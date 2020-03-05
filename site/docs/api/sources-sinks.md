@@ -1153,7 +1153,10 @@ BatchSource<String> fileSource = SourceBuilder
 For a more involved example (which reads data in _batches_ for
 efficiency, deals with _unbounded_ data, emits _timestamps_, is
 _distributed_ and _fault tolerant_ see the
-[Custom Sources](../tutorials/custom-source.md) tutorial).
+[Custom Batch Sources](../tutorials/custom-batch-source.md
+) and
+[Custom Stream Sources](../tutorials/custom-stream-source.md)
+tutorials).
 
 ### SinkBuilder
 

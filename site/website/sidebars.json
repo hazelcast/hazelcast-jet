@@ -33,8 +33,9 @@
       "tutorials/kafka",
       "tutorials/observables",
       "tutorials/cdc",
-      "tutorials/custom-source",
       "tutorials/custom-sink",
+      "tutorials/custom-batch-source",
+      "tutorials/custom-stream-source",
       "tutorials/stream-imap",
       "tutorials/python",
       "tutorials/windowing"

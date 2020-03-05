@@ -1,13 +1,14 @@
 ---
-title: Custom Sources
-description: Tutorial on how to define custom sources.
+title: Custom Stream Sources
+description: Tutorial on how to define custom stream sources.
 ---
 
 In the [Custom Sources and Sinks](../api/sources-sinks.md#custom-sources-and-sinks)
 section of our [Sources and Sinks](../api/sources-sinks.md) programming
 guide we have seen some basic examples of user-defined sources and
 sinks. Let us now examine more examples which cover some of the
-trickier aspects of writing our own sources.
+trickier aspects of writing our own sources. We will focus on stream
+sources, ones reading unbounded input data.
 
 ## 1. Start Hazelcast Jet
 
@@ -44,7 +45,7 @@ From now on we assume Hazelcast Jet is running on your machine.
 ## 2. Create a New Java Project
 
 We'll assume you're using an IDE. Create a blank Java project named
-`custom-source-tutorial` and copy the Gradle or Maven file
+`custom-stream-source-tutorial` and copy the Gradle or Maven file
 into it:
 
 <!--DOCUSAURUS_CODE_TABS-->
@@ -64,6 +65,8 @@ repositories.mavenCentral()
 dependencies {
     compile 'com.hazelcast.jet:hazelcast-jet:4.0'
 }
+
+jar.manifest.attributes 'Main-Class': 'org.example.NetworkConsumer'
 ```
 
 <!--Maven-->
@@ -75,7 +78,7 @@ dependencies {
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>org.example</groupId>
-    <artifactId>custom-source-tutorial</artifactId>
+    <artifactId>custom-stream-source-tutorial</artifactId>
     <version>1.0-SNAPSHOT</version>
 
     <properties>
@@ -90,6 +93,22 @@ dependencies {
             <version>4.0</version>
         </dependency>
     </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <configuration>
+                    <archive>
+                        <manifest>
+                            <mainClass>org.example.NetworkConsumer</mainClass>
+                        </manifest>
+                    </archive>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
 </project>
 ```
 
@@ -103,221 +122,20 @@ a file. We will start with a simple, batch version:
 ```java
 package org.example;
 
-import com.hazelcast.jet.pipeline.BatchSource;
-import com.hazelcast.jet.pipeline.SourceBuilder;
-
-import java.io.BufferedReader;
-import java.io.FileReader;
-
-public class Sources {
-
-    static BatchSource<String> buildLinesSource() {
-        return SourceBuilder
-                .batch("cpu-source", x -> new BufferedReader(
-                                                new FileReader("lines.txt")))
-                .<String>fillBufferFn((in, buf) -> {
-                    String line = in.readLine();
-                    if (line != null) {
-                        buf.add(line);
-                    } else {
-                        buf.close();
-                    }
-                })
-                .destroyFn(buf -> buf.close())
-                .build();
-    }
-
-}
-```
-
-## 4. Define Jet Job
-
-The next thing we need to do is to write the Jet code that creates a
-pipeline and the job to be submitted for execution:
-
-```java
-package org.example;
-
-import com.hazelcast.jet.Jet;
-import com.hazelcast.jet.config.JobConfig;
-import com.hazelcast.jet.pipeline.BatchSource;
-import com.hazelcast.jet.pipeline.Pipeline;
-
-public class LinesConsumer {
-
-    public static void main(String[] args) {
-        BatchSource<String> cpuSource = Sources.buildLinesSource();
-
-        Pipeline p = Pipeline.create();
-        p.readFrom(cpuSource)
-                .writeTo(com.hazelcast.jet.pipeline.Sinks.logger());
-
-        JobConfig cfg = new JobConfig().setName("lines-consumer");
-        Jet.bootstrappedInstance().newJob(p, cfg);
-    }
-
-}
-```
-
-## 5. Package
-
-Now that we have all the pieces, we need to submit it to Jet for
-execution. Since Jet runs on our machine as a standalone cluster in a
-standalone process we need to give it all the code that we have written.
-
-For this reason we create a jar containing everything we need. All we
-need to do is to run the build command:
-
-<!--DOCUSAURUS_CODE_TABS-->
-
-<!--Gradle-->
-
-```bash
-gradle build
-```
-
-This will produce a jar file called `custom-source-tutorial-1.0-SNAPSHOT.jar`
-in the `build/libs` folder of our project.
-
-<!--Maven-->
-
-```bash
-mvn package
-```
-
-This will produce a jar file called `custom-source-tutorial-1.0-SNAPSHOT.jar`
-in the `target` folder or our project.
-
-<!--END_DOCUSAURUS_CODE_TABS-->
-
-We should check that it contains the `org.example` classes we have
-written.
-
-## 6. Submit for Execution
-
-Assuming our cluster is [still running](#1-start-hazelcast-jet) all we
-need to issue is following command:
-
-<!--DOCUSAURUS_CODE_TABS-->
-
-<!--Gradle-->
-
-```bash
-<path_to_jet>/bin/jet submit \
-    --class org.example.LinesConsumer \
-    build/libs/custom-source-tutorial-1.0-SNAPSHOT.jar
-```
-
-<!--Maven-->
-
-```bash
-<path_to_jet>/bin/jet submit \
-    --class org.example.LinesConsumer \
-    target/custom-source-tutorial-1.0-SNAPSHOT.jar
-```
-
-<!--END_DOCUSAURUS_CODE_TABS-->
-
-In the log of the Jet member we should see a message like this:
-
-```text
-...
-Start executing job 'lines-consumer', execution 03fd-a4ec-bd40-0001, execution graph in DOT format:
-digraph DAG {
-    "cpu-source" [localParallelism=1];
-    "loggerSink" [localParallelism=1];
-    "cpu-source" -> "loggerSink" [queueSize=1024];
-}
-...
-```
-
-> Note: we are assuming that we have a text file called `lines.txt` with
-> lines in it present in the Jet members working directory.
-
-The output you get should contain logged versions of the lines from
-your `lines.txt` file. We had this (output produced by the custom sink
-we have defined in [another tutorial](custom-sink.md)):
-
-```text
-... 1583315484503,0.073239,SimpleEvent(timestamp=11:51:24.500, sequence=52134)
-... 1583315484703,0.090153,SimpleEvent(timestamp=11:51:24.700, sequence=52136)
-... 1583315484903,0.088542,SimpleEvent(timestamp=11:51:24.900, sequence=52138)
-```
-
-## 7. Add Batching
-
-Our source works, but it's not efficient, because it always just
-retrieves one line at a time. Optimally the `fillBufferFn` should fill
-the buffer with all the items it can acquire without blocking. As a
-rule of thumb 100 items at a time is enough to dwarf any per-call
-overheads within Jet.
-
-The function may block as well, if need be, but taking longer than a
-second to complete can have negative effects on the overall performance
-of the processing pipeline.
-
-To make it more efficient we could change our `fillBufferFn` like this:
-
-```java
-package org.example;
-
-import com.hazelcast.jet.pipeline.BatchSource;
-import com.hazelcast.jet.pipeline.SourceBuilder;
-
-import java.io.BufferedReader;
-import java.io.FileReader;
-
-public class Sources {
-
-    static BatchSource<String> buildLinesSource() {
-        return SourceBuilder
-                .batch("cpu-source", x -> new BufferedReader(
-                                                        new FileReader("lines.txt")))
-                .<String>fillBufferFn((in, buf) -> {
-                    for (int i = 0; i < 128; i++) {
-                        String line = in.readLine();
-                        if (line == null) {
-                            buf.close();
-                            return;
-                        }
-                        buf.add(line);
-                    }
-                })
-                .destroyFn(buf -> buf.close())
-                .build();
-    }
-
-}
-```
-
-Like with the sink, these changes will not produce visible effects in
-the behaviour of our source, but they will make it much more efficient.
-Benchmarking that however is a bit beyond the scope of this tutorial.
-
-## 8. Make it Unbounded
-
-Custom sources don't need to batching ones. They can also provide
-*unbounded* data. Let's see an example of such a `StreamSource`, one
-that reads lines from the network:
-
-```java
-package org.example;
-
-import com.hazelcast.jet.pipeline.SourceBuilder;
 import com.hazelcast.jet.pipeline.StreamSource;
+import com.hazelcast.jet.pipeline.SourceBuilder;
 
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.ServerSocket;
 import java.net.Socket;
 
 public class Sources {
 
-    //...
-
     static StreamSource<String> buildNetworkSource() {
         return SourceBuilder
-                .stream("http-source", ctx -> {
+                .stream("network-source", ctx -> {
                     int port = 11000;
                     ServerSocket serverSocket = new ServerSocket(port);
                     ctx.logger().info(String.format("Waiting for connection on port %d ...", port));
@@ -325,9 +143,10 @@ public class Sources {
                     BufferedReader reader = new BufferedReader(
                             new InputStreamReader(socket.getInputStream()));
                     ctx.logger().info(String.format("Data source connected on port %d.", port));
-                    return reader;
+                    return new NetworkContext(reader, serverSocket);
                 })
-                .<String>fillBufferFn((reader, buf) -> {
+                .<String>fillBufferFn((context, buf) -> {
+                    BufferedReader reader = context.getReader();
                     for (int i = 0; i < 128; i++) {
                         if (!reader.ready()) {
                             return;
@@ -340,15 +159,41 @@ public class Sources {
                         buf.add(line);
                     }
                 })
-                .destroyFn(reader -> reader.close())
+                .destroyFn(context -> context.close())
                 .build();
+    }
+
+    private static class NetworkContext {
+
+        private final BufferedReader reader;
+        private final ServerSocket serverSocket;
+
+        NetworkContext(BufferedReader reader, ServerSocket serverSocket) {
+            this.reader = reader;
+            this.serverSocket = serverSocket;
+        }
+
+        BufferedReader getReader() {
+            return reader;
+        }
+
+        void close() {
+            try {
+                reader.close();
+                serverSocket.close();
+            } catch (IOException e) {
+                throw new RuntimeException(e.getMessage(), e);
+            }
+        }
     }
 
 }
 ```
 
-The Jet code needed for it will be slightly different (because it's a
-stream source, not a batch one):
+## 4. Define Jet Job
+
+The next thing we need to do is to write the Jet code that creates a
+pipeline and the job to be submitted for execution:
 
 ```java
 package org.example;
@@ -376,9 +221,57 @@ public class NetworkConsumer {
 }
 ```
 
-Besides that, working with it happens just like with our previous
-source: [package](#5-package) and [submit](#6-submit-for-execution),
-just don't forget to use `NetworkConsumer` as the main class.
+## 5. Package
+
+Now that we have all the pieces, we need to submit it to Jet for
+execution. Since Jet runs on our machine as a standalone cluster in a
+standalone process we need to give it all the code that we have written.
+
+For this reason we create a jar containing everything we need. All we
+need to do is to run the build command:
+
+<!--DOCUSAURUS_CODE_TABS-->
+
+<!--Gradle-->
+
+```bash
+gradle build
+```
+
+This will produce a jar file called `custom-stream-source-tutorial-1.0-SNAPSHOT.jar`
+in the `build/libs` folder of our project.
+
+<!--Maven-->
+
+```bash
+mvn package
+```
+
+This will produce a jar file called `custom-stream-source-tutorial-1.0-SNAPSHOT.jar`
+in the `target` folder or our project.
+
+<!--END_DOCUSAURUS_CODE_TABS-->
+
+## 6. Submit for Execution
+
+Assuming our cluster is [still running](#1-start-hazelcast-jet) all we
+need to issue is following command:
+
+<!--DOCUSAURUS_CODE_TABS-->
+
+<!--Gradle-->
+
+```bash
+<path_to_jet>/bin/jet submit build/libs/custom-stream-source-tutorial-1.0-SNAPSHOT.jar
+```
+
+<!--Maven-->
+
+```bash
+<path_to_jet>/bin/jet submit target/custom-stream-source-tutorial-1.0-SNAPSHOT.jar
+```
+
+<!--END_DOCUSAURUS_CODE_TABS-->
 
 When it starts it should print following and wait for an incoming
 network connection:
@@ -390,18 +283,20 @@ network connection:
 You can then just go ahead and send it some lines:
 
 ```bash
-cat linex.txt | nc 127.0.0.1 11000
+cat lines.txt | nc 127.0.0.1 11000
 ```
 
 The output should look the same way as before:
 
 ```text
-... Output to ordinal 0: 1583310272413,0.185707,SimpleEvent(timestamp=10:24:32.400, sequence=14)
-... Output to ordinal 0: 1583310272613,1.000000,SimpleEvent(timestamp=10:24:32.600, sequence=16)
-... Output to ordinal 0: 1583310272813,0.052980,SimpleEvent(timestamp=10:24:32.800, sequence=18)
+... Output to ordinal 0: 1583310272413,SimpleEvent(timestamp=10:24:32.400, sequence=14)
+... Output to ordinal 0: 1583310272613,SimpleEvent(timestamp=10:24:32.600, sequence=16)
+... Output to ordinal 0: 1583310272813,SimpleEvent(timestamp=10:24:32.800, sequence=18)
 ```
 
-## 9. Add Timestamps
+Kill your line sending process (<CTRL+C>).
+
+## 7. Add Timestamps
 
 In the Jet code we wrote for this network source we can notice that
 there is an extra line, which wasn't there when we used a batch source
@@ -422,30 +317,30 @@ line starts with a timestamp, so we could modify our source like this:
 ```java
 package org.example;
 
-import com.hazelcast.jet.pipeline.SourceBuilder;
 import com.hazelcast.jet.pipeline.StreamSource;
+import com.hazelcast.jet.pipeline.SourceBuilder;
 
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.ServerSocket;
 import java.net.Socket;
 
 public class Sources {
 
-    //...
-
     static StreamSource<String> buildNetworkSource() {
         return SourceBuilder
-                .timestampedStream("http-source", ctx -> {
+                .timestampedStream("network-source", ctx -> {
                     int port = 11000;
                     ServerSocket serverSocket = new ServerSocket(port);
                     ctx.logger().info(String.format("Waiting for connection on port %d ...", port));
                     Socket socket = serverSocket.accept();
                     BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
                     ctx.logger().info(String.format("Data source connected on port %d.", port));
-                    return reader;
+                    return new NetworkContext(reader, serverSocket);
                 })
-                .<String>fillBufferFn((reader, buf) -> {
+                .<String>fillBufferFn((context, buf) -> {
+                    BufferedReader reader = context.getReader();
                     for (int i = 0; i < 128; i++) {
                         if (!reader.ready()) {
                             return;
@@ -460,8 +355,32 @@ public class Sources {
                         buf.add(line, Long.parseLong(line.substring(0, line.indexOf(','))));
                     }
                 })
-                .destroyFn(reader -> reader.close())
+                .destroyFn(context -> context.close())
                 .build();
+    }
+
+    private static class NetworkContext {
+
+        private final BufferedReader reader;
+        private final ServerSocket serverSocket;
+
+        NetworkContext(BufferedReader reader, ServerSocket serverSocket) {
+            this.reader = reader;
+            this.serverSocket = serverSocket;
+        }
+
+        BufferedReader getReader() {
+            return reader;
+        }
+
+        void close() {
+            try {
+                reader.close();
+                serverSocket.close();
+            } catch (IOException e) {
+                throw new RuntimeException(e.getMessage(), e);
+            }
+        }
     }
 
 }
@@ -495,17 +414,34 @@ public class NetworkConsumer {
 }
 ```
 
+Now let's [repackage](#5-package) our updated code just as before.
+
+Before we [re-submit it for execution](#6-submit-for-execution), just
+like before we might want to cancel the previous job:
+
+```bash
+<path_to_jet>/bin/jet cancel network-consumer
+```
+
+Send it some more lines:
+
+```bash
+cat lines.txt | nc 127.0.0.1 11000
+```
+
 The output will be very similar but with a crucial difference, now we
 have timestamps:
 
 ```text
-... Output to ordinal 0: 1583310272413,0.185707,SimpleEvent(
+... Output to ordinal 0: 1583310272413,SimpleEvent(
          timestamp=10:24:32.400, sequence=14) (eventTime=10:24:32.413)
-... Output to ordinal 0: 1583310272613,1.000000,SimpleEvent(
+... Output to ordinal 0: 1583310272613,SimpleEvent(
          timestamp=10:24:32.600, sequence=16) (eventTime=10:24:32.613)
-... Output to ordinal 0: 1583310272813,0.052980,SimpleEvent(
+... Output to ordinal 0: 1583310272813,SimpleEvent(
          timestamp=10:24:32.800, sequence=18) (eventTime=10:24:32.813)
 ```
+
+Kill your line sending process (<CTRL+C>).
 
 ## 10. Increase Parallelism
 
@@ -525,48 +461,71 @@ available in the `Processor.Context` object we get handed there:
 ```java
 package org.example;
 
-import com.hazelcast.jet.pipeline.SourceBuilder;
 import com.hazelcast.jet.pipeline.StreamSource;
+import com.hazelcast.jet.pipeline.SourceBuilder;
 
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.ServerSocket;
 import java.net.Socket;
 
 public class Sources {
 
-    //...
-
     static StreamSource<String> buildNetworkSource() {
         return SourceBuilder
-                .timestampedStream("http-source", ctx -> {
+                .stream("network-source", ctx -> {
                     int port = 11000 + ctx.globalProcessorIndex();
                     ServerSocket serverSocket = new ServerSocket(port);
                     ctx.logger().info(String.format("Waiting for connection on port %d ...", port));
                     Socket socket = serverSocket.accept();
-                    BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+                    BufferedReader reader = new BufferedReader(
+                            new InputStreamReader(socket.getInputStream()));
                     ctx.logger().info(String.format("Data source connected on port %d.", port));
-                    return reader;
+                    return new NetworkContext(reader, serverSocket);
                 })
-                .<String>fillBufferFn((reader, buf) -> {
+                .<String>fillBufferFn((context, buf) -> {
+                    BufferedReader reader = context.getReader();
                     for (int i = 0; i < 128; i++) {
                         if (!reader.ready()) {
                             return;
                         }
-
                         String line = reader.readLine();
                         if (line == null) {
                             buf.close();
                             return;
                         }
-
-                        buf.add(line, Long.parseLong(line.substring(0, line.indexOf(','))));
+                        buf.add(line);
                     }
                 })
-                .destroyFn(reader -> reader.close())
+                .destroyFn(context -> context.close())
                 .distributed(2)
                 .build();
+    }
+
+    private static class NetworkContext {
+
+        private final BufferedReader reader;
+        private final ServerSocket serverSocket;
+
+        NetworkContext(BufferedReader reader, ServerSocket serverSocket) {
+            this.reader = reader;
+            this.serverSocket = serverSocket;
         }
+
+        BufferedReader getReader() {
+            return reader;
+        }
+
+        void close() {
+            try {
+                reader.close();
+                serverSocket.close();
+            } catch (IOException e) {
+                throw new RuntimeException(e.getMessage(), e);
+            }
+        }
+    }
 
 }
 ```
@@ -575,7 +534,16 @@ Notice that we have added an extra call to specify the local parallelism
 of the source (the `distributed()` method). This means that each Jet
 cluster member will now create two such sources.
 
-If we submit this now for execution, we will see following lines:
+Now let's [repackage](#5-package) our updated code just as before.
+
+Before we [re-submit it for execution](#6-submit-for-execution), just
+like before we might want to cancel the previous job:
+
+```bash
+<path_to_jet>/bin/jet cancel network-consumer
+```
+
+After submission, we will see following lines in the Jet member's log:
 
 ```text
 [jet] [4.1-SNAPSHOT] Waiting for connection on port 11000 ...

@@ -142,7 +142,7 @@ class Sinks {
 
     static Sink<Object> buildLogSink() {
         return SinkBuilder.sinkBuilder(
-                "cpu-sink", pctx -> new PrintWriter("data." + pctx.globalProcessorIndex() + ".csv"))
+                "log-sink", pctx -> new PrintWriter("data." + pctx.globalProcessorIndex() + ".csv"))
                 .receiveFn((writer, item) -> {
                     writer.println(String.format("%d,%s", System.currentTimeMillis(), item.toString()));
                     writer.flush();
@@ -244,8 +244,8 @@ In the log of the Jet member we should see a message like this:
 Start executing job 'log-producer', execution 03fd-63b4-4700-0001, execution graph in DOT format:
 digraph DAG {
     "itemStream" [localParallelism=1];
-    "cpu-sink" [localParallelism=1];
-    "itemStream" -> "cpu-sink" [queueSize=1024];
+    "log-sink" [localParallelism=1];
+    "itemStream" -> "log-sink" [queueSize=1024];
 }
 ...
 ```
@@ -287,7 +287,7 @@ class Sinks {
 
     static Sink<Object> buildLogSink() {
         return SinkBuilder.sinkBuilder(
-                "cpu-sink", pctx -> new PrintWriter("data." + pctx.globalProcessorIndex() + ".csv"))
+                "log-sink", pctx -> new PrintWriter("data." + pctx.globalProcessorIndex() + ".csv"))
                 .receiveFn((writer, item) -> {
                     writer.println(String.format("%d,%s", System.currentTimeMillis(), item.toString()));
                 })
@@ -328,7 +328,7 @@ class Sinks {
 
     static Sink<Object> buildLogSink() {
         return SinkBuilder.sinkBuilder(
-                "cpu-sink", pctx -> new PrintWriter("data." + pctx.globalProcessorIndex() + ".csv"))
+                "log-sink", pctx -> new PrintWriter("data." + pctx.globalProcessorIndex() + ".csv"))
                 .receiveFn((writer, item) -> {
                     writer.println(String.format("%d,%s", System.currentTimeMillis(), item.toString()));
                 })
