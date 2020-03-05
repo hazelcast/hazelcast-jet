@@ -20,7 +20,7 @@ import com.hazelcast.cluster.Address;
 import com.hazelcast.config.NetworkConfig;
 import com.hazelcast.function.SupplierEx;
 import com.hazelcast.instance.BuildInfoProvider;
-import com.hazelcast.internal.serialization.InternalSerializationService;
+import com.hazelcast.internal.serialization.SerializationService;
 import com.hazelcast.internal.serialization.SerializationServiceAware;
 import com.hazelcast.internal.serialization.impl.DefaultSerializationServiceBuilder;
 import com.hazelcast.internal.util.concurrent.BackoffIdleStrategy;
@@ -791,18 +791,19 @@ public final class TestSupport {
     }
 
     private void initProcessor(Processor processor, TestOutbox outbox) {
-        InternalSerializationService serializationService;
-        if (jetInstance != null && jetInstance.getHazelcastInstance() instanceof SerializationServiceSupport) {
+        SerializationService serializationService;
+        if (jetInstance != null) {
             SerializationServiceSupport impl = (SerializationServiceSupport) jetInstance.getHazelcastInstance();
-            serializationService = (InternalSerializationService) impl.getSerializationService();
+            serializationService = impl.getSerializationService();
         } else {
             serializationService = new DefaultSerializationServiceBuilder()
                     .setManagedContext(e -> e)
                     .build();
         }
 
-        TestProcessorContext context = new TestProcessorContext(serializationService)
-                .setLogger(getLogger(processor.getClass().getName()));
+        TestProcessorContext context = new TestProcessorContext()
+                .setLogger(getLogger(processor.getClass().getName()))
+                .setManagedContext(serializationService.getManagedContext());
         if (jetInstance != null) {
             context.setJetInstance(jetInstance);
         }

@@ -16,8 +16,7 @@
 
 package com.hazelcast.jet.core.test;
 
-import com.hazelcast.internal.serialization.InternalSerializationService;
-import com.hazelcast.internal.serialization.impl.DefaultSerializationServiceBuilder;
+import com.hazelcast.core.ManagedContext;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.core.Processor;
@@ -39,11 +38,6 @@ public class TestProcessorContext extends TestProcessorSupplierContext implement
      * Constructor with default values.
      */
     public TestProcessorContext() {
-        this(new DefaultSerializationServiceBuilder().setManagedContext(object -> object).build());
-    }
-
-    TestProcessorContext(InternalSerializationService serializationService) {
-        super(serializationService);
         localProcessorIndex = 0;
         globalProcessorIndex = 0;
     }
@@ -106,6 +100,11 @@ public class TestProcessorContext extends TestProcessorSupplierContext implement
     @Nonnull @Override
     public TestProcessorContext setProcessingGuarantee(ProcessingGuarantee processingGuarantee) {
         return (TestProcessorContext) super.setProcessingGuarantee(processingGuarantee);
+    }
+
+    @Nonnull @Override
+    public TestProcessorContext setManagedContext(ManagedContext managedContext) {
+        return (TestProcessorContext) super.setManagedContext(managedContext);
     }
 
     @Override

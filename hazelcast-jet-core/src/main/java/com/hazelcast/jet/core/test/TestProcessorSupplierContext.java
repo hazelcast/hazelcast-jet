@@ -17,12 +17,9 @@
 package com.hazelcast.jet.core.test;
 
 import com.hazelcast.core.ManagedContext;
-import com.hazelcast.internal.serialization.InternalSerializationService;
-import com.hazelcast.internal.serialization.impl.DefaultSerializationServiceBuilder;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.core.ProcessorSupplier;
-import com.hazelcast.jet.impl.serialization.SerializationAware;
 import com.hazelcast.logging.ILogger;
 
 import javax.annotation.Nonnull;
@@ -38,20 +35,11 @@ import java.util.Map;
  */
 public class TestProcessorSupplierContext
         extends TestProcessorMetaSupplierContext
-        implements ProcessorSupplier.Context, SerializationAware {
+        implements ProcessorSupplier.Context {
 
     private int memberIndex;
-    private final Map<String, File> attached;
-    private final InternalSerializationService serializationService;
-
-    public TestProcessorSupplierContext() {
-        this(new DefaultSerializationServiceBuilder().setManagedContext(object -> object).build());
-    }
-
-    TestProcessorSupplierContext(InternalSerializationService serializationService) {
-        this.attached = new HashMap<>();
-        this.serializationService = serializationService;
-    }
+    private ManagedContext managedContext = object -> object;
+    private final Map<String, File> attached = new HashMap<>();
 
     @Nonnull @Override
     public TestProcessorSupplierContext setLogger(@Nonnull ILogger logger) {
@@ -106,19 +94,13 @@ public class TestProcessorSupplierContext
 
     @Nonnull @Override
     public ManagedContext managedContext() {
-        return serializationService.getManagedContext();
-    }
-
-    @Nonnull @Override
-    public InternalSerializationService serializationService() {
-        return serializationService;
+        return managedContext;
     }
 
     /**
      * Add an attached file or folder. The test context doesn't distinguish
      * between files and folders;
      */
-    @Nonnull
     public TestProcessorSupplierContext addFile(@Nonnull String id, @Nonnull File file) {
         attached.put(id, file);
         return this;
@@ -130,6 +112,15 @@ public class TestProcessorSupplierContext
     @Nonnull
     public TestProcessorSupplierContext setMemberIndex(int memberIndex) {
         this.memberIndex = memberIndex;
+        return this;
+    }
+
+    /**
+     * Sets the {@link ManagedContext}
+     */
+    @Nonnull
+    public TestProcessorSupplierContext setManagedContext(ManagedContext managedContext) {
+        this.managedContext = managedContext;
         return this;
     }
 

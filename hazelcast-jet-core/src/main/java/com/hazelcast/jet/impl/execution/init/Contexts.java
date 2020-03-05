@@ -28,7 +28,6 @@ import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.impl.deployment.IMapInputStream;
-import com.hazelcast.jet.impl.serialization.SerializationAware;
 import com.hazelcast.jet.impl.util.ExceptionUtil;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.map.IMap;
@@ -143,7 +142,7 @@ public final class Contexts {
         }
     }
 
-    static class ProcSupplierCtx extends MetaSupplierCtx implements ProcessorSupplier.Context, SerializationAware {
+    static class ProcSupplierCtx extends MetaSupplierCtx implements ProcessorSupplier.Context {
 
         private final int memberIndex;
         private final ConcurrentHashMap<String, File> tempDirectories;
@@ -237,7 +236,7 @@ public final class Contexts {
             return serializationService.getManagedContext();
         }
 
-        @Nonnull @Override
+        @Nonnull
         public InternalSerializationService serializationService() {
             return serializationService;
         }
