@@ -6,16 +6,26 @@ description: Options available for monitoring the health and operations of Jet c
 ## Logging
 
 Jet does not depend on a specific logging framework and has built-in
-adapters for a variety of logging frameworks. You can also write a new
-adapter to integrate with loggers Jet does not support natively. To use
-one of the built-in adapters, set the `hazelcast.logging.type` property
-to one of the following:
+adapters for a variety of them. You can also write a new adapter to
+integrate with loggers Jet does not support natively.
+
+To use one of the built-in adapters, set the `hazelcast.logging.type`
+property to one of the following:
 
 * `jdk`: java.util.logging (default)
 * `log4j`: Apache Log4j
 * `log4j2`: Apache Log4j 2
 * `slf4j`: SLF4J
 * `none`: Turn off logging
+
+When using the Jet distribution to set up a **cluster** of Jet members,
+the logging type of those members defaults to `log4j`. Moreover, they
+are set up with both console logging and daily rolling file logs, stored
+in the `logs` folder of the distribution.
+
+When using Jet in **embedded** mode or when using Jet **clients** to
+connect to a remote cluster, there is also the option to configure the
+logging programmatically.
 
 For example, to configure Jet to use Log4j, you can do one of the
 following:
