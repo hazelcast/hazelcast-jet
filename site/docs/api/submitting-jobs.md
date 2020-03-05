@@ -33,6 +33,25 @@ The command also has some additional options:
 * `-n`: job name to use, will override the one set in `JobConfig`
 * `-s`: name of the initial snapshot to start the job from
 
+The `jet` command also some global options:
+
+* `-a`: comma separated addresses for the cluster
+* `-n`: cluster name, which must match what's configured on the cluster
+* `-f`: path to a client config file, which can be used instead of
+  supplying an address and name.
+
+Example:
+
+```bash
+bin/jet \
+  -a 192.168.1.100:5701,192.168.1.101:5701 \
+  -n jet \
+  submit \
+  -c <MainClass> \
+  <jar file> \
+  [<arguments>...]
+```
+
 ## Bundling Dependencies
 
 A Jet pipeline is built with several transform which typically consist
