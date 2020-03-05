@@ -1,0 +1,261 @@
+<!DOCTYPE html><html lang="en"><head><meta charSet="utf-8"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><title>Custom Batch Sources · Hazelcast Jet</title><meta name="viewport" content="width=device-width"/><meta name="generator" content="Docusaurus"/><meta name="description" content="Tutorial on how to define custom batch sources."/><meta name="docsearch:language" content="en"/><meta property="og:title" content="Custom Batch Sources · Hazelcast Jet"/><meta property="og:type" content="website"/><meta property="og:url" content="https://jet-start.sh/"/><meta property="og:description" content="Tutorial on how to define custom batch sources."/><meta name="twitter:card" content="summary"/><link rel="shortcut icon" href="/img/favicon.png"/><link rel="stylesheet" href="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.css"/><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/default.min.css"/><link rel="alternate" type="application/atom+xml" href="https://jet-start.sh/blog/atom.xml" title="Hazelcast Jet Blog ATOM Feed"/><link rel="alternate" type="application/rss+xml" href="https://jet-start.sh/blog/feed.xml" title="Hazelcast Jet Blog RSS Feed"/><script>
+              (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+              (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+              m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+              })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+              ga('create', 'UA-158279495-1', 'auto');
+              ga('send', 'pageview');
+            </script><link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Ubuntu:300,400,500,600"/><link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,500,600,700,800"/><script type="text/javascript" src="https://buttons.github.io/buttons.js"></script><script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.0/clipboard.min.js"></script><script type="text/javascript" src="/js/code-block-buttons.js"></script><script src="/js/scrollSpy.js"></script><link rel="stylesheet" href="/css/prism.css"/><link rel="stylesheet" href="/css/main.css"/><script src="/js/codetabs.js"></script></head><body class="sideNavVisible separateOnPageNav"><div class="fixedHeaderContainer"><div class="headerWrapper wrapper"><header><a href="/"><img class="logo" src="/img/logo-dark.svg" alt="Hazelcast Jet"/></a><div class="navigationWrapper navigationSlider"><nav class="slidingNav"><ul class="nav-site nav-site-internal"><li class="siteNavGroupActive"><a href="/docs/get-started/intro" target="_self">Documentation</a></li><li class=""><a href="https://github.com/hazelcast/hazelcast-jet/releases" target="_self">Download</a></li><li class=""><a href="https://github.com/hazelcast/hazelcast-jet" target="_self">View on GitHub</a></li><li class=""><a href="/blog/" target="_self">Blog</a></li><li class="navSearchWrapper reactNavSearchWrapper"><input type="text" id="search_input_react" placeholder="Search" title="Search"/></li></ul></nav></div></header></div></div><div class="navPusher"><div class="docMainWrapper wrapper"><div class="docsNavContainer" id="docsNav"><nav class="toc"><div class="toggleNav"><section class="navWrapper wrapper"><div class="navBreadcrumb wrapper"><div class="navToggle" id="navToggler"><div class="hamburger-menu"><div class="line1"></div><div class="line2"></div><div class="line3"></div></div></div><h2><i>›</i><span>Tutorials</span></h2><div class="tocToggler" id="tocToggler"><i class="icon-toc"></i></div></div><div class="navGroups"><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Get Started<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/get-started/intro">Introduction</a></li><li class="navListItem"><a class="navItem" href="/docs/get-started/first-job">Your First Jet Program</a></li><li class="navListItem"><a class="navItem" href="/docs/get-started/installation">Set Up a Jet Cluster</a></li><li class="navListItem"><a class="navItem" href="/docs/get-started/submit-job">Submit a Job to the Cluster</a></li><li class="navListItem"><a class="navItem" href="/docs/get-started/scale-job">Scale Your Job</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Programming Guide<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/api/pipeline">Building Pipelines</a></li><li class="navListItem"><a class="navItem" href="/docs/api/stateless-transforms">Stateless Transforms</a></li><li class="navListItem"><a class="navItem" href="/docs/api/stateful-transforms">Stateful Transforms</a></li><li class="navListItem"><a class="navItem" href="/docs/api/sources-sinks">Sources and Sinks</a></li><li class="navListItem"><a class="navItem" href="/docs/api/data-structures">Distributed Data Structures</a></li><li class="navListItem"><a class="navItem" href="/docs/api/serialization">Serialization</a></li><li class="navListItem"><a class="navItem" href="/docs/api/classloading">Class and Resource Deployment</a></li><li class="navListItem"><a class="navItem" href="/docs/api/testing">Testing</a></li><li class="navListItem"><a class="navItem" href="/docs/api/javadoc">Javadoc</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Concepts<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/concepts/dag">Directed Acylic Graph (DAG)</a></li><li class="navListItem"><a class="navItem" href="/docs/concepts/event-time">Streaming and Event Time</a></li><li class="navListItem"><a class="navItem" href="/docs/concepts/processing-guarantees">Processing Guarantees for Stateful Computation</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Tutorials<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/tutorials/map-join">Join Static Data to a Stream</a></li><li class="navListItem"><a class="navItem" href="/docs/tutorials/kafka">Process Data from Apache Kafka</a></li><li class="navListItem"><a class="navItem" href="/docs/tutorials/observables">Reactive Streams</a></li><li class="navListItem"><a class="navItem" href="/docs/tutorials/cdc">Change Data Capture</a></li><li class="navListItem"><a class="navItem" href="/docs/tutorials/custom-sink">Custom Sinks</a></li><li class="navListItem navListItemActive"><a class="navItem" href="/docs/tutorials/custom-batch-source">Custom Batch Sources</a></li><li class="navListItem"><a class="navItem" href="/docs/tutorials/custom-stream-source">Custom Stream Sources</a></li><li class="navListItem"><a class="navItem" href="/docs/tutorials/stream-imap">Stream Changes from IMap</a></li><li class="navListItem"><a class="navItem" href="/docs/tutorials/python">Apply a Python Function</a></li><li class="navListItem"><a class="navItem" href="/docs/tutorials/windowing">Windowed Aggregation</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Operations Guide<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/operations/configuration">Configuration</a></li><li class="navListItem"><a class="navItem" href="/docs/operations/cluster-sizing">Cluster Sizing</a></li><li class="navListItem"><a class="navItem" href="/docs/operations/job-management">Job Management</a></li><li class="navListItem"><a class="navItem" href="/docs/operations/kubernetes">Jet on Kubernetes</a></li><li class="navListItem"><a class="navItem" href="/docs/operations/monitoring">Monitoring and Metrics</a></li><li class="navListItem"><a class="navItem" href="/docs/operations/spring">Spring Integration</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Architecture<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/architecture/cluster-topology">Cluster Topology</a></li><li class="navListItem"><a class="navItem" href="/docs/architecture/distributed-computing">Distributed Execution</a></li><li class="navListItem"><a class="navItem" href="/docs/architecture/execution-engine">Cooperative Threading</a></li><li class="navListItem"><a class="navItem" href="/docs/architecture/fault-tolerance">Fault Tolerance</a></li><li class="navListItem"><a class="navItem" href="/docs/architecture/in-memory-storage">In-Memory Storage and Correctness</a></li><li class="navListItem"><a class="navItem" href="/docs/architecture/event-time-processing">Event Time-Based Processing</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Design Documents<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/design-docs/kafka-connect">Kafka Connect Source</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Roadmap<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/roadmap">Roadmap</a></li></ul></div></div></section></div><script>
+            var coll = document.getElementsByClassName('collapsible');
+            var checkActiveCategory = true;
+            for (var i = 0; i < coll.length; i++) {
+              var links = coll[i].nextElementSibling.getElementsByTagName('*');
+              if (checkActiveCategory){
+                for (var j = 0; j < links.length; j++) {
+                  if (links[j].classList.contains('navListItemActive')){
+                    coll[i].nextElementSibling.classList.toggle('hide');
+                    coll[i].childNodes[1].classList.toggle('rotate');
+                    checkActiveCategory = false;
+                    break;
+                  }
+                }
+              }
+
+              coll[i].addEventListener('click', function() {
+                var arrow = this.childNodes[1];
+                arrow.classList.toggle('rotate');
+                var content = this.nextElementSibling;
+                content.classList.toggle('hide');
+              });
+            }
+
+            document.addEventListener('DOMContentLoaded', function() {
+              createToggler('#navToggler', '#docsNav', 'docsSliderActive');
+              createToggler('#tocToggler', 'body', 'tocActive');
+
+              var headings = document.querySelector('.toc-headings');
+              headings && headings.addEventListener('click', function(event) {
+                var el = event.target;
+                while(el !== headings){
+                  if (el.tagName === 'A') {
+                    document.body.classList.remove('tocActive');
+                    break;
+                  } else{
+                    el = el.parentNode;
+                  }
+                }
+              }, false);
+
+              function createToggler(togglerSelector, targetSelector, className) {
+                var toggler = document.querySelector(togglerSelector);
+                var target = document.querySelector(targetSelector);
+
+                if (!toggler) {
+                  return;
+                }
+
+                toggler.onclick = function(event) {
+                  event.preventDefault();
+
+                  target.classList.toggle(className);
+                };
+              }
+            });
+        </script></nav></div><div class="container mainContainer docsContainer"><div class="wrapper"><div class="post"><header class="postHeader"><a class="edit-page-link button" href="https://github.com/hazelcast/hazelcast-jet/edit/docs/site/docs/tutorials/custom-batch-source.md" target="_blank" rel="noreferrer noopener">Edit</a><h1 id="__docusaurus" class="postHeaderTitle">Custom Batch Sources</h1></header><article><div><span><p>In the <a href="/docs/api/sources-sinks#custom-sources-and-sinks">Custom Sources and Sinks</a>
+section of our <a href="/docs/api/sources-sinks">Sources and Sinks</a> programming
+guide we have seen some basic examples of user-defined sources and
+sinks. Let us now examine more examples which cover some of the
+trickier aspects of writing our own sources. We will focus on batch
+sources, ones reading bounded input data.</p>
+<h2><a class="anchor" aria-hidden="true" id="1-start-hazelcast-jet"></a><a href="#1-start-hazelcast-jet" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>1. Start Hazelcast Jet</h2>
+<ol>
+<li><p><a href="https://github.com/hazelcast/hazelcast-jet/releases/download/v4.0/hazelcast-jet-4.0.zip">Download</a>
+Hazelcast Jet</p></li>
+<li><p>Unzip it:</p></li>
+</ol>
+<pre><code class="hljs css language-bash"><span class="hljs-built_in">cd</span> &lt;where_you_downloaded_it&gt;
+unzip hazelcast-jet-4.0.zip
+<span class="hljs-built_in">cd</span> hazelcast-jet-4.0
+</code></pre>
+<p>If you already have Jet and you skipped the above steps, make sure to
+follow from here on.</p>
+<ol start="3">
+<li>Start Jet:</li>
+</ol>
+<pre><code class="hljs css language-bash">bin/jet-start
+</code></pre>
+<ol start="4">
+<li>When you see output like this, Hazelcast Jet is up:</li>
+</ol>
+<pre><code class="hljs css language-text">Members {size:1, ver:1} [
+    Member [192.168.1.5]:5701 - e7c26f7c-df9e-4994-a41d-203a1c63480e this
+]
+</code></pre>
+<p>From now on we assume Hazelcast Jet is running on your machine.</p>
+<h2><a class="anchor" aria-hidden="true" id="2-create-a-new-java-project"></a><a href="#2-create-a-new-java-project" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>2. Create a New Java Project</h2>
+<p>We'll assume you're using an IDE. Create a blank Java project named
+<code>custom-batch-source-tutorial</code> and copy the Gradle or Maven file
+into it:</p>
+<div class="tabs"><div class="nav-tabs"><div id="tab-group-50-tab-51" class="nav-link active" data-group="group_50" data-tab="tab-group-50-content-51">Gradle</div><div id="tab-group-50-tab-52" class="nav-link" data-group="group_50" data-tab="tab-group-50-content-52">Maven</div></div><div class="tab-content"><div id="tab-group-50-content-51" class="tab-pane active" data-group="group_50" tabindex="-1"><div><span><pre><code class="hljs css language-groovy">plugins {<br />    id <span class="hljs-string">'java'</span><br />}<br /><br />group <span class="hljs-string">'org.example'</span><br />version <span class="hljs-string">'1.0-SNAPSHOT'</span><br /><br />repositories.mavenCentral()<br /><br />dependencies {<br />    compile <span class="hljs-string">'com.hazelcast.jet:hazelcast-jet:4.0'</span><br />}<br /><br />jar.manifest.attributes <span class="hljs-string">'Main-Class'</span>: <span class="hljs-string">'org.example.LineConsumer'</span><br /></code></pre>
+</span></div></div><div id="tab-group-50-content-52" class="tab-pane" data-group="group_50" tabindex="-1"><div><span><pre><code class="hljs css language-xml"><span class="hljs-meta">&lt;?xml version="1.0" encoding="UTF-8"?&gt;</span><br /><span class="hljs-tag">&lt;<span class="hljs-name">project</span> <span class="hljs-attr">xmlns</span>=<span class="hljs-string">"http://maven.apache.org/POM/4.0.0"</span> <span class="hljs-attr">xmlns:xsi</span>=<span class="hljs-string">"http://www.w3.org/2001/XMLSchema-instance"</span><br />         <span class="hljs-attr">xsi:schemaLocation</span>=<span class="hljs-string">"http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd"</span>&gt;</span><br />    <span class="hljs-tag">&lt;<span class="hljs-name">modelVersion</span>&gt;</span>4.0.0<span class="hljs-tag">&lt;/<span class="hljs-name">modelVersion</span>&gt;</span><br /><br />    <span class="hljs-tag">&lt;<span class="hljs-name">groupId</span>&gt;</span>org.example<span class="hljs-tag">&lt;/<span class="hljs-name">groupId</span>&gt;</span><br />    <span class="hljs-tag">&lt;<span class="hljs-name">artifactId</span>&gt;</span>custom-batch-source-tutorial<span class="hljs-tag">&lt;/<span class="hljs-name">artifactId</span>&gt;</span><br />    <span class="hljs-tag">&lt;<span class="hljs-name">version</span>&gt;</span>1.0-SNAPSHOT<span class="hljs-tag">&lt;/<span class="hljs-name">version</span>&gt;</span><br /><br />    <span class="hljs-tag">&lt;<span class="hljs-name">properties</span>&gt;</span><br />        <span class="hljs-tag">&lt;<span class="hljs-name">maven.compiler.target</span>&gt;</span>1.8<span class="hljs-tag">&lt;/<span class="hljs-name">maven.compiler.target</span>&gt;</span><br />        <span class="hljs-tag">&lt;<span class="hljs-name">maven.compiler.source</span>&gt;</span>1.8<span class="hljs-tag">&lt;/<span class="hljs-name">maven.compiler.source</span>&gt;</span><br />    <span class="hljs-tag">&lt;/<span class="hljs-name">properties</span>&gt;</span><br /><br />    <span class="hljs-tag">&lt;<span class="hljs-name">dependencies</span>&gt;</span><br />        <span class="hljs-tag">&lt;<span class="hljs-name">dependency</span>&gt;</span><br />            <span class="hljs-tag">&lt;<span class="hljs-name">groupId</span>&gt;</span>com.hazelcast.jet<span class="hljs-tag">&lt;/<span class="hljs-name">groupId</span>&gt;</span><br />            <span class="hljs-tag">&lt;<span class="hljs-name">artifactId</span>&gt;</span>hazelcast-jet<span class="hljs-tag">&lt;/<span class="hljs-name">artifactId</span>&gt;</span><br />            <span class="hljs-tag">&lt;<span class="hljs-name">version</span>&gt;</span>4.0<span class="hljs-tag">&lt;/<span class="hljs-name">version</span>&gt;</span><br />        <span class="hljs-tag">&lt;/<span class="hljs-name">dependency</span>&gt;</span><br />    <span class="hljs-tag">&lt;/<span class="hljs-name">dependencies</span>&gt;</span><br /><br />    <span class="hljs-tag">&lt;<span class="hljs-name">build</span>&gt;</span><br />        <span class="hljs-tag">&lt;<span class="hljs-name">plugins</span>&gt;</span><br />            <span class="hljs-tag">&lt;<span class="hljs-name">plugin</span>&gt;</span><br />                <span class="hljs-tag">&lt;<span class="hljs-name">groupId</span>&gt;</span>org.apache.maven.plugins<span class="hljs-tag">&lt;/<span class="hljs-name">groupId</span>&gt;</span><br />                <span class="hljs-tag">&lt;<span class="hljs-name">artifactId</span>&gt;</span>maven-jar-plugin<span class="hljs-tag">&lt;/<span class="hljs-name">artifactId</span>&gt;</span><br />                <span class="hljs-tag">&lt;<span class="hljs-name">configuration</span>&gt;</span><br />                    <span class="hljs-tag">&lt;<span class="hljs-name">archive</span>&gt;</span><br />                        <span class="hljs-tag">&lt;<span class="hljs-name">manifest</span>&gt;</span><br />                            <span class="hljs-tag">&lt;<span class="hljs-name">mainClass</span>&gt;</span>org.example.LineConsumer<span class="hljs-tag">&lt;/<span class="hljs-name">mainClass</span>&gt;</span><br />                        <span class="hljs-tag">&lt;/<span class="hljs-name">manifest</span>&gt;</span><br />                    <span class="hljs-tag">&lt;/<span class="hljs-name">archive</span>&gt;</span><br />                <span class="hljs-tag">&lt;/<span class="hljs-name">configuration</span>&gt;</span><br />            <span class="hljs-tag">&lt;/<span class="hljs-name">plugin</span>&gt;</span><br />        <span class="hljs-tag">&lt;/<span class="hljs-name">plugins</span>&gt;</span><br />    <span class="hljs-tag">&lt;/<span class="hljs-name">build</span>&gt;</span><br /><span class="hljs-tag">&lt;/<span class="hljs-name">project</span>&gt;</span><br /></code></pre>
+</span></div></div></div></div>
+<h2><a class="anchor" aria-hidden="true" id="3-define-source"></a><a href="#3-define-source" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>3. Define Source</h2>
+<p>Let's write a source which is capable of reading lines of text from
+a file. We will start with a simple, batch version:</p>
+<pre><code class="hljs css language-java"><span class="token keyword">package</span> <span class="token namespace">org<span class="token punctuation">.</span>example</span><span class="token punctuation">;</span>
+
+<span class="token keyword">import</span> <span class="token namespace">com<span class="token punctuation">.</span>hazelcast<span class="token punctuation">.</span>jet<span class="token punctuation">.</span>pipeline</span><span class="token punctuation">.</span><span class="token class-name">BatchSource</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token namespace">com<span class="token punctuation">.</span>hazelcast<span class="token punctuation">.</span>jet<span class="token punctuation">.</span>pipeline</span><span class="token punctuation">.</span><span class="token class-name">SourceBuilder</span><span class="token punctuation">;</span>
+
+<span class="token keyword">import</span> <span class="token namespace">java<span class="token punctuation">.</span>io</span><span class="token punctuation">.</span><span class="token class-name">BufferedReader</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token namespace">java<span class="token punctuation">.</span>io</span><span class="token punctuation">.</span><span class="token class-name">FileReader</span><span class="token punctuation">;</span>
+
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">Sources</span> <span class="token punctuation">{</span>
+
+    <span class="token keyword">static</span> <span class="token class-name">BatchSource</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">></span></span> <span class="token function">buildLineSource</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token keyword">return</span> <span class="token class-name">SourceBuilder</span>
+                <span class="token punctuation">.</span><span class="token function">batch</span><span class="token punctuation">(</span><span class="token string">"line-source"</span><span class="token punctuation">,</span> x <span class="token operator">-></span> <span class="token keyword">new</span> <span class="token class-name">BufferedReader</span><span class="token punctuation">(</span>
+                                                <span class="token keyword">new</span> <span class="token class-name">FileReader</span><span class="token punctuation">(</span><span class="token string">"lines.txt"</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+                <span class="token punctuation">.</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">></span></span><span class="token function">fillBufferFn</span><span class="token punctuation">(</span><span class="token punctuation">(</span>in<span class="token punctuation">,</span> buf<span class="token punctuation">)</span> <span class="token operator">-></span> <span class="token punctuation">{</span>
+                    <span class="token class-name">String</span> line <span class="token operator">=</span> in<span class="token punctuation">.</span><span class="token function">readLine</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+                    <span class="token keyword">if</span> <span class="token punctuation">(</span>line <span class="token operator">!=</span> <span class="token keyword">null</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+                        buf<span class="token punctuation">.</span><span class="token function">add</span><span class="token punctuation">(</span>line<span class="token punctuation">)</span><span class="token punctuation">;</span>
+                    <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token punctuation">{</span>
+                        buf<span class="token punctuation">.</span><span class="token function">close</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+                    <span class="token punctuation">}</span>
+                <span class="token punctuation">}</span><span class="token punctuation">)</span>
+                <span class="token punctuation">.</span><span class="token function">destroyFn</span><span class="token punctuation">(</span>buf <span class="token operator">-></span> buf<span class="token punctuation">.</span><span class="token function">close</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+                <span class="token punctuation">.</span><span class="token function">build</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+
+<span class="token punctuation">}</span>
+</code></pre>
+<h2><a class="anchor" aria-hidden="true" id="4-define-jet-job"></a><a href="#4-define-jet-job" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>4. Define Jet Job</h2>
+<p>The next thing we need to do is to write the Jet code that creates a
+pipeline and the job to be submitted for execution:</p>
+<pre><code class="hljs css language-java"><span class="token keyword">package</span> <span class="token namespace">org<span class="token punctuation">.</span>example</span><span class="token punctuation">;</span>
+
+<span class="token keyword">import</span> <span class="token namespace">com<span class="token punctuation">.</span>hazelcast<span class="token punctuation">.</span>jet</span><span class="token punctuation">.</span><span class="token class-name">Jet</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token namespace">com<span class="token punctuation">.</span>hazelcast<span class="token punctuation">.</span>jet<span class="token punctuation">.</span>config</span><span class="token punctuation">.</span><span class="token class-name">JobConfig</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token namespace">com<span class="token punctuation">.</span>hazelcast<span class="token punctuation">.</span>jet<span class="token punctuation">.</span>pipeline</span><span class="token punctuation">.</span><span class="token class-name">BatchSource</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token namespace">com<span class="token punctuation">.</span>hazelcast<span class="token punctuation">.</span>jet<span class="token punctuation">.</span>pipeline</span><span class="token punctuation">.</span><span class="token class-name">Pipeline</span><span class="token punctuation">;</span>
+
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">LineConsumer</span> <span class="token punctuation">{</span>
+
+    <span class="token keyword">public</span> <span class="token keyword">static</span> <span class="token keyword">void</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token class-name">String</span><span class="token punctuation">[</span><span class="token punctuation">]</span> args<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token class-name">BatchSource</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">></span></span> lineSource <span class="token operator">=</span> <span class="token class-name">Sources</span><span class="token punctuation">.</span><span class="token function">buildLineSource</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+        <span class="token class-name">Pipeline</span> p <span class="token operator">=</span> <span class="token class-name">Pipeline</span><span class="token punctuation">.</span><span class="token function">create</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        p<span class="token punctuation">.</span><span class="token function">readFrom</span><span class="token punctuation">(</span>lineSource<span class="token punctuation">)</span>
+                <span class="token punctuation">.</span><span class="token function">writeTo</span><span class="token punctuation">(</span>com<span class="token punctuation">.</span>hazelcast<span class="token punctuation">.</span>jet<span class="token punctuation">.</span>pipeline<span class="token punctuation">.</span><span class="token class-name">Sinks</span><span class="token punctuation">.</span><span class="token function">logger</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+        <span class="token class-name">JobConfig</span> cfg <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">JobConfig</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">setName</span><span class="token punctuation">(</span><span class="token string">"line-consumer"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token class-name">Jet</span><span class="token punctuation">.</span><span class="token function">bootstrappedInstance</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">newJob</span><span class="token punctuation">(</span>p<span class="token punctuation">,</span> cfg<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+
+<span class="token punctuation">}</span>
+</code></pre>
+<h2><a class="anchor" aria-hidden="true" id="5-package"></a><a href="#5-package" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>5. Package</h2>
+<p>Now that we have all the pieces, we need to submit it to Jet for
+execution. Since Jet runs on our machine as a standalone cluster in a
+standalone process we need to give it all the code that we have written.</p>
+<p>For this reason we create a jar containing everything we need. All we
+need to do is to run the build command:</p>
+<div class="tabs"><div class="nav-tabs"><div id="tab-group-53-tab-54" class="nav-link active" data-group="group_53" data-tab="tab-group-53-content-54">Gradle</div><div id="tab-group-53-tab-55" class="nav-link" data-group="group_53" data-tab="tab-group-53-content-55">Maven</div></div><div class="tab-content"><div id="tab-group-53-content-54" class="tab-pane active" data-group="group_53" tabindex="-1"><div><span><pre><code class="hljs css language-bash">gradle build<br /></code></pre>
+<p>This will produce a jar file called <code>custom-batch-source-tutorial-1.0-SNAPSHOT.jar</code>
+in the <code>build/libs</code> folder of our project.</p>
+</span></div></div><div id="tab-group-53-content-55" class="tab-pane" data-group="group_53" tabindex="-1"><div><span><pre><code class="hljs css language-bash">mvn package<br /></code></pre>
+<p>This will produce a jar file called <code>custom-batch-source-tutorial-1.0-SNAPSHOT.jar</code>
+in the <code>target</code> folder or our project.</p>
+</span></div></div></div></div>
+<h2><a class="anchor" aria-hidden="true" id="6-submit-for-execution"></a><a href="#6-submit-for-execution" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>6. Submit for Execution</h2>
+<p>Assuming our cluster is <a href="#1-start-hazelcast-jet">still running</a> all we
+need to issue is following command:</p>
+<div class="tabs"><div class="nav-tabs"><div id="tab-group-56-tab-57" class="nav-link active" data-group="group_56" data-tab="tab-group-56-content-57">Gradle</div><div id="tab-group-56-tab-58" class="nav-link" data-group="group_56" data-tab="tab-group-56-content-58">Maven</div></div><div class="tab-content"><div id="tab-group-56-content-57" class="tab-pane active" data-group="group_56" tabindex="-1"><div><span><pre><code class="hljs css language-bash">&lt;path_to_jet&gt;/bin/jet submit build/libs/custom-batch-source-tutorial-1.0-SNAPSHOT.jar<br /></code></pre>
+</span></div></div><div id="tab-group-56-content-58" class="tab-pane" data-group="group_56" tabindex="-1"><div><span><pre><code class="hljs css language-bash">&lt;path_to_jet&gt;/bin/jet submit target/custom-batch-source-tutorial-1.0-SNAPSHOT.jar<br /></code></pre>
+</span></div></div></div></div>
+<p>In the log of the Jet member we should see a message like this:</p>
+<pre><code class="hljs css language-text">...
+Start executing job 'line-consumer', execution 03fd-a4ec-bd40-0001, execution graph in DOT format:
+digraph DAG {
+    "line-source" [localParallelism=1];
+    "loggerSink" [localParallelism=1];
+    "line-source" -> "loggerSink" [queueSize=1024];
+}
+...
+</code></pre>
+<blockquote>
+<p>Note: we are assuming that we have a text file called <code>lines.txt</code> with
+lines in it present in the Jet members working directory.</p>
+</blockquote>
+<p>The output you get should contain logged versions of the lines from
+your <code>lines.txt</code> file. We had this (output produced by the custom sink
+we have defined in <a href="/docs/tutorials/custom-sink">another tutorial</a>):</p>
+<pre><code class="hljs css language-text">... 1583315484503,SimpleEvent(timestamp=11:51:24.500, sequence=52134)
+... 1583315484703,SimpleEvent(timestamp=11:51:24.700, sequence=52136)
+... 1583315484903,SimpleEvent(timestamp=11:51:24.900, sequence=52138)
+</code></pre>
+<h2><a class="anchor" aria-hidden="true" id="7-add-batching"></a><a href="#7-add-batching" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>7. Add Batching</h2>
+<p>Our source works, but it's not efficient, because it always just
+retrieves one line at a time. Optimally the <code>fillBufferFn</code> should fill
+the buffer with all the items it can acquire without blocking. As a
+rule of thumb 100 items at a time is enough to dwarf any per-call
+overheads within Jet.</p>
+<p>The function may block as well, if need be, but taking longer than a
+second to complete can have negative effects on the overall performance
+of the processing pipeline.</p>
+<p>To make it more efficient we could change our <code>fillBufferFn</code> like this:</p>
+<pre><code class="hljs css language-java"><span class="token keyword">package</span> <span class="token namespace">org<span class="token punctuation">.</span>example</span><span class="token punctuation">;</span>
+
+<span class="token keyword">import</span> <span class="token namespace">com<span class="token punctuation">.</span>hazelcast<span class="token punctuation">.</span>jet<span class="token punctuation">.</span>pipeline</span><span class="token punctuation">.</span><span class="token class-name">BatchSource</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token namespace">com<span class="token punctuation">.</span>hazelcast<span class="token punctuation">.</span>jet<span class="token punctuation">.</span>pipeline</span><span class="token punctuation">.</span><span class="token class-name">SourceBuilder</span><span class="token punctuation">;</span>
+
+<span class="token keyword">import</span> <span class="token namespace">java<span class="token punctuation">.</span>io</span><span class="token punctuation">.</span><span class="token class-name">BufferedReader</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token namespace">java<span class="token punctuation">.</span>io</span><span class="token punctuation">.</span><span class="token class-name">FileReader</span><span class="token punctuation">;</span>
+
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">Sources</span> <span class="token punctuation">{</span>
+
+    <span class="token keyword">static</span> <span class="token class-name">BatchSource</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">></span></span> <span class="token function">buildLineSource</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token keyword">return</span> <span class="token class-name">SourceBuilder</span>
+                <span class="token punctuation">.</span><span class="token function">batch</span><span class="token punctuation">(</span><span class="token string">"line-source"</span><span class="token punctuation">,</span> x <span class="token operator">-></span> <span class="token keyword">new</span> <span class="token class-name">BufferedReader</span><span class="token punctuation">(</span>
+                                                        <span class="token keyword">new</span> <span class="token class-name">FileReader</span><span class="token punctuation">(</span><span class="token string">"lines.txt"</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+                <span class="token punctuation">.</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">></span></span><span class="token function">fillBufferFn</span><span class="token punctuation">(</span><span class="token punctuation">(</span>in<span class="token punctuation">,</span> buf<span class="token punctuation">)</span> <span class="token operator">-></span> <span class="token punctuation">{</span>
+                    <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">int</span> i <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> i <span class="token operator">&lt;</span> <span class="token number">128</span><span class="token punctuation">;</span> i<span class="token operator">++</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+                        <span class="token class-name">String</span> line <span class="token operator">=</span> in<span class="token punctuation">.</span><span class="token function">readLine</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+                        <span class="token keyword">if</span> <span class="token punctuation">(</span>line <span class="token operator">==</span> <span class="token keyword">null</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+                            buf<span class="token punctuation">.</span><span class="token function">close</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+                            <span class="token keyword">return</span><span class="token punctuation">;</span>
+                        <span class="token punctuation">}</span>
+                        buf<span class="token punctuation">.</span><span class="token function">add</span><span class="token punctuation">(</span>line<span class="token punctuation">)</span><span class="token punctuation">;</span>
+                    <span class="token punctuation">}</span>
+                <span class="token punctuation">}</span><span class="token punctuation">)</span>
+                <span class="token punctuation">.</span><span class="token function">destroyFn</span><span class="token punctuation">(</span>buf <span class="token operator">-></span> buf<span class="token punctuation">.</span><span class="token function">close</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+                <span class="token punctuation">.</span><span class="token function">build</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+
+<span class="token punctuation">}</span>
+</code></pre>
+<p>Like with the sink, these changes will not produce visible effects in
+the behaviour of our source, but they will make it much more efficient.
+Benchmarking that however is a bit beyond the scope of this tutorial.</p>
+</span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/docs/tutorials/custom-sink"><span class="arrow-prev">← </span><span>Custom Sinks</span></a><a class="docs-next button" href="/docs/tutorials/custom-stream-source"><span>Custom Stream Sources</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#1-start-hazelcast-jet">1. Start Hazelcast Jet</a></li><li><a href="#2-create-a-new-java-project">2. Create a New Java Project</a></li><li><a href="#3-define-source">3. Define Source</a></li><li><a href="#4-define-jet-job">4. Define Jet Job</a></li><li><a href="#5-package">5. Package</a></li><li><a href="#6-submit-for-execution">6. Submit for Execution</a></li><li><a href="#7-add-batching">7. Add Batching</a></li></ul></nav></div><footer class="nav-footer" id="footer"><section class="sitemap"><a href="/" class="nav-home"><img src="/img/logo-light.svg" alt="Hazelcast Jet" width="200" height="40"/></a><div><h5>Docs</h5><a href="/docs/get-started/intro">Get Started</a><a href="/docs/concepts/dag">Concepts and Architecture</a><a href="/docs/tutorials/kafka">Tutorials</a><a href="/docs/operations/configuration">Operations Guide</a></div><div><h5>Community</h5><a href="https://groups.google.com/forum/#!forum/hazelcast-jet" target="_blank" rel="noreferrer noopener">Google Groups</a><a href="http://stackoverflow.com/questions/tagged/hazelcast-jet" target="_blank" rel="noreferrer noopener">Stack Overflow</a><a href="https://gitter.im/hazelcast/hazelcast-jet">Gitter Chat</a></div><div><h5>Latest From the Blog</h5><a href="/blog/2020/03/02/jet-40-is-released">Jet 4.0 is Released</a><a href="/blog/2020/02/20/transactional-processors">Transactional connectors in Hazelcast Jet</a><a href="/blog/2020/01/28/new-website">Announcing New Documentation Website</a><a href="/blog/2019/11/12/stream-deduplication">Stream Deduplication with Hazelcast Jet</a></div><div><h5>More</h5><a href="https://github.com/hazelcast/hazelcast-jet">GitHub Project</a><a href="https://github.com/hazelcast/hazelcast-jet/issues">Issue Tracker</a><a href="http://hazelcast.com/company/careers/">Work at Hazelcast</a><a class="github-button" href="https://github.com/hazelcast/hazelcast-jet" data-icon="octicon-star" data-count-href="/facebook/docusaurus/stargazers" data-show-count="true" data-count-aria-label="# stargazers on GitHub" aria-label="Star this project on GitHub">Star</a></div></section><section class="copyright">Copyright © 2020 Hazelcast Inc.</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
+                document.addEventListener('keyup', function(e) {
+                  if (e.target !== document.body) {
+                    return;
+                  }
+                  // keyCode for '/' (slash)
+                  if (e.keyCode === 191) {
+                    const search = document.getElementById('search_input_react');
+                    search && search.focus();
+                  }
+                });
+              </script><script>
+              var search = docsearch({
+                
+                apiKey: '79d1e4941621b9fd761d279d4d19ed69',
+                indexName: 'hazelcast-jet',
+                inputSelector: '#search_input_react',
+                algoliaOptions: {}
+              });
+            </script></body></html>
