@@ -256,8 +256,9 @@ on `ICache`.
 builds a strongly consistent layer inside Hazelcast Jet which can be
 used for distributed coordination use cases, such as distributed locking
 and synchronization. The CP subsystem is based on a full RAFT
-implementation and requires a minimum of 3 nodes to run (though it can
-be run with a single node in _unsafe_ mode).
+implementation and requires a minimum of 3 nodes to run and needs to be
+explicitly enabled (though it can be run with a single node in _unsafe_
+mode).
 
 The currently supported primitives are:
 
