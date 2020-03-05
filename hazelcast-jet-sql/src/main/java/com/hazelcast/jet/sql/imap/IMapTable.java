@@ -64,7 +64,7 @@ public class IMapTable extends JetTable {
 
     @Override
     public RelDataType getRowType(RelDataTypeFactory typeFactory) {
-        throw new UnsupportedOperationException("TODO"); // TODO ??
+        return new IMapTableRelDataType(columns);
     }
 
     @Override
