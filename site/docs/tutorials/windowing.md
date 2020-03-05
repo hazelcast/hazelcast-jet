@@ -28,7 +28,7 @@ sure that your stream has timestamps.
 
 As we have seen in the [Building Pipelines](../api/pipeline.md) section
 you can obtain a
-[SourceStreamStage](https://docs.hazelcast.org/docs/jet/latest-dev/javadoc/com/hazelcast/jet/pipeline/StreamSourceStage.html)
+[SourceStreamStage](https://docs.hazelcast.org/docs/jet/4.0/javadoc/com/hazelcast/jet/pipeline/StreamSourceStage.html)
 with a call like `pipeline.drawFrom(someStreamSource)`.
 
 `SourceStreamStage` in turn offers various methods to assign
@@ -49,7 +49,7 @@ intend to do any aggregation), or to use any arbitrary function to
 extract a timestamp from the events. We can also specify an
 "allowed lag" after which late events will be discarded. For further
 details consult the
-[javadoc](https://docs.hazelcast.org/docs/jet/latest-dev/javadoc/com/hazelcast/jet/pipeline/StreamSourceStage.html)
+[javadoc](https://docs.hazelcast.org/docs/jet/4.0/javadoc/com/hazelcast/jet/pipeline/StreamSourceStage.html)
 .
 
 ## Specify the Window
@@ -99,7 +99,7 @@ windowedTweets
 
 The `aggregate` operation we have called here is in fact the one defined
 in
-[StageWithKeyAndWindow](https://docs.hazelcast.org/docs/jet/latest-dev/javadoc/com/hazelcast/jet/pipeline/StageWithKeyAndWindow.html#aggregate-com.hazelcast.jet.aggregate.AggregateOperation1-)
+[StageWithKeyAndWindow](https://docs.hazelcast.org/docs/jet/4.0/javadoc/com/hazelcast/jet/pipeline/StageWithKeyAndWindow.html#aggregate-com.hazelcast.jet.aggregate.AggregateOperation1-)
 . As windows become completed it emits `KeyedWindowResult` objects
 containing the result of the aggregate operation (on the input items
 that belong to the particular window) and the timestamp denoting the
@@ -142,6 +142,6 @@ StageWithWindow<Tweet> windowedTweets = tweets
 ```
 
 The `KeyedWindowResult` objects we will get also have an
-[isEarly()](https://docs.hazelcast.org/docs/jet/latest-dev/javadoc/com/hazelcast/jet/datamodel/WindowResult.html#isEarly--)
+[isEarly()](https://docs.hazelcast.org/docs/jet/4.0/javadoc/com/hazelcast/jet/datamodel/WindowResult.html#isEarly--)
 property which can be used to distinguish between early and final
 results.

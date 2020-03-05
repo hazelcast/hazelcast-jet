@@ -207,7 +207,7 @@ Below you can see an example Jet Pipeline, which:
 * formats them into JSON strings
 * deserializes the JSON strings into `Customer` objects (simple POJOs)
 * stores the latest `Customer` object for each customer ID in an
-  [IMap](https://docs.hazelcast.org/docs/latest-dev/javadoc/com/hazelcast/map/IMap.html)
+  [IMap](https://docs.hazelcast.org/docs/4.0/javadoc/com/hazelcast/map/IMap.html)
 
 ```java
 Pipeline pipeline = Pipeline.create();

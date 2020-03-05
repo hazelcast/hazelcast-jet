@@ -24,9 +24,9 @@ called _compute stages_ and expect you to attach further stages to them.
 
 The API differentiates between batch (bounded) and stream (unbounded)
 sources and this is reflected in the naming: there is a
-[BatchStage](https://docs.hazelcast.org/docs/jet/latest-dev/javadoc/com/hazelcast/jet/pipeline/BatchStage.html)
+[BatchStage](https://docs.hazelcast.org/docs/jet/4.0/javadoc/com/hazelcast/jet/pipeline/BatchStage.html)
 and a
-[StreamStage](https://docs.hazelcast.org/docs/jet/latest-dev/javadoc/com/hazelcast/jet/pipeline/StreamStage.html)
+[StreamStage](https://docs.hazelcast.org/docs/jet/4.0/javadoc/com/hazelcast/jet/pipeline/StreamStage.html)
 , each offering the operations appropriate to its kind.
 Depending on the data source, your pipeline will end up starting with a
 batch or streaming stage. It's possible to convert a batch stage by

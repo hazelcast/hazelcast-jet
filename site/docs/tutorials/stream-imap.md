@@ -2,7 +2,7 @@
 title: Stream Changes from IMap
 ---
 
-[IMap](https://docs.hazelcast.org/docs/latest-dev/javadoc/com/hazelcast/map/IMap.html)
+[IMap](https://docs.hazelcast.org/docs/4.0/javadoc/com/hazelcast/map/IMap.html)
 is the distributed data structure underlying Hazelcast. For Jet it's
 also the most popular data source and sink.
 
@@ -104,4 +104,4 @@ additions or updates in the underlying `IMap`.
 If we care about deletions too, or we want to differentiate between
 updates and additions, then there are further variants of this
 Pipeline API method, which can be used. For details consult the
-[javadoc](https://docs.hazelcast.org/docs/jet/latest-dev/javadoc/com/hazelcast/jet/pipeline/Sources.html#mapJournal-java.lang.String-com.hazelcast.jet.pipeline.JournalInitialPosition-com.hazelcast.function.FunctionEx-com.hazelcast.function.PredicateEx-).
+[javadoc](https://docs.hazelcast.org/docs/jet/4.0/javadoc/com/hazelcast/jet/pipeline/Sources.html#mapJournal-java.lang.String-com.hazelcast.jet.pipeline.JournalInitialPosition-com.hazelcast.function.FunctionEx-com.hazelcast.function.PredicateEx-).
