@@ -792,7 +792,7 @@ public final class TestSupport {
 
     private void initProcessor(Processor processor, TestOutbox outbox) {
         SerializationService serializationService;
-        if (jetInstance != null) {
+        if (jetInstance != null && jetInstance.getHazelcastInstance() instanceof SerializationServiceSupport) {
             SerializationServiceSupport impl = (SerializationServiceSupport) jetInstance.getHazelcastInstance();
             serializationService = impl.getSerializationService();
         } else {
