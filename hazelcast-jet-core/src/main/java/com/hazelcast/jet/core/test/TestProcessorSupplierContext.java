@@ -67,7 +67,7 @@ public class TestProcessorSupplierContext
     }
 
     @Nonnull @Override
-    public TestProcessorSupplierContext setProcessingGuarantee(ProcessingGuarantee processingGuarantee) {
+    public TestProcessorSupplierContext setProcessingGuarantee(@Nonnull ProcessingGuarantee processingGuarantee) {
         return (TestProcessorSupplierContext) super.setProcessingGuarantee(processingGuarantee);
     }
 
@@ -119,7 +119,7 @@ public class TestProcessorSupplierContext
      * Sets the {@link ManagedContext}
      */
     @Nonnull
-    public TestProcessorSupplierContext setManagedContext(ManagedContext managedContext) {
+    public TestProcessorSupplierContext setManagedContext(@Nonnull ManagedContext managedContext) {
         this.managedContext = managedContext;
         return this;
     }
