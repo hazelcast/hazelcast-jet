@@ -68,9 +68,9 @@ transactionally.
 
 #### File Watcher
 
-File watcher is a streaming file source, where only the new files,
-appended or changed lines are emitted. It expects that files are updated
-in append-only fashion.
+File watcher is a streaming file source, where only the new files or
+appended lines are emitted. If the files are modified in more complex
+ways, the behavior is undefined.
 
 ```java
 Pipeline p = Pipeline.create();
