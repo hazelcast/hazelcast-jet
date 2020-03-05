@@ -3,9 +3,14 @@ title: Fault Tolerance
 description: Fault tolerance guarantees and options provided by Jet.
 ---
 
+Hazelcast Jet doesn't delegate its cluster management and fault
+tolerance concerns to an outside system like ZooKeeper. This comes from
+the fact that it's built on top of Hazelcast IMDG, which has already
+dealt with these concerns.
+
 Jet keeps processing data without loss or duplication even if a node
-fails, so it’s easy to build fault-tolerant data processing pipelines.
-It uses a combination of several approaches to increase the resilience.
+fails so it’s easy to build fault-tolerant data processing pipelines.
+It uses a combination of several approaches to improve resilience.
 
 ## Consistency
 
@@ -33,18 +38,14 @@ snapshot.
 
 ### In-Memory Snapshot Storage
 
-Hazelcast Jet stores the snapshots in an
-[IMap](architecture/in-memory-storage.md) and does not have any external
-dependency to an outside system. Data residing in the IMap are
-replicated across the cluster to tolerate member failures. If a cluster
-member fails, Jet uses the backup of the data that the member owned. Jet
-also rebalances the snapshot data to keep the desired number of
-replicas.
-
-By default, Jet will make a single backup copy resulting in a system
-that tolerates the failure of a single member at a time. You can tweak
-this setting when starting Jet, for example increase the backup count to
-two:
+Jet backs up the state to its own `IMap` objects. `IMap` is a replicated
+in-memory data structure, storing each key-value pair on a configurable
+number of cluster members. By default it makes a single backup copy,
+resulting in a system that tolerates the failure of a single member at a
+time. The cluster recovers its safety level by re-establishing all the
+missing backups, and when this is done, another node can fail without
+data loss. You can set the backup count in the configuration, for
+example:
 
 ```yaml
 hazelcast-jet:
@@ -52,11 +53,9 @@ hazelcast-jet:
     backup-count: 2
 ```
 
-Note: if multiple members are lost simultaneously, some data from the
-backing IMaps can be lost. This is not currently checked and the job
-will restart with some state data from the snapshot missing, or it might
-fail if classpath resources were added and are missing. We plan to
-address this in future releases.
+If multiple members fail simultaneously, some data from the backing
+`IMap`s can be lost. Jet detects this by counting the entries in the
+snapshot `IMap` and it won't run a job with missing data.
 
 ## Split-Brain Protection
 
