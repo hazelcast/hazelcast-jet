@@ -17,18 +17,22 @@
 package com.hazelcast.jet.sql.imap;
 
 import com.hazelcast.sql.impl.type.DataType;
+import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
+import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.rel.type.RelDataTypeImpl;
 
 import java.util.List;
 import java.util.Map;
 
+import static com.hazelcast.jet.impl.util.Util.toList;
+
 public class IMapTableRelDataType extends RelDataTypeImpl {
 
     private static final String TYPE_NAME = "IMapRow";
 
-    public IMapTableRelDataType(Map<String, DataType> columns) {
-        super(createFieldList(columns));
+    public IMapTableRelDataType(RelDataTypeFactory typeFactory, Map<String, DataType> columns) {
+        super(createFieldList(typeFactory, columns));
     }
 
     @Override
@@ -36,7 +40,10 @@ public class IMapTableRelDataType extends RelDataTypeImpl {
         sb.append("(").append(TYPE_NAME).append(getFieldNames()).append(")");
     }
 
-    private static List<RelDataTypeField> createFieldList(Map<String, DataType> columns) {
-        throw new UnsupportedOperationException("TODO");
+    private static List<RelDataTypeField> createFieldList(RelDataTypeFactory typeFactory, Map<String, DataType> columns) {
+        return toList(columns.entrySet(),
+                column -> {
+                    typeFactory.
+                });
     }
 }
