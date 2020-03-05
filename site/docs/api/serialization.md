@@ -157,10 +157,10 @@ types:
 
 - [java.io.Serializable](https://docs.oracle.com/javase/8/docs/api/java/io/Serializable.html)
 - [java.io.Externalizable](https://docs.oracle.com/javase/8/docs/api/java/io/Externalizable.html)
-- [com.hazelcast.nio.serialization.Portable](https://docs.hazelcast.org/docs/latest/javadoc/com/hazelcast/nio/serialization/Portable.html)
-- [com.hazelcast.nio.serialization.StreamSerializer](https://docs.hazelcast.org/docs/latest/javadoc/com/hazelcast/nio/serialization/StreamSerializer.html)
+- [com.hazelcast.nio.serialization.Portable](https://docs.hazelcast.org/docs/4.0/javadoc/com/hazelcast/nio/serialization/Portable.html)
+- [com.hazelcast.nio.serialization.StreamSerializer](https://docs.hazelcast.org/docs/4.0/javadoc/com/hazelcast/nio/serialization/StreamSerializer.html)
   &
-  [com.hazelcast.nio.serialization.ByteArraySerializer](https://docs.hazelcast.org/docs/latest/javadoc/com/hazelcast/nio/serialization/ByteArraySerializer.html)
+  [com.hazelcast.nio.serialization.ByteArraySerializer](https://docs.hazelcast.org/docs/4.0/javadoc/com/hazelcast/nio/serialization/ByteArraySerializer.html)
 
 The following table provides a comparison between them to help you in
 deciding which interface to use in your applications.
@@ -217,9 +217,9 @@ not to mention very wasteful of memory usage.
 ### Sample Serializer implementation
 
 For best performance we recommend using
-[com.hazelcast.nio.serialization.StreamSerializer](https://docs.hazelcast.org/docs/latest/javadoc/com/hazelcast/nio/serialization/StreamSerializer.html)
+[com.hazelcast.nio.serialization.StreamSerializer](https://docs.hazelcast.org/docs/4.0/javadoc/com/hazelcast/nio/serialization/StreamSerializer.html)
 or
-[com.hazelcast.nio.serialization.ByteArraySerializer](https://docs.hazelcast.org/docs/latest/javadoc/com/hazelcast/nio/serialization/ByteArraySerializer.html).
+[com.hazelcast.nio.serialization.ByteArraySerializer](https://docs.hazelcast.org/docs/4.0/javadoc/com/hazelcast/nio/serialization/ByteArraySerializer.html).
 Below you can find a sample implementation of `StreamSerializer` for
 `Person` (mind the type id which should be unique across all serializers):
 
