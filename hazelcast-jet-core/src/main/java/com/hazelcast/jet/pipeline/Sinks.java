@@ -958,7 +958,8 @@ public final class Sinks {
      * correctly. We run our stress tests with RabbitMQ and ActiveMQ. The most
      * common flaw is that a prepared transaction is rolled back if the client
      * disconnects. To check your broker, you can run the code in <a
-     * href="https://github.com/hazelcast/hazelcast-jet-contrib/xa-tests">https://github.com/hazelcast/hazelcast-jet-contrib/xa-tests</a>
+     * href="https://github.com/hazelcast/hazelcast-jet-contrib/xa-test">
+     * https://github.com/hazelcast/hazelcast-jet-contrib/xa-test</a>
      * <p>
      * <b>Notes</b>
      * <p>
@@ -1030,7 +1031,8 @@ public final class Sinks {
      * correctly. We run our stress tests with RabbitMQ and ActiveMQ. The most
      * common flaw is that a prepared transaction is rolled back if the client
      * disconnects. To check your broker, you can run the code in <a
-     * href="https://github.com/hazelcast/hazelcast-jet-contrib/xa-tests">https://github.com/hazelcast/hazelcast-jet-contrib/xa-tests</a>
+     * href="https://github.com/hazelcast/hazelcast-jet-contrib/xa-test">
+     * https://github.com/hazelcast/hazelcast-jet-contrib/xa-test</a>
      * <p>
      * <b>Notes</b>
      * <p>
@@ -1151,7 +1153,8 @@ public final class Sinks {
      *  correctly. We run our stress tests with PostgreSQL. The most common
      *  flaw is that a prepared transaction is rolled back if the client
      *  disconnects. To check your database, you can run the code in <a
-     *  href="https://github.com/hazelcast/hazelcast-jet-contrib/xa-tests">https://github.com/hazelcast/hazelcast-jet-contrib/xa-tests</a>
+     *  href="https://github.com/hazelcast/hazelcast-jet-contrib/xa-test">
+     *  https://github.com/hazelcast/hazelcast-jet-contrib/xa-test</a>
      * <p>
      * <b>Notes</b>
      * <p>
