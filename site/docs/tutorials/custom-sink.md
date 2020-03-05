@@ -9,18 +9,17 @@ guide we have seen some basic examples of user-defined sources and
 sinks. Let us now examine more examples which cover some of the
 trickier aspects of writing our own sinks.
 
-Let's write a sink that functions a bit like a **file logger**. You
-set it up with a filename and it will write one line for each
-input it gets into that file. The lines will be composed of a
-**timestamp**, a floating point number providing us with the machine's
-**CPU usage** at the time of writing and then the **`toString()`** form
-of whatever input object produced the line. Here's a sample:
+Let's write a sink that functions like a **file logger**. You set it up
+with a filename and it will write one line for each input it gets into
+that file. The lines will be composed of a **timestamp** and then the
+**`toString()`** form of whatever input object produced the line.
+Here's a sample:
 
 ```text
-1583309377078,0.502024,SimpleEvent(timestamp=10:09:37.000, sequence=2900)
-1583309377177,0.502024,SimpleEvent(timestamp=10:09:37.100, sequence=2901)
-1583309377277,0.502024,SimpleEvent(timestamp=10:09:37.200, sequence=2902)
-1583309377376,0.502024,SimpleEvent(timestamp=10:09:37.300, sequence=2903)
+1583309377078,SimpleEvent(timestamp=10:09:37.000, sequence=2900)
+1583309377177,SimpleEvent(timestamp=10:09:37.100, sequence=2901)
+1583309377277,SimpleEvent(timestamp=10:09:37.200, sequence=2902)
+1583309377376,SimpleEvent(timestamp=10:09:37.300, sequence=2903)
 ```
 
 ## 1. Start Hazelcast Jet
@@ -76,15 +75,10 @@ version '1.0-SNAPSHOT'
 repositories.mavenCentral()
 
 dependencies {
-    compileOnly 'com.hazelcast.jet:hazelcast-jet:4.0'
-    compile 'com.danielflower.apprunner:javasysmon:0.3.5.1'
+    compile 'com.hazelcast.jet:hazelcast-jet:4.0'
 }
 
-jar {
-    from {
-        configurations.compile.collect { it.isDirectory() ? it : zipTree(it) }
-    }
-}
+jar.manifest.attributes 'Main-Class': 'org.example.LogProducer'
 ```
 
 <!--Maven-->
@@ -109,34 +103,21 @@ jar {
             <groupId>com.hazelcast.jet</groupId>
             <artifactId>hazelcast-jet</artifactId>
             <version>4.0</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.danielflower.apprunner</groupId>
-            <artifactId>javasysmon</artifactId>
-            <version>0.3.5.1</version>
         </dependency>
     </dependencies>
 
     <build>
         <plugins>
             <plugin>
-                <artifactId>maven-assembly-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <id>distro-assembly</id>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>single</goal>
-                        </goals>
-                        <configuration>
-                            <descriptorRefs>
-                                <descriptorRef>jar-with-dependencies</descriptorRef>
-                            </descriptorRefs>
-                            <tarLongFileMode>posix</tarLongFileMode>
-                        </configuration>
-                    </execution>
-                </executions>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <configuration>
+                    <archive>
+                        <manifest>
+                            <mainClass>org.example.LogProducer</mainClass>
+                        </manifest>
+                    </archive>
+                </configuration>
             </plugin>
         </plugins>
     </build>
@@ -145,89 +126,9 @@ jar {
 
 <!--END_DOCUSAURUS_CODE_TABS-->
 
-## 3. Define Helper Classes
+## 3. Define Sink
 
-One thing we'll need is code for obtaining CPU usage. We will use
-[JavaSysMon](https://github.com/jezhumble/javasysmon), that's why we
-have included it as a dependency [in our project](#2-create-a-new-java-project).
-
-Let's add following class to our project:
-
-```java
-package org.example;
-
-import com.jezhumble.javasysmon.CpuTimes;
-import com.jezhumble.javasysmon.JavaSysMon;
-
-import java.util.concurrent.TimeUnit;
-
-class CpuMonitor {
-
-    public static final long REFERENCE_REFRESH_PERIOD = TimeUnit.SECONDS.toMillis(1);
-
-    private JavaSysMon sysMon = new JavaSysMon();
-    private long prevTimeOrigin = System.currentTimeMillis();
-    private CpuTimes prevTimes = sysMon.cpuTimes();
-
-    float getCpuUsage() {
-        CpuTimes cpuTimes = sysMon.cpuTimes();
-        float usage = cpuTimes.getCpuUsage(prevTimes);
-        updatePrevTimes(cpuTimes);
-        return usage;
-    }
-
-    private void updatePrevTimes(CpuTimes cpuTimes) {
-        long currentTime = System.currentTimeMillis();
-        if (currentTime > prevTimeOrigin + REFERENCE_REFRESH_PERIOD) {
-            prevTimeOrigin = currentTime;
-            prevTimes = cpuTimes;
-        }
-    }
-}
-```
-
-We will also need a **context** object to hold the entities we need in
-our sink, the `CpuMonitor` and the file-based `PrintWriter`:
-
-```java
-package org.example;
-
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.PrintWriter;
-
-class Context {
-
-    private PrintWriter printWriter;
-    private CpuMonitor cpuMonitor = new CpuMonitor();
-
-    public Context(String fileName) {
-        try {
-            this.printWriter = new PrintWriter(new FileWriter(fileName));
-        } catch (IOException e) {
-            throw new RuntimeException(e.getMessage(), e);
-        }
-    }
-
-    void write(Object item) {
-        String line = String.format("%d,%f,%s",
-                System.currentTimeMillis(), cpuMonitor.getCpuUsage(), item.toString());
-        printWriter.println(line);
-        printWriter.flush();
-    }
-
-    void destroy() {
-        printWriter.close();
-        printWriter = null;
-
-        cpuMonitor = null;
-    }
-}
-```
-
-## 4. Define Sink
-
-Now that we have all the helper code ready we can write our actual sink:
+Let us now write our actual sink.
 
 ```java
 package org.example;
@@ -235,21 +136,25 @@ package org.example;
 import com.hazelcast.jet.pipeline.Sink;
 import com.hazelcast.jet.pipeline.SinkBuilder;
 
+import java.io.PrintWriter;
+
 class Sinks {
 
-    static Sink<Object> buildCpuLogSink() {
+    static Sink<Object> buildLogSink() {
         return SinkBuilder.sinkBuilder(
-                "cpu-sink", pctx -> new Context(
-                                "data." + pctx.globalProcessorIndex() + ".csv"))
-                .receiveFn((ctx, item) -> ctx.write(item))
-                .destroyFn(ctx -> ctx.destroy())
+                "cpu-sink", pctx -> new PrintWriter("data." + pctx.globalProcessorIndex() + ".csv"))
+                .receiveFn((writer, item) -> {
+                    writer.println(String.format("%d,%s", System.currentTimeMillis(), item.toString()));
+                    writer.flush();
+                })
+                .destroyFn(writer -> writer.close())
                 .build();
     }
 
 }
 ```
 
-## 5. Define Jet Job
+## 4. Define Jet Job
 
 The next thing we need to do is to write the Jet code that creates a
 pipeline and the job to be submitted for execution:
@@ -263,29 +168,28 @@ import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sink;
 import com.hazelcast.jet.pipeline.test.TestSources;
 
-public class CpuLogProducer {
+public class LogProducer {
 
     public static void main(String[] args) {
-        Sink<Object> cpuSink = Sinks.buildCpuLogSink();
+        Sink<Object> cpuSink = Sinks.buildLogSink();
 
         Pipeline p = Pipeline.create();
         p.readFrom(TestSources.itemStream(10))
                 .withoutTimestamps()
                 .writeTo(cpuSink);
 
-        JobConfig cfg = new JobConfig().setName("cpu-log-producer");
+        JobConfig cfg = new JobConfig().setName("log-producer");
         Jet.bootstrappedInstance().newJob(p, cfg);
     }
 
 }
 ```
 
-## 6. Package
+## 5. Package
 
 Now that we have all the pieces, we need to submit it to Jet for
 execution. Since Jet runs on our machine as a standalone cluster in a
-standalone process we need to give it all the code that we have written
-and used.
+standalone process we need to give it all the code that we have written.
 
 For this reason we create a fat jar containing everything we need. All
 we need to do is to run the build command:
@@ -307,17 +211,12 @@ in the `build/libs` folder of our project.
 mvn package
 ```
 
-This will produce a jar file called `custom-sink-tutorial-1.0-SNAPSHOT-jar-with-dependencies.jar`
+This will produce a jar file called `custom-sink-tutorial-1.0-SNAPSHOT.jar`
 in the `target` folder or our project.
 
 <!--END_DOCUSAURUS_CODE_TABS-->
 
-We should check that it contains:
-
-* the `org.example` classes we have written
-* the `com.jezhumble.javasysmon` classes we have as a dependency
-
-## 7. Submit for Execution
+## 6. Submit for Execution
 
 Assuming our cluster is [still running](#1-start-hazelcast-jet) all we
 need to issue is following command:
@@ -327,17 +226,13 @@ need to issue is following command:
 <!--Gradle-->
 
 ```bash
-<path_to_jet>/bin/jet submit \
-    --class org.example.CpuLogProducer \
-    build/libs/custom-sink-tutorial-1.0-SNAPSHOT.jar
+<path_to_jet>/bin/jet submit build/libs/custom-sink-tutorial-1.0-SNAPSHOT.jar
 ```
 
 <!--Maven-->
 
 ```bash
-<path_to_jet>/bin/jet submit \
-    --class org.example.CpuLogProducer \
-    target/custom-sink-tutorial-1.0-SNAPSHOT-jar-with-dependencies.jar
+<path_to_jet>/bin/jet submit target/custom-sink-tutorial-1.0-SNAPSHOT.jar
 ```
 
 <!--END_DOCUSAURUS_CODE_TABS-->
@@ -346,7 +241,7 @@ In the log of the Jet member we should see a message like this:
 
 ```text
 ...
-Start executing job 'cpu-log-producer', execution 03fd-63b4-4700-0001, execution graph in DOT format:
+Start executing job 'log-producer', execution 03fd-63b4-4700-0001, execution graph in DOT format:
 digraph DAG {
     "itemStream" [localParallelism=1];
     "cpu-sink" [localParallelism=1];
@@ -361,10 +256,10 @@ more each second):
 
 ```text
 ...
-1583309377078,0.502024,SimpleEvent(timestamp=10:09:37.000, sequence=2900)
-1583309377177,0.502024,SimpleEvent(timestamp=10:09:37.100, sequence=2901)
-1583309377277,0.502024,SimpleEvent(timestamp=10:09:37.200, sequence=2902)
-1583309377376,0.502024,SimpleEvent(timestamp=10:09:37.300, sequence=2903)
+1583309377078,SimpleEvent(timestamp=10:09:37.000, sequence=2900)
+1583309377177,SimpleEvent(timestamp=10:09:37.100, sequence=2901)
+1583309377277,SimpleEvent(timestamp=10:09:37.200, sequence=2902)
+1583309377376,SimpleEvent(timestamp=10:09:37.300, sequence=2903)
 ...
 ```
 
@@ -377,50 +272,8 @@ to make it more efficient. Jet allows us to make buffering a first-class
 concern and deal with it explicitly by taking an optional `flushFn`
 which it will call at regular intervals.
 
-To apply this to our example we need to update our `Context` class (
-`printWriter.flush()` moves into a separate method):
-
-```java
-package org.example;
-
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.PrintWriter;
-
-class Context {
-
-    private PrintWriter printWriter;
-    private CpuMonitor cpuMonitor = new CpuMonitor();
-
-    public Context(String fileName) {
-        try {
-            this.printWriter = new PrintWriter(new FileWriter(fileName));
-        } catch (IOException e) {
-            throw new RuntimeException(e.getMessage(), e);
-        }
-    }
-
-    void write(Object item) {
-        String line = String.format("%d,%f,%s", System.currentTimeMillis(),
-                cpuMonitor.getCpuUsage(), item.toString());
-        printWriter.println(line);
-    }
-
-    void flush() {
-        printWriter.flush();
-    }
-
-    void destroy() {
-        printWriter.close();
-        printWriter = null;
-
-        cpuMonitor = null;
-    }
-}
-```
-
-Our sink definition also needs to change, we need to specify that the
-newly added method should be used as the `flushFn` of the sink:
+To apply this to our example we need to update our sink definition like
+this:
 
 ```java
 package org.example;
@@ -428,14 +281,18 @@ package org.example;
 import com.hazelcast.jet.pipeline.Sink;
 import com.hazelcast.jet.pipeline.SinkBuilder;
 
+import java.io.PrintWriter;
+
 class Sinks {
 
-    static Sink<Object> buildCpuLogSink() {
+    static Sink<Object> buildLogSink() {
         return SinkBuilder.sinkBuilder(
-                "cpu-sink", pctx -> new Context("data." + pctx.globalProcessorIndex() + ".csv"))
-                .receiveFn((ctx, item) -> ctx.write(item))
-                .flushFn(ctx -> ctx.flush())
-                .destroyFn(ctx -> ctx.destroy())
+                "cpu-sink", pctx -> new PrintWriter("data." + pctx.globalProcessorIndex() + ".csv"))
+                .receiveFn((writer, item) -> {
+                    writer.println(String.format("%d,%s", System.currentTimeMillis(), item.toString()));
+                })
+                .flushFn(writer -> writer.flush())
+                .destroyFn(writer -> writer.close())
                 .build();
     }
 
@@ -465,14 +322,18 @@ package org.example;
 import com.hazelcast.jet.pipeline.Sink;
 import com.hazelcast.jet.pipeline.SinkBuilder;
 
+import java.io.PrintWriter;
+
 class Sinks {
 
-    static Sink<Object> buildCpuLogSink() {
+    static Sink<Object> buildLogSink() {
         return SinkBuilder.sinkBuilder(
-                "cpu-sink", pctx -> new Context("data." + pctx.globalProcessorIndex() + ".csv"))
-                .receiveFn((ctx, item) -> ctx.write(item))
-                .flushFn(ctx -> ctx.flush())
-                .destroyFn(ctx -> ctx.destroy())
+                "cpu-sink", pctx -> new PrintWriter("data." + pctx.globalProcessorIndex() + ".csv"))
+                .receiveFn((writer, item) -> {
+                    writer.println(String.format("%d,%s", System.currentTimeMillis(), item.toString()));
+                })
+                .flushFn(writer -> writer.flush())
+                .destroyFn(writer -> writer.close())
                 .preferredLocalParallelism(2)
                 .build();
     }
@@ -480,8 +341,14 @@ class Sinks {
 }
 ```
 
-Now let's [repackage](#6-package) our updated code and
-[submit it for execution](#7-submit-for-execution) just as before.
+Now let's [repackage](#5-package) our updated code just as before.
+
+Before we [re-submit it for execution](#6-submit-for-execution), just
+like before we might want to cancel the previous job:
+
+```bash
+<path_to_jet>/bin/jet cancel log-producer
+```
 
 The behavioral change we can notice now is that there will be two output
 files, `data.0.csv` and `data.1.csv`, each containing half of the output
