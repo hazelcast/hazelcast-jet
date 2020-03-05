@@ -350,7 +350,7 @@ applicable to batch stages.
 
 ```java
 pipeline.readFrom(TestSources.items(1, 2, 3, 4))
-        .apply(Assertions.assertCollected(items -> assertTrue("expected minimum of 4 items", items.size >= 4)))
+        .apply(Assertions.assertCollected(items -> assertTrue("expected minimum of 4 items", items.size() >= 4)))
         .writeTo(Sinks.logger())
 ```
 
