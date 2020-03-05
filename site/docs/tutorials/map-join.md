@@ -2,4 +2,287 @@
 title: Join Static Data to a Stream
 ---
 
-TODO
+> :warning: **TODO update hazelcast-jet-examples-trade-source:
+> dependency to release when available **:
+
+Streams usually contain information changing with time, e.g. prices,
+quantities, sales. Sometimes the stream needs to be enriched with
+static, or infrequently changing data, such as labels, organizational
+structure or some characteristics.
+
+Hazelcast Jet allows you to enrich your stream directly from a
+Hazelcast IMap or ReplicatedMap.
+Since it must look up the data again for each item, performance is
+lower than with a hash-join, but the data is kept fresh this way.
+This matters especially for unbounded streaming jobs, where a
+hash-join would use data frozen in time at the beginning of the job.
+
+Let's build a pipeline that takes a stream of trades from a stock
+exchange and enriches the stream with a full company name for
+nicer presentation.
+Each trade contains a stock symbol, also known as ticker, which
+uniquely identifies the stock.
+We will use the ticker to lookup the full company name in a replicated map.
+
+## 1. Start Hazelcast Jet
+
+1. [Download](https://github.com/hazelcast/hazelcast-jet/releases/download/v4.0/hazelcast-jet-4.0.zip)
+  Hazelcast Jet
+
+2. Unzip it:
+
+```bash
+cd <where_you_downloaded_it>
+unzip hazelcast-jet-4.0.zip
+cd hazelcast-jet-4.0
+```
+
+If you already have Jet and you skipped the above steps, make sure to
+follow from here on.
+
+3. Start Jet:
+
+```bash
+bin/jet-start
+```
+
+4. When you see output like this, Hazelcast Jet is up:
+
+```text
+Members {size:1, ver:1} [
+    Member [192.168.1.5]:5701 - e7c26f7c-df9e-4994-a41d-203a1c63480e this
+]
+```
+
+From now on we assume Hazelcast Jet is running on your machine.
+
+## 2. Create a New Java Project
+
+We'll assume you're using an IDE. Create a blank Java project named
+`map-join-tutorial` and copy the Gradle or Maven file into it:
+
+<!--DOCUSAURUS_CODE_TABS-->
+
+<!--Gradle-->
+
+```groovy
+plugins {
+    id 'com.github.johnrengelman.shadow' version '5.2.0'
+    id 'java'
+}
+
+group 'org.example'
+version '1.0-SNAPSHOT'
+
+repositories.mavenCentral()
+
+dependencies {
+    compile 'com.hazelcast.jet:hazelcast-jet:4.0'
+    compile 'com.hazelcast.jet.examples:hazelcast-jet-examples-trade-source:4.1-SNAPSHOT'
+}
+
+jar.manifest.attributes 'Main-Class': 'org.example.JoinUsingMapJob'
+```
+
+<!--Maven-->
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>org.example</groupId>
+    <artifactId>map-join-tutorial</artifactId>
+    <version>1.0-SNAPSHOT</version>
+
+    <properties>
+        <maven.compiler.target>1.8</maven.compiler.target>
+        <maven.compiler.source>1.8</maven.compiler.source>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.hazelcast.jet</groupId>
+            <artifactId>hazelcast-jet</artifactId>
+            <version>4.0</version>
+        </dependency>
+        <dependency>
+            <groupId>com.hazelcast.jet.examples</groupId>
+            <artifactId>hazelcast-jet-examples-trade-source</artifactId>
+            <version>4.1-SNAPSHOT</version>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <configuration>
+                    <archive>
+                        <manifest>
+                            <mainClass>org.example.JoinUsingMapJob</mainClass>
+                        </manifest>
+                    </archive>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>3.2.2</version>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>
+```
+
+<!--END_DOCUSAURUS_CODE_TABS-->
+
+When our job has any dependencies we have 2 options.
+
+- Upload the dependency to the lib folder on each Jet cluster member,
+  as shown in [kafka tutorial](kafka.md).
+  This option is  suitable for stable and heavy dependencies (3rd party
+  libraries, clients, models), but requires additional effort.
+
+- Create a so-called fat jar, suitable for code changing often and
+  lightweight dependencies as whole jar is uploaded to the cluster each
+  time a job is submitted.
+
+Our dependency is very lightweight so we chose the fat jar.
+
+## 3. Create a map containing company names
+
+This code creates a map containing company names from a list in our
+dependency.
+How we create the map is not important for this tutorial,
+e.g. it could be loaded from a local file, S3 or be a result of another
+job.
+
+```java
+package org.example;
+
+import com.hazelcast.jet.*;
+import com.hazelcast.jet.examples.tradesource.TradeGenerator;
+
+import java.io.*;
+import java.util.Map;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.stream.Collectors.toMap;
+
+public class LoadNames {
+
+    public static void main(String[] args) {
+        JetInstance instance = Jet.newJetClient();
+
+        Map<String, String> namesMap = loadNames(Integer.MAX_VALUE);
+        instance.getMap("companyNames").putAll(namesMap);
+
+        System.out.println(namesMap.size() + " names put to a map called 'companyNames'");
+
+        instance.shutdown();
+    }
+
+    private static Map<String, String> loadNames(long numTickers) {
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(
+                TradeGenerator.class.getResourceAsStream("/nasdaqlisted.txt"), UTF_8))) {
+            return reader.lines()
+                    .skip(1)
+                    .limit(numTickers)
+                    .map(line -> line.split("\\|"))
+                    .collect(toMap(parts -> parts[0], parts -> parts[1]));
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+}
+
+```
+
+Run it from your IDE. You should see this in the among other logs:
+
+```text
+3170 names put to a map called 'companyNames'
+```
+
+## 4. Use Hazelcast Jet to stream and enrich data
+
+This code takes a dummy source of trade data, enriches the trades with
+the company name and finally writes to log.
+
+```java
+package org.example;
+
+import com.hazelcast.jet.*;
+import com.hazelcast.jet.examples.tradesource.*;
+import com.hazelcast.jet.pipeline.*;
+
+import static com.hazelcast.jet.datamodel.Tuple4.tuple4;
+
+public class JoinUsingMapJob {
+
+    public static final int ALL_TICKERS = Integer.MAX_VALUE;
+
+    public static void main(String[] args) {
+        Pipeline pipeline = Pipeline.create();
+
+        pipeline.readFrom(TradeGenerator.tradeSource(ALL_TICKERS, 1, 5))
+                .withoutTimestamps()
+                .mapUsingIMap("companyNames", Trade::getTicker, (trade, name) -> tuple4(trade.getTicker(), trade.getQuantity(), trade.getPrice(), name))
+                .writeTo(Sinks.logger(tuple -> String.format("%5s quantity=%4d, price=%d (%s)",
+                        tuple.f0(), tuple.f1(), tuple.f2(), tuple.f3()
+                )));
+
+        JetInstance instance = Jet.bootstrappedInstance();
+        instance.newJob(pipeline, new JobConfig().setName("map-join-tutorial"));
+        instance.shutdown();
+    }
+
+}
+```
+
+<!--DOCUSAURUS_CODE_TABS-->
+
+<!--Gradle-->
+
+Submit the job to the Jet cluster
+
+```bash
+gradle build
+<path_to_jet>/bin/jet submit build/libs/map-join-tutorial-1.0-SNAPSHOT.jar
+```
+
+<!--Maven-->
+
+```bash
+mvn package
+<path_to_jet>/bin/jet submit target/map-join-tutorial-1.0-SNAPSHOT.jar
+```
+
+<!--END_DOCUSAURUS_CODE_TABS-->
+
+Now go to the window where you started Jet. Its log output will contain
+the output from the pipeline.
+
+If you submit the job before loading the company names you will see
+null values.
+Once you run the LoadNames class you will immediately see company
+names.
+This is how you can react to changing data.
+You can restart the Jet instance to start with empty map to try this out.
+
+Once you're done, cancel the job:
+
+```bash
+<path_to_jet>/bin/jet cancel map-join-tutorial-
+```
