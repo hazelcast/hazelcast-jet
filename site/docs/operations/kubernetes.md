@@ -3,52 +3,10 @@ title: Jet on Kubernetes
 description: Using Kubernetes for orchestrating Jet clusters. 
 ---
 
-## Hazelcast Discovery Plugin for Kubernetes
-
-The plugin provides the automatic member discovery in the Kubernetes
-environment. It is included in Hazelcast Jet docker images and Hazelcast
-Jet Helm charts.
-
-This plugin supports two different options of how Hazelcast Jet members
-discover each others:
-
-- Kubernetes API
-- DNS Lookup
-
-### Kubernetes API
-
-*Kubernetes API* mode means that each node makes a REST call to
-Kubernetes Master in order to discover IPs of Pods (with Hazelcast Jet
-members). Using Kubernetes API requires granting certain permissions.
-Therefore, you may need to create a *Role Based Access Control* file.
-See [Role Based Access Control](#role-based-access-control) section for
-a sample file.
-
-Hazelcast Kubernetes Discovery requires creating a service to Pods where
-Hazelcast Jet is running. In case of using Kubernetes API mode, the
-service can be of any type.
-
-### DNS Lookup
-
-*DNS Lookup* mode uses a feature of Kubernetes that **headless**
-(without cluster IP) services are assigned a DNS record which resolves
-to the set of IPs of related Pods.
-
-Headless service is a service of type *ClusterIP* with the `clusterIP`
-property set to `None`.
-
-The following table summarizes the differences between the discovery
-modes: *Kubernetes API* and *DNS Lookup*
-
-|             | Kubernetes API                                                                                                                                                                 | DNS Lookup                                                                                              |
-|:------------|:-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|:--------------------------------------------------------------------------------------------------------|
-| Description | Uses REST calls to Kubernetes Master to fetch IPs of Pods                                                                                                                      | Uses DNS to resolve IPs of Pods related to the given service                                            |
-| Pros        | Flexible, supports 3 different options:    <ul><li>Cluster per service</li><li>Cluster per multiple services (distinguished by labels)</li><li>Cluster per namespace</li></ul> | No additional configuration required, resolving DNS does not require granting any permissions           |
-| Cons        | Requires setting up RoleBinding (to allow access to Kubernetes API)                                                                                                            | <ul><li>Limited to **headless Cluster IP** service</li><li>Limited to **cluster per service**</li></ul> |
-
-See
-[Hazelcast Discovery Plugin for Kubernetes](https://github.com/hazelcast/hazelcast-kubernetes)
-for more information about the plugin.
+Hazelcast Jet has built-in support for Kubernetes deployments. It only
+takes a few configuration parameters to make Hazelcast Jet cluster in
+Kubernetes environments. Official Helm packages are also available to
+bootstrap Hazelcast Jet deployments with a single command.
 
 ## Install using Helm
 
@@ -117,11 +75,14 @@ for more information and configuration options.
 
 ## Install without Helm
 
-### Role Based Access Control
-
 Hazelcast Jet provides Kubernetes-ready Docker images, these images use
 the Hazelcast Kubernetes plugin to discover other Hazelcast Jet members
-by interacting with the Kubernetes API. Therefore we need to create Role
+by interacting with the Kubernetes APIs. See [relevant](#hazelcast-jet-cluster-discovery-inside-kubernetes-cluster)
+section for more details.
+
+### Role Based Access Control
+
+To communicate with the Kubernetes APIs, create the Role
 Based Access Control definition, (`rbac.yaml`), with the following
 content and apply it:
 
@@ -166,6 +127,11 @@ data:
             enabled: true
             namespace: default
             service-name: hazelcast-jet-service
+        rest-api:
+          enabled: true
+          endpoint-groups:
+            HEALTH_CHECK:
+              enabled: true
 ```
 
 ```bash
@@ -247,6 +213,40 @@ spec:
 
 ```bash
 kubectl apply -f hazelcast-jet.yaml
+```
+
+After deploying it, we can check the status of pods with the following
+ command:
+
+```bash
+$ kubectl get pods
+NAME              READY   STATUS    RESTARTS   AGE
+hazelcast-jet-0   1/1     Running   0          2m23s
+hazelcast-jet-1   1/1     Running   0          103s
+```
+
+Then we can verify from the logs of the pods that they formed a cluster
+with the following command:
+
+```log
+$ kubectl logs hazelcast-jet-0
+...
+...
+...
+2020-03-05 10:02:44,698  INFO [c.h.i.c.ClusterService] [main] - [172.17.0.6]:5701 [dev] [4.0]
+
+Members {size:1, ver:1} [
+ Member [172.17.0.6]:5701 - 03a22d3c-d88a-40bf-81b0-8f85e16acb0f this
+]
+
+2020-03-05 10:02:44,725  INFO [c.h.c.LifecycleService] [main] - [172.17.0.6]:5701 [dev] [4.0] [172.17.0.6]:5701 is STARTED
+2020-03-05 10:03:20,387  INFO [c.h.i.n.t.TcpIpConnection] [hz.distracted_bartik.IO.thread-in-2] - [172.17.0.6]:5701 [dev] [4.0] Initialized new cluster connection between /172.17.0.6:5701 and /172.17.0.7:49103
+2020-03-05 10:03:27,381  INFO [c.h.i.c.ClusterService] [hz.distracted_bartik.priority-generic-operation.thread-0] - [172.17.0.6]:5701 [dev] [4.0]
+
+Members {size:2, ver:2} [
+ Member [172.17.0.6]:5701 - 03a22d3c-d88a-40bf-81b0-8f85e16acb0f this
+ Member [172.17.0.7]:5701 - a7295b91-939b-4181-acae-208145f773e6
+]
 ```
 
 ## Deploy Jobs
@@ -433,8 +433,6 @@ kubectl apply -f rolling-aggregation.yaml
 
 ## Inspect Jobs
 
-### With Kubernetes Dashboard
-
 After you've run the job, you can open up Kubernetes Dashboard to see
 it's status. To open Kubernetes Dashboard on `minikube` run the
 following command:
@@ -449,100 +447,6 @@ job running/completed successfully like below and inspect the logs if
 you like.
 
 ![minikube-dashboard](../assets/minikube-dashboard.png)
-
-### With Hazelcast Jet Management Center
-
-Hazelcast Jet Management Center enables you to monitor and manage your
-cluster members running Hazelcast Jet. In addition to monitoring the
-overall state of your clusters, you can also analyze and browse your
-jobs in detail.
-
-You can check
-[Hazelcast Jet Documentation](http://docs.hazelcast.org/docs/jet/latest/manual)
-and
-[Hazelcast Jet Management Center Documentation](https://docs.hazelcast.org/docs/jet-management-center/latest/manual)
-for more information.
-
-#### Create a Secret with Enterprise Key
-
-Hazelcast Jet Management Center requires a license key. Free trial is
-limited to a single node, you can apply for a trial license key from
-[here](https://hazelcast.com/hazelcast-enterprise-download). Store your
-license key as a **Kubernetes Secret** with the following command.
-
-```bash
-kubectl create secret generic management-center-license --from-literal=key=MANAGEMENT-CENTER-LICENSE-KEY-HERE
-```
-
-#### Start Hazelcast Jet Management Center
-
-We need to create a *Deployment* and a *Service* which defines container
-spec. See that the secret we've created above passed to the container as
-an environment variable and the client config is stored in a volume,
-mounted to the container and passed as an argument to the java options.
-
-```yaml
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: hazelcast-jet-management-center
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: hazelcast-jet-management-center
-  template:
-    metadata:
-      labels:
-        app: hazelcast-jet-management-center
-    spec:
-      containers:
-      - name: hazelcast-jet-management-center
-        image: hazelcast/hazelcast-jet-management-center:latest-snapshot
-        imagePullPolicy: IfNotPresent
-        volumeMounts:
-        - name: hazelcast-jet-management-center-storage
-          mountPath: /hazelcast-jet-config
-        env:
-        - name: JAVA_OPTS
-          value: "-Djet.clientConfig=/hazelcast-jet-config/hazelcast-client.yaml"
-        - name: MC_LICENSE_KEY
-          valueFrom:
-            secretKeyRef:
-              name: management-center-license
-              key: key
-      volumes:
-      - name: hazelcast-jet-management-center-storage
-        configMap:
-          name: hazelcast-jet-configuration
-          items:
-            - key: hazelcast-client.yaml
-              path: hazelcast-client.yaml
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: hazelcast-jet-management-center
-spec:
-  type: LoadBalancer
-  selector:
-    app: hazelcast-jet-management-center
-  ports:
-    - protocol: TCP
-      port: 8081
-      targetPort: 8081
-```
-
-You can obtain the accessible URL of the Hazelcast Jet Management Center
-application like below. Navigating to that URL should welcome you to the
-Hazelcast Jet Management Center.
-
-```bash
-minikube service hazelcast-jet-management-center --url
-```
-
-![management-center-dashboard](../assets/management-center-dashboard.png)
 
 ## Access From Outside The Kubernetes
 
@@ -627,3 +531,51 @@ All these features are already included in Hazelcast Jet Helm Charts.
 See
 [Install Hazelcast Jet using Helm](#install-hazelcast-jet-using-helm)
 for more information.
+
+## Hazelcast Jet Cluster discovery inside Kubernetes Cluster
+
+The Hazelcast Kubernetes plugin provides the automatic member discovery
+in the Kubernetes environment by communicating with the Kubernetes
+Master. The plugin is included in Hazelcast Jet docker images and
+Hazelcast Jet Helm charts.
+
+This plugin supports two different options of how Hazelcast Jet members
+discover each others:
+
+- Kubernetes API
+- DNS Lookup
+
+### Kubernetes API
+
+*Kubernetes API* mode means that each node makes a REST call to
+Kubernetes Master in order to discover IPs of Pods (with Hazelcast Jet
+members). Using Kubernetes API requires granting certain permissions.
+Therefore, you may need to create a *Role Based Access Control* file.
+See [Role Based Access Control](#role-based-access-control) section for
+a sample file.
+
+Hazelcast Kubernetes Discovery requires creating a service to Pods where
+Hazelcast Jet is running. In case of using Kubernetes API mode, the
+service can be of any type.
+
+### DNS Lookup
+
+*DNS Lookup* mode uses a feature of Kubernetes that **headless**
+(without cluster IP) services are assigned a DNS record which resolves
+to the set of IPs of related Pods.
+
+Headless service is a service of type *ClusterIP* with the `clusterIP`
+property set to `None`.
+
+The following table summarizes the differences between the discovery
+modes: *Kubernetes API* and *DNS Lookup*
+
+|             | Kubernetes API                                                                                                                                                                 | DNS Lookup                                                                                              |
+|:------------|:-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|:--------------------------------------------------------------------------------------------------------|
+| Description | Uses REST calls to Kubernetes Master to fetch IPs of Pods                                                                                                                      | Uses DNS to resolve IPs of Pods related to the given service                                            |
+| Pros        | Flexible, supports 3 different options:    <ul><li>Cluster per service</li><li>Cluster per multiple services (distinguished by labels)</li><li>Cluster per namespace</li></ul> | No additional configuration required, resolving DNS does not require granting any permissions           |
+| Cons        | Requires setting up RoleBinding (to allow access to Kubernetes API)                                                                                                            | <ul><li>Limited to **headless Cluster IP** service</li><li>Limited to **cluster per service**</li></ul> |
+
+See
+[Hazelcast Discovery Plugin for Kubernetes](https://github.com/hazelcast/hazelcast-kubernetes)
+for more information about the plugin.
