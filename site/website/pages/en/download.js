@@ -44,10 +44,10 @@ function Downloads(props) {
           </table>
           <p>Hazelcast Jet artifacts can also be retrieved using the following Maven coordinates:</p>
           
-          <pre><code class="language-groovy css hljs">
-              groupId: <span class="hljs-string">com.hazelcast.jet</span><br/>
-              artifactId: <span class="hljs-string">hazelcast-jet</span><br/>
-              version: <span class="hljs-string">{latestVersion}</span>
+          <pre><code className="language-groovy css hljs">
+              groupId: <span className="hljs-string">com.hazelcast.jet</span><br/>
+              artifactId: <span className="hljs-string">hazelcast-jet</span><br/>
+              version: <span className="hljs-string">{latestVersion}</span>
          </code></pre>
          <p>For the full list of modules, please see <a href="https://search.maven.org/search?q=g:com.hazelcast.jet">Maven Central</a>.</p>
           <h3 id="archive">Past Versions</h3>
