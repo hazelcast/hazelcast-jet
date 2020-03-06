@@ -62,13 +62,9 @@ public final class TradeGenerator {
     }
 
     public static StreamSource<Trade> tradeSource(int numTickers, int tradesPerSec, int maxLag) {
-        return tradeSource(numTickers, tradesPerSec, maxLag, NO_TIMEOUT);
-    }
-
-    public static StreamSource<Trade> tradeSource(int numTickers, int tradesPerSec, int maxLag, long timeoutSeconds) {
         return SourceBuilder
                 .timestampedStream("trade-source",
-                        x -> new TradeGenerator(numTickers, tradesPerSec, maxLag, timeoutSeconds))
+                        x -> new TradeGenerator(numTickers, tradesPerSec, maxLag, NO_TIMEOUT))
                 .fillBufferFn(TradeGenerator::generateTrades)
                 .build();
     }

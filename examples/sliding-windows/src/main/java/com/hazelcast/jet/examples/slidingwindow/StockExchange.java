@@ -64,7 +64,7 @@ public class StockExchange {
         return p;
     }
 
-    public static void main(String[] args) throws InterruptedException {
+    public static void main(String[] args) throws Exception {
         JetInstance jet = Jet.bootstrappedInstance();
         try {
             Job job = jet.newJob(buildPipeline());

@@ -74,7 +74,7 @@ public class TopNStocks {
                 topN(5, comparingValue.reversed()),
                 TopNResult::new);
 
-        p.readFrom(TradeGenerator.tradeSource(500, 6_000, MAX_LAG, JOB_DURATION))
+        p.readFrom(TradeGenerator.tradeSource(500, 6_000, MAX_LAG))
          .withNativeTimestamps(1_000)
          .groupingKey(Trade::getTicker)
          .window(sliding(10_000, 1_000))
@@ -88,7 +88,7 @@ public class TopNStocks {
         return p;
     }
 
-    public static void main(String[] args) throws InterruptedException {
+    public static void main(String[] args) throws Exception {
         JetInstance jet = Jet.bootstrappedInstance();
         try {
             Job job = jet.newJob(buildPipeline());
