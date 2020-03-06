@@ -21,6 +21,7 @@
       "api/data-structures",
       "api/serialization",
       "api/testing",
+      "api/spring",
       "api/javadoc"
     ],
     "Concepts": [
@@ -45,8 +46,7 @@
       "operations/cluster-sizing",
       "operations/job-management",
       "operations/kubernetes",
-      "operations/monitoring",
-      "operations/spring"
+      "operations/monitoring"
     ],
     "Architecture": [
       "architecture/cluster-topology",
