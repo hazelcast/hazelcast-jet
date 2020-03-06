@@ -35,9 +35,6 @@ unzip hazelcast-jet-4.0.zip
 cd hazelcast-jet-4.0
 ```
 
-If you already have Jet and you skipped the above steps, make sure to
-follow from here on.
-
 3. Start Jet:
 
 ```bash
