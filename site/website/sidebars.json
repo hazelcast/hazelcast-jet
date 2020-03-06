@@ -43,10 +43,11 @@
     ],
     "Operations Guide": [
       "operations/configuration",
+      "operations/discovery",
       "operations/cluster-sizing",
       "operations/job-management",
       "operations/kubernetes",
-      "operations/monitoring"
+      "operations/monitoring"      
     ],
     "Architecture": [
       "architecture/cluster-topology",

@@ -77,7 +77,7 @@ for more information and configuration options.
 
 Hazelcast Jet provides Kubernetes-ready Docker images, these images use
 the Hazelcast Kubernetes plugin to discover other Hazelcast Jet members
-by interacting with the Kubernetes APIs. See [relevant](#hazelcast-jet-cluster-discovery-inside-kubernetes-cluster)
+by interacting with the Kubernetes APIs. See [relevant](discovery#kubernetes)
 section for more details.
 
 ### Role Based Access Control
@@ -531,51 +531,3 @@ All these features are already included in Hazelcast Jet Helm Charts.
 See
 [Install Hazelcast Jet using Helm](#install-hazelcast-jet-using-helm)
 for more information.
-
-## Hazelcast Jet Cluster discovery inside Kubernetes Cluster
-
-The Hazelcast Kubernetes plugin provides the automatic member discovery
-in the Kubernetes environment by communicating with the Kubernetes
-Master. The plugin is included in Hazelcast Jet docker images and
-Hazelcast Jet Helm charts.
-
-This plugin supports two different options of how Hazelcast Jet members
-discover each others:
-
-- Kubernetes API
-- DNS Lookup
-
-### Kubernetes API
-
-*Kubernetes API* mode means that each node makes a REST call to
-Kubernetes Master in order to discover IPs of Pods (with Hazelcast Jet
-members). Using Kubernetes API requires granting certain permissions.
-Therefore, you may need to create a *Role Based Access Control* file.
-See [Role Based Access Control](#role-based-access-control) section for
-a sample file.
-
-Hazelcast Kubernetes Discovery requires creating a service to Pods where
-Hazelcast Jet is running. In case of using Kubernetes API mode, the
-service can be of any type.
-
-### DNS Lookup
-
-*DNS Lookup* mode uses a feature of Kubernetes that **headless**
-(without cluster IP) services are assigned a DNS record which resolves
-to the set of IPs of related Pods.
-
-Headless service is a service of type *ClusterIP* with the `clusterIP`
-property set to `None`.
-
-The following table summarizes the differences between the discovery
-modes: *Kubernetes API* and *DNS Lookup*
-
-|             | Kubernetes API                                                                                                                                                                 | DNS Lookup                                                                                              |
-|:------------|:-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|:--------------------------------------------------------------------------------------------------------|
-| Description | Uses REST calls to Kubernetes Master to fetch IPs of Pods                                                                                                                      | Uses DNS to resolve IPs of Pods related to the given service                                            |
-| Pros        | Flexible, supports 3 different options:    <ul><li>Cluster per service</li><li>Cluster per multiple services (distinguished by labels)</li><li>Cluster per namespace</li></ul> | No additional configuration required, resolving DNS does not require granting any permissions           |
-| Cons        | Requires setting up RoleBinding (to allow access to Kubernetes API)                                                                                                            | <ul><li>Limited to **headless Cluster IP** service</li><li>Limited to **cluster per service**</li></ul> |
-
-See
-[Hazelcast Discovery Plugin for Kubernetes](https://github.com/hazelcast/hazelcast-kubernetes)
-for more information about the plugin.
