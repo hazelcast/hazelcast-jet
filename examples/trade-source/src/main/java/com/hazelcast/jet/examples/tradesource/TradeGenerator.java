@@ -62,6 +62,10 @@ public final class TradeGenerator {
         this.startTimeMillis = System.currentTimeMillis();
     }
 
+    public static StreamSource<Trade> tradeSource(int numTickers, int tradesPerSec) {
+        return tradeSource(numTickers, tradesPerSec, 0);
+    }
+
     public static StreamSource<Trade> tradeSource(int numTickers, int tradesPerSec, int maxLag) {
         return SourceBuilder
                 .timestampedStream("trade-source",
@@ -82,7 +86,7 @@ public final class TradeGenerator {
             int price = (int) (priceAndDelta.get1() / PRICE_UNITS_PER_CENT);
             priceAndDelta.add1(priceAndDelta.get2());
             priceAndDelta.add2(rnd.nextLong(101) - 50);
-            long tradeTimeNanos = scheduledTimeNanos - rnd.nextLong(maxLagNanos);
+            long tradeTimeNanos = scheduledTimeNanos - (maxLagNanos > 0 ? rnd.nextLong(maxLagNanos) : 0L);
             long tradeTimeMillis = startTimeMillis + NANOSECONDS.toMillis(tradeTimeNanos - startTimeNanos);
             Trade trade = new Trade(tradeTimeMillis, ticker, rnd.nextInt(10) * LOT, price);
             buf.add(trade, tradeTimeMillis);

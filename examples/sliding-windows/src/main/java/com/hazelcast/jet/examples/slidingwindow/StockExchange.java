@@ -47,14 +47,13 @@ public class StockExchange {
     private static final int SLIDING_WINDOW_LENGTH_MILLIS = 3_000;
     private static final int SLIDE_STEP_MILLIS = 500;
     private static final int TRADES_PER_SEC = 3_000;
-    private static final int MAX_LAG = 1000;
     private static final int NUMBER_OF_TICKERS = 10;
     private static final int JOB_DURATION = 15;
 
     private static Pipeline buildPipeline() {
         Pipeline p = Pipeline.create();
 
-        p.readFrom(TradeGenerator.tradeSource(NUMBER_OF_TICKERS, TRADES_PER_SEC, MAX_LAG))
+        p.readFrom(TradeGenerator.tradeSource(NUMBER_OF_TICKERS, TRADES_PER_SEC))
          .withNativeTimestamps(3000)
          .groupingKey(Trade::getTicker)
          .window(WindowDefinition.sliding(SLIDING_WINDOW_LENGTH_MILLIS, SLIDE_STEP_MILLIS))
