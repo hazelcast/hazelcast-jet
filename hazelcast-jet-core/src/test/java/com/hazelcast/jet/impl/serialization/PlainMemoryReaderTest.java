@@ -25,7 +25,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class PlainMemoryReaderTest {
 
     @Test
-    public void when_LittleEndian_then_CorrectValuesAreRead() {
+    public void when_littleEndian_then_correctValuesAreRead() {
         // Given
         MemoryReader reader = new PlainMemoryReader(LITTLE_ENDIAN);
         byte[] bytes = new byte[]{
@@ -40,7 +40,7 @@ public class PlainMemoryReaderTest {
     }
 
     @Test
-    public void when_BigEndian_then_CorrectValuesAreRead() {
+    public void when_bigEndian_then_correctValuesAreRead() {
         // Given
         MemoryReader reader = new PlainMemoryReader(BIG_ENDIAN);
         byte[] bytes = new byte[]{

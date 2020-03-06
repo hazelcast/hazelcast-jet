@@ -27,7 +27,7 @@ import static org.junit.Assume.assumeTrue;
 public class UnsafeMemoryReaderTest {
 
     @Test
-    public void when_LittleEndian_then_CorrectValuesAreRead() {
+    public void when_littleEndian_then_correctValuesAreRead() {
         assumeTrue(nativeOrder() == LITTLE_ENDIAN);
 
         // Given
@@ -44,7 +44,7 @@ public class UnsafeMemoryReaderTest {
     }
 
     @Test
-    public void when_BigEndian_then_CorrectValuesAreRead() {
+    public void when_bigEndian_then_correctValuesAreRead() {
         assumeTrue(nativeOrder() == BIG_ENDIAN);
 
         // Given
