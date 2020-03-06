@@ -68,6 +68,7 @@ class Footer extends React.Component {
             <a href="https://github.com/hazelcast/hazelcast-jet">GitHub Project</a>
             <a href="https://github.com/hazelcast/hazelcast-jet/issues">Issue Tracker</a>
             <a href="http://hazelcast.com/company/careers/">Work at Hazelcast</a>
+            <a href={this.pageUrl('license')}>License</a>
             <a
               className="github-button"
               href={this.props.config.repoUrl}

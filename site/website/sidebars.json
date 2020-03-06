@@ -55,13 +55,6 @@
       "architecture/fault-tolerance",
       "architecture/in-memory-storage",
 	    "architecture/event-time-processing"
-    ],
-    "Design Documents": [
-      "design-docs/unit-testing-support",
-      "design-docs/kafka-connect"
-    ],
-    "Roadmap": [
-      "roadmap"
     ]
   }
 }
