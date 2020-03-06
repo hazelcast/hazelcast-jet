@@ -40,7 +40,7 @@ const siteConfig = {
     headerLinks: [
         {doc: 'get-started/intro', label: 'Documentation'},
         // {doc: 'connectors/imap', label: 'Connectors'},
-        {href: 'https://github.com/hazelcast/hazelcast-jet/releases', label: "Download"},
+        {page: 'download', label: "Download"},
         {href: 'https://github.com/hazelcast/hazelcast-jet', label: "View on GitHub"},
         {blog: true, label: 'Blog'},
         {search: true},
