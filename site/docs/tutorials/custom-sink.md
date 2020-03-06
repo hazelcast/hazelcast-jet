@@ -72,7 +72,7 @@ version '1.0-SNAPSHOT'
 repositories.mavenCentral()
 
 dependencies {
-    compile 'com.hazelcast.jet:hazelcast-jet:4.0'
+    compileOnly 'com.hazelcast.jet:hazelcast-jet:4.0'
 }
 
 jar.manifest.attributes 'Main-Class': 'org.example.LogProducer'
@@ -100,6 +100,7 @@ jar.manifest.attributes 'Main-Class': 'org.example.LogProducer'
             <groupId>com.hazelcast.jet</groupId>
             <artifactId>hazelcast-jet</artifactId>
             <version>4.0</version>
+            <scope>provided</scope>
         </dependency>
     </dependencies>
 
@@ -188,8 +189,8 @@ Now that we have all the pieces, we need to submit it to Jet for
 execution. Since Jet runs on our machine as a standalone cluster in a
 standalone process we need to give it all the code that we have written.
 
-For this reason we create a fat jar containing everything we need. All
-we need to do is to run the build command:
+For this reason we create a jar containing the code from our project.
+All we need to do is to run the build command:
 
 <!--DOCUSAURUS_CODE_TABS-->
 
