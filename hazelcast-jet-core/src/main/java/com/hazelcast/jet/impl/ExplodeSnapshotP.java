@@ -22,6 +22,7 @@ import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.core.BroadcastKey;
 import com.hazelcast.jet.impl.execution.BroadcastEntry;
+import com.hazelcast.jet.impl.execution.init.Contexts.ProcCtx;
 import com.hazelcast.jet.impl.util.AsyncSnapshotWriterImpl.SnapshotDataKey;
 import com.hazelcast.jet.impl.util.AsyncSnapshotWriterImpl.SnapshotDataValueTerminator;
 
@@ -49,7 +50,7 @@ public class ExplodeSnapshotP extends AbstractProcessor {
 
     @Override
     protected void init(@Nonnull Context context) {
-        serializationService = context.serializationService();
+        serializationService = ((ProcCtx) context).serializationService();
     }
 
     private Traverser<Object> traverser(byte[] data) {

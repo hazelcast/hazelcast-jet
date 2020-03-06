@@ -25,6 +25,7 @@ import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.hadoop.HadoopSources;
+import com.hazelcast.jet.impl.execution.init.Contexts.ProcCtx;
 import com.hazelcast.jet.impl.util.Util;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.hadoop.conf.Configuration;
@@ -83,7 +84,7 @@ public final class ReadHadoopNewApiP<K, V, R> extends AbstractProcessor {
 
     @Override
     protected void init(@Nonnull Context context) {
-        serializationService = context.serializationService();
+        serializationService = ((ProcCtx) context).serializationService();
         // we clone the projection of key/value if configured so because some of the
         // record-readers return the same object for `reader.getCurrentKey()`
         // and `reader.getCurrentValue()` which is mutated for each `reader.nextKeyValue()`.

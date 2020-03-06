@@ -19,7 +19,8 @@ package com.hazelcast.jet.impl.util;
 import com.hazelcast.core.HazelcastInstanceNotActiveException;
 import com.hazelcast.internal.nio.Bits;
 import com.hazelcast.internal.partition.IPartitionService;
-import com.hazelcast.internal.serialization.InternalSerializationService;
+import com.hazelcast.internal.serialization.Data;
+import com.hazelcast.internal.serialization.SerializationService;
 import com.hazelcast.internal.serialization.impl.HeapData;
 import com.hazelcast.internal.serialization.impl.SerializationConstants;
 import com.hazelcast.jet.impl.JetService;
@@ -29,7 +30,6 @@ import com.hazelcast.logging.ILogger;
 import com.hazelcast.map.IMap;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
-import com.hazelcast.internal.serialization.Data;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 import com.hazelcast.partition.PartitionAware;
 import com.hazelcast.spi.impl.NodeEngine;
@@ -85,7 +85,7 @@ public class AsyncSnapshotWriterImpl implements AsyncSnapshotWriter {
                                    String vertexName,
                                    int memberIndex,
                                    int memberCount,
-                                   InternalSerializationService serializationService) {
+                                   SerializationService serializationService) {
         this(DEFAULT_CHUNK_SIZE, nodeEngine, snapshotContext, vertexName, memberIndex, memberCount, serializationService);
     }
 
@@ -96,7 +96,7 @@ public class AsyncSnapshotWriterImpl implements AsyncSnapshotWriter {
                             String vertexName,
                             int memberIndex,
                             int memberCount,
-                            InternalSerializationService serializationService) {
+                            SerializationService serializationService) {
         if (Integer.bitCount(chunkSize) != 1) {
             throw new IllegalArgumentException("chunkSize must be a power of two, but is " + chunkSize);
         }

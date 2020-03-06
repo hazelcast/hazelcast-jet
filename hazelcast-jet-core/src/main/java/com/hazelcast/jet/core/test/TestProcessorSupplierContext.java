@@ -16,7 +16,7 @@
 
 package com.hazelcast.jet.core.test;
 
-import com.hazelcast.internal.serialization.InternalSerializationService;
+import com.hazelcast.core.ManagedContext;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.core.ProcessorSupplier;
@@ -38,8 +38,8 @@ public class TestProcessorSupplierContext
         implements ProcessorSupplier.Context {
 
     private int memberIndex;
+    private ManagedContext managedContext = object -> object;
     private final Map<String, File> attached = new HashMap<>();
-    private InternalSerializationService serializationService;
 
     @Nonnull @Override
     public TestProcessorSupplierContext setLogger(@Nonnull ILogger logger) {
@@ -67,7 +67,7 @@ public class TestProcessorSupplierContext
     }
 
     @Nonnull @Override
-    public TestProcessorSupplierContext setProcessingGuarantee(ProcessingGuarantee processingGuarantee) {
+    public TestProcessorSupplierContext setProcessingGuarantee(@Nonnull ProcessingGuarantee processingGuarantee) {
         return (TestProcessorSupplierContext) super.setProcessingGuarantee(processingGuarantee);
     }
 
@@ -92,10 +92,9 @@ public class TestProcessorSupplierContext
         return file;
     }
 
-    @Nonnull
-    @Override
-    public InternalSerializationService serializationService() {
-        return serializationService;
+    @Nonnull @Override
+    public ManagedContext managedContext() {
+        return managedContext;
     }
 
     /**
@@ -117,9 +116,12 @@ public class TestProcessorSupplierContext
         return this;
     }
 
+    /**
+     * Sets the {@link ManagedContext}
+     */
     @Nonnull
-    public TestProcessorSupplierContext setSerializationService(InternalSerializationService serializationService) {
-        this.serializationService = serializationService;
+    public TestProcessorSupplierContext setManagedContext(@Nonnull ManagedContext managedContext) {
+        this.managedContext = managedContext;
         return this;
     }
 

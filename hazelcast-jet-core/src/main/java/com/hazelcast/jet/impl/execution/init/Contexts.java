@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.impl.execution.init;
 
+import com.hazelcast.core.ManagedContext;
 import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.internal.util.Preconditions;
 import com.hazelcast.jet.JetException;
@@ -230,8 +231,12 @@ public final class Contexts {
                     + "-" + resourceId.substring(0, min(32, resourceId.length())).replaceAll("[^\\w.\\-$]", "_");
         }
 
+        @Nonnull @Override
+        public ManagedContext managedContext() {
+            return serializationService.getManagedContext();
+        }
+
         @Nonnull
-        @Override
         public InternalSerializationService serializationService() {
             return serializationService;
         }
