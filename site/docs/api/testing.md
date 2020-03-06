@@ -290,9 +290,6 @@ The source above will emit data as follows:
 12:33:37.274 [ INFO] [c.h.j.i.c.W.loggerSink#0] SimpleEvent(timestamp=12:33:37.200, sequence=5)
 ```
 
-For more detailed information regarding test sources and sinks
-please see the [design document](design-docs/unit-testing-support.md).
-
 ## Assertions
 
 Hazelcast Jet contains several sinks to support asserting directly in
