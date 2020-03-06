@@ -73,7 +73,7 @@ public class TopNStocks {
                 topN(5, comparingValue.reversed()),
                 TopNResult::new);
 
-        p.readFrom(TradeGenerator.tradeSource(500, 6_000))
+        p.readFrom(TradeGenerator.tradeSource(6_000))
          .withNativeTimestamps(1_000)
          .groupingKey(Trade::getTicker)
          .window(sliding(10_000, 1_000))

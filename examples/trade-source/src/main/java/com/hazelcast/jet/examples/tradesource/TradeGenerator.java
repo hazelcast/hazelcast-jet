@@ -62,6 +62,10 @@ public final class TradeGenerator {
         this.startTimeMillis = System.currentTimeMillis();
     }
 
+    public static StreamSource<Trade> tradeSource(int tradesPerSec) {
+        return tradeSource(Integer.MAX_VALUE, tradesPerSec, 0);
+    }
+
     public static StreamSource<Trade> tradeSource(int numTickers, int tradesPerSec) {
         return tradeSource(numTickers, tradesPerSec, 0);
     }
