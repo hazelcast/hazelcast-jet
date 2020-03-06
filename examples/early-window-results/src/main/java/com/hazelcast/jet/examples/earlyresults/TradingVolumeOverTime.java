@@ -55,7 +55,7 @@ public final class TradingVolumeOverTime {
     private static final String VOLUME_LIST_NAME = "trading-volume";
     private static final int TRADES_PER_SEC = 3_000;
     private static final int MAX_LAG = 5000;
-    private static final int DURATION_SECONDS = 60;
+    private static final int DURATION_SECONDS = 55;
 
     private static Pipeline buildPipeline() {
         Pipeline p = Pipeline.create();

@@ -29,6 +29,7 @@ import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.stream.Collectors.toList;
@@ -44,14 +45,14 @@ public final class TradeGenerator {
     private final long startTimeMillis;
     private final long startTimeNanos;
     private final long endTimeNanos;
-    private final int maxLag;
+    private final long maxLagNanos;
     private final Map<String, LongLongAccumulator> pricesAndTrends;
 
     private long scheduledTimeNanos;
 
-    private TradeGenerator(long numTickers, int tradesPerSec, int maxLag, long timeoutSeconds) {
+    private TradeGenerator(long numTickers, int tradesPerSec, int maxLagMillis, long timeoutSeconds) {
         this.tickers = loadTickers(numTickers);
-        this.maxLag = maxLag;
+        this.maxLagNanos = MILLISECONDS.toNanos(maxLagMillis);
         this.pricesAndTrends = tickers.stream()
                 .collect(toMap(t -> t, t -> new LongLongAccumulator(500, 10)));
         this.emitPeriodNanos = SECONDS.toNanos(1) / tradesPerSec;
@@ -81,7 +82,7 @@ public final class TradeGenerator {
             int price = (int) (priceAndDelta.get1() / PRICE_UNITS_PER_CENT);
             priceAndDelta.add1(priceAndDelta.get2());
             priceAndDelta.add2(rnd.nextLong(101) - 50);
-            long tradeTimeNanos = scheduledTimeNanos - rnd.nextLong(maxLag);
+            long tradeTimeNanos = scheduledTimeNanos - rnd.nextLong(maxLagNanos);
             long tradeTimeMillis = startTimeMillis + NANOSECONDS.toMillis(tradeTimeNanos - startTimeNanos);
             Trade trade = new Trade(tradeTimeMillis, ticker, rnd.nextInt(10) * LOT, price);
             buf.add(trade, tradeTimeMillis);
