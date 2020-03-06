@@ -296,6 +296,11 @@ public class JetSerializationService implements InternalSerializationService {
     }
 
     @Override
+    public BufferObjectDataInput createObjectDataInput(byte[] data, int offset) {
+        return delegate.inputOutputFactory.createInput(data, offset, this);
+    }
+
+    @Override
     public BufferObjectDataInput createObjectDataInput(Data data) {
         return delegate.inputOutputFactory.createInput(data, this);
     }
@@ -351,10 +356,6 @@ public class JetSerializationService implements InternalSerializationService {
         for (SerializerAdapter serializer : serializersByClass.values()) {
             serializer.destroy();
         }
-    }
-
-    boolean isSafe() {
-        return delegate.inputOutputFactory instanceof ByteArrayInputOutputFactory;
     }
 
     private static HazelcastSerializationException newHazelcastSerializationException(int typeId) {

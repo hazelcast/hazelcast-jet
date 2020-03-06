@@ -17,6 +17,7 @@
 package com.hazelcast.jet.impl.deployment;
 
 import com.hazelcast.jet.core.AbstractProcessor;
+import com.hazelcast.jet.impl.execution.init.Contexts.ProcCtx;
 
 import javax.annotation.Nonnull;
 
@@ -35,7 +36,7 @@ public class JobLevelSerializerIsAvailable extends AbstractProcessor {
             Class<?> clazz = cl.loadClass(VALUE_CLASS_NAME);
             Object value = clazz.getDeclaredConstructor().newInstance();
             // We serialize an object so the job level serializer is invoked.
-            byte[] bytes = context.serializationService().toBytes(value);
+            byte[] bytes = ((ProcCtx) context).serializationService().toBytes(value);
             assertArrayEquals(bytes, new byte[]{0, 0, 0, 0, 0, 0, 0, 42});
         } catch (Exception e) {
             fail(e.getMessage());
