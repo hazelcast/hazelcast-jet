@@ -10,7 +10,10 @@ Please note that, after a cluster is formed, communication between
 cluster members is always via TCP/IP, regardless of the discovery
 mechanism used.
 
-Hazelcast Jet uses the following discovery mechanisms.
+The discovery mechanism must be configured before node startup and
+the options are [configured)(configuration) in `hazelcast.yaml`.
+
+Hazelcast Jet supports the following discovery mechanisms.
 
 ## Multicast
 
@@ -29,7 +32,7 @@ the following configuration elements.
  `multicast-timeout-seconds`, `trusted-interfaces` etc. to your
  multicast values.
 
-The following is an example declarative configuration:
+The following is an example configuration in `hazelcast.yaml`:
 
 ```yaml
 hazelcast:
@@ -59,7 +62,6 @@ To configure your Hazelcast Jet cluster with TCP/IP discovery, set the
 following configuration elements.
 
 - Set the `enabled` element of the `tcp-ip` element to true.
-
 - Provide your member elements within the `member-list` element.
 
 The following is an example configuration.
@@ -146,42 +148,21 @@ client connections from outside of the AWS network please see
 [Hazelcast Discovery Plugin for GCP](https://github.com/hazelcast/hazelcast-gcp)
 .
 
-## Azure Cloud
+<!-- ## Azure Cloud -->
 
-Hazelcast Jet supports automatic member discovery in the Microsoft Azure
- environment with [Hazelcast Discovery Plugin for Microsoft Azure](https://github.com/hazelcast/hazelcast-azure)
-.
+<!-- Hazelcast Jet supports automatic member discovery in the Microsoft 
+Azure environment with [Hazelcast Discovery Plugin for Microsoft Azure]
+(https://github.com/hazelcast/hazelcast-azure). 
+-->
 
-To use Azure Cloud discovery plugin, the dependency below needs to be
-added to your project
-first.
+<!-- To use Azure Cloud discovery plugin, [download the plugin]
+(https://github.com/hazelcast/hazelcast-azure/releases/download/
+v1.2.2/hazelcast-azure-1.2.2.jar)
+and add it to the `lib` folder. To use Azure discovery plugin, disable
+other join  mechanisms and enable `azure`.
+-->
 
-<!--DOCUSAURUS_CODE_TABS-->
-
-<!--Gradle-->
-
-```bash
-compile 'com.hazelcast.azure:hazelcast-azure:1.2.2'
-```
-
-<!--Maven-->
-
-```xml
-<dependencies>
-    <dependency>
-        <groupId>com.hazelcast.azure</groupId>
-        <artifactId>hazelcast-azure</artifactId>
-        <version>1.2.2</version>
-    </dependency>
-</dependencies>
-```
-
-<!--END_DOCUSAURUS_CODE_TABS-->
-
-To use Azure discovery plugin, disable other join mechanisms and
-enable `azure`.
-
-```yaml
+<!-- ```yaml
 hazelcast:
   network:
     join:
@@ -197,16 +178,19 @@ hazelcast:
         scale-set: SCALE-SET-NAME
         tag: TAG-NAME=HZLCAST001
         hz-port: 5701-5703
-```
+``` -->
 
-You will need to setup [Azure Active Directory Service Principal credentials](https://azure.microsoft.com/en-us/documentation/articles/resource-group-create-service-principal-portal/)
+<!-- You will need to setup [Azure Active Directory Service Principal
+credentials] (https://azure.microsoft.com/en-us/documentation/articles/
+resource-group-create-service-principal-portal/)
 for your Azure Subscription for this plugin to work. With the
-credentials, fill in the placeholder values above.
+credentials, fill in the placeholder values above. -->
 
-For more information on the discovery plugin regarding Zone Awarenes and
-client connections from outside of the Azure network please see
-[Hazelcast Discovery Plugin for Microsoft Azure](https://github.com/hazelcast/hazelcast-azure)
-.
+<!-- For more information on the discovery plugin regarding Zone 
+Awareness and client connections from outside of the Azure network
+please see [Hazelcast Discovery Plugin for Microsoft Azure]
+(https://github.com/hazelcast/hazelcast-azure).
+-->
 
 ## Kubernetes
 
