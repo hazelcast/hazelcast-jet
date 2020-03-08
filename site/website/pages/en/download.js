@@ -30,7 +30,7 @@ function Downloads(props) {
               <tr>
                 <th>{latestVersion}</th>
                 <td>
-                <a href={`${repoUrl}/releases/download/v${latestVersion}/hazelcast-jet-${latestVersion}.zip`}>
+                <a href={`${repoUrl}/releases/download/v${latestVersion}/hazelcast-jet-${latestVersion}.tar.gz`}>
                         Download
                 </a>
                 </td>
@@ -60,7 +60,7 @@ function Downloads(props) {
                     <tr key={version}>
                       <th>{version}</th>
                       <td>
-                      <a href={`${repoUrl}/releases/download/v${version}/hazelcast-jet-${version}.zip`}>
+                      <a href={`${repoUrl}/releases/download/v${version}/hazelcast-jet-${version}.tar.gz`}>
                         Download
                       </a>
                       </td>

@@ -69,7 +69,8 @@ class JetApp {
      .map(x -> x * x)
      .writeTo(Sinks.logger());
 
-     ...
+     JetInstance jet = Jet.bootstrappedInstance();
+     jet.newJob(p).join();
   }
 }
 ```
@@ -152,6 +153,6 @@ of them individually.
 It's also possible to add a whole JAR, using the `JobConfig.addJar`
 method.
 
-## Setting Processing Guarantee
+## Setting Processing Guarantees
 
 TODO
