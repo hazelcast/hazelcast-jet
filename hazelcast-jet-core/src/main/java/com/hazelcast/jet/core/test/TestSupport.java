@@ -192,7 +192,7 @@ public final class TestSupport {
     private static final long BLOCKING_TIME_LIMIT_MS_WARN = 10000;
 
     private static final LoggingServiceImpl LOGGING_SERVICE = new LoggingServiceImpl(
-            "test-group", null, BuildInfoProvider.getBuildInfo()
+            "test-group", null, BuildInfoProvider.getBuildInfo(), true
     );
 
     static {
@@ -791,21 +791,23 @@ public final class TestSupport {
     }
 
     private void initProcessor(Processor processor, TestOutbox outbox) {
+        SerializationService serializationService;
+        if (jetInstance != null && jetInstance.getHazelcastInstance() instanceof SerializationServiceSupport) {
+            SerializationServiceSupport impl = (SerializationServiceSupport) jetInstance.getHazelcastInstance();
+            serializationService = impl.getSerializationService();
+        } else {
+            serializationService = new DefaultSerializationServiceBuilder()
+                    .setManagedContext(e -> e)
+                    .build();
+        }
+
         TestProcessorContext context = new TestProcessorContext()
-                .setLogger(getLogger(processor.getClass().getName()));
+                .setLogger(getLogger(processor.getClass().getName()))
+                .setManagedContext(serializationService.getManagedContext());
         if (jetInstance != null) {
             context.setJetInstance(jetInstance);
         }
         if (processor instanceof SerializationServiceAware) {
-            SerializationService serializationService;
-            if (jetInstance != null) {
-                SerializationServiceSupport impl = (SerializationServiceSupport) jetInstance.getHazelcastInstance();
-                serializationService = impl.getSerializationService();
-            } else {
-                serializationService = new DefaultSerializationServiceBuilder()
-                        .setManagedContext(e -> e)
-                        .build();
-            }
             ((SerializationServiceAware) processor).setSerializationService(serializationService);
         }
         try {

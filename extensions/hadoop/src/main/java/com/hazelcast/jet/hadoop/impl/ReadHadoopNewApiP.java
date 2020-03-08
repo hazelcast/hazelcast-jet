@@ -19,13 +19,13 @@ package com.hazelcast.jet.hadoop.impl;
 import com.hazelcast.cluster.Address;
 import com.hazelcast.cluster.Member;
 import com.hazelcast.function.BiFunctionEx;
-import com.hazelcast.instance.impl.HazelcastInstanceImpl;
 import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.hadoop.HadoopSources;
+import com.hazelcast.jet.impl.execution.init.Contexts.ProcCtx;
 import com.hazelcast.jet.impl.util.Util;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.hadoop.conf.Configuration;
@@ -40,10 +40,7 @@ import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
 import org.apache.hadoop.util.ReflectionUtils;
 
 import javax.annotation.Nonnull;
-import java.io.ByteArrayOutputStream;
-import java.io.DataInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.lang.reflect.Constructor;
 import java.util.Arrays;
 import java.util.List;
@@ -87,8 +84,7 @@ public final class ReadHadoopNewApiP<K, V, R> extends AbstractProcessor {
 
     @Override
     protected void init(@Nonnull Context context) {
-        HazelcastInstanceImpl instance = (HazelcastInstanceImpl) context.jetInstance().getHazelcastInstance();
-        serializationService = instance.getSerializationService();
+        serializationService = ((ProcCtx) context).serializationService();
         // we clone the projection of key/value if configured so because some of the
         // record-readers return the same object for `reader.getCurrentKey()`
         // and `reader.getCurrentValue()` which is mutated for each `reader.nextKeyValue()`.
@@ -232,50 +228,6 @@ public final class ReadHadoopNewApiP<K, V, R> extends AbstractProcessor {
                                 return new ReadHadoopNewApiP<>(configuration, inputFormat, mappedSplits, projectionFn);
                             }
                     ).collect(toList());
-        }
-    }
-
-    /**
-     * A {@link ByteArrayOutputStream} that provides an InputStream to read out
-     * its current contents.
-     */
-    private static final class BetterByteArrayOutputStream extends ByteArrayOutputStream {
-        private static final int BYTE_MASK = 0xff;
-
-        private int inputStreamPos;
-        private InputStream inputStream = new InputStream() {
-            @Override
-            public int read() {
-                return (inputStreamPos < count) ? (buf[inputStreamPos++] & BYTE_MASK) : -1;
-            }
-
-            @Override
-            public int read(@Nonnull byte[] b, int off, int len) {
-                if (inputStreamPos == count) {
-                    return -1;
-                }
-                int copiedLength = Math.min(len, count - inputStreamPos);
-                System.arraycopy(buf, inputStreamPos, b, off, copiedLength);
-                inputStreamPos += copiedLength;
-                return copiedLength;
-            }
-        };
-        private DataInputStream inputStreamDataInput = new DataInputStream(inputStream);
-
-        /**
-         * Returns a DataInputStream from which you can read current contents
-         * of this output stream. Calling this method again invalidates the
-         * previously returned stream.
-         */
-        DataInputStream getDataInputStream() {
-            inputStreamPos = 0;
-            return inputStreamDataInput;
-        }
-
-        @Override
-        public void reset() {
-            inputStreamPos = 0;
-            super.reset();
         }
     }
 }

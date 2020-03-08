@@ -18,6 +18,7 @@ package com.hazelcast.jet.impl.execution;
 
 import com.hazelcast.cluster.Address;
 import com.hazelcast.instance.BuildInfoProvider;
+import com.hazelcast.internal.serialization.impl.DefaultSerializationServiceBuilder;
 import com.hazelcast.logging.impl.LoggingServiceImpl;
 import com.hazelcast.test.HazelcastSerialClassRunner;
 import org.junit.Before;
@@ -46,8 +47,10 @@ public class ReceiverTaskletSendLimitTest {
 
     @Before
     public void before() {
-        tasklet = new ReceiverTasklet(null, RWIN_MULTIPLIER, FLOW_CONTROL_PERIOD_MS,
-                new LoggingServiceImpl(null, null, BuildInfoProvider.getBuildInfo()), new Address(), 0, "");
+        tasklet = new ReceiverTasklet(null,
+                new DefaultSerializationServiceBuilder().build(),
+                RWIN_MULTIPLIER, FLOW_CONTROL_PERIOD_MS,
+                new LoggingServiceImpl(null, null, BuildInfoProvider.getBuildInfo(), false), new Address(), 0, "");
     }
 
     @Test

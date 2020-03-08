@@ -27,4 +27,12 @@
         <version>4.1-SNAPSHOT</version>
     </parent>
 
+    <dependencies>
+        <dependency>
+            <groupId>com.hazelcast.jet.examples</groupId>
+            <artifactId>hazelcast-jet-examples-trade-source</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+    </dependencies>
+
 </project>

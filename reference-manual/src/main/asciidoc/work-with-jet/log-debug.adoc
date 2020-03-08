@@ -124,7 +124,7 @@ There is a wide range of metrics and statistics provided by IMDG:
 {hz-refman}#getting-member-statistics[IMDG Reference Manual])
 * executor statistics (see {hz-refman}#executor-statistics[IMDG Reference Manual])
 * partition related statistics (state, migration, replication)
-* garbage collection statistics (see {hz-javadoc}/memory/GarbageCollectorStats.html[IMDG API Docs])
+* garbage collection statistics
 * memory statistics for the JVM which current IMDG member belongs to (total
 physical/free OS memory, max/committed/used/free heap memory and
 max/committed/used/free native memory)
@@ -137,7 +137,7 @@ max/committed/used/free native memory)
 
 [cols="3,2"]
 |===
-|Names|Main tags
+|Names|Extra tags
 
 | **blockingWorkerCount**: Number of non-cooperative workers employed.
 
@@ -153,7 +153,7 @@ Each Jet cluster member will have one instance of this metric.
 
 | **iterationCount**: The total number of iterations the driver of tasklets in cooperative
 thread N made. It should increase by at least 250 iterations/s. Lower
-value means some of the cooperative processors blocks for too long.
+value means some of the cooperative processors block for too long.
 Somewhat lower value is normal if there are many tasklets assigned to
 the processor. Lower value affects the latency. +
  **taskletCount**: The number of assigned tasklets to cooperative thread N.

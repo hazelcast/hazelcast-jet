@@ -54,7 +54,6 @@ import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.stream.Collectors.toList;
 
 public final class ImdgUtil {
-    private static final int BUFFER_SIZE = 1 << 15;
 
     private ImdgUtil() {
     }
@@ -141,7 +140,7 @@ public final class ImdgUtil {
         if (targetIMap instanceof MapProxyImpl) {
             return ((MapProxyImpl<K, V>) targetIMap).putAllAsync(items);
         } else if (targetIMap instanceof ClientMapProxy) {
-            return  ((ClientMapProxy<K, V>) targetIMap).putAllAsync(items);
+            return ((ClientMapProxy<K, V>) targetIMap).putAllAsync(items);
         } else {
             throw new RuntimeException("Unexpected map class: " + targetIMap.getClass().getName());
         }
@@ -161,9 +160,9 @@ public final class ImdgUtil {
     }
 
     @Nonnull
-    public static BufferObjectDataOutput createObjectDataOutput(@Nonnull NodeEngine engine) {
+    public static BufferObjectDataOutput createObjectDataOutput(@Nonnull NodeEngine engine, int size) {
         return ((InternalSerializationService) engine.getSerializationService())
-                .createObjectDataOutput(BUFFER_SIZE);
+                .createObjectDataOutput(size);
     }
 
     @Nonnull
