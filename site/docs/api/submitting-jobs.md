@@ -151,3 +151,7 @@ of them individually.
 
 It's also possible to add a whole JAR, using the `JobConfig.addJar`
 method.
+
+## Setting Processing Guarantee
+
+TODO

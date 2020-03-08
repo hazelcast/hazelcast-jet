@@ -5,49 +5,47 @@ description: Options available for monitoring the health and operations of Jet c
 
 ## Logging
 
-Jet does not depend on a specific logging framework and has built-in
-adapters for a variety of them. You can also write a new adapter to
-integrate with loggers Jet does not support natively.
+By default, a Jet node writes logs into the `logs` folder of the
+distribution. The logs are configured to roll over daily. You can change
+the logging configuration by modifying `config/log4j.properties`.
 
-To use one of the built-in adapters, set the `hazelcast.logging.type`
-property to one of the following:
+### Logging in Client and Embedded Mode
+
+When using Jet through the client or in embedded mode, Jet doesn't
+automatically add any dependencies to any logging framework and allows
+configuration of which facade the logging should be done through. Jet
+supports the following loggers:
 
 * `jdk`: java.util.logging (default)
 * `log4j`: Apache Log4j
 * `log4j2`: Apache Log4j 2
 * `slf4j`: SLF4J
-* `none`: Turn off logging
+* `none`: no logger (i.e. no logging will be made)
 
-When using the Jet distribution to set up a **cluster** of Jet members,
-the logging type of those members defaults to `log4j`. Moreover, they
-are set up with both console logging and daily rolling file logs, stored
-in the `logs` folder of the distribution.
+To configure the logging facade to use, you need to set a property
+in the configuration file:
 
-When using Jet in **embedded** mode or when using Jet **clients** to
-connect to a remote cluster, there is also the option to configure the
-logging programmatically.
-
-For example, to configure Jet to use Log4j, you can do one of the
-following:
-
-```java
-System.setProperty("hazelcast.logging.type", "log4j");
+```yaml
+hazelcast-client:
+  properties:
+    hazelcast.logging.type: log4j2
 ```
 
-or
+Alternatively, you can use the system property
+`-Dhazelcast.logging.type` to configure the logging framework to use.
 
-```java
-JetConfig config = new JetConfig();
-config.getHazelcastConfig()
-      .setProperty("hazelcast.logging.type", "log4j");
-```
+### Using a Custom Logger
+
+If you'd like to use your own logging implementation, you can configure
+the `hazelcast.logging.class` property with a class which implements the
+`com.hazelcast.logging.LoggerFactory` interface.
 
 ## Metrics
 
 Jet exposes various metrics to facilitate monitoring of the cluster
 state and of running jobs.
 
-Metrics have associated **tags** which describe which object the metric
+Metrics have associated *tags* which describe which object the metric
 applies to. The tags for job metrics typically indicate the specific
 [DAG vertex](../concepts/dag.md) and processor the metric belongs to.
 

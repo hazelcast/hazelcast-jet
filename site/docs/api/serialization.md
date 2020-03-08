@@ -214,12 +214,13 @@ bottleneck in your application, as even with this simple data type it's
 more than an order of magnitude slower than other serialization options,
 not to mention very wasteful of memory usage.
 
-### Sample Serializer implementation
+### Writing Custom Serializers
 
-For best performance we recommend using
+For best performance and simplest implementation we recommend using
 [com.hazelcast.nio.serialization.StreamSerializer](https://docs.hazelcast.org/docs/4.0/javadoc/com/hazelcast/nio/serialization/StreamSerializer.html)
 or
 [com.hazelcast.nio.serialization.ByteArraySerializer](https://docs.hazelcast.org/docs/4.0/javadoc/com/hazelcast/nio/serialization/ByteArraySerializer.html).
+
 Below you can find a sample implementation of `StreamSerializer` for
 `Person` (mind the type id which should be unique across all serializers):
 
@@ -249,28 +250,8 @@ class PersonSerializer implements StreamSerializer<Person> {
 ```
 
 Then the serializer should be registered with Jet up front on cluster
-startup, either programmatically:
-
-```java
-JetConfig config = new JetConfig();
-config.getHazelcastConfig().getSerializationConfig()
-    .addSerializerConfig(new SerializerConfig().setTypeClass(Person.class).setClass(PersonSerializer.class));
-JetInstance jet = Jet.newJetInstance(config);
-```
-
-via hazelcast.yaml:
-
-```yaml
-hazelcast:
-  ...
-  serialization:
-    serializers:
-      serializer:
-        "type-class": "com.hazelcast.jet.examples.Person"
-        "class-name": "com.hazelcast.jet.examples.PersonSerializer"
-```
-
-or it can be auto discovered with a help of `SerializerHook`:
+startup. The best way to do is to create a `SerializerHook` which can
+automatically be registered on startup:
 
 ```java
 class PersonSerializerHook implements SerializerHook<Value> {
@@ -292,13 +273,25 @@ class PersonSerializerHook implements SerializerHook<Value> {
 }
 ```
 
-and file `META-INF/services/com.hazelcast.SerializerHook` with the
-following content:
+You'll also need to add the file
+`META-INF/services/com.hazelcast.SerializerHook` with the following
+content:
 
 ```text
 com.hazelcast.jet.examples.PersonSerializerHook
 ```
 
+Alternatively, you can add the following configuration to `hazelcast.yaml`:
+
+```yaml
+hazelcast:
+  serialization:
+    serializers:
+      serializer:
+        "type-class": "com.hazelcast.jet.examples.Person"
+        "class-name": "com.hazelcast.jet.examples.PersonSerializer"
+```
+
 All the classes - data types, serializers & hooks - should be present
-on the server classpath, ideally in server's lib directory packaged as
+on the server classpath, ideally in server's `lib` directory packaged as
 a jar file.
