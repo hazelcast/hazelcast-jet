@@ -30,7 +30,7 @@ import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.HazelcastSerializationException;
 import com.hazelcast.nio.serialization.PortableReader;
-import com.hazelcast.nio.serialization.StreamSerializer;
+import com.hazelcast.nio.serialization.Serializer;
 import com.hazelcast.partition.PartitioningStrategy;
 
 import java.io.IOException;
@@ -59,11 +59,11 @@ public class JetSerializationService implements InternalSerializationService {
 
     private volatile boolean active;
 
-    public JetSerializationService(Map<Class<?>, StreamSerializer<?>> serializers,
+    public JetSerializationService(Map<Class<?>, ? extends Serializer> serializers,
                                    AbstractSerializationService delegate) {
         Map<Class<?>, SerializerAdapter> serializersByClass = new HashMap<>();
         Map<Integer, SerializerAdapter> serializersById = new HashMap<>();
-        for (Entry<Class<?>, StreamSerializer<?>> entry : serializers.entrySet()) {
+        for (Entry<Class<?>, ? extends Serializer> entry : serializers.entrySet()) {
             SerializerAdapter serializerAdapter = SerializationUtil.createSerializerAdapter(entry.getValue(), this);
             serializersByClass.put(entry.getKey(), serializerAdapter);
             serializersById.put(entry.getValue().getTypeId(), serializerAdapter);

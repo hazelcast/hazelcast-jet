@@ -42,7 +42,7 @@ import com.hazelcast.jet.impl.util.LoggingUtil;
 import com.hazelcast.jet.impl.util.ReflectionUtils;
 import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.logging.ILogger;
-import com.hazelcast.nio.serialization.StreamSerializer;
+import com.hazelcast.nio.serialization.Serializer;
 import com.hazelcast.spi.impl.NodeEngine;
 
 import javax.annotation.Nullable;
@@ -350,8 +350,8 @@ public class ExecutionContext implements DynamicMetricsProvider {
         completionTime.set(System.currentTimeMillis());
     }
 
-    private static Map<Class<?>, StreamSerializer<?>> instantiateSerializers(ClassLoader classLoader,
-                                                                             Map<String, String> configs) {
+    private static Map<Class<?>, ? extends Serializer> instantiateSerializers(ClassLoader classLoader,
+                                                                              Map<String, String> configs) {
         return configs.entrySet().stream()
                       .collect(toMap(
                               entry -> ReflectionUtils.loadClass(classLoader, entry.getKey()),
