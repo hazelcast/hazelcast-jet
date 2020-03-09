@@ -34,12 +34,11 @@ public class SqlTest extends JetTestSupport {
         JetSqlService sqlService = new JetSqlService(jet);
         sqlService.getSchema().createTable("my_map", JetSchema.IMAP_LOCAL_SERVER,
                 createMap(IMapSqlConnector.TO_MAP_NAME, "my_map"),
-                asList(entry("id", Integer.class), entry("name", String.class)));
-        sqlService.getSchema().createTable("my_map2", JetSchema.IMAP_LOCAL_SERVER,
-                createMap(IMapSqlConnector.TO_MAP_NAME, "my_map2"),
-                asList(entry("id", Integer.class), entry("field", String.class)));
+                asList(entry("__key", Integer.class), entry("name", String.class)));
+//        sqlService.getSchema().createTable("my_map2", JetSchema.IMAP_LOCAL_SERVER,
+//                createMap(IMapSqlConnector.TO_MAP_NAME, "my_map2"),
+//                asList(entry("__key", Integer.class), entry("field", String.class)));
 
-        sqlService.parse("SELECT field FROM my_map, my_map2");
-//        sqlService.parse("SELECT name FROM my_map");
+        sqlService.execute("SELECT name FROM my_map where __key=10");
     }
 }
