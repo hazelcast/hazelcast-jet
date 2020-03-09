@@ -79,14 +79,65 @@ restore its processing state to exactly what it was at the time of the
 last snapshot. If a cluster member goes away, Jet will restart the job
 on the remaining members, restore the state of processing from the last
 snapshot, and then seamlessly continue from that point.</p>
-<p>Jet utilizes the <a href="http://lamport.azurewebsites.net/pubs/chandy.pdf">Chandy-Lamport distributed snapshotting
-algorithm</a> to offer
-fault tolerance and processing guarantees.</p>
 <p>The snapshots are part of the regular Jet operations. If you configure
-your job as Exactly-once or At-least once, Jet automatically creates
+your job as <em>exactly-once</em> or <em>at-least-once</em>, Jet automatically creates
 snapshots in regular intervals. Jet manages the lifecycle of the
 snapshots - the snapshot is automatically replaced by a next successful
 snapshot.</p>
+<h2><a class="anchor" aria-hidden="true" id="distributed-snapshot"></a><a href="#distributed-snapshot" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Distributed Snapshot</h2>
+<p>The technique Jet uses to achieve fault tolerance is called a
+“distributed snapshot”, described in a <a href="http://lamport.azurewebsites.net/pubs/chandy.pdf">paper by Chandy and
+Lamport</a>. At regular
+intervals, Jet raises a global flag that says &quot;it’s time for another
+snapshot&quot;. All processors belonging to source vertices observe the flag,
+save their state, emit a barrier item to the downstream processors and
+resume processing.</p>
+<p>As the barrier item reaches a processor, it stops what it’s doing and
+saves its state to the snapshot storage. Once complete, it forwards the
+barrier item to its downstream processors and so on.</p>
+<p>Due to parallelism, in most cases a processor receives data from more
+than one upstream processor. It will receive the barrier item from each
+of them at separate times, but it must start taking a snapshot at a
+single point in time. There are two approaches it can take, as explained
+below.</p>
+<h3><a class="anchor" aria-hidden="true" id="exactly-once"></a><a href="#exactly-once" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Exactly-Once</h3>
+<p>With exactly-once configured, as soon as the processor gets a barrier
+item in any input stream (from any upstream processor), it must stop
+consuming it until it gets the same barrier item in all the streams:</p>
+<p><img src="/docs/assets/exactly-once-1.png" alt="Exactly-once processing: received one barrier"></p>
+<ol>
+<li>At the barrier in stream</li>
+</ol>
+<p>X, but not Y. Must not accept any more X items.</p>
+<p><img src="/docs/assets/exactly-once-2.png" alt="Exactly-once processing: received both barriers"></p>
+<ol start="2">
+<li>At the barrier in both streams, taking a snapshot.</li>
+</ol>
+<p><img src="/docs/assets/exactly-once-3.png" alt="Exactly-once processing: forward the barrier"></p>
+<ol start="3">
+<li>Snapshot done, barrier forwarded. Can resume consuming all streams.</li>
+</ol>
+<h3><a class="anchor" aria-hidden="true" id="at-least-once"></a><a href="#at-least-once" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>At-Least-Once</h3>
+<p>With at-least-once configured, the processor can keep consuming all the
+streams until it gets all the barriers, at which point it will stop to
+take the snapshot:</p>
+<p><img src="/docs/assets/at-least-once-1.png" alt="At-Least-once processing: received one barrier"></p>
+<ol>
+<li>At the barrier in stream X, but not Y. Carry on consuming all streams.</li>
+</ol>
+<p><img src="/docs/assets/at-least-once-3.png" alt="At-Least-once processing: received both barriers"></p>
+<ol start="2">
+<li>At the barrier in both streams, already consumed x1 and x2. Taking a snapshot.</li>
+</ol>
+<p><img src="/docs/assets/at-least-once-3.png" alt="At-Least-once processing: forward the barrier"></p>
+<ol start="3">
+<li>Snapshot done, barrier forwarded.</li>
+</ol>
+<p>Even though <code>x1</code> and <code>x2</code> occur after the barrier, the processor
+consumed and processed them, updating its state accordingly. If the
+computation job stops and restarts, this state will be restored from the
+snapshot and then the source will replay <code>x1</code> and <code>x2</code>. The processor
+will think it got two new items.</p>
 <h2><a class="anchor" aria-hidden="true" id="data-safety"></a><a href="#data-safety" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Data Safety</h2>
 <h3><a class="anchor" aria-hidden="true" id="in-memory-snapshot-storage"></a><a href="#in-memory-snapshot-storage" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>In-Memory Snapshot Storage</h3>
 <p>Jet backs up the state to its own <code>IMap</code> objects. <code>IMap</code> is a replicated
@@ -146,7 +197,7 @@ until the user decides do remove it. -->
 Exported snapshots are mainly used to upgrade the job: job is cancelled
 with a snapshot and a new job is submitted that will use the saved
 snapshot for initial state.  -->
-</span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/docs/architecture/execution-engine"><span class="arrow-prev">← </span><span>Cooperative Threading</span></a><a class="docs-next button" href="/docs/architecture/in-memory-storage"><span>In-Memory Storage</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#consistency">Consistency</a></li><li><a href="#data-safety">Data Safety</a><ul class="toc-headings"><li><a href="#in-memory-snapshot-storage">In-Memory Snapshot Storage</a></li></ul></li><li><a href="#split-brain-protection">Split-Brain Protection</a></li></ul></nav></div><footer class="nav-footer" id="footer"><section class="sitemap"><a href="/" class="nav-home"><img src="/img/logo-light.svg" alt="Hazelcast Jet" width="200" height="40"/></a><div><h5>Docs</h5><a href="/docs/get-started/intro">Get Started</a><a href="/docs/concepts/dag">Concepts and Architecture</a><a href="/docs/tutorials/kafka">Tutorials</a><a href="/docs/operations/configuration">Operations Guide</a></div><div><h5>Community</h5><a href="https://groups.google.com/forum/#!forum/hazelcast-jet" target="_blank" rel="noreferrer noopener">Google Groups</a><a href="http://stackoverflow.com/questions/tagged/hazelcast-jet" target="_blank" rel="noreferrer noopener">Stack Overflow</a><a href="https://gitter.im/hazelcast/hazelcast-jet">Gitter Chat</a></div><div><h5>Latest From the Blog</h5><a href="/blog/2020/03/02/jet-40-is-released">Jet 4.0 is Released</a><a href="/blog/2020/02/20/transactional-processors">Transactional connectors in Hazelcast Jet</a><a href="/blog/2020/01/28/new-website">Announcing New Documentation Website</a><a href="/blog/2019/11/12/stream-deduplication">Stream Deduplication with Hazelcast Jet</a></div><div><h5>More</h5><a href="https://github.com/hazelcast/hazelcast-jet">GitHub Project</a><a href="https://github.com/hazelcast/hazelcast-jet/issues">Issue Tracker</a><a href="http://hazelcast.com/company/careers/">Work at Hazelcast</a><a href="/license">License</a><a class="github-button" href="https://github.com/hazelcast/hazelcast-jet" data-icon="octicon-star" data-count-href="/facebook/docusaurus/stargazers" data-show-count="true" data-count-aria-label="# stargazers on GitHub" aria-label="Star this project on GitHub">Star</a></div></section><section class="copyright">Copyright © 2020 Hazelcast Inc.</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
+</span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/docs/architecture/execution-engine"><span class="arrow-prev">← </span><span>Cooperative Threading</span></a><a class="docs-next button" href="/docs/architecture/in-memory-storage"><span>In-Memory Storage</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#consistency">Consistency</a></li><li><a href="#distributed-snapshot">Distributed Snapshot</a><ul class="toc-headings"><li><a href="#exactly-once">Exactly-Once</a></li><li><a href="#at-least-once">At-Least-Once</a></li></ul></li><li><a href="#data-safety">Data Safety</a><ul class="toc-headings"><li><a href="#in-memory-snapshot-storage">In-Memory Snapshot Storage</a></li></ul></li><li><a href="#split-brain-protection">Split-Brain Protection</a></li></ul></nav></div><footer class="nav-footer" id="footer"><section class="sitemap"><a href="/" class="nav-home"><img src="/img/logo-light.svg" alt="Hazelcast Jet" width="200" height="40"/></a><div><h5>Docs</h5><a href="/docs/get-started/intro">Get Started</a><a href="/docs/concepts/dag">Concepts and Architecture</a><a href="/docs/tutorials/kafka">Tutorials</a><a href="/docs/operations/configuration">Operations Guide</a></div><div><h5>Community</h5><a href="https://groups.google.com/forum/#!forum/hazelcast-jet" target="_blank" rel="noreferrer noopener">Google Groups</a><a href="http://stackoverflow.com/questions/tagged/hazelcast-jet" target="_blank" rel="noreferrer noopener">Stack Overflow</a><a href="https://gitter.im/hazelcast/hazelcast-jet">Gitter Chat</a></div><div><h5>Latest From the Blog</h5><a href="/blog/2020/03/02/jet-40-is-released">Jet 4.0 is Released</a><a href="/blog/2020/02/20/transactional-processors">Transactional connectors in Hazelcast Jet</a><a href="/blog/2020/01/28/new-website">Announcing New Documentation Website</a><a href="/blog/2019/11/12/stream-deduplication">Stream Deduplication with Hazelcast Jet</a></div><div><h5>More</h5><a href="https://github.com/hazelcast/hazelcast-jet">GitHub Project</a><a href="https://github.com/hazelcast/hazelcast-jet/issues">Issue Tracker</a><a href="http://hazelcast.com/company/careers/">Work at Hazelcast</a><a href="/license">License</a><a class="github-button" href="https://github.com/hazelcast/hazelcast-jet" data-icon="octicon-star" data-count-href="/facebook/docusaurus/stargazers" data-show-count="true" data-count-aria-label="# stargazers on GitHub" aria-label="Star this project on GitHub">Star</a></div></section><section class="copyright">Copyright © 2020 Hazelcast Inc.</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
                 document.addEventListener('keyup', function(e) {
                   if (e.target !== document.body) {
                     return;
