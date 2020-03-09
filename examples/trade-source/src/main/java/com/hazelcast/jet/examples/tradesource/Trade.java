@@ -16,7 +16,9 @@
 
 package com.hazelcast.jet.examples.tradesource;
 
+import javax.annotation.Nonnull;
 import java.io.Serializable;
+import java.util.Objects;
 
 /**
  * Information about a specific trade event that took place on a
@@ -35,9 +37,9 @@ public class Trade implements Serializable {
     private final long quantity;
     private final long price;
 
-    Trade(long time, String ticker, long quantity, long price) {
+    Trade(long time, @Nonnull String ticker, long quantity, long price) {
         this.time = time;
-        this.ticker = ticker;
+        this.ticker = Objects.requireNonNull(ticker);
         this.quantity = quantity;
         this.price = price;
     }
@@ -52,6 +54,7 @@ public class Trade implements Serializable {
     /**
      * Name of the instrument being traded.
      */
+    @Nonnull
     public String getTicker() {
         return ticker;
     }

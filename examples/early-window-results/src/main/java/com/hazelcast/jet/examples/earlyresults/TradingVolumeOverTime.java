@@ -20,7 +20,7 @@ import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.examples.tradesource.Trade;
-import com.hazelcast.jet.examples.tradesource.TradeGenerator;
+import com.hazelcast.jet.examples.tradesource.TradeSource;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 
@@ -59,7 +59,7 @@ public final class TradingVolumeOverTime {
 
     private static Pipeline buildPipeline() {
         Pipeline p = Pipeline.create();
-        p.readFrom(TradeGenerator.tradeSource(1, TRADES_PER_SEC, MAX_LAG))
+        p.readFrom(TradeSource.tradeStream(1, TRADES_PER_SEC, MAX_LAG))
          .withNativeTimestamps(MAX_LAG)
          .window(tumbling(SECONDS.toMillis(2))
                  // comment out this line to see how the chart behaves without early results:
