@@ -29,7 +29,7 @@ import com.hazelcast.map.IMap;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
-import com.hazelcast.nio.serialization.StreamSerializer;
+import com.hazelcast.nio.serialization.Serializer;
 import com.hazelcast.spi.annotation.PrivateApi;
 
 import javax.annotation.Nonnull;
@@ -940,7 +940,7 @@ public class JobConfig implements IdentifiedDataSerializable {
      * @return {@code this} instance for fluent API
      */
     @Nonnull
-    public <T, S extends StreamSerializer<?>> JobConfig addSerializer(Class<T> clazz, Class<S> serializerClass) {
+    public <T, S extends Serializer> JobConfig addSerializer(Class<T> clazz, Class<S> serializerClass) {
         addClass(clazz);
         addClass(serializerClass);
         serializerConfigs.put(clazz.getName(), serializerClass.getName());

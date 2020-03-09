@@ -64,7 +64,7 @@ public class JetSerializationService implements InternalSerializationService {
         Map<Class<?>, SerializerAdapter> serializersByClass = new HashMap<>();
         Map<Integer, SerializerAdapter> serializersById = new HashMap<>();
         for (Entry<Class<?>, StreamSerializer<?>> entry : serializers.entrySet()) {
-            SerializerAdapter serializerAdapter = new StreamSerializerAdapter(null, entry.getValue());
+            SerializerAdapter serializerAdapter = SerializationUtil.createSerializerAdapter(entry.getValue(), this);
             serializersByClass.put(entry.getKey(), serializerAdapter);
             serializersById.put(entry.getValue().getTypeId(), serializerAdapter);
         }
