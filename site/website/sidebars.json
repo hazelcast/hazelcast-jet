@@ -14,15 +14,14 @@
     ],
     "Tutorials" : [
       "tutorials/kafka",
-      "tutorials/cdc",
-      "tutorials/stream-imap",
       "tutorials/map-join",
       "tutorials/windowing",
-      "tutorials/python",
-      "tutorials/observables",
-      "tutorials/custom-batch-source",
-      "tutorials/custom-stream-source",
-      "tutorials/custom-sink"
+      "tutorials/python"
+    ],
+    "Concepts": [
+      "concepts/dag",
+      "concepts/event-time",
+      "concepts/processing-guarantees"
     ],
     "Programming Guide": [
       "api/pipeline",
@@ -36,10 +35,13 @@
       "api/spring",
       "api/javadoc"
     ],
-    "Concepts": [
-      "concepts/dag",
-      "concepts/event-time",
-      "concepts/processing-guarantees"
+    "How-To Guides" : [
+      "tutorials/cdc",
+      "how-tos/stream-imap",
+      "how-tos/observables",
+      "how-tos/custom-batch-source",
+      "how-tos/custom-stream-source",
+      "how-tos/custom-sink"
     ],
     "Operations Guide": [
       "operations/configuration",
