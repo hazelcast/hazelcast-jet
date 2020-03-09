@@ -924,18 +924,13 @@ public class JobConfig implements IdentifiedDataSerializable {
     }
 
     /**
-     * Registers given serializer for a given class for the scope of the job.
-     * Both will be accessible to all the code attached to the underlying
-     * pipeline or DAG, but not to any other code. (An important example is
-     * the {@code IMap} data source, which can instantiate only the classes
-     * from the Jet instance's classpath.)
-     *
+     * Registers the given serializer for the given class for the scope of the
+     * job. Both will be accessible to all the code attached to the underlying
+     * pipeline or DAG, but not to any other code. (An important example is the
+     * {@code IMap} data source, which can instantiate only the classes from
+     * the Jet instance's classpath.)
+     * <p>
      * Serializer must have no-arg constructor.
-     *
-     * @implNote Backing storage for this method is an {@link IMap} with a
-     * default backup count of 1. When adding big files as a resource, size
-     * the cluster accordingly in terms of memory, since each file will have 2
-     * copies inside the cluster(primary + backup replica).
      *
      * @return {@code this} instance for fluent API
      */
@@ -948,7 +943,8 @@ public class JobConfig implements IdentifiedDataSerializable {
     }
 
     /**
-     * Returns all the registered serializer configurations.
+     * Returns all the registered serializer configurations. This is a private
+     * API.
      */
     @Nonnull
     @PrivateApi
