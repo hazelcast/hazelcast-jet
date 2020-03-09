@@ -79,6 +79,24 @@
                     </execution>
                 </executions>
             </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <version>${maven.javadoc.plugin.version}</version>
+                <executions>
+                    <execution>
+                        <id>attach-javadocs</id>
+                        <phase>prepare-package</phase>
+                    </execution>
+                </executions>
+                <configuration>
+                    <includeDependencySources>true</includeDependencySources>
+                    <dependencySourceIncludes>
+                        <dependencySourceInclude>com.hazelcast:*</dependencySourceInclude>
+                        <dependencySourceInclude>com.hazelcast.jet:*</dependencySourceInclude>
+                    </dependencySourceIncludes>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
 
@@ -87,6 +105,12 @@
             <groupId>com.hazelcast.jet</groupId>
             <artifactId>hazelcast-jet</artifactId>
             <version>${project.version}</version>
+        </dependency>
+        <!-- workaround, otherwise javadoc from core module is not included -->
+        <dependency>
+            <groupId>com.hazelcast.jet</groupId>
+            <artifactId>hazelcast-jet-core</artifactId>
+            <version>${project.parent.version}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>
