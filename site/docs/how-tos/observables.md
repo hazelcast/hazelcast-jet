@@ -1,5 +1,6 @@
 ---
 title: Receive Results on the Client
+description: How to monitor Jet job results on the client side.
 ---
 
 Usually Jet jobs make use of distributed data Sinks to output results,

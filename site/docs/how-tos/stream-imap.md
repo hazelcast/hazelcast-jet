@@ -1,5 +1,6 @@
 ---
 title: Receive IMap Change Stream
+description: How to monitor the stream of change events happening to an `IMap.`
 ---
 
 [IMap](https://docs.hazelcast.org/docs/4.0/javadoc/com/hazelcast/map/IMap.html)

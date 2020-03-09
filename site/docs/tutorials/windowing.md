@@ -1,5 +1,6 @@
 ---
-title: Windowed Aggregation
+title: Apply Windowed Aggregation
+description: How to effectively use windowed aggregation in Jet.
 ---
 
 As we've seen in the guide for

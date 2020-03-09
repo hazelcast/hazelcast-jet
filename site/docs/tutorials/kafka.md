@@ -1,5 +1,6 @@
 ---
 title: Receive from Apache Kafka
+description: How to use Jet for processing data streaming from Apache Kafka.
 ---
 
 Apache Kafka is a distributed, replayable messaging system. It is a

@@ -1,6 +1,6 @@
 ---
 title: Create a Batch Source
-description: Guide on how to create a custom batch source
+description: How to create a custom batch source for Jet.
 ---
 
 In the [Custom Sources and Sinks](../api/sources-sinks.md#custom-sources-and-sinks)

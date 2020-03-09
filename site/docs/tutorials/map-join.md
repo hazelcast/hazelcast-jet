@@ -1,5 +1,6 @@
 ---
 title: Enrich Your Stream with Reference Data
+description: How to enrich your Jet stream with data from static sources. 
 ---
 
 > :warning: **TODO update hazelcast-jet-examples-trade-source:

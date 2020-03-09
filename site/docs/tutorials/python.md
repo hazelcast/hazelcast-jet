@@ -1,5 +1,6 @@
 ---
 title: Apply a Python Function
+description: How to run Python code to process data in Jet pipelines.
 ---
 
 Hazelcast Jet allows you to write a function in Python and use it to

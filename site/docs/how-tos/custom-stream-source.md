@@ -1,6 +1,6 @@
 ---
 title: Create a Streaming Source
-description: Guide on how to create a custom streaming source
+description: How to create a custom streaming source for Jet.
 ---
 
 In the [Custom Sources and Sinks](../api/sources-sinks.md#custom-sources-and-sinks)

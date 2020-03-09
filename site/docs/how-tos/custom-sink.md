@@ -1,6 +1,6 @@
 ---
 title: Create a Sink Connector
-description: Tutorial on how to define custom sinks.
+description: How to create a custom sinks for Jet.
 ---
 
 In the [Custom Sources and Sinks](../api/sources-sinks.md#custom-sources-and-sinks)

@@ -1,5 +1,6 @@
 ---
-title: Change Data Capture
+title: Receive CDC from MySQL
+description: How to monitor Change Data Capture data from a MySQL database in Jet.
 ---
 
 **Change data capture** refers to the process of **observing changes
@@ -21,218 +22,358 @@ The [Kafka Connect API](http://kafka.apache.org/documentation.html#connect)
 is an interface developed for Kafka, that simplifies and automates the
 integration of a new data source (or sink) with your Kafka cluster.
 Since version 4.0 Jet includes a generic Kafka Connect Source, thus
-making the integration of Debezium's connectors a simple matter of
-configuration:
+making the integration of Debezium's connectors easy.
 
-<!--DOCUSAURUS_CODE_TABS-->
-<!--MongoDB-->
+Let's see an example, how to process change events from a MySQL datase
+in Jet.
 
-```java
-Configuration configuration = Configuration
-        .create()
-        .with("name", "mongodb-inventory-connector")
-        .with("connector.class", "io.debezium.connector.mongodb.MongoDbConnector")
-        /* begin connector properties */
-        .with("mongodb.hosts", "rs0/" + mongo.getContainerIpAddress() + ":"
-                + mongo.getMappedPort(MongoDBContainer.MONGODB_PORT))
-        .with("mongodb.name", "fullfillment")
-        .with("mongodb.user", "debezium")
-        .with("mongodb.password", "dbz")
-        .with("mongodb.members.auto.discover", "false")
-        .with("collection.whitelist", "inventory.*")
-        .with("database.history.hazelcast.list.name", "test")
-        .build();
+## 1. Install Docker
 
-Pipeline pipeline = Pipeline.create();
-pipeline.readFrom(DebeziumSources.cdc(configuration))
-        .withoutTimestamps()
-        .map(record -> Values.convertToString(record.valueSchema(), record.value()))
-        .writeTo(Sinks.logger());
+This tutorial uses [Docker](https://www.docker.com/) and a Debezium
+[example Docker image](https://hub.docker.com/r/debezium/example-mysql)
+in order to simplify the setup of a MySQL database you can freely
+experiment on.
 
-JobConfig jobConfig = new JobConfig();
-jobConfig.addJarsInZip("/path/to/debezium-connector-mongodb.zip");
+1. Follow Docker's [Get Started](https://www.docker.com/get-started)
+   instructions and install it on your system.
+2. Test that it works:
+   * Run `docker version` to check that you have the latest release
+     installed.
+   * Run `docker run hello-world` to verify that Docker is pulling
+     images and running as expected.
 
-JetInstance jet = Jet.bootstrappedInstance();
-Job job = jet.newJob(pipeline, jobConfig);
-job.join();
+## 2. Start MySQL Database
+
+Open a terminal, and run following command. It will start a new
+container that runs a MySQL database server preconfigured with an
+inventory database:
+
+```bash
+docker run -it --rm --name mysql -p 3306:3306 \
+    -e MYSQL_ROOT_PASSWORD=debezium -e MYSQL_USER=mysqluser \
+    -e MYSQL_PASSWORD=mysqlpw debezium/example-mysql:1.0
 ```
 
-<!--MySQL-->
+This runs a new container using version `1.0` of the
+`debezium/example-mysql` image, which is based on the
+[mysql:5.7](https://hub.docker.com/_/mysql) image, defines and populates
+a sample "inventory" database, and creates a `debezium` user with
+password `dbz` that has the minimum privileges required by Debezium’s
+MySQL connector.
 
-```java
-Configuration configuration = Configuration
-        .create()
-        .with("name", "mysql-inventory-connector")
-        .with("connector.class", "io.debezium.connector.mysql.MySqlConnector")
-        /* begin connector properties */
-        .with("database.hostname", mysql.getContainerIpAddress())
-        .with("database.port", mysql.getMappedPort(MYSQL_PORT))
-        .with("database.user", "debezium")
-        .with("database.password", "dbz")
-        .with("database.server.id", "184054")
-        .with("database.server.name", "dbserver1")
-        .with("database.whitelist", "inventory")
-        .with("database.history.hazelcast.list.name", "test")
-        .build();
+The command assigns the name `mysql` to the container so that it can be
+easily referenced later. The `-it` flag makes the container interactive,
+meaning it attaches the terminal’s standard input and output to the
+container so that you can see what is going on in the container. The
+`--rm` flag instructs Docker to remove the container when it is stopped.
 
-Pipeline pipeline = Pipeline.create();
-pipeline.readFrom(DebeziumSources.cdc(configuration))
-        .withoutTimestamps()
-        .map(record -> Values.convertToString(record.valueSchema(), record.value()))
-        .writeTo(Sinks.logger());
+The command maps port `3306` (the default MySQL port) in the container
+to the same port on the Docker host so that software outside of the
+container can connect to the database server.
 
-JobConfig jobConfig = new JobConfig();
-jobConfig.addJarsInZip("/path/to/debezium-connector-mysql.zip");
+Finally, it also uses the `-e` option three times to set the
+`MYSQL_ROOT_PASSWORD`, `MYSQL_USER`, and `MYSQL_PASSWORD` environment
+variables to specific values.
 
-JetInstance jet = Jet.bootstrappedInstance();
-Job job = jet.newJob(pipeline, jobConfig);
-job.join();
+You should see in your terminal something like the following:
+
+```text
+...
+2020-03-09T09:48:24.579480Z 0 [Note] mysqld: ready for connections.
+Version: '5.7.29-log'  socket: '/var/run/mysqld/mysqld.sock'  port: 3306  MySQL Community Server (GPL)
 ```
 
-<!--PostgreSQL-->
+Notice that the MySQL server starts and stops a few times as the
+configuration is modified. The last line listed above reports that the
+MySQL server is running and ready for use.
 
-```java
-Configuration configuration = Configuration
-        .create()
-        .with("name", "postgres-inventory-connector")
-        .with("connector.class", "io.debezium.connector.postgresql.PostgresConnector")
-        /* begin connector properties */
-        .with("database.hostname", postgres.getContainerIpAddress())
-        .with("database.port", postgres.getMappedPort(POSTGRESQL_PORT))
-        .with("database.user", "postgres")
-        .with("database.password", "postgres")
-        .with("database.dbname", "postgres")
-        .with("database.server.name", "dbserver1")
-        .with("schema.whitelist", "inventory")
-        .with("database.history.hazelcast.list.name", "test")
-        .with("tasks.max", "1")
-        .build();
+## 3. Start MqSQL Command Line Client
 
-Pipeline pipeline = Pipeline.create();
-pipeline.readFrom(DebeziumSources.cdc(configuration))
-        .withoutTimestamps()
-        .map(record -> Values.convertToString(record.valueSchema(), record.value()))
-        .writeTo(Sinks.logger());
+Open a new terminal, and use it to start a new container for the MySQL
+command line client and connect it to the MySQL server running in the
+`mysql` container:
 
-JobConfig jobConfig = new JobConfig();
-jobConfig.addJarsInZip("/path/to/debezium-connector-postgres.zip");
-
-JetInstance jet = Jet.bootstrappedInstance();
-Job job = jet.newJob(pipeline, jobConfig);
-job.join();
+```bash
+docker run -it --rm --name mysqlterm --link mysql --rm mysql:5.7 sh \
+    -c 'exec mysql -h"$MYSQL_PORT_3306_TCP_ADDR" -P"$MYSQL_PORT_3306_TCP_PORT" -uroot -p"$MYSQL_ENV_MYSQL_ROOT_PASSWORD"'
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+Here we start the container using the `mysql:5.7` image, name the
+container `mysqlterm` and link it to the mysql container where the
+database server is running.
 
-## Dependencies
+The `--rm` option tells Docker to remove the container when it stops,
+and the rest of the command defines the shell command that the container
+should run. This shell command runs the MySQL command line client and
+specifies the correct options so that it can connect properly.
 
-To run the above sample code you will need following libraries external to
-Jet (latest versions available at the time of writing):
+The container should output lines similar to the following:
+
+```text
+mysql: [Warning] Using a password on the command line interface can be insecure.
+Welcome to the MySQL monitor.  Commands end with ; or \g.
+Your MySQL connection id is 4
+Server version: 5.7.29-log MySQL Community Server (GPL)
+
+Copyright (c) 2000, 2020, Oracle and/or its affiliates. All rights reserved.
+
+Oracle is a registered trademark of Oracle Corporation and/or its
+affiliates. Other names may be trademarks of their respective
+owners.
+
+Type 'help;' or '\h' for help. Type '\c' to clear the current input statement.
+
+mysql>
+```
+
+Unlike the other containers, this container runs a process that produces
+a prompt. We’ll use the prompt to interact with the database. First,
+switch to the "inventory" database:
+
+```text
+mysql> use inventory;
+```
+
+and then list the tables in the database:
+
+```text
+mysql> show tables;
+```
+
+which should then display:
+
+```text
++---------------------+
+| Tables_in_inventory |
++---------------------+
+| addresses           |
+| customers           |
+| geom                |
+| orders              |
+| products            |
+| products_on_hand    |
++---------------------+
+6 rows in set (0.01 sec)
+```
+
+Use the MySQL command line client to explore the database and view the
+pre-loaded data in the database. For example:
+
+```text
+mysql> SELECT * FROM customers;
+```
+
+## 4. Start Hazelcast Jet
+
+1. [Download](https://github.com/hazelcast/hazelcast-jet/releases/download/v4.0/hazelcast-jet-4.0.zip)
+  Hazelcast Jet
+
+2. Unzip it:
+
+```bash
+cd <where_you_downloaded_it>
+unzip hazelcast-jet-4.0.zip
+cd hazelcast-jet-4.0
+```
+
+3. Start Jet:
+
+```bash
+bin/jet-start
+```
+
+4. When you see output like this, Hazelcast Jet is up:
+
+```text
+Members {size:1, ver:1} [
+    Member [192.168.1.5]:5701 - e7c26f7c-df9e-4994-a41d-203a1c63480e this
+]
+```
+
+## 5. Create a New Java Project
+
+We'll assume you're using an IDE. Create a blank Java project named
+`cdc-tutorial` and copy the Gradle or Maven file into it:
 
 <!--DOCUSAURUS_CODE_TABS-->
 
 <!--Gradle-->
 
-```bash
-compile 'com.hazelcast.jet.contrib:debezium:0.1'
+```groovy
+plugins {
+    id 'com.github.johnrengelman.shadow' version '5.2.0'
+    id 'java'
+}
+
+group 'org.example'
+version '1.0-SNAPSHOT'
+
+repositories.mavenCentral()
+
+dependencies {
+    compile 'com.hazelcast.jet:hazelcast-jet:4.0'
+    compile 'com.hazelcast.jet.contrib:debezium:0.1'
+    compile 'io.debezium:debezium-connector-mysql:1.0.0.Final'
+}
+
+jar.manifest.attributes 'Main-Class': 'org.example.JetJob'
 ```
 
 <!--Maven-->
 
 ```xml
-<dependency>
-    <groupId>com.hazelcast.jet.contrib</groupId>
-    <artifactId>debezium</artifactId>
-    <version>0.1</version>
-</dependency>
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+   <modelVersion>4.0.0</modelVersion>
+
+   <groupId>org.example</groupId>
+   <artifactId>cdc-tutorial</artifactId>
+   <version>1.0-SNAPSHOT</version>
+
+   <properties>
+       <maven.compiler.target>1.8</maven.compiler.target>
+       <maven.compiler.source>1.8</maven.compiler.source>
+   </properties>
+
+   <dependencies>
+       <dependency>
+           <groupId>com.hazelcast.jet</groupId>
+           <artifactId>hazelcast-jet</artifactId>
+           <version>4.0</version>
+       </dependency>
+       <dependency>
+           <groupId>com.hazelcast.jet.contrib</groupId>
+           <artifactId>debezium</artifactId>
+           <version>0.1</version>
+       </dependency>
+       <dependency>
+           <groupId>io.debezium</groupId>
+           <artifactId>debezium-connector-mysql</artifactId>
+           <version>1.0.0.Final</version>
+       </dependency>
+   </dependencies>
+
+   <build>
+       <plugins>
+         <plugin>
+           <groupId>org.apache.maven.plugins</groupId>
+           <artifactId>maven-shade-plugin</artifactId>
+           <version>3.2.2</version>
+           <executions>
+             <execution>
+               <phase>package</phase>
+               <goals>
+                 <goal>shade</goal>
+               </goals>
+               <configuration>
+                 <transformers>
+                   <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                     <mainClass>org.example.JetJob</mainClass>
+                   </transformer>
+                 </transformers>
+               </configuration>
+             </execution>
+           </executions>
+         </plugin>
+       </plugins>
+     </build>
+</project>
 ```
 
 <!--END_DOCUSAURUS_CODE_TABS-->
 
-## Uploading Connectors to the Job Classpath
+## 6. Define Jet Job
 
-Since we are instantiating external Kafka Connect Connectors on the Jet
-runtime, we need to be able to access those classes. Connectors are
-usually **shipped as a ZIP file**. The JAR files from inside the ZIP
-archive can be uploaded to the Jet classpath via the `addJarsInZip`
- method of the `JobConfig` class.
+Let's write the Jet code that will monitor the database and do something
+useful with the data it sees. We will only monitor the `customers` table
+and use the change events coming from it to maintain an up-to-date view
+of all current customers.
 
-To find the connector archives:
+By up-to-date view we mean an `IMap` keyed by customer ID and who's
+values are `Customer` data objects containing all information for a
+customer with a specific ID.
 
-* figure out what version of Debezium the Jet's debezium library
-  depends on; at the time of writing version 0.1 of the library
-  depends on [Debezium 1.0](https://search.maven.org/artifact/io.debezium/debezium-core/1.0.0.Final/jar)
-  , but this information can be simply checked at any time by looking at
-   the Jet debezium library's
-  [transitive dependencies on Maven](https://search.maven.org/artifact/com.hazelcast.jet.contrib/debezium/0.1/jar)
-* go to the [Releases section](https://debezium.io/releases/) on the
-  Debezium website
-* find the version you need, currently [1.0](https://debezium.io/releases/1.0/)
-* go to [Maven artifacts](https://search.maven.org/search?q=g:io.debezium%20and%20v:1.0.0.Final*)
-* download "plugin.zip" for the connector you need
-
-## Events
-
-When a database client queries a database, it uses the database’s current
-schema. However, the database schema can be changed at any time, which
-means that the connector must know what the schema looked like at the
-time each insert, update, or delete operation is recorded. For this
-reason the events coming out of the Debezium connectors are
-**self-contained**.
-
-Each event has a **key** and a **value**. Every message key and value
-has two parts: a **schema** and **payload**. The schema describes the
-structure of the payload, while the payload contains the actual data.
-
-Furthermore each connector emits events in a different schema so there
-is no single format shared among connectors. The specifics of working
-with each connector's data can be found in their respective
-[documentation](https://debezium.io/documentation/reference/1.0/connectors/index.html)
-(latest stable version available at the time of writing).
-
-## Interpreting Events
-
-Even though events are connector specific and working with them is not
-always straightforward, Debezium offers some assistance with
-[deserializing them](https://debezium.io/documentation/reference/1.0/configuration/serdes.html)
-.
-
-Below you can see an example Jet Pipeline, which:
-
-* takes CDC data from a MySQL database (same configuration as
-  previous example)
-* filters out all events except ones from the "customers" table (same
-  effect could be achieved by whitelisting the table in the connector
-  config)
-* formats them into JSON strings
-* deserializes the JSON strings into `Customer` objects (simple POJOs)
-* stores the latest `Customer` object for each customer ID in an
-  [IMap](https://docs.hazelcast.org/docs/4.0/javadoc/com/hazelcast/map/IMap.html)
+This is how the code doing this looks like:
 
 ```java
-Pipeline pipeline = Pipeline.create();
-pipeline.readFrom(DebeziumSources.cdc(configuration))
-        .withoutTimestamps()
-        .filter(r -> r.topic().equals("dbserver1.inventory.customers"))
-        .map(record -> Values.convertToString(record.valueSchema(), record.value()))
-        .mapUsingService(
-                ServiceFactories.nonSharedService(cntx -> {
-                    Serde<Customer> serde = DebeziumSerdes.payloadJson(Customer.class);
-                    serde.configure(Collections.singletonMap("from.field", "after"), false);
-                    return serde;
-                }),
-                (serde, json) -> {
-                    Customer customer = serde.deserializer()
-                                .deserialize("topic", json.getBytes());
-                    return entry(customer.id, customer);
-                })
-        .writeTo(Sinks.map("customers"));
+package org.example;
+
+import com.hazelcast.jet.Jet;
+import com.hazelcast.jet.Util;
+import com.hazelcast.jet.config.JobConfig;
+import com.hazelcast.jet.contrib.debezium.DebeziumSources;
+import com.hazelcast.jet.pipeline.Pipeline;
+import com.hazelcast.jet.pipeline.ServiceFactories;
+import com.hazelcast.jet.pipeline.ServiceFactory;
+import com.hazelcast.jet.pipeline.Sinks;
+import io.debezium.config.Configuration;
+import io.debezium.serde.DebeziumSerdes;
+import org.apache.kafka.common.serialization.Serde;
+import org.apache.kafka.connect.data.Values;
+
+import java.util.Collections;
+
+public class JetJob {
+
+    public static void main(String[] args) {
+        Configuration configuration = Configuration
+                .create()
+                .with("name", "mysql-inventory-connector")
+                .with("connector.class", "io.debezium.connector.mysql.MySqlConnector")
+                .with("database.hostname", "127.0.0.1")
+                .with("database.port", 3306)
+                .with("database.user", "debezium")
+                .with("database.password", "dbz")
+                .with("database.server.id", "184054")
+                .with("database.server.name", "dbserver1")
+                .with("database.whitelist", "inventory")
+                .with("table.whitelist", "inventory.customers")
+                .with("include.schema.changes", "false")
+                .with("database.history.hazelcast.list.name", "test")
+                .build();
+
+        ServiceFactory<?, Serde<Customer>> serdeFactory =
+            ServiceFactories.nonSharedService(cntx -> {
+                Serde<Customer> serde = DebeziumSerdes.payloadJson(Customer.class);
+                serde.configure(Collections.singletonMap("from.field", "after"), false);
+                return serde;
+            });
+
+        Pipeline pipeline = Pipeline.create();
+        pipeline.readFrom(DebeziumSources.cdc(configuration))
+                .withoutTimestamps()
+                .filter(r -> r.topic().equals("dbserver1.inventory.customers"))
+                .map(record -> Values.convertToString(record.valueSchema(), record.value()))
+                .mapUsingService(
+                        serdeFactory,
+                        (serde, json) -> {
+                            Customer customer = serde.deserializer()
+                                    .deserialize("topic", json.getBytes());
+                            return Util.entry(customer.id, customer);
+                        })
+                .peek()
+                .writeTo(Sinks.map("customers"));
+
+        JobConfig cfg = new JobConfig().setName("mysql-monitor");
+        Jet.bootstrappedInstance().newJob(pipeline, cfg);
+    }
+
+}
 ```
 
-The **Customers** class used to build the deserializer is quite simple:
+The `Customer` class we use for deserializing change events is quite
+simple too:
 
 ```java
-private static final class Customer implements Serializable {
+package org.example;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
+
+import java.io.Serializable;
+import java.util.Objects;
+
+public class Customer implements Serializable {
     public int id;
 
     @JsonProperty("first_name")
@@ -273,22 +414,142 @@ private static final class Customer implements Serializable {
                 && Objects.equals(lastName, other.lastName)
                 && Objects.equals(email, other.email);
     }
+
+    @Override
+    public String toString() {
+        return "Customer {id=" + id + ", firstName=" + firstName + ", lastName=" + lastName + ", email=" + email + '}';
+    }
 }
 ```
 
-## Snapshots
+## 7. Package
 
-When a connector gets started up and not all database change-logs still
-exist (typically the case when the database has been running for some
-time), an initial snapshot of the database’s current state can be taken.
+Now that we have all the pieces, we need to submit it to Jet for
+execution. Since Jet runs on our machine as a standalone cluster in a
+standalone process we need to give it all the code that we have written.
 
-Debezium connectors will do so, if configured accordingly, and will
-provide the contents of the snapshot in the form of events. Then they
-will transition to providing the normal, log based events. This will be
-done in a consistent way, no changes happening during the serving of the
-snapshot will be lost.
+For this reason we create a jar containing everything we need. All we
+need to do is to run the build command:
 
-Unfortunately the specifics of snapshotting differ from connector to
-connector so their individual
-[documentation](https://debezium.io/documentation/reference/1.0/connectors/index.html)
-needs to be consulted.
+<!--DOCUSAURUS_CODE_TABS-->
+
+<!--Gradle-->
+
+```bash
+gradle shadowJar
+```
+
+This will produce a jar file called `cdc-tutorial-1.0-SNAPSHOT-all.jar`
+in the `build/libs` folder of our project.
+
+<!--Maven-->
+
+```bash
+mvn package
+```
+
+This will produce a jar file called `cdc-tutorial-1.0-SNAPSHOT.jar`
+in the `target` folder or our project.
+
+<!--END_DOCUSAURUS_CODE_TABS-->
+
+## 8. Submit for Execution
+
+Assuming our cluster is [still running](#4-start-hazelcast-jet
+) and the database [is up](#2-start-mysql-database), all we need to
+issue is following command:
+
+<!--DOCUSAURUS_CODE_TABS-->
+
+<!--Gradle-->
+
+```bash
+<path_to_jet>/bin/jet submit build/libs/cdc-tutorial-1.0-SNAPSHOT-all.jar
+```
+
+<!--Maven-->
+
+```bash
+<path_to_jet>/bin/jet submit target/cdc-tutorial-1.0-SNAPSHOT.jar
+```
+
+<!--END_DOCUSAURUS_CODE_TABS-->
+
+The output in the Jet members log should look something like this (we
+also log what we put in the `IMap` sink thanks to the `peek()` stage
+we inserted):
+
+```text
+... Completed snapshot in 00:00:01.519
+... Transitioning from the snapshot reader to the binlog reader
+... 1001=Customer {id=1001, firstName=Sally, lastName=Thomas, email=sally.thomas@acme.com}
+... 1002=Customer {id=1002, firstName=George, lastName=Bailey, email=gbailey@foobar.com}
+... 1003=Customer {id=1003, firstName=Edward, lastName=Walker, email=ed@walker.com}
+... 1004=Customer {id=1004, firstName=Anne, lastName=Kretchmar, email=annek@noanswer.org}
+... Connected to MySQL binlog at 127.0.0.1:3306, starting at binlog file 'mysql-bin.000003', pos=876, skipping 0 events plus 0 rows
+```
+
+## 9. Track Updates
+
+In order to see that our Jet job indeed monitors live changes let's do
+some updates in our database.
+
+Let's go to the MySQL CLI [we've started earlier](#3-start
+-mqsql-command-line-client) and run following update statement:
+
+```text
+mysql> UPDATE customers SET first_name='Anne Marie' WHERE id=1004;
+Query OK, 1 row affected (0.00 sec)
+Rows matched: 1  Changed: 1  Warnings: 0
+```
+
+In the log of the Jet member we should immediately see the effect:
+
+```text
+... 1004=Customer {id=1004, firstName=Anne Marie, lastName=Kretchmar, email=annek@noanswer.org}
+```
+
+One more:
+
+```text
+mysql> UPDATE customers SET email='edward.walker@walker.com' WHERE id=1003;
+Query OK, 1 row affected (0.00 sec)
+Rows matched: 1  Changed: 1  Warnings: 0
+```
+
+We see it in the Jet log:
+
+```text
+... 1003=Customer {id=1003, firstName=Edward, lastName=Walker, email=edward.walker@walker.com}
+```
+
+## 10. Clean up
+
+Let's clean-up after ourselves. First we cancel our Jet Job:
+
+```bash
+<path_to_jet>/bin/jet cancel mysql-monitor
+```
+
+Then we shut down our Jet member/cluster:
+
+```bash
+<path_to_jet>/bin/jet-stop
+```
+
+You can use Docker to stop all of the running containers:
+
+```bash
+docker stop mysqlterm mysql
+```
+
+Again, since we used the `--rm` flag when starting the connectors,
+Docker should remove them right after it stops them.
+We can verify that all of the other processes are stopped and removed:
+
+```bash
+docker ps -a
+```
+
+Of course, if any are still running, simply stop them using
+`docker stop <name>` or `docker stop <containerId>`.
