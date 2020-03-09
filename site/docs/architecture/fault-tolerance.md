@@ -24,15 +24,75 @@ last snapshot. If a cluster member goes away, Jet will restart the job
 on the remaining members, restore the state of processing from the last
 snapshot, and then seamlessly continue from that point.
 
-Jet utilizes the [Chandy-Lamport distributed snapshotting
-algorithm](http://lamport.azurewebsites.net/pubs/chandy.pdf) to offer
-fault tolerance and processing guarantees.
-
 The snapshots are part of the regular Jet operations. If you configure
-your job as Exactly-once or At-least once, Jet automatically creates
+your job as _exactly-once_ or _at-least-once_, Jet automatically creates
 snapshots in regular intervals. Jet manages the lifecycle of the
 snapshots - the snapshot is automatically replaced by a next successful
 snapshot.
+
+## Distributed Snapshot
+
+The technique Jet uses to achieve fault tolerance is called a
+“distributed snapshot”, described in a [paper by Chandy and
+Lamport](http://lamport.azurewebsites.net/pubs/chandy.pdf). At regular
+intervals, Jet raises a global flag that says "it’s time for another
+snapshot". All processors belonging to source vertices observe the flag,
+save their state, emit a barrier item to the downstream processors and
+resume processing.
+
+As the barrier item reaches a processor, it stops what it’s doing and
+saves its state to the snapshot storage. Once complete, it forwards the
+barrier item to its downstream processors and so on.
+
+Due to parallelism, in most cases a processor receives data from more
+than one upstream processor. It will receive the barrier item from each
+of them at separate times, but it must start taking a snapshot at a
+single point in time. There are two approaches it can take, as explained
+below.
+
+### Exactly-Once
+
+With exactly-once configured, as soon as the processor gets a barrier
+item in any input stream (from any upstream processor), it must stop
+consuming it until it gets the same barrier item in all the streams:
+
+![Exactly-once processing: received one barrier](assets/exactly-once-1.png)
+
+1. At the barrier in stream
+
+X, but not Y. Must not accept any more X items.
+
+![Exactly-once processing: received both barriers](assets/exactly-once-2.png)
+
+2. At the barrier in both streams, taking a snapshot.
+
+![Exactly-once processing: forward the barrier](assets/exactly-once-3.png)
+
+3. Snapshot done, barrier forwarded. Can resume consuming all streams.
+
+### At-Least-Once
+
+With at-least-once configured, the processor can keep consuming all the
+streams until it gets all the barriers, at which point it will stop to
+take the snapshot:
+
+![At-Least-once processing: received one barrier](assets/at-least-once-1.png)
+
+1. At the barrier in stream X, but not Y. Carry on consuming all streams.
+
+![At-Least-once processing: received both barriers](assets/at-least-once-3.png)
+
+2. At the barrier in both streams, already consumed x1 and x2. Taking a snapshot.
+
+![At-Least-once processing: forward the barrier](assets/at-least-once-3.png)
+
+3. Snapshot done, barrier forwarded.
+
+Even though `x1` and `x2` occur after the barrier, the processor
+consumed and processed them, updating its state accordingly. If the
+computation job stops and restarts, this state will be restored from the
+snapshot and then the source will replay `x1` and `x2`. The processor
+will think it got two new items.
 
 ## Data Safety
 

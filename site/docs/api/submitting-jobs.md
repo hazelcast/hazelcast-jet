@@ -8,12 +8,27 @@ job is submitted, it's distributed automatically to all the cluster members
 and will be executed on all members by default. Jet offers
 several ways to submit the job.
 
+A typical Jet program typically has the following structure:
+
+* Acquire the `JetInstance` through `Jet.bootstrappedInstance()` or one
+  of the other available means
+* Create the data pipeline using `Pipeline.create()`
+* Add the required transforms to the pipeline
+* Submit the pipeline as a job using `JetInstance.newJob()`
+* For a batch job, call `Job.join()` to wait for the batch job to
+  complete
+* For a streaming job, exit the program after `newJob()`, or where
+  desired, have a loop to constantly monitor the results. Calling
+  `.join()` on a streaming job will not return any results until a job
+  is cancelled or fails.
+
 ## Submit Job as a JAR
 
 The simplest way to submit a Job to the Jet cluster is to use
 the `jet submit` command. When you submit a job
 using this command, then the provided JAR itself is sent to the cluster
-and all the classes inside the supplied JAR will be available during execution.
+and all the classes inside the supplied JAR will be available during
+execution.
 
 When using the `jet submit` command, you need to acquire a
 `JetInstance` using `Jet.bootstrappedInstance()` instead of other
@@ -153,6 +168,31 @@ of them individually.
 It's also possible to add a whole JAR, using the `JobConfig.addJar`
 method.
 
+## Setting the Job Name
+
+Each job has a cluster-wide unique ID and an optional name. Only one
+job with the same name can be running in the cluster at the same time.
+You can configure the job name through `JobConfig.setName()` option.
+
+When a job is already running with the same name, the newly submitted
+one will fail. You can avoid this by using the
+`JetInstance.newJobIfAbsent()` method.
+
 ## Setting Processing Guarantees
 
-TODO
+When the job is submitted it's possible to set what fault-tolerance
+level should the job support. There are three options:
+
+* `NONE`: No snapshots will be taken and upon a restart due to cluster
+  change, the job will be restarted as if it was started from scratch.
+* `AT_LEAST_ONCE`: Enables at-least-once guarantee. Regular snapshots
+  will be taken and the job can be resumed from these snapshots when
+  restarted.
+* `EXACTLY_ONCE`: Enables exactly-once guarantee. Regular snapshots will
+  be taken and the job can be resumed from these snapshots when
+  restarted.
+
+For a more detailed discussion on these guarantees, please refer to the
+[Fault Tolerance](../architecture/fault-tolerance) section.
+The snapshot interval can be configured by `JobConfig.setSnapshotIntervalMillis()`.
+The default is 10 seconds.

@@ -3,6 +3,10 @@ title: Job Management
 description: How to manage lifecycle of processing jobs in Jet.
 ---
 
+Once a Jet job is submitted, it has its own lifecycle on the cluster
+which is distinct from the submitter. Jet offers several ways to manage
+the job after it's been submitted to the cluster.
+
 ## Submitting Jobs
 
 You can submit jobs to a cluster using the `jet submit` command
