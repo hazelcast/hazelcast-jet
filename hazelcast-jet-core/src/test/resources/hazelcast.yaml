@@ -1,4 +1,0 @@
-hazelcast:
-  cluster-name: imdg
-  properties:
-    foo: bar-yaml

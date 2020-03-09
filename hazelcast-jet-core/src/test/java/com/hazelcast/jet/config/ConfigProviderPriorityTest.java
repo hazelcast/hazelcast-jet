@@ -19,29 +19,52 @@ package com.hazelcast.jet.config;
 import com.hazelcast.client.config.ClientConfig;
 import com.hazelcast.config.Config;
 import com.hazelcast.jet.impl.config.ConfigProvider;
-import com.hazelcast.test.HazelcastParallelClassRunner;
+import com.hazelcast.jet.test.JetDeclarativeConfigFileHelper;
+import com.hazelcast.jet.test.SerialTest;
+import com.hazelcast.test.HazelcastSerialClassRunner;
+import org.junit.After;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 
-@RunWith(HazelcastParallelClassRunner.class)
+@RunWith(HazelcastSerialClassRunner.class)
+@Category({SerialTest.class})
 public class ConfigProviderPriorityTest {
 
+    private JetDeclarativeConfigFileHelper helper = new JetDeclarativeConfigFileHelper();
+
+    @Before
+    @After
+    public void tearDown() throws Exception {
+        helper.ensureTestConfigDeleted();
+    }
+
     @Test
-    public void when_loadingJetConfigFromWorkDir_yamlAndXmlFilesArePresent_then_pickYaml() {
+    public void when_loadingJetConfigFromWorkDir_yamlAndXmlFilesArePresent_then_pickYaml() throws Exception {
+        helper.givenXmlJetConfigFileOnWorkdir("hazelcast-jet.xml", "foo","bar-xml");
+        helper.givenYamlJetConfigFileOnWorkdir("hazelcast-jet.yaml", "foo","bar-yaml");
+
         JetConfig jetConfig = ConfigProvider.locateAndGetJetConfig();
         Assert.assertEquals("bar-yaml", jetConfig.getProperties().getProperty("foo"));
     }
 
     @Test
-    public void when_loadingClientConfigFromWorkDir_yamlAndXmlFilesArePresent_then_pickYaml() {
+    public void when_loadingClientConfigFromWorkDir_yamlAndXmlFilesArePresent_then_pickYaml() throws Exception {
+        helper.givenXmlClientConfigFileInWorkDir("instance-xml");
+        helper.givenYamlClientConfigFileInWorkDir("instance-yaml");
+
         ClientConfig clientConfig = ConfigProvider.locateAndGetClientConfig();
-        Assert.assertEquals("bar-yaml", clientConfig.getProperties().getProperty("foo"));
+        Assert.assertEquals("instance-yaml", clientConfig.getInstanceName());
     }
 
     @Test
-    public void when_loadingMemberConfigFromWorkDir_yamlAndXmlFilesArePresent_then_pickYaml() {
+    public void when_loadingMemberConfigFromWorkDir_yamlAndXmlFilesArePresent_then_pickYaml() throws Exception {
+        helper.givenXmlConfigFileInWorkDir("instance-xml");
+        helper.givenYamlConfigFileInWorkDir("instance-yaml");
+
         Config config = ConfigProvider.locateAndGetMemberConfig(null);
-        Assert.assertEquals("bar-yaml", config.getProperties().getProperty("foo"));
+        Assert.assertEquals("instance-yaml", config.getInstanceName());
     }
 }
