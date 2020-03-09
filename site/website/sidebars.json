@@ -14,12 +14,12 @@
     ],
     "Tutorials" : [
       "tutorials/kafka",
+      "tutorials/cdc",
       "tutorials/stream-imap",
       "tutorials/map-join",
       "tutorials/windowing",
       "tutorials/python",
       "tutorials/observables",
-      "tutorials/cdc",
       "tutorials/custom-batch-source",
       "tutorials/custom-stream-source",
       "tutorials/custom-sink"
