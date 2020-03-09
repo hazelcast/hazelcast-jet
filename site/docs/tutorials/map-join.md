@@ -78,7 +78,12 @@ dependencies {
     compile 'com.hazelcast.jet.examples:hazelcast-jet-examples-trade-source:4.1-SNAPSHOT'
 }
 
-jar.manifest.attributes 'Main-Class': 'org.example.JoinUsingMapJob'
+jar {
+    enabled = false
+    dependsOn(shadowJar { classifier = null })
+    manifest.attributes 'Main-Class': 'org.example.JoinUsingMapJob'
+}
+
 ```
 
 <!--Maven-->
@@ -144,23 +149,16 @@ jar.manifest.attributes 'Main-Class': 'org.example.JoinUsingMapJob'
 
 <!--END_DOCUSAURUS_CODE_TABS-->
 
-When our job has any dependencies we have 2 options.
-
-- Upload the dependency to the lib folder on each Jet cluster member,
-  as shown in [kafka tutorial](kafka.md).
-  This option is  suitable for stable and heavy dependencies (3rd party
-  libraries, clients, models), but requires additional effort.
-
-- Create a so-called fat jar, suitable for code changing often and
-  lightweight dependencies as whole jar is uploaded to the cluster each
-  time a job is submitted.
-
-Our dependency is very lightweight so we chose the fat jar.
+We have created a so-called fat jar.
+If you want to know more about packaging Jet jobs please read the
+[Submitting jobs](../get-started/submit-job.md) section.
 
 ## 3. Create a map containing company names
 
-This code creates a map containing company names from a list in our
-dependency.
+Copy the file [nasdaqlisted.txt](assets/nasdaqlisted.txt) containing a
+list of company names to `src/main/resources`.
+
+The following code creates a map containing company names from the list.
 How we create the map is not important for this tutorial,
 e.g. it could be loaded from a local file, S3 or be a result of another
 job.
@@ -206,7 +204,7 @@ public class LoadNames {
 
 ```
 
-Run it from your IDE. You should see this in the among other logs:
+Finally, run it from your IDE. You should see this in the among other logs:
 
 ```text
 3170 names put to a map called 'companyNames'
@@ -221,6 +219,7 @@ the company name and finally writes to log.
 package org.example;
 
 import com.hazelcast.jet.*;
+import com.hazelcast.jet.config.*;
 import com.hazelcast.jet.examples.tradesource.*;
 import com.hazelcast.jet.pipeline.*;
 
@@ -229,16 +228,19 @@ import static com.hazelcast.jet.datamodel.Tuple4.tuple4;
 public class JoinUsingMapJob {
 
     public static final int ALL_TICKERS = Integer.MAX_VALUE;
+    public static final int TRADES_PER_SEC = 1;
+    public static final int MAX_LAG = 5;
 
     public static void main(String[] args) {
         Pipeline pipeline = Pipeline.create();
 
-        pipeline.readFrom(TradeGenerator.tradeSource(ALL_TICKERS, 1, 5))
-                .withoutTimestamps()
-                .mapUsingIMap("companyNames", Trade::getTicker, (trade, name) -> tuple4(trade.getTicker(), trade.getQuantity(), trade.getPrice(), name))
-                .writeTo(Sinks.logger(tuple -> String.format("%5s quantity=%4d, price=%d (%s)",
-                        tuple.f0(), tuple.f1(), tuple.f2(), tuple.f3()
-                )));
+        pipeline.readFrom(TradeGenerator.tradeSource(ALL_TICKERS, TRADES_PER_SEC, MAX_LAG))
+         .withoutTimestamps()
+         .mapUsingIMap("companyNames", Trade::getTicker, (trade, name) ->
+             tuple4(trade.getTicker(), trade.getQuantity(), trade.getPrice(), name))
+         .writeTo(Sinks.logger(tuple -> String.format("%5s quantity=%4d, price=%d (%s)",
+             tuple.f0(), tuple.f1(), tuple.f2(), tuple.f3()
+         )));
 
         JetInstance instance = Jet.bootstrappedInstance();
         instance.newJob(pipeline, new JobConfig().setName("map-join-tutorial"));
@@ -248,11 +250,11 @@ public class JoinUsingMapJob {
 }
 ```
 
+Submit the job to the Jet cluster
+
 <!--DOCUSAURUS_CODE_TABS-->
 
 <!--Gradle-->
-
-Submit the job to the Jet cluster
 
 ```bash
 gradle build
@@ -281,5 +283,5 @@ You can restart the Jet instance to start with empty map to try this out.
 Once you're done, cancel the job:
 
 ```bash
-<path_to_jet>/bin/jet cancel map-join-tutorial-
+<path_to_jet>/bin/jet cancel map-join-tutorial
 ```
