@@ -43,8 +43,8 @@ public class ConfigProviderPriorityTest {
 
     @Test
     public void when_loadingJetConfigFromWorkDir_yamlAndXmlFilesArePresent_then_pickYaml() throws Exception {
-        helper.givenXmlJetConfigFileOnWorkdir("hazelcast-jet.xml", "foo","bar-xml");
-        helper.givenYamlJetConfigFileOnWorkdir("hazelcast-jet.yaml", "foo","bar-yaml");
+        helper.givenXmlJetConfigFileOnWorkdir("hazelcast-jet.xml", "foo", "bar-xml");
+        helper.givenYamlJetConfigFileOnWorkdir("hazelcast-jet.yaml", "foo", "bar-yaml");
 
         JetConfig jetConfig = ConfigProvider.locateAndGetJetConfig();
         Assert.assertEquals("bar-yaml", jetConfig.getProperties().getProperty("foo"));
