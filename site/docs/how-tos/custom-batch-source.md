@@ -1,6 +1,6 @@
 ---
-title: Create a Source Connector (Batch)
-description: Tutorial on how to define custom batch sources.
+title: Create a Batch Source
+description: Guide on how to create a custom batch source
 ---
 
 In the [Custom Sources and Sinks](../api/sources-sinks.md#custom-sources-and-sinks)

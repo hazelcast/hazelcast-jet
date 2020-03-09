@@ -1,6 +1,6 @@
 ---
-title: Create a Source Connector (Stream)
-description: Tutorial on how to define custom stream sources.
+title: Create a Streaming Source
+description: Guide on how to create a custom streaming source
 ---
 
 In the [Custom Sources and Sinks](../api/sources-sinks.md#custom-sources-and-sinks)
