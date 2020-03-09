@@ -1,5 +1,5 @@
 ---
-title: Custom Batch Sources
+title: Create a Source Connector (Batch)
 description: Tutorial on how to define custom batch sources.
 ---
 

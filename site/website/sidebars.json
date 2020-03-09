@@ -12,6 +12,18 @@
       "get-started/submit-job",
       "get-started/scale-job"
     ],
+    "Tutorials" : [
+      "tutorials/kafka",
+      "tutorials/stream-imap",
+      "tutorials/map-join",
+      "tutorials/windowing",
+      "tutorials/python",
+      "tutorials/observables",
+      "tutorials/cdc",
+      "tutorials/custom-batch-source",
+      "tutorials/custom-stream-source",
+      "tutorials/custom-sink"
+    ],
     "Programming Guide": [
       "api/pipeline",
       "api/stateless-transforms",
@@ -29,25 +41,13 @@
       "concepts/event-time",
       "concepts/processing-guarantees"
     ],
-    "Tutorials" : [
-      "tutorials/map-join",
-      "tutorials/kafka",
-      "tutorials/observables",
-      "tutorials/cdc",
-      "tutorials/custom-sink",
-      "tutorials/custom-batch-source",
-      "tutorials/custom-stream-source",
-      "tutorials/stream-imap",
-      "tutorials/python",
-      "tutorials/windowing"
-    ],
     "Operations Guide": [
       "operations/configuration",
       "operations/discovery",
       "operations/cluster-sizing",
       "operations/job-management",
       "operations/kubernetes",
-      "operations/monitoring"      
+      "operations/monitoring"
     ],
     "Architecture": [
       "architecture/cluster-topology",

@@ -1,5 +1,5 @@
 ---
-title: Stream Changes from IMap
+title: Receive IMap Change Stream
 ---
 
 [IMap](https://docs.hazelcast.org/docs/4.0/javadoc/com/hazelcast/map/IMap.html)

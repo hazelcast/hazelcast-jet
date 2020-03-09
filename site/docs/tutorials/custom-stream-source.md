@@ -1,5 +1,5 @@
 ---
-title: Custom Stream Sources
+title: Create a Source Connector (Stream)
 description: Tutorial on how to define custom stream sources.
 ---
 

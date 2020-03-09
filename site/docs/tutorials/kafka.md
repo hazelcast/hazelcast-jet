@@ -1,5 +1,5 @@
 ---
-title: Process Data from Apache Kafka
+title: Receive from Apache Kafka
 ---
 
 Apache Kafka is a distributed, replayable messaging system. It is a

@@ -1,5 +1,5 @@
 ---
-title: Join Static Data to a Stream
+title: Enrich Your Stream with Reference Data
 ---
 
 > :warning: **TODO update hazelcast-jet-examples-trade-source:

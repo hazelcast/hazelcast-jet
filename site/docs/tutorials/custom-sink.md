@@ -1,5 +1,5 @@
 ---
-title: Custom Sinks
+title: Create a Sink Connector
 description: Tutorial on how to define custom sinks.
 ---
 

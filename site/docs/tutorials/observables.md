@@ -1,5 +1,5 @@
 ---
-title: Reactive Streams
+title: Receive Results on the Client
 ---
 
 Usually Jet jobs make use of distributed data Sinks to output results,
@@ -10,8 +10,8 @@ For certain jobs, especially batch ones, which produce a reasonably
 small amount of output, some clients would prefer to get results
 directly, at the point where they have submitted the job.
 
-In order to make this happen Jet implements reactive style `Observables`
-, which can be used in the following way:
+In order to make this happen Jet implements reactive style
+`Observables`, which can be used in the following way:
 
 ```java
 JetInstance jet = Jet.bootstrappedInstance();
