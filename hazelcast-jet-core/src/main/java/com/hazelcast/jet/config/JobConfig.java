@@ -935,8 +935,8 @@ public class JobConfig implements IdentifiedDataSerializable {
      * @return {@code this} instance for fluent API
      */
     @Nonnull
-    public <T, S extends StreamSerializer<?>> JobConfig registerStreamSerializer(Class<S> serializerClass,
-                                                                                 Class<T> clazz) {
+    public <T, S extends StreamSerializer<?>> JobConfig registerStreamSerializer(@Nonnull Class<S> serializerClass,
+                                                                                 @Nonnull Class<T> clazz) {
         serializerConfigs.put(clazz.getName(), serializerClass.getName());
         return this;
     }
@@ -951,7 +951,7 @@ public class JobConfig implements IdentifiedDataSerializable {
         return serializerConfigs;
     }
 
-    private void addClass(Class<?> clazz) {
+    private void addClass(@Nonnull Class<?> clazz) {
         ResourceConfig cfg = new ResourceConfig(clazz);
         resourceConfigs.put(cfg.getId(), cfg);
     }
