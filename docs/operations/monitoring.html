@@ -63,38 +63,37 @@
               }
             });
         </script></nav></div><div class="container mainContainer docsContainer"><div class="wrapper"><div class="post"><header class="postHeader"><a class="edit-page-link button" href="https://github.com/hazelcast/hazelcast-jet/edit/docs/site/docs/operations/monitoring.md" target="_blank" rel="noreferrer noopener">Edit</a><h1 id="__docusaurus" class="postHeaderTitle">Monitoring and Metrics</h1></header><article><div><span><h2><a class="anchor" aria-hidden="true" id="logging"></a><a href="#logging" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Logging</h2>
-<p>Jet does not depend on a specific logging framework and has built-in
-adapters for a variety of them. You can also write a new adapter to
-integrate with loggers Jet does not support natively.</p>
-<p>To use one of the built-in adapters, set the <code>hazelcast.logging.type</code>
-property to one of the following:</p>
+<p>By default, a Jet node writes logs into the <code>logs</code> folder of the
+distribution. The logs are configured to roll over daily. You can change
+the logging configuration by modifying <code>config/log4j.properties</code>.</p>
+<h3><a class="anchor" aria-hidden="true" id="logging-in-client-and-embedded-mode"></a><a href="#logging-in-client-and-embedded-mode" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Logging in Client and Embedded Mode</h3>
+<p>When using Jet through the client or in embedded mode, Jet doesn't
+automatically add any dependencies to any logging framework and allows
+configuration of which facade the logging should be done through. Jet
+supports the following loggers:</p>
 <ul>
 <li><code>jdk</code>: java.util.logging (default)</li>
 <li><code>log4j</code>: Apache Log4j</li>
 <li><code>log4j2</code>: Apache Log4j 2</li>
 <li><code>slf4j</code>: SLF4J</li>
-<li><code>none</code>: Turn off logging</li>
+<li><code>none</code>: no logger (i.e. no logging will be made)</li>
 </ul>
-<p>When using the Jet distribution to set up a <strong>cluster</strong> of Jet members,
-the logging type of those members defaults to <code>log4j</code>. Moreover, they
-are set up with both console logging and daily rolling file logs, stored
-in the <code>logs</code> folder of the distribution.</p>
-<p>When using Jet in <strong>embedded</strong> mode or when using Jet <strong>clients</strong> to
-connect to a remote cluster, there is also the option to configure the
-logging programmatically.</p>
-<p>For example, to configure Jet to use Log4j, you can do one of the
-following:</p>
-<pre><code class="hljs css language-java"><span class="token class-name">System</span><span class="token punctuation">.</span><span class="token function">setProperty</span><span class="token punctuation">(</span><span class="token string">"hazelcast.logging.type"</span><span class="token punctuation">,</span> <span class="token string">"log4j"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<p>To configure the logging facade to use, you need to set a property
+in the configuration file:</p>
+<pre><code class="hljs css language-yaml"><span class="hljs-attr">hazelcast-client:</span>
+  <span class="hljs-attr">properties:</span>
+    <span class="hljs-attr">hazelcast.logging.type:</span> <span class="hljs-string">log4j2</span>
 </code></pre>
-<p>or</p>
-<pre><code class="hljs css language-java"><span class="token class-name">JetConfig</span> config <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">JetConfig</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
-config<span class="token punctuation">.</span><span class="token function">getHazelcastConfig</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
-      <span class="token punctuation">.</span><span class="token function">setProperty</span><span class="token punctuation">(</span><span class="token string">"hazelcast.logging.type"</span><span class="token punctuation">,</span> <span class="token string">"log4j"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
-</code></pre>
+<p>Alternatively, you can use the system property
+<code>-Dhazelcast.logging.type</code> to configure the logging framework to use.</p>
+<h3><a class="anchor" aria-hidden="true" id="using-a-custom-logger"></a><a href="#using-a-custom-logger" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Using a Custom Logger</h3>
+<p>If you'd like to use your own logging implementation, you can configure
+the <code>hazelcast.logging.class</code> property with a class which implements the
+<code>com.hazelcast.logging.LoggerFactory</code> interface.</p>
 <h2><a class="anchor" aria-hidden="true" id="metrics"></a><a href="#metrics" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Metrics</h2>
 <p>Jet exposes various metrics to facilitate monitoring of the cluster
 state and of running jobs.</p>
-<p>Metrics have associated <strong>tags</strong> which describe which object the metric
+<p>Metrics have associated <em>tags</em> which describe which object the metric
 applies to. The tags for job metrics typically indicate the specific
 <a href="/docs/concepts/dag">DAG vertex</a> and processor the metric belongs to.</p>
 <p>Each metric instance provided belongs to a particular Jet cluster
@@ -505,7 +504,7 @@ on configuration.</p>
       <span class="hljs-comment"># weather metrics should be exposed over JMX</span>
       <span class="hljs-attr">enabled:</span> <span class="hljs-literal">true</span>
 </code></pre>
-</span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/docs/operations/kubernetes"><span class="arrow-prev">← </span><span>Jet on Kubernetes</span></a><a class="docs-next button" href="/docs/architecture/cluster-topology"><span>Cluster Topology</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#logging">Logging</a></li><li><a href="#metrics">Metrics</a><ul class="toc-headings"><li><a href="#hazelcast-metrics">Hazelcast Metrics</a></li><li><a href="#cluster-wide-metrics">Cluster-wide Metrics</a></li><li><a href="#job-specific-metrics">Job-specific Metrics</a></li><li><a href="#user-defined-metrics">User-defined Metrics</a></li><li><a href="#exposing-metrics">Exposing Metrics</a></li><li><a href="#configuration">Configuration</a></li></ul></li></ul></nav></div><footer class="nav-footer" id="footer"><section class="sitemap"><a href="/" class="nav-home"><img src="/img/logo-light.svg" alt="Hazelcast Jet" width="200" height="40"/></a><div><h5>Docs</h5><a href="/docs/get-started/intro">Get Started</a><a href="/docs/concepts/dag">Concepts and Architecture</a><a href="/docs/tutorials/kafka">Tutorials</a><a href="/docs/operations/configuration">Operations Guide</a></div><div><h5>Community</h5><a href="https://groups.google.com/forum/#!forum/hazelcast-jet" target="_blank" rel="noreferrer noopener">Google Groups</a><a href="http://stackoverflow.com/questions/tagged/hazelcast-jet" target="_blank" rel="noreferrer noopener">Stack Overflow</a><a href="https://gitter.im/hazelcast/hazelcast-jet">Gitter Chat</a></div><div><h5>Latest From the Blog</h5><a href="/blog/2020/03/02/jet-40-is-released">Jet 4.0 is Released</a><a href="/blog/2020/02/20/transactional-processors">Transactional connectors in Hazelcast Jet</a><a href="/blog/2020/01/28/new-website">Announcing New Documentation Website</a><a href="/blog/2019/11/12/stream-deduplication">Stream Deduplication with Hazelcast Jet</a></div><div><h5>More</h5><a href="https://github.com/hazelcast/hazelcast-jet">GitHub Project</a><a href="https://github.com/hazelcast/hazelcast-jet/issues">Issue Tracker</a><a href="http://hazelcast.com/company/careers/">Work at Hazelcast</a><a href="/license">License</a><a class="github-button" href="https://github.com/hazelcast/hazelcast-jet" data-icon="octicon-star" data-count-href="/facebook/docusaurus/stargazers" data-show-count="true" data-count-aria-label="# stargazers on GitHub" aria-label="Star this project on GitHub">Star</a></div></section><section class="copyright">Copyright © 2020 Hazelcast Inc.</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
+</span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/docs/operations/kubernetes"><span class="arrow-prev">← </span><span>Jet on Kubernetes</span></a><a class="docs-next button" href="/docs/architecture/cluster-topology"><span>Cluster Topology</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#logging">Logging</a><ul class="toc-headings"><li><a href="#logging-in-client-and-embedded-mode">Logging in Client and Embedded Mode</a></li><li><a href="#using-a-custom-logger">Using a Custom Logger</a></li></ul></li><li><a href="#metrics">Metrics</a><ul class="toc-headings"><li><a href="#hazelcast-metrics">Hazelcast Metrics</a></li><li><a href="#cluster-wide-metrics">Cluster-wide Metrics</a></li><li><a href="#job-specific-metrics">Job-specific Metrics</a></li><li><a href="#user-defined-metrics">User-defined Metrics</a></li><li><a href="#exposing-metrics">Exposing Metrics</a></li><li><a href="#configuration">Configuration</a></li></ul></li></ul></nav></div><footer class="nav-footer" id="footer"><section class="sitemap"><a href="/" class="nav-home"><img src="/img/logo-light.svg" alt="Hazelcast Jet" width="200" height="40"/></a><div><h5>Docs</h5><a href="/docs/get-started/intro">Get Started</a><a href="/docs/concepts/dag">Concepts and Architecture</a><a href="/docs/tutorials/kafka">Tutorials</a><a href="/docs/operations/configuration">Operations Guide</a></div><div><h5>Community</h5><a href="https://groups.google.com/forum/#!forum/hazelcast-jet" target="_blank" rel="noreferrer noopener">Google Groups</a><a href="http://stackoverflow.com/questions/tagged/hazelcast-jet" target="_blank" rel="noreferrer noopener">Stack Overflow</a><a href="https://gitter.im/hazelcast/hazelcast-jet">Gitter Chat</a></div><div><h5>Latest From the Blog</h5><a href="/blog/2020/03/02/jet-40-is-released">Jet 4.0 is Released</a><a href="/blog/2020/02/20/transactional-processors">Transactional connectors in Hazelcast Jet</a><a href="/blog/2020/01/28/new-website">Announcing New Documentation Website</a><a href="/blog/2019/11/12/stream-deduplication">Stream Deduplication with Hazelcast Jet</a></div><div><h5>More</h5><a href="https://github.com/hazelcast/hazelcast-jet">GitHub Project</a><a href="https://github.com/hazelcast/hazelcast-jet/issues">Issue Tracker</a><a href="http://hazelcast.com/company/careers/">Work at Hazelcast</a><a href="/license">License</a><a class="github-button" href="https://github.com/hazelcast/hazelcast-jet" data-icon="octicon-star" data-count-href="/facebook/docusaurus/stargazers" data-show-count="true" data-count-aria-label="# stargazers on GitHub" aria-label="Star this project on GitHub">Star</a></div></section><section class="copyright">Copyright © 2020 Hazelcast Inc.</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
                 document.addEventListener('keyup', function(e) {
                   if (e.target !== document.body) {
                     return;

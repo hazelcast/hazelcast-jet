@@ -67,7 +67,9 @@ different platforms.</p>
 <p>Please note that, after a cluster is formed, communication between
 cluster members is always via TCP/IP, regardless of the discovery
 mechanism used.</p>
-<p>Hazelcast Jet uses the following discovery mechanisms.</p>
+<p>The discovery mechanism must be configured before node startup and
+the options are [configured)(configuration) in <code>hazelcast.yaml</code>.</p>
+<p>Hazelcast Jet supports the following discovery mechanisms.</p>
 <h2><a class="anchor" aria-hidden="true" id="multicast"></a><a href="#multicast" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Multicast</h2>
 <p>With the multicast auto-discovery mechanism, Hazelcast Jet allows cluster
 members to find each other using multicast communication. The cluster
@@ -82,7 +84,7 @@ the following configuration elements.</p>
 <code>multicast-timeout-seconds</code>, <code>trusted-interfaces</code> etc. to your
 multicast values.</p></li>
 </ul>
-<p>The following is an example declarative configuration:</p>
+<p>The following is an example configuration in <code>hazelcast.yaml</code>:</p>
 <pre><code class="hljs css language-yaml"><span class="hljs-attr">hazelcast:</span>
   <span class="hljs-attr">network:</span>
     <span class="hljs-attr">join:</span>
@@ -107,8 +109,8 @@ active in the cluster when a new member joins.</p>
 <p>To configure your Hazelcast Jet cluster with TCP/IP discovery, set the
 following configuration elements.</p>
 <ul>
-<li><p>Set the <code>enabled</code> element of the <code>tcp-ip</code> element to true.</p></li>
-<li><p>Provide your member elements within the <code>member-list</code> element.</p></li>
+<li>Set the <code>enabled</code> element of the <code>tcp-ip</code> element to true.</li>
+<li>Provide your member elements within the <code>member-list</code> element.</li>
 </ul>
 <p>The following is an example configuration.</p>
 <pre><code class="hljs css language-yaml"><span class="hljs-attr">hazelcast:</span>
@@ -178,41 +180,44 @@ and enable <code>gcp</code>.</p>
 client connections from outside of the AWS network please see
 <a href="https://github.com/hazelcast/hazelcast-gcp">Hazelcast Discovery Plugin for GCP</a>
 .</p>
-<h2><a class="anchor" aria-hidden="true" id="azure-cloud"></a><a href="#azure-cloud" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Azure Cloud</h2>
-<p>Hazelcast Jet supports automatic member discovery in the Microsoft Azure
-environment with <a href="https://github.com/hazelcast/hazelcast-azure">Hazelcast Discovery Plugin for Microsoft Azure</a>
-.</p>
-<p>To use Azure Cloud discovery plugin, the dependency below needs to be
-added to your project
-first.</p>
-<div class="tabs"><div class="nav-tabs"><div id="tab-group-37-tab-38" class="nav-link active" data-group="group_37" data-tab="tab-group-37-content-38">Gradle</div><div id="tab-group-37-tab-39" class="nav-link" data-group="group_37" data-tab="tab-group-37-content-39">Maven</div></div><div class="tab-content"><div id="tab-group-37-content-38" class="tab-pane active" data-group="group_37" tabindex="-1"><div><span><pre><code class="hljs css language-bash">compile <span class="hljs-string">'com.hazelcast.azure:hazelcast-azure:1.2.2'</span><br /></code></pre>
-</span></div></div><div id="tab-group-37-content-39" class="tab-pane" data-group="group_37" tabindex="-1"><div><span><pre><code class="hljs css language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">dependencies</span>&gt;</span><br />    <span class="hljs-tag">&lt;<span class="hljs-name">dependency</span>&gt;</span><br />        <span class="hljs-tag">&lt;<span class="hljs-name">groupId</span>&gt;</span>com.hazelcast.azure<span class="hljs-tag">&lt;/<span class="hljs-name">groupId</span>&gt;</span><br />        <span class="hljs-tag">&lt;<span class="hljs-name">artifactId</span>&gt;</span>hazelcast-azure<span class="hljs-tag">&lt;/<span class="hljs-name">artifactId</span>&gt;</span><br />        <span class="hljs-tag">&lt;<span class="hljs-name">version</span>&gt;</span>1.2.2<span class="hljs-tag">&lt;/<span class="hljs-name">version</span>&gt;</span><br />    <span class="hljs-tag">&lt;/<span class="hljs-name">dependency</span>&gt;</span><br /><span class="hljs-tag">&lt;/<span class="hljs-name">dependencies</span>&gt;</span><br /></code></pre>
-</span></div></div></div></div>
-<p>To use Azure discovery plugin, disable other join mechanisms and
-enable <code>azure</code>.</p>
-<pre><code class="hljs css language-yaml"><span class="hljs-attr">hazelcast:</span>
-  <span class="hljs-attr">network:</span>
-    <span class="hljs-attr">join:</span>
-      <span class="hljs-attr">multicast:</span>
-        <span class="hljs-attr">enabled:</span> <span class="hljs-literal">false</span>
-      <span class="hljs-attr">azure:</span>
-        <span class="hljs-attr">enabled:</span> <span class="hljs-literal">true</span>
-        <span class="hljs-attr">client-id:</span> <span class="hljs-string">CLIENT_ID</span>
-        <span class="hljs-attr">tenant-id:</span> <span class="hljs-string">TENANT_ID</span>
-        <span class="hljs-attr">client-secret:</span> <span class="hljs-string">CLIENT_SECRET</span>
-        <span class="hljs-attr">subscription-id:</span> <span class="hljs-string">SUB_ID</span>
-        <span class="hljs-attr">resource-group:</span> <span class="hljs-string">RESOURCE-GROUP-NAME</span>
-        <span class="hljs-attr">scale-set:</span> <span class="hljs-string">SCALE-SET-NAME</span>
-        <span class="hljs-attr">tag:</span> <span class="hljs-string">TAG-NAME=HZLCAST001</span>
-        <span class="hljs-attr">hz-port:</span> <span class="hljs-number">5701</span><span class="hljs-number">-5703</span>
-</code></pre>
-<p>You will need to setup <a href="https://azure.microsoft.com/en-us/documentation/articles/resource-group-create-service-principal-portal/">Azure Active Directory Service Principal credentials</a>
+<!-- ## Azure Cloud -->
+<!-- Hazelcast Jet supports automatic member discovery in the Microsoft 
+Azure environment with [Hazelcast Discovery Plugin for Microsoft Azure]
+(https://github.com/hazelcast/hazelcast-azure). 
+-->
+<!-- To use Azure Cloud discovery plugin, [download the plugin]
+(https://github.com/hazelcast/hazelcast-azure/releases/download/
+v1.2.2/hazelcast-azure-1.2.2.jar)
+and add it to the `lib` folder. To use Azure discovery plugin, disable
+other join  mechanisms and enable `azure`.
+-->
+<!-- ```yaml
+hazelcast:
+  network:
+    join:
+      multicast:
+        enabled: false
+      azure:
+        enabled: true
+        client-id: CLIENT_ID
+        tenant-id: TENANT_ID
+        client-secret: CLIENT_SECRET
+        subscription-id: SUB_ID
+        resource-group: RESOURCE-GROUP-NAME
+        scale-set: SCALE-SET-NAME
+        tag: TAG-NAME=HZLCAST001
+        hz-port: 5701-5703
+``` -->
+<!-- You will need to setup [Azure Active Directory Service Principal
+credentials] (https://azure.microsoft.com/en-us/documentation/articles/
+resource-group-create-service-principal-portal/)
 for your Azure Subscription for this plugin to work. With the
-credentials, fill in the placeholder values above.</p>
-<p>For more information on the discovery plugin regarding Zone Awarenes and
-client connections from outside of the Azure network please see
-<a href="https://github.com/hazelcast/hazelcast-azure">Hazelcast Discovery Plugin for Microsoft Azure</a>
-.</p>
+credentials, fill in the placeholder values above. -->
+<!-- For more information on the discovery plugin regarding Zone 
+Awareness and client connections from outside of the Azure network
+please see [Hazelcast Discovery Plugin for Microsoft Azure]
+(https://github.com/hazelcast/hazelcast-azure).
+-->
 <h2><a class="anchor" aria-hidden="true" id="kubernetes"></a><a href="#kubernetes" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Kubernetes</h2>
 <p>The Hazelcast Kubernetes plugin provides the automatic member discovery
 in the Kubernetes environment by communicating with the Kubernetes
@@ -281,7 +286,7 @@ Lookup mode looks like the following.</p>
 </code></pre>
 <p>See <a href="https://github.com/hazelcast/hazelcast-kubernetes">Hazelcast Discovery Plugin for Kubernetes</a>
 for more information about the plugin.</p>
-</span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/docs/operations/configuration"><span class="arrow-prev">← </span><span>Configuration</span></a><a class="docs-next button" href="/docs/operations/cluster-sizing"><span>Cluster Sizing</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#multicast">Multicast</a></li><li><a href="#tcpip">TCP/IP</a></li><li><a href="#amazon-web-servicesec2">Amazon Web Services(EC2)</a></li><li><a href="#google-cloud-platform">Google Cloud Platform</a></li><li><a href="#azure-cloud">Azure Cloud</a></li><li><a href="#kubernetes">Kubernetes</a><ul class="toc-headings"><li><a href="#kubernetes-api">Kubernetes API</a></li><li><a href="#dns-lookup">DNS Lookup</a></li></ul></li></ul></nav></div><footer class="nav-footer" id="footer"><section class="sitemap"><a href="/" class="nav-home"><img src="/img/logo-light.svg" alt="Hazelcast Jet" width="200" height="40"/></a><div><h5>Docs</h5><a href="/docs/get-started/intro">Get Started</a><a href="/docs/concepts/dag">Concepts and Architecture</a><a href="/docs/tutorials/kafka">Tutorials</a><a href="/docs/operations/configuration">Operations Guide</a></div><div><h5>Community</h5><a href="https://groups.google.com/forum/#!forum/hazelcast-jet" target="_blank" rel="noreferrer noopener">Google Groups</a><a href="http://stackoverflow.com/questions/tagged/hazelcast-jet" target="_blank" rel="noreferrer noopener">Stack Overflow</a><a href="https://gitter.im/hazelcast/hazelcast-jet">Gitter Chat</a></div><div><h5>Latest From the Blog</h5><a href="/blog/2020/03/02/jet-40-is-released">Jet 4.0 is Released</a><a href="/blog/2020/02/20/transactional-processors">Transactional connectors in Hazelcast Jet</a><a href="/blog/2020/01/28/new-website">Announcing New Documentation Website</a><a href="/blog/2019/11/12/stream-deduplication">Stream Deduplication with Hazelcast Jet</a></div><div><h5>More</h5><a href="https://github.com/hazelcast/hazelcast-jet">GitHub Project</a><a href="https://github.com/hazelcast/hazelcast-jet/issues">Issue Tracker</a><a href="http://hazelcast.com/company/careers/">Work at Hazelcast</a><a href="/license">License</a><a class="github-button" href="https://github.com/hazelcast/hazelcast-jet" data-icon="octicon-star" data-count-href="/facebook/docusaurus/stargazers" data-show-count="true" data-count-aria-label="# stargazers on GitHub" aria-label="Star this project on GitHub">Star</a></div></section><section class="copyright">Copyright © 2020 Hazelcast Inc.</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
+</span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/docs/operations/configuration"><span class="arrow-prev">← </span><span>Configuration</span></a><a class="docs-next button" href="/docs/operations/cluster-sizing"><span>Cluster Sizing</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#multicast">Multicast</a></li><li><a href="#tcpip">TCP/IP</a></li><li><a href="#amazon-web-servicesec2">Amazon Web Services(EC2)</a></li><li><a href="#google-cloud-platform">Google Cloud Platform</a><ul class="toc-headings"><li><a href="#dns-lookup">DNS Lookup</a></li></ul></li></ul></nav></div><footer class="nav-footer" id="footer"><section class="sitemap"><a href="/" class="nav-home"><img src="/img/logo-light.svg" alt="Hazelcast Jet" width="200" height="40"/></a><div><h5>Docs</h5><a href="/docs/get-started/intro">Get Started</a><a href="/docs/concepts/dag">Concepts and Architecture</a><a href="/docs/tutorials/kafka">Tutorials</a><a href="/docs/operations/configuration">Operations Guide</a></div><div><h5>Community</h5><a href="https://groups.google.com/forum/#!forum/hazelcast-jet" target="_blank" rel="noreferrer noopener">Google Groups</a><a href="http://stackoverflow.com/questions/tagged/hazelcast-jet" target="_blank" rel="noreferrer noopener">Stack Overflow</a><a href="https://gitter.im/hazelcast/hazelcast-jet">Gitter Chat</a></div><div><h5>Latest From the Blog</h5><a href="/blog/2020/03/02/jet-40-is-released">Jet 4.0 is Released</a><a href="/blog/2020/02/20/transactional-processors">Transactional connectors in Hazelcast Jet</a><a href="/blog/2020/01/28/new-website">Announcing New Documentation Website</a><a href="/blog/2019/11/12/stream-deduplication">Stream Deduplication with Hazelcast Jet</a></div><div><h5>More</h5><a href="https://github.com/hazelcast/hazelcast-jet">GitHub Project</a><a href="https://github.com/hazelcast/hazelcast-jet/issues">Issue Tracker</a><a href="http://hazelcast.com/company/careers/">Work at Hazelcast</a><a href="/license">License</a><a class="github-button" href="https://github.com/hazelcast/hazelcast-jet" data-icon="octicon-star" data-count-href="/facebook/docusaurus/stargazers" data-show-count="true" data-count-aria-label="# stargazers on GitHub" aria-label="Star this project on GitHub">Star</a></div></section><section class="copyright">Copyright © 2020 Hazelcast Inc.</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
                 document.addEventListener('keyup', function(e) {
                   if (e.target !== document.body) {
                     return;
