@@ -340,7 +340,10 @@ public abstract class AbstractDeploymentTest extends SimpleTestInClusterSupport 
         DAG dag = new DAG();
         dag.newVertex("calls job level serializer", JobLevelSerializerIsAvailable::new);
 
-        JobConfig jobConfig = new JobConfig().addSerializer(valueClass, serializerClass);
+        JobConfig jobConfig = new JobConfig()
+                .addClass(valueClass)
+                .addClass(serializerClass)
+                .registerStreamSerializer(serializerClass, valueClass);
 
         executeAndPeel(getJetInstance().newJob(dag, jobConfig));
     }

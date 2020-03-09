@@ -137,10 +137,7 @@ public class ExecutionContext implements DynamicMetricsProvider {
         snapshotContext = new SnapshotContext(nodeEngine.getLogger(SnapshotContext.class), jobNameAndExecutionId(),
                 plan.lastSnapshotId(), jobConfig.getProcessingGuarantee());
 
-        serializationService = new JetSerializationService(
-                instantiateSerializers(currentThread().getContextClassLoader(), jobConfig.getSerializerConfigs()),
-                (AbstractSerializationService) nodeEngine.getSerializationService()
-        );
+        serializationService = serializationService(nodeEngine, jobConfig);
 
         metricsEnabled = jobConfig.isMetricsEnabled() && nodeEngine.getConfig().getMetricsConfig().isEnabled();
         plan.initialize(nodeEngine, jobId, executionId, snapshotContext, tempDirectories, serializationService);
@@ -350,12 +347,22 @@ public class ExecutionContext implements DynamicMetricsProvider {
         completionTime.set(System.currentTimeMillis());
     }
 
-    private static Map<Class<?>, ? extends Serializer> instantiateSerializers(ClassLoader classLoader,
-                                                                              Map<String, String> configs) {
-        return configs.entrySet().stream()
-                      .collect(toMap(
-                              entry -> ReflectionUtils.loadClass(classLoader, entry.getKey()),
-                              entry -> ReflectionUtils.newInstance(classLoader, entry.getValue())
-                      ));
+    private static InternalSerializationService serializationService(NodeEngine nodeEngine, JobConfig jobConfig) {
+        Map<String, String> serializerConfigs = jobConfig.getSerializerConfigs();
+        if (serializerConfigs.isEmpty()) {
+            return (InternalSerializationService) nodeEngine.getSerializationService();
+        } else {
+            ClassLoader classLoader = currentThread().getContextClassLoader();
+            Map<Class<?>, ? extends Serializer> serializers = serializerConfigs.entrySet()
+                     .stream()
+                     .collect(toMap(
+                             entry -> ReflectionUtils.loadClass(classLoader, entry.getKey()),
+                             entry -> ReflectionUtils.newInstance(classLoader, entry.getValue())
+                     ));
+            return new JetSerializationService(
+                    serializers,
+                    (AbstractSerializationService) nodeEngine.getSerializationService()
+            );
+        }
     }
 }

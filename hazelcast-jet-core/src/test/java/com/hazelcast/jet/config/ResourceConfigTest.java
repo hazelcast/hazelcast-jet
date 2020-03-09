@@ -1070,48 +1070,6 @@ public class ResourceConfigTest extends JetTestSupport {
         assertEquals(dir.toURI().toURL(), dirConfig.getUrl());
     }
 
-    @Test
-    public void when_addSerializer() {
-        // When
-        Object object = new Object() {
-        };
-
-        StreamSerializer<Object> serializer = new StreamSerializer<Object>() {
-
-            @Override
-            public int getTypeId() {
-                return 0;
-            }
-
-            @Override
-            public void write(ObjectDataOutput out, Object object) {
-            }
-
-            @Override
-            public Object read(ObjectDataInput in) {
-                return null;
-            }
-
-            @Override
-            public void destroy() {
-            }
-        };
-        config.addSerializer(object.getClass(), serializer.getClass());
-
-        // Then
-        Collection<ResourceConfig> resourceConfigs = config.getResourceConfigs().values();
-        assertThat(resourceConfigs, hasSize(2));
-        assertThat(resourceConfigs, contains(
-                new ResourceConfig(object.getClass()),
-                new ResourceConfig(serializer.getClass())
-        ));
-
-        Map<String, String> serializerConfigs = config.getSerializerConfigs();
-        assertThat(serializerConfigs.entrySet(), hasSize(1));
-        assertThat(serializerConfigs.keySet(), contains(object.getClass().getName()));
-        assertThat(serializerConfigs.values(), contains(serializer.getClass().getName()));
-    }
-
     private File createFile(String path) throws IOException {
         File file = new File(baseDir, path);
         assertTrue("Failed to create parent path for " + file, file.getParentFile().mkdirs());

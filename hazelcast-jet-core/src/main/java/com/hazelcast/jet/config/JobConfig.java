@@ -29,7 +29,7 @@ import com.hazelcast.map.IMap;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
-import com.hazelcast.nio.serialization.Serializer;
+import com.hazelcast.nio.serialization.StreamSerializer;
 import com.hazelcast.spi.annotation.PrivateApi;
 
 import javax.annotation.Nonnull;
@@ -925,7 +925,7 @@ public class JobConfig implements IdentifiedDataSerializable {
 
     /**
      * Registers the given serializer for the given class for the scope of the
-     * job. Both will be accessible to all the code attached to the underlying
+     * job. It will be accessible to all the code attached to the underlying
      * pipeline or DAG, but not to any other code. (An important example is the
      * {@code IMap} data source, which can instantiate only the classes from
      * the Jet instance's classpath.)
@@ -935,9 +935,8 @@ public class JobConfig implements IdentifiedDataSerializable {
      * @return {@code this} instance for fluent API
      */
     @Nonnull
-    public <T, S extends Serializer> JobConfig addSerializer(Class<T> clazz, Class<S> serializerClass) {
-        addClass(clazz);
-        addClass(serializerClass);
+    public <T, S extends StreamSerializer<?>> JobConfig registerStreamSerializer(Class<S> serializerClass,
+                                                                                 Class<T> clazz) {
         serializerConfigs.put(clazz.getName(), serializerClass.getName());
         return this;
     }

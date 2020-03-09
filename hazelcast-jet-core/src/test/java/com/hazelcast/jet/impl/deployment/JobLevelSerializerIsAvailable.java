@@ -22,7 +22,6 @@ import com.hazelcast.jet.impl.execution.init.Contexts.ProcCtx;
 import javax.annotation.Nonnull;
 
 import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.fail;
 
 public class JobLevelSerializerIsAvailable extends AbstractProcessor {
 
@@ -30,16 +29,12 @@ public class JobLevelSerializerIsAvailable extends AbstractProcessor {
     static final String SERIALIZER_CLASS_NAME = "com.sample.serializer.ValueSerializer";
 
     @Override
-    protected void init(@Nonnull Context context) {
+    protected void init(@Nonnull Context context) throws Exception {
         ClassLoader cl = Thread.currentThread().getContextClassLoader();
-        try {
-            Class<?> clazz = cl.loadClass(VALUE_CLASS_NAME);
-            Object value = clazz.getDeclaredConstructor().newInstance();
-            // We serialize an object so the job level serializer is invoked.
-            byte[] bytes = ((ProcCtx) context).serializationService().toBytes(value);
-            assertArrayEquals(bytes, new byte[]{0, 0, 0, 0, 0, 0, 0, 42});
-        } catch (Exception e) {
-            fail(e.getMessage());
-        }
+        Class<?> clazz = cl.loadClass(VALUE_CLASS_NAME);
+        Object value = clazz.getDeclaredConstructor().newInstance();
+        // We serialize an object so the job level serializer is invoked.
+        byte[] bytes = ((ProcCtx) context).serializationService().toBytes(value);
+        assertArrayEquals(bytes, new byte[]{0, 0, 0, 0, 0, 0, 0, 42});
     }
 }
