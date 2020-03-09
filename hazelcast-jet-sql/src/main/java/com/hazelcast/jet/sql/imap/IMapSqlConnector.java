@@ -29,7 +29,7 @@ import com.hazelcast.jet.sql.schema.JetTable;
 import com.hazelcast.projection.Projection;
 import com.hazelcast.query.Predicate;
 import com.hazelcast.query.Predicates;
-import com.hazelcast.sql.impl.type.DataType;
+import org.apache.calcite.rel.type.RelProtoDataType;
 import org.apache.calcite.rex.RexNode;
 import org.apache.commons.beanutils.BeanUtilsBean;
 
@@ -71,7 +71,7 @@ public class IMapSqlConnector implements SqlConnector {
             @Nonnull String tableName,
             @Nonnull Map<String, String> serverOptions,
             @Nonnull Map<String, String> tableOptions,
-            @Nonnull Map<String, DataType> columns
+            @Nonnull List<Entry<String, RelProtoDataType>> columns
     ) {
         String mapName = getRequiredTableOption(tableOptions, TO_MAP_NAME);
         List<HazelcastTableIndex> indexes = Collections.emptyList(); // TODO

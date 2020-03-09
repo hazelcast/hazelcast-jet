@@ -17,14 +17,14 @@
 package com.hazelcast.jet.sql.imap;
 
 import com.hazelcast.jet.sql.schema.JetTable;
-import com.hazelcast.sql.impl.type.DataType;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
+import org.apache.calcite.rel.type.RelProtoDataType;
 import org.apache.calcite.schema.Table;
 
 import javax.annotation.Nonnull;
 import java.util.List;
-import java.util.Map;
+import java.util.Map.Entry;
 
 /**
  * {@link Table} implementation for IMap.
@@ -33,12 +33,12 @@ public class IMapTable extends JetTable {
 
     private final String mapName;
     private final List<HazelcastTableIndex> indexes;
-    private final Map<String, DataType> columns;
+    private final List<Entry<String, RelProtoDataType>> columns;
 
     public IMapTable(
             @Nonnull String mapName,
             @Nonnull List<HazelcastTableIndex> indexes,
-            @Nonnull Map<String, DataType> columns
+            @Nonnull List<Entry<String, RelProtoDataType>> columns
     ) {
         this.mapName = mapName;
         this.columns = columns;
@@ -48,10 +48,6 @@ public class IMapTable extends JetTable {
     @Override
     public boolean isStream() {
         return false;
-    }
-
-    public DataType getFieldType(String fieldName) {
-        return columns.getOrDefault(fieldName, DataType.LATE); // TODO do we need the LATE type?
     }
 
     public String getMapName() {

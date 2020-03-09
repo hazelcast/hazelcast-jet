@@ -20,13 +20,14 @@ import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.sql.schema.JetTable;
-import com.hazelcast.sql.impl.type.DataType;
+import org.apache.calcite.rel.type.RelProtoDataType;
 import org.apache.calcite.rex.RexNode;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 
 public interface SqlConnector {
 
@@ -46,7 +47,7 @@ public interface SqlConnector {
             @Nonnull String tableName,
             @Nonnull Map<String, String> serverOptions,
             @Nonnull Map<String, String> tableOptions,
-            @Nonnull Map<String, DataType> columns
+            @Nonnull List<Entry<String, RelProtoDataType>> columns
     );
 
     /**

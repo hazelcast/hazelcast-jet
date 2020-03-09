@@ -16,9 +16,10 @@
 
 package com.hazelcast.jet.sql.schema;
 
+import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.jet.sql.SqlConnector;
 import com.hazelcast.jet.sql.imap.IMapSqlConnector;
-import com.hazelcast.sql.impl.type.DataType;
+import org.apache.calcite.rel.type.RelProtoDataType;
 import org.apache.calcite.schema.Table;
 import org.apache.calcite.schema.impl.AbstractSchema;
 
@@ -26,10 +27,13 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+import static com.hazelcast.jet.Util.entry;
 import static java.util.Collections.emptyMap;
 
 /**
@@ -93,16 +97,16 @@ public class JetSchema extends AbstractSchema {
             @Nonnull String tableName,
             @Nonnull String serverName,
             @Nonnull Map<String, String> tableOptions,
-            @Nonnull Map<String, DataType> columns
+            @Nonnull List<Entry<String, Class<?>>> fields
     ) {
-        createTableInt(tableName, serverName, tableOptions, columns);
+        createTableInt(tableName, serverName, tableOptions, fields);
     }
 
     public void createTableInt(
             @Nonnull String tableName,
             @Nonnull String serverName,
             @Nonnull Map<String, String> tableOptions,
-            @Nullable Map<String, DataType> columns
+            @Nullable List<Entry<String, Class<?>>> fields
     ) {
         tableOptions = new HashMap<>(tableOptions); // convert to a HashMap so that we can mutate it
         Map<String, String> serverOptions = serverMap.get(serverName);
@@ -119,13 +123,15 @@ public class JetSchema extends AbstractSchema {
         }
 
         JetTable table;
-        if (columns == null) {
+        if (fields == null) {
             table = connector.createTable(tableName, serverOptions, tableOptions);
         } else {
-            if (columns.isEmpty()) {
-                throw new IllegalArgumentException("zero columns");
+            if (fields.isEmpty()) {
+                throw new IllegalArgumentException("zero fields");
             }
-            table = connector.createTable(tableName, serverOptions, tableOptions, columns);
+            List<Entry<String, RelProtoDataType>> fields1 = Util.toList(fields,
+                    field -> entry(field.getKey(), typeFactory -> typeFactory.createJavaType(field.getValue())));
+            table = connector.createTable(tableName, serverOptions, tableOptions, fields1);
         }
         tableMap.put(tableName, table);
     }

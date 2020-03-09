@@ -20,10 +20,11 @@ import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.core.JetTestSupport;
 import com.hazelcast.jet.sql.imap.IMapSqlConnector;
 import com.hazelcast.jet.sql.schema.JetSchema;
-import com.hazelcast.sql.impl.type.DataType;
 import org.junit.Test;
 
+import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.core.TestUtil.createMap;
+import static java.util.Arrays.asList;
 
 public class SqlTest extends JetTestSupport {
     @Test
@@ -33,8 +34,12 @@ public class SqlTest extends JetTestSupport {
         JetSqlService sqlService = new JetSqlService(jet);
         sqlService.getSchema().createTable("my_map", JetSchema.IMAP_LOCAL_SERVER,
                 createMap(IMapSqlConnector.TO_MAP_NAME, "my_map"),
-                createMap("id", DataType.INT, "name", DataType.VARCHAR));
+                asList(entry("id", Integer.class), entry("name", String.class)));
+        sqlService.getSchema().createTable("my_map2", JetSchema.IMAP_LOCAL_SERVER,
+                createMap(IMapSqlConnector.TO_MAP_NAME, "my_map2"),
+                asList(entry("id", Integer.class), entry("field", String.class)));
 
-        sqlService.parse("SELECT field FROM my_map");
+        sqlService.parse("SELECT field FROM my_map, my_map2");
+//        sqlService.parse("SELECT name FROM my_map");
     }
 }
