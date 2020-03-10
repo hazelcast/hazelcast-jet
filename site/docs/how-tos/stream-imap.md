@@ -3,37 +3,17 @@ title: Receive IMap Change Stream
 ---
 
 [IMap](https://docs.hazelcast.org/docs/4.0/javadoc/com/hazelcast/map/IMap.html)
-is the distributed data structure underlying Hazelcast. For Jet it's
-also the most popular data source and sink.
+is the main data structure in Hazelcast IMDG. Jet can use it as both a
+data source and a data sink. It can serve as both a batch source, giving
+you all the current data, and as a streaming source, giving you a stream
+of change events.
 
-The simplest scenario of using `IMap` as a source is when we treat the
-entries it contains simply as a batch of data, read at a certain moment
-of time. However Jet can make use of an `IMap` in a more advanced way,
-treating all changes done to it (adding/updating/deleting entries) as
-a stream of events which then can be processed further.
+Here we focus on the `IMap` as a streaming source.
 
-Let's see how this is done.
+## 1. Enable Event Journal in Configuration
 
-## 1. Start Hazelcast Jet
-
-1. [Download](https://github.com/hazelcast/hazelcast-jet/releases/download/v4.0/hazelcast-jet-4.0.tar.gz)
-  Hazelcast Jet
-
-2. Unzip it:
-
-```bash
-cd <where_you_downloaded_it>
-tar zxvf hazelcast-jet-4.0.tar.gz
-cd hazelcast-jet-4.0
-```
-
-If you already have Jet and you skipped the above steps, make sure to
-follow from here on.
-
-3. Add following config block into the `config/hazelcast.yaml` file
-   of your distribution (by default event journal is not enabled on
-   `IMap`s, that's why we need to turn it on explicitly for the map we
-   are going to use):
+To capture the change stream of an `IMap` you must enable its _event
+journal_. Add this to your YAML config:
 
 ```yaml
   map:
@@ -42,82 +22,10 @@ follow from here on.
         enabled: true
 ```
 
-4. Start Jet:
+## 2. Write the Producer
 
-```bash
-bin/jet-start
-```
-
-5. When you see output like this, Hazelcast Jet is up:
-
-```text
-Members {size:1, ver:1} [
-    Member [192.168.1.5]:5701 - e7c26f7c-df9e-4994-a41d-203a1c63480e this
-]
-```
-
-From now on we assume Hazelcast Jet is running on your machine.
-
-## 2. Create a New Java Project
-
-We'll assume you're using an IDE. Create a blank Java project named
-`event-journal-tutorial` and copy the Gradle or Maven file
-into it:
-
-<!--DOCUSAURUS_CODE_TABS-->
-
-<!--Gradle-->
-
-```groovy
-plugins {
-    id 'java'
-}
-
-group 'org.example'
-version '1.0-SNAPSHOT'
-
-repositories.mavenCentral()
-
-dependencies {
-    compileOnly 'com.hazelcast.jet:hazelcast-jet:4.0'
-}
-```
-
-<!--Maven-->
-
-```xml
-<?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-    <modelVersion>4.0.0</modelVersion>
-
-    <groupId>org.example</groupId>
-    <artifactId>event-journal-tutorial</artifactId>
-    <version>1.0-SNAPSHOT</version>
-
-    <properties>
-        <maven.compiler.target>1.8</maven.compiler.target>
-        <maven.compiler.source>1.8</maven.compiler.source>
-    </properties>
-
-    <dependencies>
-        <dependency>
-            <groupId>com.hazelcast.jet</groupId>
-            <artifactId>hazelcast-jet</artifactId>
-            <version>4.0</version>
-            <scope>provided</scope>
-        </dependency>
-    </dependencies>
-</project>
-```
-
-<!--END_DOCUSAURUS_CODE_TABS-->
-
-## 3. Write the Producer
-
-In order to be able to have some live data in our `IMap` we will set up
-a helper process, in the form of a Jet job, which will continuously
-update entries in the map. Put following class into your project:
+First let's write some code that will be updating our `IMap`. Put this
+into your project:
 
 ```java
 package org.example;
@@ -132,7 +40,6 @@ import com.hazelcast.jet.pipeline.test.TestSources;
 import java.util.concurrent.ThreadLocalRandom;
 
 public class Producer {
-
     public static void main(String[] args) {
         Pipeline p = Pipeline.create();
         p.readFrom(TestSources.itemStream(100,
@@ -144,16 +51,14 @@ public class Producer {
         JobConfig cfg = new JobConfig().setName("producer");
         Jet.bootstrappedInstance().newJob(p, cfg);
     }
-
 }
 ```
 
-## 4. Write the Consumer
+## 3. Write the Consumer
 
-Our consumer will be a Jet job which will continuously consume update
-events streamed by our map's event journal. Then it will print a
-summary every second, specifying how many times each key has been
-updated in the map during the past second.
+Now we are ready to write the pipeline that consumes and processes the
+change events. It will tell us for each map key how many times per
+second it's being updated.
 
 ```java
 package org.example;
@@ -186,82 +91,25 @@ public class Consumer {
         JobConfig cfg = new JobConfig().setName("consumer");
         Jet.bootstrappedInstance().newJob(p, cfg);
     }
-
 }
 ```
 
-## 5. Submit for Execution
+## 4. Submit for Execution
 
-1. Build our Code:
-
-<!--DOCUSAURUS_CODE_TABS-->
-
-<!--Gradle-->
+Assuming you already started a Jet instance, use `jet submit` to first
+start the producing job:
 
 ```bash
-gradle build
+<path_to_jet>/bin/jet submit --class org.example.Producer <path_to_your_jar>
 ```
 
-This will produce a jar file called `event-journal-tutorial-1.0-SNAPSHOT.jar`
-in the `build/libs` folder of our project.
-
-<!--Maven-->
+Then start the consuming job:
 
 ```bash
-mvn package
+<path_to_jet>/bin/jet submit --class org.example.Consumer <path_to_your_jar>
 ```
 
-This will produce a jar file called `event-journal-tutorial-1.0-SNAPSHOT.jar`
-in the `target` folder or our project.
-
-<!--END_DOCUSAURUS_CODE_TABS-->
-
-2. Submit the Producer for Execution:
-
-<!--DOCUSAURUS_CODE_TABS-->
-
-<!--Gradle-->
-
-```bash
-<path_to_jet>/bin/jet submit \
-    --class org.example.Producer \
-    build/libs/event-journal-tutorial-1.0-SNAPSHOT.jar
-```
-
-<!--Maven-->
-
-```bash
-<path_to_jet>/bin/jet submit \
-    --class org.example.Producer \
-    target/event-journal-tutorial-1.0-SNAPSHOT.jar
-```
-
-<!--END_DOCUSAURUS_CODE_TABS-->
-
-3. Submit the Consumer for Execution:
-
-<!--DOCUSAURUS_CODE_TABS-->
-
-<!--Gradle-->
-
-```bash
-<path_to_jet>/bin/jet submit \
-    --class org.example.Consumer \
-    build/libs/event-journal-tutorial-1.0-SNAPSHOT.jar
-```
-
-<!--Maven-->
-
-```bash
-<path_to_jet>/bin/jet submit \
-    --class org.example.Consumer \
-    target/event-journal-tutorial-1.0-SNAPSHOT.jar
-```
-
-<!--END_DOCUSAURUS_CODE_TABS-->
-
-You should start seeing the one second summaries in the Jet member's
-log:
+You should start seeing output like this in the Jet member's log:
 
 ```text
 ...
@@ -273,17 +121,11 @@ log:
 ...
 ```
 
-## 6. Clean-up
+## 5. Clean Up
 
-To stop your Jet jobs from executing simply cancel them:
+Cancel your jobs when you're done:
 
 ```bash
 <path_to_jet>/bin/jet cancel consumer
 <path_to_jet>/bin/jet cancel producer
-```
-
-Optionally you can also shut down the Jet member we have started:
-
-```bash
-<path_to_jet>/bin/jet-stop
 ```
