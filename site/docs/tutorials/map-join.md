@@ -1,5 +1,5 @@
 ---
-title: Enrich Your Stream with Reference Data
+title: Enrich Your Stream
 description: How to enrich your Jet stream with data from static sources. 
 ---
 
@@ -82,6 +82,11 @@ jar {
     manifest.attributes 'Main-Class': 'org.example.JoinUsingMapJob'
 }
 
+shadowJar {
+    dependencies {
+        exclude(dependency('com.hazelcast.jet:hazelcast-jet:4.0'))
+    }
+}
 ```
 
 <!--Maven-->
@@ -106,6 +111,7 @@ jar {
             <groupId>com.hazelcast.jet</groupId>
             <artifactId>hazelcast-jet</artifactId>
             <version>4.0</version>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>com.hazelcast.jet.examples</groupId>

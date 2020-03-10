@@ -14,6 +14,7 @@
     ],
     "Tutorials" : [
       "tutorials/kafka",
+      "tutorials/cdc",
       "tutorials/map-join",
       "tutorials/windowing",
       "tutorials/python"
@@ -35,7 +36,6 @@
       "api/spring"
     ],
     "How-To Guides" : [
-      "tutorials/cdc",
       "how-tos/stream-imap",
       "how-tos/observables",
       "how-tos/custom-batch-source",

@@ -1,5 +1,5 @@
 ---
-title: Receive CDC from MySQL
+title: Change Data Capture from MySQL
 description: How to monitor Change Data Capture data from a MySQL database in Jet.
 ---
 
@@ -87,7 +87,7 @@ Notice that the MySQL server starts and stops a few times as the
 configuration is modified. The last line listed above reports that the
 MySQL server is running and ready for use.
 
-## 3. Start MqSQL Command Line Client
+## 3. Start MySQL Command Line Client
 
 Open a new terminal, and use it to start a new container for the MySQL
 command line client and connect it to the MySQL server running in the
@@ -216,7 +216,17 @@ dependencies {
     compile 'io.debezium:debezium-connector-mysql:1.0.0.Final'
 }
 
-jar.manifest.attributes 'Main-Class': 'org.example.JetJob'
+jar {
+    enabled = false
+    dependsOn(shadowJar { classifier = null })
+    manifest.attributes 'Main-Class': 'org.example.JetJob'
+}
+
+shadowJar {
+    dependencies {
+        exclude(dependency('com.hazelcast.jet:hazelcast-jet:4.0'))
+    }
+}
 ```
 
 <!--Maven-->
@@ -241,6 +251,7 @@ jar.manifest.attributes 'Main-Class': 'org.example.JetJob'
            <groupId>com.hazelcast.jet</groupId>
            <artifactId>hazelcast-jet</artifactId>
            <version>4.0</version>
+            <scope>provided</scope>
        </dependency>
        <dependency>
            <groupId>com.hazelcast.jet.contrib</groupId>
@@ -254,30 +265,34 @@ jar.manifest.attributes 'Main-Class': 'org.example.JetJob'
        </dependency>
    </dependencies>
 
-   <build>
-       <plugins>
-         <plugin>
-           <groupId>org.apache.maven.plugins</groupId>
-           <artifactId>maven-shade-plugin</artifactId>
-           <version>3.2.2</version>
-           <executions>
-             <execution>
-               <phase>package</phase>
-               <goals>
-                 <goal>shade</goal>
-               </goals>
-               <configuration>
-                 <transformers>
-                   <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                     <mainClass>org.example.JetJob</mainClass>
-                   </transformer>
-                 </transformers>
-               </configuration>
-             </execution>
-           </executions>
-         </plugin>
-       </plugins>
-     </build>
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <configuration>
+                    <archive>
+                        <manifest>
+                            <mainClass>org.example.JetJob</mainClass>
+                        </manifest>
+                    </archive>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>3.2.2</version>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
 </project>
 ```
 
@@ -436,7 +451,7 @@ need to do is to run the build command:
 <!--Gradle-->
 
 ```bash
-gradle shadowJar
+gradle build
 ```
 
 This will produce a jar file called `cdc-tutorial-1.0-SNAPSHOT-all.jar`
@@ -495,7 +510,7 @@ In order to see that our Jet job indeed monitors live changes let's do
 some updates in our database.
 
 Let's go to the MySQL CLI [we've started earlier](#3-start
--mqsql-command-line-client) and run following update statement:
+-mysql-command-line-client) and run following update statement:
 
 ```text
 mysql> UPDATE customers SET first_name='Anne Marie' WHERE id=1004;
