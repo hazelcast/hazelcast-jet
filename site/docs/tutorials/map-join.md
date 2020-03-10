@@ -3,9 +3,6 @@ title: Enrich Your Stream with Reference Data
 description: How to enrich your Jet stream with data from static sources. 
 ---
 
-> :warning: **TODO update hazelcast-jet-examples-trade-source:
-> dependency to release when available **:
-
 Streams usually contain information changing with time, e.g. prices,
 quantities, sales. Sometimes the stream needs to be enriched with
 static, or infrequently changing data, such as labels, organizational
@@ -76,7 +73,7 @@ repositories.mavenCentral()
 
 dependencies {
     compile 'com.hazelcast.jet:hazelcast-jet:4.0'
-    compile 'com.hazelcast.jet.examples:hazelcast-jet-examples-trade-source:4.1-SNAPSHOT'
+    compile 'com.hazelcast.jet.examples:hazelcast-jet-examples-trade-source:4.0'
 }
 
 jar {
@@ -113,7 +110,7 @@ jar {
         <dependency>
             <groupId>com.hazelcast.jet.examples</groupId>
             <artifactId>hazelcast-jet-examples-trade-source</artifactId>
-            <version>4.1-SNAPSHOT</version>
+            <version>4.0</version>
         </dependency>
     </dependencies>
 
@@ -168,7 +165,6 @@ job.
 package org.example;
 
 import com.hazelcast.jet.*;
-import com.hazelcast.jet.examples.tradesource.TradeGenerator;
 
 import java.io.*;
 import java.util.Map;
@@ -181,7 +177,7 @@ public class LoadNames {
     public static void main(String[] args) {
         JetInstance instance = Jet.newJetClient();
 
-        Map<String, String> namesMap = loadNames(Integer.MAX_VALUE);
+        Map<String, String> namesMap = loadNames();
         instance.getMap("companyNames").putAll(namesMap);
 
         System.out.println(namesMap.size() + " names put to a map called 'companyNames'");
@@ -189,12 +185,11 @@ public class LoadNames {
         instance.shutdown();
     }
 
-    private static Map<String, String> loadNames(long numTickers) {
+    private static Map<String, String> loadNames() {
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(
-                TradeGenerator.class.getResourceAsStream("/nasdaqlisted.txt"), UTF_8))) {
+                LoadNames.class.getResourceAsStream("/nasdaqlisted.txt"), UTF_8))) {
             return reader.lines()
                     .skip(1)
-                    .limit(numTickers)
                     .map(line -> line.split("\\|"))
                     .collect(toMap(parts -> parts[0], parts -> parts[1]));
         } catch (IOException e) {
@@ -228,14 +223,12 @@ import static com.hazelcast.jet.datamodel.Tuple4.tuple4;
 
 public class JoinUsingMapJob {
 
-    public static final int ALL_TICKERS = Integer.MAX_VALUE;
     public static final int TRADES_PER_SEC = 1;
-    public static final int MAX_LAG = 5;
 
     public static void main(String[] args) {
         Pipeline pipeline = Pipeline.create();
 
-        pipeline.readFrom(TradeGenerator.tradeSource(ALL_TICKERS, TRADES_PER_SEC, MAX_LAG))
+        pipeline.readFrom(TradeSource.tradeStream(TRADES_PER_SEC))
          .withoutTimestamps()
          .mapUsingIMap("companyNames", Trade::getTicker, (trade, name) ->
              tuple4(trade.getTicker(), trade.getQuantity(), trade.getPrice(), name))
