@@ -942,6 +942,8 @@ public class JobConfig implements IdentifiedDataSerializable {
     @EvolvingApi
     public <T, S extends StreamSerializer<?>> JobConfig registerSerializerFor(@Nonnull Class<T> clazz,
                                                                               @Nonnull Class<S> serializerClass) {
+        Preconditions.checkFalse(serializerConfigs.containsKey(clazz.getName()),
+                "Serializer for " + clazz + " already registered");
         serializerConfigs.put(clazz.getName(), serializerClass.getName());
         return this;
     }

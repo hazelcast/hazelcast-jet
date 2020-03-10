@@ -105,40 +105,51 @@ public class JobConfigTest extends JetTestSupport {
     }
 
     @Test
+    public void when_registerSerializerTwice_then_fails() {
+        // Given
+        JobConfig config = new JobConfig();
+        config.registerSerializerFor(Object.class, ObjectSerializer.class);
+
+        // When
+        // Then
+        exception.expect(IllegalArgumentException.class);
+        exception.expectMessage("Serializer for class java.lang.Object already registered");
+        config.registerSerializerFor(Object.class, ObjectSerializer.class);
+    }
+
+    @Test
     public void when_registerSerializer() {
         // Given
         JobConfig config = new JobConfig();
 
         // When
-        StreamSerializer<Object> serializer = new StreamSerializer<Object>() {
-
-            @Override
-            public int getTypeId() {
-                return 0;
-            }
-
-            @Override
-            public void write(ObjectDataOutput out, Object object) {
-            }
-
-            @Override
-            public Object read(ObjectDataInput in) {
-                return null;
-            }
-
-            @Override
-            public void destroy() {
-            }
-        };
-        Object object = new Object() {
-        };
-
-        config.registerSerializerFor(object.getClass(), serializer.getClass());
+        config.registerSerializerFor(Object.class, ObjectSerializer.class);
 
         // Then
         Map<String, String> serializerConfigs = config.getSerializerConfigs();
         assertThat(serializerConfigs.entrySet(), hasSize(1));
-        assertThat(serializerConfigs.keySet(), contains(object.getClass().getName()));
-        assertThat(serializerConfigs.values(), contains(serializer.getClass().getName()));
+        assertThat(serializerConfigs.keySet(), contains(Object.class.getName()));
+        assertThat(serializerConfigs.values(), contains(ObjectSerializer.class.getName()));
+    }
+
+    private static class ObjectSerializer implements StreamSerializer<Object> {
+
+        @Override
+        public int getTypeId() {
+            return 0;
+        }
+
+        @Override
+        public void write(ObjectDataOutput out, Object object) {
+        }
+
+        @Override
+        public Object read(ObjectDataInput in) {
+            return null;
+        }
+
+        @Override
+        public void destroy() {
+        }
     }
 }
