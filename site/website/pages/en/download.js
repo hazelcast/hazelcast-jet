@@ -20,8 +20,8 @@ function Downloads(props) {
   return (
     <div className="docMainWrapper wrapper">
       <Container className="mainContainer versionsContainer">
-        <div className="post">
-          <header className="postHeader">
+        <div>
+          <header>
             <h1>{siteConfig.title} Downloads</h1>
           </header>
           <h3 id="latest">Current version (Stable)</h3>

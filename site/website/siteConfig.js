@@ -41,6 +41,7 @@ const siteConfig = {
         {doc: 'get-started/intro', label: 'Documentation'},
         // {doc: 'connectors/imap', label: 'Connectors'},
         {page: 'download', label: "Download"},
+        {page: 'javadoc', label: "API Docs"},
         {href: 'https://github.com/hazelcast/hazelcast-jet', label: "View on GitHub"},
         {blog: true, label: 'Blog'},
         {search: true},
@@ -91,6 +92,8 @@ const siteConfig = {
     'https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.0/clipboard.min.js',
     '/js/code-block-buttons.js',
     ],
+
+    separateCss: ['static/javadoc'],
 
     algolia: {
         apiKey: '79d1e4941621b9fd761d279d4d19ed69',

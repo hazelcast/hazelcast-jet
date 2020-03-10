@@ -32,8 +32,7 @@
       "api/data-structures",
       "api/serialization",
       "api/testing",
-      "api/spring",
-      "api/javadoc"
+      "api/spring"
     ],
     "How-To Guides" : [
       "tutorials/cdc",
