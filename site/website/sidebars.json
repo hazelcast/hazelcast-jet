@@ -43,6 +43,7 @@
       "how-tos/custom-sink"
     ],
     "Operations Guide": [
+      "operations/installation",
       "operations/configuration",
       "operations/discovery",
       "operations/cluster-sizing",
