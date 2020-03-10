@@ -24,8 +24,10 @@ import com.hazelcast.internal.serialization.Data;
 import com.hazelcast.internal.serialization.DataType;
 import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.internal.serialization.PortableContext;
+import com.hazelcast.internal.serialization.SerializationService;
 import com.hazelcast.internal.serialization.impl.bufferpool.BufferPool;
 import com.hazelcast.internal.usercodedeployment.impl.ClassLocator;
+import com.hazelcast.jet.impl.util.ReflectionUtils;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.HazelcastSerializationException;
@@ -44,7 +46,9 @@ import static com.hazelcast.internal.serialization.impl.SerializationUtil.handle
 import static com.hazelcast.internal.serialization.impl.SerializationUtil.isNullData;
 import static com.hazelcast.internal.util.Preconditions.checkNotNull;
 import static com.hazelcast.internal.util.Preconditions.checkTrue;
+import static java.lang.Thread.currentThread;
 import static java.nio.ByteOrder.BIG_ENDIAN;
+import static java.util.stream.Collectors.toMap;
 
 // refactor after https://github.com/hazelcast/hazelcast/pull/16722 is released
 @Deprecated
@@ -358,11 +362,22 @@ public class JetSerializationService implements InternalSerializationService {
         }
     }
 
+    public static InternalSerializationService from(SerializationService serializationService,
+                                                    Map<String, String> serializerConfigs) {
+        ClassLoader classLoader = currentThread().getContextClassLoader();
+        Map<Class<?>, ? extends Serializer> serializers =
+                serializerConfigs.entrySet()
+                                 .stream()
+                                 .collect(toMap(
+                                         entry -> ReflectionUtils.loadClass(classLoader, entry.getKey()),
+                                         entry -> ReflectionUtils.newInstance(classLoader, entry.getValue())
+                                 ));
+        return new JetSerializationService(serializers, (AbstractSerializationService) serializationService);
+    }
+
     private static HazelcastSerializationException newHazelcastSerializationException(int typeId) {
         return new HazelcastSerializationException("There is no suitable de-serializer for type " + typeId + ". "
                 + "This exception is likely caused by differences in the serialization configuration between members "
                 + "or between clients and members.");
     }
 }
-
-

@@ -29,7 +29,6 @@ import com.hazelcast.jet.pipeline.ServiceFactories;
 import com.hazelcast.jet.pipeline.ServiceFactory;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.test.TestSources;
-import com.hazelcast.nio.serialization.StreamSerializer;
 import org.junit.Test;
 
 import javax.annotation.Nonnull;
@@ -46,8 +45,6 @@ import java.util.List;
 
 import static com.hazelcast.jet.core.JobStatus.RUNNING;
 import static com.hazelcast.jet.core.TestUtil.executeAndPeel;
-import static com.hazelcast.jet.impl.deployment.JobLevelSerializerIsAvailable.SERIALIZER_CLASS_NAME;
-import static com.hazelcast.jet.impl.deployment.JobLevelSerializerIsAvailable.VALUE_CLASS_NAME;
 import static com.hazelcast.jet.pipeline.test.Assertions.assertCollected;
 import static java.util.Collections.emptyEnumeration;
 import static java.util.Collections.enumeration;
@@ -324,26 +321,6 @@ public abstract class AbstractDeploymentTest extends SimpleTestInClusterSupport 
 
         JobConfig jobConfig = new JobConfig();
         jobConfig.addClasspathResource(this.getClass().getResource("/deployment/resource.txt"), "customId");
-
-        executeAndPeel(getJetInstance().newJob(dag, jobConfig));
-    }
-
-    @Test
-    @SuppressWarnings("unchecked")
-    public void testDeployment_whenAddSerializer_thenAvailableOnJobContext() throws Throwable {
-        URL classUrl = this.getClass().getResource(CLASS_LOADER_PREFIX);
-        URLClassLoader urlClassLoader = new URLClassLoader(new URL[]{classUrl}, getClass().getClassLoader());
-        Class<?> valueClass = urlClassLoader.loadClass(VALUE_CLASS_NAME);
-        Class<StreamSerializer<?>> serializerClass =
-                (Class<StreamSerializer<?>>) urlClassLoader.loadClass(SERIALIZER_CLASS_NAME);
-
-        DAG dag = new DAG();
-        dag.newVertex("calls job level serializer", JobLevelSerializerIsAvailable::new);
-
-        JobConfig jobConfig = new JobConfig()
-                .addClass(valueClass)
-                .addClass(serializerClass)
-                .registerStreamSerializer(serializerClass, valueClass);
 
         executeAndPeel(getJetInstance().newJob(dag, jobConfig));
     }

@@ -24,7 +24,6 @@ import com.hazelcast.internal.metrics.ProbeLevel;
 import com.hazelcast.internal.metrics.ProbeUnit;
 import com.hazelcast.internal.nio.IOUtil;
 import com.hazelcast.internal.serialization.InternalSerializationService;
-import com.hazelcast.internal.serialization.impl.AbstractSerializationService;
 import com.hazelcast.internal.serialization.impl.JetSerializationService;
 import com.hazelcast.internal.util.counters.Counter;
 import com.hazelcast.internal.util.counters.MwCounter;
@@ -39,10 +38,8 @@ import com.hazelcast.jet.impl.execution.init.ExecutionPlan;
 import com.hazelcast.jet.impl.metrics.RawJobMetrics;
 import com.hazelcast.jet.impl.operation.SnapshotPhase1Operation.SnapshotPhase1Result;
 import com.hazelcast.jet.impl.util.LoggingUtil;
-import com.hazelcast.jet.impl.util.ReflectionUtils;
 import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.logging.ILogger;
-import com.hazelcast.nio.serialization.Serializer;
 import com.hazelcast.spi.impl.NodeEngine;
 
 import javax.annotation.Nullable;
@@ -57,12 +54,10 @@ import java.util.concurrent.ConcurrentHashMap;
 import static com.hazelcast.jet.Util.idToString;
 import static com.hazelcast.jet.core.metrics.MetricNames.EXECUTION_COMPLETION_TIME;
 import static com.hazelcast.jet.core.metrics.MetricNames.EXECUTION_START_TIME;
-import static java.lang.Thread.currentThread;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.emptyMap;
 import static java.util.Collections.unmodifiableList;
 import static java.util.Collections.unmodifiableMap;
-import static java.util.stream.Collectors.toMap;
 
 /**
  * Data pertaining to single job execution on all cluster members. There's one
@@ -137,7 +132,8 @@ public class ExecutionContext implements DynamicMetricsProvider {
         snapshotContext = new SnapshotContext(nodeEngine.getLogger(SnapshotContext.class), jobNameAndExecutionId(),
                 plan.lastSnapshotId(), jobConfig.getProcessingGuarantee());
 
-        serializationService = serializationService(nodeEngine, jobConfig);
+        serializationService = JetSerializationService
+                .from(nodeEngine.getSerializationService(), jobConfig.getSerializerConfigs());
 
         metricsEnabled = jobConfig.isMetricsEnabled() && nodeEngine.getConfig().getMetricsConfig().isEnabled();
         plan.initialize(nodeEngine, jobId, executionId, snapshotContext, tempDirectories, serializationService);
@@ -345,24 +341,5 @@ public class ExecutionContext implements DynamicMetricsProvider {
 
     public void setCompletionTime() {
         completionTime.set(System.currentTimeMillis());
-    }
-
-    private static InternalSerializationService serializationService(NodeEngine nodeEngine, JobConfig jobConfig) {
-        Map<String, String> serializerConfigs = jobConfig.getSerializerConfigs();
-        if (serializerConfigs.isEmpty()) {
-            return (InternalSerializationService) nodeEngine.getSerializationService();
-        } else {
-            ClassLoader classLoader = currentThread().getContextClassLoader();
-            Map<Class<?>, ? extends Serializer> serializers = serializerConfigs.entrySet()
-                     .stream()
-                     .collect(toMap(
-                             entry -> ReflectionUtils.loadClass(classLoader, entry.getKey()),
-                             entry -> ReflectionUtils.newInstance(classLoader, entry.getValue())
-                     ));
-            return new JetSerializationService(
-                    serializers,
-                    (AbstractSerializationService) nodeEngine.getSerializationService()
-            );
-        }
     }
 }

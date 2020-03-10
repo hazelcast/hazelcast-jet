@@ -21,6 +21,7 @@ import com.hazelcast.internal.util.Preconditions;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
+import com.hazelcast.jet.annotation.EvolvingApi;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.impl.util.ReflectionUtils;
 import com.hazelcast.jet.impl.util.ReflectionUtils.Resources;
@@ -935,6 +936,7 @@ public class JobConfig implements IdentifiedDataSerializable {
      * @return {@code this} instance for fluent API
      */
     @Nonnull
+    @EvolvingApi
     public <T, S extends StreamSerializer<?>> JobConfig registerStreamSerializer(@Nonnull Class<S> serializerClass,
                                                                                  @Nonnull Class<T> clazz) {
         serializerConfigs.put(clazz.getName(), serializerClass.getName());
