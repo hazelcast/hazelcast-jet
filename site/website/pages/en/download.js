@@ -39,6 +39,12 @@ function Downloads(props) {
                         Release Notes
                   </a>
                 </td>
+                <td>
+                  <a
+                    href={`/javadoc/${latestVersion}`}>
+                    Javadoc
+                  </a>
+                </td>
               </tr>
             </tbody>
           </table>
@@ -67,6 +73,12 @@ function Downloads(props) {
                       <td>
                         <a href={`${repoUrl}/releases/tag/v${version}`}>
                           Release Notes
+                        </a>
+                      </td>
+                      <td>
+                        <a
+                          href={`/javadoc/${version}`}>
+                          Javadoc
                         </a>
                       </td>
                     </tr>
