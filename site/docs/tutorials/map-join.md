@@ -111,7 +111,6 @@ shadowJar {
             <groupId>com.hazelcast.jet</groupId>
             <artifactId>hazelcast-jet</artifactId>
             <version>4.0</version>
-            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>com.hazelcast.jet.examples</groupId>
@@ -143,6 +142,13 @@ shadowJar {
                         <goals>
                             <goal>shade</goal>
                         </goals>
+                        <configuration>
+                            <artifactSet>
+                                <excludes>
+                                    <exclude>com.hazelcast.jet:hazelcast-jet</exclude>
+                                </excludes>
+                            </artifactSet>
+                        </configuration>
                     </execution>
                 </executions>
             </plugin>

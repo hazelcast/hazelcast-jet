@@ -251,7 +251,6 @@ shadowJar {
            <groupId>com.hazelcast.jet</groupId>
            <artifactId>hazelcast-jet</artifactId>
            <version>4.0</version>
-            <scope>provided</scope>
        </dependency>
        <dependency>
            <groupId>com.hazelcast.jet.contrib</groupId>
@@ -288,6 +287,13 @@ shadowJar {
                         <goals>
                             <goal>shade</goal>
                         </goals>
+                        <configuration>
+                            <artifactSet>
+                                <excludes>
+                                    <exclude>com.hazelcast.jet:hazelcast-jet</exclude>
+                                </excludes>
+                            </artifactSet>
+                        </configuration>
                     </execution>
                 </executions>
             </plugin>
@@ -437,6 +443,31 @@ public class Customer implements Serializable {
 }
 ```
 
+To make it evident that our pipeline serves the purpose of building an
+up-to-date cache of customers, which can be interrogated at any time
+let's add one more class. This code can be executed at any time in your
+IDE and will print the current content of the cache.
+
+```java
+package org.example;
+
+import com.hazelcast.jet.Jet;
+import com.hazelcast.jet.JetInstance;
+
+public class CacheRead {
+
+    public static void main(String[] args) {
+        JetInstance instance = Jet.newJetClient();
+
+        System.out.println("Currently there are following customers in the cache:");
+        instance.getMap("customers").values().forEach(c -> System.out.println("\t" + c));
+
+        instance.shutdown();
+    }
+
+}
+```
+
 ## 7. Package
 
 Now that we have all the pieces, we need to submit it to Jet for
@@ -506,11 +537,20 @@ we inserted):
 
 ## 9. Track Updates
 
-In order to see that our Jet job indeed monitors live changes let's do
-some updates in our database.
+Let's see how our cache looks like at this time. If we execute the
+ `CacheRead` code [defined above](#6-define-jet-job), we'll get:
 
-Let's go to the MySQL CLI [we've started earlier](#3-start
--mysql-command-line-client) and run following update statement:
+```text
+Currently there are following customers in the cache:
+    Customer {id=1002, firstName=George, lastName=Bailey, email=gbailey@foobar.com}
+    Customer {id=1003, firstName=Edward, lastName=Walker, email=ed@walker.com}
+    Customer {id=1004, firstName=Anne, lastName=Kretchmar, email=annek@noanswer.org}
+    Customer {id=1001, firstName=Sally, lastName=Thomas, email=sally.thomas@acme.com}
+```
+
+Let's do some updates in our database. Go to the MySQL CLI
+[we've started earlier](#3-start-mysql-command-line-client) and run
+following update statement:
 
 ```text
 mysql> UPDATE customers SET first_name='Anne Marie' WHERE id=1004;
@@ -522,6 +562,16 @@ In the log of the Jet member we should immediately see the effect:
 
 ```text
 ... 1004=Customer {id=1004, firstName=Anne Marie, lastName=Kretchmar, email=annek@noanswer.org}
+```
+
+If we check the cache with `CacheRead` we get:
+
+```text
+Currently there are following customers in the cache:
+    Customer {id=1002, firstName=George, lastName=Bailey, email=gbailey@foobar.com}
+    Customer {id=1003, firstName=Edward, lastName=Walker, email=ed@walker.com}
+    Customer {id=1004, firstName=Anne Marie, lastName=Kretchmar, email=annek@noanswer.org}
+    Customer {id=1001, firstName=Sally, lastName=Thomas, email=sally.thomas@acme.com}
 ```
 
 One more:
@@ -536,6 +586,16 @@ We see it in the Jet log:
 
 ```text
 ... 1003=Customer {id=1003, firstName=Edward, lastName=Walker, email=edward.walker@walker.com}
+```
+
+`CacheRead` also reflects the latest values:
+
+```text
+Currently there are following customers in the cache:
+    Customer {id=1002, firstName=George, lastName=Bailey, email=gbailey@foobar.com}
+    Customer {id=1003, firstName=Edward, lastName=Walker, email=edward.walker@walker.com}
+    Customer {id=1004, firstName=Anne Marie, lastName=Kretchmar, email=annek@noanswer.org}
+    Customer {id=1001, firstName=Sally, lastName=Thomas, email=sally.thomas@acme.com}
 ```
 
 ## 10. Clean up
