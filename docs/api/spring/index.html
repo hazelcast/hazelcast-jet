@@ -63,8 +63,103 @@
               }
             });
         </script></nav></div><div class="container mainContainer docsContainer"><div class="wrapper"><div class="post"><header class="postHeader"><a class="edit-page-link button" href="https://github.com/hazelcast/hazelcast-jet/edit/docs/site/docs/api/spring.md" target="_blank" rel="noreferrer noopener">Edit</a><h1 id="__docusaurus" class="postHeaderTitle">Spring Integration</h1></header><article><div><span><p>You can configure and start a Hazelcast Jet instance (or a Hazelcast Jet
-client) declaratively using an <em>XML</em> based configuration or
-programmatically using an <em>Annotation</em> based configuration.</p>
+client) programmatically using an <em>Annotation</em> based configuration or
+declaratively using an <em>XML</em> based configuration.</p>
+<h2><a class="anchor" aria-hidden="true" id="annotation-based-configuration"></a><a href="#annotation-based-configuration" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Annotation-Based Configuration</h2>
+<p>Annotation-Based Configuration does not require any XML definition.
+Simply create a configuration class annotated with <code>@Configuration</code> and
+provide a <code>JetInstance</code> (either a member or client) as a bean by
+annotating the method with <code>@Bean</code>.</p>
+<pre><code class="hljs css language-java"><span class="token annotation punctuation">@Configuration</span>
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">AppConfig</span> <span class="token punctuation">{</span>
+
+    <span class="token annotation punctuation">@Bean</span>
+    <span class="token keyword">public</span> <span class="token class-name">SpringManagedContext</span> <span class="token function">springManagedContext</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token keyword">return</span> <span class="token keyword">new</span> <span class="token class-name">SpringManagedContext</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+
+    <span class="token annotation punctuation">@Bean</span>
+    <span class="token keyword">public</span> <span class="token class-name">JetInstance</span> <span class="token function">instance</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token comment">// You can configure Hazelcast Jet instance programmatically</span>
+        <span class="token class-name">JetConfig</span> jetConfig <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">JetConfig</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+                <span class="token comment">// configure SpringManagedContext for @SpringAware</span>
+                <span class="token punctuation">.</span><span class="token function">configureHazelcast</span><span class="token punctuation">(</span>hzConfig <span class="token operator">-></span>
+                    hzConfig<span class="token punctuation">.</span><span class="token function">setManagedContext</span><span class="token punctuation">(</span><span class="token function">springManagedContext</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">return</span> <span class="token class-name">Jet</span><span class="token punctuation">.</span><span class="token function">newJetInstance</span><span class="token punctuation">(</span>jetConfig<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+
+    <span class="token annotation punctuation">@Bean</span>
+    <span class="token keyword">public</span> <span class="token class-name">JetInstance</span> <span class="token function">client</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token comment">// You can configure Hazelcast Jet client programmatically</span>
+        <span class="token class-name">ClientConfig</span> clientConfig <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">ClientConfig</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+                <span class="token comment">// configure SpringManagedContext for @SpringAware</span>
+                <span class="token punctuation">.</span><span class="token function">setManagedContext</span><span class="token punctuation">(</span><span class="token function">springManagedContext</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">return</span> <span class="token class-name">Jet</span><span class="token punctuation">.</span><span class="token function">newJetClient</span><span class="token punctuation">(</span>clientConfig<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<h2><a class="anchor" aria-hidden="true" id="enabling-springaware-objects"></a><a href="#enabling-springaware-objects" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Enabling SpringAware Objects</h2>
+<p>Hazelcast IMDG has a special annotation, <code>@SpringAware</code>, which enables
+you to initialize the object with spring context.</p>
+<p>When a job is submitted to the cluster, processors are created by
+Hazelcast Jet on each member. By marking your processor with
+<code>@SpringAware</code>, you make spring context accessible to your processor
+which gives you the ability:</p>
+<ul>
+<li>to apply bean properties</li>
+<li>to apply factory callbacks such as <code>ApplicationContextAware</code>,
+<code>BeanNameAware</code></li>
+<li>to apply bean post-processing annotations such as <code>InitializingBean</code>,
+<code>@PostConstruct</code></li>
+</ul>
+<p>Here is a custom processor which an <code>IList</code> is injected as a resource.</p>
+<pre><code class="hljs css language-java"><span class="token annotation punctuation">@SpringAware</span>
+<span class="token keyword">private</span> <span class="token keyword">class</span> <span class="token class-name">CustomProcessor</span> <span class="token keyword">extends</span> <span class="token class-name">AbstractProcessor</span> <span class="token punctuation">{</span>
+
+    <span class="token annotation punctuation">@Resource</span><span class="token punctuation">(</span>name <span class="token operator">=</span> <span class="token string">"my-list-bean"</span><span class="token punctuation">)</span>
+    <span class="token keyword">private</span> <span class="token class-name">IList</span> list<span class="token punctuation">;</span>
+
+    <span class="token annotation punctuation">@Override</span>
+    <span class="token keyword">protected</span> <span class="token keyword">void</span> <span class="token function">init</span><span class="token punctuation">(</span><span class="token annotation punctuation">@Nonnull</span> <span class="token class-name">Context</span> context<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token punctuation">}</span>
+
+    <span class="token annotation punctuation">@Override</span>
+    <span class="token keyword">public</span> <span class="token keyword">boolean</span> <span class="token function">complete</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token keyword">return</span> <span class="token boolean">false</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>You can use <code>@SpringAware</code> annotation while creating custom sources and
+sinks (with <code>SourceBuilder</code> and <code>SinkBuilder</code> respectively). Both
+builders expects you to pass a function which creates a <code>context</code>
+object. By marking that object with <code>@SpringAware</code> annotation you can
+make spring context accessible to the source/sink.</p>
+<pre><code class="hljs css language-java"><span class="token annotation punctuation">@SpringAware</span>
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">SourceContext</span> <span class="token punctuation">{</span>
+
+    <span class="token annotation punctuation">@Resource</span><span class="token punctuation">(</span>name <span class="token operator">=</span> <span class="token string">"my-source-map"</span><span class="token punctuation">)</span>
+    <span class="token class-name">IMap</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">,</span> <span class="token class-name">String</span><span class="token punctuation">></span></span> sourceMap<span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+<span class="token annotation punctuation">@SpringAware</span>
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">SinkContext</span> <span class="token punctuation">{</span>
+
+    <span class="token annotation punctuation">@Resource</span><span class="token punctuation">(</span>name <span class="token operator">=</span> <span class="token string">"my-sink-map"</span><span class="token punctuation">)</span>
+    <span class="token class-name">IMap</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">,</span> <span class="token class-name">String</span><span class="token punctuation">></span></span> sinkMap<span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>You can also use <code>@SpringAware</code> annotation while enriching your data via
+lookup from an external system. Again you need to mark the <code>context</code>
+object of <code>ServiceFactory</code> with <code>@SpringAware</code>. Hazelcast Jet also
+provides utility methods (see <code>JetSpringServiceFactories</code>) to use Spring
+beans as a <code>context</code> object for the <code>ServiceFactory</code>.</p>
+<pre><code class="hljs css language-java"><span class="token class-name">Pipeline</span> pipeline <span class="token operator">=</span> <span class="token class-name">Pipeline</span><span class="token punctuation">.</span><span class="token function">create</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+pipeline<span class="token punctuation">.</span><span class="token function">readFrom</span><span class="token punctuation">(</span><span class="token class-name">Sources</span><span class="token punctuation">.</span><span class="token function">list</span><span class="token punctuation">(</span><span class="token string">"list"</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+        <span class="token punctuation">.</span><span class="token function">mapUsingService</span><span class="token punctuation">(</span><span class="token class-name">JetSpringServiceFactories</span><span class="token punctuation">.</span><span class="token function">bean</span><span class="token punctuation">(</span><span class="token string">"my-bean"</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token punctuation">(</span>myBean<span class="token punctuation">,</span> item<span class="token punctuation">)</span> <span class="token operator">-></span> myBean<span class="token punctuation">.</span><span class="token function">enrich</span><span class="token punctuation">(</span>item<span class="token punctuation">)</span><span class="token punctuation">)</span>
+        <span class="token punctuation">.</span><span class="token function">writeTo</span><span class="token punctuation">(</span><span class="token class-name">Sinks</span><span class="token punctuation">.</span><span class="token function">logger</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>You need to configure Hazelcast Jet with <code>&lt;hz:spring-aware/&gt;</code> tag or set
+<code>SpringManagedContext</code> programmatically to enable spring-aware objects.</p>
 <h2><a class="anchor" aria-hidden="true" id="declarative-configuration"></a><a href="#declarative-configuration" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Declarative Configuration</h2>
 <p>Hazelcast Jet can be configured as a component in the Spring Application
 Context. You can use the plain <code>bean</code> element and define individual
@@ -249,96 +344,7 @@ attributes.</p>
     <span class="hljs-tag">&lt;/<span class="hljs-name">jet:client</span>&gt;</span>
 <span class="hljs-tag">&lt;/<span class="hljs-name">beans</span>&gt;</span>
 </code></pre>
-<h2><a class="anchor" aria-hidden="true" id="annotation-based-configuration"></a><a href="#annotation-based-configuration" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Annotation-Based Configuration</h2>
-<p>Annotation-Based Configuration does not require any XML definition.
-Simply create a configuration class annotated with <code>@Configuration</code> and
-provide a <code>JetInstance</code> (either a member or client) as a bean by
-annotating the method with <code>@Bean</code>.</p>
-<pre><code class="hljs css language-java"><span class="token annotation punctuation">@Configuration</span>
-<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">AppConfig</span> <span class="token punctuation">{</span>
-
-    <span class="token annotation punctuation">@Bean</span>
-    <span class="token keyword">public</span> <span class="token class-name">JetInstance</span> <span class="token function">instance</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
-        <span class="token comment">// You can configure Hazelcast Jet instance programmatically</span>
-        <span class="token class-name">JetConfig</span> jetConfig <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">JetConfig</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
-                <span class="token comment">// configure SpringManagedContext for @SpringAware</span>
-                <span class="token punctuation">.</span><span class="token function">configureHazelcast</span><span class="token punctuation">(</span>hzConfig <span class="token operator">-></span> hzConfig<span class="token punctuation">.</span><span class="token function">setManagedContext</span><span class="token punctuation">(</span><span class="token keyword">new</span> <span class="token class-name">SpringManagedContext</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
-        <span class="token keyword">return</span> <span class="token class-name">Jet</span><span class="token punctuation">.</span><span class="token function">newJetInstance</span><span class="token punctuation">(</span>jetConfig<span class="token punctuation">)</span><span class="token punctuation">;</span>
-    <span class="token punctuation">}</span>
-
-    <span class="token annotation punctuation">@Bean</span>
-    <span class="token keyword">public</span> <span class="token class-name">JetInstance</span> <span class="token function">client</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
-        <span class="token comment">// You can configure Hazelcast Jet client programmatically</span>
-        <span class="token class-name">ClientConfig</span> clientConfig <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">ClientConfig</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
-                <span class="token comment">// configure SpringManagedContext for @SpringAware</span>
-                <span class="token punctuation">.</span><span class="token function">setManagedContext</span><span class="token punctuation">(</span><span class="token keyword">new</span> <span class="token class-name">SpringManagedContext</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
-        <span class="token keyword">return</span> <span class="token class-name">Jet</span><span class="token punctuation">.</span><span class="token function">newJetClient</span><span class="token punctuation">(</span>clientConfig<span class="token punctuation">)</span><span class="token punctuation">;</span>
-    <span class="token punctuation">}</span>
-<span class="token punctuation">}</span>
-</code></pre>
-<h2><a class="anchor" aria-hidden="true" id="enabling-springaware-objects"></a><a href="#enabling-springaware-objects" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Enabling SpringAware Objects</h2>
-<p>Hazelcast IMDG has a special annotation, <code>@SpringAware</code>, which enables
-you to initialize the object with spring context.</p>
-<p>When a job is submitted to the cluster, processors are created by
-Hazelcast Jet on each member. By marking your processor with
-<code>@SpringAware</code>, you make spring context accessible to your processor
-which gives you the ability:</p>
-<ul>
-<li>to apply bean properties</li>
-<li>to apply factory callbacks such as <code>ApplicationContextAware</code>,
-<code>BeanNameAware</code></li>
-<li>to apply bean post-processing annotations such as <code>InitializingBean</code>,
-<code>@PostConstruct</code></li>
-</ul>
-<p>Here is a custom processor which an <code>IList</code> is injected as a resource.</p>
-<pre><code class="hljs css language-java"><span class="token annotation punctuation">@SpringAware</span>
-<span class="token keyword">private</span> <span class="token keyword">class</span> <span class="token class-name">CustomProcessor</span> <span class="token keyword">extends</span> <span class="token class-name">AbstractProcessor</span> <span class="token punctuation">{</span>
-
-    <span class="token annotation punctuation">@Resource</span><span class="token punctuation">(</span>name <span class="token operator">=</span> <span class="token string">"my-list-bean"</span><span class="token punctuation">)</span>
-    <span class="token keyword">private</span> <span class="token class-name">IList</span> list<span class="token punctuation">;</span>
-
-    <span class="token annotation punctuation">@Override</span>
-    <span class="token keyword">protected</span> <span class="token keyword">void</span> <span class="token function">init</span><span class="token punctuation">(</span><span class="token annotation punctuation">@Nonnull</span> <span class="token class-name">Context</span> context<span class="token punctuation">)</span> <span class="token punctuation">{</span>
-    <span class="token punctuation">}</span>
-
-    <span class="token annotation punctuation">@Override</span>
-    <span class="token keyword">public</span> <span class="token keyword">boolean</span> <span class="token function">complete</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
-        <span class="token keyword">return</span> <span class="token boolean">false</span><span class="token punctuation">;</span>
-    <span class="token punctuation">}</span>
-<span class="token punctuation">}</span>
-</code></pre>
-<p>You can use <code>@SpringAware</code> annotation while creating custom sources and
-sinks (with <code>SourceBuilder</code> and <code>SinkBuilder</code> respectively). Both
-builders expects you to pass a function which creates a <code>context</code>
-object. By marking that object with <code>@SpringAware</code> annotation you can
-make spring context accessible to the source/sink.</p>
-<pre><code class="hljs css language-java"><span class="token annotation punctuation">@SpringAware</span>
-<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">SourceContext</span> <span class="token punctuation">{</span>
-
-    <span class="token annotation punctuation">@Resource</span><span class="token punctuation">(</span>name <span class="token operator">=</span> <span class="token string">"my-source-map"</span><span class="token punctuation">)</span>
-    <span class="token class-name">IMap</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">,</span> <span class="token class-name">String</span><span class="token punctuation">></span></span> sourceMap<span class="token punctuation">;</span>
-<span class="token punctuation">}</span>
-
-<span class="token annotation punctuation">@SpringAware</span>
-<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">SinkContext</span> <span class="token punctuation">{</span>
-
-    <span class="token annotation punctuation">@Resource</span><span class="token punctuation">(</span>name <span class="token operator">=</span> <span class="token string">"my-sink-map"</span><span class="token punctuation">)</span>
-    <span class="token class-name">IMap</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">,</span> <span class="token class-name">String</span><span class="token punctuation">></span></span> sinkMap<span class="token punctuation">;</span>
-<span class="token punctuation">}</span>
-</code></pre>
-<p>You can also use <code>@SpringAware</code> annotation while enriching your data via
-lookup from an external system. Again you need to mark the <code>context</code>
-object of <code>ServiceFactory</code> with <code>@SpringAware</code>. Hazelcast Jet also
-provides utility methods (see <code>JetSpringServiceFactories</code>) to use Spring
-beans as a <code>context</code> object for the <code>ServiceFactory</code>.</p>
-<pre><code class="hljs css language-java"><span class="token class-name">Pipeline</span> pipeline <span class="token operator">=</span> <span class="token class-name">Pipeline</span><span class="token punctuation">.</span><span class="token function">create</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
-pipeline<span class="token punctuation">.</span><span class="token function">readFrom</span><span class="token punctuation">(</span><span class="token class-name">Sources</span><span class="token punctuation">.</span><span class="token function">list</span><span class="token punctuation">(</span><span class="token string">"list"</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
-        <span class="token punctuation">.</span><span class="token function">mapUsingService</span><span class="token punctuation">(</span><span class="token class-name">JetSpringServiceFactories</span><span class="token punctuation">.</span><span class="token function">bean</span><span class="token punctuation">(</span><span class="token string">"my-bean"</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token punctuation">(</span>myBean<span class="token punctuation">,</span> item<span class="token punctuation">)</span> <span class="token operator">-></span> myBean<span class="token punctuation">.</span><span class="token function">enrich</span><span class="token punctuation">(</span>item<span class="token punctuation">)</span><span class="token punctuation">)</span>
-        <span class="token punctuation">.</span><span class="token function">writeTo</span><span class="token punctuation">(</span><span class="token class-name">Sinks</span><span class="token punctuation">.</span><span class="token function">logger</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
-</code></pre>
-<p>You need to configure Hazelcast Jet with <code>&lt;hz:spring-aware/&gt;</code> tag or set
-<code>SpringManagedContext</code> programmatically to enable spring-aware objects.</p>
-</span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/docs/api/testing"><span class="arrow-prev">← </span><span>Testing</span></a><a class="docs-next button" href="/docs/api/javadoc"><span>Javadoc</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#declarative-configuration">Declarative Configuration</a><ul class="toc-headings"><li><a href="#using-default-beans-namespace">Using Default Beans Namespace</a></li><li><a href="#using-jet-beans-namespace">Using Jet Beans Namespace</a></li></ul></li><li><a href="#annotation-based-configuration">Annotation-Based Configuration</a></li><li><a href="#enabling-springaware-objects">Enabling SpringAware Objects</a></li></ul></nav></div><footer class="nav-footer" id="footer"><section class="sitemap"><a href="/" class="nav-home"><img src="/img/logo-light.svg" alt="Hazelcast Jet" width="200" height="40"/></a><div><h5>Docs</h5><a href="/docs/get-started/intro">Get Started</a><a href="/docs/concepts/dag">Concepts and Architecture</a><a href="/docs/tutorials/kafka">Tutorials</a><a href="/docs/operations/configuration">Operations Guide</a></div><div><h5>Community</h5><a href="https://groups.google.com/forum/#!forum/hazelcast-jet" target="_blank" rel="noreferrer noopener">Google Groups</a><a href="http://stackoverflow.com/questions/tagged/hazelcast-jet" target="_blank" rel="noreferrer noopener">Stack Overflow</a><a href="https://gitter.im/hazelcast/hazelcast-jet">Gitter Chat</a></div><div><h5>Latest From the Blog</h5><a href="/blog/2020/03/02/jet-40-is-released">Jet 4.0 is Released</a><a href="/blog/2020/02/20/transactional-processors">Transactional connectors in Hazelcast Jet</a><a href="/blog/2020/01/28/new-website">Announcing New Documentation Website</a><a href="/blog/2019/11/12/stream-deduplication">Stream Deduplication with Hazelcast Jet</a></div><div><h5>More</h5><a href="https://github.com/hazelcast/hazelcast-jet">GitHub Project</a><a href="https://github.com/hazelcast/hazelcast-jet/issues">Issue Tracker</a><a href="http://hazelcast.com/company/careers/">Work at Hazelcast</a><a href="/license">License</a><a class="github-button" href="https://github.com/hazelcast/hazelcast-jet" data-icon="octicon-star" data-count-href="/facebook/docusaurus/stargazers" data-show-count="true" data-count-aria-label="# stargazers on GitHub" aria-label="Star this project on GitHub">Star</a></div></section><section class="copyright">Copyright © 2020 Hazelcast Inc.</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
+</span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/docs/api/testing"><span class="arrow-prev">← </span><span>Testing</span></a><a class="docs-next button" href="/docs/api/javadoc"><span>Javadoc</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#annotation-based-configuration">Annotation-Based Configuration</a></li><li><a href="#enabling-springaware-objects">Enabling SpringAware Objects</a></li><li><a href="#declarative-configuration">Declarative Configuration</a><ul class="toc-headings"><li><a href="#using-default-beans-namespace">Using Default Beans Namespace</a></li><li><a href="#using-jet-beans-namespace">Using Jet Beans Namespace</a></li></ul></li></ul></nav></div><footer class="nav-footer" id="footer"><section class="sitemap"><a href="/" class="nav-home"><img src="/img/logo-light.svg" alt="Hazelcast Jet" width="200" height="40"/></a><div><h5>Docs</h5><a href="/docs/get-started/intro">Get Started</a><a href="/docs/concepts/dag">Concepts and Architecture</a><a href="/docs/tutorials/kafka">Tutorials</a><a href="/docs/operations/configuration">Operations Guide</a></div><div><h5>Community</h5><a href="https://groups.google.com/forum/#!forum/hazelcast-jet" target="_blank" rel="noreferrer noopener">Google Groups</a><a href="http://stackoverflow.com/questions/tagged/hazelcast-jet" target="_blank" rel="noreferrer noopener">Stack Overflow</a><a href="https://gitter.im/hazelcast/hazelcast-jet">Gitter Chat</a></div><div><h5>Latest From the Blog</h5><a href="/blog/2020/03/02/jet-40-is-released">Jet 4.0 is Released</a><a href="/blog/2020/02/20/transactional-processors">Transactional connectors in Hazelcast Jet</a><a href="/blog/2020/01/28/new-website">Announcing New Documentation Website</a><a href="/blog/2019/11/12/stream-deduplication">Stream Deduplication with Hazelcast Jet</a></div><div><h5>More</h5><a href="https://github.com/hazelcast/hazelcast-jet">GitHub Project</a><a href="https://github.com/hazelcast/hazelcast-jet/issues">Issue Tracker</a><a href="http://hazelcast.com/company/careers/">Work at Hazelcast</a><a href="/license">License</a><a class="github-button" href="https://github.com/hazelcast/hazelcast-jet" data-icon="octicon-star" data-count-href="/facebook/docusaurus/stargazers" data-show-count="true" data-count-aria-label="# stargazers on GitHub" aria-label="Star this project on GitHub">Star</a></div></section><section class="copyright">Copyright © 2020 Hazelcast Inc.</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
                 document.addEventListener('keyup', function(e) {
                   if (e.target !== document.body) {
                     return;
