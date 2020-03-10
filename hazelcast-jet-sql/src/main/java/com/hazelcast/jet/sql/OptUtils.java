@@ -42,8 +42,8 @@ import static org.apache.calcite.plan.RelOptRule.convert;
  */
 public final class OptUtils {
 
-    public static final RelTrait CONVENTION_LOGICAL = new Convention.Impl("LOGICAL", LogicalRel.class);
-    public static final RelTrait CONVENTION_PHYSICAL = new Convention.Impl("PHYSICAL", PhysicalRel.class);
+    public static final Convention CONVENTION_LOGICAL = new Convention.Impl("LOGICAL", LogicalRel.class);
+    public static final Convention CONVENTION_PHYSICAL = new Convention.Impl("PHYSICAL", PhysicalRel.class);
 
     private OptUtils() {
         // No-op.

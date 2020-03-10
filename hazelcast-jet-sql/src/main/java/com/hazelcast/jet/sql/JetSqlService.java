@@ -20,6 +20,7 @@ import com.google.common.collect.ImmutableList;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.sql.cost.CostFactory;
+import com.hazelcast.jet.sql.imap.IMapScanPhysicalRule;
 import com.hazelcast.jet.sql.schema.JetSchema;
 import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.avatica.util.Casing;
@@ -33,12 +34,14 @@ import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptCostImpl;
 import org.apache.calcite.plan.hep.HepPlanner;
 import org.apache.calcite.plan.hep.HepProgramBuilder;
+import org.apache.calcite.plan.volcano.AbstractConverter;
 import org.apache.calcite.plan.volcano.VolcanoPlanner;
 import org.apache.calcite.prepare.CalciteCatalogReader;
 import org.apache.calcite.prepare.Prepare;
 import org.apache.calcite.rel.RelCollationTraitDef;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelRoot;
+import org.apache.calcite.rel.core.RelFactories;
 import org.apache.calcite.rel.metadata.ChainedRelMetadataProvider;
 import org.apache.calcite.rel.metadata.DefaultRelMetadataProvider;
 import org.apache.calcite.rel.metadata.JaninoRelMetadataProvider;
@@ -55,6 +58,7 @@ import org.apache.calcite.sql2rel.StandardConvertletTable;
 import org.apache.calcite.tools.Program;
 import org.apache.calcite.tools.Programs;
 import org.apache.calcite.tools.RuleSet;
+import org.apache.calcite.tools.RuleSets;
 
 import java.util.Collections;
 import java.util.Properties;
@@ -198,8 +202,8 @@ public class JetSqlService {
 
         RelNode rel = convert(node);
 
-        RelNode logicalRel = optimizeLogical(rel);
-        System.out.println(logicalRel);
+        LogicalRel logicalRel = optimizeLogical(rel);
+        PhysicalRel physicalRel = optimizePhysical(logicalRel);
     }
 
     /**
@@ -208,7 +212,7 @@ public class JetSqlService {
      * @param rel Original logical tree.
      * @return Optimized logical tree.
      */
-    public RelNode optimizeLogical(RelNode rel) {
+    public LogicalRel optimizeLogical(RelNode rel) {
         RuleSet rules = JetLogicalRules.getRuleSet();
         Program program = Programs.of(rules);
 
@@ -221,7 +225,37 @@ public class JetSqlService {
         );
 
 //        return new RootLogicalRel(res.getCluster(), res.getTraitSet(), res);
-        return res;
+        return (LogicalRel) res;
+    }
+
+    /**
+     * Perform physical optimization. This is where proper access methods and algorithms for joins and aggregations are chosen.
+     *
+     * @param rel Optimized logical tree.
+     * @return Optimized physical tree.
+     */
+    public PhysicalRel optimizePhysical(RelNode rel) {
+        RuleSet rules = RuleSets.ofList(
+//                SortPhysicalRule.INSTANCE,
+//                RootPhysicalRule.INSTANCE,
+//                FilterPhysicalRule.INSTANCE,
+//                ProjectPhysicalRule.INSTANCE,
+                IMapScanPhysicalRule.INSTANCE,
+//                AggregatePhysicalRule.INSTANCE,
+//                JoinPhysicalRule.INSTANCE,
+
+                new AbstractConverter.ExpandConversionRule(RelFactories.LOGICAL_BUILDER)
+        );
+
+        Program program = Programs.of(rules);
+        RelNode res = program.run(
+                planner,
+                rel,
+                OptUtils.toPhysicalConvention(rel.getTraitSet()),
+                ImmutableList.of(),
+                ImmutableList.of());
+
+        return (PhysicalRel) res;
     }
 
     public JetSchema getSchema() {

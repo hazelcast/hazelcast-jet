@@ -21,9 +21,11 @@ import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.RelWriter;
 import org.apache.calcite.rel.core.TableScan;
+import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rel.type.RelDataTypeField;
+import org.apache.calcite.rex.RexNode;
 
 import java.util.List;
 
@@ -33,15 +35,28 @@ import java.util.List;
 public abstract class AbstractScanRel extends TableScan {
     /** Projection. */
     protected final List<Integer> projects;
+    /** Filter. */
+    protected final RexNode filter;
 
-    protected AbstractScanRel(RelOptCluster cluster, RelTraitSet traitSet, RelOptTable table, List<Integer> projects) {
+    protected AbstractScanRel(
+            RelOptCluster cluster,
+            RelTraitSet traitSet,
+            RelOptTable table,
+            List<Integer> projects,
+            RexNode filter
+    ) {
         super(cluster, traitSet, table);
 
-        this.projects = projects;
+        this.projects = projects != null ? projects : identity();
+        this.filter = filter;
     }
 
     public List<Integer> getProjects() {
-        return projects != null ? projects : identity();
+        return projects;
+    }
+
+    public RexNode getFilter() {
+        return filter;
     }
 
     /**
@@ -51,9 +66,14 @@ public abstract class AbstractScanRel extends TableScan {
         return table.unwrap(IMapTable.class);
     }
 
-    public boolean isReplicated() {
-//        return getTableUnwrapped().isReplicated();
-        return false;
+    @Override
+    public final double estimateRowCount(RelMetadataQuery mq) {
+        double rowCount = super.estimateRowCount(mq); // TODO not a real row count?
+        if (filter != null) {
+            double selectivity = mq.getSelectivity(this, filter); // TODO verify this works
+            rowCount = rowCount * selectivity;
+        }
+        return rowCount;
     }
 
     @Override

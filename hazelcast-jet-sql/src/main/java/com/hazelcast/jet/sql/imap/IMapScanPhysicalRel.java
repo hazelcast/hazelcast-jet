@@ -16,7 +16,7 @@
 
 package com.hazelcast.jet.sql.imap;
 
-import com.hazelcast.jet.sql.LogicalRel;
+import com.hazelcast.jet.sql.PhysicalRel;
 import com.hazelcast.jet.sql.cost.CostUtils;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptCost;
@@ -30,10 +30,16 @@ import org.apache.calcite.rex.RexNode;
 import java.util.List;
 
 /**
- * Logical scan.
+ * Physical scan over partitioned map.
+ * <p>
+ * Traits:
+ * <ul>
+ *     <li><b>Collation</b>: empty, as map is not sorted</li>
+ *     <li><b>Distribution</b>: PARTITIONED</li>
+ * </ul>
  */
-public class IMapScanLogicalRel extends AbstractScanRel implements LogicalRel {
-    public IMapScanLogicalRel(
+public class IMapScanPhysicalRel extends AbstractScanRel implements PhysicalRel {
+    public IMapScanPhysicalRel(
         RelOptCluster cluster,
         RelTraitSet traitSet,
         RelOptTable table,
@@ -45,15 +51,21 @@ public class IMapScanLogicalRel extends AbstractScanRel implements LogicalRel {
 
     @Override
     public final RelNode copy(RelTraitSet traitSet, List<RelNode> inputs) {
-        return new IMapScanLogicalRel(getCluster(), traitSet, table, projects, filter);
+        return new IMapScanPhysicalRel(getCluster(), traitSet, getTable(), projects, filter);
     }
 
+//    @Override
+//    public void visit(PhysicalRelVisitor visitor) {
+//        visitor.onMapScan(this);
+//    }
+
+    // TODO: Dedup with logical scan
     @Override
     public RelOptCost computeSelfCost(RelOptPlanner planner, RelMetadataQuery mq) {
         // 1. Get cost of the scan itself. For replicated map cost is multiplied by the number of nodes.
         RelOptCost scanCost = super.computeSelfCost(planner, mq);
 
-//        if (table.unwrap(HazelcastTable.class).isReplicated()) {
+//        if (table.unwrap(IMapTable.class).isReplicated()) {
 //            scanCost = scanCost.multiplyBy(getHazelcastCluster().getMemberCount());
 //        }
 
