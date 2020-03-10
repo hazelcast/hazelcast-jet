@@ -63,61 +63,22 @@
               }
             });
         </script></nav></div><div class="container mainContainer docsContainer"><div class="wrapper"><div class="post"><header class="postHeader"><a class="edit-page-link button" href="https://github.com/hazelcast/hazelcast-jet/edit/docs/site/docs/how-tos/stream-imap.md" target="_blank" rel="noreferrer noopener">Edit</a><h1 id="__docusaurus" class="postHeaderTitle">Receive IMap Change Stream</h1></header><article><div><span><p><a href="https://docs.hazelcast.org/docs/4.0/javadoc/com/hazelcast/map/IMap.html">IMap</a>
-is the distributed data structure underlying Hazelcast. For Jet it's
-also the most popular data source and sink.</p>
-<p>The simplest scenario of using <code>IMap</code> as a source is when we treat the
-entries it contains simply as a batch of data, read at a certain moment
-of time. However Jet can make use of an <code>IMap</code> in a more advanced way,
-treating all changes done to it (adding/updating/deleting entries) as
-a stream of events which then can be processed further.</p>
-<p>Let's see how this is done.</p>
-<h2><a class="anchor" aria-hidden="true" id="1-start-hazelcast-jet"></a><a href="#1-start-hazelcast-jet" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>1. Start Hazelcast Jet</h2>
-<ol>
-<li><p><a href="https://github.com/hazelcast/hazelcast-jet/releases/download/v4.0/hazelcast-jet-4.0.tar.gz">Download</a>
-Hazelcast Jet</p></li>
-<li><p>Unzip it:</p></li>
-</ol>
-<pre><code class="hljs css language-bash"><span class="hljs-built_in">cd</span> &lt;where_you_downloaded_it&gt;
-tar zxvf hazelcast-jet-4.0.tar.gz
-<span class="hljs-built_in">cd</span> hazelcast-jet-4.0
-</code></pre>
-<p>If you already have Jet and you skipped the above steps, make sure to
-follow from here on.</p>
-<ol start="3">
-<li>Add following config block into the <code>config/hazelcast.yaml</code> file
-of your distribution (by default event journal is not enabled on
-<code>IMap</code>s, that's why we need to turn it on explicitly for the map we
-are going to use):</li>
-</ol>
+is the main data structure in Hazelcast IMDG. Jet can use it as both a
+data source and a data sink. It can serve as both a batch source, giving
+you all the current data, and as a streaming source, giving you a stream
+of change events.</p>
+<p>Here we focus on the <code>IMap</code> as a streaming source.</p>
+<h2><a class="anchor" aria-hidden="true" id="1-enable-event-journal-in-configuration"></a><a href="#1-enable-event-journal-in-configuration" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>1. Enable Event Journal in Configuration</h2>
+<p>To capture the change stream of an <code>IMap</code> you must enable its <em>event
+journal</em>. Add this to your YAML config:</p>
 <pre><code class="hljs css language-yaml">  <span class="hljs-attr">map:</span>
     <span class="hljs-attr">streamed-map:</span>
       <span class="hljs-attr">event-journal:</span>
         <span class="hljs-attr">enabled:</span> <span class="hljs-literal">true</span>
 </code></pre>
-<ol start="4">
-<li>Start Jet:</li>
-</ol>
-<pre><code class="hljs css language-bash">bin/jet-start
-</code></pre>
-<ol start="5">
-<li>When you see output like this, Hazelcast Jet is up:</li>
-</ol>
-<pre><code class="hljs css language-text">Members {size:1, ver:1} [
-    Member [192.168.1.5]:5701 - e7c26f7c-df9e-4994-a41d-203a1c63480e this
-]
-</code></pre>
-<p>From now on we assume Hazelcast Jet is running on your machine.</p>
-<h2><a class="anchor" aria-hidden="true" id="2-create-a-new-java-project"></a><a href="#2-create-a-new-java-project" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>2. Create a New Java Project</h2>
-<p>We'll assume you're using an IDE. Create a blank Java project named
-<code>event-journal-tutorial</code> and copy the Gradle or Maven file
-into it:</p>
-<div class="tabs"><div class="nav-tabs"><div id="tab-group-64-tab-65" class="nav-link active" data-group="group_64" data-tab="tab-group-64-content-65">Gradle</div><div id="tab-group-64-tab-66" class="nav-link" data-group="group_64" data-tab="tab-group-64-content-66">Maven</div></div><div class="tab-content"><div id="tab-group-64-content-65" class="tab-pane active" data-group="group_64" tabindex="-1"><div><span><pre><code class="hljs css language-groovy">plugins {<br />    id <span class="hljs-string">'java'</span><br />}<br /><br />group <span class="hljs-string">'org.example'</span><br />version <span class="hljs-string">'1.0-SNAPSHOT'</span><br /><br />repositories.mavenCentral()<br /><br />dependencies {<br />    compileOnly <span class="hljs-string">'com.hazelcast.jet:hazelcast-jet:4.0'</span><br />}<br /></code></pre>
-</span></div></div><div id="tab-group-64-content-66" class="tab-pane" data-group="group_64" tabindex="-1"><div><span><pre><code class="hljs css language-xml"><span class="hljs-meta">&lt;?xml version="1.0" encoding="UTF-8"?&gt;</span><br /><span class="hljs-tag">&lt;<span class="hljs-name">project</span> <span class="hljs-attr">xmlns</span>=<span class="hljs-string">"http://maven.apache.org/POM/4.0.0"</span> <span class="hljs-attr">xmlns:xsi</span>=<span class="hljs-string">"http://www.w3.org/2001/XMLSchema-instance"</span><br />         <span class="hljs-attr">xsi:schemaLocation</span>=<span class="hljs-string">"http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd"</span>&gt;</span><br />    <span class="hljs-tag">&lt;<span class="hljs-name">modelVersion</span>&gt;</span>4.0.0<span class="hljs-tag">&lt;/<span class="hljs-name">modelVersion</span>&gt;</span><br /><br />    <span class="hljs-tag">&lt;<span class="hljs-name">groupId</span>&gt;</span>org.example<span class="hljs-tag">&lt;/<span class="hljs-name">groupId</span>&gt;</span><br />    <span class="hljs-tag">&lt;<span class="hljs-name">artifactId</span>&gt;</span>event-journal-tutorial<span class="hljs-tag">&lt;/<span class="hljs-name">artifactId</span>&gt;</span><br />    <span class="hljs-tag">&lt;<span class="hljs-name">version</span>&gt;</span>1.0-SNAPSHOT<span class="hljs-tag">&lt;/<span class="hljs-name">version</span>&gt;</span><br /><br />    <span class="hljs-tag">&lt;<span class="hljs-name">properties</span>&gt;</span><br />        <span class="hljs-tag">&lt;<span class="hljs-name">maven.compiler.target</span>&gt;</span>1.8<span class="hljs-tag">&lt;/<span class="hljs-name">maven.compiler.target</span>&gt;</span><br />        <span class="hljs-tag">&lt;<span class="hljs-name">maven.compiler.source</span>&gt;</span>1.8<span class="hljs-tag">&lt;/<span class="hljs-name">maven.compiler.source</span>&gt;</span><br />    <span class="hljs-tag">&lt;/<span class="hljs-name">properties</span>&gt;</span><br /><br />    <span class="hljs-tag">&lt;<span class="hljs-name">dependencies</span>&gt;</span><br />        <span class="hljs-tag">&lt;<span class="hljs-name">dependency</span>&gt;</span><br />            <span class="hljs-tag">&lt;<span class="hljs-name">groupId</span>&gt;</span>com.hazelcast.jet<span class="hljs-tag">&lt;/<span class="hljs-name">groupId</span>&gt;</span><br />            <span class="hljs-tag">&lt;<span class="hljs-name">artifactId</span>&gt;</span>hazelcast-jet<span class="hljs-tag">&lt;/<span class="hljs-name">artifactId</span>&gt;</span><br />            <span class="hljs-tag">&lt;<span class="hljs-name">version</span>&gt;</span>4.0<span class="hljs-tag">&lt;/<span class="hljs-name">version</span>&gt;</span><br />            <span class="hljs-tag">&lt;<span class="hljs-name">scope</span>&gt;</span>provided<span class="hljs-tag">&lt;/<span class="hljs-name">scope</span>&gt;</span><br />        <span class="hljs-tag">&lt;/<span class="hljs-name">dependency</span>&gt;</span><br />    <span class="hljs-tag">&lt;/<span class="hljs-name">dependencies</span>&gt;</span><br /><span class="hljs-tag">&lt;/<span class="hljs-name">project</span>&gt;</span><br /></code></pre>
-</span></div></div></div></div>
-<h2><a class="anchor" aria-hidden="true" id="3-write-the-producer"></a><a href="#3-write-the-producer" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>3. Write the Producer</h2>
-<p>In order to be able to have some live data in our <code>IMap</code> we will set up
-a helper process, in the form of a Jet job, which will continuously
-update entries in the map. Put following class into your project:</p>
+<h2><a class="anchor" aria-hidden="true" id="2-write-the-producer"></a><a href="#2-write-the-producer" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>2. Write the Producer</h2>
+<p>First let's write some code that will be updating our <code>IMap</code>. Put this
+into your project:</p>
 <pre><code class="hljs css language-java"><span class="token keyword">package</span> <span class="token namespace">org<span class="token punctuation">.</span>example</span><span class="token punctuation">;</span>
 
 <span class="token keyword">import</span> <span class="token namespace">com<span class="token punctuation">.</span>hazelcast<span class="token punctuation">.</span>jet</span><span class="token punctuation">.</span><span class="token class-name">Jet</span><span class="token punctuation">;</span>
@@ -130,7 +91,6 @@ update entries in the map. Put following class into your project:</p>
 <span class="token keyword">import</span> <span class="token namespace">java<span class="token punctuation">.</span>util<span class="token punctuation">.</span>concurrent</span><span class="token punctuation">.</span><span class="token class-name">ThreadLocalRandom</span><span class="token punctuation">;</span>
 
 <span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">Producer</span> <span class="token punctuation">{</span>
-
     <span class="token keyword">public</span> <span class="token keyword">static</span> <span class="token keyword">void</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token class-name">String</span><span class="token punctuation">[</span><span class="token punctuation">]</span> args<span class="token punctuation">)</span> <span class="token punctuation">{</span>
         <span class="token class-name">Pipeline</span> p <span class="token operator">=</span> <span class="token class-name">Pipeline</span><span class="token punctuation">.</span><span class="token function">create</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
         p<span class="token punctuation">.</span><span class="token function">readFrom</span><span class="token punctuation">(</span><span class="token class-name">TestSources</span><span class="token punctuation">.</span><span class="token function">itemStream</span><span class="token punctuation">(</span><span class="token number">100</span><span class="token punctuation">,</span>
@@ -142,14 +102,12 @@ update entries in the map. Put following class into your project:</p>
         <span class="token class-name">JobConfig</span> cfg <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">JobConfig</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">setName</span><span class="token punctuation">(</span><span class="token string">"producer"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
         <span class="token class-name">Jet</span><span class="token punctuation">.</span><span class="token function">bootstrappedInstance</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">newJob</span><span class="token punctuation">(</span>p<span class="token punctuation">,</span> cfg<span class="token punctuation">)</span><span class="token punctuation">;</span>
     <span class="token punctuation">}</span>
-
 <span class="token punctuation">}</span>
 </code></pre>
-<h2><a class="anchor" aria-hidden="true" id="4-write-the-consumer"></a><a href="#4-write-the-consumer" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>4. Write the Consumer</h2>
-<p>Our consumer will be a Jet job which will continuously consume update
-events streamed by our map's event journal. Then it will print a
-summary every second, specifying how many times each key has been
-updated in the map during the past second.</p>
+<h2><a class="anchor" aria-hidden="true" id="3-write-the-consumer"></a><a href="#3-write-the-consumer" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>3. Write the Consumer</h2>
+<p>Now we are ready to write the pipeline that consumes and processes the
+change events. It will tell us for each map key how many times per
+second it's being updated.</p>
 <pre><code class="hljs css language-java"><span class="token keyword">package</span> <span class="token namespace">org<span class="token punctuation">.</span>example</span><span class="token punctuation">;</span>
 
 <span class="token keyword">import</span> <span class="token namespace">com<span class="token punctuation">.</span>hazelcast<span class="token punctuation">.</span>jet</span><span class="token punctuation">.</span><span class="token class-name">Jet</span><span class="token punctuation">;</span>
@@ -180,34 +138,17 @@ updated in the map during the past second.</p>
         <span class="token class-name">JobConfig</span> cfg <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">JobConfig</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">setName</span><span class="token punctuation">(</span><span class="token string">"consumer"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
         <span class="token class-name">Jet</span><span class="token punctuation">.</span><span class="token function">bootstrappedInstance</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">newJob</span><span class="token punctuation">(</span>p<span class="token punctuation">,</span> cfg<span class="token punctuation">)</span><span class="token punctuation">;</span>
     <span class="token punctuation">}</span>
-
 <span class="token punctuation">}</span>
 </code></pre>
-<h2><a class="anchor" aria-hidden="true" id="5-submit-for-execution"></a><a href="#5-submit-for-execution" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>5. Submit for Execution</h2>
-<ol>
-<li>Build our Code:</li>
-</ol>
-<div class="tabs"><div class="nav-tabs"><div id="tab-group-67-tab-68" class="nav-link active" data-group="group_67" data-tab="tab-group-67-content-68">Gradle</div><div id="tab-group-67-tab-69" class="nav-link" data-group="group_67" data-tab="tab-group-67-content-69">Maven</div></div><div class="tab-content"><div id="tab-group-67-content-68" class="tab-pane active" data-group="group_67" tabindex="-1"><div><span><pre><code class="hljs css language-bash">gradle build<br /></code></pre>
-<p>This will produce a jar file called <code>event-journal-tutorial-1.0-SNAPSHOT.jar</code>
-in the <code>build/libs</code> folder of our project.</p>
-</span></div></div><div id="tab-group-67-content-69" class="tab-pane" data-group="group_67" tabindex="-1"><div><span><pre><code class="hljs css language-bash">mvn package<br /></code></pre>
-<p>This will produce a jar file called <code>event-journal-tutorial-1.0-SNAPSHOT.jar</code>
-in the <code>target</code> folder or our project.</p>
-</span></div></div></div></div>
-<ol start="2">
-<li>Submit the Producer for Execution:</li>
-</ol>
-<div class="tabs"><div class="nav-tabs"><div id="tab-group-70-tab-71" class="nav-link active" data-group="group_70" data-tab="tab-group-70-content-71">Gradle</div><div id="tab-group-70-tab-72" class="nav-link" data-group="group_70" data-tab="tab-group-70-content-72">Maven</div></div><div class="tab-content"><div id="tab-group-70-content-71" class="tab-pane active" data-group="group_70" tabindex="-1"><div><span><pre><code class="hljs css language-bash">&lt;path_to_jet&gt;/bin/jet submit \<br />    --class org.example.Producer \<br />    build/libs/event-journal-tutorial-1.0-SNAPSHOT.jar<br /></code></pre>
-</span></div></div><div id="tab-group-70-content-72" class="tab-pane" data-group="group_70" tabindex="-1"><div><span><pre><code class="hljs css language-bash">&lt;path_to_jet&gt;/bin/jet submit \<br />    --class org.example.Producer \<br />    target/event-journal-tutorial-1.0-SNAPSHOT.jar<br /></code></pre>
-</span></div></div></div></div>
-<ol start="3">
-<li>Submit the Consumer for Execution:</li>
-</ol>
-<div class="tabs"><div class="nav-tabs"><div id="tab-group-73-tab-74" class="nav-link active" data-group="group_73" data-tab="tab-group-73-content-74">Gradle</div><div id="tab-group-73-tab-75" class="nav-link" data-group="group_73" data-tab="tab-group-73-content-75">Maven</div></div><div class="tab-content"><div id="tab-group-73-content-74" class="tab-pane active" data-group="group_73" tabindex="-1"><div><span><pre><code class="hljs css language-bash">&lt;path_to_jet&gt;/bin/jet submit \<br />    --class org.example.Consumer \<br />    build/libs/event-journal-tutorial-1.0-SNAPSHOT.jar<br /></code></pre>
-</span></div></div><div id="tab-group-73-content-75" class="tab-pane" data-group="group_73" tabindex="-1"><div><span><pre><code class="hljs css language-bash">&lt;path_to_jet&gt;/bin/jet submit \<br />    --class org.example.Consumer \<br />    target/event-journal-tutorial-1.0-SNAPSHOT.jar<br /></code></pre>
-</span></div></div></div></div>
-<p>You should start seeing the one second summaries in the Jet member's
-log:</p>
+<h2><a class="anchor" aria-hidden="true" id="4-submit-for-execution"></a><a href="#4-submit-for-execution" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>4. Submit for Execution</h2>
+<p>Assuming you already started a Jet instance, use <code>jet submit</code> to first
+start the producing job:</p>
+<pre><code class="hljs css language-bash">&lt;path_to_jet&gt;/bin/jet submit --class org.example.Producer &lt;path_to_your_jar&gt;
+</code></pre>
+<p>Then start the consuming job:</p>
+<pre><code class="hljs css language-bash">&lt;path_to_jet&gt;/bin/jet submit --class org.example.Consumer &lt;path_to_your_jar&gt;
+</code></pre>
+<p>You should start seeing output like this in the Jet member's log:</p>
 <pre><code class="hljs css language-text">...
 2020-03-06 10:17:21,025 ... Key 2 had 24 updates
 2020-03-06 10:17:21,025 ... Key 1 had 19 updates
@@ -216,15 +157,12 @@ log:</p>
 2020-03-06 10:17:21,025 ... Key 4 had 26 updates
 ...
 </code></pre>
-<h2><a class="anchor" aria-hidden="true" id="6-clean-up"></a><a href="#6-clean-up" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>6. Clean-up</h2>
-<p>To stop your Jet jobs from executing simply cancel them:</p>
+<h2><a class="anchor" aria-hidden="true" id="5-clean-up"></a><a href="#5-clean-up" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>5. Clean Up</h2>
+<p>Cancel your jobs when you're done:</p>
 <pre><code class="hljs css language-bash">&lt;path_to_jet&gt;/bin/jet cancel consumer
 &lt;path_to_jet&gt;/bin/jet cancel producer
 </code></pre>
-<p>Optionally you can also shut down the Jet member we have started:</p>
-<pre><code class="hljs css language-bash">&lt;path_to_jet&gt;/bin/jet-stop
-</code></pre>
-</span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/docs/tutorials/cdc"><span class="arrow-prev">← </span><span>Change Data Capture</span></a><a class="docs-next button" href="/docs/how-tos/observables"><span>Receive Results on the Client</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#1-start-hazelcast-jet">1. Start Hazelcast Jet</a></li><li><a href="#2-create-a-new-java-project">2. Create a New Java Project</a></li><li><a href="#3-write-the-producer">3. Write the Producer</a></li><li><a href="#4-write-the-consumer">4. Write the Consumer</a></li><li><a href="#5-submit-for-execution">5. Submit for Execution</a></li><li><a href="#6-clean-up">6. Clean-up</a></li></ul></nav></div><footer class="nav-footer" id="footer"><section class="sitemap"><a href="/" class="nav-home"><img src="/img/logo-light.svg" alt="Hazelcast Jet" width="200" height="40"/></a><div><h5>Docs</h5><a href="/docs/get-started/intro">Get Started</a><a href="/docs/concepts/dag">Concepts and Architecture</a><a href="/docs/tutorials/kafka">Tutorials</a><a href="/docs/operations/configuration">Operations Guide</a></div><div><h5>Community</h5><a href="https://groups.google.com/forum/#!forum/hazelcast-jet" target="_blank" rel="noreferrer noopener">Google Groups</a><a href="http://stackoverflow.com/questions/tagged/hazelcast-jet" target="_blank" rel="noreferrer noopener">Stack Overflow</a><a href="https://gitter.im/hazelcast/hazelcast-jet">Gitter Chat</a></div><div><h5>Latest From the Blog</h5><a href="/blog/2020/03/02/jet-40-is-released">Jet 4.0 is Released</a><a href="/blog/2020/02/20/transactional-processors">Transactional connectors in Hazelcast Jet</a><a href="/blog/2020/01/28/new-website">Announcing New Documentation Website</a><a href="/blog/2019/11/12/stream-deduplication">Stream Deduplication with Hazelcast Jet</a></div><div><h5>More</h5><a href="https://github.com/hazelcast/hazelcast-jet">GitHub Project</a><a href="https://github.com/hazelcast/hazelcast-jet/issues">Issue Tracker</a><a href="http://hazelcast.com/company/careers/">Work at Hazelcast</a><a href="/license">License</a><a class="github-button" href="https://github.com/hazelcast/hazelcast-jet" data-icon="octicon-star" data-count-href="/facebook/docusaurus/stargazers" data-show-count="true" data-count-aria-label="# stargazers on GitHub" aria-label="Star this project on GitHub">Star</a></div></section><section class="copyright">Copyright © 2020 Hazelcast Inc.</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
+</span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/docs/tutorials/cdc"><span class="arrow-prev">← </span><span>Change Data Capture</span></a><a class="docs-next button" href="/docs/how-tos/observables"><span>Receive Results on the Client</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#1-enable-event-journal-in-configuration">1. Enable Event Journal in Configuration</a></li><li><a href="#2-write-the-producer">2. Write the Producer</a></li><li><a href="#3-write-the-consumer">3. Write the Consumer</a></li><li><a href="#4-submit-for-execution">4. Submit for Execution</a></li><li><a href="#5-clean-up">5. Clean Up</a></li></ul></nav></div><footer class="nav-footer" id="footer"><section class="sitemap"><a href="/" class="nav-home"><img src="/img/logo-light.svg" alt="Hazelcast Jet" width="200" height="40"/></a><div><h5>Docs</h5><a href="/docs/get-started/intro">Get Started</a><a href="/docs/concepts/dag">Concepts and Architecture</a><a href="/docs/tutorials/kafka">Tutorials</a><a href="/docs/operations/configuration">Operations Guide</a></div><div><h5>Community</h5><a href="https://groups.google.com/forum/#!forum/hazelcast-jet" target="_blank" rel="noreferrer noopener">Google Groups</a><a href="http://stackoverflow.com/questions/tagged/hazelcast-jet" target="_blank" rel="noreferrer noopener">Stack Overflow</a><a href="https://gitter.im/hazelcast/hazelcast-jet">Gitter Chat</a></div><div><h5>Latest From the Blog</h5><a href="/blog/2020/03/02/jet-40-is-released">Jet 4.0 is Released</a><a href="/blog/2020/02/20/transactional-processors">Transactional connectors in Hazelcast Jet</a><a href="/blog/2020/01/28/new-website">Announcing New Documentation Website</a><a href="/blog/2019/11/12/stream-deduplication">Stream Deduplication with Hazelcast Jet</a></div><div><h5>More</h5><a href="https://github.com/hazelcast/hazelcast-jet">GitHub Project</a><a href="https://github.com/hazelcast/hazelcast-jet/issues">Issue Tracker</a><a href="http://hazelcast.com/company/careers/">Work at Hazelcast</a><a href="/license">License</a><a class="github-button" href="https://github.com/hazelcast/hazelcast-jet" data-icon="octicon-star" data-count-href="/facebook/docusaurus/stargazers" data-show-count="true" data-count-aria-label="# stargazers on GitHub" aria-label="Star this project on GitHub">Star</a></div></section><section class="copyright">Copyright © 2020 Hazelcast Inc.</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
                 document.addEventListener('keyup', function(e) {
                   if (e.target !== document.body) {
                     return;
