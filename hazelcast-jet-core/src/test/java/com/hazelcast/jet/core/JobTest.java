@@ -740,7 +740,7 @@ public class JobTest extends SimpleTestInClusterSupport {
         dag.edge(between(source, sink).distributed());
 
         JobConfig config = new JobConfig()
-                .registerStreamSerializer(ValueSerializer.class, Value.class);
+                .registerSerializerFor(Value.class, ValueSerializer.class);
 
         // When
         Job job = instance().newJob(dag, config);

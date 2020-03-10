@@ -931,14 +931,17 @@ public class JobConfig implements IdentifiedDataSerializable {
      * {@code IMap} data source, which can instantiate only the classes from
      * the Jet instance's classpath.)
      * <p>
+     * Serializers registered on a job level have precedence over any serializer
+     * registered on a cluster level.
+     * <p>
      * Serializer must have no-arg constructor.
      *
      * @return {@code this} instance for fluent API
      */
     @Nonnull
     @EvolvingApi
-    public <T, S extends StreamSerializer<?>> JobConfig registerStreamSerializer(@Nonnull Class<S> serializerClass,
-                                                                                 @Nonnull Class<T> clazz) {
+    public <T, S extends StreamSerializer<?>> JobConfig registerSerializerFor(@Nonnull Class<T> clazz,
+                                                                              @Nonnull Class<S> serializerClass) {
         serializerConfigs.put(clazz.getName(), serializerClass.getName());
         return this;
     }

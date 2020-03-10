@@ -133,7 +133,7 @@ public class JobConfigTest extends JetTestSupport {
         Object object = new Object() {
         };
 
-        config.registerStreamSerializer(serializer.getClass(), object.getClass());
+        config.registerSerializerFor(object.getClass(), serializer.getClass());
 
         // Then
         Map<String, String> serializerConfigs = config.getSerializerConfigs();
