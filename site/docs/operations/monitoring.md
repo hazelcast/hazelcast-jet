@@ -447,9 +447,9 @@ custom code can be added. This means (just to name the most important
 ones): filtering, mapping and flat-mapping functions, various
 constituent functions of aggregations (accumulate, create, combine,
 deduct, export & finish), key extraction function when grouping, in
-[custom batch sources](../tutorials/custom-batch-source.md),
-[custom stream sources](../tutorials/custom-stream-source.md),
-[custom sinks](../tutorials/custom-sink.md), processors and so on.
+[custom batch sources](../how-tos/custom-batch-source.md),
+[custom stream sources](../how-tos/custom-stream-source.md),
+[custom sinks](../how-tos/custom-sink.md), processors and so on.
 
 ### Exposing Metrics
 
