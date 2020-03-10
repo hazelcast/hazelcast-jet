@@ -607,7 +607,7 @@ For example, if there's many updates to just one key, with the default
 partition count of `271` and journal size of `100,000` the journal only
 has space for `370` events per partitions.
 
-For a full example, please see the [Stream Changes From IMap tutorial.](../tutorials/stream-imap)
+For a full example, please see the [Stream Changes From IMap tutorial.](../how-tos/stream-imap)
 
 #### Map Sink
 
@@ -1153,9 +1153,9 @@ BatchSource<String> fileSource = SourceBuilder
 For a more involved example (which reads data in _batches_ for
 efficiency, deals with _unbounded_ data, emits _timestamps_, is
 _distributed_ and _fault tolerant_ see the
-[Custom Batch Sources](../tutorials/custom-batch-source.md
+[Custom Batch Sources](../how-tos/custom-batch-source.md
 ) and
-[Custom Stream Sources](../tutorials/custom-stream-source.md)
+[Custom Stream Sources](../how-tos/custom-stream-source.md)
 tutorials).
 
 ### SinkBuilder
@@ -1180,4 +1180,4 @@ Sink<Object> sink = sinkBuilder(
 
 For a more involved example, covering issues like _batching_,
 _distributiveness_ and _fault tolerance_, see the
-[Custom Sinks](../tutorials/custom-sink.md) tutorial).
+[Custom Sinks](../how-tos/custom-sink.md) tutorial).

@@ -172,9 +172,8 @@ deciding which interface to use in your applications.
 |StreamSerializer|The fastest and lightest out of supported interfaces|Requires implementation and registration during cluster setup|
 
 Below you can find rough performance numbers one can expect when
-employing each of those strategies. A straightforward
-[benchmark](https://github.com/hazelcast/hazelcast/blob/master/hazelcast/src/test/java/com/hazelcast/serialization/SerializationBenchmark.java)
-which continuously serializes and then deserializes very simple object:
+employing each of those strategies. A straightforward benchmark which
+continuously serializes and then deserializes very simple object:
 
 ```java
 class Person {

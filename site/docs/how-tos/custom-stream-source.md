@@ -300,8 +300,8 @@ there is an extra line, which wasn't there when we used a batch source
 (`withoutTimestamps()`). It is needed because for stream sources Jet
 has to know what kind of event timestamps they will provide (if any). Now
 we are using it without timestamps, but this unfortunately means that
-we aren't allowed to use [Windowed Aggregation](windowing.md) in
-our pipeline.
+we aren't allowed to use [Windowed Aggregation](../tutorials/windowing.md)
+in our pipeline.
 
 There are multiple ways to fix this (we can add timestamps in the
 pipeline after the source), but the most convenient one is to provide

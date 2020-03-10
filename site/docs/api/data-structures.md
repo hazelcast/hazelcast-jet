@@ -157,8 +157,8 @@ userCache.executeOnEntry("user-id", new IncrementEntryProcessor());
 ```
 
 >Note that the `EntryProcessor` must be on the classpath of the node or
->loaded in some other way. See the [classloading](classloading) section
->for more details.
+>loaded in some other way. See the [classloading](submitting-jobs#adding-to-Classpath)
+>section for more details.
 
 ### Querying
 
@@ -192,7 +192,7 @@ List<User> user = userCache.values(Predicates.greaterThan(35));
 
 For more information about the advanced features of `IMap`, the best
 source of information is Javadoc and the [Hazelcast Reference
-Manual](https://hazelcast.org/documentation/).
+Manual](https://hazelcast.org/imdg/docs/).
 
 ### Consistency Guarantees
 
