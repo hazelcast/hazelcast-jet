@@ -39,8 +39,8 @@ import java.io.IOException;
 import java.nio.ByteOrder;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Map.Entry;
 
+import static com.hazelcast.internal.serialization.impl.SerializationUtil.createSerializerAdapter;
 import static com.hazelcast.internal.serialization.impl.SerializationUtil.handleException;
 import static com.hazelcast.internal.serialization.impl.SerializationUtil.handleSerializeException;
 import static com.hazelcast.internal.serialization.impl.SerializationUtil.isNullData;
@@ -67,11 +67,18 @@ public class JetSerializationService implements InternalSerializationService {
                                    AbstractSerializationService delegate) {
         Map<Class<?>, SerializerAdapter> serializersByClass = new HashMap<>();
         Map<Integer, SerializerAdapter> serializersById = new HashMap<>();
-        for (Entry<Class<?>, ? extends Serializer> entry : serializers.entrySet()) {
-            SerializerAdapter serializerAdapter = SerializationUtil.createSerializerAdapter(entry.getValue(), this);
-            serializersByClass.put(entry.getKey(), serializerAdapter);
-            serializersById.put(entry.getValue().getTypeId(), serializerAdapter);
-        }
+        serializers.forEach((clazz, serializer) -> {
+            if (serializersById.containsKey(serializer.getTypeId())) {
+                Serializer registered = serializersById.get(serializer.getTypeId()).getImpl();
+                throw new IllegalStateException("Cannot register Serializer[" + serializer.getClass().getName() + "] - " +
+                        registered.getClass().getName() + " has been already registered for type ID: " +
+                        serializer.getTypeId());
+            }
+
+            SerializerAdapter serializerAdapter = createSerializerAdapter(serializer, this);
+            serializersByClass.put(clazz, serializerAdapter);
+            serializersById.put(serializerAdapter.getImpl().getTypeId(), serializerAdapter);
+        });
         this.serializersByClass = serializersByClass;
         this.serializersById = serializersById;
 
