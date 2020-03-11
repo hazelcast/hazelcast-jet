@@ -108,13 +108,13 @@ public class JobConfigTest extends JetTestSupport {
     public void when_registerSerializerTwice_then_fails() {
         // Given
         JobConfig config = new JobConfig();
-        config.registerSerializerFor(Object.class, ObjectSerializer.class);
+        config.registerSerializer(Object.class, ObjectSerializer.class);
 
         // When
         // Then
         exception.expect(IllegalArgumentException.class);
         exception.expectMessage("Serializer for class java.lang.Object already registered");
-        config.registerSerializerFor(Object.class, ObjectSerializer.class);
+        config.registerSerializer(Object.class, ObjectSerializer.class);
     }
 
     @Test
@@ -123,7 +123,7 @@ public class JobConfigTest extends JetTestSupport {
         JobConfig config = new JobConfig();
 
         // When
-        config.registerSerializerFor(Object.class, ObjectSerializer.class);
+        config.registerSerializer(Object.class, ObjectSerializer.class);
 
         // Then
         Map<String, String> serializerConfigs = config.getSerializerConfigs();
