@@ -15,7 +15,6 @@ Here is the function we want to apply:
 ```python
 import numpy as np
 
-
 def transform_list(input_list):
     num_list = [float(it) for it in input_list]
     sqrt_list = np.sqrt(num_list)
@@ -46,14 +45,14 @@ Python 3 on your machine.
 
 ## 3. Start Hazelcast Jet
 
-1. [Download](https://github.com/hazelcast/hazelcast-jet/releases/download/v4.0/hazelcast-jet-4.0.zip)
+1. [Download](https://github.com/hazelcast/hazelcast-jet/releases/download/v4.0/hazelcast-jet-4.0.tar.gz)
   Hazelcast Jet
 
 2. Unzip it:
 
 ```bash
 cd <where_you_downloaded_it>
-unzip hazelcast-jet-4.0.zip
+tar zxvf hazelcast-jet-4.0.tar.gz
 cd hazelcast-jet-4.0
 ```
 
