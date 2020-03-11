@@ -8,8 +8,7 @@ Welcome to Hazelcast Jet!
 Hazelcast Jet allows you to write modern Java code that focuses purely
 on data transformation while it does all the heavy lifting of getting
 the data flowing and computation running across a cluster of nodes. It
-supports working with both bounded (batch) and unbounded data
-(streaming).
+supports working with both bounded (batch) and unbounded (streaming) data.
 
 These are some of the concerns Jet handles well:
 
