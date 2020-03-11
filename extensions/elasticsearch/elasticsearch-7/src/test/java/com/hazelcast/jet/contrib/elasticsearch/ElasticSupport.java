@@ -14,7 +14,21 @@
  * limitations under the License.
  */
 
-/**
- * Contains sources and sinks for Elasticsearch
- */
 package com.hazelcast.jet.contrib.elasticsearch;
+
+import com.hazelcast.jet.impl.util.Util;
+import org.testcontainers.elasticsearch.ElasticsearchContainer;
+
+import java.util.function.Supplier;
+
+public class ElasticSupport {
+
+    // Elastic container takes long time to start up, reusing the container for speedup
+    public static final Supplier<ElasticsearchContainer> elastic = Util.memoize(() -> {
+        ElasticsearchContainer elastic = new ElasticsearchContainer("elasticsearch:7.6.1");
+        elastic.start();
+        Runtime.getRuntime().addShutdownHook(new Thread(elastic::stop));
+        return elastic;
+    });
+
+}

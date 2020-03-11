@@ -16,26 +16,24 @@
 
 package com.hazelcast.jet.contrib.elasticsearch;
 
-import com.hazelcast.jet.pipeline.Pipeline;
-import com.hazelcast.jet.pipeline.Sources;
+import com.hazelcast.jet.pipeline.BatchSource;
+import org.elasticsearch.client.RestHighLevelClient;
+import org.elasticsearch.search.SearchHit;
 import org.junit.Test;
 
-import java.io.IOException;
+import static org.assertj.core.api.Assertions.assertThat;
 
-import static com.hazelcast.jet.contrib.elasticsearch.ElasticsearchSinks.elasticsearch;
-
-public class ElasticsearchSinkTest extends ElasticsearchBaseTest {
+public class ElasticsearchSourceBuilderTest {
 
     @Test
-    public void test_elasticsearchSink() throws IOException {
-        String containerAddress = container.getHttpHostAddress();
+    public void sourceHasCorrectName() {
+        BatchSource<Object> source = new ElasticsearchSourceBuilder<>().build();
+        assertThat(source.name()).isEqualTo("elastic");
 
-        Pipeline p = Pipeline.create();
-        p.readFrom(Sources.list(userList))
-         .writeTo(elasticsearch(indexName, () -> createClient(containerAddress), indexFn(indexName)));
-
-        jet.newJob(p).join();
-
-        assertIndexes();
+        BatchSource<Object> namedSource = new ElasticsearchSourceBuilder<>()
+                .name("CustomName")
+                .build();
+        assertThat(namedSource.name()).isEqualTo("CustomName");
     }
+
 }
