@@ -12,7 +12,7 @@ and the nodes just happen to reside on the same physical machine.
 There are two main approaches to setting up a Hazelcast Jet cluster: as
 a classic Java process or as a Docker instance. In order to follow the
 tutorial, in both cases you'll need the Hazelcast Jet distribution
-package. Download it from [here](https://github.com/hazelcast/hazelcast-jet/releases/download/v4.0/hazelcast-jet-4.0.zip)
+package. Download it from [here](https://github.com/hazelcast/hazelcast-jet/releases/download/v4.0/hazelcast-jet-4.0.tar.gz)
 and unzip it to a directory we'll refer to as `<jet_home>`.
 
 ## As a Java Process

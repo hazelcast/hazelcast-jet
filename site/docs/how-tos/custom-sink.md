@@ -31,7 +31,7 @@ Here's a sample:
 
 ```bash
 cd <where_you_downloaded_it>
-tar zxvf hazelcast-jet-4.0.zip
+tar zxvf hazelcast-jet-4.0.tar.gz
 cd hazelcast-jet-4.0
 ```
 
