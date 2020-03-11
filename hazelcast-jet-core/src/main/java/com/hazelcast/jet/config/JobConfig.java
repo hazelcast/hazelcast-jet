@@ -41,6 +41,7 @@ import java.net.MalformedURLException;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Files;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -67,7 +68,7 @@ public class JobConfig implements IdentifiedDataSerializable {
     private boolean storeMetricsAfterJobCompletion;
 
     private Map<String, ResourceConfig> resourceConfigs = new LinkedHashMap<>();
-    private Map<String, String> serializerConfigs = new LinkedHashMap<>();
+    private Map<String, String> serializerConfigs = new HashMap<>();
     private JobClassLoaderFactory classLoaderFactory;
     private String initialSnapshotName;
 
@@ -940,8 +941,8 @@ public class JobConfig implements IdentifiedDataSerializable {
      */
     @Nonnull
     @EvolvingApi
-    public <T, S extends StreamSerializer<?>> JobConfig registerSerializerFor(@Nonnull Class<T> clazz,
-                                                                              @Nonnull Class<S> serializerClass) {
+    public <T, S extends StreamSerializer<?>> JobConfig registerSerializer(@Nonnull Class<T> clazz,
+                                                                           @Nonnull Class<S> serializerClass) {
         Preconditions.checkFalse(serializerConfigs.containsKey(clazz.getName()),
                 "Serializer for " + clazz + " already registered");
         serializerConfigs.put(clazz.getName(), serializerClass.getName());
