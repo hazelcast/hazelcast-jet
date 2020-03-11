@@ -11,7 +11,9 @@
 const CWD = process.cwd();
 const versions = require(`${CWD}/all-versions.json`);
 const latestVersion= versions[0];
-
+const isLocalhost = Boolean(
+    process.env.NODE_ENV === 'development'
+);
 
 const siteConfig = {
     title: 'Hazelcast Jet', // Title for your website.
@@ -118,7 +120,7 @@ const siteConfig = {
     // You may provide arbitrary config keys to be used as needed by your
     // template. For example, if you need your repo's URL...
     repoUrl: 'https://github.com/hazelcast/hazelcast-jet',
-    gaTrackingId: 'UA-158279495-1'
+    gaTrackingId: isLocalhost ? '' : 'UA-158279495-1'
 };
 
 module.exports = siteConfig;
