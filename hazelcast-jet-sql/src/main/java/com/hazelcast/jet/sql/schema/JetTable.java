@@ -16,9 +16,20 @@
 
 package com.hazelcast.jet.sql.schema;
 
+import com.hazelcast.jet.sql.SqlConnector;
 import org.apache.calcite.schema.impl.AbstractTable;
 
 public abstract class JetTable extends AbstractTable {
 
+    private final SqlConnector sqlConnector;
+
+    protected JetTable(SqlConnector sqlConnector) {
+        this.sqlConnector = sqlConnector;
+    }
+
     public abstract boolean isStream();
+
+    public SqlConnector getSqlConnector() {
+        return sqlConnector;
+    }
 }

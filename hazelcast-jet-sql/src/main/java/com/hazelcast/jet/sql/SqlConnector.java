@@ -39,7 +39,7 @@ public interface SqlConnector {
             @Nonnull Map<String, String> serverOptions,
             @Nonnull Map<String, String> tableOptions
     ) {
-        throw new UnsupportedOperationException("Column examination not supported for " + getClass().getName());
+        throw new UnsupportedOperationException("Field examination not supported for " + getClass().getName());
     }
 
     @Nullable
@@ -47,27 +47,29 @@ public interface SqlConnector {
             @Nonnull String tableName,
             @Nonnull Map<String, String> serverOptions,
             @Nonnull Map<String, String> tableOptions,
-            @Nonnull List<Entry<String, RelProtoDataType>> columns
-    );
+            @Nonnull List<Entry<String, RelProtoDataType>> fields);
 
     /**
      * Returns a supplier for a source vertex reading the input according to
      * the projection/predicate. The output type of the source is Object[]. If
-     * timestampColumn is not null, the source should generate watermarks
+     * timestampField is not null, the source should generate watermarks
      * according to it.
+     * <p>
+     * The result is:<ul>
+     *     <li>{@code f0}: the source vertex of the sub-DAG
+     *     <li>{@code f1}: the sink vertex of teh sub-DAG
+     * </ul>
      *
      * @param predicate  SQL expression to filter the rows
-     * @param projection list of column names to return
+     * @param projection list of field names to return
      */
     @Nullable
     Tuple2<Vertex, Vertex> fullScanReader(
             @Nonnull DAG dag,
-            @Nonnull Map<String, String> serverOptions,
-            @Nonnull Map<String, String> tableOptions,
-            @Nullable String timestampColumn,
+            @Nonnull JetTable jetTable,
+            @Nullable String timestampField,
             @Nonnull RexNode predicate,
-            @Nonnull List<String> projection
-    );
+            @Nonnull List<Integer> projection);
 
     /**
      * Returns a supplier for a reader that reads a set of records for the
@@ -79,28 +81,26 @@ public interface SqlConnector {
      * @param predicateWithParams A predicate with positional parameters which
      *                           will be provided at runtime as the input to
      *                           the returned function.
-     * @param projection list of column names to return
+     * @param projection list of field names to return
      */
     @Nullable
     Tuple2<Vertex, Vertex> nestedLoopReader(
             @Nonnull DAG dag,
-            @Nonnull Map<String, String> serverOptions,
-            @Nonnull Map<String, String> tableOptions,
+            @Nonnull JetTable jetTable,
             @Nonnull RexNode predicateWithParams,
             @Nonnull List<String> projection);
 
     /**
      * Returns the supplier for the sink processor.
      *
-     * @param columns list of column names given to the sink
+     * @param fields list of field names given to the sink
      */
     @Nullable
     Tuple2<Vertex, Vertex> sink(
             @Nonnull DAG dag,
             @Nonnull Map<String, String> serverOptions,
             @Nonnull Map<String, String> tableOptions,
-            @Nonnull List<String> columns
-    );
+            @Nonnull List<String> fields);
 
     boolean supportsFullScanReader();
     boolean supportsNestedLoopReader();

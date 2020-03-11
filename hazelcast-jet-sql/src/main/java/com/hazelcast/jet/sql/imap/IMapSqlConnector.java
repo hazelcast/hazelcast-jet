@@ -35,7 +35,6 @@ import org.apache.commons.beanutils.BeanUtilsBean;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.lang.reflect.InvocationTargetException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -44,6 +43,7 @@ import java.util.Map.Entry;
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
 import static com.hazelcast.jet.sql.Util.getRequiredTableOption;
+import static com.hazelcast.projection.Projections.identity;
 import static com.hazelcast.query.QueryConstants.KEY_ATTRIBUTE_NAME;
 
 public class IMapSqlConnector implements SqlConnector {
@@ -63,7 +63,7 @@ public class IMapSqlConnector implements SqlConnector {
             @Nonnull Map<String, String> serverOptions,
             @Nonnull Map<String, String> tableOptions
     ) {
-        throw new UnsupportedOperationException("TODO column examination");
+        throw new UnsupportedOperationException("TODO field examination");
     }
 
     @Nullable @Override
@@ -71,27 +71,27 @@ public class IMapSqlConnector implements SqlConnector {
             @Nonnull String tableName,
             @Nonnull Map<String, String> serverOptions,
             @Nonnull Map<String, String> tableOptions,
-            @Nonnull List<Entry<String, RelProtoDataType>> columns
+            @Nonnull List<Entry<String, RelProtoDataType>> fields
     ) {
+        // TODO validate options
+//        if (!serverOptions.isEmpty()) {
+//            throw new JetException("Only local maps are supported for now");
+//        }
         String mapName = getRequiredTableOption(tableOptions, TO_MAP_NAME);
         List<HazelcastTableIndex> indexes = Collections.emptyList(); // TODO
-        return new IMapTable(mapName, indexes, columns);
+        return new IMapTable(this, mapName, indexes, fields);
     }
 
     @Nullable @Override
     public Tuple2<Vertex, Vertex> fullScanReader(
             @Nonnull DAG dag,
-            @Nonnull Map<String, String> serverOptions,
-            @Nonnull Map<String, String> tableOptions,
-            @Nullable String timestampColumn,
+            @Nonnull JetTable jetTable,
+            @Nullable String timestampField,
             @Nonnull RexNode predicate,
-            @Nonnull List<String> projection
+            @Nonnull List<Integer> projection
     ) {
-        // TODO validate options
-        String mapName = tableOptions.get(TO_MAP_NAME);
-        if (!serverOptions.isEmpty()) {
-            throw new JetException("Only local maps are supported for now");
-        }
+        IMapTable table = (IMapTable) jetTable;
+        String mapName = table.getMapName();
 
         // convert the predicate
         Predicate<Object, Object> mapPredicate;
@@ -105,22 +105,25 @@ public class IMapSqlConnector implements SqlConnector {
             mapPredicate = Predicates.alwaysTrue(); // TODO
         }
 
-        // convert the projection
-        Projection<Entry<Object, Object>, Object[]> mapProjection = entry -> {
-            // TODO use Extractors
-            Object[] res = new Object[projection.size()];
-            BeanUtilsBean bub = new BeanUtilsBean();
-            for (int i = 0; i < projection.size(); i++) {
-                String column = projection.get(i);
-                try {
-                    res[i] = bub.getProperty(entry, column);
-                } catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
-                    throw new RuntimeException(e);
-                }
-            }
-            return res;
-        };
+//        // convert the projection
+//        // TODO don't project if we select all fields
+//        Projection<Entry<Object, Object>, Object[]> mapProjection = entry -> {
+//            // TODO use Extractors
+//            Object[] res = new Object[projection.size()];
+//            BeanUtilsBean bub = new BeanUtilsBean();
+//
+//            for (int i = 0; i < projection.size(); i++) {
+//                int fieldIndex = projection.get(i);
+//                try {
+//                    res[i] = bub.getProperty(entry, table.getField(fieldIndex));
+//                } catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
+//                    throw new RuntimeException(e);
+//                }
+//            }
+//            return res;
+//        };
 
+        Projection<Entry<Object, Object>, ?> mapProjection = identity();
         Vertex v = dag.newVertex("map(" + mapName + ")", SourceProcessors.readMapP(mapName, mapPredicate, mapProjection));
         return tuple2(v, v);
     }
@@ -128,12 +131,13 @@ public class IMapSqlConnector implements SqlConnector {
     @Nullable @Override
     public Tuple2<Vertex, Vertex> nestedLoopReader(
             @Nonnull DAG dag,
-            @Nonnull Map<String, String> serverOptions,
-            @Nonnull Map<String, String> tableOptions,
+            @Nonnull JetTable jetTable,
             @Nonnull RexNode predicateWithParams,
             @Nonnull List<String> projection
     ) {
-        String mapName = tableOptions.get(TO_MAP_NAME);
+        IMapTable table = (IMapTable) jetTable;
+        String mapName = table.getMapName();
+
         Vertex v = dag.newVertex("enrich", Processors.mapUsingServiceAsyncP(
                 ServiceFactories.iMapService(mapName),
                 1024,
@@ -154,7 +158,7 @@ public class IMapSqlConnector implements SqlConnector {
             @Nonnull DAG dag,
             @Nonnull Map<String, String> serverOptions,
             @Nonnull Map<String, String> tableOptions,
-            @Nonnull List<String> columns
+            @Nonnull List<String> fields
     ) {
         String mapName = tableOptions.get(TO_MAP_NAME);
         String keyClassName = tableOptions.get(TO_KEY_CLASS);
@@ -170,14 +174,14 @@ public class IMapSqlConnector implements SqlConnector {
             BeanUtilsBean bub = new BeanUtilsBean();
             Object key = Class.forName(keyClassName).getConstructor().newInstance();
             Object value = Class.forName(valueClassName).getConstructor().newInstance();
-            for (int i = 0; i < columns.size(); i++) {
-                String column = columns.get(i);
+            for (int i = 0; i < fields.size(); i++) {
+                String field = fields.get(i);
                 Object o = value;
-                if (column.startsWith(KEY_ATTRIBUTE_NAME.value())) {
+                if (field.startsWith(KEY_ATTRIBUTE_NAME.value())) {
                     o = key;
-                    column = column.substring(KEY_ATTRIBUTE_NAME.value().length() + 1);
+                    field = field.substring(KEY_ATTRIBUTE_NAME.value().length() + 1);
                 }
-                bub.setProperty(o, column, row[i]);
+                bub.setProperty(o, field, row[i]);
             }
             return entry(key, value);
         }));

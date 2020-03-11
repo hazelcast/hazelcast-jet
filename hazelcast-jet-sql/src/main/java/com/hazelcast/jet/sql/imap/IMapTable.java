@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.sql.imap;
 
+import com.hazelcast.jet.sql.SqlConnector;
 import com.hazelcast.jet.sql.schema.JetTable;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
@@ -33,15 +34,16 @@ public class IMapTable extends JetTable {
 
     private final String mapName;
     private final List<HazelcastTableIndex> indexes;
-    private final List<Entry<String, RelProtoDataType>> columns;
+    private final List<Entry<String, RelProtoDataType>> fields;
 
     public IMapTable(
+            @Nonnull SqlConnector sqlConnector,
             @Nonnull String mapName,
             @Nonnull List<HazelcastTableIndex> indexes,
-            @Nonnull List<Entry<String, RelProtoDataType>> columns
-    ) {
+            @Nonnull List<Entry<String, RelProtoDataType>> fields) {
+        super(sqlConnector);
         this.mapName = mapName;
-        this.columns = columns;
+        this.fields = fields;
         this.indexes = indexes;
     }
 
@@ -60,7 +62,7 @@ public class IMapTable extends JetTable {
 
     @Override
     public RelDataType getRowType(RelDataTypeFactory typeFactory) {
-        return new IMapTableRelDataType(typeFactory, columns);
+        return new IMapTableRelDataType(typeFactory, fields);
     }
 
     @Override

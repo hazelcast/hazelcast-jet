@@ -17,18 +17,24 @@
 package com.hazelcast.jet.sql;
 
 import com.hazelcast.jet.JetInstance;
+import com.hazelcast.jet.Observable;
 import com.hazelcast.jet.core.JetTestSupport;
 import com.hazelcast.jet.sql.imap.IMapSqlConnector;
 import com.hazelcast.jet.sql.schema.JetSchema;
+import com.hazelcast.map.IMap;
 import org.junit.Test;
+
+import java.util.List;
 
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.core.TestUtil.createMap;
 import static java.util.Arrays.asList;
+import static java.util.stream.Collectors.toList;
+import static org.junit.Assert.assertEquals;
 
 public class SqlTest extends JetTestSupport {
     @Test
-    public void test() {
+    public void test() throws Exception {
         JetInstance jet = createJetMember();
 
         JetSqlService sqlService = new JetSqlService(jet);
@@ -39,6 +45,14 @@ public class SqlTest extends JetTestSupport {
 //                createMap(IMapSqlConnector.TO_MAP_NAME, "my_map2"),
 //                asList(entry("__key", Integer.class), entry("field", String.class)));
 
-        sqlService.execute("SELECT name FROM my_map where __key=10");
+        IMap<Integer, String> map = jet.getMap("my_map");
+        map.put(0, "value-0");
+        map.put(1, "value-1");
+        map.put(2, "value-2");
+
+        Observable<Object[]> observable = sqlService.execute("SELECT name FROM my_map WHERE __key=10");
+        List<Object[]> result = observable.toFuture(str -> str.collect(toList())).get();
+
+        assertEquals(asList(new Object[]{"value-0"}, new Object[]{"value-1"}, new Object[]{"value-2"}), result);
     }
 }

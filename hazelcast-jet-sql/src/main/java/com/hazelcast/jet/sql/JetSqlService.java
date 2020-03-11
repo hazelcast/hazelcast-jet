@@ -19,6 +19,10 @@ package com.hazelcast.jet.sql;
 import com.google.common.collect.ImmutableList;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.JetInstance;
+import com.hazelcast.jet.Observable;
+import com.hazelcast.jet.core.DAG;
+import com.hazelcast.jet.core.Vertex;
+import com.hazelcast.jet.core.processor.SinkProcessors;
 import com.hazelcast.jet.sql.cost.CostFactory;
 import com.hazelcast.jet.sql.imap.IMapScanPhysicalRule;
 import com.hazelcast.jet.sql.schema.JetSchema;
@@ -62,6 +66,7 @@ import org.apache.calcite.tools.RuleSets;
 
 import java.util.Collections;
 import java.util.Properties;
+import java.util.UUID;
 
 public class JetSqlService {
 
@@ -132,9 +137,9 @@ public class JetSqlService {
             RelOptCluster cluster
     ) {
         SqlToRelConverter.ConfigBuilder sqlToRelConfigBuilder = SqlToRelConverter.configBuilder()
-                                                                                 .withConvertTableAccess(CONVERTER_CONVERT_TABLE_ACCESS)
-                                                                                 .withTrimUnusedFields(CONVERTER_TRIM_UNUSED_FIELDS)
-                                                                                 .withExpand(CONVERTER_EXPAND);
+                .withConvertTableAccess(CONVERTER_CONVERT_TABLE_ACCESS)
+                .withTrimUnusedFields(CONVERTER_TRIM_UNUSED_FIELDS)
+                .withExpand(CONVERTER_EXPAND);
 
         return new SqlToRelConverter(
                 null,
@@ -151,7 +156,7 @@ public class JetSqlService {
      * @param sqlQuery SQL string.
      * @return SQL tree.
      */
-    public SqlNode parse(String sqlQuery) {
+    private SqlNode parse(String sqlQuery) {
         SqlNode node;
 
         try {
@@ -197,13 +202,30 @@ public class JetSqlService {
         return relTrimmed;
     }
 
-    public void execute(String sqlQuery) {
+    public Observable<Object[]> execute(String sqlQuery) {
         SqlNode node = parse(sqlQuery);
 
         RelNode rel = convert(node);
 
         LogicalRel logicalRel = optimizeLogical(rel);
         PhysicalRel physicalRel = optimizePhysical(logicalRel);
+
+        String observableName = "sql-sink-" + UUID.randomUUID().toString();
+        DAG dag = createDag(physicalRel, observableName);
+
+        instance.newJob(dag);
+
+        return instance.getObservable(observableName);
+    }
+
+    private DAG createDag(PhysicalRel physicalRel, String observableName) {
+        DAG dag = new DAG();
+
+        Vertex sink = dag.newVertex("observableSink", SinkProcessors.writeObservableP(observableName));
+
+        CreateDagVisitor visitor = new CreateDagVisitor(this, dag, sink);
+        physicalRel.visit(visitor);
+        return dag;
     }
 
     /**
@@ -212,7 +234,7 @@ public class JetSqlService {
      * @param rel Original logical tree.
      * @return Optimized logical tree.
      */
-    public LogicalRel optimizeLogical(RelNode rel) {
+    private LogicalRel optimizeLogical(RelNode rel) {
         RuleSet rules = JetLogicalRules.getRuleSet();
         Program program = Programs.of(rules);
 
@@ -234,7 +256,7 @@ public class JetSqlService {
      * @param rel Optimized logical tree.
      * @return Optimized physical tree.
      */
-    public PhysicalRel optimizePhysical(RelNode rel) {
+    private PhysicalRel optimizePhysical(RelNode rel) {
         RuleSet rules = RuleSets.ofList(
 //                SortPhysicalRule.INSTANCE,
 //                RootPhysicalRule.INSTANCE,

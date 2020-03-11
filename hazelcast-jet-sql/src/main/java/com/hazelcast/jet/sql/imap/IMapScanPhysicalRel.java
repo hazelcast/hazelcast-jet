@@ -17,6 +17,7 @@
 package com.hazelcast.jet.sql.imap;
 
 import com.hazelcast.jet.sql.PhysicalRel;
+import com.hazelcast.jet.sql.CreateDagVisitor;
 import com.hazelcast.jet.sql.cost.CostUtils;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptCost;
@@ -38,6 +39,7 @@ import java.util.List;
  *     <li><b>Distribution</b>: PARTITIONED</li>
  * </ul>
  */
+// TODO convert to ConnectorFullScan
 public class IMapScanPhysicalRel extends AbstractScanRel implements PhysicalRel {
     public IMapScanPhysicalRel(
         RelOptCluster cluster,
@@ -54,10 +56,10 @@ public class IMapScanPhysicalRel extends AbstractScanRel implements PhysicalRel 
         return new IMapScanPhysicalRel(getCluster(), traitSet, getTable(), projects, filter);
     }
 
-//    @Override
-//    public void visit(PhysicalRelVisitor visitor) {
-//        visitor.onMapScan(this);
-//    }
+    @Override
+    public void visit(CreateDagVisitor visitor) {
+        visitor.onConnectorFullScan(this);
+    }
 
     // TODO: Dedup with logical scan
     @Override

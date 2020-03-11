@@ -22,5 +22,11 @@ import org.apache.calcite.rel.RelNode;
  * Marker interface for logical relations.
  */
 public interface PhysicalRel extends RelNode {
-    // No-op.
+
+    /**
+     * Visit physical rel. A node with children should delegate to parent nodes first.
+     *
+     * @param visitor Visitor.
+     */
+    void visit(CreateDagVisitor visitor);
 }
