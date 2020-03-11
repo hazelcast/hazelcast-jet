@@ -1,9 +1,4 @@
 {
-  "connectors": {
-    "Connectors" : [
-      "connectors/imap"
-    ]
-  },
   "docs": {
     "Get Started": [
       "get-started/intro",
@@ -58,6 +53,18 @@
       "architecture/fault-tolerance",
       "architecture/in-memory-storage",
 	    "architecture/event-time-processing"
+    ]
+  },
+  "enterprise": {
+    "Enterprise Edition" : [
+      "enterprise/index",
+      "enterprise/installation",
+      "enterprise/management-center",
+      "enterprise/security",
+      "enterprise/job-upgrade",
+      "enterprise/lossless-restart",
+      "enterprise/off-heap",
+      "enterprise/blue-green"
     ]
   }
 }
