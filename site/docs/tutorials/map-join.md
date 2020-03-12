@@ -163,7 +163,7 @@ We have created a so-called fat jar.
 If you want to know more about packaging Jet jobs please read the
 [Submitting jobs](../get-started/submit-job.md) section.
 
-## 3. Create a map containing company names
+## 3. Load Company Names into a Map
 
 Copy the file [nasdaqlisted.txt](assets/nasdaqlisted.txt) containing a
 list of company names to `src/main/resources`.
@@ -218,7 +218,7 @@ Finally, run it from your IDE. You should see this in the among other logs:
 3170 names put to a map called 'companyNames'
 ```
 
-## 4. Use Hazelcast Jet to stream and enrich data
+## 4. Use the Map to Enrich Jet Stream
 
 This code takes a dummy source of trade data, enriches the trades with
 the company name and finally writes to log.
@@ -286,8 +286,16 @@ names.
 This is how you can react to changing data.
 You can restart the Jet instance to start with empty map to try this out.
 
-Once you're done, cancel the job:
+## 5. Clean up
+
+Let's clean-up after ourselves. First we cancel our Jet Job:
 
 ```bash
 <path_to_jet>/bin/jet cancel map-join-tutorial
+```
+
+Then we shut down our Jet member/cluster:
+
+```bash
+<path_to_jet>/bin/jet-stop
 ```
