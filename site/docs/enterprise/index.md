@@ -14,6 +14,8 @@ features such as:
   cluster gracefully without losing the computational state.
 * Job upgrades, which allows updating of a streaming job's pipeline from
   one version to the next without losing computational state.
+* Blue/Green client support, which allows clients to switch from one
+  cluster to the other when one of the clusters are down.
 * Off-heap memory, which allows to large and efficient data storage
   inside `IMap` through the use of off-heap data structures.
 
