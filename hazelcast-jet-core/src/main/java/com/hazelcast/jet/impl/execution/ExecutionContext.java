@@ -132,7 +132,7 @@ public class ExecutionContext implements DynamicMetricsProvider {
                 plan.lastSnapshotId(), jobConfig.getProcessingGuarantee());
 
         JetService jetService = nodeEngine.getService(JetService.SERVICE_NAME);
-        serializationService = jetService.createSerializationService(jobId);
+        serializationService = jetService.createSerializationService(jobConfig.getSerializerConfigs());
 
         metricsEnabled = jobConfig.isMetricsEnabled() && nodeEngine.getConfig().getMetricsConfig().isEnabled();
         plan.initialize(nodeEngine, jobId, executionId, snapshotContext, tempDirectories, serializationService);

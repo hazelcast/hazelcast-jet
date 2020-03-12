@@ -45,6 +45,7 @@ import com.hazelcast.spi.impl.operationservice.LiveOperationsTracker;
 import com.hazelcast.spi.impl.operationservice.Operation;
 
 import java.io.IOException;
+import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -179,9 +180,9 @@ public class JetService implements ManagedService, MembershipAwareService, LiveO
         return new JobCoordinationService(nodeEngine, this, config, jobRepository);
     }
 
-    public InternalSerializationService createSerializationService(long jobId) {
+    public InternalSerializationService createSerializationService(Map<String, String> serializerConfigs) {
         return DelegatingSerializationService
-                .from(getNodeEngine().getSerializationService(), getJobConfig(jobId).getSerializerConfigs());
+                .from(getNodeEngine().getSerializationService(), serializerConfigs);
     }
 
     public Operation createExportSnapshotOperation(long jobId, String name, boolean cancelJob) {
