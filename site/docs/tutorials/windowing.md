@@ -1,6 +1,6 @@
 ---
 title: Apply Windowed Aggregation
-description: How to effectively use windowed aggregation in Jet.
+description: How to use windowed aggregation in Jet for monitoring most actively traded stocks on an exchange.
 ---
 
 As we've seen in the guide for
@@ -14,135 +14,314 @@ a result from it. In order to make it work with infinite streams, we
 need some way to break up the stream into finite chunks. This is what
 **windowing** does.
 
-The criteria based on which windowing separates the chunks out of the
-data is **time**, more accurately the timestamp of the input events (
-most of the windows we will going to meet are actually "time windows").
+Let's see how windowed aggregation can be used in Jet for monitoring a
+financial exchange's most actively traded stocks.
 
-For details on what timestamps are usually being used see the
-[Streaming and Event Time](../concepts/event-time.md) section.
+## 1. Start Hazelcast Jet
 
-## Add Timestamps to the Stream
+1. [Download](https://github.com/hazelcast/hazelcast-jet/releases/download/v4.0/hazelcast-jet-4.0.tar.gz)
+  Hazelcast Jet
 
-According to what we have discussed so far, in order to use aggregation
-in an infinite stream, the first thing you need to do in Jet is to make
-sure that your stream has timestamps.
+2. Unzip it:
 
-As we have seen in the [Building Pipelines](../api/pipeline.md) section
-you can obtain a
-[SourceStreamStage](https://docs.hazelcast.org/docs/jet/4.0/javadoc/com/hazelcast/jet/pipeline/StreamSourceStage.html)
-with a call like `pipeline.drawFrom(someStreamSource)`.
-
-`SourceStreamStage` in turn offers various methods to assign
-timestamps to your events. To just name a few:
-
-* `withNativeTimestamps()` declares that the stream will use the
-  source's native timestamps. This typically refers to the timestamps
-  that the external source system sets on each event. Keep in mind
-  that not all types of sources are capable to provide such native
-  timestamps.
-
-* `withIngestionTimestamp()` declares that the source will assign the
-  time of observing the event, so the "processing time", as the event's
-  timestamp.
-
-We also have the option of not using timestamps at all (if we don't
-intend to do any aggregation), or to use any arbitrary function to
-extract a timestamp from the events. We can also specify an
-"allowed lag" after which late events will be discarded. For further
-details consult the
-[javadoc](https://docs.hazelcast.org/docs/jet/4.0/javadoc/com/hazelcast/jet/pipeline/StreamSourceStage.html)
-.
-
-## Specify the Window
-
-Let's illustrate how windows are set in Jet, via an example. Let's say
-we want to analyse word frequencies in a bunch of tweets. First we need
-a source stage:
-
-```java
-StreamStage<Tweet> tweets = p.readFrom(twitterStream())
-      .withTimestamps(Tweet::timestamp, SECONDS.toMillis(5));
+```bash
+cd <where_you_downloaded_it>
+tar zxvf hazelcast-jet-4.0.tar.gz
+cd hazelcast-jet-4.0
 ```
 
-We have specified two things: how to extract the timestamp and how much
-event "lateness" we want to tolerate. We said that any event we receive
-can be at most five seconds behind the highest timestamp we have
-already received. If it’s older than that, we’ll ignore it. On the flip
-side, this means that we’ll have to wait for an event that has occurred
-five seconds after the given window’s end before we can assume we have
-all the data to emit that result. More about that in the
-[section about early results](#get-early-results).
+3. Start Jet:
 
-Now that we have the timestamps we can go ahead and specify the window:
-
-```java
-StageWithWindow<Tweet> windowedTweets = tweets
-      .window(sliding(MINUTES.toMillis(1), SECONDS.toMillis(1)))
+```bash
+bin/jet-start
 ```
 
-We have just told Jet to do our processing on events that have occurred
-within the last minute and update the result every second. More about
-available types of windows in [following sections](#types-of-windows).
+4. When you see output like this, Hazelcast Jet is up:
 
-## Apply the Aggregation
-
-Having assigned timestamps to events and defined windows we can now add
-the rest of our processing logic, including aggregations:
-
-```java
-windowedTweets
-      .flatMap(tweet -> traverseArray(tweet.text().toLowerCase().split("\\W+")))
-      .filter(word -> !word.isEmpty())
-      .groupingKey(wholeItem())
-      .aggregate(counting())
-      .drainTo(Sinks.logger());
+```text
+Members {size:1, ver:1} [
+    Member [192.168.1.5]:5701 - e7c26f7c-df9e-4994-a41d-203a1c63480e this
+]
 ```
 
-The `aggregate` operation we have called here is in fact the one defined
-in
-[StageWithKeyAndWindow](https://docs.hazelcast.org/docs/jet/4.0/javadoc/com/hazelcast/jet/pipeline/StageWithKeyAndWindow.html#aggregate-com.hazelcast.jet.aggregate.AggregateOperation1-)
-. As windows become completed it emits `KeyedWindowResult` objects
-containing the result of the aggregate operation (on the input items
-that belong to the particular window) and the timestamp denoting the
-window's ending time.
+From now on we assume Hazelcast Jet is running on your machine.
 
-## Types of Windows
+## 2. Create a New Java Project
 
-Jet supports following types of windows:
+We'll assume you're using an IDE. Create a blank Java project named
+`trade-monitor` and copy the Gradle or Maven file
+into it:
 
-* [tumbling window](../api/stateful-transforms.md#tumblingwindow)
-* [sliding window](../api/stateful-transforms.md#slidingwindow)
-* [session window](../api/stateful-transforms.md#sessionwindow)
+<!--DOCUSAURUS_CODE_TABS-->
 
-## Get Early Results
+<!--Gradle-->
 
-Results for windows are emitted when Jet considers the window closed.
-This decision is made based on the "watermark". It is a timestamped item
-Jet inserts into the stream that says "from this point on there will be
-no more items with timestamp less than this".
+```groovy
+plugins {
+    id 'com.github.johnrengelman.shadow' version '5.2.0'
+    id 'java'
+}
 
-The watermark could be as simple as "the most recent timestamp observed
-in any event". Depending on the source it could be something more
-sophisticated too, but in essence it is related to the "current value"
-of (event) time.
+group 'org.example'
+version '1.0-SNAPSHOT'
 
-Completion of a window being dependent on the watermark, window lengths
-being potentially large, allowing for significantly late events can all
-add up to long delays until we get some results. We may want to track
-the progress of a window while it's still accumulating events.
+repositories.mavenCentral()
 
-You can tell Jet to give you, at regular intervals, the current status
-on all the windows it has some data for, but aren’t yet complete. For
-our example of trending words the window definition would need to change
-like this:
+dependencies {
+    compile 'com.hazelcast.jet:hazelcast-jet:4.0'
+    compile 'com.hazelcast.jet.examples:hazelcast-jet-examples-trade-source:4.0'
+}
 
-```java
-StageWithWindow<Tweet> windowedTweets = tweets
-    .window(sliding(MINUTES.toMillis(1), SECONDS.toMillis(1))
-        .setEarlyResultsPeriod(SECONDS.toMillis(1)))
+jar {
+    enabled = false
+    dependsOn(shadowJar { classifier = null })
+    manifest.attributes 'Main-Class': 'org.example.TradeMonitor'
+}
+
+shadowJar {
+    dependencies {
+        exclude(dependency('com.hazelcast.jet:hazelcast-jet:4.0'))
+    }
+}
 ```
 
-The `KeyedWindowResult` objects we will get also have an
-[isEarly()](https://docs.hazelcast.org/docs/jet/4.0/javadoc/com/hazelcast/jet/datamodel/WindowResult.html#isEarly--)
-property which can be used to distinguish between early and final
-results.
+<!--Maven-->
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>org.example</groupId>
+    <artifactId>trade-monitor</artifactId>
+    <version>1.0-SNAPSHOT</version>
+
+    <properties>
+        <maven.compiler.target>1.8</maven.compiler.target>
+        <maven.compiler.source>1.8</maven.compiler.source>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.hazelcast.jet</groupId>
+            <artifactId>hazelcast-jet</artifactId>
+            <version>4.0</version>
+        </dependency>
+        <dependency>
+            <groupId>com.hazelcast.jet.examples</groupId>
+            <artifactId>hazelcast-jet-examples-trade-source</artifactId>
+            <version>4.0</version>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <configuration>
+                    <archive>
+                        <manifest>
+                            <mainClass>org.example.TradeMonitor</mainClass>
+                        </manifest>
+                    </archive>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>3.2.2</version>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                        <configuration>
+                            <artifactSet>
+                                <excludes>
+                                    <exclude>com.hazelcast.jet:hazelcast-jet</exclude>
+                                </excludes>
+                            </artifactSet>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>
+```
+
+<!--END_DOCUSAURUS_CODE_TABS-->
+
+## 3. Define Jet Job
+
+The next thing we need to do is to write the Jet code which computes
+the data we need.
+
+We will define a pipeline doing the following:
+
+* read an unbounded stream of trades
+* compute the number of trades in the past minute, for each stock
+  monitored (every 5 seconds)
+* compute the top 10 stocks with most trades from the previous
+  results (every 5 seconds)
+* format and log the final results (every 5 seconds)
+
+Add following class to your project.
+
+```java
+package org.example;
+
+import com.hazelcast.jet.Jet;
+import com.hazelcast.jet.JetInstance;
+import com.hazelcast.jet.config.JobConfig;
+import com.hazelcast.jet.datamodel.KeyedWindowResult;
+import com.hazelcast.jet.datamodel.WindowResult;
+import com.hazelcast.jet.examples.tradesource.Trade;
+import com.hazelcast.jet.examples.tradesource.TradeSource;
+import com.hazelcast.jet.pipeline.Pipeline;
+import com.hazelcast.jet.pipeline.Sinks;
+import com.hazelcast.jet.pipeline.StreamStage;
+
+import java.util.List;
+
+import static com.hazelcast.function.ComparatorEx.comparing;
+import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
+import static com.hazelcast.jet.aggregate.AggregateOperations.topN;
+import static com.hazelcast.jet.pipeline.WindowDefinition.sliding;
+import static com.hazelcast.jet.pipeline.WindowDefinition.tumbling;
+import static java.util.concurrent.TimeUnit.SECONDS;
+
+public class TradeMonitor {
+
+    private static final int TRADES_PER_SEC = 5000;
+    private static final long MONITORING_INTERVAL = SECONDS.toMillis(60);
+    private static final long REPORTING_INTERVAL = SECONDS.toMillis(5);
+
+    public static void main(String[] args) {
+        Pipeline pipeline = definePipeline();
+        submitForExecution(pipeline);
+    }
+
+    private static Pipeline definePipeline() {
+        Pipeline pipeline = Pipeline.create();
+
+        StreamStage<Trade> source = pipeline.readFrom(TradeSource.tradeStream(TRADES_PER_SEC))
+                .withNativeTimestamps(0);
+
+        StreamStage<KeyedWindowResult<String, Long>> tradeCounts = source
+                .groupingKey(Trade::getTicker)
+                .window(sliding(MONITORING_INTERVAL, REPORTING_INTERVAL))
+                .aggregate(counting());
+
+        StreamStage<WindowResult<List<KeyedWindowResult<String, Long>>>> topN = tradeCounts
+                .window(tumbling(REPORTING_INTERVAL))
+                .aggregate(topN(10, comparing(KeyedWindowResult::result)));
+
+        topN.map(wrList -> format(wrList.result()))
+            .writeTo(Sinks.logger());
+
+        return pipeline;
+    }
+
+    private static String format(List<KeyedWindowResult<String, Long>> results) {
+        StringBuilder sb = new StringBuilder("Most active stocks in past minute:");
+        for (int i = 0; i < results.size(); i++) {
+            KeyedWindowResult<String, Long> result = results.get(i);
+            sb.append(String.format("\n\t%2d. %5s - %d trades", i + 1, result.getKey(), result.getValue()));
+        }
+        return sb.toString();
+    }
+
+    private static void submitForExecution(Pipeline pipeline) {
+        JetInstance instance = Jet.bootstrappedInstance();
+        instance.newJob(pipeline, new JobConfig().setName("trade-monitor"));
+    }
+
+}
+```
+
+## 4. Package
+
+Now we need to submit this code to Jet for execution. Since Jet runs on
+our machine as a standalone cluster in a standalone process we need to
+give it all the code that we have written.
+
+For this reason we create a jar containing everything we need. All we
+need to do is to run the build command:
+
+<!--DOCUSAURUS_CODE_TABS-->
+
+<!--Gradle-->
+
+```bash
+gradle build
+```
+
+This will produce a jar file called `trade-monitor-1.0-SNAPSHOT.jar`
+in the `build/libs` folder of our project.
+
+<!--Maven-->
+
+```bash
+mvn package
+```
+
+This will produce a jar file called `trade-monitor-1.0-SNAPSHOT.jar`
+in the `target` folder or our project.
+
+<!--END_DOCUSAURUS_CODE_TABS-->
+
+## 6. Submit for Execution
+
+Assuming our cluster is [still running](#1-start-hazelcast-jet) all we
+need to issue is following command:
+
+<!--DOCUSAURUS_CODE_TABS-->
+
+<!--Gradle-->
+
+```bash
+<path_to_jet>/bin/jet submit build/libs/trade-monitor-1.0-SNAPSHOT.jar
+```
+
+<!--Maven-->
+
+```bash
+<path_to_jet>/bin/jet submit target/trade-monitor-1.0-SNAPSHOT.jar
+```
+
+<!--END_DOCUSAURUS_CODE_TABS-->
+
+The output you should be seeing in the Jet member's log is one such
+message every 5 seconds:
+
+```text
+... Most active stocks in past minute:
+     1.  AXDX - 55 trades
+     2.  MTBC - 53 trades
+     3.  ARIS - 52 trades
+     4.  ASUR - 51 trades
+     5.  CSBR - 50 trades
+     6.  ARII - 50 trades
+     7.  FTXD - 50 trades
+     8. MSDIW - 49 trades
+     9.  SGEN - 49 trades
+    10. LILAK - 49 trades
+```
+
+## 7. Clean up
+
+Let's clean-up after ourselves. First we cancel our Jet Job:
+
+```bash
+<path_to_jet>/bin/jet cancel trade-monitor
+```
+
+Then we shut down our Jet member/cluster:
+
+```bash
+<path_to_jet>/bin/jet-stop
+```
