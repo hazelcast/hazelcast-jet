@@ -16,43 +16,113 @@
 
 package com.hazelcast.jet.sql;
 
-import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Observable;
-import com.hazelcast.jet.core.JetTestSupport;
+import com.hazelcast.jet.SimpleTestInClusterSupport;
 import com.hazelcast.jet.sql.imap.IMapSqlConnector;
 import com.hazelcast.jet.sql.schema.JetSchema;
 import com.hazelcast.map.IMap;
+import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.core.TestUtil.createMap;
 import static java.util.Arrays.asList;
+import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toSet;
 import static org.junit.Assert.assertEquals;
 
-public class SqlTest extends JetTestSupport {
+public class SqlTest extends SimpleTestInClusterSupport {
+
+    private static final String INT_TO_STRING_MAP = "int_to_string_map";
+
+    private static JetSqlService sqlService;
+
+    @BeforeClass
+    public static void beforeClass() {
+        initialize(1, null);
+        sqlService = new JetSqlService(instance());
+
+        sqlService.getSchema().createTable(INT_TO_STRING_MAP, JetSchema.IMAP_LOCAL_SERVER,
+                createMap(IMapSqlConnector.TO_MAP_NAME, INT_TO_STRING_MAP),
+                asList(entry("__key", Integer.class), entry("this", String.class)));
+    }
+
+    @Before
+    public void before() {
+        IMap<Integer, String> intToStringMap = instance().getMap(INT_TO_STRING_MAP);
+        intToStringMap.put(0, "value-0");
+        intToStringMap.put(1, "value-1");
+        intToStringMap.put(2, "value-2");
+    }
+
     @Test
-    public void test() throws Exception {
-        JetInstance jet = createJetMember();
+    public void fullScan() throws Exception {
+        assertRowsAnyOrder(
+                "SELECT this, __key FROM " + INT_TO_STRING_MAP,
+                asList(
+                        new Row("value-0", 0),
+                        new Row("value-1", 1),
+                        new Row("value-2", 2)));
+    }
 
-        JetSqlService sqlService = new JetSqlService(jet);
-        sqlService.getSchema().createTable("my_map", JetSchema.IMAP_LOCAL_SERVER,
-                createMap(IMapSqlConnector.TO_MAP_NAME, "my_map"),
-                asList(entry("__key", Integer.class), entry("name", String.class)));
-//        sqlService.getSchema().createTable("my_map2", JetSchema.IMAP_LOCAL_SERVER,
-//                createMap(IMapSqlConnector.TO_MAP_NAME, "my_map2"),
-//                asList(entry("__key", Integer.class), entry("field", String.class)));
+    @Test
+    public void fullScan_star() throws Exception {
+        assertRowsAnyOrder(
+                "SELECT * FROM " + INT_TO_STRING_MAP,
+                asList(
+                        new Row(0, "value-0"),
+                        new Row(1, "value-1"),
+                        new Row(2, "value-2")));
+    }
 
-        IMap<Integer, String> map = jet.getMap("my_map");
-        map.put(0, "value-0");
-        map.put(1, "value-1");
-        map.put(2, "value-2");
+    @Test
+    public void fullScan_filter() throws Exception {
+        assertRowsAnyOrder(
+                "SELECT this FROM " + INT_TO_STRING_MAP + " WHERE __key=1",
+                singletonList(new Row("value-1")));
+    }
 
-        Observable<Object[]> observable = sqlService.execute("SELECT name FROM my_map WHERE __key=10");
+    private void assertRowsAnyOrder(String sql, Collection<Row> expectedRows) throws Exception {
+        Observable<Object[]> observable = sqlService.execute(sql);
+
         List<Object[]> result = observable.toFuture(str -> str.collect(toList())).get();
+        assertEquals(new HashSet<>(expectedRows), result.stream().map(Row::new).collect(toSet()));
+    }
 
-        assertEquals(asList(new Object[]{"value-0"}, new Object[]{"value-1"}, new Object[]{"value-2"}), result);
+    private static final class Row {
+        Object[] values;
+
+        Row(Object ... values) {
+            this.values = values;
+        }
+
+        @Override
+        public String toString() {
+            return "Row{" + Arrays.toString(values) + '}';
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
+            Row row = (Row) o;
+            return Arrays.equals(values, row.values);
+        }
+
+        @Override
+        public int hashCode() {
+            return Arrays.hashCode(values);
+        }
     }
 }

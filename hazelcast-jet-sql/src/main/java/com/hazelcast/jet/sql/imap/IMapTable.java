@@ -60,6 +60,10 @@ public class IMapTable extends JetTable {
         return indexes;
     }
 
+    public List<Entry<String, RelProtoDataType>> getFields() {
+        return fields;
+    }
+
     @Override
     public RelDataType getRowType(RelDataTypeFactory typeFactory) {
         return new IMapTableRelDataType(typeFactory, fields);

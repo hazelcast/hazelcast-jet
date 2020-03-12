@@ -212,18 +212,16 @@ public class JetSqlService {
 
         String observableName = "sql-sink-" + UUID.randomUUID().toString();
         DAG dag = createDag(physicalRel, observableName);
-
+        // submit the job
         instance.newJob(dag);
-
         return instance.getObservable(observableName);
     }
 
     private DAG createDag(PhysicalRel physicalRel, String observableName) {
         DAG dag = new DAG();
+        Vertex sink = dag.newVertex(observableName, SinkProcessors.writeObservableP(observableName));
 
-        Vertex sink = dag.newVertex("observableSink", SinkProcessors.writeObservableP(observableName));
-
-        CreateDagVisitor visitor = new CreateDagVisitor(this, dag, sink);
+        CreateDagVisitor visitor = new CreateDagVisitor(dag, sink);
         physicalRel.visit(visitor);
         return dag;
     }

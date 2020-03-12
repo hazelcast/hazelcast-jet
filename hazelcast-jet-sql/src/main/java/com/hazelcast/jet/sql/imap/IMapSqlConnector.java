@@ -32,9 +32,11 @@ import com.hazelcast.query.Predicates;
 import org.apache.calcite.rel.type.RelProtoDataType;
 import org.apache.calcite.rex.RexNode;
 import org.apache.commons.beanutils.BeanUtilsBean;
+import org.apache.commons.beanutils.PropertyUtils;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.lang.reflect.InvocationTargetException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -42,9 +44,10 @@ import java.util.Map.Entry;
 
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
+import static com.hazelcast.jet.impl.util.Util.toList;
 import static com.hazelcast.jet.sql.Util.getRequiredTableOption;
-import static com.hazelcast.projection.Projections.identity;
 import static com.hazelcast.query.QueryConstants.KEY_ATTRIBUTE_NAME;
+import static com.hazelcast.query.QueryConstants.THIS_ATTRIBUTE_NAME;
 
 public class IMapSqlConnector implements SqlConnector {
 
@@ -87,7 +90,7 @@ public class IMapSqlConnector implements SqlConnector {
             @Nonnull DAG dag,
             @Nonnull JetTable jetTable,
             @Nullable String timestampField,
-            @Nonnull RexNode predicate,
+            @Nullable RexNode predicate,
             @Nonnull List<Integer> projection
     ) {
         IMapTable table = (IMapTable) jetTable;
@@ -95,36 +98,56 @@ public class IMapSqlConnector implements SqlConnector {
 
         // convert the predicate
         Predicate<Object, Object> mapPredicate;
-        if (predicate.isAlwaysFalse()) {
-            // TODO don't create noop vertex, eliminate in optimization
+        if (predicate == null || predicate.isAlwaysTrue()) {
+            mapPredicate = Predicates.alwaysTrue();
+        } else if (predicate.isAlwaysFalse()) {
+            // TODO don't create noop vertex, eliminate in optimization (maybe it already is...)
             Vertex v = dag.newVertex("noop-src", Processors.noopP());
             return tuple2(v, v);
-        } else if (predicate.isAlwaysTrue()) {
-            mapPredicate = Predicates.alwaysTrue();
         } else {
-            mapPredicate = Predicates.alwaysTrue(); // TODO
+            mapPredicate = Predicates.alwaysTrue(); // TODO convert the predicate
         }
 
-//        // convert the projection
-//        // TODO don't project if we select all fields
-//        Projection<Entry<Object, Object>, Object[]> mapProjection = entry -> {
-//            // TODO use Extractors
-//            Object[] res = new Object[projection.size()];
-//            BeanUtilsBean bub = new BeanUtilsBean();
-//
-//            for (int i = 0; i < projection.size(); i++) {
-//                int fieldIndex = projection.get(i);
-//                try {
-//                    res[i] = bub.getProperty(entry, table.getField(fieldIndex));
-//                } catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
-//                    throw new RuntimeException(e);
-//                }
-//            }
-//            return res;
-//        };
+        // convert the projection
+        List<String> fieldNames = toList(table.getFields(), en -> {
+            // convert field name, the property path must start with "key" or "value", we're getting
+            // it from a java.util.Map.Entry. Examples:
+            //     "__key" -> "key"
+            //     "__key.fieldA" -> "key.fieldA"
+            //     "fieldB" -> "value.fieldB"
+            //     "this" -> "value"
+            //     "this.fieldB" -> "value.fieldB"
+            String fieldName = en.getKey();
+            if (fieldName.equals(KEY_ATTRIBUTE_NAME.value())) {
+                return "key";
+            } else if (fieldName.startsWith(KEY_ATTRIBUTE_NAME.value())) {
+                return "key." + fieldName.substring(KEY_ATTRIBUTE_NAME.value().length());
+            } else if (fieldName.equals(THIS_ATTRIBUTE_NAME.value())) {
+                return "value";
+            } else if (fieldName.startsWith(THIS_ATTRIBUTE_NAME.value())) {
+                return "value." + fieldName.substring(THIS_ATTRIBUTE_NAME.value().length());
+            } else {
+                return "value." + fieldName;
+            }
+        });
+        int[] projection0 = projection.stream().mapToInt(i -> i).toArray();
+        Projection<Entry<Object, Object>, Object[]> mapProjection = entry -> {
+            // TODO use Extractors
+            Object[] res = new Object[projection0.length];
 
-        Projection<Entry<Object, Object>, ?> mapProjection = identity();
-        Vertex v = dag.newVertex("map(" + mapName + ")", SourceProcessors.readMapP(mapName, mapPredicate, mapProjection));
+            for (int i = 0; i < projection0.length; i++) {
+                int fieldIndex = projection0[i];
+                try {
+                    res[i] = PropertyUtils.getProperty(entry, fieldNames.get(fieldIndex));
+                } catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+            return res;
+        };
+
+        Vertex v = dag.newVertex("map(" + mapName + ")",
+                SourceProcessors.readMapP(mapName, mapPredicate, mapProjection));
         return tuple2(v, v);
     }
 

@@ -29,13 +29,10 @@ import static com.hazelcast.jet.core.Edge.between;
 
 public class CreateDagVisitor {
 
-    private final JetSqlService sqlService;
-
     private DAG dag;
     private Deque<VertexAndOrdinal> vertexStack = new ArrayDeque<>();
 
-    public CreateDagVisitor(JetSqlService sqlService, DAG dag, Vertex sink) {
-        this.sqlService = sqlService;
+    public CreateDagVisitor(DAG dag, Vertex sink) {
         this.dag = dag;
         vertexStack.push(new VertexAndOrdinal(sink));
     }
@@ -46,6 +43,7 @@ public class CreateDagVisitor {
                 rel.getProjects());
         assert subDag != null : "null subDag"; // we check for this earlier TODO check for it earlier :)
         VertexAndOrdinal targetVertex = vertexStack.peek();
+        assert targetVertex != null : "targetVertex=null";
         dag.edge(between(subDag.f1(), targetVertex.vertex));
         targetVertex.ordinal++;
     }
