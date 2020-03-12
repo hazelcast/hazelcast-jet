@@ -3,6 +3,9 @@ title: Change Data Capture from MySQL
 description: How to monitor Change Data Capture data from a MySQL database in Jet.
 ---
 
+> NOTE: This feature is currently in incubating state, i.e. API,
+> configuration etc. most likely will change in future revisions.
+
 **Change data capture** refers to the process of **observing changes
 made to a database** and extracting them in a form usable by other
 systems, for the purposes of replication, analysis and many many more.
