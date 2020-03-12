@@ -24,6 +24,8 @@ import com.hazelcast.instance.impl.Node;
 import com.hazelcast.internal.metrics.impl.MetricsService;
 import com.hazelcast.internal.nio.Packet;
 import com.hazelcast.internal.partition.InternalPartitionService;
+import com.hazelcast.internal.serialization.InternalSerializationService;
+import com.hazelcast.jet.impl.serialization.DelegatingSerializationService;
 import com.hazelcast.internal.services.ManagedService;
 import com.hazelcast.internal.services.MembershipAwareService;
 import com.hazelcast.internal.services.MembershipServiceEvent;
@@ -175,6 +177,11 @@ public class JetService implements ManagedService, MembershipAwareService, LiveO
 
     JobCoordinationService createJobCoordinationService() {
         return new JobCoordinationService(nodeEngine, this, config, jobRepository);
+    }
+
+    public InternalSerializationService createSerializationService(long jobId) {
+        return DelegatingSerializationService
+                .from(getNodeEngine().getSerializationService(), getJobConfig(jobId).getSerializerConfigs());
     }
 
     public Operation createExportSnapshotOperation(long jobId, String name, boolean cancelJob) {
