@@ -35,6 +35,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 import static com.hazelcast.internal.serialization.impl.SerializationUtil.createSerializerAdapter;
+import static com.hazelcast.internal.util.Preconditions.checkTrue;
 import static com.hazelcast.jet.impl.util.ReflectionUtils.loadClass;
 import static com.hazelcast.jet.impl.util.ReflectionUtils.newInstance;
 import static java.lang.Thread.currentThread;
@@ -75,13 +76,15 @@ public class DelegatingSerializationService extends AbstractSerializationService
     }
 
     @Override
-    public <B extends Data> B toData(Object o, DataType dataType) {
-        return delegate.toData(o, dataType);
+    public <B extends Data> B toData(Object object, DataType type) {
+        checkTrue(type != DataType.NATIVE, "Native data type is not supported");
+        return toData(object);
     }
 
     @Override
-    public <B extends Data> B toData(Object o, DataType dataType, PartitioningStrategy partitioningStrategy) {
-        return delegate.toData(o, dataType, partitioningStrategy);
+    public <B extends Data> B toData(Object object, DataType type, PartitioningStrategy strategy) {
+        checkTrue(type != DataType.NATIVE, "Native data type is not supported");
+        return toData(object, strategy);
     }
 
     @Override
