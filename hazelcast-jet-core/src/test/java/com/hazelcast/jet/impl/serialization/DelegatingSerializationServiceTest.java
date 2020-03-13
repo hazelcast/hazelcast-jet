@@ -19,6 +19,7 @@ package com.hazelcast.jet.impl.serialization;
 import com.google.common.collect.ImmutableMap;
 import com.hazelcast.internal.serialization.impl.AbstractSerializationService;
 import com.hazelcast.internal.serialization.impl.DefaultSerializationServiceBuilder;
+import com.hazelcast.jet.JetException;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.HazelcastSerializationException;
@@ -61,9 +62,9 @@ public class DelegatingSerializationServiceTest {
         // When
         // Then
         assertThatThrownBy(() -> service.serializerFor(new Value()))
-                .isInstanceOf(HazelcastSerializationException.class);
+                .isInstanceOf(JetException.class);
         assertThatThrownBy(() -> service.serializerFor(Integer.MAX_VALUE))
-                .isInstanceOf(HazelcastSerializationException.class);
+                .isInstanceOf(JetException.class);
     }
 
     @Test
