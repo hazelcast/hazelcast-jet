@@ -13,7 +13,7 @@ without a data loss.
 
 ## Persistence
 
-Jet regurlarly[snapshots](/docs/architecture/fault-tolerance) it's
+Jet regurlarly [snapshots](/docs/architecture/fault-tolerance) it's
 state. The state snapshot can be used as a recovery point. Snapshots are
 stored in memory. Lossless Cluster Restart works by persisting the
 RAM-based snapshot data. It uses the
