@@ -66,7 +66,7 @@ public class IMapTable extends JetTable {
 
     @Override
     public RelDataType getRowType(RelDataTypeFactory typeFactory) {
-        return new IMapTableRelDataType(typeFactory, fields);
+        return new IMapRowRelDataType(typeFactory, fields);
     }
 
     @Override

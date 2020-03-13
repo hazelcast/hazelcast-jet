@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.sql.imap;
 
+import com.hazelcast.function.PredicateEx;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Vertex;
@@ -27,8 +28,9 @@ import com.hazelcast.jet.pipeline.ServiceFactories;
 import com.hazelcast.jet.sql.SqlConnector;
 import com.hazelcast.jet.sql.schema.JetTable;
 import com.hazelcast.projection.Projection;
-import com.hazelcast.query.Predicate;
 import com.hazelcast.query.Predicates;
+import com.hazelcast.sql.impl.expression.Expression;
+import com.hazelcast.sql.impl.row.HeapRow;
 import org.apache.calcite.rel.type.RelProtoDataType;
 import org.apache.calcite.rex.RexNode;
 import org.apache.commons.beanutils.BeanUtilsBean;
@@ -43,6 +45,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 import static com.hazelcast.jet.Util.entry;
+import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
 import static com.hazelcast.jet.impl.util.Util.toList;
 import static com.hazelcast.jet.sql.Util.getRequiredTableOption;
@@ -90,22 +93,18 @@ public class IMapSqlConnector implements SqlConnector {
             @Nonnull DAG dag,
             @Nonnull JetTable jetTable,
             @Nullable String timestampField,
-            @Nullable RexNode predicate,
+            @Nullable Expression<Boolean> predicate,
             @Nonnull List<Integer> projection
     ) {
         IMapTable table = (IMapTable) jetTable;
         String mapName = table.getMapName();
 
         // convert the predicate
-        Predicate<Object, Object> mapPredicate;
-        if (predicate == null || predicate.isAlwaysTrue()) {
-            mapPredicate = Predicates.alwaysTrue();
-        } else if (predicate.isAlwaysFalse()) {
-            // TODO don't create noop vertex, eliminate in optimization (maybe it already is...)
-            Vertex v = dag.newVertex("noop-src", Processors.noopP());
-            return tuple2(v, v);
+        PredicateEx<Object[]> predicate0;
+        if (predicate == null) {
+            predicate0 = PredicateEx.alwaysTrue();
         } else {
-            mapPredicate = Predicates.alwaysTrue(); // TODO convert the predicate
+            predicate0 = en -> predicate.eval(new HeapRow(en));
         }
 
         // convert the projection
@@ -146,9 +145,11 @@ public class IMapSqlConnector implements SqlConnector {
             return res;
         };
 
-        Vertex v = dag.newVertex("map(" + mapName + ")",
-                SourceProcessors.readMapP(mapName, mapPredicate, mapProjection));
-        return tuple2(v, v);
+        Vertex vRead = dag.newVertex("map(" + mapName + ")",
+                SourceProcessors.readMapP(mapName, Predicates.alwaysTrue(), mapProjection));
+        Vertex vFilter = dag.newVertex("filter", Processors.filterP(predicate0));
+        dag.edge(between(vRead, vFilter).isolated());
+        return tuple2(vRead, vFilter);
     }
 
     @Nullable @Override

@@ -20,6 +20,7 @@ import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.sql.schema.JetTable;
+import com.hazelcast.sql.impl.expression.Expression;
 import org.apache.calcite.rel.type.RelProtoDataType;
 import org.apache.calcite.rex.RexNode;
 
@@ -68,7 +69,7 @@ public interface SqlConnector {
             @Nonnull DAG dag,
             @Nonnull JetTable jetTable,
             @Nullable String timestampField,
-            @Nonnull RexNode predicate,
+            @Nonnull Expression<Boolean> predicate,
             @Nonnull List<Integer> projection);
 
     /**

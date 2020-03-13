@@ -26,11 +26,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map.Entry;
 
-public class IMapTableRelDataType extends RelDataTypeImpl {
+public class IMapRowRelDataType extends RelDataTypeImpl {
 
     private static final String TYPE_NAME = "IMapRow";
 
-    public IMapTableRelDataType(RelDataTypeFactory typeFactory, List<Entry<String, RelProtoDataType>> fields) {
+    public IMapRowRelDataType(RelDataTypeFactory typeFactory, List<Entry<String, RelProtoDataType>> fields) {
         super(createFieldList(typeFactory, fields));
 
         computeDigest();

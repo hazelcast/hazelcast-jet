@@ -19,11 +19,17 @@ package com.hazelcast.jet.sql;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.datamodel.Tuple2;
+import com.hazelcast.jet.sql.expression.RexToExpressionVisitor;
 import com.hazelcast.jet.sql.imap.IMapScanPhysicalRel;
 import com.hazelcast.jet.sql.schema.JetTable;
+import com.hazelcast.sql.impl.expression.Expression;
+import com.hazelcast.sql.impl.physical.FieldTypeProvider;
+import com.hazelcast.sql.impl.physical.PhysicalNodeSchema;
+import org.apache.calcite.rex.RexNode;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
+import java.util.function.Function;
 
 import static com.hazelcast.jet.core.Edge.between;
 
@@ -46,6 +52,27 @@ public class CreateDagVisitor {
         assert targetVertex != null : "targetVertex=null";
         dag.edge(between(subDag.f1(), targetVertex.vertex));
         targetVertex.ordinal++;
+    }
+
+    @SuppressWarnings("unchecked")
+    private Expression<Boolean> convertFilter(PhysicalNodeSchema schema, RexNode expression) {
+        if (expression == null) {
+            return null;
+        }
+
+        Expression convertedExpression = convertExpression(schema, expression);
+
+        return (Expression<Boolean>) convertedExpression;
+    }
+
+    private Expression<?> convertExpression(FieldTypeProvider fieldTypeProvider, RexNode expression) {
+        if (expression == null) {
+            return null;
+        }
+
+        RexToExpressionVisitor converter = new RexToExpressionVisitor(fieldTypeProvider, 0);
+
+        return expression.accept(converter);
     }
 
     private static final class VertexAndOrdinal {
