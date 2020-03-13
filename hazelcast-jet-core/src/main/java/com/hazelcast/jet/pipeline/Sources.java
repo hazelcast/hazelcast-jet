@@ -1027,13 +1027,13 @@ public final class Sources {
      * that case you can use {@linkplain #jmsQueueBuilder(SupplierEx) the
      * builder} and add a projection.
      *
-     * @param factorySupplier supplier to obtain JMS connection factory
      * @param name            the name of the queue
+     * @param factorySupplier supplier to obtain JMS connection factory
      */
     @Nonnull
     public static StreamSource<Message> jmsQueue(
-            @Nonnull SupplierEx<? extends ConnectionFactory> factorySupplier,
-            @Nonnull String name
+            @Nonnull String name,
+            @Nonnull SupplierEx<? extends ConnectionFactory> factorySupplier
     ) {
         return jmsQueueBuilder(factorySupplier)
                 .destinationName(name)
@@ -1082,13 +1082,13 @@ public final class Sources {
      * that case you can use {@linkplain #jmsQueueBuilder(SupplierEx) the
      * builder} and add a projection.
      *
-     * @param factorySupplier supplier to obtain JMS connection factory
      * @param name            the name of the queue
+     * @param factorySupplier supplier to obtain JMS connection factory
      */
     @Nonnull
     public static StreamSource<Message> jmsTopic(
-            @Nonnull SupplierEx<? extends ConnectionFactory> factorySupplier,
-            @Nonnull String name
+            @Nonnull String name,
+            @Nonnull SupplierEx<? extends ConnectionFactory> factorySupplier
     ) {
         return jmsTopicBuilder(factorySupplier)
                 .destinationName(name)
