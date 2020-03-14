@@ -108,8 +108,12 @@ public class DelegatingSerializationService extends AbstractSerializationService
 
     @Override
     public SerializerAdapter serializerFor(Object object) {
-        Class<?> clazz = object.getClass();
-        SerializerAdapter serializer = serializersByClass.get(clazz);
+        Class<?> clazz = object == null ? null : object.getClass();
+
+        SerializerAdapter serializer = null;
+        if (clazz != null) {
+            serializer = serializersByClass.get(clazz);
+        }
         if (serializer == null) {
             try {
                 serializer = delegate.serializerFor(object);

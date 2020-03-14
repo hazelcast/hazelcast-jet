@@ -79,6 +79,16 @@ public class DelegatingSerializationServiceTest {
         assertThat(service.serializerFor(Byte.valueOf((byte) 1)).getImpl()).isInstanceOf(CustomByteSerializer.class);
     }
 
+    @Test
+    public void when_triesToFindSerializerForNullObject_then_Succeeds() {
+        // Given
+        DelegatingSerializationService service = new DelegatingSerializationService(emptyMap(), DELEGATE);
+
+        // When
+        // Then
+        assertThat(service.serializerFor(null).getImpl()).isNotNull();
+    }
+
     private static class Value {
     }
 
