@@ -4,7 +4,7 @@ description: Install Hazelcast Jet Enterprise
 ---
 
 Hazelcast Jet Enterprise requires a license key to run. You can get a
-30-day trial license from [Hazelcast website](https://hazelcast.com/download).
+30-day trial license from the [Hazelcast website](https://hazelcast.com/download).
 
 ## Download Hazelcast Jet
 

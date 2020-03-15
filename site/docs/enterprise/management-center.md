@@ -1,6 +1,6 @@
 ---
 title: Management Center
-description: Work with Hazelcast Jet Management Center
+description: Install Hazelcast Jet Management Center
 ---
 
 Hazelcast Jet Enterprise comes with a management center which can be
@@ -23,7 +23,10 @@ TODO
 ## Setting License Key
 
 Like with the Jet Enterprise Server, Jet Management Center also requires
-a license key. You can run the Management Center without a license key,
+a license key. You can get a 30-day trial license from
+[the Hazelcast website](https://hazelcast.com/download).
+
+You can also run the Management Center without a license key,
 but it will only work with a single node cluster. To update the license
 key, edit the file `application.properties`:
 

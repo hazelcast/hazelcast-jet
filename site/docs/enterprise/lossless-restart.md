@@ -1,6 +1,6 @@
 ---
 title: Lossless Cluster Restart 
-description: TODO
+description: Restart a Jet cluster without losing job state
 ---
 
 The Lossless Cluster Restart feature allows you to gracefully shut down

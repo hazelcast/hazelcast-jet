@@ -1,6 +1,6 @@
 ---
 title: Updating Jobs
-description: Update Streaming Jobs
+description: Update Streaming Jobs without losing computation state
 ---
 
 A streaming job can be running for days or months without disruptions
