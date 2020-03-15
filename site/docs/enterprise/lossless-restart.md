@@ -4,12 +4,13 @@ description: TODO
 ---
 
 The Lossless Cluster Restart feature allows you to gracefully shut down
-the cluster at any time and have the snapshot data of all the jobs
+the cluster at any time and have the computational data of all the jobs
 preserved. After you restart the cluster, Jet automatically restores the
 data and resumes the jobs.
 
 This allows Jet cluster to be shut down gracefully and restarted without
-a data loss.
+a data loss. When the cluster restarts, the jobs will automatically be
+restarted, without having to submit them to the cluster again.
 
 Jet regularly [snapshots](../architecture/fault-tolerance) it's state.
 The state snapshot can be used as a recovery point. Snapshots are stored

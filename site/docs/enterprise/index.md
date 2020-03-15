@@ -12,7 +12,7 @@ features such as:
 * Additional security options such as TLS support
 * Lossless cluster restart, which enables to shutdown and restart the
   cluster gracefully without losing the computational state.
-* Job upgrades, which allows updating of a streaming job's pipeline from
+* Job updates, which allows updating of a streaming job's pipeline from
   one version to the next without losing computational state.
 * Blue/Green client support, which allows clients to switch from one
   cluster to the other when one of the clusters are down.

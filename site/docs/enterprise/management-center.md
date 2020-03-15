@@ -16,6 +16,10 @@ Once you have downloaded it, unzip it to a folder:
 tar zxvf hazelcast-jet-enterprise-4.0.tar.gz
 ```
 
+## Run using Docker
+
+TODO
+
 ## Setting License Key
 
 Like with the Jet Enterprise Server, Jet Management Center also requires

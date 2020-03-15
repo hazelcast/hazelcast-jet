@@ -61,7 +61,7 @@
       "enterprise/installation",
       "enterprise/management-center",
       "enterprise/security",
-      "enterprise/job-upgrade",
+      "enterprise/job-update",
       "enterprise/lossless-restart",
       "enterprise/off-heap",
       "enterprise/blue-green"
