@@ -35,8 +35,8 @@ import com.hazelcast.jet.core.processor.SourceProcessors;
 import com.hazelcast.jet.function.ToResultSetFunction;
 import com.hazelcast.jet.impl.pipeline.transform.BatchSourceTransform;
 import com.hazelcast.jet.impl.pipeline.transform.StreamSourceTransform;
-import com.hazelcast.map.IMap;
 import com.hazelcast.map.EventJournalMapEvent;
+import com.hazelcast.map.IMap;
 import com.hazelcast.projection.Projection;
 import com.hazelcast.projection.Projections;
 import com.hazelcast.query.Predicate;
@@ -1013,6 +1013,18 @@ public final class Sources {
     }
 
     /**
+     * @deprecated see {@linkplain #jmsQueue(String, SupplierEx)}.
+     */
+    @Nonnull
+    @Deprecated
+    public static StreamSource<Message> jmsQueue(
+            @Nonnull SupplierEx<? extends ConnectionFactory> factorySupplier,
+            @Nonnull String name
+    ) {
+        return jmsQueue(name, factorySupplier);
+    }
+
+    /**
      * Shortcut equivalent to:
      * <pre>
      *         return jmsQueueBuilder(factorySupplier)
@@ -1063,6 +1075,18 @@ public final class Sources {
     @Nonnull
     public static JmsSourceBuilder jmsQueueBuilder(SupplierEx<? extends ConnectionFactory> factorySupplier) {
         return new JmsSourceBuilder(factorySupplier, false);
+    }
+
+    /**
+     * @deprecated see {@linkplain #jmsTopic(String, SupplierEx)}.
+     */
+    @Nonnull
+    @Deprecated
+    public static StreamSource<Message> jmsTopic(
+            @Nonnull SupplierEx<? extends ConnectionFactory> factorySupplier,
+            @Nonnull String name
+    ) {
+        return jmsTopic(name, factorySupplier);
     }
 
     /**
