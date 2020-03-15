@@ -8,23 +8,89 @@ the cluster at any time and have the snapshot data of all the jobs
 preserved. After you restart the cluster, Jet automatically restores the
 data and resumes the jobs.
 
-This allows Jet cluster to be shut down gracefully and restarted
-without a data loss.
+This allows Jet cluster to be shut down gracefully and restarted without
+a data loss.
 
-## Persistence
+Jet regularly [snapshots](../architecture/fault-tolerance) it's state.
+The state snapshot can be used as a recovery point. Snapshots are stored
+in memory. Lossless Cluster Restart works by persisting the RAM-based
+snapshot data to disk. It uses the [Hot Restart Persistence](https://docs.hazelcast.org/docs/latest/manual/html-single/index.html#hot-restart-persistence)
+feature of Hazelcast under the hood.
 
-Jet regularly [snapshots](/docs/architecture/fault-tolerance) it's
-state. The state snapshot can be used as a recovery point. Snapshots are
-stored in memory. Lossless Cluster Restart works by persisting the
-RAM-based snapshot data. It uses the
-[Hot Restart Persistence](https://docs.hazelcast.org/docs/latest/manual/html-single/index.html#hot-restart-persistence)
-feature of Hazelcast. See the
-[docs](https://docs.hazelcast.org/docs/latest/manual/html-single/index.html#hot-restart-persistence)
+## Enabling Lossless Restart
+
+To enable Lossless Cluster Restart, you need to enable it in
+`hazelcast-jet.yaml`:
+
+```yml
+hazelcast-jet:
+  instance:
+    lossless-restart-enabled: true
+```
+
+By the default the snapshot will be written to `<JET_HOME>/recovery`
+folder . To change this directory where the data will be stored,
+configure the `hot-restart-persistence` option in `hazelcast.yaml`:
+
+```yml
+hazelcast:
+  hot-restart-persistence:
+    enabled: true
+    base-dir: /var/hazelcast/recovery
+```
+
+See the
+[docs](https://docs.hazelcast.org/docs/4.0/manual/html-single/index.html#hot-restart-persistence)
 for detailed description including fine-tuning.
 
-## Fault Tolerance and Maintentance Windows
+## Safely Shutting Down A Jet Cluster
 
-Lossless Cluster Restart is a maintenance tool. It isn't a means of
+For lossless restart to work, the cluster must be shutdown gracefully.
+When members are shutdown one by one in rapid succession, this starts an
+automatic rebalancing process where backup partitions are promoted and
+new backups are created for each member. This may result in
+out-of-memory errors or data loss.
+
+The entire cluster can be shut down using the `jet-cluster-admin`
+command line tool.
+
+```bash
+bin/jet-cluster-admin -a <address> -c <cluster-name> -o shutdown
+```
+
+For the command line tool to work, REST should be enabled in
+`hazelcast.yaml`:
+
+```yaml
+hazelcast:
+  network:
+    rest-api:
+      enabled: true
+      endpoint-groups:
+        CLUSTER_READ:
+          enabled: true
+        CLUSTER_WRITE:
+          enabled: true
+        HEALTH_CHECK:
+          enabled: true
+        HOT_RESTART:
+          enabled: true
+```
+
+Alternatively, you can shutdown the cluster using the Jet Management
+Center:
+
+![Cluster Shutdown using Management Center](assets/management-center-shutdown.png)
+
+Since the Hot Restart data is saved locally on each member, all the
+members must be present after the restart for Jet to be able to reload
+the data. Beyond that, there’s no special action to take: as soon as the
+cluster re-forms, it will automatically reload the persisted snapshots
+and resume the jobs.
+
+## Fault Tolerance Considerations
+
+Lossless Cluster Restart is a _maintenance_ tool. It isn't a means of
 fault tolerance.
 
 The purpose of the Lossless Cluster Restart is to provide a maintenance
@@ -53,97 +119,3 @@ Also, this throughput limit does not apply to the data going through the
 Jet pipeline, but only to the periodic saving of the state present in
 the pipeline. Typically the state scales with the number of distinct
 keys seen within the time window.
-
-## Configuration
-
-To use Lossless Cluster Restart, enable it in hazelcast-jet.yaml:
-
-```yml
-hazelcast-jet:
-  instance:
-    lossless-restart-enabled: true
-```
-
-To set the base directory where the data will be stored, configure Hot
-Restart in the IMDG configuration:
-
-```yml
-hazelcast:
-  hot-restart-persistence:
-    enabled: true
-    base-dir: /mnt/hot-restart
-```
-
-Quick programmatic example:
-
-```java
-JetConfig cfg = new JetConfig();
-cfg.getInstanceConfig().setLosslessRestartEnabled(true);
-cfg.getHazelcastConfig().getHotRestartPersistenceConfig()
-        .setEnabled(true)
-        .setBaseDir(new File("/mnt/hot-restart"))
-        .setParallelism(2);
-```
-
-To have the cluster shut down gracefully, as required for this feature
-to work, do not kill the Jet instances one by one. As you are killing
-them, the cluster starts working hard to rebalance the data on the
-remaining members. This usually leads to out-of-memory failures and the
-loss of all data.
-
-The entire cluster can be shut down gracefully in several ways:
-
-<!--DOCUSAURUS_CODE_TABS-->
-
-<!--Command line-->
-
-```bash
-jet-cluster-admin -o shutdown
-```
-
-<!-- Jet Management Center -->
-
-![Cluster Shutdown using Management Center](assets/management-center-shutdown.png)
-
-<!-- Programmatically -->
-
-```java
-jet.getCluster().shutdown();
-```
-
-<!--END_DOCUSAURUS_CODE_TABS-->
-
-The first two ways make use of Jet’s REST endpoint, which isn’t enabled
-by default. You can enable it by setting the property
-
-```bash
-hazelcast.rest.enabled=true
-```
-
-This can be either a system property (`-Dhazelcast.rest.enabled=true`)
-or a property in the Hazelcast Jet configuration:
-
-<!--DOCUSAURUS_CODE_TABS-->
-
-<!--YAML -->
-
-```yaml
-hazelcast-jet:
-  properties:
-    hazelcast.rest.enabled: true
-```
-
-<!-- Programmatically -->
-
-```java
-JetConfig config = new JetConfig();
-config.getProperties().setProperty("hazelcast.rest.enabled", "true");
-```
-
-<!--END_DOCUSAURUS_CODE_TABS-->
-
-Since the Hot Restart data is saved locally on each member, all the
-members must be present after the restart for Jet to be able to reload
-the data. Beyond that, there’s no special action to take: as soon as the
-cluster re-forms, it will automatically reload the persisted snapshots
-and resume the jobs.

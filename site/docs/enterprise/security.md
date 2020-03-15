@@ -1,6 +1,6 @@
 ---
 title: Security
-description: Configure Security
+description: Configuring Security for Hazelcast Jet Enterprise
 ---
 
 It is possible to configure Jet Enterprise to use TLS for all member to
@@ -98,7 +98,9 @@ configuring OpenSSL we recommend going through the guide in
 ## Remote Hazelcast Sources and Sinks
 
 You can configure TLS for remote [Hazelcast sources and sinks](../api/sources-sinks#imap)
-by passing a ClientConfig with TLS enabled:
+by passing a ClientConfig with TLS enabled. Jet will create a new
+client for the remote cluster, and will use the connection options
+configured in the config.
 
 ```java
 ClientConfig config = new ClientConfig();
