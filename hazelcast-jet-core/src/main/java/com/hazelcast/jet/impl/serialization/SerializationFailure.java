@@ -27,7 +27,7 @@ class SerializationFailure extends JetException {
 
     SerializationFailure(Class<?> clazz, Throwable t) {
         super("Unable to serialize instance of " + clazz +
-                ". Note: You can register a serializer using JobConfig.registerSerializer()", t);
+                "- Note: You can register a serializer using JobConfig.registerSerializer()", t);
     }
 
     SerializationFailure(int typeId) {
