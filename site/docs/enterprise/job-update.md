@@ -14,7 +14,7 @@ the pipeline and some additional filter needs to be added.
 
 While implementing this requirement, we don't want to lose the current
 computational state because it includes data for the past day and in
-many cases it may not be able to replay this data fully.
+many cases we may not be able to replay this data fully.
 
 ## Updating The Job
 
@@ -40,16 +40,18 @@ For additional details, please see the [state compatibility guide](#state-compat
 
 ### Exporting A Snapshot
 
-To update a job, the first we need to do is to take a snapshot of its
-current state. This can be achieved by using the following command:
+To update a job, the first thing we need to do is to take a snapshot of
+its current state and cancel it. This can be achieved by using the
+following command:
 
 ```bash
-bin/jet save-snapshot <job name or id> <snapshot name>
+bin/jet save-snapshot -C <job name or id> <snapshot name>
 ```
 
-This will take an in-memory snapshot of the job while keeping it running
-and save it with the specified name. You can see a list of the current
-exported snapshots in the cluster with the following command:
+This will take an in-memory snapshot of the job state and cancel it. The
+job will not process any data after the snapshot was taken and is
+cleanly taken down. You can see a list of current exported snapshots in
+the cluster with the following command:
 
 ```bash
 $ bin/jet list-snapshots
@@ -57,30 +59,22 @@ TIME                    SIZE (bytes)    JOB NAME                 SNAPSHOT NAME
 2020-03-15T14:37:01.011 1,196           hello-world              snapshot-v1
 ```
 
-You will note that the job where the snapshot was exported from is still
-running. You can optionally atomically take a snapshot and cancel the job
-as follows:
-
-```bash
-bin/jet save-snapshot -C <job name or id> <snapshot name>
-```
-
 ### Starting the Updated Job
 
 When submitting a job, it's possible to specify an initial snapshot to
-use. The job then will start at the specified snapshot, and as long as
-state-compatibility is maintained, will continue running once the
-snapshot is restored. To submit a job starting from a specific snapshot
-you can use the following command:
+use. The job will then start with processing state restored from the
+specified snapshot and as long as _state compatibility_ is maintained,
+it will continue running once the snapshot is restored. To submit a job
+starting from a specific snapshot you can use the following command:
 
 ```bash
-bin/jet submit -s snapshot-v1 <jar name>
+bin/jet submit -s <snapshot name> <jar name>
 ```
 
 ## Memory Requirements
 
-Internally, Jet stores these snapshots in an `IMap`, that are separate
-from the periodic snapshots that are taken as part of the job execution.
+Internally, Jet stores these snapshots in `IMap`s that are separate from
+the periodic snapshots that are taken as part of the job execution.
 Exporting snapshots requires enough available memory in the cluster to
 store the computation state.
 
@@ -89,39 +83,38 @@ store the computation state.
 The state has to be compatible with the updated pipeline. As a Jet
 pipeline is converted to a [DAG](../architecture/distributed-computing),
 the snapshot contains separate data for each vertex, identified by the
-transform name. The stateful transforms in previous and updated pipeline
-must have the same name for the state to be restored successfully. Once
-the job is started again from a snapshot, the following rules are
-applied:
+transform name. The stateful transforms in the previous and tje updated
+pipeline must have the same name for the state to be restored
+successfully. Once the job is started again from a snapshot, the
+following rules are applied:
 
 * If a transform was not in the previous version and is available in the
   new version, the transform will be restored with an empty state.
-* If a transform was in the previous version, and not in the new
+* If a transform was in the previous version and is not in the new
   version, then its state will simply be ignored.
-* If the transform exited in the previous version and exists in the new
-  version as well and their names much, then the state from the previous
-  version will be restored as the state of the new transform.
+* If the transform existed in the previous version and also exists in
+  the new version and their names match, then the state from the
+  previous version will be restored as the state of the new transform.
 
-Using these rules, the following are possible:
+Using these rules the following is possible:
 
 * you can add and new stateful stages and remove existing ones without
   breaking compatibility. This includes adding/removing a source or sink
   or adding a new aggregation path from existing sources.
-* you can freely add, remove or change stateless stages, such as
+* you can freely add, remove or change _stateless_ stages, such as
   filter/map/flatMap stages, sinks and others
 
-You can also find additional information about what state is stored
-under the Javadoc for each transform. Here are some examples of other
-supported changes:
+You can find information about what state is stored under the Javadoc
+for each transform. Here are some examples of other supported changes:
 
-* adding new sinks to existing pipeline stages
+* adding new sources/sinks to existing pipeline stages
 * adding new branches to existing pipeline stages
 * change session window timeout
 * change connection parameters of sources/sinks
-* enable early results for a window
-* for sliding windows, you can increase or reduce the window size while
-  keeping the step size the same.
-* increase eviction timeout for stateful map
+* enable/disable early results for a window
+* for sliding windows you can increase or reduce the window size or the
+  slide length
+* change eviction timeout for stateful map
 * change parameters of aggregate operation: for example, change the
   comparator of `AggregateOperation.minBy()`
 * tweak the aggregate operation, but accumulator type has to stay the
@@ -133,11 +126,29 @@ supported changes:
 The following changes are not supported:
 
 * change a sliding window to a session window
-* change size of a tumbling window to another size which is not a direct
-  multiple of the previous size
+* change the size of a tumbling window to another size which is not an
+  integer multiple of the previous size
 * replace aggregation operation for another one with a different
   accumulator
 * rename a stateful stage
+
+### Caveats when changing window parameters
+
+Changing window parameters is supported, but there can be a few quirks
+during the transition period. Jet accumulates events into windows as
+they arrive. When you change window size, slide step or session window
+timeout, it can not split already aggregated events into different
+accumulators, however it will assign existing pre-aggregated values into
+frames based on their end time. After all the data based on events that
+were processed before the update are emitted, the results will be
+correct again.
+
+Second issue is if you extend the window size. Since Jet purges data
+when the windows for which they were needed are fully emitted, if you
+extend the window length, after the update Jet will need data that were
+already purged. As a result, after the update the windows can miss some
+data. Again, after the transition period elapses, all output will be
+correct.
 
 ## Upgrading Between Jet Versions
 
