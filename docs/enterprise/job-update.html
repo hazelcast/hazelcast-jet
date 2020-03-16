@@ -71,7 +71,7 @@ additional need is that an additional 1-hour window must be added to
 the pipeline and some additional filter needs to be added.</p>
 <p>While implementing this requirement, we don't want to lose the current
 computational state because it includes data for the past day and in
-many cases it may not be able to replay this data fully.</p>
+many cases we may not be able to replay this data fully.</p>
 <h2><a class="anchor" aria-hidden="true" id="updating-the-job"></a><a href="#updating-the-job" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Updating The Job</h2>
 <h3><a class="anchor" aria-hidden="true" id="updating-the-pipeline"></a><a href="#updating-the-pipeline" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Updating The Pipeline</h3>
 <p>The first step you must when updating a job is to update its pipeline.
@@ -91,72 +91,68 @@ explicitly is suggested.</li>
 </ul>
 <p>For additional details, please see the <a href="#state-compatibility">state compatibility guide</a>.</p>
 <h3><a class="anchor" aria-hidden="true" id="exporting-a-snapshot"></a><a href="#exporting-a-snapshot" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Exporting A Snapshot</h3>
-<p>To update a job, the first we need to do is to take a snapshot of its
-current state. This can be achieved by using the following command:</p>
-<pre><code class="hljs css language-bash">bin/jet save-snapshot &lt;job name or id&gt; &lt;snapshot name&gt;
+<p>To update a job, the first thing we need to do is to take a snapshot of
+its current state and cancel it. This can be achieved by using the
+following command:</p>
+<pre><code class="hljs css language-bash">bin/jet save-snapshot -C &lt;job name or id&gt; &lt;snapshot name&gt;
 </code></pre>
-<p>This will take an in-memory snapshot of the job while keeping it running
-and save it with the specified name. You can see a list of the current
-exported snapshots in the cluster with the following command:</p>
+<p>This will take an in-memory snapshot of the job state and cancel it. The
+job will not process any data after the snapshot was taken and is
+cleanly taken down. You can see a list of current exported snapshots in
+the cluster with the following command:</p>
 <pre><code class="hljs css language-bash">$ bin/jet list-snapshots
 TIME                    SIZE (bytes)    JOB NAME                 SNAPSHOT NAME
 2020-03-15T14:37:01.011 1,196           hello-world              snapshot-v1
 </code></pre>
-<p>You will note that the job where the snapshot was exported from is still
-running. You can optionally atomically take a snapshot and cancel the job
-as follows:</p>
-<pre><code class="hljs css language-bash">bin/jet save-snapshot -C &lt;job name or id&gt; &lt;snapshot name&gt;
-</code></pre>
 <h3><a class="anchor" aria-hidden="true" id="starting-the-updated-job"></a><a href="#starting-the-updated-job" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Starting the Updated Job</h3>
 <p>When submitting a job, it's possible to specify an initial snapshot to
-use. The job then will start at the specified snapshot, and as long as
-state-compatibility is maintained, will continue running once the
-snapshot is restored. To submit a job starting from a specific snapshot
-you can use the following command:</p>
-<pre><code class="hljs css language-bash">bin/jet submit -s snapshot-v1 &lt;jar name&gt;
+use. The job will then start with processing state restored from the
+specified snapshot and as long as <em>state compatibility</em> is maintained,
+it will continue running once the snapshot is restored. To submit a job
+starting from a specific snapshot you can use the following command:</p>
+<pre><code class="hljs css language-bash">bin/jet submit -s &lt;snapshot name&gt; &lt;jar name&gt;
 </code></pre>
 <h2><a class="anchor" aria-hidden="true" id="memory-requirements"></a><a href="#memory-requirements" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Memory Requirements</h2>
-<p>Internally, Jet stores these snapshots in an <code>IMap</code>, that are separate
-from the periodic snapshots that are taken as part of the job execution.
+<p>Internally, Jet stores these snapshots in <code>IMap</code>s that are separate from
+the periodic snapshots that are taken as part of the job execution.
 Exporting snapshots requires enough available memory in the cluster to
 store the computation state.</p>
 <h2><a class="anchor" aria-hidden="true" id="state-compatibility"></a><a href="#state-compatibility" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>State Compatibility</h2>
 <p>The state has to be compatible with the updated pipeline. As a Jet
 pipeline is converted to a <a href="../architecture/distributed-computing">DAG</a>,
 the snapshot contains separate data for each vertex, identified by the
-transform name. The stateful transforms in previous and updated pipeline
-must have the same name for the state to be restored successfully. Once
-the job is started again from a snapshot, the following rules are
-applied:</p>
+transform name. The stateful transforms in the previous and tje updated
+pipeline must have the same name for the state to be restored
+successfully. Once the job is started again from a snapshot, the
+following rules are applied:</p>
 <ul>
 <li>If a transform was not in the previous version and is available in the
 new version, the transform will be restored with an empty state.</li>
-<li>If a transform was in the previous version, and not in the new
+<li>If a transform was in the previous version and is not in the new
 version, then its state will simply be ignored.</li>
-<li>If the transform exited in the previous version and exists in the new
-version as well and their names much, then the state from the previous
-version will be restored as the state of the new transform.</li>
+<li>If the transform existed in the previous version and also exists in
+the new version and their names match, then the state from the
+previous version will be restored as the state of the new transform.</li>
 </ul>
-<p>Using these rules, the following are possible:</p>
+<p>Using these rules the following is possible:</p>
 <ul>
 <li>you can add and new stateful stages and remove existing ones without
 breaking compatibility. This includes adding/removing a source or sink
 or adding a new aggregation path from existing sources.</li>
-<li>you can freely add, remove or change stateless stages, such as
+<li>you can freely add, remove or change <em>stateless</em> stages, such as
 filter/map/flatMap stages, sinks and others</li>
 </ul>
-<p>You can also find additional information about what state is stored
-under the Javadoc for each transform. Here are some examples of other
-supported changes:</p>
+<p>You can find information about what state is stored under the Javadoc
+for each transform. Here are some examples of other supported changes:</p>
 <ul>
-<li>adding new sinks to existing pipeline stages</li>
+<li>adding new sources/sinks to existing pipeline stages</li>
 <li>adding new branches to existing pipeline stages</li>
 <li>change session window timeout</li>
 <li>change connection parameters of sources/sinks</li>
-<li>enable early results for a window</li>
-<li>for sliding windows, you can increase or reduce the window size while
-keeping the step size the same.</li>
-<li>increase eviction timeout for stateful map</li>
+<li>enable/disable early results for a window</li>
+<li>for sliding windows you can increase or reduce the window size or the
+slide length</li>
+<li>change eviction timeout for stateful map</li>
 <li>change parameters of aggregate operation: for example, change the
 comparator of <code>AggregateOperation.minBy()</code></li>
 <li>tweak the aggregate operation, but accumulator type has to stay the
@@ -168,12 +164,27 @@ same</li>
 <p>The following changes are not supported:</p>
 <ul>
 <li>change a sliding window to a session window</li>
-<li>change size of a tumbling window to another size which is not a direct
-multiple of the previous size</li>
+<li>change the size of a tumbling window to another size which is not an
+integer multiple of the previous size</li>
 <li>replace aggregation operation for another one with a different
 accumulator</li>
 <li>rename a stateful stage</li>
 </ul>
+<h3><a class="anchor" aria-hidden="true" id="caveats-when-changing-window-parameters"></a><a href="#caveats-when-changing-window-parameters" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Caveats when changing window parameters</h3>
+<p>Changing window parameters is supported, but there can be a few quirks
+during the transition period. Jet accumulates events into windows as
+they arrive. When you change window size, slide step or session window
+timeout, it can not split already aggregated events into different
+accumulators, however it will assign existing pre-aggregated values into
+frames based on their end time. After all the data based on events that
+were processed before the update are emitted, the results will be
+correct again.</p>
+<p>Second issue is if you extend the window size. Since Jet purges data
+when the windows for which they were needed are fully emitted, if you
+extend the window length, after the update Jet will need data that were
+already purged. As a result, after the update the windows can miss some
+data. Again, after the transition period elapses, all output will be
+correct.</p>
 <h2><a class="anchor" aria-hidden="true" id="upgrading-between-jet-versions"></a><a href="#upgrading-between-jet-versions" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Upgrading Between Jet Versions</h2>
 <p>You can also use the job update feature to update between Jet patch
 versions. We eventually also plan to support updates between minor
@@ -181,7 +192,7 @@ versions, and currently this may or may not work depending on what
 transforms are updated. Please note that you need to use <a href="lossless-restart">lossless
 restart</a> to update the Jet version without losing the
 cluster state as the whole cluster needs to be restarted.</p>
-</span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/docs/enterprise/security"><span class="arrow-prev">← </span><span>Security</span></a><a class="docs-next button" href="/docs/enterprise/lossless-restart"><span>Lossless Cluster Restart</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#updating-the-job">Updating The Job</a><ul class="toc-headings"><li><a href="#updating-the-pipeline">Updating The Pipeline</a></li><li><a href="#exporting-a-snapshot">Exporting A Snapshot</a></li><li><a href="#starting-the-updated-job">Starting the Updated Job</a></li></ul></li><li><a href="#memory-requirements">Memory Requirements</a></li><li><a href="#state-compatibility">State Compatibility</a></li><li><a href="#upgrading-between-jet-versions">Upgrading Between Jet Versions</a></li></ul></nav></div><footer class="nav-footer" id="footer"><section class="sitemap"><a href="/" class="nav-home"><img src="/img/logo-light.svg" alt="Hazelcast Jet" width="200" height="40"/></a><div><h5>Docs</h5><a href="/docs/get-started/intro">Get Started</a><a href="/docs/concepts/dag">Concepts and Architecture</a><a href="/docs/tutorials/kafka">Tutorials</a><a href="/docs/operations/installation">Operations Guide</a></div><div><h5>Community</h5><a href="https://groups.google.com/forum/#!forum/hazelcast-jet" target="_blank" rel="noreferrer noopener">Google Groups</a><a href="http://stackoverflow.com/questions/tagged/hazelcast-jet" target="_blank" rel="noreferrer noopener">Stack Overflow</a><a href="https://gitter.im/hazelcast/hazelcast-jet">Gitter Chat</a></div><div><h5>Latest From the Blog</h5><a href="/blog/2020/03/02/jet-40-is-released">Jet 4.0 is Released</a><a href="/blog/2020/02/20/transactional-processors">Transactional connectors in Hazelcast Jet</a><a href="/blog/2020/01/28/new-website">Announcing New Documentation Website</a><a href="/blog/2019/11/12/stream-deduplication">Stream Deduplication with Hazelcast Jet</a></div><div><h5>More</h5><a href="https://github.com/hazelcast/hazelcast-jet">GitHub Project</a><a href="https://github.com/hazelcast/hazelcast-jet/issues">Issue Tracker</a><a href="http://hazelcast.com/company/careers/">Work at Hazelcast</a><a href="/license">License</a><a class="github-button" href="https://github.com/hazelcast/hazelcast-jet" data-icon="octicon-star" data-count-href="/facebook/docusaurus/stargazers" data-show-count="true" data-count-aria-label="# stargazers on GitHub" aria-label="Star this project on GitHub">Star</a></div></section><section class="copyright">Copyright © 2020 Hazelcast Inc.</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
+</span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/docs/enterprise/security"><span class="arrow-prev">← </span><span>Security</span></a><a class="docs-next button" href="/docs/enterprise/lossless-restart"><span>Lossless Cluster Restart</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#updating-the-job">Updating The Job</a><ul class="toc-headings"><li><a href="#updating-the-pipeline">Updating The Pipeline</a></li><li><a href="#exporting-a-snapshot">Exporting A Snapshot</a></li><li><a href="#starting-the-updated-job">Starting the Updated Job</a></li></ul></li><li><a href="#memory-requirements">Memory Requirements</a></li><li><a href="#state-compatibility">State Compatibility</a><ul class="toc-headings"><li><a href="#caveats-when-changing-window-parameters">Caveats when changing window parameters</a></li></ul></li><li><a href="#upgrading-between-jet-versions">Upgrading Between Jet Versions</a></li></ul></nav></div><footer class="nav-footer" id="footer"><section class="sitemap"><a href="/" class="nav-home"><img src="/img/logo-light.svg" alt="Hazelcast Jet" width="200" height="40"/></a><div><h5>Docs</h5><a href="/docs/get-started/intro">Get Started</a><a href="/docs/concepts/dag">Concepts and Architecture</a><a href="/docs/tutorials/kafka">Tutorials</a><a href="/docs/operations/installation">Operations Guide</a></div><div><h5>Community</h5><a href="https://groups.google.com/forum/#!forum/hazelcast-jet" target="_blank" rel="noreferrer noopener">Google Groups</a><a href="http://stackoverflow.com/questions/tagged/hazelcast-jet" target="_blank" rel="noreferrer noopener">Stack Overflow</a><a href="https://gitter.im/hazelcast/hazelcast-jet">Gitter Chat</a></div><div><h5>Latest From the Blog</h5><a href="/blog/2020/03/02/jet-40-is-released">Jet 4.0 is Released</a><a href="/blog/2020/02/20/transactional-processors">Transactional connectors in Hazelcast Jet</a><a href="/blog/2020/01/28/new-website">Announcing New Documentation Website</a><a href="/blog/2019/11/12/stream-deduplication">Stream Deduplication with Hazelcast Jet</a></div><div><h5>More</h5><a href="https://github.com/hazelcast/hazelcast-jet">GitHub Project</a><a href="https://github.com/hazelcast/hazelcast-jet/issues">Issue Tracker</a><a href="http://hazelcast.com/company/careers/">Work at Hazelcast</a><a href="/license">License</a><a class="github-button" href="https://github.com/hazelcast/hazelcast-jet" data-icon="octicon-star" data-count-href="/facebook/docusaurus/stargazers" data-show-count="true" data-count-aria-label="# stargazers on GitHub" aria-label="Star this project on GitHub">Star</a></div></section><section class="copyright">Copyright © 2020 Hazelcast Inc.</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
                 document.addEventListener('keyup', function(e) {
                   if (e.target !== document.body) {
                     return;
