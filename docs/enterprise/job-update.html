@@ -121,7 +121,7 @@ store the computation state.</p>
 <p>The state has to be compatible with the updated pipeline. As a Jet
 pipeline is converted to a <a href="../architecture/distributed-computing">DAG</a>,
 the snapshot contains separate data for each vertex, identified by the
-transform name. The stateful transforms in the previous and tje updated
+transform name. The stateful transforms in the previous and the updated
 pipeline must have the same name for the state to be restored
 successfully. Once the job is started again from a snapshot, the
 following rules are applied:</p>
@@ -136,11 +136,11 @@ previous version will be restored as the state of the new transform.</li>
 </ul>
 <p>Using these rules the following is possible:</p>
 <ul>
-<li>you can add and new stateful stages and remove existing ones without
+<li>you can add new stateful stages and remove existing ones without
 breaking compatibility. This includes adding/removing a source or sink
 or adding a new aggregation path from existing sources.</li>
 <li>you can freely add, remove or change <em>stateless</em> stages, such as
-filter/map/flatMap stages, sinks and others</li>
+filter/map/flatMap stages, transactional sinks and others</li>
 </ul>
 <p>You can find information about what state is stored under the Javadoc
 for each transform. Here are some examples of other supported changes:</p>
@@ -150,8 +150,8 @@ for each transform. Here are some examples of other supported changes:</p>
 <li>change session window timeout</li>
 <li>change connection parameters of sources/sinks</li>
 <li>enable/disable early results for a window</li>
-<li>for sliding windows you can increase or reduce the window size or the
-slide length</li>
+<li>for sliding windows or tumbling windows you can increase or reduce the
+window size or the slide length</li>
 <li>change eviction timeout for stateful map</li>
 <li>change parameters of aggregate operation: for example, change the
 comparator of <code>AggregateOperation.minBy()</code></li>
@@ -164,8 +164,6 @@ same</li>
 <p>The following changes are not supported:</p>
 <ul>
 <li>change a sliding window to a session window</li>
-<li>change the size of a tumbling window to another size which is not an
-integer multiple of the previous size</li>
 <li>replace aggregation operation for another one with a different
 accumulator</li>
 <li>rename a stateful stage</li>
@@ -191,8 +189,9 @@ versions. We eventually also plan to support updates between minor
 versions, and currently this may or may not work depending on what
 transforms are updated. Please note that you need to use <a href="lossless-restart">lossless
 restart</a> to update the Jet version without losing the
-cluster state as the whole cluster needs to be restarted.</p>
-</span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/docs/enterprise/security"><span class="arrow-prev">← </span><span>Security</span></a><a class="docs-next button" href="/docs/enterprise/lossless-restart"><span>Lossless Cluster Restart</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#updating-the-job">Updating The Job</a><ul class="toc-headings"><li><a href="#updating-the-pipeline">Updating The Pipeline</a></li><li><a href="#exporting-a-snapshot">Exporting A Snapshot</a></li><li><a href="#starting-the-updated-job">Starting the Updated Job</a></li></ul></li><li><a href="#memory-requirements">Memory Requirements</a></li><li><a href="#state-compatibility">State Compatibility</a><ul class="toc-headings"><li><a href="#caveats-when-changing-window-parameters">Caveats when changing window parameters</a></li></ul></li><li><a href="#upgrading-between-jet-versions">Upgrading Between Jet Versions</a></li></ul></nav></div><footer class="nav-footer" id="footer"><section class="sitemap"><a href="/" class="nav-home"><img src="/img/logo-light.svg" alt="Hazelcast Jet" width="200" height="40"/></a><div><h5>Docs</h5><a href="/docs/get-started/intro">Get Started</a><a href="/docs/concepts/dag">Concepts and Architecture</a><a href="/docs/tutorials/kafka">Tutorials</a><a href="/docs/operations/installation">Operations Guide</a></div><div><h5>Community</h5><a href="https://groups.google.com/forum/#!forum/hazelcast-jet" target="_blank" rel="noreferrer noopener">Google Groups</a><a href="http://stackoverflow.com/questions/tagged/hazelcast-jet" target="_blank" rel="noreferrer noopener">Stack Overflow</a><a href="https://gitter.im/hazelcast/hazelcast-jet">Gitter Chat</a></div><div><h5>Latest From the Blog</h5><a href="/blog/2020/03/02/jet-40-is-released">Jet 4.0 is Released</a><a href="/blog/2020/02/20/transactional-processors">Transactional connectors in Hazelcast Jet</a><a href="/blog/2020/01/28/new-website">Announcing New Documentation Website</a><a href="/blog/2019/11/12/stream-deduplication">Stream Deduplication with Hazelcast Jet</a></div><div><h5>More</h5><a href="https://github.com/hazelcast/hazelcast-jet">GitHub Project</a><a href="https://github.com/hazelcast/hazelcast-jet/issues">Issue Tracker</a><a href="http://hazelcast.com/company/careers/">Work at Hazelcast</a><a href="/license">License</a><a class="github-button" href="https://github.com/hazelcast/hazelcast-jet" data-icon="octicon-star" data-count-href="/facebook/docusaurus/stargazers" data-show-count="true" data-count-aria-label="# stargazers on GitHub" aria-label="Star this project on GitHub">Star</a></div></section><section class="copyright">Copyright © 2020 Hazelcast Inc.</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
+cluster state as the whole cluster needs to be restarted to update Jet
+version.</p>
+</span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/docs/enterprise/security"><span class="arrow-prev">← </span><span>Security</span></a><a class="docs-next button" href="/docs/enterprise/lossless-restart"><span>Lossless Cluster Restart</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#updating-the-job">Updating The Job</a><ul class="toc-headings"><li><a href="#updating-the-pipeline">Updating The Pipeline</a></li><li><a href="#exporting-a-snapshot">Exporting A Snapshot</a></li><li><a href="#starting-the-updated-job">Starting the Updated Job</a></li></ul></li><li><a href="#memory-requirements">Memory Requirements</a></li><li><a href="#state-compatibility">State Compatibility</a><ul class="toc-headings"><li><a href="#caveats-when-changing-window-parameters">Caveats when changing window parameters</a></li></ul></li><li><a href="#upgrading-between-jet-versions">Upgrading Between Jet Versions</a></li></ul></nav></div><footer class="nav-footer" id="footer"><section class="sitemap"><a href="/" class="nav-home"><img src="/img/logo-light.svg" alt="Hazelcast Jet" width="200" height="40"/></a><div><h5>Docs</h5><a href="/docs/get-started/intro">Get Started</a><a href="/docs/concepts/dag">Concepts and Architecture</a><a href="/docs/tutorials/kafka">Tutorials</a><a href="/docs/operations/installation">Operations Guide</a><a href="/docs/enterprise">Enterprise Edition</a></div><div><h5>Community</h5><a href="https://groups.google.com/forum/#!forum/hazelcast-jet" target="_blank" rel="noreferrer noopener">Google Groups</a><a href="http://stackoverflow.com/questions/tagged/hazelcast-jet" target="_blank" rel="noreferrer noopener">Stack Overflow</a><a href="https://gitter.im/hazelcast/hazelcast-jet">Gitter Chat</a></div><div><h5>Latest From the Blog</h5><a href="/blog/2020/03/02/jet-40-is-released">Jet 4.0 is Released</a><a href="/blog/2020/02/20/transactional-processors">Transactional connectors in Hazelcast Jet</a><a href="/blog/2020/01/28/new-website">Announcing New Documentation Website</a><a href="/blog/2019/11/12/stream-deduplication">Stream Deduplication with Hazelcast Jet</a></div><div><h5>More</h5><a href="https://github.com/hazelcast/hazelcast-jet">GitHub Project</a><a href="https://github.com/hazelcast/hazelcast-jet/issues">Issue Tracker</a><a href="http://hazelcast.com/company/careers/">Work at Hazelcast</a><a href="/license">License</a><a class="github-button" href="https://github.com/hazelcast/hazelcast-jet" data-icon="octicon-star" data-count-href="/facebook/docusaurus/stargazers" data-show-count="true" data-count-aria-label="# stargazers on GitHub" aria-label="Star this project on GitHub">Star</a></div></section><section class="copyright">Copyright © 2020 Hazelcast Inc.</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
                 document.addEventListener('keyup', function(e) {
                   if (e.target !== document.body) {
                     return;
