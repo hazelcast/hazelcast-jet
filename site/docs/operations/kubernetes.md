@@ -502,11 +502,11 @@ hazelcast-client:
 **Note**: Hazelcast Jet Client outside Kubernetes cluster works only in
 the *Kubernetes API* mode.
 
-## Rolling Upgrade and Scaling
+## Rolling Update and Scaling
 
 Hazelcast Jet cluster is easily scalable within Kubernetes. You can use
 the standard `kubectl scale` command to change the cluster size. The
-same applies the rolling upgrade procedure, you can depend on the
+same applies the rolling update procedure, you can depend on the
 standard Kubernetes behavior and just update the new version to your
 `Deployment/StatefulSet` configurations.
 

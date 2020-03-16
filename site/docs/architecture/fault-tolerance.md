@@ -169,6 +169,6 @@ the user: it's created upon user request and is stored in the cluster
 until the user decides do remove it. -->
 
 <!--
-Exported snapshots are mainly used to upgrade the job: job is cancelled
+Exported snapshots are mainly used to update the job: job is cancelled
 with a snapshot and a new job is submitted that will use the saved
 snapshot for initial state.  -->

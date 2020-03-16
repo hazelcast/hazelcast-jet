@@ -107,10 +107,10 @@ for creating the `JetInstance`. Enterprise version is automatically
 detected during startup. License key needs to be set inside the config
 before node startup.
 
-## Install Using Docker
+<!-- ## Install Using Docker -->
 
-TODO
+<!-- TODO -->
 
-## Install Using Helm
+<!-- ## Install Using Helm -->
 
-TODO, maybe another document?
+<!-- TODO, maybe another document? -->

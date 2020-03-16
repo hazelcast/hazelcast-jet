@@ -16,9 +16,9 @@ Once you have downloaded it, unzip it to a folder:
 tar zxvf hazelcast-jet-enterprise-4.0.tar.gz
 ```
 
-## Run using Docker
+<!-- ## Run using Docker -->
 
-TODO
+<!-- TODO -->
 
 ## Setting License Key
 
