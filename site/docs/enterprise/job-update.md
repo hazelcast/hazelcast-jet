@@ -83,7 +83,7 @@ store the computation state.
 The state has to be compatible with the updated pipeline. As a Jet
 pipeline is converted to a [DAG](../architecture/distributed-computing),
 the snapshot contains separate data for each vertex, identified by the
-transform name. The stateful transforms in the previous and tje updated
+transform name. The stateful transforms in the previous and the updated
 pipeline must have the same name for the state to be restored
 successfully. Once the job is started again from a snapshot, the
 following rules are applied:
@@ -98,11 +98,11 @@ following rules are applied:
 
 Using these rules the following is possible:
 
-* you can add and new stateful stages and remove existing ones without
+* you can add new stateful stages and remove existing ones without
   breaking compatibility. This includes adding/removing a source or sink
   or adding a new aggregation path from existing sources.
 * you can freely add, remove or change _stateless_ stages, such as
-  filter/map/flatMap stages, sinks and others
+  filter/map/flatMap stages, transactional sinks and others
 
 You can find information about what state is stored under the Javadoc
 for each transform. Here are some examples of other supported changes:
@@ -112,8 +112,8 @@ for each transform. Here are some examples of other supported changes:
 * change session window timeout
 * change connection parameters of sources/sinks
 * enable/disable early results for a window
-* for sliding windows you can increase or reduce the window size or the
-  slide length
+* for sliding windows or tumbling windows you can increase or reduce the
+  window size or the slide length
 * change eviction timeout for stateful map
 * change parameters of aggregate operation: for example, change the
   comparator of `AggregateOperation.minBy()`
@@ -126,8 +126,6 @@ for each transform. Here are some examples of other supported changes:
 The following changes are not supported:
 
 * change a sliding window to a session window
-* change the size of a tumbling window to another size which is not an
-  integer multiple of the previous size
 * replace aggregation operation for another one with a different
   accumulator
 * rename a stateful stage
@@ -157,4 +155,5 @@ versions. We eventually also plan to support updates between minor
 versions, and currently this may or may not work depending on what
 transforms are updated. Please note that you need to use [lossless
 restart](lossless-restart) to update the Jet version without losing the
-cluster state as the whole cluster needs to be restarted.
+cluster state as the whole cluster needs to be restarted to update Jet
+version.
