@@ -118,21 +118,13 @@ public class DelegatingSerializationService extends AbstractSerializationService
             try {
                 serializer = delegate.serializerFor(object);
             } catch (HazelcastSerializationException hse) {
-                throw handle(clazz, hse);
+                throw new SerializationFailure(clazz, hse);
             }
         }
         if (serializer == null) {
-            throw active ? new MissingSerializer(clazz) : new HazelcastInstanceNotActiveException();
+            throw active ? new SerializationFailure(clazz) : new HazelcastInstanceNotActiveException();
         }
         return serializer;
-    }
-
-    private RuntimeException handle(Class<?> clazz, HazelcastSerializationException e) {
-        String message = e.getMessage();
-        if (message != null && message.startsWith("There is no suitable serializer for")) {
-            return new MissingSerializer(clazz);
-        }
-        return e;
     }
 
     @Override
@@ -142,21 +134,13 @@ public class DelegatingSerializationService extends AbstractSerializationService
             try {
                 serializer = delegate.serializerFor(typeId);
             } catch (HazelcastSerializationException hse) {
-                throw handle(typeId, hse);
+                throw new SerializationFailure(typeId, hse);
             }
         }
         if (serializer == null) {
-            throw active ? new MissingSerializer(typeId) : new HazelcastInstanceNotActiveException();
+            throw active ? new SerializationFailure(typeId) : new HazelcastInstanceNotActiveException();
         }
         return serializer;
-    }
-
-    private RuntimeException handle(int typeId, HazelcastSerializationException e) {
-        String message = e.getMessage();
-        if (message != null && message.startsWith("There is no suitable de-serializer for")) {
-            return new MissingSerializer(typeId);
-        }
-        return e;
     }
 
     @Override

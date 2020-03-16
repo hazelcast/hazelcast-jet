@@ -18,16 +18,25 @@ package com.hazelcast.jet.impl.serialization;
 
 import com.hazelcast.jet.JetException;
 
-class MissingSerializer extends JetException {
+class SerializationFailure extends JetException {
 
-    MissingSerializer(Class<?> clazz) {
+    SerializationFailure(Class<?> clazz) {
         super("There is no suitable serializer for " + clazz +
-                ". Did you register it with JobConfig.registerSerializer()?");
+                ", did you register it with JobConfig.registerSerializer()?");
     }
 
-    MissingSerializer(int typeId) {
+    SerializationFailure(Class<?> clazz, Throwable t) {
+        super("Unable to serialize instance of " + clazz +
+                ". Note: You can register a serializer using JobConfig.registerSerializer()", t);
+    }
+
+    SerializationFailure(int typeId) {
         super("There is no suitable de-serializer for type " + typeId + ". "
                 + "This exception is likely caused by differences in the serialization configuration between members "
                 + "or between clients and members.");
+    }
+
+    SerializationFailure(int typeId, Throwable t) {
+        super("Unable to deserialize object for type " + typeId, t);
     }
 }
