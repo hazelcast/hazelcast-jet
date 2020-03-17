@@ -47,9 +47,9 @@
       "operations/monitoring"
     ],
     "Architecture": [
-      "architecture/cluster-topology",
-      "architecture/distributed-computing",
       "architecture/execution-engine",
+      "architecture/distributed-computing",
+      "architecture/cluster-topology",
       "architecture/fault-tolerance",
       "architecture/in-memory-storage",
 	    "architecture/event-time-processing"
