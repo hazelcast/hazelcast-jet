@@ -16,10 +16,7 @@
 
 package com.hazelcast.jet.sql.imap;
 
-import com.hazelcast.instance.impl.HazelcastInstanceImpl;
-import com.hazelcast.internal.serialization.InternalSerializationService;
-import com.hazelcast.internal.serialization.impl.DefaultSerializationServiceBuilder;
-import com.hazelcast.internal.serialization.impl.HeapData;
+import com.hazelcast.function.BiFunctionEx;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Vertex;
@@ -27,13 +24,13 @@ import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.core.processor.SinkProcessors;
 import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.pipeline.ServiceFactories;
-import com.hazelcast.jet.pipeline.ServiceFactory;
 import com.hazelcast.jet.sql.SqlConnector;
 import com.hazelcast.jet.sql.schema.JetTable;
 import com.hazelcast.projection.Projection;
+import com.hazelcast.query.Predicate;
 import com.hazelcast.query.Predicates;
 import com.hazelcast.sql.impl.expression.Expression;
-import com.hazelcast.sql.impl.row.HeapRow;
+import com.hazelcast.sql.impl.row.Row;
 import com.hazelcast.sql.impl.type.QueryDataType;
 import org.apache.calcite.rex.RexNode;
 import org.apache.commons.beanutils.BeanUtilsBean;
@@ -41,6 +38,7 @@ import org.apache.commons.beanutils.PropertyUtils;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.io.Serializable;
 import java.lang.reflect.InvocationTargetException;
 import java.util.Collections;
 import java.util.List;
@@ -48,9 +46,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 import static com.hazelcast.jet.Util.entry;
-import static com.hazelcast.jet.core.Edge.between;
-import static com.hazelcast.jet.core.processor.DiagnosticProcessors.peekInputP;
-import static com.hazelcast.jet.core.processor.Processors.filterUsingServiceP;
 import static com.hazelcast.jet.core.processor.SourceProcessors.readMapP;
 import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
 import static com.hazelcast.jet.impl.util.Util.toList;
@@ -106,7 +101,7 @@ public class IMapSqlConnector implements SqlConnector {
         String mapName = table.getMapName();
 
         // convert the projection
-        List<String> fieldNames = toList(table.getFields(), en -> {
+        List<String> fieldNames = toList(table.getFieldNames(), fieldName -> {
             // convert field name, the property path must start with "key" or "value", we're getting
             // it from a java.util.Map.Entry. Examples:
             //     "__key" -> "key"
@@ -114,7 +109,6 @@ public class IMapSqlConnector implements SqlConnector {
             //     "fieldB" -> "value.fieldB"
             //     "this" -> "value"
             //     "this.fieldB" -> "value.fieldB"
-            String fieldName = en.getKey();
             if (fieldName.equals(KEY_ATTRIBUTE_NAME.value())) {
                 return "key";
             } else if (fieldName.startsWith(KEY_ATTRIBUTE_NAME.value())) {
@@ -143,24 +137,50 @@ public class IMapSqlConnector implements SqlConnector {
             return res;
         };
 
-        Vertex vRead = dag.newVertex("map(" + mapName + ")",
-                readMapP(mapName, Predicates.alwaysTrue(), mapProjection));
+        // convert the predicate
+        // TODO make the ReadMapOrCacheP.LocalProcessorMetaSupplier implement IdentifiedDataSerializable
+        Predicate<Object, Object> mapPredicate;
         if (predicate == null) {
-            return tuple2(vRead, vRead);
+            mapPredicate = Predicates.alwaysTrue();
         } else {
-            // the com.hazelcast.sql.impl.expression.Expression isn't java-serializable and Jet only
-            // serializes the DAG using java serialization. Let's serialize it using hz-serialization manually.
-            // TODO this is a quick and dirty solution
-            InternalSerializationService ss = new DefaultSerializationServiceBuilder().build();
-            byte[] predicateBytes = ss.toBytes(predicate);
-            ServiceFactory<?, Expression<Boolean>> sf = ServiceFactories.sharedService(pCtx -> {
-                HazelcastInstanceImpl hzInstance = (HazelcastInstanceImpl) pCtx.jetInstance().getHazelcastInstance();
-                return hzInstance.getSerializationService().toObject(new HeapData(predicateBytes));
-            });
-            Vertex vFilter = dag.newVertex("filter",
-                    peekInputP(filterUsingServiceP(sf, (p, row) -> p.eval(new HeapRow((Object[]) row)))));
-            dag.edge(between(vRead, vFilter).isolated());
-            return tuple2(vRead, vFilter);
+            ResettablePropertyRow<Entry<Object, Object>> resettablePropertyRow = new ResettablePropertyRow<>(fieldNames.size(),
+                    (entry, index) -> PropertyUtils.getProperty(entry, fieldNames.get(index)));
+            mapPredicate = entry -> {
+                resettablePropertyRow.setCurrentObject(entry);
+                return predicate.eval(resettablePropertyRow) == Boolean.TRUE;
+            };
+        }
+
+        Vertex vRead = dag.newVertex("map(" + mapName + ")",
+                readMapP(mapName, mapPredicate, mapProjection));
+        return tuple2(vRead, vRead);
+    }
+
+    // TODO extract this class for reuse in other connectors
+    private static final class ResettablePropertyRow<O> implements Row, Serializable {
+
+        private final int columnCount;
+        private final BiFunctionEx<O, Integer, Object> extractor;
+        private O currentObject;
+
+        protected ResettablePropertyRow(int columnCount, BiFunctionEx<O, Integer, Object> extractor) {
+            this.columnCount = columnCount;
+            this.extractor = extractor;
+        }
+
+        @SuppressWarnings("unchecked")
+        @Override
+        public <T> T get(int index) {
+            return (T) extractor.apply(currentObject, index);
+        }
+
+        public void setCurrentObject(O object) {
+            this.currentObject = object;
+        }
+
+        @Override
+        public int getColumnCount() {
+            return columnCount;
         }
     }
 

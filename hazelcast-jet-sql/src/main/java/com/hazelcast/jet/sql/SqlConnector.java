@@ -60,6 +60,17 @@ public interface SqlConnector {
      *     <li>{@code f0}: the source vertex of the sub-DAG
      *     <li>{@code f1}: the sink vertex of teh sub-DAG
      * </ul>
+     * <p>
+     * The field indexes in the predicate and projection both refer to indexes
+     * of original fields of the jetTable. That is if the table has fields
+     * {@code a, b, c} and the query is:
+     *
+     * <pre>{@code
+     *     SELECT b FROM t WHERE c=10
+     * }</pre>
+     *
+     * Then the projection will be {@code {1}} and the predicate will be {@code
+     * {2}=10}.
      *
      * @param predicate  SQL expression to filter the rows
      * @param projection list of field names to return

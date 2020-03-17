@@ -86,8 +86,8 @@ public class SqlTest extends SimpleTestInClusterSupport {
     @Test
     public void fullScan_filter() throws Exception {
         assertRowsAnyOrder(
-                "SELECT * FROM " + INT_TO_STRING_MAP + " WHERE __key=1",
-                singletonList(new Row(1, "value-1")));
+                "SELECT this FROM " + INT_TO_STRING_MAP + " WHERE __key=1",
+                singletonList(new Row("value-1")));
     }
 
     private void assertRowsAnyOrder(String sql, Collection<Row> expectedRows) throws Exception {
