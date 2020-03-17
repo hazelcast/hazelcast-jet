@@ -16,10 +16,6 @@ Once you have downloaded it, unzip it to a folder:
 tar zxvf hazelcast-jet-enterprise-4.0.tar.gz
 ```
 
-<!-- ## Run using Docker -->
-
-<!-- TODO -->
-
 ## Setting License Key
 
 Like with the Jet Enterprise Server, Jet Management Center also requires
@@ -75,6 +71,70 @@ password is `admin:admin` which you can change inside
 
 You should be able to see the "hello-world" job running on the cluster,
 if you've submitted it earlier.
+
+## Run using Docker
+
+Hazelcast Jet Management Center can also be started with Docker.
+The Docker image requires a license key to start Management Center.
+The license key can be passed to the container with the `MC_LICENSE_KEY`
+ environment property.
+
+Run the following command to start Management Center container:
+
+```bash
+docker run -e MC_LICENSE_KEY=<your-license-key> -p 8081:8081 hazelcast/hazelcast-jet-management-center
+```
+
+After the container has been started, the Hazelcast Jet Management
+Center can be reached from the  browser using the URL <http://localhost:8081>
+. One thing to note that we are using `-p` flag to map the `8081` port
+of the container to the same port on the host machine.
+
+To point Management Center to an existing cluster on Docker, a
+configuration file which contains IP addresses of the cluster members
+needs to be added to Management Center container. To achieve that,
+create a `hazelcast-client.yaml` file with the following content on the
+host machine:
+
+```yaml
+hazelcast-client:
+  cluster-name: jet
+  network:
+    cluster-members:
+      - 172.17.0.2:5701
+```
+
+Then Management Center container can be started with the configuration
+file above by mapping the folder on host machine to the container.
+
+```bash
+docker run -e MC_LICENSE_KEY=<your-license-key> -p 8081:8081 -v /path/to/hazelcast-client.yaml:/conf/hazelcast-client.yaml -e MC_CLIENT_CONFIG=/conf/hazelcast-client.yaml hazelcast/hazelcast-jet-management-center
+```
+
+After running the command above, the output should be similar to the
+below:
+
+```log
+...
+...
+2020-03-17 14:31:18.947  INFO 1 --- [           main] c.h.j.management.service.LicenseService  : License Info : License{allowedNumberOfNodes=NNN, expiryDate=MM/DD/YYYY 23:59:59, featureList=[ Management Center, Clustered JMX, Clustered Rest, Security, Hot Restart, Jet Management Center, Jet Lossless Recovery, Jet Rolling Job Upgrade, Jet Enterprise ], type=Enterprise HD, companyName=null, ownerEmail=null, keyHash=NNN, No Version Restriction}
+
+...
+2020-03-17 14:31:17.523  INFO 1 --- [-center.event-5] c.h.c.impl.spi.ClientClusterService      : jet-management-center [jet] [4.0] [4.0]
+
+Members [1] {
+    Member [172.17.0.2]:5701 - 32349cdf-8c9a-413f-8dad-80f2ef7bbcd6
+}
+...
+...
+╔═════════════════════════════════════════════════════════════════════════════════╗
+║ Hazelcast Jet Management Center successfully started at http://localhost:8081/  ║
+╚═════════════════════════════════════════════════════════════════════════════════╝
+
+````
+
+You should be able to log into <http://localhost:8081/> and see the
+details of the cluster.
 
 ## Configuring TLS
 
