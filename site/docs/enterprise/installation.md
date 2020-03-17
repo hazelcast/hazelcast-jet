@@ -107,10 +107,102 @@ for creating the `JetInstance`. Enterprise version is automatically
 detected during startup. License key needs to be set inside the config
 before node startup.
 
-<!-- ## Install Using Docker -->
+## Install Using Docker
 
-<!-- TODO -->
+Hazelcast maintains an official Docker image for Hazelcast Jet
+ Enterprise. The Docker Image requires a license key to start Hazelcast
+ Jet instance properly. The license key can be passed to the container
+ with the `JET_LICENSE_KEY` environment property.
 
-<!-- ## Install Using Helm -->
+To start a node, run the following command:
 
-<!-- TODO, maybe another document? -->
+```bash
+docker run -e JET_LICENSE_KEY=<your_license_key> hazelcast/hazelcast-jet-enterprise
+```
+
+This should start a Hazelcast Jet node in a Docker container. Inspect
+the log output for a line like this:
+
+```text
+Members {size:1, ver:1} [
+    Member [172.17.0.2]:5701 - 4bc3691d-2575-452d-b9d9-335f177f6aff this
+]
+```
+
+Note the IP address of the Docker container and use it in the commands
+below instead of our example's `172.17.0.2`. Let's submit the Hello
+World application from the distribution package:
+
+```bash
+cd hazelcast-jet-enterprise-4.0
+docker run -it -v "$(pwd)"/examples:/examples hazelcast/hazelcast-jet-enterprise jet -a 172.17.0.2 submit /examples/hello-world.jar
+```
+
+The command mounts the local `examples` directory from `hazelcast-jet-enterprise-4.0`
+to the container and uses `jet submit` to submit the example JAR. While
+the job is running, it should produce output like this:
+
+```text
+Top 10 random numbers in the latest window:
+    1. 9,148,584,845,265,430,884
+    2. 9,062,844,734,542,410,944
+    3. 8,803,176,683,229,613,741
+    4. 8,779,035,965,085,775,340
+    5. 8,542,080,641,730,428,499
+    6. 8,528,134,348,376,217,974
+    7. 8,290,200,710,152,066,026
+    8. 8,008,893,323,519,996,615
+    9. 7,804,055,086,912,769,625
+    10. 7,681,774,251,691,230,162
+```
+
+## Install Using Helm
+
+Hazelcast Jet provides Helm charts for enterprise edition which
+also includes [Hazelcast Jet Management Center](management-center).
+
+Helm charts for Enterprise Edition are hosted on the Hazelcast Charts
+ repository which needs to ne added to the list of repositories of your
+ Helm CLI.
+
+Run the following commands to add Hazelcast Charts repository and pull
+the latest charts from there:
+
+```bash
+helm repo add hazelcast https://hazelcast.github.io/charts/
+helm repo update
+```
+
+The Helm chart requires a license key to start Hazelcast
+ Jet instances properly. The license key can be passed to the chart
+ with the `jet.licenseKey` property.
+
+Run the following command to create a Helm release from the Hazelcast
+ Jet Enterprise Helm chart:
+
+ <!--DOCUSAURUS_CODE_TABS-->
+
+<!--Helm 2-->
+
+```bash
+helm install --set jet.licenseKey=<license-key> hazelcast/hazelcast-jet-enterprise
+```
+
+<!--Helm 3-->
+
+```bash
+helm install --generate-name --set jet.licenseKey=<license-key> hazelcast/hazelcast-jet-enterprise
+```
+
+<!--END_DOCUSAURUS_CODE_TABS-->
+
+The command above will going to create a two node Hazelast Jet
+Enterprise cluster and a Hazelcast Jet Management Center deployment.
+
+After executing the command, you can follow the notes printed on screen
+to obtain a connection to the Hazelcast Jet Enterprise cluster and the
+Hazelcast Jet Management Center.
+
+For the list of available configuration options on the Hazelcast Jet
+Enterprise Helm chart please refer to [this table](https://github.com/hazelcast/charts/tree/master/stable/hazelcast-jet-enterprise#configuration)
+.
