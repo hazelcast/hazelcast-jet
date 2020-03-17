@@ -16,7 +16,6 @@
 
 package com.hazelcast.jet.sql.imap;
 
-import com.hazelcast.function.BiFunctionEx;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Vertex;
@@ -30,7 +29,7 @@ import com.hazelcast.projection.Projection;
 import com.hazelcast.query.Predicate;
 import com.hazelcast.query.Predicates;
 import com.hazelcast.sql.impl.expression.Expression;
-import com.hazelcast.sql.impl.row.Row;
+import com.hazelcast.sql.impl.row.KeyValueRow;
 import com.hazelcast.sql.impl.type.QueryDataType;
 import org.apache.calcite.rex.RexNode;
 import org.apache.commons.beanutils.BeanUtilsBean;
@@ -38,7 +37,6 @@ import org.apache.commons.beanutils.PropertyUtils;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.io.Serializable;
 import java.lang.reflect.InvocationTargetException;
 import java.util.Collections;
 import java.util.List;
@@ -48,6 +46,7 @@ import java.util.Map.Entry;
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.core.processor.SourceProcessors.readMapP;
 import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
+import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 import static com.hazelcast.jet.impl.util.Util.toList;
 import static com.hazelcast.jet.sql.Util.getRequiredTableOption;
 import static com.hazelcast.query.QueryConstants.KEY_ATTRIBUTE_NAME;
@@ -143,45 +142,26 @@ public class IMapSqlConnector implements SqlConnector {
         if (predicate == null) {
             mapPredicate = Predicates.alwaysTrue();
         } else {
-            ResettablePropertyRow<Entry<Object, Object>> resettablePropertyRow = new ResettablePropertyRow<>(fieldNames.size(),
-                    (entry, index) -> PropertyUtils.getProperty(entry, fieldNames.get(index)));
+            List<QueryDataType> fieldTypes = table.getPhysicalRowType();
             mapPredicate = entry -> {
-                resettablePropertyRow.setCurrentObject(entry);
-                return predicate.eval(resettablePropertyRow) == Boolean.TRUE;
+                KeyValueRow row = new KeyValueRow(fieldNames, fieldTypes, (key, val, path) ->
+                {
+                    try {
+                        return PropertyUtils.getProperty(entry(key, val), path);
+                    } catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
+                        throw sneakyThrow(e);
+                    }
+                });
+                row.setKeyValue(entry.getKey(), entry.getValue());
+                boolean res = predicate.eval(row) == Boolean.TRUE;
+                System.out.println("evaluated " + entry + " to " + res);
+                return res;
             };
         }
 
         Vertex vRead = dag.newVertex("map(" + mapName + ")",
                 readMapP(mapName, mapPredicate, mapProjection));
         return tuple2(vRead, vRead);
-    }
-
-    // TODO extract this class for reuse in other connectors
-    private static final class ResettablePropertyRow<O> implements Row, Serializable {
-
-        private final int columnCount;
-        private final BiFunctionEx<O, Integer, Object> extractor;
-        private O currentObject;
-
-        protected ResettablePropertyRow(int columnCount, BiFunctionEx<O, Integer, Object> extractor) {
-            this.columnCount = columnCount;
-            this.extractor = extractor;
-        }
-
-        @SuppressWarnings("unchecked")
-        @Override
-        public <T> T get(int index) {
-            return (T) extractor.apply(currentObject, index);
-        }
-
-        public void setCurrentObject(O object) {
-            this.currentObject = object;
-        }
-
-        @Override
-        public int getColumnCount() {
-            return columnCount;
-        }
     }
 
     @Nullable @Override

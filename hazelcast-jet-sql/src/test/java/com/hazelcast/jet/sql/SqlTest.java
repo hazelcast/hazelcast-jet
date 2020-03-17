@@ -34,7 +34,6 @@ import java.util.List;
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.core.TestUtil.createMap;
 import static java.util.Arrays.asList;
-import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
 import static org.junit.Assert.assertEquals;
@@ -86,8 +85,8 @@ public class SqlTest extends SimpleTestInClusterSupport {
     @Test
     public void fullScan_filter() throws Exception {
         assertRowsAnyOrder(
-                "SELECT this FROM " + INT_TO_STRING_MAP + " WHERE __key=1",
-                singletonList(new Row("value-1")));
+                "SELECT this FROM " + INT_TO_STRING_MAP + " WHERE __key=1 or this='value-0'",
+                asList(new Row("value-1"), new Row("value-0")));
     }
 
     private void assertRowsAnyOrder(String sql, Collection<Row> expectedRows) throws Exception {
