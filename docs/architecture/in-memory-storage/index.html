@@ -101,7 +101,7 @@ assigns some partition replicas to the new node. It uses the consistent
 hashing algorithm to move a minimum amount of data between the nodes
 while rebalancing. In our scenario, the new node receives one primary
 and one backup from each existing Hazelcast Jet node. For instance, from
-the 1st node it receives the primary of partition 2 and backup of
+the 1st node it receives the primary of partition 1 and backup of
 partition 2. After rebalancing the job is restarted and processor states
 are initialized from local replicas of the snapshot.</p>
 <p><img src="/docs/assets/ram-storage-3.png" alt="Figure 3"></p>
