@@ -29,7 +29,6 @@ import org.apache.calcite.rex.RexNode;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
-import java.util.function.Function;
 
 import static com.hazelcast.jet.core.Edge.between;
 
@@ -45,7 +44,9 @@ public class CreateDagVisitor {
 
     public void onConnectorFullScan(IMapScanPhysicalRel rel) {
         JetTable table = rel.getTableUnwrapped();
-        Tuple2<Vertex, Vertex> subDag = table.getSqlConnector().fullScanReader(dag, table, null, rel.getFilter(),
+        PhysicalNodeSchema schema = new PhysicalNodeSchema(table.getPhysicalRowType());
+        Expression<Boolean> predicate = convertFilter(schema, rel.getFilter());
+        Tuple2<Vertex, Vertex> subDag = table.getSqlConnector().fullScanReader(dag, table, null, predicate,
                 rel.getProjects());
         assert subDag != null : "null subDag"; // we check for this earlier TODO check for it earlier :)
         VertexAndOrdinal targetVertex = vertexStack.peek();

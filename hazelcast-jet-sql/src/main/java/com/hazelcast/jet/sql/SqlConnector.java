@@ -21,7 +21,7 @@ import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.sql.schema.JetTable;
 import com.hazelcast.sql.impl.expression.Expression;
-import org.apache.calcite.rel.type.RelProtoDataType;
+import com.hazelcast.sql.impl.type.QueryDataType;
 import org.apache.calcite.rex.RexNode;
 
 import javax.annotation.Nonnull;
@@ -48,7 +48,7 @@ public interface SqlConnector {
             @Nonnull String tableName,
             @Nonnull Map<String, String> serverOptions,
             @Nonnull Map<String, String> tableOptions,
-            @Nonnull List<Entry<String, RelProtoDataType>> fields);
+            @Nonnull List<Entry<String, QueryDataType>> fields);
 
     /**
      * Returns a supplier for a source vertex reading the input according to

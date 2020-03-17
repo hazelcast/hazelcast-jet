@@ -16,10 +16,9 @@
 
 package com.hazelcast.jet.sql.schema;
 
-import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.jet.sql.SqlConnector;
 import com.hazelcast.jet.sql.imap.IMapSqlConnector;
-import org.apache.calcite.rel.type.RelProtoDataType;
+import com.hazelcast.sql.impl.type.QueryDataType;
 import org.apache.calcite.schema.Table;
 import org.apache.calcite.schema.impl.AbstractSchema;
 
@@ -33,7 +32,6 @@ import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-import static com.hazelcast.jet.Util.entry;
 import static java.util.Collections.emptyMap;
 
 /**
@@ -97,7 +95,7 @@ public class JetSchema extends AbstractSchema {
             @Nonnull String tableName,
             @Nonnull String serverName,
             @Nonnull Map<String, String> tableOptions,
-            @Nonnull List<Entry<String, Class<?>>> fields
+            @Nonnull List<Entry<String, QueryDataType>> fields
     ) {
         createTableInt(tableName, serverName, tableOptions, fields);
     }
@@ -106,7 +104,7 @@ public class JetSchema extends AbstractSchema {
             @Nonnull String tableName,
             @Nonnull String serverName,
             @Nonnull Map<String, String> tableOptions,
-            @Nullable List<Entry<String, Class<?>>> fields
+            @Nullable List<Entry<String, QueryDataType>> fields
     ) {
         tableOptions = new HashMap<>(tableOptions); // convert to a HashMap so that we can mutate it
         Map<String, String> serverOptions = serverMap.get(serverName);
@@ -129,9 +127,7 @@ public class JetSchema extends AbstractSchema {
             if (fields.isEmpty()) {
                 throw new IllegalArgumentException("zero fields");
             }
-            List<Entry<String, RelProtoDataType>> fields1 = Util.toList(fields,
-                    field -> entry(field.getKey(), typeFactory -> typeFactory.createJavaType(field.getValue())));
-            table = connector.createTable(tableName, serverOptions, tableOptions, fields1);
+            table = connector.createTable(tableName, serverOptions, tableOptions, fields);
         }
         tableMap.put(tableName, table);
     }

@@ -18,10 +18,11 @@ package com.hazelcast.jet.sql.imap;
 
 import com.hazelcast.jet.sql.SqlConnector;
 import com.hazelcast.jet.sql.schema.JetTable;
+import com.hazelcast.sql.impl.type.QueryDataType;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
-import org.apache.calcite.rel.type.RelProtoDataType;
 import org.apache.calcite.schema.Table;
+import org.apache.calcite.util.Pair;
 
 import javax.annotation.Nonnull;
 import java.util.List;
@@ -34,13 +35,13 @@ public class IMapTable extends JetTable {
 
     private final String mapName;
     private final List<HazelcastTableIndex> indexes;
-    private final List<Entry<String, RelProtoDataType>> fields;
+    private final List<Entry<String, QueryDataType>> fields;
 
     public IMapTable(
             @Nonnull SqlConnector sqlConnector,
             @Nonnull String mapName,
             @Nonnull List<HazelcastTableIndex> indexes,
-            @Nonnull List<Entry<String, RelProtoDataType>> fields) {
+            @Nonnull List<Entry<String, QueryDataType>> fields) {
         super(sqlConnector);
         this.mapName = mapName;
         this.fields = fields;
@@ -52,6 +53,11 @@ public class IMapTable extends JetTable {
         return false;
     }
 
+    @Override
+    public List<QueryDataType> getPhysicalRowType() {
+        return Pair.right(fields);
+    }
+
     public String getMapName() {
         return mapName;
     }
@@ -60,7 +66,7 @@ public class IMapTable extends JetTable {
         return indexes;
     }
 
-    public List<Entry<String, RelProtoDataType>> getFields() {
+    public List<Entry<String, QueryDataType>> getFields() {
         return fields;
     }
 

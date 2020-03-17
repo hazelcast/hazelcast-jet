@@ -17,7 +17,10 @@
 package com.hazelcast.jet.sql.schema;
 
 import com.hazelcast.jet.sql.SqlConnector;
+import com.hazelcast.sql.impl.type.QueryDataType;
 import org.apache.calcite.schema.impl.AbstractTable;
+
+import java.util.List;
 
 public abstract class JetTable extends AbstractTable {
 
@@ -32,4 +35,6 @@ public abstract class JetTable extends AbstractTable {
     public SqlConnector getSqlConnector() {
         return sqlConnector;
     }
+
+    public abstract List<QueryDataType> getPhysicalRowType();
 }

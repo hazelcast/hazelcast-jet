@@ -21,6 +21,7 @@ import com.hazelcast.jet.SimpleTestInClusterSupport;
 import com.hazelcast.jet.sql.imap.IMapSqlConnector;
 import com.hazelcast.jet.sql.schema.JetSchema;
 import com.hazelcast.map.IMap;
+import com.hazelcast.sql.impl.type.QueryDataType;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -51,7 +52,7 @@ public class SqlTest extends SimpleTestInClusterSupport {
 
         sqlService.getSchema().createTable(INT_TO_STRING_MAP, JetSchema.IMAP_LOCAL_SERVER,
                 createMap(IMapSqlConnector.TO_MAP_NAME, INT_TO_STRING_MAP),
-                asList(entry("__key", Integer.class), entry("this", String.class)));
+                asList(entry("__key", QueryDataType.INT), entry("this", QueryDataType.VARCHAR)));
     }
 
     @Before
@@ -85,8 +86,8 @@ public class SqlTest extends SimpleTestInClusterSupport {
     @Test
     public void fullScan_filter() throws Exception {
         assertRowsAnyOrder(
-                "SELECT this FROM " + INT_TO_STRING_MAP + " WHERE __key=1",
-                singletonList(new Row("value-1")));
+                "SELECT * FROM " + INT_TO_STRING_MAP + " WHERE __key=1",
+                singletonList(new Row(1, "value-1")));
     }
 
     private void assertRowsAnyOrder(String sql, Collection<Row> expectedRows) throws Exception {

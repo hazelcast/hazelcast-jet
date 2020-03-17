@@ -16,11 +16,12 @@
 
 package com.hazelcast.jet.sql.imap;
 
+import com.hazelcast.sql.impl.type.QueryDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.rel.type.RelDataTypeFieldImpl;
 import org.apache.calcite.rel.type.RelDataTypeImpl;
-import org.apache.calcite.rel.type.RelProtoDataType;
+import org.apache.calcite.sql.type.SqlTypeName;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -30,7 +31,7 @@ public class IMapRowRelDataType extends RelDataTypeImpl {
 
     private static final String TYPE_NAME = "IMapRow";
 
-    public IMapRowRelDataType(RelDataTypeFactory typeFactory, List<Entry<String, RelProtoDataType>> fields) {
+    public IMapRowRelDataType(RelDataTypeFactory typeFactory, List<Entry<String, QueryDataType>> fields) {
         super(createFieldList(typeFactory, fields));
 
         computeDigest();
@@ -41,11 +42,11 @@ public class IMapRowRelDataType extends RelDataTypeImpl {
         sb.append("(").append(TYPE_NAME).append(getFieldNames()).append(")");
     }
 
-    private static List<RelDataTypeField> createFieldList(RelDataTypeFactory typeFactory, List<Entry<String, RelProtoDataType>> fields) {
+    private static List<RelDataTypeField> createFieldList(RelDataTypeFactory typeFactory, List<Entry<String, QueryDataType>> fields) {
         List<RelDataTypeField> res = new ArrayList<>();
         for (int i = 0; i < fields.size(); i++) {
-            Entry<String, RelProtoDataType> field = fields.get(i);
-            RelDataTypeField relDataTypeField = new RelDataTypeFieldImpl(field.getKey(), i, field.getValue().apply(typeFactory));
+            Entry<String, QueryDataType> field = fields.get(i);
+            RelDataTypeField relDataTypeField = new RelDataTypeFieldImpl(field.getKey(), i, typeFactory.createSqlType(SqlTypeName.ANY));
             res.add(relDataTypeField);
         }
         return res;
