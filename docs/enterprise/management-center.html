@@ -69,8 +69,6 @@ used to monitor a Jet cluster and manage the lifecycle of the jobs</p>
 <p>Once you have downloaded it, unzip it to a folder:</p>
 <pre><code class="hljs css language-bash">tar zxvf hazelcast-jet-enterprise-4.0.tar.gz
 </code></pre>
-<!-- ## Run using Docker -->
-<!-- TODO -->
 <h2><a class="anchor" aria-hidden="true" id="setting-license-key"></a><a href="#setting-license-key" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Setting License Key</h2>
 <p>Like with the Jet Enterprise Server, Jet Management Center also requires
 a license key. You can get a 30-day trial license from
@@ -109,6 +107,54 @@ password is <code>admin:admin</code> which you can change inside
 <code>application.properties</code>.</p>
 <p>You should be able to see the &quot;hello-world&quot; job running on the cluster,
 if you've submitted it earlier.</p>
+<h2><a class="anchor" aria-hidden="true" id="run-using-docker"></a><a href="#run-using-docker" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Run using Docker</h2>
+<p>Hazelcast Jet Management Center can also be started with Docker.
+The Docker image requires a license key to start Management Center.
+The license key can be passed to the container with the <code>MC_LICENSE_KEY</code>
+environment property.</p>
+<p>Run the following command to start Management Center container:</p>
+<pre><code class="hljs css language-bash">docker run -e MC_LICENSE_KEY=&lt;your-license-key&gt; -p 8081:8081 hazelcast/hazelcast-jet-management-center
+</code></pre>
+<p>After the container has been started, the Hazelcast Jet Management
+Center can be reached from the  browser using the URL <a href="http://localhost:8081">http://localhost:8081</a>
+. One thing to note that we are using <code>-p</code> flag to map the <code>8081</code> port
+of the container to the same port on the host machine.</p>
+<p>To point Management Center to an existing cluster on Docker, a
+configuration file which contains IP addresses of the cluster members
+needs to be added to Management Center container. To achieve that,
+create a <code>hazelcast-client.yaml</code> file with the following content on the
+host machine:</p>
+<pre><code class="hljs css language-yaml"><span class="hljs-attr">hazelcast-client:</span>
+  <span class="hljs-attr">cluster-name:</span> <span class="hljs-string">jet</span>
+  <span class="hljs-attr">network:</span>
+    <span class="hljs-attr">cluster-members:</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-number">172.17</span><span class="hljs-number">.0</span><span class="hljs-number">.2</span><span class="hljs-string">:5701</span>
+</code></pre>
+<p>Then Management Center container can be started with the configuration
+file above by mapping the folder on host machine to the container.</p>
+<pre><code class="hljs css language-bash">docker run -e MC_LICENSE_KEY=&lt;your-license-key&gt; -p 8081:8081 -v /path/to/hazelcast-client.yaml:/conf/hazelcast-client.yaml -e MC_CLIENT_CONFIG=/conf/hazelcast-client.yaml hazelcast/hazelcast-jet-management-center
+</code></pre>
+<p>After running the command above, the output should be similar to the
+below:</p>
+<pre><code class="hljs css language-log">...
+...
+<span class="hljs-number">2020</span><span class="hljs-number">-03</span><span class="hljs-number">-17</span> <span class="hljs-number">14</span>:<span class="hljs-number">31</span>:<span class="hljs-number">18.947</span>  INFO <span class="hljs-number">1</span> --- [           main] c.h.j.management.service.LicenseService  : License Info : License{allowedNumberOfNodes=NNN, expiryDate=MM/DD/YYYY <span class="hljs-number">23</span>:<span class="hljs-number">59</span>:<span class="hljs-number">59</span>, featureList=[ Management Center, Clustered JMX, Clustered Rest, Security, Hot Restart, Jet Management Center, Jet Lossless Recovery, Jet Rolling Job Upgrade, Jet Enterprise ], type=Enterprise HD, companyName=<span class="hljs-literal">null</span>, ownerEmail=<span class="hljs-literal">null</span>, keyHash=NNN, No Version Restriction}
+
+...
+<span class="hljs-number">2020</span><span class="hljs-number">-03</span><span class="hljs-number">-17</span> <span class="hljs-number">14</span>:<span class="hljs-number">31</span>:<span class="hljs-number">17.523</span>  INFO <span class="hljs-number">1</span> --- [-center.event<span class="hljs-number">-5</span>] c.h.c.impl.spi.ClientClusterService      : jet-management-center [jet] [<span class="hljs-number">4.0</span>] [<span class="hljs-number">4.0</span>]
+
+Members [<span class="hljs-number">1</span>] {
+    Member [<span class="hljs-number">172.17</span><span class="hljs-number">.0</span><span class="hljs-number">.2</span>]:<span class="hljs-number">5701</span> - <span class="hljs-number">32349</span>cdf<span class="hljs-number">-8</span>c9a<span class="hljs-number">-413f</span><span class="hljs-number">-8</span>dad<span class="hljs-number">-80f</span>2ef7bbcd6
+}
+...
+...
+╔═════════════════════════════════════════════════════════════════════════════════╗
+║ Hazelcast Jet Management Center successfully started at http:<span class="hljs-comment">//localhost:8081/  ║</span>
+╚═════════════════════════════════════════════════════════════════════════════════╝
+
+</code></pre>
+<p>You should be able to log into <a href="http://localhost:8081/">http://localhost:8081/</a> and see the
+details of the cluster.</p>
 <h2><a class="anchor" aria-hidden="true" id="configuring-tls"></a><a href="#configuring-tls" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Configuring TLS</h2>
 <p>To configure Jet Management Center to use TLS, you need to edit the
 <code>hazelcast-client.xml</code> file and configure these properties in the SSL
@@ -118,7 +164,7 @@ section:</p>
 &lt;property name=<span class="hljs-string">"trustStorePassword"</span>&gt;123456&lt;/property&gt;
 &lt;property name=<span class="hljs-string">"trustStoreType"</span>&gt;JKS&lt;/property&gt;
 </code></pre>
-</span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/docs/enterprise/installation"><span class="arrow-prev">← </span><span>Installation</span></a><a class="docs-next button" href="/docs/enterprise/security"><span>Security</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#download-management-center">Download Management Center</a></li><li><a href="#setting-license-key">Setting License Key</a></li><li><a href="#configure-cluster-ip">Configure Cluster IP</a></li><li><a href="#start-management-center">Start Management Center</a></li><li><a href="#configuring-tls">Configuring TLS</a></li></ul></nav></div><footer class="nav-footer" id="footer"><section class="sitemap"><a href="/" class="nav-home"><img src="/img/logo-light.svg" alt="Hazelcast Jet" width="200" height="40"/></a><div><h5>Docs</h5><a href="/docs/get-started/intro">Get Started</a><a href="/docs/concepts/dag">Concepts and Architecture</a><a href="/docs/tutorials/kafka">Tutorials</a><a href="/docs/operations/installation">Operations Guide</a><a href="/docs/enterprise">Enterprise Edition</a></div><div><h5>Community</h5><a href="https://groups.google.com/forum/#!forum/hazelcast-jet" target="_blank" rel="noreferrer noopener">Google Groups</a><a href="http://stackoverflow.com/questions/tagged/hazelcast-jet" target="_blank" rel="noreferrer noopener">Stack Overflow</a><a href="https://gitter.im/hazelcast/hazelcast-jet">Gitter Chat</a></div><div><h5>Latest From the Blog</h5><a href="/blog/2020/03/02/jet-40-is-released">Jet 4.0 is Released</a><a href="/blog/2020/02/20/transactional-processors">Transactional connectors in Hazelcast Jet</a><a href="/blog/2020/01/28/new-website">Announcing New Documentation Website</a><a href="/blog/2019/11/12/stream-deduplication">Stream Deduplication with Hazelcast Jet</a></div><div><h5>More</h5><a href="https://github.com/hazelcast/hazelcast-jet">GitHub Project</a><a href="https://github.com/hazelcast/hazelcast-jet/issues">Issue Tracker</a><a href="http://hazelcast.com/company/careers/">Work at Hazelcast</a><a href="/license">License</a><a class="github-button" href="https://github.com/hazelcast/hazelcast-jet" data-icon="octicon-star" data-count-href="/facebook/docusaurus/stargazers" data-show-count="true" data-count-aria-label="# stargazers on GitHub" aria-label="Star this project on GitHub">Star</a></div></section><section class="copyright">Copyright © 2020 Hazelcast Inc.</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
+</span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/docs/enterprise/installation"><span class="arrow-prev">← </span><span>Installation</span></a><a class="docs-next button" href="/docs/enterprise/security"><span>Security</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#download-management-center">Download Management Center</a></li><li><a href="#setting-license-key">Setting License Key</a></li><li><a href="#configure-cluster-ip">Configure Cluster IP</a></li><li><a href="#start-management-center">Start Management Center</a></li><li><a href="#run-using-docker">Run using Docker</a></li><li><a href="#configuring-tls">Configuring TLS</a></li></ul></nav></div><footer class="nav-footer" id="footer"><section class="sitemap"><a href="/" class="nav-home"><img src="/img/logo-light.svg" alt="Hazelcast Jet" width="200" height="40"/></a><div><h5>Docs</h5><a href="/docs/get-started/intro">Get Started</a><a href="/docs/concepts/dag">Concepts and Architecture</a><a href="/docs/tutorials/kafka">Tutorials</a><a href="/docs/operations/installation">Operations Guide</a><a href="/docs/enterprise">Enterprise Edition</a></div><div><h5>Community</h5><a href="https://groups.google.com/forum/#!forum/hazelcast-jet" target="_blank" rel="noreferrer noopener">Google Groups</a><a href="http://stackoverflow.com/questions/tagged/hazelcast-jet" target="_blank" rel="noreferrer noopener">Stack Overflow</a><a href="https://gitter.im/hazelcast/hazelcast-jet">Gitter Chat</a></div><div><h5>Latest From the Blog</h5><a href="/blog/2020/03/02/jet-40-is-released">Jet 4.0 is Released</a><a href="/blog/2020/02/20/transactional-processors">Transactional connectors in Hazelcast Jet</a><a href="/blog/2020/01/28/new-website">Announcing New Documentation Website</a><a href="/blog/2019/11/12/stream-deduplication">Stream Deduplication with Hazelcast Jet</a></div><div><h5>More</h5><a href="https://github.com/hazelcast/hazelcast-jet">GitHub Project</a><a href="https://github.com/hazelcast/hazelcast-jet/issues">Issue Tracker</a><a href="http://hazelcast.com/company/careers/">Work at Hazelcast</a><a href="/license">License</a><a class="github-button" href="https://github.com/hazelcast/hazelcast-jet" data-icon="octicon-star" data-count-href="/facebook/docusaurus/stargazers" data-show-count="true" data-count-aria-label="# stargazers on GitHub" aria-label="Star this project on GitHub">Star</a></div></section><section class="copyright">Copyright © 2020 Hazelcast Inc.</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
                 document.addEventListener('keyup', function(e) {
                   if (e.target !== document.body) {
                     return;
