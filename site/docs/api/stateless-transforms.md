@@ -16,7 +16,7 @@ done on each item individually. It simply applies a function to the
 input item, and passes the output to the next stage.
 
 ```java
-BatchStage<String> names = stage.map(name -> name.toLowerCase());
+StreamStage<String> names = stage.map(name -> name.toLowerCase());
 ```
 
 ## filter
@@ -37,7 +37,7 @@ similar to an `Iterator`. For example, the code below will split a
 sentence into individual items consisting of words:
 
 ```java
-BatchStage<String> words = stage.flatMap(
+StreamStage<String> words = stage.flatMap(
     sentence -> Traversers.traverseArray(sentence.split("\\W+"))
 );
 ```
