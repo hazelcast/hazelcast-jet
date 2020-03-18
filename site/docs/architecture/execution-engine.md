@@ -79,9 +79,9 @@ interface Outbox {
 }
 ```
 
-`offer()` is non-blocking, but will fail when the outbox is full, by
-returning `false`. The processor will react to this by returnig from its
-`process()` method, and then the tasklet returns from `call()`. The
+`offer()` is non-blocking, but will fail when the outbox is full,
+returning `false`. The processor will react to this by returning from
+its `process()` method, and then the tasklet returns from `call()`. The
 processor must preserve its state of computation so that it can resume
 where it left off the next time it's called.
 
@@ -101,7 +101,7 @@ interface Traverser<T> {
 }
 ```
 
-This lightweight contract allows us to implement `Traverser` in a single
+This lightweight contract allows us to implement `Traverser` with just a
 lambda expression. If you look at the source code of Jet processor,
 you may encounter quite complex code inside `Traverser` transforms. A
 good example is the

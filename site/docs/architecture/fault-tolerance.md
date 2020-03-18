@@ -4,31 +4,29 @@ description: Fault tolerance guarantees and options provided by Jet.
 ---
 
 Hazelcast Jet doesn't delegate its cluster management and fault
-tolerance concerns to an outside system like ZooKeeper. This comes from
-the fact that it's built on top of Hazelcast IMDG, which has already
-dealt with these concerns.
+tolerance concerns to an outside system like ZooKeeper. It reuses the
+groundwork implemented for the IMDG: cluster management and the `IMap`,
+and adds its own implementation of Chandy-Lamport distributed snapshots.
+If a cluster member fails, Jet will restart the job on the remaining
+members, restore the state of processing from the last snapshot, and
+then seamlessly continue from that point.
 
-Jet keeps processing data without loss or duplication even if a node
-fails so it’s easy to build fault-tolerant data processing pipelines.
-It uses a combination of several approaches to improve resilience.
+## Processing Guarantee is a Shared Concern
 
-## Consistency
+When you configure the processing guarantee for your job as
+_exactly-once_ or _at-least-once_, Hazelcast Jet uses the distributed
+snapshotting feature to store all the internal computation state to an
+`IMap`. However, this on its own isn't enough to provide the processing
+guarantee because the snapshot must cover the entire pipeline, from
+source to sink. Hazelcast Jet requires certain guarantees from the
+systems used as sources and sinks in a fault-tolerant data pipeline.
 
-Jet takes snapshots of the entire state of the computation at regular
-intervals. It coordinates the snapshot across the cluster and
-synchronizes it with the data source. The source must ensure that, in
-case of a restart, it will be able to re-emit all the data it emitted
-after the last snapshot. Each of the other components in the job will
-restore its processing state to exactly what it was at the time of the
-last snapshot. If a cluster member goes away, Jet will restart the job
-on the remaining members, restore the state of processing from the last
-snapshot, and then seamlessly continue from that point.
-
-The snapshots are part of the regular Jet operations. If you configure
-your job as _exactly-once_ or _at-least-once_, Jet automatically creates
-snapshots in regular intervals. Jet manages the lifecycle of the
-snapshots - the snapshot is automatically replaced by a next successful
-snapshot.
+When the job is restarting after a node failure, Jet resets the whole
+data pipeline to the state of the last snapshot. For the source this
+means rewinding back to the point of snapshot, ready to replay the items
+it already emitted in he previous (failed) job run. For the sink it's
+usually enough to support idempotence: when Jet's sink connector asks it
+to apply the same data again, it must simply stay in the same state.
 
 ## Distributed Snapshot
 
@@ -42,13 +40,15 @@ resume processing.
 
 As the barrier item reaches a processor, it stops what it’s doing and
 saves its state to the snapshot storage. Once complete, it forwards the
-barrier item to its downstream processors and so on.
+barrier item to its downstream processors and resumes. The same story
+repeats in the downstream processors, eventually reaching the sink
+processors. When they complete, the snapshot is done.
 
-Due to parallelism, in most cases a processor receives data from more
-than one upstream processor. It will receive the barrier item from each
-of them at separate times, but it must start taking a snapshot at a
-single point in time. There are two approaches it can take, as explained
-below.
+This is the basic story, but due to parallelism, in most cases a
+processor receives data from more than one upstream processor. It will
+receive the barrier item from each of them at separate times, but it
+must start taking a snapshot at a single point in time. There are two
+approaches it can take, as explained below.
 
 ### Exactly-Once
 
@@ -56,35 +56,47 @@ With exactly-once configured, as soon as the processor gets a barrier
 item in any input stream (from any upstream processor), it must stop
 consuming it until it gets the same barrier item in all the streams:
 
-![Exactly-once processing: received one barrier](assets/exactly-once-1.png)
+<img src="/docs/assets/exactly-once-1.png"
+     alt="Exactly-once processing: received one of two barrier items"
+     width="70%">
 
-1. At the barrier in stream
+1. Stream X is at the barrier, Y not yet. The processor must not accept
+   any more X items.
 
-X, but not Y. Must not accept any more X items.
-
-![Exactly-once processing: received both barriers](assets/exactly-once-2.png)
+<img src="/docs/assets/exactly-once-2.png"
+     alt="Exactly-once processing: received both barrier items"
+     width="70%">
 
 2. At the barrier in both streams, taking a snapshot.
 
-![Exactly-once processing: forward the barrier](assets/exactly-once-3.png)
+<img src="/docs/assets/exactly-once-3.png"
+     alt="Exactly-once processing: forwarding the barrier"
+     width="70%">
 
-3. Snapshot done, barrier forwarded. Can resume consuming all streams.
+3. Snapshot done, barrier forwarded. Processor resumes consuming all
+   streams.
 
 ### At-Least-Once
 
 With at-least-once configured, the processor can keep consuming all the
-streams until it gets all the barriers, at which point it will stop to
-take the snapshot:
+streams until it gets all the barriers, at which point it stops to take
+the snapshot:
 
-![At-Least-once processing: received one barrier](assets/at-least-once-1.png)
+<img src="/docs/assets/at-least-once-1.png"
+     alt="At-Least-once processing: received one barrier"
+     width="70%">
 
-1. At the barrier in stream X, but not Y. Carry on consuming all streams.
+1. Stream X is at the barrier, Y not yet. Carry on consuming all streams.
 
-![At-Least-once processing: received both barriers](assets/at-least-once-3.png)
+<img src="/docs/assets/at-least-once-2.png"
+     alt="At-Least-once processing: received both barriers"
+     width="70%">
 
 2. At the barrier in both streams, already consumed x1 and x2. Taking a snapshot.
 
-![At-Least-once processing: forward the barrier](assets/at-least-once-3.png)
+<img src="/docs/assets/at-least-once-3.png"
+     alt="At-Least-once processing: forward the barrier"
+     width="70%">
 
 3. Snapshot done, barrier forwarded.
 
