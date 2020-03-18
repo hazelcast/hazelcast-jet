@@ -19,10 +19,6 @@ package com.hazelcast.jet.sql.imap;
 import com.hazelcast.jet.sql.OptUtils;
 import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelOptRuleCall;
-import org.apache.calcite.rel.RelNode;
-
-import java.util.ArrayList;
-import java.util.List;
 
 import static com.hazelcast.jet.sql.OptUtils.CONVENTION_LOGICAL;
 
@@ -40,24 +36,15 @@ public final class IMapScanPhysicalRule extends RelOptRule {
     @Override
     public void onMatch(RelOptRuleCall call) {
         IMapScanLogicalRel scan = call.rel(0);
-
-        IMapTable table = scan.getTableUnwrapped();
-
-//        DistributionTrait distribution = getDistributionTrait(table, scan.getProjects());
-
-        List<RelNode> transforms = new ArrayList<>(1);
+        System.out.println("aaa " + scan);
 
         // Add normal map scan.
-        transforms.add(new IMapScanPhysicalRel(
+        call.transformTo(new IMapScanPhysicalRel(
             scan.getCluster(),
             OptUtils.toPhysicalConvention(scan.getTraitSet()),
             scan.getTable(),
             scan.getProjects(),
             scan.getFilter()
         ));
-
-        for (RelNode transform : transforms) {
-            call.transformTo(transform);
-        }
     }
 }

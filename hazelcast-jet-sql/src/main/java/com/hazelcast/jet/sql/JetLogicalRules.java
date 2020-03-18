@@ -31,6 +31,7 @@ import org.apache.calcite.rel.rules.FilterProjectTransposeRule;
 import org.apache.calcite.rel.rules.JoinPushExpressionsRule;
 import org.apache.calcite.rel.rules.ProjectFilterTransposeRule;
 import org.apache.calcite.rel.rules.ProjectJoinTransposeRule;
+import org.apache.calcite.rel.rules.ProjectMergeRule;
 import org.apache.calcite.rel.rules.ProjectRemoveRule;
 import org.apache.calcite.rel.rules.SemiJoinRule;
 import org.apache.calcite.rel.type.RelDataTypeField;
@@ -55,6 +56,9 @@ public class JetLogicalRules {
 
     /** Rule which merges two nearby filters together. */
     private static final FilterMergeRule FILTER_MERGE_RULE = FilterMergeRule.INSTANCE;
+
+    /** Rule which merges two nearby projects together. */
+    private static final ProjectMergeRule PROJECT_MERGE_RULE = ProjectMergeRule.INSTANCE;
 
     /** Rule which moves filter past project. */
     // TODO: Disallow "item" pushdown
@@ -91,24 +95,25 @@ public class JetLogicalRules {
         // TODO: Use HEP instead?
         return RuleSets.ofList(
                 // Join optimization rules.
-                FILTER_PULL_RULE,
-                CONDITION_PUSH_RULE,
-                EXPRESSIONS_PUSH_RULE,
+//                FILTER_PULL_RULE,
+//                CONDITION_PUSH_RULE,
+//                EXPRESSIONS_PUSH_RULE,
 
                 // Filter and project rules.
                 FILTER_MERGE_RULE,
+                PROJECT_MERGE_RULE,
                 FILTER_PROJECT_TRANSPOSE_RULE,
                 FILTER_INTO_SCAN_RULE,
                 // TODO: ProjectMergeRule: https://jira.apache.org/jira/browse/CALCITE-2223
                 PROJECT_FILTER_TRANSPOSE_RULE,
-                PROJECT_JOIN_TRANSPOSE_RULE,
+//                PROJECT_JOIN_TRANSPOSE_RULE,
                 PROJECT_REMOVE_RULE,
                 PROJECT_INTO_SCAN_RULE,
 
                 // TODO: Aggregate rules
 
-                SEMI_JOIN_PROJECT_RULE,
-                SEMI_JOIN_JOIN_RULE,
+//                SEMI_JOIN_PROJECT_RULE,
+//                SEMI_JOIN_JOIN_RULE,
 
                 // Convert Calcite node into Hazelcast nodes.
                 // TODO: Should we extend converter here instead (see Flink)?

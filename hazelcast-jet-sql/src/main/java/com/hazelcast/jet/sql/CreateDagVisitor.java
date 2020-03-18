@@ -20,6 +20,7 @@ import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.sql.expression.RexToExpressionVisitor;
+import com.hazelcast.jet.sql.imap.IMapProjectPhysicalRel;
 import com.hazelcast.jet.sql.imap.IMapScanPhysicalRel;
 import com.hazelcast.jet.sql.schema.JetTable;
 import com.hazelcast.sql.impl.expression.Expression;
@@ -74,6 +75,10 @@ public class CreateDagVisitor {
         RexToExpressionVisitor converter = new RexToExpressionVisitor(fieldTypeProvider, 0);
 
         return expression.accept(converter);
+    }
+
+    public void onProject(IMapProjectPhysicalRel rel) {
+        throw new UnsupportedOperationException("TODO");
     }
 
     private static final class VertexAndOrdinal {

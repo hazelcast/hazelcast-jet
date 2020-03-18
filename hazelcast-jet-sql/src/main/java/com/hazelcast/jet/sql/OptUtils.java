@@ -43,7 +43,17 @@ import static org.apache.calcite.plan.RelOptRule.convert;
 public final class OptUtils {
 
     public static final Convention CONVENTION_LOGICAL = new Convention.Impl("LOGICAL", LogicalRel.class);
-    public static final Convention CONVENTION_PHYSICAL = new Convention.Impl("PHYSICAL", PhysicalRel.class);
+    public static final Convention CONVENTION_PHYSICAL = new Convention.Impl("PHYSICAL", PhysicalRel.class) {
+        @Override
+        public boolean canConvertConvention(Convention toConvention) {
+            return true;
+        }
+
+        @Override
+        public boolean useAbstractConvertersForConversion(RelTraitSet fromTraits, RelTraitSet toTraits) {
+            return !fromTraits.satisfies(toTraits);
+        }
+    };
 
     private OptUtils() {
         // No-op.
