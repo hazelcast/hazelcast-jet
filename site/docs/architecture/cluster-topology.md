@@ -8,7 +8,7 @@ referred to as a *member*. Each member is a Java application, running in
 a JVM.
 
 The members automatically join together to form a cluster. There are
-[various discovery mechanisms](https://docs.hazelcast.org/docs/4.0/manual/html-single/index.html#discovery-mechanisms)
+[various discovery mechanisms](../operations/discovery)
 Jet supports. The Jet cluster automatically elects one member as the
 coordinator. It tells other members what to do and they report to it any
 status changes. The coordinator may fail and the cluster will
