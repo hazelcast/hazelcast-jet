@@ -275,8 +275,8 @@ non-distributed.
 ```java
 int itemsPerSecond = 10;
 pipeline.readFrom(TestSources.itemStream(itemsPerSecond))
-        .withNativeTimestamp(0)
-        .writeTo();
+        .withNativeTimestamps(0)
+        .writeTo(Sinks.logger());
 ```
 
 The source above will emit data as follows:
