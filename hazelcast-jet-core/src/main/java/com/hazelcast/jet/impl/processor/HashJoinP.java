@@ -31,7 +31,12 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
@@ -68,7 +73,7 @@ public class HashJoinP<E0> extends AbstractProcessor {
 
     private final List<Function<E0, Object>> keyFns;
    // private final List<Map<Object, Object>> lookupTables;
-    private RocksDBStateBackend<Object,Object> store= new RocksDBFactory<Object,Object>().getKeyValueStore();
+    private RocksDBStateBackend<Object, Object> store = new RocksDBFactory<Object, Object>().getKeyValueStore();
     private List<RocksMap<Object, Object>> lookupTables;
     private final FlatMapper<E0, Object> flatMapper;
 
@@ -118,7 +123,7 @@ public class HashJoinP<E0> extends AbstractProcessor {
        // lookupTables.set(ordinal - 1, (Map) item);
         RocksMap map = store.getMap();
         map.putAll((HashMap) item);
-        lookupTables.set(ordinal-1, map);
+        lookupTables.set(ordinal - 1, map);
         return true;
     }
 

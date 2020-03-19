@@ -45,8 +45,8 @@ public class GroupP<K, A, R, OUT> extends AbstractProcessor {
     @Nonnull private final List<FunctionEx<?, ? extends K>> groupKeyFns;
     @Nonnull private final AggregateOperation<A, R> aggrOp;
 
-    private RocksDBStateBackend<K,A> store = new RocksDBFactory<K,A>().getKeyValueStore();
-    private RocksMap<K,A> keyToAcc = store.getMap();
+    private RocksDBStateBackend<K, A> store = new RocksDBFactory<K, A>().getKeyValueStore();
+    private RocksMap<K, A> keyToAcc = store.getMap();
     private Traverser<OUT> resultTraverser;
     private final BiFunction<? super K, ? super R, OUT> mapToOutputFn;
 
@@ -77,7 +77,7 @@ public class GroupP<K, A, R, OUT> extends AbstractProcessor {
         K key = keyFn.apply(item);
        // A acc = keyToAcc.computeIfAbsent(key, k -> aggrOp.createFn().get());
         A acc = aggrOp.createFn().get();
-        keyToAcc.put(key,acc);
+        keyToAcc.put(key, acc);
         aggrOp.accumulateFn(ordinal).accept(acc, item);
         return true;
     }

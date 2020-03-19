@@ -8,5 +8,7 @@ import org.rocksdb.Options;
  * it can be used to configure database-wide and column family options
  */
 public class RocksDBOptions {
-    public Options getOptions(){return null;}
+    public Options getOptions() {
+        return null;
+    }
 }

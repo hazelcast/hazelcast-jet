@@ -1,38 +1,46 @@
 package com.hazelcast.jet.rocksdb;
 
-import org.rocksdb.*;
+import org.rocksdb.RocksDB;
+import org.rocksdb.Options;
+import org.rocksdb.ColumnFamilyHandle;
+import org.rocksdb.ColumnFamilyDescriptor;
+import org.rocksdb.RocksDBException;
 
 import java.util.ArrayList;
 
-/** Responsible for managing one RocksDB instance,
- *	opening and Closing the connection and deleting the database.
- *	Processors acquire an instance of this class on initialization.
- *	Processors use this class to acquire any number of RocksMaps they require.
- *	The datastore is logically partitioned using column families.
- *	Each RocksMap is instantiated with a ColumnFamilyHandler.
- *	Once the task has finished (complete() is invoked),
- *  the task asks it to delete the whole data-store.
+/**
+ * Responsible for managing one RocksDB instance,
+ * opening and Closing the connection and deleting the database.
+ * Processors acquire an instance of this class on initialization.
+ * Processors use this class to acquire any number of RocksMaps they require.
+ * The datastore is logically partitioned using column families.
+ * Each RocksMap is instantiated with a ColumnFamilyHandler.
+ * Once the task has finished (complete() is invoked),
+ * the task asks it to delete the whole data-store.
  */
 
-public class RocksDBStateBackend<K,V> {
+public class RocksDBStateBackend<K, V> {
     private RocksDB db;
-    private ArrayList<ColumnFamilyHandle> cfhs= new ArrayList<>();
+    private ArrayList<ColumnFamilyHandle> cfhs = new ArrayList<>();
 
-    public RocksDBStateBackend(Options opt,String directory) {
+    public RocksDBStateBackend(Options opt, String directory) {
         RocksDB.loadLibrary();
         try {
-            db = RocksDB.open(opt,directory);
+            db = RocksDB.open(opt, directory);
+        } catch (RocksDBException e) {
+            e.printStackTrace();
         }
-        catch(RocksDBException e){}
     }
-    public RocksMap<K,V> getMap(){
+    public RocksMap<K, V> getMap() {
         ColumnFamilyHandle cfh = null;
         try {
             cfh = db.createColumnFamily(new ColumnFamilyDescriptor("RocksMap1".getBytes()));
-        } catch (RocksDBException e) {}
+        } catch (RocksDBException e) {
+            e.printStackTrace();
+        }
         cfhs.add(cfh);
-        return new RocksMap<K,V>(db,cfh);
+        return new RocksMap<K, V>(db, cfh);
     }
 
-    public void deleteDataStore(){}
+    public void deleteDataStore() { }
 }
