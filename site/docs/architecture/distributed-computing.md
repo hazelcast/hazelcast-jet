@@ -3,8 +3,8 @@ title: Distributed Execution
 description: How distributed execution is orchestrated by Jet.
 ---
 
-Jet models the computations as a [Directed Acyclic Graphs
-(DAG)](concepts/dag.md), where vertices represent computation and edges
+Jet models its computation as a [Directed Acyclic Graphs
+(DAG)](concepts/dag.md) where vertices represent computation and edges
 represent data flows.
 
 ## Planner

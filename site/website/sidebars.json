@@ -53,7 +53,8 @@
       "architecture/cluster-topology",
       "architecture/fault-tolerance",
       "architecture/in-memory-storage",
-	    "architecture/event-time-processing"
+      "architecture/event-time-processing",
+      "architecture/sliding-window"
     ],
     "Design Documents": [
       "design-docs/index",
