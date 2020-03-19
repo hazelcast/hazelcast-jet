@@ -16,12 +16,13 @@
 
 package com.hazelcast.jet.impl.processor;
 
+import com.hazelcast.jet.rocksdb.RocksDBFactory;
+import com.hazelcast.jet.rocksdb.RocksDBStateBackend;
+import com.hazelcast.jet.rocksdb.RocksMap;
 import com.hazelcast.jet.core.AbstractProcessor;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
@@ -46,7 +47,9 @@ public class HashJoinCollectP<K, T, V> extends AbstractProcessor {
 
     // the value is either a V or a HashJoinArrayList (if multiple values for
     // the key were observed)
-    private final Map<K, Object> lookupTable = new HashMap<>();
+  //  private final Map<K, Object> lookupTable = new HashMap<>();
+    private RocksDBStateBackend<K,Object> store= new RocksDBFactory<K,Object>().getKeyValueStore();
+    private RocksMap<K,Object> lookupTable = store.getMap();
     @Nonnull private final Function<T, K> keyFn;
     @Nonnull private final Function<T, V> projectFn;
 
@@ -55,19 +58,21 @@ public class HashJoinCollectP<K, T, V> extends AbstractProcessor {
         this.projectFn = projectFn;
     }
 
+
     @Override
     @SuppressWarnings("unchecked")
     protected boolean tryProcess0(@Nonnull Object item) {
         T t = (T) item;
         K key = keyFn.apply(t);
         V value = projectFn.apply(t);
-        lookupTable.merge(key, value, MERGE_FN);
+        lookupTable.merge(key,value,MERGE_FN);
         return true;
     }
 
     @Override
     public boolean complete() {
-        return tryEmit(lookupTable);
+        store.deleteDataStore();
+        return tryEmit(lookupTable.getAll());
     }
 
     // We need a custom ArrayList subclass because the user's V type could be

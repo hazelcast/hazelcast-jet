@@ -17,6 +17,9 @@
 package com.hazelcast.jet.impl.processor;
 
 import com.hazelcast.jet.Traverser;
+import com.hazelcast.jet.rocksdb.RocksDBFactory;
+import com.hazelcast.jet.rocksdb.RocksDBStateBackend;
+import com.hazelcast.jet.rocksdb.RocksMap;
 import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.datamodel.ItemsByTag;
 import com.hazelcast.jet.datamodel.Tag;
@@ -28,11 +31,7 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
@@ -68,7 +67,9 @@ import static java.util.Objects.requireNonNull;
 public class HashJoinP<E0> extends AbstractProcessor {
 
     private final List<Function<E0, Object>> keyFns;
-    private final List<Map<Object, Object>> lookupTables;
+   // private final List<Map<Object, Object>> lookupTables;
+    private RocksDBStateBackend<Object,Object> store= new RocksDBFactory<Object,Object>().getKeyValueStore();
+    private List<RocksMap<Object, Object>> lookupTables;
     private final FlatMapper<E0, Object> flatMapper;
 
     private boolean ordinal0Consumed;
@@ -82,6 +83,7 @@ public class HashJoinP<E0> extends AbstractProcessor {
             @Nullable TriFunction mapToOutputTriFn
     ) {
         this.keyFns = keyFns;
+       // this.lookupTables = new ArrayList<>(Collections.nCopies(keyFns.size(), null));
         this.lookupTables = new ArrayList<>(Collections.nCopies(keyFns.size(), null));
         BiFunction<E0, Object[], Object> mapTupleToOutputFn;
         checkTrue(mapToOutputBiFn != null ^ mapToOutputTriFn != null,
@@ -113,7 +115,10 @@ public class HashJoinP<E0> extends AbstractProcessor {
     @Override
     protected boolean tryProcess(int ordinal, @Nonnull Object item) {
         assert !ordinal0Consumed : "Edge 0 must have a lower priority than all other edges";
-        lookupTables.set(ordinal - 1, (Map) item);
+       // lookupTables.set(ordinal - 1, (Map) item);
+        RocksMap map = store.getMap();
+        map.putAll((HashMap) item);
+        lookupTables.set(ordinal-1, map);
         return true;
     }
 
@@ -125,7 +130,8 @@ public class HashJoinP<E0> extends AbstractProcessor {
 
     @Nonnull
     private Object lookUpJoined(int index, E0 item) {
-        Map<Object, Object> lookupTableForOrdinal = lookupTables.get(index);
+       // Map<Object, Object> lookupTableForOrdinal = lookupTables.get(index);
+        Map<Object, Object> lookupTableForOrdinal = lookupTables.get(index).getAll();
         Object key = keyFns.get(index).apply(item);
         return lookupTableForOrdinal.get(key);
     }
