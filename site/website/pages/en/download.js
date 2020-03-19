@@ -12,10 +12,11 @@ const Container = CompLibrary.Container;
 const CWD = process.cwd();
 
 const versions = require(`${CWD}/all-versions.json`);
+const MarkdownBlock = CompLibrary.MarkdownBlock;
 
 function Downloads(props) {
   const {config: siteConfig} = props;
-  const latestVersion = versions[0];
+  const latest = versions[0];
   const repoUrl = `https://github.com/${siteConfig.organizationName}/${siteConfig.projectName}`;
   return (
     <div className="docMainWrapper wrapper">
@@ -24,24 +25,32 @@ function Downloads(props) {
           <header>
             <h1>{siteConfig.title} Downloads</h1>
           </header>
+          <MarkdownBlock>
+            The Hazelcast Jet download package includes Hazelcast Jet server and 
+            several additional modules. It requires a JDK to run, which can be obtained from 
+            [AdoptOpenJDK](https://adoptopenjdk.net) (minimum version 8). For details about 
+            what's included, and minimim requirements please see the
+             [installation page](/docs/operations/installation).
+          </MarkdownBlock>
           <h3 id="latest">Current version (Stable)</h3>
           <table className="versions">
             <tbody>
               <tr>
-                <th>{latestVersion}</th>
+                <th>{latest.version}</th>
                 <td>
-                <a href={`${repoUrl}/releases/download/v${latestVersion}/hazelcast-jet-${latestVersion}.tar.gz`}>
-                        Download
+                <a href={`${repoUrl}/releases/download/v${latest.version}/hazelcast-jet-${latest.version}.tar.gz`}>
+                        hazelcast-jet-{latest.version}.tar.gz
                 </a>
                 </td>
+                <td>{latest.size}MB</td>
                 <td>
-                  <a href={`${repoUrl}/releases/tag/v${latestVersion}`}>
+                  <a href={`${repoUrl}/releases/tag/v${latest.version}`}>
                         Release Notes
                   </a>
                 </td>
                 <td>
                   <a
-                    href={`/javadoc/${latestVersion}`}>
+                    href={`/javadoc/${latest.version}`}>
                     Javadoc
                   </a>
                 </td>
@@ -53,7 +62,7 @@ function Downloads(props) {
           <pre><code className="language-groovy css hljs">
               groupId: <span className="hljs-string">com.hazelcast.jet</span><br/>
               artifactId: <span className="hljs-string">hazelcast-jet</span><br/>
-              version: <span className="hljs-string">{latestVersion}</span>
+              version: <span className="hljs-string">{latest.version}</span>
          </code></pre>
          <p>For the full list of modules, please see <a href="https://search.maven.org/search?q=g:com.hazelcast.jet">Maven Central</a>.</p>
           <h3 id="archive">Past Versions</h3>
@@ -61,23 +70,26 @@ function Downloads(props) {
           <table className="versions">
             <tbody>
               {versions.map(
-                version =>
-                  version !== latestVersion && (
-                    <tr key={version}>
-                      <th>{version}</th>
+                current =>
+                  current.version !== latest.version && (
+                    <tr key={current.version}>
+                      <th>{current.version}</th>
                       <td>
-                      <a href={`${repoUrl}/releases/download/v${version}/hazelcast-jet-${version}.tar.gz`}>
-                        Download
+                      <a href={`${repoUrl}/releases/download/v${current.version}/hazelcast-jet-${current.version}.tar.gz`}>
+                        hazelcast-jet-{current.version}.tar.gz
                       </a>
                       </td>
                       <td>
-                        <a href={`${repoUrl}/releases/tag/v${version}`}>
+                      {current.size} MB
+                      </td>
+                      <td>
+                        <a href={`${repoUrl}/releases/tag/v${current.version}`}>
                           Release Notes
                         </a>
                       </td>
                       <td>
                         <a
-                          href={`/javadoc/${version}`}>
+                          href={`/javadoc/${current.version}`}>
                           Javadoc
                         </a>
                       </td>

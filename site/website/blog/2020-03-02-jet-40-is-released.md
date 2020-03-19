@@ -99,7 +99,7 @@ o.addObserver(event -> System.out.println(event));
 p.readFrom(TestSources.itemStream(10))
  .withoutTimestamps()
  .writeTo(Sinks.observable(o));
-jet.newJob(o).join();
+jet.newJob(p).join();
 ```
 
 The `Observable` can also be used to be notified of a job's completion

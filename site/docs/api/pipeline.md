@@ -29,8 +29,9 @@ and a
 [StreamStage](https://docs.hazelcast.org/docs/jet/4.0/javadoc/com/hazelcast/jet/pipeline/StreamStage.html)
 , each offering the operations appropriate to its kind.
 Depending on the data source, your pipeline will end up starting with a
-batch or streaming stage. It's possible to convert a batch stage by
-adding timestamps to it, but not the other way around.
+batch or streaming stage. A batch source still can be used to simulate
+a streaming source using the `addTimestamps` method, which will
+convert it into a `StreamStage`.
 
 In this section we'll mostly use batch stages, for simplicity, but the
 API of operations common to both kinds is identical. Jet internally
