@@ -10,7 +10,7 @@
 
 const CWD = process.cwd();
 const versions = require(`${CWD}/all-versions.json`);
-const latestVersion= versions[0];
+const latestVersion= versions[0].version;
 const isLocalhost = Boolean(
     process.env.NODE_ENV === 'development'
 );
