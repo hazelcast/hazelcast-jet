@@ -70,7 +70,7 @@ public final class WriteMapP<K, V> extends AsyncHazelcastWriterP {
         if (!tryAcquirePermit()) {
             return false;
         }
-        setCallback(ImdgUtil.mapPutAllAsync(map, buffer));
+        setCallback(map.putAllAsync(buffer));
         buffer.clear();
         return true;
     }
