@@ -224,8 +224,7 @@ public final class HazelcastWriters {
             entries = new ArrayList<>(size);
         }
 
-        @Override
-        @Nonnull
+        @Override @Nonnull
         public Set<Entry<K, V>> entrySet() {
             return set;
         }
@@ -241,8 +240,7 @@ public final class HazelcastWriters {
 
         private class ArraySet extends AbstractSet<Entry<K, V>> {
 
-            @Override
-            @Nonnull
+            @Override @Nonnull
             public Iterator<Entry<K, V>> iterator() {
                 return entries.iterator();
             }
