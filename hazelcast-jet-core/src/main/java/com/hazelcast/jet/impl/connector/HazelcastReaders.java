@@ -46,7 +46,9 @@ public final class HazelcastReaders {
 
     @Nonnull
     public static ProcessorMetaSupplier readLocalCacheSupplier(@Nonnull String cacheName) {
-        return new LocalProcessorMetaSupplier<>(hzInstance -> new LocalCacheReader(hzInstance, cacheName));
+        return new LocalProcessorMetaSupplier<>(
+                (hzInstance, serializationService) -> new LocalCacheReader(hzInstance, serializationService, cacheName)
+        );
     }
 
     @Nonnull
@@ -55,12 +57,17 @@ public final class HazelcastReaders {
             @Nonnull ClientConfig clientConfig
     ) {
         String clientXml = ImdgUtil.asXmlString(clientConfig);
-        return new RemoteProcessorSupplier<>(clientXml, hzInstance -> new RemoteCacheReader(hzInstance, cacheName));
+        return new RemoteProcessorSupplier<>(
+                clientXml,
+                (hzInstance, serializationService) -> new RemoteCacheReader(hzInstance, serializationService, cacheName)
+        );
     }
 
     @Nonnull
     public static ProcessorMetaSupplier readLocalMapSupplier(@Nonnull String mapName) {
-        return new LocalProcessorMetaSupplier<>(hzInstance -> new LocalMapReader(hzInstance, mapName));
+        return new LocalProcessorMetaSupplier<>(
+                (hzInstance, serializationService) -> new LocalMapReader(hzInstance, serializationService, mapName)
+        );
     }
 
     @Nonnull
@@ -73,7 +80,9 @@ public final class HazelcastReaders {
         checkSerializable(Objects.requireNonNull(projection), "projection");
 
         return new LocalProcessorMetaSupplier<>(
-                hzInstance -> new LocalMapQueryReader(hzInstance, mapName, predicate, projection));
+                (hzInstance, serializationService) ->
+                        new LocalMapQueryReader(hzInstance, serializationService, mapName, predicate, projection)
+        );
     }
 
     @Nonnull
@@ -82,7 +91,10 @@ public final class HazelcastReaders {
             @Nonnull ClientConfig clientConfig
     ) {
         String clientXml = ImdgUtil.asXmlString(clientConfig);
-        return new RemoteProcessorSupplier<>(clientXml, hzInstance -> new RemoteMapReader(hzInstance, mapName));
+        return new RemoteProcessorSupplier<>(
+                clientXml,
+                (hzInstance, serializationService) -> new RemoteMapReader(hzInstance, serializationService, mapName)
+        );
     }
 
     @Nonnull
@@ -96,8 +108,11 @@ public final class HazelcastReaders {
         checkSerializable(Objects.requireNonNull(projection), "projection");
 
         String clientXml = ImdgUtil.asXmlString(clientConfig);
-        return new RemoteProcessorSupplier<>(clientXml,
-                hzInstance -> new RemoteMapQueryReader(hzInstance, mapName, predicate, projection));
+        return new RemoteProcessorSupplier<>(
+                clientXml,
+                (hzInstance, serializationService) ->
+                        new RemoteMapQueryReader(hzInstance, serializationService, mapName, predicate, projection)
+        );
     }
 
     public static ProcessorMetaSupplier localOrRemoteListSupplier(String listName, ClientConfig clientConfig) {
