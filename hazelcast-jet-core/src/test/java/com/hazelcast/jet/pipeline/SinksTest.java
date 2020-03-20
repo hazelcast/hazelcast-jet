@@ -57,6 +57,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.function.Function;
 
+import static com.hazelcast.jet.TestContextSupport.adaptSupplier;
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.impl.pipeline.AbstractStage.transformOf;
 import static java.util.stream.Collectors.toList;
@@ -65,6 +66,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 public class SinksTest extends PipelineTestSupport {
+
     private static HazelcastInstance remoteHz;
     private static ClientConfig clientConfig;
 
@@ -244,7 +246,7 @@ public class SinksTest extends PipelineTestSupport {
                 srcName,
                 Entry::getKey,
                 Entry::getValue,
-                (oldValue, newValue) -> oldValue + newValue);
+                Integer::sum);
 
         // Then
         p.readFrom(Sources.<String, Integer>map(srcName)).writeTo(sink);
@@ -269,7 +271,7 @@ public class SinksTest extends PipelineTestSupport {
                 srcMap,
                 Entry::getKey,
                 Entry::getValue,
-                (oldValue, newValue) -> oldValue + newValue);
+                Integer::sum);
 
         // Then
         p.readFrom(Sources.<String, Integer>map(srcName)).writeTo(sink);
@@ -291,7 +293,7 @@ public class SinksTest extends PipelineTestSupport {
 
         // When
         Sink<Entry<String, Integer>> sink = Sinks.mapWithMerging(
-                srcMap, (oldValue, newValue) -> oldValue + newValue);
+                srcMap, Integer::sum);
 
         // Then
         p.readFrom(Sources.<String, Integer>map(srcName)).writeTo(sink);
@@ -343,7 +345,7 @@ public class SinksTest extends PipelineTestSupport {
         jet().getList(srcName).addAll(input);
 
         // When
-        Sink<Entry<String, Integer>> sink = Sinks.mapWithMerging(srcName, (oldValue, newValue) -> oldValue + newValue);
+        Sink<Entry<String, Integer>> sink = Sinks.mapWithMerging(srcName, Integer::sum);
 
         // Then
         p.readFrom(Sources.<Integer>list(srcName))
@@ -357,8 +359,8 @@ public class SinksTest extends PipelineTestSupport {
 
     @Test
     public void mapWithMerging_when_multipleValuesForSingleKeyInABatch() throws Exception {
-        ProcessorMetaSupplier metaSupplier = SinkProcessors.<Entry<String, Integer>, String, Integer>mergeMapP(
-                sinkName, Entry::getKey, Entry::getValue, Integer::sum);
+        ProcessorMetaSupplier metaSupplier = adaptSupplier(SinkProcessors.<Entry<String, Integer>, String,
+                Integer>mergeMapP(sinkName, Entry::getKey, Entry::getValue, Integer::sum));
 
         TestProcessorSupplierContext psContext = new TestProcessorSupplierContext().setJetInstance(member);
         Processor p = TestSupport.supplierFrom(metaSupplier, psContext).get();
@@ -421,7 +423,7 @@ public class SinksTest extends PipelineTestSupport {
                 clientConfig,
                 Entry::getKey,
                 Entry::getValue,
-                (oldValue, newValue) -> oldValue + newValue);
+                Integer::sum);
 
         // Then
         p.readFrom(Sources.<String, Integer>remoteMap(srcName, clientConfig)).writeTo(sink);
