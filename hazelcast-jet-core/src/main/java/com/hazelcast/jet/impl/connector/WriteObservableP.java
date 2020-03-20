@@ -17,6 +17,7 @@
 package com.hazelcast.jet.impl.connector;
 
 import com.hazelcast.core.HazelcastInstance;
+import com.hazelcast.internal.serialization.SerializationService;
 import com.hazelcast.jet.core.Inbox;
 import com.hazelcast.jet.core.Outbox;
 import com.hazelcast.jet.core.Processor;
@@ -87,9 +88,8 @@ public final class WriteObservableP<T> extends AsyncHazelcastWriterP {
         }
 
         @Override
-        protected Processor createProcessor(HazelcastInstance instance) {
+        protected Processor createProcessor(HazelcastInstance instance, SerializationService serializationService) {
             return new WriteObservableP<>(observableName, instance);
         }
     }
-
 }

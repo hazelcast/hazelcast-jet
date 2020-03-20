@@ -28,6 +28,8 @@ import com.hazelcast.function.BinaryOperatorEx;
 import com.hazelcast.function.ConsumerEx;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.function.SupplierEx;
+import com.hazelcast.internal.serialization.Data;
+import com.hazelcast.internal.serialization.SerializationService;
 import com.hazelcast.jet.RestartableException;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
@@ -137,24 +139,7 @@ public final class HazelcastWriters {
 
     @Nonnull
     public static ProcessorMetaSupplier writeListSupplier(@Nonnull String name, @Nullable ClientConfig clientConfig) {
-        boolean isLocal = clientConfig == null;
-        return preferLocalParallelismOne(new WriterSupplier<>(
-                asXmlString(clientConfig),
-                ArrayList::new,
-                ArrayList::add,
-                instance -> {
-                    IList<Object> list = instance.getList(name);
-                    return buffer -> {
-                        try {
-                            list.addAll(buffer);
-                        } catch (HazelcastInstanceNotActiveException e) {
-                            throw handleInstanceNotActive(e, isLocal);
-                        }
-                        buffer.clear();
-                    };
-                },
-                ConsumerEx.noop()
-        ));
+        return preferLocalParallelismOne(new WriteListPSupplier<>(clientConfig, name));
     }
 
     public static ProcessorMetaSupplier writeObservableSupplier(@Nonnull String name) {
@@ -180,6 +165,35 @@ public final class HazelcastWriters {
     static RuntimeException handleInstanceNotActive(HazelcastInstanceNotActiveException e, boolean isLocal) {
         // if we are writing to a local instance, restarting the job should resolve the error
         return isLocal ? new RestartableException(e) : e;
+    }
+
+    private static class WriteListPSupplier<T> extends AbstractHazelcastConnectorSupplier {
+
+        static final long serialVersionUID = 1L;
+
+        private final String name;
+
+        WriteListPSupplier(@Nullable ClientConfig clientConfig, @Nonnull String name) {
+            super(asXmlString(clientConfig));
+            this.name = name;
+        }
+
+        @Override
+        protected Processor createProcessor(HazelcastInstance instance, SerializationService serializationService) {
+            FunctionEx<Context, List<Data>> bufferCreator = context -> new ArrayList<>();
+            BiConsumerEx<List<Data>, T> itemReceiver = (buffer, item) -> buffer.add(serializationService.toData(item));
+            ConsumerEx<List<Data>> bufferFlusher = buffer -> {
+                IList<Object> list = instance.getList(name);
+                try {
+                    list.addAll(buffer);
+                } catch (HazelcastInstanceNotActiveException e) {
+                    throw handleInstanceNotActive(e, isLocal());
+                }
+                buffer.clear();
+            };
+
+            return new WriteBufferedP<>(bufferCreator, itemReceiver, bufferFlusher, ConsumerEx.noop());
+        }
     }
 
     /**
@@ -281,10 +295,9 @@ public final class HazelcastWriters {
         }
 
         @Override
-        protected Processor createProcessor(HazelcastInstance instance) {
+        protected Processor createProcessor(HazelcastInstance instance, SerializationService serializationService) {
             ConsumerEx<B> flushBufferFn = instanceToFlushBufferFn.apply(instance);
             return new WriteBufferedP<>(ctx -> newBufferFn.get(), addToBufferFn, flushBufferFn, disposeBufferFn);
         }
     }
 }
-

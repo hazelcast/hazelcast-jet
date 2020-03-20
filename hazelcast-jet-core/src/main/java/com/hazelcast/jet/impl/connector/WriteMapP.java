@@ -17,6 +17,7 @@
 package com.hazelcast.jet.impl.connector;
 
 import com.hazelcast.core.HazelcastInstance;
+import com.hazelcast.internal.serialization.SerializationService;
 import com.hazelcast.jet.config.EdgeConfig;
 import com.hazelcast.jet.core.Inbox;
 import com.hazelcast.jet.core.Outbox;
@@ -34,6 +35,7 @@ import static java.lang.Integer.max;
 public final class WriteMapP<K, V> extends AsyncHazelcastWriterP {
 
     private static final int BUFFER_LIMIT = 1024;
+
     private final String mapName;
     private final ArrayMap<K, V> buffer = new ArrayMap<>(EdgeConfig.DEFAULT_QUEUE_SIZE);
 
@@ -76,6 +78,7 @@ public final class WriteMapP<K, V> extends AsyncHazelcastWriterP {
     }
 
     public static class Supplier<K, V> extends AbstractHazelcastConnectorSupplier {
+
         private static final long serialVersionUID = 1L;
 
         // use a conservative max parallelism to prevent overloading
@@ -97,7 +100,7 @@ public final class WriteMapP<K, V> extends AsyncHazelcastWriterP {
         }
 
         @Override
-        protected Processor createProcessor(HazelcastInstance instance) {
+        protected Processor createProcessor(HazelcastInstance instance, SerializationService serializationService) {
             return new WriteMapP<>(instance, maxParallelAsyncOps, mapName);
         }
     }

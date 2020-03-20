@@ -16,15 +16,25 @@
 
 package com.hazelcast.jet.impl.connector;
 
+import com.hazelcast.client.impl.proxy.ClientListProxy;
 import com.hazelcast.collection.IList;
+import com.hazelcast.collection.impl.list.ListProxyImpl;
 import com.hazelcast.core.HazelcastInstance;
+import com.hazelcast.internal.serialization.Data;
+import com.hazelcast.internal.serialization.SerializationService;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.core.AbstractProcessor;
+import com.hazelcast.jet.impl.execution.init.Contexts.ProcCtx;
 
 import javax.annotation.Nonnull;
+import java.util.Iterator;
+import java.util.List;
+import java.util.function.BiFunction;
+import java.util.function.Supplier;
 
 import static com.hazelcast.client.HazelcastClient.newHazelcastClient;
 import static com.hazelcast.jet.Traversers.traverseIterable;
+import static com.hazelcast.jet.Traversers.traverseIterator;
 import static com.hazelcast.jet.Traversers.traverseStream;
 import static com.hazelcast.jet.impl.util.ImdgUtil.asClientConfig;
 import static java.lang.Math.min;
@@ -33,6 +43,7 @@ import static java.util.stream.IntStream.rangeClosed;
 public final class ReadIListP extends AbstractProcessor {
 
     static final int FETCH_SIZE = 16384;
+
     private final String name;
     private final String clientXml;
 
@@ -57,13 +68,34 @@ public final class ReadIListP extends AbstractProcessor {
         } else {
             instance = context.jetInstance().getHazelcastInstance();
         }
-        IList<Object> list = instance.getList(name);
-        final int size = list.size();
-        traverser = size <= FETCH_SIZE ?
-                traverseIterable(list)
-                :
+
+        SerializationService serializationService = ((ProcCtx) context).serializationService();
+        traverser = createTraverser(instance, name).map(serializationService::toObject);
+    }
+
+    @SuppressWarnings("rawtypes")
+    private Traverser<Data> createTraverser(HazelcastInstance instance, String name) {
+        IList<Data> list = instance.getList(name);
+        int size = list.size();
+
+        if (list instanceof ClientListProxy) {
+            ClientListProxy proxy = (ClientListProxy) list;
+            return createTraverser(size, proxy::rawIterator, proxy::rawSubList);
+        } else if (list instanceof ListProxyImpl) {
+            ListProxyImpl proxy = (ListProxyImpl) list;
+            return createTraverser(size, proxy::rawIterator, proxy::rawSubList);
+        } else {
+            throw new RuntimeException("Unexpected list class: " + list.getClass().getName());
+        }
+    }
+
+    private Traverser<Data> createTraverser(int size,
+                                            Supplier<Iterator<Data>> iteratorSupplier,
+                                            BiFunction<Integer, Integer, List<Data>> subListSupplier) {
+        return size <= FETCH_SIZE ?
+                traverseIterator(iteratorSupplier.get()) :
                 traverseStream(rangeClosed(0, size / FETCH_SIZE).mapToObj(chunkIndex -> chunkIndex * FETCH_SIZE))
-                        .flatMap(start -> traverseIterable(list.subList(start, min(start + FETCH_SIZE, size))));
+                        .flatMap(start -> traverseIterable(subListSupplier.apply(start, min(start + FETCH_SIZE, size))));
     }
 
     @Override
@@ -81,5 +113,4 @@ public final class ReadIListP extends AbstractProcessor {
     private boolean isRemote() {
         return clientXml != null;
     }
-
 }
