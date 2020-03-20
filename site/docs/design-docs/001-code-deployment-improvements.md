@@ -3,6 +3,8 @@ title: 001 - Code Deployment Improvements
 description: Improvements for adding classes during job submission
 ---
 
+*Target Release*: 4.1
+
 ## Background
 
 User should be able to add nested (inner & anonymous) classes as well as

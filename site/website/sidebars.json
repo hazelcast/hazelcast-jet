@@ -57,6 +57,7 @@
     ],
     "Design Documents": [
       "design-docs/index",
+      "design-docs/002-job-level-serialization",
       "design-docs/001-code-deployment-improvements"
     ]
   },
