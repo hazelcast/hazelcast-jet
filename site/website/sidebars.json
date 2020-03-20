@@ -35,7 +35,8 @@
       "how-tos/observables",
       "how-tos/custom-batch-source",
       "how-tos/custom-stream-source",
-      "how-tos/custom-sink"
+      "how-tos/custom-sink",
+      "how-tos/xa"
     ],
     "Operations Guide": [
       "operations/installation",
