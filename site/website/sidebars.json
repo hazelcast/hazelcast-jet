@@ -54,6 +54,10 @@
       "architecture/fault-tolerance",
       "architecture/in-memory-storage",
 	    "architecture/event-time-processing"
+    ],
+    "Design Documents": [
+      "design-docs/index",
+      "design-docs/001-code-deployment-improvements"
     ]
   },
   "enterprise": {
