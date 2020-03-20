@@ -3,19 +3,19 @@ title: Compatibility of XA Support
 description: How to check the compatibility of XA Support for JMS brokers and JDBC databases.
 ---
 
-Jet supports exactly-once processing but to have an end-to-end
-exactly-once processing both source and sink need to support it too.
-Jet introduced XA transaction support which source and sink will
-actively participate to achieve this goal. Basically Jet starts
+Jet supports exactly-once processing internally, but in order to have
+end-to-end exactly-once processing sources and sinks need to support
+it too. Jet introduced XA transaction support, by which source and sink
+will actively participate to achieve this goal. Basically Jet starts
 transactions for the source, sink and any stage between these two,
 prepares them and commit them only after snapshot completed on all
 nodes.
 
-We've found that many resources claiming to support XA have a common
-flaw: the transaction doesn't survive a client disconnection. Their
-behavior is sufficient to ensure atomicity (that is all distributed
-participants either commit or all rollback), but not to achieve
-fault-tolerance.
+We've found that many resources we use as either sinks or
+sources, claiming to support XA have a common flaw: the transaction
+doesn't survive a client disconnect. Their behavior is sufficient to
+ensure atomicity (that is all distributed participants either commit or
+all rollback), but not to achieve fault-tolerance.
 
 ## Testing
 
