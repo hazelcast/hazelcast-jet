@@ -38,6 +38,32 @@ also set the `Main-Class` attribute in `MANIFEST.MF` to avoid the need
 to specify the main class in `jet submit`. Both Maven and Gradle can be
 configured to do this, refer to their docs.
 
+<!--DOCUSAURUS_CODE_TABS-->
+
+<!--Gradle-->
+
+```bash
+jar.manifest.attributes 'Main-Class': 'org.example.JetJob'
+```
+
+<!--Maven-->
+
+```xml
+<plugin>
+  <groupId>org.apache.maven.plugins</groupId>
+  <artifactId>maven-jar-plugin</artifactId>
+  <configuration>
+    <archive>
+      <manifest>
+        <mainClass>org.example.JetJob</mainClass>
+      </manifest>
+      </archive>
+  </configuration>
+</plugin>
+```
+
+<!--END_DOCUSAURUS_CODE_TABS-->
+
 ## Submit to the Cluster
 
 From the Jet home folder execute the command:

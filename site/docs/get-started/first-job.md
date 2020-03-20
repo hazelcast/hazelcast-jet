@@ -62,7 +62,7 @@ those with an even sequence number.
 ### Start Embedded Jet and Run the Pipeline
 
 To create a single Jet node and submit the job to it, add this code to
-the bottom of the `main` method:
+**the bottom** of the `main` method:
 
 ```java
 JetInstance jet = Jet.newJetInstance();
