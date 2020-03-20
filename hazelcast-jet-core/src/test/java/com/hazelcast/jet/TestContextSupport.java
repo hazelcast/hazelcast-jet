@@ -49,7 +49,7 @@ public final class TestContextSupport {
         return new TestProcessorMetaSupplierAdapter(processorMetaSupplier);
     }
 
-    private static class TestProcessorMetaSupplierAdapter implements ProcessorMetaSupplier {
+    private static final class TestProcessorMetaSupplierAdapter implements ProcessorMetaSupplier {
 
         private final ProcessorMetaSupplier delegate;
 
@@ -69,7 +69,7 @@ public final class TestContextSupport {
         }
     }
 
-    private static class TestProcessorSupplierAdapter implements ProcessorSupplier {
+    private static final class TestProcessorSupplierAdapter implements ProcessorSupplier {
 
         private final ProcessorSupplier delegate;
 
