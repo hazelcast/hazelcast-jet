@@ -117,8 +117,8 @@ pipeline through the use of a simple API:
 p.readFrom(TestSources.itemStream(10))
  .withoutTimestamps()
  .map(event -> {
-     if (event.sequence % 2 == 0) {
-         Metrics.metrics("numEvens").increment();
+     if (event.sequence() % 2 == 0) {
+         Metrics.metric("numEvens").increment();
      }
      return event;
  }).writeTo(Sinks.logger());

@@ -28,8 +28,8 @@ via existing `add[Class|Jar]`:
 
 ```java
 new JobConfig()
-	.addSerializer(Value.class, ValueSerializer.class)
-	.addJar("/file/serialization-library.jar")
+  .addSerializer(Value.class, ValueSerializer.class)
+  .addJar("/file/serialization-library.jar")
 ```
 
 All the serialization classes/jars could be then uploaded to job’s
