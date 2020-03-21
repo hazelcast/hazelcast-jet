@@ -88,7 +88,7 @@ Members {size:1, ver:1} [
 
 Note the IP address of the Docker container and use it in the commands
 below instead of our example's `172.17.0.2`. Let's submit the Hello
-World application from the distribution package, but this time using 
+World application from the distribution package, but this time using
 Docker:
 
 ```bash

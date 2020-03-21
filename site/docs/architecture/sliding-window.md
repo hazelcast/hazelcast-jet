@@ -11,6 +11,8 @@ a quantity in real time.
 Hazelcast Jet pays special attention to reducing the computational cost
 of the sliding window. Let's present the challenges.
 
+## Windowing in General
+
 If we start from the general concept of windowing, this is the basic
 picture: there is a stream of timestamped data items (_events_) and a
 set of time intervals called _windows_. They can overlap, so any given
@@ -22,10 +24,12 @@ example:
 
 To compute the output for a window, you must run every item in it
 through the aggregation algorithm, and you must do this computation for
-each window independently. Theoretically, you must retain all the events
-until the window has "closed" (event time has advanced beyond the window
-end) and then then pass them to the aggregation function in the correct
-time order.
+each window independently. Since you may receive the events out of the
+order of their occurrence, you must retain all the events until the
+window has "closed" (event time has advanced beyond the window end) and
+then pass them to the aggregation function in the correct time order.
+
+## Decompose into Accumulation and Finishing
 
 This is where Jet takes the first optimization step: it decomposes the
 aggregate function into an order-insensitive (commutative) part that
@@ -36,10 +40,15 @@ seeing all the events &mdash; the _finish_ function:
 ![Accumulate and Finish](assets/arch-sliding-window-2.svg)
 
 It turns out that many useful aggregate functions can be decomposed like
-this and maintain only fixed-size state during the accumulation. Note
-that this doesn't constrain us in any way: we can still implement
-order-sensitive aggregation by keeping the events in a list and sorting
-it by timestamp in the end.
+this and maintain only fixed-size state during the accumulation. Examples
+are average, standard deviation, slope (linear regression coefficient),
+min, max etc.
+
+On the other hand, this doesn't constrain us in any way: we can still
+implement order-sensitive aggregation by keeping the events in a list
+and sorting it by timestamp in the end.
+
+## The Sliding Window
 
 Now let's focus on the sliding window. This is how our set of windows
 looks like:
@@ -50,6 +59,9 @@ All windows have the same size and they are arranged along the time axis
 at a constant pitch, called the _sliding step_. Typically, to get smooth
 sliding, we choose the sliding step to be 1% of the window size. Each
 event thus ends up in a hundred windows. That's a lot of computation.
+
+## Break into Frames
+
 To avoid this repeated work, Jet breaks down the windows into _frames_
 whose size is exactly the sliding step and combines the frames into full
 windows:
@@ -87,3 +99,13 @@ leading one.
 _Deduct_ is supported by less aggregate functions than _accumulate_ and
 _combine_. For example, you can't use it for _min_ or _max_ aggregation.
 It is an optional component in Jet's aggregation process.
+
+## Local Accumulation, Global Combining
+
+So far we haven't considered the distributed nature of computation in
+Hazelcast Jet. If you have a distributed data source like Kafka, every
+Jet node consumes a slice of the complete stream. Jet performs the
+accumulation step locally where the data came in and then sends the
+frames to a single member where they are combined along two dimensions:
+
+![Global Combining](assets/arch-sliding-window-7.svg)

@@ -28,8 +28,8 @@ via existing `add[Class|Jar]`:
 
 ```java
 new JobConfig()
-  .addSerializer(Value.class, ValueSerializer.class)
-  .addJar("/file/serialization-library.jar")
+    .addSerializer(Value.class, ValueSerializer.class)
+    .addJar("/file/serialization-library.jar")
 ```
 
 All the serialization classes/jars could be then uploaded to job’s
@@ -98,7 +98,7 @@ job and hooking it up (at least) in:
 ## Implemented Solution
 
 Each job execution gets its own `SerializationService` which encapsulates
-job-level serializers and fallbacks to cluster `SerializationService`.  
+job-level serializers and fallbacks to cluster `SerializationService`.
 
 Job-level `SerializationService` serializers have precedence over any
 cluster serializers - if type A have serializers registered on both
