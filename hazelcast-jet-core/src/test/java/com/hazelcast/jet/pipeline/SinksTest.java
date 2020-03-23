@@ -246,7 +246,8 @@ public class SinksTest extends PipelineTestSupport {
                 srcName,
                 Entry::getKey,
                 Entry::getValue,
-                Integer::sum);
+                // intentionally not a method reference - https://bugs.openjdk.java.net/browse/JDK-8154236
+                (oldValue, newValue) -> oldValue + newValue);
 
         // Then
         p.readFrom(Sources.<String, Integer>map(srcName)).writeTo(sink);
@@ -271,7 +272,8 @@ public class SinksTest extends PipelineTestSupport {
                 srcMap,
                 Entry::getKey,
                 Entry::getValue,
-                Integer::sum);
+                // intentionally not a method reference - https://bugs.openjdk.java.net/browse/JDK-8154236
+                (oldValue, newValue) -> oldValue + newValue);
 
         // Then
         p.readFrom(Sources.<String, Integer>map(srcName)).writeTo(sink);
@@ -293,7 +295,9 @@ public class SinksTest extends PipelineTestSupport {
 
         // When
         Sink<Entry<String, Integer>> sink = Sinks.mapWithMerging(
-                srcMap, Integer::sum);
+                srcMap,
+                // intentionally not a method reference - https://bugs.openjdk.java.net/browse/JDK-8154236
+                (oldValue, newValue) -> oldValue + newValue);
 
         // Then
         p.readFrom(Sources.<String, Integer>map(srcName)).writeTo(sink);
@@ -345,7 +349,10 @@ public class SinksTest extends PipelineTestSupport {
         jet().getList(srcName).addAll(input);
 
         // When
-        Sink<Entry<String, Integer>> sink = Sinks.mapWithMerging(srcName, Integer::sum);
+        Sink<Entry<String, Integer>> sink = Sinks.mapWithMerging(
+                srcName,
+                // intentionally not a method reference - https://bugs.openjdk.java.net/browse/JDK-8154236
+                (oldValue, newValue) -> oldValue + newValue);
 
         // Then
         p.readFrom(Sources.<Integer>list(srcName))
@@ -423,7 +430,8 @@ public class SinksTest extends PipelineTestSupport {
                 clientConfig,
                 Entry::getKey,
                 Entry::getValue,
-                Integer::sum);
+                // intentionally not a method reference - https://bugs.openjdk.java.net/browse/JDK-8154236
+                (oldValue, newValue) -> oldValue + newValue);
 
         // Then
         p.readFrom(Sources.<String, Integer>remoteMap(srcName, clientConfig)).writeTo(sink);

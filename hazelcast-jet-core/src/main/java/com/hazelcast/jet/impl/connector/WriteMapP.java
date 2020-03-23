@@ -25,7 +25,6 @@ import com.hazelcast.jet.core.Inbox;
 import com.hazelcast.jet.core.Outbox;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.impl.connector.HazelcastWriters.ArrayMap;
-import com.hazelcast.jet.impl.execution.init.Contexts.ProcCtx;
 import com.hazelcast.map.IMap;
 import com.hazelcast.map.impl.proxy.MapProxyImpl;
 import com.hazelcast.partition.PartitioningStrategy;
@@ -42,30 +41,34 @@ public final class WriteMapP<K, V> extends AsyncHazelcastWriterP {
     private static final int BUFFER_LIMIT = 1024;
 
     private final String mapName;
+    private final SerializationService serializationService;
     private final ArrayMap<Data, Data> buffer = new ArrayMap<>(EdgeConfig.DEFAULT_QUEUE_SIZE);
 
     private IMap<Data, Data> map;
     private Consumer<Entry<K, V>> addToBuffer;
 
-    private WriteMapP(HazelcastInstance instance, int maxParallelAsyncOps, String mapName) {
+    private WriteMapP(@Nonnull HazelcastInstance instance,
+                      int maxParallelAsyncOps,
+                      String mapName,
+                      @Nonnull SerializationService serializationService) {
         super(instance, maxParallelAsyncOps);
         this.mapName = mapName;
+        this.serializationService = serializationService;
     }
 
     @Override
     public void init(@Nonnull Outbox outbox, @Nonnull Context context) {
         map = instance().getMap(mapName);
 
-        SerializationService serializationService = ((ProcCtx) context).serializationService();
         if (map instanceof MapProxyImpl) {
             PartitioningStrategy<?> partitionStrategy = ((MapProxyImpl<K, V>) map).getPartitionStrategy();
             addToBuffer = entry -> {
-              Data key = serializationService.toData(entry.getKey(), partitionStrategy);
-              Data value = serializationService.toData(entry.getValue());
-              buffer.add(new SimpleEntry<>(key, value));
+                Data key = serializationService.toData(entry.getKey(), partitionStrategy);
+                Data value = serializationService.toData(entry.getValue());
+                buffer.add(new SimpleEntry<>(key, value));
             };
         } else if (map instanceof ClientMapProxy) {
-            // TODO: add strategy after https://github.com/hazelcast/hazelcast/issues/13950
+            // TODO: add strategy/unify after https://github.com/hazelcast/hazelcast/issues/13950 is fixed
             addToBuffer = entry -> {
                 Data key = serializationService.toData(entry.getKey());
                 Data value = serializationService.toData(entry.getValue());
@@ -125,7 +128,7 @@ public final class WriteMapP<K, V> extends AsyncHazelcastWriterP {
 
         @Override
         protected Processor createProcessor(HazelcastInstance instance, SerializationService serializationService) {
-            return new WriteMapP<>(instance, maxParallelAsyncOps, mapName);
+            return new WriteMapP<>(instance, maxParallelAsyncOps, mapName, serializationService);
         }
     }
 }

@@ -291,16 +291,15 @@ public final class ReadMapOrCacheP<F extends CompletableFuture, B, R> extends Ab
         static final long serialVersionUID = 1L;
 
         private final String clientXml;
-        private final BiFunctionEx<HazelcastInstance, InternalSerializationService, Reader<F, B, R>> readerSupplier;
+        private final FunctionEx<HazelcastInstance, Reader<F, B, R>> readerSupplier;
 
         private transient HazelcastClientProxy client;
         private transient int totalParallelism;
         private transient int baseIndex;
-        private transient InternalSerializationService serializationService;
 
         RemoteProcessorSupplier(
                 @Nonnull String clientXml,
-                @Nonnull BiFunctionEx<HazelcastInstance, InternalSerializationService, Reader<F, B, R>> readerSupplier) {
+                @Nonnull FunctionEx<HazelcastInstance, Reader<F, B, R>> readerSupplier) {
             this.clientXml = clientXml;
             this.readerSupplier = readerSupplier;
         }
@@ -310,7 +309,6 @@ public final class ReadMapOrCacheP<F extends CompletableFuture, B, R> extends Ab
             client = (HazelcastClientProxy) newHazelcastClient(asClientConfig(clientXml));
             totalParallelism = context.totalParallelism();
             baseIndex = context.memberIndex() * context.localParallelism();
-            serializationService = ((ProcSupplierCtx) context).serializationService();
         }
 
         @Override
@@ -327,7 +325,7 @@ public final class ReadMapOrCacheP<F extends CompletableFuture, B, R> extends Ab
             return IntStream.range(0, count)
                     .mapToObj(i -> {
                         int[] partitionIds = Util.roundRobinPart(remotePartitionCount, totalParallelism, baseIndex + i);
-                        return new ReadMapOrCacheP<>(readerSupplier.apply(client, serializationService), partitionIds);
+                        return new ReadMapOrCacheP<>(readerSupplier.apply(client), partitionIds);
                     })
                     .collect(Collectors.toList());
         }
@@ -414,15 +412,13 @@ public final class ReadMapOrCacheP<F extends CompletableFuture, B, R> extends Ab
 
         private final ClientCacheProxy clientCacheProxy;
 
-        RemoteCacheReader(@Nonnull HazelcastInstance hzInstance,
-                          @Nonnull InternalSerializationService serializationService,
-                          @Nonnull String cacheName) {
+        RemoteCacheReader(@Nonnull HazelcastInstance hzInstance, @Nonnull String cacheName) {
             super(cacheName,
                     parameters -> decodePointers(parameters.iterationPointers),
                     parameters -> parameters.entries
             );
             this.clientCacheProxy = (ClientCacheProxy) hzInstance.getCacheManager().getCache(cacheName);
-            this.serializationService = serializationService;
+            this.serializationService = clientCacheProxy.getContext().getSerializationService();
         }
 
         @Nonnull @Override
@@ -526,12 +522,11 @@ public final class ReadMapOrCacheP<F extends CompletableFuture, B, R> extends Ab
         private final ClientMapProxy clientMapProxy;
 
         RemoteMapReader(@Nonnull HazelcastInstance hzInstance,
-                        @Nonnull InternalSerializationService serializationService,
                         @Nonnull String mapName) {
-            super(mapName, parameters -> decodePointers(parameters.iterationPointers), r -> r.entries);
+            super(mapName, parameters -> decodePointers(parameters.iterationPointers), parameters -> parameters.entries);
 
             this.clientMapProxy = (ClientMapProxy) hzInstance.getMap(mapName);
-            this.serializationService = serializationService;
+            this.serializationService = clientMapProxy.getContext().getSerializationService();
         }
 
         @Nonnull @Override
@@ -569,7 +564,6 @@ public final class ReadMapOrCacheP<F extends CompletableFuture, B, R> extends Ab
 
         RemoteMapQueryReader(
                 @Nonnull HazelcastInstance hzInstance,
-                @Nonnull InternalSerializationService serializationService,
                 @Nonnull String mapName,
                 @Nonnull Predicate predicate,
                 @Nonnull Projection projection
@@ -578,7 +572,7 @@ public final class ReadMapOrCacheP<F extends CompletableFuture, B, R> extends Ab
             this.predicate = predicate;
             this.projection = projection;
             this.clientMapProxy = (ClientMapProxy) hzInstance.getMap(mapName);
-            this.serializationService = serializationService;
+            this.serializationService = clientMapProxy.getContext().getSerializationService();
         }
 
         @Nonnull @Override
