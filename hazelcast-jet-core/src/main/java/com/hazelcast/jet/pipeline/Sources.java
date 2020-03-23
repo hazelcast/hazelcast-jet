@@ -1041,6 +1041,8 @@ public final class Sources {
      *
      * @param name            the name of the queue
      * @param factorySupplier supplier to obtain JMS connection factory
+     *
+     * @since 4.1
      */
     @Nonnull
     public static StreamSource<Message> jmsQueue(
@@ -1108,6 +1110,8 @@ public final class Sources {
      *
      * @param name            the name of the queue
      * @param factorySupplier supplier to obtain JMS connection factory
+     *
+     * @since 4.1
      */
     @Nonnull
     public static StreamSource<Message> jmsTopic(
