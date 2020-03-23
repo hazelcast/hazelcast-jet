@@ -750,6 +750,13 @@ public interface GeneralStage<T> extends Stage {
             @Nonnull BiFunctionEx<T, T1, R> mapToOutputFn
     );
 
+    @Nonnull
+    <K, T1_IN, T1, R> GeneralStage<R> innerHashJoin(
+            @Nonnull BatchStage<T1_IN> stage1,
+            @Nonnull JoinClause<K, ? super T, ? super T1_IN, ? extends T1> joinClause1,
+            @Nonnull BiFunctionEx<T, T1, R> mapToOutputFn
+    );
+
     /**
      * Attaches to this and the two supplied stages a hash-joining stage and
      * returns it. This stage plays the role of the <em>primary stage</em> in
