@@ -8,7 +8,7 @@ transform the data flowing through a data pipeline. You are expected to
 write a function that takes a list of strings and returns the
 transformed list of strings.
 
-### 1. Write a Python Function
+## 1. Write a Python Function
 
 Here is the function we want to apply:
 
