@@ -191,6 +191,8 @@ public final class HazelcastWriters {
 
         @Override
         protected Processor createProcessor(HazelcastInstance instance, SerializationService serializationService) {
+            ICache<Data, Data> cache = instance.getCacheManager().getCache(name);
+
             FunctionEx<Context, ArrayMap<Data, Data>> bufferCreator = context -> new ArrayMap<>();
             BiConsumerEx<ArrayMap<Data, Data>, Entry<K, V>> entryReceiver = (buffer, entry) -> {
                 Data key = serializationService.toData(entry.getKey());
@@ -198,7 +200,6 @@ public final class HazelcastWriters {
                 buffer.add(new SimpleEntry<>(key, value));
             };
             ConsumerEx<ArrayMap<Data, Data>> bufferFlusher = buffer -> {
-                ICache<Data, Data> cache = instance.getCacheManager().getCache(name);
                 try {
                     cache.putAll(buffer);
                 } catch (HazelcastInstanceNotActiveException e) {
