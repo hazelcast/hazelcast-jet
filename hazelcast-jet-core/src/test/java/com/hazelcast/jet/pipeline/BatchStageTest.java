@@ -1041,8 +1041,11 @@ public class BatchStageTest extends PipelineTestSupport {
         int invalidIdStart = itemCount * 2;
         List<Integer> input = sequence(itemCount);
         String prefix = "value-";
-        BatchStage<Entry<Integer, String>> enrichingStageMatching = batchStageFromList(input).map(i -> entry(i, prefix + i));
-        BatchStage<Entry<Integer, String>> enrichingStageNonMatching = batchStageFromList(input).map(i -> entry(invalidIdStart + i, "nope"));
+        BatchStage<Entry<Integer, String>> enrichingStageMatching = batchStageFromList(input)
+                .map(i -> entry(i, prefix + i));
+        BatchStage<Entry<Integer, String>> enrichingStageNonMatching = batchStageFromList(input)
+                .map(i -> entry(invalidIdStart + i, "nope"));
+
         BatchStage<Entry<Integer, String>> enrichingStage = enrichingStageMatching.merge(enrichingStageNonMatching);
 
         // When
