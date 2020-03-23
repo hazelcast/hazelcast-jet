@@ -750,6 +750,41 @@ public interface GeneralStage<T> extends Stage {
             @Nonnull BiFunctionEx<T, T1, R> mapToOutputFn
     );
 
+    /**
+     * Attaches to both this and the supplied stage a inner-hash-joining stage and
+     * returns it. This stage plays the role of the <em>primary stage</em> in
+     * the hash-join. Please refer to the {@link com.hazelcast.jet.pipeline
+     * package javadoc} for a detailed description of the hash-join transform.
+     * <p>
+     * This sample joins a stream of users to a stream of countries and outputs
+     * a stream of users with the {@code country} field set:
+     * <pre>{@code
+     * // Types of the input stages:
+     * BatchStage<User> users;
+     * BatchStage<Map.Entry<Long, Country>> idAndCountry;
+     *
+     * users.innerHashJoin(
+     *     idAndCountry,
+     *     JoinClause.joinMapEntries(User::getCountryId),
+     *     (user, country) -> user.setCountry(country)
+     * )
+     * }</pre>
+     *
+     * <p>
+     *     This metod is similar to {@link #hashJoin(BatchStage, JoinClause, BiFunctionEx)} method,
+     *     but it guarantees that both input items will be not-null.
+     *     Nulls will be filtered out before reaching {@code #mapToOutputFn}.
+     * </p>
+     *
+     * @param stage1        the stage to hash-join with this one
+     * @param joinClause1   specifies how to join the two streams
+     * @param mapToOutputFn function to map the joined items to the output value
+     * @param <K>           the type of the join key
+     * @param <T1_IN>       the type of {@code stage1} items
+     * @param <T1>          the result type of projection on {@code stage1} items
+     * @param <R>           the resulting output type
+     * @return the newly attached stage
+     */
     @Nonnull
     <K, T1_IN, T1, R> GeneralStage<R> innerHashJoin(
             @Nonnull BatchStage<T1_IN> stage1,
@@ -772,7 +807,7 @@ public interface GeneralStage<T> extends Stage {
      * BatchStage<Map.Entry<Long, Country>> idAndCountry;
      * BatchStage<Map.Entry<Long, Company>> idAndCompany;
      *
-     * users.hashJoin(
+     * users.hashJoin2(
      *     idAndCountry, JoinClause.joinMapEntries(User::getCountryId),
      *     idAndCompany, JoinClause.joinMapEntries(User::getCompanyId),
      *     (user, country, company) -> user.setCountry(country).setCompany(company)
