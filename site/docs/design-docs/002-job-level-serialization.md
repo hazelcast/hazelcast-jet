@@ -188,7 +188,7 @@ serializers.
 
 Job-level serializers are used to serialize objects between distributed
 edges & to/from snapshots. They can also be used to read/write data
-from/to IMDG local data structures. However, if one wants to work with
+from/to local IMDG data structures. However, if one wants to work with
 them outside of the job, she has to register compatible serializers on
 a cluster level as well.
 
