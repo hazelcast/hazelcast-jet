@@ -26,7 +26,6 @@ import com.hazelcast.jet.core.Outbox;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.impl.connector.HazelcastWriters.ArrayMap;
 import com.hazelcast.jet.impl.execution.init.Contexts.ProcCtx;
-import com.hazelcast.jet.impl.util.ImdgUtil;
 import com.hazelcast.map.IMap;
 import com.hazelcast.map.impl.proxy.MapProxyImpl;
 import com.hazelcast.partition.PartitioningStrategy;
@@ -97,7 +96,7 @@ public final class WriteMapP<K, V> extends AsyncHazelcastWriterP {
         if (!tryAcquirePermit()) {
             return false;
         }
-        setCallback(ImdgUtil.mapPutAllAsync(map, buffer));
+        setCallback(map.putAllAsync(buffer));
         buffer.clear();
         return true;
     }
