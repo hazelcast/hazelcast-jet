@@ -97,10 +97,7 @@ public final class ReflectionUtils {
                 .whitelistPaths(paths)
                 .ignoreClassVisibility();
         try (ScanResult scanResult = classGraph.scan()) {
-            Collection<ClassResource> classes = scanResult.getAllClasses()
-                                                          .stream()
-                                                          .map(ClassResource::new)
-                                                          .collect(toList());
+            Collection<ClassResource> classes = Util.toList(scanResult.getAllClasses(), ClassResource::new);
             Collection<URL> nonClasses = scanResult.getAllResources().nonClassFilesOnly().getURLs();
             return new Resources(classes, nonClasses);
         }
