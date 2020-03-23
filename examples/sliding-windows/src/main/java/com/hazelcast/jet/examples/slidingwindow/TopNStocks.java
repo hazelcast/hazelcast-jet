@@ -116,9 +116,9 @@ public class TopNStocks {
         public String toString() {
             return String.format(
                     "Top rising stocks:%n%s\nTop falling stocks:%n%s",
-                    topIncrease.stream().map(kwr -> String.format("   %s by %.5f", kwr.key(), kwr.result()))
+                    topIncrease.stream().map(kwr -> String.format("   %s by %.2f%%", kwr.key(), 100d * kwr.result()))
                                .collect(joining("\n")),
-                    topDecrease.stream().map(kwr -> String.format("   %s by %.5f", kwr.key(), kwr.result()))
+                    topDecrease.stream().map(kwr -> String.format("   %s by %.2f%%", kwr.key(), 100d * kwr.result()))
                                .collect(joining("\n"))
             );
         }
