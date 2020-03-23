@@ -510,13 +510,13 @@ on configuration.
 hazelcast:
 
   metrics:
-    # weather metrics collection should be enabled
+    # whether metrics collection should be enabled
     enabled: true
   
     # metrics collection interval in seconds
     collection-frequency-seconds: 5
   
     jmx:
-      # weather metrics should be exposed over JMX
+      # whether metrics should be exposed over JMX
       enabled: true
 ```
