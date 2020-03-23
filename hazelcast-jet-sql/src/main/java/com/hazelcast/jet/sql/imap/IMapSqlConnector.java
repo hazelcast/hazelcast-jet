@@ -54,9 +54,9 @@ import static com.hazelcast.query.QueryConstants.THIS_ATTRIBUTE_NAME;
 
 public class IMapSqlConnector implements SqlConnector {
 
-    public static final String TO_MAP_NAME = "com.hazelcast.map.name";
-    public static final String TO_KEY_CLASS = "com.hazelcast.map.keyClass";
-    public static final String TO_VALUE_CLASS = "com.hazelcast.map.valueClass";
+    public static final String TO_MAP_NAME = "mapName";
+    public static final String TO_KEY_CLASS = "keyClass";
+    public static final String TO_VALUE_CLASS = "valueClass";
 
     @Override
     public boolean isStream() {

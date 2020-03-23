@@ -19,8 +19,10 @@ package com.hazelcast.jet.sql;
 import com.google.common.collect.ImmutableList;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.JetInstance;
+import com.hazelcast.jet.Job;
 import com.hazelcast.jet.Observable;
 import com.hazelcast.jet.core.DAG;
+import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.core.processor.SinkProcessors;
 import com.hazelcast.jet.sql.cost.CostFactory;
@@ -204,8 +206,31 @@ public class JetSqlService {
         return relTrimmed;
     }
 
-    public Observable<Object[]> execute(String sqlQuery) {
-        SqlNode node = parse(sqlQuery);
+    /**
+     * Executes a DML query. Currently only {@code INSERT INTO ... SELECT ...}
+     * is supported.
+     */
+    public Job execute(String sql) {
+        SqlNode node = parse(sql);
+
+        RelNode rel = convert(node);
+
+        System.out.println("before logical opt:\n" + RelOptUtil.toString(rel));
+        LogicalRel logicalRel = optimizeLogical(rel);
+        System.out.println("after logical opt:\n" + RelOptUtil.toString(logicalRel));
+        PhysicalRel physicalRel = optimizePhysical(logicalRel);
+        System.out.println("after physical opt:\n" + RelOptUtil.toString(physicalRel));
+
+        DAG dag = createDag(physicalRel, null);
+        // submit the job
+        return instance.newJob(dag);
+    }
+
+    /**
+     * Executes a DQL query (a SELECT query).
+     */
+    public Observable<Object[]> executeQuery(String sql) {
+        SqlNode node = parse(sql);
 
         RelNode rel = convert(node);
 
@@ -215,15 +240,15 @@ public class JetSqlService {
         System.out.println(RelOptUtil.toString(physicalRel));
 
         String observableName = "sql-sink-" + UUID.randomUUID().toString();
-        DAG dag = createDag(physicalRel, observableName);
+        DAG dag = createDag(physicalRel, SinkProcessors.writeObservableP(observableName));
         // submit the job
         instance.newJob(dag);
         return instance.getObservable(observableName);
     }
 
-    private DAG createDag(PhysicalRel physicalRel, String observableName) {
+    private DAG createDag(PhysicalRel physicalRel, ProcessorMetaSupplier sinkSupplier) {
         DAG dag = new DAG();
-        Vertex sink = dag.newVertex(observableName, SinkProcessors.writeObservableP(observableName));
+        Vertex sink = dag.newVertex("sink", sinkSupplier);
 
         CreateDagVisitor visitor = new CreateDagVisitor(dag, sink);
         physicalRel.visit(visitor);
@@ -248,7 +273,6 @@ public class JetSqlService {
                 ImmutableList.of()
         );
 
-//        return new RootLogicalRel(res.getCluster(), res.getTraitSet(), res);
         return (LogicalRel) res;
     }
 
@@ -260,6 +284,7 @@ public class JetSqlService {
      */
     private PhysicalRel optimizePhysical(RelNode rel) {
         RuleSet rules = RuleSets.ofList(
+                JetTableInsertPhysicalRule.INSTANCE,
 //                SortPhysicalRule.INSTANCE,
 //                RootPhysicalRule.INSTANCE,
 //                FilterPhysicalRule.INSTANCE,

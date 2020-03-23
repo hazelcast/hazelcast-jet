@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.sql;
 
+import com.hazelcast.jet.Job;
 import com.hazelcast.jet.Observable;
 import com.hazelcast.jet.SimpleTestInClusterSupport;
 import com.hazelcast.jet.sql.imap.IMapSqlConnector;
@@ -28,8 +29,10 @@ import org.junit.Test;
 
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.core.TestUtil.createMap;
@@ -41,6 +44,7 @@ import static org.junit.Assert.assertEquals;
 
 public class SqlTest extends SimpleTestInClusterSupport {
 
+    private static final String SINK_MAP = "sink_map";
     private static final String INT_TO_STRING_MAP = "int_to_string_map";
 
     private static JetSqlService sqlService;
@@ -52,6 +56,12 @@ public class SqlTest extends SimpleTestInClusterSupport {
 
         sqlService.getSchema().createTable(INT_TO_STRING_MAP, JetSchema.IMAP_LOCAL_SERVER,
                 createMap(IMapSqlConnector.TO_MAP_NAME, INT_TO_STRING_MAP),
+                asList(entry("__key", QueryDataType.INT), entry("this", QueryDataType.VARCHAR)));
+
+        sqlService.getSchema().createTable(SINK_MAP, JetSchema.IMAP_LOCAL_SERVER,
+                createMap(IMapSqlConnector.TO_MAP_NAME, SINK_MAP,
+                        IMapSqlConnector.TO_KEY_CLASS, Integer.class.getName(),
+                        IMapSqlConnector.TO_VALUE_CLASS, String.class.getName()),
                 asList(entry("__key", QueryDataType.INT), entry("this", QueryDataType.VARCHAR)));
     }
 
@@ -97,8 +107,33 @@ public class SqlTest extends SimpleTestInClusterSupport {
                 singletonList(new Row("VALUE-1")));
     }
 
+    @Test
+    public void insert() {
+        assertMap(
+                "INSERT INTO " + SINK_MAP + " SELECT * FROM " + INT_TO_STRING_MAP,
+                createMap(0, new Object[] {"value-0"},
+                        1, new Object[] {"value-1"},
+                        2, new Object[] {"value-2"}));
+    }
+
+    @Test
+    public void update() {
+        assertMap(
+                "UPDATE sink_map SET sink_map.this=t.this " +
+                        "FROM " + INT_TO_STRING_MAP + " WHERE sink_map.__key=t.__key",
+                createMap(0, new Object[] {"value-0"},
+                        1, new Object[] {"value-1"},
+                        2, new Object[] {"value-2"}));
+    }
+
+    private <K, V> void assertMap(String sql, Map<K, V> expected) {
+        Job job = sqlService.execute(sql);
+        job.join();
+        assertEquals(expected, new HashMap<>(instance().getMap(SINK_MAP)));
+    }
+
     private void assertRowsAnyOrder(String sql, Collection<Row> expectedRows) throws Exception {
-        Observable<Object[]> observable = sqlService.execute(sql);
+        Observable<Object[]> observable = sqlService.executeQuery(sql);
 
         List<Object[]> result = observable.toFuture(str -> str.collect(toList())).get();
         assertEquals(new HashSet<>(expectedRows), result.stream().map(Row::new).collect(toSet()));
