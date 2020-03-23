@@ -48,6 +48,7 @@ import java.util.Map.Entry;
 import java.util.Objects;
 
 import static com.hazelcast.internal.util.Preconditions.checkNotNull;
+import static com.hazelcast.jet.config.ResourceType.CLASS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 /**
@@ -265,12 +266,13 @@ public class JobConfig implements IdentifiedDataSerializable {
      * copies inside the cluster(primary + backup replica).
      *
      * @return {@code this} instance for fluent API
+     * @since 4.1
      */
     @Nonnull
     public JobConfig addPackage(@Nonnull String... packages) {
         checkNotNull(packages, "Packages cannot be null");
         Resources resources = ReflectionUtils.resourcesOf(packages);
-        resources.classes().forEach(this::addClass);
+        resources.classes().forEach(classResource -> add(classResource.getUrl(), classResource.getId(), CLASS));
         resources.nonClasses().forEach(this::addClasspathResource);
         return this;
     }
@@ -938,6 +940,7 @@ public class JobConfig implements IdentifiedDataSerializable {
      * Serializer must have no-arg constructor.
      *
      * @return {@code this} instance for fluent API
+     * @since 4.1
      */
     @Nonnull
     @EvolvingApi
