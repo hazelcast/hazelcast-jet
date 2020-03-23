@@ -52,6 +52,7 @@ classes but also all their nested classes to the Jet job’s classpath:
  * copies inside the cluster(primary + backup replica).
  *
  * @return {@code this} instance for fluent API
+ * @since 4.1
  */
 @Nonnull
 @SuppressWarnings("rawtypes")

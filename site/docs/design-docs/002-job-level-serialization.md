@@ -1,6 +1,6 @@
 ---
 title: 002 - Job-level Serialization
-description: Make it possible add serializer per job
+description: Make it possible to add serializer per job
 ---
 
 *Target Release*: 4.1
@@ -36,10 +36,6 @@ All the serialization classes/jars could be then uploaded to job’s
 `IMap`, similarly to how is it done for other resources via
 `JobRepository`. That would allow reusing existing class loading mechanism
 and make sure resources are cleaned up on job completion.
-
-Above requires implementation and does not fulfill the declarative
-configuration requirement. The discussion about joint (IMDG and Jet)
-serialization is ongoing.
 
 ### SerializationService
 
@@ -100,6 +96,9 @@ job and hooking it up (at least) in:
 Each job execution gets its own `SerializationService` which encapsulates
 job-level serializers and fallbacks to cluster `SerializationService`.
 
+Job-level serializers can be used to read/write data from/to IMDG
+`Observable`s, `List`s, `Map`s & `Cache`s.
+
 Job-level `SerializationService` serializers have precedence over any
 cluster serializers - if type A have serializers registered on both
 levels, cluster and job, the latter will be chosen for given job.
@@ -122,6 +121,7 @@ levels, cluster and job, the latter will be chosen for given job.
  * Serializer must have no-arg constructor.
  *
  * @return {@code this} instance for fluent API
+ * @since 4.1
  */
  @Nonnull
  @EvolvingApi
@@ -137,34 +137,34 @@ levels, cluster and job, the latter will be chosen for given job.
 Given sample value class and its serializer:
 
 ```java
-private static class Value {
+class Value {
 
-        public static final int TYPE = 1;
+    public static final int TYPE = 1;
 
-        private Integer v;
+    private Integer v;
 
-        public Value(Integer v) {
+    public Value(Integer v) {
             this.v = v;
-        }
+    }
+}
+
+class ValueSerializer implements StreamSerializer<Value> {
+
+    @Override
+    public int getTypeId() {
+        return Value.TYPE;
     }
 
-    private static class ValueSerializer implements StreamSerializer<Value> {
-
-        @Override
-        public int getTypeId() {
-            return Value.TYPE;
-        }
-
-        @Override
-        public void write(ObjectDataOutput objectDataOutput, Value value) throws IOException {
-            objectDataOutput.writeInt(value.v);
-        }
-
-        @Override
-        public Value read(ObjectDataInput objectDataInput) throws IOException {
-            return new Value(objectDataInput.readInt());
-        }
+    @Override
+    public void write(ObjectDataOutput objectDataOutput, Value value) throws IOException {
+        objectDataOutput.writeInt(value.v);
     }
+
+    @Override
+    public Value read(ObjectDataInput objectDataInput) throws IOException {
+        return new Value(objectDataInput.readInt());
+    }
+}
 ```
 
 one registers them with `JobConfig`, the following way
@@ -186,12 +186,16 @@ serializers.
 
 ## Limitations
 
-Currently, job-level serializers are internal to the job - used to
-serialize objects between distributed edges & to/from snapshots - they
-can’t be used to interact with IMDG data structures.
+Job-level serializers are used to serialize objects between distributed
+edges & to/from snapshots. They can also be used to read/write data
+from/to IMDG data structures. However, if one wants to work with them
+outside of the job, she has to register compatible serializers on a
+cluster level as well.
+
+Updating `Map`s/`Cache`s or streaming `Journal` data is not currently
+supported as those require cluster side object manipulation.
 
 ## Improvements
 
-Allow job-level serializers to be used with IMDG (?) - if the data
-in/out is treated simply as `byte[]` and isn’t used by more advanced IMDG
-features like EP for instance, it should be feasible.
+Allow job-level serializers to be used to update `Map`s/`Cache`s and
+stream `Journal` data.
