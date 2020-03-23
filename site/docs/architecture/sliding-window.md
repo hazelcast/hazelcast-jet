@@ -109,3 +109,19 @@ accumulation step locally where the data came in and then sends the
 frames to a single member where they are combined along two dimensions:
 
 ![Global Combining](assets/arch-sliding-window-7.svg)
+
+To summarize, this would be the "naïve windowing" picture:
+
+1. Send all the data to a single node
+2. Put every event into all the windows it belongs to
+3. Keep all the events stored until the window is complete
+4. Apply the aggregate function for each window separately
+
+And this is what Hazelcast Jet does for the sliding window:
+
+1. Process events locally, on the node where you received them
+2. Don't store the events, apply aggregation right away
+3. Aggregate just once, in the single frame where the event
+   belongs
+4. Send the aggregated partial results to a single node, for final
+   combining
