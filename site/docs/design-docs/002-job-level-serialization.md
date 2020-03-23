@@ -96,7 +96,7 @@ job and hooking it up (at least) in:
 Each job execution gets its own `SerializationService` which encapsulates
 job-level serializers and fallbacks to cluster `SerializationService`.
 
-Job-level serializers can be used to read/write data from/to IMDG
+Job-level serializers can be used to read/write data from/to local IMDG
 `Observable`s, `List`s, `Map`s & `Cache`s.
 
 Job-level `SerializationService` serializers have precedence over any
@@ -188,9 +188,9 @@ serializers.
 
 Job-level serializers are used to serialize objects between distributed
 edges & to/from snapshots. They can also be used to read/write data
-from/to IMDG data structures. However, if one wants to work with them
-outside of the job, she has to register compatible serializers on a
-cluster level as well.
+from/to IMDG local data structures. However, if one wants to work with
+them outside of the job, she has to register compatible serializers on
+a cluster level as well.
 
 Updating `Map`s/`Cache`s or streaming `Journal` data is not currently
 supported as those require cluster side object manipulation.
