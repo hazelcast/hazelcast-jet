@@ -22,7 +22,6 @@ import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.impl.util.Util;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
