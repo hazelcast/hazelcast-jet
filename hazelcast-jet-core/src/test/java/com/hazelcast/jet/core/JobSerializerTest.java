@@ -21,6 +21,7 @@ import com.hazelcast.config.CacheSimpleConfig;
 import com.hazelcast.config.SerializerConfig;
 import com.hazelcast.jet.Observable;
 import com.hazelcast.jet.SimpleTestInClusterSupport;
+import com.hazelcast.jet.config.JetClientConfig;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.pipeline.Pipeline;
@@ -69,15 +70,18 @@ public class JobSerializerTest extends SimpleTestInClusterSupport {
         JetConfig config = new JetConfig();
         config.getHazelcastConfig()
               .addCacheConfig(new CacheSimpleConfig().setName(SOURCE_CACHE_NAME))
-              .addCacheConfig(new CacheSimpleConfig().setName(SINK_CACHE_NAME))
-              .getSerializationConfig()
-              .addSerializerConfig(new SerializerConfig().setTypeClass(Value.class).setClass(ValueSerializer.class));
-        initializeWithClient(1, config, null);
+              .addCacheConfig(new CacheSimpleConfig().setName(SINK_CACHE_NAME));
+
+        JetClientConfig clientConfig = new JetClientConfig();
+        clientConfig.getSerializationConfig()
+                    .addSerializerConfig(new SerializerConfig().setTypeClass(Value.class).setClass(ValueSerializer.class));
+
+        initializeWithClient(1, config, clientConfig);
     }
 
     @Test
     public void when_serializerIsRegistered_then_itIsAvailableForLocalMapSource() {
-        Map<Integer, Value> map = instance().getMap(SOURCE_MAP_NAME);
+        Map<Integer, Value> map = client().getMap(SOURCE_MAP_NAME);
         map.putAll(ImmutableMap.of(1, new Value(1), 2, new Value(2)));
 
         Pipeline pipeline = Pipeline.create();
@@ -85,7 +89,7 @@ public class JobSerializerTest extends SimpleTestInClusterSupport {
                 .map(entry -> entry.getValue().value())
                 .writeTo(AssertionSinks.assertAnyOrder(asList(1, 2)));
 
-        instance().newJob(pipeline, jobConfig()).join();
+        client().newJob(pipeline, jobConfig()).join();
     }
 
     @Test
@@ -95,9 +99,9 @@ public class JobSerializerTest extends SimpleTestInClusterSupport {
                 .map(i -> new SimpleEntry<>(i, new Value(i)))
                 .writeTo(Sinks.map(SINK_MAP_NAME));
 
-        instance().newJob(pipeline, jobConfig()).join();
+        client().newJob(pipeline, jobConfig()).join();
 
-        IMap<Object, Object> map = instance().getMap(SINK_MAP_NAME);
+        IMap<Object, Object> map = client().getMap(SINK_MAP_NAME);
         Set<Entry<Object, Object>> entries = map.entrySet();
         assertThat(entries, containsInAnyOrder(
                 new SimpleEntry<>(1, new Value(1)),
@@ -107,7 +111,7 @@ public class JobSerializerTest extends SimpleTestInClusterSupport {
 
     @Test
     public void when_serializerIsRegistered_then_itIsAvailableForLocalCacheSource() {
-        Cache<Integer, Value> map = instance().getCacheManager().getCache(SOURCE_CACHE_NAME);
+        Cache<Integer, Value> map = client().getCacheManager().getCache(SOURCE_CACHE_NAME);
         map.putAll(ImmutableMap.of(1, new Value(1), 2, new Value(2)));
 
         Pipeline pipeline = Pipeline.create();
@@ -115,7 +119,7 @@ public class JobSerializerTest extends SimpleTestInClusterSupport {
                 .map(entry -> entry.getValue().value())
                 .writeTo(AssertionSinks.assertAnyOrder(asList(1, 2)));
 
-        instance().newJob(pipeline, jobConfig()).join();
+        client().newJob(pipeline, jobConfig()).join();
     }
 
     @Test
@@ -125,9 +129,9 @@ public class JobSerializerTest extends SimpleTestInClusterSupport {
                 .map(i -> new SimpleEntry<>(i, new Value(i)))
                 .writeTo(Sinks.cache(SINK_CACHE_NAME));
 
-        instance().newJob(pipeline, jobConfig()).join();
+        client().newJob(pipeline, jobConfig()).join();
 
-        ICache<Object, Object> cache = instance().getCacheManager().getCache(SINK_CACHE_NAME);
+        ICache<Object, Object> cache = client().getCacheManager().getCache(SINK_CACHE_NAME);
         Set<Entry<Object, Object>> entries = cache.getAll(ImmutableSet.of(1, 2)).entrySet();
         assertThat(cache.size(), equalTo(2));
         assertThat(entries, containsInAnyOrder(
@@ -145,11 +149,11 @@ public class JobSerializerTest extends SimpleTestInClusterSupport {
                 .writeTo(Sinks.observable(OBSERVABLE_NAME));
 
         // When
-        Observable<Value> observable = instance().getObservable(OBSERVABLE_NAME);
+        Observable<Value> observable = client().getObservable(OBSERVABLE_NAME);
         CompletableFuture<Long> counter = observable.toFuture(values -> values.map(Value::value).count());
 
         // Then
-        instance().newJob(pipeline, jobConfig()).join();
+        client().newJob(pipeline, jobConfig()).join();
         assertEquals(2, counter.get(5, TimeUnit.SECONDS).intValue());
     }
 
