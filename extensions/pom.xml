@@ -34,8 +34,10 @@
 
     <modules>
         <module>avro</module>
+<!--
         <module>elasticsearch/elasticsearch-5</module>
         <module>elasticsearch/elasticsearch-6</module>
+-->
         <module>elasticsearch/elasticsearch-7</module>
         <module>hadoop</module>
         <module>kafka</module>
