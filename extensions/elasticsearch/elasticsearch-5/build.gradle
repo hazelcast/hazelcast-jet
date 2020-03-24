@@ -1,5 +1,0 @@
-dependencies {
-    compile 'org.elasticsearch.client:elasticsearch-rest-high-level-client:5.6.0'
-    testCompile "org.testcontainers:elasticsearch:1.11.2"
-    testCompile "org.slf4j:slf4j-log4j12:1.7.26"
-}
