@@ -23,7 +23,6 @@ import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sink;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.test.TestSources;
-import com.hazelcast.transaction.impl.xa.SerializableXID;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -35,11 +34,6 @@ import org.testcontainers.containers.PostgreSQLContainer;
 
 import javax.sql.CommonDataSource;
 import javax.sql.DataSource;
-import javax.sql.XAConnection;
-import javax.sql.XADataSource;
-import javax.transaction.xa.XAException;
-import javax.transaction.xa.XAResource;
-import javax.transaction.xa.Xid;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -54,7 +48,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.IntStream;
 
 import static com.hazelcast.jet.Util.entry;
-import static javax.transaction.xa.XAResource.TMFAIL;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
