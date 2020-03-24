@@ -17,17 +17,67 @@ Gradle, and add the Jet JAR to your build:
 <!--Gradle-->
 
 ```bash
-compile 'com.hazelcast.jet:hazelcast-jet:4.0'
+plugins {
+    id 'application'
+}
+group 'org.example'
+version '1.0-SNAPSHOT'
+
+repositories.mavenCentral()
+
+dependencies {
+    compile 'com.hazelcast.jet:hazelcast-jet:4.0'
+}
+
+application {
+    mainClassName = 'org.example.JetJob'
+}
 ```
 
 <!--Maven-->
 
 ```xml
-<dependency>
-  <groupId>com.hazelcast.jet</groupId>
-  <artifactId>hazelcast-jet</artifactId>
-  <version>4.0</version>
-</dependency>
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>org.example</groupId>
+    <artifactId>first-jet-program</artifactId>
+    <version>1.0-SNAPSHOT</version>
+
+    <name>first-jet-program</name>
+    <properties>
+      <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+      <maven.compiler.target>1.8</maven.compiler.target>
+      <maven.compiler.source>1.8</maven.compiler.source>
+    </properties>
+
+    <dependencies>
+      <dependency>
+        <groupId>com.hazelcast.jet</groupId>
+        <artifactId>hazelcast-jet</artifactId>
+        <version>4.0</version>
+      </dependency>
+    </dependencies>
+
+    <build>
+      <plugins>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-jar-plugin</artifactId>
+          <version>3.2.0</version>
+          <configuration>
+            <archive>
+              <manifest>
+                <mainClass>org.example.JetJob</mainClass>
+              </manifest>
+            </archive>
+          </configuration>
+        </plugin>
+      </plugins>
+    </build>
+</project>
 ```
 
 <!--END_DOCUSAURUS_CODE_TABS-->
@@ -69,6 +119,25 @@ JetInstance jet = Jet.newJetInstance();
 jet.newJob(p).join();
 ```
 
+And run it either from your IDE or from command line:
+
+
+<!--DOCUSAURUS_CODE_TABS-->
+
+<!--Gradle-->
+
+```bash
+gradle run
+```
+
+<!--Maven-->
+
+```bash
+mvn -Dexec.mainClass=org.example.JetJob exec:java
+```
+
+<!--END_DOCUSAURUS_CODE_TABS-->
+
 It will start a full-featured Jet node right there in the JVM where you
 call it and submit your pipeline to it. If you were submitting the code
 to an external Jet cluster, the syntax would be the same because
@@ -94,3 +163,6 @@ The output should look like this:
 11:28:25.443 [INFO] [loggerSink#0] (timestamp=11:28:25.400, sequence=14)
 11:28:25.643 [INFO] [loggerSink#0] (timestamp=11:28:25.600, sequence=16)
 ```
+
+Continue to the next step to submit this job to a running cluster instead
+of running embedded instance.

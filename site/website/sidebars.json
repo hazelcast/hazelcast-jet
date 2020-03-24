@@ -2,8 +2,8 @@
   "docs": {
     "Get Started": [
       "get-started/intro",
-      "get-started/first-job",
       "get-started/installation",
+      "get-started/first-job",
       "get-started/submit-job",
       "get-started/scale-job"
     ],
