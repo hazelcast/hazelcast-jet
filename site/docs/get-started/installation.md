@@ -9,8 +9,8 @@ a cluster on your local machine. This will already be very close to the
 real thing because all the communication happens over network interfaces
 and the nodes just happen to reside on the same physical machine.
 
-There are two main approaches to setting up a local Hazelcast Jet cluster: as
-a classic Java process or as a Docker instance. In order to follow the
+There are two main approaches to setting up a local Hazelcast Jet cluster:
+as a classic Java process or as a Docker instance. In order to follow the
 tutorial, in both cases you'll need the Hazelcast Jet distribution
 package. Download it from [here](https://github.com/hazelcast/hazelcast-jet/releases/download/v4.0/hazelcast-jet-4.0.tar.gz)
 and unzip it to a directory we'll refer to as `<jet_home>`.

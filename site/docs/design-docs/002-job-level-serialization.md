@@ -100,7 +100,7 @@ Job-level serializers can be used to read/write data from/to local IMDG
 `Observable`s, `List`s, `Map`s & `Cache`s.
 
 Job-level `SerializationService` serializers have precedence over any
-cluster serializers - if type A have serializers registered on both
+cluster serializers - if type `A` have serializers registered on both
 levels, cluster and job, the latter will be chosen for given job.
 
 ### API changes
@@ -192,10 +192,19 @@ from/to local IMDG data structures. However, if one wants to work with
 them outside of the job, she has to register compatible serializers on
 a cluster level as well.
 
-Updating `Map`s/`Cache`s or streaming `Journal` data is not currently
-supported.
+Moreover, following functionalities are not currently supported:
+
+* querying `Map`s (reading from an `IMap` with user defined predicates
+    & projections)
+* merging/updating `Map`s
+* streaming `Journal` data
 
 ## Improvements
 
-Allow job-level serializers to be used to update `Map`s/`Cache`s and
-stream `Journal` data.
+Allow job-level serializers to be used with remote IMDG data structures.
+
+Allow job-level serializers to:
+
+* query `Map`s
+* merge/update `Map`s
+* stream `Journal` data

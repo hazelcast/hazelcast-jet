@@ -121,7 +121,6 @@ jet.newJob(p).join();
 
 And run it either from your IDE or from command line:
 
-
 <!--DOCUSAURUS_CODE_TABS-->
 
 <!--Gradle-->
