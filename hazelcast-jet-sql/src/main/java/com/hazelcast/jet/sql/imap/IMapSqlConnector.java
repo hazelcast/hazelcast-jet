@@ -17,6 +17,7 @@
 package com.hazelcast.jet.sql.imap;
 
 import com.hazelcast.jet.JetException;
+import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.core.processor.Processors;
@@ -56,8 +57,28 @@ import static java.util.Collections.emptyList;
 
 public class IMapSqlConnector implements SqlConnector {
 
+    /**
+     * A key in the table options (TO).
+     * <p>
+     * Specifies the map name. If missing, the IMap name is assumed to be equal
+     * to the table name.
+     */
     public static final String TO_MAP_NAME = "mapName";
+
+    /**
+     * A key in the table options (TO).
+     * <p>
+     * Specifies the key class in the IMap entry. Can be omitted if "__key" is
+     * one of the columns.
+     */
     public static final String TO_KEY_CLASS = "keyClass";
+
+    /**
+     * A key in the table options (TO).
+     * <p>
+     * Specifies the value class in the IMap entry. Can be omitted if "this" is
+     * one of the columns.
+     */
     public static final String TO_VALUE_CLASS = "valueClass";
 
     private static final ExpressionEvalContext ZERO_ARGUMENTS_CONTEXT = new ExpressionEvalContext() {
@@ -74,6 +95,7 @@ public class IMapSqlConnector implements SqlConnector {
 
     @Nullable @Override
     public JetTable createTable(
+            @Nonnull JetInstance jetInstance,
             @Nonnull String tableName,
             @Nonnull Map<String, String> serverOptions,
             @Nonnull Map<String, String> tableOptions
@@ -83,6 +105,7 @@ public class IMapSqlConnector implements SqlConnector {
 
     @Nullable @Override
     public JetTable createTable(
+            @Nonnull JetInstance jetInstance,
             @Nonnull String tableName,
             @Nonnull Map<String, String> serverOptions,
             @Nonnull Map<String, String> tableOptions,
@@ -93,6 +116,9 @@ public class IMapSqlConnector implements SqlConnector {
 //            throw new JetException("Only local maps are supported for now");
 //        }
         String mapName = getRequiredTableOption(tableOptions, TO_MAP_NAME);
+        if (mapName == null) {
+            mapName = tableName;
+        }
         List<HazelcastTableIndex> indexes = emptyList(); // TODO
         String keyClassName = tableOptions.get(TO_KEY_CLASS);
         String valueClassName = tableOptions.get(TO_VALUE_CLASS);

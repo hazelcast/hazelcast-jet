@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.sql.schema;
 
+import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.sql.SqlConnector;
 import com.hazelcast.jet.sql.imap.IMapSqlConnector;
 import com.hazelcast.sql.impl.type.QueryDataType;
@@ -56,8 +57,10 @@ public class JetSchema extends AbstractSchema {
     private final ConcurrentMap<String, JetTable> tableMap = new ConcurrentHashMap<>();
 
     private final Map<String, Table> unmodifiableTableMap = Collections.unmodifiableMap(tableMap);
+    private final JetInstance instance;
 
-    public JetSchema() {
+    public JetSchema(JetInstance instance) {
+        this.instance = instance;
         // insert the IMap connector and local cluster server by default
         createConnector(IMAP_CONNECTOR_NAME, new IMapSqlConnector());
         createServer(IMAP_LOCAL_SERVER, IMAP_CONNECTOR_NAME, emptyMap());
@@ -122,12 +125,12 @@ public class JetSchema extends AbstractSchema {
 
         JetTable table;
         if (fields == null) {
-            table = connector.createTable(tableName, serverOptions, tableOptions);
+            table = connector.createTable(instance, tableName, serverOptions, tableOptions);
         } else {
             if (fields.isEmpty()) {
                 throw new IllegalArgumentException("zero fields");
             }
-            table = connector.createTable(tableName, serverOptions, tableOptions, fields);
+            table = connector.createTable(instance, tableName, serverOptions, tableOptions, fields);
         }
         tableMap.put(tableName, table);
     }

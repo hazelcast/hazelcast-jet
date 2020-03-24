@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.sql;
 
+import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.datamodel.Tuple2;
@@ -36,6 +37,7 @@ public interface SqlConnector {
 
     @Nullable
     default JetTable createTable(
+            @Nonnull JetInstance jetInstance,
             @Nonnull String tableName,
             @Nonnull Map<String, String> serverOptions,
             @Nonnull Map<String, String> tableOptions
@@ -45,6 +47,7 @@ public interface SqlConnector {
 
     @Nullable
     JetTable createTable(
+            @Nonnull JetInstance jetInstance,
             @Nonnull String tableName,
             @Nonnull Map<String, String> serverOptions,
             @Nonnull Map<String, String> tableOptions,

@@ -95,13 +95,15 @@ public class JetSqlService {
             .of(RowCountMetadata.SOURCE, DefaultRelMetadataProvider.INSTANCE));
 
     private final JetInstance instance;
-    private final JetSchema schema = new JetSchema();
-    private final SqlValidator validator = createValidator();
+    private final JetSchema schema;
+    private final SqlValidator validator;
     private final SqlToRelConverter sqlToRelConverter;
     private final VolcanoPlanner planner;
 
     public JetSqlService(JetInstance instance) {
         this.instance = instance;
+        this.schema = new JetSchema(instance);
+        this.validator = createValidator();
 
         JavaTypeFactory typeFactory = new HazelcastTypeFactory();
         CalciteConnectionConfig connectionConfig = createConnectionConfig();
