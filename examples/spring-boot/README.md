@@ -1,5 +1,5 @@
 ## Spring Boot Integration
-
+some change
 You can integrate Hazelcast Jet with Spring Boot easily. The approach is
 very similar to the programmatic configuration. You need to have a
 [config class](../spring/src/main/java/com/hazelcast/jet/examples/spring/config/AppConfig.java)
