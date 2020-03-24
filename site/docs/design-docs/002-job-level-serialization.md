@@ -193,7 +193,7 @@ them outside of the job, she has to register compatible serializers on
 a cluster level as well.
 
 Updating `Map`s/`Cache`s or streaming `Journal` data is not currently
-supported as those require cluster side object manipulation.
+supported.
 
 ## Improvements
 
