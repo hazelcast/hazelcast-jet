@@ -107,14 +107,11 @@ public interface SqlConnector {
 
     /**
      * Returns the supplier for the sink processor.
-     *
-     * @param fields list of field names given to the sink
      */
     @Nullable
     Tuple2<Vertex, Vertex> sink(
             @Nonnull DAG dag,
-            @Nonnull JetTable jetTable,
-            @Nonnull List<String> fields);
+            @Nonnull JetTable jetTable);
 
     boolean supportsFullScanReader();
     boolean supportsNestedLoopReader();

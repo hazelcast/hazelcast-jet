@@ -214,7 +214,6 @@ public class JetSqlService {
      */
     public Job execute(String sql) {
         SqlNode node = parse(sql);
-
         RelNode rel = convert(node);
 
         System.out.println("before logical opt:\n" + RelOptUtil.toString(rel));
@@ -233,13 +232,13 @@ public class JetSqlService {
      */
     public Observable<Object[]> executeQuery(String sql) {
         SqlNode node = parse(sql);
-
         RelNode rel = convert(node);
 
+        System.out.println("before logical opt:\n" + RelOptUtil.toString(rel));
         LogicalRel logicalRel = optimizeLogical(rel);
-        System.out.println(RelOptUtil.toString(logicalRel));
+        System.out.println("after logical opt:\n" + RelOptUtil.toString(logicalRel));
         PhysicalRel physicalRel = optimizePhysical(logicalRel);
-        System.out.println(RelOptUtil.toString(physicalRel));
+        System.out.println("after physical opt:\n" + RelOptUtil.toString(physicalRel));
 
         String observableName = "sql-sink-" + UUID.randomUUID().toString();
         DAG dag = createDag(physicalRel, SinkProcessors.writeObservableP(observableName));

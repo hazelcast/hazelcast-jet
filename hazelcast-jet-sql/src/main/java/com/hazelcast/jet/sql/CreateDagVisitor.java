@@ -34,7 +34,6 @@ import java.util.ArrayDeque;
 import java.util.Deque;
 
 import static com.hazelcast.jet.core.Edge.between;
-import static java.util.Arrays.asList;
 
 public class CreateDagVisitor {
 
@@ -88,8 +87,7 @@ public class CreateDagVisitor {
 
     public void onTableInsert(JetTableInsertPhysicalRel rel) {
         final JetTable jetTable = rel.getTable().unwrap(JetTable.class);
-        // TODO don't hard-code fields
-        Tuple2<Vertex, Vertex> sink = jetTable.getSqlConnector().sink(dag, jetTable, asList("__key", "this"));
+        Tuple2<Vertex, Vertex> sink = jetTable.getSqlConnector().sink(dag, jetTable);
         if (sink == null) {
             throw new JetException("This connector doesn't support writing");
         }

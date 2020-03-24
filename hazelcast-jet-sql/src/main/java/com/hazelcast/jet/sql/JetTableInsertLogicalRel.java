@@ -51,8 +51,7 @@ public class JetTableInsertLogicalRel extends TableModify implements LogicalRel 
                 updateColumnList, sourceExpressionList, flattened);
         assert input.getConvention() == CONVENTION_LOGICAL : "input.convention=" + input.getConvention();
         assert getConvention() == CONVENTION_LOGICAL;
-        final JetTable jetTable =
-                table.unwrap(JetTable.class);
+        final JetTable jetTable = table.unwrap(JetTable.class);
         if (jetTable == null) {
             throw new AssertionError(); // TODO: user error in validator
         }

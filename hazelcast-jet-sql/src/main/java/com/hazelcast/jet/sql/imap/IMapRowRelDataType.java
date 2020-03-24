@@ -17,6 +17,7 @@
 package com.hazelcast.jet.sql.imap;
 
 import com.hazelcast.sql.impl.type.QueryDataType;
+import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.rel.type.RelDataTypeFieldImpl;
@@ -46,7 +47,9 @@ public class IMapRowRelDataType extends RelDataTypeImpl {
         List<RelDataTypeField> res = new ArrayList<>();
         for (int i = 0; i < fields.size(); i++) {
             Entry<String, QueryDataType> field = fields.get(i);
-            RelDataTypeField relDataTypeField = new RelDataTypeFieldImpl(field.getKey(), i, typeFactory.createSqlType(SqlTypeName.ANY));
+            // TODO this type is NOT NULL
+            RelDataType sqlType = typeFactory.createSqlType(SqlTypeName.ANY);
+            RelDataTypeField relDataTypeField = new RelDataTypeFieldImpl(field.getKey(), i, sqlType);
             res.add(relDataTypeField);
         }
         return res;

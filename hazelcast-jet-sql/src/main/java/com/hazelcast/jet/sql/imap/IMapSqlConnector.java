@@ -50,7 +50,6 @@ import static com.hazelcast.jet.core.processor.SourceProcessors.readMapP;
 import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 import static com.hazelcast.jet.impl.util.Util.toList;
-import static com.hazelcast.jet.sql.Util.getRequiredTableOption;
 import static com.hazelcast.query.QueryConstants.KEY_ATTRIBUTE_NAME;
 import static com.hazelcast.query.QueryConstants.THIS_ATTRIBUTE_NAME;
 import static java.util.Collections.emptyList;
@@ -115,10 +114,7 @@ public class IMapSqlConnector implements SqlConnector {
 //        if (!serverOptions.isEmpty()) {
 //            throw new JetException("Only local maps are supported for now");
 //        }
-        String mapName = getRequiredTableOption(tableOptions, TO_MAP_NAME);
-        if (mapName == null) {
-            mapName = tableName;
-        }
+        String mapName = tableOptions.getOrDefault(TO_MAP_NAME, tableName);
         List<HazelcastTableIndex> indexes = emptyList(); // TODO
         String keyClassName = tableOptions.get(TO_KEY_CLASS);
         String valueClassName = tableOptions.get(TO_VALUE_CLASS);
@@ -229,8 +225,7 @@ public class IMapSqlConnector implements SqlConnector {
     @Nullable @Override
     public Tuple2<Vertex, Vertex> sink(
             @Nonnull DAG dag,
-            @Nonnull JetTable jetTable,
-            @Nonnull List<String> fields
+            @Nonnull JetTable jetTable
     ) {
         IMapTable table = (IMapTable) jetTable;
         String mapName = table.getMapName();
@@ -240,6 +235,7 @@ public class IMapSqlConnector implements SqlConnector {
             throw new JetException("If writing to IMap, you need to specify " + TO_KEY_CLASS + " and "
                     + TO_VALUE_CLASS + " in table options");
         }
+        List<String> fields = ((IMapTable) jetTable).getFieldNames();
         // TODO merge projection vertex into the sink vertex
         Vertex vStart = dag.newVertex("project", Processors.<Object[], Entry<Object, Object>>mapP(row -> {
             BeanUtilsBean bub = new BeanUtilsBean();

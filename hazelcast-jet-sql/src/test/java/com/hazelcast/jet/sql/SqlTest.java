@@ -37,6 +37,7 @@ import java.util.Map;
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.core.TestUtil.createMap;
 import static java.util.Arrays.asList;
+import static java.util.Collections.emptyMap;
 import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
@@ -55,12 +56,11 @@ public class SqlTest extends SimpleTestInClusterSupport {
         sqlService = new JetSqlService(instance());
 
         sqlService.getSchema().createTable(INT_TO_STRING_MAP, JetSchema.IMAP_LOCAL_SERVER,
-                createMap(IMapSqlConnector.TO_MAP_NAME, INT_TO_STRING_MAP),
+                emptyMap(),
                 asList(entry("__key", QueryDataType.INT), entry("this", QueryDataType.VARCHAR)));
 
         sqlService.getSchema().createTable(SINK_MAP, JetSchema.IMAP_LOCAL_SERVER,
-                createMap(IMapSqlConnector.TO_MAP_NAME, SINK_MAP,
-                        IMapSqlConnector.TO_KEY_CLASS, Integer.class.getName(),
+                createMap(IMapSqlConnector.TO_KEY_CLASS, Integer.class.getName(),
                         IMapSqlConnector.TO_VALUE_CLASS, String.class.getName()),
                 asList(entry("__key", QueryDataType.INT), entry("this", QueryDataType.VARCHAR)));
     }

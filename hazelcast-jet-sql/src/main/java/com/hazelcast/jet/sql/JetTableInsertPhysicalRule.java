@@ -34,6 +34,7 @@ public final class JetTableInsertPhysicalRule extends ConverterRule {
     public RelNode convert(RelNode rel) {
         JetTableInsertLogicalRel tableModify = (JetTableInsertLogicalRel) rel;
         if (!tableModify.isInsert()) {
+            // we only support INSERT statements
             return null;
         }
 

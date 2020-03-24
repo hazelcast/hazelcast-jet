@@ -35,6 +35,7 @@ public final class JetTableInsertLogicalRule extends ConverterRule {
     public RelNode convert(RelNode rel) {
         LogicalTableModify tableModify = (LogicalTableModify) rel;
         if (!tableModify.isInsert()) {
+            // we only support INSERT statements
             return null;
         }
 
