@@ -75,7 +75,7 @@ public class GroupP<K, A, R, OUT> extends AbstractProcessor {
     protected boolean tryProcess(int ordinal, @Nonnull Object item) {
         Function<Object, ? extends K> keyFn = (Function<Object, ? extends K>) groupKeyFns.get(ordinal);
         K key = keyFn.apply(item);
-       // A acc = keyToAcc.computeIfAbsent(key, k -> aggrOp.createFn().get());
+        // A acc = keyToAcc.computeIfAbsent(key, k -> aggrOp.createFn().get());
         A acc = aggrOp.createFn().get();
         keyToAcc.put(key, acc);
         aggrOp.accumulateFn(ordinal).accept(acc, item);
@@ -89,6 +89,7 @@ public class GroupP<K, A, R, OUT> extends AbstractProcessor {
                     // reuse null filtering done by map()
                     .map(e -> mapToOutputFn.apply(e.getKey(), aggrOp.finishFn().apply(e.getValue())));
         }
+        store.deleteDataStore();
         return emitFromTraverser(resultTraverser);
     }
 

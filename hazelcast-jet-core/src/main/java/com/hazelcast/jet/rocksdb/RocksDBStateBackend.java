@@ -1,3 +1,18 @@
+/*
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.hazelcast.jet.rocksdb;
 
 import org.rocksdb.RocksDB;
@@ -17,13 +32,16 @@ import java.util.ArrayList;
  * Each RocksMap is instantiated with a ColumnFamilyHandler.
  * Once the task has finished (complete() is invoked),
  * the task asks it to delete the whole data-store.
+ *
+ * @param <K> the type of key
+ * @param <V> the type of value
  */
 
 public class RocksDBStateBackend<K, V> {
     private RocksDB db;
     private ArrayList<ColumnFamilyHandle> cfhs = new ArrayList<>();
 
-    public RocksDBStateBackend(Options opt, String directory) {
+    RocksDBStateBackend(Options opt, String directory) {
         RocksDB.loadLibrary();
         try {
             db = RocksDB.open(opt, directory);
@@ -31,6 +49,7 @@ public class RocksDBStateBackend<K, V> {
             e.printStackTrace();
         }
     }
+
     public RocksMap<K, V> getMap() {
         ColumnFamilyHandle cfh = null;
         try {
@@ -42,5 +61,9 @@ public class RocksDBStateBackend<K, V> {
         return new RocksMap<K, V>(db, cfh);
     }
 
-    public void deleteDataStore() { }
+    public void deleteDataStore() {
+        for (final ColumnFamilyHandle cfh : cfhs) {
+            cfh.close();
+        }
+    }
 }

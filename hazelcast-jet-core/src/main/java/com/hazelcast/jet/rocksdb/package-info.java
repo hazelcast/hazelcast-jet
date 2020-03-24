@@ -13,18 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.hazelcast.jet.rocksdb;
-
-import org.rocksdb.Options;
-
 /**
- * A configuration class where the RocksDB default options should be placed.
- * Used by RocksDBFactory to Create RocksDBStateBackend.
- * Note : RocksDB.Options extends DBOptions and ColumnFamilyOptions
- * it can be used to configure database-wide and column family options
+ * This Package contains the proposed RocksDB state backend design for GSOC 2020.
  */
-public class RocksDBOptions {
-    public Options getOptions() {
-        return null;
-    }
-}
+package com.hazelcast.jet.rocksdb;
