@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.core;
 
+import com.hazelcast.cache.ICache;
 import com.hazelcast.config.CacheSimpleConfig;
 import com.hazelcast.config.SerializerConfig;
 import com.hazelcast.jet.Observable;
@@ -25,7 +26,9 @@ import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
+import com.hazelcast.jet.pipeline.test.AssertionSinks;
 import com.hazelcast.jet.pipeline.test.TestSources;
+import com.hazelcast.map.IMap;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.StreamSerializer;
@@ -33,77 +36,104 @@ import com.hazelcast.test.HazelcastSerialClassRunner;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.testcontainers.shaded.com.google.common.collect.ImmutableMap;
+import org.testcontainers.shaded.com.google.common.collect.ImmutableSet;
 
+import javax.cache.Cache;
 import java.io.IOException;
 import java.util.AbstractMap.SimpleEntry;
+import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
-import static com.hazelcast.jet.core.JobStatus.COMPLETED;
+import static java.util.Arrays.asList;
+import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.hamcrest.Matchers.equalTo;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThat;
 
 @RunWith(HazelcastSerialClassRunner.class)
 public class JobSerializerTest extends SimpleTestInClusterSupport {
 
-    private static final String MAP_NAME = "map";
-    private static final String CACHE_NAME = "cache";
+    private static final String SOURCE_MAP_NAME = "source-map";
+    private static final String SINK_MAP_NAME = "sink-map";
+    private static final String SOURCE_CACHE_NAME = "source-cache";
+    private static final String SINK_CACHE_NAME = "sink-cache";
     private static final String OBSERVABLE_NAME = "observable";
 
     @BeforeClass
     public static void beforeClass() {
         JetConfig config = new JetConfig();
         config.getHazelcastConfig()
-              .addCacheConfig(new CacheSimpleConfig().setName(CACHE_NAME))
+              .addCacheConfig(new CacheSimpleConfig().setName(SOURCE_CACHE_NAME))
+              .addCacheConfig(new CacheSimpleConfig().setName(SINK_CACHE_NAME))
               .getSerializationConfig()
               .addSerializerConfig(new SerializerConfig().setTypeClass(Value.class).setClass(ValueSerializer.class));
         initializeWithClient(1, config, null);
     }
 
     @Test
-    public void when_serializerIsRegistered_then_itIsAvailableForLocalMapSourceAndSink() {
-        // Given
-        Pipeline sinkPipeline = Pipeline.create();
-        sinkPipeline.readFrom(TestSources.items(13))
-                    .map(i -> new SimpleEntry<>(i, new Value(i)))
-                    .writeTo(Sinks.map(MAP_NAME));
+    public void when_serializerIsRegistered_then_itIsAvailableForLocalMapSource() {
+        Map<Integer, Value> map = instance().getMap(SOURCE_MAP_NAME);
+        map.putAll(ImmutableMap.of(1, new Value(1), 2, new Value(2)));
 
-        // When
-        // Then
-        assertJobStatusEventually(instance().newJob(sinkPipeline, jobConfig()), COMPLETED);
+        Pipeline pipeline = Pipeline.create();
+        pipeline.readFrom(Sources.<Integer, Value>map(SOURCE_MAP_NAME))
+                .map(entry -> entry.getValue().value())
+                .writeTo(AssertionSinks.assertAnyOrder(asList(1, 2)));
 
-        // Given
-        Pipeline sourcePipeline = Pipeline.create();
-        sourcePipeline.readFrom(Sources.<Integer, Value>map(MAP_NAME))
-                      .map(Entry::getValue)
-                      .writeTo(Sinks.logger());
-
-        // When
-        // Then
-        assertJobStatusEventually(instance().newJob(sourcePipeline, jobConfig()), COMPLETED);
+        instance().newJob(pipeline, jobConfig()).join();
     }
 
     @Test
-    public void when_serializerIsRegistered_then_itIsAvailableForLocalCacheSourceAndSink() {
-        // Given
-        Pipeline sinkPipeline = Pipeline.create();
-        sinkPipeline.readFrom(TestSources.items(13))
-                    .map(i -> new SimpleEntry<>(i, new Value(i)))
-                    .writeTo(Sinks.cache(CACHE_NAME));
+    public void when_serializerIsRegistered_then_itIsAvailableForLocalMapSink() {
+        Pipeline pipeline = Pipeline.create();
+        pipeline.readFrom(TestSources.items(1, 2))
+                .map(i -> new SimpleEntry<>(i, new Value(i)))
+                .writeTo(Sinks.map(SINK_MAP_NAME));
 
-        // When
-        // Then
-        assertJobStatusEventually(instance().newJob(sinkPipeline, jobConfig()), COMPLETED);
+        instance().newJob(pipeline, jobConfig()).join();
 
-        // Given
-        Pipeline sourcePipeline = Pipeline.create();
-        sourcePipeline.readFrom(Sources.<Integer, Value>cache(CACHE_NAME))
-                      .map(Entry::getValue)
-                      .writeTo(Sinks.logger());
+        IMap<Object, Object> map = instance().getMap(SINK_MAP_NAME);
+        Set<Entry<Object, Object>> entries = map.entrySet();
+        assertThat(entries, containsInAnyOrder(
+                new SimpleEntry<>(1, new Value(1)),
+                new SimpleEntry<>(2, new Value(2))
+        ));
+    }
 
-        // When
-        // Then
-        assertJobStatusEventually(instance().newJob(sourcePipeline, jobConfig()), COMPLETED);
+    @Test
+    public void when_serializerIsRegistered_then_itIsAvailableForLocalCacheSource() {
+        Cache<Integer, Value> map = instance().getCacheManager().getCache(SOURCE_CACHE_NAME);
+        map.putAll(ImmutableMap.of(1, new Value(1), 2, new Value(2)));
+
+        Pipeline pipeline = Pipeline.create();
+        pipeline.readFrom(Sources.<Integer, Value>cache(SOURCE_CACHE_NAME))
+                .map(entry -> entry.getValue().value())
+                .writeTo(AssertionSinks.assertAnyOrder(asList(1, 2)));
+
+        instance().newJob(pipeline, jobConfig()).join();
+    }
+
+    @Test
+    public void when_serializerIsRegistered_then_itIsAvailableForLocalCacheSink() {
+        Pipeline pipeline = Pipeline.create();
+        pipeline.readFrom(TestSources.items(1, 2))
+                .map(i -> new SimpleEntry<>(i, new Value(i)))
+                .writeTo(Sinks.cache(SINK_CACHE_NAME));
+
+        instance().newJob(pipeline, jobConfig()).join();
+
+        ICache<Object, Object> cache = instance().getCacheManager().getCache(SINK_CACHE_NAME);
+        Set<Entry<Object, Object>> entries = cache.getAll(ImmutableSet.of(1, 2)).entrySet();
+        assertThat(cache.size(), equalTo(2));
+        assertThat(entries, containsInAnyOrder(
+                new SimpleEntry<>(1, new Value(1)),
+                new SimpleEntry<>(2, new Value(2))
+        ));
     }
 
     @Test
@@ -116,12 +146,11 @@ public class JobSerializerTest extends SimpleTestInClusterSupport {
 
         // When
         Observable<Value> observable = instance().getObservable(OBSERVABLE_NAME);
-        CompletableFuture<Integer> summer = observable
-                .toFuture(values -> values.map(Value::value).reduce(0, Integer::sum));
+        CompletableFuture<Long> counter = observable.toFuture(values -> values.map(Value::value).count());
 
         // Then
-        assertJobStatusEventually(instance().newJob(pipeline, jobConfig()), COMPLETED);
-        assertEquals(3, summer.get(5, TimeUnit.SECONDS).intValue());
+        instance().newJob(pipeline, jobConfig()).join();
+        assertEquals(2, counter.get(5, TimeUnit.SECONDS).intValue());
     }
 
     private static JobConfig jobConfig() {
@@ -138,6 +167,23 @@ public class JobSerializerTest extends SimpleTestInClusterSupport {
 
         public int value() {
             return value;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
+            Value value1 = (Value) o;
+            return value == value1.value;
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(value);
         }
     }
 
