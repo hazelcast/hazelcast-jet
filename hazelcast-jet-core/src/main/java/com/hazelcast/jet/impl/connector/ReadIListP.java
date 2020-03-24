@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.impl.connector;
 
+import com.hazelcast.client.impl.clientside.HazelcastClientProxy;
 import com.hazelcast.client.impl.proxy.ClientListProxy;
 import com.hazelcast.collection.IList;
 import com.hazelcast.collection.impl.list.ListProxyImpl;
@@ -63,13 +64,14 @@ public final class ReadIListP extends AbstractProcessor {
     @Override
     protected void init(@Nonnull Context context) {
         HazelcastInstance instance;
+        SerializationService serializationService;
         if (isRemote()) {
             instance = client = newHazelcastClient(asClientConfig(clientXml));
+            serializationService = ((HazelcastClientProxy) instance).getSerializationService();
         } else {
             instance = context.jetInstance().getHazelcastInstance();
+            serializationService = ((ProcCtx) context).serializationService();
         }
-
-        SerializationService serializationService = ((ProcCtx) context).serializationService();
         traverser = createTraverser(instance, name).map(serializationService::toObject);
     }
 

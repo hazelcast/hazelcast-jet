@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.impl.connector;
 
+import com.hazelcast.client.impl.clientside.HazelcastClientProxy;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.internal.serialization.SerializationService;
 import com.hazelcast.jet.core.Processor;
@@ -46,10 +47,11 @@ public abstract class AbstractHazelcastConnectorSupplier implements ProcessorSup
     public void init(@Nonnull Context context) {
         if (clientXml != null) {
             instance = newHazelcastClient(asClientConfig(clientXml));
+            serializationService = ((HazelcastClientProxy) instance).getSerializationService();
         } else {
             instance = context.jetInstance().getHazelcastInstance();
+            serializationService = ((ProcSupplierCtx) context).serializationService();
         }
-        serializationService = ((ProcSupplierCtx) context).serializationService();
     }
 
     @Nonnull @Override
