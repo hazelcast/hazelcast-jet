@@ -30,6 +30,7 @@ import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.partition.strategy.StringPartitioningStrategy;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.elasticsearch.action.search.SearchRequest;
 import org.elasticsearch.client.Request;
 import org.elasticsearch.client.Response;
@@ -48,6 +49,7 @@ import java.util.Set;
 import java.util.function.Function;
 
 import static com.hazelcast.jet.impl.util.Util.uncheckCall;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.emptyMap;
 import static java.util.Collections.nCopies;
@@ -60,13 +62,13 @@ public class ElasticProcessorMetaSupplier<T> implements ProcessorMetaSupplier {
 
     private static final long serialVersionUID = 1L;
 
-    private ILogger logger;
+    private transient ILogger logger;
 
     @Nonnull
     private final ElasticsearchSourceBuilder<T> builder;
 
     private Map<String, List<Shard>> assignedShards;
-    private Address ownerAddress;
+    private transient Address ownerAddress;
 
     public ElasticProcessorMetaSupplier(@Nonnull ElasticsearchSourceBuilder<T> builder) {
         this.builder = builder;
@@ -143,6 +145,8 @@ public class ElasticProcessorMetaSupplier<T> implements ProcessorMetaSupplier {
         return nodeAssigned;
     }
 
+
+    @SuppressFBWarnings("RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE")
     private List<Shard> readShards() throws IOException {
         try (RestHighLevelClient client = builder.clientSupplier().get()) {
             SearchRequest sr = builder.searchRequestSupplier().get();
@@ -150,7 +154,7 @@ public class ElasticProcessorMetaSupplier<T> implements ProcessorMetaSupplier {
             r.addParameter("format", "json");
             Response res = client.getLowLevelClient().performRequest(r);
 
-            try (InputStreamReader reader = new InputStreamReader(res.getEntity().getContent())) {
+            try (InputStreamReader reader = new InputStreamReader(res.getEntity().getContent(), UTF_8)) {
                 JsonArray array = Json.parse(reader).asArray();
                 List<Shard> shards = new ArrayList<>(array.size());
                 for (JsonValue value : array) {
