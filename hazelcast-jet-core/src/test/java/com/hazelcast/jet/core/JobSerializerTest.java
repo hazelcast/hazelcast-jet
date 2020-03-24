@@ -32,6 +32,7 @@ import com.hazelcast.jet.pipeline.test.TestSources;
 import com.hazelcast.map.IMap;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
+import com.hazelcast.nio.serialization.HazelcastSerializationException;
 import com.hazelcast.nio.serialization.StreamSerializer;
 import com.hazelcast.test.HazelcastSerialClassRunner;
 import org.junit.BeforeClass;
@@ -44,17 +45,13 @@ import javax.cache.Cache;
 import java.io.IOException;
 import java.util.AbstractMap.SimpleEntry;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Objects;
-import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 import static java.util.Arrays.asList;
-import static org.hamcrest.Matchers.containsInAnyOrder;
-import static org.hamcrest.Matchers.equalTo;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @RunWith(HazelcastSerialClassRunner.class)
 public class JobSerializerTest extends SimpleTestInClusterSupport {
@@ -80,6 +77,13 @@ public class JobSerializerTest extends SimpleTestInClusterSupport {
     }
 
     @Test
+    public void when_serializerIsNotRegistered_then_mapThrowsException() {
+        Map<Integer, Value> map = instance().getMap(SOURCE_MAP_NAME);
+
+        assertThatThrownBy(() -> map.put(1, new Value(1))).isInstanceOf(HazelcastSerializationException.class);
+    }
+
+    @Test
     public void when_serializerIsRegistered_then_itIsAvailableForLocalMapSource() {
         Map<Integer, Value> map = client().getMap(SOURCE_MAP_NAME);
         map.putAll(ImmutableMap.of(1, new Value(1), 2, new Value(2)));
@@ -102,11 +106,16 @@ public class JobSerializerTest extends SimpleTestInClusterSupport {
         client().newJob(pipeline, jobConfig()).join();
 
         IMap<Object, Object> map = client().getMap(SINK_MAP_NAME);
-        Set<Entry<Object, Object>> entries = map.entrySet();
-        assertThat(entries, containsInAnyOrder(
-                new SimpleEntry<>(1, new Value(1)),
-                new SimpleEntry<>(2, new Value(2))
-        ));
+        assertThat(map).containsExactlyInAnyOrderEntriesOf(
+                ImmutableMap.of(1, new Value(1), 2, new Value(2))
+        );
+    }
+
+    @Test
+    public void when_serializerIsNotRegistered_then_cacheThrowsException() {
+        Cache<Integer, Value> cache = instance().getCacheManager().getCache(SOURCE_CACHE_NAME);
+
+        assertThatThrownBy(() -> cache.put(1, new Value(1))).isInstanceOf(HazelcastSerializationException.class);
     }
 
     @Test
@@ -131,13 +140,11 @@ public class JobSerializerTest extends SimpleTestInClusterSupport {
 
         client().newJob(pipeline, jobConfig()).join();
 
-        ICache<Object, Object> cache = client().getCacheManager().getCache(SINK_CACHE_NAME);
-        Set<Entry<Object, Object>> entries = cache.getAll(ImmutableSet.of(1, 2)).entrySet();
-        assertThat(cache.size(), equalTo(2));
-        assertThat(entries, containsInAnyOrder(
-                new SimpleEntry<>(1, new Value(1)),
-                new SimpleEntry<>(2, new Value(2))
-        ));
+        ICache<Integer, Value> cache = client().getCacheManager().getCache(SINK_CACHE_NAME);
+        assertThat(cache).hasSize(2);
+        assertThat(cache.getAll(ImmutableSet.of(1, 2))).containsExactlyInAnyOrderEntriesOf(
+                ImmutableMap.of(1, new Value(1), 2, new Value(2))
+        );
     }
 
     @Test
@@ -154,7 +161,7 @@ public class JobSerializerTest extends SimpleTestInClusterSupport {
 
         // Then
         client().newJob(pipeline, jobConfig()).join();
-        assertEquals(2, counter.get(5, TimeUnit.SECONDS).intValue());
+        assertThat(counter.get(5, TimeUnit.SECONDS).intValue()).isEqualTo(2);
     }
 
     private static JobConfig jobConfig() {
