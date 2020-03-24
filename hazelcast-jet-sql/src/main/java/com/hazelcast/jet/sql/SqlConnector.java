@@ -110,8 +110,7 @@ public interface SqlConnector {
     @Nullable
     Tuple2<Vertex, Vertex> sink(
             @Nonnull DAG dag,
-            @Nonnull Map<String, String> serverOptions,
-            @Nonnull Map<String, String> tableOptions,
+            @Nonnull JetTable jetTable,
             @Nonnull List<String> fields);
 
     boolean supportsFullScanReader();

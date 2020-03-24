@@ -248,7 +248,7 @@ public class JetSqlService {
 
     private DAG createDag(PhysicalRel physicalRel, ProcessorMetaSupplier sinkSupplier) {
         DAG dag = new DAG();
-        Vertex sink = dag.newVertex("sink", sinkSupplier);
+        Vertex sink = sinkSupplier != null ? dag.newVertex("sink", sinkSupplier) : null;
 
         CreateDagVisitor visitor = new CreateDagVisitor(dag, sink);
         physicalRel.visit(visitor);

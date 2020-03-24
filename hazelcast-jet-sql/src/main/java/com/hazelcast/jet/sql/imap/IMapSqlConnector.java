@@ -29,6 +29,7 @@ import com.hazelcast.projection.Projection;
 import com.hazelcast.query.Predicate;
 import com.hazelcast.query.Predicates;
 import com.hazelcast.sql.impl.expression.Expression;
+import com.hazelcast.sql.impl.expression.ExpressionEvalContext;
 import com.hazelcast.sql.impl.row.KeyValueRow;
 import com.hazelcast.sql.impl.type.QueryDataType;
 import org.apache.calcite.rex.RexNode;
@@ -38,12 +39,12 @@ import org.apache.commons.beanutils.PropertyUtils;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.lang.reflect.InvocationTargetException;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
 import static com.hazelcast.jet.Util.entry;
+import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.processor.SourceProcessors.readMapP;
 import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
@@ -51,12 +52,20 @@ import static com.hazelcast.jet.impl.util.Util.toList;
 import static com.hazelcast.jet.sql.Util.getRequiredTableOption;
 import static com.hazelcast.query.QueryConstants.KEY_ATTRIBUTE_NAME;
 import static com.hazelcast.query.QueryConstants.THIS_ATTRIBUTE_NAME;
+import static java.util.Collections.emptyList;
 
 public class IMapSqlConnector implements SqlConnector {
 
     public static final String TO_MAP_NAME = "mapName";
     public static final String TO_KEY_CLASS = "keyClass";
     public static final String TO_VALUE_CLASS = "valueClass";
+
+    private static final ExpressionEvalContext ZERO_ARGUMENTS_CONTEXT = new ExpressionEvalContext() {
+        @Override
+        public List<Object> getArguments() {
+            return emptyList();
+        }
+    };
 
     @Override
     public boolean isStream() {
@@ -84,8 +93,10 @@ public class IMapSqlConnector implements SqlConnector {
 //            throw new JetException("Only local maps are supported for now");
 //        }
         String mapName = getRequiredTableOption(tableOptions, TO_MAP_NAME);
-        List<HazelcastTableIndex> indexes = Collections.emptyList(); // TODO
-        return new IMapTable(this, mapName, indexes, fields);
+        List<HazelcastTableIndex> indexes = emptyList(); // TODO
+        String keyClassName = tableOptions.get(TO_KEY_CLASS);
+        String valueClassName = tableOptions.get(TO_VALUE_CLASS);
+        return new IMapTable(this, mapName, indexes, fields, keyClassName, valueClassName);
     }
 
     @Nullable @Override
@@ -153,7 +164,7 @@ public class IMapSqlConnector implements SqlConnector {
                     }
                 });
                 row.setKeyValue(entry.getKey(), entry.getValue());
-                boolean res = predicate.eval(row) == Boolean.TRUE;
+                boolean res = predicate.eval(row, ZERO_ARGUMENTS_CONTEXT) == Boolean.TRUE;
                 System.out.println("evaluated " + entry + " to " + res);
                 return res;
             };
@@ -192,36 +203,53 @@ public class IMapSqlConnector implements SqlConnector {
     @Nullable @Override
     public Tuple2<Vertex, Vertex> sink(
             @Nonnull DAG dag,
-            @Nonnull Map<String, String> serverOptions,
-            @Nonnull Map<String, String> tableOptions,
+            @Nonnull JetTable jetTable,
             @Nonnull List<String> fields
     ) {
-        String mapName = tableOptions.get(TO_MAP_NAME);
-        String keyClassName = tableOptions.get(TO_KEY_CLASS);
-        String valueClassName = tableOptions.get(TO_VALUE_CLASS);
+        IMapTable table = (IMapTable) jetTable;
+        String mapName = table.getMapName();
+        String keyClassName = table.getKeyClassName();
+        String valueClassName = table.getValueClassName();
         if (keyClassName == null || valueClassName == null) {
             throw new JetException("If writing to IMap, you need to specify " + TO_KEY_CLASS + " and "
                     + TO_VALUE_CLASS + " in table options");
         }
-        if (!serverOptions.isEmpty()) {
-            throw new JetException("Only local maps are supported for now");
-        }
+        // TODO merge projection vertex into the sink vertex
         Vertex vStart = dag.newVertex("project", Processors.<Object[], Entry<Object, Object>>mapP(row -> {
             BeanUtilsBean bub = new BeanUtilsBean();
-            Object key = Class.forName(keyClassName).getConstructor().newInstance();
-            Object value = Class.forName(valueClassName).getConstructor().newInstance();
+            Object key;
+            int wholeKeyIndex = fields.indexOf(KEY_ATTRIBUTE_NAME.value());
+            int wholeValueIndex = fields.indexOf(THIS_ATTRIBUTE_NAME.value());
+            if (wholeKeyIndex >= 0) {
+                key = row[wholeKeyIndex];
+            } else {
+                key = Class.forName(keyClassName).getConstructor().newInstance();
+            }
+            Object value;
+            if (wholeValueIndex >= 0) {
+                value = row[wholeValueIndex];
+            } else {
+                value = Class.forName(valueClassName).getConstructor().newInstance();
+            }
             for (int i = 0; i < fields.size(); i++) {
                 String field = fields.get(i);
                 Object o = value;
-                if (field.startsWith(KEY_ATTRIBUTE_NAME.value())) {
+                if (field.equals(KEY_ATTRIBUTE_NAME.value()) || field.equals(THIS_ATTRIBUTE_NAME.value())) {
+                    continue;
+                }
+                else if (field.startsWith(KEY_ATTRIBUTE_NAME.value() + ".")) {
                     o = key;
                     field = field.substring(KEY_ATTRIBUTE_NAME.value().length() + 1);
+                }
+                else if (field.startsWith(THIS_ATTRIBUTE_NAME.value() + ".")) {
+                    field = field.substring(THIS_ATTRIBUTE_NAME.value().length() + 1);
                 }
                 bub.setProperty(o, field, row[i]);
             }
             return entry(key, value);
         }));
         Vertex vEnd = dag.newVertex("mapSink", SinkProcessors.writeMapP(mapName));
+        dag.edge(between(vStart, vEnd));
         return tuple2(vStart, vEnd);
     }
 

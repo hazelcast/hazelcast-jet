@@ -16,18 +16,18 @@
 
 package com.hazelcast.jet.sql;
 
-import org.apache.calcite.plan.Convention;
 import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.convert.ConverterRule;
 
+import static com.hazelcast.jet.sql.OptUtils.CONVENTION_LOGICAL;
 import static com.hazelcast.jet.sql.OptUtils.CONVENTION_PHYSICAL;
 
 public final class JetTableInsertPhysicalRule extends ConverterRule {
     public static final RelOptRule INSTANCE = new JetTableInsertPhysicalRule();
 
     private JetTableInsertPhysicalRule() {
-        super(JetTableInsertLogicalRel.class, Convention.NONE, CONVENTION_PHYSICAL, JetTableInsertPhysicalRule.class.getSimpleName());
+        super(JetTableInsertLogicalRel.class, CONVENTION_LOGICAL, CONVENTION_PHYSICAL, JetTableInsertPhysicalRule.class.getSimpleName());
     }
 
     @Override
@@ -37,7 +37,7 @@ public final class JetTableInsertPhysicalRule extends ConverterRule {
             return null;
         }
 
-        return new JetTableInsertLogicalRel(
+        return new JetTableInsertPhysicalRel(
                 tableModify.getCluster(),
                 OptUtils.toPhysicalConvention(tableModify.getTraitSet()),
                 tableModify.getTable(),

@@ -111,19 +111,10 @@ public class SqlTest extends SimpleTestInClusterSupport {
     public void insert() {
         assertMap(
                 "INSERT INTO " + SINK_MAP + " SELECT * FROM " + INT_TO_STRING_MAP,
-                createMap(0, new Object[] {"value-0"},
-                        1, new Object[] {"value-1"},
-                        2, new Object[] {"value-2"}));
-    }
-
-    @Test
-    public void update() {
-        assertMap(
-                "UPDATE sink_map SET sink_map.this=t.this " +
-                        "FROM " + INT_TO_STRING_MAP + " WHERE sink_map.__key=t.__key",
-                createMap(0, new Object[] {"value-0"},
-                        1, new Object[] {"value-1"},
-                        2, new Object[] {"value-2"}));
+                createMap(
+                        0, "value-0",
+                        1, "value-1",
+                        2, "value-2"));
     }
 
     private <K, V> void assertMap(String sql, Map<K, V> expected) {

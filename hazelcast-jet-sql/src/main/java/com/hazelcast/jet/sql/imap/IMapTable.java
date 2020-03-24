@@ -37,6 +37,9 @@ public class IMapTable extends JetTable {
     private final String mapName;
     private final List<HazelcastTableIndex> indexes;
     private final List<Entry<String, QueryDataType>> fields;
+    private final String keyClassName;
+    private final String valueClassName;
+
     private final List<String> fieldNames;
     private final List<QueryDataType> fieldTypes;
 
@@ -44,11 +47,16 @@ public class IMapTable extends JetTable {
             @Nonnull SqlConnector sqlConnector,
             @Nonnull String mapName,
             @Nonnull List<HazelcastTableIndex> indexes,
-            @Nonnull List<Entry<String, QueryDataType>> fields) {
+            @Nonnull List<Entry<String, QueryDataType>> fields,
+            String keyClassName,
+            String valueClassName
+    ) {
         super(sqlConnector);
         this.mapName = mapName;
         this.fields = fields;
         this.indexes = indexes;
+        this.keyClassName = keyClassName;
+        this.valueClassName = valueClassName;
 
         fieldNames = toList(fields, Entry::getKey);
         fieldTypes = toList(fields, Entry::getValue);
@@ -88,5 +96,13 @@ public class IMapTable extends JetTable {
 
     public List<String> getFieldNames() {
         return fieldNames;
+    }
+
+    public String getKeyClassName() {
+        return keyClassName;
+    }
+
+    public String getValueClassName() {
+        return valueClassName;
     }
 }

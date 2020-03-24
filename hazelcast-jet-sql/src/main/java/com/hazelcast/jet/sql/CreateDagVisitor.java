@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.sql;
 
+import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.datamodel.Tuple2;
@@ -28,19 +29,23 @@ import com.hazelcast.sql.impl.physical.FieldTypeProvider;
 import com.hazelcast.sql.impl.physical.PhysicalNodeSchema;
 import org.apache.calcite.rex.RexNode;
 
+import javax.annotation.Nullable;
 import java.util.ArrayDeque;
 import java.util.Deque;
 
 import static com.hazelcast.jet.core.Edge.between;
+import static java.util.Arrays.asList;
 
 public class CreateDagVisitor {
 
     private DAG dag;
     private Deque<VertexAndOrdinal> vertexStack = new ArrayDeque<>();
 
-    public CreateDagVisitor(DAG dag, Vertex sink) {
+    public CreateDagVisitor(DAG dag, @Nullable Vertex sink) {
         this.dag = dag;
-        vertexStack.push(new VertexAndOrdinal(sink));
+        if (sink != null) {
+            vertexStack.push(new VertexAndOrdinal(sink));
+        }
     }
 
     public void onConnectorFullScan(IMapScanPhysicalRel rel) {
@@ -79,6 +84,16 @@ public class CreateDagVisitor {
 
     public void onProject(IMapProjectPhysicalRel rel) {
         throw new UnsupportedOperationException("TODO");
+    }
+
+    public void onTableInsert(JetTableInsertPhysicalRel rel) {
+        final JetTable jetTable = rel.getTable().unwrap(JetTable.class);
+        // TODO don't hard-code fields
+        Tuple2<Vertex, Vertex> sink = jetTable.getSqlConnector().sink(dag, jetTable, asList("__key", "this"));
+        if (sink == null) {
+            throw new JetException("This connector doesn't support writing");
+        }
+        vertexStack.push(new VertexAndOrdinal(sink.f0()));
     }
 
     private static final class VertexAndOrdinal {

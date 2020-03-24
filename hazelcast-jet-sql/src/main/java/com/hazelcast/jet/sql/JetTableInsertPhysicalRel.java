@@ -51,8 +51,7 @@ public class JetTableInsertPhysicalRel extends TableModify implements PhysicalRe
                 updateColumnList, sourceExpressionList, flattened);
         assert input.getConvention() == CONVENTION_PHYSICAL;
         assert getConvention() == CONVENTION_PHYSICAL;
-        final JetTable jetTable =
-                table.unwrap(JetTable.class);
+        final JetTable jetTable = table.unwrap(JetTable.class);
         if (jetTable == null) {
             throw new AssertionError(); // TODO: user error in validator
         }
@@ -73,6 +72,7 @@ public class JetTableInsertPhysicalRel extends TableModify implements PhysicalRe
 
     @Override
     public void visit(CreateDagVisitor visitor) {
-        throw new UnsupportedOperationException("TODO");
+        visitor.onTableInsert(this);
+        ((PhysicalRel) input).visit(visitor);
     }
 }

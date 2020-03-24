@@ -49,7 +49,7 @@ public class JetTableInsertLogicalRel extends TableModify implements LogicalRel 
     ) {
         super(cluster, traitSet, table, catalogReader, input, operation,
                 updateColumnList, sourceExpressionList, flattened);
-        assert input.getConvention() == CONVENTION_LOGICAL;
+        assert input.getConvention() == CONVENTION_LOGICAL : "input.convention=" + input.getConvention();
         assert getConvention() == CONVENTION_LOGICAL;
         final JetTable jetTable =
                 table.unwrap(JetTable.class);
