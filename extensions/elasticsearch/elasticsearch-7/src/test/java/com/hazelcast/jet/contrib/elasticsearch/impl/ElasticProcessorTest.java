@@ -58,11 +58,12 @@ import static org.mockito.Mockito.when;
 
 public class ElasticProcessorTest {
 
-    private static final String KEEP_ALIVE = "42m";
     public static final String HIT_SOURCE = "{\"name\": \"Frantisek\"}";
     public static final String HIT_SOURCE2 = "{\"name\": \"Vladimir\"}";
     public static final String SCROLL_ID = "random-scroll-id";
     public static final int OUTBOX_CAPACITY = 1000;
+
+    private static final String KEEP_ALIVE = "42m";
 
     private ElasticProcessor<String> processor;
     private RestHighLevelClient mockClient;
@@ -91,7 +92,9 @@ public class ElasticProcessorTest {
         createProcessor(request -> RequestOptions.DEFAULT, shards);
     }
 
-    private void createProcessor(FunctionEx<ActionRequest, RequestOptions> optionsFn, List<Shard> shards) throws Exception {
+    private void createProcessor(FunctionEx<ActionRequest, RequestOptions> optionsFn, List<Shard> shards)
+            throws Exception {
+
         ElasticsearchSourceBuilder<String> builder = new ElasticsearchSourceBuilder<String>()
                 .clientSupplier(() -> mockClient)
                 .searchRequestSupplier(() -> new SearchRequest("*"))

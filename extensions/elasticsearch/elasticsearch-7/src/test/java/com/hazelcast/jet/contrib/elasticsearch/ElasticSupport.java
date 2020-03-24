@@ -23,7 +23,7 @@ import java.util.function.Supplier;
 
 import static com.hazelcast.jet.contrib.elasticsearch.ElasticsearchBaseTest.ELASTICSEARCH_IMAGE;
 
-public class ElasticSupport {
+public final class ElasticSupport {
 
     // Elastic container takes long time to start up, reusing the container for speedup
     public static final Supplier<ElasticsearchContainer> elastic = Util.memoize(() -> {
@@ -33,4 +33,6 @@ public class ElasticSupport {
         return elastic;
     });
 
+    private ElasticSupport() {
+    }
 }

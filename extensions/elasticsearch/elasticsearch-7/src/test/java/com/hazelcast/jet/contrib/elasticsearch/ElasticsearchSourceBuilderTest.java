@@ -22,7 +22,6 @@ import org.apache.http.HttpHost;
 import org.elasticsearch.action.search.SearchRequest;
 import org.elasticsearch.client.RestClient;
 import org.elasticsearch.client.RestHighLevelClient;
-import org.elasticsearch.common.document.DocumentField;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Test;
 
