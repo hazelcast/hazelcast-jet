@@ -30,7 +30,7 @@ import java.util.function.Supplier;
 /**
  * Test running 3 local Jet members in a cluster and Elastic in docker
  */
-public class LocalClusterElasticsearchSourceTest extends ElasticsearchSourceBaseTest {
+public class LocalClusterElasticsearchSourcesTest extends CommonElasticsearchSourcesTest {
 
     // Cluster startup takes >1s, reusing the cluster between tests
     private static Supplier<JetInstance> jet = Util.memoize(() -> {

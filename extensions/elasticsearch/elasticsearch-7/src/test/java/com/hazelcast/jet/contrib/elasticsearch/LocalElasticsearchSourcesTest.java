@@ -39,7 +39,7 @@ import static org.testcontainers.shaded.com.google.common.collect.ImmutableMap.o
 /**
  * Test running single Jet member locally and Elastic in docker
  */
-public class LocalElasticsearchSourceTest extends ElasticsearchSourceBaseTest {
+public class LocalElasticsearchSourcesTest extends CommonElasticsearchSourcesTest {
 
     // Cluster startup takes >1s, reusing the cluster between tests
     private static Supplier<JetInstance> jet = Util.memoize(() -> {

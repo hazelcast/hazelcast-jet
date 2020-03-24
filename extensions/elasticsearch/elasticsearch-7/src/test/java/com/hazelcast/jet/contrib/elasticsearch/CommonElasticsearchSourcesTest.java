@@ -17,40 +17,21 @@
 package com.hazelcast.jet.contrib.elasticsearch;
 
 import com.hazelcast.collection.IList;
-import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.pipeline.BatchSource;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
-import org.elasticsearch.action.admin.indices.delete.DeleteIndexRequest;
-import org.elasticsearch.action.bulk.BulkItemResponse;
-import org.elasticsearch.action.bulk.BulkRequest;
-import org.elasticsearch.action.bulk.BulkResponse;
-import org.elasticsearch.action.index.IndexRequest;
 import org.elasticsearch.action.search.SearchRequest;
-import org.elasticsearch.action.support.WriteRequest.RefreshPolicy;
-import org.elasticsearch.client.RequestOptions;
-import org.elasticsearch.client.RestHighLevelClient;
-import org.elasticsearch.client.indices.CreateIndexRequest;
-import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.index.query.QueryBuilders;
-import org.elasticsearch.index.reindex.DeleteByQueryRequest;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.util.Lists.newArrayList;
-import static org.elasticsearch.client.RequestOptions.DEFAULT;
 import static org.elasticsearch.index.query.QueryBuilders.matchAllQuery;
 import static org.testcontainers.shaded.com.google.common.collect.ImmutableMap.of;
 
@@ -66,11 +47,10 @@ import static org.testcontainers.shaded.com.google.common.collect.ImmutableMap.o
  * <p>
  * RestHighLevelClient is used to create data in Elastic to isolate possible Source and Sink issues.
  */
-public abstract class ElasticsearchSourceBaseTest {
+public abstract class CommonElasticsearchSourcesTest extends BaseElasticsearchTest {
 
     protected static final int BATCH_SIZE = 42;
 
-    protected RestHighLevelClient elasticClient;
     protected JetInstance jet;
     protected IList<String> items;
 
@@ -86,8 +66,6 @@ public abstract class ElasticsearchSourceBaseTest {
         items = jet.getList("result");
         items.clear();
     }
-
-    protected abstract SupplierEx<RestHighLevelClient> createElasticClient();
 
     protected abstract JetInstance createJetInstance();
 
@@ -262,74 +240,13 @@ public abstract class ElasticsearchSourceBaseTest {
         assertThat(items).hasSize(2 * BATCH_SIZE);
     }
 
-    protected void initShardedIndex(String index) throws IOException {
-        CreateIndexRequest indexRequest = new CreateIndexRequest(index);
-        indexRequest.settings(Settings.builder()
-                                      .put("index.number_of_shards", 3)
-                                      .put("index.number_of_replicas", 0)
-        );
-
-        elasticClient.indices().create(indexRequest, RequestOptions.DEFAULT);
-
-        indexBatchOfDocuments(index);
-    }
-
-    protected void cleanElasticData() {
-        try {
-            deleteDocuments();
-
-            elasticClient.indices().delete(new DeleteIndexRequest("*"), DEFAULT);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    protected void deleteDocuments() throws IOException {
-        DeleteByQueryRequest request = new DeleteByQueryRequest("*")
-                .setQuery(matchAllQuery())
-                .setRefresh(true);
-        elasticClient.deleteByQuery(request, DEFAULT);
-    }
-
-    protected void indexBatchOfDocuments(String index) {
-        List<Map<String, Object>> docs = new ArrayList<>();
-        for (int i = 0; i < BATCH_SIZE; i++) {
-            docs.add(of("title", "document " + i));
-        }
-        indexDocuments(index, docs);
-    }
-
-    protected List<String> indexDocument(String index, Map<String, Object> document) {
-        return indexDocuments(index, newArrayList(document));
-    }
-
-    protected List<String> indexDocuments(String index, List<Map<String, Object>> documents) {
-        BulkRequest request = new BulkRequest()
-                .setRefreshPolicy(RefreshPolicy.IMMEDIATE);
-
-        for (Map<String, Object> document : documents) {
-            request.add(new IndexRequest(index)
-                    .source(document));
-        }
-
-        try {
-            BulkResponse response = elasticClient.bulk(request, RequestOptions.DEFAULT);
-            return Arrays.stream(response.getItems())
-                         .map(BulkItemResponse::getId)
-                         .collect(Collectors.toList());
-
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
     protected void submitJob(Pipeline p) {
         JobConfig config = new JobConfig();
 
         config.addClass(
                 // TODO this class will be moved to integration test suite
-                CoLocatedClustersElasticsearchSourceTest.class,
-                ElasticsearchSourceBaseTest.class
+                CoLocatedClustersElasticsearchSourcesTest.class,
+                CommonElasticsearchSourcesTest.class
         );
 
         jet.newJob(p, config).join();

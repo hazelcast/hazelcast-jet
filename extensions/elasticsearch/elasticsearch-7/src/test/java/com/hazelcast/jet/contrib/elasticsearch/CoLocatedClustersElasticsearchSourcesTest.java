@@ -36,7 +36,7 @@ import java.io.IOException;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class CoLocatedClustersElasticsearchSourceTest extends ElasticsearchSourceBaseTest {
+public class CoLocatedClustersElasticsearchSourcesTest extends CommonElasticsearchSourcesTest {
 
     @Override
     protected SupplierEx<RestHighLevelClient> createElasticClient() {
