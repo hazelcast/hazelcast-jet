@@ -21,11 +21,13 @@ import org.testcontainers.elasticsearch.ElasticsearchContainer;
 
 import java.util.function.Supplier;
 
+import static com.hazelcast.jet.contrib.elasticsearch.ElasticsearchBaseTest.ELASTICSEARCH_IMAGE;
+
 public class ElasticSupport {
 
     // Elastic container takes long time to start up, reusing the container for speedup
     public static final Supplier<ElasticsearchContainer> elastic = Util.memoize(() -> {
-        ElasticsearchContainer elastic = new ElasticsearchContainer("elasticsearch:7.6.1");
+        ElasticsearchContainer elastic = new ElasticsearchContainer(ELASTICSEARCH_IMAGE);
         elastic.start();
         Runtime.getRuntime().addShutdownHook(new Thread(elastic::stop));
         return elastic;

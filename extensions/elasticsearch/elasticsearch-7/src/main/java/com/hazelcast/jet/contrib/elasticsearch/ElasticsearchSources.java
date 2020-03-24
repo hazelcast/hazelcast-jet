@@ -20,29 +20,94 @@ import com.hazelcast.function.ConsumerEx;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.pipeline.BatchSource;
-import com.hazelcast.jet.pipeline.SourceBuilder;
-import com.hazelcast.jet.pipeline.SourceBuilder.SourceBuffer;
+import org.apache.http.HttpHost;
 import org.elasticsearch.action.ActionRequest;
-import org.elasticsearch.action.search.ClearScrollRequest;
 import org.elasticsearch.action.search.SearchRequest;
-import org.elasticsearch.action.search.SearchResponse;
-import org.elasticsearch.action.search.SearchScrollRequest;
 import org.elasticsearch.client.RequestOptions;
+import org.elasticsearch.client.RestClient;
 import org.elasticsearch.client.RestHighLevelClient;
 import org.elasticsearch.search.SearchHit;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.io.IOException;
 
 /**
  * Contains factory methods for Elasticsearch sources.
+ * <p>
+ * TODO maybe rename to ElasticSources - Elastic is the company name, but is also used interchangeably for elasticsearch
+ * it would make the API bit nicer to use, shorter in places etc.. same for {@link #elasticsearch()} methods
  */
 public final class ElasticsearchSources {
 
     private static final String DEFAULT_SCROLL_TIMEOUT = "60s";
+    private static final int DEFAULT_PORT = 9200;
 
     private ElasticsearchSources() {
+    }
+
+    /**
+     * Creates a source which queries local instance of Elasticsearch for all documents
+     * <p>
+     * Useful for quick prototyping. See other methods {@link #elasticsearch(String, SupplierEx, SupplierEx)}
+     * and {@link #builder()}
+     */
+    public static BatchSource<String> elasticsearch() {
+        return elasticsearch(() -> new RestHighLevelClient(
+                RestClient.builder(new HttpHost("localhost", DEFAULT_PORT))
+        ));
+    }
+
+    /**
+     * Creates a source which queries Elasticsearch using client obtained from {@link RestHighLevelClient} supplier.
+     * Queries all indexes for all documents.
+     * Uses {@link SearchHit#getSourceAsString()} as mapping function
+     */
+    public static BatchSource<String> elasticsearch(@Nonnull SupplierEx<RestHighLevelClient> clientSupplier) {
+        return elasticsearch(clientSupplier, SearchHit::getSourceAsString);
+    }
+
+    /**
+     * Creates a source which queries Elasticsearch using client obtained from {@link RestHighLevelClient} supplier.
+     * Uses provided mapHitFn to map results.
+     * Queries all indexes for all documents.
+     *
+     * @param clientSupplier RestHighLevelClient supplier
+     * @param mapHitFn       supplier of a function mapping the result from SearchHit to a result type
+     * @param <T>            result type returned by the map function
+     */
+    public static <T> BatchSource<T> elasticsearch(
+            @Nonnull SupplierEx<RestHighLevelClient> clientSupplier,
+            @Nonnull FunctionEx<? super SearchHit, T> mapHitFn) {
+        return elasticsearch(clientSupplier, SearchRequest::new, mapHitFn);
+    }
+
+    /**
+     * Creates a source which queries Elasticsearch using client obtained from {@link RestHighLevelClient} supplier.
+     *
+     * @param clientSupplier        RestHighLevelClient supplier
+     * @param searchRequestSupplier supplier of a SearchRequest used to query for documents
+     * @param mapHitFn              supplier of a function mapping the result from SearchHit to a target type
+     * @param <T>                   result type returned by the map function
+     */
+    public static <T> BatchSource<T> elasticsearch(
+            @Nonnull SupplierEx<RestHighLevelClient> clientSupplier,
+            @Nonnull SupplierEx<SearchRequest> searchRequestSupplier,
+            @Nonnull FunctionEx<? super SearchHit, T> mapHitFn
+    ) {
+        return ElasticsearchSources.<T>builder()
+                .clientSupplier(clientSupplier)
+                .searchRequestSupplier(searchRequestSupplier)
+                .mapHitFn(mapHitFn)
+                .build();
+    }
+
+    /**
+     * Returns {@link ElasticsearchSourceBuilder}
+     *
+     * @param <T> result type returned by the map function
+     */
+    public static <T> ElasticsearchSourceBuilder<T> builder() {
+        return new ElasticsearchSourceBuilder<>();
     }
 
     /**
@@ -58,6 +123,8 @@ public final class ElasticsearchSources {
      * @param destroyFn             called upon completion to release any resource
      * @param <T>                   type of items emitted downstream
      */
+    @Deprecated // TODO keep this for backward compatibility?
+    // taken from original elastic source, now superseded by the builder
     public static <T> BatchSource<T> elasticsearch(
             @Nonnull String name,
             @Nonnull SupplierEx<? extends RestHighLevelClient> clientSupplier,
@@ -67,11 +134,14 @@ public final class ElasticsearchSources {
             @Nonnull FunctionEx<? super ActionRequest, RequestOptions> optionsFn,
             @Nonnull ConsumerEx<? super RestHighLevelClient> destroyFn
     ) {
-        return SourceBuilder
-                .batch(name, ctx -> new SearchContext<>(clientSupplier.get(), scrollTimeout,
-                        mapHitFn, searchRequestSupplier.get(), optionsFn, destroyFn))
-                .<T>fillBufferFn(SearchContext::fillBuffer)
-                .destroyFn(SearchContext::close)
+        return ElasticsearchSources.<T>builder()
+                .name(name)
+                .clientSupplier(clientSupplier)
+                .searchRequestSupplier(searchRequestSupplier)
+                .scrollKeepAlive(scrollTimeout)
+                .mapHitFn(mapHitFn)
+                .optionsFn(optionsFn)
+                .destroyFn(destroyFn)
                 .build();
     }
 
@@ -83,6 +153,8 @@ public final class ElasticsearchSources {
      * {@link SearchHit#getSourceAsString()} and closes the {@link
      * RestHighLevelClient} upon completion.
      */
+    @Deprecated // TODO keep this for backward compatibility?
+    // also not sure if providing custom source name is common, doestn' seem like it is unless you have more than 1
     public static BatchSource<String> elasticsearch(
             @Nonnull String name,
             @Nonnull SupplierEx<? extends RestHighLevelClient> clientSupplier,
@@ -109,58 +181,18 @@ public final class ElasticsearchSources {
                 searchRequestSupplier);
     }
 
-    private static final class SearchContext<T> {
-
-        private final RestHighLevelClient client;
-        private final String scrollInterval;
-        private final FunctionEx<SearchHit, T> mapHitFn;
-        private final FunctionEx<? super ActionRequest, RequestOptions> optionsFn;
-        private final ConsumerEx<? super RestHighLevelClient> destroyFn;
-
-        private SearchResponse searchResponse;
-
-        private SearchContext(RestHighLevelClient client, String scrollInterval,
-                              FunctionEx<SearchHit, T> mapHitFn, SearchRequest searchRequest,
-                              FunctionEx<? super ActionRequest, RequestOptions> optionsFn,
-                              ConsumerEx<? super RestHighLevelClient> destroyFn
-        ) throws IOException {
-            this.client = client;
-            this.scrollInterval = scrollInterval;
-            this.mapHitFn = mapHitFn;
-            this.optionsFn = optionsFn;
-            this.destroyFn = destroyFn;
-
-            searchRequest.scroll(scrollInterval);
-            searchResponse = client.search(searchRequest, optionsFn.apply(searchRequest));
-        }
-
-        private void fillBuffer(SourceBuffer<T> buffer) throws IOException {
-            SearchHit[] hits = searchResponse.getHits().getHits();
-            if (hits == null || hits.length == 0) {
-                buffer.close();
-                return;
-            }
-            for (SearchHit hit : hits) {
-                T item = mapHitFn.apply(hit);
-                if (item != null) {
-                    buffer.add(item);
-                }
-            }
-
-            SearchScrollRequest scrollRequest = new SearchScrollRequest(searchResponse.getScrollId());
-            scrollRequest.scroll(scrollInterval);
-            searchResponse = client.scroll(scrollRequest, optionsFn.apply(scrollRequest));
-        }
-
-        private void clearScroll() throws IOException {
-            ClearScrollRequest clearScrollRequest = new ClearScrollRequest();
-            clearScrollRequest.addScrollId(searchResponse.getScrollId());
-            client.clearScroll(clearScrollRequest, RequestOptions.DEFAULT);
-        }
-
-        private void close() throws IOException {
-            clearScroll();
-            destroyFn.accept(client);
-        }
+    /**
+     * Convenience method to create {@link RestHighLevelClient} with basic authentication and given hostname and port
+     * <p>
+     * Usage:
+     * <pre>
+     *   BatchSource<SearchHit> source = elasticsearch(() -> client("user", "password", "host", 9200));
+     * </pre>
+     */
+    public static RestHighLevelClient client(@Nonnull String username,
+                                             @Nullable String password,
+                                             @Nonnull String hostname,
+                                             int port) {
+        return ElasticsearchSinks.buildClient(username, password, hostname, port);
     }
 }

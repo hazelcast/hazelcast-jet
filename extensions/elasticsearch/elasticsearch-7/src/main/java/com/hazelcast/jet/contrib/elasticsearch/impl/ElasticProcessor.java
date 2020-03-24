@@ -125,7 +125,7 @@ final class ElasticProcessor<T> extends AbstractProcessor {
 
         private final RestHighLevelClient client;
         private final FunctionEx<? super ActionRequest, RequestOptions> optionsFn;
-        private final FunctionEx<SearchHit, R> mapHitFn;
+        private final FunctionEx<? super SearchHit, R> mapHitFn;
         private final String scrollKeepAlive;
         private final ConsumerEx<? super RestHighLevelClient> destroyFn;
 

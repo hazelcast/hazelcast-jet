@@ -31,6 +31,9 @@ import org.elasticsearch.search.SearchHit;
 import javax.annotation.Nonnull;
 import java.io.Serializable;
 
+import static com.hazelcast.jet.impl.util.Util.checkSerializable;
+import static java.util.Objects.requireNonNull;
+
 /**
  * Builder for Elasticsearch source which reads data from Elasticsearch and
  * converts SearchHits using provided {@code mapHitFn}
@@ -49,7 +52,7 @@ public class ElasticsearchSourceBuilder<T> implements Serializable {
     private ConsumerEx<? super RestHighLevelClient> destroyFn = RestHighLevelClient::close;
     private SupplierEx<SearchRequest> searchRequestSupplier;
     private FunctionEx<? super ActionRequest, RequestOptions> optionsFn = request -> RequestOptions.DEFAULT;
-    private FunctionEx<SearchHit, T> mapHitFn;
+    private FunctionEx<? super SearchHit, T> mapHitFn;
     private boolean slicing;
     private boolean coLocatedReading;
     private String scrollKeepAlive = "1m"; // Using String because it needs to be Serializable
@@ -61,6 +64,10 @@ public class ElasticsearchSourceBuilder<T> implements Serializable {
      */
     @Nonnull
     public BatchSource<T> build() {
+        requireNonNull(clientSupplier, "clientSupplier must be set");
+        requireNonNull(searchRequestSupplier, "searchRequestSupplier must be set");
+        requireNonNull(mapHitFn, "mapHitFn must be set");
+
         ElasticProcessorMetaSupplier<T> metaSupplier = new ElasticProcessorMetaSupplier<>(this);
         return Sources.batchFromProcessor(name, metaSupplier);
     }
@@ -88,6 +95,7 @@ public class ElasticsearchSourceBuilder<T> implements Serializable {
      */
     @Nonnull
     public ElasticsearchSourceBuilder<T> clientSupplier(SupplierEx<? extends RestHighLevelClient> clientSupplier) {
+        checkSerializable(clientSupplier, "clientSupplier");
         this.clientSupplier = clientSupplier;
         return this;
     }
@@ -99,6 +107,7 @@ public class ElasticsearchSourceBuilder<T> implements Serializable {
 
     @Nonnull
     public ElasticsearchSourceBuilder<T> destroyFn(ConsumerEx<? super RestHighLevelClient> destroyFn) {
+        checkSerializable(destroyFn, "destroyFn");
         this.destroyFn = destroyFn;
         return this;
     }
@@ -115,6 +124,7 @@ public class ElasticsearchSourceBuilder<T> implements Serializable {
      */
     @Nonnull
     public ElasticsearchSourceBuilder<T> searchRequestSupplier(SupplierEx<SearchRequest> searchRequestSupplier) {
+        checkSerializable(searchRequestSupplier, "searchRequestSupplier");
         this.searchRequestSupplier = searchRequestSupplier;
         return this;
     }
@@ -130,18 +140,20 @@ public class ElasticsearchSourceBuilder<T> implements Serializable {
      * @param mapHitFn maps search hits to output items
      */
     @Nonnull
-    public ElasticsearchSourceBuilder<T> mapHitFn(FunctionEx<SearchHit, T> mapHitFn) {
+    public ElasticsearchSourceBuilder<T> mapHitFn(FunctionEx<? super SearchHit, T> mapHitFn) {
+        checkSerializable(mapHitFn, "mapHitFn");
         this.mapHitFn = mapHitFn;
         return this;
     }
 
     @Nonnull
-    public FunctionEx<SearchHit, T> mapHitFn() {
+    public FunctionEx<? super SearchHit, T> mapHitFn() {
         return mapHitFn;
     }
 
     @Nonnull
     public ElasticsearchSourceBuilder<T> optionsFn(FunctionEx<? super ActionRequest, RequestOptions> optionsFn) {
+        checkSerializable(optionsFn, "optionsFn");
         this.optionsFn = optionsFn;
         return this;
     }

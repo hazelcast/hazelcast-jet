@@ -33,7 +33,7 @@ import static org.elasticsearch.action.support.WriteRequest.RefreshPolicy.IMMEDI
 import static org.elasticsearch.index.query.QueryBuilders.termQuery;
 import static org.junit.Assert.assertEquals;
 
-public class ElasticsearchSourcesTest extends ElasticsearchBaseTest {
+public class ElasticsearchXSourcesTest extends ElasticsearchBaseTest {
 
     @Test
     public void test() throws IOException {

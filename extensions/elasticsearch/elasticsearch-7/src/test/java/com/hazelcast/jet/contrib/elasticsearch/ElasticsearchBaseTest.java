@@ -45,11 +45,13 @@ import static org.junit.Assert.assertTrue;
 
 public abstract class ElasticsearchBaseTest extends JetTestSupport {
 
+    public static final String ELASTICSEARCH_IMAGE = "elasticsearch:7.6.1";
+
     private static final int OBJECT_COUNT = 20;
 
     @Rule
     public ElasticsearchContainer container =
-            new ElasticsearchContainer("docker.elastic.co/elasticsearch/elasticsearch:7.1.0")
+            new ElasticsearchContainer(ELASTICSEARCH_IMAGE)
             .withNetwork(Network.newNetwork());
     JetInstance jet;
     IList<User> userList;

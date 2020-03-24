@@ -16,24 +16,66 @@
 
 package com.hazelcast.jet.contrib.elasticsearch;
 
+import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.pipeline.BatchSource;
+import org.apache.http.HttpHost;
+import org.elasticsearch.action.search.SearchRequest;
+import org.elasticsearch.client.RestClient;
 import org.elasticsearch.client.RestHighLevelClient;
-import org.elasticsearch.search.SearchHit;
+import org.elasticsearch.common.document.DocumentField;
+import org.jetbrains.annotations.NotNull;
 import org.junit.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public class ElasticsearchSourceBuilderTest {
 
     @Test
     public void sourceHasCorrectName() {
-        BatchSource<Object> source = new ElasticsearchSourceBuilder<>().build();
+        BatchSource<Object> source = builderWithRequiredParams()
+                .build();
         assertThat(source.name()).isEqualTo("elastic");
 
-        BatchSource<Object> namedSource = new ElasticsearchSourceBuilder<>()
+        BatchSource<Object> namedSource = builderWithRequiredParams()
                 .name("CustomName")
                 .build();
         assertThat(namedSource.name()).isEqualTo("CustomName");
+    }
+
+    @NotNull
+    private ElasticsearchSourceBuilder<Object> builderWithRequiredParams() {
+        return new ElasticsearchSourceBuilder<>()
+                .clientSupplier(() -> new RestHighLevelClient(RestClient.builder(new HttpHost("localhost"))))
+                .searchRequestSupplier(SearchRequest::new)
+                .mapHitFn(FunctionEx.identity());
+    }
+
+    @Test
+    public void clientSupplierMustBeSet() {
+        assertThatThrownBy(() -> new ElasticsearchSourceBuilder<>()
+                .searchRequestSupplier(SearchRequest::new)
+                .mapHitFn(FunctionEx.identity())
+                .build())
+                .hasMessage("clientSupplier must be set");
+    }
+
+    @Test
+    public void searchRequestSupplierMustBeSet() {
+        assertThatThrownBy(() -> new ElasticsearchSourceBuilder<>()
+                .clientSupplier(() -> new RestHighLevelClient(RestClient.builder(new HttpHost("localhost"))))
+                .mapHitFn(FunctionEx.identity())
+                .build())
+                .hasMessage("searchRequestSupplier must be set");
+    }
+
+    @Test
+    public void mapHitFnSupplierMustBeSet() {
+        assertThatThrownBy(() -> new ElasticsearchSourceBuilder<>()
+                .clientSupplier(() -> new RestHighLevelClient(RestClient.builder(new HttpHost("localhost"))))
+                .searchRequestSupplier(SearchRequest::new)
+                .build())
+                .hasMessage("mapHitFn must be set");
     }
 
 }

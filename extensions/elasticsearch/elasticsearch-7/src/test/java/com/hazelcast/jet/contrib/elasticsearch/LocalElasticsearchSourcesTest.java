@@ -21,7 +21,6 @@ import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.JetTestInstanceFactory;
 import com.hazelcast.jet.config.JetConfig;
-import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.jet.pipeline.BatchSource;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
@@ -29,9 +28,8 @@ import org.apache.http.HttpHost;
 import org.elasticsearch.action.search.SearchRequest;
 import org.elasticsearch.client.RestClient;
 import org.elasticsearch.client.RestHighLevelClient;
+import org.junit.After;
 import org.junit.Test;
-
-import java.util.function.Supplier;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.testcontainers.shaded.com.google.common.collect.ImmutableMap.of;
@@ -41,15 +39,14 @@ import static org.testcontainers.shaded.com.google.common.collect.ImmutableMap.o
  */
 public class LocalElasticsearchSourcesTest extends CommonElasticsearchSourcesTest {
 
-    // Cluster startup takes >1s, reusing the cluster between tests
-    private static Supplier<JetInstance> jet = Util.memoize(() -> {
-        JetTestInstanceFactory factory = new JetTestInstanceFactory();
-        JetInstance instance = factory.newMember(new JetConfig());
-        Runtime.getRuntime().addShutdownHook(new Thread(factory::terminateAll));
-        return instance;
-    });
+    private JetTestInstanceFactory factory = new JetTestInstanceFactory();
 
-    protected SupplierEx<RestHighLevelClient> createElasticClient() {
+    @After
+    public void tearDown() throws Exception {
+        factory.terminateAll();
+    }
+
+    protected SupplierEx<RestHighLevelClient> elasticClientSupplier() {
         String address = ElasticSupport.elastic.get().getHttpHostAddress();
         return () -> new RestHighLevelClient(
                 RestClient.builder(HttpHost.create(address))
@@ -59,7 +56,7 @@ public class LocalElasticsearchSourcesTest extends CommonElasticsearchSourcesTes
     @Override
     protected JetInstance createJetInstance() {
         // This starts very quickly, no need to cache the instance
-        return jet.get();
+        return factory.newMember(new JetConfig());
     }
 
     @Test
@@ -69,7 +66,7 @@ public class LocalElasticsearchSourcesTest extends CommonElasticsearchSourcesTes
         Pipeline p = Pipeline.create();
 
         BatchSource<String> source = new ElasticsearchSourceBuilder<String>()
-                .clientSupplier(createElasticClient())
+                .clientSupplier(elasticClientSupplier())
                 .searchRequestSupplier(() -> new SearchRequest("my-index"))
                 .mapHitFn(hit -> (String) hit.getSourceAsMap().get("name"))
                 .coLocatedReading(true)

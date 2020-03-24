@@ -40,7 +40,7 @@ public class LocalClusterElasticsearchSourcesTest extends CommonElasticsearchSou
         return instances[0];
     });
 
-    protected SupplierEx<RestHighLevelClient> createElasticClient() {
+    protected SupplierEx<RestHighLevelClient> elasticClientSupplier() {
         String address = ElasticSupport.elastic.get().getHttpHostAddress();
         return () -> new RestHighLevelClient(
                 RestClient.builder(HttpHost.create(address))

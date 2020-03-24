@@ -16,7 +16,11 @@
 
 package com.hazelcast.jet.contrib.elasticsearch;
 
+import com.hazelcast.collection.IList;
 import com.hazelcast.function.SupplierEx;
+import com.hazelcast.jet.JetInstance;
+import com.hazelcast.jet.config.JobConfig;
+import com.hazelcast.jet.pipeline.Pipeline;
 import org.elasticsearch.action.admin.indices.delete.DeleteIndexRequest;
 import org.elasticsearch.action.bulk.BulkItemResponse;
 import org.elasticsearch.action.bulk.BulkRequest;
@@ -28,6 +32,7 @@ import org.elasticsearch.client.RestHighLevelClient;
 import org.elasticsearch.client.indices.CreateIndexRequest;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.index.reindex.DeleteByQueryRequest;
+import org.junit.Before;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -41,11 +46,44 @@ import static org.elasticsearch.client.RequestOptions.DEFAULT;
 import static org.elasticsearch.index.query.QueryBuilders.matchAllQuery;
 import static org.testcontainers.shaded.com.google.common.collect.ImmutableMap.of;
 
+/**
+ * Base class for running Elasticsearch connector tests
+ *
+ * To use implement:
+ * - {@link #elasticClientSupplier()}
+ * - {@link #createJetInstance()}
+ * Subclasses are free to cache
+ */
 public abstract class BaseElasticsearchTest {
 
-    protected RestHighLevelClient elasticClient;
+    protected static final int BATCH_SIZE = 42;
 
-    protected abstract SupplierEx<RestHighLevelClient> createElasticClient();
+    protected RestHighLevelClient elasticClient;
+    protected JetInstance jet;
+    protected IList<String> results;
+
+    @Before
+    public void setUpBase() {
+        if (elasticClient == null) {
+            elasticClient = elasticClientSupplier().get();
+        }
+        cleanElasticData();
+
+        if (jet == null) {
+            jet = createJetInstance();
+        }
+        results = jet.getList("results");
+        results.clear();
+    }
+
+    /**
+     * RestHighLevelClient supplier, it is used to
+     * - create a client before each test for use by all methods from this class interacting with elastic
+     * - may be used as as a parameter of {@link ElasticsearchSourceBuilder#clientSupplier(SupplierEx)}
+     */
+    protected abstract SupplierEx<RestHighLevelClient> elasticClientSupplier();
+
+    protected abstract JetInstance createJetInstance();
 
     /**
      * Creates an index with given name with 3 shards
@@ -124,5 +162,22 @@ public abstract class BaseElasticsearchTest {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    /**
+     * Creates a new job from given Pipeline
+     *
+     * Adds this.getClass to config so any lambdas used in a test class can be deserialized when run in remote cluster.
+     */
+    protected void submitJob(Pipeline p) {
+        JobConfig config = new JobConfig();
+
+        Class<?> clazz = this.getClass();
+        while (clazz.getSuperclass() != null) {
+            config.addClass(clazz);
+            clazz = clazz.getSuperclass();
+        }
+
+        jet.newJob(p, config).join();
     }
 }

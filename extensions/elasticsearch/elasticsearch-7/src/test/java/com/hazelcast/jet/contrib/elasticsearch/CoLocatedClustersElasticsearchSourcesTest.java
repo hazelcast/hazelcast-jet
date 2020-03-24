@@ -39,7 +39,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class CoLocatedClustersElasticsearchSourcesTest extends CommonElasticsearchSourcesTest {
 
     @Override
-    protected SupplierEx<RestHighLevelClient> createElasticClient() {
+    protected SupplierEx<RestHighLevelClient> elasticClientSupplier() {
         return () -> new RestHighLevelClient(RestClient.builder(
                 new HttpHost("172.21.0.2", 9200)
         ));
@@ -58,16 +58,16 @@ public class CoLocatedClustersElasticsearchSourcesTest extends CommonElasticsear
         Pipeline p = Pipeline.create();
 
         BatchSource<String> source = new ElasticsearchSourceBuilder<String>()
-                .clientSupplier(createElasticClient())
+                .clientSupplier(elasticClientSupplier())
                 .searchRequestSupplier(() -> new SearchRequest("my-index"))
                 .mapHitFn(SearchHit::getSourceAsString)
                 .coLocatedReading(true)
                 .build();
 
         p.readFrom(source)
-         .writeTo(Sinks.list(items));
+         .writeTo(Sinks.list(results));
 
         submitJob(p);
-        assertThat(items).hasSize(BATCH_SIZE);
+        assertThat(results).hasSize(BATCH_SIZE);
     }
 }
