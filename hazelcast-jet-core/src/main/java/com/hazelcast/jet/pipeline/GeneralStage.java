@@ -751,8 +751,9 @@ public interface GeneralStage<T> extends Stage {
     );
 
     /**
-     * Attaches to both this and the supplied stage a inner-hash-joining stage and
-     * returns it. This stage plays the role of the <em>primary stage</em> in
+     * Attaches to both this and the supplied stage
+     * an inner-hash-joining stage and  returns it.
+     * This stage plays the role of the <em>primary stage</em> in
      * the hash-join. Please refer to the {@link com.hazelcast.jet.pipeline
      * package javadoc} for a detailed description of the hash-join transform.
      * <p>
@@ -771,10 +772,10 @@ public interface GeneralStage<T> extends Stage {
      * }</pre>
      *
      * <p>
-     *     This metod is similar to {@link #hashJoin(BatchStage, JoinClause, BiFunctionEx)} method,
-     *     but it guarantees that both input items will be not-null.
-     *     Nulls will be filtered out before reaching {@code #mapToOutputFn}.
-     * </p>
+     * This method is similar
+     * to {@link #hashJoin(BatchStage, JoinClause, BiFunctionEx)} method,
+     * but it guarantees that both input items will be not-null.
+     * Nulls will be filtered out before reaching {@code #mapToOutputFn}.
      *
      * @param stage1        the stage to hash-join with this one
      * @param joinClause1   specifies how to join the two streams
