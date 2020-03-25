@@ -114,12 +114,3 @@ level we needed a full state machine implementation, basically
 implementing the [CPS
 transformation](https://github.com/Kotlin/KEEP/blob/master/proposals/coroutines.md#implementation-details)
 by hand.
-
-## Tasklet Execution Service
-
-The tasklet execution service creates a user-configurable number of
-threads and runs a productionized version of the tasklet-running loop we
-showed above. The following diagram shows how a DAG is materialized as a
-set of tasklets and how each tasklet is assigned to a worker thread:
-
-![Hazelcast Jet Parallelism Model](assets/cooperative-multithreading.png)
