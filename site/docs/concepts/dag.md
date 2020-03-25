@@ -33,7 +33,7 @@ for (String line : lines) {
 
 Basically, this code does everything in one nested loop. This works for
 the local `ArrayList`, very efficiently so, but in this form it is not
-amenable to auto-parallelization. We need a _reactive_ coding style that
+amenable to auto-parallelization. We need a *reactive* coding style that
 uses lambda functions to specify what to do with the data once it's
 there while the framework takes care of passing it to the lambdas. This
 leads us to the Pipeline API expression:
@@ -137,7 +137,7 @@ user's events independently, you should send all the events with the
 same user ID to the same task, the one holding that user's state.
 Otherwise all the tasks will end up with storage for all the IDs and no
 task will have the full picture. The technique to achieve this
-separation is _data partitioning_: Jet uses a function that maps any
+separation is *data partitioning*: Jet uses a function that maps any
 user ID to an integer from a predefined range and then assigns the
 integers to tasks:
 
@@ -162,3 +162,21 @@ seen all the items, it sends its partial result to `combine` which
 combines the partial results from all cluster members. Since there is
 much less data after aggregation than before it, this reduces the amount
 of data exchanged between servers at the cost of using more RAM.
+
+## Tasks Concurrency is Cooperative
+
+Hazelast Jet avoids starting a heavyweight system thread for each
+concurrent task of the DAG. Instead it uses a *cooperative
+multithreading* model. This has high-level implications as well: all the
+lambdas you write in the Pipeline API must cooperate by not calling
+blocking methods that may take unpredictably long to complete. If that
+happens, all the tasklets scheduled on the same thread will be blocked
+as well.
+
+Since sometimes you can't avoid making blocking calls, Jet provides
+dedicated support for such cases. You should use the `mapUsingService`
+transform that allows you to declare your code as "non-cooperative". Jet
+will adapt to this by running the code in a dedicade thread.
+
+However, whenever you have a choice, you should go for non-blocking,
+asynchronous calls and use `mapUsingServiceAsync`.

@@ -48,10 +48,10 @@
       "operations/monitoring"
     ],
     "Architecture": [
+      "architecture/distributed-computing",
       "architecture/event-time-processing",
       "architecture/sliding-window",
       "architecture/execution-engine",
-      "architecture/distributed-computing",
       "architecture/cluster-topology",
       "architecture/fault-tolerance",
       "architecture/in-memory-storage"

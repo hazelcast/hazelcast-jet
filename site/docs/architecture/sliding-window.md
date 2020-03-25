@@ -124,4 +124,4 @@ And this is what Hazelcast Jet does for the sliding window:
 3. Aggregate just once, in the single frame where the event
    belongs
 4. Send the aggregated partial results to a single node, for final
-   combining
+   combining.
