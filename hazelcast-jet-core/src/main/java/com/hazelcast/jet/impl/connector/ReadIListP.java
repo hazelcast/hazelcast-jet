@@ -82,10 +82,10 @@ public final class ReadIListP extends AbstractProcessor {
 
         if (list instanceof ClientListProxy) {
             ClientListProxy proxy = (ClientListProxy) list;
-            return createTraverser(size, proxy::rawIterator, proxy::rawSubList);
+            return createTraverser(size, proxy::dataIterator, proxy::dataSubList);
         } else if (list instanceof ListProxyImpl) {
             ListProxyImpl proxy = (ListProxyImpl) list;
-            return createTraverser(size, proxy::rawIterator, proxy::rawSubList);
+            return createTraverser(size, proxy::dataIterator, proxy::dataSubList);
         } else {
             throw new RuntimeException("Unexpected list class: " + list.getClass().getName());
         }
