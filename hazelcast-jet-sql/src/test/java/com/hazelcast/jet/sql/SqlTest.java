@@ -27,6 +27,7 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
@@ -115,6 +116,14 @@ public class SqlTest extends SimpleTestInClusterSupport {
                         0, "value-0",
                         1, "value-1",
                         2, "value-2"));
+    }
+
+    @Test
+    public void insert_values() {
+        assertMap(
+                "INSERT INTO " + SINK_MAP + "(__key, this) values (1, 1)",
+                // TODO should be <Integer, String> because that's what the map is
+                createMap(BigDecimal.ONE, BigDecimal.ONE));
     }
 
     private <K, V> void assertMap(String sql, Map<K, V> expected) {

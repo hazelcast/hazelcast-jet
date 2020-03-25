@@ -118,6 +118,7 @@ public class JetLogicalRules {
                 // Convert Calcite node into Hazelcast nodes.
                 // TODO: Should we extend converter here instead (see Flink)?
                 JetTableInsertLogicalRule.INSTANCE,
+                JetValuesLogicalRule.INSTANCE,
                 IMapScanLogicalRule.INSTANCE,
                 IMapFilterLogicalRule.INSTANCE,
                 IMapProjectLogicalRule.INSTANCE

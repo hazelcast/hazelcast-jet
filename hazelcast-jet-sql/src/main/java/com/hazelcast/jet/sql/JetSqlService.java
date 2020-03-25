@@ -286,6 +286,7 @@ public class JetSqlService {
     private PhysicalRel optimizePhysical(RelNode rel) {
         RuleSet rules = RuleSets.ofList(
                 JetTableInsertPhysicalRule.INSTANCE,
+                JetValuesPhysicalRule.INSTANCE,
 //                SortPhysicalRule.INSTANCE,
 //                RootPhysicalRule.INSTANCE,
 //                FilterPhysicalRule.INSTANCE,

@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.sql;
 
+import com.hazelcast.function.ConsumerEx;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Vertex;
@@ -27,13 +28,17 @@ import com.hazelcast.jet.sql.schema.JetTable;
 import com.hazelcast.sql.impl.expression.Expression;
 import com.hazelcast.sql.impl.physical.FieldTypeProvider;
 import com.hazelcast.sql.impl.physical.PhysicalNodeSchema;
+import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 
 import javax.annotation.Nullable;
 import java.util.ArrayDeque;
 import java.util.Deque;
+import java.util.List;
 
 import static com.hazelcast.jet.core.Edge.between;
+import static com.hazelcast.jet.core.processor.SourceProcessors.convenientSourceP;
+import static com.hazelcast.jet.impl.util.Util.toList;
 
 public class CreateDagVisitor {
 
@@ -92,6 +97,28 @@ public class CreateDagVisitor {
             throw new JetException("This connector doesn't support writing");
         }
         vertexStack.push(new VertexAndOrdinal(sink.f0()));
+    }
+
+    public void onValues(JetValuesPhysicalRel rel) {
+        List<Object[]> items = toList(rel.getTuples(), tuple -> tuple.stream().map(RexLiteral::getValue).toArray());
+
+        Vertex v = dag.newVertex("values-src", convenientSourceP(
+                pCtx -> null,
+                (ignored, buf) -> {
+                    items.forEach(buf::add);
+                    buf.close();
+                },
+                ctx -> null,
+                (ctx, states) -> {
+                },
+                ConsumerEx.noop(),
+                1,
+                true));
+
+        VertexAndOrdinal targetVertex = vertexStack.peek();
+        assert targetVertex != null : "targetVertex=null";
+        dag.edge(between(v, targetVertex.vertex));
+        targetVertex.ordinal++;
     }
 
     private static final class VertexAndOrdinal {
