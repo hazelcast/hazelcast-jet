@@ -1,10 +1,10 @@
 syntax = "proto3";
 option java_package = "com.hazelcast.jet.grpc.greeter";
 
-// The greeting service definition.
 service Greeter {
   // Sends a greeting
-  rpc SayHello (stream HelloRequest) returns (stream HelloReply) {}
+  rpc SayHelloBidirectional (stream HelloRequest) returns (stream HelloReply) {}
+  rpc SayHelloUnary (HelloRequest) returns (HelloReply) {}
 }
 
 // The request message containing the user's name.

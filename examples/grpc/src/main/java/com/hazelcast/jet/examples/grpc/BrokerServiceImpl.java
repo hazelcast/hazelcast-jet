@@ -24,7 +24,7 @@ import java.util.Map;
 
 /**
  * Server-side implementation of a gRPC service. See {@link
- * GRPCEnrichment#enrichUsingGRPC()}.
+ * GRPCEnrichment#enrichUsingGRPC()} ()}.
  */
 public class BrokerServiceImpl extends BrokerServiceImplBase {
 

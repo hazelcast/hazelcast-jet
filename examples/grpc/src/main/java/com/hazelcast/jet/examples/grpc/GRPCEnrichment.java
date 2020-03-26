@@ -16,46 +16,37 @@
 
 package com.hazelcast.jet.examples.grpc;
 
-import com.google.common.util.concurrent.FutureCallback;
-import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.MoreExecutors;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
-import com.hazelcast.jet.examples.grpc.BrokerServiceGrpc.BrokerServiceFutureStub;
-import com.hazelcast.jet.examples.grpc.ProductServiceGrpc.ProductServiceFutureStub;
+import com.hazelcast.jet.examples.grpc.BrokerServiceGrpc.BrokerServiceStub;
+import com.hazelcast.jet.examples.grpc.ProductServiceGrpc.ProductServiceStub;
 import com.hazelcast.jet.examples.grpc.datamodel.Broker;
 import com.hazelcast.jet.examples.grpc.datamodel.Product;
 import com.hazelcast.jet.examples.grpc.datamodel.Trade;
+import com.hazelcast.jet.grpc.UnaryService;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.ServiceFactory;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
 import com.hazelcast.jet.pipeline.StreamStage;
-import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.ServerBuilder;
-import io.grpc.stub.AbstractStub;
-import org.checkerframework.checker.nullness.compatqual.NullableDecl;
 
-import javax.annotation.Nonnull;
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.CancellationException;
-import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
 
 import static com.hazelcast.function.Functions.entryValue;
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
 import static com.hazelcast.jet.datamodel.Tuple3.tuple3;
+import static com.hazelcast.jet.grpc.GrpcServices.unaryService;
 import static com.hazelcast.jet.pipeline.JournalInitialPosition.START_FROM_CURRENT;
-import static com.hazelcast.jet.pipeline.ServiceFactories.sharedService;
-import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.stream.Collectors.toMap;
 
 /**
@@ -90,7 +81,7 @@ public final class GRPCEnrichment {
      * using the {@link StreamStage#mapUsingServiceAsync}
      * method.
      */
-    private static Pipeline enrichUsingGRPC() throws Exception {
+    public static Pipeline enrichUsingGRPC() throws Exception {
         Map<Integer, Product> productMap = readLines("products.txt")
                 .collect(toMap(Entry::getKey, e -> new Product(e.getKey(), e.getValue())));
         Map<Integer, Broker> brokerMap = readLines("brokers.txt")
@@ -110,28 +101,34 @@ public final class GRPCEnrichment {
                 .withoutTimestamps()
                 .map(entryValue());
 
-        ServiceFactory<?, ProductServiceFutureStub> productService = sharedService(
-                pctx -> ProductServiceGrpc.newFutureStub(getLocalChannel()),
-                stub -> shutdownClient(stub)
+
+        ServiceFactory<?, UnaryService<ProductInfoRequest, ProductInfoReply>> productService = unaryService(
+                GRPCEnrichment::localChannel,
+                channel -> {
+                    ProductServiceStub stub = ProductServiceGrpc.newStub(channel);
+                    return stub::productInfo;
+                }
         );
 
-        ServiceFactory<?, BrokerServiceFutureStub> brokerService = sharedService(
-                pctx -> BrokerServiceGrpc.newFutureStub(getLocalChannel()),
-                stub -> shutdownClient(stub)
+        ServiceFactory<?, UnaryService<BrokerInfoRequest, BrokerInfoReply>> brokerService = unaryService(
+                GRPCEnrichment::localChannel,
+                channel -> {
+                    BrokerServiceStub stub = BrokerServiceGrpc.newStub(channel);
+                    return stub::brokerInfo;
+                }
         );
 
         // Enrich the trade by querying the product and broker name from the gRPC services
         trades.mapUsingServiceAsync(productService,
                 (service, trade) -> {
                     ProductInfoRequest request = ProductInfoRequest.newBuilder().setId(trade.productId()).build();
-                    return toCompletableFuture(service.productInfo(request))
-                            .thenApply(productReply -> tuple2(trade, productReply.getProductName()));
+                    return service.call(request).thenApply(productReply -> tuple2(trade, productReply.getProductName()));
                 })
               // input is (trade, product)
               .mapUsingServiceAsync(brokerService,
-                      (stub, t) -> {
+                      (service, t) -> {
                           BrokerInfoRequest request = BrokerInfoRequest.newBuilder().setId(t.f0().brokerId()).build();
-                          return toCompletableFuture(stub.brokerInfo(request))
+                          return service.call(request)
                                   .thenApply(brokerReply -> tuple3(t.f0(), t.f1(), brokerReply.getBrokerName()));
                       })
               // output is (trade, productName, brokerName)
@@ -164,14 +161,9 @@ public final class GRPCEnrichment {
         }
     }
 
-    private static void shutdownClient(AbstractStub stub) throws InterruptedException {
-        ManagedChannel managedChannel = (ManagedChannel) stub.getChannel();
-        managedChannel.shutdown().awaitTermination(5, SECONDS);
-    }
-
-    private static ManagedChannel getLocalChannel() {
+    private static ManagedChannelBuilder<?> localChannel() {
         return ManagedChannelBuilder.forAddress("localhost", PORT)
-                                    .usePlaintext().build();
+                                    .usePlaintext();
     }
 
     private static Stream<Map.Entry<Integer, String>> readLines(String file) {
@@ -187,26 +179,5 @@ public final class GRPCEnrichment {
     private static Map.Entry<Integer, String> splitLine(String e) {
         int commaPos = e.indexOf(',');
         return entry(Integer.valueOf(e.substring(0, commaPos)), e.substring(commaPos + 1));
-    }
-
-    /**
-     * Adapt a {@link ListenableFuture} to java standard {@link
-     * CompletableFuture}, which is used by Jet.
-     */
-    private static <T> CompletableFuture<T> toCompletableFuture(ListenableFuture<T> lf) {
-        CompletableFuture<T> f = new CompletableFuture<>();
-        // note that we don't handle CompletableFuture.cancel()
-        Futures.addCallback(lf, new FutureCallback<T>() {
-            @Override
-            public void onSuccess(@NullableDecl T result) {
-                f.complete(result);
-            }
-
-            @Override
-            public void onFailure(@Nonnull Throwable t) {
-                f.completeExceptionally(t);
-            }
-        }, MoreExecutors.directExecutor());
-        return f;
     }
 }

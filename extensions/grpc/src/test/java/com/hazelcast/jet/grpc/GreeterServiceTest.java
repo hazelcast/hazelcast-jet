@@ -19,6 +19,7 @@ package com.hazelcast.jet.grpc;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.core.JetTestSupport;
 import com.hazelcast.jet.grpc.greeter.GreeterGrpc;
+import com.hazelcast.jet.grpc.greeter.GreeterGrpc.GreeterStub;
 import com.hazelcast.jet.grpc.greeter.GreeterOuterClass.HelloReply;
 import com.hazelcast.jet.grpc.greeter.GreeterOuterClass.HelloRequest;
 import com.hazelcast.jet.pipeline.Pipeline;
@@ -34,33 +35,62 @@ import org.junit.Test;
 
 import java.io.IOException;
 
-import static com.hazelcast.jet.grpc.BidirectionalStreamingService.bidirectionalService;
+import static com.hazelcast.jet.grpc.GrpcServices.bidirectionalStreamingService;
+import static com.hazelcast.jet.grpc.GrpcServices.unaryService;
 
 public class GreeterServiceTest extends JetTestSupport {
 
-    public static final int PORT = 50051;
     private JetInstance jet;
+    private int port;
 
     @Before
     public void setup() throws IOException {
-        Server server = ServerBuilder.forPort(PORT).addService(new GreeterServiceImpl()).build();
+        Server server = ServerBuilder.forPort(0).addService(new GreeterServiceImpl()).build();
         server.start();
+        port = server.getPort();
 
         jet = createJetMember();
     }
 
     @Test
-    public void test() {
+    public void testBidirectionalStreaming() {
+        final int localPort = port;
         Pipeline p = Pipeline.create();
         ServiceFactory<?, BidirectionalStreamingService<HelloRequest, HelloReply>> greeterService =
-                bidirectionalService(
-                        () -> ManagedChannelBuilder.forAddress("localhost", PORT).usePlaintext(),
-                        (channel, observer) -> GreeterGrpc.newStub(channel).sayHello(observer)
+                bidirectionalStreamingService(
+                        () -> ManagedChannelBuilder.forAddress("localhost", localPort).usePlaintext(),
+                        channel -> {
+                            GreeterStub stub = GreeterGrpc.newStub(channel);
+                            return stub::sayHelloBidirectional;
+                        }
                 );
 
         p.readFrom(TestSources.items("one", "two", "three", "four"))
          .map(item -> HelloRequest.newBuilder().setName(item).build())
-         .mapUsingServiceAsync(greeterService, BidirectionalStreamingService::sendRequest)
+         .mapUsingServiceAsync(greeterService, BidirectionalStreamingService::call)
+         .writeTo(Sinks.logger());
+
+        jet.newJob(p).join();
+    }
+
+    @Test
+    public void testUnary() {
+        final int localPort = port;
+        Pipeline p = Pipeline.create();
+        ServiceFactory<?, UnaryService<HelloRequest, HelloReply>> greeterService =
+                unaryService(
+                        () -> ManagedChannelBuilder.forAddress("localhost", localPort).usePlaintext(),
+                        channel -> {
+                            GreeterStub stub = GreeterGrpc.newStub(channel);
+                            return stub::sayHelloUnary;
+                        }
+                );
+
+        p.readFrom(TestSources.items("one", "two", "three", "four"))
+         .mapUsingServiceAsync(greeterService, (service, input) -> {
+             HelloRequest request = HelloRequest.newBuilder().setName(input).build();
+             return service.call(request).thenApply(r -> r.toString());
+         })
          .writeTo(Sinks.logger());
 
         jet.newJob(p).join();
@@ -69,7 +99,16 @@ public class GreeterServiceTest extends JetTestSupport {
     public static class GreeterServiceImpl extends GreeterGrpc.GreeterImplBase {
 
         @Override
-        public StreamObserver<HelloRequest> sayHello(StreamObserver<HelloReply> responseObserver) {
+        public void sayHelloUnary(HelloRequest request, StreamObserver<HelloReply> responseObserver) {
+            HelloReply reply = HelloReply.newBuilder()
+                                         .setMessage("Hello " + request.getName())
+                                         .build();
+            responseObserver.onNext(reply);
+            responseObserver.onCompleted();
+        }
+
+        @Override
+        public StreamObserver<HelloRequest> sayHelloBidirectional(StreamObserver<HelloReply> responseObserver) {
             return new StreamObserver<HelloRequest>() {
 
                 @Override

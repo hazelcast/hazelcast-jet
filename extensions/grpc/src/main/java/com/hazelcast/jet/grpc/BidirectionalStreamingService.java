@@ -16,16 +16,12 @@
 
 package com.hazelcast.jet.grpc;
 
-import com.hazelcast.function.BiFunctionEx;
-import com.hazelcast.function.SupplierEx;
+import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.core.Processor.Context;
 import com.hazelcast.jet.impl.util.ExceptionUtil;
-import com.hazelcast.jet.pipeline.ServiceFactories;
-import com.hazelcast.jet.pipeline.ServiceFactory;
 import com.hazelcast.logging.ILogger;
 import io.grpc.ManagedChannel;
-import io.grpc.ManagedChannelBuilder;
 import io.grpc.StatusException;
 import io.grpc.StatusRuntimeException;
 import io.grpc.stub.StreamObserver;
@@ -36,30 +32,27 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
 
-import static java.lang.Thread.currentThread;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 public final class BidirectionalStreamingService<I, O> {
 
-    private final ManagedChannel channel;
     private final StreamObserver<I> sink;
     private final Queue<CompletableFuture<O>> futureQueue = new ConcurrentLinkedQueue<>();
     private final CountDownLatch completionLatch = new CountDownLatch(1);
     private final ILogger logger;
     private volatile Throwable exceptionInOutputObserver;
 
-    public BidirectionalStreamingService(
+    BidirectionalStreamingService(
             Context context,
-            SupplierEx<ManagedChannelBuilder<?>> createChannelFn,
-            BiFunctionEx<ManagedChannel, StreamObserver<O>, StreamObserver<I>> createStubFn
+            ManagedChannel channel,
+            FunctionEx<ManagedChannel, FunctionEx<StreamObserver<O>, StreamObserver<I>>> createStubFn
     ) {
         logger = context.logger();
-        channel = createChannelFn.get().build();
-
-        sink = createStubFn.apply(channel, new OutputMessageObserver());
+        sink = createStubFn.apply(channel).apply(new OutputMessageObserver());
     }
 
-    CompletableFuture<O> sendRequest(I input) {
+    @Nonnull
+    public CompletableFuture<O> call(@Nonnull I input) {
         checkForServerError();
         CompletableFuture<O> future = new CompletableFuture<>();
         futureQueue.add(future);
@@ -67,42 +60,16 @@ public final class BidirectionalStreamingService<I, O> {
         return future;
     }
 
-    @Nonnull
-    static <S, I, O> ServiceFactory<?, BidirectionalStreamingService<I, O>> bidirectionalService(
-            SupplierEx<ManagedChannelBuilder<?>> channelSup,
-            BiFunctionEx<ManagedChannel, StreamObserver<O>, StreamObserver<I>> callStubFn
-    ) {
-        return ServiceFactories.nonSharedService(ctx ->
-                new BidirectionalStreamingService<>(
-                        ctx, channelSup, callStubFn
-                ), BidirectionalStreamingService::destroy);
-    }
-
     private void checkForServerError() {
         if (completionLatch.getCount() == 0) {
-            throw new JetException("PythonService broke down: " + exceptionInOutputObserver, exceptionInOutputObserver);
+            throw new JetException("Exception in gRPC service: " + exceptionInOutputObserver, exceptionInOutputObserver);
         }
     }
 
-    public void destroy() {
-        boolean interrupted = Thread.interrupted();
-        try {
-            sink.onCompleted();
-            if (!completionLatch.await(1, SECONDS)) {
-                logger.info("gRPC call has not completed on time");
-            }
-            if (!channel.shutdown().awaitTermination(1, SECONDS)) {
-                logger.info("gRPC client has not shut down on time");
-            }
-            if (!channel.shutdownNow().awaitTermination(1, SECONDS)) {
-                logger.info("gRPC client has not shut down on time, even after forceful shutdown");
-            }
-        } catch (Exception e) {
-            throw new JetException("JetToPythonServiceFactory.destroy() failed: " + e, e);
-        } finally {
-            if (interrupted) {
-                currentThread().interrupt();
-            }
+    void destroy() throws InterruptedException {
+        sink.onCompleted();
+        if (!completionLatch.await(1, SECONDS)) {
+            logger.info("gRPC call has not completed on time");
         }
     }
 
