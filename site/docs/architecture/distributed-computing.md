@@ -122,9 +122,19 @@ Backpressure is trickier over a network link: instead of a shared memory
 location you can use for reliable instant signaling, all we have are
 messages sent over unreliable links that have significant latency.
 Hazelcast Jet uses a design very similar to the TCP/IP adaptive receive
-window: the sender must wait for a message from the receiver telling it
-how many more data items it can send. After processing message N, the
-receiver sends a message that the sender can send up to message N +
-RWIN. As long as the receive window is large enough to buffer the link
-latency, and as long as the receiver is at least as fast as the sender,
-it will be allowed to keep sending the messages all the time.
+window: the sender must wait for an acknowledgment from the receiver
+telling it how many more data items it can send. After processing item
+N, the receiver sends a message that the sender can send up to item N +
+RWIN.
+
+The receiver sends the acknowledgment message ten times per second, so
+as long as the receive window is large enough to hold the amount of data
+processed within 100 milliseconds plus network link latency, the
+receiver will always have data ready to be processed:
+
+![Receive Window](/docs/assets/arch-dag-7.svg)
+
+Jet calculates the size of the receive window based on the rate of data
+flow through a given tasklet. It adaptively shrinks and expands it as
+the flow changes. In stable state the window size is 300 milliseconds'
+worth of data.
