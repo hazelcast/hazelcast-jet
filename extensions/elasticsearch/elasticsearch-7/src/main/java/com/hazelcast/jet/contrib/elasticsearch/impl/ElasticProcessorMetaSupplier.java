@@ -172,6 +172,7 @@ public class ElasticProcessorMetaSupplier<T> implements ProcessorMetaSupplier {
 
     private Optional<Shard> convertToShard(JsonValue value) {
         JsonObject object = value.asObject();
+        // TODO IndexShardState.STARTED but this is deeply inside elastic, should we mirror the enum?
         if ("STARTED".equals(object.get("state").asString())) {
             Shard shard = new Shard(
                     object.get("index").asString(),
