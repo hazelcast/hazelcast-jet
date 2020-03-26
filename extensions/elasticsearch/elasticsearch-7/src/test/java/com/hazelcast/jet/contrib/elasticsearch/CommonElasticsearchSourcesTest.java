@@ -27,9 +27,9 @@ import org.junit.Test;
 
 import java.io.IOException;
 
+import static com.google.common.collect.ImmutableMap.of;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.elasticsearch.index.query.QueryBuilders.matchAllQuery;
-import static org.testcontainers.shaded.com.google.common.collect.ImmutableMap.of;
 
 /**
  * Base class for Elasticsearch source tests

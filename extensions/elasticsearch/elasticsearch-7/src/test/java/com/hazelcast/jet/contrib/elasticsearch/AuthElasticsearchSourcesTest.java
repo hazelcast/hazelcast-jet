@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.contrib.elasticsearch;
 
+import com.google.common.collect.ImmutableMap;
 import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.JetTestInstanceFactory;
@@ -35,7 +36,6 @@ import static com.hazelcast.jet.contrib.elasticsearch.ElasticsearchBaseTest.ELAS
 import static com.hazelcast.jet.contrib.elasticsearch.ElasticsearchSources.client;
 import static com.hazelcast.jet.contrib.elasticsearch.ElasticsearchSources.elasticsearch;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.testcontainers.shaded.com.google.common.collect.ImmutableMap.of;
 
 public class AuthElasticsearchSourcesTest extends BaseElasticsearchTest {
 
@@ -75,7 +75,7 @@ public class AuthElasticsearchSourcesTest extends BaseElasticsearchTest {
 
     @Test
     public void testAuthenticatedClient() {
-        indexDocument("my-index", of("name", "Frantisek"));
+        indexDocument("my-index", ImmutableMap.of("name", "Frantisek"));
 
         Pipeline p = Pipeline.create();
         p.readFrom(elasticsearch(elasticClientSupplier()))

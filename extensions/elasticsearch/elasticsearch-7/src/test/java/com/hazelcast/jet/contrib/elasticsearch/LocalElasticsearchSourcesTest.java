@@ -31,8 +31,8 @@ import org.elasticsearch.client.RestHighLevelClient;
 import org.junit.After;
 import org.junit.Test;
 
+import static com.google.common.collect.ImmutableMap.of;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.testcontainers.shaded.com.google.common.collect.ImmutableMap.of;
 
 /**
  * Test running single Jet member locally and Elastic in docker

@@ -41,10 +41,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import static com.google.common.collect.ImmutableMap.of;
 import static org.assertj.core.util.Lists.newArrayList;
 import static org.elasticsearch.client.RequestOptions.DEFAULT;
 import static org.elasticsearch.index.query.QueryBuilders.matchAllQuery;
-import static org.testcontainers.shaded.com.google.common.collect.ImmutableMap.of;
 
 /**
  * Base class for running Elasticsearch connector tests
