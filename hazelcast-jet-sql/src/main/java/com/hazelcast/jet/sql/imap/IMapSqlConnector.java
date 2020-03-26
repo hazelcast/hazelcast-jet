@@ -33,6 +33,8 @@ import com.hazelcast.sql.impl.expression.Expression;
 import com.hazelcast.sql.impl.expression.ExpressionEvalContext;
 import com.hazelcast.sql.impl.row.KeyValueRow;
 import com.hazelcast.sql.impl.type.QueryDataType;
+import com.hazelcast.sql.impl.type.converter.Converter;
+import com.hazelcast.sql.impl.type.converter.Converters;
 import org.apache.calcite.rex.RexNode;
 import org.apache.commons.beanutils.BeanUtilsBean;
 import org.apache.commons.beanutils.PropertyUtils;
@@ -46,6 +48,7 @@ import java.util.Map.Entry;
 
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.core.Edge.between;
+import static com.hazelcast.jet.core.processor.Processors.mapUsingServiceP;
 import static com.hazelcast.jet.core.processor.SourceProcessors.readMapP;
 import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
@@ -235,44 +238,54 @@ public class IMapSqlConnector implements SqlConnector {
             throw new JetException("If writing to IMap, you need to specify " + TO_KEY_CLASS + " and "
                     + TO_VALUE_CLASS + " in table options");
         }
-        List<String> fields = ((IMapTable) jetTable).getFieldNames();
+        List<String> fieldNames = table.getFieldNames();
+        List<QueryDataType> fieldTypes = table.getPhysicalRowType();
+
         // TODO merge projection vertex into the sink vertex
-        Vertex vStart = dag.newVertex("project", Processors.<Object[], Entry<Object, Object>>mapP(row -> {
-            BeanUtilsBean bub = new BeanUtilsBean();
-            Object key;
-            int wholeKeyIndex = fields.indexOf(KEY_ATTRIBUTE_NAME.value());
-            int wholeValueIndex = fields.indexOf(THIS_ATTRIBUTE_NAME.value());
-            if (wholeKeyIndex >= 0) {
-                key = row[wholeKeyIndex];
-            } else {
-                key = Class.forName(keyClassName).getConstructor().newInstance();
-            }
-            Object value;
-            if (wholeValueIndex >= 0) {
-                value = row[wholeValueIndex];
-            } else {
-                value = Class.forName(valueClassName).getConstructor().newInstance();
-            }
-            for (int i = 0; i < fields.size(); i++) {
-                String field = fields.get(i);
-                Object o = value;
-                if (field.equals(KEY_ATTRIBUTE_NAME.value()) || field.equals(THIS_ATTRIBUTE_NAME.value())) {
-                    continue;
-                }
-                else if (field.startsWith(KEY_ATTRIBUTE_NAME.value() + ".")) {
-                    o = key;
-                    field = field.substring(KEY_ATTRIBUTE_NAME.value().length() + 1);
-                }
-                else if (field.startsWith(THIS_ATTRIBUTE_NAME.value() + ".")) {
-                    field = field.substring(THIS_ATTRIBUTE_NAME.value().length() + 1);
-                }
-                bub.setProperty(o, field, row[i]);
-            }
-            return entry(key, value);
-        }));
+        int wholeKeyIndex = fieldNames.indexOf(KEY_ATTRIBUTE_NAME.value());
+        int wholeValueIndex = fieldNames.indexOf(THIS_ATTRIBUTE_NAME.value());
+        Vertex vStart = dag.newVertex("project", mapUsingServiceP(
+                ServiceFactories.nonSharedService(pCtx -> BeanUtilsBean.getInstance()),
+                (BeanUtilsBean bub, Object[] row) -> {
+                    Object key;
+                    if (wholeKeyIndex >= 0) {
+                        key = convert(row[wholeKeyIndex], fieldTypes.get(wholeKeyIndex));
+                    } else {
+                        key = Class.forName(keyClassName).getConstructor().newInstance();
+                    }
+                    Object value;
+                    if (wholeValueIndex >= 0) {
+                        value = convert(row[wholeValueIndex], fieldTypes.get(wholeValueIndex));
+                    } else {
+                        value = Class.forName(valueClassName).getConstructor().newInstance();
+                    }
+                    for (int i = 0; i < fieldNames.size(); i++) {
+                        if (i == wholeKeyIndex || i == wholeValueIndex) {
+                            continue;
+                        }
+                        String field = fieldNames.get(i);
+                        Object o = value;
+                        if (field.startsWith(KEY_ATTRIBUTE_NAME.value() + ".")) {
+                            o = key;
+                            field = field.substring(KEY_ATTRIBUTE_NAME.value().length() + 1);
+                        } else if (field.startsWith(THIS_ATTRIBUTE_NAME.value() + ".")) {
+                            field = field.substring(THIS_ATTRIBUTE_NAME.value().length() + 1);
+                        }
+                        bub.setProperty(convert(o, fieldTypes.get(i)), field, row[i]);
+                    }
+                    return entry(key, value);
+                }));
         Vertex vEnd = dag.newVertex("mapSink", SinkProcessors.writeMapP(mapName));
         dag.edge(between(vStart, vEnd));
         return tuple2(vStart, vEnd);
+    }
+
+    private static Object convert(Object v, QueryDataType type) {
+        if (v == null || type.getConverter().getValueClass() == v.getClass()) {
+            return v;
+        }
+        Converter converter = Converters.getConverter(v.getClass());
+        return type.getConverter().convertToSelf(converter, v);
     }
 
     @Override
