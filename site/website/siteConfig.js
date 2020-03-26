@@ -38,6 +38,7 @@ const siteConfig = {
         {page: 'download', label: "Download"},
         {href: `/javadoc/${latestVersion}`, label: "Javadoc"},
         {href: 'https://github.com/hazelcast/hazelcast-jet', label: "View on GitHub"},
+        {href: 'https://gitter.im/hazelcast/hazelcast-jet', label: "Chat With Us"},
         {blog: true, label: 'Blog'},
         {search: true},
     ],
