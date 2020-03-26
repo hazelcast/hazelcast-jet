@@ -930,7 +930,7 @@ public class JobConfig implements IdentifiedDataSerializable {
     /**
      * Registers the given serializer for the given class for the scope of the
      * job. It will be accessible to all the code attached to the underlying
-     * pipeline or DAG.
+     * pipeline or DAG, but not to any other code.
      * <p>
      * Serializers registered on a job level have precedence over any serializer
      * registered on a cluster level.
