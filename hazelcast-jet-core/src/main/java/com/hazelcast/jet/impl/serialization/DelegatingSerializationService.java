@@ -53,17 +53,15 @@ public class DelegatingSerializationService extends AbstractSerializationService
                                           @Nonnull AbstractSerializationService delegate) {
         super(delegate);
 
-        Map<Class<?>, SerializerAdapter> serializersByClass;
-        Map<Integer, SerializerAdapter> serializersById;
         if (config.isEmpty()) {
-            serializersByClass = emptyMap();
-            serializersById = emptyMap();
+            this.serializersByClass = emptyMap();
+            this.serializersById = emptyMap();
         } else {
             ClassLoader classLoader = currentThread().getContextClassLoader();
             SerializerFactory serializerFactory = new SerializerFactory(classLoader);
 
-            serializersByClass = new HashMap<>();
-            serializersById = new HashMap<>();
+            Map<Class<?>, SerializerAdapter> serializersByClass = new HashMap<>();
+            Map<Integer, SerializerAdapter> serializersById = new HashMap<>();
             config.primers().forEach(entry -> {
                 Class<?> clazz = loadClass(classLoader, entry.getKey());
                 StreamSerializer<?> serializer = entry.getValue().construct(serializerFactory);
@@ -79,9 +77,9 @@ public class DelegatingSerializationService extends AbstractSerializationService
                 serializersByClass.put(clazz, serializerAdapter);
                 serializersById.put(serializerAdapter.getImpl().getTypeId(), serializerAdapter);
             });
+            this.serializersByClass = serializersByClass;
+            this.serializersById = serializersById;
         }
-        this.serializersByClass = serializersByClass;
-        this.serializersById = serializersById;
 
         this.delegate = delegate;
 
