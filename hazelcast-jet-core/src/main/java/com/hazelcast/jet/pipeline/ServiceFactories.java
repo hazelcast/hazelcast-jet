@@ -105,7 +105,7 @@ public final class ServiceFactories {
      * to start a dedicated thread for those calls. Failing to do this can
      * cause severe performance problems. You should also carefully consider
      * how much local parallelism you need for this step since each parallel
-     * tasklet needs its own thread. Call {@code GeneralStage#setLocalParallelism
+     * tasklet needs its own thread. Call {@link GeneralStage#setLocalParallelism
      * stage.setLocalParallelism()} to set an explicit level, otherwise it will
      * depend on the number of cores on the Jet machine, which makes no sense
      * for blocking code.
@@ -132,7 +132,7 @@ public final class ServiceFactories {
      * to start a dedicated thread for those calls. Failing to do this can
      * cause severe performance problems. You should also carefully consider
      * how much local parallelism you need for this step since each parallel
-     * tasklet needs its own thread. Call {@code GeneralStage#setLocalParallelism
+     * tasklet needs its own thread. Call {@link GeneralStage#setLocalParallelism
      * stage.setLocalParallelism()} to set an explicit level, otherwise it will
      * depend on the number of cores on the Jet machine, which makes no sense
      * for blocking code.
@@ -166,7 +166,7 @@ public final class ServiceFactories {
      * to start a dedicated thread for those calls. Failing to do this can
      * cause severe performance problems. You should also carefully consider
      * how much local parallelism you need for this step since each parallel
-     * tasklet needs its own thread. Call {@code GeneralStage#setLocalParallelism
+     * tasklet needs its own thread. Call {@link GeneralStage#setLocalParallelism
      * stage.setLocalParallelism()} to set an explicit level, otherwise it will
      * depend on the number of cores on the Jet machine, which makes no sense
      * for blocking code.
@@ -193,7 +193,7 @@ public final class ServiceFactories {
      * to start a dedicated thread for those calls. Failing to do this can
      * cause severe performance problems. You should also carefully consider
      * how much local parallelism you need for this step since each parallel
-     * tasklet needs its own thread. Call {@code GeneralStage#setLocalParallelism
+     * tasklet needs its own thread. Call {@link GeneralStage#setLocalParallelism
      * stage.setLocalParallelism()} to set an explicit level, otherwise it will
      * depend on the number of cores on the Jet machine, which makes no sense
      * for blocking code.
