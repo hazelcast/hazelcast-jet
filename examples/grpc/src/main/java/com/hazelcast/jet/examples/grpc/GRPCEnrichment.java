@@ -19,8 +19,6 @@ package com.hazelcast.jet.examples.grpc;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
-import com.hazelcast.jet.examples.grpc.BrokerServiceGrpc.BrokerServiceStub;
-import com.hazelcast.jet.examples.grpc.ProductServiceGrpc.ProductServiceStub;
 import com.hazelcast.jet.examples.grpc.datamodel.Broker;
 import com.hazelcast.jet.examples.grpc.datamodel.Product;
 import com.hazelcast.jet.examples.grpc.datamodel.Trade;
@@ -103,19 +101,13 @@ public final class GRPCEnrichment {
 
 
         ServiceFactory<?, UnaryService<ProductInfoRequest, ProductInfoReply>> productService = unaryService(
-                GRPCEnrichment::localChannel,
-                channel -> {
-                    ProductServiceStub stub = ProductServiceGrpc.newStub(channel);
-                    return stub::productInfo;
-                }
+                () -> ManagedChannelBuilder.forAddress("localhost", PORT).usePlaintext(),
+                channel -> ProductServiceGrpc.newStub(channel)::productInfo
         );
 
         ServiceFactory<?, UnaryService<BrokerInfoRequest, BrokerInfoReply>> brokerService = unaryService(
-                GRPCEnrichment::localChannel,
-                channel -> {
-                    BrokerServiceStub stub = BrokerServiceGrpc.newStub(channel);
-                    return stub::brokerInfo;
-                }
+                () -> ManagedChannelBuilder.forAddress("localhost", PORT).usePlaintext(),
+                channel -> BrokerServiceGrpc.newStub(channel)::brokerInfo
         );
 
         // Enrich the trade by querying the product and broker name from the gRPC services
@@ -159,11 +151,6 @@ public final class GRPCEnrichment {
             eventGenerator.shutdown();
             Jet.shutdownAll();
         }
-    }
-
-    private static ManagedChannelBuilder<?> localChannel() {
-        return ManagedChannelBuilder.forAddress("localhost", PORT)
-                                    .usePlaintext();
     }
 
     private static Stream<Map.Entry<Integer, String>> readLines(String file) {
