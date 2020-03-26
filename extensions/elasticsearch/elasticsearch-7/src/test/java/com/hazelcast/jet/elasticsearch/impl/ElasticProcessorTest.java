@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.contrib.elasticsearch.impl;
+package com.hazelcast.jet.elasticsearch.impl;
 
 import com.hazelcast.function.FunctionEx;
-import com.hazelcast.jet.contrib.elasticsearch.ElasticsearchSourceBuilder;
-import com.hazelcast.jet.contrib.elasticsearch.impl.Shard.Prirep;
+import com.hazelcast.jet.elasticsearch.ElasticsearchSourceBuilder;
+import com.hazelcast.jet.elasticsearch.impl.Shard.Prirep;
 import com.hazelcast.jet.core.test.TestOutbox;
 import com.hazelcast.jet.core.test.TestProcessorContext;
 import org.apache.lucene.search.TotalHits;

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.contrib.elasticsearch;
+package com.hazelcast.jet.elasticsearch;
 
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sources;
@@ -22,7 +22,7 @@ import org.junit.Test;
 
 import java.io.IOException;
 
-import static com.hazelcast.jet.contrib.elasticsearch.ElasticsearchSinks.elasticsearch;
+import static com.hazelcast.jet.elasticsearch.ElasticsearchSinks.elasticsearch;
 
 public class ElasticsearchSinkTest extends ElasticsearchBaseTest {
 
@@ -32,7 +32,7 @@ public class ElasticsearchSinkTest extends ElasticsearchBaseTest {
 
         Pipeline p = Pipeline.create();
         p.readFrom(Sources.list(userList))
-         .writeTo(elasticsearch(indexName, () -> createClient(containerAddress), indexFn(indexName)));
+         .writeTo(ElasticsearchSinks.elasticsearch(indexName, () -> createClient(containerAddress), indexFn(indexName)));
 
         jet.newJob(p).join();
 

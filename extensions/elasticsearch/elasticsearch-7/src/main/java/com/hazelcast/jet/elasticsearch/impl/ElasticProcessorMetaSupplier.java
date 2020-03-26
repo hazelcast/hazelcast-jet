@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.contrib.elasticsearch.impl;
+package com.hazelcast.jet.elasticsearch.impl;
 
 import com.hazelcast.cluster.Address;
 import com.hazelcast.internal.json.Json;
@@ -22,8 +22,8 @@ import com.hazelcast.internal.json.JsonArray;
 import com.hazelcast.internal.json.JsonObject;
 import com.hazelcast.internal.json.JsonValue;
 import com.hazelcast.jet.JetException;
-import com.hazelcast.jet.contrib.elasticsearch.ElasticsearchSourceBuilder;
-import com.hazelcast.jet.contrib.elasticsearch.impl.Shard.Prirep;
+import com.hazelcast.jet.elasticsearch.ElasticsearchSourceBuilder;
+import com.hazelcast.jet.elasticsearch.impl.Shard.Prirep;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.Vertex;

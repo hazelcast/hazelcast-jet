@@ -17,4 +17,4 @@
 /**
  * Contains sources and sinks for Elasticsearch
  */
-package com.hazelcast.jet.contrib.elasticsearch;
+package com.hazelcast.jet.elasticsearch;

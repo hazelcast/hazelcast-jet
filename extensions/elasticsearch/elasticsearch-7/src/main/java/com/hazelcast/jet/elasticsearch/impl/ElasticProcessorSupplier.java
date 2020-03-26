@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.contrib.elasticsearch.impl;
+package com.hazelcast.jet.elasticsearch.impl;
 
-import com.hazelcast.jet.contrib.elasticsearch.ElasticsearchSourceBuilder;
+import com.hazelcast.jet.elasticsearch.ElasticsearchSourceBuilder;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.impl.util.Util;

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.contrib.elasticsearch;
+package com.hazelcast.jet.elasticsearch;
 
 import com.google.common.collect.ImmutableMap;
 import com.hazelcast.function.SupplierEx;
@@ -32,9 +32,9 @@ import org.testcontainers.elasticsearch.ElasticsearchContainer;
 
 import java.util.function.Supplier;
 
-import static com.hazelcast.jet.contrib.elasticsearch.ElasticsearchBaseTest.ELASTICSEARCH_IMAGE;
-import static com.hazelcast.jet.contrib.elasticsearch.ElasticsearchSources.client;
-import static com.hazelcast.jet.contrib.elasticsearch.ElasticsearchSources.elasticsearch;
+import static com.hazelcast.jet.elasticsearch.ElasticsearchBaseTest.ELASTICSEARCH_IMAGE;
+import static com.hazelcast.jet.elasticsearch.ElasticsearchSources.client;
+import static com.hazelcast.jet.elasticsearch.ElasticsearchSources.elasticsearch;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public class AuthElasticsearchSourcesTest extends BaseElasticsearchTest {

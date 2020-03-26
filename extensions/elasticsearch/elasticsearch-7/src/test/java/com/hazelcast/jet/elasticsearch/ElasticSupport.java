@@ -14,20 +14,18 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.contrib.elasticsearch;
+package com.hazelcast.jet.elasticsearch;
 
 import com.hazelcast.jet.impl.util.Util;
 import org.testcontainers.elasticsearch.ElasticsearchContainer;
 
 import java.util.function.Supplier;
 
-import static com.hazelcast.jet.contrib.elasticsearch.ElasticsearchBaseTest.ELASTICSEARCH_IMAGE;
-
 public final class ElasticSupport {
 
     // Elastic container takes long time to start up, reusing the container for speedup
     public static final Supplier<ElasticsearchContainer> elastic = Util.memoize(() -> {
-        ElasticsearchContainer elastic = new ElasticsearchContainer(ELASTICSEARCH_IMAGE);
+        ElasticsearchContainer elastic = new ElasticsearchContainer(ElasticsearchBaseTest.ELASTICSEARCH_IMAGE);
         elastic.start();
         Runtime.getRuntime().addShutdownHook(new Thread(elastic::stop));
         return elastic;

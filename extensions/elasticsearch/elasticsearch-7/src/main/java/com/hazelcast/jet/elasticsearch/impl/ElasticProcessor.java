@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.contrib.elasticsearch.impl;
+package com.hazelcast.jet.elasticsearch.impl;
 
 import com.hazelcast.function.ConsumerEx;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.Traversers;
-import com.hazelcast.jet.contrib.elasticsearch.ElasticsearchSourceBuilder;
+import com.hazelcast.jet.elasticsearch.ElasticsearchSourceBuilder;
 import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.logging.ILogger;
 import org.apache.http.HttpHost;

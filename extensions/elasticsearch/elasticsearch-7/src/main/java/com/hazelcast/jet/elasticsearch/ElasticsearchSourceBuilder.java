@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.contrib.elasticsearch;
+package com.hazelcast.jet.elasticsearch;
 
 import com.hazelcast.function.ConsumerEx;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.function.SupplierEx;
-import com.hazelcast.jet.contrib.elasticsearch.impl.ElasticProcessorMetaSupplier;
+import com.hazelcast.jet.elasticsearch.impl.ElasticProcessorMetaSupplier;
 import com.hazelcast.jet.pipeline.BatchSource;
 import com.hazelcast.jet.pipeline.Sources;
 import org.elasticsearch.action.ActionRequest;
