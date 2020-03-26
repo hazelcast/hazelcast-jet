@@ -166,7 +166,7 @@ public class JobSerializerTest extends SimpleTestInClusterSupport {
         Pipeline pipeline = Pipeline.create();
         pipeline.readFrom(Sources.<Value>list(SOURCE_LIST_NAME))
                 .map(Value::value)
-                .writeTo(AssertionSinks.assertOrdered(asList(1, 2)));
+                .writeTo(AssertionSinks.assertAnyOrder(asList(1, 2)));
 
         client().newJob(pipeline, jobConfig()).join();
     }
