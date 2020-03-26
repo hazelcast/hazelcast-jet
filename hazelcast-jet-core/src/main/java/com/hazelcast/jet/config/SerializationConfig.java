@@ -67,6 +67,23 @@ public class SerializationConfig implements Serializable {
         return primersByClass.entrySet().stream();
     }
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        SerializationConfig that = (SerializationConfig) o;
+        return Objects.equals(primersByClass, that.primersByClass);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(primersByClass);
+    }
+
     public interface SerializerPrimer extends Serializable {
 
         StreamSerializer<?> construct(@Nonnull SerializerFactory serializerFactory);

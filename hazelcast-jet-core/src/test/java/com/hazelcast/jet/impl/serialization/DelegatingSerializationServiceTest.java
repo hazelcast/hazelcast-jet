@@ -41,7 +41,7 @@ public class DelegatingSerializationServiceTest {
         // Given
         SerializationConfig config = new SerializationConfig();
         config.registerSerializer(Boolean.class, CustomByteSerializer.class);
-        config.registerSerializer(Byte.class, CustomByteSerializer.class);
+        config.registerSerializer(Byte.class, AnotherCustomByteSerializer.class);
 
         // When
         // Then
@@ -90,6 +90,24 @@ public class DelegatingSerializationServiceTest {
     }
 
     private static class CustomByteSerializer implements StreamSerializer<Byte> {
+
+        @Override
+        public int getTypeId() {
+            return CONSTANT_TYPE_BYTE;
+        }
+
+        @Override
+        public void write(ObjectDataOutput output, Byte value) throws IOException {
+            output.writeByte(value);
+        }
+
+        @Override
+        public Byte read(ObjectDataInput input) throws IOException {
+            return input.readByte();
+        }
+    }
+
+    private static class AnotherCustomByteSerializer implements StreamSerializer<Byte> {
 
         @Override
         public int getTypeId() {
