@@ -117,9 +117,9 @@ public final class TestContextSupport {
                 TestProcessorContext c = (TestProcessorContext) context;
                 NodeEngine nodeEngine = ((HazelcastInstanceImpl) c.jetInstance().getHazelcastInstance()).node.nodeEngine;
                 context = new ProcCtx(c.jetInstance(), c.jobId(), c.executionId(), c.jobConfig(),
-                        c.logger(), c.vertexName(), c.localProcessorIndex(), c.globalProcessorIndex(), c.processingGuarantee(),
-                        c.localParallelism(), c.memberIndex(), c.memberCount(), new ConcurrentHashMap<>(),
-                        (InternalSerializationService) nodeEngine.getSerializationService());
+                        c.logger(), c.vertexName(), c.localProcessorIndex(), c.globalProcessorIndex(),
+                        c.processingGuarantee(), c.localParallelism(), c.memberIndex(), c.memberCount(),
+                        new ConcurrentHashMap<>(), (InternalSerializationService) nodeEngine.getSerializationService());
             }
             delegate.init(outbox, context);
         }
