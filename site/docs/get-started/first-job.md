@@ -16,7 +16,7 @@ Gradle, and add the Jet JAR to your build:
 
 <!--Gradle-->
 
-```bash
+```groovy
 plugins {
     id 'application'
 }

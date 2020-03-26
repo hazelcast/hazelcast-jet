@@ -42,8 +42,10 @@ configured to do this, refer to their docs.
 
 <!--Gradle-->
 
-```bash
-jar.manifest.attributes 'Main-Class': 'org.example.JetJob'
+```groovy
+application {
+    mainClassName = 'org.example.JetJob'
+}
 ```
 
 <!--Maven-->
