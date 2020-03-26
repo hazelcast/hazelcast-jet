@@ -36,7 +36,7 @@ public final class IMapScanPhysicalRule extends RelOptRule {
     @Override
     public void onMatch(RelOptRuleCall call) {
         IMapScanLogicalRel scan = call.rel(0);
-        System.out.println("onMatch0 in " + getClass().getSimpleName());
+        System.out.println("aaa onMatch0 in " + getClass().getSimpleName());
 
         // Add normal map scan.
         call.transformTo(new IMapScanPhysicalRel(

@@ -52,13 +52,12 @@ public final class IMapProjectPhysicalRule extends RelOptRule {
     @Override
     public void onMatch(RelOptRuleCall call) {
         IMapProjectLogicalRel logicalProject = call.rel(0);
-        System.out.println("aaa " + logicalProject);
         RelNode input = logicalProject.getInput();
 
         RelNode convertedInput = OptUtils.toPhysicalInput(input);
 
         Collection<InputAndTraitSet> transforms = getTransforms(logicalProject, convertedInput);
-        System.out.println("onMatch0 in " + getClass().getSimpleName() + ", transforms=" + transforms);
+        System.out.println("aaa onMatch0 in " + getClass().getSimpleName() + ", transforms=" + transforms);
 
         for (InputAndTraitSet transform : transforms) {
             IMapProjectPhysicalRel newProject = new IMapProjectPhysicalRel(

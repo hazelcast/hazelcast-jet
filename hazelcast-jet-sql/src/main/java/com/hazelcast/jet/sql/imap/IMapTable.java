@@ -22,6 +22,7 @@ import com.hazelcast.sql.impl.type.QueryDataType;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.schema.Table;
+import org.apache.calcite.sql.type.SqlTypeName;
 
 import javax.annotation.Nonnull;
 import java.util.List;
@@ -86,7 +87,14 @@ public class IMapTable extends JetTable {
 
     @Override
     public RelDataType getRowType(RelDataTypeFactory typeFactory) {
-        return new IMapRowRelDataType(typeFactory, fields);
+        RelDataTypeFactory.Builder builder = typeFactory.builder();
+        for (Entry<String, QueryDataType> field : fields) {
+            RelDataType type = typeFactory.createSqlType(SqlTypeName.ANY);
+
+            builder.add(field.getKey(), type)
+                .nullable(true);
+        }
+        return builder.build();
     }
 
     @Override
