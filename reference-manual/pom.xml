@@ -69,7 +69,7 @@
             <!-- workaround for https://github.com/asciidoctor/asciidoctor-maven-plugin/issues/144 -->
             <plugin>
                 <artifactId>maven-antrun-plugin</artifactId>
-                <version>1.8</version>
+                <version>${maven.antrun.plugin.version}</version>
                 <executions>
                     <execution>
                         <id>delete-empty-dirs</id>

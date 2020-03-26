@@ -25,17 +25,19 @@ import com.hazelcast.internal.metrics.impl.MetricsService;
 import com.hazelcast.internal.nio.Packet;
 import com.hazelcast.internal.partition.InternalPartitionService;
 import com.hazelcast.internal.serialization.InternalSerializationService;
-import com.hazelcast.jet.impl.serialization.DelegatingSerializationService;
+import com.hazelcast.internal.serialization.impl.AbstractSerializationService;
 import com.hazelcast.internal.services.ManagedService;
 import com.hazelcast.internal.services.MembershipAwareService;
 import com.hazelcast.internal.services.MembershipServiceEvent;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.config.JobConfig;
+import com.hazelcast.jet.config.SerializationConfig;
 import com.hazelcast.jet.core.JobNotFoundException;
 import com.hazelcast.jet.impl.execution.TaskletExecutionService;
 import com.hazelcast.jet.impl.metrics.JobMetricsPublisher;
 import com.hazelcast.jet.impl.operation.NotifyMemberShutdownOperation;
+import com.hazelcast.jet.impl.serialization.DelegatingSerializationService;
 import com.hazelcast.jet.impl.util.ExceptionUtil;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.spi.impl.NodeEngine;
@@ -44,8 +46,8 @@ import com.hazelcast.spi.impl.operationservice.LiveOperations;
 import com.hazelcast.spi.impl.operationservice.LiveOperationsTracker;
 import com.hazelcast.spi.impl.operationservice.Operation;
 
+import javax.annotation.Nonnull;
 import java.io.IOException;
-import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -180,9 +182,10 @@ public class JetService implements ManagedService, MembershipAwareService, LiveO
         return new JobCoordinationService(nodeEngine, this, config, jobRepository);
     }
 
-    public InternalSerializationService createSerializationService(Map<String, String> serializerConfigs) {
-        return DelegatingSerializationService
-                .from(getNodeEngine().getSerializationService(), serializerConfigs);
+    public InternalSerializationService createSerializationService(@Nonnull SerializationConfig serializationConfig) {
+        return new DelegatingSerializationService(serializationConfig,
+                (AbstractSerializationService) getNodeEngine().getSerializationService()
+        );
     }
 
     public Operation createExportSnapshotOperation(long jobId, String name, boolean cancelJob) {

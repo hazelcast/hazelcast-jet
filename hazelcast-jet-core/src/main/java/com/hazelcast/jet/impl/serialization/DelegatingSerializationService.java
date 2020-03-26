@@ -19,25 +19,24 @@ package com.hazelcast.jet.impl.serialization;
 import com.hazelcast.core.HazelcastInstanceNotActiveException;
 import com.hazelcast.internal.serialization.Data;
 import com.hazelcast.internal.serialization.DataType;
-import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.internal.serialization.PortableContext;
-import com.hazelcast.internal.serialization.SerializationService;
 import com.hazelcast.internal.serialization.impl.AbstractSerializationService;
 import com.hazelcast.internal.serialization.impl.SerializerAdapter;
 import com.hazelcast.jet.JetException;
+import com.hazelcast.jet.config.SerializationConfig;
 import com.hazelcast.nio.serialization.HazelcastSerializationException;
 import com.hazelcast.nio.serialization.PortableReader;
 import com.hazelcast.nio.serialization.Serializer;
+import com.hazelcast.nio.serialization.StreamSerializer;
 import com.hazelcast.partition.PartitioningStrategy;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Map.Entry;
 
 import static com.hazelcast.internal.serialization.impl.SerializationUtil.createSerializerAdapter;
 import static com.hazelcast.jet.impl.util.ReflectionUtils.loadClass;
-import static com.hazelcast.jet.impl.util.ReflectionUtils.newInstance;
 import static java.lang.Thread.currentThread;
 import static java.util.Collections.emptyMap;
 
@@ -50,19 +49,25 @@ public class DelegatingSerializationService extends AbstractSerializationService
 
     private volatile boolean active;
 
-    public DelegatingSerializationService(Map<Class<?>, ? extends Serializer> serializers,
-                                          AbstractSerializationService delegate) {
+    public DelegatingSerializationService(@Nonnull SerializationConfig config,
+                                          @Nonnull AbstractSerializationService delegate) {
         super(delegate);
 
         Map<Class<?>, SerializerAdapter> serializersByClass;
         Map<Integer, SerializerAdapter> serializersById;
-        if (serializers.isEmpty()) {
+        if (config.isEmpty()) {
             serializersByClass = emptyMap();
             serializersById = emptyMap();
         } else {
+            ClassLoader classLoader = currentThread().getContextClassLoader();
+            SerializerFactory serializerFactory = new SerializerFactory(classLoader);
+
             serializersByClass = new HashMap<>();
             serializersById = new HashMap<>();
-            serializers.forEach((clazz, serializer) -> {
+            config.primers().forEach(entry -> {
+                Class<?> clazz = loadClass(classLoader, entry.getKey());
+                StreamSerializer<?> serializer = entry.getValue().construct(serializerFactory);
+
                 if (serializersById.containsKey(serializer.getTypeId())) {
                     Serializer registered = serializersById.get(serializer.getTypeId()).getImpl();
                     throw new IllegalStateException("Cannot register Serializer[" + serializer.getClass().getName()
@@ -172,15 +177,5 @@ public class DelegatingSerializationService extends AbstractSerializationService
         for (SerializerAdapter serializer : serializersByClass.values()) {
             serializer.destroy();
         }
-    }
-
-    public static InternalSerializationService from(SerializationService serializationService,
-                                                    Map<String, String> serializerConfigs) {
-        ClassLoader classLoader = currentThread().getContextClassLoader();
-        Map<Class<?>, ? extends Serializer> serializers = new HashMap<>();
-        for (Entry<String, String> entry : serializerConfigs.entrySet()) {
-            serializers.put(loadClass(classLoader, entry.getKey()), newInstance(classLoader, entry.getValue()));
-        }
-        return new DelegatingSerializationService(serializers, (AbstractSerializationService) serializationService);
     }
 }

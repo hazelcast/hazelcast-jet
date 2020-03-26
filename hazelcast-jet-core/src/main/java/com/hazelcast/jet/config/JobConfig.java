@@ -41,7 +41,6 @@ import java.net.MalformedURLException;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Files;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -69,9 +68,10 @@ public class JobConfig implements IdentifiedDataSerializable {
     private boolean storeMetricsAfterJobCompletion;
 
     private Map<String, ResourceConfig> resourceConfigs = new LinkedHashMap<>();
-    private Map<String, String> serializerConfigs = new HashMap<>();
     private JobClassLoaderFactory classLoaderFactory;
     private String initialSnapshotName;
+
+    private SerializationConfig serializationConfig = new SerializationConfig();
 
     /**
      * Returns the name of the job or {@code null} if no name was given.
@@ -930,9 +930,7 @@ public class JobConfig implements IdentifiedDataSerializable {
     /**
      * Registers the given serializer for the given class for the scope of the
      * job. It will be accessible to all the code attached to the underlying
-     * pipeline or DAG, but not to any other code. (An important example is the
-     * {@code IMap} data source, which can instantiate only the classes from
-     * the Jet instance's classpath.)
+     * pipeline or DAG.
      * <p>
      * Serializers registered on a job level have precedence over any serializer
      * registered on a cluster level.
@@ -946,20 +944,36 @@ public class JobConfig implements IdentifiedDataSerializable {
     @EvolvingApi
     public <T, S extends StreamSerializer<?>> JobConfig registerSerializer(@Nonnull Class<T> clazz,
                                                                            @Nonnull Class<S> serializerClass) {
-        Preconditions.checkFalse(serializerConfigs.containsKey(clazz.getName()),
-                "Serializer for " + clazz + " already registered");
-        serializerConfigs.put(clazz.getName(), serializerClass.getName());
+        serializationConfig.registerSerializer(clazz, serializerClass);
         return this;
     }
 
     /**
-     * Returns all the registered serializer configurations. This is a private
-     * API.
+     * Registers a Protobuf serializer with the given typeId for the given
+     * class for the scope of the job. It will be accessible to all the code
+     * attached to the underlying pipeline or DAG.
+     * <p>
+     * Serializers registered on a job level have precedence over any serializer
+     * registered on a cluster level.
+     *
+     * @return {@code this} instance for fluent API
+     * @since 4.1
+     */
+    @Nonnull
+    @EvolvingApi
+    public <T, S extends StreamSerializer<?>> JobConfig registerProtobufSerializer(@Nonnull Class<T> clazz,
+                                                                                   int typeId) {
+        serializationConfig.registerProtobufSerializer(clazz, typeId);
+        return this;
+    }
+
+    /**
+     * Returns serialization configuration. This is a private API.
      */
     @Nonnull
     @PrivateApi
-    public Map<String, String> getSerializerConfigs() {
-        return serializerConfigs;
+    public SerializationConfig getSerializationConfig() {
+        return serializationConfig;
     }
 
     private void addClass(@Nonnull Class<?> clazz) {
@@ -1104,7 +1118,7 @@ public class JobConfig implements IdentifiedDataSerializable {
         out.writeBoolean(autoScaling);
         out.writeBoolean(splitBrainProtectionEnabled);
         out.writeObject(resourceConfigs);
-        out.writeObject(serializerConfigs);
+        out.writeObject(serializationConfig);
         out.writeObject(classLoaderFactory);
         out.writeUTF(initialSnapshotName);
         out.writeBoolean(enableMetrics);
@@ -1119,7 +1133,7 @@ public class JobConfig implements IdentifiedDataSerializable {
         autoScaling = in.readBoolean();
         splitBrainProtectionEnabled = in.readBoolean();
         resourceConfigs = in.readObject();
-        serializerConfigs = in.readObject();
+        serializationConfig = in.readObject();
         classLoaderFactory = in.readObject();
         initialSnapshotName = in.readUTF();
         enableMetrics = in.readBoolean();
@@ -1144,7 +1158,7 @@ public class JobConfig implements IdentifiedDataSerializable {
                 Objects.equals(name, jobConfig.name) &&
                 processingGuarantee == jobConfig.processingGuarantee &&
                 Objects.equals(resourceConfigs, jobConfig.resourceConfigs) &&
-                Objects.equals(serializerConfigs, jobConfig.serializerConfigs) &&
+                Objects.equals(serializationConfig, jobConfig.serializationConfig) &&
                 Objects.equals(classLoaderFactory, jobConfig.classLoaderFactory) &&
                 Objects.equals(initialSnapshotName, jobConfig.initialSnapshotName);
     }
@@ -1153,7 +1167,7 @@ public class JobConfig implements IdentifiedDataSerializable {
     public int hashCode() {
         return Objects.hash(name, processingGuarantee, snapshotIntervalMillis, autoScaling,
                 splitBrainProtectionEnabled, enableMetrics, storeMetricsAfterJobCompletion, resourceConfigs,
-                serializerConfigs, classLoaderFactory, initialSnapshotName
+                serializationConfig, classLoaderFactory, initialSnapshotName
         );
     }
 }
