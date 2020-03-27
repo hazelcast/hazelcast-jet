@@ -948,9 +948,9 @@ public class JobConfig implements IdentifiedDataSerializable {
     }
 
     /**
-     * Registers a Google Protocol Buffers serializer with the given typeId for
-     * the given class for the scope of the job. It will be accessible to all
-     * the code attached to the underlying pipeline or DAG.
+     * Registers a Google Protocol Buffers v3 serializer with the given typeId
+     * for the given class for the scope of the job. It will be accessible to
+     * all the code attached to the underlying pipeline or DAG.
      * <p>
      * Serializers registered on a job level have precedence over any serializer
      * registered on a cluster level.

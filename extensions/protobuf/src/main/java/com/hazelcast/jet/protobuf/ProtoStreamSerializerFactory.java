@@ -23,7 +23,7 @@ import javax.annotation.Nonnull;
 
 /**
  * An implementation of {@link ProtoSerializerFactory} constructing
- * Google Protocol Buffers {@link StreamSerializer}s.
+ * Google Protocol Buffers v3 {@link StreamSerializer}s.
  *
  * @since 4.1
  */

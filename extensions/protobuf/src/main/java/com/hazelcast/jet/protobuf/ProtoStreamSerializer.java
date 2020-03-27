@@ -16,8 +16,7 @@
 
 package com.hazelcast.jet.protobuf;
 
-import com.google.protobuf.DynamicMessage;
-import com.google.protobuf.Message;
+import com.google.protobuf.GeneratedMessageV3;
 import com.google.protobuf.Parser;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
@@ -27,22 +26,21 @@ import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 
-import static com.hazelcast.internal.util.Preconditions.checkFalse;
 import static com.hazelcast.internal.util.Preconditions.checkTrue;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 
 /**
  * An adapter implementation of {@link StreamSerializer} for Google Protocol
- * Buffers binary format.
+ * Buffers v3 binary format.
  *
  * <p>To learn more about Protocol Buffers, visit:
- * <a href="https://developers.google.com/protocol-buffers">https://developers.google.com/protocol-buffers</a>
+ * <a href="https://developers.google.com/protocol-buffers/docs/proto3">https://developers.google.com/protocol-buffers/docs/proto3</a>
  *
- * @param <T> the Protocol Buffers {@link Message} handled by this
+ * @param <T> the Protocol Buffers {@link GeneratedMessageV3} handled by this
  *            {@link StreamSerializer}.
  * @since 4.1
  */
-public class ProtoStreamSerializer<T extends Message> implements StreamSerializer<T> {
+public class ProtoStreamSerializer<T extends GeneratedMessageV3> implements StreamSerializer<T> {
 
     private static final String DEFAULT_INSTANCE_METHOD_NAME = "getDefaultInstance";
 
@@ -50,14 +48,14 @@ public class ProtoStreamSerializer<T extends Message> implements StreamSerialize
     private final Parser<T> parser;
 
     /**
-     * Creates Google Protocol Buffers serializer.
+     * Creates Google Protocol Buffers v3 serializer.
      *
      * @param typeId unique type id of serializer
-     * @param clazz  class of {@link Message} handled by this serializer
+     * @param clazz  class of {@link GeneratedMessageV3} handled by this
+     *               serializer
      */
     public ProtoStreamSerializer(int typeId, @Nonnull Class<T> clazz) {
-        checkTrue(Message.class.isAssignableFrom(clazz), clazz.getName() + " is not supported");
-        checkFalse(DynamicMessage.class.isAssignableFrom(clazz), "DynamicMessage is not supported");
+        checkTrue(GeneratedMessageV3.class.isAssignableFrom(clazz), clazz.getName() + " is not supported");
 
         this.typeId = typeId;
         this.parser = parser(clazz);

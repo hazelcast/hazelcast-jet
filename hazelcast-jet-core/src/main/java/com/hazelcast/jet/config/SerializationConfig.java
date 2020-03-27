@@ -56,8 +56,8 @@ public class SerializationConfig implements Serializable {
     }
 
     /**
-     * Registers a Google Protocol Buffers serializer with given {@code typeId} for
-     * given {@code clazz}.
+     * Registers a Google Protocol Buffers v3 serializer with given
+     * {@code typeId} for given {@code clazz}.
      */
     public <T> void registerProtoSerializer(@Nonnull Class<T> clazz,
                                             int typeId) {
@@ -100,11 +100,21 @@ public class SerializationConfig implements Serializable {
         return Objects.hash(primersByClass);
     }
 
+    /**
+     * Serializer config that using a {@link SerializerFactory} is able
+     * to output a {@link Serializer}.
+     */
     public interface SerializerPrimer extends Serializable {
 
+        /**
+         * Creates a {@link Serializer} using given {@link SerializerFactory}.
+         */
         Serializer construct(@Nonnull SerializerFactory serializerFactory);
     }
 
+    /**
+     * Serializer config for regular {@link StreamSerializer}s.
+     */
     static class StreamSerializerPrimer implements SerializerPrimer {
 
         static final long serialVersionUID = 1L;
@@ -138,6 +148,9 @@ public class SerializationConfig implements Serializable {
         }
     }
 
+    /**
+     * Serializer config for Google Protocol Buffers serializers.
+     */
     static class ProtoSerializerPrimer implements SerializerPrimer {
 
         static final long serialVersionUID = 1L;

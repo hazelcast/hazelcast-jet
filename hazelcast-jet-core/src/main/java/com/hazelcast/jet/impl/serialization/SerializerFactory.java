@@ -32,7 +32,7 @@ import static com.hazelcast.jet.impl.util.ReflectionUtils.newInstance;
  * A serializer factory facade that discovers serializer factories by reading:
  * <ul>
  *     <li>"META-INF/services/com.hazelcast.jet.protobuf.SerializerFactoryHook"
- *     for Google Protocol Buffers serializer factory</li>
+ *     for Google Protocol Buffers v3 serializer factory</li>
  * </ul>
  * <p>
  * This system is meant to be internal code and is subject to change at any time.

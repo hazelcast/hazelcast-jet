@@ -16,8 +16,7 @@
 
 package com.hazelcast.jet.protobuf;
 
-import com.google.protobuf.DynamicMessage;
-import com.google.protobuf.Message;
+import com.google.protobuf.GeneratedMessageV3;
 import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.internal.serialization.impl.DefaultSerializationServiceBuilder;
 import com.hazelcast.internal.serialization.impl.ObjectDataInputStream;
@@ -49,14 +48,6 @@ public class ProtoStreamSerializerTest {
     }
 
     @Test
-    public void when_instantiatedWithDynamicMessage_then_throws() {
-        // When
-        // Then
-        assertThatThrownBy(() -> new ProtoStreamSerializer<>(1, DynamicMessage.class))
-                .isInstanceOf(IllegalArgumentException.class);
-    }
-
-    @Test
     public void when_instantiatedWithTypeId_then_returnsIt() {
         // Given
         int typeId = 13;
@@ -81,7 +72,7 @@ public class ProtoStreamSerializerTest {
         assertThat(transformed).isEqualTo(original);
     }
 
-    private static <T extends Message> byte[] serialize(StreamSerializer<T> serializer, T object) {
+    private static <T extends GeneratedMessageV3> byte[] serialize(StreamSerializer<T> serializer, T object) {
         try (ByteArrayOutputStream baos = new ByteArrayOutputStream();
              ObjectDataOutputStream output = new ObjectDataOutputStream(baos, SERIALIZATION_SERVICE)) {
             serializer.write(output, object);
@@ -91,7 +82,7 @@ public class ProtoStreamSerializerTest {
         }
     }
 
-    private static <T extends Message> T deserialize(StreamSerializer<T> serializer, byte[] bytes) {
+    private static <T extends GeneratedMessageV3> T deserialize(StreamSerializer<T> serializer, byte[] bytes) {
         try (ByteArrayInputStream bais = new ByteArrayInputStream(bytes);
              ObjectDataInputStream input = new ObjectDataInputStream(bais, SERIALIZATION_SERVICE)) {
             return serializer.read(input);
