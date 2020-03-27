@@ -50,9 +50,9 @@
     "Architecture": [
       "architecture/distributed-computing",
       "architecture/execution-engine",
+      "architecture/cluster-topology",
       "architecture/event-time-processing",
       "architecture/sliding-window",
-      "architecture/cluster-topology",
       "architecture/fault-tolerance",
       "architecture/in-memory-storage"
     ],

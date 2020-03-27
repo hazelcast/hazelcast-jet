@@ -36,9 +36,9 @@ the routing of the data among vertices:
 
 There are two main types of edges:
 
-- *round-robin*: a load-balancing edge that sends items to tasklets in a
+- *round-robin:* a load-balancing edge that sends items to tasklets in a
   round-robin fashion. If a given queue is full, it tries the next one.
-- *partitioned*: computes the partition key of every item, which
+- *partitioned:* computes the partition key of every item, which
   uniquely determines the destination tasklet. Necessary for stateful
   keyed transformations like group-and-aggregate.
 

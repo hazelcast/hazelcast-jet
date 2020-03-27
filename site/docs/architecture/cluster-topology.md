@@ -1,123 +1,79 @@
 ---
 title: Cluster Topology
-description: Various ways and options for using Jet. 
+description: Different ways to form a Jet cluster
 ---
 
-Hazelcast Jet is a distributed system, where each Hazelcast Jet node is
-referred to as a *member*. Each member is a Java application, running in
-a JVM.
+Hazelcast Jet is a distributed system, consisting of several machines
+talking over the network. In a topological sense, it is a *complete
+graph*, having an edge between all vertices. Hazelcast Jet uses the term
+"cluster member" or just "member" to denote a Jet instance participating
+in a cluster. A common term is also "node", but we tend to avoid it due
+to the similar term "vertex" used for the Jet DAG. Since Jet deploys the
+entire DAG to all the members, data travels on all the network links.
 
-The members automatically join together to form a cluster. There are
-[various discovery mechanisms](../operations/discovery)
-Jet supports. The Jet cluster automatically elects one member as the
-coordinator. It tells other members what to do and they report to it any
-status changes. The coordinator may fail and the cluster will
-automatically re-elect another one. If any other member fails, the
-coordinator restarts the job on the remaining members.
+Jet tries hard to relieve you from the task of manually forming and
+maintaining the cluster. There are several algorithms a Jet instance can
+use to automatically discover other instances that should form a
+cluster. The default one is to use the IP Multicast protocol, which
+allows it to work out-of-the-box in a non-production setting like your
+office WiFi. In a cloud setting Jet uses the cloud providers'
+proprietary APIs to find a list of machines in its local network
+environment. You can find out more about that in the [Operations
+Guide](../operations/discovery).
 
-Broadly speaking, Hazelcast Jet can be used in one of two ways:
+## The Coordinator
 
-1. **Dedicated**: Hazelcast Jet runs on a dedicated cluster,
-   which is accessed by using the Jet Client that is available as a
-   command line tool or through its Java API.
-2. **Embedded**: Hazelcast Jet cluster member runs together with another
-   JVM-based application, inside the same JVM. The nodes can be directly
-   access through the Java API, without requiring the use of the Client
-   API.
+One of the members is is the *coordinator:*
 
-![Embedded vs Client-Server Cluster Topology](assets/deployment-options.png)
+![Jet Cluster is a Complete Graph](/docs/assets/arch-topo-1.svg)
 
-The functionality offered in both modes is similar, but there are
-major differences in terms of deployment and operations.
+The coordinator expands the Core DAG into the tasklet execution plan,
+distributes it to all the other members, and takes the initiative in
+moving the pipeline execution job through its lifecycle (initialize,
+run, clean up) while the other members follow its commands and report
+state changes.
 
-## Dedicated Cluster
+![Coordinator creates and distributes the execution plan](/docs/assets/arch-topo-2.svg)
 
-The standard way to deploy Hazelcast Jet is to run it in a dedicated
-cluster. The cluster is deployed in one of the many
-supported ways (using bare instances, Docker, Kubernetes, etc) and the
-clients interact with the cluster using the Hazelcast Jet Client API. A
-single cluster is able to scale to several concurrent jobs, from
-hundreds to thousands depending on the pipelines.
+If a cluster member fails (leaves the cluster), the coordinator suspends
+all the jobs, rescales them to the new cluster topology, and resumes
+them.
 
-In this mode, clients are able to deploy jobs along with the classes
-required for job execution using either the `jet submit` command or the
-Jet Client APIs. To create a Jet client, you use the snippet below:
+The coordinator itself may fail, in that case the other members enter a
+consensus protocol to elect a new one, which then proceeds as above to
+restore all the running jobs.
 
-```java
-JetInstance client = Jet.newJetClient();
-```
+## Embedded Jet Cluster
 
-`JetInstance` type refers to both a client instance, or an embedded node
-and all of the functionality is available in both APIs. The client API
-may be seen as a proxy which sends the requested operations to the
-server.
+Since Hazelcast Jet is just a library, you can build it into your
+own distributed application. If each instance of your application
+starts a Jet instance, they will automatically form their own cluster,
+and you can use the local Jet instance to interact with the Jet cluster,
+just like you would normally use a Jet client.
 
-A Jet node generally tries to consume as much resources on a node as
-possible to maximize performance. Having a dedicated Jet cluster
-provides the full benefits of isolation and decouples the cluster from
-the applications that are using it. There aren't any benefits to running
-more than one Jet node in the same system since Jet automatically scales
-to make use of all CPU cores.
+![Embedded Jet Cluster](/docs/assets/arch-topo-3.svg)
 
-Having a dedicated Jet cluster means you can also scale it independently
-of its users, as Jet supports automatic scaling of streaming jobs.
+If you are a Java developer working in an IDE, this is a very convenient
+way to run a Jet cluster on your development machine. There is nothing
+stopping you from starting your program several times, getting a Jet
+cluster on the same physical machine.
 
-In this mode, Jet typically wouldn't know about user-supplied classes so
-any user code needs to be explicitly submitted with the Job. It is
-recommended that heavyweight dependencies are also added to the
-cluster's classpath so that they're not re-submitted with each job.
+Jet also allows you to run several instances inside a single application:
 
-## Embedded Jet
+![Jet Embedded in a Single Application](/docs/assets/arch-topo-4.svg)
 
-Hazelcast Jet cluster member can be embedded and run inside the same JVM
-with any other JVM based application. The code snipped below is all that
- is needed to create a Jet node:
+Even though they share a JVM, the instances will still use the usual
+network-based discovery mechanisms and will work just as if they were
+on separate machines.
 
-```java
-JetInstance jet = Jet.newJetInstance();
-```
+One major convenience of the embedded architecture is that all the
+classes the Jet pipeline uses are visible to Jet. When you submit a
+pipeline to an outside cluster, you must be careful to include all the
+classes within the job itself, but in the embedded mode you can just
+submit it with no configuration.
 
-The main use of using Jet this way is for testing and development, as
-you can easily create multiple Jet nodes and form a full cluster inside
-a single JVM from an IDE for development purposes, without having to set
-up complex infrastructure or dependencies. Each Jet node has a full Jet
-execution engine which is not crippled or simulated in any way compared
-to a dedicated cluster. This is one of the main benefits of Jet compared
-to other similar systems.
-
-In this mode, the user doesn't need to worry about adding required
-classes to the cluster, since everything is run as part of a single
-application so the deployment model is very simple.
-
-The host application can call directly into the Jet node without using
-the client API. External applications still can interact with the
-embedded Jet nodes using the Client API.
-
-For production, this is only recommended in specific cases where you
-would benefit from tightly coupling the cluster lifecycle to the
-application. As mentioned earlier, Jet by default tries to consume all
-resources to maximize computational throughput. Using Jet in this mode
-together with a CPU and memory intensive application requires special
-care to make sure that they do not interfere with each other.
-
-If you're deploying Jet in a restricted or limited runtime environment
-where you don't have full control of the host processes (such as in an
-app server) then this mode might be suitable.
-
-If you're interested in OEM-ing Jet as part of another service, using
-this mode is also a good choice (but with the above caveats regarding
-performance).
-
-## Summary
-
-Use dedicated mode for:
-
-- Mixed workloads that can scale independently of the client applications
-- Getting the best throughput for performance critical applications
-
-Use embedded mode for:
-
-- Development and testing
-- Running on application servers or on restricted environments
-- OEMs
-- Simple, non-distributed pipelines (i.e. single node)
+While this is convenient and a great way to prepare self-contained
+demos, it can also be deceiving and hide problems that you will
+encounter in production. You are encouraged to start a small but
+independent cluster on your development machine and submit the pipeline
+as a client of that cluster (using the command-line tool `jet submit`).
