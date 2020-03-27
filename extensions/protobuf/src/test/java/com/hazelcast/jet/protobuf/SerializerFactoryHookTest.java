@@ -27,7 +27,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class SerializerFactoryHookTest {
 
     @Test
-    public void when_hookIsPresent_then_loadsFactory() {
+    public void when_hookIsPresent_then_loadsFactoryAndCreatesSerializer() {
         // Given
         SerializerFactory serializerFactory = new SerializerFactory(currentThread().getContextClassLoader());
 

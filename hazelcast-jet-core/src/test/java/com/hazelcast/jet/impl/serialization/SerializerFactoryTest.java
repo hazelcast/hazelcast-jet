@@ -24,7 +24,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 public class SerializerFactoryTest {
 
     @Test
-    public void when_hooksAreMissing_then_installsExceptionFallback() {
+    public void when_hooksAreMissing_then_creationFails() {
         // Given
         SerializerFactory serializerFactory = new SerializerFactory(currentThread().getContextClassLoader());
 

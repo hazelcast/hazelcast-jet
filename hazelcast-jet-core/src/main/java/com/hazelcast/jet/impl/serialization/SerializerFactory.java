@@ -72,7 +72,8 @@ public final class SerializerFactory {
 
     @Nonnull
     public Serializer createProtoSerializer(@Nonnull String className, int typeId) {
-        checkState(protoSerializerFactory != null, "no Proto serializer factory found");
+        checkState(protoSerializerFactory != null,
+                "no Proto serializer factory found, did you add extension library to the classpath?");
         return protoSerializerFactory.create(loadClass(classLoader, className), typeId);
     }
 

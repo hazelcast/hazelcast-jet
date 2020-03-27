@@ -23,6 +23,7 @@ import com.hazelcast.jet.config.JetClientConfig;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.pipeline.Pipeline;
+import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
 import com.hazelcast.jet.pipeline.test.AssertionSinks;
 import com.hazelcast.jet.protobuf.Messages.Person;
@@ -64,7 +65,7 @@ public class JobSerializerTest extends SimpleTestInClusterSupport {
         Pipeline pipeline = Pipeline.create();
         pipeline.readFrom(Sources.<Integer, Person>map(name))
                 .map(entry -> entry.getValue().getName())
-                .writeTo(AssertionSinks.assertAnyOrder(singletonList("Joe")));
+                .writeTo(Sinks.logger());
 
         assertThatThrownBy(() -> client().newJob(pipeline, new JobConfig()).join())
                 .hasCauseInstanceOf(JetException.class);

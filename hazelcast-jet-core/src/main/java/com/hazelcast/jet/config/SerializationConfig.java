@@ -102,7 +102,7 @@ public class SerializationConfig implements Serializable {
 
     /**
      * Serializer config that using a {@link SerializerFactory} is able
-     * to output a {@link Serializer}.
+     * to provide a {@link Serializer}.
      */
     public interface SerializerPrimer extends Serializable {
 
@@ -149,7 +149,7 @@ public class SerializationConfig implements Serializable {
     }
 
     /**
-     * Serializer config for Google Protocol Buffers serializers.
+     * Serializer config for Google Protocol Buffers v3 serializers.
      */
     static class ProtoSerializerPrimer implements SerializerPrimer {
 
