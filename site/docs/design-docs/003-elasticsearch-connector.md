@@ -1,5 +1,5 @@
 ---
-title: 002 - Elasticsearch connector
+title: 003 - Elasticsearch connector
 description: Elasticsearch connector (source and sink)
 ---
 
@@ -86,10 +86,11 @@ public static <T> BatchSource<T> elasticsearch(
 
 New requirements introduce additional settings (slicing, co-located
  reading, ..) which would make the list of parameters too long.
- A builder class is implemented for both the source and sink to provide 
+ A builder class is implemented for both the source and sink to provide
  same experience.
 
 Full example:
+
 ```java
 BatchSource<String> source = new ElasticsearchSourceBuilder<String>()
         .name("my-elastic-source")
@@ -112,8 +113,6 @@ BatchSource<String> source = new ElasticsearchSourceBuilder<String>()
                 .build();
 ```
 
-
-
 ## New features
 
 ### Slicing
@@ -125,7 +124,7 @@ Slicing is used to parallelize read from Elasticsearch.
 To provide maximum performance the number of slices should be less than
  number of shards.
 
-Each processor reads one or more shards. 
+Each processor reads one or more shards.
 If there are not enough shards then some processors don’t read any data.
 
 It is possible to create more slices than shards, but it has high
@@ -167,9 +166,9 @@ Assignment is done when all shards are assigned (to exactly 1 node).
 
 ## Authentication
 
-Because we use the High Level REST client users use the same authentication 
-methods as they normally would.
-A convenience factory method for authenticated client for basic 
+Because we use the High Level REST client users use the same
+authentication methods as they normally would.
+A convenience factory method for authenticated client for basic
 authentication is provided:
 
 ```java
