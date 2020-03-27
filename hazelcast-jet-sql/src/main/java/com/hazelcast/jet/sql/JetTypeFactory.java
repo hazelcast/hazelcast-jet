@@ -16,19 +16,15 @@
 
 package com.hazelcast.jet.sql;
 
-import org.apache.calcite.rel.type.RelDataTypeFactory;
-import org.apache.calcite.sql.SqlOperatorTable;
-import org.apache.calcite.sql.validate.SqlConformance;
-import org.apache.calcite.sql.validate.SqlValidatorCatalogReader;
-import org.apache.calcite.sql.validate.SqlValidatorImpl;
+import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
+import org.apache.calcite.util.ConversionUtil;
 
-public class HazelcastSqlValidator extends SqlValidatorImpl {
-    public HazelcastSqlValidator(
-        SqlOperatorTable opTab,
-        SqlValidatorCatalogReader catalogReader,
-        RelDataTypeFactory typeFactory,
-        SqlConformance conformance
-    ) {
-        super(opTab, catalogReader, typeFactory, conformance);
+import java.nio.charset.Charset;
+
+public class JetTypeFactory extends JavaTypeFactoryImpl {
+
+    @Override
+    public Charset getDefaultCharset() {
+        return Charset.forName(ConversionUtil.NATIVE_UTF16_CHARSET_NAME);
     }
 }

@@ -28,8 +28,9 @@ import com.hazelcast.jet.sql.schema.JetTable;
 import com.hazelcast.sql.impl.expression.Expression;
 import com.hazelcast.sql.impl.physical.FieldTypeProvider;
 import com.hazelcast.sql.impl.physical.PhysicalNodeSchema;
-import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.util.ConversionUtil;
+import org.apache.calcite.util.NlsString;
 
 import javax.annotation.Nullable;
 import java.util.ArrayDeque;
@@ -100,7 +101,15 @@ public class CreateDagVisitor {
     }
 
     public void onValues(JetValuesPhysicalRel rel) {
-        List<Object[]> items = toList(rel.getTuples(), tuple -> tuple.stream().map(RexLiteral::getValue).toArray());
+        List<Object[]> items = toList(rel.getTuples(), tuple -> tuple.stream().map(rexLiteral -> {
+            Comparable<?> v = rexLiteral.getValue();
+            if (v instanceof NlsString) {
+                NlsString nlsString = (NlsString) v;
+                assert nlsString.getCharset().name().equals(ConversionUtil.NATIVE_UTF16_CHARSET_NAME);
+                return nlsString.getValue();
+            }
+            return v;
+        }).toArray());
 
         Vertex v = dag.newVertex("values-src", convenientSourceP(
                 pCtx -> null,

@@ -36,8 +36,8 @@ import com.hazelcast.sql.impl.type.QueryDataType;
 import com.hazelcast.sql.impl.type.converter.Converter;
 import com.hazelcast.sql.impl.type.converter.Converters;
 import org.apache.calcite.rex.RexNode;
-import org.apache.commons.beanutils.BeanUtilsBean;
 import org.apache.commons.beanutils.PropertyUtils;
+import org.apache.commons.beanutils.PropertyUtilsBean;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -234,9 +234,13 @@ public class IMapSqlConnector implements SqlConnector {
         String mapName = table.getMapName();
         String keyClassName = table.getKeyClassName();
         String valueClassName = table.getValueClassName();
-        if (keyClassName == null || valueClassName == null) {
-            throw new JetException("If writing to IMap, you need to specify " + TO_KEY_CLASS + " and "
-                    + TO_VALUE_CLASS + " in table options");
+        if (keyClassName == null && !table.getFieldNames().contains(KEY_ATTRIBUTE_NAME.value())) {
+            throw new JetException("If writing to IMap, you need to either specify " + TO_KEY_CLASS
+                    + " in table options or declare the " + KEY_ATTRIBUTE_NAME.value() + " column");
+        }
+        if (valueClassName == null && !table.getFieldNames().contains(THIS_ATTRIBUTE_NAME.value())) {
+            throw new JetException("If writing to IMap, you need to either specify " + TO_VALUE_CLASS
+                    + " in table options or declare the " + THIS_ATTRIBUTE_NAME.value() + " column");
         }
         List<String> fieldNames = table.getFieldNames();
         List<QueryDataType> fieldTypes = table.getPhysicalRowType();
@@ -245,8 +249,8 @@ public class IMapSqlConnector implements SqlConnector {
         int wholeKeyIndex = fieldNames.indexOf(KEY_ATTRIBUTE_NAME.value());
         int wholeValueIndex = fieldNames.indexOf(THIS_ATTRIBUTE_NAME.value());
         Vertex vStart = dag.newVertex("project", mapUsingServiceP(
-                ServiceFactories.nonSharedService(pCtx -> BeanUtilsBean.getInstance()),
-                (BeanUtilsBean bub, Object[] row) -> {
+                ServiceFactories.nonSharedService(pCtx -> new PropertyUtilsBean()),
+                (PropertyUtilsBean bub, Object[] row) -> {
                     Object key;
                     if (wholeKeyIndex >= 0) {
                         key = convert(row[wholeKeyIndex], fieldTypes.get(wholeKeyIndex));
@@ -263,15 +267,15 @@ public class IMapSqlConnector implements SqlConnector {
                         if (i == wholeKeyIndex || i == wholeValueIndex) {
                             continue;
                         }
-                        String field = fieldNames.get(i);
+                        String fieldName = fieldNames.get(i);
                         Object o = value;
-                        if (field.startsWith(KEY_ATTRIBUTE_NAME.value() + ".")) {
+                        if (fieldName.startsWith(KEY_ATTRIBUTE_NAME.value() + ".")) {
                             o = key;
-                            field = field.substring(KEY_ATTRIBUTE_NAME.value().length() + 1);
-                        } else if (field.startsWith(THIS_ATTRIBUTE_NAME.value() + ".")) {
-                            field = field.substring(THIS_ATTRIBUTE_NAME.value().length() + 1);
+                            fieldName = fieldName.substring(KEY_ATTRIBUTE_NAME.value().length() + 1);
+                        } else if (fieldName.startsWith(THIS_ATTRIBUTE_NAME.value() + ".")) {
+                            fieldName = fieldName.substring(THIS_ATTRIBUTE_NAME.value().length() + 1);
                         }
-                        bub.setProperty(convert(o, fieldTypes.get(i)), field, row[i]);
+                        PropertyUtils.setProperty(o, fieldName, convert(row[i], fieldTypes.get(i)));
                     }
                     return entry(key, value);
                 }));

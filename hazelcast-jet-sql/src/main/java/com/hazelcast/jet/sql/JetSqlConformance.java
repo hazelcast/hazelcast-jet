@@ -24,11 +24,11 @@ import org.apache.calcite.sql.validate.SqlDelegatingConformance;
  *
  * TODO [viliam] copied from imdg, needs to be merged
  */
-public final class HazelcastSqlConformance extends SqlDelegatingConformance {
+public final class JetSqlConformance extends SqlDelegatingConformance {
     /** Singleton. */
-    public static final HazelcastSqlConformance INSTANCE = new HazelcastSqlConformance();
+    public static final JetSqlConformance INSTANCE = new JetSqlConformance();
 
-    private HazelcastSqlConformance() {
+    private JetSqlConformance() {
         super(SqlConformanceEnum.DEFAULT);
     }
 

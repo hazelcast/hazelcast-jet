@@ -16,12 +16,19 @@
 
 package com.hazelcast.jet.sql;
 
-import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
-import org.apache.calcite.rel.type.RelDataType;
+import org.apache.calcite.rel.type.RelDataTypeFactory;
+import org.apache.calcite.sql.SqlOperatorTable;
+import org.apache.calcite.sql.validate.SqlConformance;
+import org.apache.calcite.sql.validate.SqlValidatorCatalogReader;
+import org.apache.calcite.sql.validate.SqlValidatorImpl;
 
-public class HazelcastTypeFactory extends JavaTypeFactoryImpl {
-    @Override
-    public RelDataType createTypeWithNullability(RelDataType type, boolean nullable) {
-        return super.createTypeWithNullability(type, nullable);
+public class JetSqlValidator extends SqlValidatorImpl {
+    public JetSqlValidator(
+        SqlOperatorTable opTab,
+        SqlValidatorCatalogReader catalogReader,
+            RelDataTypeFactory typeFactory,
+        SqlConformance conformance
+    ) {
+        super(opTab, catalogReader, typeFactory, conformance);
     }
 }

@@ -105,7 +105,7 @@ public class JetSqlService {
         this.schema = new JetSchema(instance);
         this.validator = createValidator();
 
-        JavaTypeFactory typeFactory = new HazelcastTypeFactory();
+        JavaTypeFactory typeFactory = new JetTypeFactory();
         CalciteConnectionConfig connectionConfig = createConnectionConfig();
         Prepare.CatalogReader catalogReader = createCatalogReader(typeFactory, connectionConfig, schema);
         planner = createPlanner(connectionConfig);
@@ -171,7 +171,7 @@ public class JetSqlService {
             parserConfig.setCaseSensitive(true);
             parserConfig.setUnquotedCasing(Casing.UNCHANGED);
             parserConfig.setQuotedCasing(Casing.UNCHANGED);
-            parserConfig.setConformance(HazelcastSqlConformance.INSTANCE);
+            parserConfig.setConformance(JetSqlConformance.INSTANCE);
 
             SqlParser parser = SqlParser.create(sqlQuery, parserConfig.build());
 
@@ -337,15 +337,15 @@ public class JetSqlService {
     private SqlValidator createValidator() {
         SqlOperatorTable opTab = SqlStdOperatorTable.instance();
 
-        HazelcastTypeFactory typeFactory = new HazelcastTypeFactory();
+        JetTypeFactory typeFactory = new JetTypeFactory();
         CalciteConnectionConfig connectionConfig = createConnectionConfig();
         Prepare.CatalogReader catalogReader = createCatalogReader(typeFactory, connectionConfig, schema);
 
-        return new HazelcastSqlValidator(
+        return new JetSqlValidator(
                 opTab,
                 catalogReader,
                 typeFactory,
-                HazelcastSqlConformance.INSTANCE
+                JetSqlConformance.INSTANCE
         );
     }
 
