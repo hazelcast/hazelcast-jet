@@ -3,6 +3,8 @@ title: 003 - Elasticsearch Connector
 description: Elasticsearch Connector (source and sink)
 ---
 
+*Target Release*: 4.1
+
 ## Background
 
 Existing Elasticsearch connector doesn't support all features expected
