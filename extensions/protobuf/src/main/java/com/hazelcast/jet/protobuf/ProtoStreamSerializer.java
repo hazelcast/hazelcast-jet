@@ -34,7 +34,9 @@ import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
  * Buffers v3 binary format.
  *
  * <p>To learn more about Protocol Buffers, visit:
- * <a href="https://developers.google.com/protocol-buffers/docs/proto3">https://developers.google.com/protocol-buffers/docs/proto3</a>
+ * <a href="https://developers.google.com/protocol-buffers/docs/proto3">
+ *     https://developers.google.com/protocol-buffers/docs/proto3
+ * </a>
  *
  * @param <T> the Protocol Buffers {@link GeneratedMessageV3} handled by this
  *            {@link StreamSerializer}.
