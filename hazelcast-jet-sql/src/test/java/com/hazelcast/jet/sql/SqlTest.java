@@ -159,8 +159,8 @@ public class SqlTest extends SimpleTestInClusterSupport {
     @Test
     public void selectWithoutFrom_unicode() throws Exception {
         assertRowsAnyOrder(
-                "SELECT '喷射'",
-                singletonList(new Row("喷射")));
+                "SELECT '喷气式飞机'",
+                singletonList(new Row("喷气式飞机")));
     }
 
     @Test
