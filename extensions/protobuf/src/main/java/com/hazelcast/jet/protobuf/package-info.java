@@ -15,7 +15,7 @@
  */
 
 /**
- * Protobuf support for Hazelcast Jet.
+ * Google Protocol Buffers support for Hazelcast Jet.
  *
  * @since 4.1
  */

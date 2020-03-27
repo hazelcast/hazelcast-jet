@@ -68,10 +68,9 @@ public class JobConfig implements IdentifiedDataSerializable {
     private boolean storeMetricsAfterJobCompletion;
 
     private Map<String, ResourceConfig> resourceConfigs = new LinkedHashMap<>();
+    private SerializationConfig serializationConfig = new SerializationConfig();
     private JobClassLoaderFactory classLoaderFactory;
     private String initialSnapshotName;
-
-    private SerializationConfig serializationConfig = new SerializationConfig();
 
     /**
      * Returns the name of the job or {@code null} if no name was given.
@@ -949,9 +948,9 @@ public class JobConfig implements IdentifiedDataSerializable {
     }
 
     /**
-     * Registers a Protobuf serializer with the given typeId for the given
-     * class for the scope of the job. It will be accessible to all the code
-     * attached to the underlying pipeline or DAG.
+     * Registers a Google Protocol Buffers serializer with the given typeId for
+     * the given class for the scope of the job. It will be accessible to all
+     * the code attached to the underlying pipeline or DAG.
      * <p>
      * Serializers registered on a job level have precedence over any serializer
      * registered on a cluster level.
@@ -961,9 +960,9 @@ public class JobConfig implements IdentifiedDataSerializable {
      */
     @Nonnull
     @EvolvingApi
-    public <T, S extends StreamSerializer<?>> JobConfig registerProtobufSerializer(@Nonnull Class<T> clazz,
-                                                                                   int typeId) {
-        serializationConfig.registerProtobufSerializer(clazz, typeId);
+    public <T> JobConfig registerProtoSerializer(@Nonnull Class<T> clazz,
+                                                 int typeId) {
+        serializationConfig.registerProtoSerializer(clazz, typeId);
         return this;
     }
 

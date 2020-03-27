@@ -34,7 +34,7 @@ import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-public class ProtobufStreamSerializerTest {
+public class ProtoStreamSerializerTest {
 
     private static final InternalSerializationService SERIALIZATION_SERVICE =
             new DefaultSerializationServiceBuilder().build();
@@ -44,7 +44,7 @@ public class ProtobufStreamSerializerTest {
     public void when_instantiatedWithArbitraryClass_then_throws() {
         // When
         // Then
-        assertThatThrownBy(() -> new ProtobufStreamSerializer(1, Object.class))
+        assertThatThrownBy(() -> new ProtoStreamSerializer(1, Object.class))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -52,7 +52,7 @@ public class ProtobufStreamSerializerTest {
     public void when_instantiatedWithDynamicMessage_then_throws() {
         // When
         // Then
-        assertThatThrownBy(() -> new ProtobufStreamSerializer<>(1, DynamicMessage.class))
+        assertThatThrownBy(() -> new ProtoStreamSerializer<>(1, DynamicMessage.class))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -62,7 +62,7 @@ public class ProtobufStreamSerializerTest {
         int typeId = 13;
 
         // When
-        StreamSerializer<Person> serializer = new ProtobufStreamSerializer<>(typeId, Person.class);
+        StreamSerializer<Person> serializer = new ProtoStreamSerializer<>(typeId, Person.class);
 
         // Then
         assertThat(serializer.getTypeId()).isEqualTo(typeId);
@@ -72,7 +72,7 @@ public class ProtobufStreamSerializerTest {
     public void when_serializes_then_isAbleToDeserialize() {
         // Given
         Person original = Person.newBuilder().setName("Joe").setAge(18).build();
-        StreamSerializer<Person> serializer = new ProtobufStreamSerializer<>(1, Person.class);
+        StreamSerializer<Person> serializer = new ProtoStreamSerializer<>(1, Person.class);
 
         // When
         Person transformed = deserialize(serializer, serialize(serializer, original));

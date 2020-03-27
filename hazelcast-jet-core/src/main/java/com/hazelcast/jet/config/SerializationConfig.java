@@ -17,7 +17,9 @@
 package com.hazelcast.jet.config;
 
 import com.hazelcast.jet.impl.serialization.SerializerFactory;
+import com.hazelcast.nio.serialization.Serializer;
 import com.hazelcast.nio.serialization.StreamSerializer;
+import com.hazelcast.spi.annotation.PrivateApi;
 
 import javax.annotation.Nonnull;
 import java.io.Serializable;
@@ -31,7 +33,10 @@ import static com.hazelcast.internal.util.Preconditions.checkFalse;
 
 /**
  * Contains the serialization configuration specific to one Hazelcast Jet job.
+ *
+ * @since 4.1
  */
+@PrivateApi
 public class SerializationConfig implements Serializable {
 
     static final long serialVersionUID = 1L;
@@ -42,27 +47,38 @@ public class SerializationConfig implements Serializable {
         this.primersByClass = new HashMap<>();
     }
 
+    /**
+     * Registers given {@code serializerClass} for given {@code clazz}.
+     */
     public <T, S extends StreamSerializer<?>> void registerSerializer(@Nonnull Class<T> clazz,
                                                                       @Nonnull Class<S> serializerClass) {
         register(clazz, new StreamSerializerPrimer(serializerClass.getName()));
     }
 
-    public <T> void registerProtobufSerializer(@Nonnull Class<T> clazz,
-                                               int typeId) {
-        register(clazz, new ProtobufSerializerPrimer(clazz.getName(), typeId));
+    /**
+     * Registers a Google Protocol Buffers serializer with given {@code typeId} for
+     * given {@code clazz}.
+     */
+    public <T> void registerProtoSerializer(@Nonnull Class<T> clazz,
+                                            int typeId) {
+        register(clazz, new ProtoSerializerPrimer(clazz.getName(), typeId));
     }
 
     private void register(Class<?> clazz, SerializerPrimer primer) {
         checkFalse(primersByClass.containsKey(clazz.getName()), "Serializer for " + clazz + " already registered");
-        checkFalse(primersByClass.containsValue(primer), "Serializer " + primer + " already registered");
         primersByClass.put(clazz.getName(), primer);
     }
 
+    /**
+     * Returns {@code true} if no serializers were registered.
+     */
     public boolean isEmpty() {
         return primersByClass.isEmpty();
     }
 
-    @Nonnull
+    /**
+     * Returns all the registered serializer configs.
+     */
     public Stream<Entry<String, SerializerPrimer>> primers() {
         return primersByClass.entrySet().stream();
     }
@@ -86,7 +102,7 @@ public class SerializationConfig implements Serializable {
 
     public interface SerializerPrimer extends Serializable {
 
-        StreamSerializer<?> construct(@Nonnull SerializerFactory serializerFactory);
+        Serializer construct(@Nonnull SerializerFactory serializerFactory);
     }
 
     static class StreamSerializerPrimer implements SerializerPrimer {
@@ -100,15 +116,8 @@ public class SerializationConfig implements Serializable {
         }
 
         @Override
-        public StreamSerializer<?> construct(@Nonnull SerializerFactory serializerFactory) {
+        public Serializer construct(@Nonnull SerializerFactory serializerFactory) {
             return serializerFactory.createSerializer(serializerClassName);
-        }
-
-        @Override
-        public String toString() {
-            return "Serializer{" +
-                    "serializerClassName='" + serializerClassName + '\'' +
-                    '}';
         }
 
         @Override
@@ -129,29 +138,21 @@ public class SerializationConfig implements Serializable {
         }
     }
 
-    static class ProtobufSerializerPrimer implements SerializerPrimer {
+    static class ProtoSerializerPrimer implements SerializerPrimer {
 
         static final long serialVersionUID = 1L;
 
         private final String className;
         private final int typeId;
 
-        ProtobufSerializerPrimer(@Nonnull String className, int typeId) {
+        ProtoSerializerPrimer(@Nonnull String className, int typeId) {
             this.className = className;
             this.typeId = typeId;
         }
 
         @Override
-        public StreamSerializer<?> construct(@Nonnull SerializerFactory serializerFactory) {
-            return serializerFactory.createProtobufSerializer(className, typeId);
-        }
-
-        @Override
-        public String toString() {
-            return "ProtobufSerializer{" +
-                    "className='" + className + '\'' +
-                    ", typeId=" + typeId +
-                    '}';
+        public Serializer construct(@Nonnull SerializerFactory serializerFactory) {
+            return serializerFactory.createProtoSerializer(className, typeId);
         }
 
         @Override
@@ -162,7 +163,7 @@ public class SerializationConfig implements Serializable {
             if (o == null || getClass() != o.getClass()) {
                 return false;
             }
-            ProtobufSerializerPrimer that = (ProtobufSerializerPrimer) o;
+            ProtoSerializerPrimer that = (ProtoSerializerPrimer) o;
             return typeId == that.typeId &&
                     className.equals(that.className);
         }

@@ -14,4 +14,4 @@
 # limitations under the License.
 #
 
-com.hazelcast.jet.protobuf.ProtobufStreamSerializerFactory
+com.hazelcast.jet.protobuf.ProtoStreamSerializerFactory

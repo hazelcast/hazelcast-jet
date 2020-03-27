@@ -18,50 +18,47 @@ package com.hazelcast.jet.impl.serialization;
 
 import com.hazelcast.internal.util.ExceptionUtil;
 import com.hazelcast.internal.util.ServiceLoader;
-import com.hazelcast.nio.serialization.StreamSerializer;
+import com.hazelcast.nio.serialization.Serializer;
 
 import javax.annotation.Nonnull;
 import java.util.Iterator;
-import java.util.Optional;
 
 import static com.hazelcast.internal.util.Preconditions.checkFalse;
+import static com.hazelcast.internal.util.Preconditions.checkState;
 import static com.hazelcast.jet.impl.util.ReflectionUtils.loadClass;
 import static com.hazelcast.jet.impl.util.ReflectionUtils.newInstance;
 
 /**
- * A serializer factory facade that discovers serializer factories by reading
- * in the file(s) "META-INF/services/com.hazelcast.jet.*.SerializerFactoryHook".
+ * A serializer factory facade that discovers serializer factories by reading:
+ * <ul>
+ *     <li>"META-INF/services/com.hazelcast.jet.protobuf.SerializerFactoryHook"
+ *     for Google Protocol Buffers serializer factory</li>
+ * </ul>
  * <p>
  * This system is meant to be internal code and is subject to change at any time.
  */
 public final class SerializerFactory {
 
-    private static final String PROTOBUF_FACTORY_ID = "com.hazelcast.jet.protobuf.SerializerFactoryHook";
+    private static final String PROTO_FACTORY_ID = "com.hazelcast.jet.protobuf.SerializerFactoryHook";
 
     private final ClassLoader classLoader;
-    private final ProtobufSerializerFactory protobufSerializerFactory;
+    private final ProtoSerializerFactory protoSerializerFactory;
 
     public SerializerFactory(@Nonnull ClassLoader classLoader) {
         this.classLoader = classLoader;
-        this.protobufSerializerFactory = loadProtobufSerializerFactory(classLoader)
-                .orElseGet(() -> new ProtobufSerializerFactory() {
-                    @Override
-                    public <T> StreamSerializer<T> create(@Nonnull Class<T> clazz, int typeId) {
-                        throw new IllegalStateException("no Protobuf serializer factory found");
-                    }
-                });
+        this.protoSerializerFactory = loadProtoSerializerFactory(classLoader);
     }
 
-    private static Optional<ProtobufSerializerFactory> loadProtobufSerializerFactory(ClassLoader classLoader) {
+    private static ProtoSerializerFactory loadProtoSerializerFactory(ClassLoader classLoader) {
         try {
-            Iterator<ProtobufSerializerFactory> factoryIterator =
-                    ServiceLoader.iterator(ProtobufSerializerFactory.class, PROTOBUF_FACTORY_ID, classLoader);
+            Iterator<ProtoSerializerFactory> factoryIterator =
+                    ServiceLoader.iterator(ProtoSerializerFactory.class, PROTO_FACTORY_ID, classLoader);
             if (factoryIterator.hasNext()) {
-                ProtobufSerializerFactory factory = factoryIterator.next();
-                checkFalse(factoryIterator.hasNext(), "multiple Protobuf serializer factories found");
-                return Optional.of(factory);
+                ProtoSerializerFactory factory = factoryIterator.next();
+                checkFalse(factoryIterator.hasNext(), "multiple Proto serializer factories found");
+                return factory;
             } else {
-                return Optional.empty();
+                return null;
             }
         } catch (Exception e) {
             throw ExceptionUtil.rethrow(e);
@@ -69,20 +66,19 @@ public final class SerializerFactory {
     }
 
     @Nonnull
-    public StreamSerializer<?> createSerializer(@Nonnull String serializerClassName) {
+    public Serializer createSerializer(@Nonnull String serializerClassName) {
         return newInstance(classLoader, serializerClassName);
     }
 
-    @SuppressWarnings("unchecked")
     @Nonnull
-    public <T> StreamSerializer<T> createProtobufSerializer(@Nonnull String className, int typeId) {
-        Class<T> clazz = (Class<T>) loadClass(classLoader, className);
-        return protobufSerializerFactory.create(clazz, typeId);
+    public Serializer createProtoSerializer(@Nonnull String className, int typeId) {
+        checkState(protoSerializerFactory != null, "no Proto serializer factory found");
+        return protoSerializerFactory.create(loadClass(classLoader, className), typeId);
     }
 
     @FunctionalInterface
-    public interface ProtobufSerializerFactory {
+    public interface ProtoSerializerFactory {
 
-        <T> StreamSerializer<T> create(@Nonnull Class<T> clazz, int typeId);
+        <T> Serializer create(@Nonnull Class<T> clazz, int typeId);
     }
 }

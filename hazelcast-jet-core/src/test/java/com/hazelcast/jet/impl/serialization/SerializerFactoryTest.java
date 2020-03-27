@@ -30,7 +30,7 @@ public class SerializerFactoryTest {
 
         // When
         // Then
-        assertThatThrownBy(() -> serializerFactory.createProtobufSerializer(Object.class.getName(), 1))
+        assertThatThrownBy(() -> serializerFactory.createProtoSerializer(Object.class.getName(), 1))
                 .isInstanceOf(IllegalStateException.class);
     }
 }

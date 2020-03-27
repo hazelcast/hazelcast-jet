@@ -32,8 +32,8 @@ import static com.hazelcast.internal.util.Preconditions.checkTrue;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 
 /**
- * An implementation of {@link StreamSerializer} for Google Protocol Buffers
- * binary format.
+ * An adapter implementation of {@link StreamSerializer} for Google Protocol
+ * Buffers binary format.
  *
  * <p>To learn more about Protocol Buffers, visit:
  * <a href="https://developers.google.com/protocol-buffers">https://developers.google.com/protocol-buffers</a>
@@ -42,14 +42,20 @@ import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
  *            {@link StreamSerializer}.
  * @since 4.1
  */
-class ProtobufStreamSerializer<T extends Message> implements StreamSerializer<T> {
+public class ProtoStreamSerializer<T extends Message> implements StreamSerializer<T> {
 
     private static final String DEFAULT_INSTANCE_METHOD_NAME = "getDefaultInstance";
 
     private final int typeId;
     private final Parser<T> parser;
 
-    ProtobufStreamSerializer(int typeId, @Nonnull Class<T> clazz) {
+    /**
+     * Creates Google Protocol Buffers serializer.
+     *
+     * @param typeId unique type id of serializer
+     * @param clazz  class of {@link Message} handled by this serializer
+     */
+    public ProtoStreamSerializer(int typeId, @Nonnull Class<T> clazz) {
         checkTrue(Message.class.isAssignableFrom(clazz), clazz.getName() + " is not supported");
         checkFalse(DynamicMessage.class.isAssignableFrom(clazz), "DynamicMessage is not supported");
 

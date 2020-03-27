@@ -27,7 +27,6 @@ import com.hazelcast.jet.config.SerializationConfig;
 import com.hazelcast.nio.serialization.HazelcastSerializationException;
 import com.hazelcast.nio.serialization.PortableReader;
 import com.hazelcast.nio.serialization.Serializer;
-import com.hazelcast.nio.serialization.StreamSerializer;
 import com.hazelcast.partition.PartitioningStrategy;
 
 import javax.annotation.Nonnull;
@@ -64,7 +63,7 @@ public class DelegatingSerializationService extends AbstractSerializationService
             Map<Integer, SerializerAdapter> serializersById = new HashMap<>();
             config.primers().forEach(entry -> {
                 Class<?> clazz = loadClass(classLoader, entry.getKey());
-                StreamSerializer<?> serializer = entry.getValue().construct(serializerFactory);
+                Serializer serializer = entry.getValue().construct(serializerFactory);
 
                 if (serializersById.containsKey(serializer.getTypeId())) {
                     Serializer registered = serializersById.get(serializer.getTypeId()).getImpl();

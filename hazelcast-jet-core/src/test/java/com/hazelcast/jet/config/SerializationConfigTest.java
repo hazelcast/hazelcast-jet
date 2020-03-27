@@ -16,7 +16,7 @@
 
 package com.hazelcast.jet.config;
 
-import com.hazelcast.jet.config.SerializationConfig.ProtobufSerializerPrimer;
+import com.hazelcast.jet.config.SerializationConfig.ProtoSerializerPrimer;
 import com.hazelcast.jet.config.SerializationConfig.StreamSerializerPrimer;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
@@ -30,6 +30,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public class SerializationConfigTest {
 
+    private static final int TYPE_ID = 1;
+
     @Test
     public void when_registersClassTwice_then_fails() {
         // Given
@@ -38,18 +40,7 @@ public class SerializationConfigTest {
 
         // When
         // Then
-        assertThatThrownBy(() -> config.registerProtobufSerializer(Object.class, 1));
-    }
-
-    @Test
-    public void when_registersSerializerTwice_then_fails() {
-        // Given
-        SerializationConfig config = new SerializationConfig();
-        config.registerSerializer(Object.class, ObjectSerializer.class);
-
-        // When
-        // Then
-        assertThatThrownBy(() -> config.registerSerializer(String.class, ObjectSerializer.class));
+        assertThatThrownBy(() -> config.registerProtoSerializer(Object.class, TYPE_ID));
     }
 
     @Test
@@ -68,17 +59,17 @@ public class SerializationConfigTest {
     }
 
     @Test
-    public void when_registersProtobufSerializer() {
+    public void when_registersProtoSerializer() {
         // Given
         SerializationConfig config = new SerializationConfig();
 
         // When
-        config.registerProtobufSerializer(Object.class, 1);
+        config.registerProtoSerializer(Object.class, TYPE_ID);
 
         // Then
         assertThat(config.isEmpty()).isFalse();
         assertThat(config.primers()).containsOnly(
-                new SimpleEntry<>(Object.class.getName(), new ProtobufSerializerPrimer(Object.class.getName(), 1))
+                new SimpleEntry<>(Object.class.getName(), new ProtoSerializerPrimer(Object.class.getName(), TYPE_ID))
         );
     }
 
@@ -86,7 +77,7 @@ public class SerializationConfigTest {
 
         @Override
         public int getTypeId() {
-            return 1;
+            return TYPE_ID;
         }
 
         @Override

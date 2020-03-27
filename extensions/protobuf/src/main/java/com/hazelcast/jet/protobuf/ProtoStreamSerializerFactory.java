@@ -16,21 +16,22 @@
 
 package com.hazelcast.jet.protobuf;
 
-import com.hazelcast.jet.impl.serialization.SerializerFactory.ProtobufSerializerFactory;
+import com.hazelcast.jet.impl.serialization.SerializerFactory.ProtoSerializerFactory;
 import com.hazelcast.nio.serialization.StreamSerializer;
 
 import javax.annotation.Nonnull;
 
 /**
- * An implementation of {@link ProtobufSerializerFactory}.
+ * An implementation of {@link ProtoSerializerFactory} constructing
+ * Google Protocol Buffers {@link StreamSerializer}s.
  *
  * @since 4.1
  */
-public class ProtobufStreamSerializerFactory implements ProtobufSerializerFactory {
+public class ProtoStreamSerializerFactory implements ProtoSerializerFactory {
 
     @SuppressWarnings({"unchecked", "rawtypes"})
     @Nonnull @Override
     public <T> StreamSerializer<T> create(@Nonnull Class<T> clazz, int typeId) {
-        return new ProtobufStreamSerializer(typeId, clazz);
+        return new ProtoStreamSerializer(typeId, clazz);
     }
 }

@@ -18,7 +18,7 @@ package com.hazelcast.jet.protobuf;
 
 import com.hazelcast.jet.impl.serialization.SerializerFactory;
 import com.hazelcast.jet.protobuf.Messages.Person;
-import com.hazelcast.nio.serialization.StreamSerializer;
+import com.hazelcast.nio.serialization.Serializer;
 import org.junit.Test;
 
 import static java.lang.Thread.currentThread;
@@ -32,9 +32,9 @@ public class SerializerFactoryHookTest {
         SerializerFactory serializerFactory = new SerializerFactory(currentThread().getContextClassLoader());
 
         // When
-        StreamSerializer<Person> serializer = serializerFactory.createProtobufSerializer(Person.class.getName(), 1);
+        Serializer serializer = serializerFactory.createProtoSerializer(Person.class.getName(), 1);
 
         // Then
-        assertThat(serializer).isInstanceOf(ProtobufStreamSerializer.class);
+        assertThat(serializer).isInstanceOf(ProtoStreamSerializer.class);
     }
 }
