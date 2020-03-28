@@ -79,6 +79,7 @@ class NodeExtensionCommon {
     }
 
     void printNodeInfo(ILogger log, String addToProductName) {
+        log.info("Cluster name: " + node.getConfig().getClusterName());
         log.info(versionAndAddressMessage(addToProductName));
         log.fine(serializationVersionMessage());
         log.info('\n' + JET_LOGO);
