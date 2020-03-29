@@ -79,8 +79,8 @@ class NodeExtensionCommon {
     }
 
     void printNodeInfo(ILogger log, String addToProductName) {
-        log.info("Cluster name: " + node.getConfig().getClusterName());
         log.info(versionAndAddressMessage(addToProductName));
+        log.info(clusterNameMessage());
         log.fine(serializationVersionMessage());
         log.info('\n' + JET_LOGO);
         log.info(COPYRIGHT_LINE);
@@ -99,6 +99,10 @@ class NodeExtensionCommon {
 
     private String serializationVersionMessage() {
         return "Configured Hazelcast Serialization version: " + node.getBuildInfo().getSerializationVersion();
+    }
+
+    private String clusterNameMessage() {
+        return "Cluster name: " + node.getConfig().getClusterName();
     }
 
     Map<String, Object> createExtensionServices() {
