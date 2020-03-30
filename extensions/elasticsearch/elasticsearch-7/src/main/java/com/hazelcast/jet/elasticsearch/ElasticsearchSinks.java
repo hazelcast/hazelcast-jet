@@ -19,17 +19,16 @@ package com.hazelcast.jet.elasticsearch;
 import com.hazelcast.function.ConsumerEx;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.function.SupplierEx;
+import com.hazelcast.jet.elasticsearch.ElasticsearchSinkBuilder.BulkContext;
 import com.hazelcast.jet.pipeline.Sink;
 import com.hazelcast.jet.pipeline.SinkBuilder;
 import org.apache.http.HttpHost;
 import org.apache.http.auth.UsernamePasswordCredentials;
 import org.apache.http.client.CredentialsProvider;
 import org.apache.http.impl.client.BasicCredentialsProvider;
-import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.action.ActionRequest;
 import org.elasticsearch.action.DocWriteRequest;
 import org.elasticsearch.action.bulk.BulkRequest;
-import org.elasticsearch.action.bulk.BulkResponse;
 import org.elasticsearch.action.delete.DeleteRequest;
 import org.elasticsearch.action.index.IndexRequest;
 import org.elasticsearch.action.update.UpdateRequest;
@@ -39,16 +38,46 @@ import org.elasticsearch.client.RestHighLevelClient;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.io.IOException;
 
 import static org.apache.http.auth.AuthScope.ANY;
 
 /**
- * Contains factory methods for Elasticsearch sinks.
+ * Provides factory methods for Elasticsearch sinks.
+ * Alternatively you can use {@link ElasticsearchSinkBuilder}
+ *
+ * @since 4.1
  */
 public final class ElasticsearchSinks {
 
+    private static final int PORT = 9200;
+
     private ElasticsearchSinks() {
+    }
+
+    /**
+     * Creates an Elasticsearch sink, uses a local instance of Elasticsearch
+     *
+     * @param mapItemFn function that maps items from a stream to an indexing request
+     */
+    public static <T> Sink<T> elasticsearch(@Nonnull FunctionEx<? super T, ? extends DocWriteRequest<?>> mapItemFn) {
+        return elasticsearch(() -> buildClient("localhost", PORT), mapItemFn);
+    }
+
+    /**
+     * Creates an Elasticsearch sink, uses provided clientSupplier and mapItemFn
+     *
+     * @param clientSupplier client supplier
+     * @param mapItemFn      function that maps items from a stream to an indexing request
+     * @param <T>            type of incoming items
+     */
+    public static <T> Sink<T> elasticsearch(
+            @Nonnull SupplierEx<RestHighLevelClient> clientSupplier,
+            @Nonnull FunctionEx<? super T, ? extends DocWriteRequest<?>> mapItemFn
+    ) {
+        return new ElasticsearchSinkBuilder<T>()
+                .clientSupplier(clientSupplier)
+                .mapItemFn(mapItemFn)
+                .build();
     }
 
     /**
@@ -64,16 +93,18 @@ public final class ElasticsearchSinks {
      * @param optionsFn           obtains {@link RequestOptions} for each request
      * @param destroyFn           called upon completion to release any resource
      */
+    @Deprecated // TODO keep this for backward compatibility?
     public static <T> Sink<T> elasticsearch(
             @Nonnull String name,
             @Nonnull SupplierEx<? extends RestHighLevelClient> clientSupplier,
             @Nonnull SupplierEx<BulkRequest> bulkRequestSupplier,
-            @Nonnull FunctionEx<? super T, ? extends DocWriteRequest> requestFn,
+            @Nonnull FunctionEx<? super T, ? extends DocWriteRequest<?>> requestFn,
             @Nonnull FunctionEx<? super ActionRequest, RequestOptions> optionsFn,
             @Nonnull ConsumerEx<? super RestHighLevelClient> destroyFn
     ) {
         return SinkBuilder
-                .sinkBuilder(name, ctx -> new BulkContext(clientSupplier.get(), bulkRequestSupplier, optionsFn, destroyFn))
+                .sinkBuilder(name, ctx ->
+                        new BulkContext(clientSupplier.get(), bulkRequestSupplier, optionsFn, destroyFn))
                 .<T>receiveFn((bulkContext, item) -> bulkContext.add(requestFn.apply(item)))
                 .flushFn(BulkContext::flush)
                 .destroyFn(BulkContext::close)
@@ -91,7 +122,7 @@ public final class ElasticsearchSinks {
     public static <T> Sink<T> elasticsearch(
             @Nonnull String name,
             @Nonnull SupplierEx<? extends RestHighLevelClient> clientSupplier,
-            @Nonnull FunctionEx<? super T, ? extends DocWriteRequest> requestFn
+            @Nonnull FunctionEx<? super T, ? extends DocWriteRequest<?>> requestFn
     ) {
         return elasticsearch(name, clientSupplier, BulkRequest::new, requestFn,
                 request -> RequestOptions.DEFAULT, RestHighLevelClient::close);
@@ -107,9 +138,15 @@ public final class ElasticsearchSinks {
             @Nullable String password,
             @Nonnull String hostname,
             int port,
-            @Nonnull FunctionEx<? super T, ? extends DocWriteRequest> requestFn
+            @Nonnull FunctionEx<? super T, ? extends DocWriteRequest<?>> requestFn
     ) {
         return elasticsearch(name, () -> buildClient(username, password, hostname, port), requestFn);
+    }
+
+    static RestHighLevelClient buildClient(String hostname, int port) {
+        return new RestHighLevelClient(
+                RestClient.builder(new HttpHost(hostname, port))
+        );
     }
 
     static RestHighLevelClient buildClient(String username, String password, String hostname, int port) {
@@ -122,41 +159,5 @@ public final class ElasticsearchSinks {
         );
     }
 
-    private static final class BulkContext {
-
-        private final RestHighLevelClient client;
-        private final SupplierEx<BulkRequest> bulkRequestSupplier;
-        private final FunctionEx<? super ActionRequest, RequestOptions> optionsFn;
-        private final ConsumerEx<? super RestHighLevelClient> destroyFn;
-
-        private BulkRequest bulkRequest;
-
-        private BulkContext(RestHighLevelClient client, SupplierEx<BulkRequest> bulkRequestSupplier,
-                            FunctionEx<? super ActionRequest, RequestOptions> optionsFn,
-                            ConsumerEx<? super RestHighLevelClient> destroyFn) {
-            this.client = client;
-            this.bulkRequestSupplier = bulkRequestSupplier;
-            this.optionsFn = optionsFn;
-            this.destroyFn = destroyFn;
-
-            this.bulkRequest = bulkRequestSupplier.get();
-        }
-
-        private void add(DocWriteRequest request) {
-            bulkRequest.add(request);
-        }
-
-        private void flush() throws IOException {
-            BulkResponse response = client.bulk(bulkRequest, optionsFn.apply(bulkRequest));
-            if (response.hasFailures()) {
-                throw new ElasticsearchException(response.buildFailureMessage());
-            }
-            bulkRequest = bulkRequestSupplier.get();
-        }
-
-        private void close() {
-            destroyFn.accept(client);
-        }
-    }
 
 }

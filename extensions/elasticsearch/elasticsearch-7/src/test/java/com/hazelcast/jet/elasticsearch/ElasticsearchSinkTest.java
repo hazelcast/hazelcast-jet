@@ -22,8 +22,6 @@ import org.junit.Test;
 
 import java.io.IOException;
 
-import static com.hazelcast.jet.elasticsearch.ElasticsearchSinks.elasticsearch;
-
 public class ElasticsearchSinkTest extends ElasticsearchBaseTest {
 
     @Test

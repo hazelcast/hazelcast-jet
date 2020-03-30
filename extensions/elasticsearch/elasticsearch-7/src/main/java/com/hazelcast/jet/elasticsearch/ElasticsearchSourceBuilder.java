@@ -105,6 +105,11 @@ public class ElasticsearchSourceBuilder<T> implements Serializable {
         return clientSupplier;
     }
 
+    /**
+     * Set the destroy function called on completion, defaults to {@link RestHighLevelClient#close()}
+     *
+     * @param destroyFn destroy function
+     */
     @Nonnull
     public ElasticsearchSourceBuilder<T> destroyFn(ConsumerEx<? super RestHighLevelClient> destroyFn) {
         checkSerializable(destroyFn, "destroyFn");
@@ -151,6 +156,11 @@ public class ElasticsearchSourceBuilder<T> implements Serializable {
         return mapHitFn;
     }
 
+    /**
+     * Set the function that provides {@link RequestOptions} based on given request
+     *
+     * @param optionsFn function that provides {@link RequestOptions}
+     */
     @Nonnull
     public ElasticsearchSourceBuilder<T> optionsFn(FunctionEx<? super ActionRequest, RequestOptions> optionsFn) {
         checkSerializable(optionsFn, "optionsFn");

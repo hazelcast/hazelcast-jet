@@ -27,6 +27,7 @@ import com.hazelcast.logging.ILogger;
 import org.apache.http.HttpHost;
 import org.elasticsearch.action.ActionRequest;
 import org.elasticsearch.action.search.ClearScrollRequest;
+import org.elasticsearch.action.search.ClearScrollResponse;
 import org.elasticsearch.action.search.SearchRequest;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.search.SearchScrollRequest;
@@ -114,7 +115,7 @@ final class ElasticProcessor<T> extends AbstractProcessor {
     @Override
     public void close() throws Exception {
         if (traverser instanceof ElasticProcessor.ElasticScrollTraverser) {
-            ElasticScrollTraverser scrollTraverser = (ElasticScrollTraverser) traverser;
+            ElasticScrollTraverser<T> scrollTraverser = (ElasticScrollTraverser<T>) traverser;
             scrollTraverser.close();
         }
     }
@@ -180,18 +181,29 @@ final class ElasticProcessor<T> extends AbstractProcessor {
         }
 
         public void close() {
-            ClearScrollRequest clearScrollRequest = new ClearScrollRequest();
-            clearScrollRequest.addScrollId(scrollId);
-            try {
-                client.clearScroll(clearScrollRequest, optionsFn.apply(clearScrollRequest));
-            } catch (IOException e) {
-                logger.fine("Could not clear scroll with scrollId=" + scrollId, e);
-            }
+            clearScroll(scrollId);
 
             try {
                 destroyFn.accept(client);
             } catch (Exception e) { // IOException on client.close()
                 logger.fine("Could not close client", e);
+            }
+        }
+
+        private void clearScroll(String scrollId) {
+            ClearScrollRequest clearScrollRequest = new ClearScrollRequest();
+            clearScrollRequest.addScrollId(scrollId);
+            try {
+                ClearScrollResponse response = client.clearScroll(clearScrollRequest,
+                        optionsFn.apply(clearScrollRequest));
+
+                if (response.isSucceeded()) {
+                    logger.fine("Succeeded clearing " + response.getNumFreed() + " scrolls");
+                } else {
+                    logger.warning("Clearing scroll " + scrollId + " failed");
+                }
+            } catch (IOException e) {
+                logger.fine("Could not clear scroll with scrollId=" + scrollId, e);
             }
         }
     }

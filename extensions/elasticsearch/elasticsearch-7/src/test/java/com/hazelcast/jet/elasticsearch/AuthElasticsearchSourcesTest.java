@@ -39,8 +39,10 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public class AuthElasticsearchSourcesTest extends BaseElasticsearchTest {
 
-    // Using elastic container configured with security enabled
-    public static final Supplier<ElasticsearchContainer> elastic = Util.memoize(() -> {
+    /**
+     * Using elastic container configured with security enabled
+     */
+    public static Supplier<ElasticsearchContainer> elastic = Util.memoize(() -> {
         ElasticsearchContainer elastic = new ElasticsearchContainer(ELASTICSEARCH_IMAGE)
                 .withEnv("ELASTIC_USERNAME", "elastic")
                 .withEnv("ELASTIC_PASSWORD", "SuperSecret")

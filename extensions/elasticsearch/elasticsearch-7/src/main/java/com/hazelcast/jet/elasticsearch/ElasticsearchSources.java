@@ -32,10 +32,13 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 /**
- * Contains factory methods for Elasticsearch sources.
+ * Provides factory methods for Elasticsearch sources.
+ * Alternatively you can use {@link ElasticsearchSourceBuilder}
  * <p>
  * TODO maybe rename to ElasticSources - Elastic is the company name, but is also used interchangeably for elasticsearch
  * it would make the API bit nicer to use, shorter in places etc.. same for {@link #elasticsearch()} methods
+ *
+ * @since 4.1
  */
 public final class ElasticsearchSources {
 
@@ -64,6 +67,18 @@ public final class ElasticsearchSources {
      */
     public static BatchSource<String> elasticsearch(@Nonnull SupplierEx<RestHighLevelClient> clientSupplier) {
         return elasticsearch(clientSupplier, SearchHit::getSourceAsString);
+    }
+
+    /**
+     * Creates a source which queries local instance of Elasticsearch for all documents
+     * Uses {@link SearchHit#getSourceAsString()} as mapping function
+     */
+    public static <T> BatchSource<T> elasticsearch(@Nonnull FunctionEx<? super SearchHit, T> mapHitFn) {
+        return elasticsearch(() -> new RestHighLevelClient(
+                        RestClient.builder(new HttpHost("localhost", DEFAULT_PORT))
+                ),
+                mapHitFn
+        );
     }
 
     /**
