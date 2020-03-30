@@ -29,10 +29,11 @@ that same data to the processors after a restart. Jet performs such
 snapshots in regular intervals. Sources can cooperate with the job in
 multiple ways:
 
-- **Replayable sources:** a replayable can seek to certain position and
-re-read events from that positions multiple times. An example is Apache
-Kafka or an IMap Journal. Such source saves the offset(s) to the
-snapshot and in case of restart it continues from the saved position.
+- **Replayable sources:** a replayable source can seek to certain
+position and re-read events from that positions multiple times. An
+example is Apache Kafka or an IMap Journal. Such source saves the
+offset(s) to the snapshot and in case of restart it continues from the
+saved position.
 
 - **Acknowledging sources:** such sources acknowledge messages after
 fully processing them. Typical example is a JMS queue. Unacknowledged
