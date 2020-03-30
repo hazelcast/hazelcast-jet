@@ -54,10 +54,10 @@ import static org.junit.Assert.assertTrue;
 
 public class JmsSourceIntegration_NonSharedClusterTest extends JetTestSupport {
 
-    private static final int MESSAGE_COUNT = 10_000;
-
     @ClassRule
-    private static EmbeddedActiveMQResource realBroker = new EmbeddedActiveMQResource();
+    public static EmbeddedActiveMQResource realBroker = new EmbeddedActiveMQResource();
+
+    private static final int MESSAGE_COUNT = 10_000;
 
     private static volatile boolean storeFailed;
 
