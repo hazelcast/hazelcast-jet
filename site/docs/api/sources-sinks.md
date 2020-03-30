@@ -839,6 +839,99 @@ connectivity issues and is suitable for use in streaming jobs. If you
 want to avoid duplicate writes to the database, then a suitable
 _insert-or-update_ statement should be used instead of `INSERT`.
 
+### Elasticsearch
+
+Elasticsearch is a popular fulltext search engine.
+Hazelcast Jet can use it both as a source and a sink.
+
+#### Source
+
+The Elasticsearch connector source provides a builder and several 
+convenience factory methods.
+Most commonly on needs to provide
+- a client supplier, which returns a configured instance of
+RestHighLevelClient (see
+[Elasticsearch documentation](https://www.elastic.co/guide/en/elasticsearch/client/java-rest/current/java-rest-high.html)), 
+- a search request supplier specifying a query to Elasticsearch,
+- a mapping function from `SearchHit` to a desired type.
+
+Example using a factory method:
+
+```java
+BatchSource<String> source = ElasticsearchSources.elasticsearch(
+    () -> client("user", "password", "host", 9200),
+    () -> new SearchRequest("my-index"),
+    hit -> (String) hit.getSourceAsMap().get("name")
+);
+```
+
+For all configuration options use the builder:
+
+```java
+BatchSource<String> elasticsearch = new ElasticsearchSourceBuilder<String>()
+        .name("elastic-source")
+        .clientSupplier(() -> new RestHighLevelClient(RestClient.builder(new HttpHost(
+                "localhost", 9200
+        ))))
+        .destroyFn(RestHighLevelClient::close)
+        .searchRequestSupplier(() -> new SearchRequest("my-index"))
+        .optionsFn(request -> RequestOptions.DEFAULT)
+        .mapHitFn(hit -> hit.getSourceAsString())
+        .slicing(true)
+        .build();
+```
+
+By default the connector uses a single scroll to read data from 
+Elasticsearch - there is only a single reader on a single node in whole 
+cluster.
+
+Slicing can be used to parallelize reading from an index with more
+shards. Number of slices equals to globalParallelism.
+
+If Hazelcast Jet nodes and Elasticsearch nodes are located on the same
+machines then the connector will use co-located reading, avoiding the
+overhead of physical network.
+
+#### Sink
+
+The Elasticsearch connector sink provides a builder and several 
+convenience factory methods.
+Most commonly you need to provide
+- a client supplier, which returns a configured instance of
+RestHighLevelClient (see
+[Elasticsearch documentation](https://www.elastic.co/guide/en/elasticsearch/client/java-rest/current/java-rest-high.html)),
+- mapping function to map items from the pipeline to an instance of
+one of `IndexRequest`, `UpdateRequest` or `DeleteRequest`.
+
+Suppose type of the items in the pipeline is `Map<String, Object>`, the
+sink can be created using
+
+```java
+Sink<Map<String, Object>> sink = ElasticsearchSinks.elasticsearch(
+    () -> client("user", "password", "host", 9200),
+    item -> new IndexRequest("my-index").source(item)
+);
+```
+
+For all configuration options use the builder:
+
+```java
+Sink<Map<String, Object>> build = new ElasticsearchSinkBuilder<Map<String, Object>>()
+    .name("elastic-sink")
+    .clientSupplier(() -> new RestHighLevelClient(RestClient.builder(new HttpHost(
+            "localhost", 9200
+    ))))
+    .bulkRequestSupplier(BulkRequest::new)
+    .mapItemFn((map) -> new IndexRequest("my-index").source(map))
+    .optionsFn(request -> RequestOptions.DEFAULT)
+    .destroyFn(RestHighLevelClient::close)
+    .build();
+```
+
+The Elasticsearch sink doesn't implement co-located writing. To achieve
+maximum write throughput provide all nodes to the `RestHighLevelClient`
+and configure parallelism.
+
 ### MongoDB
 
 >This connector is currently under incubation. For more
@@ -848,11 +941,6 @@ _insert-or-update_ statement should be used instead of `INSERT`.
 
 >This connector is currently under incubation. For more
 >information and examples, please visit the [GitHub repository](https://github.com/hazelcast/hazelcast-jet-contrib/tree/master/influxdb).
-
-### Elasticsearch
-
->This connector is currently under incubation. For more
->information and examples, please visit the [GitHub repository](https://github.com/hazelcast/hazelcast-jet-contrib/tree/master/elasticsearch).
 
 ### Debezium
 
