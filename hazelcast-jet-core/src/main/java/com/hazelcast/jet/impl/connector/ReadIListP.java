@@ -28,14 +28,11 @@ import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.impl.execution.init.Contexts.ProcCtx;
 
 import javax.annotation.Nonnull;
-import java.util.Iterator;
 import java.util.List;
 import java.util.function.BiFunction;
-import java.util.function.Supplier;
 
 import static com.hazelcast.client.HazelcastClient.newHazelcastClient;
 import static com.hazelcast.jet.Traversers.traverseIterable;
-import static com.hazelcast.jet.Traversers.traverseIterator;
 import static com.hazelcast.jet.Traversers.traverseStream;
 import static com.hazelcast.jet.impl.util.ImdgUtil.asClientConfig;
 import static java.lang.Math.min;
@@ -82,20 +79,19 @@ public final class ReadIListP extends AbstractProcessor {
 
         if (list instanceof ClientListProxy) {
             ClientListProxy proxy = (ClientListProxy) list;
-            return createTraverser(size, proxy::dataIterator, proxy::dataSubList);
+            return createTraverser(size, proxy::dataSubList);
         } else if (list instanceof ListProxyImpl) {
             ListProxyImpl proxy = (ListProxyImpl) list;
-            return createTraverser(size, proxy::dataIterator, proxy::dataSubList);
+            return createTraverser(size, proxy::dataSubList);
         } else {
             throw new RuntimeException("Unexpected list class: " + list.getClass().getName());
         }
     }
 
     private Traverser<Data> createTraverser(int size,
-                                            Supplier<Iterator<Data>> iteratorSupplier,
                                             BiFunction<Integer, Integer, List<Data>> subListSupplier) {
         return size <= FETCH_SIZE ?
-                traverseIterator(iteratorSupplier.get()) :
+                traverseIterable(subListSupplier.apply(0, size)) :
                 traverseStream(rangeClosed(0, size / FETCH_SIZE).mapToObj(chunkIndex -> chunkIndex * FETCH_SIZE))
                         .flatMap(start -> traverseIterable(subListSupplier.apply(start, min(start + FETCH_SIZE, size))));
     }
