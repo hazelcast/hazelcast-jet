@@ -185,7 +185,7 @@ items.</p>
 <tbody>
 <tr><td>Model managed by Jet</td><td>✅</td><td>✅</td><td>✅</td></tr>
 <tr><td>Model shared between Jobs</td><td>❌</td><td>❌</td><td>✅</td></tr>
-<tr><td>Jet ↔ Model Communication</td><td>Shared memory</td><td>gRPC<br>(processes colocated)</td><td>RPC<br>(processes usually on different machines)</td></tr>
+<tr><td>Jet ↔ Model Communication</td><td>Shared memory</td><td>gRPC<br>(processes collocated)</td><td>RPC<br>(processes usually on different machines)</td></tr>
 <tr><td>Throughput (single node)</td><td>1M / sec</td><td>50k / sec</td><td>Depends on underlying architecture</td></tr>
 <tr><td>Prerequisites</td><td>Model runs in JVM</td><td>Python runtime installed on all cluster machines</td><td>Model available as a RPC service</td></tr>
 </tbody>
