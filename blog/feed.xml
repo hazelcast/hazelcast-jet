@@ -4,7 +4,7 @@
         <title>Hazelcast Jet Blog</title>
         <link>https://jet-start.sh/blog</link>
         <description>The best place to stay up-to-date with the latest Hazelcast Jet news and events.</description>
-        <lastBuildDate>Mon, 02 Mar 2020 06:00:00 GMT</lastBuildDate>
+        <lastBuildDate>Mon, 30 Mar 2020 06:00:00 GMT</lastBuildDate>
         <docs>https://validator.w3.org/feed/docs/rss2.html</docs>
         <generator>https://github.com/jpmonette/feed</generator>
         <image>
@@ -13,6 +13,13 @@
             <link>https://jet-start.sh/blog</link>
         </image>
         <copyright>Copyright © 2020 Hazelcast Inc.</copyright>
+        <item>
+            <title><![CDATA[Machine Learning Inference at Scale]]></title>
+            <link>https://jet-start.sh/blog/2020/03/30/ml-inference.html</link>
+            <guid>https://jet-start.sh/blog/2020/03/30/ml-inference.html</guid>
+            <pubDate>Mon, 30 Mar 2020 06:00:00 GMT</pubDate>
+            <description><![CDATA[<p>Machine learning projects can be split into two phases:</p> <ul> <li>Training</li> <li>Inference</li> </ul> <p>During the training phase, data science teams have to obtain, analyze and understand available data and generalize it into a mathematical model. The model uses the features ...</p>]]></description>
+        </item>
         <item>
             <title><![CDATA[Jet 4.0 is Released]]></title>
             <link>https://jet-start.sh/blog/2020/03/02/jet-40-is-released.html</link>
