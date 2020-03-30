@@ -57,13 +57,12 @@ public class DelegatingSerializationService extends AbstractSerializationService
             this.serializersById = emptyMap();
         } else {
             ClassLoader classLoader = currentThread().getContextClassLoader();
-            SerializerFactory serializerFactory = new SerializerFactory(classLoader);
 
             Map<Class<?>, SerializerAdapter> serializersByClass = new HashMap<>();
             Map<Integer, SerializerAdapter> serializersById = new HashMap<>();
             config.primers().forEach(entry -> {
                 Class<?> clazz = loadClass(classLoader, entry.getKey());
-                Serializer serializer = entry.getValue().construct(serializerFactory);
+                Serializer serializer = entry.getValue().construct();
 
                 if (serializersById.containsKey(serializer.getTypeId())) {
                     Serializer registered = serializersById.get(serializer.getTypeId()).getImpl();

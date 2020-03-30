@@ -16,7 +16,7 @@
 
 package com.hazelcast.jet.config;
 
-import com.hazelcast.jet.impl.serialization.SerializerFactory;
+import com.hazelcast.jet.JetException;
 import com.hazelcast.nio.serialization.Serializer;
 import com.hazelcast.nio.serialization.StreamSerializer;
 import com.hazelcast.spi.annotation.PrivateApi;
@@ -30,6 +30,9 @@ import java.util.Objects;
 import java.util.stream.Stream;
 
 import static com.hazelcast.internal.util.Preconditions.checkFalse;
+import static com.hazelcast.jet.impl.util.ReflectionUtils.loadClass;
+import static com.hazelcast.jet.impl.util.ReflectionUtils.newInstance;
+import static java.lang.Thread.currentThread;
 
 /**
  * Contains the serialization configuration specific to one Hazelcast Jet job.
@@ -56,8 +59,8 @@ public class SerializationConfig implements Serializable {
     }
 
     /**
-     * Registers a Google Protocol Buffers v3 serializer with given
-     * {@code typeId} for given {@code clazz}.
+     * Registers a Protocol Buffers v3 serializer with given {@code typeId}
+     * for given {@code clazz}.
      */
     public <T> void registerProtoSerializer(@Nonnull Class<T> clazz,
                                             int typeId) {
@@ -101,15 +104,14 @@ public class SerializationConfig implements Serializable {
     }
 
     /**
-     * Serializer config that using a {@link SerializerFactory} is able
-     * to provide a {@link Serializer}.
+     * Serializer config that is able to construct a {@link Serializer}.
      */
     public interface SerializerPrimer extends Serializable {
 
         /**
-         * Creates a {@link Serializer} using given {@link SerializerFactory}.
+         * Creates a {@link Serializer}.
          */
-        Serializer construct(@Nonnull SerializerFactory serializerFactory);
+        Serializer construct();
     }
 
     /**
@@ -126,8 +128,8 @@ public class SerializationConfig implements Serializable {
         }
 
         @Override
-        public Serializer construct(@Nonnull SerializerFactory serializerFactory) {
-            return serializerFactory.createSerializer(serializerClassName);
+        public Serializer construct() {
+            return newInstance(currentThread().getContextClassLoader(), serializerClassName);
         }
 
         @Override
@@ -149,11 +151,13 @@ public class SerializationConfig implements Serializable {
     }
 
     /**
-     * Serializer config for Google Protocol Buffers v3 serializers.
+     * Serializer config for Protocol Buffers v3 serializers.
      */
     static class ProtoSerializerPrimer implements SerializerPrimer {
 
         static final long serialVersionUID = 1L;
+
+        private static final String PROTO_SERIALIZER_CLASS_NAME = "com.hazelcast.jet.protobuf.ProtoStreamSerializer";
 
         private final String className;
         private final int typeId;
@@ -164,8 +168,16 @@ public class SerializationConfig implements Serializable {
         }
 
         @Override
-        public Serializer construct(@Nonnull SerializerFactory serializerFactory) {
-            return serializerFactory.createProtoSerializer(className, typeId);
+        public Serializer construct() {
+            try {
+                ClassLoader classLoader = currentThread().getContextClassLoader();
+                Class<?> clazz = loadClass(classLoader, className);
+                return newInstance(classLoader, PROTO_SERIALIZER_CLASS_NAME,
+                        new Class[]{Class.class, int.class}, new Object[]{clazz, typeId});
+            } catch (Exception e) {
+                throw new JetException("Unable to construct " + PROTO_SERIALIZER_CLASS_NAME + ": " +
+                        e.getMessage() + " - Note: You can add extension jar using JobConfig.addJar()", e);
+            }
         }
 
         @Override

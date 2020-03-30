@@ -23,6 +23,7 @@ import io.github.classgraph.ClassInfo;
 import io.github.classgraph.ScanResult;
 
 import javax.annotation.Nonnull;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.net.URL;
 import java.util.Collection;
@@ -122,6 +123,18 @@ public final class ReflectionUtils {
     public static <T> T newInstance(ClassLoader classLoader, String name) {
         try {
             return ClassLoaderUtil.newInstance(classLoader, name);
+        } catch (Exception e) {
+            throw sneakyThrow(e);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    public static <T> T newInstance(ClassLoader classLoader, String name,
+                                    Class<?>[] argumentClasses, Object[] arguments) {
+        Class<?> clazz = loadClass(classLoader, name);
+        try {
+            Constructor<?> constructor = clazz.getConstructor(argumentClasses);
+            return (T) constructor.newInstance(arguments);
         } catch (Exception e) {
             throw sneakyThrow(e);
         }

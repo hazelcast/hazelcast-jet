@@ -50,7 +50,7 @@ public class JobSerializerTest extends SimpleTestInClusterSupport {
                     .addSerializerConfig(
                             new SerializerConfig()
                                     .setTypeClass(Person.class)
-                                    .setImplementation(new ProtoStreamSerializer<>(TYPE_ID, Person.class))
+                                    .setImplementation(new ProtoStreamSerializer<>(Person.class, TYPE_ID))
                     );
 
         initializeWithClient(1, config, clientConfig);

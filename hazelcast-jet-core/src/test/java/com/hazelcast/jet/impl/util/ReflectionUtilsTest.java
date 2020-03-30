@@ -125,6 +125,16 @@ public class ReflectionUtilsTest {
         assertThat(instance, notNullValue());
     }
 
+    @Test
+    public void when_newInstanceWithArguments_then_returnsInstance() {
+        // When
+        String instance = ReflectionUtils.newInstance(OuterClass.class.getClassLoader(), String.class.getName(),
+                new Class[]{String.class}, new Object[]{"string"});
+
+        // Then
+        assertThat(instance, equalTo("string"));
+    }
+
     @SuppressWarnings("unused")
     public static final class MyClass {
         public static String staticPublicField = "staticPublicFieldContent";

@@ -43,7 +43,7 @@ public class ProtoStreamSerializerTest {
     public void when_instantiatedWithArbitraryClass_then_throws() {
         // When
         // Then
-        assertThatThrownBy(() -> new ProtoStreamSerializer(1, Object.class))
+        assertThatThrownBy(() -> new ProtoStreamSerializer(Object.class, 1))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -53,7 +53,7 @@ public class ProtoStreamSerializerTest {
         int typeId = 13;
 
         // When
-        StreamSerializer<Person> serializer = new ProtoStreamSerializer<>(typeId, Person.class);
+        StreamSerializer<Person> serializer = new ProtoStreamSerializer<>(Person.class, typeId);
 
         // Then
         assertThat(serializer.getTypeId()).isEqualTo(typeId);
@@ -63,7 +63,7 @@ public class ProtoStreamSerializerTest {
     public void when_serializes_then_isAbleToDeserialize() {
         // Given
         Person original = Person.newBuilder().setName("Joe").setAge(18).build();
-        StreamSerializer<Person> serializer = new ProtoStreamSerializer<>(1, Person.class);
+        StreamSerializer<Person> serializer = new ProtoStreamSerializer<>(Person.class, 1);
 
         // When
         Person transformed = deserialize(serializer, serialize(serializer, original));

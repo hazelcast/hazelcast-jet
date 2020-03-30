@@ -35,7 +35,7 @@ import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
  *
  * <p>To learn more about Protocol Buffers, visit:
  * <a href="https://developers.google.com/protocol-buffers/docs/proto3">
- *     https://developers.google.com/protocol-buffers/docs/proto3
+ * https://developers.google.com/protocol-buffers/docs/proto3
  * </a>
  *
  * @param <T> the Protocol Buffers {@link GeneratedMessageV3} handled by this
@@ -50,14 +50,15 @@ public class ProtoStreamSerializer<T extends GeneratedMessageV3> implements Stre
     private final Parser<T> parser;
 
     /**
-     * Creates Google Protocol Buffers v3 serializer.
+     * Creates Protocol Buffers v3 serializer.
      *
-     * @param typeId unique type id of serializer
      * @param clazz  class of {@link GeneratedMessageV3} handled by this
      *               serializer
+     * @param typeId unique type id of serializer
      */
-    public ProtoStreamSerializer(int typeId, @Nonnull Class<T> clazz) {
-        checkTrue(GeneratedMessageV3.class.isAssignableFrom(clazz), clazz.getName() + " is not supported");
+    public ProtoStreamSerializer(@Nonnull Class<T> clazz, int typeId) {
+        checkTrue(GeneratedMessageV3.class.isAssignableFrom(clazz), clazz.getName() + " is not supported, " +
+                "provide a Protocol Buffers " + GeneratedMessageV3.class.getName() + " type");
 
         this.typeId = typeId;
         this.parser = parser(clazz);
