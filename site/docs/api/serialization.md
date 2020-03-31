@@ -296,7 +296,7 @@ class PersonSerializerHook implements SerializerHook<Person> {
 
 To make it auto-discoverable on startup you also need to add the file
 `META-INF/services/com.hazelcast.SerializerHook` with the following
-content:
+content to your cluster classpath:
 
 ```text
 com.hazelcast.jet.examples.PersonSerializerHook
@@ -319,3 +319,56 @@ a jar file. Moreover, used type ids have to be unique across all
 serializers. Despite those limitations cluster level serializers offer
 full support for IMDG [sources and sinks](sources-sinks.md) - in particular
 the possibility to query & update `Map`s as well as read from `EventJournal`.
+
+### 3rd Party Serialization Support
+
+#### Google Protocol Buffers
+
+As Google Protocol Buffers types already implement `Serializable` interface
+they are natively supported and don't need custom serializer. However, for
+best performance we encourage using Protocol Buffers specific serialization.
+Jet extensions already contain an adapter and hook (supporting Protocol
+Buffers v3) that allow you to make use of it.
+
+To include Maven dependency add following to your pom:
+
+```xml
+<dependency>
+    <groupId>com.hazelcast.jet</groupId>
+    <artifactId>hazelcast-jet-protobuf</artifactId>
+    <classifier>jar-with-dependencies</classifier>
+    <version>${hazelcast.jet.version}</version>
+</dependency>
+```
+
+If you want to use it with just a job, implement provided adapter:
+
+```java
+class PersonSerializer extends ProtoSerializer<Person> {
+
+    private static final int TYPE_ID = 1;
+
+    PersonSerializer() {
+        super(Person.class, TYPE_ID);
+    }
+}
+```
+
+and then follow
+[job serializer registration steps](#registering-serializer-for-the-job).
+
+If you would like to use it on cluster level, implement provided hook:
+
+```java
+class PersonSerializerHook extends ProtoSerializerHook<Person> {
+
+    private static final int TYPE_ID = 1;
+
+    PersonSerializerHook() {
+        super(Person.class, TYPE_ID);
+    }
+}
+```
+
+and then follow
+[cluster serializer registration steps](#registering-serializer-on-cluster).
