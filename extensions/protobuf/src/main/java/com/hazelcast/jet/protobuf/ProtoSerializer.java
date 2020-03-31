@@ -38,8 +38,8 @@ import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
  * https://developers.google.com/protocol-buffers/docs/proto3
  * </a>
  *
- * @param <T> the Protocol Buffers {@link GeneratedMessageV3} handled by this
- *            {@link StreamSerializer}.
+ * @param <T> the Protocol Buffers {@link GeneratedMessageV3} type handled by
+ *            this {@link StreamSerializer}.
  * @since 4.1
  */
 public abstract class ProtoSerializer<T extends GeneratedMessageV3> implements StreamSerializer<T> {
@@ -52,9 +52,9 @@ public abstract class ProtoSerializer<T extends GeneratedMessageV3> implements S
     /**
      * Creates Protocol Buffers v3 serializer.
      *
-     * @param clazz  class of {@link GeneratedMessageV3} handled by this
+     * @param clazz  {@link GeneratedMessageV3} type handled by this
      *               serializer
-     * @param typeId unique type id of serializer
+     * @param typeId unique type id of this serializer
      */
     public ProtoSerializer(@Nonnull Class<T> clazz, int typeId) {
         checkTrue(GeneratedMessageV3.class.isAssignableFrom(clazz), clazz.getName() + " is not supported, " +
@@ -91,7 +91,13 @@ public abstract class ProtoSerializer<T extends GeneratedMessageV3> implements S
 
     /**
      * An utility method that creates an anonymous {@link ProtoSerializer}.
+     *
+     * @param clazz  {@link GeneratedMessageV3} type of created serializer
+     * @param typeId unique type id of created serializer
+     * @param <T>    the Protocol Buffers {@link GeneratedMessageV3} type
+     *               handled by created {@link StreamSerializer}
      */
+    @Nonnull
     public static <T extends GeneratedMessageV3> ProtoSerializer<T> from(@Nonnull Class<T> clazz, int typeId) {
         return new ProtoSerializer<T>(clazz, typeId) {
         };

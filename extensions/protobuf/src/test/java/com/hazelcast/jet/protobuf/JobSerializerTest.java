@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.protobuf;
 
+import com.hazelcast.client.impl.proxy.ClientListProxy;
 import com.hazelcast.config.SerializerConfig;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.SimpleTestInClusterSupport;
@@ -26,20 +27,25 @@ import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
 import com.hazelcast.jet.pipeline.test.AssertionSinks;
+import com.hazelcast.jet.pipeline.test.TestSources;
+import com.hazelcast.jet.protobuf.Messages.Animal;
 import com.hazelcast.jet.protobuf.Messages.Person;
-import com.hazelcast.map.IMap;
 import com.hazelcast.test.HazelcastSerialClassRunner;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import java.util.List;
+
 import static java.util.Collections.singletonList;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @RunWith(HazelcastSerialClassRunner.class)
 public class JobSerializerTest extends SimpleTestInClusterSupport {
 
-    private static final int TYPE_ID = 1;
+    private static final int PERSON_TYPE_ID = 1;
+    private static final int ANIMAL_TYPE_ID = 2;
 
     @BeforeClass
     public static void beforeClass() {
@@ -56,13 +62,13 @@ public class JobSerializerTest extends SimpleTestInClusterSupport {
 
     @Test
     public void when_serializerIsNotRegistered_then_throwsException() {
-        String name = "map-1";
-        IMap<Integer, Person> map = client().getMap(name);
-        map.put(1, Person.newBuilder().setName("Joe").setAge(33).build());
+        String listName = "list-1";
+        List<Person> list = client().getList(listName);
+        list.add(Person.newBuilder().setName("Joe").setAge(33).build());
 
         Pipeline pipeline = Pipeline.create();
-        pipeline.readFrom(Sources.<Integer, Person>map(name))
-                .map(entry -> entry.getValue().getName())
+        pipeline.readFrom(Sources.<Person>list(listName))
+                .map(Person::getName)
                 .writeTo(Sinks.logger());
 
         assertThatThrownBy(() -> client().newJob(pipeline, new JobConfig()).join())
@@ -71,26 +77,47 @@ public class JobSerializerTest extends SimpleTestInClusterSupport {
 
     @Test
     public void when_serializerIsRegistered_then_itIsAvailableForTheJob() {
-        String name = "map-2";
-        IMap<Integer, Person> map = client().getMap(name);
-        map.put(1, Person.newBuilder().setName("Joe").setAge(33).build());
+        String listName = "list-2";
+        List<Person> list = client().getList(listName);
+        list.add(Person.newBuilder().setName("Joe").setAge(33).build());
 
         Pipeline pipeline = Pipeline.create();
-        pipeline.readFrom(Sources.<Integer, Person>map(name))
-                .map(entry -> entry.getValue().getName())
+        pipeline.readFrom(Sources.<Person>list(listName))
+                .map(Person::getName)
                 .writeTo(AssertionSinks.assertAnyOrder(singletonList("Joe")));
 
-        client().newJob(pipeline, jobConfig()).join();
+        client().newJob(pipeline, new JobConfig().registerSerializer(Person.class, PersonSerializer.class)).join();
     }
 
-    private static JobConfig jobConfig() {
-        return new JobConfig().registerSerializer(Person.class, PersonSerializer.class);
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    @Test
+    public void when_serializerIsRegisteredWithTheHook_then_itIsAvailableForTheJob() {
+        String listName = "list-3";
+
+        Pipeline pipeline = Pipeline.create();
+        pipeline.readFrom(TestSources.items("Mustang"))
+                .map(name -> Animal.newBuilder().setName(name).build())
+                .writeTo(Sinks.list(listName));
+
+        client().newJob(pipeline, new JobConfig()).join();
+
+        // Protocol Buffer types implement Serializable, to make sure hook registered serializer is used we check the
+        // type id
+        ClientListProxy<Animal> proxy = ((ClientListProxy) client().getList(listName));
+        assertThat(proxy.dataSubList(0, 1).get(0).getType()).isEqualTo(ANIMAL_TYPE_ID);
     }
 
     private static class PersonSerializer extends ProtoSerializer<Person> {
 
         PersonSerializer() {
-            super(Person.class, TYPE_ID);
+            super(Person.class, PERSON_TYPE_ID);
+        }
+    }
+
+    private static class AnimalSerializerHook extends ProtoSerializerHook<Animal> {
+
+        AnimalSerializerHook() {
+            super(Animal.class, ANIMAL_TYPE_ID);
         }
     }
 }
