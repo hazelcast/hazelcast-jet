@@ -226,26 +226,26 @@ Below you can find a sample implementation of `StreamSerializer` for
 ```java
 class PersonSerializer implements StreamSerializer<Person> {
 
-        private static final int TYPE_ID = 1;
+    private static final int TYPE_ID = 1;
 
-        @Override
-        public int getTypeId() {
-            return TYPE_ID;
-        }
-
-        @Override
-        public void write(ObjectDataOutput out, Person person) throws IOException {
-            out.writeUTF(person.firstName);
-            out.writeUTF(person.lastName);
-            out.writeInt(person.age);
-            out.writeFloat(person.height);
-        }
-
-        @Override
-        public Person read(ObjectDataInput in) throws IOException {
-            return new Person(in.readUTF(), in.readUTF(), in.readInt(), in.readFloat());
-        }
+    @Override
+    public int getTypeId() {
+        return TYPE_ID;
     }
+
+    @Override
+    public void write(ObjectDataOutput out, Person person) throws IOException {
+        out.writeUTF(person.firstName);
+        out.writeUTF(person.lastName);
+        out.writeInt(person.age);
+        out.writeFloat(person.height);
+    }
+
+    @Override
+    public Person read(ObjectDataInput in) throws IOException {
+        return new Person(in.readUTF(), in.readUTF(), in.readInt(), in.readFloat());
+    }
+}
 ```
 
 Then the serializer should be registered with Jet up front on cluster
@@ -294,3 +294,28 @@ hazelcast:
 All the classes - data types, serializers & hooks - should be present
 on the server classpath, ideally in server's `lib` directory packaged as
 a jar file.
+
+### Job-level Serializers
+
+The other way of registering a custom serializer is to do that on a job
+level. Assuming both, value and serializer classes are already added to
+the [classpath](submitting-jobs.md), you can:
+
+```java
+new JobConfig()
+    .registerSerializer(Person.class, PersonSerializer.class)
+```
+
+Such serializer is scoped - the type id does not have to be globally
+unique, it is enough if it is distinct for the given job - and is used
+to serialize objects between distributed edges & to/from snapshots.
+Moreover, it has precedence over any cluster serializer - if `Person`
+have serializers registered on both levels, cluster and job, the latter
+will be chosen for given job.
+
+Job-level serializers can also be used with IMDG
+[sources and sinks](sources-sinks.md). Currently supported is writing and
+reading from local `Observable`s, `List`s, `Map`s & `Cache`s. We are
+working on adding the possibility to query (read with user defined
+predicates & projections) & update `Map`s as well as read from
+`EventJournal`.
