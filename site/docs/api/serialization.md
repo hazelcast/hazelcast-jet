@@ -217,7 +217,7 @@ For best performance and simplest implementation we recommend using
 [com.hazelcast.nio.serialization.StreamSerializer](https://docs.hazelcast.org/docs/4.0/javadoc/com/hazelcast/nio/serialization/StreamSerializer.html).
 
 Below you can find a sample implementation of `StreamSerializer` for
-`Person` (mind the type id which should be unique across all serializers):
+`Person`:
 
 ```java
 class PersonSerializer implements StreamSerializer<Person> {
@@ -255,12 +255,12 @@ new JobConfig()
     .registerSerializer(Person.class, PersonSerializer.class)
 ```
 
-Such serializer is scoped to the job - you can reuse same type id
-between different jobs, however it still should not conflict with
-any of cluster level type ids - and is used to serialize objects between
-distributed edges & to/from snapshots. Moreover, it has precedence
-over any cluster serializer - if `Person` have serializers registered
-on both levels, cluster and job, the latter will be chosen for given job.
+Such serializer is scoped - the type id does not have to be globally
+unique, it is enough if it is distinct for the given job - and is used
+to serialize objects between distributed edges & to/from snapshots.
+Moreover, it has precedence over any cluster serializer - if `Person`
+have serializers registered on both levels, cluster and job, the latter
+will be chosen for given job.
 
 Job-level serializers can also be used with IMDG
 [sources and sinks](sources-sinks.md). Currently supported is writing and
@@ -315,6 +315,7 @@ hazelcast:
 
 All the classes - data types, serializers & hooks - should be present
 on the cluster classpath, ideally in server's `lib` directory packaged as
-a jar file. Cluster level serializers offer full support for IMDG
-[sources and sinks](sources-sinks.md) - the possibility to query & update
-`Map`s as well as read from `EventJournal`.
+a jar file. Moreover, used type ids have to be unique across all
+serializers. Despite those limitations cluster level serializers offer
+full support for IMDG [sources and sinks](sources-sinks.md) - in particular
+the possibility to query & update `Map`s as well as read from `EventJournal`.
