@@ -260,7 +260,9 @@ unique, it is enough if it is distinct for the given job - and is used
 to serialize objects between distributed edges & to/from snapshots.
 Moreover, it has precedence over any cluster serializer - if `Person`
 have serializers registered on both levels, cluster and job, the latter
-will be chosen for given job.
+will be chosen for given job. However, registering serializers for same
+type or using same ids on job and cluster level might lead to unexpected
+behavior and should be avoided.
 
 Job-level serializers can also be used with IMDG
 [sources and sinks](sources-sinks.md). Currently supported is writing and
@@ -296,7 +298,7 @@ class PersonSerializerHook implements SerializerHook<Person> {
 
 To make it auto-discoverable on startup you also need to add the file
 `META-INF/services/com.hazelcast.SerializerHook` with the following
-content to your cluster classpath:
+content to the cluster classpath:
 
 ```text
 com.hazelcast.jet.examples.PersonSerializerHook
