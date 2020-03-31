@@ -262,7 +262,7 @@ Moreover, it has precedence over any cluster serializer - if `Person`
 have serializers registered on both levels, cluster and job, the latter
 will be chosen for given job. However, registering serializers for same
 type or using same ids on job and cluster level might lead to unexpected
-behavior and in general is discouraged.
+behavior and should be avoided.
 
 Job-level serializers can also be used with IMDG
 [sources and sinks](sources-sinks.md). Currently supported is writing and
