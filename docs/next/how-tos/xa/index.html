@@ -107,19 +107,15 @@ can be committed after the client reconnects.</p>
 <p>Create a <code>PGXADataSource</code> as the XA connection factory and configure it
 with the URL of the database, username, password and database name:</p>
 <pre><code class="hljs css language-java"><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span>
-<span class="token keyword">public</span> <span class="token keyword">static</span> <span class="token keyword">void</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token class-name">String</span><span class="token punctuation">[</span><span class="token punctuation">]</span> args<span class="token punctuation">)</span> <span class="token keyword">throws</span> <span class="token class-name">Exception</span> <span class="token punctuation">{</span>
+<span class="token keyword">private</span> <span class="token keyword">static</span> <span class="token class-name">XADataSource</span> <span class="token function">getXADataSource</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
     <span class="token class-name">PGXADataSource</span> factory <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">PGXADataSource</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
-    factory<span class="token punctuation">.</span><span class="token function">setURL</span><span class="token punctuation">(</span><span class="token string">"jdbc:postgresql://localhost:32773/test-database"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    factory<span class="token punctuation">.</span><span class="token function">setUrl</span><span class="token punctuation">(</span><span class="token string">"jdbc:postgresql://localhost:32773/test-database"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
     factory<span class="token punctuation">.</span><span class="token function">setUser</span><span class="token punctuation">(</span><span class="token string">"the-user"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
     factory<span class="token punctuation">.</span><span class="token function">setPassword</span><span class="token punctuation">(</span><span class="token string">"the-pass"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
     factory<span class="token punctuation">.</span><span class="token function">setDatabaseName</span><span class="token punctuation">(</span><span class="token string">"test-database"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
-
-    <span class="token comment">// create an xa-connection, connection and XA transaction</span>
-    <span class="token class-name">XAConnection</span> xaConn <span class="token operator">=</span> factory<span class="token punctuation">.</span><span class="token function">getXAConnection</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
-    <span class="token class-name">Connection</span> conn <span class="token operator">=</span> xaConn<span class="token punctuation">.</span><span class="token function">getConnection</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
-    <span class="token class-name">XAResource</span> xaRes <span class="token operator">=</span> xaConn<span class="token punctuation">.</span><span class="token function">getXAResource</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
-    <span class="token class-name">Xid</span> xid <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">MyXid</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
-    <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span>
+    <span class="token keyword">return</span> factory<span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span>
 </code></pre>
 <ol start="3">
 <li>Run the class, you should see <code>&quot;Success!&quot;</code> in the output.</li>
@@ -137,15 +133,11 @@ with the URL of the database, username, password and database name:</p>
 <p>Create an <code>ActiveMQXAConnectionFactory</code> with the broker URL as the XA
 connection factory.</p>
 <pre><code class="hljs css language-java"><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span>
-<span class="token keyword">public</span> <span class="token keyword">static</span> <span class="token keyword">void</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token class-name">String</span><span class="token punctuation">[</span><span class="token punctuation">]</span> args<span class="token punctuation">)</span> <span class="token keyword">throws</span> <span class="token class-name">Exception</span> <span class="token punctuation">{</span>
+<span class="token keyword">private</span> <span class="token keyword">static</span> <span class="token class-name">XAConnectionFactory</span> <span class="token function">getXAConnectionFactory</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
     <span class="token class-name">ActiveMQXAConnectionFactory</span> factory <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">ActiveMQXAConnectionFactory</span><span class="token punctuation">(</span><span class="token string">"broker:(tcp://localhost:61616)"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
-
-    <span class="token comment">// create a connection, session and XA transaction</span>
-    <span class="token class-name">XAConnection</span> conn <span class="token operator">=</span> factory<span class="token punctuation">.</span><span class="token function">createXAConnection</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
-    <span class="token class-name">XASession</span> sess <span class="token operator">=</span> conn<span class="token punctuation">.</span><span class="token function">createXASession</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
-    <span class="token class-name">XAResource</span> xaRes <span class="token operator">=</span> sess<span class="token punctuation">.</span><span class="token function">getXAResource</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
-    <span class="token class-name">Xid</span> xid <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">MyXid</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
-    <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span>
+    <span class="token keyword">return</span> factory<span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span>
 </code></pre>
 <ol start="3">
 <li>Run the class, you should see <code>&quot;Success!&quot;</code> in the output.</li>
