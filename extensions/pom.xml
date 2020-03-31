@@ -34,9 +34,9 @@
 
     <modules>
         <module>avro</module>
-        <module>protobuf</module>
         <module>hadoop</module>
         <module>kafka</module>
+        <module>protobuf</module>
         <module>python</module>
         <module>s3</module>
     </modules>
