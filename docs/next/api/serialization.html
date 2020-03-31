@@ -191,9 +191,7 @@ types:</p>
 <li><a href="https://docs.oracle.com/javase/8/docs/api/java/io/Serializable.html">java.io.Serializable</a></li>
 <li><a href="https://docs.oracle.com/javase/8/docs/api/java/io/Externalizable.html">java.io.Externalizable</a></li>
 <li><a href="https://docs.hazelcast.org/docs/4.0/javadoc/com/hazelcast/nio/serialization/Portable.html">com.hazelcast.nio.serialization.Portable</a></li>
-<li><a href="https://docs.hazelcast.org/docs/4.0/javadoc/com/hazelcast/nio/serialization/StreamSerializer.html">com.hazelcast.nio.serialization.StreamSerializer</a>
-&amp;
-<a href="https://docs.hazelcast.org/docs/4.0/javadoc/com/hazelcast/nio/serialization/ByteArraySerializer.html">com.hazelcast.nio.serialization.ByteArraySerializer</a></li>
+<li><a href="https://docs.hazelcast.org/docs/4.0/javadoc/com/hazelcast/nio/serialization/StreamSerializer.html">com.hazelcast.nio.serialization.StreamSerializer</a></li>
 </ul>
 <p>The following table provides a comparison between them to help you in
 deciding which interface to use in your applications.</p>
@@ -242,38 +240,57 @@ more than an order of magnitude slower than other serialization options,
 not to mention very wasteful of memory usage.</p>
 <h3><a class="anchor" aria-hidden="true" id="writing-custom-serializers"></a><a href="#writing-custom-serializers" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Writing Custom Serializers</h3>
 <p>For best performance and simplest implementation we recommend using
-<a href="https://docs.hazelcast.org/docs/4.0/javadoc/com/hazelcast/nio/serialization/StreamSerializer.html">com.hazelcast.nio.serialization.StreamSerializer</a>
-or
-<a href="https://docs.hazelcast.org/docs/4.0/javadoc/com/hazelcast/nio/serialization/ByteArraySerializer.html">com.hazelcast.nio.serialization.ByteArraySerializer</a>.</p>
+<a href="https://docs.hazelcast.org/docs/4.0/javadoc/com/hazelcast/nio/serialization/StreamSerializer.html">com.hazelcast.nio.serialization.StreamSerializer</a>.</p>
 <p>Below you can find a sample implementation of <code>StreamSerializer</code> for
-<code>Person</code> (mind the type id which should be unique across all serializers):</p>
+<code>Person</code>:</p>
 <pre><code class="hljs css language-java"><span class="token keyword">class</span> <span class="token class-name">PersonSerializer</span> <span class="token keyword">implements</span> <span class="token class-name">StreamSerializer</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">Person</span><span class="token punctuation">></span></span> <span class="token punctuation">{</span>
 
-        <span class="token keyword">private</span> <span class="token keyword">static</span> <span class="token keyword">final</span> <span class="token keyword">int</span> TYPE_ID <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span>
+    <span class="token keyword">private</span> <span class="token keyword">static</span> <span class="token keyword">final</span> <span class="token keyword">int</span> TYPE_ID <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span>
 
-        <span class="token annotation punctuation">@Override</span>
-        <span class="token keyword">public</span> <span class="token keyword">int</span> <span class="token function">getTypeId</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
-            <span class="token keyword">return</span> TYPE_ID<span class="token punctuation">;</span>
-        <span class="token punctuation">}</span>
-
-        <span class="token annotation punctuation">@Override</span>
-        <span class="token keyword">public</span> <span class="token keyword">void</span> <span class="token function">write</span><span class="token punctuation">(</span><span class="token class-name">ObjectDataOutput</span> out<span class="token punctuation">,</span> <span class="token class-name">Person</span> person<span class="token punctuation">)</span> <span class="token keyword">throws</span> <span class="token class-name">IOException</span> <span class="token punctuation">{</span>
-            out<span class="token punctuation">.</span><span class="token function">writeUTF</span><span class="token punctuation">(</span>person<span class="token punctuation">.</span>firstName<span class="token punctuation">)</span><span class="token punctuation">;</span>
-            out<span class="token punctuation">.</span><span class="token function">writeUTF</span><span class="token punctuation">(</span>person<span class="token punctuation">.</span>lastName<span class="token punctuation">)</span><span class="token punctuation">;</span>
-            out<span class="token punctuation">.</span><span class="token function">writeInt</span><span class="token punctuation">(</span>person<span class="token punctuation">.</span>age<span class="token punctuation">)</span><span class="token punctuation">;</span>
-            out<span class="token punctuation">.</span><span class="token function">writeFloat</span><span class="token punctuation">(</span>person<span class="token punctuation">.</span>height<span class="token punctuation">)</span><span class="token punctuation">;</span>
-        <span class="token punctuation">}</span>
-
-        <span class="token annotation punctuation">@Override</span>
-        <span class="token keyword">public</span> <span class="token class-name">Person</span> <span class="token function">read</span><span class="token punctuation">(</span><span class="token class-name">ObjectDataInput</span> in<span class="token punctuation">)</span> <span class="token keyword">throws</span> <span class="token class-name">IOException</span> <span class="token punctuation">{</span>
-            <span class="token keyword">return</span> <span class="token keyword">new</span> <span class="token class-name">Person</span><span class="token punctuation">(</span>in<span class="token punctuation">.</span><span class="token function">readUTF</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> in<span class="token punctuation">.</span><span class="token function">readUTF</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> in<span class="token punctuation">.</span><span class="token function">readInt</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> in<span class="token punctuation">.</span><span class="token function">readFloat</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
-        <span class="token punctuation">}</span>
+    <span class="token annotation punctuation">@Override</span>
+    <span class="token keyword">public</span> <span class="token keyword">int</span> <span class="token function">getTypeId</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token keyword">return</span> TYPE_ID<span class="token punctuation">;</span>
     <span class="token punctuation">}</span>
+
+    <span class="token annotation punctuation">@Override</span>
+    <span class="token keyword">public</span> <span class="token keyword">void</span> <span class="token function">write</span><span class="token punctuation">(</span><span class="token class-name">ObjectDataOutput</span> out<span class="token punctuation">,</span> <span class="token class-name">Person</span> person<span class="token punctuation">)</span> <span class="token keyword">throws</span> <span class="token class-name">IOException</span> <span class="token punctuation">{</span>
+        out<span class="token punctuation">.</span><span class="token function">writeUTF</span><span class="token punctuation">(</span>person<span class="token punctuation">.</span>firstName<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        out<span class="token punctuation">.</span><span class="token function">writeUTF</span><span class="token punctuation">(</span>person<span class="token punctuation">.</span>lastName<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        out<span class="token punctuation">.</span><span class="token function">writeInt</span><span class="token punctuation">(</span>person<span class="token punctuation">.</span>age<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        out<span class="token punctuation">.</span><span class="token function">writeFloat</span><span class="token punctuation">(</span>person<span class="token punctuation">.</span>height<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+
+    <span class="token annotation punctuation">@Override</span>
+    <span class="token keyword">public</span> <span class="token class-name">Person</span> <span class="token function">read</span><span class="token punctuation">(</span><span class="token class-name">ObjectDataInput</span> in<span class="token punctuation">)</span> <span class="token keyword">throws</span> <span class="token class-name">IOException</span> <span class="token punctuation">{</span>
+        <span class="token keyword">return</span> <span class="token keyword">new</span> <span class="token class-name">Person</span><span class="token punctuation">(</span>in<span class="token punctuation">.</span><span class="token function">readUTF</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> in<span class="token punctuation">.</span><span class="token function">readUTF</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> in<span class="token punctuation">.</span><span class="token function">readInt</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> in<span class="token punctuation">.</span><span class="token function">readFloat</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
 </code></pre>
-<p>Then the serializer should be registered with Jet up front on cluster
-startup. The best way to do is to create a <code>SerializerHook</code> which can
-automatically be registered on startup:</p>
-<pre><code class="hljs css language-java"><span class="token keyword">class</span> <span class="token class-name">PersonSerializerHook</span> <span class="token keyword">implements</span> <span class="token class-name">SerializerHook</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">Value</span><span class="token punctuation">></span></span> <span class="token punctuation">{</span>
+<h4><a class="anchor" aria-hidden="true" id="registering-serializer-for-the-job"></a><a href="#registering-serializer-for-the-job" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Registering serializer for the job</h4>
+<p>One way of registering a custom serializer is to do that on a job
+level. Assuming both, value and serializer classes are already added to
+the <a href="/docs/next/api/submitting-jobs">classpath</a>, you can simply:</p>
+<pre><code class="hljs css language-java"><span class="token keyword">new</span> <span class="token class-name">JobConfig</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+    <span class="token punctuation">.</span><span class="token function">registerSerializer</span><span class="token punctuation">(</span><span class="token class-name">Person</span><span class="token punctuation">.</span><span class="token keyword">class</span><span class="token punctuation">,</span> <span class="token class-name">PersonSerializer</span><span class="token punctuation">.</span><span class="token keyword">class</span><span class="token punctuation">)</span>
+</code></pre>
+<p>Such serializer is scoped - the type id does not have to be globally
+unique, it is enough if it is distinct for the given job - and is used
+to serialize objects between distributed edges &amp; to/from snapshots.
+Moreover, it has precedence over any cluster serializer - if <code>Person</code>
+have serializers registered on both levels, cluster and job, the latter
+will be chosen for given job. However, registering serializers for same
+type or using same ids on job and cluster level might lead to unexpected
+behavior and should be avoided.</p>
+<p>Job-level serializers can also be used with IMDG
+<a href="/docs/next/api/sources-sinks">sources and sinks</a>. Currently supported is writing and
+reading from local <code>Observable</code>s, <code>List</code>s, <code>Map</code>s &amp; <code>Cache</code>s. We are
+working on adding the possibility to query (read with user defined
+predicates &amp; projections) &amp; update <code>Map</code>s as well as read from
+<code>EventJournal</code>.</p>
+<h4><a class="anchor" aria-hidden="true" id="registering-serializer-on-cluster"></a><a href="#registering-serializer-on-cluster" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Registering serializer on cluster</h4>
+<p>Another way of registering a serializer is to do that upfront on a
+cluster level. The best way to do this is to create a <code>SerializerHook</code>:</p>
+<pre><code class="hljs css language-java"><span class="token keyword">class</span> <span class="token class-name">PersonSerializerHook</span> <span class="token keyword">implements</span> <span class="token class-name">SerializerHook</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">Person</span><span class="token punctuation">></span></span> <span class="token punctuation">{</span>
 
     <span class="token annotation punctuation">@Override</span>
     <span class="token keyword">public</span> <span class="token class-name">Class</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">Person</span><span class="token punctuation">></span></span> <span class="token function">getSerializationType</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
@@ -291,9 +308,9 @@ automatically be registered on startup:</p>
     <span class="token punctuation">}</span>
 <span class="token punctuation">}</span>
 </code></pre>
-<p>You'll also need to add the file
+<p>To make it auto-discoverable on startup you also need to add the file
 <code>META-INF/services/com.hazelcast.SerializerHook</code> with the following
-content:</p>
+content to the cluster classpath:</p>
 <pre><code class="hljs css language-text">com.hazelcast.jet.examples.PersonSerializerHook
 </code></pre>
 <p>Alternatively, you can add the following configuration to <code>hazelcast.yaml</code>:</p>
@@ -305,8 +322,11 @@ content:</p>
         <span class="hljs-attr">"class-name":</span> <span class="hljs-string">"com.hazelcast.jet.examples.PersonSerializer"</span>
 </code></pre>
 <p>All the classes - data types, serializers &amp; hooks - should be present
-on the server classpath, ideally in server's <code>lib</code> directory packaged as
-a jar file.</p>
+on the cluster classpath, ideally in server's <code>lib</code> directory packaged as
+a jar file. Moreover, used type ids have to be unique across all
+serializers. Despite those limitations cluster level serializers offer
+full support for IMDG <a href="/docs/next/api/sources-sinks">sources and sinks</a> - in particular
+the possibility to query &amp; update <code>Map</code>s as well as read from <code>EventJournal</code>.</p>
 </span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/docs/next/api/data-structures"><span class="arrow-prev">← </span><span>Distributed Data Structures</span></a><a class="docs-next button" href="/docs/next/api/testing"><span>Testing</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#serialization-of-pipelines">Serialization of Pipelines</a></li><li><a href="#serialization-of-data-types">Serialization of Data Types</a><ul class="toc-headings"><li><a href="#writing-custom-serializers">Writing Custom Serializers</a></li></ul></li></ul></nav></div><footer class="nav-footer" id="footer"><section class="sitemap"><a href="/" class="nav-home"><img src="/img/logo-light.svg" alt="Hazelcast Jet" width="200" height="40"/></a><div><h5>Docs</h5><a href="/docs/get-started/intro">Get Started</a><a href="/docs/concepts/dag">Concepts and Architecture</a><a href="/docs/tutorials/kafka">Tutorials</a><a href="/docs/operations/installation">Operations Guide</a><a href="/docs/enterprise">Enterprise Edition</a></div><div><h5>Community</h5><a href="https://groups.google.com/forum/#!forum/hazelcast-jet" target="_blank" rel="noreferrer noopener">Google Groups</a><a href="http://stackoverflow.com/questions/tagged/hazelcast-jet" target="_blank" rel="noreferrer noopener">Stack Overflow</a><a href="https://gitter.im/hazelcast/hazelcast-jet">Gitter Chat</a></div><div><h5>Latest From the Blog</h5><a href="/blog/2020/03/30/ml-inference">Machine Learning Inference at Scale</a><a href="/blog/2020/03/02/jet-40-is-released">Jet 4.0 is Released</a><a href="/blog/2020/02/20/transactional-processors">Transactional connectors in Hazelcast Jet</a><a href="/blog/2020/01/28/new-website">Announcing New Documentation Website</a><a href="/blog/2019/11/12/stream-deduplication">Stream Deduplication with Hazelcast Jet</a></div><div><h5>More</h5><a href="https://github.com/hazelcast/hazelcast-jet">GitHub Project</a><a href="https://github.com/hazelcast/hazelcast-jet/issues">Issue Tracker</a><a href="http://hazelcast.com/company/careers/">Work at Hazelcast</a><a href="/license">License</a><a class="github-button" href="https://github.com/hazelcast/hazelcast-jet" data-icon="octicon-star" data-count-href="/facebook/docusaurus/stargazers" data-show-count="true" data-count-aria-label="# stargazers on GitHub" aria-label="Star this project on GitHub">Star</a></div></section><section class="copyright">Copyright © 2020 Hazelcast Inc.</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
                 document.addEventListener('keyup', function(e) {
                   if (e.target !== document.body) {
