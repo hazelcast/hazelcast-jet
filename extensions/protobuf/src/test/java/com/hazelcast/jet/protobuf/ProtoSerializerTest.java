@@ -33,7 +33,7 @@ import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-public class ProtoStreamSerializerTest {
+public class ProtoSerializerTest {
 
     private static final InternalSerializationService SERIALIZATION_SERVICE =
             new DefaultSerializationServiceBuilder().build();
@@ -43,7 +43,7 @@ public class ProtoStreamSerializerTest {
     public void when_instantiatedWithArbitraryClass_then_throws() {
         // When
         // Then
-        assertThatThrownBy(() -> new ProtoStreamSerializer(Object.class, 1))
+        assertThatThrownBy(() -> new ProtoSerializer(Object.class, 1) { })
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -53,7 +53,7 @@ public class ProtoStreamSerializerTest {
         int typeId = 13;
 
         // When
-        StreamSerializer<Person> serializer = new ProtoStreamSerializer<>(Person.class, typeId);
+        StreamSerializer<Person> serializer = ProtoSerializer.from(Person.class, typeId);
 
         // Then
         assertThat(serializer.getTypeId()).isEqualTo(typeId);
@@ -63,7 +63,7 @@ public class ProtoStreamSerializerTest {
     public void when_serializes_then_isAbleToDeserialize() {
         // Given
         Person original = Person.newBuilder().setName("Joe").setAge(18).build();
-        StreamSerializer<Person> serializer = new ProtoStreamSerializer<>(Person.class, 1);
+        StreamSerializer<Person> serializer = ProtoSerializer.from(Person.class, 1);
 
         // When
         Person transformed = deserialize(serializer, serialize(serializer, original));

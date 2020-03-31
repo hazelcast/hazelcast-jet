@@ -48,9 +48,7 @@ public class JobSerializerTest extends SimpleTestInClusterSupport {
         JetClientConfig clientConfig = new JetClientConfig();
         clientConfig.getSerializationConfig()
                     .addSerializerConfig(
-                            new SerializerConfig()
-                                    .setTypeClass(Person.class)
-                                    .setImplementation(new ProtoStreamSerializer<>(Person.class, TYPE_ID))
+                            new SerializerConfig().setTypeClass(Person.class).setClass(PersonSerializer.class)
                     );
 
         initializeWithClient(1, config, clientConfig);
@@ -86,6 +84,13 @@ public class JobSerializerTest extends SimpleTestInClusterSupport {
     }
 
     private static JobConfig jobConfig() {
-        return new JobConfig().registerProtoSerializer(Person.class, TYPE_ID);
+        return new JobConfig().registerSerializer(Person.class, PersonSerializer.class);
+    }
+
+    private static class PersonSerializer extends ProtoSerializer<Person> {
+
+        PersonSerializer() {
+            super(Person.class, TYPE_ID);
+        }
     }
 }

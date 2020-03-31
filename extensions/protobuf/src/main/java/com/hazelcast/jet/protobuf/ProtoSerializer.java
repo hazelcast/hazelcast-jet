@@ -42,7 +42,7 @@ import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
  *            {@link StreamSerializer}.
  * @since 4.1
  */
-public class ProtoStreamSerializer<T extends GeneratedMessageV3> implements StreamSerializer<T> {
+public abstract class ProtoSerializer<T extends GeneratedMessageV3> implements StreamSerializer<T> {
 
     private static final String DEFAULT_INSTANCE_METHOD_NAME = "getDefaultInstance";
 
@@ -56,7 +56,7 @@ public class ProtoStreamSerializer<T extends GeneratedMessageV3> implements Stre
      *               serializer
      * @param typeId unique type id of serializer
      */
-    public ProtoStreamSerializer(@Nonnull Class<T> clazz, int typeId) {
+    public ProtoSerializer(@Nonnull Class<T> clazz, int typeId) {
         checkTrue(GeneratedMessageV3.class.isAssignableFrom(clazz), clazz.getName() + " is not supported, " +
                 "provide a Protocol Buffers " + GeneratedMessageV3.class.getName() + " type");
 
@@ -87,5 +87,13 @@ public class ProtoStreamSerializer<T extends GeneratedMessageV3> implements Stre
     @Override
     public T read(ObjectDataInput in) throws IOException {
         return parser.parseFrom(in.readByteArray());
+    }
+
+    /**
+     * An utility method that creates an anonymous {@link ProtoSerializer}.
+     */
+    public static <T extends GeneratedMessageV3> ProtoSerializer<T> from(@Nonnull Class<T> clazz, int typeId) {
+        return new ProtoSerializer<T>(clazz, typeId) {
+        };
     }
 }
