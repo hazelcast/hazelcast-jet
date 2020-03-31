@@ -35,7 +35,7 @@
         <module>hazelcast-jet-distribution</module>
         <module>hazelcast-jet-core</module>
         <module>hazelcast-jet-spring</module>
-        <module>reference-manual2222</module>
+        <module>reference-manual</module>
     </modules>
 
     <repositories>
@@ -61,7 +61,7 @@
             -Dhazelcast.logging.type=log4j2
             -Dhazelcast.logging.details.enabled=true
             -Dhazelcast.test.use.network=false
-            -Djava.net.preferIPv4Stack=true
+            -Djava.net.preferIPv4Stack=false
         </argLine>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
