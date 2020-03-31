@@ -80,12 +80,12 @@ final class ElasticProcessor<T> extends AbstractProcessor {
         }
 
         if (builder.coLocatedReading()) {
-            List<String> ip = shards.stream().map(Shard::getIp).distinct().collect(toList());
-            if (ip.isEmpty()) {
+            if (shards.isEmpty()) {
                 traverser = Traversers.empty();
                 return;
             }
 
+            List<String> ip = shards.stream().map(Shard::getIp).distinct().collect(toList());
             if (ip.size() > 1) {
                 throw new JetException("Should receive shards from single local node");
             }
