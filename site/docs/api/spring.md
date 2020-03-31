@@ -328,3 +328,23 @@ attributes.
     </jet:client>
 </beans>
 ```
+
+## SpringBoot Integration
+
+Hazelcast Jet provides
+[Hazelcast Jet Spring Boot Starter](https://github.com/hazelcast/hazelcast-jet-contrib/tree/master/hazelcast-jet-spring-boot-starter)
+which automatically configures and starts a `JetInstance`, either a
+server or a client, if Jet is on the classpath.
+
+To create a server instance you need to put `hazelcast-jet.yaml` or
+`hazelcast-jet.xml` to the classpath or to the root directory. To
+create a client instance you need to put `hazelcast-client.yaml` or
+`hazelcast-client.xml` to the classpath or to the root directory.
+
+If your configuration files are available with different names then you
+can point to them by system properties, `hazelcast.jet.config`  for
+server and `hazelcast.client.config` for client.
+
+If no configuration file is present or explicitly specified, the
+starter creates a server instance using the default configuration file
+(`hazelcast-jet-default.yaml`).
