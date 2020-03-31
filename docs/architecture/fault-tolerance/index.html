@@ -72,17 +72,53 @@ then seamlessly continue from that point.</p>
 <h2><a class="anchor" aria-hidden="true" id="processing-guarantee-is-a-shared-concern"></a><a href="#processing-guarantee-is-a-shared-concern" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Processing Guarantee is a Shared Concern</h2>
 <p>When you configure the processing guarantee for your job as
 <em>exactly-once</em> or <em>at-least-once</em>, Hazelcast Jet uses the distributed
-snapshotting feature to store all the internal computation state to an
-<code>IMap</code>. However, this on its own isn't enough to provide the processing
-guarantee because the snapshot must cover the entire pipeline, from
-source to sink. Hazelcast Jet requires certain guarantees from the
-systems used as sources and sinks in a fault-tolerant data pipeline.</p>
+snapshotting feature to store all the <strong>internal</strong> computation state to
+an <code>IMap</code>. However, this on its own isn't enough to provide the
+processing guarantee because the snapshot must cover the entire
+pipeline, including the external changes performed by sources and sinks.
+Hazelcast Jet requires certain guarantees from sources and sinks in a
+fault-tolerant data pipeline.</p>
 <p>When the job is restarting after a node failure, Jet resets the whole
-data pipeline to the state of the last snapshot. For the source this
-means rewinding back to the point of snapshot, ready to replay the items
-it already emitted in he previous (failed) job run. For the sink it's
-usually enough to support idempotence: when Jet's sink connector asks it
-to apply the same data again, it must simply stay in the same state.</p>
+data pipeline to the state of the last snapshot. More technically,
+processors can save arbitrary data to the snapshot and Jet will present
+that same data to the processors after a restart. Jet performs such
+snapshots in regular intervals. Sources can cooperate with the job in
+multiple ways:</p>
+<ul>
+<li><p><strong>Replayable sources:</strong> a replayable source can seek to certain
+position and re-read events from that positions multiple times. An
+example is Apache Kafka or an IMap Journal. Such source saves the
+offset(s) to the snapshot and in case of restart it continues from the
+saved position.</p></li>
+<li><p><strong>Acknowledging sources:</strong> such sources acknowledge messages after
+fully processing them. Typical example is a JMS queue. Unacknowledged
+messages are delivered again in case the job fails. Such sources need to
+do two things: (1) acknowledge messages only after a next snapshot is
+completed and (2) save message IDs for deduplication to snapshot in case
+the job fails after a snapshot is completed but before it manages to
+acknowledge the consumption. Those IDs are used to drop re-delivered
+messages after a restart.</p></li>
+</ul>
+<p>Sinks can cooperate in different ways:</p>
+<ul>
+<li><p><strong>Transactional sinks:</strong> such sinks write their output using a
+transaction and they commit it only after the snapshot is completed.
+Since there are multiple parallel workers writing the data, each with
+its own transaction, Jet employs two-phase commit to ensure that either
+all participants commit or all roll back. An example is JMS, JDBC or
+Kafka sinks.</p></li>
+<li><p><strong>Idempotent writes:</strong> Idempotent operation is an operation that, if
+performed multiple times, has the same effect as if performed once. An
+example is writing to an IMap: <code>map.put(&quot;key&quot;, &quot;value&quot;)</code> has the same
+effect if you execute it once or twice. Such sinks only need to ensure
+that all in-flight operations are finished before each snapshot is
+performed. That is they need to wait for async operations to finish or
+fsync writes to files. But it's not enough to just use such a sink: you
+also need to ensure that the keys are stable. For example if you use
+random UUID for the key, it won't work, the job must produce identical
+keys after a restart. Also if you process the journal for a map, the
+journal will contain the update event multiple times.</p></li>
+</ul>
 <h2><a class="anchor" aria-hidden="true" id="distributed-snapshot"></a><a href="#distributed-snapshot" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Distributed Snapshot</h2>
 <p>The technique Jet uses to achieve fault tolerance is called a
 “distributed snapshot”, described in a <a href="http://lamport.azurewebsites.net/pubs/chandy.pdf">paper by Chandy and
@@ -148,10 +184,10 @@ the snapshot:</p>
 <li>Snapshot done, barrier forwarded.</li>
 </ol>
 <p>Even though <code>x1</code> and <code>x2</code> occur after the barrier, the processor
-consumed and processed them, updating its state accordingly. If the
-computation job stops and restarts, this state will be restored from the
-snapshot and then the source will replay <code>x1</code> and <code>x2</code>. The processor
-will think it got two new items.</p>
+consumed and processed them before processing the barrier, updating its
+state accordingly. If the computation job stops and restarts, this state
+will be restored from the snapshot and then the source will replay <code>x1</code>
+and <code>x2</code>. The processor will think it got two new items.</p>
 <h2><a class="anchor" aria-hidden="true" id="data-safety"></a><a href="#data-safety" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Data Safety</h2>
 <h3><a class="anchor" aria-hidden="true" id="in-memory-snapshot-storage"></a><a href="#in-memory-snapshot-storage" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>In-Memory Snapshot Storage</h3>
 <p>Jet backs up the state to its own <code>IMap</code> objects. <code>IMap</code> is a replicated
@@ -179,8 +215,8 @@ working. Now you have two Jet clusters working in parallel, each running
 all the jobs on all the data.</p>
 <p>Hazelcast Jet offers a mechanism to mitigate this risk: split-brain
 protection. It works by ensuring that a job can be restarted only in a
-cluster whose size is more than half of what it was before the job was
-suspended. Enable split-brain protection like this:</p>
+cluster whose size is more than half of what it ever was. Enable
+split-brain protection like this:</p>
 <pre><code class="hljs css language-java">jobConfig<span class="token punctuation">.</span><span class="token function">setSplitBrainProtection</span><span class="token punctuation">(</span><span class="token boolean">true</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
 </code></pre>
 <p>If there’s an even number of members in your cluster, this may mean the
@@ -189,7 +225,7 @@ equally-sized parts. We recommend having an odd number of members.</p>
 <p>Note also that you should ensure there is no split-brain condition at
 the moment you are introducing new members to the cluster. If that
 happens, both sub-clusters may grow to more than half of the previous
-size, circumventing split-brain protection.</p>
+size, circumventing the split-brain protection.</p>
 <!-- ### Disk Snapshot Storage -->
 <!-- In-memory Snapshot Storage doesn’t cover the case when the entire
 cluster must shut down. -->
