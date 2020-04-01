@@ -4,7 +4,7 @@
         <title>Hazelcast Jet Blog</title>
         <link>https://jet-start.sh/blog</link>
         <description>The best place to stay up-to-date with the latest Hazelcast Jet news and events.</description>
-        <lastBuildDate>Mon, 30 Mar 2020 06:00:00 GMT</lastBuildDate>
+        <lastBuildDate>Wed, 01 Apr 2020 06:00:00 GMT</lastBuildDate>
         <docs>https://validator.w3.org/feed/docs/rss2.html</docs>
         <generator>https://github.com/jpmonette/feed</generator>
         <image>
@@ -13,6 +13,13 @@
             <link>https://jet-start.sh/blog</link>
         </image>
         <copyright>Copyright © 2020 Hazelcast Inc.</copyright>
+        <item>
+            <title><![CDATA[Upgrading to Jet 4.0]]></title>
+            <link>https://jet-start.sh/blog/2020/04/01/upgrading-to-jet-40.html</link>
+            <guid>https://jet-start.sh/blog/2020/04/01/upgrading-to-jet-40.html</guid>
+            <pubDate>Wed, 01 Apr 2020 06:00:00 GMT</pubDate>
+            <description><![CDATA[<p>As we have announce earlier <a href="/blog/2020/03/02/jet-40-is-released">Jet 4.0 is out</a>! In this blog post we aim to give you the lower level details needed for migrating from older versions.</p> <p>Jet 4.0 is a major version release. According to the semantic versioning we apply, this means that in v...</p>]]></description>
+        </item>
         <item>
             <title><![CDATA[Machine Learning Inference at Scale]]></title>
             <link>https://jet-start.sh/blog/2020/03/30/ml-inference.html</link>
