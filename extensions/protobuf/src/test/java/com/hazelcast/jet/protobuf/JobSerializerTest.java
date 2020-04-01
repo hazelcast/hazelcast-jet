@@ -107,14 +107,14 @@ public class JobSerializerTest extends SimpleTestInClusterSupport {
         assertThat(proxy.dataSubList(0, 1).get(0).getType()).isEqualTo(ANIMAL_TYPE_ID);
     }
 
-    private static class PersonSerializer extends ProtoSerializer<Person> {
+    private static class PersonSerializer extends ProtobufSerializer<Person> {
 
         PersonSerializer() {
             super(Person.class, PERSON_TYPE_ID);
         }
     }
 
-    private static class AnimalSerializerHook extends ProtoSerializerHook<Animal> {
+    private static class AnimalSerializerHook extends ProtobufSerializerHook<Animal> {
 
         AnimalSerializerHook() {
             super(Animal.class, ANIMAL_TYPE_ID);

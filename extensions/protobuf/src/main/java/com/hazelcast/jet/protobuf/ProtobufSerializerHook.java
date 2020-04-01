@@ -36,7 +36,7 @@ import com.hazelcast.nio.serialization.SerializerHook;
  *            this {@link SerializerHook}.
  * @since 4.1
  */
-public abstract class ProtoSerializerHook<T extends GeneratedMessageV3> implements SerializerHook<T> {
+public abstract class ProtobufSerializerHook<T extends GeneratedMessageV3> implements SerializerHook<T> {
 
     private final Class<T> clazz;
     private final int typeId;
@@ -48,7 +48,7 @@ public abstract class ProtoSerializerHook<T extends GeneratedMessageV3> implemen
      *               by this hook
      * @param typeId unique type id of serializer registered by this hook
      */
-    protected ProtoSerializerHook(Class<T> clazz, int typeId) {
+    protected ProtobufSerializerHook(Class<T> clazz, int typeId) {
         this.clazz = clazz;
         this.typeId = typeId;
     }
@@ -60,7 +60,7 @@ public abstract class ProtoSerializerHook<T extends GeneratedMessageV3> implemen
 
     @Override
     public Serializer createSerializer() {
-        return ProtoSerializer.from(clazz, typeId);
+        return ProtobufSerializer.from(clazz, typeId);
     }
 
     @Override

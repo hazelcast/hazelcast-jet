@@ -45,14 +45,14 @@ import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
  *     jobConfig.registerSerializer(MyType.class, MyTypeSerializer.class)}.
  * </li><li>
  *     Register it with the Jet cluster through a matching implementation of
- *     {@linkplain ProtoSerializerHook}
+ *     {@linkplain ProtobufSerializerHook}
  * </li></ol>
  *
  * @param <T> the Protocol Buffers {@link GeneratedMessageV3} type handled by
  *            this {@link StreamSerializer}.
  * @since 4.1
  */
-public abstract class ProtoSerializer<T extends GeneratedMessageV3> implements StreamSerializer<T> {
+public abstract class ProtobufSerializer<T extends GeneratedMessageV3> implements StreamSerializer<T> {
 
     private static final String DEFAULT_INSTANCE_METHOD_NAME = "getDefaultInstance";
 
@@ -65,7 +65,7 @@ public abstract class ProtoSerializer<T extends GeneratedMessageV3> implements S
      * @param clazz  {@link GeneratedMessageV3} type handled by this serializer
      * @param typeId unique type ID of this serializer
      */
-    protected ProtoSerializer(@Nonnull Class<T> clazz, int typeId) {
+    protected ProtobufSerializer(@Nonnull Class<T> clazz, int typeId) {
         checkTrue(GeneratedMessageV3.class.isAssignableFrom(clazz), clazz.getName() + " is not supported, " +
                 "provide a Protocol Buffers " + GeneratedMessageV3.class.getName() + " type");
 
@@ -99,7 +99,7 @@ public abstract class ProtoSerializer<T extends GeneratedMessageV3> implements S
     }
 
     /**
-     * An utility method that creates an anonymous {@link ProtoSerializer}.
+     * An utility method that creates an anonymous {@link ProtobufSerializer}.
      *
      * @param clazz  {@link GeneratedMessageV3} type of created serializer
      * @param typeId unique type id of created serializer
@@ -107,8 +107,8 @@ public abstract class ProtoSerializer<T extends GeneratedMessageV3> implements S
      *               handled by created {@link StreamSerializer}
      */
     @Nonnull
-    public static <T extends GeneratedMessageV3> ProtoSerializer<T> from(@Nonnull Class<T> clazz, int typeId) {
-        return new ProtoSerializer<T>(clazz, typeId) {
+    public static <T extends GeneratedMessageV3> ProtobufSerializer<T> from(@Nonnull Class<T> clazz, int typeId) {
+        return new ProtobufSerializer<T>(clazz, typeId) {
         };
     }
 }
