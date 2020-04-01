@@ -81,8 +81,8 @@
  * {@code innerHashJoin} function, in which for each primary item with
  * at least one match, there are N output items, one for each matching
  * item in the enriching set. If an enriching set doesn't have a matching
- * item, there will be no records with given primary item. In this case
- * output function's arguments are always non-null.
+ * item, there will be no records with the given primary item. In this case
+ * the output function's arguments are always non-null.
  *
  * <p>
  * The join also allows duplicate keys on both enriching and primary inputs:
