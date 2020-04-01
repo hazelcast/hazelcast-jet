@@ -1279,7 +1279,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
         // sinkList: tuple2(0, "A-0000"), tuple2(2, "A-0002"), ...
         assertEquals(
                 streamToString(
-                        input.stream().filter(e -> e % 2 == 0).map(i -> formatFn.apply(i, ENRICHING_FORMAT_FN.apply(prefixA, i))),
+                        enrichingInputList.stream().map(i -> formatFn.apply(i, ENRICHING_FORMAT_FN.apply(prefixA, i))),
                         identity()),
                 streamToString(
                         sinkList.stream().map(t2 -> (Tuple2<Integer, String>) t2),
