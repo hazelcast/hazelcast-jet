@@ -1259,8 +1259,9 @@ public class StreamStageTest extends PipelineStreamTestSupport {
         // Given
         List<Integer> input = sequence(itemCount);
         String prefixA = "A";
-        // entry(0, "A-0000"), entry(1, "A-0001"), ...
-        BatchStage<Entry<Integer, String>> enrichingStage = enrichingStage(input, prefixA);
+        // entry(0, "A-0000"), entry(2, "A-0002"), ...
+        List<Integer> enrichingInputList = input.stream().filter(e -> e % 2 == 0).collect(toList());
+        BatchStage<Entry<Integer, String>> enrichingStage = enrichingStage(enrichingInputList, prefixA);
 
         // When
         @SuppressWarnings("Convert2MethodRef")
@@ -1275,10 +1276,10 @@ public class StreamStageTest extends PipelineStreamTestSupport {
         hashJoined.writeTo(sink);
         execute();
         BiFunction<Integer, String, String> formatFn = (i, value) -> String.format("(%04d, %s)", i, value);
-        // sinkList: tuple2(0, "A-0000"), tuple2(1, "A-0001"), ...
+        // sinkList: tuple2(0, "A-0000"), tuple2(2, "A-0002"), ...
         assertEquals(
                 streamToString(
-                        input.stream().map(i -> formatFn.apply(i, ENRICHING_FORMAT_FN.apply(prefixA, i))),
+                        input.stream().filter(e -> e % 2 == 0).map(i -> formatFn.apply(i, ENRICHING_FORMAT_FN.apply(prefixA, i))),
                         identity()),
                 streamToString(
                         sinkList.stream().map(t2 -> (Tuple2<Integer, String>) t2),
