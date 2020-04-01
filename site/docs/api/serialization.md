@@ -356,13 +356,12 @@ class PersonSerializer extends ProtoSerializer<Person> {
 }
 ```
 
-and then add both, the serializer and the extension jar (assuming it's not
-already on the cluster classpath), to the job:
+and register it with the job (extension jar if not on the cluster
+classpath should be submitted with the job):
 
 ```java
 new JobConfig()
-    .addClass(Person.class)
-    .addJar("/path/to/hazelcast-jet-protobuf-4.1-SNAPSHOT-jar-with-dependencies.jar")
+    .registerSerializer(Person.class, PersonSerializer.class)
 ```
 
 If you would like to use it on cluster level, implement provided hook:
@@ -378,8 +377,7 @@ class PersonSerializerHook extends ProtoSerializerHook<Person> {
 }
 ```
 
-add the extension jar to the cluster classpath (ideally to server's
-`lib` directory) and add the file
+and add both, the extension jar and the file
 `META-INF/services/com.hazelcast.SerializerHook` with the following
 content to the cluster classpath:
 
