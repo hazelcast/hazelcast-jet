@@ -188,36 +188,35 @@ counting the total throughput, yields following results:
 # Processor: Intel(R) Core(TM) i7-4700HQ CPU @ 2.40GHz
 # VM version: JDK 13, OpenJDK 64-Bit Server VM, 13+33
 
-Benchmark                                           Mode  Cnt  Score   Error   Units
-SerializationBenchmark.serializable                thrpt    3  0.259 ± 0.087  ops/us
-SerializationBenchmark.externalizable              thrpt    3  0.846 ± 0.057  ops/us
-SerializationBenchmark.portable                    thrpt    3  1.171 ± 0.539  ops/us
-SerializationBenchmark.stream                      thrpt    3  4.828 ± 1.227  ops/us
+Benchmark                              Mode  Cnt  Score   Error   Units
+SerializationBenchmark.serializable   thrpt    3  0.259 ± 0.087  ops/us
+SerializationBenchmark.externalizable thrpt    3  0.846 ± 0.057  ops/us
+SerializationBenchmark.portable       thrpt    3  1.171 ± 0.539  ops/us
+SerializationBenchmark.stream         thrpt    3  4.828 ± 1.227  ops/us
 ```
 
 The very same object instantiated with sample data will also be encoded
 with different number of bytes depending on used strategy:
 
 ```text
-Strategy                                                   Number of Bytes   Overhead %
-java.io.Serializable                                                   162          523
-java.io.Externalizable                                                  87          234
-com.hazelcast.nio.serialization.Portable                               104          300
-com.hazelcast.nio.serialization.StreamSerializer                        26            0
+Strategy                                        Number of Bytes  Overhead %
+com.hazelcast.nio.serialization.StreamSerializer             26           0
+com.hazelcast.nio.serialization.Portable                    104         300
+java.io.Externalizable                                       87         234
+java.io.Serializable                                        162         523
 ```
 
 You can see that using plain `Serializable` can easily become a
 bottleneck in your application, as even with this simple data type it's
 more than an order of magnitude slower than other serialization options,
-not to mention very wasteful of memory usage.
+not to mention very wasteful with memory.
 
-### Writing Custom Serializers
+## Write a Custom Serializer
 
-For best performance and simplest implementation we recommend using
-[com.hazelcast.nio.serialization.StreamSerializer](https://docs.hazelcast.org/docs/4.0/javadoc/com/hazelcast/nio/serialization/StreamSerializer.html).
-
-Below you can find a sample implementation of `StreamSerializer` for
-`Person`:
+For the best performance and simplest implementation we recommend using
+the Hazelcast
+[StreamSerializer](https://docs.hazelcast.org/docs/4.0/javadoc/com/hazelcast/nio/serialization/StreamSerializer.html)
+mechanism. Here is a sample implementation for a `Person` class:
 
 ```java
 class PersonSerializer implements StreamSerializer<Person> {
@@ -244,37 +243,36 @@ class PersonSerializer implements StreamSerializer<Person> {
 }
 ```
 
-#### Registering serializer for the job
+## Register a Serializer for a Single Jet Job
 
-One way of registering a custom serializer is to do that on a job
-level. Assuming both, value and serializer classes are already added to
-the [classpath](submitting-jobs.md), you can simply:
+You can register a serializer in a Jet job's configuration object:
 
 ```java
 new JobConfig()
     .registerSerializer(Person.class, PersonSerializer.class)
 ```
 
-Such serializer is scoped - the type id does not have to be globally
-unique, it is enough if it is distinct for the given job - and is used
-to serialize objects between distributed edges & to/from snapshots.
-Moreover, it has precedence over any cluster serializer - if `Person`
-have serializers registered on both levels, cluster and job, the latter
-will be chosen for given job. However, registering serializers for same
-type or using same ids on job and cluster level might lead to unexpected
-behavior and should be avoided.
+Such a serializer is scoped &mdash; its type ID doesn't clash with the
+same type ID in another Jet job. However, if you also use the serializer
+hook to register a global serializer on the Jet cluster, a job-local ID
+would clash with it. The job-local serializer takes precedence, but it
+is best to avoid such clashes due to the potential for surprising
+behavior and hard-to-diagnose bugs.
 
-Job-level serializers can also be used with IMDG
-[sources and sinks](sources-sinks.md). Currently supported is writing and
-reading from local `Observable`s, `List`s, `Map`s & `Cache`s. We are
-working on adding the possibility to query (read with user defined
-predicates & projections) & update `Map`s as well as read from
-`EventJournal`.
+Jet uses the job-local serializer to serialize the objects as they
+travel through the Jet pipeline (over distributed DAG edges) and get
+saved to snapshots.
 
-#### Registering serializer on cluster
+Job-level serializers can also be used with IMDG [sources and
+sinks](sources-sinks.md). You can read from/write to a local
+`Observable`, `IList`, `IMap` or `ICache`. We are working on adding the
+ability to read from an `IMap` using a user-defined predicate and
+projections, update an `IMap`, and read from `EventJournal`.
 
-Another way of registering a serializer is to do that upfront on a
-cluster level. The best way to do this is to create a `SerializerHook`:
+## Register a Serializer with the Jet Cluster
+
+You can register a serializer with the Jet cluster, before starting it.
+For that you need a `SerializerHook`:
 
 ```java
 class PersonSerializerHook implements SerializerHook<Person> {
@@ -296,15 +294,18 @@ class PersonSerializerHook implements SerializerHook<Person> {
 }
 ```
 
-To make it auto-discoverable on startup you also need to add the file
-`META-INF/services/com.hazelcast.SerializerHook` with the following
-content to the cluster classpath:
+Hazelcast Jet uses the Java service discovery mechanism to find your
+serializer hook. You should create a JAR with the serializer hook and
+its dependent classes, and the JAR should have a file
+`META-INF/services/com.hazelcast.SerializerHook` with the
+fully-qualified name of the serializer hook class:
 
 ```text
 com.hazelcast.jet.examples.PersonSerializerHook
 ```
 
-Alternatively, you can add the following configuration to `hazelcast.yaml`:
+Alternatively, you can add the following configuration to
+`hazelcast.yaml`:
 
 ```yaml
 hazelcast:
@@ -315,24 +316,24 @@ hazelcast:
         "class-name": "com.hazelcast.jet.examples.PersonSerializer"
 ```
 
-All the classes - data types, serializers & hooks - should be present
-on the cluster classpath, ideally in server's `lib` directory packaged as
-a jar file. Moreover, used type ids have to be unique across all
-serializers. Despite those limitations cluster level serializers offer
-full support for IMDG [sources and sinks](sources-sinks.md) - in particular
-the possibility to query & update `Map`s as well as read from `EventJournal`.
+Put the JAR containing the serializer hook and related classes in the
+`<jet_home>/lib` directory. Make sure that ecah registered serializer
+has a unique type ID.
 
-### 3rd Party Serialization Support
+The advantage of a cluster-level serializer is that it is supported in
+all Hazelcast Jet features.
 
-#### Google Protocol Buffers
+## 3rd-Party Serialization Support
 
-As Google Protocol Buffers types already implement `Serializable` interface
-they are natively supported and don't need custom serializer. However, for
-best performance we encourage using Protocol Buffers specific serialization.
-Jet extensions already contain an adapter and hook (supporting Protocol
-Buffers v3) that allow you to make use of it.
+### Google Protocol Buffers (Protobuf)
 
-To include Maven dependency add following to your pom:
+Since the classes generated by Protobuf already implement
+`java.io.Serializable`, Hazelcast Jet automatically supports them
+without a custom serializer. However, for best performance we encourage
+registering a Protobuf-specific serializer. There is a Jet extension
+module that simplifies this for Protobuf version 3.
+
+Add the extension as a dependency to your Jet job's Maven project:
 
 ```xml
 <dependency>
@@ -343,10 +344,11 @@ To include Maven dependency add following to your pom:
 </dependency>
 ```
 
-If you want to use it with just a job, implement provided adapter:
+If you want to use it locally within a Jet job, implement an adapter
+by extending the provided class:
 
 ```java
-class PersonSerializer extends ProtoSerializer<Person> {
+class PersonSerializer extends ProtobufSerializer<Person> {
 
     private static final int TYPE_ID = 1;
 
@@ -356,31 +358,16 @@ class PersonSerializer extends ProtoSerializer<Person> {
 }
 ```
 
-and register it with the job (extension jar if not on the cluster
-classpath should be submitted with the job):
+Then register it with the job:
 
 ```java
 new JobConfig()
     .registerSerializer(Person.class, PersonSerializer.class)
 ```
 
-If you would like to use it on cluster level, implement provided hook:
+Also make sure that the Protobuf extension JAR is either on the Jet
+cluster's classpath or inlined into your job JAR by creating a fat
+JAR.
 
-```java
-class PersonSerializerHook extends ProtoSerializerHook<Person> {
-
-    private static final int TYPE_ID = 1;
-
-    PersonSerializerHook() {
-        super(Person.class, TYPE_ID);
-    }
-}
-```
-
-and add both, the extension jar and the file
-`META-INF/services/com.hazelcast.SerializerHook` with the following
-content to the cluster classpath:
-
-```text
-com.hazelcast.jet.examples.PersonSerializerHook
-```
+You can also install the serializer in the Jet cluster by implementing
+and registering a serialization hook, as explained above.
