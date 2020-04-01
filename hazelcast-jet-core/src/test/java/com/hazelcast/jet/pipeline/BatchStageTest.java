@@ -1036,20 +1036,16 @@ public class BatchStageTest extends PipelineTestSupport {
     }
 
     @Test
-    public void innerHashJoin_filter_out_nulls() {
+    public void when_innerHashJoin_then_filterOutNulls() {
         // Given
-        int invalidIdStart = itemCount * 2;
         List<Integer> input = sequence(itemCount);
         String prefix = "value-";
-        BatchStage<Entry<Integer, String>> enrichingStageMatching = batchStageFromList(input)
+        BatchStage<Entry<Integer, String>> enrichingStage = batchStageFromList(input)
+                .filter(i -> i % 2 == 0)
                 .map(i -> entry(i, prefix + i));
-        BatchStage<Entry<Integer, String>> enrichingStageNonMatching = batchStageFromList(input)
-                .map(i -> entry(invalidIdStart + i, "nope"));
-
-        BatchStage<Entry<Integer, String>> enrichingStage = enrichingStageMatching.merge(enrichingStageNonMatching);
 
         // When
-        BatchStage<Entry<Integer, String>> joined = batchStageFromList(input).hashJoin(
+        BatchStage<Entry<Integer, String>> joined = batchStageFromList(input).innerHashJoin(
                 enrichingStage,
                 joinMapEntries(wholeItem()),
                 Util::entry);
@@ -1060,7 +1056,7 @@ public class BatchStageTest extends PipelineTestSupport {
         Function<Entry<Integer, String>, String> formatFn =
                 e -> String.format("(%04d, %s)", e.getKey(), e.getValue());
         assertEquals(
-                streamToString(input.stream().map(i -> tuple2(i, prefix + i)), formatFn),
+                streamToString(input.stream().filter(e -> e % 2 == 0).map(i -> tuple2(i, prefix + i)), formatFn),
                 streamToString(sinkStreamOfEntry(), formatFn));
     }
 
