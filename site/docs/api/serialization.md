@@ -378,7 +378,8 @@ class PersonSerializerHook extends ProtoSerializerHook<Person> {
 }
 ```
 
-and add the file
+add the extension jar to the cluster classpath (ideally to server's
+`lib` directory) and add the file
 `META-INF/services/com.hazelcast.SerializerHook` with the following
 content to the cluster classpath:
 
