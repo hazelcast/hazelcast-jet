@@ -333,19 +333,30 @@ supports them without a custom serializer. However, for best performance
 we encourage registering a Protobuf-specific serializer. There is a Jet
 extension module that simplifies this for Protobuf version 3.
 
-Add the extension as a dependency to your Jet job's Maven project:
+If you want to use it locally within a Jet job, add the extension as a
+dependency to your Jet job's project:
+
+<!--DOCUSAURUS_CODE_TABS-->
+
+<!--Gradle-->
+
+```groovy
+compile "com.hazelcast.jet:hazelcast-jet-protobuf:${hazelcast.jet.version}"
+```
+
+<!--Maven-->
 
 ```xml
 <dependency>
     <groupId>com.hazelcast.jet</groupId>
     <artifactId>hazelcast-jet-protobuf</artifactId>
-    <classifier>jar-with-dependencies</classifier>
     <version>${hazelcast.jet.version}</version>
 </dependency>
 ```
 
-If you want to use it locally within a Jet job, implement an adapter
-by extending the provided class:
+<!--END_DOCUSAURUS_CODE_TABS-->
+
+Implement the adapter by extending the provided class:
 
 ```java
 class PersonSerializer extends ProtobufSerializer<Person> {
