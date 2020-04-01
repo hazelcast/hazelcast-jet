@@ -30,13 +30,23 @@ import static com.hazelcast.internal.util.Preconditions.checkTrue;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 
 /**
- * An adapter implementation of {@link StreamSerializer} for Google Protocol
- * Buffers v3 binary format.
- *
- * <p>To learn more about Protocol Buffers, visit:
- * <a href="https://developers.google.com/protocol-buffers/docs/proto3">
- * https://developers.google.com/protocol-buffers/docs/proto3
- * </a>
+ * Adapts a generated <a
+ * href="https://developers.google.com/protocol-buffers/docs/proto3">
+ * Google Protocol Buffers v3</a> serializer class to the Hazelcast {@link
+ * StreamSerializer} interface.
+ * <p>
+ * To learn how to use this class, visit Jet's <a
+ * href="https://hazelcast-jet.io/docs/api/serialization#google-protocol-buffers">
+ * Serialization Guide</a>. In brief, you should create a subclass that
+ * does nothing else but call this class's protected constructor, and then
+ * you can use it in two ways:
+ * <ol><li>
+ *     Register it as a Jet job serializer: {@code
+ *     jobConfig.registerSerializer(MyType.class, MyTypeSerializer.class)}.
+ * </li><li>
+ *     Register it with the Jet cluster through a matching implementation of
+ *     {@linkplain ProtoSerializerHook}
+ * </li></ol>
  *
  * @param <T> the Protocol Buffers {@link GeneratedMessageV3} type handled by
  *            this {@link StreamSerializer}.
@@ -50,13 +60,12 @@ public abstract class ProtoSerializer<T extends GeneratedMessageV3> implements S
     private final Parser<T> parser;
 
     /**
-     * Creates Protocol Buffers v3 serializer.
+     * Called by the subclass to initialize this protobuf serializer.
      *
-     * @param clazz  {@link GeneratedMessageV3} type handled by this
-     *               serializer
-     * @param typeId unique type id of this serializer
+     * @param clazz  {@link GeneratedMessageV3} type handled by this serializer
+     * @param typeId unique type ID of this serializer
      */
-    public ProtoSerializer(@Nonnull Class<T> clazz, int typeId) {
+    protected ProtoSerializer(@Nonnull Class<T> clazz, int typeId) {
         checkTrue(GeneratedMessageV3.class.isAssignableFrom(clazz), clazz.getName() + " is not supported, " +
                 "provide a Protocol Buffers " + GeneratedMessageV3.class.getName() + " type");
 

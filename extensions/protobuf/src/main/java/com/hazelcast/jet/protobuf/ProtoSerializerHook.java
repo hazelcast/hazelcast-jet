@@ -21,11 +21,16 @@ import com.hazelcast.nio.serialization.Serializer;
 import com.hazelcast.nio.serialization.SerializerHook;
 
 /**
- * This class simplifies automatic, hook based, Protocol Buffers serializers
- * registration from user modules.
+ * Simplifies using the {@linkplain SerializerHook Hazelcast Serializer
+ * Hook mechanism} to register a Google Protocol Buffers serializer with
+ * the Hazelcast Jet cluster. The serialized class can then be used in
+ * Hazelcast data structures and Jet jobs.
  * <p>
- * Class extending this one needs to be registered using a file called
- * "com.hazelcast.SerializerHook" in META-INF/services.
+ * To use it, create a JAR containing the serializer hook class and
+ * {@code META-INF/services/com.hazelcast.SerializerHook}, a plain-text
+ * file containing its fully qualified name. Visit Jet's <a
+ * href="https://hazelcast-jet.io/docs/api/serialization#google-protocol-buffers">
+ * Serialization Guide</a> for more details.
  *
  * @param <T> the Protocol Buffers {@link GeneratedMessageV3} type handled by
  *            this {@link SerializerHook}.
