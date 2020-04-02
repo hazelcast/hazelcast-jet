@@ -60,6 +60,7 @@
     "Design Documents": [
       "version-4.0-design-docs/index",
       "version-4.0-design-docs/006-declarative-serialization",
+      "version-4.0-design-docs/005-cdc-sources",
       "version-4.0-design-docs/004-spring-boot-starter",
       "version-4.0-design-docs/003-elasticsearch-connector",
       "version-4.0-design-docs/002-job-level-serialization",
