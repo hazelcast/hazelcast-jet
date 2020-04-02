@@ -785,6 +785,8 @@ public interface GeneralStage<T> extends Stage {
      * @param <T1>          the result type of projection on {@code stage1} items
      * @param <R>           the resulting output type
      * @return the newly attached stage
+     *
+     * @since 4.1
      */
     @Nonnull
     <K, T1_IN, T1, R> GeneralStage<R> innerHashJoin(
