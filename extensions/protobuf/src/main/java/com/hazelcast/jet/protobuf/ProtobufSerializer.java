@@ -36,7 +36,7 @@ import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
  * StreamSerializer} interface.
  * <p>
  * To learn how to use this class, visit Jet's <a
- * href="https://hazelcast-jet.io/docs/api/serialization#google-protocol-buffers">
+ * href="https://jet-start.sh/docs/api/serialization#google-protocol-buffers">
  * Serialization Guide</a>. In brief, you should create a subclass that
  * does nothing else but call this class's protected constructor, and then
  * you can use it in two ways:
