@@ -455,7 +455,7 @@ public final class ReadMapOrCacheP<F extends ICompletableFuture, B, R> extends A
     static class LocalMapReader extends Reader<
             InternalCompletableFuture<MapEntriesWithCursor>,
             MapEntriesWithCursor,
-            Entry<Data, Data>
+            Entry<Data, Object>
             > {
 
         private final MapProxyImpl mapProxyImpl;
@@ -476,7 +476,7 @@ public final class ReadMapOrCacheP<F extends ICompletableFuture, B, R> extends A
         }
 
         @Nullable @Override
-        public Object toObject(@Nonnull Entry<Data, Data> dataEntry) {
+        public Object toObject(@Nonnull Entry<Data, Object> dataEntry) {
             return new LazyMapEntry(dataEntry.getKey(), dataEntry.getValue(), serializationService);
         }
     }
