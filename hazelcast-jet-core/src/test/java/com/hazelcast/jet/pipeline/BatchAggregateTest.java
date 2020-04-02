@@ -50,18 +50,18 @@ import static org.junit.Assert.assertEquals;
 
 public class BatchAggregateTest extends PipelineTestSupport {
 
+    static final FunctionEx<Entry<Integer, Long>, String> FORMAT_FN =
+            e -> String.format("(%04d: %04d)", e.getKey(), e.getValue());
+    static final BiFunctionEx<Integer, Tuple2<Long, Long>, String> FORMAT_FN_2 =
+            (key, t2) -> String.format("(%04d: %04d, %04d)", key, t2.f0(), t2.f1());
+    static final BiFunctionEx<Integer, Tuple3<Long, Long, Long>, String> FORMAT_FN_3 =
+            (key, t3) -> String.format("(%04d: %04d, %04d, %04d)", key, t3.f0(), t3.f1(), t3.f2());
+
     private static final AggregateOperation1<Integer, LongAccumulator, Long> SUMMING =
             AggregateOperations.summingLong(i -> i);
 
     private static final int FACTOR_1 = 1_000;
     private static final int FACTOR_2 = 1_000_000;
-
-    private static final FunctionEx<Entry<Integer, Long>, String> FORMAT_FN =
-            e -> String.format("(%04d: %04d)", e.getKey(), e.getValue());
-    private static final BiFunctionEx<Integer, Tuple2<Long, Long>, String> FORMAT_FN_2 =
-            (key, t2) -> String.format("(%04d: %04d, %04d)", key, t2.f0(), t2.f1());
-    private static final BiFunctionEx<Integer, Tuple3<Long, Long, Long>, String> FORMAT_FN_3 =
-            (key, t3) -> String.format("(%04d: %04d, %04d, %04d)", key, t3.f0(), t3.f1(), t3.f2());
 
     private List<Integer> input;
 

@@ -944,6 +944,121 @@ public interface GeneralStage<T> extends Stage {
     <K> GeneralStageWithKey<T, K> groupingKey(@Nonnull FunctionEx<? super T, ? extends K> keyFn);
 
     /**
+     * Applies data rebalancing to the output of this stage. By default, Jet
+     * prefers to process the data locally, on the cluster member where it was
+     * originally received. This is generally a good option because it
+     * eliminates unneeded network traffic. However, if the data volume is
+     * highly skewed across members, for example when using a non-distributed
+     * data source, you can tell Jet to rebalance it by sending some to other
+     * members.
+     * <p>
+     * To implement rebalancing, Jet uses a <em>distributed unicast</em> data
+     * routing pattern on the DAG edge from this stage's vertex to the next one.
+     * It routes the data in a round-robin fashion, each item going to the next
+     * downstream processor. If a given processor's queue is full, it skips it
+     * and retries in the next round. This scheme generally ensures the maximum
+     * throughput, but it may mean that most data still stays local, if network
+     * throughput is significantly lower than the locally achievable throughput.
+     * <p>
+     * If the next stage has a grouping key, round-robin routing cannot be
+     * applied because grouping by key requires strict data partitioning, every
+     * item with the same key going to the same processor. In most cases Jet
+     * already uses a <em>distributed partitioned</em> edge there &mdash;
+     * except for aggregation, in which case it would use a <em>local
+     * partitioned</em> edge to an intermediate vertex, followed by a
+     * distributed one to the vertex that computes the final results. When you
+     * apply rebalancing, Jet skips the intermediate vertex and uses just a
+     * distributed partitioned edge. This reduces memory usage because every
+     * Jet member takes care of its own subset of keys, without local
+     * pre-accumulation.
+     * <p>
+     * Rebalancing has no effect on a stage used as an enriching stage in a
+     * hash join. Hash join, also called a broadcast join, by itself already
+     * distributes all the enriching data to all the members.
+     * <p>
+     * Rebalancing has no effect when the next stage is a stateful transform
+     * like {@link #mapStateful} or {@link #rollingAggregate} without a
+     * grouping key. These transforms are non-parallelizable and Jet is forced
+     * to send all the data to the single member doing all the processing.
+     * <p>
+     * Rebalancing followed by aggregation without a grouping key does have an
+     * effect, but it is counterintuitive and usually detrimental: it forces
+     * Jet to use single-stage aggregation, sending all the data to the member
+     * that performs the aggregation. Since global aggregation usually has very
+     * small state (just a single value being accumulated), you can eliminate
+     * almost all network traffic by aggregating locally and only combining
+     * globally, at virtually no memory cost.
+     *
+     * @return a new stage using the same transform as this one, only with a
+     *         rebalancing flag raised that will affect data routing into the next
+     *         stage.
+     * @since 4.1
+     */
+    @Nonnull
+    GeneralStage<T> rebalance();
+
+    /**
+     * Applies partitioned rebalancing to this stage. By default, Jet prefers
+     * to process the data locally, on the cluster member where it was
+     * originally received. This is generally a good option because it
+     * eliminates unneeded network traffic. However, if the data volume is
+     * highly skewed across members, for example when using a non-distributed
+     * data source, you can tell Jet to rebalance it by sending some to other
+     * members.
+     * <p>
+     * With partitioned rebalancing, you supply your awn function that decides
+     * (indirectly) where to send each data item. Jet first applies your
+     * partition key function to the data item and then its own partitioning
+     * function to the key. This means that all items with the same key go to
+     * the same Jet processor and different keys are distributed pseudo-randomly
+     * across the processors.
+     * <p>
+     * Compared to non-partitioned balancing, partitioned balancing may result
+     * in a better data balance across the cluster, but the throughput may be
+     * lower if the network is a bottleneck. If you choose a partitioning key
+     * that has a skewed distribution (some keys being much more frequent),
+     * this will also result in a disbalanced data flow.
+     * <p>
+     * If the next stage has a grouping key, Jet ignores the partitioning key
+     * you supplied and uses the grouping key for partitioning. This is
+     * required for the correctness and it's applied whether or not you request
+     * rebalancing. For aggregation, Jet would normally use a <em>local
+     * partitioned</em> edge to an intermediate vertex, followed by a
+     * distributed one to the vertex that computes the final results. When you
+     * apply rebalancing, Jet skips the intermediate vertex and uses just a
+     * distributed partitioned edge. This reduces memory usage because every
+     * Jet member takes care of its own subset of keys, without local
+     * pre-accumulation.
+     * <p>
+     * Rebalancing has no effect on a stage used as an enriching stage in a
+     * hash join. Hash join, also called a broadcast join, by itself already
+     * distributes all the enriching data to all the members.
+     * <p>
+     * Rebalancing has no effect when the next stage is a stateful transform
+     * like {@link #mapStateful} or {@link #rollingAggregate} without a
+     * grouping key. These transforms are non-parallelizable and Jet is forced
+     * to send all the data to the single member doing all the processing.
+     * <p>
+     * Rebalancing followed by aggregation without a grouping key does have an
+     * effect, but it is counterintuitive and usually detrimental: it forces
+     * Jet to use single-stage aggregation, sending all the data to the member
+     * that performs the aggregation. Partitioning key is completely ignored.
+     * Since global aggregation usually has very small state (just a single
+     * value being accumulated), you can eliminate almost all network traffic
+     * by aggregating locally and only combining globally, at virtually no
+     * memory cost.
+     *
+     * @param keyFn the partitioning key function
+     * @param <K> type of the key
+     * @return a new stage using the same transform as this one, only with a
+     *         rebalancing flag raised that will affect data routing into the next
+     *         stage.
+     * @since 4.1
+     */
+    @Nonnull
+    <K> GeneralStage<T> rebalance(@Nonnull FunctionEx<? super T, ? extends K> keyFn);
+
+    /**
      * Adds a timestamp to each item in the stream using the supplied function
      * and specifies the allowed amount of disorder between them. As the stream
      * moves on, the timestamps must increase, but you can tell Jet to accept

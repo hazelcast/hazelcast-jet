@@ -21,6 +21,7 @@ import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.datamodel.KeyedWindowResult;
 import com.hazelcast.jet.datamodel.Tag;
+import com.hazelcast.jet.impl.pipeline.transform.AbstractTransform;
 import com.hazelcast.jet.impl.pipeline.transform.GroupTransform;
 import com.hazelcast.jet.impl.pipeline.transform.Transform;
 import com.hazelcast.jet.impl.pipeline.transform.WindowGroupTransform;
@@ -36,6 +37,7 @@ import com.hazelcast.jet.pipeline.WindowGroupAggregateBuilder1;
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static com.hazelcast.jet.datamodel.Tag.tag;
 import static com.hazelcast.jet.impl.pipeline.ComputeStageImplBase.ADAPT_TO_JET_EVENT;
@@ -51,6 +53,7 @@ import static com.hazelcast.jet.impl.util.Util.toList;
  *
  * @param <K> type of the grouping key
  */
+@SuppressWarnings("rawtypes")
 public class GrAggBuilder<K> {
     private final PipelineImpl pipelineImpl;
     private final WindowDefinition wDef;
@@ -96,25 +99,21 @@ public class GrAggBuilder<K> {
     ) {
         checkSerializable(mapToOutputFn, "mapToOutputFn");
         List<Transform> upstreamTransforms = toList(upstreamStages, s -> s.transform);
-        Transform transform = new GroupTransform<>(upstreamTransforms, keyFns, aggrOp, mapToOutputFn);
-        pipelineImpl.connect(upstreamTransforms, transform);
+        AbstractTransform transform = new GroupTransform<>(upstreamTransforms, keyFns, aggrOp, mapToOutputFn);
+        pipelineImpl.connect(upstreamStages, transform);
         return new BatchStageImpl<>(transform, pipelineImpl);
     }
 
-    @SuppressWarnings("unchecked")
     public <A, R> StreamStage<KeyedWindowResult<K, R>> buildStream(@Nonnull AggregateOperation<A, ? extends R> aggrOp) {
         List<Transform> upstreamTransforms = toList(upstreamStages, s -> s.transform);
         FunctionAdapter fnAdapter = ADAPT_TO_JET_EVENT;
-
-        // Avoided Stream API here due to static typing issues
-        List<FunctionEx<?, ? extends K>> adaptedKeyFns = new ArrayList<>();
-        for (FunctionEx keyFn : keyFns) {
-            adaptedKeyFns.add(fnAdapter.adaptKeyFn(keyFn));
-        }
-
-        Transform transform = new WindowGroupTransform<K, R>(
+        List<FunctionEx<?, ? extends K>> adaptedKeyFns = keyFns
+                .stream()
+                .<FunctionEx<?, ? extends K>>map(fn -> fnAdapter.adaptKeyFn(fn))
+                .collect(Collectors.toList());
+        AbstractTransform transform = new WindowGroupTransform<K, R>(
                 upstreamTransforms, wDef, adaptedKeyFns, fnAdapter.adaptAggregateOperation(aggrOp));
-        pipelineImpl.connect(upstreamTransforms, transform);
+        pipelineImpl.connect(upstreamStages, transform);
         return new StreamStageImpl<>(transform, fnAdapter, pipelineImpl);
     }
 }

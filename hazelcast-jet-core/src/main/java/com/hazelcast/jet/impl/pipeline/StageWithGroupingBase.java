@@ -150,8 +150,4 @@ class StageWithGroupingBase<T, K> {
                     return mapAsyncFn.apply(s, keys, items);
                 });
     }
-
-    static Transform transformOf(GeneralStageWithKey stage) {
-        return ((StageWithGroupingBase) stage).computeStage.transform;
-    }
 }

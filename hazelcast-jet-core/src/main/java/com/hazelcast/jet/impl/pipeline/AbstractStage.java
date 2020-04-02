@@ -34,7 +34,7 @@ public abstract class AbstractStage implements Stage {
         this.pipelineImpl = pipelineImpl;
     }
 
-    public static Transform transformOf(GeneralStage stage) {
+    public static Transform transformOf(GeneralStage<?> stage) {
         return ((AbstractStage) stage).transform;
     }
 

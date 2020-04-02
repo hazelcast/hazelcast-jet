@@ -52,10 +52,29 @@ public class StreamStageImpl<T> extends ComputeStageImplBase<T> implements Strea
         super(transform, fnAdapter, pipeline);
     }
 
+    StreamStageImpl(StreamStageImpl<T> toCopy, boolean rebalanceOutput) {
+        super(toCopy, rebalanceOutput);
+    }
+
+    <K> StreamStageImpl(StreamStageImpl<T> toCopy, FunctionEx<? super T, ? extends K> keyFn) {
+        super(toCopy, keyFn);
+    }
+
     @Nonnull @Override
     public <K> StreamStageWithKey<T, K> groupingKey(@Nonnull FunctionEx<? super T, ? extends K> keyFn) {
         checkSerializable(keyFn, "keyFn");
         return new StreamStageWithKeyImpl<>(this, keyFn);
+    }
+
+    @Nonnull @Override
+    public <K> StreamStage<T> rebalance(@Nonnull FunctionEx<? super T, ? extends K> keyFn) {
+        checkSerializable(keyFn, "keyFn");
+        return new StreamStageImpl<>(this, keyFn);
+    }
+
+    @Nonnull @Override
+    public StreamStage<T> rebalance() {
+        return new StreamStageImpl<>(this, true);
     }
 
     @Nonnull @Override
@@ -220,10 +239,9 @@ public class StreamStageImpl<T> extends ComputeStageImplBase<T> implements Strea
         return attachCustomTransform(stageName, procSupplier);
     }
 
-    @Nonnull @Override
+    @Override
     @SuppressWarnings("unchecked")
-    <RET> RET attach(@Nonnull AbstractTransform transform, @Nonnull FunctionAdapter fnAdapter) {
-        pipelineImpl.connect(transform.upstream(), transform);
+    <RET> RET newStage(@Nonnull AbstractTransform transform, @Nonnull FunctionAdapter fnAdapter) {
         return (RET) new StreamStageImpl<>(transform, fnAdapter, pipelineImpl);
     }
 

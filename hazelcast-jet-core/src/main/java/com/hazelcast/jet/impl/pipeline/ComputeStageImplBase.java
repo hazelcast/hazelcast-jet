@@ -87,14 +87,36 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
 
     @Nonnull
     public FunctionAdapter fnAdapter;
+    final boolean isRebalanceOutput;
+    final FunctionEx<? super T, ?> rebalanceKeyFn;
+
+    private ComputeStageImplBase(
+            @Nonnull Transform transform,
+            @Nonnull FunctionAdapter fnAdapter,
+            @Nonnull PipelineImpl pipelineImpl,
+            boolean rebalanceOutput,
+            FunctionEx<? super T, ?> rebalanceKeyFn
+    ) {
+        super(transform, pipelineImpl);
+        this.fnAdapter = fnAdapter;
+        this.isRebalanceOutput = rebalanceOutput;
+        this.rebalanceKeyFn = rebalanceKeyFn;
+    }
 
     ComputeStageImplBase(
             @Nonnull Transform transform,
             @Nonnull FunctionAdapter fnAdapter,
             @Nonnull PipelineImpl pipelineImpl
     ) {
-        super(transform, pipelineImpl);
-        this.fnAdapter = fnAdapter;
+        this(transform, fnAdapter, pipelineImpl, false, null);
+    }
+
+    ComputeStageImplBase(ComputeStageImplBase<T> toCopy, boolean rebalanceOutput) {
+        this(toCopy.transform, toCopy.fnAdapter, toCopy.pipelineImpl, rebalanceOutput, null);
+    }
+
+    ComputeStageImplBase(ComputeStageImplBase<T> toCopy, FunctionEx<? super T, ?> rebalanceKeyFn) {
+        this(toCopy.transform, toCopy.fnAdapter, toCopy.pipelineImpl, true, rebalanceKeyFn);
     }
 
     @Nonnull
@@ -107,7 +129,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
                 limitingLag(allowedLateness),
                 0, 0, DEFAULT_IDLE_TIMEOUT
         ));
-        pipelineImpl.connect(transform, tsTransform);
+        pipelineImpl.connect(this, tsTransform);
         return new StreamStageImpl<>(tsTransform, ADAPT_TO_JET_EVENT, pipelineImpl);
     }
 
@@ -436,10 +458,11 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
     <RET> RET attachMerge(@Nonnull GeneralStage<? extends T> other) {
         ComputeStageImplBase castOther = (ComputeStageImplBase) other;
         if (fnAdapter != castOther.fnAdapter) {
-            throw new IllegalArgumentException("The merged stages must both have or both not have " +
-                    "timestamp definitions");
+            throw new IllegalArgumentException(
+                    "The merged stages must either both have or both not have timestamp definitions");
         }
-        return attach(new MergeTransform<>(transform, castOther.transform), fnAdapter);
+        MergeTransform<Object> transform = new MergeTransform<>(this.transform, castOther.transform);
+        return attach(transform, singletonList(other), fnAdapter);
     }
 
     @Nonnull
@@ -450,11 +473,13 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
     ) {
         checkSerializable(mapToOutputFn, "mapToOutputFn");
         return attach(new HashJoinTransform<>(
-                asList(transform, transformOf(stage1)),
-                singletonList(fnAdapter.adaptJoinClause(joinClause)),
-                emptyList(),
-                fnAdapter.adaptHashJoinOutputFn(mapToOutputFn)
-        ), fnAdapter);
+                        asList(transform, transformOf(stage1)),
+                        singletonList(fnAdapter.adaptJoinClause(joinClause)),
+                        emptyList(),
+                        fnAdapter.adaptHashJoinOutputFn(mapToOutputFn)
+                ),
+                singletonList(stage1),
+                fnAdapter);
     }
 
     @Nonnull
@@ -468,11 +493,13 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
     ) {
         checkSerializable(mapToOutputFn, "mapToOutputFn");
         return attach(new HashJoinTransform(
-                asList(transform, transformOf(stage1), transformOf(stage2)),
-                asList(fnAdapter.adaptJoinClause(joinClause1), fnAdapter.adaptJoinClause(joinClause2)),
-                emptyList(),
-                fnAdapter.adaptHashJoinOutputFn(mapToOutputFn)
-        ), fnAdapter);
+                        asList(transform, transformOf(stage1), transformOf(stage2)),
+                        asList(fnAdapter.adaptJoinClause(joinClause1), fnAdapter.adaptJoinClause(joinClause2)),
+                        emptyList(),
+                        fnAdapter.adaptHashJoinOutputFn(mapToOutputFn)
+                ),
+                asList(stage1, stage2),
+                fnAdapter);
     }
 
     @Nonnull
@@ -516,12 +543,26 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
         SinkTransform<T> sinkTransform = new SinkTransform(sinkImpl, transform, fnAdapter == ADAPT_TO_JET_EVENT);
         SinkStageImpl output = new SinkStageImpl(sinkTransform, pipelineImpl);
         sinkImpl.onAssignToStage();
-        pipelineImpl.connect(transform, sinkTransform);
+        pipelineImpl.connect(this, sinkTransform);
         return output;
     }
 
     @Nonnull
-    abstract <RET> RET attach(@Nonnull AbstractTransform transform, @Nonnull FunctionAdapter fnAdapter);
+    final <RET> RET attach(
+            @Nonnull AbstractTransform transform,
+            @Nonnull List<? extends GeneralStage<?>> moreInputStages,
+            @Nonnull FunctionAdapter fnAdapter
+    ) {
+        pipelineImpl.connect(this, moreInputStages, transform);
+        return newStage(transform, fnAdapter);
+    }
+
+    @Nonnull
+    final <RET> RET attach(@Nonnull AbstractTransform transform, @Nonnull FunctionAdapter fnAdapter) {
+        return attach(transform, emptyList(), fnAdapter);
+    }
+
+    abstract <RET> RET newStage(@Nonnull AbstractTransform transform, @Nonnull FunctionAdapter fnAdapter);
 
     @SuppressWarnings("rawtypes")
     static void ensureJetEvents(@Nonnull ComputeStageImplBase stage, @Nonnull String name) {
