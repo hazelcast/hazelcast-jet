@@ -111,7 +111,7 @@ public final class RexToExpressionVisitor implements RexVisitor<Expression<?>> {
                     "Insufficient query parameter arguments: expected at least " + (index + 1) + ", got " + parameterCount);
         }
 
-        return new ParameterExpression<>(index, QueryDataType.LATE); // TODO: ?????
+        return new ParameterExpression<>(index, fieldTypeProvider.getType(index));
     }
 
     @Override
