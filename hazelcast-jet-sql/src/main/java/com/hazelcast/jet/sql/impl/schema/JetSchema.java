@@ -86,23 +86,6 @@ public class JetSchema extends AbstractSchema {
         serverMap.put(serverName, serverOptions);
     }
 
-    public void createTable(
-            @Nonnull String tableName,
-            @Nonnull String serverName,
-            @Nonnull Map<String, String> tableOptions
-    ) {
-        createTableInt(tableName, serverName, tableOptions, null);
-    }
-
-    public void createTable(
-            @Nonnull String tableName,
-            @Nonnull String serverName,
-            @Nonnull Map<String, String> tableOptions,
-            @Nonnull List<Entry<String, QueryDataType>> fields
-    ) {
-        createTableInt(tableName, serverName, tableOptions, fields);
-    }
-
     public void createTableInt(
             @Nonnull String tableName,
             @Nonnull String serverName,

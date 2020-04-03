@@ -25,9 +25,6 @@ import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.core.processor.SinkProcessors;
-import com.hazelcast.jet.sql.impl.cost.CostFactory;
-import com.hazelcast.jet.sql.impl.imap.IMapProjectPhysicalRule;
-import com.hazelcast.jet.sql.impl.imap.IMapScanPhysicalRule;
 import com.hazelcast.jet.sql.impl.CreateDagVisitor;
 import com.hazelcast.jet.sql.impl.JetLogicalRules;
 import com.hazelcast.jet.sql.impl.JetSqlConformance;
@@ -39,7 +36,11 @@ import com.hazelcast.jet.sql.impl.LogicalRel;
 import com.hazelcast.jet.sql.impl.OptUtils;
 import com.hazelcast.jet.sql.impl.PhysicalRel;
 import com.hazelcast.jet.sql.impl.RowCountMetadata;
+import com.hazelcast.jet.sql.impl.cost.CostFactory;
+import com.hazelcast.jet.sql.impl.imap.IMapProjectPhysicalRule;
+import com.hazelcast.jet.sql.impl.imap.IMapScanPhysicalRule;
 import com.hazelcast.jet.sql.impl.schema.JetSchema;
+import com.hazelcast.sql.impl.type.QueryDataType;
 import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.avatica.util.Casing;
 import org.apache.calcite.config.CalciteConnectionConfig;
@@ -79,7 +80,11 @@ import org.apache.calcite.tools.Programs;
 import org.apache.calcite.tools.RuleSet;
 import org.apache.calcite.tools.RuleSets;
 
+import javax.annotation.Nonnull;
 import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.UUID;
 
@@ -124,7 +129,38 @@ public class JetSqlService {
         this.sqlToRelConverter = createSqlToRelConverter(catalogReader, validator, cluster);
     }
 
-    private static RelOptCluster createCluster(VolcanoPlanner planner, JavaTypeFactory typeFactory) {
+    /// SCHEMA METHODS
+
+    public void createConnector(@Nonnull String connectorName, @Nonnull SqlConnector connector) {
+        schema.createConnector(connectorName, connector);
+    }
+
+    public void createServer(
+            @Nonnull String serverName,
+            @Nonnull String connectorName,
+            @Nonnull Map<String, String> serverOptions
+    ) {
+        schema.createServer(serverName, connectorName, serverOptions);
+    }
+
+    public void createTable(
+            @Nonnull String tableName,
+            @Nonnull String serverName,
+            @Nonnull Map<String, String> tableOptions
+    ) {
+        schema.createTableInt(tableName, serverName, tableOptions, null);
+    }
+
+    public void createTable(
+            @Nonnull String tableName,
+            @Nonnull String serverName,
+            @Nonnull Map<String, String> tableOptions,
+            @Nonnull List<Entry<String, QueryDataType>> fields
+    ) {
+        schema.createTableInt(tableName, serverName, tableOptions, fields);
+    }
+
+        private static RelOptCluster createCluster(VolcanoPlanner planner, JavaTypeFactory typeFactory) {
         // TODO: Use CachingRelMetadataProvider instead?
         RelMetadataProvider relMetadataProvider = JaninoRelMetadataProvider.of(METADATA_PROVIDER_INSTANCE);
 
@@ -318,10 +354,6 @@ public class JetSqlService {
                 ImmutableList.of());
 
         return (PhysicalRel) res;
-    }
-
-    public JetSchema getSchema() {
-        return schema;
     }
 
     /**

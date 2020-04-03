@@ -68,11 +68,11 @@ public class SqlTest extends SimpleTestInClusterSupport {
         List<Entry<String, QueryDataType>> intToStringMapFields = asList(
                 entry("__key", QueryDataType.INT),
                 entry("this", QueryDataType.VARCHAR));
-        sqlService.getSchema().createTable(INT_TO_STRING_MAP_SRC, JetSchema.IMAP_LOCAL_SERVER,
+        sqlService.createTable(INT_TO_STRING_MAP_SRC, JetSchema.IMAP_LOCAL_SERVER,
                 emptyMap(),
                 intToStringMapFields);
 
-        sqlService.getSchema().createTable(INT_TO_STRING_MAP_SINK, JetSchema.IMAP_LOCAL_SERVER,
+        sqlService.createTable(INT_TO_STRING_MAP_SINK, JetSchema.IMAP_LOCAL_SERVER,
                 emptyMap(),
                 intToStringMapFields);
 
@@ -80,11 +80,11 @@ public class SqlTest extends SimpleTestInClusterSupport {
                 entry("__key", QueryDataType.INT),
                 entry("name", QueryDataType.VARCHAR),
                 entry("age", QueryDataType.INT));
-        sqlService.getSchema().createTable(PERSON_MAP_SRC, JetSchema.IMAP_LOCAL_SERVER,
+        sqlService.createTable(PERSON_MAP_SRC, JetSchema.IMAP_LOCAL_SERVER,
                 emptyMap(),
                 personMapFields);
 
-        sqlService.getSchema().createTable(PERSON_MAP_SINK, JetSchema.IMAP_LOCAL_SERVER,
+        sqlService.createTable(PERSON_MAP_SINK, JetSchema.IMAP_LOCAL_SERVER,
                 createMap(TO_VALUE_CLASS, Person.class.getName()),
                 personMapFields);
     }
