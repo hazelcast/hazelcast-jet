@@ -14,22 +14,27 @@
  * limitations under the License.
  */
 
-package org.apache.calcite.jdbc;
+package com.hazelcast.jet.sql.impl.schema;
 
-import com.hazelcast.jet.sql.impl.schema.JetSchema;
-import org.apache.calcite.schema.SchemaVersion;
+import com.hazelcast.jet.sql.SqlConnector;
+import com.hazelcast.sql.impl.type.QueryDataType;
+import org.apache.calcite.schema.impl.AbstractTable;
 
-/**
- * Root Calcite schema.
- */
-public final class JetRootCalciteSchema extends SimpleCalciteSchema {
+import java.util.List;
 
-    public JetRootCalciteSchema(JetSchema schema) {
-        super(null, schema, "");
+public abstract class JetTable extends AbstractTable {
+
+    private final SqlConnector sqlConnector;
+
+    protected JetTable(SqlConnector sqlConnector) {
+        this.sqlConnector = sqlConnector;
     }
 
-    @Override
-    public CalciteSchema createSnapshot(SchemaVersion version) {
-        return this;
+    public abstract boolean isStream();
+
+    public SqlConnector getSqlConnector() {
+        return sqlConnector;
     }
+
+    public abstract List<QueryDataType> getPhysicalRowType();
 }

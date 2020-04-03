@@ -14,22 +14,17 @@
  * limitations under the License.
  */
 
-package org.apache.calcite.jdbc;
+package com.hazelcast.jet.sql.impl;
 
-import com.hazelcast.jet.sql.impl.schema.JetSchema;
-import org.apache.calcite.schema.SchemaVersion;
+import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
+import org.apache.calcite.util.ConversionUtil;
 
-/**
- * Root Calcite schema.
- */
-public final class JetRootCalciteSchema extends SimpleCalciteSchema {
+import java.nio.charset.Charset;
 
-    public JetRootCalciteSchema(JetSchema schema) {
-        super(null, schema, "");
-    }
+public class JetTypeFactory extends JavaTypeFactoryImpl {
 
     @Override
-    public CalciteSchema createSnapshot(SchemaVersion version) {
-        return this;
+    public Charset getDefaultCharset() {
+        return Charset.forName(ConversionUtil.NATIVE_UTF16_CHARSET_NAME);
     }
 }

@@ -14,22 +14,19 @@
  * limitations under the License.
  */
 
-package org.apache.calcite.jdbc;
+package com.hazelcast.jet.sql.impl;
 
-import com.hazelcast.jet.sql.impl.schema.JetSchema;
-import org.apache.calcite.schema.SchemaVersion;
+import java.util.Map;
 
-/**
- * Root Calcite schema.
- */
-public final class JetRootCalciteSchema extends SimpleCalciteSchema {
+import static java.util.Objects.requireNonNull;
 
-    public JetRootCalciteSchema(JetSchema schema) {
-        super(null, schema, "");
+public class Util {
+
+    public static String getRequiredTableOption(Map<String, String> options, String optionName) {
+        return requireNonNull(options.get(optionName), "Missing required table option: " + optionName);
     }
 
-    @Override
-    public CalciteSchema createSnapshot(SchemaVersion version) {
-        return this;
+    public static String getRequiredServerOption(Map<String, String> options, String optionName) {
+        return requireNonNull(options.get(optionName), "Missing required server option: " + optionName);
     }
 }

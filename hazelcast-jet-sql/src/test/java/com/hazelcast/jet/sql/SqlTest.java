@@ -19,7 +19,7 @@ package com.hazelcast.jet.sql;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.Observable;
 import com.hazelcast.jet.SimpleTestInClusterSupport;
-import com.hazelcast.jet.sql.schema.JetSchema;
+import com.hazelcast.jet.sql.impl.schema.JetSchema;
 import com.hazelcast.map.IMap;
 import com.hazelcast.sql.impl.type.QueryDataType;
 import org.junit.Before;
@@ -38,7 +38,7 @@ import java.util.Objects;
 
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.core.TestUtil.createMap;
-import static com.hazelcast.jet.sql.imap.IMapSqlConnector.TO_VALUE_CLASS;
+import static com.hazelcast.jet.sql.impl.imap.IMapSqlConnector.TO_VALUE_CLASS;
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyMap;
 import static java.util.Collections.singletonList;

@@ -14,22 +14,21 @@
  * limitations under the License.
  */
 
-package org.apache.calcite.jdbc;
+package com.hazelcast.jet.sql.impl;
 
-import com.hazelcast.jet.sql.impl.schema.JetSchema;
-import org.apache.calcite.schema.SchemaVersion;
+import org.apache.calcite.rel.type.RelDataTypeFactory;
+import org.apache.calcite.sql.SqlOperatorTable;
+import org.apache.calcite.sql.validate.SqlConformance;
+import org.apache.calcite.sql.validate.SqlValidatorCatalogReader;
+import org.apache.calcite.sql.validate.SqlValidatorImpl;
 
-/**
- * Root Calcite schema.
- */
-public final class JetRootCalciteSchema extends SimpleCalciteSchema {
-
-    public JetRootCalciteSchema(JetSchema schema) {
-        super(null, schema, "");
-    }
-
-    @Override
-    public CalciteSchema createSnapshot(SchemaVersion version) {
-        return this;
+public class JetSqlValidator extends SqlValidatorImpl {
+    public JetSqlValidator(
+        SqlOperatorTable opTab,
+        SqlValidatorCatalogReader catalogReader,
+            RelDataTypeFactory typeFactory,
+        SqlConformance conformance
+    ) {
+        super(opTab, catalogReader, typeFactory, conformance);
     }
 }

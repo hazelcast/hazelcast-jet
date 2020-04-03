@@ -14,22 +14,13 @@
  * limitations under the License.
  */
 
-package org.apache.calcite.jdbc;
+package com.hazelcast.jet.sql.impl;
 
-import com.hazelcast.jet.sql.impl.schema.JetSchema;
-import org.apache.calcite.schema.SchemaVersion;
+import org.apache.calcite.rel.RelNode;
 
 /**
- * Root Calcite schema.
+ * Marker interface for logical relations.
  */
-public final class JetRootCalciteSchema extends SimpleCalciteSchema {
-
-    public JetRootCalciteSchema(JetSchema schema) {
-        super(null, schema, "");
-    }
-
-    @Override
-    public CalciteSchema createSnapshot(SchemaVersion version) {
-        return this;
-    }
+public interface LogicalRel extends RelNode {
+    // No-op.
 }
