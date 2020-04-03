@@ -329,7 +329,7 @@ attributes.
 </beans>
 ```
 
-## SpringBoot Integration
+## Spring Boot Integration
 
 Hazelcast Jet provides
 [Hazelcast Jet Spring Boot Starter](https://github.com/hazelcast/hazelcast-jet-contrib/tree/master/hazelcast-jet-spring-boot-starter)
@@ -348,3 +348,30 @@ server and `hazelcast.client.config` for client.
 If no configuration file is present or explicitly specified, the
 starter creates a server instance using the default configuration file
 (`hazelcast-jet-default.yaml`).
+
+See [Spring Boot Starter](../tutorials/spring-boot.md) tutorial for
+examples.  
+
+### Conflict with Hazelcast IMDG Starter
+
+Spring Boot has out of the box support for Hazelcast IMDG starter. This
+creates a conflict when Hazelcast IMDG related configuration files
+(like `hazelcast.xml` or `hazelcast-client.xml`) are on the classpath
+or at the root directory. We have addressed this issue by disabling
+Hazelcast IMDG starter if Hazelcast Jet is present. See the
+[PR](https://github.com/spring-projects/spring-boot/pull/20729) on
+Spring Boot repository.
+
+As a workaround users can exclude the Hazelcast IMDG auto-configuration
+class like below:
+
+```java
+@SpringBootApplication(exclude = HazelcastAutoConfiguration.class)
+```
+
+### SpringAware Objects
+
+Hazelcast Jet Spring Boot Starter configures the created member
+instances with `SpringManagedContext` automatically. See
+[Enabling SpringAware Objects](#enabling-springaware-objects) for more
+information.
