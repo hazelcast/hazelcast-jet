@@ -36,7 +36,6 @@ import static com.hazelcast.jet.impl.util.Util.toList;
 public class IMapTable extends JetTable {
 
     private final String mapName;
-    private final List<HazelcastTableIndex> indexes;
     private final List<Entry<String, QueryDataType>> fields;
     private final String keyClassName;
     private final String valueClassName;
@@ -47,7 +46,6 @@ public class IMapTable extends JetTable {
     public IMapTable(
             @Nonnull SqlConnector sqlConnector,
             @Nonnull String mapName,
-            @Nonnull List<HazelcastTableIndex> indexes,
             @Nonnull List<Entry<String, QueryDataType>> fields,
             String keyClassName,
             String valueClassName
@@ -55,7 +53,6 @@ public class IMapTable extends JetTable {
         super(sqlConnector);
         this.mapName = mapName;
         this.fields = fields;
-        this.indexes = indexes;
         this.keyClassName = keyClassName;
         this.valueClassName = valueClassName;
 
@@ -77,10 +74,6 @@ public class IMapTable extends JetTable {
         return mapName;
     }
 
-    public List<HazelcastTableIndex> getIndexes() {
-        return indexes;
-    }
-
     public List<Entry<String, QueryDataType>> getFields() {
         return fields;
     }
@@ -99,7 +92,7 @@ public class IMapTable extends JetTable {
 
     @Override
     public String toString() {
-        return getClass().getSimpleName() + "{mapName=" + mapName + ", indexes=" + indexes + '}';
+        return getClass().getSimpleName() + "{mapName=" + mapName + '}';
     }
 
     public List<String> getFieldNames() {

@@ -118,10 +118,9 @@ public class IMapSqlConnector implements SqlConnector {
 //            throw new JetException("Only local maps are supported for now");
 //        }
         String mapName = tableOptions.getOrDefault(TO_MAP_NAME, tableName);
-        List<HazelcastTableIndex> indexes = emptyList(); // TODO
         String keyClassName = tableOptions.get(TO_KEY_CLASS);
         String valueClassName = tableOptions.get(TO_VALUE_CLASS);
-        return new IMapTable(this, mapName, indexes, fields, keyClassName, valueClassName);
+        return new IMapTable(this, mapName, fields, keyClassName, valueClassName);
     }
 
     @Nullable @Override
