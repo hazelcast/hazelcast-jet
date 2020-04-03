@@ -115,8 +115,6 @@ hazelcast-jet:
     cooperative-thread-count: 4
   edge-defaults:
     queue-size: 2048
-  hazelcast:
-    cluster-name: tutorial-jet-starter
 ```
 
 When you stop and re-run the main class you should now see that the
