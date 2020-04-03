@@ -16,13 +16,15 @@
 
 package com.hazelcast.jet.grpc;
 
-import com.hazelcast.jet.TestInClusterSupport;
+import com.hazelcast.jet.SimpleTestInClusterSupport;
+import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.grpc.greeter.GreeterGrpc;
 import com.hazelcast.jet.grpc.greeter.GreeterGrpc.GreeterStub;
 import com.hazelcast.jet.grpc.greeter.GreeterOuterClass.HelloReply;
 import com.hazelcast.jet.grpc.greeter.GreeterOuterClass.HelloRequest;
 import com.hazelcast.jet.impl.util.ExceptionUtil;
 import com.hazelcast.jet.pipeline.BatchStage;
+import com.hazelcast.jet.pipeline.BatchStageWithKey;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.ServiceFactory;
 import com.hazelcast.jet.pipeline.Sinks;
@@ -34,19 +36,30 @@ import io.grpc.Server;
 import io.grpc.ServerBuilder;
 import io.grpc.stub.StreamObserver;
 import org.junit.After;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.IntStream;
 
 import static com.hazelcast.jet.grpc.GrpcServices.bidirectionalStreamingService;
 import static com.hazelcast.jet.grpc.GrpcServices.unaryService;
+import static java.util.stream.Collectors.toList;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-public class GreeterServiceTest extends TestInClusterSupport {
+public class GRPCServiceTest extends SimpleTestInClusterSupport {
 
+    private static final int ITEM_COUNT = 10_000;
     Server server;
+
+    @BeforeClass
+    public static void setup() {
+        initialize(2, new JetConfig());
+    }
 
     @After
     public void teardown() {
@@ -58,18 +71,11 @@ public class GreeterServiceTest extends TestInClusterSupport {
     @Test
     public void when_bidirectionalStreaming() throws IOException {
         // Given
-        Server server = createServer(new GreeterServiceImpl());
-        final int localPort = server.getPort();
+        server = createServer(new GreeterServiceImpl());
+        final int port = server.getPort();
 
-        ServiceFactory<?, BidirectionalStreamingService<HelloRequest, HelloReply>> greeterService =
-                bidirectionalStreamingService(
-                        () -> ManagedChannelBuilder.forAddress("localhost", localPort).usePlaintext(),
-                        channel -> {
-                            GreeterStub stub = GreeterGrpc.newStub(channel);
-                            return stub::sayHelloBidirectional;
-                        }
-                );
-        List<String> expected = Arrays.asList("Hello one", "Hello two", "Hello three", "Hello four");
+        ServiceFactory<?, GRPCService<HelloRequest, HelloReply>> greeterService =
+                bidirectionalStreaming(port);
 
         Pipeline p = Pipeline.create();
         BatchStage<String> stage = p.readFrom(TestSources.items("one", "two", "three", "four"));
@@ -81,27 +87,77 @@ public class GreeterServiceTest extends TestInClusterSupport {
         });
 
         // Then
+        List<String> expected = Arrays.asList("Hello one", "Hello two", "Hello three", "Hello four");
         mapped.writeTo(AssertionSinks.assertAnyOrder(expected));
-        jet().newJob(p).join();
+        instance().newJob(p).join();
+    }
+
+    @Test
+    public void when_bidirectionalStreaming_distributed() throws IOException {
+        // Given
+        server = createServer(new GreeterServiceImpl());
+        final int port = server.getPort();
+
+        ServiceFactory<?, GRPCService<HelloRequest, HelloReply>> greeterService =
+                bidirectionalStreaming(port);
+
+        List<String> items = IntStream.range(0, ITEM_COUNT).mapToObj(Integer::toString).collect(toList());
+
+        Pipeline p = Pipeline.create();
+        BatchStageWithKey<String, String> stage = p.readFrom(TestSources.items(items))
+                                           .groupingKey(i -> i);
+        // When
+        BatchStage<String> mapped = stage.mapUsingServiceAsync(greeterService, (service, key, item) -> {
+            HelloRequest req = HelloRequest.newBuilder().setName(item).build();
+            return service.call(req).thenApply(HelloReply::getMessage);
+        });
+
+        // Then
+        mapped.writeTo(AssertionSinks.assertCollected(e -> {
+            assertEquals("unexpected number of items received", ITEM_COUNT, e.size());
+        }));
+        instance().newJob(p).join();
+    }
+
+
+    @Test
+    public void when_bidirectionalStreaming_withFaultyService() throws IOException {
+        // Given
+        server = createServer(new FaultyGreeterServiceImpl());
+        final int port = server.getPort();
+
+        ServiceFactory<?, GRPCService<HelloRequest, HelloReply>> greeterService =
+                bidirectionalStreaming(port);
+
+        Pipeline p = Pipeline.create();
+        BatchStage<String> stage = p.readFrom(TestSources.items("one", "two", "three", "four"));
+
+        // When
+        BatchStage<String> mapped = stage.mapUsingServiceAsync(greeterService, (service, item) -> {
+            HelloRequest req = HelloRequest.newBuilder().setName(item).build();
+            return service.call(req).thenApply(HelloReply::getMessage);
+        });
+
+        // Then
+        mapped.writeTo(Sinks.noop());
+        try {
+            instance().newJob(p).join();
+            fail("Job should have failed");
+        } catch (Exception e) {
+            Throwable ex = ExceptionUtil.peel(e);
+            assertTrue(ex.getMessage().contains("io.grpc.StatusRuntimeException"));
+        }
     }
 
     @Test
     public void when_unary() throws IOException {
         // Given
-        Server server = createServer(new GreeterServiceImpl());
-        final int localPort = server.getPort();
+        server = createServer(new GreeterServiceImpl());
+        final int port = server.getPort();
+
+        ServiceFactory<?, GRPCService<HelloRequest, HelloReply>> greeterService = unary(port);
 
         Pipeline p = Pipeline.create();
-        ServiceFactory<?, UnaryService<HelloRequest, HelloReply>> greeterService =
-                unaryService(
-                        () -> ManagedChannelBuilder.forAddress("localhost", localPort).usePlaintext(),
-                        channel -> {
-                            GreeterStub stub = GreeterGrpc.newStub(channel);
-                            return stub::sayHelloUnary;
-                        }
-                );
-        List<String> expected = Arrays.asList("Hello one", "Hello two", "Hello three", "Hello four");
-
         BatchStage<String> source = p.readFrom(TestSources.items("one", "two", "three", "four"));
 
         // When
@@ -112,27 +168,47 @@ public class GreeterServiceTest extends TestInClusterSupport {
                 });
 
         // Then
+        List<String> expected = Arrays.asList("Hello one", "Hello two", "Hello three", "Hello four");
         mapped.writeTo(AssertionSinks.assertAnyOrder(expected));
-        jet().newJob(p).join();
+        instance().newJob(p).join();
+    }
+
+    @Test
+    public void when_unary_distributed() throws IOException {
+        // Given
+        server = createServer(new GreeterServiceImpl());
+        final int port = server.getPort();
+
+        ServiceFactory<?, GRPCService<HelloRequest, HelloReply>> greeterService =
+                unary(port);
+
+        List<String> items = IntStream.range(0, ITEM_COUNT).mapToObj(Integer::toString).collect(toList());
+
+        Pipeline p = Pipeline.create();
+        BatchStageWithKey<String, String> stage = p.readFrom(TestSources.items(items))
+                                                   .groupingKey(i -> i);
+        // When
+        BatchStage<String> mapped = stage.mapUsingServiceAsync(greeterService, (service, key, item) -> {
+            HelloRequest req = HelloRequest.newBuilder().setName(item).build();
+            return service.call(req).thenApply(HelloReply::getMessage);
+        });
+
+        // Then
+        mapped.writeTo(AssertionSinks.assertCollected(e -> {
+            assertEquals("unexpected number of items received", ITEM_COUNT, e.size());
+        }));
+        instance().newJob(p).join();
     }
 
     @Test
     public void when_unary_with_faultyService() throws IOException {
         // Given
         Server server = createServer(new FaultyGreeterServiceImpl());
-        final int localPort = server.getPort();
+        final int port = server.getPort();
+
+        ServiceFactory<?, GRPCService<HelloRequest, HelloReply>> greeterService = unary(port);
 
         Pipeline p = Pipeline.create();
-        ServiceFactory<?, UnaryService<HelloRequest, HelloReply>> greeterService =
-                unaryService(
-                        () -> ManagedChannelBuilder.forAddress("localhost", localPort).usePlaintext(),
-                        channel -> {
-                            GreeterStub stub = GreeterGrpc.newStub(channel);
-                            return stub::sayHelloUnary;
-                        }
-                );
-        List<String> expected = Arrays.asList("Hello one", "Hello two", "Hello three", "Hello four");
-
         BatchStage<String> source = p.readFrom(TestSources.items("one", "two", "three", "four"));
 
         // When
@@ -146,12 +222,33 @@ public class GreeterServiceTest extends TestInClusterSupport {
         mapped.writeTo(Sinks.noop());
 
         try {
-            jet().newJob(p).join();
+            instance().newJob(p).join();
             fail("Job should have failed");
         } catch (Exception e) {
             Throwable ex = ExceptionUtil.peel(e);
-            ex.printStackTrace();
+            assertTrue(ex.getMessage().contains("io.grpc.StatusRuntimeException"));
         }
+    }
+
+    private ServiceFactory<?, GRPCService<HelloRequest, HelloReply>> unary(int port) {
+        return unaryService(
+                () -> ManagedChannelBuilder.forAddress("localhost", port).usePlaintext(),
+                channel -> {
+                    GreeterStub stub = GreeterGrpc.newStub(channel);
+                    return stub::sayHelloUnary;
+                }
+        );
+    }
+
+    private ServiceFactory<?, GRPCService<HelloRequest, HelloReply>>
+    bidirectionalStreaming(int port) {
+        return bidirectionalStreamingService(
+                () -> ManagedChannelBuilder.forAddress("localhost", port).usePlaintext(),
+                channel -> {
+                    GreeterStub stub = GreeterGrpc.newStub(channel);
+                    return stub::sayHelloBidirectional;
+                }
+        );
     }
 
     private static Server createServer(BindableService service) throws IOException {

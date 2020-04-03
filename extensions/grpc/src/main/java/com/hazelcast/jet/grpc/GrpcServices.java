@@ -20,6 +20,8 @@ package com.hazelcast.jet.grpc;
 import com.hazelcast.function.BiConsumerEx;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.function.SupplierEx;
+import com.hazelcast.jet.grpc.impl.BidirectionalStreamingService;
+import com.hazelcast.jet.grpc.impl.UnaryService;
 import com.hazelcast.jet.pipeline.ServiceFactory;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
@@ -43,13 +45,14 @@ public final class GrpcServices {
      * @since 4.1
      */
     @Nonnull
-    public static <I, O> ServiceFactory<?, UnaryService<I, O>> unaryService(
+    public static <I, O> ServiceFactory<?, GRPCService<I, O>> unaryService(
             @Nonnull SupplierEx<ManagedChannelBuilder<?>> channelFn,
             @Nonnull FunctionEx<ManagedChannel, BiConsumerEx<I, StreamObserver<O>>> createStubFn
     ) {
         return ServiceFactory.withCreateContextFn(ctx -> channelFn.get().build())
-                             .withCreateServiceFn((ctx, channel) -> new UnaryService<>(channel, createStubFn))
-                             .withDestroyServiceFn(UnaryService::destroy)
+                             .<GRPCService<I, O>>withCreateServiceFn((ctx, channel) ->
+                                     new UnaryService<>(channel, createStubFn)
+                             ).withDestroyServiceFn(s -> ((UnaryService<I, O>)s).destroy())
                              .withDestroyContextFn(ManagedChannel::shutdown);
     }
 
@@ -59,13 +62,14 @@ public final class GrpcServices {
      * @since 4.1
      */
     @Nonnull
-    public static <I, O> ServiceFactory<?, BidirectionalStreamingService<I, O>> bidirectionalStreamingService(
+    public static <I, O> ServiceFactory<?, GRPCService<I, O>> bidirectionalStreamingService(
             @Nonnull SupplierEx<ManagedChannelBuilder<?>> channelFn,
             @Nonnull FunctionEx<ManagedChannel, FunctionEx<StreamObserver<O>, StreamObserver<I>>> createStubFn
     ) {
         return ServiceFactory.withCreateContextFn(ctx -> channelFn.get().build())
-                 .withCreateServiceFn((ctx, channel) -> new BidirectionalStreamingService<>(ctx, channel, createStubFn))
-                 .withDestroyServiceFn(BidirectionalStreamingService::destroy)
-                 .withDestroyContextFn(ManagedChannel::shutdown);
+                 .<GRPCService<I, O>>withCreateServiceFn((ctx, channel) ->
+                         new BidirectionalStreamingService<>(ctx, channel, createStubFn)
+                 ).withDestroyServiceFn(s -> ((BidirectionalStreamingService<I, O>)s).destroy())
+                .withDestroyContextFn(ManagedChannel::shutdown);
     }
 }

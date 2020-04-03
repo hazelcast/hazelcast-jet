@@ -22,7 +22,7 @@ import com.hazelcast.jet.Job;
 import com.hazelcast.jet.examples.grpc.datamodel.Broker;
 import com.hazelcast.jet.examples.grpc.datamodel.Product;
 import com.hazelcast.jet.examples.grpc.datamodel.Trade;
-import com.hazelcast.jet.grpc.UnaryService;
+import com.hazelcast.jet.grpc.impl.UnaryService;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.ServiceFactory;
 import com.hazelcast.jet.pipeline.Sinks;
