@@ -26,8 +26,8 @@ import com.hazelcast.jet.sql.imap.IMapProjectPhysicalRel;
 import com.hazelcast.jet.sql.imap.IMapScanPhysicalRel;
 import com.hazelcast.jet.sql.schema.JetTable;
 import com.hazelcast.sql.impl.expression.Expression;
-import com.hazelcast.sql.impl.physical.FieldTypeProvider;
-import com.hazelcast.sql.impl.physical.PhysicalNodeSchema;
+import com.hazelcast.sql.impl.plan.node.PlanNodeFieldTypeProvider;
+import com.hazelcast.sql.impl.plan.node.PlanNodeSchema;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.util.ConversionUtil;
 import org.apache.calcite.util.NlsString;
@@ -55,7 +55,7 @@ public class CreateDagVisitor {
 
     public void onConnectorFullScan(IMapScanPhysicalRel rel) {
         JetTable table = rel.getTableUnwrapped();
-        PhysicalNodeSchema schema = new PhysicalNodeSchema(table.getPhysicalRowType());
+        PlanNodeSchema schema = new PlanNodeSchema(table.getPhysicalRowType());
         Expression<Boolean> predicate = convertFilter(schema, rel.getFilter());
         Tuple2<Vertex, Vertex> subDag = table.getSqlConnector().fullScanReader(dag, table, null, predicate,
                 rel.getProjects());
@@ -67,7 +67,7 @@ public class CreateDagVisitor {
     }
 
     @SuppressWarnings("unchecked")
-    private Expression<Boolean> convertFilter(PhysicalNodeSchema schema, RexNode expression) {
+    private Expression<Boolean> convertFilter(PlanNodeSchema schema, RexNode expression) {
         if (expression == null) {
             return null;
         }
@@ -77,7 +77,7 @@ public class CreateDagVisitor {
         return (Expression<Boolean>) convertedExpression;
     }
 
-    private Expression<?> convertExpression(FieldTypeProvider fieldTypeProvider, RexNode expression) {
+    private Expression<?> convertExpression(PlanNodeFieldTypeProvider fieldTypeProvider, RexNode expression) {
         if (expression == null) {
             return null;
         }
