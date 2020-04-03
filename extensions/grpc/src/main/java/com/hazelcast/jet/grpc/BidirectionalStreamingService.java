@@ -19,11 +19,8 @@ package com.hazelcast.jet.grpc;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.core.Processor.Context;
-import com.hazelcast.jet.impl.util.ExceptionUtil;
 import com.hazelcast.logging.ILogger;
 import io.grpc.ManagedChannel;
-import io.grpc.StatusException;
-import io.grpc.StatusRuntimeException;
 import io.grpc.stub.StreamObserver;
 
 import javax.annotation.Nonnull;
@@ -32,6 +29,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
 
+import static com.hazelcast.jet.grpc.impl.GrpcUtil.wrapGrpcException;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 /**
@@ -97,10 +95,7 @@ public final class BidirectionalStreamingService<I, O> {
         @Override
         public void onError(Throwable e) {
             try {
-                if (e instanceof StatusException || e instanceof StatusRuntimeException) {
-                    // not serializable exceptions
-                    e = new JetException(ExceptionUtil.stackTraceToString(e));
-                }
+                e = wrapGrpcException(e);
 
                 exceptionInOutputObserver = e;
                 for (CompletableFuture<O> future; (future = futureQueue.poll()) != null; ) {

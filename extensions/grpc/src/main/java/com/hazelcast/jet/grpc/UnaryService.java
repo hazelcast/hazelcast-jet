@@ -18,6 +18,7 @@ package com.hazelcast.jet.grpc;
 
 import com.hazelcast.function.BiConsumerEx;
 import com.hazelcast.function.FunctionEx;
+import com.hazelcast.jet.grpc.impl.GrpcUtil;
 import io.grpc.ManagedChannel;
 import io.grpc.stub.StreamObserver;
 
@@ -71,7 +72,7 @@ public final class UnaryService<I, O> {
 
         @Override
         public void onError(Throwable t) {
-            future.completeExceptionally(t);
+            future.completeExceptionally(GrpcUtil.wrapGrpcException(t));
         }
 
         @Override
