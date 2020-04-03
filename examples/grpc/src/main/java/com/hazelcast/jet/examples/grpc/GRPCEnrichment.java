@@ -22,7 +22,7 @@ import com.hazelcast.jet.Job;
 import com.hazelcast.jet.examples.grpc.datamodel.Broker;
 import com.hazelcast.jet.examples.grpc.datamodel.Product;
 import com.hazelcast.jet.examples.grpc.datamodel.Trade;
-import com.hazelcast.jet.grpc.impl.UnaryService;
+import com.hazelcast.jet.grpc.GrpcService;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.ServiceFactory;
 import com.hazelcast.jet.pipeline.Sinks;
@@ -100,12 +100,12 @@ public final class GRPCEnrichment {
                 .map(entryValue());
 
 
-        ServiceFactory<?, UnaryService<ProductInfoRequest, ProductInfoReply>> productService = unaryService(
+        ServiceFactory<?, GrpcService<ProductInfoRequest, ProductInfoReply>> productService = unaryService(
                 () -> ManagedChannelBuilder.forAddress("localhost", PORT).usePlaintext(),
                 channel -> ProductServiceGrpc.newStub(channel)::productInfo
         );
 
-        ServiceFactory<?, UnaryService<BrokerInfoRequest, BrokerInfoReply>> brokerService = unaryService(
+        ServiceFactory<?, GrpcService<BrokerInfoRequest, BrokerInfoReply>> brokerService = unaryService(
                 () -> ManagedChannelBuilder.forAddress("localhost", PORT).usePlaintext(),
                 channel -> BrokerServiceGrpc.newStub(channel)::brokerInfo
         );

@@ -14,11 +14,12 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.grpc;
+package com.hazelcast.jet.grpc.impl;
 
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.core.Processor.Context;
+import com.hazelcast.jet.grpc.GrpcService;
 import com.hazelcast.logging.ILogger;
 import io.grpc.ManagedChannel;
 import io.grpc.stub.StreamObserver;
@@ -32,12 +33,7 @@ import java.util.concurrent.CountDownLatch;
 import static com.hazelcast.jet.grpc.impl.GrpcUtil.wrapGrpcException;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
-/**
- * TODO
- * @param <I>
- * @param <O>
- */
-public final class BidirectionalStreamingService<I, O> {
+public final class BidirectionalStreamingService<I, O> implements GrpcService<I, O> {
 
     private final StreamObserver<I> sink;
     private final Queue<CompletableFuture<O>> futureQueue = new ConcurrentLinkedQueue<>();
@@ -45,7 +41,7 @@ public final class BidirectionalStreamingService<I, O> {
     private final ILogger logger;
     private volatile Throwable exceptionInOutputObserver;
 
-    BidirectionalStreamingService(
+    public BidirectionalStreamingService(
             Context context,
             ManagedChannel channel,
             FunctionEx<ManagedChannel, FunctionEx<StreamObserver<O>, StreamObserver<I>>> createStubFn
@@ -54,12 +50,7 @@ public final class BidirectionalStreamingService<I, O> {
         sink = createStubFn.apply(channel).apply(new OutputMessageObserver());
     }
 
-    /**
-     * TODO
-     * @param input
-     * @return
-     */
-    @Nonnull
+    @Override @Nonnull
     public CompletableFuture<O> call(@Nonnull I input) {
         checkForServerError();
         CompletableFuture<O> future = new CompletableFuture<>();
@@ -74,7 +65,7 @@ public final class BidirectionalStreamingService<I, O> {
         }
     }
 
-    void destroy() throws InterruptedException {
+    public void destroy() throws InterruptedException {
         sink.onCompleted();
         if (!completionLatch.await(1, SECONDS)) {
             logger.info("gRPC call has not completed on time");

@@ -51,7 +51,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-public class GRPCServiceTest extends SimpleTestInClusterSupport {
+public class GrpcServiceTest extends SimpleTestInClusterSupport {
 
     private static final int ITEM_COUNT = 10_000;
     Server server;
@@ -74,7 +74,7 @@ public class GRPCServiceTest extends SimpleTestInClusterSupport {
         server = createServer(new GreeterServiceImpl());
         final int port = server.getPort();
 
-        ServiceFactory<?, GRPCService<HelloRequest, HelloReply>> greeterService =
+        ServiceFactory<?, GrpcService<HelloRequest, HelloReply>> greeterService =
                 bidirectionalStreaming(port);
 
         Pipeline p = Pipeline.create();
@@ -98,7 +98,7 @@ public class GRPCServiceTest extends SimpleTestInClusterSupport {
         server = createServer(new GreeterServiceImpl());
         final int port = server.getPort();
 
-        ServiceFactory<?, GRPCService<HelloRequest, HelloReply>> greeterService =
+        ServiceFactory<?, GrpcService<HelloRequest, HelloReply>> greeterService =
                 bidirectionalStreaming(port);
 
         List<String> items = IntStream.range(0, ITEM_COUNT).mapToObj(Integer::toString).collect(toList());
@@ -126,7 +126,7 @@ public class GRPCServiceTest extends SimpleTestInClusterSupport {
         server = createServer(new FaultyGreeterServiceImpl());
         final int port = server.getPort();
 
-        ServiceFactory<?, GRPCService<HelloRequest, HelloReply>> greeterService =
+        ServiceFactory<?, GrpcService<HelloRequest, HelloReply>> greeterService =
                 bidirectionalStreaming(port);
 
         Pipeline p = Pipeline.create();
@@ -155,7 +155,7 @@ public class GRPCServiceTest extends SimpleTestInClusterSupport {
         server = createServer(new GreeterServiceImpl());
         final int port = server.getPort();
 
-        ServiceFactory<?, GRPCService<HelloRequest, HelloReply>> greeterService = unary(port);
+        ServiceFactory<?, GrpcService<HelloRequest, HelloReply>> greeterService = unary(port);
 
         Pipeline p = Pipeline.create();
         BatchStage<String> source = p.readFrom(TestSources.items("one", "two", "three", "four"));
@@ -179,7 +179,7 @@ public class GRPCServiceTest extends SimpleTestInClusterSupport {
         server = createServer(new GreeterServiceImpl());
         final int port = server.getPort();
 
-        ServiceFactory<?, GRPCService<HelloRequest, HelloReply>> greeterService =
+        ServiceFactory<?, GrpcService<HelloRequest, HelloReply>> greeterService =
                 unary(port);
 
         List<String> items = IntStream.range(0, ITEM_COUNT).mapToObj(Integer::toString).collect(toList());
@@ -206,7 +206,7 @@ public class GRPCServiceTest extends SimpleTestInClusterSupport {
         Server server = createServer(new FaultyGreeterServiceImpl());
         final int port = server.getPort();
 
-        ServiceFactory<?, GRPCService<HelloRequest, HelloReply>> greeterService = unary(port);
+        ServiceFactory<?, GrpcService<HelloRequest, HelloReply>> greeterService = unary(port);
 
         Pipeline p = Pipeline.create();
         BatchStage<String> source = p.readFrom(TestSources.items("one", "two", "three", "four"));
@@ -230,7 +230,7 @@ public class GRPCServiceTest extends SimpleTestInClusterSupport {
         }
     }
 
-    private ServiceFactory<?, GRPCService<HelloRequest, HelloReply>> unary(int port) {
+    private ServiceFactory<?, GrpcService<HelloRequest, HelloReply>> unary(int port) {
         return unaryService(
                 () -> ManagedChannelBuilder.forAddress("localhost", port).usePlaintext(),
                 channel -> {
@@ -240,7 +240,7 @@ public class GRPCServiceTest extends SimpleTestInClusterSupport {
         );
     }
 
-    private ServiceFactory<?, GRPCService<HelloRequest, HelloReply>>
+    private ServiceFactory<?, GrpcService<HelloRequest, HelloReply>>
     bidirectionalStreaming(int port) {
         return bidirectionalStreamingService(
                 () -> ManagedChannelBuilder.forAddress("localhost", port).usePlaintext(),

@@ -14,46 +14,36 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.grpc;
+package com.hazelcast.jet.grpc.impl;
 
 import com.hazelcast.function.BiConsumerEx;
 import com.hazelcast.function.FunctionEx;
-import com.hazelcast.jet.grpc.impl.GrpcUtil;
+import com.hazelcast.jet.grpc.GrpcService;
 import io.grpc.ManagedChannel;
 import io.grpc.stub.StreamObserver;
 
 import javax.annotation.Nonnull;
 import java.util.concurrent.CompletableFuture;
 
-/**
- * TODO
- * @param <I>
- * @param <O>
- */
-public final class UnaryService<I, O> {
+public final class UnaryService<I, O> implements GrpcService<I, O> {
 
     private final BiConsumerEx<I, StreamObserver<O>> callFn;
 
-    UnaryService(
+    public UnaryService(
             @Nonnull ManagedChannel channel,
             @Nonnull FunctionEx<ManagedChannel, BiConsumerEx<I, StreamObserver<O>>> createStubFn
     ) {
         callFn = createStubFn.apply(channel);
     }
 
-    /**
-     * TODO
-     * @param input
-     * @return
-     */
-    @Nonnull
+    @Override @Nonnull
     public CompletableFuture<O> call(@Nonnull I input) {
         Observer<O> o = new Observer<>();
         callFn.accept(input, o);
         return o.future;
     }
 
-    void destroy() {
+    public void destroy() {
     }
 
     // these objects could also be pooled
