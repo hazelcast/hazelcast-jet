@@ -24,6 +24,11 @@ import io.grpc.stub.StreamObserver;
 import javax.annotation.Nonnull;
 import java.util.concurrent.CompletableFuture;
 
+/**
+ * TODO
+ * @param <I>
+ * @param <O>
+ */
 public final class UnaryService<I, O> {
 
     private final BiConsumerEx<I, StreamObserver<O>> callFn;
@@ -55,7 +60,7 @@ public final class UnaryService<I, O> {
         private final CompletableFuture<O> future;
         private volatile O value; // TODO: is this necessary here - contract states "thread-compatible"
 
-        public Observer() {
+        Observer() {
             this.future = new CompletableFuture<>();
         }
 

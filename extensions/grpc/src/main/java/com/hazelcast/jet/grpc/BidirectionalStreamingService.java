@@ -34,6 +34,11 @@ import java.util.concurrent.CountDownLatch;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
 
+/**
+ * TODO
+ * @param <I>
+ * @param <O>
+ */
 public final class BidirectionalStreamingService<I, O> {
 
     private final StreamObserver<I> sink;
@@ -51,6 +56,11 @@ public final class BidirectionalStreamingService<I, O> {
         sink = createStubFn.apply(channel).apply(new OutputMessageObserver());
     }
 
+    /**
+     * TODO
+     * @param input
+     * @return
+     */
     @Nonnull
     public CompletableFuture<O> call(@Nonnull I input) {
         checkForServerError();
