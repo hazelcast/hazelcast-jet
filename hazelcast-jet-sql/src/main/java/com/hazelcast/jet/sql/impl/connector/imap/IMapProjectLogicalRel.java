@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.sql.impl.imap;
+package com.hazelcast.jet.sql.impl.connector.imap;
 
 import com.hazelcast.jet.sql.impl.LogicalRel;
 import com.hazelcast.jet.sql.impl.cost.CostUtils;

@@ -14,9 +14,10 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.sql.impl.imap;
+package com.hazelcast.jet.sql.impl.connector.imap;
 
 import com.hazelcast.jet.sql.impl.OptUtils;
+import com.hazelcast.jet.sql.impl.connector.FullScanLogicalRel;
 import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelOptRuleCall;
 import org.apache.calcite.rel.RelNode;
@@ -84,7 +85,7 @@ public final class IMapProjectIntoScanLogicalRule extends RelOptRule {
 
         List<Integer> newProjects = Mappings.apply((Mapping) mapping, projects);
 
-        return new IMapScanLogicalRel(
+        return new FullScanLogicalRel(
             scan.getCluster(),
             OptUtils.toLogicalConvention(scan.getTraitSet()),
             scan.getTable(),
@@ -116,7 +117,7 @@ public final class IMapProjectIntoScanLogicalRule extends RelOptRule {
         List<Integer> newScanFields = projectFieldVisitor.createNewScanFields();
         RexNode filter = getScanFilter(scan);
 
-        IMapScanLogicalRel newScan = new IMapScanLogicalRel(
+        FullScanLogicalRel newScan = new FullScanLogicalRel(
             scan.getCluster(),
             OptUtils.toLogicalConvention(scan.getTraitSet()),
             scan.getTable(),
@@ -158,7 +159,7 @@ public final class IMapProjectIntoScanLogicalRule extends RelOptRule {
      * @return Field indexes.
      */
     private static List<Integer> getScanProjects(TableScan scan) {
-        return scan instanceof IMapScanLogicalRel ? ((IMapScanLogicalRel) scan).getProjects() : scan.identity();
+        return scan instanceof FullScanLogicalRel ? ((FullScanLogicalRel) scan).getProjects() : scan.identity();
     }
 
     /**
@@ -168,7 +169,7 @@ public final class IMapProjectIntoScanLogicalRule extends RelOptRule {
      * @return Filter or null.
      */
     private static RexNode getScanFilter(TableScan scan) {
-        return scan instanceof IMapScanLogicalRel ? ((IMapScanLogicalRel) scan).getFilter() : null;
+        return scan instanceof FullScanLogicalRel ? ((FullScanLogicalRel) scan).getFilter() : null;
     }
 
     /**

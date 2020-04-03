@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.sql.impl.imap;
+package com.hazelcast.jet.sql.impl.connector;
 
 import com.hazelcast.jet.sql.impl.OptUtils;
 import org.apache.calcite.plan.RelOptRule;
@@ -23,23 +23,22 @@ import org.apache.calcite.plan.RelOptRuleCall;
 import static com.hazelcast.jet.sql.impl.OptUtils.CONVENTION_LOGICAL;
 
 /**
- * Convert logical map scan to either replicated or partitioned physical scan.
+ * Convert logical full scan to physical full scan.
  */
-public final class IMapScanPhysicalRule extends RelOptRule {
-    public static final RelOptRule INSTANCE = new IMapScanPhysicalRule();
+public final class FullScanPhysicalRule extends RelOptRule {
+    public static final RelOptRule INSTANCE = new FullScanPhysicalRule();
 
-    private IMapScanPhysicalRule() {
-        super(OptUtils.single(IMapScanLogicalRel.class, CONVENTION_LOGICAL),
-            IMapScanPhysicalRule.class.getSimpleName());
+    private FullScanPhysicalRule() {
+        super(OptUtils.single(FullScanLogicalRel.class, CONVENTION_LOGICAL),
+            FullScanPhysicalRule.class.getSimpleName());
     }
 
     @Override
     public void onMatch(RelOptRuleCall call) {
-        IMapScanLogicalRel scan = call.rel(0);
-        System.out.println("aaa onMatch0 in " + getClass().getSimpleName());
+        FullScanLogicalRel scan = call.rel(0);
 
         // Add normal map scan.
-        call.transformTo(new IMapScanPhysicalRel(
+        call.transformTo(new FullScanPhysicalRel(
             scan.getCluster(),
             OptUtils.toPhysicalConvention(scan.getTraitSet()),
             scan.getTable(),

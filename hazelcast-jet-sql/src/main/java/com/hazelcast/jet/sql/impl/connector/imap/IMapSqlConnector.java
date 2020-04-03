@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.sql.impl.imap;
+package com.hazelcast.jet.sql.impl.connector.imap;
 
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.JetInstance;

@@ -16,11 +16,11 @@
 
 package com.hazelcast.jet.sql.impl;
 
-import com.hazelcast.jet.sql.impl.imap.IMapFilterIntoScanLogicalRule;
-import com.hazelcast.jet.sql.impl.imap.IMapFilterLogicalRule;
-import com.hazelcast.jet.sql.impl.imap.IMapProjectIntoScanLogicalRule;
-import com.hazelcast.jet.sql.impl.imap.IMapProjectLogicalRule;
-import com.hazelcast.jet.sql.impl.imap.IMapScanLogicalRule;
+import com.hazelcast.jet.sql.impl.connector.imap.IMapFilterIntoScanLogicalRule;
+import com.hazelcast.jet.sql.impl.connector.imap.IMapFilterLogicalRule;
+import com.hazelcast.jet.sql.impl.connector.imap.IMapProjectIntoScanLogicalRule;
+import com.hazelcast.jet.sql.impl.connector.imap.IMapProjectLogicalRule;
+import com.hazelcast.jet.sql.impl.connector.FullScanLogicalRule;
 import org.apache.calcite.rel.rules.FilterMergeRule;
 import org.apache.calcite.rel.rules.FilterProjectTransposeRule;
 import org.apache.calcite.rel.rules.ProjectFilterTransposeRule;
@@ -67,7 +67,7 @@ public final class JetLogicalRules {
                 // TODO: Should we extend converter here instead (see Flink)?
                 JetTableInsertLogicalRule.INSTANCE,
                 JetValuesLogicalRule.INSTANCE,
-                IMapScanLogicalRule.INSTANCE,
+                FullScanLogicalRule.INSTANCE,
                 IMapFilterLogicalRule.INSTANCE,
                 IMapProjectLogicalRule.INSTANCE
 //                AggregateLogicalRule.INSTANCE,

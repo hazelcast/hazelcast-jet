@@ -18,7 +18,7 @@ package com.hazelcast.jet.sql.impl.schema;
 
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.sql.SqlConnector;
-import com.hazelcast.jet.sql.impl.imap.IMapSqlConnector;
+import com.hazelcast.jet.sql.impl.connector.imap.IMapSqlConnector;
 import com.hazelcast.sql.impl.type.QueryDataType;
 import org.apache.calcite.schema.Table;
 import org.apache.calcite.schema.impl.AbstractSchema;

@@ -22,8 +22,8 @@ import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.sql.impl.expression.RexToExpressionVisitor;
-import com.hazelcast.jet.sql.impl.imap.IMapProjectPhysicalRel;
-import com.hazelcast.jet.sql.impl.imap.IMapScanPhysicalRel;
+import com.hazelcast.jet.sql.impl.connector.imap.IMapProjectPhysicalRel;
+import com.hazelcast.jet.sql.impl.connector.FullScanPhysicalRel;
 import com.hazelcast.jet.sql.impl.schema.JetTable;
 import com.hazelcast.sql.impl.expression.Expression;
 import com.hazelcast.sql.impl.plan.node.PlanNodeFieldTypeProvider;
@@ -53,7 +53,7 @@ public class CreateDagVisitor {
         }
     }
 
-    public void onConnectorFullScan(IMapScanPhysicalRel rel) {
+    public void onConnectorFullScan(FullScanPhysicalRel rel) {
         JetTable table = rel.getTableUnwrapped();
         PlanNodeSchema schema = new PlanNodeSchema(table.getPhysicalRowType());
         Expression<Boolean> predicate = convertFilter(schema, rel.getFilter());

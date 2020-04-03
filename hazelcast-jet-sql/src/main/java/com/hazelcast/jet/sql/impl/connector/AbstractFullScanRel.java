@@ -14,8 +14,9 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.sql.impl.imap;
+package com.hazelcast.jet.sql.impl.connector;
 
+import com.hazelcast.jet.sql.impl.connector.imap.IMapTable;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.plan.RelTraitSet;
@@ -32,13 +33,13 @@ import java.util.List;
 /**
  * Base class for scans.
  */
-public abstract class AbstractScanRel extends TableScan {
+public abstract class AbstractFullScanRel extends TableScan {
     /** Projection. */
     protected final List<Integer> projects;
     /** Filter. */
     protected final RexNode filter;
 
-    protected AbstractScanRel(
+    protected AbstractFullScanRel(
             RelOptCluster cluster,
             RelTraitSet traitSet,
             RelOptTable table,

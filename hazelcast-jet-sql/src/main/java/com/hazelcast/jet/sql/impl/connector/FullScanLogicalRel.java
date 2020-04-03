@@ -14,10 +14,9 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.sql.impl.imap;
+package com.hazelcast.jet.sql.impl.connector;
 
-import com.hazelcast.jet.sql.impl.PhysicalRel;
-import com.hazelcast.jet.sql.impl.CreateDagVisitor;
+import com.hazelcast.jet.sql.impl.LogicalRel;
 import com.hazelcast.jet.sql.impl.cost.CostUtils;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptCost;
@@ -31,17 +30,10 @@ import org.apache.calcite.rex.RexNode;
 import java.util.List;
 
 /**
- * Physical scan over partitioned map.
- * <p>
- * Traits:
- * <ul>
- *     <li><b>Collation</b>: empty, as map is not sorted</li>
- *     <li><b>Distribution</b>: PARTITIONED</li>
- * </ul>
+ * Physical full scan over a source connector.
  */
-// TODO convert to ConnectorFullScan
-public class IMapScanPhysicalRel extends AbstractScanRel implements PhysicalRel {
-    public IMapScanPhysicalRel(
+public class FullScanLogicalRel extends AbstractFullScanRel implements LogicalRel {
+    public FullScanLogicalRel(
         RelOptCluster cluster,
         RelTraitSet traitSet,
         RelOptTable table,
@@ -53,35 +45,23 @@ public class IMapScanPhysicalRel extends AbstractScanRel implements PhysicalRel 
 
     @Override
     public final RelNode copy(RelTraitSet traitSet, List<RelNode> inputs) {
-        return new IMapScanPhysicalRel(getCluster(), traitSet, getTable(), projects, filter);
+        return new FullScanLogicalRel(getCluster(), traitSet, table, projects, filter);
     }
 
-    @Override
-    public void visit(CreateDagVisitor visitor) {
-        visitor.onConnectorFullScan(this);
-    }
-
-    // TODO: Dedup with logical scan
     @Override
     public RelOptCost computeSelfCost(RelOptPlanner planner, RelMetadataQuery mq) {
         // 1. Get cost of the scan itself. For replicated map cost is multiplied by the number of nodes.
         RelOptCost scanCost = super.computeSelfCost(planner, mq);
-
-//        if (table.unwrap(IMapTable.class).isReplicated()) {
-//            scanCost = scanCost.multiplyBy(getHazelcastCluster().getMemberCount());
-//        }
 
         // 2. Get cost of the project taking in count filter and number of expressions. Project never produces IO.
         double filterRowCount = scanCost.getRows();
 
         if (filter != null) {
             double filterSelectivity = mq.getSelectivity(this, filter);
-
             filterRowCount = filterRowCount * filterSelectivity;
         }
 
         int expressionCount = getProjects().size();
-
         double projectCpu = CostUtils.adjustProjectCpu(filterRowCount * expressionCount, true);
 
         // 3. Finally, return sum of both scan and project.

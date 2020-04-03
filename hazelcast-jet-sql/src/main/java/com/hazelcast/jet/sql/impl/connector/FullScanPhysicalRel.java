@@ -14,9 +14,10 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.sql.impl.imap;
+package com.hazelcast.jet.sql.impl.connector;
 
-import com.hazelcast.jet.sql.impl.LogicalRel;
+import com.hazelcast.jet.sql.impl.PhysicalRel;
+import com.hazelcast.jet.sql.impl.CreateDagVisitor;
 import com.hazelcast.jet.sql.impl.cost.CostUtils;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptCost;
@@ -30,10 +31,10 @@ import org.apache.calcite.rex.RexNode;
 import java.util.List;
 
 /**
- * Logical scan.
+ * Physical full scan over a source connector.
  */
-public class IMapScanLogicalRel extends AbstractScanRel implements LogicalRel {
-    public IMapScanLogicalRel(
+public class FullScanPhysicalRel extends AbstractFullScanRel implements PhysicalRel {
+    public FullScanPhysicalRel(
         RelOptCluster cluster,
         RelTraitSet traitSet,
         RelOptTable table,
@@ -45,29 +46,24 @@ public class IMapScanLogicalRel extends AbstractScanRel implements LogicalRel {
 
     @Override
     public final RelNode copy(RelTraitSet traitSet, List<RelNode> inputs) {
-        return new IMapScanLogicalRel(getCluster(), traitSet, table, projects, filter);
+        return new FullScanPhysicalRel(getCluster(), traitSet, getTable(), projects, filter);
     }
 
+    // TODO: Dedup with logical scan
     @Override
     public RelOptCost computeSelfCost(RelOptPlanner planner, RelMetadataQuery mq) {
         // 1. Get cost of the scan itself. For replicated map cost is multiplied by the number of nodes.
         RelOptCost scanCost = super.computeSelfCost(planner, mq);
-
-//        if (table.unwrap(HazelcastTable.class).isReplicated()) {
-//            scanCost = scanCost.multiplyBy(getHazelcastCluster().getMemberCount());
-//        }
 
         // 2. Get cost of the project taking in count filter and number of expressions. Project never produces IO.
         double filterRowCount = scanCost.getRows();
 
         if (filter != null) {
             double filterSelectivity = mq.getSelectivity(this, filter);
-
             filterRowCount = filterRowCount * filterSelectivity;
         }
 
         int expressionCount = getProjects().size();
-
         double projectCpu = CostUtils.adjustProjectCpu(filterRowCount * expressionCount, true);
 
         // 3. Finally, return sum of both scan and project.
@@ -78,5 +74,10 @@ public class IMapScanLogicalRel extends AbstractScanRel implements LogicalRel {
         );
 
         return totalCost;
+    }
+
+    @Override
+    public void visit(CreateDagVisitor visitor) {
+        visitor.onConnectorFullScan(this);
     }
 }

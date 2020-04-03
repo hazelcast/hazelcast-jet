@@ -14,34 +14,34 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.sql.impl.imap;
+package com.hazelcast.jet.sql.impl.connector.imap;
 
 import com.hazelcast.jet.sql.impl.OptUtils;
 import org.apache.calcite.plan.Convention;
 import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.convert.ConverterRule;
-import org.apache.calcite.rel.logical.LogicalTableScan;
+import org.apache.calcite.rel.logical.LogicalFilter;
 
 import static com.hazelcast.jet.sql.impl.OptUtils.CONVENTION_LOGICAL;
 
-public final class IMapScanLogicalRule extends ConverterRule {
-    public static final RelOptRule INSTANCE = new IMapScanLogicalRule();
+public final class IMapFilterLogicalRule extends ConverterRule {
+    public static final RelOptRule INSTANCE = new IMapFilterLogicalRule();
 
-    private IMapScanLogicalRule() {
-        super(LogicalTableScan.class, Convention.NONE, CONVENTION_LOGICAL, IMapScanLogicalRule.class.getSimpleName());
+    private IMapFilterLogicalRule() {
+        super(LogicalFilter.class, Convention.NONE, CONVENTION_LOGICAL, IMapFilterLogicalRule.class.getSimpleName());
     }
 
     @Override
     public RelNode convert(RelNode rel) {
-        LogicalTableScan scan = (LogicalTableScan) rel;
+        LogicalFilter filter = (LogicalFilter) rel;
+        RelNode input = filter.getInput();
 
-        return new IMapScanLogicalRel(
-            scan.getCluster(),
-            OptUtils.toLogicalConvention(scan.getTraitSet()),
-            scan.getTable(),
-            null,
-            null
+        return new IMapFilterLogicalRel(
+            filter.getCluster(),
+            OptUtils.toLogicalConvention(filter.getTraitSet()),
+            OptUtils.toLogicalInput(input),
+            filter.getCondition()
         );
     }
 }

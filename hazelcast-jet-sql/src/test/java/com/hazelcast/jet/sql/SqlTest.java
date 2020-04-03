@@ -38,7 +38,7 @@ import java.util.Objects;
 
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.core.TestUtil.createMap;
-import static com.hazelcast.jet.sql.impl.imap.IMapSqlConnector.TO_VALUE_CLASS;
+import static com.hazelcast.jet.sql.impl.connector.imap.IMapSqlConnector.TO_VALUE_CLASS;
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyMap;
 import static java.util.Collections.singletonList;

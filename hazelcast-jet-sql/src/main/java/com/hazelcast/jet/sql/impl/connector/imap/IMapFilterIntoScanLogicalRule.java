@@ -14,9 +14,10 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.sql.impl.imap;
+package com.hazelcast.jet.sql.impl.connector.imap;
 
 import com.hazelcast.jet.sql.impl.OptUtils;
+import com.hazelcast.jet.sql.impl.connector.FullScanLogicalRel;
 import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelOptRuleCall;
 import org.apache.calcite.rel.core.Filter;
@@ -54,8 +55,8 @@ public final class IMapFilterIntoScanLogicalRule extends RelOptRule {
 
         Mapping mapping;
 
-        if (scan instanceof IMapScanLogicalRel) {
-            IMapScanLogicalRel scan0 = (IMapScanLogicalRel) scan;
+        if (scan instanceof FullScanLogicalRel) {
+            FullScanLogicalRel scan0 = (FullScanLogicalRel) scan;
 
             projects = scan0.getProjects();
             oldFilter = scan0.getFilter();
@@ -79,7 +80,7 @@ public final class IMapFilterIntoScanLogicalRule extends RelOptRule {
             newFilter = RexUtil.composeConjunction(scan.getCluster().getRexBuilder(), nodes, true);
         }
 
-        IMapScanLogicalRel newScan = new IMapScanLogicalRel(
+        FullScanLogicalRel newScan = new FullScanLogicalRel(
             scan.getCluster(),
             OptUtils.toLogicalConvention(scan.getTraitSet()),
             scan.getTable(),
