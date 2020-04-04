@@ -31,9 +31,9 @@ public final class UnaryService<I, O> implements GrpcService<I, O> {
 
     public UnaryService(
             @Nonnull ManagedChannel channel,
-            @Nonnull FunctionEx<ManagedChannel, BiConsumerEx<I, StreamObserver<O>>> createStubFn
+            @Nonnull FunctionEx<ManagedChannel, BiConsumerEx<I, StreamObserver<O>>> callStubFn
     ) {
-        callFn = createStubFn.apply(channel);
+        callFn = callStubFn.apply(channel);
     }
 
     @Override @Nonnull

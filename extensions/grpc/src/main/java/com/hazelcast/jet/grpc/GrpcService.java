@@ -30,13 +30,15 @@ import java.util.concurrent.CompletableFuture;
  *
  * @param <I> Type of the request object
  * @param <O> Type of the response object
+ *
+ * @since 4.1
  */
 @FunctionalInterface
 public interface GrpcService<I, O> {
 
     /**
-     * Calls the requested service and returns a future
-     * which will be completed with the result once the
+     * Calls the requested service and returns a future which will be
+     * completed with the result once a response is received.
      */
     @Nonnull
     CompletableFuture<O> call(@Nonnull I input);

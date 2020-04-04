@@ -44,10 +44,10 @@ public final class BidirectionalStreamingService<I, O> implements GrpcService<I,
     public BidirectionalStreamingService(
             Context context,
             ManagedChannel channel,
-            FunctionEx<ManagedChannel, FunctionEx<StreamObserver<O>, StreamObserver<I>>> createStubFn
+            FunctionEx<ManagedChannel, FunctionEx<StreamObserver<O>, StreamObserver<I>>> callStubFn
     ) {
         logger = context.logger();
-        sink = createStubFn.apply(channel).apply(new OutputMessageObserver());
+        sink = callStubFn.apply(channel).apply(new OutputMessageObserver());
     }
 
     @Override @Nonnull

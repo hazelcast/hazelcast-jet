@@ -19,7 +19,6 @@ package com.hazelcast.jet.grpc;
 import com.hazelcast.jet.SimpleTestInClusterSupport;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.grpc.greeter.GreeterGrpc;
-import com.hazelcast.jet.grpc.greeter.GreeterGrpc.GreeterStub;
 import com.hazelcast.jet.grpc.greeter.GreeterOuterClass.HelloReply;
 import com.hazelcast.jet.grpc.greeter.GreeterOuterClass.HelloRequest;
 import com.hazelcast.jet.impl.util.ExceptionUtil;
@@ -233,10 +232,7 @@ public class GrpcServiceTest extends SimpleTestInClusterSupport {
     private ServiceFactory<?, GrpcService<HelloRequest, HelloReply>> unary(int port) {
         return unaryService(
                 () -> ManagedChannelBuilder.forAddress("localhost", port).usePlaintext(),
-                channel -> {
-                    GreeterStub stub = GreeterGrpc.newStub(channel);
-                    return stub::sayHelloUnary;
-                }
+                channel -> GreeterGrpc.newStub(channel)::sayHelloUnary
         );
     }
 
@@ -244,10 +240,7 @@ public class GrpcServiceTest extends SimpleTestInClusterSupport {
     bidirectionalStreaming(int port) {
         return bidirectionalStreamingService(
                 () -> ManagedChannelBuilder.forAddress("localhost", port).usePlaintext(),
-                channel -> {
-                    GreeterStub stub = GreeterGrpc.newStub(channel);
-                    return stub::sayHelloBidirectional;
-                }
+                channel -> GreeterGrpc.newStub(channel)::sayHelloBidirectional
         );
     }
 
