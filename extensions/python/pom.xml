@@ -149,7 +149,6 @@
             <artifactId>hazelcast-jet-grpc</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
-
         <!-- Test Dependencies -->
         <dependency>
             <groupId>com.hazelcast.jet</groupId>
