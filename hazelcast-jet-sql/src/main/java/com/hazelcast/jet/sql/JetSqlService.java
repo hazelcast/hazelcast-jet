@@ -113,20 +113,16 @@ public class JetSqlService {
     private final JetInstance instance;
     private final JetSchema schema;
     private final SqlValidator validator;
-    private final SqlToRelConverter sqlToRelConverter;
     private final VolcanoPlanner planner;
+    private final CalciteConnectionConfig connectionConfig;
 
     public JetSqlService(JetInstance instance) {
         this.instance = instance;
         this.schema = new JetSchema(instance);
         this.validator = createValidator();
-
-        JavaTypeFactory typeFactory = new JetTypeFactory();
-        CalciteConnectionConfig connectionConfig = createConnectionConfig();
-        Prepare.CatalogReader catalogReader = createCatalogReader(typeFactory, connectionConfig, schema);
+        
+        connectionConfig = createConnectionConfig();
         planner = createPlanner(connectionConfig);
-        RelOptCluster cluster = createCluster(planner, typeFactory);
-        this.sqlToRelConverter = createSqlToRelConverter(catalogReader, validator, cluster);
     }
 
     /// SCHEMA METHODS
@@ -160,7 +156,7 @@ public class JetSqlService {
         schema.createTableInt(tableName, serverName, tableOptions, fields);
     }
 
-        private static RelOptCluster createCluster(VolcanoPlanner planner, JavaTypeFactory typeFactory) {
+    private static RelOptCluster createCluster(VolcanoPlanner planner, JavaTypeFactory typeFactory) {
         // TODO: Use CachingRelMetadataProvider instead?
         RelMetadataProvider relMetadataProvider = JaninoRelMetadataProvider.of(METADATA_PROVIDER_INSTANCE);
 
@@ -237,6 +233,12 @@ public class JetSqlService {
      * @return Relational tree.
      */
     private RelNode convert(SqlNode node) {
+        JavaTypeFactory typeFactory = new JetTypeFactory();
+        
+        Prepare.CatalogReader catalogReader = createCatalogReader(typeFactory, connectionConfig, schema);
+        RelOptCluster cluster = createCluster(planner, typeFactory);
+        SqlToRelConverter sqlToRelConverter = createSqlToRelConverter(catalogReader, validator, cluster);
+        
         // 1. Perform initial conversion.
         RelRoot root = sqlToRelConverter.convertQuery(node, false, true);
 
