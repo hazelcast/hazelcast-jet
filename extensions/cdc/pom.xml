@@ -107,6 +107,13 @@
         </dependency>
 
         <dependency>
+            <groupId>com.hazelcast.jet.contrib</groupId>
+            <artifactId>mongodb</artifactId>
+            <version>0.3-SNAPSHOT</version>
+            <classifier>tests</classifier>
+        </dependency>
+
+        <dependency>
             <groupId>io.debezium</groupId>
             <artifactId>debezium-connector-mysql</artifactId>
             <version>${debezium.version}</version>
