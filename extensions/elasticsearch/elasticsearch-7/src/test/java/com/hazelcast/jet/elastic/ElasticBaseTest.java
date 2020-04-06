@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.elasticsearch;
+package com.hazelcast.jet.elastic;
 
 import com.hazelcast.collection.IList;
 import com.hazelcast.function.FunctionEx;
@@ -43,7 +43,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
-public abstract class ElasticsearchBaseTest extends JetTestSupport {
+public abstract class ElasticBaseTest extends JetTestSupport {
 
     public static final String ELASTICSEARCH_IMAGE = "elasticsearch:7.6.1";
 

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.elasticsearch.impl;
+package com.hazelcast.jet.elastic.impl;
 
 import com.hazelcast.function.ConsumerEx;
 import com.hazelcast.function.FunctionEx;
@@ -22,7 +22,7 @@ import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.Traversers;
 import com.hazelcast.jet.core.AbstractProcessor;
-import com.hazelcast.jet.elasticsearch.ElasticsearchSourceBuilder;
+import com.hazelcast.jet.elastic.ElasticSourceBuilder;
 import com.hazelcast.logging.ILogger;
 import org.apache.http.HttpHost;
 import org.apache.lucene.search.TotalHits;
@@ -50,11 +50,11 @@ import static java.util.stream.Collectors.toList;
 
 final class ElasticProcessor<T> extends AbstractProcessor {
 
-    private ElasticsearchSourceBuilder<T> builder;
+    private ElasticSourceBuilder<T> builder;
     private final List<Shard> shards;
     private Traverser<T> traverser;
 
-    ElasticProcessor(ElasticsearchSourceBuilder<T> builder, List<Shard> shards) {
+    ElasticProcessor(ElasticSourceBuilder<T> builder, List<Shard> shards) {
         this.builder = builder;
         this.shards = shards;
     }
@@ -147,7 +147,7 @@ final class ElasticProcessor<T> extends AbstractProcessor {
         private int nextHit;
         private String scrollId;
 
-        ElasticScrollTraverser(ElasticsearchSourceBuilder<R> builder, RestHighLevelClient client, SearchRequest sr,
+        ElasticScrollTraverser(ElasticSourceBuilder<R> builder, RestHighLevelClient client, SearchRequest sr,
                                ILogger logger) {
             this.client = client;
             this.optionsFn = builder.optionsFn();

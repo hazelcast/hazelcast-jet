@@ -14,16 +14,14 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.elasticsearch.impl;
+package com.hazelcast.jet.elastic.impl;
 
 import com.hazelcast.cluster.Address;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.processor.Processors;
-import com.hazelcast.jet.elasticsearch.ElasticsearchSourceBuilder;
-import com.hazelcast.logging.ILogger;
-import com.hazelcast.partition.strategy.StringPartitioningStrategy;
+import com.hazelcast.jet.elastic.ElasticSourceBuilder;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
@@ -47,12 +45,12 @@ public class ElasticProcessorMetaSupplier<T> implements ProcessorMetaSupplier {
     private static final long serialVersionUID = 1L;
 
     @Nonnull
-    private final ElasticsearchSourceBuilder<T> builder;
+    private final ElasticSourceBuilder<T> builder;
 
     private Map<String, List<Shard>> assignedShards;
     private transient Address ownerAddress;
 
-    public ElasticProcessorMetaSupplier(@Nonnull ElasticsearchSourceBuilder<T> builder) {
+    public ElasticProcessorMetaSupplier(@Nonnull ElasticSourceBuilder<T> builder) {
         this.builder = builder;
     }
 

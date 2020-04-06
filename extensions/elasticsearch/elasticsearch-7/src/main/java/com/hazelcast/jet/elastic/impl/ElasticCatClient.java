@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.elasticsearch.impl;
+package com.hazelcast.jet.elastic.impl;
 
 import com.hazelcast.internal.json.Json;
 import com.hazelcast.internal.json.JsonArray;
 import com.hazelcast.internal.json.JsonObject;
 import com.hazelcast.internal.json.JsonValue;
 import com.hazelcast.jet.JetException;
-import com.hazelcast.jet.elasticsearch.impl.Shard.Prirep;
+import com.hazelcast.jet.elastic.impl.Shard.Prirep;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.logging.Logger;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.elasticsearch;
+package com.hazelcast.jet.elastic;
 
 import com.hazelcast.function.ConsumerEx;
 import com.hazelcast.function.FunctionEx;
@@ -46,7 +46,7 @@ import static java.util.Objects.requireNonNull;
  *
  * @since 4.1
  */
-public class ElasticsearchSinkBuilder<T> implements Serializable {
+public class ElasticSinkBuilder<T> implements Serializable {
 
     private String name = "elastic";
     private SupplierEx<? extends RestHighLevelClient> clientSupplier;
@@ -62,7 +62,7 @@ public class ElasticsearchSinkBuilder<T> implements Serializable {
      * @param sinkName user-friendly sink name
      */
     @Nonnull
-    public ElasticsearchSinkBuilder<T> name(@Nonnull String sinkName) {
+    public ElasticSinkBuilder<T> name(@Nonnull String sinkName) {
         this.name = requireNonNull(sinkName, "sinkName");
         return this;
     }
@@ -78,7 +78,7 @@ public class ElasticsearchSinkBuilder<T> implements Serializable {
      * @param clientSupplier supplier for configure Elasticsearch REST client
      */
     @Nonnull
-    public ElasticsearchSinkBuilder<T> clientSupplier(SupplierEx<? extends RestHighLevelClient> clientSupplier) {
+    public ElasticSinkBuilder<T> clientSupplier(SupplierEx<? extends RestHighLevelClient> clientSupplier) {
         checkSerializable(clientSupplier, "clientSupplier");
         this.clientSupplier = clientSupplier;
         return this;
@@ -95,7 +95,7 @@ public class ElasticsearchSinkBuilder<T> implements Serializable {
      * @param destroyFn destroy function
      */
     @Nonnull
-    public ElasticsearchSinkBuilder<T> destroyFn(ConsumerEx<? super RestHighLevelClient> destroyFn) {
+    public ElasticSinkBuilder<T> destroyFn(ConsumerEx<? super RestHighLevelClient> destroyFn) {
         checkSerializable(destroyFn, "destroyFn");
         this.destroyFn = destroyFn;
         return this;
@@ -112,7 +112,7 @@ public class ElasticsearchSinkBuilder<T> implements Serializable {
      * @param bulkRequestSupplier supplier for the bulk request
      */
     @Nonnull
-    public ElasticsearchSinkBuilder<T> bulkRequestSupplier(SupplierEx<BulkRequest> bulkRequestSupplier) {
+    public ElasticSinkBuilder<T> bulkRequestSupplier(SupplierEx<BulkRequest> bulkRequestSupplier) {
         checkSerializable(bulkRequestSupplier, "clientSupplier");
         this.bulkRequestSupplier = bulkRequestSupplier;
         return this;
@@ -131,7 +131,7 @@ public class ElasticsearchSinkBuilder<T> implements Serializable {
      *                  {@link org.elasticsearch.action.delete.DeleteRequest}
      */
     @Nonnull
-    public ElasticsearchSinkBuilder<T> mapItemFn(FunctionEx<? super T, ? extends DocWriteRequest<?>> mapItemFn) {
+    public ElasticSinkBuilder<T> mapItemFn(FunctionEx<? super T, ? extends DocWriteRequest<?>> mapItemFn) {
         checkSerializable(mapItemFn, "mapItemFn");
         this.mapItemFn = mapItemFn;
         return this;
@@ -147,7 +147,7 @@ public class ElasticsearchSinkBuilder<T> implements Serializable {
      * @param optionsFn function that provides {@link RequestOptions}
      */
     @Nonnull
-    public ElasticsearchSinkBuilder<T> optionsFn(FunctionEx<? super ActionRequest, RequestOptions> optionsFn) {
+    public ElasticSinkBuilder<T> optionsFn(FunctionEx<? super ActionRequest, RequestOptions> optionsFn) {
         checkSerializable(optionsFn, "optionsFn");
         this.optionsFn = optionsFn;
         return this;
@@ -158,7 +158,7 @@ public class ElasticsearchSinkBuilder<T> implements Serializable {
     }
 
     @Nonnull
-    public ElasticsearchSinkBuilder<T> preferredLocalParallelism(int preferredLocalParallelism) {
+    public ElasticSinkBuilder<T> preferredLocalParallelism(int preferredLocalParallelism) {
         this.preferredLocalParallelism = preferredLocalParallelism;
         return this;
     }

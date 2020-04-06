@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.elasticsearch;
+package com.hazelcast.jet.elastic;
 
 import com.google.common.collect.ImmutableMap;
 import com.hazelcast.function.SupplierEx;
@@ -32,12 +32,12 @@ import org.testcontainers.elasticsearch.ElasticsearchContainer;
 
 import java.util.function.Supplier;
 
-import static com.hazelcast.jet.elasticsearch.ElasticsearchBaseTest.ELASTICSEARCH_IMAGE;
-import static com.hazelcast.jet.elasticsearch.ElasticsearchSources.client;
-import static com.hazelcast.jet.elasticsearch.ElasticsearchSources.elasticsearch;
+import static com.hazelcast.jet.elastic.ElasticBaseTest.ELASTICSEARCH_IMAGE;
+import static com.hazelcast.jet.elastic.ElasticSources.client;
+import static com.hazelcast.jet.elastic.ElasticSources.elastic;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-public class AuthElasticsearchSourcesTest extends BaseElasticsearchTest {
+public class AuthElasticSourcesTest extends BaseElasticTest {
 
     /**
      * Using elastic container configured with security enabled
@@ -80,7 +80,7 @@ public class AuthElasticsearchSourcesTest extends BaseElasticsearchTest {
         indexDocument("my-index", ImmutableMap.of("name", "Frantisek"));
 
         Pipeline p = Pipeline.create();
-        p.readFrom(elasticsearch(elasticClientSupplier()))
+        p.readFrom(ElasticSources.elastic(elasticClientSupplier()))
          .writeTo(Sinks.list(results));
 
         submitJob(p);
@@ -93,7 +93,7 @@ public class AuthElasticsearchSourcesTest extends BaseElasticsearchTest {
         Integer port = container.getMappedPort(PORT);
 
         Pipeline p = Pipeline.create();
-        p.readFrom(elasticsearch(() -> client("elastic", "WrongPassword", containerIp, port)))
+        p.readFrom(ElasticSources.elastic(() -> client("elastic", "WrongPassword", containerIp, port)))
          .writeTo(Sinks.list(results));
 
         assertThatThrownBy(() -> submitJob(p))

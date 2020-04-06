@@ -21,7 +21,7 @@ import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Observable;
 import com.hazelcast.jet.datamodel.Tuple2;
-import com.hazelcast.jet.elasticsearch.ElasticsearchSources;
+import com.hazelcast.jet.elastic.ElasticSources;
 import com.hazelcast.jet.pipeline.BatchSource;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
@@ -35,14 +35,14 @@ import static com.hazelcast.jet.aggregate.AggregateOperations.toList;
 import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
 import static com.hazelcast.jet.pipeline.Pipeline.create;
 
-public class ElasticsearchSourceExample {
+public class ElasticSourceExample {
 
     private static final String ROLES_OBSERVABLE = "roles";
 
     public static void main(String[] args) {
         try {
             Pipeline p = create();
-            BatchSource<Tuple2<String, String>> elasticsearch = ElasticsearchSources.elasticsearch(
+            BatchSource<Tuple2<String, String>> elasticsearch = ElasticSources.elastic(
                     hit -> {
                         Map<String, Object> map = hit.getSourceAsMap();
                         return tuple2((String) map.get("role"), (String) map.get("name"));

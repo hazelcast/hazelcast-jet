@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.elasticsearch.impl;
+package com.hazelcast.jet.elastic.impl;
 
-import com.hazelcast.jet.elasticsearch.ElasticsearchSourceBuilder;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorSupplier;
+import com.hazelcast.jet.elastic.ElasticSourceBuilder;
 import com.hazelcast.jet.impl.util.Util;
 
 import javax.annotation.Nonnull;
@@ -33,12 +33,12 @@ import static java.util.Objects.requireNonNull;
 
 class ElasticProcessorSupplier<R> implements ProcessorSupplier {
 
-    private final ElasticsearchSourceBuilder<R> builder;
+    private final ElasticSourceBuilder<R> builder;
 
     private final List<Shard> shards;
     private Map<Integer, List<Shard>> shardsByProcessor;
 
-    ElasticProcessorSupplier(@Nonnull ElasticsearchSourceBuilder<R> builder,
+    ElasticProcessorSupplier(@Nonnull ElasticSourceBuilder<R> builder,
                              @Nonnull List<Shard> shards) {
         this.builder = requireNonNull(builder);
         this.shards = requireNonNull(shards);

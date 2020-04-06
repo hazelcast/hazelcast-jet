@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.elasticsearch.impl;
+package com.hazelcast.jet.elastic.impl;
 
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.core.test.TestOutbox;
 import com.hazelcast.jet.core.test.TestProcessorContext;
-import com.hazelcast.jet.elasticsearch.ElasticsearchSourceBuilder;
-import com.hazelcast.jet.elasticsearch.impl.Shard.Prirep;
+import com.hazelcast.jet.elastic.ElasticSourceBuilder;
+import com.hazelcast.jet.elastic.impl.Shard.Prirep;
 import org.apache.lucene.search.TotalHits;
 import org.elasticsearch.action.ActionRequest;
 import org.elasticsearch.action.search.SearchRequest;
@@ -108,7 +108,7 @@ public class ElasticProcessorTest {
             throws Exception {
 
         RestHighLevelClient client = mockClient;
-        ElasticsearchSourceBuilder<String> builder = new ElasticsearchSourceBuilder<String>()
+        ElasticSourceBuilder<String> builder = new ElasticSourceBuilder<String>()
                 .clientSupplier(() -> client)
                 .searchRequestSupplier(() -> new SearchRequest("*"))
                 .optionsFn(optionsFn)

@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.elasticsearch.impl;
+package com.hazelcast.jet.elastic.impl;
 
 import com.hazelcast.jet.JetException;
-import com.hazelcast.jet.elasticsearch.impl.Shard.Prirep;
+import com.hazelcast.jet.elastic.impl.Shard.Prirep;
 import org.junit.Test;
 
 import java.util.Collection;

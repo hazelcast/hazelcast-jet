@@ -49,7 +49,7 @@
                 <configuration>
                     <archive>
                         <manifestEntries>
-                            <Automatic-Module-Name>com.hazelcast.jet.elasticsearch</Automatic-Module-Name>
+                            <Automatic-Module-Name>com.hazelcast.jet.elastic</Automatic-Module-Name>
                         </manifestEntries>
                     </archive>
                 </configuration>

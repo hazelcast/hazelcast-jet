@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.elasticsearch;
+package com.hazelcast.jet.elastic;
 
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sink;
@@ -38,11 +38,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.entry;
 import static org.elasticsearch.client.RequestOptions.DEFAULT;
 
-public abstract class CommonElasticsearchSinksTest extends BaseElasticsearchTest {
+public abstract class CommonElasticSinksTest extends BaseElasticTest {
 
     @Test
     public void shouldStoreDocument() throws Exception {
-        Sink<TestItem> elasticSink = new ElasticsearchSinkBuilder<TestItem>()
+        Sink<TestItem> elasticSink = new ElasticSinkBuilder<TestItem>()
                 .clientSupplier(elasticClientSupplier())
                 .bulkRequestSupplier(() -> new BulkRequest().setRefreshPolicy(RefreshPolicy.IMMEDIATE))
                 .mapItemFn(item -> new IndexRequest("my-index").source(item.asMap()))
@@ -59,7 +59,7 @@ public abstract class CommonElasticsearchSinksTest extends BaseElasticsearchTest
 
     @Test
     public void shouldStoreBatchOfDocuments() throws IOException {
-        Sink<TestItem> elasticSink = new ElasticsearchSinkBuilder<TestItem>()
+        Sink<TestItem> elasticSink = new ElasticSinkBuilder<TestItem>()
                 .clientSupplier(elasticClientSupplier())
                 .mapItemFn(item -> new IndexRequest("my-index").source(item.asMap()))
                 .build();
@@ -83,7 +83,7 @@ public abstract class CommonElasticsearchSinksTest extends BaseElasticsearchTest
 
     @Test
     public void whenCreateSinkUsingFactoryMethodThenShouldStoreDocument() throws Exception {
-        Sink<TestItem> elasticSink = ElasticsearchSinks.elasticsearch(
+        Sink<TestItem> elasticSink = ElasticSinks.elastic(
                 elasticClientSupplier(),
                 item -> new IndexRequest("my-index").source(item.asMap())
         );

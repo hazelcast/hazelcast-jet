@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.elasticsearch;
+package com.hazelcast.jet.elastic;
 
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.function.SupplierEx;
@@ -30,29 +30,25 @@ import javax.annotation.Nullable;
 
 /**
  * Provides factory methods for Elasticsearch sources.
- * Alternatively you can use {@link ElasticsearchSourceBuilder}
- * <p>
- * TODO maybe rename to ElasticSources - Elastic is the company name, but is also used interchangeably for elasticsearch
- * it would make the API bit nicer to use, shorter in places etc.. same for {@link #elasticsearch()} methods
+ * Alternatively you can use {@link ElasticSourceBuilder}
  *
  * @since 4.1
  */
-public final class ElasticsearchSources {
+public final class ElasticSources {
 
-    private static final String DEFAULT_SCROLL_TIMEOUT = "60s";
     private static final int DEFAULT_PORT = 9200;
 
-    private ElasticsearchSources() {
+    private ElasticSources() {
     }
 
     /**
      * Creates a source which queries local instance of Elasticsearch for all documents
      * <p>
-     * Useful for quick prototyping. See other methods {@link #elasticsearch(SupplierEx, SupplierEx, FunctionEx)}
+     * Useful for quick prototyping. See other methods {@link #elastic(SupplierEx, SupplierEx, FunctionEx)}
      * and {@link #builder()}
      */
-    public static BatchSource<String> elasticsearch() {
-        return elasticsearch(() -> new RestHighLevelClient(
+    public static BatchSource<String> elastic() {
+        return elastic(() -> new RestHighLevelClient(
                 RestClient.builder(new HttpHost("localhost", DEFAULT_PORT))
         ));
     }
@@ -62,16 +58,16 @@ public final class ElasticsearchSources {
      * Queries all indexes for all documents.
      * Uses {@link SearchHit#getSourceAsString()} as mapping function
      */
-    public static BatchSource<String> elasticsearch(@Nonnull SupplierEx<RestHighLevelClient> clientSupplier) {
-        return elasticsearch(clientSupplier, SearchHit::getSourceAsString);
+    public static BatchSource<String> elastic(@Nonnull SupplierEx<RestHighLevelClient> clientSupplier) {
+        return elastic(clientSupplier, SearchHit::getSourceAsString);
     }
 
     /**
      * Creates a source which queries local instance of Elasticsearch for all documents
      * Uses {@link SearchHit#getSourceAsString()} as mapping function
      */
-    public static <T> BatchSource<T> elasticsearch(@Nonnull FunctionEx<? super SearchHit, T> mapHitFn) {
-        return elasticsearch(() -> new RestHighLevelClient(
+    public static <T> BatchSource<T> elastic(@Nonnull FunctionEx<? super SearchHit, T> mapHitFn) {
+        return elastic(() -> new RestHighLevelClient(
                         RestClient.builder(new HttpHost("localhost", DEFAULT_PORT))
                 ),
                 mapHitFn
@@ -87,10 +83,10 @@ public final class ElasticsearchSources {
      * @param mapHitFn       supplier of a function mapping the result from SearchHit to a result type
      * @param <T>            result type returned by the map function
      */
-    public static <T> BatchSource<T> elasticsearch(
+    public static <T> BatchSource<T> elastic(
             @Nonnull SupplierEx<RestHighLevelClient> clientSupplier,
             @Nonnull FunctionEx<? super SearchHit, T> mapHitFn) {
-        return elasticsearch(clientSupplier, SearchRequest::new, mapHitFn);
+        return elastic(clientSupplier, SearchRequest::new, mapHitFn);
     }
 
     /**
@@ -101,12 +97,12 @@ public final class ElasticsearchSources {
      * @param mapHitFn              supplier of a function mapping the result from SearchHit to a target type
      * @param <T>                   result type returned by the map function
      */
-    public static <T> BatchSource<T> elasticsearch(
+    public static <T> BatchSource<T> elastic(
             @Nonnull SupplierEx<RestHighLevelClient> clientSupplier,
             @Nonnull SupplierEx<SearchRequest> searchRequestSupplier,
             @Nonnull FunctionEx<? super SearchHit, T> mapHitFn
     ) {
-        return ElasticsearchSources.<T>builder()
+        return ElasticSources.<T>builder()
                 .clientSupplier(clientSupplier)
                 .searchRequestSupplier(searchRequestSupplier)
                 .mapHitFn(mapHitFn)
@@ -114,12 +110,12 @@ public final class ElasticsearchSources {
     }
 
     /**
-     * Returns {@link ElasticsearchSourceBuilder}
+     * Returns {@link ElasticSourceBuilder}
      *
      * @param <T> result type returned by the map function
      */
-    public static <T> ElasticsearchSourceBuilder<T> builder() {
-        return new ElasticsearchSourceBuilder<>();
+    public static <T> ElasticSourceBuilder<T> builder() {
+        return new ElasticSourceBuilder<>();
     }
 
     /**
@@ -134,6 +130,6 @@ public final class ElasticsearchSources {
                                              @Nullable String password,
                                              @Nonnull String hostname,
                                              int port) {
-        return ElasticsearchSinks.client(username, password, hostname, port);
+        return ElasticSinks.client(username, password, hostname, port);
     }
 }

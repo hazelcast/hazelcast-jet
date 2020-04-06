@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.elasticsearch;
+package com.hazelcast.jet.elastic;
 
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.function.SupplierEx;
@@ -33,15 +33,15 @@ import static org.apache.http.auth.AuthScope.ANY;
 
 /**
  * Provides factory methods for Elasticsearch sinks.
- * Alternatively you can use {@link ElasticsearchSinkBuilder}
+ * Alternatively you can use {@link ElasticSinkBuilder}
  *
  * @since 4.1
  */
-public final class ElasticsearchSinks {
+public final class ElasticSinks {
 
     private static final int PORT = 9200;
 
-    private ElasticsearchSinks() {
+    private ElasticSinks() {
     }
 
     /**
@@ -49,8 +49,8 @@ public final class ElasticsearchSinks {
      *
      * @param mapItemFn function that maps items from a stream to an indexing request
      */
-    public static <T> Sink<T> elasticsearch(@Nonnull FunctionEx<? super T, ? extends DocWriteRequest<?>> mapItemFn) {
-        return elasticsearch(() -> client("localhost", PORT), mapItemFn);
+    public static <T> Sink<T> elastic(@Nonnull FunctionEx<? super T, ? extends DocWriteRequest<?>> mapItemFn) {
+        return elastic(() -> client("localhost", PORT), mapItemFn);
     }
 
     /**
@@ -60,23 +60,23 @@ public final class ElasticsearchSinks {
      * @param mapItemFn      function that maps items from a stream to an indexing request
      * @param <T>            type of incoming items
      */
-    public static <T> Sink<T> elasticsearch(
+    public static <T> Sink<T> elastic(
             @Nonnull SupplierEx<RestHighLevelClient> clientSupplier,
             @Nonnull FunctionEx<? super T, ? extends DocWriteRequest<?>> mapItemFn
     ) {
-        return new ElasticsearchSinkBuilder<T>()
+        return new ElasticSinkBuilder<T>()
                 .clientSupplier(clientSupplier)
                 .mapItemFn(mapItemFn)
                 .build();
     }
 
     /**
-     * Returns {@link ElasticsearchSinkBuilder}
+     * Returns {@link ElasticSinkBuilder}
      *
      * @param <T> type of the items in the pipeline
      */
-    public static <T> ElasticsearchSinkBuilder<T> builder() {
-        return new ElasticsearchSinkBuilder<T>();
+    public static <T> ElasticSinkBuilder<T> builder() {
+        return new ElasticSinkBuilder<T>();
     }
 
     static RestHighLevelClient client(String hostname, int port) {

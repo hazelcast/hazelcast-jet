@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.elasticsearch;
+package com.hazelcast.jet.elastic;
 
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.JetInstance;
@@ -33,7 +33,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 /**
  * Test running single Jet member locally and Elastic in docker
  */
-public class LocalElasticsearchSourcesTest extends CommonElasticsearchSourcesTest {
+public class LocalElasticSourcesTest extends CommonElasticSourcesTest {
 
     private JetTestInstanceFactory factory = new JetTestInstanceFactory();
 
@@ -54,7 +54,7 @@ public class LocalElasticsearchSourcesTest extends CommonElasticsearchSourcesTes
 
         Pipeline p = Pipeline.create();
 
-        BatchSource<String> source = new ElasticsearchSourceBuilder<String>()
+        BatchSource<String> source = new ElasticSourceBuilder<String>()
                 .clientSupplier(elasticClientSupplier())
                 .searchRequestSupplier(() -> new SearchRequest("my-index"))
                 .mapHitFn(hit -> (String) hit.getSourceAsMap().get("name"))

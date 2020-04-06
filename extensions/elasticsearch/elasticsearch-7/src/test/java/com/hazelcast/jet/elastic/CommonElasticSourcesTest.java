@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.elasticsearch;
+package com.hazelcast.jet.elastic;
 
 import com.hazelcast.jet.pipeline.BatchSource;
 import com.hazelcast.jet.pipeline.Pipeline;
@@ -43,7 +43,7 @@ import static org.elasticsearch.index.query.QueryBuilders.matchAllQuery;
  * <p>
  * RestHighLevelClient is used to create data in Elastic to isolate possible Source and Sink issues.
  */
-public abstract class CommonElasticsearchSourcesTest extends BaseElasticsearchTest {
+public abstract class CommonElasticSourcesTest extends BaseElasticTest {
 
     @Test
     public void shouldReadEmptyIndex() throws IOException {
@@ -56,7 +56,7 @@ public abstract class CommonElasticsearchSourcesTest extends BaseElasticsearchTe
 
         Pipeline p = Pipeline.create();
 
-        BatchSource<String> source = new ElasticsearchSourceBuilder<String>()
+        BatchSource<String> source = new ElasticSourceBuilder<String>()
                 .clientSupplier(elasticClientSupplier())
                 .searchRequestSupplier(() -> new SearchRequest("my-index"))
                 .mapHitFn(SearchHit::getSourceAsString)
@@ -76,7 +76,7 @@ public abstract class CommonElasticsearchSourcesTest extends BaseElasticsearchTe
 
         Pipeline p = Pipeline.create();
 
-        BatchSource<String> source = new ElasticsearchSourceBuilder<String>()
+        BatchSource<String> source = new ElasticSourceBuilder<String>()
                 .clientSupplier(elasticClientSupplier())
                 .searchRequestSupplier(() -> new SearchRequest("my-index"))
                 .mapHitFn(hit -> (String) hit.getSourceAsMap().get("name"))
@@ -95,7 +95,7 @@ public abstract class CommonElasticsearchSourcesTest extends BaseElasticsearchTe
 
         Pipeline p = Pipeline.create();
 
-        BatchSource<String> source = ElasticsearchSources.elasticsearch(
+        BatchSource<String> source = ElasticSources.elastic(
                 elasticClientSupplier(),
                 hit -> (String) hit.getSourceAsMap().get("name")
         );
@@ -114,7 +114,7 @@ public abstract class CommonElasticsearchSourcesTest extends BaseElasticsearchTe
 
         Pipeline p = Pipeline.create();
 
-        BatchSource<String> source = ElasticsearchSources.elasticsearch(
+        BatchSource<String> source = ElasticSources.elastic(
                 elasticClientSupplier(),
                 () -> new SearchRequest("my-index-1"),
                 hit -> (String) hit.getSourceAsMap().get("name")
@@ -133,7 +133,7 @@ public abstract class CommonElasticsearchSourcesTest extends BaseElasticsearchTe
 
         Pipeline p = Pipeline.create();
 
-        BatchSource<String> source = new ElasticsearchSourceBuilder<String>()
+        BatchSource<String> source = new ElasticSourceBuilder<String>()
                 .clientSupplier(elasticClientSupplier())
                 .searchRequestSupplier(() -> {
                     SearchRequest sr = new SearchRequest("my-index");
@@ -159,7 +159,7 @@ public abstract class CommonElasticsearchSourcesTest extends BaseElasticsearchTe
 
         Pipeline p = Pipeline.create();
 
-        BatchSource<String> source = new ElasticsearchSourceBuilder<String>()
+        BatchSource<String> source = new ElasticSourceBuilder<String>()
                 .clientSupplier(elasticClientSupplier())
                 .searchRequestSupplier(() -> new SearchRequest("my-index-*"))
                 .mapHitFn(hit -> (String) hit.getSourceAsMap().get("name"))
@@ -179,7 +179,7 @@ public abstract class CommonElasticsearchSourcesTest extends BaseElasticsearchTe
 
         Pipeline p = Pipeline.create();
 
-        BatchSource<String> source = new ElasticsearchSourceBuilder<String>()
+        BatchSource<String> source = new ElasticSourceBuilder<String>()
                 .clientSupplier(elasticClientSupplier())
                 .searchRequestSupplier(() -> new SearchRequest("my-index-1"))
                 .mapHitFn(hit -> (String) hit.getSourceAsMap().get("name"))
@@ -199,7 +199,7 @@ public abstract class CommonElasticsearchSourcesTest extends BaseElasticsearchTe
 
         Pipeline p = Pipeline.create();
 
-        BatchSource<String> source = new ElasticsearchSourceBuilder<String>()
+        BatchSource<String> source = new ElasticSourceBuilder<String>()
                 .clientSupplier(elasticClientSupplier())
                 .searchRequestSupplier(() -> new SearchRequest("my-index")
                         .source(new SearchSourceBuilder().query(QueryBuilders.matchQuery("name", "Frantisek"))))
@@ -219,7 +219,7 @@ public abstract class CommonElasticsearchSourcesTest extends BaseElasticsearchTe
 
         Pipeline p = Pipeline.create();
 
-        BatchSource<String> source = new ElasticsearchSourceBuilder<String>()
+        BatchSource<String> source = new ElasticSourceBuilder<String>()
                 .clientSupplier(elasticClientSupplier())
                 .searchRequestSupplier(() -> new SearchRequest("my-index"))
                 .mapHitFn(SearchHit::getSourceAsString)
@@ -240,7 +240,7 @@ public abstract class CommonElasticsearchSourcesTest extends BaseElasticsearchTe
 
         Pipeline p = Pipeline.create();
 
-        BatchSource<String> source = new ElasticsearchSourceBuilder<String>()
+        BatchSource<String> source = new ElasticSourceBuilder<String>()
                 .clientSupplier(elasticClientSupplier())
                 .searchRequestSupplier(() -> new SearchRequest("my-index-*"))
                 .mapHitFn(SearchHit::getSourceAsString)

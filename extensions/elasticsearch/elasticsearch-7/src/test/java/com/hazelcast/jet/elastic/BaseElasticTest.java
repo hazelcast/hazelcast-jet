@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.elasticsearch;
+package com.hazelcast.jet.elastic;
 
 import com.hazelcast.collection.IList;
 import com.hazelcast.function.SupplierEx;
@@ -55,7 +55,7 @@ import static org.elasticsearch.index.query.QueryBuilders.matchAllQuery;
  * - {@link #createJetInstance()}
  * Subclasses are free to cache
  */
-public abstract class BaseElasticsearchTest {
+public abstract class BaseElasticTest {
 
     protected static final int BATCH_SIZE = 42;
 
@@ -80,7 +80,7 @@ public abstract class BaseElasticsearchTest {
     /**
      * RestHighLevelClient supplier, it is used to
      * - create a client before each test for use by all methods from this class interacting with elastic
-     * - may be used as as a parameter of {@link ElasticsearchSourceBuilder#clientSupplier(SupplierEx)}
+     * - may be used as as a parameter of {@link ElasticSourceBuilder#clientSupplier(SupplierEx)}
      */
     protected SupplierEx<RestHighLevelClient> elasticClientSupplier() {
         return ElasticSupport.elasticClientSupplier();
@@ -137,7 +137,7 @@ public abstract class BaseElasticsearchTest {
      * Indexes a batch of documents to an index with given name
      */
     protected void indexBatchOfDocuments(String index) {
-        indexBatchOfDocuments(index, CommonElasticsearchSourcesTest.BATCH_SIZE);
+        indexBatchOfDocuments(index, CommonElasticSourcesTest.BATCH_SIZE);
     }
 
     /**

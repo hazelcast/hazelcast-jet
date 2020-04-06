@@ -14,29 +14,30 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.elasticsearch;
+package com.hazelcast.jet.elastic;
 
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.JetTestInstanceFactory;
 import com.hazelcast.jet.config.JetConfig;
-import org.junit.After;
+import com.hazelcast.jet.impl.util.Util;
+
+import java.util.function.Supplier;
 
 /**
- * Test running single Jet member locally and Elastic in docker
+ * Test running 3 local Jet members in a cluster and Elastic in docker
  */
-public class LocalElasticsearchSinkTest extends CommonElasticsearchSinksTest {
+public class LocalClusterElasticSourcesTest extends CommonElasticSourcesTest {
 
-    private JetTestInstanceFactory factory = new JetTestInstanceFactory();
-
-    @After
-    public void tearDown() throws Exception {
-        factory.terminateAll();
-    }
+    // Cluster startup takes >1s, reusing the cluster between tests
+    private static Supplier<JetInstance> jet = Util.memoize(() -> {
+        JetTestInstanceFactory factory = new JetTestInstanceFactory();
+        JetInstance[] instances = factory.newMembers(new JetConfig(), 3);
+        Runtime.getRuntime().addShutdownHook(new Thread(factory::terminateAll));
+        return instances[0];
+    });
 
     @Override
     protected JetInstance createJetInstance() {
-        // This starts very quickly, no need to cache the instance
-        return factory.newMember(new JetConfig());
+        return jet.get();
     }
-
 }

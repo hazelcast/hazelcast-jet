@@ -21,7 +21,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.core.processor.SourceProcessors;
-import com.hazelcast.jet.elasticsearch.ElasticsearchSinks;
+import com.hazelcast.jet.elastic.ElasticSinks;
 import com.hazelcast.jet.pipeline.BatchSource;
 import com.hazelcast.jet.pipeline.Pipeline;
 import org.elasticsearch.action.index.IndexRequest;
@@ -35,7 +35,7 @@ import static com.hazelcast.jet.pipeline.Pipeline.create;
 import static com.hazelcast.jet.pipeline.Sources.batchFromProcessor;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
-public class ElasticsearchSinkExample {
+public class ElasticSinkExample {
 
     public static void main(String[] args) {
         try {
@@ -44,7 +44,7 @@ public class ElasticsearchSinkExample {
             p.readFrom(files("src/main/resources/documents"))
              .map(json -> mapper.readValue(json, new TypeReference<Map<String, Object>>() {
              }))
-             .writeTo(ElasticsearchSinks.elasticsearch(map ->
+             .writeTo(ElasticSinks.elastic(map ->
                      new IndexRequest("my-index").source(map)
              ));
 

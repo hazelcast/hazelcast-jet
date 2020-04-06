@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.elasticsearch;
+package com.hazelcast.jet.elastic;
 
 import com.hazelcast.function.ConsumerEx;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.core.Vertex;
-import com.hazelcast.jet.elasticsearch.impl.ElasticProcessorMetaSupplier;
+import com.hazelcast.jet.elastic.impl.ElasticProcessorMetaSupplier;
 import com.hazelcast.jet.pipeline.BatchSource;
 import com.hazelcast.jet.pipeline.Sources;
 import org.elasticsearch.action.ActionRequest;
@@ -44,7 +44,7 @@ import static java.util.Objects.requireNonNull;
  *           also we could accept the function in the build() method, same as the original source did it
  * @since 4.1
  */
-public class ElasticsearchSourceBuilder<T> implements Serializable {
+public class ElasticSourceBuilder<T> implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
@@ -80,7 +80,7 @@ public class ElasticsearchSourceBuilder<T> implements Serializable {
      * @param sourceName user-friendly source name
      */
     @Nonnull
-    public ElasticsearchSourceBuilder<T> name(String sourceName) {
+    public ElasticSourceBuilder<T> name(String sourceName) {
         this.name = sourceName;
         return this;
     }
@@ -96,7 +96,7 @@ public class ElasticsearchSourceBuilder<T> implements Serializable {
      * @param clientSupplier supplier for configure Elasticsearch REST client
      */
     @Nonnull
-    public ElasticsearchSourceBuilder<T> clientSupplier(SupplierEx<? extends RestHighLevelClient> clientSupplier) {
+    public ElasticSourceBuilder<T> clientSupplier(SupplierEx<? extends RestHighLevelClient> clientSupplier) {
         checkSerializable(clientSupplier, "clientSupplier");
         this.clientSupplier = clientSupplier;
         return this;
@@ -113,7 +113,7 @@ public class ElasticsearchSourceBuilder<T> implements Serializable {
      * @param destroyFn destroy function
      */
     @Nonnull
-    public ElasticsearchSourceBuilder<T> destroyFn(ConsumerEx<? super RestHighLevelClient> destroyFn) {
+    public ElasticSourceBuilder<T> destroyFn(ConsumerEx<? super RestHighLevelClient> destroyFn) {
         checkSerializable(destroyFn, "destroyFn");
         this.destroyFn = destroyFn;
         return this;
@@ -130,7 +130,7 @@ public class ElasticsearchSourceBuilder<T> implements Serializable {
      * @param searchRequestSupplier search request supplier
      */
     @Nonnull
-    public ElasticsearchSourceBuilder<T> searchRequestSupplier(SupplierEx<SearchRequest> searchRequestSupplier) {
+    public ElasticSourceBuilder<T> searchRequestSupplier(SupplierEx<SearchRequest> searchRequestSupplier) {
         checkSerializable(searchRequestSupplier, "searchRequestSupplier");
         this.searchRequestSupplier = searchRequestSupplier;
         return this;
@@ -147,7 +147,7 @@ public class ElasticsearchSourceBuilder<T> implements Serializable {
      * @param mapHitFn maps search hits to output items
      */
     @Nonnull
-    public ElasticsearchSourceBuilder<T> mapHitFn(FunctionEx<? super SearchHit, T> mapHitFn) {
+    public ElasticSourceBuilder<T> mapHitFn(FunctionEx<? super SearchHit, T> mapHitFn) {
         checkSerializable(mapHitFn, "mapHitFn");
         this.mapHitFn = mapHitFn;
         return this;
@@ -164,7 +164,7 @@ public class ElasticsearchSourceBuilder<T> implements Serializable {
      * @param optionsFn function that provides {@link RequestOptions}
      */
     @Nonnull
-    public ElasticsearchSourceBuilder<T> optionsFn(FunctionEx<? super ActionRequest, RequestOptions> optionsFn) {
+    public ElasticSourceBuilder<T> optionsFn(FunctionEx<? super ActionRequest, RequestOptions> optionsFn) {
         checkSerializable(optionsFn, "optionsFn");
         this.optionsFn = optionsFn;
         return this;
@@ -187,7 +187,7 @@ public class ElasticsearchSourceBuilder<T> implements Serializable {
      *     Sliced Scroll</a>
      */
     @Nonnull
-    public ElasticsearchSourceBuilder<T> slicing(boolean enabled) {
+    public ElasticSourceBuilder<T> slicing(boolean enabled) {
         this.slicing = enabled;
         return this;
     }
@@ -204,7 +204,7 @@ public class ElasticsearchSourceBuilder<T> implements Serializable {
      * @param coLocatedRead {@code true} to enable co-located reading, default value {@code false}
      */
     @Nonnull
-    public ElasticsearchSourceBuilder<T> coLocatedReading(boolean coLocatedRead) {
+    public ElasticSourceBuilder<T> coLocatedReading(boolean coLocatedRead) {
         this.coLocatedReading = coLocatedRead;
         return this;
     }
@@ -222,7 +222,7 @@ public class ElasticsearchSourceBuilder<T> implements Serializable {
      *                        default value 1m
      */
     @Nonnull
-    public ElasticsearchSourceBuilder<T> scrollKeepAlive(String scrollKeepAlive) {
+    public ElasticSourceBuilder<T> scrollKeepAlive(String scrollKeepAlive) {
         this.scrollKeepAlive = scrollKeepAlive;
         return this;
     }
@@ -238,7 +238,7 @@ public class ElasticsearchSourceBuilder<T> implements Serializable {
      * @return
      */
     @Nonnull
-    public ElasticsearchSourceBuilder<T> preferredLocalParallelism(int preferredLocalParallelism) {
+    public ElasticSourceBuilder<T> preferredLocalParallelism(int preferredLocalParallelism) {
         this.preferredLocalParallelism = preferredLocalParallelism;
         return this;
     }

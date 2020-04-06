@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.elasticsearch;
+package com.hazelcast.jet.elastic;
 
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.pipeline.BatchSource;
@@ -28,7 +28,7 @@ import org.junit.Test;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-public class ElasticsearchSourceBuilderTest {
+public class ElasticSourceBuilderTest {
 
     @Test
     public void sourceHasCorrectName() {
@@ -43,8 +43,8 @@ public class ElasticsearchSourceBuilderTest {
     }
 
     @NotNull
-    private ElasticsearchSourceBuilder<Object> builderWithRequiredParams() {
-        return new ElasticsearchSourceBuilder<>()
+    private ElasticSourceBuilder<Object> builderWithRequiredParams() {
+        return new ElasticSourceBuilder<>()
                 .clientSupplier(() -> new RestHighLevelClient(RestClient.builder(new HttpHost("localhost"))))
                 .searchRequestSupplier(SearchRequest::new)
                 .mapHitFn(FunctionEx.identity());
@@ -52,7 +52,7 @@ public class ElasticsearchSourceBuilderTest {
 
     @Test
     public void clientSupplierMustBeSet() {
-        assertThatThrownBy(() -> new ElasticsearchSourceBuilder<>()
+        assertThatThrownBy(() -> new ElasticSourceBuilder<>()
                 .searchRequestSupplier(SearchRequest::new)
                 .mapHitFn(FunctionEx.identity())
                 .build())
@@ -61,7 +61,7 @@ public class ElasticsearchSourceBuilderTest {
 
     @Test
     public void searchRequestSupplierMustBeSet() {
-        assertThatThrownBy(() -> new ElasticsearchSourceBuilder<>()
+        assertThatThrownBy(() -> new ElasticSourceBuilder<>()
                 .clientSupplier(() -> new RestHighLevelClient(RestClient.builder(new HttpHost("localhost"))))
                 .mapHitFn(FunctionEx.identity())
                 .build())
@@ -70,7 +70,7 @@ public class ElasticsearchSourceBuilderTest {
 
     @Test
     public void mapHitFnSupplierMustBeSet() {
-        assertThatThrownBy(() -> new ElasticsearchSourceBuilder<>()
+        assertThatThrownBy(() -> new ElasticSourceBuilder()
                 .clientSupplier(() -> new RestHighLevelClient(RestClient.builder(new HttpHost("localhost"))))
                 .searchRequestSupplier(SearchRequest::new)
                 .build())
