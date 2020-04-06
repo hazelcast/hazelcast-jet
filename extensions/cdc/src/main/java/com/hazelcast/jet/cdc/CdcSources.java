@@ -44,6 +44,8 @@ import java.util.Properties;
 @EvolvingApi
 public final class CdcSources {
 
+    //todo: test with actual cluster
+
     //todo: use BUILDER instead of Properties
 
     //todo: can we use these sources in a distributed way?
