@@ -63,7 +63,7 @@ public final class UnaryService<T, R> implements GrpcService<T, R> {
 
         @Override
         public void onError(Throwable t) {
-            future.completeExceptionally(GrpcUtil.wrapGrpcException(t));
+            future.completeExceptionally(GrpcUtil.translateGrpcException(t));
         }
 
         @Override

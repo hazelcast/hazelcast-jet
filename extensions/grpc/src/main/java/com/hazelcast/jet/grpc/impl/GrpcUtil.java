@@ -33,7 +33,7 @@ public final class GrpcUtil {
      * @param exception the exception to examine and possibly replace
      * @return the same exception or a replacement if needed
      */
-    public static Throwable wrapGrpcException(Throwable exception) {
+    public static Throwable translateGrpcException(Throwable exception) {
         return (exception instanceof StatusException)
                 ? new StatusExceptionJet((StatusException) exception)
                 : (exception instanceof StatusRuntimeException)

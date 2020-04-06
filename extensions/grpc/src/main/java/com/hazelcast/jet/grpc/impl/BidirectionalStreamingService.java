@@ -30,7 +30,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
 
-import static com.hazelcast.jet.grpc.impl.GrpcUtil.wrapGrpcException;
+import static com.hazelcast.jet.grpc.impl.GrpcUtil.translateGrpcException;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 public final class BidirectionalStreamingService<I, O> implements GrpcService<I, O> {
@@ -50,7 +50,7 @@ public final class BidirectionalStreamingService<I, O> implements GrpcService<I,
         sink = callStubFn.apply(channel).apply(new OutputMessageObserver());
     }
 
-    @Override @Nonnull
+    @Nonnull @Override
     public CompletableFuture<O> call(@Nonnull I input) {
         checkForServerError();
         CompletableFuture<O> future = new CompletableFuture<>();
@@ -86,7 +86,7 @@ public final class BidirectionalStreamingService<I, O> implements GrpcService<I,
         @Override
         public void onError(Throwable e) {
             try {
-                e = wrapGrpcException(e);
+                e = translateGrpcException(e);
 
                 exceptionInOutputObserver = e;
                 for (CompletableFuture<O> future; (future = futureQueue.poll()) != null; ) {

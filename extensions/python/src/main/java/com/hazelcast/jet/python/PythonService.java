@@ -129,7 +129,7 @@ final class PythonService {
         @Override
         public void onError(Throwable e) {
             try {
-                e = GrpcUtil.wrapGrpcException(e);
+                e = GrpcUtil.translateGrpcException(e);
 
                 exceptionInOutputObserver = e;
                 for (CompletableFuture<List<String>> future; (future = futureQueue.poll()) != null;) {
