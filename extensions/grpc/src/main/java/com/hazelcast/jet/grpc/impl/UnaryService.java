@@ -18,6 +18,7 @@ package com.hazelcast.jet.grpc.impl;
 
 import com.hazelcast.function.BiConsumerEx;
 import com.hazelcast.function.FunctionEx;
+import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.grpc.GrpcService;
 import io.grpc.ManagedChannel;
 import io.grpc.stub.StreamObserver;
@@ -46,10 +47,8 @@ public final class UnaryService<T, R> implements GrpcService<T, R> {
     public void destroy() {
     }
 
-    // these objects could also be pooled
     private static class Observer<O> implements StreamObserver<O> {
         private final CompletableFuture<O> future;
-        private volatile O value; // TODO: is this necessary here - contract states "thread-compatible"
 
         Observer() {
             this.future = new CompletableFuture<>();
@@ -57,7 +56,9 @@ public final class UnaryService<T, R> implements GrpcService<T, R> {
 
         @Override
         public void onNext(O value) {
-            this.value = value;
+            if (!future.complete(value)) {
+                throw new JetException("UnaryService.Observer.onNext() called, but its future is already completed");
+            }
         }
 
         @Override
@@ -67,7 +68,6 @@ public final class UnaryService<T, R> implements GrpcService<T, R> {
 
         @Override
         public void onCompleted() {
-            future.complete(value);
         }
     }
 }
