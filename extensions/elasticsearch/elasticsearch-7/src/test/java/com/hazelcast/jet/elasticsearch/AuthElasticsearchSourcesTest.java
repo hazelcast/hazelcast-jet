@@ -98,7 +98,7 @@ public class AuthElasticsearchSourcesTest extends BaseElasticsearchTest {
 
         assertThatThrownBy(() -> submitJob(p))
                 .hasRootCauseInstanceOf(ResponseException.class)
-                .hasMessageContaining("failed to authenticate user [elastic]");
+                .hasStackTraceContaining("failed to authenticate user [elastic]");
     }
 
 }

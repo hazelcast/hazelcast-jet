@@ -36,9 +36,9 @@ public class ElasticProcessorMetaSupplierTest {
     @Test
     public void shouldAssignToSingleAddress() {
         List<Shard> shards = newArrayList(
-                new Shard("elastic-index", 0, Prirep.p, 10, "STARTED", "10.0.0.1", "node1"),
-                new Shard("elastic-index", 1, Prirep.p, 10, "STARTED", "10.0.0.1", "node2"),
-                new Shard("elastic-index", 2, Prirep.p, 10, "STARTED", "10.0.0.1", "node3")
+                new Shard("elastic-index", 0, Prirep.p, 10, "STARTED", "10.0.0.1", "10.0.0.1:9200", "node1"),
+                new Shard("elastic-index", 1, Prirep.p, 10, "STARTED", "10.0.0.1", "10.0.0.1:9200", "node2"),
+                new Shard("elastic-index", 2, Prirep.p, 10, "STARTED", "10.0.0.1", "10.0.0.1:9200", "node3")
         );
 
         List<String> addresses = newArrayList("10.0.0.1");
@@ -52,9 +52,9 @@ public class ElasticProcessorMetaSupplierTest {
     @Test
     public void shouldAssignToEachAddress() {
         List<Shard> shards = newArrayList(
-                new Shard("elastic-index", 0, Prirep.p, 10, "STARTED", "10.0.0.1", "node1"),
-                new Shard("elastic-index", 1, Prirep.p, 10, "STARTED", "10.0.0.2", "node2"),
-                new Shard("elastic-index", 2, Prirep.p, 10, "STARTED", "10.0.0.3", "node3")
+                new Shard("elastic-index", 0, Prirep.p, 10, "STARTED", "10.0.0.1", "10.0.0.1:9200", "node1"),
+                new Shard("elastic-index", 1, Prirep.p, 10, "STARTED", "10.0.0.2", "10.0.0.1:9200", "node2"),
+                new Shard("elastic-index", 2, Prirep.p, 10, "STARTED", "10.0.0.3", "10.0.0.1:9200", "node3")
         );
 
         List<String> addresses = newArrayList("10.0.0.1", "10.0.0.2", "10.0.0.3");
@@ -70,17 +70,17 @@ public class ElasticProcessorMetaSupplierTest {
     @Test
     public void shouldAssignOneReplicaOnly() {
         List<Shard> shards = newArrayList(
-                new Shard("elastic-index", 0, Prirep.p, 10, "STARTED", "10.0.0.1", "node1"),
-                new Shard("elastic-index", 0, Prirep.r, 10, "STARTED", "10.0.0.2", "node2"),
-                new Shard("elastic-index", 0, Prirep.r, 10, "STARTED", "10.0.0.3", "node3"),
+                new Shard("elastic-index", 0, Prirep.p, 10, "STARTED", "10.0.0.1", "10.0.0.1:9200", "node1"),
+                new Shard("elastic-index", 0, Prirep.r, 10, "STARTED", "10.0.0.2", "10.0.0.1:9200", "node2"),
+                new Shard("elastic-index", 0, Prirep.r, 10, "STARTED", "10.0.0.3", "10.0.0.1:9200", "node3"),
 
-                new Shard("elastic-index", 1, Prirep.p, 10, "STARTED", "10.0.0.2", "node2"),
-                new Shard("elastic-index", 1, Prirep.r, 10, "STARTED", "10.0.0.3", "node3"),
-                new Shard("elastic-index", 1, Prirep.r, 10, "STARTED", "10.0.0.1", "node1"),
+                new Shard("elastic-index", 1, Prirep.p, 10, "STARTED", "10.0.0.2", "10.0.0.1:9200", "node2"),
+                new Shard("elastic-index", 1, Prirep.r, 10, "STARTED", "10.0.0.3", "10.0.0.1:9200", "node3"),
+                new Shard("elastic-index", 1, Prirep.r, 10, "STARTED", "10.0.0.1", "10.0.0.1:9200", "node1"),
 
-                new Shard("elastic-index", 2, Prirep.p, 10, "STARTED", "10.0.0.3", "node3"),
-                new Shard("elastic-index", 2, Prirep.r, 10, "STARTED", "10.0.0.1", "node1"),
-                new Shard("elastic-index", 2, Prirep.r, 10, "STARTED", "10.0.0.2", "node2")
+                new Shard("elastic-index", 2, Prirep.p, 10, "STARTED", "10.0.0.3", "10.0.0.1:9200", "node3"),
+                new Shard("elastic-index", 2, Prirep.r, 10, "STARTED", "10.0.0.1", "10.0.0.1:9200", "node1"),
+                new Shard("elastic-index", 2, Prirep.r, 10, "STARTED", "10.0.0.2", "10.0.0.1:9200", "node2")
         );
 
         Collections.shuffle(shards, new Random(1L)); // random but stable shuffle
@@ -110,8 +110,8 @@ public class ElasticProcessorMetaSupplierTest {
     @Test
     public void noLocalCandidate() {
         List<Shard> shards = newArrayList(
-                new Shard("elastic-index", 0, Prirep.p, 10, "STARTED", "10.0.0.1", "node1"),
-                new Shard("elastic-index", 1, Prirep.p, 10, "STARTED", "10.0.0.2", "node2")
+                new Shard("elastic-index", 0, Prirep.p, 10, "STARTED", "10.0.0.1", "10.0.0.1:9200", "node1"),
+                new Shard("elastic-index", 1, Prirep.p, 10, "STARTED", "10.0.0.2", "10.0.0.1:9200", "node2")
         );
 
         List<String> addresses = newArrayList("10.0.0.1", "10.0.0.2", "10.0.0.3");
@@ -126,7 +126,7 @@ public class ElasticProcessorMetaSupplierTest {
     @Test(expected = JetException.class)
     public void shouldNotAllowDisjunctClusters() {
         List<Shard> shards = newArrayList(
-                new Shard("elastic-index", 0, Prirep.p, 10, "STARTED", "10.0.0.1", "node1")
+                new Shard("elastic-index", 0, Prirep.p, 10, "STARTED", "10.0.0.1", "10.0.0.1:9200", "node1")
         );
         List<String> addresses = newArrayList("10.0.0.2");
 

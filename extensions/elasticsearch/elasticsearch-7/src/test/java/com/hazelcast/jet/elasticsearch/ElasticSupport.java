@@ -16,7 +16,11 @@
 
 package com.hazelcast.jet.elasticsearch;
 
+import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.impl.util.Util;
+import org.apache.http.HttpHost;
+import org.elasticsearch.client.RestClient;
+import org.elasticsearch.client.RestHighLevelClient;
 import org.testcontainers.elasticsearch.ElasticsearchContainer;
 
 import java.util.function.Supplier;
@@ -32,5 +36,12 @@ public final class ElasticSupport {
     });
 
     private ElasticSupport() {
+    }
+
+    public static SupplierEx<RestHighLevelClient> elasticClientSupplier() {
+        String address = elastic.get().getHttpHostAddress();
+        return () -> new RestHighLevelClient(
+                RestClient.builder(HttpHost.create(address))
+        );
     }
 }

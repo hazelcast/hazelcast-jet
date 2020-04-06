@@ -16,7 +16,6 @@
 
 package com.hazelcast.jet.elasticsearch;
 
-import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.JetTestInstanceFactory;
@@ -24,10 +23,7 @@ import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.pipeline.BatchSource;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
-import org.apache.http.HttpHost;
 import org.elasticsearch.action.search.SearchRequest;
-import org.elasticsearch.client.RestClient;
-import org.elasticsearch.client.RestHighLevelClient;
 import org.junit.After;
 import org.junit.Test;
 
@@ -44,13 +40,6 @@ public class LocalElasticsearchSourcesTest extends CommonElasticsearchSourcesTes
     @After
     public void tearDown() throws Exception {
         factory.terminateAll();
-    }
-
-    protected SupplierEx<RestHighLevelClient> elasticClientSupplier() {
-        String address = ElasticSupport.elastic.get().getHttpHostAddress();
-        return () -> new RestHighLevelClient(
-                RestClient.builder(HttpHost.create(address))
-        );
     }
 
     @Override

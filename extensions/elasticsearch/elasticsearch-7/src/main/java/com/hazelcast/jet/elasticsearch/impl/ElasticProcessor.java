@@ -21,10 +21,11 @@ import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.Traversers;
-import com.hazelcast.jet.elasticsearch.ElasticsearchSourceBuilder;
 import com.hazelcast.jet.core.AbstractProcessor;
+import com.hazelcast.jet.elasticsearch.ElasticsearchSourceBuilder;
 import com.hazelcast.logging.ILogger;
 import org.apache.http.HttpHost;
+import org.apache.lucene.search.TotalHits;
 import org.elasticsearch.action.ActionRequest;
 import org.elasticsearch.action.search.ClearScrollRequest;
 import org.elasticsearch.action.search.ClearScrollResponse;
@@ -68,6 +69,9 @@ final class ElasticProcessor<T> extends AbstractProcessor {
     protected void init(@Nonnull Context context) throws Exception {
         super.init(context);
 
+        ILogger logger = context.logger();
+        logger.fine("init");
+
         RestHighLevelClient client = builder.clientSupplier().get();
         SearchRequest sr = builder.searchRequestSupplier().get();
         sr.scroll(builder.scrollKeepAlive());
@@ -76,30 +80,35 @@ final class ElasticProcessor<T> extends AbstractProcessor {
         int totalSlices = context.totalParallelism();
 
         if (builder.slicing() && totalSlices > 1) {
+            logger.fine("Slice id=" + sliceId + ", max=" + totalSlices);
             sr.source().slice(new SliceBuilder(sliceId, totalSlices));
         }
 
         if (builder.coLocatedReading()) {
+            logger.fine("Assigned shards: " + shards);
             if (shards.isEmpty()) {
                 traverser = Traversers.empty();
                 return;
             }
 
-            List<String> ip = shards.stream().map(Shard::getIp).distinct().collect(toList());
-            if (ip.size() > 1) {
-                throw new JetException("Should receive shards from single local node");
-            }
-
-            // TODO use /_cat/nodes?format=json&h=ip,http_address,name to get http endpoint
-            final int port = 9200;
-            client.getLowLevelClient().setNodes(singleton(new Node(new HttpHost(ip.get(0), port))));
+            Node node = createLocalElasticNode();
+            client.getLowLevelClient().setNodes(singleton(node));
             String preference =
-                    "_shards:" + shards.stream().map(s -> String.valueOf(s.getShard())).collect(joining(","))
+                    "_shards:" + shards.stream().map(shard -> String.valueOf(shard.getShard())).collect(joining(","))
                             + "|_only_local";
             sr.preference(preference);
         }
 
-        traverser = new ElasticScrollTraverser<>(builder, client, sr, context.logger());
+        traverser = new ElasticScrollTraverser<>(builder, client, sr, logger);
+    }
+
+    private Node createLocalElasticNode() {
+        List<String> ips = shards.stream().map(Shard::getHttpAddress).distinct().collect(toList());
+        if (ips.size() != 1) {
+            throw new JetException("Should receive shards from single local node, got: " + ips);
+        }
+        String localIp = ips.get(0);
+        return new Node(HttpHost.create(localIp));
     }
 
     @Override
@@ -150,6 +159,10 @@ final class ElasticProcessor<T> extends AbstractProcessor {
                 // These should be always present, even when there are no results
                 hits = requireNonNull(response.getHits(), "null hits in the response");
                 scrollId = requireNonNull(response.getScrollId(), "null scrollId in the response");
+
+                TotalHits totalHits = hits.getTotalHits();
+                logger.fine("Initialized scroll with scrollId " + scrollId + ", total results " +
+                        totalHits.relation + ", " + totalHits.value);
             } catch (IOException e) {
                 throw new JetException("Could not execute SearchRequest to Elastic", e);
             }
@@ -158,6 +171,7 @@ final class ElasticProcessor<T> extends AbstractProcessor {
         @Override
         public R next() {
             if (hits.getHits().length == 0) {
+                scrollId = null;
                 return null;
             }
 
@@ -181,7 +195,10 @@ final class ElasticProcessor<T> extends AbstractProcessor {
         }
 
         public void close() {
-            clearScroll(scrollId);
+            if (scrollId != null) {
+                clearScroll(scrollId);
+                scrollId = null;
+            }
 
             try {
                 destroyFn.accept(client);

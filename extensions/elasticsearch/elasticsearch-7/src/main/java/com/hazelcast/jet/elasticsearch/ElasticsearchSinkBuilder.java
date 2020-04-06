@@ -21,6 +21,7 @@ import com.hazelcast.function.FunctionEx;
 import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.pipeline.Sink;
 import com.hazelcast.jet.pipeline.SinkBuilder;
+import com.hazelcast.logging.ILogger;
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.action.ActionRequest;
 import org.elasticsearch.action.DocWriteRequest;
@@ -30,7 +31,6 @@ import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.client.RestHighLevelClient;
 
 import javax.annotation.Nonnull;
-
 import java.io.IOException;
 import java.io.Serializable;
 
@@ -54,6 +54,7 @@ public class ElasticsearchSinkBuilder<T> implements Serializable {
     private SupplierEx<BulkRequest> bulkRequestSupplier = BulkRequest::new;
     private FunctionEx<? super T, ? extends DocWriteRequest<?>> mapItemFn;
     private FunctionEx<? super ActionRequest, RequestOptions> optionsFn = (request) -> RequestOptions.DEFAULT;
+    private int preferredLocalParallelism = 2;
 
     /**
      * Set the user-friendly source name for this sink
@@ -156,6 +157,16 @@ public class ElasticsearchSinkBuilder<T> implements Serializable {
         return optionsFn;
     }
 
+    @Nonnull
+    public ElasticsearchSinkBuilder<T> preferredLocalParallelism(int preferredLocalParallelism) {
+        this.preferredLocalParallelism = preferredLocalParallelism;
+        return this;
+    }
+
+    public int preferredLocalParallelism() {
+        return preferredLocalParallelism;
+    }
+
     /**
      * Create a sink that writes data into Elasticsearch based on this builder configuration
      */
@@ -164,11 +175,13 @@ public class ElasticsearchSinkBuilder<T> implements Serializable {
         requireNonNull(mapItemFn, "mapItemFn is not set");
 
         return SinkBuilder
-                .sinkBuilder(name, ctx -> new BulkContext(clientSupplier.get(), bulkRequestSupplier, optionsFn, destroyFn))
+                .sinkBuilder(name, ctx ->
+                        new BulkContext(clientSupplier.get(), bulkRequestSupplier,
+                                optionsFn, destroyFn, ctx.logger()))
                 .<T>receiveFn((bulkContext, item) -> bulkContext.add(mapItemFn.apply(item)))
                 .flushFn(BulkContext::flush)
                 .destroyFn(BulkContext::close)
-                .preferredLocalParallelism(2)
+                .preferredLocalParallelism(preferredLocalParallelism)
                 .build();
     }
 
@@ -180,31 +193,40 @@ public class ElasticsearchSinkBuilder<T> implements Serializable {
         private final ConsumerEx<? super RestHighLevelClient> destroyFn;
 
         private BulkRequest bulkRequest;
+        private final ILogger logger;
 
         BulkContext(RestHighLevelClient client, SupplierEx<BulkRequest> bulkRequestSupplier,
-                            FunctionEx<? super ActionRequest, RequestOptions> optionsFn,
-                            ConsumerEx<? super RestHighLevelClient> destroyFn) {
+                    FunctionEx<? super ActionRequest, RequestOptions> optionsFn,
+                    ConsumerEx<? super RestHighLevelClient> destroyFn, ILogger logger) {
             this.client = client;
             this.bulkRequestSupplier = bulkRequestSupplier;
             this.optionsFn = optionsFn;
             this.destroyFn = destroyFn;
 
             this.bulkRequest = bulkRequestSupplier.get();
+            this.logger = logger;
         }
 
         void add(DocWriteRequest<?> request) {
+//            System.out.println("add" + request.id());
             bulkRequest.add(request);
         }
 
         void flush() throws IOException {
-            BulkResponse response = client.bulk(bulkRequest, optionsFn.apply(bulkRequest));
-            if (response.hasFailures()) {
-                throw new ElasticsearchException(response.buildFailureMessage());
+            if (!bulkRequest.requests().isEmpty()) {
+                BulkResponse response = client.bulk(bulkRequest, optionsFn.apply(bulkRequest));
+                if (response.hasFailures()) {
+                    System.out.println("BulkRequest with " + bulkRequest.requests().size() + " requests failed");
+                    throw new ElasticsearchException(response.buildFailureMessage());
+                }
+                System.out.println("BulkRequest with " + bulkRequest.requests().size() + " requests succeeded");
+//                logger.fine("BulkRequest with " + bulkRequest.requests().size() + " requests succeeded");
+                bulkRequest = bulkRequestSupplier.get();
             }
-            bulkRequest = bulkRequestSupplier.get();
         }
 
-        void close() {
+        void close() throws IOException {
+            flush();
             destroyFn.accept(client);
         }
     }

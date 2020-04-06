@@ -29,22 +29,27 @@ class Shard implements Serializable {
     private final int docs;
     private final String state;
     private final String ip;
+    private final String httpAddress;
     private final String node;
 
     Shard(@Nonnull String index, int shard, @Nonnull Prirep prirep, int docs,
-                 @Nonnull String state, @Nonnull String ip, @Nonnull String node) {
+          @Nonnull String state, @Nonnull String ip, @Nonnull String httpAddress,
+          @Nonnull String node) {
+
         this.index = index;
         this.shard = shard;
         this.prirep = prirep;
         this.docs = docs;
         this.state = state;
         this.ip = ip;
+        this.httpAddress = httpAddress;
         this.node = node;
     }
 
     public String indexShard() {
         return index + "-" + shard;
     }
+
     public String getIndex() {
         return index;
     }
@@ -69,6 +74,10 @@ class Shard implements Serializable {
         return ip;
     }
 
+    public String getHttpAddress() {
+        return httpAddress;
+    }
+
     public String getNode() {
         return node;
     }
@@ -86,6 +95,7 @@ class Shard implements Serializable {
                 ", docs=" + docs +
                 ", state='" + state + '\'' +
                 ", ip='" + ip + '\'' +
+                ", httpAddress='" + httpAddress + '\'' +
                 ", node='" + node + '\'' +
                 '}';
     }

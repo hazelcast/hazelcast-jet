@@ -19,6 +19,7 @@ package com.hazelcast.jet.elasticsearch;
 import com.hazelcast.function.ConsumerEx;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.function.SupplierEx;
+import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.elasticsearch.impl.ElasticProcessorMetaSupplier;
 import com.hazelcast.jet.pipeline.BatchSource;
 import com.hazelcast.jet.pipeline.Sources;
@@ -56,6 +57,7 @@ public class ElasticsearchSourceBuilder<T> implements Serializable {
     private boolean slicing;
     private boolean coLocatedReading;
     private String scrollKeepAlive = "1m"; // Using String because it needs to be Serializable
+    private int preferredLocalParallelism = Vertex.LOCAL_PARALLELISM_USE_DEFAULT;
 
     /**
      * Build Elasticsearch {@link BatchSource} with supplied parameters
@@ -216,7 +218,7 @@ public class ElasticsearchSourceBuilder<T> implements Serializable {
      * <p>
      * See {@link SearchRequest#scroll(String)}
      *
-     * @param scrollKeepAlive keepAlive value, this must be high enough to process all resuls from a single scroll,
+     * @param scrollKeepAlive keepAlive value, this must be high enough to process all results from a single scroll,
      *                        default value 1m
      */
     @Nonnull
@@ -229,4 +231,19 @@ public class ElasticsearchSourceBuilder<T> implements Serializable {
         return scrollKeepAlive;
     }
 
+    /**
+     * Set the preferred local parallelism
+     *
+     * @param preferredLocalParallelism
+     * @return
+     */
+    @Nonnull
+    public ElasticsearchSourceBuilder<T> preferredLocalParallelism(int preferredLocalParallelism) {
+        this.preferredLocalParallelism = preferredLocalParallelism;
+        return this;
+    }
+
+    public int preferredLocalParallelism() {
+        return preferredLocalParallelism;
+    }
 }

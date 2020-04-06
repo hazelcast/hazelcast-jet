@@ -30,7 +30,7 @@ public class ElasticsearchSinkTest extends ElasticsearchBaseTest {
 
         Pipeline p = Pipeline.create();
         p.readFrom(Sources.list(userList))
-         .writeTo(ElasticsearchSinks.elasticsearch(indexName, () -> createClient(containerAddress), indexFn(indexName)));
+         .writeTo(ElasticsearchSinks.elasticsearch(() -> createClient(containerAddress), indexFn(indexName)));
 
         jet.newJob(p).join();
 

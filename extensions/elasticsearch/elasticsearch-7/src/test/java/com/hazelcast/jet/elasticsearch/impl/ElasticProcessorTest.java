@@ -17,10 +17,10 @@
 package com.hazelcast.jet.elasticsearch.impl;
 
 import com.hazelcast.function.FunctionEx;
-import com.hazelcast.jet.elasticsearch.ElasticsearchSourceBuilder;
-import com.hazelcast.jet.elasticsearch.impl.Shard.Prirep;
 import com.hazelcast.jet.core.test.TestOutbox;
 import com.hazelcast.jet.core.test.TestProcessorContext;
+import com.hazelcast.jet.elasticsearch.ElasticsearchSourceBuilder;
+import com.hazelcast.jet.elasticsearch.impl.Shard.Prirep;
 import org.apache.lucene.search.TotalHits;
 import org.elasticsearch.action.ActionRequest;
 import org.elasticsearch.action.search.SearchRequest;
@@ -28,7 +28,9 @@ import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.search.SearchScrollRequest;
 import org.elasticsearch.client.Node;
 import org.elasticsearch.client.RequestOptions;
+import org.elasticsearch.client.RequestOptions.Builder;
 import org.elasticsearch.client.RestClient;
+import org.elasticsearch.client.RestClientBuilder;
 import org.elasticsearch.client.RestHighLevelClient;
 import org.elasticsearch.common.bytes.BytesArray;
 import org.elasticsearch.common.text.Text;
@@ -38,6 +40,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -46,6 +49,7 @@ import static java.util.Collections.emptyList;
 import static java.util.Collections.emptyMap;
 import static org.apache.lucene.search.TotalHits.Relation.EQUAL_TO;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.assertj.core.util.Lists.newArrayList;
 import static org.mockito.ArgumentCaptor.forClass;
 import static org.mockito.ArgumentMatchers.any;
@@ -66,13 +70,13 @@ public class ElasticProcessorTest {
     private static final String KEEP_ALIVE = "42m";
 
     private ElasticProcessor<String> processor;
-    private RestHighLevelClient mockClient;
+    private SerializableRestClient mockClient;
     private SearchResponse response;
     private TestOutbox outbox;
 
     @Before
     public void setUp() throws Exception {
-        mockClient = mock(RestHighLevelClient.class, RETURNS_DEEP_STUBS);
+        mockClient = SerializableRestClient.instanceHolder = mock(SerializableRestClient.class, RETURNS_DEEP_STUBS);
         // Mocks returning mocks is not generally recommended, but the setup of empty SearchResponse is even uglier
         // See org.elasticsearch.action.search.SearchResponse#empty
         response = mock(SearchResponse.class);
@@ -95,8 +99,9 @@ public class ElasticProcessorTest {
     private void createProcessor(FunctionEx<ActionRequest, RequestOptions> optionsFn, List<Shard> shards)
             throws Exception {
 
+        RestHighLevelClient client = mockClient;
         ElasticsearchSourceBuilder<String> builder = new ElasticsearchSourceBuilder<String>()
-                .clientSupplier(() -> mockClient)
+                .clientSupplier(() -> client)
                 .searchRequestSupplier(() -> new SearchRequest("*"))
                 .optionsFn(optionsFn)
                 .mapHitFn(SearchHit::getSourceAsString)
@@ -141,8 +146,11 @@ public class ElasticProcessorTest {
         when(response.getHits()).thenReturn(new SearchHits(new SearchHit[]{}, new TotalHits(0, EQUAL_TO), Float.NaN));
 
         // get different instance than default
-        RequestOptions options = RequestOptions.DEFAULT.toBuilder().build();
-        createProcessor(request -> options);
+        createProcessor(request -> {
+            Builder builder = RequestOptions.DEFAULT.toBuilder();
+            builder.addHeader("TestHeader", "value");
+            return builder.build();
+        });
 
         runProcessor();
 
@@ -150,7 +158,9 @@ public class ElasticProcessorTest {
         verify(mockClient).search(any(), captor.capture());
 
         RequestOptions capturedOptions = captor.getValue();
-        assertThat(capturedOptions).isSameAs(options);
+        assertThat(capturedOptions.getHeaders())
+                .extracting(h -> tuple(h.getName(), h.getValue()))
+                .containsExactly(tuple("TestHeader", "value"));
     }
 
     @Test
@@ -208,8 +218,11 @@ public class ElasticProcessorTest {
         when(mockClient.scroll(any(), any())).thenReturn(response2);
 
         // get different instance than default
-        RequestOptions options = RequestOptions.DEFAULT.toBuilder().build();
-        createProcessor(request -> options);
+        createProcessor(request -> {
+            Builder builder = RequestOptions.DEFAULT.toBuilder();
+            builder.addHeader("TestHeader", "value");
+            return builder.build();
+        });
 
         runProcessor();
 
@@ -217,7 +230,9 @@ public class ElasticProcessorTest {
         verify(mockClient).scroll(any(), captor.capture());
 
         RequestOptions capturedOptions = captor.getValue();
-        assertThat(capturedOptions).isSameAs(options);
+        assertThat(capturedOptions.getHeaders())
+                .extracting(h -> tuple(h.getName(), h.getValue()))
+                .containsExactly(tuple("TestHeader", "value"));
     }
 
     @Test
@@ -226,7 +241,8 @@ public class ElasticProcessorTest {
         when(mockClient.getLowLevelClient()).thenReturn(lowClient);
         when(response.getHits()).thenReturn(new SearchHits(new SearchHit[]{}, new TotalHits(0, EQUAL_TO), Float.NaN));
 
-        createProcessor(newArrayList(new Shard("my-index", 0, Prirep.p, 42, "STARTED", "10.0.0.1", "es1")));
+        createProcessor(newArrayList(new Shard("my-index", 0, Prirep.p, 42,
+                "STARTED", "10.0.0.1", "10.0.0.1:9200", "es1")));
 
         runProcessor();
 
@@ -246,9 +262,9 @@ public class ElasticProcessorTest {
         when(response.getHits()).thenReturn(new SearchHits(new SearchHit[]{}, new TotalHits(0, EQUAL_TO), Float.NaN));
 
         createProcessor(newArrayList(
-                new Shard("my-index", 0, Prirep.p, 42, "STARTED", "10.0.0.1", "es1"),
-                new Shard("my-index", 1, Prirep.p, 42, "STARTED", "10.0.0.1", "es1"),
-                new Shard("my-index", 2, Prirep.p, 42, "STARTED", "10.0.0.1", "es1")
+                new Shard("my-index", 0, Prirep.p, 42, "STARTED", "10.0.0.1", "10.0.0.1:9200", "es1"),
+                new Shard("my-index", 1, Prirep.p, 42, "STARTED", "10.0.0.1", "10.0.0.1:9200", "es1"),
+                new Shard("my-index", 2, Prirep.p, 42, "STARTED", "10.0.0.1", "10.0.0.1:9200", "es1")
         ));
 
         runProcessor();
@@ -258,5 +274,22 @@ public class ElasticProcessorTest {
 
         SearchRequest request = captor.getValue();
         assertThat(request.preference()).isEqualTo("_shards:0,1,2|_only_local");
+    }
+
+    /*
+     * Need to pass a Serializable Supplier into
+     * ElasticsearchSourceBuilder.clientSupplier(...)
+     * which returns a mock, so the mock itself must be serializable.
+     *
+     * Can't use Mockito's withSettings().serializable() because some of the setup (SearchResponse) is not Serializable
+     */
+    static class SerializableRestClient extends RestHighLevelClient implements Serializable {
+
+        static SerializableRestClient instanceHolder;
+
+        SerializableRestClient(RestClientBuilder restClientBuilder) {
+            super(restClientBuilder);
+        }
+
     }
 }

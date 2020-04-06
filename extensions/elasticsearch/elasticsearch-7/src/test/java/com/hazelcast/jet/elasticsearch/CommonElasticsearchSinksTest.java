@@ -31,9 +31,9 @@ import org.junit.Test;
 
 import java.io.IOException;
 import java.io.Serializable;
+import java.util.HashMap;
 import java.util.Map;
 
-import static com.google.common.collect.ImmutableMap.of;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.entry;
 import static org.elasticsearch.client.RequestOptions.DEFAULT;
@@ -45,8 +45,7 @@ public abstract class CommonElasticsearchSinksTest extends BaseElasticsearchTest
         Sink<TestItem> elasticSink = new ElasticsearchSinkBuilder<TestItem>()
                 .clientSupplier(elasticClientSupplier())
                 .bulkRequestSupplier(() -> new BulkRequest().setRefreshPolicy(RefreshPolicy.IMMEDIATE))
-                .mapItemFn(item -> new IndexRequest("my-index")
-                        .source(of("id", item.getId(), "name", item.getName())))
+                .mapItemFn(item -> new IndexRequest("my-index").source(item.asMap()))
                 .build();
 
         Pipeline p = Pipeline.create();
@@ -62,8 +61,7 @@ public abstract class CommonElasticsearchSinksTest extends BaseElasticsearchTest
     public void shouldStoreBatchOfDocuments() throws IOException {
         Sink<TestItem> elasticSink = new ElasticsearchSinkBuilder<TestItem>()
                 .clientSupplier(elasticClientSupplier())
-                .mapItemFn(item -> new IndexRequest("my-index")
-                        .source(of("id", item.getId(), "name", item.getName())))
+                .mapItemFn(item -> new IndexRequest("my-index").source(item.asMap()))
                 .build();
 
         int batchSize = 10_000;
@@ -87,8 +85,7 @@ public abstract class CommonElasticsearchSinksTest extends BaseElasticsearchTest
     public void whenCreateSinkUsingFactoryMethodThenShouldStoreDocument() throws Exception {
         Sink<TestItem> elasticSink = ElasticsearchSinks.elasticsearch(
                 elasticClientSupplier(),
-                item -> new IndexRequest("my-index")
-                        .source(of("id", item.getId(), "name", item.getName()))
+                item -> new IndexRequest("my-index").source(item.asMap())
         );
 
         Pipeline p = Pipeline.create();
@@ -134,5 +131,13 @@ public abstract class CommonElasticsearchSinksTest extends BaseElasticsearchTest
         public String getName() {
             return name;
         }
+
+        public Map<String, Object> asMap() {
+            Map<String, Object> map = new HashMap<>();
+            map.put("id", id);
+            map.put("name", name);
+            return map;
+        }
+
     }
 }

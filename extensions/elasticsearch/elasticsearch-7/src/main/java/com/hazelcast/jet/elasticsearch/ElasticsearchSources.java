@@ -16,14 +16,11 @@
 
 package com.hazelcast.jet.elasticsearch;
 
-import com.hazelcast.function.ConsumerEx;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.pipeline.BatchSource;
 import org.apache.http.HttpHost;
-import org.elasticsearch.action.ActionRequest;
 import org.elasticsearch.action.search.SearchRequest;
-import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.client.RestClient;
 import org.elasticsearch.client.RestHighLevelClient;
 import org.elasticsearch.search.SearchHit;
@@ -51,7 +48,7 @@ public final class ElasticsearchSources {
     /**
      * Creates a source which queries local instance of Elasticsearch for all documents
      * <p>
-     * Useful for quick prototyping. See other methods {@link #elasticsearch(String, SupplierEx, SupplierEx)}
+     * Useful for quick prototyping. See other methods {@link #elasticsearch(SupplierEx, SupplierEx, FunctionEx)}
      * and {@link #builder()}
      */
     public static BatchSource<String> elasticsearch() {
@@ -126,77 +123,6 @@ public final class ElasticsearchSources {
     }
 
     /**
-     * Creates a source which queries objects using the specified Elasticsearch
-     * client and the specified request supplier using scrolling method.
-     *
-     * @param name                  name of the source
-     * @param clientSupplier        Elasticsearch REST client supplier
-     * @param searchRequestSupplier search request supplier
-     * @param scrollTimeout         scroll keep alive time
-     * @param mapHitFn              maps search hits to output items
-     * @param optionsFn             obtains {@link RequestOptions} for each request
-     * @param destroyFn             called upon completion to release any resource
-     * @param <T>                   type of items emitted downstream
-     */
-    @Deprecated // TODO keep this for backward compatibility?
-    // taken from original elastic source, now superseded by the builder
-    public static <T> BatchSource<T> elasticsearch(
-            @Nonnull String name,
-            @Nonnull SupplierEx<? extends RestHighLevelClient> clientSupplier,
-            @Nonnull SupplierEx<SearchRequest> searchRequestSupplier,
-            @Nonnull String scrollTimeout,
-            @Nonnull FunctionEx<SearchHit, T> mapHitFn,
-            @Nonnull FunctionEx<? super ActionRequest, RequestOptions> optionsFn,
-            @Nonnull ConsumerEx<? super RestHighLevelClient> destroyFn
-    ) {
-        return ElasticsearchSources.<T>builder()
-                .name(name)
-                .clientSupplier(clientSupplier)
-                .searchRequestSupplier(searchRequestSupplier)
-                .scrollKeepAlive(scrollTimeout)
-                .mapHitFn(mapHitFn)
-                .optionsFn(optionsFn)
-                .destroyFn(destroyFn)
-                .build();
-    }
-
-    /**
-     * Convenience for {@link #elasticsearch(String, SupplierEx, SupplierEx,
-     * String, FunctionEx, FunctionEx, ConsumerEx)}.
-     * Uses {@link #DEFAULT_SCROLL_TIMEOUT} for scroll timeout and {@link
-     * RequestOptions#DEFAULT}, emits string representation of items using
-     * {@link SearchHit#getSourceAsString()} and closes the {@link
-     * RestHighLevelClient} upon completion.
-     */
-    @Deprecated // TODO keep this for backward compatibility?
-    // also not sure if providing custom source name is common, doestn' seem like it is unless you have more than 1
-    public static BatchSource<String> elasticsearch(
-            @Nonnull String name,
-            @Nonnull SupplierEx<? extends RestHighLevelClient> clientSupplier,
-            @Nonnull SupplierEx<SearchRequest> searchRequestSupplier
-    ) {
-        return elasticsearch(name, clientSupplier, searchRequestSupplier, DEFAULT_SCROLL_TIMEOUT,
-                SearchHit::getSourceAsString, request -> RequestOptions.DEFAULT, RestHighLevelClient::close);
-    }
-
-
-    /**
-     * Convenience for {@link #elasticsearch(String, SupplierEx, SupplierEx)}.
-     * Rest client is configured with basic authentication.
-     */
-    public static BatchSource<String> elasticsearch(
-            @Nonnull String name,
-            @Nonnull String username,
-            @Nullable String password,
-            @Nonnull String hostname,
-            int port,
-            @Nonnull SupplierEx<SearchRequest> searchRequestSupplier
-    ) {
-        return elasticsearch(name, () -> ElasticsearchSinks.buildClient(username, password, hostname, port),
-                searchRequestSupplier);
-    }
-
-    /**
      * Convenience method to create {@link RestHighLevelClient} with basic authentication and given hostname and port
      * <p>
      * Usage:
@@ -208,6 +134,6 @@ public final class ElasticsearchSources {
                                              @Nullable String password,
                                              @Nonnull String hostname,
                                              int port) {
-        return ElasticsearchSinks.buildClient(username, password, hostname, port);
+        return ElasticsearchSinks.client(username, password, hostname, port);
     }
 }

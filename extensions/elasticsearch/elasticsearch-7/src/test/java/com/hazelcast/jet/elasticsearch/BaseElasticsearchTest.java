@@ -19,6 +19,7 @@ package com.hazelcast.jet.elasticsearch;
 import com.hazelcast.collection.IList;
 import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.JetInstance;
+import com.hazelcast.jet.Job;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.pipeline.Pipeline;
 import org.elasticsearch.action.admin.indices.delete.DeleteIndexRequest;
@@ -81,7 +82,9 @@ public abstract class BaseElasticsearchTest {
      * - create a client before each test for use by all methods from this class interacting with elastic
      * - may be used as as a parameter of {@link ElasticsearchSourceBuilder#clientSupplier(SupplierEx)}
      */
-    protected abstract SupplierEx<RestHighLevelClient> elasticClientSupplier();
+    protected SupplierEx<RestHighLevelClient> elasticClientSupplier() {
+        return ElasticSupport.elasticClientSupplier();
+    };
 
     protected abstract JetInstance createJetInstance();
 
@@ -89,15 +92,22 @@ public abstract class BaseElasticsearchTest {
      * Creates an index with given name with 3 shards
      */
     protected void initShardedIndex(String index) throws IOException {
+        createShardedIndex(index, 3, 0);
+        indexBatchOfDocuments(index);
+    }
+
+    /**
+     * Creates an index with given name with 3 shards
+     */
+    protected void createShardedIndex(String index, int shards, int replicas) throws IOException {
         CreateIndexRequest indexRequest = new CreateIndexRequest(index);
         indexRequest.settings(Settings.builder()
-                                      .put("index.number_of_shards", 3)
-                                      .put("index.number_of_replicas", 0)
+                                      .put("index.unassigned.node_left.delayed_timeout", "1s")
+                                      .put("index.number_of_shards", shards)
+                                      .put("index.number_of_replicas", replicas)
         );
 
         elasticClient.indices().create(indexRequest, RequestOptions.DEFAULT);
-
-        indexBatchOfDocuments(index);
     }
 
     /**
@@ -105,7 +115,7 @@ public abstract class BaseElasticsearchTest {
      */
     protected void cleanElasticData() {
         try {
-            deleteDocuments();
+//            deleteDocuments();
 
             elasticClient.indices().delete(new DeleteIndexRequest("*"), DEFAULT);
         } catch (IOException e) {
@@ -127,8 +137,15 @@ public abstract class BaseElasticsearchTest {
      * Indexes a batch of documents to an index with given name
      */
     protected void indexBatchOfDocuments(String index) {
+        indexBatchOfDocuments(index, CommonElasticsearchSourcesTest.BATCH_SIZE);
+    }
+
+    /**
+     * Indexes a batch of documents to an index with given name
+     */
+    protected void indexBatchOfDocuments(String index, int batchSize) {
         List<Map<String, Object>> docs = new ArrayList<>();
-        for (int i = 0; i < CommonElasticsearchSourcesTest.BATCH_SIZE; i++) {
+        for (int i = 0; i < batchSize; i++) {
             docs.add(of("title", "document " + i));
         }
         indexDocuments(index, docs);
@@ -170,6 +187,11 @@ public abstract class BaseElasticsearchTest {
      * Adds this.getClass to config so any lambdas used in a test class can be deserialized when run in remote cluster.
      */
     protected void submitJob(Pipeline p) {
+        Job job = submitJobNoWait(p);
+        job.join();
+    }
+
+    protected Job submitJobNoWait(Pipeline p) {
         JobConfig config = new JobConfig();
 
         Class<?> clazz = this.getClass();
@@ -178,6 +200,6 @@ public abstract class BaseElasticsearchTest {
             clazz = clazz.getSuperclass();
         }
 
-        jet.newJob(p, config).join();
+        return jet.newJob(p, config);
     }
 }

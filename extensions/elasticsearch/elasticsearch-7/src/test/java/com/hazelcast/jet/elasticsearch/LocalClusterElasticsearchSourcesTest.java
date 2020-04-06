@@ -16,14 +16,10 @@
 
 package com.hazelcast.jet.elasticsearch;
 
-import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.JetTestInstanceFactory;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.impl.util.Util;
-import org.apache.http.HttpHost;
-import org.elasticsearch.client.RestClient;
-import org.elasticsearch.client.RestHighLevelClient;
 
 import java.util.function.Supplier;
 
@@ -39,13 +35,6 @@ public class LocalClusterElasticsearchSourcesTest extends CommonElasticsearchSou
         Runtime.getRuntime().addShutdownHook(new Thread(factory::terminateAll));
         return instances[0];
     });
-
-    protected SupplierEx<RestHighLevelClient> elasticClientSupplier() {
-        String address = ElasticSupport.elastic.get().getHttpHostAddress();
-        return () -> new RestHighLevelClient(
-                RestClient.builder(HttpHost.create(address))
-        );
-    }
 
     @Override
     protected JetInstance createJetInstance() {

@@ -17,44 +17,27 @@
 package com.hazelcast.jet.elasticsearch.impl;
 
 import com.hazelcast.cluster.Address;
-import com.hazelcast.internal.json.Json;
-import com.hazelcast.internal.json.JsonArray;
-import com.hazelcast.internal.json.JsonObject;
-import com.hazelcast.internal.json.JsonValue;
 import com.hazelcast.jet.JetException;
-import com.hazelcast.jet.elasticsearch.ElasticsearchSourceBuilder;
-import com.hazelcast.jet.elasticsearch.impl.Shard.Prirep;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
-import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.core.processor.Processors;
+import com.hazelcast.jet.elasticsearch.ElasticsearchSourceBuilder;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.partition.strategy.StringPartitioningStrategy;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import org.elasticsearch.action.search.SearchRequest;
-import org.elasticsearch.client.Request;
-import org.elasticsearch.client.Response;
-import org.elasticsearch.client.RestHighLevelClient;
 
 import javax.annotation.Nonnull;
-import java.io.IOException;
-import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 
 import static com.hazelcast.jet.impl.util.Util.uncheckCall;
-import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.emptyMap;
 import static java.util.Collections.nCopies;
-import static java.util.Optional.empty;
-import static java.util.logging.Level.FINER;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toList;
 
@@ -82,8 +65,8 @@ public class ElasticProcessorMetaSupplier<T> implements ProcessorMetaSupplier {
 
     @Override
     public int preferredLocalParallelism() {
-        if (builder.slicing() || builder.coLocatedReading()) {
-            return Vertex.LOCAL_PARALLELISM_USE_DEFAULT;
+        if (builder.coLocatedReading() || builder.slicing()) {
+            return builder.preferredLocalParallelism();
         } else {
             return 1;
         }
@@ -94,7 +77,9 @@ public class ElasticProcessorMetaSupplier<T> implements ProcessorMetaSupplier {
     public void init(@Nonnull Context context) throws Exception {
         logger = context.logger();
 
-        List<Shard> shards = readShards();
+        ElasticCatClient catClient = new ElasticCatClient(builder.clientSupplier().get().getLowLevelClient());
+        List<Shard> shards = catClient.shards(builder.searchRequestSupplier().get().indices());
+
         if (builder.coLocatedReading()) {
             List<String> addresses = context
                     .jetInstance().getCluster().getMembers().stream()
@@ -110,10 +95,11 @@ public class ElasticProcessorMetaSupplier<T> implements ProcessorMetaSupplier {
     }
 
     static Map<String, List<Shard>> assignShards(List<Shard> shards, List<String> addresses) {
-        Map<String, List<Shard>> nodeCandidates = shards.stream().collect(groupingBy(Shard::getIp));
+        Map<String, List<Shard>> nodeCandidates = shards.stream()
+                                                        .collect(groupingBy(Shard::getIp));
         Map<String, List<Shard>> nodeAssigned = new HashMap<>();
 
-        if (!nodeCandidates.keySet().equals(new HashSet<>(addresses))) {
+        if (!addresses.containsAll(nodeCandidates.keySet())) {
             throw new JetException("Shard locations are not equal to Jet nodes locations, " +
                     "shards=" + nodeCandidates.keySet() +
                     ", Jet nodes=" + addresses);
@@ -122,7 +108,8 @@ public class ElasticProcessorMetaSupplier<T> implements ProcessorMetaSupplier {
         int uniqueShards = (int) shards.stream().map(Shard::indexShard).distinct().count();
         Set<String> assignedShards = new HashSet<>();
 
-        for (int i = 0; i < (uniqueShards / addresses.size()); i++) {
+        int iterations = (uniqueShards + addresses.size() - 1) / addresses.size(); // Same as Math.ceil for float div
+        for (int i = 0; i < iterations; i++) {
             for (String address : addresses) {
                 List<Shard> thisNodeCandidates = nodeCandidates.getOrDefault(address, emptyList());
                 if (thisNodeCandidates.isEmpty()) {
@@ -140,53 +127,9 @@ public class ElasticProcessorMetaSupplier<T> implements ProcessorMetaSupplier {
             }
         }
         if (assignedShards.size() != uniqueShards) {
-            throw new JetException("Not all shards have been assigned assigned");
+            throw new JetException("Not all shards have been assigned");
         }
         return nodeAssigned;
-    }
-
-
-    @SuppressFBWarnings("RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE")
-    private List<Shard> readShards() throws IOException {
-        try (RestHighLevelClient client = builder.clientSupplier().get()) {
-            SearchRequest sr = builder.searchRequestSupplier().get();
-            Request r = new Request("GET", "/_cat/shards/" + String.join(",", sr.indices()));
-            r.addParameter("format", "json");
-            Response res = client.getLowLevelClient().performRequest(r);
-
-            try (InputStreamReader reader = new InputStreamReader(res.getEntity().getContent(), UTF_8)) {
-                JsonArray array = Json.parse(reader).asArray();
-                List<Shard> shards = new ArrayList<>(array.size());
-                for (JsonValue value : array) {
-                    Optional<Shard> shard = convertToShard(value);
-                    shard.ifPresent(shards::add);
-                }
-
-                if (logger.isFineEnabled()) {
-                    logger.log(FINER, "Shards " + shards);
-                }
-                return shards;
-            }
-        }
-    }
-
-    private Optional<Shard> convertToShard(JsonValue value) {
-        JsonObject object = value.asObject();
-        // TODO IndexShardState.STARTED but this is deeply inside elastic, should we mirror the enum?
-        if ("STARTED".equals(object.get("state").asString())) {
-            Shard shard = new Shard(
-                    object.get("index").asString(),
-                    Integer.parseInt(object.get("shard").asString()),
-                    Prirep.valueOf(object.get("prirep").asString()),
-                    Integer.parseInt(object.get("docs").asString()),
-                    object.get("state").asString(),
-                    object.get("ip").asString(),
-                    object.get("node").asString()
-            );
-            return Optional.of(shard);
-        } else {
-            return empty();
-        }
     }
 
     @Nonnull
