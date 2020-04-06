@@ -63,6 +63,7 @@ import com.hazelcast.sql.impl.expression.string.PositionFunction;
 import com.hazelcast.sql.impl.expression.string.ReplaceFunction;
 import com.hazelcast.sql.impl.expression.string.SubstringFunction;
 import com.hazelcast.sql.impl.expression.string.UpperFunction;
+import com.hazelcast.sql.impl.type.QueryDataType;
 import com.hazelcast.sql.impl.type.SqlDaySecondInterval;
 import com.hazelcast.sql.impl.type.SqlYearMonthInterval;
 import com.hazelcast.sql.impl.type.converter.CalendarConverter;
@@ -101,6 +102,8 @@ public final class RexToExpression {
             "checkstyle:NPathComplexity"})
     public static Expression<?> convertCall(RexCall call, Expression<?>[] operands) {
         SqlOperator operator = call.getOperator();
+
+        QueryDataType returnType = SqlToQueryType.map(call.getType().getSqlTypeName());
 
         switch (operator.getKind()) {
             case PLUS:
@@ -230,7 +233,7 @@ public final class RexToExpression {
                 } else if (function == SqlStdOperatorTable.ABS) {
                     return AbsFunction.create(operands[0]);
                 } else if (function == SqlStdOperatorTable.PI) {
-                    return ConstantExpression.create(Math.PI);
+                    return ConstantExpression.create(returnType, Math.PI);
                 } else if (function == SqlStdOperatorTable.SIGN) {
                     return SignFunction.create(operands[0]);
                 } else if (function == SqlStdOperatorTable.ATAN2) {
@@ -323,7 +326,7 @@ public final class RexToExpression {
             case INTERVAL_YEAR:
             case INTERVAL_MONTH:
             case INTERVAL_YEAR_MONTH:
-                return convertIntervalYearMonthLiteral(literal);
+                return convertIntervalYearMonthLiteral(literal, type);
 
             case INTERVAL_DAY:
             case INTERVAL_DAY_HOUR:
@@ -335,10 +338,13 @@ public final class RexToExpression {
             case INTERVAL_MINUTE:
             case INTERVAL_MINUTE_SECOND:
             case INTERVAL_SECOND:
-                return convertDaySecondLiteral(literal);
+                return convertDaySecondLiteral(literal, type);
 
             case SYMBOL:
                 return convertSymbolLiteral(literal);
+
+            case NULL:
+                return ConstantExpression.create(QueryDataType.NULL, null);
 
             default:
                 throw HazelcastSqlException.error("Unsupported literal: " + literal);
@@ -385,7 +391,7 @@ public final class RexToExpression {
                 throw new IllegalArgumentException("Unsupported literal type: " + type);
         }
 
-        return ConstantExpression.create(value);
+        return ConstantExpression.create(SqlToQueryType.map(type), value);
     }
 
     private static Expression<?> convertStringLiteral(RexLiteral literal, SqlTypeName type) {
@@ -400,7 +406,7 @@ public final class RexToExpression {
                 throw new IllegalArgumentException("Unsupported literal type: " + type);
         }
 
-        return ConstantExpression.create(value);
+        return ConstantExpression.create(SqlToQueryType.map(type), value);
     }
 
     private static Expression<?> convertTemporalLiteral(RexLiteral literal, SqlTypeName type) {
@@ -430,21 +436,21 @@ public final class RexToExpression {
                 throw new IllegalArgumentException("Unsupported literal type: " + type);
         }
 
-        return ConstantExpression.create(value);
+        return ConstantExpression.create(SqlToQueryType.map(type), value);
     }
 
-    private static Expression<?> convertIntervalYearMonthLiteral(RexLiteral literal) {
+    private static Expression<?> convertIntervalYearMonthLiteral(RexLiteral literal, SqlTypeName type) {
         int months = literal.getValueAs(Integer.class);
-        return ConstantExpression.create(new SqlYearMonthInterval(months));
+        return ConstantExpression.create(SqlToQueryType.map(type), new SqlYearMonthInterval(months));
     }
 
-    private static Expression<?> convertDaySecondLiteral(RexLiteral literal) {
+    private static Expression<?> convertDaySecondLiteral(RexLiteral literal, SqlTypeName type) {
         long value = literal.getValueAs(Long.class);
 
         long seconds = value / MILLISECONDS_PER_SECOND;
         int nanoseconds = (int) (value % MILLISECONDS_PER_SECOND) * NANOSECONDS_PER_MILLISECOND;
 
-        return ConstantExpression.create(new SqlDaySecondInterval(seconds, nanoseconds));
+        return ConstantExpression.create(SqlToQueryType.map(type), new SqlDaySecondInterval(seconds, nanoseconds));
     }
 
     private static Expression<?> convertSymbolLiteral(RexLiteral literal) {
@@ -505,5 +511,4 @@ public final class RexToExpression {
 
         throw HazelcastSqlException.error("Unsupported literal symbol: " + literal);
     }
-
 }
