@@ -12,7 +12,8 @@
       "tutorials/cdc",
       "tutorials/map-join",
       "tutorials/windowing",
-      "tutorials/python"
+      "tutorials/python",
+      "tutorials/spring-boot"
     ],
     "Concepts": [
       "concepts/dag",
@@ -59,6 +60,8 @@
     ],
     "Design Documents": [
       "design-docs/index",
+      "design-docs/006-declarative-serialization",
+      "design-docs/005-cdc-sources",
       "design-docs/004-spring-boot-starter",
       "design-docs/003-elasticsearch-connector",
       "design-docs/002-job-level-serialization",
