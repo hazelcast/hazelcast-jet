@@ -28,7 +28,7 @@ public final class GrpcUtil {
      * {@link io.grpc.StatusException} and {@link io.grpc.StatusRuntimeException}
      * break the Serializable contract, see
      * <a href="https://github.com/grpc/grpc-java/issues/1913">gRPC Issue #1913</a>.
-     * Jet replaces them with a serializable ones.
+     * This method replaces them with serializable ones.
      *
      * @param exception the exception to examine and possibly replace
      * @return the same exception or a replacement if needed

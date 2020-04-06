@@ -24,9 +24,9 @@ import javax.annotation.Nonnull;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * Represents a gRPC service that can be used as part of a
- * {@link GeneralStage#mapUsingServiceAsync(ServiceFactory, BiFunctionEx) mapUsingServiceAsync}
- * call. Use {@link GrpcServices} to create a service.
+ * Represents a gRPC service that can be used as part of a {@link
+ * GeneralStage#mapUsingServiceAsync(ServiceFactory, BiFunctionEx)
+ * mapUsingServiceAsync} call. Use {@link GrpcServices} to create a service.
  *
  * @param <T> type of the request object
  * @param <R> type of the response object
