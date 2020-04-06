@@ -25,20 +25,20 @@ import io.grpc.stub.StreamObserver;
 import javax.annotation.Nonnull;
 import java.util.concurrent.CompletableFuture;
 
-public final class UnaryService<I, O> implements GrpcService<I, O> {
+public final class UnaryService<T, R> implements GrpcService<T, R> {
 
-    private final BiConsumerEx<I, StreamObserver<O>> callFn;
+    private final BiConsumerEx<? super T, ? super StreamObserver<R>> callFn;
 
     public UnaryService(
             @Nonnull ManagedChannel channel,
-            @Nonnull FunctionEx<ManagedChannel, BiConsumerEx<I, StreamObserver<O>>> callStubFn
+            @Nonnull FunctionEx<? super ManagedChannel, ? extends BiConsumerEx<T, StreamObserver<R>>> callStubFn
     ) {
         callFn = callStubFn.apply(channel);
     }
 
     @Override @Nonnull
-    public CompletableFuture<O> call(@Nonnull I input) {
-        Observer<O> o = new Observer<>();
+    public CompletableFuture<R> call(@Nonnull T input) {
+        Observer<R> o = new Observer<>();
         callFn.accept(input, o);
         return o.future;
     }

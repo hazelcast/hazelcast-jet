@@ -100,12 +100,12 @@ public final class GRPCEnrichment {
                 .map(entryValue());
 
 
-        ServiceFactory<?, GrpcService<ProductInfoRequest, ProductInfoReply>> productService = unaryService(
+        ServiceFactory<?, ? extends GrpcService<ProductInfoRequest, ProductInfoReply>> productService = unaryService(
                 () -> ManagedChannelBuilder.forAddress("localhost", PORT).usePlaintext(),
                 channel -> ProductServiceGrpc.newStub(channel)::productInfo
         );
 
-        ServiceFactory<?, GrpcService<BrokerInfoRequest, BrokerInfoReply>> brokerService = unaryService(
+        ServiceFactory<?, ? extends GrpcService<BrokerInfoRequest, BrokerInfoReply>> brokerService = unaryService(
                 () -> ManagedChannelBuilder.forAddress("localhost", PORT).usePlaintext(),
                 channel -> BrokerServiceGrpc.newStub(channel)::brokerInfo
         );

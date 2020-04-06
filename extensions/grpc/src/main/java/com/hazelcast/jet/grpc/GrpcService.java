@@ -28,18 +28,18 @@ import java.util.concurrent.CompletableFuture;
  * {@link GeneralStage#mapUsingServiceAsync(ServiceFactory, BiFunctionEx) mapUsingServiceAsync}
  * call. Use {@link GrpcServices} to create a service.
  *
- * @param <I> Type of the request object
- * @param <O> Type of the response object
+ * @param <T> type of the request object
+ * @param <R> type of the response object
  *
  * @since 4.1
  */
 @FunctionalInterface
-public interface GrpcService<I, O> {
+public interface GrpcService<T, R> {
 
     /**
      * Calls the requested service and returns a future which will be
      * completed with the result once a response is received.
      */
     @Nonnull
-    CompletableFuture<O> call(@Nonnull I input);
+    CompletableFuture<R> call(@Nonnull T input);
 }

@@ -96,19 +96,19 @@ public final class GrpcServices {
      *                   input item and the observer. The returned function
      *                   will be used to invoke the service once per input
      *                   item.
-     * @param <I> Type of the request object
-     * @param <O> Type of the response object
+     * @param <T> type of the request object
+     * @param <R> type of the response object
      */
     @Nonnull
-    public static <I, O> ServiceFactory<?, GrpcService<I, O>> unaryService(
-            @Nonnull SupplierEx<ManagedChannelBuilder<?>> channelFn,
-            @Nonnull FunctionEx<ManagedChannel, BiConsumerEx<I, StreamObserver<O>>> callStubFn
+    public static <T, R> ServiceFactory<?, ? extends GrpcService<T, R>> unaryService(
+            @Nonnull SupplierEx<? extends ManagedChannelBuilder<?>> channelFn,
+            @Nonnull FunctionEx<? super ManagedChannel, ? extends BiConsumerEx<T, StreamObserver<R>>> callStubFn
     ) {
-        return ServiceFactory.withCreateContextFn(ctx -> channelFn.get().build())
-                .<GrpcService<I, O>>withCreateServiceFn((ctx, channel) ->
-                        new UnaryService<>(channel, callStubFn)
-                ).withDestroyServiceFn(s -> ((UnaryService<I, O>) s).destroy())
-                 .withDestroyContextFn(ManagedChannel::shutdown);
+        return ServiceFactory
+                .withCreateContextFn(ctx -> channelFn.get().build())
+                .withCreateServiceFn((ctx, channel) -> new UnaryService<>(channel, callStubFn))
+                .withDestroyServiceFn(UnaryService::destroy)
+                .withDestroyContextFn(ManagedChannel::shutdown);
     }
 
     /**
@@ -159,18 +159,19 @@ public final class GrpcServices {
      *                   and returns a function that calls the stub given the
      *                   input item and the observer. The returned function
      *                   will be used to feed input items to the input observer.
-     * @param <I> Type of the request object
-     * @param <O> Type of the response object
+     * @param <T> type of the request object
+     * @param <R> type of the response object
      */
     @Nonnull
-    public static <I, O> ServiceFactory<?, GrpcService<I, O>> bidirectionalStreamingService(
-            @Nonnull SupplierEx<ManagedChannelBuilder<?>> channelFn,
-            @Nonnull FunctionEx<ManagedChannel, FunctionEx<StreamObserver<O>, StreamObserver<I>>> callStubFn
+    public static <T, R> ServiceFactory<?, ? extends GrpcService<T, R>> bidirectionalStreamingService(
+            @Nonnull SupplierEx<? extends ManagedChannelBuilder<?>> channelFn,
+            @Nonnull FunctionEx<? super ManagedChannel, ? extends FunctionEx<StreamObserver<R>, StreamObserver<T>>>
+                    callStubFn
     ) {
-        return ServiceFactory.withCreateContextFn(ctx -> channelFn.get().build())
-                .<GrpcService<I, O>>withCreateServiceFn((ctx, channel) ->
-                        new BidirectionalStreamingService<>(ctx, channel, callStubFn)
-                ).withDestroyServiceFn(s -> ((BidirectionalStreamingService<I, O>) s).destroy())
-                 .withDestroyContextFn(ManagedChannel::shutdown);
+        return ServiceFactory
+                .withCreateContextFn(ctx -> channelFn.get().build())
+                .withCreateServiceFn((ctx, channel) -> new BidirectionalStreamingService<>(ctx, channel, callStubFn))
+                .withDestroyServiceFn(BidirectionalStreamingService::destroy)
+                .withDestroyContextFn(ManagedChannel::shutdown);
     }
 }
