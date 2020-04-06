@@ -57,12 +57,12 @@ public class CreateDagVisitor {
         JetTable table = rel.getTableUnwrapped();
         PlanNodeSchema schema = new PlanNodeSchema(table.getPhysicalRowType());
         Expression<Boolean> predicate = convertFilter(schema, rel.getFilter());
-        Tuple2<Vertex, Vertex> subDag = table.getSqlConnector().fullScanReader(dag, table, null, predicate,
+        Vertex vertex = table.getSqlConnector().fullScanReader(dag, table, null, predicate,
                 rel.getProjects());
-        assert subDag != null : "null subDag"; // we check for this earlier TODO check for it earlier :)
+        assert vertex != null : "null subDag"; // we check for this earlier TODO check for it earlier :)
         VertexAndOrdinal targetVertex = vertexStack.peek();
         assert targetVertex != null : "targetVertex=null";
-        dag.edge(between(subDag.f1(), targetVertex.vertex));
+        dag.edge(between(vertex, targetVertex.vertex));
         targetVertex.ordinal++;
     }
 
@@ -93,11 +93,11 @@ public class CreateDagVisitor {
 
     public void onTableInsert(JetTableInsertPhysicalRel rel) {
         final JetTable jetTable = rel.getTable().unwrap(JetTable.class);
-        Tuple2<Vertex, Vertex> sink = jetTable.getSqlConnector().sink(dag, jetTable);
-        if (sink == null) {
+        Vertex vertex = jetTable.getSqlConnector().sink(dag, jetTable);
+        if (vertex == null) {
             throw new JetException("This connector doesn't support writing");
         }
-        vertexStack.push(new VertexAndOrdinal(sink.f0()));
+        vertexStack.push(new VertexAndOrdinal(vertex));
     }
 
     public void onValues(JetValuesPhysicalRel rel) {
