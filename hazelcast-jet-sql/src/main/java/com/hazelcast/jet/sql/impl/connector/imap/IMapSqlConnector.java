@@ -124,7 +124,7 @@ public class IMapSqlConnector implements SqlConnector {
     }
 
     @Nullable @Override
-    public Tuple2<Vertex, Vertex> fullScanReader(
+    public Vertex fullScanReader(
             @Nonnull DAG dag,
             @Nonnull JetTable jetTable,
             @Nullable String timestampField,
@@ -196,7 +196,7 @@ public class IMapSqlConnector implements SqlConnector {
 
         Vertex vRead = dag.newVertex("map(" + mapName + ")",
                 readMapP(mapName, mapPredicate, mapProjection));
-        return tuple2(vRead, vRead);
+        return vRead;
     }
 
     @Nullable @Override
@@ -225,7 +225,7 @@ public class IMapSqlConnector implements SqlConnector {
     }
 
     @Nullable @Override
-    public Tuple2<Vertex, Vertex> sink(
+    public Vertex sink(
             @Nonnull DAG dag,
             @Nonnull JetTable jetTable
     ) {
@@ -280,7 +280,7 @@ public class IMapSqlConnector implements SqlConnector {
                 }));
         Vertex vEnd = dag.newVertex("mapSink", SinkProcessors.writeMapP(mapName));
         dag.edge(between(vStart, vEnd));
-        return tuple2(vStart, vEnd);
+        return vStart;
     }
 
     private static Object convert(Object v, QueryDataType type) {

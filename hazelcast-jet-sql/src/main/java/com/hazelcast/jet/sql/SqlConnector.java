@@ -79,7 +79,7 @@ public interface SqlConnector {
      * @param projection list of field names to return
      */
     @Nullable
-    Tuple2<Vertex, Vertex> fullScanReader(
+    Vertex fullScanReader(
             @Nonnull DAG dag,
             @Nonnull JetTable jetTable,
             @Nullable String timestampField,
@@ -109,7 +109,7 @@ public interface SqlConnector {
      * Returns the supplier for the sink processor.
      */
     @Nullable
-    Tuple2<Vertex, Vertex> sink(
+    Vertex sink(
             @Nonnull DAG dag,
             @Nonnull JetTable jetTable);
 
