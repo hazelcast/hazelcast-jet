@@ -16,25 +16,28 @@
 
 package com.hazelcast.jet.grpc.impl;
 
-import com.hazelcast.jet.JetException;
-import com.hazelcast.jet.impl.util.ExceptionUtil;
 import io.grpc.StatusException;
 import io.grpc.StatusRuntimeException;
 
 public final class GrpcUtil {
 
     private GrpcUtil() {
-
     }
 
+    /**
+     * {@link io.grpc.StatusException} and {@link io.grpc.StatusRuntimeException}
+     * break the Serializable contract, see
+     * <a href="https://github.com/grpc/grpc-java/issues/1913">gRPC Issue #1913</a>.
+     * Jet replaces them with a serializable ones.
+     *
+     * @param exception the exception to examine and possibly replace
+     * @return the same exception or a replacement if needed
+     */
     public static Throwable wrapGrpcException(Throwable exception) {
-        // some gRPC exceptions break Serializable contract, handle these explicitly
-        // see: https://github.com/grpc/grpc-java/issues/1913
-        if (exception instanceof StatusException || exception instanceof StatusRuntimeException) {
-            // not serializable exceptions
-            exception = new JetException("Call to gRPC service failed with "
-                    + ExceptionUtil.stackTraceToString(exception));
-        }
-        return exception;
+        return (exception instanceof StatusException)
+                ? new StatusExceptionJet((StatusException) exception)
+                : (exception instanceof StatusRuntimeException)
+                ? new StatusRuntimeExceptionJet((StatusRuntimeException) exception)
+                : exception;
     }
 }
