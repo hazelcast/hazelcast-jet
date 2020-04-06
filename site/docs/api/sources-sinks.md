@@ -249,8 +249,8 @@ p.readFrom(S3Sources.s3(singletonList("input-bucket"), "prefix",
  .writeTo(Sinks.logger());
 ```
 
-The S3 sink works similarly to the local file sink, writing a line to
-the output for each input item:
+The S3 sink works similar to the local file sink, writing a line to the
+output for each input item:
 
 ```java
 Pipeline p = Pipeline.create();
@@ -424,7 +424,7 @@ or greater than 1.0.0.
 ### JMS
 
 JMS (Java Message Service) is a standard API for communicating with
-various message brokers using queue or publish-subscribe patterns.
+various message brokers using the queue or publish-subscribe patterns.
 
 There are several brokers that implement the JMS standard, including:
 
@@ -481,7 +481,7 @@ p.readFrom(Sources.jmsTopic("topic",
  .writeTo(Sinks.logger());
 ```
 
-Here is a more complex example that uses a shared and durable consumer:
+Here is a more complex example that uses a shared, durable consumer:
 
 ```java
 Pipeline p = Pipeline.create();
@@ -500,20 +500,20 @@ p.readFrom(Sources
 
 #### Source fault tolerance
 
-The source connector is fault-tolerant with exactly-once guarantee
-(except for non-durable topic consumer). The fault tolerance is achieved
+The source connector is fault-tolerant with the exactly-once guarantee
+(except for the non-durable topic consumer). Fault tolerance is achieved
 by acknowledging the consumed messages only after they were fully
 processed by the downstream stages. Acknowledging is done once per
 snapshot, you need to enable the processing guarantee in the
 `JobConfig`.
 
-In exactly-once mode the processor saves IDs of the messages processed
-since the last snapshot into the snapshotted state. Therefore this mode
-will not work if your messages don't have the JMS Message ID set (it is
-an optional feature of JMS). In this case you need to set `messageIdFn`
-on the builder to extract message ID from the payload. If you don't have
-a message ID to use, you must reduce the source guarantee to
-at-least-once:
+In the exactly-once mode the processor saves the IDs of the messages
+processed since the last snapshot into the snapshotted state. Therefore
+this mode will not work if your messages don't have the JMS Message ID
+set (it is an optional feature of JMS). In this case you need to set
+`messageIdFn` on the builder to extract the message ID from the payload.
+If you don't have a message ID to use, you must reduce the source
+guarantee to at-least-once:
 
 ```java
 p.readFrom(Sources.jmsTopicBuilder(...)
@@ -521,11 +521,11 @@ p.readFrom(Sources.jmsTopicBuilder(...)
         ...
 ```
 
-In at-least-once mode messages are acknowledged in the same way as in
-exactly-once mode, but message IDs are not saved to the snapshot.
+In the at-least-once mode messages are acknowledged in the same way as
+in the exactly-once mode, but message IDs are not saved to the snapshot.
 
 If you have no processing guarantee enabled, the processor will consume
-the messages in `DUPS_OK_ACKNOWLEDGE` mode.
+the messages in the `DUPS_OK_ACKNOWLEDGE` mode.
 
 #### JMS Sink Connector
 
@@ -551,18 +551,18 @@ p.readFrom(Sources.list("inputList"))
 
 #### Fault Tolerance
 
-The JMS sink supports exactly-once guarantee. It uses two-phase XA
-transactions, messages are committed consistently with the last state
+The JMS sink supports the exactly-once guarantee. It uses two-phase XA
+transactions, messages are committed consistent with the last state
 snapshot. This greatly increases the latency, it is determined by the
 snapshot interval: messages are visible to consumers only after the
 commit. In order to make it work, the connection factory you provide has
 to implement `javax.jms.XAConnectionFactory`, otherwise the job will not
 start.
 
-If you want to avoid the higher latency, decrease the overhead wrought
-by the XA transactions, if your JMS implementation doesn't support XA
-transactions or if you just don't need the guarantee, you can reduce it
-just for the sink:
+If you want to avoid the higher latency, decrease the overhead
+introduced by the XA transactions, if your JMS implementation doesn't
+support XA transactions or if you just don't need the guarantee, you can
+reduce it just for the sink:
 
 ```java
 stage.writeTo(Sinks
@@ -572,10 +572,10 @@ stage.writeTo(Sinks
          .build());
 ```
 
-In at-least-once mode or if no guarantee is enabled, the transaction is
-committed after each batch of messages: transactions are used for
-performance as this is the JMS' way to send messages in batches. Batches
-are created from readily available messages so they incur minimal extra
+In the at-least-once mode or if no guarantee is enabled, the transaction
+is committed after each batch of messages: transactions are used for
+performance as this is JMS' way to send messages in batches. Batches are
+created from readily available messages so they incur minimal extra
 latency.
 
 #### Connection Handling
@@ -823,11 +823,11 @@ which we will explore.
 ### JDBC
 
 JDBC is a well-established database API supported by every major
-relational (and many non-relational) database implementations out there
-including Oracle, MySQL, PostgreSQL, Microsoft SQL Server. The libraries
-are typically referred to as _JDBC drivers_ and every major database
-vendor will have this driver available for either download or on a
-package repository such as maven.
+relational (and many non-relational) database implementations including
+Oracle, MySQL, PostgreSQL, Microsoft SQL Server. They provide libraries
+called _JDBC drivers_ and every major database vendor will have this
+driver available for either download or in a package repository such as
+maven.
 
 Jet is able to utilize these drivers both for sources and sinks and the
 only step required is to add the driver to the `lib` folder of Jet or
@@ -894,14 +894,14 @@ _insert-or-update_ statement should be used instead of `INSERT`, such as
 
 #### Fault tolerance
 
-The JDBC sink supports exactly-once guarantee. It uses two-phase XA
+The JDBC sink supports the exactly-once guarantee. It uses two-phase XA
 transactions, the DML statements are committed consistently with the
 last state snapshot. This greatly increases the latency, it is
 determined by the snapshot interval: messages are visible to consumers
 only after the commit. In order to make it work, instead of the JDBC URL
-you have to use variant with `Supplier<CommonDataSource>` and it must
-return an instance of `javax.sql.XADataSource`, otherwise the job will
-not start.
+you have to use the variant with `Supplier<CommonDataSource>` and it
+must return an instance of `javax.sql.XADataSource`, otherwise the job
+will not start.
 
 Here is an example for PostgreSQL:
 
