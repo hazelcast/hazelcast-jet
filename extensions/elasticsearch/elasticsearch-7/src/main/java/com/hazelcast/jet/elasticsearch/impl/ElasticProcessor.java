@@ -54,12 +54,6 @@ final class ElasticProcessor<T> extends AbstractProcessor {
     private final List<Shard> shards;
     private Traverser<T> traverser;
 
-    ElasticProcessor(ElasticsearchSourceBuilder<T> builder) {
-        this.builder = builder;
-        this.shards = null;
-        assert !builder.coLocatedReading() : "Co-located reading is on but no shards given";
-    }
-
     ElasticProcessor(ElasticsearchSourceBuilder<T> builder, List<Shard> shards) {
         this.builder = builder;
         this.shards = shards;
@@ -76,12 +70,22 @@ final class ElasticProcessor<T> extends AbstractProcessor {
         SearchRequest sr = builder.searchRequestSupplier().get();
         sr.scroll(builder.scrollKeepAlive());
 
-        int sliceId = context.globalProcessorIndex();
-        int totalSlices = context.totalParallelism();
-
-        if (builder.slicing() && totalSlices > 1) {
-            logger.fine("Slice id=" + sliceId + ", max=" + totalSlices);
-            sr.source().slice(new SliceBuilder(sliceId, totalSlices));
+        if (builder.slicing()) {
+            if (builder.coLocatedReading()) {
+                int sliceId = context.localProcessorIndex();
+                int totalSlices = context.localParallelism();
+                if (totalSlices > 1) {
+                    logger.fine("Slice id=" + sliceId + ", max=" + totalSlices);
+                    sr.source().slice(new SliceBuilder(sliceId, totalSlices));
+                }
+            } else {
+                int sliceId = context.globalProcessorIndex();
+                int totalSlices = context.totalParallelism();
+                if (totalSlices > 1) {
+                    logger.fine("Slice id=" + sliceId + ", max=" + totalSlices);
+                    sr.source().slice(new SliceBuilder(sliceId, totalSlices));
+                }
+            }
         }
 
         if (builder.coLocatedReading()) {

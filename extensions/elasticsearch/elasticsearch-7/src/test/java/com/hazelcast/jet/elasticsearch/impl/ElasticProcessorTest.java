@@ -36,6 +36,7 @@ import org.elasticsearch.common.bytes.BytesArray;
 import org.elasticsearch.common.text.Text;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
+import org.elasticsearch.search.slice.SliceBuilder;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
@@ -85,18 +86,25 @@ public class ElasticProcessorTest {
     }
 
     private void createProcessor() throws Exception {
-        createProcessor(request -> RequestOptions.DEFAULT, emptyList());
+        createProcessor(request -> RequestOptions.DEFAULT, emptyList(), false, false);
     }
 
     private void createProcessor(FunctionEx<ActionRequest, RequestOptions> optionsFn) throws Exception {
-        createProcessor(optionsFn, emptyList());
+        createProcessor(optionsFn, emptyList(), false, false);
     }
 
     private void createProcessor(List<Shard> shards) throws Exception {
-        createProcessor(request -> RequestOptions.DEFAULT, shards);
+        createProcessor(request -> RequestOptions.DEFAULT, shards, false, true);
     }
 
-    private void createProcessor(FunctionEx<ActionRequest, RequestOptions> optionsFn, List<Shard> shards)
+    private void createProcessor(FunctionEx<ActionRequest, RequestOptions> optionsFn, List<Shard> shards,
+                                 boolean slicing, boolean coLocatedReading)
+            throws Exception {
+        createProcessor(optionsFn, shards, slicing, coLocatedReading, new TestProcessorContext());
+    }
+
+    private void createProcessor(FunctionEx<ActionRequest, RequestOptions> optionsFn, List<Shard> shards,
+                                 boolean slicing, boolean coLocatedReading, TestProcessorContext context)
             throws Exception {
 
         RestHighLevelClient client = mockClient;
@@ -105,17 +113,15 @@ public class ElasticProcessorTest {
                 .searchRequestSupplier(() -> new SearchRequest("*"))
                 .optionsFn(optionsFn)
                 .mapHitFn(SearchHit::getSourceAsString)
-                .scrollKeepAlive(KEEP_ALIVE);
-
-        if (!shards.isEmpty()) {
-            builder.coLocatedReading(true);
-        }
+                .scrollKeepAlive(KEEP_ALIVE)
+                .slicing(slicing)
+                .coLocatedReading(coLocatedReading);
 
         // This constructor calls the client so it has to be called after specific mock setup in each test method
         // rather than in setUp()
         processor = new ElasticProcessor<>(builder, shards);
         outbox = new TestOutbox(OUTBOX_CAPACITY);
-        processor.init(outbox, new TestProcessorContext());
+        processor.init(outbox, context);
 
     }
 
@@ -274,6 +280,62 @@ public class ElasticProcessorTest {
 
         SearchRequest request = captor.getValue();
         assertThat(request.preference()).isEqualTo("_shards:0,1,2|_only_local");
+    }
+
+    @Test
+    public void shouldUseSlicing() throws Exception {
+        when(response.getHits()).thenReturn(new SearchHits(new SearchHit[]{}, new TotalHits(0, EQUAL_TO), Float.NaN));
+
+        TestProcessorContext context = new TestProcessorContext();
+        context.setLocalProcessorIndex(1);
+        context.setLocalParallelism(2);
+        context.setGlobalProcessorIndex(4);
+        context.setTotalParallelism(6);
+
+        createProcessor((r) -> RequestOptions.DEFAULT, emptyList(), true, false, context);
+
+        runProcessor();
+
+        ArgumentCaptor<SearchRequest> captor = forClass(SearchRequest.class);
+        verify(mockClient).search(captor.capture(), any());
+
+        SearchRequest request = captor.getValue();
+        SliceBuilder slice = request.source().slice();
+
+        // Slicing across all, should use global values
+        assertThat(slice.getId()).isEqualTo(4);
+        assertThat(slice.getMax()).isEqualTo(6);
+    }
+
+    @Test
+    public void useSlicingAndCoLocation() throws Exception {
+        when(response.getHits()).thenReturn(new SearchHits(new SearchHit[]{}, new TotalHits(0, EQUAL_TO), Float.NaN));
+
+        TestProcessorContext context = new TestProcessorContext();
+        context.setLocalProcessorIndex(1);
+        context.setLocalParallelism(2);
+        context.setGlobalProcessorIndex(4);
+        context.setTotalParallelism(6);
+
+        createProcessor((r) -> RequestOptions.DEFAULT,
+                newArrayList(
+                        new Shard("my-index", 0, Prirep.p, 42, "STARTED", "10.0.0.1", "10.0.0.1:9200", "es1"),
+                        new Shard("my-index", 1, Prirep.p, 42, "STARTED", "10.0.0.1", "10.0.0.1:9200", "es1"),
+                        new Shard("my-index", 2, Prirep.p, 42, "STARTED", "10.0.0.1", "10.0.0.1:9200", "es1")
+                ),
+                true, true, context);
+
+        runProcessor();
+
+        ArgumentCaptor<SearchRequest> captor = forClass(SearchRequest.class);
+        verify(mockClient).search(captor.capture(), any());
+
+        SearchRequest request = captor.getValue();
+        SliceBuilder slice = request.source().slice();
+
+        // Slicing across single node, should use local values
+        assertThat(slice.getId()).isEqualTo(1);
+        assertThat(slice.getMax()).isEqualTo(2);
     }
 
     /*

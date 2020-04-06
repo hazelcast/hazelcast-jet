@@ -27,6 +27,7 @@ import com.hazelcast.partition.strategy.StringPartitioningStrategy;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -39,13 +40,11 @@ import static java.util.Collections.emptyList;
 import static java.util.Collections.emptyMap;
 import static java.util.Collections.nCopies;
 import static java.util.stream.Collectors.groupingBy;
-import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toSet;
 
 public class ElasticProcessorMetaSupplier<T> implements ProcessorMetaSupplier {
 
     private static final long serialVersionUID = 1L;
-
-    private transient ILogger logger;
 
     @Nonnull
     private final ElasticsearchSourceBuilder<T> builder;
@@ -55,12 +54,6 @@ public class ElasticProcessorMetaSupplier<T> implements ProcessorMetaSupplier {
 
     public ElasticProcessorMetaSupplier(@Nonnull ElasticsearchSourceBuilder<T> builder) {
         this.builder = builder;
-    }
-
-    @Nonnull
-    @Override
-    public Map<String, String> getTags() {
-        return emptyMap();
     }
 
     @Override
@@ -75,26 +68,24 @@ public class ElasticProcessorMetaSupplier<T> implements ProcessorMetaSupplier {
 
     @Override
     public void init(@Nonnull Context context) throws Exception {
-        logger = context.logger();
-
         ElasticCatClient catClient = new ElasticCatClient(builder.clientSupplier().get().getLowLevelClient());
         List<Shard> shards = catClient.shards(builder.searchRequestSupplier().get().indices());
 
         if (builder.coLocatedReading()) {
-            List<String> addresses = context
+            Set<String> addresses = context
                     .jetInstance().getCluster().getMembers().stream()
                     .map(m -> uncheckCall((() -> m.getAddress().getInetAddress().getHostAddress())))
-                    .collect(toList());
-            this.assignedShards = assignShards(shards, addresses);
+                    .collect(toSet());
+            assignedShards = assignShards(shards, addresses);
         } else {
-            String key = StringPartitioningStrategy.getPartitionKey(String.valueOf(context.jobId()));
             ownerAddress = context.jetInstance().getHazelcastInstance().getPartitionService()
-                                  .getPartition(key).getOwner().getAddress();
+                                  .getPartition(context.jobId()).getOwner().getAddress();
+            assignedShards = emptyMap();
         }
 
     }
 
-    static Map<String, List<Shard>> assignShards(List<Shard> shards, List<String> addresses) {
+    static Map<String, List<Shard>> assignShards(Collection<Shard> shards, Collection<String> addresses) {
         Map<String, List<Shard>> nodeCandidates = shards.stream()
                                                         .collect(groupingBy(Shard::getIp));
         Map<String, List<Shard>> nodeAssigned = new HashMap<>();
@@ -135,17 +126,14 @@ public class ElasticProcessorMetaSupplier<T> implements ProcessorMetaSupplier {
     @Nonnull
     @Override
     public Function<? super Address, ? extends ProcessorSupplier> get(@Nonnull List<Address> addresses) {
-        if (builder.slicing()) {
-            return address -> new ElasticProcessorSupplier<>(builder);
-        }
-        if (builder.coLocatedReading()) {
+        if (builder.slicing() || builder.coLocatedReading()) {
             return address -> {
                 String ipAddress = uncheckCall(() -> address.getInetAddress().getHostAddress());
-                List<Shard> shards = assignedShards.get(ipAddress);
+                List<Shard> shards = assignedShards.getOrDefault(ipAddress, emptyList());
                 return new ElasticProcessorSupplier<>(builder, shards);
             };
         } else {
-            return address -> address.equals(ownerAddress) ? new ElasticProcessorSupplier<>(builder)
+            return address -> address.equals(ownerAddress) ? new ElasticProcessorSupplier<>(builder, emptyList())
                     : count -> nCopies(count, Processors.noopP().get());
         }
     }
