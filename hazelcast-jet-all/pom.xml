@@ -88,6 +88,10 @@
                             <pattern>nonapi.io.github.classgraph.</pattern>
                             <shadedPattern>com.hazelcast.jet.nonapi.io.github.classgraph.</shadedPattern>
                         </relocation>
+                        <relocation>
+                            <pattern>com.hazelcast.internal.json.</pattern>
+                            <shadedPattern>com.hazelcast.jet.json.</shadedPattern>
+                        </relocation>
                     </relocations>
                     <transformers>
                         <transformer
