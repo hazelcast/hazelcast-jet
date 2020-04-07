@@ -44,6 +44,8 @@ import org.apache.calcite.rex.RexWindow;
 import java.util.ArrayList;
 import java.util.List;
 
+import static java.util.Arrays.asList;
+
 public final class IMapFilterIntoScanLogicalRule extends RelOptRule {
 
     public static final IMapFilterIntoScanLogicalRule INSTANCE = new IMapFilterIntoScanLogicalRule();
@@ -62,8 +64,6 @@ public final class IMapFilterIntoScanLogicalRule extends RelOptRule {
         Filter filter = call.rel(0);
         TableScan scan = call.rel(1);
 
-        int scanFieldCount = scan.getTable().getRowType().getFieldCount();
-
         List<RexNode> projectNodes;
         RexNode oldFilter;
         if (scan instanceof FullScanLogicalRel) {
@@ -77,13 +77,9 @@ public final class IMapFilterIntoScanLogicalRule extends RelOptRule {
 
         //Mapping mapping = Mappings.target(scan.identity(), scan.getTable().getRowType().getFieldCount()); // TODO: Old mode
         RexNode newFilter = projectNodes == null ? filter.getCondition()
-                : RexUtil.apply(new SubstituteInputRefVisitor(projectNodes), new RexNode[] {filter.getCondition()})[0];
+                : RexUtil.apply(new SubstituteInputRefVisitor(projectNodes), new RexNode[]{filter.getCondition()})[0];
         if (oldFilter != null) {
-            List<RexNode> nodes = new ArrayList<>(2);
-            nodes.add(oldFilter);
-            nodes.add(newFilter);
-
-            newFilter = RexUtil.composeConjunction(scan.getCluster().getRexBuilder(), nodes, true);
+            newFilter = RexUtil.composeConjunction(scan.getCluster().getRexBuilder(), asList(oldFilter, newFilter), true);
         }
 
         FullScanLogicalRel newScan = new FullScanLogicalRel(

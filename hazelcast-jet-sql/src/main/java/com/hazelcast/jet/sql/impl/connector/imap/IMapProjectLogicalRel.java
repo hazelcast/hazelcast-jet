@@ -32,12 +32,13 @@ import org.apache.calcite.rex.RexNode;
 import java.util.List;
 
 public class IMapProjectLogicalRel extends Project implements LogicalRel {
+
     public IMapProjectLogicalRel(
-        RelOptCluster cluster,
-        RelTraitSet traits,
-        RelNode input,
-        List<? extends RexNode> projects,
-        RelDataType rowType
+            RelOptCluster cluster,
+            RelTraitSet traits,
+            RelNode input,
+            List<? extends RexNode> projects,
+            RelDataType rowType
     ) {
         super(cluster, traits, input, projects, rowType);
     }
