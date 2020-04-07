@@ -23,10 +23,23 @@ import org.apache.calcite.plan.RelOptRuleCall;
 import org.apache.calcite.rel.core.Filter;
 import org.apache.calcite.rel.core.RelFactories;
 import org.apache.calcite.rel.core.TableScan;
+import org.apache.calcite.rex.RexCall;
+import org.apache.calcite.rex.RexCorrelVariable;
+import org.apache.calcite.rex.RexDynamicParam;
+import org.apache.calcite.rex.RexFieldAccess;
+import org.apache.calcite.rex.RexFieldCollation;
+import org.apache.calcite.rex.RexInputRef;
+import org.apache.calcite.rex.RexLiteral;
+import org.apache.calcite.rex.RexLocalRef;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.rex.RexOver;
+import org.apache.calcite.rex.RexPatternFieldRef;
+import org.apache.calcite.rex.RexRangeRef;
+import org.apache.calcite.rex.RexSubQuery;
+import org.apache.calcite.rex.RexTableInputRef;
 import org.apache.calcite.rex.RexUtil;
-import org.apache.calcite.util.mapping.Mapping;
-import org.apache.calcite.util.mapping.Mappings;
+import org.apache.calcite.rex.RexVisitor;
+import org.apache.calcite.rex.RexWindow;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -53,21 +66,18 @@ public final class IMapFilterIntoScanLogicalRule extends RelOptRule {
 
         List<RexNode> projectNodes;
         RexNode oldFilter;
-        Mapping mapping;
         if (scan instanceof FullScanLogicalRel) {
             FullScanLogicalRel scan0 = (FullScanLogicalRel) scan;
             projectNodes = scan0.getProjectNodes();
             oldFilter = scan0.getFilter();
-            // TODO the scan.identity() is wrong
-            mapping = Mappings.source(scan.identity(), scanFieldCount);
         } else {
             projectNodes = null;
             oldFilter = null;
-            mapping = Mappings.source(scan.identity(), scanFieldCount);
         }
 
         //Mapping mapping = Mappings.target(scan.identity(), scan.getTable().getRowType().getFieldCount()); // TODO: Old mode
-        RexNode newFilter = RexUtil.apply(mapping, filter.getCondition());
+        RexNode newFilter = projectNodes == null ? filter.getCondition()
+                : RexUtil.apply(new SubstituteInputRefVisitor(projectNodes), new RexNode[] {filter.getCondition()})[0];
         if (oldFilter != null) {
             List<RexNode> nodes = new ArrayList<>(2);
             nodes.add(oldFilter);
@@ -85,5 +95,93 @@ public final class IMapFilterIntoScanLogicalRule extends RelOptRule {
         );
 
         call.transformTo(newScan);
+    }
+
+    private static class SubstituteInputRefVisitor implements RexVisitor<RexNode> {
+
+        private final List<RexNode> projectNodes;
+
+        protected SubstituteInputRefVisitor(List<RexNode> projectNodes) {
+            this.projectNodes = projectNodes;
+        }
+
+        @Override
+        public RexNode visitInputRef(RexInputRef inputRef) {
+            return projectNodes.get(inputRef.getIndex());
+        }
+
+        public RexNode visitLocalRef(RexLocalRef localRef) {
+            return localRef;
+        }
+
+        public RexNode visitLiteral(RexLiteral literal) {
+            return literal;
+        }
+
+        public RexNode visitOver(RexOver over) {
+            final RexWindow window = over.getWindow();
+            for (RexFieldCollation orderKey : window.orderKeys) {
+                RexNode newOrderKey = orderKey.left.accept(this);
+                if (newOrderKey != orderKey.left) {
+                    throw new RuntimeException("replacing order key not supported");
+                }
+            }
+            for (RexNode partitionKey : window.partitionKeys) {
+                RexNode newPartitionKey = partitionKey.accept(this);
+                if (partitionKey != newPartitionKey) {
+                    throw new RuntimeException("replacing partition key not supported");
+                }
+            }
+            window.getLowerBound().accept(this);
+            window.getUpperBound().accept(this);
+            return over;
+        }
+
+        public RexNode visitCorrelVariable(RexCorrelVariable correlVariable) {
+            return correlVariable;
+        }
+
+        public RexNode visitCall(RexCall call) {
+            List<RexNode> newOperands = new ArrayList<>(call.getOperands().size());
+            for (RexNode operand : call.operands) {
+                newOperands.add(operand.accept(this));
+            }
+            return call.clone(call.type, newOperands);
+        }
+
+        public RexNode visitDynamicParam(RexDynamicParam dynamicParam) {
+            return dynamicParam;
+        }
+
+        public RexNode visitRangeRef(RexRangeRef rangeRef) {
+            return rangeRef;
+        }
+
+        public RexNode visitFieldAccess(RexFieldAccess fieldAccess) {
+            final RexNode expr = fieldAccess.getReferenceExpr();
+            RexNode newOperand = expr.accept(this);
+            if (newOperand != fieldAccess.getReferenceExpr()) {
+                throw new RuntimeException("replacing partition key not supported");
+            }
+            return fieldAccess;
+        }
+
+        public RexNode visitSubQuery(RexSubQuery subQuery) {
+            List<RexNode> newOperands = new ArrayList<>(subQuery.operands.size());
+            for (RexNode operand : subQuery.operands) {
+                newOperands.add(operand.accept(this));
+            }
+            return subQuery.clone(subQuery.type, newOperands);
+        }
+
+        @Override
+        public RexNode visitTableInputRef(RexTableInputRef ref) {
+            return ref;
+        }
+
+        @Override
+        public RexNode visitPatternFieldRef(RexPatternFieldRef fieldRef) {
+            return fieldRef;
+        }
     }
 }

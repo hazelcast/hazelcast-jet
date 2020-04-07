@@ -161,6 +161,13 @@ public class SqlTest extends SimpleTestInClusterSupport {
     }
 
     @Test
+    public void fullScan_projection4() throws Exception {
+        assertRowsAnyOrder(
+                "SELECT upper(this) FROM " + INT_TO_STRING_MAP_SRC + " WHERE upper(this)='VALUE-1'",
+                singletonList(new Row("VALUE-1")));
+    }
+
+    @Test
     public void insert() {
         assertMap(
                 INT_TO_STRING_MAP_SINK, "INSERT INTO " + INT_TO_STRING_MAP_SINK + " SELECT * FROM " + INT_TO_STRING_MAP_SRC,
