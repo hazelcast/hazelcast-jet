@@ -16,8 +16,8 @@
 
 package com.hazelcast.jet.sql.impl.connector;
 
-import com.hazelcast.jet.sql.impl.PhysicalRel;
 import com.hazelcast.jet.sql.impl.CreateDagVisitor;
+import com.hazelcast.jet.sql.impl.PhysicalRel;
 import com.hazelcast.jet.sql.impl.cost.CostUtils;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptCost;
@@ -34,19 +34,21 @@ import java.util.List;
  * Physical full scan over a source connector.
  */
 public class FullScanPhysicalRel extends AbstractFullScanRel implements PhysicalRel {
+
     public FullScanPhysicalRel(
-        RelOptCluster cluster,
-        RelTraitSet traitSet,
-        RelOptTable table,
-        List<Integer> projects,
-        RexNode filter
+            RelOptCluster cluster,
+            RelTraitSet traitSet,
+            RelOptTable table,
+            List<Integer> projects,
+            List<RexNode> projectNodes,
+            RexNode filter
     ) {
-        super(cluster, traitSet, table, projects, filter);
+        super(cluster, traitSet, table, projects, projectNodes, filter);
     }
 
     @Override
     public final RelNode copy(RelTraitSet traitSet, List<RelNode> inputs) {
-        return new FullScanPhysicalRel(getCluster(), traitSet, getTable(), projects, filter);
+        return new FullScanPhysicalRel(getCluster(), traitSet, getTable(), getProjects(), getProjectNodes(), getFilter());
     }
 
     // TODO: Dedup with logical scan
@@ -58,6 +60,7 @@ public class FullScanPhysicalRel extends AbstractFullScanRel implements Physical
         // 2. Get cost of the project taking in count filter and number of expressions. Project never produces IO.
         double filterRowCount = scanCost.getRows();
 
+        RexNode filter = getFilter();
         if (filter != null) {
             double filterSelectivity = mq.getSelectivity(this, filter);
             filterRowCount = filterRowCount * filterSelectivity;
@@ -67,13 +70,11 @@ public class FullScanPhysicalRel extends AbstractFullScanRel implements Physical
         double projectCpu = CostUtils.adjustProjectCpu(filterRowCount * expressionCount, true);
 
         // 3. Finally, return sum of both scan and project.
-        RelOptCost totalCost = planner.getCostFactory().makeCost(
-            filterRowCount,
-            scanCost.getCpu() + projectCpu,
-            scanCost.getIo()
+        return planner.getCostFactory().makeCost(
+                filterRowCount,
+                scanCost.getCpu() + projectCpu,
+                scanCost.getIo()
         );
-
-        return totalCost;
     }
 
     @Override

@@ -20,10 +20,9 @@ import com.hazelcast.function.ConsumerEx;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Vertex;
-import com.hazelcast.jet.datamodel.Tuple2;
-import com.hazelcast.jet.sql.impl.expression.RexToExpressionVisitor;
-import com.hazelcast.jet.sql.impl.connector.imap.IMapProjectPhysicalRel;
 import com.hazelcast.jet.sql.impl.connector.FullScanPhysicalRel;
+import com.hazelcast.jet.sql.impl.connector.imap.IMapProjectPhysicalRel;
+import com.hazelcast.jet.sql.impl.expression.RexToExpressionVisitor;
 import com.hazelcast.jet.sql.impl.schema.JetTable;
 import com.hazelcast.sql.impl.expression.Expression;
 import com.hazelcast.sql.impl.plan.node.PlanNodeFieldTypeProvider;
@@ -40,6 +39,7 @@ import java.util.List;
 import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.processor.SourceProcessors.convenientSourceP;
 import static com.hazelcast.jet.impl.util.Util.toList;
+import static java.util.stream.Collectors.toList;
 
 public class CreateDagVisitor {
 
@@ -57,8 +57,10 @@ public class CreateDagVisitor {
         JetTable table = rel.getTableUnwrapped();
         PlanNodeSchema schema = new PlanNodeSchema(table.getPhysicalRowType());
         Expression<Boolean> predicate = convertFilter(schema, rel.getFilter());
-        Vertex vertex = table.getSqlConnector().fullScanReader(dag, table, null, predicate,
-                rel.getProjects());
+        List<Expression<?>> projection = rel.getProjectNodes().stream()
+                                            .map(projectNode -> convertExpression(schema, projectNode, rel.getProjectNodes().size()))
+                                            .collect(toList());
+        Vertex vertex = table.getSqlConnector().fullScanReader(dag, table, null, predicate, projection);
         assert vertex != null : "null subDag"; // we check for this earlier TODO check for it earlier :)
         VertexAndOrdinal targetVertex = vertexStack.peek();
         assert targetVertex != null : "targetVertex=null";
@@ -71,19 +73,14 @@ public class CreateDagVisitor {
         if (expression == null) {
             return null;
         }
-
-        Expression convertedExpression = convertExpression(schema, expression);
-
-        return (Expression<Boolean>) convertedExpression;
+        return (Expression<Boolean>) convertExpression(schema, expression, 0);
     }
 
-    private Expression<?> convertExpression(PlanNodeFieldTypeProvider fieldTypeProvider, RexNode expression) {
+    private Expression<?> convertExpression(PlanNodeFieldTypeProvider fieldTypeProvider, RexNode expression, int parameterCount) {
         if (expression == null) {
             return null;
         }
-
-        RexToExpressionVisitor converter = new RexToExpressionVisitor(fieldTypeProvider, 0);
-
+        RexToExpressionVisitor converter = new RexToExpressionVisitor(fieldTypeProvider, parameterCount);
         return expression.accept(converter);
     }
 

@@ -32,14 +32,15 @@ import java.util.ArrayList;
 import java.util.List;
 
 public final class IMapFilterIntoScanLogicalRule extends RelOptRule {
+
     public static final IMapFilterIntoScanLogicalRule INSTANCE = new IMapFilterIntoScanLogicalRule();
 
     private IMapFilterIntoScanLogicalRule() {
         super(
-            operand(Filter.class,
-                operandJ(TableScan.class, null, scan -> scan.getTable().unwrap(IMapTable.class) != null, none())),
-            RelFactories.LOGICAL_BUILDER,
-            IMapFilterIntoScanLogicalRule.class.getSimpleName()
+                operand(Filter.class,
+                        operandJ(TableScan.class, null, scan -> scan.getTable().unwrap(IMapTable.class) != null, none())),
+                RelFactories.LOGICAL_BUILDER,
+                IMapFilterIntoScanLogicalRule.class.getSimpleName()
         );
     }
 
@@ -51,27 +52,25 @@ public final class IMapFilterIntoScanLogicalRule extends RelOptRule {
         int scanFieldCount = scan.getTable().getRowType().getFieldCount();
 
         List<Integer> projects;
+        List<RexNode> projectNodes;
         RexNode oldFilter;
-
         Mapping mapping;
-
         if (scan instanceof FullScanLogicalRel) {
             FullScanLogicalRel scan0 = (FullScanLogicalRel) scan;
 
             projects = scan0.getProjects();
+            projectNodes = scan0.getProjectNodes();
             oldFilter = scan0.getFilter();
-
             mapping = Mappings.source(projects, scanFieldCount);
         } else {
             projects = null;
+            projectNodes = null;
             oldFilter = null;
-
             mapping = Mappings.source(scan.identity(), scanFieldCount);
         }
 
         //Mapping mapping = Mappings.target(scan.identity(), scan.getTable().getRowType().getFieldCount()); // TODO: Old mode
         RexNode newFilter = RexUtil.apply(mapping, filter.getCondition());
-
         if (oldFilter != null) {
             List<RexNode> nodes = new ArrayList<>(2);
             nodes.add(oldFilter);
@@ -81,11 +80,12 @@ public final class IMapFilterIntoScanLogicalRule extends RelOptRule {
         }
 
         FullScanLogicalRel newScan = new FullScanLogicalRel(
-            scan.getCluster(),
-            OptUtils.toLogicalConvention(scan.getTraitSet()),
-            scan.getTable(),
-            projects,
-            newFilter
+                scan.getCluster(),
+                OptUtils.toLogicalConvention(scan.getTraitSet()),
+                scan.getTable(),
+                projects,
+                projectNodes,
+                newFilter
         );
 
         call.transformTo(newScan);

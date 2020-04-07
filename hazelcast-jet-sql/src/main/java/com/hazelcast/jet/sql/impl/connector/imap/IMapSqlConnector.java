@@ -129,10 +129,12 @@ public class IMapSqlConnector implements SqlConnector {
             @Nonnull JetTable jetTable,
             @Nullable String timestampField,
             @Nullable Expression<Boolean> predicate,
-            @Nonnull List<Integer> projection
+            @Nonnull List<Expression<?>> projections
     ) {
         IMapTable table = (IMapTable) jetTable;
         String mapName = table.getMapName();
+
+        List<QueryDataType> fieldTypes = table.getPhysicalRowType();
 
         // convert the projection
         List<String> fieldNames = toList(table.getFieldNames(), fieldName -> {
@@ -155,18 +157,21 @@ public class IMapSqlConnector implements SqlConnector {
                 return "value." + fieldName;
             }
         });
-        int[] projection0 = projection.stream().mapToInt(i -> i).toArray();
-        Projection<Entry<Object, Object>, Object[]> mapProjection = entry -> {
-            // TODO use Extractors
-            Object[] res = new Object[projection0.length];
 
-            for (int i = 0; i < projection0.length; i++) {
-                int fieldIndex = projection0[i];
+        Projection<Entry<Object, Object>, Object[]> mapProjection = entry -> {
+            KeyValueRow row = new KeyValueRow(fieldNames, fieldTypes, (key, val, path) ->
+            {
                 try {
-                    res[i] = PropertyUtils.getProperty(entry, fieldNames.get(fieldIndex));
+                    return PropertyUtils.getProperty(entry(key, val), path);
                 } catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
-                    throw new RuntimeException(e);
+                    throw sneakyThrow(e);
                 }
+            });
+            row.setKeyValue(entry.getKey(), entry.getValue());
+
+            Object[] res = new Object[projections.size()];
+            for (int i = 0; i < projections.size(); i++) {
+                res[i] = projections.get(i).eval(row, ZERO_ARGUMENTS_CONTEXT);
             }
             return res;
         };
@@ -177,7 +182,6 @@ public class IMapSqlConnector implements SqlConnector {
         if (predicate == null) {
             mapPredicate = Predicates.alwaysTrue();
         } else {
-            List<QueryDataType> fieldTypes = table.getPhysicalRowType();
             mapPredicate = entry -> {
                 KeyValueRow row = new KeyValueRow(fieldNames, fieldTypes, (key, val, path) ->
                 {
@@ -194,9 +198,8 @@ public class IMapSqlConnector implements SqlConnector {
             };
         }
 
-        Vertex vRead = dag.newVertex("map(" + mapName + ")",
+        return dag.newVertex("map(" + mapName + ")",
                 readMapP(mapName, mapPredicate, mapProjection));
-        return vRead;
     }
 
     @Nullable @Override

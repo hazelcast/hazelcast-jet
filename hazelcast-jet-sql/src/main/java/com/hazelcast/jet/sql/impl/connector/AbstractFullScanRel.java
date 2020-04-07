@@ -26,34 +26,52 @@ import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rel.type.RelDataTypeField;
+import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexNode;
 
 import java.util.List;
+
+import static java.util.stream.Collectors.toList;
 
 /**
  * Base class for scans.
  */
 public abstract class AbstractFullScanRel extends TableScan {
-    /** Projection. */
-    protected final List<Integer> projects;
-    /** Filter. */
-    protected final RexNode filter;
+
+    /**
+     * Projection.
+     */
+    private final List<Integer> projects;
+    private final List<RexNode> projectNodes;
+
+    /**
+     * Filter.
+     */
+    private final RexNode filter;
 
     protected AbstractFullScanRel(
             RelOptCluster cluster,
             RelTraitSet traitSet,
             RelOptTable table,
             List<Integer> projects,
+            List<RexNode> projectNodes,
             RexNode filter
     ) {
         super(cluster, traitSet, table);
-
         this.projects = projects != null ? projects : identity();
+        this.projectNodes = projectNodes != null ? projectNodes :
+                table.getRowType().getFieldList().stream()
+                     .map(field -> new RexInputRef(field.getIndex(), field.getType()))
+                     .collect(toList());
         this.filter = filter;
     }
 
     public List<Integer> getProjects() {
         return projects;
+    }
+
+    public List<RexNode> getProjectNodes() {
+        return projectNodes;
     }
 
     public RexNode getFilter() {

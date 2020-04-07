@@ -40,14 +40,15 @@ import java.util.List;
 import java.util.Map;
 
 public final class IMapProjectIntoScanLogicalRule extends RelOptRule {
+
     public static final IMapProjectIntoScanLogicalRule INSTANCE = new IMapProjectIntoScanLogicalRule();
 
     private IMapProjectIntoScanLogicalRule() {
         super(
-            operand(Project.class,
-                operandJ(TableScan.class, null, scan -> scan.getTable().unwrap(IMapTable.class) != null, none())),
-            RelFactories.LOGICAL_BUILDER,
-            IMapProjectIntoScanLogicalRule.class.getSimpleName()
+                operand(Project.class,
+                        operandJ(TableScan.class, null, scan -> scan.getTable().unwrap(IMapTable.class) != null, none())),
+                RelFactories.LOGICAL_BUILDER,
+                IMapProjectIntoScanLogicalRule.class.getSimpleName()
         );
     }
 
@@ -66,7 +67,7 @@ public final class IMapProjectIntoScanLogicalRule extends RelOptRule {
             // Project returns all the rows of the scan. Let ProjectRemoveRule do its job.
             return;
         } else {
-            transformed = processSimple(mapping, scan);
+            transformed = processSimple(project, mapping, scan);
         }
 
         call.transformTo(transformed);
@@ -76,21 +77,29 @@ public final class IMapProjectIntoScanLogicalRule extends RelOptRule {
      * Process simple case when all project expressions are direct field access.
      *
      * @param mapping Projects mapping.
-     * @param scan Scan.
+     * @param scan    Scan.
      * @return Transformed node (new scan).
      */
-    private static RelNode processSimple(Mappings.TargetMapping mapping, TableScan scan) {
-        List<Integer> projects = getScanProjects(scan);
-        RexNode filter = getScanFilter(scan);
+    private static RelNode processSimple(Project project, Mappings.TargetMapping mapping, TableScan scan) {
+        List<Integer> oldProjects = getScanProjects(scan);
+        List<Integer> newProjects = Mappings.apply((Mapping) mapping, oldProjects);
+        List<RexNode> newProjectNodes = new ArrayList<>();
 
-        List<Integer> newProjects = Mappings.apply((Mapping) mapping, projects);
+        for (Integer newProject : newProjects) {
+            RexNode node = project.getProjects().stream()
+                                  .filter(n -> ((RexInputRef) n).getIndex() == newProject) // TODO
+                                  .findFirst()
+                                  .orElseThrow(RuntimeException::new);
+            newProjectNodes.add(node);
+        }
 
         return new FullScanLogicalRel(
-            scan.getCluster(),
-            OptUtils.toLogicalConvention(scan.getTraitSet()),
-            scan.getTable(),
-            newProjects,
-            filter
+                scan.getCluster(),
+                OptUtils.toLogicalConvention(scan.getTraitSet()),
+                scan.getTable(),
+                newProjects,
+                newProjectNodes,
+                getScanFilter(scan)
         );
     }
 
@@ -99,49 +108,44 @@ public final class IMapProjectIntoScanLogicalRule extends RelOptRule {
      * decreased in scan.
      *
      * @param project Project.
-     * @param scan Scan.
+     * @param scan    Scan.
      * @return Transformed node (new project with new scan).
      */
     private RelNode processComplex(Project project, TableScan scan) {
         // Map projected field references to real scan fields.
-        List<Integer> oldScanFields = getScanProjects(scan);
+        List<Integer> oldProjects = getScanProjects(scan);
 
-        ProjectFieldVisitor projectFieldVisitor = new ProjectFieldVisitor(oldScanFields);
-
-        for (RexNode projectExp : project.getProjects()) {
-            projectExp.accept(projectFieldVisitor);
+        ProjectFieldVisitor projectFieldVisitor = new ProjectFieldVisitor(oldProjects);
+        for (RexNode projectNode : project.getProjects()) {
+            projectNode.accept(projectFieldVisitor);
         }
-
         // Get new scan fields. These are the only fields which are accessed by the project operator, so the rest could be
         // removed.
-        List<Integer> newScanFields = projectFieldVisitor.createNewScanFields();
-        RexNode filter = getScanFilter(scan);
-
-        FullScanLogicalRel newScan = new FullScanLogicalRel(
-            scan.getCluster(),
-            OptUtils.toLogicalConvention(scan.getTraitSet()),
-            scan.getTable(),
-            newScanFields,
-            filter
-        );
+        List<Integer> newProjects = projectFieldVisitor.createNewScanFields();
 
         // Create new project nodes with references to scan fields.
         ProjectConverter projectConverter = projectFieldVisitor.createProjectConverter();
-
-        List<RexNode> newProjects = new ArrayList<>();
-
-        for (RexNode projectExp : project.getProjects()) {
-            RexNode newProjectExp = projectExp.accept(projectConverter);
-
-            newProjects.add(newProjectExp);
+        List<RexNode> newProjectNodes = new ArrayList<>();
+        for (RexNode oldProjectNode : project.getProjects()) {
+            RexNode newProjectNode = oldProjectNode.accept(projectConverter);
+            newProjectNodes.add(newProjectNode);
         }
 
+        FullScanLogicalRel newScan = new FullScanLogicalRel(
+                scan.getCluster(),
+                OptUtils.toLogicalConvention(scan.getTraitSet()),
+                scan.getTable(),
+                newProjects,
+                newProjectNodes,
+                getScanFilter(scan)
+        );
+
         IMapProjectLogicalRel newProject = new IMapProjectLogicalRel(
-            project.getCluster(),
-            OptUtils.toLogicalConvention(project.getTraitSet()),
-            newScan,
-            newProjects,
-            project.getRowType()
+                project.getCluster(),
+                OptUtils.toLogicalConvention(project.getTraitSet()),
+                newScan,
+                newProjectNodes,
+                project.getRowType()
         );
 
         // If new project is trivial, i.e. it contains only references to scan fields, then it can be eliminated.
@@ -176,7 +180,9 @@ public final class IMapProjectIntoScanLogicalRule extends RelOptRule {
      * Visitor which collects fields from project expressions and map them to respective scan fields.
      */
     private static final class ProjectFieldVisitor extends RexVisitorImpl<Void> {
-        /** Originally available scan fields. */
+        /**
+         * Originally available scan fields.
+         */
         private final List<Integer> originalScanFields;
 
         /**
@@ -238,7 +244,9 @@ public final class IMapProjectIntoScanLogicalRule extends RelOptRule {
      * Visitor which converts old project expressions (before pushdown) to new project expressions (after pushdown).
      */
     public static final class ProjectConverter extends RexShuttle {
-        /** Map from old project expression to relevant field in the new scan operator. */
+        /**
+         * Map from old project expression to relevant field in the new scan operator.
+         */
         private final Map<RexNode, Integer> projectExpToScanFieldMap;
 
         private ProjectConverter(Map<RexNode, Integer> projectExpToScanFieldMap) {
