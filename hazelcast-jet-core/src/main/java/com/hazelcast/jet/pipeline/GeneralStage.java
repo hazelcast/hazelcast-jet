@@ -526,9 +526,9 @@ public interface GeneralStage<T> extends Stage {
     );
 
     /**
-     * Attaches a mapping stage where for each item a lookup in the
-     * {@code ReplicatedMap} with the supplied name is performed and the
-     * result of the lookup is merged with the item and emitted.
+     * Attaches a mapping stage where for each item a lookup in the {@code
+     * ReplicatedMap} with the supplied name is performed and the result of the
+     * lookup is merged with the item and emitted.
      * <p>
      * If the result of the mapping is {@code null}, it emits nothing.
      * Therefore this stage can be used to implement filtering semantics as
@@ -552,8 +552,8 @@ public interface GeneralStage<T> extends Stage {
      * }</pre>
      *
      * @param mapName name of the {@code ReplicatedMap}
-     * @param lookupKeyFn a function which returns the key to look up in the
-     *          map. Must not return null
+     * @param lookupKeyFn a function which returns the key to look up in the map. Must not return
+     *                    null
      * @param mapFn the mapping function
      * @param <K> type of the key in the {@code ReplicatedMap}
      * @param <V> type of the value in the {@code ReplicatedMap}
@@ -572,12 +572,13 @@ public interface GeneralStage<T> extends Stage {
     }
 
     /**
-     * Attaches a mapping stage where for each item a lookup in the
-     * supplied {@code ReplicatedMap} is performed and the result of the
-     * lookup is merged with the item and emitted.
+     * Attaches a mapping stage where for each item a lookup in the supplied
+     * {@code ReplicatedMap} is performed and the result of the lookup is
+     * merged with the item and emitted.
      * <p>
      * If the result of the mapping is {@code null}, it emits nothing.
-     * Therefore this stage can be used to implement filtering semantics as well.
+     * Therefore this stage can be used to implement filtering semantics as
+     * well.
      * <p>
      * The mapping logic is equivalent to:
      * <pre>{@code
@@ -597,8 +598,8 @@ public interface GeneralStage<T> extends Stage {
      * }</pre>
      *
      * @param replicatedMap the {@code ReplicatedMap} to lookup from
-     * @param lookupKeyFn a function which returns the key to look up in the
-     *          map. Must not return null
+     * @param lookupKeyFn a function which returns the key to look up in the map. Must not return
+     *                    null.
      * @param mapFn the mapping function
      * @param <K> type of the key in the {@code ReplicatedMap}
      * @param <V> type of the value in the {@code ReplicatedMap}
@@ -615,16 +616,16 @@ public interface GeneralStage<T> extends Stage {
     }
 
     /**
-     * Attaches a mapping stage where for each item a lookup in the
-     * {@code IMap} with the supplied name is performed and the
-     * result of the lookup is merged with the item and emitted.
+     * Attaches a mapping stage where for each item a lookup in the {@code IMap}
+     * with the supplied name is performed and the result of the lookup is
+     * merged with the item and emitted.
      * <p>
      * If the result of the mapping is {@code null}, it emits nothing.
-     * Therefore this stage can be used to implement filtering semantics as well.
+     * Therefore this stage can be used to implement filtering semantics as
+     * well.
      * <p>
      * The mapping logic is equivalent to:
-     *
-     * <pre>{@code
+     *<pre>{@code
      * K key = lookupKeyFn.apply(item);
      * V value = map.get(key);
      * return mapFn.apply(item, value);
@@ -640,12 +641,12 @@ public interface GeneralStage<T> extends Stage {
      * )
      * }</pre>
      *
-     * See also {@link GeneralStageWithKey#mapUsingIMap} for a partitioned version of
-     * this operation.
+     * See also {@link GeneralStageWithKey#mapUsingIMap} for a partitioned
+     * version of this operation.
      *
      * @param mapName name of the {@code IMap}
-     * @param lookupKeyFn a function which returns the key to look up in the
-     *          map. Must not return null
+     * @param lookupKeyFn a function which returns the key to look up in the map. Must not return
+     *                    null
      * @param mapFn the mapping function
      * @param <K> type of the key in the {@code IMap}
      * @param <V> type of the value in the {@code IMap}
@@ -668,12 +669,13 @@ public interface GeneralStage<T> extends Stage {
     }
 
     /**
-     * Attaches a mapping stage where for each item a lookup in the
-     * supplied {@code IMap} is performed and the result of the
-     * lookup is merged with the item and emitted.
+     * Attaches a mapping stage where for each item a lookup in the supplied
+     * {@code IMap} is performed and the result of the lookup is merged with
+     * the item and emitted.
      * <p>
      * If the result of the mapping is {@code null}, it emits nothing.
-     * Therefore this stage can be used to implement filtering semantics as well.
+     * Therefore this stage can be used to implement filtering semantics as
+     * well.
      * <p>
      * The mapping logic is equivalent to:
      *
@@ -693,12 +695,12 @@ public interface GeneralStage<T> extends Stage {
      * )
      * }</pre>
      *
-     * See also {@link GeneralStageWithKey#mapUsingIMap} for a partitioned version of
-     * this operation.
+     * See also {@link GeneralStageWithKey#mapUsingIMap} for a partitioned
+     * version of this operation.
      *
      * @param iMap the {@code IMap} to lookup from
-     * @param lookupKeyFn a function which returns the key to look up in the
-     *          map. Must not return null
+     * @param lookupKeyFn a function which returns the key to look up in the map. Must not return
+     *                    null.
      * @param mapFn the mapping function
      * @param <K> type of the key in the {@code IMap}
      * @param <V> type of the value in the {@code IMap}

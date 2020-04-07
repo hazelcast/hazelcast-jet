@@ -49,7 +49,7 @@ public class StreamStageImpl<T> extends ComputeStageImplBase<T> implements Strea
             @Nonnull FunctionAdapter fnAdapter,
             @Nonnull PipelineImpl pipeline
     ) {
-        super(transform, fnAdapter, pipeline, true);
+        super(transform, fnAdapter, pipeline);
     }
 
     @Nonnull @Override
@@ -119,7 +119,7 @@ public class StreamStageImpl<T> extends ComputeStageImplBase<T> implements Strea
             boolean preserveOrder,
             @Nonnull BiFunctionEx<? super S, ? super T, ? extends CompletableFuture<R>> mapAsyncFn
     ) {
-        return attachFlatMapUsingServiceAsync("map", serviceFactory, maxConcurrentOps, preserveOrder,
+        return attachMapUsingServiceAsync(serviceFactory, maxConcurrentOps, preserveOrder,
                 (s, t) -> mapAsyncFn.apply(s, t).thenApply(Traversers::singleton));
     }
 
@@ -129,7 +129,7 @@ public class StreamStageImpl<T> extends ComputeStageImplBase<T> implements Strea
             int maxBatchSize,
             @Nonnull BiFunctionEx<? super S, ? super List<T>, ? extends CompletableFuture<List<R>>> mapAsyncBatchedFn
     ) {
-        return attachFlatMapUsingServiceAsyncBatched("map", serviceFactory, maxBatchSize,
+        return attachMapUsingServiceAsyncBatched(serviceFactory, maxBatchSize,
                 (s, t) -> mapAsyncBatchedFn.apply(s, t).thenApply(list ->
                         toList(list, Traversers::singleton)));
     }

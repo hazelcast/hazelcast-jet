@@ -59,6 +59,7 @@ public class PipelineImpl implements Pipeline {
     public <T> BatchStage<T> readFrom(@Nonnull BatchSource<? extends T> source) {
         BatchSourceTransform<? extends T> xform = (BatchSourceTransform<? extends T>) source;
         xform.onAssignToStage();
+        register(xform);
         return new BatchStageImpl<>(xform, this);
     }
 
@@ -67,6 +68,7 @@ public class PipelineImpl implements Pipeline {
     public <T> StreamSourceStage<T> readFrom(@Nonnull StreamSource<? extends T> source) {
         StreamSourceTransform<T> xform = (StreamSourceTransform<T>) source;
         xform.onAssignToStage();
+        register(xform);
         return new StreamSourceStageImpl<>(xform, this);
     }
 
@@ -105,10 +107,21 @@ public class PipelineImpl implements Pipeline {
 
     public void connect(Transform upstream, Transform downstream) {
         adjacencyMap.get(upstream).add(downstream);
+        register(downstream);
     }
 
     public void connect(List<Transform> upstream, Transform downstream) {
-        upstream.forEach(u -> connect(u, downstream));
+        upstream.forEach(u -> adjacencyMap.get(u).add(downstream));
+        register(downstream);
+    }
+
+    public void attachFiles(@Nonnull Map<String, File> filesToAttach) {
+        this.attachedFiles.putAll(filesToAttach);
+    }
+
+    @Nonnull
+    public Map<String, File> attachedFiles() {
+        return Collections.unmodifiableMap(attachedFiles);
     }
 
     @Override
@@ -145,11 +158,6 @@ public class PipelineImpl implements Pipeline {
         return safeCopy;
     }
 
-    void register(Transform stage, List<Transform> downstream) {
-        List<Transform> prev = adjacencyMap.put(stage, downstream);
-        assert prev == null : "Double registration of a Stage with this Pipeline: " + stage;
-    }
-
     void makeNamesUnique() {
         Set<String> usedNames = new HashSet<>();
         for (Transform transform : adjacencyMap.keySet()) {
@@ -160,12 +168,8 @@ public class PipelineImpl implements Pipeline {
         }
     }
 
-    public void attachFiles(@Nonnull Map<String, File> filesToAttach) {
-        this.attachedFiles.putAll(filesToAttach);
-    }
-
-    @Nonnull
-    public Map<String, File> attachedFiles() {
-        return Collections.unmodifiableMap(attachedFiles);
+    private void register(Transform stage) {
+        List<Transform> prev = adjacencyMap.putIfAbsent(stage, new ArrayList<>());
+        assert prev == null : "Double registration of a Stage with this Pipeline: " + stage;
     }
 }

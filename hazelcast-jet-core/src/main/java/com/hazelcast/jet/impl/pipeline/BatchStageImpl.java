@@ -48,7 +48,7 @@ import static java.util.Collections.singletonList;
 public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchStage<T> {
 
     BatchStageImpl(@Nonnull Transform transform, @Nonnull PipelineImpl pipeline) {
-        super(transform, DO_NOT_ADAPT, pipeline, true);
+        super(transform, DO_NOT_ADAPT, pipeline);
     }
 
     /**
@@ -121,7 +121,7 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
             boolean preserveOrder,
             @Nonnull BiFunctionEx<? super S, ? super T, ? extends CompletableFuture<R>> mapAsyncFn
     ) {
-        return attachFlatMapUsingServiceAsync("map", serviceFactory, maxConcurrentOps, preserveOrder,
+        return attachMapUsingServiceAsync(serviceFactory, maxConcurrentOps, preserveOrder,
                 (s, t) -> mapAsyncFn.apply(s, t).thenApply(Traversers::singleton));
     }
 
@@ -131,7 +131,7 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
             int maxBatchSize,
             @Nonnull BiFunctionEx<? super S, ? super List<T>, ? extends CompletableFuture<List<R>>> mapAsyncFn
     ) {
-        return attachFlatMapUsingServiceAsyncBatched("map", serviceFactory, maxBatchSize,
+        return attachMapUsingServiceAsyncBatched(serviceFactory, maxBatchSize,
                 (s, t) -> mapAsyncFn.apply(s, t).thenApply(list -> toList(list, Traversers::singleton)));
     }
 

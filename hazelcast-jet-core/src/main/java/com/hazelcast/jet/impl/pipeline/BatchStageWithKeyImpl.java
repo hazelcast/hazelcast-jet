@@ -98,8 +98,7 @@ public class BatchStageWithKeyImpl<T, K> extends StageWithGroupingBase<T, K> imp
             boolean preserveOrder,
             @Nonnull TriFunction<? super S, ? super K, ? super T, CompletableFuture<R>> mapAsyncFn
     ) {
-        return attachTransformUsingServiceAsync("map", serviceFactory, maxConcurrentOps, preserveOrder,
-                (s, k, t) -> mapAsyncFn.apply(s, k, t).thenApply(Traversers::singleton));
+        return attachMapUsingServiceAsync(serviceFactory, maxConcurrentOps, preserveOrder, mapAsyncFn);
     }
 
     @Nonnull @Override
@@ -108,20 +107,17 @@ public class BatchStageWithKeyImpl<T, K> extends StageWithGroupingBase<T, K> imp
             int maxBatchSize,
             @Nonnull BiFunctionEx<? super S, ? super List<T>, ? extends CompletableFuture<List<R>>> mapAsyncFn
     ) {
-        return attachTransformUsingServiceAsyncBatched("map", serviceFactory, maxBatchSize,
-                (s, items) -> mapAsyncFn.apply(s, items).thenApply(list -> toList(list, Traversers::singleton)));
+        return attachMapUsingServiceAsyncBatched(serviceFactory, maxBatchSize, mapAsyncFn);
     }
 
     @Nonnull @Override
     public <S, R> BatchStage<R> mapUsingServiceAsyncBatched(
             @Nonnull ServiceFactory<?, S> serviceFactory,
             int maxBatchSize,
-            @Nonnull TriFunction<? super S, ? super List<K>, ? super List<T>,
-                    ? extends CompletableFuture<List<R>>> mapAsyncFn
+            @Nonnull TriFunction<? super S, ? super List<K>, ? super List<T>, ? extends CompletableFuture<List<R>>>
+                    mapAsyncFn
     ) {
-        return attachTransformUsingServiceAsyncBatched("map", serviceFactory, maxBatchSize,
-                (s, keys, items) -> mapAsyncFn.apply(s, keys, items)
-                        .thenApply(list -> toList(list, Traversers::singleton)));
+        return attachMapUsingServiceAsyncBatched(serviceFactory, maxBatchSize, mapAsyncFn);
     }
 
     @Nonnull @Override

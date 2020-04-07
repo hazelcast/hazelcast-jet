@@ -220,9 +220,9 @@ public class DAG implements IdentifiedDataSerializable, Iterable<Vertex> {
     }
 
     /**
-     * Returns the vertex with the given name.
+     * Returns the vertex with the given name, or {@code null} if there is no
+     * vertex with that name.
      */
-    @Nonnull
     public Vertex getVertex(@Nonnull String vertexName) {
         return nameToVertex.get(vertexName);
     }
@@ -230,8 +230,7 @@ public class DAG implements IdentifiedDataSerializable, Iterable<Vertex> {
     /**
      * Returns an iterator over the DAG's vertices in topological order.
      */
-    @Override
-    @Nonnull
+    @Nonnull @Override
     public Iterator<Vertex> iterator() {
         return validate().iterator();
     }
