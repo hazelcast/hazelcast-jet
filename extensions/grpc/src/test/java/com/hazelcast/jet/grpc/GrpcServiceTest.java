@@ -46,8 +46,8 @@ import java.util.stream.IntStream;
 import static com.hazelcast.jet.grpc.GrpcServices.bidirectionalStreamingService;
 import static com.hazelcast.jet.grpc.GrpcServices.unaryService;
 import static java.util.stream.Collectors.toList;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 public class GrpcServiceTest extends SimpleTestInClusterSupport {
@@ -73,7 +73,7 @@ public class GrpcServiceTest extends SimpleTestInClusterSupport {
         server = createServer(new GreeterServiceImpl());
         final int port = server.getPort();
 
-        ServiceFactory<?, GrpcService<HelloRequest, HelloReply>> greeterService =
+        ServiceFactory<?, ? extends GrpcService<HelloRequest, HelloReply>> greeterService =
                 bidirectionalStreaming(port);
 
         Pipeline p = Pipeline.create();
@@ -97,7 +97,7 @@ public class GrpcServiceTest extends SimpleTestInClusterSupport {
         server = createServer(new GreeterServiceImpl());
         final int port = server.getPort();
 
-        ServiceFactory<?, GrpcService<HelloRequest, HelloReply>> greeterService =
+        ServiceFactory<?, ? extends GrpcService<HelloRequest, HelloReply>> greeterService =
                 bidirectionalStreaming(port);
 
         List<String> items = IntStream.range(0, ITEM_COUNT).mapToObj(Integer::toString).collect(toList());
@@ -125,7 +125,7 @@ public class GrpcServiceTest extends SimpleTestInClusterSupport {
         server = createServer(new FaultyGreeterServiceImpl());
         final int port = server.getPort();
 
-        ServiceFactory<?, GrpcService<HelloRequest, HelloReply>> greeterService =
+        ServiceFactory<?, ? extends GrpcService<HelloRequest, HelloReply>> greeterService =
                 bidirectionalStreaming(port);
 
         Pipeline p = Pipeline.create();
@@ -144,7 +144,7 @@ public class GrpcServiceTest extends SimpleTestInClusterSupport {
             fail("Job should have failed");
         } catch (Exception e) {
             Throwable ex = ExceptionUtil.peel(e);
-            assertTrue(ex.getMessage().contains("io.grpc.StatusRuntimeException"));
+            assertThat(ex.getMessage()).contains("com.hazelcast.jet.grpc.impl.StatusRuntimeExceptionJet");
         }
     }
 
@@ -154,7 +154,7 @@ public class GrpcServiceTest extends SimpleTestInClusterSupport {
         server = createServer(new GreeterServiceImpl());
         final int port = server.getPort();
 
-        ServiceFactory<?, GrpcService<HelloRequest, HelloReply>> greeterService = unary(port);
+        ServiceFactory<?, ? extends GrpcService<HelloRequest, HelloReply>> greeterService = unary(port);
 
         Pipeline p = Pipeline.create();
         BatchStage<String> source = p.readFrom(TestSources.items("one", "two", "three", "four"));
@@ -178,7 +178,7 @@ public class GrpcServiceTest extends SimpleTestInClusterSupport {
         server = createServer(new GreeterServiceImpl());
         final int port = server.getPort();
 
-        ServiceFactory<?, GrpcService<HelloRequest, HelloReply>> greeterService =
+        ServiceFactory<?, ? extends GrpcService<HelloRequest, HelloReply>> greeterService =
                 unary(port);
 
         List<String> items = IntStream.range(0, ITEM_COUNT).mapToObj(Integer::toString).collect(toList());
@@ -205,7 +205,7 @@ public class GrpcServiceTest extends SimpleTestInClusterSupport {
         Server server = createServer(new FaultyGreeterServiceImpl());
         final int port = server.getPort();
 
-        ServiceFactory<?, GrpcService<HelloRequest, HelloReply>> greeterService = unary(port);
+        ServiceFactory<?, ? extends GrpcService<HelloRequest, HelloReply>> greeterService = unary(port);
 
         Pipeline p = Pipeline.create();
         BatchStage<String> source = p.readFrom(TestSources.items("one", "two", "three", "four"));
@@ -225,18 +225,18 @@ public class GrpcServiceTest extends SimpleTestInClusterSupport {
             fail("Job should have failed");
         } catch (Exception e) {
             Throwable ex = ExceptionUtil.peel(e);
-            assertTrue(ex.getMessage().contains("io.grpc.StatusRuntimeException"));
+            assertThat(ex.getMessage()).contains("com.hazelcast.jet.grpc.impl.StatusRuntimeExceptionJet");
         }
     }
 
-    private ServiceFactory<?, GrpcService<HelloRequest, HelloReply>> unary(int port) {
+    private ServiceFactory<?, ? extends GrpcService<HelloRequest, HelloReply>> unary(int port) {
         return unaryService(
                 () -> ManagedChannelBuilder.forAddress("localhost", port).usePlaintext(),
                 channel -> GreeterGrpc.newStub(channel)::sayHelloUnary
         );
     }
 
-    private ServiceFactory<?, GrpcService<HelloRequest, HelloReply>>
+    private ServiceFactory<?, ? extends GrpcService<HelloRequest, HelloReply>>
     bidirectionalStreaming(int port) {
         return bidirectionalStreamingService(
                 () -> ManagedChannelBuilder.forAddress("localhost", port).usePlaintext(),
