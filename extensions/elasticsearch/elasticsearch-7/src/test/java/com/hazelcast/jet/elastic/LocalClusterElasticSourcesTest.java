@@ -20,12 +20,14 @@ import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.JetTestInstanceFactory;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.impl.util.Util;
+import org.junit.Ignore;
 
 import java.util.function.Supplier;
 
 /**
  * Test running 3 local Jet members in a cluster and Elastic in docker
  */
+@Ignore
 public class LocalClusterElasticSourcesTest extends CommonElasticSourcesTest {
 
     // Cluster startup takes >1s, reusing the cluster between tests
