@@ -21,7 +21,6 @@ import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.sql.impl.connector.FullScanPhysicalRel;
-import com.hazelcast.jet.sql.impl.connector.imap.IMapProjectPhysicalRel;
 import com.hazelcast.jet.sql.impl.expression.RexToExpressionVisitor;
 import com.hazelcast.jet.sql.impl.schema.JetTable;
 import com.hazelcast.sql.impl.expression.Expression;
@@ -82,10 +81,6 @@ public class CreateDagVisitor {
         }
         RexToExpressionVisitor converter = new RexToExpressionVisitor(fieldTypeProvider, parameterCount);
         return expression.accept(converter);
-    }
-
-    public void onProject(IMapProjectPhysicalRel rel) {
-        throw new UnsupportedOperationException("TODO");
     }
 
     public void onTableInsert(JetTableInsertPhysicalRel rel) {

@@ -158,24 +158,6 @@ public class IMapSqlConnector implements SqlConnector {
             }
         });
 
-        Projection<Entry<Object, Object>, Object[]> mapProjection = entry -> {
-            KeyValueRow row = new KeyValueRow(fieldNames, fieldTypes, (key, val, path) ->
-            {
-                try {
-                    return PropertyUtils.getProperty(entry(key, val), path);
-                } catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
-                    throw sneakyThrow(e);
-                }
-            });
-            row.setKeyValue(entry.getKey(), entry.getValue());
-
-            Object[] res = new Object[projections.size()];
-            for (int i = 0; i < projections.size(); i++) {
-                res[i] = projections.get(i).eval(row, ZERO_ARGUMENTS_CONTEXT);
-            }
-            return res;
-        };
-
         // convert the predicate
         // TODO make the ReadMapOrCacheP.LocalProcessorMetaSupplier implement IdentifiedDataSerializable
         Predicate<Object, Object> mapPredicate;
@@ -197,6 +179,24 @@ public class IMapSqlConnector implements SqlConnector {
                 return res;
             };
         }
+
+        Projection<Entry<Object, Object>, Object[]> mapProjection = entry -> {
+            KeyValueRow row = new KeyValueRow(fieldNames, fieldTypes, (key, val, path) ->
+            {
+                try {
+                    return PropertyUtils.getProperty(entry(key, val), path);
+                } catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
+                    throw sneakyThrow(e);
+                }
+            });
+            row.setKeyValue(entry.getKey(), entry.getValue());
+
+            Object[] res = new Object[projections.size()];
+            for (int i = 0; i < projections.size(); i++) {
+                res[i] = projections.get(i).eval(row, ZERO_ARGUMENTS_CONTEXT);
+            }
+            return res;
+        };
 
         return dag.newVertex("map(" + mapName + ")",
                 readMapP(mapName, mapPredicate, mapProjection));
