@@ -25,7 +25,6 @@ import org.apache.calcite.rel.core.TableScan;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
-import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexNode;
 
@@ -41,7 +40,6 @@ public abstract class AbstractFullScanRel extends TableScan {
     /**
      * Projection.
      */
-    private final List<Integer> projects;
     private final List<RexNode> projectNodes;
 
     /**
@@ -53,21 +51,15 @@ public abstract class AbstractFullScanRel extends TableScan {
             RelOptCluster cluster,
             RelTraitSet traitSet,
             RelOptTable table,
-            List<Integer> projects,
             List<RexNode> projectNodes,
             RexNode filter
     ) {
         super(cluster, traitSet, table);
-        this.projects = projects != null ? projects : identity();
         this.projectNodes = projectNodes != null ? projectNodes :
                 table.getRowType().getFieldList().stream()
                      .map(field -> new RexInputRef(field.getIndex(), field.getType()))
                      .collect(toList());
         this.filter = filter;
-    }
-
-    public List<Integer> getProjects() {
-        return projects;
     }
 
     public List<RexNode> getProjectNodes() {
@@ -98,10 +90,10 @@ public abstract class AbstractFullScanRel extends TableScan {
     @Override
     public final RelDataType deriveRowType() {
         RelDataTypeFactory.Builder builder = getCluster().getTypeFactory().builder();
-        List<RelDataTypeField> fieldList = table.getRowType().getFieldList();
 
-        for (int project : getProjects()) {
-            builder.add(fieldList.get(project));
+        for (int i = 0; i < getProjectNodes().size(); i++) {
+            RexNode project = getProjectNodes().get(i);
+            builder.add("$" + i, project.getType());
         }
 
         return builder.build();
@@ -109,6 +101,8 @@ public abstract class AbstractFullScanRel extends TableScan {
 
     @Override
     public RelWriter explainTerms(RelWriter pw) {
-        return super.explainTerms(pw).item("projects", getProjects());
+        return super.explainTerms(pw)
+                    .item("projects", getProjectNodes())
+                    .item("filter", getFilter());
     }
 }

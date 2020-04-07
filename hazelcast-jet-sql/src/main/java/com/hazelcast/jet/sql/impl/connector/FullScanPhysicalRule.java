@@ -43,7 +43,6 @@ public final class FullScanPhysicalRule extends RelOptRule {
                 scan.getCluster(),
                 OptUtils.toPhysicalConvention(scan.getTraitSet()),
                 scan.getTable(),
-                scan.getProjects(),
                 scan.getProjectNodes(),
                 scan.getFilter()
         ));

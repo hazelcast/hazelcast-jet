@@ -42,7 +42,6 @@ public final class FullScanLogicalRule extends ConverterRule {
                 OptUtils.toLogicalConvention(scan.getTraitSet()),
                 scan.getTable(),
                 null,
-                null,
                 null
         );
     }

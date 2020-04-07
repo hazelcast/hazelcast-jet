@@ -51,19 +51,16 @@ public final class IMapFilterIntoScanLogicalRule extends RelOptRule {
 
         int scanFieldCount = scan.getTable().getRowType().getFieldCount();
 
-        List<Integer> projects;
         List<RexNode> projectNodes;
         RexNode oldFilter;
         Mapping mapping;
         if (scan instanceof FullScanLogicalRel) {
             FullScanLogicalRel scan0 = (FullScanLogicalRel) scan;
-
-            projects = scan0.getProjects();
             projectNodes = scan0.getProjectNodes();
             oldFilter = scan0.getFilter();
-            mapping = Mappings.source(projects, scanFieldCount);
+            // TODO the scan.identity() is wrong
+            mapping = Mappings.source(scan.identity(), scanFieldCount);
         } else {
-            projects = null;
             projectNodes = null;
             oldFilter = null;
             mapping = Mappings.source(scan.identity(), scanFieldCount);
@@ -83,7 +80,6 @@ public final class IMapFilterIntoScanLogicalRule extends RelOptRule {
                 scan.getCluster(),
                 OptUtils.toLogicalConvention(scan.getTraitSet()),
                 scan.getTable(),
-                projects,
                 projectNodes,
                 newFilter
         );

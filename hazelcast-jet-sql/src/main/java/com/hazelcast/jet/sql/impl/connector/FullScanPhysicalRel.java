@@ -39,16 +39,15 @@ public class FullScanPhysicalRel extends AbstractFullScanRel implements Physical
             RelOptCluster cluster,
             RelTraitSet traitSet,
             RelOptTable table,
-            List<Integer> projects,
             List<RexNode> projectNodes,
             RexNode filter
     ) {
-        super(cluster, traitSet, table, projects, projectNodes, filter);
+        super(cluster, traitSet, table, projectNodes, filter);
     }
 
     @Override
     public final RelNode copy(RelTraitSet traitSet, List<RelNode> inputs) {
-        return new FullScanPhysicalRel(getCluster(), traitSet, getTable(), getProjects(), getProjectNodes(), getFilter());
+        return new FullScanPhysicalRel(getCluster(), traitSet, getTable(), getProjectNodes(), getFilter());
     }
 
     // TODO: Dedup with logical scan
@@ -66,7 +65,7 @@ public class FullScanPhysicalRel extends AbstractFullScanRel implements Physical
             filterRowCount = filterRowCount * filterSelectivity;
         }
 
-        int expressionCount = getProjects().size();
+        int expressionCount = getProjectNodes().size();
         double projectCpu = CostUtils.adjustProjectCpu(filterRowCount * expressionCount, true);
 
         // 3. Finally, return sum of both scan and project.
