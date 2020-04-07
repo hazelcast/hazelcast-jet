@@ -18,16 +18,19 @@ package com.hazelcast.jet.elastic;
 
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.pipeline.BatchSource;
+import com.hazelcast.jet.test.SerialTest;
 import org.apache.http.HttpHost;
 import org.elasticsearch.action.search.SearchRequest;
 import org.elasticsearch.client.RestClient;
 import org.elasticsearch.client.RestHighLevelClient;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+@Category(SerialTest.class)
 public class ElasticSourceBuilderTest {
 
     @Test

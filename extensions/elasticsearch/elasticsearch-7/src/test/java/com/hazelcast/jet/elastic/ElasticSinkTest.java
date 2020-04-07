@@ -18,10 +18,13 @@ package com.hazelcast.jet.elastic;
 
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sources;
+import com.hazelcast.jet.test.SerialTest;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 import java.io.IOException;
 
+@Category(SerialTest.class)
 public class ElasticSinkTest extends ElasticBaseTest {
 
     @Test

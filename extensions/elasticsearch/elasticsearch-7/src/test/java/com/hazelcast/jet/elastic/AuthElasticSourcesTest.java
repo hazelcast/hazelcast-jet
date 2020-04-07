@@ -24,10 +24,12 @@ import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
+import com.hazelcast.jet.test.SerialTest;
 import org.elasticsearch.client.ResponseException;
 import org.elasticsearch.client.RestHighLevelClient;
 import org.junit.After;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 import org.testcontainers.elasticsearch.ElasticsearchContainer;
 
 import java.util.function.Supplier;
@@ -37,6 +39,7 @@ import static com.hazelcast.jet.elastic.ElasticSources.client;
 import static com.hazelcast.jet.elastic.ElasticSources.elastic;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+@Category(SerialTest.class)
 public class AuthElasticSourcesTest extends BaseElasticTest {
 
     /**
