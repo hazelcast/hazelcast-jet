@@ -40,7 +40,7 @@ public abstract class AbstractFullScanRel extends TableScan {
     /**
      * Projection.
      */
-    private final List<RexNode> projectNodes;
+    private final List<RexNode> projection;
 
     /**
      * Filter.
@@ -51,19 +51,19 @@ public abstract class AbstractFullScanRel extends TableScan {
             RelOptCluster cluster,
             RelTraitSet traitSet,
             RelOptTable table,
-            List<RexNode> projectNodes,
+            List<RexNode> projection,
             RexNode filter
     ) {
         super(cluster, traitSet, table);
-        this.projectNodes = projectNodes != null ? projectNodes :
+        this.projection = projection != null ? projection :
                 table.getRowType().getFieldList().stream()
                      .map(field -> new RexInputRef(field.getIndex(), field.getType()))
                      .collect(toList());
         this.filter = filter;
     }
 
-    public List<RexNode> getProjectNodes() {
-        return projectNodes;
+    public List<RexNode> getProjection() {
+        return projection;
     }
 
     public RexNode getFilter() {
@@ -91,8 +91,8 @@ public abstract class AbstractFullScanRel extends TableScan {
     public final RelDataType deriveRowType() {
         RelDataTypeFactory.Builder builder = getCluster().getTypeFactory().builder();
 
-        for (int i = 0; i < getProjectNodes().size(); i++) {
-            RexNode project = getProjectNodes().get(i);
+        for (int i = 0; i < getProjection().size(); i++) {
+            RexNode project = getProjection().get(i);
             builder.add("$" + i, project.getType());
         }
 
@@ -102,7 +102,7 @@ public abstract class AbstractFullScanRel extends TableScan {
     @Override
     public RelWriter explainTerms(RelWriter pw) {
         return super.explainTerms(pw)
-                    .item("projects", getProjectNodes())
+                    .item("projects", getProjection())
                     .item("filter", getFilter());
     }
 }

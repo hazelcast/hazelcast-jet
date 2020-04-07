@@ -38,15 +38,15 @@ public class FullScanLogicalRel extends AbstractFullScanRel implements LogicalRe
             RelOptCluster cluster,
             RelTraitSet traitSet,
             RelOptTable table,
-            List<RexNode> projectNodes,
+            List<RexNode> projection,
             RexNode filter
     ) {
-        super(cluster, traitSet, table, projectNodes, filter);
+        super(cluster, traitSet, table, projection, filter);
     }
 
     @Override
     public final RelNode copy(RelTraitSet traitSet, List<RelNode> inputs) {
-        return new FullScanLogicalRel(getCluster(), traitSet, table, getProjectNodes(), getFilter());
+        return new FullScanLogicalRel(getCluster(), traitSet, table, getProjection(), getFilter());
     }
 
     @Override
@@ -63,7 +63,7 @@ public class FullScanLogicalRel extends AbstractFullScanRel implements LogicalRe
             filterRowCount = filterRowCount * filterSelectivity;
         }
 
-        int expressionCount = getProjectNodes().size();
+        int expressionCount = getProjection().size();
         double projectCpu = CostUtils.adjustProjectCpu(filterRowCount * expressionCount, true);
 
         // 3. Finally, return sum of both scan and project.

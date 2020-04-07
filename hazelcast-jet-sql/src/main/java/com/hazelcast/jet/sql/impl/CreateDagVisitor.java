@@ -56,8 +56,8 @@ public class CreateDagVisitor {
         JetTable table = rel.getTableUnwrapped();
         PlanNodeSchema schema = new PlanNodeSchema(table.getPhysicalRowType());
         Expression<Boolean> predicate = convertFilter(schema, rel.getFilter());
-        List<Expression<?>> projection = rel.getProjectNodes().stream()
-                                            .map(projectNode -> convertExpression(schema, projectNode, rel.getProjectNodes().size()))
+        List<Expression<?>> projection = rel.getProjection().stream()
+                                            .map(projectNode -> convertExpression(schema, projectNode, rel.getProjection().size()))
                                             .collect(toList());
         Vertex vertex = table.getSqlConnector().fullScanReader(dag, table, null, predicate, projection);
         assert vertex != null : "null subDag"; // we check for this earlier TODO check for it earlier :)

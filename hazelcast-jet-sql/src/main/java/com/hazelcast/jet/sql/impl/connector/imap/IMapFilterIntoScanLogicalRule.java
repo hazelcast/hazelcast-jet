@@ -64,20 +64,20 @@ public final class IMapFilterIntoScanLogicalRule extends RelOptRule {
         Filter filter = call.rel(0);
         TableScan scan = call.rel(1);
 
-        List<RexNode> projectNodes;
+        List<RexNode> projection;
         RexNode oldFilter;
         if (scan instanceof FullScanLogicalRel) {
             FullScanLogicalRel scan0 = (FullScanLogicalRel) scan;
-            projectNodes = scan0.getProjectNodes();
+            projection = scan0.getProjection();
             oldFilter = scan0.getFilter();
         } else {
-            projectNodes = null;
+            projection = null;
             oldFilter = null;
         }
 
         //Mapping mapping = Mappings.target(scan.identity(), scan.getTable().getRowType().getFieldCount()); // TODO: Old mode
-        RexNode newFilter = projectNodes == null ? filter.getCondition()
-                : RexUtil.apply(new SubstituteInputRefVisitor(projectNodes), new RexNode[]{filter.getCondition()})[0];
+        RexNode newFilter = projection == null ? filter.getCondition()
+                : RexUtil.apply(new SubstituteInputRefVisitor(projection), new RexNode[]{filter.getCondition()})[0];
         if (oldFilter != null) {
             newFilter = RexUtil.composeConjunction(scan.getCluster().getRexBuilder(), asList(oldFilter, newFilter), true);
         }
@@ -86,7 +86,7 @@ public final class IMapFilterIntoScanLogicalRule extends RelOptRule {
                 scan.getCluster(),
                 OptUtils.toLogicalConvention(scan.getTraitSet()),
                 scan.getTable(),
-                projectNodes,
+                projection,
                 newFilter
         );
 
@@ -95,15 +95,15 @@ public final class IMapFilterIntoScanLogicalRule extends RelOptRule {
 
     private static class SubstituteInputRefVisitor implements RexVisitor<RexNode> {
 
-        private final List<RexNode> projectNodes;
+        private final List<RexNode> projection;
 
-        protected SubstituteInputRefVisitor(List<RexNode> projectNodes) {
-            this.projectNodes = projectNodes;
+        protected SubstituteInputRefVisitor(List<RexNode> projection) {
+            this.projection = projection;
         }
 
         @Override
         public RexNode visitInputRef(RexInputRef inputRef) {
-            return projectNodes.get(inputRef.getIndex());
+            return projection.get(inputRef.getIndex());
         }
 
         public RexNode visitLocalRef(RexLocalRef localRef) {
