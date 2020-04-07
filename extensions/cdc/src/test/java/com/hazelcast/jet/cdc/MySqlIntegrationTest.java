@@ -35,7 +35,6 @@ import javax.annotation.Nonnull;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.util.Date;
-import java.util.Properties;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -66,17 +65,7 @@ public class MySqlIntegrationTest extends AbstractIntegrationTest {
 
         Pipeline pipeline = Pipeline.create();
 
-        StreamSource<ChangeEvent> source = CdcSources.mysql("customers")
-                .setDatabaseAddress(mysql.getContainerIpAddress())
-                .setDatabasePort(mysql.getMappedPort(MYSQL_PORT))
-                .setDatabaseUser("debezium")
-                .setDatabasePassword("dbz")
-                .setDatabaseClusterName("dbserver1")
-                .setDatabaseWhitelist("inventory")
-                .setTableWhitelist("inventory.customers")
-                .build();
-
-        pipeline.readFrom(source)
+        pipeline.readFrom(source("customers"))
                 .withNativeTimestamps(0)
                 .<ChangeEvent>customTransform("filter_timestamps", filterTimestampsProcessorSupplier())
                 .groupingKey(event -> event.key().getInteger("id").orElse(0))
@@ -142,7 +131,7 @@ public class MySqlIntegrationTest extends AbstractIntegrationTest {
         };
 
         Pipeline pipeline = Pipeline.create();
-        pipeline.readFrom(CdcSources.mysql("orders", connectorProperties("orders")))
+        pipeline.readFrom(source("orders"))
                 .withoutTimestamps()
                 .groupingKey(MySqlIntegrationTest::getOrderNumber)
                 .mapStateful(
@@ -179,17 +168,16 @@ public class MySqlIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Nonnull
-    private Properties connectorProperties(String tableName) {
-        Properties properties = new Properties();
-        properties.put("database.hostname", mysql.getContainerIpAddress());
-        properties.put("database.port", mysql.getMappedPort(MYSQL_PORT));
-        properties.put("database.user", "debezium");
-        properties.put("database.password", "dbz");
-        properties.put("database.server.id", "184054");
-        properties.put("database.server.name", "dbserver1");
-        properties.put("database.whitelist", "inventory");
-        properties.put("table.whitelist", "inventory." + tableName);
-        return properties;
+    private StreamSource<ChangeEvent> source(String tableName) {
+        return CdcSources.mysql(tableName)
+                .setDatabaseAddress(mysql.getContainerIpAddress())
+                .setDatabasePort(mysql.getMappedPort(MYSQL_PORT))
+                .setDatabaseUser("debezium")
+                .setDatabasePassword("dbz")
+                .setClusterName("dbserver1")
+                .setDatabaseWhitelist("inventory")
+                .setTableWhitelist("inventory." + tableName)
+                .build();
     }
 
     private static int getOrderNumber(ChangeEvent event) throws ParsingException {

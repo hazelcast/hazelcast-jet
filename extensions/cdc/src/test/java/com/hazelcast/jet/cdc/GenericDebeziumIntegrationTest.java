@@ -22,6 +22,7 @@ import com.hazelcast.jet.accumulator.LongAccumulator;
 import com.hazelcast.jet.cdc.data.Customer;
 import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.pipeline.Pipeline;
+import com.hazelcast.jet.pipeline.StreamSource;
 import com.hazelcast.jet.pipeline.test.AssertionCompletedException;
 import com.hazelcast.jet.pipeline.test.AssertionSinks;
 import org.junit.Test;
@@ -29,7 +30,6 @@ import org.testcontainers.containers.MySQLContainer;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
-import java.util.Properties;
 import java.util.concurrent.CompletionException;
 
 import static com.hazelcast.jet.cdc.Operation.DELETE;
@@ -61,20 +61,21 @@ public class GenericDebeziumIntegrationTest extends AbstractIntegrationTest {
                     "1005/1:DELETE:Customer {id=1005, firstName=Jason, lastName=Bourne, email=jason@bourne.org}"
             };
 
-            Properties connectorProperties = new Properties();
-            connectorProperties.put("connector.class", "io.debezium.connector.mysql.MySqlConnector");
-            connectorProperties.putIfAbsent("include.schema.changes", "false");
-            connectorProperties.put("database.hostname", container.getContainerIpAddress());
-            connectorProperties.put("database.port", container.getMappedPort(MYSQL_PORT));
-            connectorProperties.put("database.user", "debezium");
-            connectorProperties.put("database.password", "dbz");
-            connectorProperties.put("database.server.id", "184054");
-            connectorProperties.put("database.server.name", "dbserver1");
-            connectorProperties.put("database.whitelist", "inventory");
-            connectorProperties.put("table.whitelist", "inventory.customers");
+            StreamSource<ChangeEvent> source = CdcSources.debezium("mysql",
+                    "io.debezium.connector.mysql.MySqlConnector")
+                    .setCustomProperty("include.schema.changes", "false")
+                    .setCustomProperty("database.hostname", container.getContainerIpAddress())
+                    .setCustomProperty("database.port", Integer.toString(container.getMappedPort(MYSQL_PORT)))
+                    .setCustomProperty("database.user", "debezium")
+                    .setCustomProperty("database.password", "dbz")
+                    .setCustomProperty("database.server.id", "184054")
+                    .setCustomProperty("database.server.name", "dbserver1")
+                    .setCustomProperty("database.whitelist", "inventory")
+                    .setCustomProperty("table.whitelist", "inventory.customers")
+                    .build();
 
             Pipeline pipeline = Pipeline.create();
-            pipeline.readFrom(CdcSources.debezium("mysql", connectorProperties))
+            pipeline.readFrom(source)
                     .withNativeTimestamps(0)
                     .<ChangeEvent>customTransform("filter_timestamps", filterTimestampsProcessorSupplier())
                     .groupingKey(event -> event.key().getInteger("id").orElse(0))

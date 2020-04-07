@@ -22,6 +22,7 @@ import com.hazelcast.jet.accumulator.LongAccumulator;
 import com.hazelcast.jet.cdc.data.Customer;
 import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.pipeline.Pipeline;
+import com.hazelcast.jet.pipeline.StreamSource;
 import com.hazelcast.jet.pipeline.test.AssertionCompletedException;
 import com.hazelcast.jet.pipeline.test.AssertionSinks;
 import org.junit.Rule;
@@ -33,7 +34,6 @@ import org.testcontainers.containers.MSSQLServerContainer;
 import javax.annotation.Nonnull;
 import java.sql.Connection;
 import java.sql.DriverManager;
-import java.util.Properties;
 import java.util.concurrent.CompletionException;
 
 import static com.hazelcast.jet.cdc.Operation.DELETE;
@@ -41,7 +41,7 @@ import static com.hazelcast.jet.core.test.JetAssert.fail;
 import static org.junit.Assert.assertTrue;
 import static org.testcontainers.containers.MSSQLServerContainer.MS_SQL_SERVER_PORT;
 
-public class MsSqlIntegrationTest extends AbstractIntegrationTest {
+public class SqlServerIntegrationTest extends AbstractIntegrationTest {
 
     @Rule
     public MSSQLServerContainer mssql = new MSSQLServerContainer<>("mcr.microsoft.com/mssql/server")
@@ -70,7 +70,7 @@ public class MsSqlIntegrationTest extends AbstractIntegrationTest {
         };
 
         Pipeline pipeline = Pipeline.create();
-        pipeline.readFrom(CdcSources.sqlserver("customers", connectorProperties("customers")))
+        pipeline.readFrom(source("customers"))
                 .withNativeTimestamps(0)
                 .<ChangeEvent>customTransform("filter_timestamps", filterTimestampsProcessorSupplier())
                 .groupingKey(event -> event.key().getInteger("id").orElse(0))
@@ -124,16 +124,16 @@ public class MsSqlIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Nonnull
-    private Properties connectorProperties(String tableName) {
-        Properties properties = new Properties();
-        properties.put("database.hostname", mssql.getContainerIpAddress());
-        properties.put("database.port", mssql.getMappedPort(MS_SQL_SERVER_PORT));
-        properties.put("database.user", mssql.getUsername());
-        properties.put("database.password", mssql.getPassword());
-        properties.put("database.dbname", "MyDB");
-        properties.put("database.server.name", "fulfillment");
-        properties.put("table.whitelist", "inventory." + tableName);
-        return properties;
+    private StreamSource<ChangeEvent> source(String tableName) {
+        return CdcSources.sqlserver(tableName)
+                .setDatabaseAddress(mssql.getContainerIpAddress())
+                .setDatabasePort(mssql.getMappedPort(MS_SQL_SERVER_PORT))
+                .setDatabaseUser(mssql.getUsername())
+                .setDatabasePassword(mssql.getPassword())
+                .setDatabaseName("MyDB")
+                .setClusterName("fulfillment")
+                .setTableWhitelist("inventory." + tableName)
+                .build();
     }
 
     private Container.ExecResult execInContainer(String script) throws Exception {

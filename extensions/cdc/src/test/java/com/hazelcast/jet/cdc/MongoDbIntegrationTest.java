@@ -23,6 +23,7 @@ import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.contrib.mongodb.MongoDBContainer;
 import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.pipeline.Pipeline;
+import com.hazelcast.jet.pipeline.StreamSource;
 import com.hazelcast.jet.pipeline.test.AssertionCompletedException;
 import com.hazelcast.jet.pipeline.test.AssertionSinks;
 import org.bson.Document;
@@ -36,7 +37,6 @@ import javax.annotation.Nonnull;
 import java.io.Serializable;
 import java.util.Date;
 import java.util.Objects;
-import java.util.Properties;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -79,7 +79,7 @@ public class MongoDbIntegrationTest extends AbstractIntegrationTest {
         };
 
         Pipeline pipeline = Pipeline.create();
-        pipeline.readFrom(CdcSources.mongodb("customers", connectorProperties("customers")))
+        pipeline.readFrom(source("customers"))
                 .withNativeTimestamps(0)
                 .<ChangeEvent>customTransform("filter_timestamps", filterTimestampsProcessorSupplier())
                 .groupingKey(event -> event.key().getInteger("id").orElse(0))
@@ -134,7 +134,7 @@ public class MongoDbIntegrationTest extends AbstractIntegrationTest {
         };
 
         Pipeline pipeline = Pipeline.create();
-        pipeline.readFrom(CdcSources.mongodb("customers", connectorProperties("customers")))
+        pipeline.readFrom(source("customers"))
                 .withNativeTimestamps(0)
                 .<ChangeEvent>customTransform("filter_timestamps", filterTimestampsProcessorSupplier())
                 .groupingKey(event -> event.key().getInteger("id").orElse(0))
@@ -199,7 +199,7 @@ public class MongoDbIntegrationTest extends AbstractIntegrationTest {
         };
 
         Pipeline pipeline = Pipeline.create();
-        pipeline.readFrom(CdcSources.mongodb("orders", connectorProperties("orders")))
+        pipeline.readFrom(source("orders"))
                 .withoutTimestamps()
                 .groupingKey(event -> getOrderNumber(event, "id"))
                 .mapStateful(
@@ -240,16 +240,16 @@ public class MongoDbIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Nonnull
-    private Properties connectorProperties(String collectionName) {
-        Properties properties = new Properties();
-        properties.put("mongodb.hosts", "rs0/" + mongo.getContainerIpAddress() + ":"
-                + mongo.getMappedPort(MongoDBContainer.MONGODB_PORT));
-        properties.put("mongodb.name", "fullfillment");
-        properties.put("mongodb.user", "debezium");
-        properties.put("mongodb.password", "dbz");
-        properties.put("mongodb.members.auto.discover", "false");
-        properties.put("collection.whitelist", "inventory." + collectionName);
-        return properties;
+    private StreamSource<ChangeEvent> source(String collectionName) {
+        return CdcSources.mongodb(collectionName)
+                .setDatabaseHosts("rs0/" + mongo.getContainerIpAddress() + ":"
+                        + mongo.getMappedPort(MongoDBContainer.MONGODB_PORT))
+                .setClusterName("fullfillment")
+                .setDatabaseUser("debezium")
+                .setDatabasePassword("dbz")
+                .setMemberAutoDiscoveryEnabled(false)
+                .setCollectionWhitelist("inventory." + collectionName)
+                .build();
     }
 
     private static class State implements Serializable {

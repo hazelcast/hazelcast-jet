@@ -24,6 +24,7 @@ import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.pipeline.Pipeline;
+import com.hazelcast.jet.pipeline.StreamSource;
 import com.hazelcast.jet.pipeline.test.AssertionCompletedException;
 import com.hazelcast.jet.pipeline.test.AssertionSinks;
 import org.junit.Rule;
@@ -33,7 +34,6 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import javax.annotation.Nonnull;
 import java.sql.Connection;
 import java.sql.DriverManager;
-import java.util.Properties;
 import java.util.concurrent.CompletionException;
 
 import static com.hazelcast.jet.cdc.Operation.DELETE;
@@ -63,7 +63,7 @@ public class PostgreSqlIntegrationTest extends AbstractIntegrationTest {
         };
 
         Pipeline pipeline = Pipeline.create();
-        pipeline.readFrom(CdcSources.postgres("consumers", connectorProperties()))
+        pipeline.readFrom(source("consumers"))
                 .withNativeTimestamps(0)
                 .<ChangeEvent>customTransform("filter_timestamps", filterTimestampsProcessorSupplier())
                 .groupingKey(event -> event.key().getInteger("id").orElse(0))
@@ -125,7 +125,7 @@ public class PostgreSqlIntegrationTest extends AbstractIntegrationTest {
         };
 
         Pipeline pipeline = Pipeline.create();
-        pipeline.readFrom(CdcSources.postgres("consumers", connectorProperties()))
+        pipeline.readFrom(source("consumers"))
                 .withNativeTimestamps(0)
                 .<ChangeEvent>customTransform("filter_timestamps", filterTimestampsProcessorSupplier())
                 .groupingKey(event -> event.key().getInteger("id").orElse(0))
@@ -182,16 +182,16 @@ public class PostgreSqlIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Nonnull
-    private Properties connectorProperties() {
-        Properties properties = new Properties();
-        properties.put("database.hostname", postgres.getContainerIpAddress());
-        properties.put("database.port", postgres.getMappedPort(POSTGRESQL_PORT));
-        properties.put("database.user", "postgres");
-        properties.put("database.password", "postgres");
-        properties.put("database.dbname", "postgres");
-        properties.put("database.server.name", "dbserver1");
-        properties.put("table.whitelist", "inventory.customers");
-        return properties;
+    private StreamSource<ChangeEvent> source(String tableName) {
+        return CdcSources.postgres(tableName)
+                .setDatabaseAddress(postgres.getContainerIpAddress())
+                .setDatabasePort(postgres.getMappedPort(POSTGRESQL_PORT))
+                .setDatabaseUser("postgres")
+                .setDatabasePassword("postgres")
+                .setDatabaseName("postgres")
+                .setClusterName("dbserver1")
+                .setTableWhitelist("inventory.customers")
+                .build();
     }
 
 
