@@ -15,7 +15,9 @@
  */
 
 /**
- * TODO
+ * Contributes {@link com.hazelcast.jet.grpc.GrpcServices
+ * gRPC service factories} that can be to apply transformations to
+ * a pipeline which for each input item calls to a gRPC service.
  *
  * @since 4.1
  */

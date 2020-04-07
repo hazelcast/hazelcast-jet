@@ -34,10 +34,11 @@ public final class GrpcUtil {
      * @return the same exception or a replacement if needed
      */
     public static Throwable translateGrpcException(Throwable exception) {
-        return (exception instanceof StatusException)
-                ? new StatusExceptionJet((StatusException) exception)
-                : (exception instanceof StatusRuntimeException)
-                ? new StatusRuntimeExceptionJet((StatusRuntimeException) exception)
-                : exception;
+        if (exception instanceof StatusException) {
+            return new StatusExceptionJet((StatusException) exception);
+        } else if (exception instanceof StatusRuntimeException) {
+            return new StatusRuntimeExceptionJet((StatusRuntimeException) exception);
+        }
+        return exception;
     }
 }

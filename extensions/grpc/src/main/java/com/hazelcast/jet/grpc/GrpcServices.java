@@ -38,7 +38,7 @@ import java.util.concurrent.CompletableFuture;
  * transform.
  * <p>
  * Currently two types of gRPC services are supported:
- * <oul>
+ * <ul>
  *     <li>{@link #unaryService(SupplierEx, FunctionEx) unary}</li>
  *     <li>{@link #bidirectionalStreamingService(SupplierEx, FunctionEx)} (SupplierEx, FunctionEx)
  *     bidirectionalStreaming}</li>
