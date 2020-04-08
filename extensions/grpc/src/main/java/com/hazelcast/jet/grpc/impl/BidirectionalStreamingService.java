@@ -33,10 +33,10 @@ import java.util.concurrent.CountDownLatch;
 import static com.hazelcast.jet.grpc.impl.GrpcUtil.translateGrpcException;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
-public final class BidirectionalStreamingService<I, O> implements GrpcService<I, O> {
+public final class BidirectionalStreamingService<T, R> implements GrpcService<T, R> {
 
-    private final StreamObserver<I> sink;
-    private final Queue<CompletableFuture<O>> futureQueue = new ConcurrentLinkedQueue<>();
+    private final StreamObserver<T> sink;
+    private final Queue<CompletableFuture<R>> futureQueue = new ConcurrentLinkedQueue<>();
     private final CountDownLatch completionLatch = new CountDownLatch(1);
     private final ILogger logger;
     private volatile Throwable exceptionInOutputObserver;
@@ -44,16 +44,16 @@ public final class BidirectionalStreamingService<I, O> implements GrpcService<I,
     public BidirectionalStreamingService(
             Context context,
             ManagedChannel channel,
-            FunctionEx<? super ManagedChannel, ? extends FunctionEx<StreamObserver<O>, StreamObserver<I>>> callStubFn
+            FunctionEx<? super ManagedChannel, ? extends FunctionEx<StreamObserver<R>, StreamObserver<T>>> callStubFn
     ) {
         logger = context.logger();
         sink = callStubFn.apply(channel).apply(new OutputMessageObserver());
     }
 
     @Nonnull @Override
-    public CompletableFuture<O> call(@Nonnull I input) {
+    public CompletableFuture<R> call(@Nonnull T input) {
         checkForServerError();
-        CompletableFuture<O> future = new CompletableFuture<>();
+        CompletableFuture<R> future = new CompletableFuture<>();
         futureQueue.add(future);
         sink.onNext(input);
         return future;
@@ -72,9 +72,9 @@ public final class BidirectionalStreamingService<I, O> implements GrpcService<I,
         }
     }
 
-    private class OutputMessageObserver implements StreamObserver<O> {
+    private class OutputMessageObserver implements StreamObserver<R> {
         @Override
-        public void onNext(O outputItem) {
+        public void onNext(R outputItem) {
             try {
                 futureQueue.remove().complete(outputItem);
             } catch (Throwable e) {
@@ -89,7 +89,7 @@ public final class BidirectionalStreamingService<I, O> implements GrpcService<I,
                 e = translateGrpcException(e);
 
                 exceptionInOutputObserver = e;
-                for (CompletableFuture<O> future; (future = futureQueue.poll()) != null; ) {
+                for (CompletableFuture<R> future; (future = futureQueue.poll()) != null; ) {
                     future.completeExceptionally(e);
                 }
             } finally {
@@ -99,7 +99,7 @@ public final class BidirectionalStreamingService<I, O> implements GrpcService<I,
 
         @Override
         public void onCompleted() {
-            for (CompletableFuture<O> future; (future = futureQueue.poll()) != null; ) {
+            for (CompletableFuture<R> future; (future = futureQueue.poll()) != null; ) {
                 future.completeExceptionally(new JetException("Completion signaled before the future was completed"));
             }
             completionLatch.countDown();
