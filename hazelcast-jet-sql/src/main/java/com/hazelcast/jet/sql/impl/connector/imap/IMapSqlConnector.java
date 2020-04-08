@@ -95,7 +95,8 @@ public class IMapSqlConnector implements SqlConnector {
         return false;
     }
 
-    @Nullable @Override
+    @Nullable
+    @Override
     public JetTable createTable(
             @Nonnull JetInstance jetInstance,
             @Nonnull String tableName,
@@ -105,7 +106,8 @@ public class IMapSqlConnector implements SqlConnector {
         throw new UnsupportedOperationException("TODO field examination");
     }
 
-    @Nullable @Override
+    @Nullable
+    @Override
     public JetTable createTable(
             @Nonnull JetInstance jetInstance,
             @Nonnull String tableName,
@@ -123,7 +125,8 @@ public class IMapSqlConnector implements SqlConnector {
         return new IMapTable(this, mapName, fields, keyClassName, valueClassName);
     }
 
-    @Nullable @Override
+    @Nullable
+    @Override
     public Vertex fullScanReader(
             @Nonnull DAG dag,
             @Nonnull JetTable jetTable,
@@ -168,7 +171,7 @@ public class IMapSqlConnector implements SqlConnector {
                 KeyValueRow row = new KeyValueRow(fieldNames, fieldTypes, (key, val, path) ->
                 {
                     try {
-                        return PropertyUtils.getProperty(entry(key, val), path);
+                        return PropertyUtils.getProperty(entry, path);
                     } catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
                         throw sneakyThrow(e);
                     }
@@ -184,7 +187,7 @@ public class IMapSqlConnector implements SqlConnector {
             KeyValueRow row = new KeyValueRow(fieldNames, fieldTypes, (key, val, path) ->
             {
                 try {
-                    return PropertyUtils.getProperty(entry(key, val), path);
+                    return PropertyUtils.getProperty(entry, path);
                 } catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
                     throw sneakyThrow(e);
                 }
@@ -202,7 +205,8 @@ public class IMapSqlConnector implements SqlConnector {
                 readMapP(mapName, mapPredicate, mapProjection));
     }
 
-    @Nullable @Override
+    @Nullable
+    @Override
     public Tuple2<Vertex, Vertex> nestedLoopReader(
             @Nonnull DAG dag,
             @Nonnull JetTable jetTable,
@@ -227,7 +231,8 @@ public class IMapSqlConnector implements SqlConnector {
         return tuple2(v, v);
     }
 
-    @Nullable @Override
+    @Nullable
+    @Override
     public Vertex sink(
             @Nonnull DAG dag,
             @Nonnull JetTable jetTable
