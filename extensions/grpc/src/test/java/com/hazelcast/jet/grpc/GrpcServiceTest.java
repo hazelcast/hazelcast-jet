@@ -73,14 +73,12 @@ public class GrpcServiceTest extends SimpleTestInClusterSupport {
         server = createServer(new GreeterServiceImpl());
         final int port = server.getPort();
 
-        ServiceFactory<?, ? extends GrpcService<HelloRequest, HelloReply>> greeterService =
-                bidirectionalStreaming(port);
-
         Pipeline p = Pipeline.create();
+
         BatchStage<String> stage = p.readFrom(TestSources.items("one", "two", "three", "four"));
 
         // When
-        BatchStage<String> mapped = stage.mapUsingServiceAsync(greeterService, (service, item) -> {
+        BatchStage<String> mapped = stage.mapUsingServiceAsync(bidirectionalStreaming(port), (service, item) -> {
             HelloRequest req = HelloRequest.newBuilder().setName(item).build();
             return service.call(req).thenApply(HelloReply::getMessage);
         });
@@ -97,16 +95,13 @@ public class GrpcServiceTest extends SimpleTestInClusterSupport {
         server = createServer(new GreeterServiceImpl());
         final int port = server.getPort();
 
-        ServiceFactory<?, ? extends GrpcService<HelloRequest, HelloReply>> greeterService =
-                bidirectionalStreaming(port);
-
         List<String> items = IntStream.range(0, ITEM_COUNT).mapToObj(Integer::toString).collect(toList());
 
         Pipeline p = Pipeline.create();
         BatchStageWithKey<String, String> stage = p.readFrom(TestSources.items(items))
                                            .groupingKey(i -> i);
         // When
-        BatchStage<String> mapped = stage.mapUsingServiceAsync(greeterService, (service, key, item) -> {
+        BatchStage<String> mapped = stage.mapUsingServiceAsync(bidirectionalStreaming(port), (service, key, item) -> {
             HelloRequest req = HelloRequest.newBuilder().setName(item).build();
             return service.call(req).thenApply(HelloReply::getMessage);
         });
@@ -125,14 +120,12 @@ public class GrpcServiceTest extends SimpleTestInClusterSupport {
         server = createServer(new FaultyGreeterServiceImpl());
         final int port = server.getPort();
 
-        ServiceFactory<?, ? extends GrpcService<HelloRequest, HelloReply>> greeterService =
-                bidirectionalStreaming(port);
-
         Pipeline p = Pipeline.create();
+
         BatchStage<String> stage = p.readFrom(TestSources.items("one", "two", "three", "four"));
 
         // When
-        BatchStage<String> mapped = stage.mapUsingServiceAsync(greeterService, (service, item) -> {
+        BatchStage<String> mapped = stage.mapUsingServiceAsync(bidirectionalStreaming(port), (service, item) -> {
             HelloRequest req = HelloRequest.newBuilder().setName(item).build();
             return service.call(req).thenApply(HelloReply::getMessage);
         });
@@ -154,14 +147,13 @@ public class GrpcServiceTest extends SimpleTestInClusterSupport {
         server = createServer(new GreeterServiceImpl());
         final int port = server.getPort();
 
-        ServiceFactory<?, ? extends GrpcService<HelloRequest, HelloReply>> greeterService = unary(port);
-
         Pipeline p = Pipeline.create();
+
         BatchStage<String> source = p.readFrom(TestSources.items("one", "two", "three", "four"));
 
         // When
         BatchStage<String> mapped = source
-                .mapUsingServiceAsync(greeterService, (service, input) -> {
+                .mapUsingServiceAsync(unary(port), (service, input) -> {
                     HelloRequest request = HelloRequest.newBuilder().setName(input).build();
                     return service.call(request).thenApply(HelloReply::getMessage);
                 });
@@ -178,16 +170,14 @@ public class GrpcServiceTest extends SimpleTestInClusterSupport {
         server = createServer(new GreeterServiceImpl());
         final int port = server.getPort();
 
-        ServiceFactory<?, ? extends GrpcService<HelloRequest, HelloReply>> greeterService =
-                unary(port);
-
         List<String> items = IntStream.range(0, ITEM_COUNT).mapToObj(Integer::toString).collect(toList());
 
         Pipeline p = Pipeline.create();
+
         BatchStageWithKey<String, String> stage = p.readFrom(TestSources.items(items))
                                                    .groupingKey(i -> i);
         // When
-        BatchStage<String> mapped = stage.mapUsingServiceAsync(greeterService, (service, key, item) -> {
+        BatchStage<String> mapped = stage.mapUsingServiceAsync(unary(port), (service, key, item) -> {
             HelloRequest req = HelloRequest.newBuilder().setName(item).build();
             return service.call(req).thenApply(HelloReply::getMessage);
         });
@@ -205,14 +195,13 @@ public class GrpcServiceTest extends SimpleTestInClusterSupport {
         Server server = createServer(new FaultyGreeterServiceImpl());
         final int port = server.getPort();
 
-        ServiceFactory<?, ? extends GrpcService<HelloRequest, HelloReply>> greeterService = unary(port);
-
         Pipeline p = Pipeline.create();
+
         BatchStage<String> source = p.readFrom(TestSources.items("one", "two", "three", "four"));
 
         // When
         BatchStage<String> mapped = source
-                .mapUsingServiceAsync(greeterService, (service, input) -> {
+                .mapUsingServiceAsync(unary(port), (service, input) -> {
                     HelloRequest request = HelloRequest.newBuilder().setName(input).build();
                     return service.call(request).thenApply(HelloReply::getMessage);
                 });
