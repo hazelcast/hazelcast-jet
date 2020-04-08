@@ -17,6 +17,7 @@
 package com.hazelcast.jet.sql.impl.expression;
 
 import com.hazelcast.sql.HazelcastSqlException;
+import com.hazelcast.sql.impl.QueryException;
 import com.hazelcast.sql.impl.expression.ConstantExpression;
 import com.hazelcast.sql.impl.expression.Expression;
 import com.hazelcast.sql.impl.expression.datetime.CurrentDateFunction;
@@ -287,7 +288,7 @@ public final class RexToExpression {
                 break;
         }
 
-        throw HazelcastSqlException.error("Unsupported operator: " + operator);
+        throw QueryException.error("Unsupported operator: " + operator);
     }
 
     /**
@@ -347,7 +348,7 @@ public final class RexToExpression {
                 return ConstantExpression.create(QueryDataType.NULL, null);
 
             default:
-                throw HazelcastSqlException.error("Unsupported literal: " + literal);
+                throw QueryException.error("Unsupported literal: " + literal);
         }
     }
 
@@ -503,12 +504,12 @@ public final class RexToExpression {
                     break;
 
                 default:
-                    throw HazelcastSqlException.error("Unsupported literal symbol: " + literal);
+                    throw QueryException.error("Unsupported literal symbol: " + literal);
             }
 
             return new DatePartUnitConstantExpression(unit);
         }
 
-        throw HazelcastSqlException.error("Unsupported literal symbol: " + literal);
+        throw QueryException.error("Unsupported literal symbol: " + literal);
     }
 }
