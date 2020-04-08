@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.sql.impl.connector;
+package com.hazelcast.jet.sql.impl.rel;
 
 import com.hazelcast.jet.sql.impl.connector.imap.IMapTable;
 import org.apache.calcite.plan.RelOptCluster;

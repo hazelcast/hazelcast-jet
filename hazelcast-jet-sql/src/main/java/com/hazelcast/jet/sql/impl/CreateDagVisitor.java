@@ -20,7 +20,7 @@ import com.hazelcast.function.ConsumerEx;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Vertex;
-import com.hazelcast.jet.sql.impl.connector.FullScanPhysicalRel;
+import com.hazelcast.jet.sql.impl.rel.FullScanPhysicalRel;
 import com.hazelcast.jet.sql.impl.expression.RexToExpressionVisitor;
 import com.hazelcast.jet.sql.impl.schema.JetTable;
 import com.hazelcast.sql.impl.expression.Expression;

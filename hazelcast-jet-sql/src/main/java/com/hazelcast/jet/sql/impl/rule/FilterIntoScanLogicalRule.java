@@ -14,10 +14,11 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.sql.impl.connector.imap;
+package com.hazelcast.jet.sql.impl.rule;
 
 import com.hazelcast.jet.sql.impl.OptUtils;
-import com.hazelcast.jet.sql.impl.connector.FullScanLogicalRel;
+import com.hazelcast.jet.sql.impl.connector.imap.IMapTable;
+import com.hazelcast.jet.sql.impl.rel.FullScanLogicalRel;
 import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelOptRuleCall;
 import org.apache.calcite.rel.core.Filter;
@@ -46,16 +47,16 @@ import java.util.List;
 
 import static java.util.Arrays.asList;
 
-public final class IMapFilterIntoScanLogicalRule extends RelOptRule {
+public final class FilterIntoScanLogicalRule extends RelOptRule {
 
-    public static final IMapFilterIntoScanLogicalRule INSTANCE = new IMapFilterIntoScanLogicalRule();
+    public static final FilterIntoScanLogicalRule INSTANCE = new FilterIntoScanLogicalRule();
 
-    private IMapFilterIntoScanLogicalRule() {
+    private FilterIntoScanLogicalRule() {
         super(
                 operand(Filter.class,
                         operandJ(TableScan.class, null, scan -> scan.getTable().unwrap(IMapTable.class) != null, none())),
                 RelFactories.LOGICAL_BUILDER,
-                IMapFilterIntoScanLogicalRule.class.getSimpleName()
+                FilterIntoScanLogicalRule.class.getSimpleName()
         );
     }
 

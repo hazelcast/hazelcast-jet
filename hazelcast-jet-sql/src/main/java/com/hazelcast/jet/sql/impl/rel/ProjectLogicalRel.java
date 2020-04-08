@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.sql.impl.connector.imap;
+package com.hazelcast.jet.sql.impl.rel;
 
 import com.hazelcast.jet.sql.impl.LogicalRel;
 import com.hazelcast.jet.sql.impl.cost.CostUtils;
@@ -31,9 +31,9 @@ import org.apache.calcite.rex.RexNode;
 
 import java.util.List;
 
-public class IMapProjectLogicalRel extends Project implements LogicalRel {
+public class ProjectLogicalRel extends Project implements LogicalRel {
 
-    public IMapProjectLogicalRel(
+    public ProjectLogicalRel(
             RelOptCluster cluster,
             RelTraitSet traits,
             RelNode input,
@@ -45,7 +45,7 @@ public class IMapProjectLogicalRel extends Project implements LogicalRel {
 
     @Override
     public final Project copy(RelTraitSet traitSet, RelNode input, List<RexNode> projects, RelDataType rowType) {
-        return new IMapProjectLogicalRel(getCluster(), traitSet, input, getProjects(), rowType);
+        return new ProjectLogicalRel(getCluster(), traitSet, input, getProjects(), rowType);
     }
 
     @Override

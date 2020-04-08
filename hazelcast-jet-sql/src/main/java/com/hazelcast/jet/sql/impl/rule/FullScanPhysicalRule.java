@@ -14,9 +14,11 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.sql.impl.connector;
+package com.hazelcast.jet.sql.impl.rule;
 
 import com.hazelcast.jet.sql.impl.OptUtils;
+import com.hazelcast.jet.sql.impl.rel.FullScanLogicalRel;
+import com.hazelcast.jet.sql.impl.rel.FullScanPhysicalRel;
 import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelOptRuleCall;
 

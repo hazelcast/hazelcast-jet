@@ -14,10 +14,11 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.sql.impl.connector.imap;
+package com.hazelcast.jet.sql.impl.rule;
 
 import com.hazelcast.jet.sql.impl.OptUtils;
-import com.hazelcast.jet.sql.impl.connector.FullScanLogicalRel;
+import com.hazelcast.jet.sql.impl.connector.imap.IMapTable;
+import com.hazelcast.jet.sql.impl.rel.FullScanLogicalRel;
 import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelOptRuleCall;
 import org.apache.calcite.rel.core.Project;
@@ -25,16 +26,16 @@ import org.apache.calcite.rel.core.RelFactories;
 import org.apache.calcite.rel.core.TableScan;
 import org.apache.calcite.rex.RexNode;
 
-public final class IMapProjectIntoScanLogicalRule extends RelOptRule {
+public final class ProjectIntoScanLogicalRule extends RelOptRule {
 
-    public static final IMapProjectIntoScanLogicalRule INSTANCE = new IMapProjectIntoScanLogicalRule();
+    public static final ProjectIntoScanLogicalRule INSTANCE = new ProjectIntoScanLogicalRule();
 
-    private IMapProjectIntoScanLogicalRule() {
+    private ProjectIntoScanLogicalRule() {
         super(
                 operand(Project.class,
                         operandJ(TableScan.class, null, scan -> scan.getTable().unwrap(IMapTable.class) != null, none())),
                 RelFactories.LOGICAL_BUILDER,
-                IMapProjectIntoScanLogicalRule.class.getSimpleName()
+                ProjectIntoScanLogicalRule.class.getSimpleName()
         );
     }
 

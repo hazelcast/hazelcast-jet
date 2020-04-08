@@ -14,42 +14,36 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.sql.impl.connector.imap;
+package com.hazelcast.jet.sql.impl.rule;
 
 import com.hazelcast.jet.sql.impl.OptUtils;
+import com.hazelcast.jet.sql.impl.rel.FilterLogicalRel;
 import org.apache.calcite.plan.Convention;
 import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.convert.ConverterRule;
-import org.apache.calcite.rel.core.Project;
-import org.apache.calcite.rel.logical.LogicalProject;
+import org.apache.calcite.rel.logical.LogicalFilter;
 
 import static com.hazelcast.jet.sql.impl.OptUtils.CONVENTION_LOGICAL;
 
-public final class IMapProjectLogicalRule extends ConverterRule {
+public final class FilterLogicalRule extends ConverterRule {
 
-    public static final RelOptRule INSTANCE = new IMapProjectLogicalRule();
+    public static final RelOptRule INSTANCE = new FilterLogicalRule();
 
-    private IMapProjectLogicalRule() {
-        super(
-                LogicalProject.class,
-                Convention.NONE,
-                CONVENTION_LOGICAL,
-                IMapProjectLogicalRule.class.getSimpleName()
-        );
+    private FilterLogicalRule() {
+        super(LogicalFilter.class, Convention.NONE, CONVENTION_LOGICAL, FilterLogicalRule.class.getSimpleName());
     }
 
     @Override
     public RelNode convert(RelNode rel) {
-        Project project = (Project) rel;
-        RelNode input = project.getInput();
+        LogicalFilter filter = (LogicalFilter) rel;
+        RelNode input = filter.getInput();
 
-        return new IMapProjectLogicalRel(
-                project.getCluster(),
-                OptUtils.toLogicalConvention(project.getTraitSet()),
+        return new FilterLogicalRel(
+                filter.getCluster(),
+                OptUtils.toLogicalConvention(filter.getTraitSet()),
                 OptUtils.toLogicalInput(input),
-                project.getProjects(),
-                project.getRowType()
+                filter.getCondition()
         );
     }
 }

@@ -16,11 +16,11 @@
 
 package com.hazelcast.jet.sql.impl;
 
-import com.hazelcast.jet.sql.impl.connector.imap.IMapFilterIntoScanLogicalRule;
-import com.hazelcast.jet.sql.impl.connector.imap.IMapFilterLogicalRule;
-import com.hazelcast.jet.sql.impl.connector.imap.IMapProjectIntoScanLogicalRule;
-import com.hazelcast.jet.sql.impl.connector.imap.IMapProjectLogicalRule;
-import com.hazelcast.jet.sql.impl.connector.FullScanLogicalRule;
+import com.hazelcast.jet.sql.impl.rule.FilterIntoScanLogicalRule;
+import com.hazelcast.jet.sql.impl.rule.FilterLogicalRule;
+import com.hazelcast.jet.sql.impl.rule.ProjectIntoScanLogicalRule;
+import com.hazelcast.jet.sql.impl.rule.ProjectLogicalRule;
+import com.hazelcast.jet.sql.impl.rule.FullScanLogicalRule;
 import org.apache.calcite.rel.rules.FilterMergeRule;
 import org.apache.calcite.rel.rules.FilterProjectTransposeRule;
 import org.apache.calcite.rel.rules.ProjectFilterTransposeRule;
@@ -52,8 +52,8 @@ public final class JetLogicalRules {
 //                ProjectJoinTransposeRule.INSTANCE,
                 ProjectRemoveRule.INSTANCE,
                 // TODO [viliam] IMap-specific rules, move into SqlConnector
-                IMapProjectIntoScanLogicalRule.INSTANCE,
-                IMapFilterIntoScanLogicalRule.INSTANCE,
+                ProjectIntoScanLogicalRule.INSTANCE,
+                FilterIntoScanLogicalRule.INSTANCE,
                 ValuesReduceRule.FILTER_INSTANCE,
                 ValuesReduceRule.PROJECT_FILTER_INSTANCE,
                 ValuesReduceRule.PROJECT_INSTANCE,
@@ -68,8 +68,8 @@ public final class JetLogicalRules {
                 JetTableInsertLogicalRule.INSTANCE,
                 JetValuesLogicalRule.INSTANCE,
                 FullScanLogicalRule.INSTANCE,
-                IMapFilterLogicalRule.INSTANCE,
-                IMapProjectLogicalRule.INSTANCE
+                FilterLogicalRule.INSTANCE,
+                ProjectLogicalRule.INSTANCE
 //                AggregateLogicalRule.INSTANCE,
 //                SortLogicalRule.INSTANCE,
 //                JoinLogicalRule.INSTANCE

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.sql.impl.connector.imap;
+package com.hazelcast.jet.sql.impl.rel;
 
 import com.hazelcast.jet.sql.impl.LogicalRel;
 import org.apache.calcite.plan.RelOptCluster;
@@ -24,8 +24,8 @@ import org.apache.calcite.rel.RelWriter;
 import org.apache.calcite.rel.core.Filter;
 import org.apache.calcite.rex.RexNode;
 
-public class IMapFilterLogicalRel extends Filter implements LogicalRel {
-    public IMapFilterLogicalRel(
+public class FilterLogicalRel extends Filter implements LogicalRel {
+    public FilterLogicalRel(
         RelOptCluster cluster,
         RelTraitSet traits,
         RelNode input,
@@ -36,7 +36,7 @@ public class IMapFilterLogicalRel extends Filter implements LogicalRel {
 
     @Override
     public final Filter copy(RelTraitSet traitSet, RelNode input, RexNode condition) {
-        return new IMapFilterLogicalRel(getCluster(), traitSet, input, condition);
+        return new FilterLogicalRel(getCluster(), traitSet, input, condition);
     }
 
     @Override

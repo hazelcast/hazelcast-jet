@@ -14,35 +14,43 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.sql.impl.connector.imap;
+package com.hazelcast.jet.sql.impl.rule;
 
 import com.hazelcast.jet.sql.impl.OptUtils;
+import com.hazelcast.jet.sql.impl.rel.ProjectLogicalRel;
 import org.apache.calcite.plan.Convention;
 import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.convert.ConverterRule;
-import org.apache.calcite.rel.logical.LogicalFilter;
+import org.apache.calcite.rel.core.Project;
+import org.apache.calcite.rel.logical.LogicalProject;
 
 import static com.hazelcast.jet.sql.impl.OptUtils.CONVENTION_LOGICAL;
 
-public final class IMapFilterLogicalRule extends ConverterRule {
+public final class ProjectLogicalRule extends ConverterRule {
 
-    public static final RelOptRule INSTANCE = new IMapFilterLogicalRule();
+    public static final RelOptRule INSTANCE = new ProjectLogicalRule();
 
-    private IMapFilterLogicalRule() {
-        super(LogicalFilter.class, Convention.NONE, CONVENTION_LOGICAL, IMapFilterLogicalRule.class.getSimpleName());
+    private ProjectLogicalRule() {
+        super(
+                LogicalProject.class,
+                Convention.NONE,
+                CONVENTION_LOGICAL,
+                ProjectLogicalRule.class.getSimpleName()
+        );
     }
 
     @Override
     public RelNode convert(RelNode rel) {
-        LogicalFilter filter = (LogicalFilter) rel;
-        RelNode input = filter.getInput();
+        Project project = (Project) rel;
+        RelNode input = project.getInput();
 
-        return new IMapFilterLogicalRel(
-                filter.getCluster(),
-                OptUtils.toLogicalConvention(filter.getTraitSet()),
+        return new ProjectLogicalRel(
+                project.getCluster(),
+                OptUtils.toLogicalConvention(project.getTraitSet()),
                 OptUtils.toLogicalInput(input),
-                filter.getCondition()
+                project.getProjects(),
+                project.getRowType()
         );
     }
 }

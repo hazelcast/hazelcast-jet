@@ -37,7 +37,7 @@ import com.hazelcast.jet.sql.impl.OptUtils;
 import com.hazelcast.jet.sql.impl.PhysicalRel;
 import com.hazelcast.jet.sql.impl.RowCountMetadata;
 import com.hazelcast.jet.sql.impl.cost.CostFactory;
-import com.hazelcast.jet.sql.impl.connector.FullScanPhysicalRule;
+import com.hazelcast.jet.sql.impl.rule.FullScanPhysicalRule;
 import com.hazelcast.jet.sql.impl.schema.JetSchema;
 import com.hazelcast.sql.impl.type.QueryDataType;
 import org.apache.calcite.adapter.java.JavaTypeFactory;
