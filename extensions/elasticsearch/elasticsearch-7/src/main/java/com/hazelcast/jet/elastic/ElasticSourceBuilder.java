@@ -57,7 +57,7 @@ public class ElasticSourceBuilder<T> implements Serializable {
     private boolean slicing;
     private boolean coLocatedReading;
     private String scrollKeepAlive = "1m"; // Using String because it needs to be Serializable
-    private int preferredLocalParallelism = Vertex.LOCAL_PARALLELISM_USE_DEFAULT;
+    private int preferredLocalParallelism = 2;
 
     /**
      * Build Elasticsearch {@link BatchSource} with supplied parameters
