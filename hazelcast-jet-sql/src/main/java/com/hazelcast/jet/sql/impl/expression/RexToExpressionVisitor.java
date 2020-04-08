@@ -17,6 +17,7 @@
 package com.hazelcast.jet.sql.impl.expression;
 
 import com.hazelcast.sql.HazelcastSqlException;
+import com.hazelcast.sql.impl.QueryException;
 import com.hazelcast.sql.impl.expression.ColumnExpression;
 import com.hazelcast.sql.impl.expression.Expression;
 import com.hazelcast.sql.impl.expression.ParameterExpression;
@@ -106,7 +107,7 @@ public final class RexToExpressionVisitor implements RexVisitor<Expression<?>> {
         int index = dynamicParam.getIndex();
 
         if (index >= parameterCount) {
-            throw HazelcastSqlException.error(
+            throw QueryException.error(
                     "Insufficient query parameter arguments: expected at least " + (index + 1) + ", got " + parameterCount);
         }
 

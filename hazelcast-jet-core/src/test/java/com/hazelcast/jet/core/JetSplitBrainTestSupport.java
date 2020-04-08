@@ -23,7 +23,7 @@ import com.hazelcast.instance.impl.HazelcastInstanceImpl;
 import com.hazelcast.instance.impl.HazelcastInstanceProxy;
 import com.hazelcast.instance.impl.Node;
 import com.hazelcast.instance.impl.NodeState;
-import com.hazelcast.internal.nio.tcp.FirewallingNetworkingService.FirewallingEndpointManager;
+import com.hazelcast.internal.nio.server.FirewallingNetworkingService.FirewallingEndpointManager;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.logging.ILogger;
