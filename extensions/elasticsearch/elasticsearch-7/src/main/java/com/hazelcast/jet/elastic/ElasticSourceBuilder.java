@@ -19,7 +19,6 @@ package com.hazelcast.jet.elastic;
 import com.hazelcast.function.ConsumerEx;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.function.SupplierEx;
-import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.elastic.impl.ElasticProcessorMetaSupplier;
 import com.hazelcast.jet.pipeline.BatchSource;
 import com.hazelcast.jet.pipeline.Sources;
