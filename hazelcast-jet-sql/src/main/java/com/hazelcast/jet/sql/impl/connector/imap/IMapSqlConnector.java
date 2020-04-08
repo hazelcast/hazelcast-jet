@@ -95,7 +95,8 @@ public class IMapSqlConnector implements SqlConnector {
         return false;
     }
 
-    @Nullable @Override
+    @Nullable
+    @Override
     public JetTable createTable(
             @Nonnull JetInstance jetInstance,
             @Nonnull String tableName,
@@ -105,7 +106,8 @@ public class IMapSqlConnector implements SqlConnector {
         throw new UnsupportedOperationException("TODO field examination");
     }
 
-    @Nullable @Override
+    @Nullable
+    @Override
     public JetTable createTable(
             @Nonnull JetInstance jetInstance,
             @Nonnull String tableName,
@@ -123,16 +125,19 @@ public class IMapSqlConnector implements SqlConnector {
         return new IMapTable(this, mapName, fields, keyClassName, valueClassName);
     }
 
-    @Nullable @Override
+    @Nullable
+    @Override
     public Vertex fullScanReader(
             @Nonnull DAG dag,
             @Nonnull JetTable jetTable,
             @Nullable String timestampField,
             @Nullable Expression<Boolean> predicate,
-            @Nonnull List<Integer> projection
+            @Nonnull List<Expression<?>> projections
     ) {
         IMapTable table = (IMapTable) jetTable;
         String mapName = table.getMapName();
+
+        List<QueryDataType> fieldTypes = table.getPhysicalRowType();
 
         // convert the projection
         List<String> fieldNames = toList(table.getFieldNames(), fieldName -> {
@@ -155,21 +160,6 @@ public class IMapSqlConnector implements SqlConnector {
                 return "value." + fieldName;
             }
         });
-        int[] projection0 = projection.stream().mapToInt(i -> i).toArray();
-        Projection<Entry<Object, Object>, Object[]> mapProjection = entry -> {
-            // TODO use Extractors
-            Object[] res = new Object[projection0.length];
-
-            for (int i = 0; i < projection0.length; i++) {
-                int fieldIndex = projection0[i];
-                try {
-                    res[i] = PropertyUtils.getProperty(entry, fieldNames.get(fieldIndex));
-                } catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
-                    throw new RuntimeException(e);
-                }
-            }
-            return res;
-        };
 
         // convert the predicate
         // TODO make the ReadMapOrCacheP.LocalProcessorMetaSupplier implement IdentifiedDataSerializable
@@ -177,12 +167,11 @@ public class IMapSqlConnector implements SqlConnector {
         if (predicate == null) {
             mapPredicate = Predicates.alwaysTrue();
         } else {
-            List<QueryDataType> fieldTypes = table.getPhysicalRowType();
             mapPredicate = entry -> {
                 KeyValueRow row = new KeyValueRow(fieldNames, fieldTypes, (key, val, path) ->
                 {
                     try {
-                        return PropertyUtils.getProperty(entry(key, val), path);
+                        return PropertyUtils.getProperty(entry, path);
                     } catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
                         throw sneakyThrow(e);
                     }
@@ -194,12 +183,30 @@ public class IMapSqlConnector implements SqlConnector {
             };
         }
 
-        Vertex vRead = dag.newVertex("map(" + mapName + ")",
+        Projection<Entry<Object, Object>, Object[]> mapProjection = entry -> {
+            KeyValueRow row = new KeyValueRow(fieldNames, fieldTypes, (key, val, path) ->
+            {
+                try {
+                    return PropertyUtils.getProperty(entry, path);
+                } catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
+                    throw sneakyThrow(e);
+                }
+            });
+            row.setKeyValue(entry.getKey(), entry.getValue());
+
+            Object[] res = new Object[projections.size()];
+            for (int i = 0; i < projections.size(); i++) {
+                res[i] = projections.get(i).eval(row, ZERO_ARGUMENTS_CONTEXT);
+            }
+            return res;
+        };
+
+        return dag.newVertex("map(" + mapName + ")",
                 readMapP(mapName, mapPredicate, mapProjection));
-        return vRead;
     }
 
-    @Nullable @Override
+    @Nullable
+    @Override
     public Tuple2<Vertex, Vertex> nestedLoopReader(
             @Nonnull DAG dag,
             @Nonnull JetTable jetTable,
@@ -224,7 +231,8 @@ public class IMapSqlConnector implements SqlConnector {
         return tuple2(v, v);
     }
 
-    @Nullable @Override
+    @Nullable
+    @Override
     public Vertex sink(
             @Nonnull DAG dag,
             @Nonnull JetTable jetTable

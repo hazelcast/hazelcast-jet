@@ -26,11 +26,12 @@ import static com.hazelcast.jet.sql.impl.OptUtils.CONVENTION_LOGICAL;
  * Convert logical full scan to physical full scan.
  */
 public final class FullScanPhysicalRule extends RelOptRule {
+
     public static final RelOptRule INSTANCE = new FullScanPhysicalRule();
 
     private FullScanPhysicalRule() {
         super(OptUtils.single(FullScanLogicalRel.class, CONVENTION_LOGICAL),
-            FullScanPhysicalRule.class.getSimpleName());
+                FullScanPhysicalRule.class.getSimpleName());
     }
 
     @Override
@@ -39,11 +40,11 @@ public final class FullScanPhysicalRule extends RelOptRule {
 
         // Add normal map scan.
         call.transformTo(new FullScanPhysicalRel(
-            scan.getCluster(),
-            OptUtils.toPhysicalConvention(scan.getTraitSet()),
-            scan.getTable(),
-            scan.getProjects(),
-            scan.getFilter()
+                scan.getCluster(),
+                OptUtils.toPhysicalConvention(scan.getTraitSet()),
+                scan.getTable(),
+                scan.getProjection(),
+                scan.getFilter()
         ));
     }
 }

@@ -84,7 +84,7 @@ public interface SqlConnector {
             @Nonnull JetTable jetTable,
             @Nullable String timestampField,
             @Nonnull Expression<Boolean> predicate,
-            @Nonnull List<Integer> projection);
+            @Nonnull List<Expression<?>> projection);
 
     /**
      * Returns a supplier for a reader that reads a set of records for the

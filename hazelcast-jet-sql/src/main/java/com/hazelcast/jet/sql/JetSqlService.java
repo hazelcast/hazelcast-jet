@@ -37,7 +37,6 @@ import com.hazelcast.jet.sql.impl.OptUtils;
 import com.hazelcast.jet.sql.impl.PhysicalRel;
 import com.hazelcast.jet.sql.impl.RowCountMetadata;
 import com.hazelcast.jet.sql.impl.cost.CostFactory;
-import com.hazelcast.jet.sql.impl.connector.imap.IMapProjectPhysicalRule;
 import com.hazelcast.jet.sql.impl.connector.FullScanPhysicalRule;
 import com.hazelcast.jet.sql.impl.schema.JetSchema;
 import com.hazelcast.sql.impl.type.QueryDataType;
@@ -339,7 +338,6 @@ public class JetSqlService {
 //                SortPhysicalRule.INSTANCE,
 //                RootPhysicalRule.INSTANCE,
 //                FilterPhysicalRule.INSTANCE,
-                IMapProjectPhysicalRule.INSTANCE,
                 FullScanPhysicalRule.INSTANCE,
 //                AggregatePhysicalRule.INSTANCE,
 //                JoinPhysicalRule.INSTANCE,

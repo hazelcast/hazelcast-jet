@@ -26,6 +26,7 @@ import org.apache.calcite.rel.logical.LogicalTableScan;
 import static com.hazelcast.jet.sql.impl.OptUtils.CONVENTION_LOGICAL;
 
 public final class FullScanLogicalRule extends ConverterRule {
+
     public static final RelOptRule INSTANCE = new FullScanLogicalRule();
 
     private FullScanLogicalRule() {
@@ -37,11 +38,11 @@ public final class FullScanLogicalRule extends ConverterRule {
         LogicalTableScan scan = (LogicalTableScan) rel;
 
         return new FullScanLogicalRel(
-            scan.getCluster(),
-            OptUtils.toLogicalConvention(scan.getTraitSet()),
-            scan.getTable(),
-            null,
-            null
+                scan.getCluster(),
+                OptUtils.toLogicalConvention(scan.getTraitSet()),
+                scan.getTable(),
+                null,
+                null
         );
     }
 }

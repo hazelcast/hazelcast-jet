@@ -26,6 +26,7 @@ import org.apache.calcite.rel.logical.LogicalFilter;
 import static com.hazelcast.jet.sql.impl.OptUtils.CONVENTION_LOGICAL;
 
 public final class IMapFilterLogicalRule extends ConverterRule {
+
     public static final RelOptRule INSTANCE = new IMapFilterLogicalRule();
 
     private IMapFilterLogicalRule() {
@@ -38,10 +39,10 @@ public final class IMapFilterLogicalRule extends ConverterRule {
         RelNode input = filter.getInput();
 
         return new IMapFilterLogicalRel(
-            filter.getCluster(),
-            OptUtils.toLogicalConvention(filter.getTraitSet()),
-            OptUtils.toLogicalInput(input),
-            filter.getCondition()
+                filter.getCluster(),
+                OptUtils.toLogicalConvention(filter.getTraitSet()),
+                OptUtils.toLogicalInput(input),
+                filter.getCondition()
         );
     }
 }

@@ -27,14 +27,15 @@ import org.apache.calcite.rel.logical.LogicalProject;
 import static com.hazelcast.jet.sql.impl.OptUtils.CONVENTION_LOGICAL;
 
 public final class IMapProjectLogicalRule extends ConverterRule {
+
     public static final RelOptRule INSTANCE = new IMapProjectLogicalRule();
 
     private IMapProjectLogicalRule() {
         super(
-            LogicalProject.class,
-            Convention.NONE,
-            CONVENTION_LOGICAL,
-            IMapProjectLogicalRule.class.getSimpleName()
+                LogicalProject.class,
+                Convention.NONE,
+                CONVENTION_LOGICAL,
+                IMapProjectLogicalRule.class.getSimpleName()
         );
     }
 
@@ -44,11 +45,11 @@ public final class IMapProjectLogicalRule extends ConverterRule {
         RelNode input = project.getInput();
 
         return new IMapProjectLogicalRel(
-            project.getCluster(),
-            OptUtils.toLogicalConvention(project.getTraitSet()),
-            OptUtils.toLogicalInput(input),
-            project.getProjects(),
-            project.getRowType()
+                project.getCluster(),
+                OptUtils.toLogicalConvention(project.getTraitSet()),
+                OptUtils.toLogicalInput(input),
+                project.getProjects(),
+                project.getRowType()
         );
     }
 }

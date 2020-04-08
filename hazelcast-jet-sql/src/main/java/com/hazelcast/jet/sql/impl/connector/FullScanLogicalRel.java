@@ -33,19 +33,20 @@ import java.util.List;
  * Physical full scan over a source connector.
  */
 public class FullScanLogicalRel extends AbstractFullScanRel implements LogicalRel {
+
     public FullScanLogicalRel(
-        RelOptCluster cluster,
-        RelTraitSet traitSet,
-        RelOptTable table,
-        List<Integer> projects,
-        RexNode filter
+            RelOptCluster cluster,
+            RelTraitSet traitSet,
+            RelOptTable table,
+            List<RexNode> projection,
+            RexNode filter
     ) {
-        super(cluster, traitSet, table, projects, filter);
+        super(cluster, traitSet, table, projection, filter);
     }
 
     @Override
     public final RelNode copy(RelTraitSet traitSet, List<RelNode> inputs) {
-        return new FullScanLogicalRel(getCluster(), traitSet, table, projects, filter);
+        return new FullScanLogicalRel(getCluster(), traitSet, table, getProjection(), getFilter());
     }
 
     @Override
@@ -56,21 +57,20 @@ public class FullScanLogicalRel extends AbstractFullScanRel implements LogicalRe
         // 2. Get cost of the project taking in count filter and number of expressions. Project never produces IO.
         double filterRowCount = scanCost.getRows();
 
+        RexNode filter = getFilter();
         if (filter != null) {
             double filterSelectivity = mq.getSelectivity(this, filter);
             filterRowCount = filterRowCount * filterSelectivity;
         }
 
-        int expressionCount = getProjects().size();
+        int expressionCount = getProjection().size();
         double projectCpu = CostUtils.adjustProjectCpu(filterRowCount * expressionCount, true);
 
         // 3. Finally, return sum of both scan and project.
-        RelOptCost totalCost = planner.getCostFactory().makeCost(
-            filterRowCount,
-            scanCost.getCpu() + projectCpu,
-            scanCost.getIo()
+        return planner.getCostFactory().makeCost(
+                filterRowCount,
+                scanCost.getCpu() + projectCpu,
+                scanCost.getIo()
         );
-
-        return totalCost;
     }
 }
