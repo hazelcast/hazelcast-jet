@@ -29,6 +29,7 @@ import com.hazelcast.jet.sql.impl.schema.JetTable;
 import com.hazelcast.projection.Projection;
 import com.hazelcast.query.Predicate;
 import com.hazelcast.query.Predicates;
+import com.hazelcast.sql.impl.exec.KeyValueRowExtractor;
 import com.hazelcast.sql.impl.expression.Expression;
 import com.hazelcast.sql.impl.expression.ExpressionEvalContext;
 import com.hazelcast.sql.impl.row.KeyValueRow;
@@ -42,6 +43,7 @@ import org.apache.commons.beanutils.PropertyUtilsBean;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.lang.reflect.InvocationTargetException;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -55,7 +57,6 @@ import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 import static com.hazelcast.jet.impl.util.Util.toList;
 import static com.hazelcast.query.QueryConstants.KEY_ATTRIBUTE_NAME;
 import static com.hazelcast.query.QueryConstants.THIS_ATTRIBUTE_NAME;
-import static java.util.Collections.emptyList;
 
 public class IMapSqlConnector implements SqlConnector {
 
@@ -83,20 +84,22 @@ public class IMapSqlConnector implements SqlConnector {
      */
     public static final String TO_VALUE_CLASS = "valueClass";
 
-    private static final ExpressionEvalContext ZERO_ARGUMENTS_CONTEXT = new ExpressionEvalContext() {
-        @Override
-        public List<Object> getArguments() {
-            return emptyList();
+    private static final KeyValueRowExtractor KEY_VALUE_ROW_EXTRACTOR = (key, value, path) -> {
+        try {
+            return PropertyUtils.getProperty(entry(key, value), path); // TODO: custom Row implementation so we don't have to create Entry ???
+        } catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
+            throw sneakyThrow(e);
         }
     };
+
+    private static final ExpressionEvalContext ZERO_ARGUMENTS_CONTEXT = Collections::emptyList;
 
     @Override
     public boolean isStream() {
         return false;
     }
 
-    @Nullable
-    @Override
+    @Nullable @Override
     public JetTable createTable(
             @Nonnull JetInstance jetInstance,
             @Nonnull String tableName,
@@ -106,8 +109,7 @@ public class IMapSqlConnector implements SqlConnector {
         throw new UnsupportedOperationException("TODO field examination");
     }
 
-    @Nullable
-    @Override
+    @Nullable @Override
     public JetTable createTable(
             @Nonnull JetInstance jetInstance,
             @Nonnull String tableName,
@@ -125,8 +127,7 @@ public class IMapSqlConnector implements SqlConnector {
         return new IMapTable(this, mapName, fields, keyClassName, valueClassName);
     }
 
-    @Nullable
-    @Override
+    @Nullable @Override
     public Vertex fullScanReader(
             @Nonnull DAG dag,
             @Nonnull JetTable jetTable,
@@ -168,45 +169,31 @@ public class IMapSqlConnector implements SqlConnector {
             mapPredicate = Predicates.alwaysTrue();
         } else {
             mapPredicate = entry -> {
-                KeyValueRow row = new KeyValueRow(fieldNames, fieldTypes, (key, val, path) ->
-                {
-                    try {
-                        return PropertyUtils.getProperty(entry, path);
-                    } catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
-                        throw sneakyThrow(e);
-                    }
-                });
+                KeyValueRow row = new KeyValueRow(fieldNames, fieldTypes, KEY_VALUE_ROW_EXTRACTOR);
                 row.setKeyValue(entry.getKey(), entry.getValue());
-                boolean res = predicate.eval(row, ZERO_ARGUMENTS_CONTEXT) == Boolean.TRUE;
-                System.out.println("evaluated " + entry + " to " + res);
-                return res;
+
+                boolean result = predicate.eval(row, ZERO_ARGUMENTS_CONTEXT) == Boolean.TRUE;
+                System.out.println("evaluated " + entry + " to " + result);
+                return result;
             };
         }
 
         Projection<Entry<Object, Object>, Object[]> mapProjection = entry -> {
-            KeyValueRow row = new KeyValueRow(fieldNames, fieldTypes, (key, val, path) ->
-            {
-                try {
-                    return PropertyUtils.getProperty(entry, path);
-                } catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
-                    throw sneakyThrow(e);
-                }
-            });
+            KeyValueRow row = new KeyValueRow(fieldNames, fieldTypes, KEY_VALUE_ROW_EXTRACTOR);
             row.setKeyValue(entry.getKey(), entry.getValue());
 
-            Object[] res = new Object[projections.size()];
+            Object[] result = new Object[projections.size()];
             for (int i = 0; i < projections.size(); i++) {
-                res[i] = projections.get(i).eval(row, ZERO_ARGUMENTS_CONTEXT);
+                result[i] = projections.get(i).eval(row, ZERO_ARGUMENTS_CONTEXT);
             }
-            return res;
+            return result;
         };
 
         return dag.newVertex("map(" + mapName + ")",
                 readMapP(mapName, mapPredicate, mapProjection));
     }
 
-    @Nullable
-    @Override
+    @Nullable @Override
     public Tuple2<Vertex, Vertex> nestedLoopReader(
             @Nonnull DAG dag,
             @Nonnull JetTable jetTable,
@@ -231,8 +218,7 @@ public class IMapSqlConnector implements SqlConnector {
         return tuple2(v, v);
     }
 
-    @Nullable
-    @Override
+    @Nullable @Override
     public Vertex sink(
             @Nonnull DAG dag,
             @Nonnull JetTable jetTable
