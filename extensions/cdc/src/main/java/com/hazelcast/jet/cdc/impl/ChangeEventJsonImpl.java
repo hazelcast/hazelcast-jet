@@ -16,7 +16,6 @@
 
 package com.hazelcast.jet.cdc.impl;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.cdc.ChangeEvent;
 import com.hazelcast.jet.cdc.ChangeEventKey;
@@ -32,13 +31,12 @@ public class ChangeEventJsonImpl implements ChangeEvent {
     private final SupplierEx<ChangeEventKey> key;
     private final SupplierEx<ChangeEventValue> value;
 
-    public ChangeEventJsonImpl(@Nonnull String keyJson, @Nonnull String valueJson, @Nonnull ObjectMapper mapper) {
+    public ChangeEventJsonImpl(@Nonnull String keyJson, @Nonnull String valueJson) {
         Objects.requireNonNull(keyJson, "keyJson");
         Objects.requireNonNull(valueJson, "valueJson");
-        Objects.requireNonNull(mapper, "mapper");
 
-        this.key = new LazySupplier<>(() -> new ChangeEventKeyJsonImpl(keyJson, mapper));
-        this.value = new LazySupplier<>(() -> new ChangeEventValueJsonImpl(valueJson, mapper));
+        this.key = new LazySupplier<>(() -> new ChangeEventKeyJsonImpl(keyJson));
+        this.value = new LazySupplier<>(() -> new ChangeEventValueJsonImpl(valueJson));
         this.json = new LazySupplier<>(() -> String.format("key:{%s}, value:{%s}", keyJson, valueJson));
     }
 

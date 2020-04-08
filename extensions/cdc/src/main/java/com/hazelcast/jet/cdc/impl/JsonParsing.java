@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.cdc.impl;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -29,12 +30,16 @@ import java.util.Optional;
 
 public final class JsonParsing {
 
+    private static final ThreadLocal<ObjectMapper> OBJECT_MAPPER_TL = ThreadLocal.withInitial(() ->
+            new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false));
+
     private JsonParsing() {
     }
 
-    public static ThrowingSupplier<JsonNode, ParsingException> parse(String json, ObjectMapper mapper) {
+    public static ThrowingSupplier<JsonNode, ParsingException> parse(String json) {
         return () -> {
             try {
+                ObjectMapper mapper = OBJECT_MAPPER_TL.get();
                 return mapper.readTree(json);
             } catch (Exception e) {
                 throw new ProcessingException(e.getMessage(), e);
@@ -53,8 +58,9 @@ public final class JsonParsing {
         };
     }
 
-    public static <T> T mapToObj(JsonNode node, Class<T> clazz, ObjectMapper mapper) throws ParsingException {
+    public static <T> T mapToObj(JsonNode node, Class<T> clazz) throws ParsingException {
         try {
+            ObjectMapper mapper = OBJECT_MAPPER_TL.get();
             return mapper.treeToValue(node, clazz);
         } catch (Exception e) {
             throw new ParsingException(e.getMessage(), e);

@@ -17,7 +17,6 @@
 package com.hazelcast.jet.cdc.impl;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.cdc.ChangeEventElement;
 import com.hazelcast.jet.cdc.ParsingException;
@@ -45,21 +44,20 @@ class ChangeEventElementJsonImpl implements ChangeEventElement {
     private final ThrowingFunction<String, Optional<Boolean>, ParsingException> booleans;
     private final ThrowingBiFunction<String, Class<Object>, Optional<List<Optional<Object>>>, ParsingException> lists;
 
-    ChangeEventElementJsonImpl(@Nonnull String json, @Nonnull ObjectMapper mapper) {
-        this(new LazyThrowingSupplier<>(JsonParsing.parse(json, mapper)), () -> json, mapper);
+    ChangeEventElementJsonImpl(@Nonnull String json) {
+        this(new LazyThrowingSupplier<>(JsonParsing.parse(json)), () -> json);
     }
 
-    ChangeEventElementJsonImpl(@Nonnull JsonNode node, @Nonnull ObjectMapper mapper) {
-        this(() -> node, node::textValue, mapper);
+    ChangeEventElementJsonImpl(@Nonnull JsonNode node) {
+        this(() -> node, node::textValue);
     }
 
     private ChangeEventElementJsonImpl(
             @Nonnull ThrowingSupplier<JsonNode, ParsingException> node,
-            @Nonnull SupplierEx<String> json,
-            @Nonnull ObjectMapper mapper) {
+            @Nonnull SupplierEx<String> json) {
         this.json = json;
 
-        this.mapper = new LazyThrowingFunction<>((clazz) -> JsonParsing.mapToObj(node.get(), clazz, mapper));
+        this.mapper = new LazyThrowingFunction<>((clazz) -> JsonParsing.mapToObj(node.get(), clazz));
 
         this.objects = (key) -> JsonParsing.getObject(node.get(), key);
         this.strings = (key) -> JsonParsing.getString(node.get(), key);

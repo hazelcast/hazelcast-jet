@@ -17,7 +17,6 @@
 package com.hazelcast.jet.cdc.impl;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hazelcast.jet.cdc.ChangeEventElement;
 import com.hazelcast.jet.cdc.ChangeEventValue;
 import com.hazelcast.jet.cdc.Operation;
@@ -38,18 +37,18 @@ public class ChangeEventValueJsonImpl extends ChangeEventElementJsonImpl impleme
     private final ThrowingSupplier<Optional<ChangeEventElement>, ParsingException> before;
     private final ThrowingSupplier<Optional<ChangeEventElement>, ParsingException> after;
 
-    public ChangeEventValueJsonImpl(String valueJson, ObjectMapper mapper) {
-        super(valueJson, mapper);
+    public ChangeEventValueJsonImpl(String valueJson) {
+        super(valueJson);
 
-        ThrowingSupplier<JsonNode, ParsingException> node = parse(valueJson, mapper);
+        ThrowingSupplier<JsonNode, ParsingException> node = parse(valueJson);
         this.timestamp = new LazyThrowingSupplier<>(() ->
                 JsonParsing.getLong(node.get(), "ts_ms"));
         this.operation = new LazyThrowingSupplier<>(() ->
                 Operation.get(JsonParsing.getString(node.get(), "op").orElse(null)));
         this.before = new LazyThrowingSupplier<>(() -> JsonParsing.getChild(node.get(), "before").get()
-                .map(n -> new ChangeEventElementJsonImpl(n, mapper)));
+                .map(n -> new ChangeEventElementJsonImpl(n)));
         this.after = new LazyThrowingSupplier<>(() -> JsonParsing.getChild(node.get(), "after").get()
-                .map(n -> new ChangeEventElementJsonImpl(n, mapper)));
+                .map(n -> new ChangeEventElementJsonImpl(n)));
         this.json = valueJson;
     }
 

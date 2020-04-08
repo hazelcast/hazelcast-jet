@@ -16,11 +16,7 @@
 
 package com.hazelcast.jet.cdc;
 
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.hazelcast.function.BiFunctionEx;
 import com.hazelcast.function.FunctionEx;
-import com.hazelcast.function.SupplierEx;
 import com.hazelcast.instance.impl.HazelcastInstanceFactory;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.annotation.EvolvingApi;
@@ -50,8 +46,6 @@ public final class CdcSources {
     //todo: can we use these sources in a distributed way?
 
     //todo: update main README.md file in cdc module
-
-    //todo: the ObjectMapper, even if it's serializable, shouldn't be in each event!
 
     //todo: sources could have an optional, custom ObjectMapper param, which would simplify the definition of data objects
 
@@ -125,23 +119,17 @@ public final class CdcSources {
 
     private static StreamSource<ChangeEvent> connect(
             @Nonnull Properties properties,
-            @Nonnull SupplierEx<ObjectMapper> objectMapperSupplier,
-            @Nonnull BiFunctionEx<ObjectMapper, ChangeEvent, Long> eventToTimestampMapper,
-            @Nonnull BiFunctionEx<ObjectMapper, SourceRecord, ChangeEvent> recordToEventMapper) {
+            @Nonnull FunctionEx<ChangeEvent, Long> eventToTimestampMapper,
+            @Nonnull FunctionEx<SourceRecord, ChangeEvent> recordToEventMapper) {
         String name = properties.getProperty("name");
         FunctionEx<Processor.Context, KafkaConnectSource> createFn = ctx -> new KafkaConnectSource(ctx, properties,
-                objectMapperSupplier, recordToEventMapper, eventToTimestampMapper);
+                recordToEventMapper, eventToTimestampMapper);
         return SourceBuilder.timestampedStream(name, createFn)
                 .fillBufferFn(KafkaConnectSource::fillBuffer)
                 .createSnapshotFn(KafkaConnectSource::createSnapshot)
                 .restoreSnapshotFn(KafkaConnectSource::restoreSnapshot)
                 .destroyFn(KafkaConnectSource::destroy)
                 .build();
-    }
-
-    private static ObjectMapper createObjectMapper() {
-        return new ObjectMapper()
-                .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     }
 
     private abstract static class AbstractBuilder<SELF extends AbstractBuilder<SELF>> {
@@ -336,12 +324,11 @@ public final class CdcSources {
         public StreamSource<ChangeEvent> build() {
             RULES.check(properties);
             return connect(properties,
-                    CdcSources::createObjectMapper,
-                    (mapper, event) -> event.timestamp(),
-                    (mapper, record) -> {
+                    ChangeEvent::timestamp,
+                    (record) -> {
                         String keyJson = Values.convertToString(record.keySchema(), record.key());
                         String valueJson = Values.convertToString(record.valueSchema(), record.value());
-                        return new ChangeEventJsonImpl(keyJson, valueJson, mapper);
+                        return new ChangeEventJsonImpl(keyJson, valueJson);
                     }
             );
         }
@@ -487,12 +474,11 @@ public final class CdcSources {
         public StreamSource<ChangeEvent> build() {
             RULES.check(properties);
             return connect(properties,
-                    CdcSources::createObjectMapper,
-                    (mapper, event) -> event.timestamp(),
-                    (mapper, record) -> {
+                    ChangeEvent::timestamp,
+                    (record) -> {
                         String keyJson = Values.convertToString(record.keySchema(), record.key());
                         String valueJson = Values.convertToString(record.valueSchema(), record.value());
-                        return new ChangeEventJsonImpl(keyJson, valueJson, mapper);
+                        return new ChangeEventJsonImpl(keyJson, valueJson);
                     }
             );
         }
@@ -614,12 +600,11 @@ public final class CdcSources {
         public StreamSource<ChangeEvent> build() {
             RULES.check(properties);
             return connect(properties,
-                    CdcSources::createObjectMapper,
-                    (mapper, event) -> event.timestamp(),
-                    (mapper, record) -> {
+                    ChangeEvent::timestamp,
+                    (record) -> {
                         String keyJson = Values.convertToString(record.keySchema(), record.key());
                         String valueJson = Values.convertToString(record.valueSchema(), record.value());
-                        return new ChangeEventJsonImpl(keyJson, valueJson, mapper);
+                        return new ChangeEventJsonImpl(keyJson, valueJson);
                     }
             );
         }
@@ -790,9 +775,8 @@ public final class CdcSources {
         public StreamSource<ChangeEvent> build() {
             RULES.check(properties);
             return connect(properties,
-                    () -> null,
-                    (IGNORED, event) -> event.timestamp(),
-                    (IGNORED, record) -> {
+                    ChangeEvent::timestamp,
+                    (record) -> {
                         String keyJson = Values.convertToString(record.keySchema(), record.key());
                         String valueJson = Values.convertToString(record.valueSchema(), record.value());
                         return new ChangeEventMongoImpl(keyJson, valueJson);
@@ -820,12 +804,11 @@ public final class CdcSources {
          */
         public StreamSource<ChangeEvent> build() {
             return connect(properties,
-                    CdcSources::createObjectMapper,
-                    (mapper, event) -> event.value().getLong("ts_ms").orElse(0L),
-                    (mapper, record) -> {
+                    (event) -> event.value().getLong("ts_ms").orElse(0L),
+                    (record) -> {
                         String keyJson = Values.convertToString(record.keySchema(), record.key());
                         String valueJson = Values.convertToString(record.valueSchema(), record.value());
-                        return new ChangeEventJsonImpl(keyJson, valueJson, mapper);
+                        return new ChangeEventJsonImpl(keyJson, valueJson);
                     }
             );
         }
@@ -833,28 +816,25 @@ public final class CdcSources {
 
     private static class KafkaConnectSource extends AbstractKafkaConnectSource<ChangeEvent> {
 
-        private final ObjectMapper objectMapper;
-        private final BiFunctionEx<ObjectMapper, SourceRecord, ChangeEvent> recordToEventMapper;
-        private final BiFunctionEx<ObjectMapper, ChangeEvent, Long> timestampProjectionFn;
+        private final FunctionEx<SourceRecord, ChangeEvent> recordToEventMapper;
+        private final FunctionEx<ChangeEvent, Long> timestampProjectionFn;
 
         KafkaConnectSource(
                 Processor.Context ctx,
                 Properties properties,
-                SupplierEx<ObjectMapper> objectMapperSupplier,
-                BiFunctionEx<ObjectMapper, SourceRecord, ChangeEvent> recordToEventMapper,
-                BiFunctionEx<ObjectMapper, ChangeEvent, Long> eventToTimestampMapper
+                FunctionEx<SourceRecord, ChangeEvent> recordToEventMapper,
+                FunctionEx<ChangeEvent, Long> eventToTimestampMapper
         ) {
             super(injectHazelcastInstanceNameProperty(ctx, properties));
-            this.objectMapper = objectMapperSupplier.get();
             this.recordToEventMapper = recordToEventMapper;
             this.timestampProjectionFn = eventToTimestampMapper;
         }
 
         @Override
         protected boolean addToBuffer(SourceRecord record, SourceBuilder.TimestampedSourceBuffer<ChangeEvent> buf) {
-            ChangeEvent event = recordToEventMapper.apply(objectMapper, record);
+            ChangeEvent event = recordToEventMapper.apply(record);
             if (event != null) {
-                long ts = timestampProjectionFn.apply(objectMapper, event);
+                long ts = timestampProjectionFn.apply(event);
                 buf.add(event, ts);
                 return true;
             }

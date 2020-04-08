@@ -16,15 +16,14 @@
 
 package com.hazelcast.jet.cdc.impl;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hazelcast.jet.cdc.ChangeEventKey;
 
 import javax.annotation.Nonnull;
 
 public class ChangeEventKeyJsonImpl extends ChangeEventElementJsonImpl implements ChangeEventKey {
 
-    public ChangeEventKeyJsonImpl(@Nonnull String keyJson, @Nonnull ObjectMapper mapper) {
-        super(keyJson, mapper);
+    public ChangeEventKeyJsonImpl(@Nonnull String keyJson) {
+        super(keyJson);
     }
 
 }
