@@ -38,11 +38,6 @@ public class ElasticSourceBuilderTest {
         BatchSource<Object> source = builderWithRequiredParams()
                 .build();
         assertThat(source.name()).isEqualTo("elastic");
-
-        BatchSource<Object> namedSource = builderWithRequiredParams()
-                .name("CustomName")
-                .build();
-        assertThat(namedSource.name()).isEqualTo("CustomName");
     }
 
     @NotNull

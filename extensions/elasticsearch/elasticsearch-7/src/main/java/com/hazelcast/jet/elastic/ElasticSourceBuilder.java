@@ -47,7 +47,8 @@ public class ElasticSourceBuilder<T> implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
-    private String name = "elastic";
+    private static final String DEFAULT_NAME = "elastic";
+
     private SupplierEx<? extends RestHighLevelClient> clientSupplier;
     private ConsumerEx<? super RestHighLevelClient> destroyFn = RestHighLevelClient::close;
     private SupplierEx<SearchRequest> searchRequestSupplier;
@@ -70,23 +71,7 @@ public class ElasticSourceBuilder<T> implements Serializable {
         requireNonNull(mapHitFn, "mapHitFn must be set");
 
         ElasticProcessorMetaSupplier<T> metaSupplier = new ElasticProcessorMetaSupplier<>(this);
-        return Sources.batchFromProcessor(name, metaSupplier);
-    }
-
-    /**
-     * Set the user-friendly source name for this source
-     *
-     * @param sourceName user-friendly source name
-     */
-    @Nonnull
-    public ElasticSourceBuilder<T> name(String sourceName) {
-        this.name = sourceName;
-        return this;
-    }
-
-    @Nonnull
-    public String name() {
-        return name;
+        return Sources.batchFromProcessor(DEFAULT_NAME, metaSupplier);
     }
 
     /**
