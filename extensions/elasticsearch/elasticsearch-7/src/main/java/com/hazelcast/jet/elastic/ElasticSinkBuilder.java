@@ -208,7 +208,6 @@ public class ElasticSinkBuilder<T> implements Serializable {
         }
 
         void add(DocWriteRequest<?> request) {
-//            System.out.println("add" + request.id());
             bulkRequest.add(request);
         }
 
@@ -216,16 +215,17 @@ public class ElasticSinkBuilder<T> implements Serializable {
             if (!bulkRequest.requests().isEmpty()) {
                 BulkResponse response = client.bulk(bulkRequest, optionsFn.apply(bulkRequest));
                 if (response.hasFailures()) {
-                    System.out.println("BulkRequest with " + bulkRequest.requests().size() + " requests failed");
                     throw new ElasticsearchException(response.buildFailureMessage());
                 }
-                System.out.println("BulkRequest with " + bulkRequest.requests().size() + " requests succeeded");
-//                logger.fine("BulkRequest with " + bulkRequest.requests().size() + " requests succeeded");
+                if (logger.isFineEnabled()) {
+                    logger.fine("BulkRequest with " + bulkRequest.requests().size() + " requests succeeded");
+                }
                 bulkRequest = bulkRequestSupplier.get();
             }
         }
 
         void close() throws IOException {
+            logger.fine("Closing BulkContext");
             flush();
             destroyFn.accept(client);
         }
