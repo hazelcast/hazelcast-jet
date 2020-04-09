@@ -19,18 +19,25 @@ package com.hazelcast.jet.cdc.impl;
 import com.hazelcast.jet.cdc.ChangeEvent;
 import com.hazelcast.jet.cdc.ChangeEventKey;
 import com.hazelcast.jet.cdc.ChangeEventValue;
+import com.hazelcast.nio.ObjectDataInput;
+import com.hazelcast.nio.ObjectDataOutput;
+import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 
 import javax.annotation.Nonnull;
+import java.io.IOException;
 import java.util.Objects;
 
-public class ChangeEventJsonImpl implements ChangeEvent {
+public class ChangeEventJsonImpl implements ChangeEvent, IdentifiedDataSerializable {
 
-    private final String keyJson;
-    private final String valueJson;
+    private String keyJson;
+    private String valueJson;
 
     private String json;
     private ChangeEventKey key;
     private ChangeEventValue value;
+
+    ChangeEventJsonImpl() { //needed for deserialization
+    }
 
     public ChangeEventJsonImpl(@Nonnull String keyJson, @Nonnull String valueJson) {
         this.keyJson = Objects.requireNonNull(keyJson, "keyJson");
@@ -67,6 +74,28 @@ public class ChangeEventJsonImpl implements ChangeEvent {
     @Override
     public String toString() {
         return asJson();
+    }
+
+    @Override
+    public int getFactoryId() {
+        return CdcJsonDataSerializerHook.FACTORY_ID;
+    }
+
+    @Override
+    public int getClassId() {
+        return CdcJsonDataSerializerHook.EVENT;
+    }
+
+    @Override
+    public void writeData(ObjectDataOutput out) throws IOException {
+        out.writeUTF(keyJson);
+        out.writeUTF(valueJson);
+    }
+
+    @Override
+    public void readData(ObjectDataInput in) throws IOException {
+        keyJson = in.readUTF();
+        valueJson = in.readUTF();
     }
 
 }

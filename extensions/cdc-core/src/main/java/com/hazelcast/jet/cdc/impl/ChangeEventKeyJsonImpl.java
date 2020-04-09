@@ -22,8 +22,16 @@ import javax.annotation.Nonnull;
 
 public class ChangeEventKeyJsonImpl extends ChangeEventElementJsonImpl implements ChangeEventKey {
 
+    ChangeEventKeyJsonImpl() { //needed for deserialization
+    }
+
     public ChangeEventKeyJsonImpl(@Nonnull String keyJson) {
         super(keyJson);
+    }
+
+    @Override
+    public int getClassId() {
+        return CdcJsonDataSerializerHook.KEY;
     }
 
 }

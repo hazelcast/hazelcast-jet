@@ -19,16 +19,23 @@ package com.hazelcast.jet.cdc.impl;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.hazelcast.jet.cdc.ChangeEventElement;
 import com.hazelcast.jet.cdc.ParsingException;
+import com.hazelcast.nio.ObjectDataInput;
+import com.hazelcast.nio.ObjectDataOutput;
+import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
 
-class ChangeEventElementJsonImpl implements ChangeEventElement {
+class ChangeEventElementJsonImpl implements ChangeEventElement, IdentifiedDataSerializable {
 
     private String json;
     private JsonNode node;
+
+    ChangeEventElementJsonImpl() { //needed for deserialization
+    }
 
     ChangeEventElementJsonImpl(@Nonnull String json) {
         this(null, json);
@@ -117,4 +124,23 @@ class ChangeEventElementJsonImpl implements ChangeEventElement {
         return asJson();
     }
 
+    @Override
+    public int getFactoryId() {
+        return CdcJsonDataSerializerHook.FACTORY_ID;
+    }
+
+    @Override
+    public int getClassId() {
+        return CdcJsonDataSerializerHook.ELEMENT;
+    }
+
+    @Override
+    public void writeData(ObjectDataOutput out) throws IOException {
+        out.writeUTF(asJson());
+    }
+
+    @Override
+    public void readData(ObjectDataInput in) throws IOException {
+        json = in.readUTF();
+    }
 }

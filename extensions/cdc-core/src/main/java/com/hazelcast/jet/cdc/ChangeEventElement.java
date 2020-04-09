@@ -20,7 +20,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.hazelcast.jet.annotation.EvolvingApi;
 
 import javax.annotation.Nonnull;
-import java.io.Serializable;
 import java.util.List;
 import java.util.Optional;
 
@@ -33,7 +32,7 @@ import java.util.Optional;
  * @since 4.1
  */
 @EvolvingApi
-public interface ChangeEventElement extends Serializable { //todo: use better serialization
+public interface ChangeEventElement {
 
     /**
      * Maps the entire element to an instance of the specified class.

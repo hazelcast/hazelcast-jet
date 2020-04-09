@@ -19,7 +19,6 @@ package com.hazelcast.jet.cdc;
 import com.hazelcast.jet.annotation.EvolvingApi;
 
 import javax.annotation.Nonnull;
-import java.io.Serializable;
 
 /**
  * Information pertaining to a single data change event (insertion,
@@ -52,7 +51,7 @@ import java.io.Serializable;
  * @since 4.1
  */
 @EvolvingApi
-public interface ChangeEvent extends Serializable  { //todo: use better serialization
+public interface ChangeEvent {
 
     /**
      * Convenience method, see {@link ChangeEventValue#timestamp()} for

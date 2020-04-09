@@ -30,6 +30,9 @@ public class ChangeEventValueJsonImpl extends ChangeEventElementJsonImpl impleme
     private ChangeEventElement before;
     private ChangeEventElement after;
 
+    ChangeEventValueJsonImpl() { //needed for deserialization
+    }
+
     public ChangeEventValueJsonImpl(String valueJson) {
         super(valueJson);
     }
@@ -78,5 +81,10 @@ public class ChangeEventValueJsonImpl extends ChangeEventElementJsonImpl impleme
     @Nonnull
     public ChangeEventElement change() {
         throw new UnsupportedOperationException("Not supported for relational databases");
+    }
+
+    @Override
+    public int getClassId() {
+        return CdcJsonDataSerializerHook.VALUE;
     }
 }
