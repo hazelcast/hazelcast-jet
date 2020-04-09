@@ -173,6 +173,26 @@ public class UtilTest {
     }
 
     @Test
+    public void whenNullToCheckSerializable_thenReturnNull() {
+        Object returned = Util.checkSerializable(null, "object");
+        assertThat(returned).isNull();
+    }
+
+    @Test
+    public void whenSerializableObjectToCheckSerializable_thenReturnObject() {
+        Object o = "o";
+        Object returned = Util.checkSerializable(o, "object");
+        assertThat(returned).isSameAs(o);
+    }
+
+    @Test
+    public void whenNonSerializableObjectToCheckSerializable_thenThrowException() {
+        assertThatThrownBy(() -> Util.checkSerializable(new HashMap<>().entrySet(), "object"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("\"object\" must implement Serializable");
+    }
+
+    @Test
     public void whenNullToCheckNonNullAndSerializable_thenThrowException() {
         assertThatThrownBy(() -> Util.checkNonNullAndSerializable(null, "object"))
                 .isInstanceOf(IllegalArgumentException.class)
