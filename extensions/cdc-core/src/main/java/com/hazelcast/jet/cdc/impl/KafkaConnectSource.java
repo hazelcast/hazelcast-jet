@@ -38,7 +38,7 @@ import java.util.Properties;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
 
-public class KafkaConnectSource {
+class KafkaConnectSource {
 
     private final SourceConnector connector;
     private final SourceTask task;
