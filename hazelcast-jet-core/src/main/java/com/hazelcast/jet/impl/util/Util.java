@@ -187,7 +187,7 @@ public final class Util {
     }
 
     /**
-     * Checks that the {@code object} is not null and  implements
+     * Checks that the {@code object} is not null and implements
      * {@link Serializable} and is correctly serializable by actually
      * trying to serialize it. This will reveal some non-serializable
      * field early.
