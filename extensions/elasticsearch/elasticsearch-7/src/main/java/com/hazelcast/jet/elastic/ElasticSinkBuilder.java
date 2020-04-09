@@ -34,7 +34,7 @@ import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.io.Serializable;
 
-import static com.hazelcast.jet.impl.util.Util.checkSerializable;
+import static com.hazelcast.jet.impl.util.Util.checkNonNullAndSerializable;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -63,9 +63,8 @@ public class ElasticSinkBuilder<T> implements Serializable {
      * @param clientSupplier supplier for configure Elasticsearch REST client
      */
     @Nonnull
-    public ElasticSinkBuilder<T> clientSupplier(SupplierEx<? extends RestHighLevelClient> clientSupplier) {
-        checkSerializable(clientSupplier, "clientSupplier");
-        this.clientSupplier = clientSupplier;
+    public ElasticSinkBuilder<T> clientSupplier(@Nonnull SupplierEx<? extends RestHighLevelClient> clientSupplier) {
+        this.clientSupplier = checkNonNullAndSerializable(clientSupplier, "clientSupplier");
         return this;
     }
 
@@ -80,9 +79,8 @@ public class ElasticSinkBuilder<T> implements Serializable {
      * @param destroyFn destroy function
      */
     @Nonnull
-    public ElasticSinkBuilder<T> destroyFn(ConsumerEx<? super RestHighLevelClient> destroyFn) {
-        checkSerializable(destroyFn, "destroyFn");
-        this.destroyFn = destroyFn;
+    public ElasticSinkBuilder<T> destroyFn(@Nonnull ConsumerEx<? super RestHighLevelClient> destroyFn) {
+        this.destroyFn = checkNonNullAndSerializable(destroyFn, "destroyFn");
         return this;
     }
 
@@ -97,9 +95,8 @@ public class ElasticSinkBuilder<T> implements Serializable {
      * @param bulkRequestSupplier supplier for the bulk request
      */
     @Nonnull
-    public ElasticSinkBuilder<T> bulkRequestSupplier(SupplierEx<BulkRequest> bulkRequestSupplier) {
-        checkSerializable(bulkRequestSupplier, "clientSupplier");
-        this.bulkRequestSupplier = bulkRequestSupplier;
+    public ElasticSinkBuilder<T> bulkRequestSupplier(@Nonnull SupplierEx<BulkRequest> bulkRequestSupplier) {
+        this.bulkRequestSupplier = checkNonNullAndSerializable(bulkRequestSupplier, "clientSupplier");
         return this;
     }
 
@@ -116,9 +113,8 @@ public class ElasticSinkBuilder<T> implements Serializable {
      *                  {@link org.elasticsearch.action.delete.DeleteRequest}
      */
     @Nonnull
-    public ElasticSinkBuilder<T> mapItemFn(FunctionEx<? super T, ? extends DocWriteRequest<?>> mapItemFn) {
-        checkSerializable(mapItemFn, "mapItemFn");
-        this.mapItemFn = mapItemFn;
+    public ElasticSinkBuilder<T> mapItemFn(@Nonnull FunctionEx<? super T, ? extends DocWriteRequest<?>> mapItemFn) {
+        this.mapItemFn = checkNonNullAndSerializable(mapItemFn, "mapItemFn");
         return this;
     }
 
@@ -132,9 +128,8 @@ public class ElasticSinkBuilder<T> implements Serializable {
      * @param optionsFn function that provides {@link RequestOptions}
      */
     @Nonnull
-    public ElasticSinkBuilder<T> optionsFn(FunctionEx<? super ActionRequest, RequestOptions> optionsFn) {
-        checkSerializable(optionsFn, "optionsFn");
-        this.optionsFn = optionsFn;
+    public ElasticSinkBuilder<T> optionsFn(@Nonnull FunctionEx<? super ActionRequest, RequestOptions> optionsFn) {
+        this.optionsFn = checkNonNullAndSerializable(optionsFn, "optionsFn");
         return this;
     }
 
@@ -155,6 +150,7 @@ public class ElasticSinkBuilder<T> implements Serializable {
     /**
      * Create a sink that writes data into Elasticsearch based on this builder configuration
      */
+    @Nonnull
     public Sink<T> build() {
         requireNonNull(clientSupplier, "clientSupplier is not set");
         requireNonNull(mapItemFn, "mapItemFn is not set");

@@ -31,6 +31,7 @@ import org.elasticsearch.search.SearchHit;
 import javax.annotation.Nonnull;
 import java.io.Serializable;
 
+import static com.hazelcast.jet.impl.util.Util.checkNonNullAndSerializable;
 import static com.hazelcast.jet.impl.util.Util.checkSerializable;
 import static java.util.Objects.requireNonNull;
 
@@ -39,8 +40,6 @@ import static java.util.Objects.requireNonNull;
  * converts SearchHits using provided {@code mapHitFn}
  *
  * @param <T> type of the mapping function from {@link SearchHit} -> T
- *           TODO not sure about the type parameter name - T as the usual default, or R for Result
- *           also we could accept the function in the build() method, same as the original source did it
  * @since 4.1
  */
 public class ElasticSourceBuilder<T> implements Serializable {
@@ -80,9 +79,8 @@ public class ElasticSourceBuilder<T> implements Serializable {
      * @param clientSupplier supplier for configure Elasticsearch REST client
      */
     @Nonnull
-    public ElasticSourceBuilder<T> clientSupplier(SupplierEx<? extends RestHighLevelClient> clientSupplier) {
-        checkSerializable(clientSupplier, "clientSupplier");
-        this.clientSupplier = clientSupplier;
+    public ElasticSourceBuilder<T> clientSupplier(@Nonnull SupplierEx<? extends RestHighLevelClient> clientSupplier) {
+        this.clientSupplier = checkNonNullAndSerializable(clientSupplier, "clientSupplier");
         return this;
     }
 
@@ -97,9 +95,8 @@ public class ElasticSourceBuilder<T> implements Serializable {
      * @param destroyFn destroy function
      */
     @Nonnull
-    public ElasticSourceBuilder<T> destroyFn(ConsumerEx<? super RestHighLevelClient> destroyFn) {
-        checkSerializable(destroyFn, "destroyFn");
-        this.destroyFn = destroyFn;
+    public ElasticSourceBuilder<T> destroyFn(@Nonnull ConsumerEx<? super RestHighLevelClient> destroyFn) {
+        this.destroyFn = checkNonNullAndSerializable(destroyFn, "destroyFn");
         return this;
     }
 
@@ -114,9 +111,8 @@ public class ElasticSourceBuilder<T> implements Serializable {
      * @param searchRequestSupplier search request supplier
      */
     @Nonnull
-    public ElasticSourceBuilder<T> searchRequestSupplier(SupplierEx<SearchRequest> searchRequestSupplier) {
-        checkSerializable(searchRequestSupplier, "searchRequestSupplier");
-        this.searchRequestSupplier = searchRequestSupplier;
+    public ElasticSourceBuilder<T> searchRequestSupplier(@Nonnull SupplierEx<SearchRequest> searchRequestSupplier) {
+        this.searchRequestSupplier = checkSerializable(searchRequestSupplier, "searchRequestSupplier");
         return this;
     }
 
@@ -131,9 +127,8 @@ public class ElasticSourceBuilder<T> implements Serializable {
      * @param mapHitFn maps search hits to output items
      */
     @Nonnull
-    public ElasticSourceBuilder<T> mapHitFn(FunctionEx<? super SearchHit, T> mapHitFn) {
-        checkSerializable(mapHitFn, "mapHitFn");
-        this.mapHitFn = mapHitFn;
+    public ElasticSourceBuilder<T> mapHitFn(@Nonnull FunctionEx<? super SearchHit, T> mapHitFn) {
+        this.mapHitFn = checkSerializable(mapHitFn, "mapHitFn");
         return this;
     }
 
@@ -148,9 +143,8 @@ public class ElasticSourceBuilder<T> implements Serializable {
      * @param optionsFn function that provides {@link RequestOptions}
      */
     @Nonnull
-    public ElasticSourceBuilder<T> optionsFn(FunctionEx<? super ActionRequest, RequestOptions> optionsFn) {
-        checkSerializable(optionsFn, "optionsFn");
-        this.optionsFn = optionsFn;
+    public ElasticSourceBuilder<T> optionsFn(@Nonnull FunctionEx<? super ActionRequest, RequestOptions> optionsFn) {
+        this.optionsFn = checkSerializable(optionsFn, "optionsFn");
         return this;
     }
 
@@ -206,8 +200,8 @@ public class ElasticSourceBuilder<T> implements Serializable {
      *                        default value 1m
      */
     @Nonnull
-    public ElasticSourceBuilder<T> scrollKeepAlive(String scrollKeepAlive) {
-        this.scrollKeepAlive = scrollKeepAlive;
+    public ElasticSourceBuilder<T> scrollKeepAlive(@Nonnull String scrollKeepAlive) {
+        this.scrollKeepAlive = requireNonNull(scrollKeepAlive, scrollKeepAlive);
         return this;
     }
 
@@ -218,8 +212,7 @@ public class ElasticSourceBuilder<T> implements Serializable {
     /**
      * Set the preferred local parallelism
      *
-     * @param preferredLocalParallelism
-     * @return
+     * @param preferredLocalParallelism preferred local parallelism
      */
     @Nonnull
     public ElasticSourceBuilder<T> preferredLocalParallelism(int preferredLocalParallelism) {

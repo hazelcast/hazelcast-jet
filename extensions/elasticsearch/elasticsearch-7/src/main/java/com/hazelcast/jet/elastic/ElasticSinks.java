@@ -19,17 +19,10 @@ package com.hazelcast.jet.elastic;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.pipeline.Sink;
-import org.apache.http.HttpHost;
-import org.apache.http.auth.UsernamePasswordCredentials;
-import org.apache.http.client.CredentialsProvider;
-import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.elasticsearch.action.DocWriteRequest;
-import org.elasticsearch.client.RestClient;
 import org.elasticsearch.client.RestHighLevelClient;
 
 import javax.annotation.Nonnull;
-
-import static org.apache.http.auth.AuthScope.ANY;
 
 /**
  * Provides factory methods for Elasticsearch sinks.
@@ -39,8 +32,6 @@ import static org.apache.http.auth.AuthScope.ANY;
  */
 public final class ElasticSinks {
 
-    private static final int PORT = 9200;
-
     private ElasticSinks() {
     }
 
@@ -49,8 +40,9 @@ public final class ElasticSinks {
      *
      * @param mapItemFn function that maps items from a stream to an indexing request
      */
+    @Nonnull
     public static <T> Sink<T> elastic(@Nonnull FunctionEx<? super T, ? extends DocWriteRequest<?>> mapItemFn) {
-        return elastic(() -> client("localhost", PORT), mapItemFn);
+        return elastic(ElasticClients::client, mapItemFn);
     }
 
     /**
@@ -60,6 +52,7 @@ public final class ElasticSinks {
      * @param mapItemFn      function that maps items from a stream to an indexing request
      * @param <T>            type of incoming items
      */
+    @Nonnull
     public static <T> Sink<T> elastic(
             @Nonnull SupplierEx<RestHighLevelClient> clientSupplier,
             @Nonnull FunctionEx<? super T, ? extends DocWriteRequest<?>> mapItemFn
@@ -75,33 +68,9 @@ public final class ElasticSinks {
      *
      * @param <T> type of the items in the pipeline
      */
+    @Nonnull
     public static <T> ElasticSinkBuilder<T> builder() {
         return new ElasticSinkBuilder<T>();
     }
-
-    static RestHighLevelClient client(String hostname, int port) {
-        return new RestHighLevelClient(
-                RestClient.builder(new HttpHost(hostname, port))
-        );
-    }
-
-    /**
-     * Convenience method to create {@link RestHighLevelClient} with basic authentication and given hostname and port
-     * <p>
-     * Usage:
-     * <pre>
-     *   BatchSource<SearchHit> source = elasticsearch(() -> client("user", "password", "host", 9200));
-     * </pre>
-     */
-    public static RestHighLevelClient client(String username, String password, String hostname, int port) {
-        CredentialsProvider credentialsProvider = new BasicCredentialsProvider();
-        credentialsProvider.setCredentials(ANY, new UsernamePasswordCredentials(username, password));
-        return new RestHighLevelClient(
-                RestClient.builder(new HttpHost(hostname, port))
-                          .setHttpClientConfigCallback(httpClientBuilder ->
-                                  httpClientBuilder.setDefaultCredentialsProvider(credentialsProvider))
-        );
-    }
-
 
 }

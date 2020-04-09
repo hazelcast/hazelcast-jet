@@ -19,14 +19,11 @@ package com.hazelcast.jet.elastic;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.pipeline.BatchSource;
-import org.apache.http.HttpHost;
 import org.elasticsearch.action.search.SearchRequest;
-import org.elasticsearch.client.RestClient;
 import org.elasticsearch.client.RestHighLevelClient;
 import org.elasticsearch.search.SearchHit;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 
 /**
  * Provides factory methods for Elasticsearch sources.
@@ -35,8 +32,6 @@ import javax.annotation.Nullable;
  * @since 4.1
  */
 public final class ElasticSources {
-
-    private static final int DEFAULT_PORT = 9200;
 
     private ElasticSources() {
     }
@@ -47,10 +42,9 @@ public final class ElasticSources {
      * Useful for quick prototyping. See other methods {@link #elastic(SupplierEx, SupplierEx, FunctionEx)}
      * and {@link #builder()}
      */
+    @Nonnull
     public static BatchSource<String> elastic() {
-        return elastic(() -> new RestHighLevelClient(
-                RestClient.builder(new HttpHost("localhost", DEFAULT_PORT))
-        ));
+        return elastic(ElasticClients::client);
     }
 
     /**
@@ -58,6 +52,7 @@ public final class ElasticSources {
      * Queries all indexes for all documents.
      * Uses {@link SearchHit#getSourceAsString()} as mapping function
      */
+    @Nonnull
     public static BatchSource<String> elastic(@Nonnull SupplierEx<RestHighLevelClient> clientSupplier) {
         return elastic(clientSupplier, SearchHit::getSourceAsString);
     }
@@ -66,12 +61,9 @@ public final class ElasticSources {
      * Creates a source which queries local instance of Elasticsearch for all documents
      * Uses {@link SearchHit#getSourceAsString()} as mapping function
      */
+    @Nonnull
     public static <T> BatchSource<T> elastic(@Nonnull FunctionEx<? super SearchHit, T> mapHitFn) {
-        return elastic(() -> new RestHighLevelClient(
-                        RestClient.builder(new HttpHost("localhost", DEFAULT_PORT))
-                ),
-                mapHitFn
-        );
+        return elastic(ElasticClients::client, mapHitFn);
     }
 
     /**
@@ -83,6 +75,7 @@ public final class ElasticSources {
      * @param mapHitFn       supplier of a function mapping the result from SearchHit to a result type
      * @param <T>            result type returned by the map function
      */
+    @Nonnull
     public static <T> BatchSource<T> elastic(
             @Nonnull SupplierEx<RestHighLevelClient> clientSupplier,
             @Nonnull FunctionEx<? super SearchHit, T> mapHitFn) {
@@ -97,6 +90,7 @@ public final class ElasticSources {
      * @param mapHitFn              supplier of a function mapping the result from SearchHit to a target type
      * @param <T>                   result type returned by the map function
      */
+    @Nonnull
     public static <T> BatchSource<T> elastic(
             @Nonnull SupplierEx<RestHighLevelClient> clientSupplier,
             @Nonnull SupplierEx<SearchRequest> searchRequestSupplier,
@@ -114,22 +108,9 @@ public final class ElasticSources {
      *
      * @param <T> result type returned by the map function
      */
+    @Nonnull
     public static <T> ElasticSourceBuilder<T> builder() {
         return new ElasticSourceBuilder<>();
     }
 
-    /**
-     * Convenience method to create {@link RestHighLevelClient} with basic authentication and given hostname and port
-     * <p>
-     * Usage:
-     * <pre>
-     *   BatchSource<SearchHit> source = elasticsearch(() -> client("user", "password", "host", 9200));
-     * </pre>
-     */
-    public static RestHighLevelClient client(@Nonnull String username,
-                                             @Nullable String password,
-                                             @Nonnull String hostname,
-                                             int port) {
-        return ElasticSinks.client(username, password, hostname, port);
-    }
 }
