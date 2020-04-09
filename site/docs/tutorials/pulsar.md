@@ -76,19 +76,35 @@ Create a blank Java project named
 ```groovy
 plugins {
     id 'java'
+    id 'com.github.johnrengelman.shadow' version '5.2.0'
 }
 
 group 'org.example'
-version '0.1-SNAPSHOT'
+version '1.0-SNAPSHOT'
 
-repositories.mavenCentral()
+sourceCompatibility = 1.8
+
+repositories {
+    mavenCentral()
+}
 
 dependencies {
     compile 'com.hazelcast.jet:hazelcast-jet:4.0'
     compile 'com.hazelcast.jet-contrib:pulsar:0.1-SNAPSHOT'
+    compile 'org.apache.pulsar:pulsar-client:2.5.0'
 }
 
-jar.manifest.attributes 'Main-Class': 'org.example.JetJob'
+jar {
+    enabled = false
+    dependsOn(shadowJar { classifier = null })
+    manifest.attributes 'Main-Class': 'org.example.JetJob'
+}
+
+shadowJar {
+    dependencies {
+        exclude(dependency('com.hazelcast.jet:hazelcast-jet:4.0'))
+    }
+}
 ```
 
 <!--Maven-->
@@ -101,7 +117,7 @@ jar.manifest.attributes 'Main-Class': 'org.example.JetJob'
 
     <groupId>org.example</groupId>
     <artifactId>pulsar-example</artifactId>
-    <version>0.1-SNAPSHOT</version>
+    <version>1.0-SNAPSHOT</version>
 
     <properties>
         <maven.compiler.target>1.8</maven.compiler.target>
@@ -119,10 +135,15 @@ jar.manifest.attributes 'Main-Class': 'org.example.JetJob'
             <artifactId>pulsar</artifactId>
             <version>0.1-SNAPSHOT</version>
         </dependency>
+        <dependency>
+            <groupId>org.apache.pulsar</groupId>
+            <artifactId>pulsar-client</artifactId>
+            <version>2.5.0</version>
+        </dependency>
     </dependencies>
-
-    <build>
+     <build>
         <plugins>
+            <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>
@@ -133,6 +154,26 @@ jar.manifest.attributes 'Main-Class': 'org.example.JetJob'
                         </manifest>
                     </archive>
                 </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>3.2.2</version>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                        <configuration>
+                            <artifactSet>
+                                <excludes>
+                                    <exclude>com.hazelcast.jet:hazelcast-jet</exclude>
+                                </excludes>
+                            </artifactSet>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>
@@ -149,6 +190,8 @@ uniformly at random, then creates event on behalf of this user, and
 sends this event as a message to the Pulsar topic named `hz-jet-topic`.
 
 ```java
+package org.example;
+
 import org.apache.pulsar.client.api.Producer;
 import org.apache.pulsar.client.api.PulsarClient;
 import org.apache.pulsar.client.api.Schema;
@@ -158,7 +201,7 @@ import java.util.concurrent.TimeUnit;
 
 public class MessagePublisher {
 
-    private static class Event {
+    public static class Event {
         public String user;
         public Long eventCount;
         public String message;
@@ -170,6 +213,17 @@ public class MessagePublisher {
             this.user = user;
             this.eventCount = eventCount;
             this.message = message;
+        }
+        public String getUser() {
+            return user;
+        }
+
+        public Long getEventCount() {
+            return eventCount;
+        }
+
+        public String getMessage() {
+            return message;
         }
 
     }
@@ -193,7 +247,7 @@ public class MessagePublisher {
             String user = getRandomUser(userArray);
             producer.send(new Event(user, eventCount, message));
             System.out.format("Published '%s' from '%s' to Pulsar topic '%s'%n", message, user, topicName);
-            Thread.sleep(20);  
+            Thread.sleep(20);
         }
     }
 
@@ -219,21 +273,21 @@ Published 'message-0004' from 'user4' to Pulsar topic 'hz-jet-topic'
 ## 5. Use Hazelcast Jet to Count the Messages of Users
 
 The code below is used to connect to the Pulsar topic and gets messages
-from it and then logs the count of messages by grouping them with their users.
+from it and then logs the count of messages by grouping them with their
+users.
 
 ```java
-package com.hazelcast.jet.contrib.pulsar;
+package org.example;
 
-import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.*;
 import com.hazelcast.jet.config.JobConfig;
+import com.hazelcast.jet.contrib.pulsar.PulsarSources;
 import com.hazelcast.jet.pipeline.*;
 import org.apache.pulsar.client.api.Message;
 import org.apache.pulsar.client.api.PulsarClient;
 import org.apache.pulsar.client.api.Schema;
-import org.apache.pulsar.client.impl.MessageImpl;
+import org.example.MessagePublisher.Event;
 
-import java.io.Serializable;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -246,34 +300,6 @@ import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
 import static com.hazelcast.jet.pipeline.WindowDefinition.sliding;
 
 public class JetJob {
-
-    private static class Event {
-        public String user;
-        public Long eventCount;
-        public String message;
-
-        public Event() {
-        }
-
-        public Event(String user, Long eventCount, String message) {
-            this.user = user;
-            this.eventCount = eventCount;
-            this.message = message;
-        }
-
-        public String getUser() {
-            return user;
-        }
-
-        public Long getEventCount() {
-            return eventCount;
-        }
-
-        public String getMessage() {
-            return message;
-        }
-    }
-
     static final DateTimeFormatter TIME_FORMATTER =
             DateTimeFormatter.ofPattern("HH:mm:ss:SSS");
 
@@ -317,22 +343,23 @@ public class JetJob {
 If you run this code from your IDE, it will create its own Jet instance
 and run the job on it. To run this on the previously started Jet member,
 you need to create a runnable JAR including all dependencies required to
-run it. Then, submit it to the Jet cluster. These steps are shown below:
-
+run it. Then, submit it to the Jet cluster. Since build.gradle/pom.xml
+files are configured to create a fat jar, we can do these steps easily
+as shown as below:
 <!--DOCUSAURUS_CODE_TABS-->
 
 <!--Gradle-->
 
 ```bash
 gradle build
-<path_to_jet>/bin/jet submit build/libs/pulsar-example-0.1-SNAPSHOT.jar
+<path_to_jet>/bin/jet submit build/libs/pulsar-example-1.0-SNAPSHOT.jar
 ```
 
 <!--Maven-->
 
 ```bash
 mvn package
-<path_to_jet>/bin/jet submit target/pulsar-example-0.1-SNAPSHOT.jar
+<path_to_jet>/bin/jet submit target/pulsar-example-1.0-SNAPSHOT.jar
 ```
 
 <!--END_DOCUSAURUS_CODE_TABS-->
