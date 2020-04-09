@@ -35,6 +35,7 @@
     <modules>
         <module>avro</module>
         <module>elasticsearch/elasticsearch-7</module>
+        <module>grpc</module>
         <module>hadoop</module>
         <module>kafka</module>
         <module>protobuf</module>

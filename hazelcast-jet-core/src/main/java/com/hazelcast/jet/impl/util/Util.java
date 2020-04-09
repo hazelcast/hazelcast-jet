@@ -163,11 +163,12 @@ public final class Util {
      *
      * @param object     object to check
      * @param objectName object description for the exception
+     * @return given object
      * @throws IllegalArgumentException if {@code object} is not serializable
      */
-    public static void checkSerializable(Object object, String objectName) {
+    public static <T> T checkSerializable(T object, String objectName) {
         if (object == null) {
-            return;
+            return null;
         }
         if (!(object instanceof Serializable)) {
             throw new IllegalArgumentException('"' + objectName + "\" must implement Serializable");
@@ -180,6 +181,33 @@ public final class Util {
             // never really thrown, as the underlying stream never throws it
             throw new JetException(e);
         }
+        return object;
+    }
+
+    /**
+     * Checks that the {@code object} is not null and implements
+     * {@link Serializable} and is correctly serializable by actually
+     * trying to serialize it. This will reveal some non-serializable
+     * field early.
+     * <p>
+     * Usage:
+     * <pre>{@code
+     * void setValue(@Nonnull Object value) {
+     *     this.value = checkNonNullAndSerializable(value, "value");
+     * }
+     * }</pre>
+     *
+     * @param object     object to check
+     * @param objectName object description for the exception
+     * @return given object
+     * @throws IllegalArgumentException if {@code object} is not serializable
+     */
+    public static <T> T checkNonNullAndSerializable(T object, String objectName) {
+        if (object == null) {
+            throw new IllegalArgumentException('"' + objectName + "\" must not be null");
+        }
+        checkSerializable(object, objectName);
+        return object;
     }
 
     /**
