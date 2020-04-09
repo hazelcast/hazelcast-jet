@@ -25,7 +25,7 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Arbitrary part of a {@link ChangeEvent}, as big as the whole body orz
+ * Arbitrary part of a {@link ChangeEvent}, as big as the whole body or
  * as small as a single patch expression, based on a complete JSON
  * expression. Contains various methods for retrieving component values
  * or for mapping itself to data objects.

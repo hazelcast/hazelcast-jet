@@ -79,7 +79,7 @@ public interface ChangeEvent extends Serializable  { //todo: use better serializ
     ChangeEventKey key();
 
     /**
-     * Describes the actual change affected on the record or ducument
+     * Describes the actual change affected on the record or document
      * by the change event.
      */
     @Nonnull
