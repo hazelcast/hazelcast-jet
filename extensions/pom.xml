@@ -35,10 +35,7 @@
     <modules>
         <module>avro</module>
         <module>cdc-core</module>
-        <module>cdc-mongodb</module>
         <module>cdc-mysql</module>
-        <module>cdc-postgres</module>
-        <module>cdc-sqlserver</module>
         <module>hadoop</module>
         <module>kafka</module>
         <module>protobuf</module>
