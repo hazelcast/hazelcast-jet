@@ -109,69 +109,29 @@ public final class JsonParsing {
     }
 
     private static Optional<Integer> getInteger(JsonNode value) {
-        if (value != null) {
-            if (value.isNumber()) {
-                return Optional.of(value.asInt());
-            } else if (value.isValueNode()) {
-                String stringValue = value.asText();
-                try {
-                    return Optional.of(Integer.valueOf(stringValue));
-                } catch (NumberFormatException ei) {
-                    try {
-                        return Optional.of(Double.valueOf(stringValue).intValue());
-                    } catch (NumberFormatException ef) {
-                        return Optional.empty();
-                    }
-                }
-            }
+        if (value != null && value.isNumber()) {
+            return Optional.of(value.asInt());
         }
         return Optional.empty();
     }
 
     private static Optional<Long> getLong(JsonNode value) {
-        if (value != null) {
-            if (value.isNumber()) {
-                return Optional.of(value.asLong());
-            } else if (value.isValueNode()) {
-                String stringValue = value.asText();
-                try {
-                    return Optional.of(Long.valueOf(stringValue));
-                } catch (NumberFormatException ei) {
-                    try {
-                        return Optional.of(Double.valueOf(stringValue).longValue());
-                    } catch (NumberFormatException ef) {
-                        return Optional.empty();
-                    }
-                }
-            }
+        if (value != null && value.isNumber()) {
+            return Optional.of(value.asLong());
         }
         return Optional.empty();
     }
 
     private static Optional<Double> getDouble(JsonNode value) {
-        if (value != null) {
-            if (value.isNumber()) {
-                return Optional.of(value.asDouble());
-            } else if (value.isValueNode()) {
-                String stringValue = value.asText();
-                try {
-                    return Optional.of(Double.valueOf(stringValue));
-                } catch (NumberFormatException e) {
-                    return Optional.empty();
-                }
-            }
+        if (value != null && value.isNumber()) {
+            return Optional.of(value.asDouble());
         }
         return Optional.empty();
     }
 
     private static Optional<Boolean> getBoolean(JsonNode value) {
-        if (value != null) {
-            if (value.isBoolean()) {
-                return Optional.of(value.asBoolean());
-            } else if (value.isValueNode()) {
-                String stringValue = value.asText();
-                return Optional.of(Boolean.valueOf(stringValue));
-            }
+        if (value != null && value.isBoolean()) {
+            return Optional.of(value.asBoolean());
         }
         return Optional.empty();
     }
