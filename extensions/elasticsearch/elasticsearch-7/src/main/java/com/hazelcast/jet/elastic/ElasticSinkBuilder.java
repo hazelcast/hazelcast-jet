@@ -48,29 +48,14 @@ import static java.util.Objects.requireNonNull;
  */
 public class ElasticSinkBuilder<T> implements Serializable {
 
-    private String name = "elastic";
+    private static final String DEFAULT_NAME = "elastic";
+
     private SupplierEx<? extends RestHighLevelClient> clientSupplier;
     private ConsumerEx<? super RestHighLevelClient> destroyFn = RestHighLevelClient::close;
     private SupplierEx<BulkRequest> bulkRequestSupplier = BulkRequest::new;
     private FunctionEx<? super T, ? extends DocWriteRequest<?>> mapItemFn;
     private FunctionEx<? super ActionRequest, RequestOptions> optionsFn = (request) -> RequestOptions.DEFAULT;
     private int preferredLocalParallelism = 2;
-
-    /**
-     * Set the user-friendly source name for this sink
-     *
-     * @param sinkName user-friendly sink name
-     */
-    @Nonnull
-    public ElasticSinkBuilder<T> name(@Nonnull String sinkName) {
-        this.name = requireNonNull(sinkName, "sinkName");
-        return this;
-    }
-
-    @Nonnull
-    public String name() {
-        return name;
-    }
 
     /**
      * Set the client supplier
@@ -175,7 +160,7 @@ public class ElasticSinkBuilder<T> implements Serializable {
         requireNonNull(mapItemFn, "mapItemFn is not set");
 
         return SinkBuilder
-                .sinkBuilder(name, ctx ->
+                .sinkBuilder(DEFAULT_NAME, ctx ->
                         new BulkContext(clientSupplier.get(), bulkRequestSupplier,
                                 optionsFn, destroyFn, ctx.logger()))
                 .<T>receiveFn((bulkContext, item) -> bulkContext.add(mapItemFn.apply(item)))
