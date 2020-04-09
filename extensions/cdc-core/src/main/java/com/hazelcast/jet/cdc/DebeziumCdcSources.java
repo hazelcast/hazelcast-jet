@@ -30,8 +30,6 @@ import org.apache.kafka.connect.data.Values;
 @EvolvingApi
 public final class DebeziumCdcSources {
 
-    //todo: can we use cdc sources in a distributed way?
-
     //todo: update main README.md files in cdc modules
 
     private DebeziumCdcSources() {

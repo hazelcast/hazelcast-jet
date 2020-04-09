@@ -77,7 +77,7 @@ public class Order {
 
         @Override
         public Date deserialize(JsonParser parser, DeserializationContext ctxt) throws IOException {
-            long days = parser.getLongValue(); //todo: very weird, the connector should give us milliseconds...
+            long days = parser.getLongValue();
             try {
                 return new Date(TimeUnit.DAYS.toMillis(days));
             } catch (Exception e) {

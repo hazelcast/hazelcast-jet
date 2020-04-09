@@ -278,7 +278,7 @@ public class MongoDbIntegrationTest extends AbstractIntegrationTest {
         }
 
         void update(@Nonnull Document document) {
-            this.document.putAll((Document) document.get("$set")); //todo: blasphemy!
+            this.document.putAll((Document) document.get("$set"));
             updates++;
         }
 
