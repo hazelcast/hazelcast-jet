@@ -46,6 +46,7 @@ import java.net.Socket;
 import java.nio.charset.Charset;
 import java.sql.PreparedStatement;
 
+import static com.hazelcast.function.FunctionEx.identity;
 import static com.hazelcast.internal.util.Preconditions.checkNotNull;
 import static com.hazelcast.jet.core.ProcessorMetaSupplier.preferLocalParallelismOne;
 import static com.hazelcast.jet.impl.util.Util.checkSerializable;
@@ -67,7 +68,18 @@ public final class SinkProcessors {
      */
     @Nonnull
     public static <K, V> ProcessorMetaSupplier writeMapP(@Nonnull String mapName) {
-        return HazelcastWriters.writeMapSupplier(mapName, null);
+        return writeMapP(mapName, identity(), identity());
+    }
+
+    /**
+     * TODO
+     */
+    public static <T, K, V> ProcessorMetaSupplier writeMapP(
+            @Nonnull String mapName,
+            @Nonnull FunctionEx<? super T, ? extends K> toKeyFn,
+            @Nonnull FunctionEx<? super T, ? extends V> toValueFn
+    ) {
+        return HazelcastWriters.writeMapSupplier(mapName, null, toKeyFn, toValueFn);
     }
 
     /**
@@ -78,7 +90,19 @@ public final class SinkProcessors {
     public static <K, V> ProcessorMetaSupplier writeRemoteMapP(
         @Nonnull String mapName, @Nonnull ClientConfig clientConfig
     ) {
-        return HazelcastWriters.writeMapSupplier(mapName, clientConfig);
+        return writeRemoteMapP(mapName, clientConfig, identity(), identity());
+    }
+
+    /**
+     * TODO
+     */
+    public static <T, K, V> ProcessorMetaSupplier writeRemoteMapP(
+            @Nonnull String mapName,
+            @Nonnull ClientConfig clientConfig,
+            @Nonnull FunctionEx<? super T, ? extends K> toKeyFn,
+            @Nonnull FunctionEx<? super T, ? extends V> toValueFn
+    ) {
+        return HazelcastWriters.writeMapSupplier(mapName, clientConfig, toKeyFn, toValueFn);
     }
 
     /**

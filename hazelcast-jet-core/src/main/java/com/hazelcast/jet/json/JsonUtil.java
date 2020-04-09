@@ -74,6 +74,10 @@ public final class JsonUtil {
         return new HazelcastJsonValue(object.toString());
     }
 
+    public static <K, V> FunctionEx<Entry<K, V>, ?> wrapKey(boolean json) {
+        return entry -> json ? hazelcastJsonValue(entry.getKey()) : entry.getKey();
+    }
+
 
     /* Map and FlatMap Functions*/
 

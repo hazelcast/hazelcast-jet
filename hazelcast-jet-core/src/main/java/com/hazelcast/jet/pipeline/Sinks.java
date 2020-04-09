@@ -29,6 +29,7 @@ import com.hazelcast.jet.Observable;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.processor.SinkProcessors;
 import com.hazelcast.jet.impl.pipeline.SinkImpl;
+import com.hazelcast.jet.json.JsonUtil;
 import com.hazelcast.map.EntryProcessor;
 import com.hazelcast.map.IMap;
 import com.hazelcast.topic.ITopic;
@@ -109,7 +110,29 @@ public final class Sinks {
      */
     @Nonnull
     public static <K, V> Sink<Entry<K, V>> map(@Nonnull String mapName) {
-        return new SinkImpl<>("mapSink(" + mapName + ')', writeMapP(mapName), false, entryKey());
+        return map(mapName, Entry::getKey, Entry::getValue);
+    }
+
+    /**
+     * TODO
+     */
+    public static <K, V> Sink<Entry<K, V>> map(@Nonnull String mapName, boolean jsonKey, boolean jsonValue) {
+        return map(mapName,
+                e -> jsonKey ? JsonUtil.hazelcastJsonValue(e.getKey()) : e.getKey(),
+                e -> jsonValue ? JsonUtil.hazelcastJsonValue(e.getValue()) : e.getValue());
+    }
+
+    /**
+     * TODO
+     */
+    public static <T, K, V> Sink<T> map(
+            @Nonnull String mapName,
+            @Nonnull FunctionEx<? super T, ? extends K> toKeyFn,
+            @Nonnull FunctionEx<? super T, ? extends V> toValueFn
+
+    ) {
+        return new SinkImpl<>("mapSink(" + mapName + ')',
+                writeMapP(mapName, toKeyFn, toValueFn), false, toKeyFn);
     }
 
     /**
@@ -147,7 +170,34 @@ public final class Sinks {
      */
     @Nonnull
     public static <K, V> Sink<Entry<K, V>> remoteMap(@Nonnull String mapName, @Nonnull ClientConfig clientConfig) {
-        return fromProcessor("remoteMapSink(" + mapName + ')', writeRemoteMapP(mapName, clientConfig));
+        return remoteMap(mapName, clientConfig, Entry::getKey, Entry::getValue);
+    }
+
+    /**
+     * TODO
+     */
+    public static <K, V> Sink<Entry<K, V>> remoteMap(
+            @Nonnull String mapName,
+            @Nonnull ClientConfig clientConfig,
+            boolean jsonKey,
+            boolean jsonValue
+    ) {
+        return remoteMap(mapName, clientConfig,
+                e -> jsonKey ? JsonUtil.hazelcastJsonValue(e.getKey()) : e.getKey(),
+                e -> jsonValue ? JsonUtil.hazelcastJsonValue(e.getValue()) : e.getValue());
+    }
+
+    /**
+     * TODO
+     */
+    public static <T, K, V> Sink<T> remoteMap(
+            @Nonnull String mapName,
+            @Nonnull ClientConfig clientConfig,
+            @Nonnull FunctionEx<? super T, ? extends K> toKeyFn,
+            @Nonnull FunctionEx<? super T, ? extends V> toValueFn
+    ) {
+        return fromProcessor("remoteMapSink(" + mapName + ')',
+                writeRemoteMapP(mapName, clientConfig, toKeyFn, toValueFn));
     }
 
     /**
