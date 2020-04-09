@@ -103,7 +103,7 @@ final class ElasticProcessor<T> extends AbstractProcessor {
             sr.preference(preference);
         }
 
-        traverser = new ElasticScrollTraverser<>(builder, client, sr, logger);
+        traverser = new ElasticScrollTraverser(builder, client, sr, logger).map(builder.mapHitFn());
     }
 
     private Node createLocalElasticNode() {
@@ -128,18 +128,17 @@ final class ElasticProcessor<T> extends AbstractProcessor {
     @Override
     public void close() throws Exception {
         if (traverser instanceof ElasticProcessor.ElasticScrollTraverser) {
-            ElasticScrollTraverser<T> scrollTraverser = (ElasticScrollTraverser<T>) traverser;
+            ElasticScrollTraverser scrollTraverser = (ElasticScrollTraverser) traverser;
             scrollTraverser.close();
         }
     }
 
-    static class ElasticScrollTraverser<R> implements Traverser<R> {
+    static class ElasticScrollTraverser implements Traverser<SearchHit> {
 
         private final ILogger logger;
 
         private final RestHighLevelClient client;
         private final FunctionEx<? super ActionRequest, RequestOptions> optionsFn;
-        private final FunctionEx<? super SearchHit, R> mapHitFn;
         private final String scrollKeepAlive;
         private final ConsumerEx<? super RestHighLevelClient> destroyFn;
 
@@ -147,11 +146,10 @@ final class ElasticProcessor<T> extends AbstractProcessor {
         private int nextHit;
         private String scrollId;
 
-        ElasticScrollTraverser(ElasticSourceBuilder<R> builder, RestHighLevelClient client, SearchRequest sr,
+        ElasticScrollTraverser(ElasticSourceBuilder<?> builder, RestHighLevelClient client, SearchRequest sr,
                                ILogger logger) {
             this.client = client;
             this.optionsFn = builder.optionsFn();
-            this.mapHitFn = builder.mapHitFn();
             this.destroyFn = builder.destroyFn();
             this.scrollKeepAlive = builder.scrollKeepAlive();
             this.logger = logger;
@@ -173,7 +171,7 @@ final class ElasticProcessor<T> extends AbstractProcessor {
         }
 
         @Override
-        public R next() {
+        public SearchHit next() {
             if (hits.getHits().length == 0) {
                 scrollId = null;
                 return null;
@@ -195,7 +193,7 @@ final class ElasticProcessor<T> extends AbstractProcessor {
                 }
             }
 
-            return mapHitFn.apply(hits.getAt(nextHit++));
+            return hits.getAt(nextHit++);
         }
 
         public void close() {
