@@ -5,6 +5,13 @@ issues at https://github.com/hazelcast/hazelcast-jet/issues/<issue number>.
 
 The label in the brackets refer to the respective module.
 
+** Hazelcast Jet 4.1 **
+
+1. New Features
+
+2. Enhancements
+[integration] Improve Debezium connector usability and production readiness (generic & MySQL versions) [#2142]
+
 ** Hazelcast Jet 4.0 **
 
 1. New Features
