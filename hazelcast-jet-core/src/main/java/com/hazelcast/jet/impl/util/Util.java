@@ -183,6 +183,32 @@ public final class Util {
     }
 
     /**
+     * Checks that the {@code object} is not null and  implements
+     * {@link Serializable} and is correctly serializable by actually
+     * trying to serialize it. This will reveal some non-serializable
+     * field early.
+     * <p>
+     * Usage:
+     * <pre>{@code
+     * void setValue(@Nonnull Object value) {
+     *     this.value = checkNonNullAndSerializable(value, "value");
+     * }
+     * }</pre>
+     *
+     * @param object     object to check
+     * @param objectName object description for the exception
+     * @return given object
+     * @throws IllegalArgumentException if {@code object} is not serializable
+     */
+    public static <T> T checkNonNullAndSerializable(T object, String objectName) {
+        if (object == null) {
+            throw new IllegalArgumentException('"' + objectName + "\" must not be null");
+        }
+        checkSerializable(object, objectName);
+        return object;
+    }
+
+    /**
      * Distributes the {@code objects} to {@code count} processors in a
      * round-robin fashion. If the object count is smaller than processor
      * count, an empty list is put for the rest of the processors.
