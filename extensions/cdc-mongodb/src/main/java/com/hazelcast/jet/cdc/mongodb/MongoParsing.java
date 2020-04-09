@@ -17,8 +17,6 @@
 package com.hazelcast.jet.cdc.mongodb;
 
 import com.hazelcast.jet.cdc.ParsingException;
-import com.hazelcast.jet.cdc.impl.util.LazyThrowingSupplier;
-import com.hazelcast.jet.cdc.impl.util.ThrowingSupplier;
 import org.bson.Document;
 
 import java.util.Date;
@@ -31,29 +29,23 @@ public final class MongoParsing {
     private MongoParsing() {
     }
 
-    public static ThrowingSupplier<Document, ParsingException> parse(String json) {
-        return () -> {
-            try {
-                return Document.parse(json);
-            } catch (Exception e) {
-                throw new ParsingException(e.getMessage(), e);
-            }
-        };
+    public static Document parse(String json) throws ParsingException {
+        try {
+            return Document.parse(json);
+        } catch (Exception e) {
+            throw new ParsingException(e.getMessage(), e);
+        }
     }
 
-    public static ThrowingSupplier<Optional<Document>, ParsingException> getDocument(Document parent, String key) {
-        return new LazyThrowingSupplier<>(
-                () -> {
-                    Optional<String> json = getString(parent, key);
-                    Document result;
-                    try {
-                        result = Document.parse(json.get());
-                    } catch (Exception e) {
-                        throw new ParsingException(e.getMessage(), e);
-                    }
-                    return json.isPresent() ? Optional.of(result) : Optional.empty();
-                }
-        );
+    public static Optional<Document> getChild(Document parent, String key) throws ParsingException {
+        Optional<String> json = getString(parent, key);
+        Document result;
+        try {
+            result = Document.parse(json.get());
+        } catch (Exception e) {
+            throw new ParsingException(e.getMessage(), e);
+        }
+        return json.isPresent() ? Optional.of(result) : Optional.empty();
     }
 
     public static <T> Optional<List<Optional<T>>> getList(Document document, String key, Class<T> clazz) {

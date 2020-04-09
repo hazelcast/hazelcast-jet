@@ -16,51 +16,34 @@
 
 package com.hazelcast.jet.cdc.mongodb;
 
-import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.cdc.ChangeEventElement;
 import com.hazelcast.jet.cdc.ParsingException;
-import com.hazelcast.jet.cdc.impl.util.LazyThrowingSupplier;
-import com.hazelcast.jet.cdc.impl.util.ThrowingBiFunction;
-import com.hazelcast.jet.cdc.impl.util.ThrowingFunction;
-import com.hazelcast.jet.cdc.impl.util.ThrowingSupplier;
 import org.bson.Document;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Optional;
 
 class ChangeEventElementMongoImpl implements ChangeEventElement {
 
-    private final ThrowingSupplier<Document, ParsingException> document;
-    private final SupplierEx<String> json;
-
-    private final ThrowingFunction<String, Optional<Object>, ParsingException> objects;
-    private final ThrowingFunction<String, Optional<String>, ParsingException> strings;
-    private final ThrowingFunction<String, Optional<Integer>, ParsingException> integers;
-    private final ThrowingFunction<String, Optional<Long>, ParsingException> longs;
-    private final ThrowingFunction<String, Optional<Double>, ParsingException> doubles;
-    private final ThrowingFunction<String, Optional<Boolean>, ParsingException> booleans;
-    private final ThrowingBiFunction<String, Class<Object>, Optional<List<Optional<Object>>>, ParsingException> lists;
+    private Document document;
+    private String json;
 
     ChangeEventElementMongoImpl(String json) {
-        this(new LazyThrowingSupplier<>(MongoParsing.parse(json)), () -> json);
+        this(null, json);
     }
 
     ChangeEventElementMongoImpl(Document document) {
-        this(() -> document, document::toJson);
+        this(document, null);
     }
 
-    private ChangeEventElementMongoImpl(ThrowingSupplier<Document, ParsingException> document, SupplierEx<String> json) {
+    private ChangeEventElementMongoImpl(@Nullable Document document, @Nullable String json) {
+        if (document == null && json == null) {
+            throw new IllegalStateException("Need some input");
+        }
         this.document = document;
         this.json = json;
-
-        this.objects = (key) -> MongoParsing.getObject(document.get(), key);
-        this.strings = (key) -> MongoParsing.getString(document.get(), key);
-        this.integers = (key) -> MongoParsing.getInteger(document.get(), key);
-        this.longs = (key) -> MongoParsing.getLong(document.get(), key);
-        this.doubles = (key) -> MongoParsing.getDouble(document.get(), key);
-        this.booleans = (key) -> MongoParsing.getBoolean(document.get(), key);
-        this.lists = (key, clazz) -> MongoParsing.getList(document.get(), key, clazz);
     }
 
     @Override
@@ -69,55 +52,65 @@ class ChangeEventElementMongoImpl implements ChangeEventElement {
         if (!clazz.equals(Document.class)) {
             throw new IllegalArgumentException("Content provided only as " + Document.class.getName());
         }
-        return (T) document.get();
+        return (T) document();
     }
 
     @Override
     @Nonnull
     public Optional<Object> getObject(String key) throws ParsingException {
-        return objects.apply(key);
+        return MongoParsing.getObject(document(), key);
     }
 
     @Override
     @Nonnull
     public Optional<String> getString(String key) throws ParsingException {
-        return strings.apply(key);
+        return MongoParsing.getString(document(), key);
     }
 
     @Override
     @Nonnull
     public Optional<Integer> getInteger(String key) throws ParsingException {
-        return integers.apply(key);
+        return MongoParsing.getInteger(document(), key);
     }
 
     @Override
     @Nonnull
     public Optional<Long> getLong(String key) throws ParsingException {
-        return longs.apply(key);
+        return MongoParsing.getLong(document(), key);
     }
 
     @Override
     @Nonnull
     public Optional<Double> getDouble(String key) throws ParsingException {
-        return doubles.apply(key);
+        return MongoParsing.getDouble(document(), key);
     }
 
     @Override
     @Nonnull
     public Optional<Boolean> getBoolean(String key) throws ParsingException {
-        return booleans.apply(key);
+        return MongoParsing.getBoolean(document(), key);
     }
 
     @Override
     @Nonnull
     public <T> Optional<List<Optional<T>>> getList(String key, Class<T> clazz) throws ParsingException {
-        return lists.apply(key, (Class) clazz);
+        return MongoParsing.getList(document(), key, clazz);
+    }
+
+    protected Document document() throws ParsingException {
+        if (document == null) {
+            document = MongoParsing.parse(json);
+        }
+        return document;
     }
 
     @Override
     @Nonnull
     public String asJson() {
-        return json.get();
+        if (json == null) {
+            json = document.toJson();
+        }
+        return json;
     }
 
     @Override

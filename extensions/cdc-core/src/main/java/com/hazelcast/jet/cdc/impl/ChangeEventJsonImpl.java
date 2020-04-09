@@ -16,46 +16,52 @@
 
 package com.hazelcast.jet.cdc.impl;
 
-import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.cdc.ChangeEvent;
 import com.hazelcast.jet.cdc.ChangeEventKey;
 import com.hazelcast.jet.cdc.ChangeEventValue;
-import com.hazelcast.jet.cdc.impl.util.LazySupplier;
 
 import javax.annotation.Nonnull;
 import java.util.Objects;
 
 public class ChangeEventJsonImpl implements ChangeEvent {
 
-    private final SupplierEx<String> json;
-    private final SupplierEx<ChangeEventKey> key;
-    private final SupplierEx<ChangeEventValue> value;
+    private final String keyJson;
+    private final String valueJson;
+
+    private String json;
+    private ChangeEventKey key;
+    private ChangeEventValue value;
 
     public ChangeEventJsonImpl(@Nonnull String keyJson, @Nonnull String valueJson) {
-        Objects.requireNonNull(keyJson, "keyJson");
-        Objects.requireNonNull(valueJson, "valueJson");
-
-        this.key = new LazySupplier<>(() -> new ChangeEventKeyJsonImpl(keyJson));
-        this.value = new LazySupplier<>(() -> new ChangeEventValueJsonImpl(valueJson));
-        this.json = new LazySupplier<>(() -> String.format("key:{%s}, value:{%s}", keyJson, valueJson));
+        this.keyJson = Objects.requireNonNull(keyJson, "keyJson");
+        this.valueJson = Objects.requireNonNull(valueJson, "valueJson");
     }
 
     @Override
     @Nonnull
     public ChangeEventKey key() {
-        return key.get();
+        if (key == null) {
+            key = new ChangeEventKeyJsonImpl(keyJson);
+        }
+        return key;
     }
 
     @Override
     @Nonnull
     public ChangeEventValue value() {
-        return value.get();
+        if (value == null) {
+            value = new ChangeEventValueJsonImpl(valueJson);
+        }
+        return value;
     }
 
     @Override
     @Nonnull
     public String asJson() {
-        return json.get();
+        if (json == null) {
+            json = String.format("key:{%s}, value:{%s}", keyJson, valueJson);
+        }
+        return json;
     }
 
     @Override

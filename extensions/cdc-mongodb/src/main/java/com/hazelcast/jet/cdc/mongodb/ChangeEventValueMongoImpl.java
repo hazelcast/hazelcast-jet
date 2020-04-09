@@ -20,80 +20,72 @@ import com.hazelcast.jet.cdc.ChangeEventElement;
 import com.hazelcast.jet.cdc.ChangeEventValue;
 import com.hazelcast.jet.cdc.Operation;
 import com.hazelcast.jet.cdc.ParsingException;
-import com.hazelcast.jet.cdc.impl.util.LazyThrowingSupplier;
-import com.hazelcast.jet.cdc.impl.util.ThrowingSupplier;
-import org.bson.Document;
 
 import javax.annotation.Nonnull;
-import java.util.Optional;
 
-import static com.hazelcast.jet.cdc.mongodb.MongoParsing.getDocument;
-import static com.hazelcast.jet.cdc.mongodb.MongoParsing.parse;
+import static com.hazelcast.jet.cdc.mongodb.MongoParsing.getChild;
 
 public class ChangeEventValueMongoImpl extends ChangeEventElementMongoImpl implements ChangeEventValue {
 
-    private final String json;
-    private final ThrowingSupplier<Optional<Long>, ParsingException> timestamp;
-    private final ThrowingSupplier<Operation, ParsingException> operation;
-    private final ThrowingSupplier<Optional<ChangeEventElement>, ParsingException> before;
-    private final ThrowingSupplier<Optional<ChangeEventElement>, ParsingException> after;
-    private final ThrowingSupplier<Optional<ChangeEventElement>, ParsingException> patch;
+    private Long timestamp;
+    private Operation operation;
+    private ChangeEventElement before;
+    private ChangeEventElement after;
+    private ChangeEventElement patch;
 
     public ChangeEventValueMongoImpl(String valueJson) {
         super(valueJson);
-
-        ThrowingSupplier<Document, ParsingException> document = parse(valueJson);
-        this.timestamp = new LazyThrowingSupplier<>(() ->
-                MongoParsing.getLong(document.get(), "ts_ms"));
-        this.operation = new LazyThrowingSupplier<>(() ->
-                Operation.get(MongoParsing.getString(document.get(), "op").orElse(null)));
-        this.before = new LazyThrowingSupplier<>(() ->
-                getDocument(document.get(), "before").get().map(ChangeEventElementMongoImpl::new));
-        this.after = new LazyThrowingSupplier<>(() ->
-                getDocument(document.get(), "after").get().map(ChangeEventElementMongoImpl::new));
-        this.patch = new LazyThrowingSupplier<>(() ->
-                getDocument(document.get(), "patch").get().map(ChangeEventElementMongoImpl::new));
-        this.json = valueJson;
     }
 
     @Override
     public long timestamp() throws ParsingException {
-        return timestamp.get().orElseThrow(() -> new ParsingException("No parsable timestamp field found"));
+        if (timestamp == null) {
+            timestamp = MongoParsing.getLong(document(), "ts_ms")
+                    .orElseThrow(() -> new ParsingException("No parsable timestamp field found"));
+        }
+        return timestamp;
     }
 
     @Override
     @Nonnull
     public Operation operation() throws ParsingException {
-        return operation.get();
+        if (operation == null) {
+            operation = Operation.get(MongoParsing.getString(document(), "op").orElse(null));
+        }
+        return operation;
     }
 
     @Override
     @Nonnull
     public ChangeEventElement before() throws ParsingException {
-        return before.get().orElseThrow(() -> new ParsingException("No 'before' sub-document present"));
+        if (before == null) {
+            before = getChild(document(), "before")
+                    .map(ChangeEventElementMongoImpl::new)
+                    .orElseThrow(() -> new ParsingException("No 'before' sub-document present"));
+        }
+        return before;
     }
 
     @Override
     @Nonnull
     public ChangeEventElement after() throws ParsingException {
-        return after.get().orElseThrow(() -> new ParsingException("No 'after' sub-document present"));
+        if (after == null) {
+            after = getChild(document(), "after")
+                    .map(ChangeEventElementMongoImpl::new)
+                    .orElseThrow(() -> new ParsingException("No 'after' sub-document present"));
+        }
+        return after;
     }
 
     @Override
     @Nonnull
     public ChangeEventElement change() throws ParsingException {
-        return patch.get().orElseThrow(() -> new ParsingException("No 'patch' sub-document present"));
-    }
-
-    @Override
-    @Nonnull
-    public String asJson() {
-        return json;
-    }
-
-    @Override
-    public String toString() {
-        return asJson();
+        if (patch == null) {
+            patch = getChild(document(), "patch")
+                    .map(ChangeEventElementMongoImpl::new)
+                    .orElseThrow(() -> new ParsingException("No 'patch' sub-document present"));
+        }
+        return patch;
     }
 
 }

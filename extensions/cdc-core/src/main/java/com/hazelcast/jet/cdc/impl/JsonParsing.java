@@ -21,9 +21,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.hazelcast.jet.cdc.ParsingException;
-import com.hazelcast.jet.cdc.impl.util.ThrowingSupplier;
 
-import javax.ws.rs.ProcessingException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -36,26 +34,22 @@ public final class JsonParsing {
     private JsonParsing() {
     }
 
-    public static ThrowingSupplier<JsonNode, ParsingException> parse(String json) {
-        return () -> {
-            try {
-                ObjectMapper mapper = OBJECT_MAPPER_TL.get();
-                return mapper.readTree(json);
-            } catch (Exception e) {
-                throw new ProcessingException(e.getMessage(), e);
-            }
-        };
+    public static JsonNode parse(String json) throws ParsingException {
+        try {
+            ObjectMapper mapper = OBJECT_MAPPER_TL.get();
+            return mapper.readTree(json);
+        } catch (Exception e) {
+            throw new ParsingException(e.getMessage(), e);
+        }
     }
 
-    public static ThrowingSupplier<Optional<JsonNode>, ParsingException> getChild(JsonNode node, String key) {
-        return () -> {
-            JsonNode subNode = node.get(key);
-            if (subNode == null || subNode.isNull()) {
-                return Optional.empty();
-            } else {
-                return Optional.of(subNode);
-            }
-        };
+    public static Optional<JsonNode> getChild(JsonNode node, String key) {
+        JsonNode subNode = node.get(key);
+        if (subNode == null || subNode.isNull()) {
+            return Optional.empty();
+        } else {
+            return Optional.of(subNode);
+        }
     }
 
     public static <T> T mapToObj(JsonNode node, Class<T> clazz) throws ParsingException {

@@ -16,77 +16,67 @@
 
 package com.hazelcast.jet.cdc.impl;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.hazelcast.jet.cdc.ChangeEventElement;
 import com.hazelcast.jet.cdc.ChangeEventValue;
 import com.hazelcast.jet.cdc.Operation;
 import com.hazelcast.jet.cdc.ParsingException;
-import com.hazelcast.jet.cdc.impl.util.LazyThrowingSupplier;
-import com.hazelcast.jet.cdc.impl.util.ThrowingSupplier;
 
 import javax.annotation.Nonnull;
-import java.util.Optional;
 
 public class ChangeEventValueJsonImpl extends ChangeEventElementJsonImpl implements ChangeEventValue {
 
-    private final String json;
-    private final ThrowingSupplier<Optional<Long>, ParsingException> timestamp;
-    private final ThrowingSupplier<Operation, ParsingException> operation;
-    private final ThrowingSupplier<Optional<ChangeEventElement>, ParsingException> before;
-    private final ThrowingSupplier<Optional<ChangeEventElement>, ParsingException> after;
+    private Long timestamp;
+    private Operation operation;
+    private ChangeEventElement before;
+    private ChangeEventElement after;
 
     public ChangeEventValueJsonImpl(String valueJson) {
         super(valueJson);
-
-        ThrowingSupplier<JsonNode, ParsingException> node = JsonParsing.parse(valueJson);
-        this.timestamp = new LazyThrowingSupplier<>(() ->
-                JsonParsing.getLong(node.get(), "ts_ms"));
-        this.operation = new LazyThrowingSupplier<>(() ->
-                Operation.get(JsonParsing.getString(node.get(), "op").orElse(null)));
-        this.before = new LazyThrowingSupplier<>(() -> JsonParsing.getChild(node.get(), "before").get()
-                .map(n -> new ChangeEventElementJsonImpl(n)));
-        this.after = new LazyThrowingSupplier<>(() -> JsonParsing.getChild(node.get(), "after").get()
-                .map(n -> new ChangeEventElementJsonImpl(n)));
-        this.json = valueJson;
     }
 
     @Override
     public long timestamp() throws ParsingException {
-        return timestamp.get().orElseThrow(() -> new ParsingException("No parsable timestamp field found"));
+        if (timestamp == null) {
+            timestamp = JsonParsing.getLong(node(), "ts_ms")
+                    .orElseThrow(() -> new ParsingException("No parsable timestamp field found"));
+        }
+        return timestamp;
     }
 
     @Override
     @Nonnull
     public Operation operation() throws ParsingException {
-        return operation.get();
+        if (operation == null) {
+            operation = Operation.get(JsonParsing.getString(node(), "op").orElse(null));
+        }
+        return operation;
     }
 
     @Override
     @Nonnull
     public ChangeEventElement before() throws ParsingException {
-        return before.get().orElseThrow(() -> new ParsingException("No 'before' sub-node present"));
+        if (before == null) {
+            before = JsonParsing.getChild(node(), "before")
+                    .map(ChangeEventElementJsonImpl::new)
+                    .orElseThrow(() -> new ParsingException("No 'before' sub-node present"));
+        }
+        return before;
     }
 
     @Override
     @Nonnull
     public ChangeEventElement after() throws ParsingException {
-        return after.get().orElseThrow(() -> new ParsingException("No 'after' sub-node present"));
+        if (after == null) {
+            after = JsonParsing.getChild(node(), "after")
+                    .map(ChangeEventElementJsonImpl::new)
+                    .orElseThrow(() -> new ParsingException("No 'after' sub-node present"));
+        }
+        return after;
     }
 
     @Override
     @Nonnull
     public ChangeEventElement change() {
         throw new UnsupportedOperationException("Not supported for relational databases");
-    }
-
-    @Override
-    @Nonnull
-    public String asJson() {
-        return json;
-    }
-
-    @Override
-    public String toString() {
-        return asJson();
     }
 }

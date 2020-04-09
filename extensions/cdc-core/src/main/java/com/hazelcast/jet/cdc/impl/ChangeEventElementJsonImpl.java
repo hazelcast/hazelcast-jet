@@ -17,109 +17,99 @@
 package com.hazelcast.jet.cdc.impl;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.cdc.ChangeEventElement;
 import com.hazelcast.jet.cdc.ParsingException;
-import com.hazelcast.jet.cdc.impl.util.LazyThrowingFunction;
-import com.hazelcast.jet.cdc.impl.util.LazyThrowingSupplier;
-import com.hazelcast.jet.cdc.impl.util.ThrowingBiFunction;
-import com.hazelcast.jet.cdc.impl.util.ThrowingFunction;
-import com.hazelcast.jet.cdc.impl.util.ThrowingSupplier;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Optional;
 
 class ChangeEventElementJsonImpl implements ChangeEventElement {
 
-    private final SupplierEx<String> json;
-
-    private final ThrowingFunction<Class<?>, Object, ParsingException> mapper;
-
-    private final ThrowingFunction<String, Optional<Object>, ParsingException> objects;
-    private final ThrowingFunction<String, Optional<String>, ParsingException> strings;
-    private final ThrowingFunction<String, Optional<Integer>, ParsingException> integers;
-    private final ThrowingFunction<String, Optional<Long>, ParsingException> longs;
-    private final ThrowingFunction<String, Optional<Double>, ParsingException> doubles;
-    private final ThrowingFunction<String, Optional<Boolean>, ParsingException> booleans;
-    private final ThrowingBiFunction<String, Class<Object>, Optional<List<Optional<Object>>>, ParsingException> lists;
+    private String json;
+    private JsonNode node;
 
     ChangeEventElementJsonImpl(@Nonnull String json) {
-        this(new LazyThrowingSupplier<>(JsonParsing.parse(json)), () -> json);
+        this(null, json);
     }
 
     ChangeEventElementJsonImpl(@Nonnull JsonNode node) {
-        this(() -> node, node::textValue);
+        this(node, null);
     }
 
     private ChangeEventElementJsonImpl(
-            @Nonnull ThrowingSupplier<JsonNode, ParsingException> node,
-            @Nonnull SupplierEx<String> json) {
+            @Nullable JsonNode node,
+            @Nullable String json) {
+        if (node == null && json == null) {
+            throw new IllegalStateException("Need some input");
+        }
         this.json = json;
-
-        this.mapper = new LazyThrowingFunction<>((clazz) -> JsonParsing.mapToObj(node.get(), clazz));
-
-        this.objects = (key) -> JsonParsing.getObject(node.get(), key);
-        this.strings = (key) -> JsonParsing.getString(node.get(), key);
-        this.integers = (key) -> JsonParsing.getInteger(node.get(), key);
-        this.longs = (key) -> JsonParsing.getLong(node.get(), key);
-        this.doubles = (key) -> JsonParsing.getDouble(node.get(), key);
-        this.booleans = (key) -> JsonParsing.getBoolean(node.get(), key);
-        this.lists = (key, clazz) -> JsonParsing.getList(node.get(), key, clazz);
+        this.node = node;
     }
 
     @Override
     @Nonnull
     public <T> T mapToObj(Class<T> clazz) throws ParsingException {
-        return (T) mapper.apply(clazz);
+        return JsonParsing.mapToObj(node(), clazz);
     }
 
     @Override
     @Nonnull
     public Optional<Object> getObject(String key) throws ParsingException {
-        return objects.apply(key);
+        return JsonParsing.getObject(node(), key);
     }
 
     @Override
     @Nonnull
     public Optional<String> getString(String key) throws ParsingException {
-        return strings.apply(key);
+        return JsonParsing.getString(node(), key);
     }
 
     @Override
     @Nonnull
     public Optional<Integer> getInteger(String key) throws ParsingException {
-        return integers.apply(key);
+        return JsonParsing.getInteger(node(), key);
     }
 
     @Override
     @Nonnull
     public Optional<Long> getLong(String key) throws ParsingException {
-        return longs.apply(key);
+        return JsonParsing.getLong(node(), key);
     }
 
     @Override
     @Nonnull
     public Optional<Double> getDouble(String key) throws ParsingException {
-        return doubles.apply(key);
+        return JsonParsing.getDouble(node(), key);
     }
 
     @Override
     @Nonnull
     public Optional<Boolean> getBoolean(String key) throws ParsingException {
-        return booleans.apply(key);
+        return JsonParsing.getBoolean(node(), key);
     }
 
     @Override
     @Nonnull
     public <T> Optional<List<Optional<T>>> getList(String key, Class<T> clazz) throws ParsingException {
-        return lists.apply(key, (Class) clazz);
+        return JsonParsing.getList(node(), key, clazz);
+    }
+
+    protected JsonNode node() throws ParsingException {
+        if (node == null) {
+            node = JsonParsing.parse(json);
+        }
+        return node;
     }
 
     @Override
     @Nonnull
     public String asJson() {
-        return json.get();
+        if (json == null) {
+            json = node.textValue();
+        }
+        return json;
     }
 
     @Override
