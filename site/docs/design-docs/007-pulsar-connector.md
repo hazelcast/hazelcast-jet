@@ -1,5 +1,5 @@
 ---
-title: 004 - Apache Pulsar Connector
+title: 007 - Apache Pulsar Connector
 description: Jet source and sink for Apache Pulsar.
 ---
 
