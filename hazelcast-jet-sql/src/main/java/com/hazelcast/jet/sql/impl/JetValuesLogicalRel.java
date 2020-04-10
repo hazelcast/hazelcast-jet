@@ -27,6 +27,7 @@ import org.apache.calcite.rex.RexLiteral;
 import java.util.List;
 
 public class JetValuesLogicalRel extends Values implements LogicalRel {
+
     JetValuesLogicalRel(RelOptCluster cluster, RelDataType rowType,
                         ImmutableList<ImmutableList<RexLiteral>> tuples, RelTraitSet traitSet) {
         super(cluster, rowType, tuples, traitSet);

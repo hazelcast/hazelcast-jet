@@ -81,7 +81,7 @@ public class SqlTest extends SimpleTestInClusterSupport {
                 entry("name", QueryDataType.VARCHAR),
                 entry("age", QueryDataType.INT));
         sqlService.createTable(PERSON_MAP_SRC, JetSchema.IMAP_LOCAL_SERVER,
-                emptyMap(),
+                createMap(TO_VALUE_CLASS, Person.class.getName()),
                 personMapFields);
 
         sqlService.createTable(PERSON_MAP_SINK, JetSchema.IMAP_LOCAL_SERVER,
@@ -187,9 +187,9 @@ public class SqlTest extends SimpleTestInClusterSupport {
     @Test
     public void insert_person() {
         assertMap(
-                PERSON_MAP_SINK, "INSERT INTO " + PERSON_MAP_SINK + " VALUES (0, 'Foo', 25)",
+                PERSON_MAP_SINK, "INSERT INTO " + PERSON_MAP_SINK + " VALUES (1, 'Foo', 25)",
                 createMap(
-                        0, new Person("Foo", 25)));
+                        1, new Person("Foo", 25)));
     }
 
     @Test
@@ -215,7 +215,7 @@ public class SqlTest extends SimpleTestInClusterSupport {
     private static final class Row {
         Object[] values;
 
-        Row(Object ... values) {
+        Row(Object... values) {
             this.values = values;
         }
 

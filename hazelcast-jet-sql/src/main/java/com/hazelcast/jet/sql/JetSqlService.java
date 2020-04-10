@@ -36,8 +36,8 @@ import com.hazelcast.jet.sql.impl.LogicalRel;
 import com.hazelcast.jet.sql.impl.OptUtils;
 import com.hazelcast.jet.sql.impl.PhysicalRel;
 import com.hazelcast.jet.sql.impl.RowCountMetadata;
-import com.hazelcast.jet.sql.impl.cost.CostFactory;
 import com.hazelcast.jet.sql.impl.connector.FullScanPhysicalRule;
+import com.hazelcast.jet.sql.impl.cost.CostFactory;
 import com.hazelcast.jet.sql.impl.schema.JetSchema;
 import com.hazelcast.sql.impl.type.QueryDataType;
 import org.apache.calcite.adapter.java.JavaTypeFactory;
@@ -89,10 +89,14 @@ import java.util.UUID;
 
 public class JetSqlService {
 
-    /** Converter: whether to convert LogicalTableScan to some physical form immediately or not. We do not need this. */
+    /**
+     * Converter: whether to convert LogicalTableScan to some physical form immediately or not. We do not need this.
+     */
     private static final boolean CONVERTER_CONVERT_TABLE_ACCESS = false;
 
-    /** Converter: whether to trim unused fields. */
+    /**
+     * Converter: whether to trim unused fields.
+     */
     private static final boolean CONVERTER_TRIM_UNUSED_FIELDS = true;
 
     /**
@@ -105,7 +109,9 @@ public class JetSqlService {
      */
     private static final boolean CONVERTER_EXPAND = false;
 
-    /** Singleton instance. */
+    /**
+     * Singleton instance.
+     */
     public static final RelMetadataProvider METADATA_PROVIDER_INSTANCE = ChainedRelMetadataProvider.of(ImmutableList
             .of(RowCountMetadata.SOURCE, DefaultRelMetadataProvider.INSTANCE));
 
@@ -119,7 +125,7 @@ public class JetSqlService {
         this.instance = instance;
         this.schema = new JetSchema(instance);
         this.validator = createValidator();
-        
+
         connectionConfig = createConnectionConfig();
         planner = createPlanner(connectionConfig);
     }
@@ -185,10 +191,9 @@ public class JetSqlService {
             RelOptCluster cluster
     ) {
         SqlToRelConverter.ConfigBuilder sqlToRelConfigBuilder = SqlToRelConverter.configBuilder()
-                .withConvertTableAccess(CONVERTER_CONVERT_TABLE_ACCESS)
-                .withTrimUnusedFields(CONVERTER_TRIM_UNUSED_FIELDS)
-                .withExpand(CONVERTER_EXPAND);
-
+                                                                                 .withConvertTableAccess(CONVERTER_CONVERT_TABLE_ACCESS)
+                                                                                 .withTrimUnusedFields(CONVERTER_TRIM_UNUSED_FIELDS)
+                                                                                 .withExpand(CONVERTER_EXPAND);
         return new SqlToRelConverter(
                 null,
                 validator,
@@ -233,11 +238,11 @@ public class JetSqlService {
      */
     private RelNode convert(SqlNode node) {
         JavaTypeFactory typeFactory = new JetTypeFactory();
-        
+
         Prepare.CatalogReader catalogReader = createCatalogReader(typeFactory, connectionConfig, schema);
         RelOptCluster cluster = createCluster(planner, typeFactory);
         SqlToRelConverter sqlToRelConverter = createSqlToRelConverter(catalogReader, validator, cluster);
-        
+
         // 1. Perform initial conversion.
         RelRoot root = sqlToRelConverter.convertQuery(node, false, true);
 
@@ -251,9 +256,8 @@ public class JetSqlService {
 
         // 4. The side effect of subquery rewrite and decorrelation in Apache Calcite is a number of unnecessary fields,
         // primarily in projections. This steps removes unused fields from the tree.
-        RelNode relTrimmed = sqlToRelConverter.trimUnusedFields(true, relDecorrelated);
 
-        return relTrimmed;
+        return sqlToRelConverter.trimUnusedFields(true, relDecorrelated);
     }
 
     /**

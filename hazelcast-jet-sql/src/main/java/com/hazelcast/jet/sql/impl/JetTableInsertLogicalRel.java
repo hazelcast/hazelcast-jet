@@ -36,6 +36,7 @@ import static com.hazelcast.jet.sql.impl.OptUtils.CONVENTION_LOGICAL;
  * Logical scan.
  */
 public class JetTableInsertLogicalRel extends TableModify implements LogicalRel {
+
     public JetTableInsertLogicalRel(
             RelOptCluster cluster,
             RelTraitSet traitSet,
@@ -65,8 +66,15 @@ public class JetTableInsertLogicalRel extends TableModify implements LogicalRel 
     @Override
     public RelNode copy(RelTraitSet traitSet, List<RelNode> inputs) {
         return new JetTableInsertLogicalRel(
-                getCluster(), traitSet, getTable(), getCatalogReader(),
-                sole(inputs), getOperation(), getUpdateColumnList(),
-                getSourceExpressionList(), isFlattened());
+                getCluster(),
+                traitSet,
+                getTable(),
+                getCatalogReader(),
+                sole(inputs),
+                getOperation(),
+                getUpdateColumnList(),
+                getSourceExpressionList(),
+                isFlattened()
+        );
     }
 }

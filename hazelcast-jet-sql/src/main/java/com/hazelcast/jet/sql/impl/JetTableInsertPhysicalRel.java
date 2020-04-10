@@ -36,6 +36,7 @@ import static com.hazelcast.jet.sql.impl.OptUtils.CONVENTION_PHYSICAL;
  * Logical scan.
  */
 public class JetTableInsertPhysicalRel extends TableModify implements PhysicalRel {
+
     public JetTableInsertPhysicalRel(
             RelOptCluster cluster,
             RelTraitSet traitSet,

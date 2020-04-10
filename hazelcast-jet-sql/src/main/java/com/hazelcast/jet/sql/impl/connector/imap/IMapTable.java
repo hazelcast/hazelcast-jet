@@ -17,6 +17,7 @@
 package com.hazelcast.jet.sql.impl.connector.imap;
 
 import com.hazelcast.jet.sql.SqlConnector;
+import com.hazelcast.jet.sql.impl.connector.SqlWriters.EntryWriter;
 import com.hazelcast.jet.sql.impl.schema.JetTable;
 import com.hazelcast.sql.impl.type.QueryDataType;
 import org.apache.calcite.rel.type.RelDataType;
@@ -37,27 +38,36 @@ public class IMapTable extends JetTable {
 
     private final String mapName;
     private final List<Entry<String, QueryDataType>> fields;
-    private final String keyClassName;
-    private final String valueClassName;
-
     private final List<String> fieldNames;
     private final List<QueryDataType> fieldTypes;
+
+    private final EntryWriter writer;
 
     public IMapTable(
             @Nonnull SqlConnector sqlConnector,
             @Nonnull String mapName,
             @Nonnull List<Entry<String, QueryDataType>> fields,
-            String keyClassName,
-            String valueClassName
+            @Nonnull EntryWriter writer
     ) {
         super(sqlConnector);
         this.mapName = mapName;
         this.fields = fields;
-        this.keyClassName = keyClassName;
-        this.valueClassName = valueClassName;
+        this.fieldNames = toList(fields, Entry::getKey);
+        this.fieldTypes = toList(fields, Entry::getValue);
 
-        fieldNames = toList(fields, Entry::getKey);
-        fieldTypes = toList(fields, Entry::getValue);
+        this.writer = writer;
+    }
+
+    String getMapName() {
+        return mapName;
+    }
+
+    EntryWriter getWriter() {
+        return writer;
+    }
+
+    List<String> getFieldNames() {
+        return fieldNames;
     }
 
     @Override
@@ -70,14 +80,6 @@ public class IMapTable extends JetTable {
         return fieldTypes;
     }
 
-    public String getMapName() {
-        return mapName;
-    }
-
-    public List<Entry<String, QueryDataType>> getFields() {
-        return fields;
-    }
-
     @Override
     public RelDataType getRowType(RelDataTypeFactory typeFactory) {
         RelDataTypeFactory.Builder builder = typeFactory.builder();
@@ -85,7 +87,7 @@ public class IMapTable extends JetTable {
             RelDataType type = typeFactory.createSqlType(SqlTypeName.ANY);
 
             builder.add(field.getKey(), type)
-                .nullable(true);
+                   .nullable(true);
         }
         return builder.build();
     }
@@ -93,17 +95,5 @@ public class IMapTable extends JetTable {
     @Override
     public String toString() {
         return getClass().getSimpleName() + "{mapName=" + mapName + '}';
-    }
-
-    public List<String> getFieldNames() {
-        return fieldNames;
-    }
-
-    public String getKeyClassName() {
-        return keyClassName;
-    }
-
-    public String getValueClassName() {
-        return valueClassName;
     }
 }

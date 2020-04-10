@@ -111,6 +111,10 @@ public final class ReflectionUtils {
         return toPath(name) + ".class";
     }
 
+    public static Class<?> loadClass(String name) {
+        return loadClass(Thread.currentThread().getContextClassLoader(), name);
+    }
+
     public static Class<?> loadClass(ClassLoader classLoader, String name) {
         try {
             return ClassLoaderUtil.loadClass(classLoader, name);
@@ -119,12 +123,24 @@ public final class ReflectionUtils {
         }
     }
 
+    public static <T> T newInstance(String name) {
+        return newInstance(Thread.currentThread().getContextClassLoader(), name);
+    }
+
     public static <T> T newInstance(ClassLoader classLoader, String name) {
         try {
             return ClassLoaderUtil.newInstance(classLoader, name);
         } catch (Exception e) {
             throw sneakyThrow(e);
         }
+    }
+
+    public static Stream<Field> fieldsOf(String name) {
+        return fieldsOf(Thread.currentThread().getContextClassLoader(), name);
+    }
+
+    public static Stream<Field> fieldsOf(ClassLoader classLoader, String name) {
+        return stream(loadClass(classLoader, name).getDeclaredFields());
     }
 
     public static final class Resources {

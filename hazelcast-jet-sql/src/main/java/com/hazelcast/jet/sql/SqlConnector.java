@@ -60,8 +60,8 @@ public interface SqlConnector {
      * according to it.
      * <p>
      * The result is:<ul>
-     *     <li>{@code f0}: the source vertex of the sub-DAG
-     *     <li>{@code f1}: the sink vertex of teh sub-DAG
+     * <li>{@code f0}: the source vertex of the sub-DAG
+     * <li>{@code f1}: the sink vertex of teh sub-DAG
      * </ul>
      * <p>
      * The field indexes in the predicate and projection both refer to indexes
@@ -71,7 +71,7 @@ public interface SqlConnector {
      * <pre>{@code
      *     SELECT b FROM t WHERE c=10
      * }</pre>
-     *
+     * <p>
      * Then the projection will be {@code {1}} and the predicate will be {@code
      * {2}=10}.
      *
@@ -94,9 +94,9 @@ public interface SqlConnector {
      * true}.
      *
      * @param predicateWithParams A predicate with positional parameters which
-     *                           will be provided at runtime as the input to
-     *                           the returned function.
-     * @param projection list of field names to return
+     *                            will be provided at runtime as the input to
+     *                            the returned function.
+     * @param projection          list of field names to return
      */
     @Nullable
     Tuple2<Vertex, Vertex> nestedLoopReader(
@@ -114,6 +114,8 @@ public interface SqlConnector {
             @Nonnull JetTable jetTable);
 
     boolean supportsFullScanReader();
+
     boolean supportsNestedLoopReader();
+
     boolean supportsSink();
 }
