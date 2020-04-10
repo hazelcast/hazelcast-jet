@@ -112,7 +112,7 @@ shadowJar {
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>org.example</groupId>
@@ -130,7 +130,7 @@ shadowJar {
             <artifactId>hazelcast-jet</artifactId>
             <version>4.0</version>
         </dependency>
-         <dependency>
+        <dependency>
             <groupId>com.hazelcast.jet.contrib</groupId>
             <artifactId>pulsar</artifactId>
             <version>0.1-SNAPSHOT</version>
@@ -141,9 +141,8 @@ shadowJar {
             <version>2.5.0</version>
         </dependency>
     </dependencies>
-     <build>
+    <build>
         <plugins>
-            <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>
@@ -159,6 +158,18 @@ shadowJar {
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
                 <version>3.2.2</version>
+                <configuration>
+                    <filters>
+                        <filter>
+                            <artifact>*:*</artifact>
+                            <excludes>
+                                <exclude>META-INF/*.SF</exclude>
+                                <exclude>META-INF/*.DSA</exclude>
+                                <exclude>META-INF/*.RSA</exclude>
+                            </excludes>
+                        </filter>
+                    </filters>
+                </configuration>
                 <executions>
                     <execution>
                         <phase>package</phase>
