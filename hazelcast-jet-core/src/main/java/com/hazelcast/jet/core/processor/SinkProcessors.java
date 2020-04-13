@@ -72,8 +72,10 @@ public final class SinkProcessors {
     }
 
     /**
-     * TODO
+     * Returns a supplier of processors for
+     * {@link Sinks#map(String, FunctionEx, FunctionEx)}.
      */
+    @Nonnull
     public static <T, K, V> ProcessorMetaSupplier writeMapP(
             @Nonnull String mapName,
             @Nonnull FunctionEx<? super T, ? extends K> toKeyFn,
@@ -94,8 +96,10 @@ public final class SinkProcessors {
     }
 
     /**
-     * TODO
+     * Returns a supplier of processors for
+     * {@link Sinks#remoteMap(String, ClientConfig, FunctionEx, FunctionEx)}.
      */
+    @Nonnull
     public static <T, K, V> ProcessorMetaSupplier writeRemoteMapP(
             @Nonnull String mapName,
             @Nonnull ClientConfig clientConfig,

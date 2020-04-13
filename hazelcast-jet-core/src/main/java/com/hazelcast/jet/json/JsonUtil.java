@@ -19,76 +19,55 @@ package com.hazelcast.jet.json;
 import com.hazelcast.core.HazelcastJsonValue;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.internal.json.Json;
+import com.hazelcast.internal.json.JsonArray;
 import com.hazelcast.internal.json.JsonObject;
 import com.hazelcast.internal.json.JsonValue;
 import com.hazelcast.jet.pipeline.BatchStage;
+import com.hazelcast.jet.pipeline.StreamStage;
 
-import java.util.Map.Entry;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
-import static com.hazelcast.jet.Util.entry;
-
-/**
- * todo add proper javadoc
- */
 public final class JsonUtil {
 
     private JsonUtil() {
     }
 
-    /* map to HazelcastJsonValue */
-
-    public static <T> FunctionEx<? super T, Entry<HazelcastJsonValue, HazelcastJsonValue>>
-    mapHazelcastJsonValue(
-            FunctionEx<? super T, String> toKeyFn,
-            FunctionEx<? super T, String> toValueFn
-    ) {
-        return object -> entry(hazelcastJsonValue(toKeyFn.apply(object)), hazelcastJsonValue(toValueFn.apply(object)));
-    }
-
-    public static <K, V> FunctionEx<? super Entry<? super K, ? super V>,
-            Entry<HazelcastJsonValue, HazelcastJsonValue>>
-    mapHazelcastJsonValue() {
-        return mapHazelcastJsonValue(e -> e.getKey().toString(), e -> e.getValue().toString());
-    }
-
-    /* transform to HazelcastJsonValue */
-
-    public static <T> FunctionEx<BatchStage<? extends T>,
-            BatchStage<Entry<HazelcastJsonValue, HazelcastJsonValue>>>
-    transformHazelcastJsonValue(
-            FunctionEx<? super T, String> toKeyFn,
-            FunctionEx<? super T, String> toValueFn
-    ) {
-        return upstream -> upstream.map(mapHazelcastJsonValue(toKeyFn, toValueFn));
-    }
-
-//    public static <K, V> FunctionEx<BatchStage<? extends Entry<? super K, ? super V>>,
-//            BatchStage<Entry<HazelcastJsonValue, HazelcastJsonValue>>>
-//    transformHazelcastJsonValue() {
-//        return upstream -> upstream.map(mapHazelcastJsonValue());
-//    }
-
+    /**
+     * Creates a {@link HazelcastJsonValue} by converting given the object to
+     * string using {@link Object#toString()}.
+     */
     public static <T> HazelcastJsonValue hazelcastJsonValue(T object) {
         return new HazelcastJsonValue(object.toString());
     }
 
-    public static <K, V> FunctionEx<Entry<K, V>, ?> wrapKey(boolean json) {
-        return entry -> json ? hazelcastJsonValue(entry.getKey()) : entry.getKey();
-    }
-
-
-    /* Map and FlatMap Functions*/
-
+    /**
+     * Returns a function which converts the given input to string using
+     * {@link Object#toString()} and parses it to {@link JsonValue}. The
+     * function can be used in mapping stages like
+     * {@link BatchStage#map(FunctionEx)}, {@link StreamStage#map(FunctionEx)}.
+     */
     public static <T> FunctionEx<? super T, JsonValue> jsonValueMapFn() {
         return object -> Json.parse(object.toString());
     }
 
+    /**
+     * Convenience for {@link #jsonValueMapFn()}, which further converts the
+     * {@link JsonValue} to {@link JsonObject}.
+     */
     public static <T> FunctionEx<? super T, JsonObject> jsonObjectMapFn() {
         return object -> Json.parse(object.toString()).asObject();
     }
 
+    /**
+     * Returns a function which converts the given input to string using
+     * {@link Object#toString()} and parses it to {@link JsonValue}. If the
+     * parsed object is a {@link JsonArray}, returns the objects in the array
+     * as a stream of {@link JsonValue}s. Otherwise returns the parsed object
+     * as a stream. The function can be used in flat-mapping stages like
+     * {@link BatchStage#flatMap(FunctionEx)},
+     * {@link StreamStage#flatMap(FunctionEx)}}.
+     */
     public static <T> FunctionEx<? super T, Stream<JsonValue>> jsonValueFlatMapFn() {
         return object -> {
             JsonValue jsonValue = Json.parse(object.toString());
@@ -99,6 +78,10 @@ public final class JsonUtil {
         };
     }
 
+    /**
+     * Convenience for {@link #jsonValueFlatMapFn()}, which further converts the
+     * {@link JsonValue} to {@link JsonObject}.
+     */
     public static <T> FunctionEx<? super T, Stream<JsonObject>> jsonObjectFlatMapFn() {
         return object -> {
             JsonValue jsonValue = Json.parse(object.toString());

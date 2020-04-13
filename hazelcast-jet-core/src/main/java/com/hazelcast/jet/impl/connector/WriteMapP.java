@@ -54,8 +54,8 @@ public final class WriteMapP<T, K, V> extends AsyncHazelcastWriterP {
             int maxParallelAsyncOps,
             String mapName,
             @Nonnull SerializationService serializationService,
-            FunctionEx<? super T, ? extends K> toKeyFn,
-            FunctionEx<? super T, ? extends V> toValueFn
+            @Nonnull FunctionEx<? super T, ? extends K> toKeyFn,
+            @Nonnull FunctionEx<? super T, ? extends V> toValueFn
     ) {
         super(instance, maxParallelAsyncOps);
         this.mapName = mapName;
@@ -135,8 +135,8 @@ public final class WriteMapP<T, K, V> extends AsyncHazelcastWriterP {
 
         public Supplier(
                 String clientXml, String mapName,
-                FunctionEx<? super T, ? extends K> toKeyFn,
-                FunctionEx<? super T, ? extends V> toValueFn
+                @Nonnull FunctionEx<? super T, ? extends K> toKeyFn,
+                @Nonnull FunctionEx<? super T, ? extends V> toValueFn
         ) {
             super(clientXml);
             this.mapName = mapName;

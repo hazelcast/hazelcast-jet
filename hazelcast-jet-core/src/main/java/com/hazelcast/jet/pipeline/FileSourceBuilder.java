@@ -20,7 +20,7 @@ import com.hazelcast.function.BiFunctionEx;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.internal.json.JsonObject;
 import com.hazelcast.jet.core.processor.SourceProcessors;
-import com.hazelcast.jet.json.StreamJsonParser;
+import com.hazelcast.jet.impl.json.StreamJsonParser;
 
 import javax.annotation.Nonnull;
 import java.io.File;

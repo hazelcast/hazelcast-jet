@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.json;
+package com.hazelcast.jet.impl.json;
 
 import com.hazelcast.com.fasterxml.jackson.core.JsonFactory;
 import com.hazelcast.com.fasterxml.jackson.core.JsonParser;
@@ -38,7 +38,19 @@ import static com.hazelcast.jet.impl.util.Util.uncheckCall;
 import static com.hazelcast.jet.impl.util.Util.uncheckRun;
 
 /**
- * todo add proper javadoc
+ * A JSON parser which parses the given {@link Reader input} as a
+ * stream of {@link JsonObject}s. The actual parsing happens while the
+ * returned {@linkplain Stream} is being consumed.
+ * <p>
+ * If the input contains a single object, a stream containing that
+ * single object is returned. Otherwise, parser assumes the input is an
+ * {@link JsonArray array of objects} and returns a stream which
+ * iterates over these objects.
+ * <p>
+ * The parser does not validate the content. If the provided content
+ * contains an invalid JSON the result is unpredictable, it may or may
+ * not throw an exception.When the stream closed, provided
+ * {@code reader} is also closed.
  */
 public class StreamJsonParser implements Spliterator<JsonObject> {
 
@@ -48,18 +60,9 @@ public class StreamJsonParser implements Spliterator<JsonObject> {
 
     private final boolean singleObject;
 
-    public StreamJsonParser(String content) throws IOException {
-        this(FACTORY.createParser(content));
-    }
-
     public StreamJsonParser(Reader reader) throws IOException {
-        this(FACTORY.createParser(reader));
-    }
-
-    StreamJsonParser(JsonParser parser) throws IOException {
-        this.parser = parser;
-        JsonToken jsonToken = parser.nextToken();
-        singleObject = START_OBJECT.equals(jsonToken);
+        this.parser = FACTORY.createParser(reader);
+        singleObject = START_OBJECT.equals(parser.nextToken());
     }
 
     public Stream<JsonObject> stream() {
