@@ -17,6 +17,7 @@
 package com.hazelcast.jet.elastic;
 
 import com.hazelcast.jet.pipeline.BatchSource;
+import com.hazelcast.jet.pipeline.BatchStage;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import org.elasticsearch.action.search.SearchRequest;
@@ -62,7 +63,8 @@ public abstract class CommonElasticSourcesTest extends BaseElasticTest {
                 .mapHitFn(SearchHit::getSourceAsString)
                 .build();
 
-        p.readFrom(source)
+        BatchStage<String> stage = p.readFrom(source);
+        stage
          .writeTo(Sinks.list(results));
 
         submitJob(p);

@@ -39,6 +39,16 @@ import static java.util.Objects.requireNonNull;
  * Builder for Elasticsearch source which reads data from Elasticsearch and
  * converts SearchHits using provided {@code mapHitFn}
  *
+ * Usage:
+ * <pre>{@code
+ * BatchSource<String> source = new ElasticSourceBuilder<String>()
+ *   .clientSupplier(() -> client(host, port))
+ *   .searchRequestSupplier(() -> new SearchRequest("my-index"))
+ *   .mapHitFn(SearchHit::getSourceAsString)
+ *   .build();
+ *
+ * BatchStage<String> stage = p.readFrom(source);
+ * }</pre>
  * @param <T> type of the mapping function from {@link SearchHit} -> T
  * @since 4.1
  */

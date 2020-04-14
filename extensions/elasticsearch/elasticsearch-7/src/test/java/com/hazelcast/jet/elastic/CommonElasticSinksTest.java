@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.elastic;
 
+import com.hazelcast.jet.pipeline.BatchStage;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sink;
 import com.hazelcast.jet.pipeline.test.TestSources;
@@ -28,6 +29,7 @@ import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.support.WriteRequest.RefreshPolicy;
 import org.elasticsearch.search.SearchHit;
 import org.junit.Test;
+import org.testcontainers.shaded.com.google.common.collect.ImmutableMap;
 
 import java.io.IOException;
 import java.io.Serializable;

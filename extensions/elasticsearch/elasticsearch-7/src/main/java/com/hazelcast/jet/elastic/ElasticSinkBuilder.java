@@ -39,11 +39,25 @@ import static java.util.Objects.requireNonNull;
 
 /**
  * Builder for Elasticsearch Sink
+ * <p>
+ * The Sink first maps items from the pipeline using the provided
+ * {@link #mapItemFn(FunctionEx)} and then using {@link BulkRequest}.
+ * <p>
+ * {@link BulkRequest#BulkRequest()} is used by default, it can be
+ * modified by providing custom {@link #bulkRequestSupplier(SupplierEx)}
  *
+ * <p>
+ * Usage:
+ * <pre>{@code
+ * Sink<Map<String, ?>> elasticSink = new ElasticSinkBuilder<Map<String, ?>>()
+ *   .clientSupplier(() -> ElasticClients.client(host, port))
+ *   .mapItemFn(item -> new IndexRequest("my-index").source(item))
+ *   .build();
+ * }</pre>
+ * <p>
  * Requires {@link #clientSupplier(SupplierEx)} and {@link #mapItemFn(FunctionEx)}.
  *
  * @param <T>
- *
  * @since 4.1
  */
 public class ElasticSinkBuilder<T> implements Serializable {
