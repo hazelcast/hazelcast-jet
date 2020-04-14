@@ -27,6 +27,7 @@ import org.apache.calcite.rex.RexLiteral;
 import java.util.List;
 
 public class JetValuesPhysicalRel extends Values implements PhysicalRel {
+
     JetValuesPhysicalRel(RelOptCluster cluster, RelDataType rowType,
                          ImmutableList<ImmutableList<RexLiteral>> tuples, RelTraitSet traitSet) {
         super(cluster, rowType, tuples, traitSet);

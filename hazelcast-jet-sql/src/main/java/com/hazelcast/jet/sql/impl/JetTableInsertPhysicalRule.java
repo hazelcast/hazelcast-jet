@@ -24,6 +24,7 @@ import static com.hazelcast.jet.sql.impl.OptUtils.CONVENTION_LOGICAL;
 import static com.hazelcast.jet.sql.impl.OptUtils.CONVENTION_PHYSICAL;
 
 public final class JetTableInsertPhysicalRule extends ConverterRule {
+
     public static final RelOptRule INSTANCE = new JetTableInsertPhysicalRule();
 
     private JetTableInsertPhysicalRule() {

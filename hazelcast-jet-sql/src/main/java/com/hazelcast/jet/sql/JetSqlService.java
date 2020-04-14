@@ -89,10 +89,14 @@ import java.util.UUID;
 
 public class JetSqlService {
 
-    /** Converter: whether to convert LogicalTableScan to some physical form immediately or not. We do not need this. */
+    /**
+     * Converter: whether to convert LogicalTableScan to some physical form immediately or not. We do not need this.
+     */
     private static final boolean CONVERTER_CONVERT_TABLE_ACCESS = false;
 
-    /** Converter: whether to trim unused fields. */
+    /**
+     * Converter: whether to trim unused fields.
+     */
     private static final boolean CONVERTER_TRIM_UNUSED_FIELDS = true;
 
     /**
@@ -105,7 +109,9 @@ public class JetSqlService {
      */
     private static final boolean CONVERTER_EXPAND = false;
 
-    /** Singleton instance. */
+    /**
+     * Singleton instance.
+     */
     public static final RelMetadataProvider METADATA_PROVIDER_INSTANCE = ChainedRelMetadataProvider.of(ImmutableList
             .of(RowCountMetadata.SOURCE, DefaultRelMetadataProvider.INSTANCE));
 
@@ -188,7 +194,6 @@ public class JetSqlService {
                 .withConvertTableAccess(CONVERTER_CONVERT_TABLE_ACCESS)
                 .withTrimUnusedFields(CONVERTER_TRIM_UNUSED_FIELDS)
                 .withExpand(CONVERTER_EXPAND);
-
         return new SqlToRelConverter(
                 null,
                 validator,
@@ -251,9 +256,8 @@ public class JetSqlService {
 
         // 4. The side effect of subquery rewrite and decorrelation in Apache Calcite is a number of unnecessary fields,
         // primarily in projections. This steps removes unused fields from the tree.
-        RelNode relTrimmed = sqlToRelConverter.trimUnusedFields(true, relDecorrelated);
 
-        return relTrimmed;
+        return sqlToRelConverter.trimUnusedFields(true, relDecorrelated);
     }
 
     /**
