@@ -40,7 +40,6 @@ import org.apache.commons.beanutils.PropertyUtils;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.lang.reflect.InvocationTargetException;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -91,7 +90,9 @@ public class IMapSqlConnector implements SqlConnector {
         }
     };
 
-    private static final ExpressionEvalContext ZERO_ARGUMENTS_CONTEXT = Collections::emptyList;
+    private static final ExpressionEvalContext ZERO_ARGUMENTS_CONTEXT = index -> {
+        throw new IndexOutOfBoundsException("" + index);
+    };
 
     @Override
     public boolean isStream() {
