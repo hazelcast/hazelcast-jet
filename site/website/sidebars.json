@@ -12,7 +12,9 @@
       "tutorials/cdc",
       "tutorials/map-join",
       "tutorials/windowing",
-      "tutorials/python"
+      "tutorials/python",
+      "tutorials/spring-boot",
+      "tutorials/pulsar"
     ],
     "Concepts": [
       "concepts/dag",
@@ -59,6 +61,7 @@
     ],
     "Design Documents": [
       "design-docs/index",
+      "design-docs/009-pulsar-connector",
       "design-docs/006-declarative-serialization",
       "design-docs/005-cdc-sources",
       "design-docs/004-spring-boot-starter",
