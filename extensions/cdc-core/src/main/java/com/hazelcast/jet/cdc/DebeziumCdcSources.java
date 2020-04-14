@@ -30,8 +30,6 @@ import org.apache.kafka.connect.data.Values;
 @EvolvingApi
 public final class DebeziumCdcSources {
 
-    //todo: update main README.md files in cdc modules
-
     private DebeziumCdcSources() {
     }
 

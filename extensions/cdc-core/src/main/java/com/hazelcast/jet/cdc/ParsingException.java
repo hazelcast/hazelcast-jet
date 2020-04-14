@@ -19,7 +19,7 @@ package com.hazelcast.jet.cdc;
 import com.hazelcast.jet.annotation.EvolvingApi;
 
 /**
- * TODO: javadoc
+ * Exception to indicate that parsing CDC JSON data has failed irrecoverably.
  *
  * @since 4.1
  */
@@ -27,14 +27,17 @@ import com.hazelcast.jet.annotation.EvolvingApi;
 public class ParsingException extends Exception {
 
     /**
-     * TODO: javadoc
+     * Constructs a new exception with the specified detail message.
+     * @param message the detail message.
      */
     public ParsingException(String message) {
         super(message);
     }
 
     /**
-     * TODO: javadoc
+     * Constructs a new exception with the specified detail message and <code>Throwable</code> as cause.
+     * @param message the detail message.
+     * @param cause the cause of this exception.
      */
     public ParsingException(String message, Throwable cause) {
         super(message, cause);
