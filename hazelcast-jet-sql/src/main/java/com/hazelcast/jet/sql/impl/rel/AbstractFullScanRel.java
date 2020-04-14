@@ -16,7 +16,7 @@
 
 package com.hazelcast.jet.sql.impl.rel;
 
-import com.hazelcast.jet.sql.impl.connector.imap.IMapTable;
+import com.hazelcast.jet.sql.impl.schema.JetTable;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.plan.RelTraitSet;
@@ -73,8 +73,8 @@ public abstract class AbstractFullScanRel extends TableScan {
     /**
      * @return Unwrapped Hazelcast table.
      */
-    public IMapTable getTableUnwrapped() {
-        return table.unwrap(IMapTable.class);
+    public JetTable getTableUnwrapped() {
+        return table.unwrap(JetTable.class);
     }
 
     @Override

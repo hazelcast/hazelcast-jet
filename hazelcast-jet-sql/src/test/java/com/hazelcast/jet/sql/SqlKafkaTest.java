@@ -36,15 +36,17 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.core.TestUtil.createMap;
 import static com.hazelcast.jet.sql.impl.schema.JetSchema.KAFKA_CONNECTOR;
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyMap;
-import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 
 public class SqlKafkaTest extends SimpleTestInClusterSupport {
 
@@ -72,7 +74,7 @@ public class SqlKafkaTest extends SimpleTestInClusterSupport {
 
     @Before
     public void before() {
-        topicName = randomString().replace('-', '_');
+        topicName = "t_" + randomString().replace('-', '_');
         kafkaTestSupport.createTopic(topicName, INITIAL_PARTITION_COUNT);
 
         List<Entry<String, QueryDataType>> intToStringMapFields = asList(
@@ -93,11 +95,22 @@ public class SqlKafkaTest extends SimpleTestInClusterSupport {
     }
 
     @Test
-    public void stream_kafka() throws Exception {
-        assertRowsAnyOrder(
+    public void stream_kafka() {
+        kafkaTestSupport.produce(topicName, 0, "value-" + 0);
+        kafkaTestSupport.produce(topicName, 1, "value-" + 1);
+        kafkaTestSupport.produce(topicName, 2, "value-" + 2);
+
+        assertRowsEventuallyAnyOrder(
                 "SELECT * FROM " + topicName,
-                asList()
-        );
+                asList(
+                        new Row(0, "value-0"),
+                        new Row(1, "value-1"),
+                        new Row(2, "value-2")));
+    }
+
+    @Test
+    public void write_kafka() throws Exception {
+        fail("todo");
     }
 
     private <K, V> void assertMap(String mapName, String sql, Map<K, V> expected) {
@@ -106,11 +119,14 @@ public class SqlKafkaTest extends SimpleTestInClusterSupport {
         assertEquals(expected, new HashMap<>(instance().getMap(mapName)));
     }
 
-    private void assertRowsAnyOrder(String sql, Collection<Row> expectedRows) throws Exception {
+    private void assertRowsEventuallyAnyOrder(String sql, Collection<Row> expectedRows) {
         Observable<Object[]> observable = sqlService.executeQuery(sql);
+        BlockingQueue<Object[]> rows = new LinkedBlockingQueue<>();
+        observable.addObserver(row -> rows.add(row));
 
-        List<Object[]> result = observable.toFuture(str -> str.collect(toList())).get();
-        assertEquals(new HashSet<>(expectedRows), result.stream().map(Row::new).collect(toSet()));
+        assertTrueEventually(() -> assertEquals(expectedRows.size(), rows.size()));
+
+        assertEquals(new HashSet<>(expectedRows), rows.stream().map(Row::new).collect(toSet()));
     }
 
     private static final class Row {

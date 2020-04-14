@@ -17,12 +17,12 @@
 package com.hazelcast.jet.sql.impl.connector.kafka;
 
 import com.hazelcast.jet.sql.SqlConnector;
+import com.hazelcast.jet.sql.impl.connector.SqlWriters.EntryWriter;
 import com.hazelcast.jet.sql.impl.schema.JetTable;
 import com.hazelcast.sql.impl.type.QueryDataType;
 import org.apache.calcite.schema.Table;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.Properties;
@@ -33,23 +33,19 @@ import java.util.Properties;
 public class KafkaTable extends JetTable {
 
     private final String topicName;
-    private final String keyClassName;
-    private final String valueClassName;
-
+    private final EntryWriter writer;
     private final Properties kafkaProperties;
 
     public KafkaTable(
             @Nonnull SqlConnector sqlConnector,
             @Nonnull String topicName,
             @Nonnull List<Entry<String, QueryDataType>> fields,
-            @Nullable String keyClassName,
-            @Nullable String valueClassName,
+            @Nonnull EntryWriter writer,
             @Nonnull Properties kafkaProperties
     ) {
         super(sqlConnector, fields);
         this.topicName = topicName;
-        this.keyClassName = keyClassName;
-        this.valueClassName = valueClassName;
+        this.writer = writer;
         this.kafkaProperties = kafkaProperties;
     }
 
@@ -67,15 +63,11 @@ public class KafkaTable extends JetTable {
         return getClass().getSimpleName() + "{mapName=" + topicName + '}';
     }
 
-    public String getKeyClassName() {
-        return keyClassName;
-    }
-
-    public String getValueClassName() {
-        return valueClassName;
-    }
-
     public Properties getKafkaProperties() {
         return kafkaProperties;
+    }
+
+    public EntryWriter getWriter() {
+        return writer;
     }
 }

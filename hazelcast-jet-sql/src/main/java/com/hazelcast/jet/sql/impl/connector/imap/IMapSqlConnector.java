@@ -44,10 +44,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import static com.hazelcast.function.FunctionEx.identity;
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.core.Edge.between;
-import static com.hazelcast.jet.core.processor.Processors.mapUsingServiceP;
+import static com.hazelcast.jet.core.processor.Processors.mapP;
 import static com.hazelcast.jet.core.processor.SourceProcessors.readMapP;
 import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
@@ -224,8 +223,7 @@ public class IMapSqlConnector implements SqlConnector {
         IMapTable table = (IMapTable) jetTable;
 
         EntryWriter writer = table.getWriter();
-        Vertex vStart = dag.newVertex("project",
-                mapUsingServiceP(ServiceFactories.nonSharedService(identity()), writer));
+        Vertex vStart = dag.newVertex("project", mapP(writer));
 
         String mapName = table.getMapName();
         Vertex vEnd = dag.newVertex("mapSink", SinkProcessors.writeMapP(mapName));

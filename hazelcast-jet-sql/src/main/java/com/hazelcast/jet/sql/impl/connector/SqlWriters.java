@@ -16,9 +16,8 @@
 
 package com.hazelcast.jet.sql.impl.connector;
 
-import com.hazelcast.function.BiFunctionEx;
+import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.JetException;
-import com.hazelcast.jet.core.Processor.Context;
 import com.hazelcast.sql.impl.type.QueryDataType;
 import org.apache.calcite.util.Pair;
 
@@ -107,7 +106,7 @@ public class SqlWriters {
                 .collect(toMap(PropertyDescriptor::getName, PropertyDescriptor::getPropertyType));
     }
 
-    public static class EntryWriter implements BiFunctionEx<Context, Object[], Entry<Object, Object>> {
+    public static class EntryWriter implements FunctionEx<Object[], Entry<Object, Object>> {
 
         private final int wholeKeyIndex;
         private final String keyClassName;
@@ -135,7 +134,7 @@ public class SqlWriters {
         }
 
         @Override
-        public Entry<Object, Object> applyEx(Context context, Object[] row) throws Exception {
+        public Entry<Object, Object> applyEx(Object[] row) throws Exception {
             assert row.length == fieldClassNames.length;
 
             Object key = wholeKeyIndex >= 0 ? getToConverter(fieldClassNames[wholeKeyIndex]).convert(row[wholeKeyIndex]) :

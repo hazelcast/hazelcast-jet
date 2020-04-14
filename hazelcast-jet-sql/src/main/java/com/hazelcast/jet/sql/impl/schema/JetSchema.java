@@ -19,6 +19,7 @@ package com.hazelcast.jet.sql.impl.schema;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.sql.SqlConnector;
 import com.hazelcast.jet.sql.impl.connector.imap.IMapSqlConnector;
+import com.hazelcast.jet.sql.impl.connector.kafka.KafkaSqlConnector;
 import com.hazelcast.sql.impl.type.QueryDataType;
 import org.apache.calcite.schema.Table;
 import org.apache.calcite.schema.impl.AbstractSchema;
@@ -68,7 +69,8 @@ public class JetSchema extends AbstractSchema {
         this.instance = instance;
         // insert the IMap connector and local cluster server by default
         createConnector(IMAP_CONNECTOR, new IMapSqlConnector());
-        createConnector(KAFKA_CONNECTOR, new IMapSqlConnector());
+        // TODO KafkaSqlConnector is an optional dependency, don't add hard dependency on it
+        createConnector(KAFKA_CONNECTOR, new KafkaSqlConnector());
         createServer(IMAP_LOCAL_SERVER, IMAP_CONNECTOR, emptyMap());
     }
 

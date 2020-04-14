@@ -152,15 +152,15 @@ public class KafkaTestSupport {
         );
     }
 
-    Future<RecordMetadata> produce(String topic, Integer key, String value) {
+    public Future<RecordMetadata> produce(String topic, Integer key, String value) {
         return getProducer().send(new ProducerRecord<>(topic, key, value));
     }
 
-    Future<RecordMetadata> produce(String topic, int partition, Long timestamp, Integer key, String value) {
+    public Future<RecordMetadata> produce(String topic, int partition, Long timestamp, Integer key, String value) {
         return getProducer().send(new ProducerRecord<>(topic, partition, timestamp, key, value));
     }
 
-    void resetProducer() {
+    public void resetProducer() {
         this.producer = null;
     }
 
