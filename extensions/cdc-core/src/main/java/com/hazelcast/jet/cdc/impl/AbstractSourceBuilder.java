@@ -18,7 +18,6 @@ package com.hazelcast.jet.cdc.impl;
 
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.cdc.ChangeEvent;
-import com.hazelcast.jet.cdc.HazelcastListDatabaseHistory;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.pipeline.SourceBuilder;
 import com.hazelcast.jet.pipeline.StreamSource;

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.cdc;
+package com.hazelcast.jet.cdc.impl;
 
 import com.hazelcast.collection.IList;
 import com.hazelcast.core.HazelcastInstance;
