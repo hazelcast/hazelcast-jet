@@ -63,7 +63,13 @@ class ChangeEventElementJsonImpl implements ChangeEventElement, IdentifiedDataSe
 
     @Override
     @Nonnull
-    public Optional<Object> getObject(String key) throws ParsingException {
+    public Optional<ChangeEventElement> getChild(String key) throws ParsingException {
+        return JsonParsing.getChild(node(), key).map(ChangeEventElementJsonImpl::new);
+    }
+
+    @Override
+    @Nonnull
+    public Optional<Object> getRaw(String key) throws ParsingException {
         return JsonParsing.getObject(node(), key);
     }
 

@@ -38,12 +38,13 @@ public interface ChangeEventElement {
      * Maps the entire element to an instance of the specified class.
      * <p>
      * For databases providing standard JSON syntax, parsing it is based
-     * on <a href="https://github.com/FasterXML/jackson-databind">Jackson Databind</a>,
-     * in particular on the Jackson {@code ObjectMapper}, so the
-     * parameter class needs to be annotated accordingly.
+     * on <a
+     * href="https://github.com/FasterXML/jackson-databind">Jackson
+     * Databind</a>, in particular on the Jackson {@code ObjectMapper},
+     * so the parameter class needs to be annotated accordingly.
      *
-     * @return optional {@code Object} value, which is empty only if
-     * the specified key is not found or if it's value is null
+     * @return optional {@code Object} value, which is empty only if the
+     * specified key is not found or if it's value is null
      * @throws ParsingException if the whole structure containing this
      *                          element is unparsable or the mapping
      *                          fails to produce a result
@@ -52,32 +53,26 @@ public interface ChangeEventElement {
     <T> T mapToObj(Class<T> clazz) throws ParsingException;
 
     /**
-     * Best effort method for finding the specified (top level) key in
-     * the underlying JSON message and returning its value as is,
-     * without attempting to parse it in any way. This means that it
-     * can return objects specific to the parsing used by internal
-     * implementations, so Jackson classes (mostly {@link JsonNode}
-     * implementations).
-     * <p>
-     * Should not be used normally, is intended as a fallback in case
-     * regular parsing fails for some reason.
+     * Returns the value of the specified (top level) key in the
+     * underlying JSON message as a child {@code ChangeEventElement}.
      *
-     * @throws ParsingException if the whole structure containing this
-     *                          element or the element itself is unparsable
+     * @return optional {@code ChangeEventElement}, which is empty if
+     * the specified key is not found or if the value is null.
+     * @throws ParsingException if the underlying JSON message, or any
+     *                          of its parent messages are unparsable
      */
-    @Nonnull
-    Optional<Object> getObject(String key) throws ParsingException;
+    Optional<ChangeEventElement> getChild(String key) throws ParsingException;
 
     /**
-     * Best effort method for finding the specified (top level) key in
-     * the underlying JSON message and returning its value as a
-     * {@link String}, but only as long as the value is indeed just a
-     * simple value. So numbers, strings, booleans will be converted,
-     * but complex structures like arrays and collections won't.
+     * Returns the value of the specified (top level) key in the
+     * underlying JSON message as a {@link String}, but only as long as
+     * the value is indeed a simple text value. So numbers, booleans,
+     * complex structures like arrays and collections won't be handled
+     * (returned {@code Optional} will be empty).
      *
      * @return optional {@code String} value, which is empty if the
      * specified key is not found or if the value is null or doesn't
-     * represent a single value.
+     * represent a simple text value.
      * @throws ParsingException if the underlying JSON message, or any
      *                          of its parent messages are unparsable
      */
@@ -85,14 +80,16 @@ public interface ChangeEventElement {
     Optional<String> getString(String key) throws ParsingException;
 
     /**
-     * Best effort method for finding the specified (top level) key in
-     * the underlying JSON message and returning its value in the form
-     * of an {@link Integer}, but only as long as the value is indeed
-     * a number or a string that can be parsed into one.
+     * Returns the value of the specified (top level) key in the
+     * underlying JSON message as an {@link Integer}, but only as long
+     * as the value is indeed a number. Various number types (like
+     * floating point, integer and so on) will all be handled, but
+     * strings won't be attempted to be parsed as numbers (returned
+     * {@code Optional} will be empty).
      *
      * @return optional {@code Integer} value, which is empty if the
      * specified key is not found or if the value is null or if it isn't
-     * a number or a string that can be parsed as a number
+     * a number
      * @throws ParsingException if the underlying JSON message, or any
      *                          of its parent messages are unparsable
      */
@@ -100,14 +97,16 @@ public interface ChangeEventElement {
     Optional<Integer> getInteger(String key) throws ParsingException;
 
     /**
-     * Best effort method for finding the specified (top level) key in
-     * the underlying JSON message and returning its value in the form
-     * of a {@link Long}, but only as long as the value is indeed
-     * a number or a string that can be parsed into one.
+     * Returns the value of the specified (top level) key in the
+     * underlying JSON message as an {@link Long}, but only as long as
+     * the value is indeed a number. Various number types (like floating
+     * point, integer and so on) will all be handled, but strings won't
+     * be attempted to be parsed as numbers (returned {@code Optional}
+     * will be empty).
      *
      * @return optional {@code Long} value, which is empty if the
      * specified key is not found or if the value is null or if it isn't
-     * a number or a string that can be parsed as a number
+     * a number
      * @throws ParsingException if the underlying JSON message, or any
      *                          of its parent messages are unparsable
      */
@@ -115,14 +114,16 @@ public interface ChangeEventElement {
     Optional<Long> getLong(String key) throws ParsingException;
 
     /**
-     * Best effort method for finding the specified (top level) key in
-     * the underlying JSON message and returning its value in the form
-     * of a {@link Double}, but only as long as the value is indeed
-     * a number or a string that can be parsed into one.
+     * Returns the value of the specified (top level) key in the
+     * underlying JSON message as an {@link Double}, but only as long as
+     * the value is indeed a number. Various number types (like floating
+     * point, integer and so on) will all be handled, but strings won't
+     * be attempted to be parsed as numbers (returned {@code Optional}
+     * will be empty).
      *
      * @return optional {@code Double} value, which is empty if the
      * specified key is not found or if the value is null or if it isn't
-     * a number or a string that can be parsed as a number
+     * a number
      * @throws ParsingException if the underlying JSON message, or any
      *                          of its parent messages are unparsable
      */
@@ -130,14 +131,14 @@ public interface ChangeEventElement {
     Optional<Double> getDouble(String key) throws ParsingException;
 
     /**
-     * Best effort method for finding the specified (top level) key in
-     * the underlying JSON message and returning its value in the form
-     * of a {@link Boolean}, but only as long as the value is indeed
-     * a boolean or a string that can be parsed into one.
+     * Returns the value of the specified (top level) key in the
+     * underlying JSON message as an {@link Boolean}, but only as long
+     * as the value is indeed of a boolean type (so not a string, not a
+     * number or any other complex structures).
      *
      * @return optional {@code Boolean} value, which is empty if the
      * specified key is not found or if the value is null or if it isn't
-     * a boolean or a string that can be parsed as a boolean
+     * a boolean
      * @throws ParsingException if the underlying JSON message, or any
      *                          of its parent messages are unparsable
      */
@@ -145,16 +146,15 @@ public interface ChangeEventElement {
     Optional<Boolean> getBoolean(String key) throws ParsingException;
 
     /**
-     * Best effort method for finding the specified (top level) key in
-     * the underlying JSON message and returning its value a
-     * {@link List} of optional values of a certain type.
+     * Returns the value of the specified (top level) key in the
+     * underlying JSON message as a {@link List} of optional values of a
+     * certain type.
      *
      * @param <T> type of elements in the list
      * @return optional {@code List} value, which is empty only if the
      * specified key is not found or if the value is null or not a
-     * collection type; the optional {@code T} elements in the list
-     * are empty if they are null or can't be parsed as the specified
-     * type
+     * collection type; the optional {@code T} elements in the list are
+     * empty if they are null or aren't of the specified type
      * @throws ParsingException if the underlying JSON message, or any
      *                          of its parent messages are unparsable
      */
@@ -162,9 +162,26 @@ public interface ChangeEventElement {
     <T> Optional<List<Optional<T>>> getList(String key, Class<T> clazz) throws ParsingException;
 
     /**
+     * Returns the value of the specified (top level) key in the
+     * underlying JSON message AS IS, without attempting to parse it in
+     * any way. This means that it can return objects specific to the
+     * parsing used by internal implementations, so Jackson classes
+     * (mostly {@link JsonNode} implementations).
+     * <p>
+     * Should not be used normally, is intended as a fallback in case
+     * regular parsing fails for some reason.
+     *
+     * @throws ParsingException if the whole structure containing this
+     *                          element or the element itself is
+     *                          unparsable
+     */
+    @Nonnull
+    Optional<Object> getRaw(String key) throws ParsingException;
+
+    /**
      * Returns raw JSON string which the content of this event element
-     * is based on. To be used when parsing fails for some reason
-     * (for example on some untested DB-connector version combination).
+     * is based on. To be used when parsing fails for some reason (for
+     * example on some untested DB-connector version combination).
      */
     @Nonnull
     String asJson();
