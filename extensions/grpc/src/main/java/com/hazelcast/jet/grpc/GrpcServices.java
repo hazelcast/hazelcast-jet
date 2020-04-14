@@ -30,6 +30,7 @@ import io.grpc.stub.StreamObserver;
 
 import javax.annotation.Nonnull;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Provides {@link ServiceFactory} implementations for calling gRPC
@@ -107,7 +108,7 @@ public final class GrpcServices {
                 .withCreateContextFn(ctx -> channelFn.get().build())
                 .withCreateServiceFn((ctx, channel) -> new UnaryService<>(channel, callStubFn))
                 .withDestroyServiceFn(UnaryService::destroy)
-                .withDestroyContextFn(ManagedChannel::shutdown);
+                .withDestroyContextFn(channel -> channel.shutdown().awaitTermination(5, TimeUnit.SECONDS));
     }
 
     /**
@@ -170,6 +171,6 @@ public final class GrpcServices {
                 .withCreateContextFn(ctx -> channelFn.get().build())
                 .withCreateServiceFn((ctx, channel) -> new BidirectionalStreamingService<>(ctx, channel, callStubFn))
                 .withDestroyServiceFn(BidirectionalStreamingService::destroy)
-                .withDestroyContextFn(ManagedChannel::shutdown);
+                .withDestroyContextFn(channel -> channel.shutdown().awaitTermination(5, TimeUnit.SECONDS));
     }
 }
