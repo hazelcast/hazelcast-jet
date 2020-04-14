@@ -39,6 +39,7 @@ import java.util.Objects;
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.core.TestUtil.createMap;
 import static com.hazelcast.jet.sql.impl.connector.imap.IMapSqlConnector.TO_VALUE_CLASS;
+import static com.hazelcast.jet.sql.impl.schema.JetSchema.KAFKA_CONNECTOR;
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyMap;
 import static java.util.Collections.singletonList;
@@ -197,6 +198,13 @@ public class SqlTest extends SimpleTestInClusterSupport {
         assertMap(
                 INT_TO_STRING_MAP_SINK, "INSERT INTO " + INT_TO_STRING_MAP_SINK + "(__key, this) values (1, 1)",
                 createMap(1, "1"));
+    }
+
+    @Test
+    public void stream_kafka() {
+        sqlService.createServer("test", KAFKA_CONNECTOR, createMap(
+
+        ));
     }
 
     private <K, V> void assertMap(String mapName, String sql, Map<K, V> expected) {

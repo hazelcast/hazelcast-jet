@@ -44,7 +44,12 @@ public class JetSchema extends AbstractSchema {
      * The name under which the IMap connector is registered. Use as an
      * argument to {@link #createServer} when connecting to remote cluster.
      */
-    public static final String IMAP_CONNECTOR_NAME = "imap";
+    public static final String IMAP_CONNECTOR = "imap";
+    /**
+     * The name under which the Apache Kafka connector is registered. Use as an
+     * argument to {@link #createServer} when connecting to a broker.
+     */
+    public static final String KAFKA_CONNECTOR = "kafka";
 
     /** The server name under which the local hazelcast IMap connector registered. */
     public static final String IMAP_LOCAL_SERVER = "local_imap";
@@ -62,8 +67,9 @@ public class JetSchema extends AbstractSchema {
     public JetSchema(JetInstance instance) {
         this.instance = instance;
         // insert the IMap connector and local cluster server by default
-        createConnector(IMAP_CONNECTOR_NAME, new IMapSqlConnector());
-        createServer(IMAP_LOCAL_SERVER, IMAP_CONNECTOR_NAME, emptyMap());
+        createConnector(IMAP_CONNECTOR, new IMapSqlConnector());
+        createConnector(KAFKA_CONNECTOR, new IMapSqlConnector());
+        createServer(IMAP_LOCAL_SERVER, IMAP_CONNECTOR, emptyMap());
     }
 
     @Override

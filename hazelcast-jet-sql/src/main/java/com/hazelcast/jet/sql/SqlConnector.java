@@ -79,12 +79,16 @@ public interface SqlConnector {
      * @param projection list of field names to return
      */
     @Nullable
-    Vertex fullScanReader(
+    default Vertex fullScanReader(
             @Nonnull DAG dag,
             @Nonnull JetTable jetTable,
             @Nullable String timestampField,
             @Nonnull Expression<Boolean> predicate,
-            @Nonnull List<Expression<?>> projection);
+            @Nonnull List<Expression<?>> projection) {
+        assert !supportsFullScanReader();
+        throw new UnsupportedOperationException("Full scan reader not supported for " + getClass().getName());
+
+    }
 
     /**
      * Returns a supplier for a reader that reads a set of records for the
@@ -99,23 +103,35 @@ public interface SqlConnector {
      * @param projection          list of field names to return
      */
     @Nullable
-    Tuple2<Vertex, Vertex> nestedLoopReader(
+    default Tuple2<Vertex, Vertex> nestedLoopReader(
             @Nonnull DAG dag,
             @Nonnull JetTable jetTable,
             @Nonnull RexNode predicateWithParams,
-            @Nonnull List<String> projection);
+            @Nonnull List<String> projection) {
+        assert !supportsNestedLoopReader();
+        throw new UnsupportedOperationException("Nested loop reader not supported for " + getClass().getName());
+    }
 
     /**
      * Returns the supplier for the sink processor.
      */
     @Nullable
-    Vertex sink(
+    default Vertex sink(
             @Nonnull DAG dag,
-            @Nonnull JetTable jetTable);
+            @Nonnull JetTable jetTable) {
+        assert !supportsSink();
+        throw new UnsupportedOperationException("Sink not supported for " + getClass().getName());
+    }
 
-    boolean supportsFullScanReader();
+    default boolean supportsFullScanReader() {
+        return false;
+}
 
-    boolean supportsNestedLoopReader();
+    default boolean supportsNestedLoopReader() {
+        return false;
+    }
 
-    boolean supportsSink();
+    default boolean supportsSink() {
+        return false;
+    }
 }
