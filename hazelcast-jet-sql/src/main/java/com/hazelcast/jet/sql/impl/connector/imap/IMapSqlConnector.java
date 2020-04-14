@@ -135,7 +135,7 @@ public class IMapSqlConnector implements SqlConnector {
             @Nonnull List<Expression<?>> projections
     ) {
         IMapTable table = (IMapTable) jetTable;
-        List<QueryDataType> fieldTypes = table.getPhysicalRowType();
+        List<QueryDataType> fieldTypes = table.getFieldTypes();
 
         // convert the projection
         List<String> fieldNames = toList(table.getFieldNames(), fieldName -> {

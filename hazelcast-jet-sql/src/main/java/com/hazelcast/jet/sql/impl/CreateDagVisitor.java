@@ -54,7 +54,7 @@ public class CreateDagVisitor {
 
     public void onConnectorFullScan(FullScanPhysicalRel rel) {
         JetTable table = rel.getTableUnwrapped();
-        PlanNodeSchema schema = new PlanNodeSchema(table.getPhysicalRowType());
+        PlanNodeSchema schema = new PlanNodeSchema(table.getFieldTypes());
         Expression<Boolean> predicate = convertFilter(schema, rel.getFilter());
         List<Expression<?>> projection = rel.getProjection().stream()
                                             .map(projectNode -> convertExpression(schema, projectNode, rel.getProjection().size()))

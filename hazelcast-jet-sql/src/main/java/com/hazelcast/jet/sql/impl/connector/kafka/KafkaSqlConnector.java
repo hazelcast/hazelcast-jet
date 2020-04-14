@@ -144,7 +144,7 @@ public class KafkaSqlConnector implements SqlConnector {
         KafkaTable table = (KafkaTable) jetTable;
         String topicName = table.getTopicName();
 
-        List<QueryDataType> fieldTypes = table.getPhysicalRowType();
+        List<QueryDataType> fieldTypes = table.getFieldTypes();
 
         // convert the projection
         List<String> fieldNames = toList(table.getFieldNames(), fieldName -> {
