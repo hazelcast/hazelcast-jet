@@ -16,17 +16,21 @@
 
 package com.hazelcast.jet.cdc.mysql;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.databind.DeserializationContext;
+import com.fasterxml.jackson.databind.JsonDeserializer;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.accumulator.LongAccumulator;
+import com.hazelcast.jet.cdc.AbstractIntegrationTest;
 import com.hazelcast.jet.cdc.ChangeEvent;
 import com.hazelcast.jet.cdc.ChangeEventElement;
 import com.hazelcast.jet.cdc.ChangeEventValue;
 import com.hazelcast.jet.cdc.Operation;
 import com.hazelcast.jet.cdc.ParsingException;
-import com.hazelcast.jet.cdc.mysql.data.Customer;
-import com.hazelcast.jet.cdc.mysql.data.Order;
-import com.hazelcast.jet.cdc.mysql.data.OrderPrimaryKey;
 import com.hazelcast.jet.core.JetTestSupport;
 import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.pipeline.Pipeline;
@@ -38,11 +42,14 @@ import org.junit.Test;
 import org.testcontainers.containers.MySQLContainer;
 
 import javax.annotation.Nonnull;
+import java.io.IOException;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.util.Date;
+import java.util.Objects;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 
 import static com.hazelcast.jet.cdc.Operation.DELETE;
 import static com.hazelcast.jet.pipeline.test.AssertionSinks.assertCollectedEventually;
@@ -197,4 +204,134 @@ public class MySqlIntegrationTest extends AbstractIntegrationTest {
         }
     }
 
+    private static class Customer {
+
+        @JsonProperty("id")
+        public int id;
+
+        @JsonProperty("first_name")
+        public String firstName;
+
+        @JsonProperty("last_name")
+        public String lastName;
+
+        @JsonProperty("email")
+        public String email;
+
+        Customer() {
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(email, firstName, id, lastName);
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (this == obj) {
+                return true;
+            }
+            if (obj == null || getClass() != obj.getClass()) {
+                return false;
+            }
+            Customer other = (Customer) obj;
+            return id == other.id
+                    && Objects.equals(firstName, other.firstName)
+                    && Objects.equals(lastName, other.lastName)
+                    && Objects.equals(email, other.email);
+        }
+
+        @Override
+        public String toString() {
+            return "Customer {id=" + id + ", firstName=" + firstName + ", lastName=" + lastName + ", email=" + email + '}';
+        }
+    }
+
+    @JsonIgnoreProperties({"purchaser"})
+    private static class Order {
+
+        @JsonProperty("order_number")
+        public int orderNumber;
+
+        @JsonDeserialize(using = DateHandler.class)
+        @JsonProperty("order_date")
+        public Date orderDate;
+
+        @JsonProperty("quantity")
+        public int quantity;
+
+        @JsonProperty("product_id")
+        public int productId;
+
+        Order() {
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(orderNumber, orderDate, quantity, productId);
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (this == obj) {
+                return true;
+            }
+            if (obj == null || getClass() != obj.getClass()) {
+                return false;
+            }
+            Order other = (Order) obj;
+            return orderNumber == other.orderNumber
+                    && Objects.equals(orderDate, other.orderDate)
+                    && Objects.equals(quantity, other.quantity)
+                    && Objects.equals(productId, other.productId);
+        }
+
+        @Override
+        public String toString() {
+            return "Order {orderNumber=" + orderNumber + ", orderDate=" + orderDate + ", quantity=" + quantity +
+                    ", productId=" + productId + '}';
+        }
+
+        public static class DateHandler extends JsonDeserializer<Date> {
+
+            @Override
+            public Date deserialize(JsonParser parser, DeserializationContext ctxt) throws IOException {
+                long days = parser.getLongValue();
+                try {
+                    return new Date(TimeUnit.DAYS.toMillis(days));
+                } catch (Exception e) {
+                    return null;
+                }
+            }
+        }
+
+    }
+
+    private static class OrderPrimaryKey {
+
+        @JsonProperty("order_number")
+        public int id;
+
+        @Override
+        public int hashCode() {
+            return id;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (this == obj) {
+                return true;
+            }
+            if (obj == null || getClass() != obj.getClass()) {
+                return false;
+            }
+            OrderPrimaryKey other = (OrderPrimaryKey) obj;
+            return id == other.id;
+        }
+
+        @Override
+        public String toString() {
+            return "OrderPrimaryKey {id=" + id + '}';
+        }
+    }
 }

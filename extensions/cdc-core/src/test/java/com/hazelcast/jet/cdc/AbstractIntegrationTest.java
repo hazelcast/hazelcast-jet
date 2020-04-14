@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.cdc.mysql;
+package com.hazelcast.jet.cdc;
 
 import com.hazelcast.function.ConsumerEx;
 import com.hazelcast.function.SupplierEx;

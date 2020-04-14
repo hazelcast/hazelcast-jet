@@ -14,17 +14,12 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.cdc.mysql;
+package com.hazelcast.jet.cdc;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.accumulator.LongAccumulator;
-import com.hazelcast.jet.cdc.ChangeEvent;
-import com.hazelcast.jet.cdc.ChangeEventElement;
-import com.hazelcast.jet.cdc.ChangeEventValue;
-import com.hazelcast.jet.cdc.DebeziumCdcSources;
-import com.hazelcast.jet.cdc.Operation;
-import com.hazelcast.jet.cdc.mysql.data.Customer;
 import com.hazelcast.jet.core.JetTestSupport;
 import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.pipeline.Pipeline;
@@ -36,6 +31,7 @@ import org.testcontainers.containers.MySQLContainer;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.util.Objects;
 import java.util.concurrent.CompletionException;
 
 import static com.hazelcast.jet.cdc.Operation.DELETE;
@@ -132,5 +128,49 @@ public class GenericDebeziumIntegrationTest extends AbstractIntegrationTest {
         } finally {
             container.stop();
         }
+    }
+
+    private static class Customer {
+
+        @JsonProperty("id")
+        public int id;
+
+        @JsonProperty("first_name")
+        public String firstName;
+
+        @JsonProperty("last_name")
+        public String lastName;
+
+        @JsonProperty("email")
+        public String email;
+
+        Customer() {
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(email, firstName, id, lastName);
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (this == obj) {
+                return true;
+            }
+            if (obj == null || getClass() != obj.getClass()) {
+                return false;
+            }
+            Customer other = (Customer) obj;
+            return id == other.id
+                    && Objects.equals(firstName, other.firstName)
+                    && Objects.equals(lastName, other.lastName)
+                    && Objects.equals(email, other.email);
+        }
+
+        @Override
+        public String toString() {
+            return "Customer {id=" + id + ", firstName=" + firstName + ", lastName=" + lastName + ", email=" + email + '}';
+        }
+
     }
 }
