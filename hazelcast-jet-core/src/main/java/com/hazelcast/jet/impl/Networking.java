@@ -80,7 +80,7 @@ public class Networking {
             handleStreamPacket(packet);
             return;
         }
-        handleFlowControlPacket(packet.getConn().getEndPoint(), packet.toByteArray());
+        handleFlowControlPacket(packet.getConn().getRemoteAddress(), packet.toByteArray());
     }
 
     private void handleStreamPacket(Packet packet) {
@@ -95,7 +95,7 @@ public class Networking {
         offset += Integer.BYTES;
 
         ExecutionContext executionContext = jobExecutionService.getExecutionContext(executionId);
-        executionContext.handlePacket(vertexId, ordinal, packet.getConn().getEndPoint(), payload, offset);
+        executionContext.handlePacket(vertexId, ordinal, packet.getConn().getRemoteAddress(), payload, offset);
     }
 
     public static byte[] createStreamPacketHeader(NodeEngine nodeEngine,
