@@ -169,6 +169,13 @@ public class SqlTest extends SimpleTestInClusterSupport {
     }
 
     @Test
+    public void selectWithoutFrom_unicode() throws Exception {
+        assertRowsAnyOrder(
+                "SELECT '喷气式飞机'",
+                singletonList(new Row("喷气式飞机")));
+    }
+
+    @Test
     public void insert() {
         assertMap(
                 INT_TO_STRING_MAP_SINK, "INSERT INTO " + INT_TO_STRING_MAP_SINK + " SELECT * FROM " + INT_TO_STRING_MAP_SRC,
@@ -179,10 +186,10 @@ public class SqlTest extends SimpleTestInClusterSupport {
     }
 
     @Test
-    public void selectWithoutFrom_unicode() throws Exception {
-        assertRowsAnyOrder(
-                "SELECT '喷气式飞机'",
-                singletonList(new Row("喷气式飞机")));
+    public void insert_values() {
+        assertMap(
+                INT_TO_STRING_MAP_SINK, "INSERT INTO " + INT_TO_STRING_MAP_SINK + "(this, __key) values (2, 1)",
+                createMap(1, "2"));
     }
 
     @Test
@@ -191,13 +198,6 @@ public class SqlTest extends SimpleTestInClusterSupport {
                 PERSON_MAP_SINK, "INSERT INTO " + PERSON_MAP_SINK + " VALUES (1, 'Foo', 25)",
                 createMap(
                         1, new Person("Foo", 25)));
-    }
-
-    @Test
-    public void insert_values() {
-        assertMap(
-                INT_TO_STRING_MAP_SINK, "INSERT INTO " + INT_TO_STRING_MAP_SINK + "(__key, this) values (1, 1)",
-                createMap(1, "1"));
     }
 
     @Test
@@ -250,6 +250,7 @@ public class SqlTest extends SimpleTestInClusterSupport {
         }
     }
 
+    @SuppressWarnings("unused")
     public static final class Person implements Serializable {
         private String name;
         private int age;

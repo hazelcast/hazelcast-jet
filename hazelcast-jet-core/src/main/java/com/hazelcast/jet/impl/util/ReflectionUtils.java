@@ -135,14 +135,6 @@ public final class ReflectionUtils {
         }
     }
 
-    public static Stream<Field> fieldsOf(String name) {
-        return fieldsOf(Thread.currentThread().getContextClassLoader(), name);
-    }
-
-    public static Stream<Field> fieldsOf(ClassLoader classLoader, String name) {
-        return stream(loadClass(classLoader, name).getDeclaredFields());
-    }
-
     public static final class Resources {
 
         private final Collection<ClassResource> classes;

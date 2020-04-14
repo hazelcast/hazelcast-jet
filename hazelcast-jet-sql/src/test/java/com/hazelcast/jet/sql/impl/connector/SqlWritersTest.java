@@ -27,7 +27,6 @@ import static com.hazelcast.query.QueryConstants.THIS_ATTRIBUTE_NAME;
 import static com.hazelcast.sql.impl.type.QueryDataType.BIGINT;
 import static com.hazelcast.sql.impl.type.QueryDataType.INT;
 import static com.hazelcast.sql.impl.type.QueryDataType.OBJECT;
-import static com.hazelcast.sql.impl.type.QueryDataType.VARCHAR;
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
@@ -35,8 +34,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public class SqlWritersTest {
-
-    private static final String FIELD_NAME = "field";
 
     @Test
     public void when_createsEntryWriterWithoutKey_then_throws() {
@@ -79,17 +76,6 @@ public class SqlWritersTest {
                 singletonList(entry(THIS_ATTRIBUTE_NAME.value(), OBJECT)),
                 AnObject.class.getName(),
                 AnObject.class.getName()
-        )).isInstanceOf(JetException.class);
-    }
-
-    @Test
-    public void when_createsEntryWriterWithMissingMapping_then_throws() {
-        // When
-        // Then
-        assertThatThrownBy(() -> entryWriter(
-                singletonList(entry(FIELD_NAME, VARCHAR)),
-                Object.class.getName(),
-                Object.class.getName()
         )).isInstanceOf(JetException.class);
     }
 
