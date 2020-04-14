@@ -78,12 +78,6 @@ public class ChangeEventValueJsonImpl extends ChangeEventElementJsonImpl impleme
     }
 
     @Override
-    @Nonnull
-    public ChangeEventElement change() {
-        throw new UnsupportedOperationException("Not supported for relational databases");
-    }
-
-    @Override
     public int getClassId() {
         return CdcJsonDataSerializerHook.VALUE;
     }

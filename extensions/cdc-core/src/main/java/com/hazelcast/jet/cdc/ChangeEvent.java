@@ -89,10 +89,6 @@ public interface ChangeEvent {
      * based on. Mean to be used when higher level parsing (see other
      * methods) fails for some reason (for example on some untested
      * DB-connector version combination).
-     * <p>
-     * While the format is standard for relational databases, for
-     * MongoDB it's MongoDB Extended JSON v2 format and needs to be
-     * parsed accordingly.
      */
     @Nonnull
     String asJson();

@@ -41,10 +41,6 @@ public interface ChangeEventElement {
      * on <a href="https://github.com/FasterXML/jackson-databind">Jackson Databind</a>,
      * in particular on the Jackson {@code ObjectMapper}, so the
      * parameter class needs to be annotated accordingly.
-     * <p>
-     * Certain databases have limitations, for example MongoDB, which
-     * uses an extended JSON syntax, mapping is only supported to
-     * instances of the {@code org.bson.Document} class.
      *
      * @return optional {@code Object} value, which is empty only if
      * the specified key is not found or if it's value is null
@@ -56,13 +52,12 @@ public interface ChangeEventElement {
     <T> T mapToObj(Class<T> clazz) throws ParsingException;
 
     /**
-     * Best effor method for finding the specified (top level) key in
+     * Best effort method for finding the specified (top level) key in
      * the underlying JSON message and returning its value as is,
      * without attempting to parse it in any way. This means that it
      * can return objects specific to the parsing used by internal
      * implementations, so Jackson classes (mostly {@link JsonNode}
-     * implementations), or MongoDB Java driver classes (for example
-     * embedded {@code org.bson.Document} instances).
+     * implementations).
      * <p>
      * Should not be used normally, is intended as a fallback in case
      * regular parsing fails for some reason.
@@ -170,10 +165,6 @@ public interface ChangeEventElement {
      * Returns raw JSON string which the content of this event element
      * is based on. To be used when parsing fails for some reason
      * (for example on some untested DB-connector version combination).
-     * <p>
-     * While the format is standard for RELATIONAL DATABASES, for
-     * MongoDB it's MongoDB Extended JSON v2 format and needs to be
-     * parsed accordingly.
      */
     @Nonnull
     String asJson();

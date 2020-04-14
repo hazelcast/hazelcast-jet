@@ -62,8 +62,8 @@ public interface ChangeEventValue extends ChangeEventElement {
     Operation operation() throws ParsingException;
 
     /**
-     * Describes how the database record or document looked like BEFORE
-     * applying the change event. Not provided for MongoDB updates.
+     * Describes how the database record looked like BEFORE applying the
+     * change event.
      *
      * @throws ParsingException if this {@code ChangeEventValue} doesn't
      *                          have a 'before' sub-element
@@ -72,23 +72,13 @@ public interface ChangeEventValue extends ChangeEventElement {
     ChangeEventElement before() throws ParsingException;
 
     /**
-     * Describes how the database record or document looks like AFTER
-     * the change event has been applied. Not provided for MongoDB updates.
+     * Describes how the database record looks like AFTER the change
+     * event has been applied.
      *
      * @throws ParsingException if this {@code ChangeEventValue} doesn't
      *                          have an 'after' sub-element
      */
     @Nonnull
     ChangeEventElement after() throws ParsingException;
-
-    /**
-     * Describes the change being done by the event. Only used by
-     * MongoDB updates.
-     *
-     * @throws ParsingException if this {@code ChangeEventValue} doesn't
-     *                          have an 'patch' sub-element
-     */
-    @Nonnull
-    ChangeEventElement change() throws ParsingException;
 
 }
