@@ -22,7 +22,9 @@ import com.hazelcast.jet.SimpleTestInClusterSupport;
 import com.hazelcast.jet.kafka.impl.KafkaTestSupport;
 import com.hazelcast.sql.impl.type.QueryDataType;
 import org.apache.kafka.common.serialization.IntegerDeserializer;
+import org.apache.kafka.common.serialization.IntegerSerializer;
 import org.apache.kafka.common.serialization.StringDeserializer;
+import org.apache.kafka.common.serialization.StringSerializer;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -31,7 +33,6 @@ import org.junit.Test;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -46,7 +47,6 @@ import static java.util.Arrays.asList;
 import static java.util.Collections.emptyMap;
 import static java.util.stream.Collectors.toSet;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
 
 public class SqlKafkaTest extends SimpleTestInClusterSupport {
 
@@ -67,7 +67,9 @@ public class SqlKafkaTest extends SimpleTestInClusterSupport {
 
         sqlService.createServer("kafka_test_server", KAFKA_CONNECTOR, createMap(
                 "bootstrap.servers", kafkaTestSupport.getBrokerConnectionString(),
+                "key.serializer", IntegerSerializer.class.getCanonicalName(),
                 "key.deserializer", IntegerDeserializer.class.getCanonicalName(),
+                "value.serializer", StringSerializer.class.getCanonicalName(),
                 "value.deserializer", StringDeserializer.class.getCanonicalName(),
                 "auto.offset.reset", "earliest"));
     }
@@ -109,14 +111,15 @@ public class SqlKafkaTest extends SimpleTestInClusterSupport {
     }
 
     @Test
-    public void write_kafka() throws Exception {
-        fail("todo");
+    public void write_kafka() {
+        assertTopic("INSERT INTO " + topicName + " VALUES(1, 'value-1')",
+                createMap(1, "value-1"));
     }
 
-    private <K, V> void assertMap(String mapName, String sql, Map<K, V> expected) {
+    private void assertTopic(String sql, Map<Integer, String> expected) {
         Job job = sqlService.execute(sql);
         job.join();
-        assertEquals(expected, new HashMap<>(instance().getMap(mapName)));
+        kafkaTestSupport.assertTopicContentsEventually(topicName, expected, false);
     }
 
     private void assertRowsEventuallyAnyOrder(String sql, Collection<Row> expectedRows) {
