@@ -22,6 +22,7 @@ import com.hazelcast.jet.core.Processor.Context;
 import com.hazelcast.sql.impl.type.QueryDataType;
 import com.hazelcast.sql.impl.type.converter.Converter;
 import com.hazelcast.sql.impl.type.converter.Converters;
+import org.apache.calcite.util.Pair;
 import org.apache.commons.beanutils.PropertyUtils;
 
 import javax.annotation.Nonnull;
@@ -55,7 +56,7 @@ public class SqlWriters {
     private static void validateEntrySchema(List<Entry<String, QueryDataType>> fields,
                                             String keyClassName,
                                             String valueClassName) {
-        List<String> schemaFieldNames = toList(fields, Entry::getKey);
+        List<String> schemaFieldNames = Pair.left(fields);
         int schemaKeyIndex = schemaFieldNames.indexOf(KEY_ATTRIBUTE_NAME.value());
         int schemaValueIndex = schemaFieldNames.indexOf(THIS_ATTRIBUTE_NAME.value());
 
