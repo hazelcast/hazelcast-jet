@@ -1,7 +1,9 @@
 package com.hazelcast.jet.sql.impl.type.converter;
 
+import java.math.BigInteger;
 import java.time.Instant;
 import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.Date;
 import java.util.GregorianCalendar;
 
@@ -33,7 +35,7 @@ public interface ToConverter {
 
         @Override
         public Object convert(Object value) {
-            if (value == null || value.getClass() == Date.class) {
+            if (value == null || value.getClass() == BigInteger.class) {
                 return value;
             }
             return getConverter(value.getClass())
@@ -81,7 +83,7 @@ public interface ToConverter {
 
         @Override
         public Object convert(Object value) {
-            if (value == null || value.getClass() == Instant.class) {
+            if (value == null || value.getClass() == ZonedDateTime.class) {
                 return value;
             }
             return getConverter(value.getClass())
@@ -96,7 +98,7 @@ public interface ToConverter {
 
         @Override
         public Object convert(Object value) {
-            if (value == null || value.getClass() == Instant.class) {
+            if (value == null || value.getClass() == GregorianCalendar.class) {
                 return value;
             }
             return GregorianCalendar.from(getConverter(value.getClass())
