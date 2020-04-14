@@ -14,10 +14,9 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.cdc.mysql;
+package com.hazelcast.jet.cdc;
 
 import com.hazelcast.jet.annotation.EvolvingApi;
-import com.hazelcast.jet.cdc.ChangeEvent;
 import com.hazelcast.jet.cdc.impl.AbstractSourceBuilder;
 import com.hazelcast.jet.cdc.impl.ChangeEventJsonImpl;
 import com.hazelcast.jet.cdc.impl.PropertyRules;

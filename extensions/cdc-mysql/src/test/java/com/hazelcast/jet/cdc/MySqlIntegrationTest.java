@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.cdc.mysql;
+package com.hazelcast.jet.cdc;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -25,12 +25,6 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.accumulator.LongAccumulator;
-import com.hazelcast.jet.cdc.AbstractIntegrationTest;
-import com.hazelcast.jet.cdc.ChangeEvent;
-import com.hazelcast.jet.cdc.ChangeEventElement;
-import com.hazelcast.jet.cdc.ChangeEventValue;
-import com.hazelcast.jet.cdc.Operation;
-import com.hazelcast.jet.cdc.ParsingException;
 import com.hazelcast.jet.core.JetTestSupport;
 import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.pipeline.Pipeline;
