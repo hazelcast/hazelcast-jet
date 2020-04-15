@@ -34,7 +34,6 @@ import com.hazelcast.sql.impl.expression.Expression;
 import com.hazelcast.sql.impl.expression.ExpressionEvalContext;
 import com.hazelcast.sql.impl.row.KeyValueRow;
 import com.hazelcast.sql.impl.type.QueryDataType;
-import org.apache.calcite.rex.RexNode;
 import org.apache.commons.beanutils.PropertyUtils;
 
 import javax.annotation.Nonnull;
@@ -194,8 +193,8 @@ public class IMapSqlConnector implements SqlConnector {
     public Tuple2<Vertex, Vertex> nestedLoopReader(
             @Nonnull DAG dag,
             @Nonnull JetTable jetTable,
-            @Nonnull RexNode predicateWithParams,
-            @Nonnull List<String> projection
+            @Nonnull Expression<Boolean> predicateWithParams,
+            @Nonnull List<Expression<?>> projection
     ) {
         IMapTable table = (IMapTable) jetTable;
         String mapName = table.getMapName();

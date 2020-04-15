@@ -23,7 +23,6 @@ import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.sql.impl.schema.JetTable;
 import com.hazelcast.sql.impl.expression.Expression;
 import com.hazelcast.sql.impl.type.QueryDataType;
-import org.apache.calcite.rex.RexNode;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -106,8 +105,8 @@ public interface SqlConnector {
     default Tuple2<Vertex, Vertex> nestedLoopReader(
             @Nonnull DAG dag,
             @Nonnull JetTable jetTable,
-            @Nonnull RexNode predicateWithParams,
-            @Nonnull List<String> projection) {
+            @Nonnull Expression<Boolean> predicateWithParams,
+            @Nonnull List<Expression<?>> projection) {
         assert !supportsNestedLoopReader();
         throw new UnsupportedOperationException("Nested loop reader not supported for " + getClass().getName());
     }

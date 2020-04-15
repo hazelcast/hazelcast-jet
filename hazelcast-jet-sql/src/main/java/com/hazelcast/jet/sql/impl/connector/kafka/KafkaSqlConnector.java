@@ -20,7 +20,6 @@ import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Vertex;
-import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.kafka.KafkaProcessors;
 import com.hazelcast.jet.sql.SqlConnector;
 import com.hazelcast.jet.sql.impl.connector.SqlWriters.EntryWriter;
@@ -31,7 +30,6 @@ import com.hazelcast.sql.impl.expression.Expression;
 import com.hazelcast.sql.impl.expression.ExpressionEvalContext;
 import com.hazelcast.sql.impl.row.KeyValueRow;
 import com.hazelcast.sql.impl.type.QueryDataType;
-import org.apache.calcite.rex.RexNode;
 import org.apache.commons.beanutils.PropertyUtils;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 
@@ -195,16 +193,6 @@ public class KafkaSqlConnector implements SqlConnector {
         Vertex filterVertex = dag.newVertex("kafka-project-filter", peekOutputP(mapP(projectionAndFilter)));
         dag.edge(between(sourceVertex, filterVertex).isolated());
         return filterVertex;
-    }
-
-    @Nullable @Override
-    public Tuple2<Vertex, Vertex> nestedLoopReader(
-            @Nonnull DAG dag,
-            @Nonnull JetTable jetTable,
-            @Nonnull RexNode predicateWithParams,
-            @Nonnull List<String> projection
-    ) {
-        return null;
     }
 
     @Override
