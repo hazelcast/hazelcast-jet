@@ -12,34 +12,34 @@ as part of a pipeline.
 
 ## Background
 
-As part of a data pipeline, it can be necessary to call to a service for
-each input item, where the service is external to Jet. Jet currently
-provides the `mapUsingService` transform and its variants to supports
-this. With this transform, each processor creates a proxy to a
-service and then invoke it for each input item. Jet also supports async
-services through the use of `mapUsingServiceAsync` which is able to make
-several concurrent requests to the same service without any blocking.
+A Jet pipeline can contact outside services to process the data. The
+general facility is called `mapUsingService`, with variants that do
+filtering and flat-mapping. With this transform, each processor creates
+a proxy to a service and then invokes it for each input item. Jet also
+supports services with async APIs through `mapUsingServiceAsync` and in
+that case it can make several concurrent requests to the same service
+without any blocking.
 
-[gRPC](https://grpc.io) is a RPC framework for building services and
-handles concerns like transport, authentication and stub generation
-with support for several different programming languages.
+[gRPC](https://grpc.io) is an RPC framework for building network
+services and handles concerns like transport, authentication and stub
+generation with support for several different programming languages.
 
 If you have a pipeline where you want to call a gRPC service for each
-input item, you can already use the `mapUsingService` transform but this
-will not give you the best performance because it will not be making use
-of asynchronous calls and each processor will only have a single request
-in flight a time. It's still possible to use `mapUsingServiceAsync` in
-combination with the non-blocking stub, but this requires writing a lot
-of boiler-plate code for each service.
+input item, you can use the `mapUsingService` transform directly, but
+this will not give you the best performance because it will not be
+making use of asynchronous calls and each processor will only have a
+single request in flight a time. It's also possible to use
+`mapUsingServiceAsync` in combination with the non-blocking stub, but
+this requires a lot of boilerplate.
 
-Furthermore, from internal tests it showed that the most efficient way
-to use gRPC is to use [bidirectional
-streaming](https://grpc.io/docs/guides/concepts/#bidirectional-streaming-rpc)
-. To use bidirectional streaming is even less straightforward, requiring
-some fairly advanced code to be written as part of the `ServiceFactory`.
+Furthermore, our internal tests showed that the most efficient gRPC
+communication pattern is [bidirectional
+streaming](https://grpc.io/docs/guides/concepts/#bidirectional-streaming-rpc).
+Using it is even less straightforward, requiring some fairly advanced
+code in the `ServiceFactory`.
 
-As part of the Jet-Python integration, some best practices were
-discovered for integrating a Jet pipeline with gRPC, and the goal is
+As a part of the Jet-Python integration, we discovered some best
+practices for integrating a Jet pipeline with gRPC, and the goal is to
 apply these in a more generic way.
 
 ## Design
@@ -161,19 +161,22 @@ p.readFrom(TestSources.items("one", "two", "three", "four"))
 
 #### Ordering
 
-When using bidirectional streaming mode, the service implementation can
-choose to complete some input items before others, this may have some
-unexpected consequences: for example, the request item and the returned
-future will not match. As such, **it's required that the service
-implementation preserves the input order when completing requests**.
+In the bidirectional streaming style, gRPC doesn't enforce any
+correlation between the input and output streams. However, from a
+higher-level perspective, the service is just mapping the input to the
+output, one item at a time, and Jet must match them up based on nothing
+more than their order of appearance. Therefore, **for each input item
+your gRPC service receives, it must emit exactly one output item in
+exactly the same order.** If you want to filter out some items, you must
+do that by using special "null sentinel" items that you can then filter
+out in post-processing.
 
 ### Error Handling
 
-Any exception thrown from the service is propagated to the returned
-future for the input item. The user is expected to handle all exceptions
-by using `CompletableFuture.handle()` and map the exception to an
-appropriate item, if it's not a fatal failure, otherwise the job will
-be failed.
+If the gRPC service returns an error response, Jet completes the
+corresponding future with an exception. For non-fatal errors you should
+use `CompletableFuture.handle()` to map the exception to an appropriate
+item, otherwise the job will fail.
 
 ## Future Work
 
