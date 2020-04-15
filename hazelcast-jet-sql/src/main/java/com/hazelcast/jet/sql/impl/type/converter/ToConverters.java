@@ -1,17 +1,12 @@
 package com.hazelcast.jet.sql.impl.type.converter;
 
-import com.hazelcast.jet.sql.impl.type.converter.ToConverter.ToBigIntegerConverter;
-import com.hazelcast.jet.sql.impl.type.converter.ToConverter.ToCalendarConverter;
-import com.hazelcast.jet.sql.impl.type.converter.ToConverter.ToCharacterConverter;
-import com.hazelcast.jet.sql.impl.type.converter.ToConverter.ToDateConverter;
-import com.hazelcast.jet.sql.impl.type.converter.ToConverter.ToInstantConverter;
-import com.hazelcast.jet.sql.impl.type.converter.ToConverter.ToZonedDateTimeConverter;
 import com.hazelcast.sql.impl.type.QueryDataType;
 import com.hazelcast.sql.impl.type.converter.Converter;
 import com.hazelcast.sql.impl.type.converter.Converters;
 import com.hazelcast.sql.impl.type.converter.SqlDaySecondIntervalConverter;
 import com.hazelcast.sql.impl.type.converter.SqlYearMonthIntervalConverter;
 
+import javax.annotation.Nonnull;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.time.Instant;
@@ -19,18 +14,27 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.GregorianCalendar;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+
+import static com.hazelcast.sql.impl.type.converter.Converters.getConverter;
 
 public final class ToConverters {
 
     private static final Map<String, ToConverter> CONVERTERS = prepareConverters();
 
     private ToConverters() {
+    }
+
+    @Nonnull
+    public static ToConverter getToConverter(String name) {
+        return Objects.requireNonNull(CONVERTERS.get(name), "missing converter for " + name);
     }
 
     private static Map<String, ToConverter> prepareConverters() {
@@ -81,7 +85,100 @@ public final class ToConverters {
         return converters;
     }
 
-    public static ToConverter identityConverter(QueryDataType type) {
+    private static class ToCharacterConverter implements ToConverter {
+
+        public static final ToCharacterConverter INSTANCE = new ToCharacterConverter();
+
+        @Override
+        public Object convert(Object value) {
+            if (value == null || value.getClass() == Date.class) {
+                return value;
+            }
+            return getConverter(value.getClass())
+                    .asVarchar(value)
+                    .charAt(0);
+        }
+    }
+
+    private static class ToBigIntegerConverter implements ToConverter {
+
+        public static final ToBigIntegerConverter INSTANCE = new ToBigIntegerConverter();
+
+        @Override
+        public Object convert(Object value) {
+            if (value == null || value.getClass() == BigInteger.class) {
+                return value;
+            }
+            return getConverter(value.getClass())
+                    .asDecimal(value)
+                    .toBigInteger();
+        }
+    }
+
+    private static class ToDateConverter implements ToConverter {
+
+        public static final ToDateConverter INSTANCE = new ToDateConverter();
+
+        @Override
+        public Object convert(Object value) {
+            if (value == null || value.getClass() == Date.class) {
+                return value;
+            }
+
+            return Date.from(getConverter(value.getClass())
+                    .asDate(value)
+                    .atStartOfDay()
+                    .atZone(ZoneId.systemDefault())
+                    .toInstant());
+        }
+    }
+
+    private static class ToInstantConverter implements ToConverter {
+
+        public static final ToInstantConverter INSTANCE = new ToInstantConverter();
+
+        @Override
+        public Object convert(Object value) {
+            if (value == null || value.getClass() == Instant.class) {
+                return value;
+            }
+            return getConverter(value.getClass())
+                    .asTimestampWithTimezone(value)
+                    .toInstant();
+        }
+    }
+
+    private static class ToZonedDateTimeConverter implements ToConverter {
+
+        public static final ToZonedDateTimeConverter INSTANCE = new ToZonedDateTimeConverter();
+
+        @Override
+        public Object convert(Object value) {
+            if (value == null || value.getClass() == ZonedDateTime.class) {
+                return value;
+            }
+            return getConverter(value.getClass())
+                    .asTimestampWithTimezone(value)
+                    .atZoneSameInstant(ZoneId.systemDefault());
+        }
+    }
+
+    private static class ToCalendarConverter implements ToConverter {
+
+        public static final ToCalendarConverter INSTANCE = new ToCalendarConverter();
+
+        @Override
+        public Object convert(Object value) {
+            if (value == null || value.getClass() == GregorianCalendar.class) {
+                return value;
+            }
+            return GregorianCalendar.from(getConverter(value.getClass())
+                    .asTimestampWithTimezone(value)
+                    .atZoneSameInstant(ZoneId.systemDefault()));
+        }
+    }
+
+    private static ToConverter identityConverter(QueryDataType type) {
         Converter typeConverter = type.getConverter();
         return value -> {
             if (value == null || typeConverter.getValueClass() == value.getClass()) {
@@ -90,9 +187,5 @@ public final class ToConverters {
             Converter converter = Converters.getConverter(value.getClass());
             return typeConverter.convertToSelf(converter, value);
         };
-    }
-
-    public static ToConverter getToConverter(String name) {
-        return Objects.requireNonNull(CONVERTERS.get(name), "missing converter for " + name);
     }
 }
