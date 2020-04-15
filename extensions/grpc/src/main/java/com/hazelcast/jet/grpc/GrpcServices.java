@@ -21,16 +21,18 @@ import com.hazelcast.function.BiFunctionEx;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.grpc.impl.BidirectionalStreamingService;
+import com.hazelcast.jet.grpc.impl.GrpcUtil;
 import com.hazelcast.jet.grpc.impl.UnaryService;
 import com.hazelcast.jet.pipeline.GeneralStage;
 import com.hazelcast.jet.pipeline.ServiceFactory;
+import com.hazelcast.logging.ILogger;
+import com.hazelcast.logging.Logger;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.stub.StreamObserver;
 
 import javax.annotation.Nonnull;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
 
 /**
  * Provides {@link ServiceFactory} implementations for calling gRPC
@@ -48,6 +50,8 @@ import java.util.concurrent.TimeUnit;
  * @since 4.1
  */
 public final class GrpcServices {
+
+    private static ILogger logger = Logger.getLogger(GrpcServices.class);
 
     private GrpcServices() {
     }
@@ -108,7 +112,7 @@ public final class GrpcServices {
                 .withCreateContextFn(ctx -> channelFn.get().build())
                 .withCreateServiceFn((ctx, channel) -> new UnaryService<>(channel, callStubFn))
                 .withDestroyServiceFn(UnaryService::destroy)
-                .withDestroyContextFn(channel -> channel.shutdown().awaitTermination(5, TimeUnit.SECONDS));
+                .withDestroyContextFn(channel -> GrpcUtil.shutdownChannel(channel, logger));
     }
 
     /**
@@ -171,6 +175,6 @@ public final class GrpcServices {
                 .withCreateContextFn(ctx -> channelFn.get().build())
                 .withCreateServiceFn((ctx, channel) -> new BidirectionalStreamingService<>(ctx, channel, callStubFn))
                 .withDestroyServiceFn(BidirectionalStreamingService::destroy)
-                .withDestroyContextFn(channel -> channel.shutdown().awaitTermination(5, TimeUnit.SECONDS));
+                .withDestroyContextFn(channel -> GrpcUtil.shutdownChannel(channel, logger));
     }
 }
