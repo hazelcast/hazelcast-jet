@@ -121,6 +121,9 @@ public class JetSchema extends AbstractSchema {
             if (fields.isEmpty()) {
                 throw new IllegalArgumentException("zero fields");
             }
+            if (fields.stream().anyMatch(e -> e.getValue() == QueryDataType.NULL)) {
+                throw new IllegalArgumentException("NULL type not supported");
+            }
             table = connector.createTable(instance, tableName, serverOptions, tableOptions, fields);
         }
         tableMap.put(tableName, table);
