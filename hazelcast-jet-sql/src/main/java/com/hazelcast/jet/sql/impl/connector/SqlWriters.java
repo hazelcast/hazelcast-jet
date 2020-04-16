@@ -26,8 +26,8 @@ import javax.annotation.Nullable;
 import java.beans.PropertyDescriptor;
 import java.util.BitSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.impl.util.ReflectionUtils.loadClass;
@@ -38,8 +38,8 @@ import static com.hazelcast.jet.sql.impl.type.converter.ToConverters.getToConver
 import static com.hazelcast.query.QueryConstants.KEY_ATTRIBUTE_NAME;
 import static com.hazelcast.query.QueryConstants.THIS_ATTRIBUTE_NAME;
 import static java.util.Arrays.stream;
-import static java.util.Collections.emptyMap;
-import static java.util.stream.Collectors.toMap;
+import static java.util.Collections.emptySet;
+import static java.util.stream.Collectors.toSet;
 import static org.apache.commons.beanutils.PropertyUtils.getPropertyDescriptors;
 import static org.apache.commons.beanutils.PropertyUtils.setProperty;
 
@@ -67,8 +67,6 @@ public class SqlWriters {
             throw new JetException("You need to either specify " + TO_VALUE_CLASS + " in table options or declare the " +
                     THIS_ATTRIBUTE_NAME.value() + " column but not both");
         }
-
-        // TODO: validate supported types
     }
 
     private static EntryWriter createEntryWriter(List<Entry<String, QueryDataType>> fields,
@@ -78,36 +76,29 @@ public class SqlWriters {
         int keyIndex = fieldNames.indexOf(KEY_ATTRIBUTE_NAME.value());
         int valueIndex = fieldNames.indexOf(THIS_ATTRIBUTE_NAME.value());
 
-        Map<String, Class<?>> keyProperties = keyClassName == null ? emptyMap() : propertiesOf(keyClassName);
-        Map<String, Class<?>> valueProperties = valueClassName == null ? emptyMap() : propertiesOf(valueClassName);
+        Set<String> keyProperties = keyClassName == null ? emptySet() : propertiesOf(keyClassName);
+        Set<String> valueProperties = valueClassName == null ? emptySet() : propertiesOf(valueClassName);
 
         BitSet keyIndices = new BitSet(fields.size());
-        String[] fieldClassNames = new String[fields.size()];
         for (int index = 0; index < fields.size(); index++) {
-            if (index == keyIndex || index == valueIndex) {
-                fieldClassNames[index] = fields.get(index).getValue().getConverter().getValueClass().getName();
-            } else {
-                String schemaFieldName = fields.get(index).getKey();
-                if (valueProperties.containsKey(schemaFieldName)) {
-                    fieldClassNames[index] = valueProperties.get(schemaFieldName).getName();
-                } else if (keyProperties.containsKey(schemaFieldName)) {
-                    fieldClassNames[index] = keyProperties.get(schemaFieldName).getName();
+            if (index != keyIndex && index != valueIndex) {
+                String fieldName = fields.get(index).getKey();
+                if (!valueProperties.contains(fieldName) && keyProperties.contains(fieldName)) {
                     keyIndices.set(index);
                 }
             }
         }
 
-        return new EntryWriter(fields, keyIndex, keyClassName, valueIndex, valueClassName, keyIndices, fieldClassNames);
+        return new EntryWriter(keyIndex, keyClassName, valueIndex, valueClassName, keyIndices, fields);
     }
 
-    private static Map<String, Class<?>> propertiesOf(String className) {
+    private static Set<String> propertiesOf(String className) {
         return stream(getPropertyDescriptors(loadClass(className)))
-                .collect(toMap(PropertyDescriptor::getName, PropertyDescriptor::getPropertyType));
+                .map(PropertyDescriptor::getName)
+                .collect(toSet());
     }
 
     public static class EntryWriter implements FunctionEx<Object[], Entry<Object, Object>> {
-
-        private final List<Entry<String, QueryDataType>> fields;
 
         private final int wholeKeyIndex;
         private final String keyClassName;
@@ -116,14 +107,11 @@ public class SqlWriters {
         private final String valueClassName;
 
         private final BitSet keyIndices;
-        private final String[] fieldClassNames;
+        private final List<Entry<String, QueryDataType>> fields;
 
-        public EntryWriter(List<Entry<String, QueryDataType>> fields,
-                           int wholeKeyIndex, String keyClassName,
+        public EntryWriter(int wholeKeyIndex, String keyClassName,
                            int wholeValueIndex, String valueClassName,
-                           BitSet keyIndices, String[] fieldClassNames) {
-            this.fields = fields;
-
+                           BitSet keyIndices, List<Entry<String, QueryDataType>> fields) {
             this.wholeKeyIndex = wholeKeyIndex;
             this.keyClassName = keyClassName;
 
@@ -131,12 +119,12 @@ public class SqlWriters {
             this.valueClassName = valueClassName;
 
             this.keyIndices = keyIndices;
-            this.fieldClassNames = fieldClassNames;
+            this.fields = fields;
         }
 
         @Override
         public Entry<Object, Object> applyEx(Object[] row) throws Exception {
-            assert row.length == fieldClassNames.length;
+            assert row.length == fields.size();
 
             Object key = wholeKeyIndex >= 0 ?
                     getToConverter(fields.get(wholeKeyIndex).getValue()).convert(row[wholeKeyIndex]) :
@@ -146,11 +134,10 @@ public class SqlWriters {
                     newInstance(valueClassName);
 
             for (int index = 0; index < row.length; index++) {
-                if (index != wholeKeyIndex && index != wholeValueIndex && row[index] != null) {
-                    assert fieldClassNames[index] != null; // expects just null values otherwise
-
+                Object rowValue = row[index];
+                if (index != wholeKeyIndex && index != wholeValueIndex && rowValue != null) {
                     Object target = keyIndices.get(index) ? key : value;
-                    Object converted = getToConverter(fields.get(index).getValue()).convert(row[index]);
+                    Object converted = getToConverter(fields.get(index).getValue()).convert(rowValue);
                     setProperty(target, fields.get(index).getKey(), converted);
                 }
             }

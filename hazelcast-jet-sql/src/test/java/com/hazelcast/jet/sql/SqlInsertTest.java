@@ -58,7 +58,7 @@ public class SqlInsertTest extends SimpleTestInClusterSupport {
         sqlService.createTable(ALL_TYPES_MAP, JetSchema.IMAP_LOCAL_SERVER,
                 createMap(TO_VALUE_CLASS, AllTypesValue.class.getName()),
                 asList(
-                        entry("__key", QueryDataType.INT),
+                        entry("__key", QueryDataType.DECIMAL_BIG_INTEGER),
                         entry("string", QueryDataType.VARCHAR),
                         entry("character0", QueryDataType.VARCHAR_CHARACTER),
                         entry("character1", QueryDataType.VARCHAR_CHARACTER),
@@ -134,7 +134,7 @@ public class SqlInsertTest extends SimpleTestInClusterSupport {
                         /*"INTERVAL '1' YEAR, -- year-to-month interval\n" +
                         "INTERVAL '1' HOUR -- day-to-second interval\n" +*/
                         ")",
-                createMap(1, new AllTypesValue(
+                createMap(BigInteger.valueOf(1), new AllTypesValue(
                         "string",
                         'a',
                         'b',
