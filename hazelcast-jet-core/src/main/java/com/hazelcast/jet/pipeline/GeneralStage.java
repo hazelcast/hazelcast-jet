@@ -841,6 +841,51 @@ public interface GeneralStage<T> extends Stage {
     );
 
     /**
+     * Attaches to this and the two supplied stages a inner hash-joining stage and
+     * returns it. This stage plays the role of the <em>primary stage</em> in
+     * the hash-join. Please refer to the {@link com.hazelcast.jet.pipeline
+     * package javadoc} for a detailed description of the hash-join transform.
+     * <p>
+     * This sample joins a stream of users to streams of countries and
+     * companies, and outputs a stream of users with the {@code country} and
+     * {@code company} fields set:
+     * <pre>{@code
+     * // Types of the input stages:
+     * BatchStage<User> users;
+     * BatchStage<Map.Entry<Long, Country>> idAndCountry;
+     * BatchStage<Map.Entry<Long, Company>> idAndCompany;
+     *
+     * users.innerHashJoin2(
+     *     idAndCountry, JoinClause.joinMapEntries(User::getCountryId),
+     *     idAndCompany, JoinClause.joinMapEntries(User::getCompanyId),
+     *     (user, country, company) -> user.setCountry(country).setCompany(company)
+     * )
+     * }</pre>
+     *
+     * @param stage1        the first stage to join
+     * @param joinClause1   specifies how to join with {@code stage1}
+     * @param stage2        the second stage to join
+     * @param joinClause2   specifies how to join with {@code stage2}
+     * @param mapToOutputFn function to map the joined items to the output value
+     * @param <K1>          the type of key for {@code stage1}
+     * @param <T1_IN>       the type of {@code stage1} items
+     * @param <T1>          the result type of projection of {@code stage1} items
+     * @param <K2>          the type of key for {@code stage2}
+     * @param <T2_IN>       the type of {@code stage2} items
+     * @param <T2>          the result type of projection of {@code stage2} items
+     * @param <R>           the resulting output type
+     * @return the newly attached stage
+     */
+    @Nonnull
+    <K1, K2, T1_IN, T2_IN, T1, T2, R> GeneralStage<R> innerHashJoin2(
+            @Nonnull BatchStage<T1_IN> stage1,
+            @Nonnull JoinClause<K1, ? super T, ? super T1_IN, ? extends T1> joinClause1,
+            @Nonnull BatchStage<T2_IN> stage2,
+            @Nonnull JoinClause<K2, ? super T, ? super T2_IN, ? extends T2> joinClause2,
+            @Nonnull TriFunction<T, T1, T2, R> mapToOutputFn
+    );
+
+    /**
      * Returns a fluent API builder object to construct a hash join operation
      * with any number of contributing stages. It is mainly intended for
      * hash-joins with three or more enriching stages. For one or two stages

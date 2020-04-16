@@ -192,6 +192,23 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
     }
 
     @Nonnull @Override
+    public <K1, K2, T1_IN, T2_IN, T1, T2, R> BatchStage<R> innerHashJoin2(
+            @Nonnull BatchStage<T1_IN> stage1,
+            @Nonnull JoinClause<K1, ? super T, ? super T1_IN, ? extends T1> joinClause1,
+            @Nonnull BatchStage<T2_IN> stage2,
+            @Nonnull JoinClause<K2, ? super T, ? super T2_IN, ? extends T2> joinClause2,
+            @Nonnull TriFunction<T, T1, T2, R> mapToOutputFn
+    ) {
+        TriFunction<T, T1, T2, R> finalOutputFn = (leftSide, middle, rightSide) -> {
+            if (leftSide == null || middle == null || rightSide == null) {
+                return null;
+            }
+            return mapToOutputFn.apply(leftSide, middle, rightSide);
+        };
+        return attachHashJoin2(stage1, joinClause1, stage2, joinClause2, finalOutputFn);
+    }
+
+    @Nonnull @Override
     public <R> BatchStage<R> aggregate(@Nonnull AggregateOperation1<? super T, ?, ? extends R> aggrOp) {
         return attach(new AggregateTransform<>(singletonList(transform), aggrOp), fnAdapter);
     }
