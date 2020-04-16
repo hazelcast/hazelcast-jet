@@ -51,7 +51,7 @@ public abstract class TestInClusterSupport extends JetTestSupport {
     protected static final String JOURNALED_CACHE_PREFIX = "journaledCache.";
     protected static final int MEMBER_COUNT = 2;
 
-    protected static JetTestInstanceFactory FACTORY = new JetTestInstanceFactory();
+    protected static JetTestInstanceFactory factory = new JetTestInstanceFactory();
     private static JetInstance[] allJetInstances;
 
     protected static JetInstance member;
@@ -72,7 +72,7 @@ public abstract class TestInClusterSupport extends JetTestSupport {
     @BeforeClass
     public static void setupCluster() {
         member = createCluster(MEMBER_COUNT, prepareConfig());
-        client = FACTORY.newClient();
+        client = factory.newClient();
     }
 
     protected static JetConfig prepareConfig() {
@@ -93,10 +93,10 @@ public abstract class TestInClusterSupport extends JetTestSupport {
 
     @AfterClass
     public static void tearDown() throws Exception {
-        spawn(() -> FACTORY.terminateAll())
+        spawn(() -> factory.terminateAll())
                 .get(1, TimeUnit.MINUTES);
 
-        FACTORY = null;
+        factory = null;
         allJetInstances = null;
         member = null;
         client = null;
@@ -124,10 +124,10 @@ public abstract class TestInClusterSupport extends JetTestSupport {
     }
 
     private static JetInstance createCluster(int nodeCount, JetConfig config) {
-        FACTORY = new JetTestInstanceFactory();
+        factory = new JetTestInstanceFactory();
         allJetInstances = new JetInstance[nodeCount];
         for (int i = 0; i < nodeCount; i++) {
-            allJetInstances[i] = FACTORY.newMember(config);
+            allJetInstances[i] = factory.newMember(config);
         }
         return allJetInstances[0];
     }

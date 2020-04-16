@@ -79,7 +79,7 @@ public class JobMetrics_BatchTest extends TestInClusterSupport {
         Job job = execute(p, JOB_CONFIG_WITH_METRICS);
 
         // When
-        JetInstance instance = FACTORY.newMember(prepareConfig());
+        JetInstance instance = factory.newMember(prepareConfig());
         try {
             assertClusterSizeEventually(MEMBER_COUNT + 1, jet());
             // Then
@@ -94,7 +94,7 @@ public class JobMetrics_BatchTest extends TestInClusterSupport {
     public void when_memberRemovedAfterJobFinished_then_metricsNotAffected() {
         Pipeline p = createPipeline();
 
-        JetInstance newMember = FACTORY.newMember(prepareConfig());
+        JetInstance newMember = factory.newMember(prepareConfig());
         Job job;
         try {
             assertClusterSizeEventually(MEMBER_COUNT + 1, jet());
