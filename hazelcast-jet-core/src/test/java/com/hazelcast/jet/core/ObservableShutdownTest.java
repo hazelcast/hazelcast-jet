@@ -25,8 +25,10 @@ import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.StreamStage;
 import com.hazelcast.jet.pipeline.test.SimpleEvent;
 import com.hazelcast.jet.pipeline.test.TestSources;
+import com.hazelcast.test.HazelcastParallelClassRunner;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 
 import javax.annotation.Nonnull;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -36,6 +38,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+@RunWith(HazelcastParallelClassRunner.class)
 public class ObservableShutdownTest extends JetTestSupport {
 
     private static final int MEMBER_COUNT = 3;
@@ -64,7 +67,7 @@ public class ObservableShutdownTest extends JetTestSupport {
     }
 
     @Test
-    public void cleanup() {
+    public void when_jetInstanceIsShutDown_then_ObservablesStopReceivingEvents() {
         Pipeline pipeline = Pipeline.create();
         StreamStage<Long> stage = pipeline.readFrom(TestSources.itemStream(100))
                 .withoutTimestamps()
