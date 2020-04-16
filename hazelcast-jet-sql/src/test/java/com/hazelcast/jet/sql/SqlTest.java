@@ -271,8 +271,8 @@ public class SqlTest extends SimpleTestInClusterSupport {
                         "123451234567890.2,\n" +
                         "time'12:23:34', -- local time\n" +
                         "date'2020-04-15', -- local date \n" +
-                        // there's no timestamp-with-tz literal in calcite apparently
                         "timestamp'2020-04-15 12:23:34.1', --timestamp\n" +
+                        // there's no timestamp-with-tz literal in calcite apparently
                         "timestamp'2020-04-15 12:23:34.2', --timestamp with tz\n" +
                         "timestamp'2020-04-15 12:23:34.3', --timestamp with tz\n" +
                         "timestamp'2020-04-15 12:23:34.4', --timestamp with tz\n" +
