@@ -354,8 +354,15 @@ server or a client, if Jet is on the classpath.</p>
 create a client instance you need to put <code>hazelcast-client.yaml</code> or
 <code>hazelcast-client.xml</code> to the classpath or to the root directory.</p>
 <p>If your configuration files are available with different names then you
-can point to them by system properties, <code>hazelcast.jet.config</code>  for
-server and <code>hazelcast.client.config</code> for client.</p>
+can point to them by config properties, <code>hazelcast.jet.server.config</code>
+for server and <code>hazelcast.jet.client.config</code> for client. You can also
+use system properties, <code>hazelcast.jet.config</code> for server and
+<code>hazelcast.client.config</code> for client.</p>
+<p>If you want to configure the underlying <code>HazelcastInstance</code>, you need
+to put <code>hazelcast.yaml</code> or <code>hazelcast.xml</code> to the classpath or to the
+root directory. You can use the config property
+<code>hazelcast.jet.server.config</code> or system property
+<code>hazelcast.config</code> to explicitly set the configuration file.</p>
 <p>If no configuration file is present or explicitly specified, the
 starter creates a server instance using the default configuration file
 (<code>hazelcast-jet-default.yaml</code>).</p>
