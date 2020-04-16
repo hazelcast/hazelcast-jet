@@ -343,7 +343,15 @@ create a client instance you need to put `hazelcast-client.yaml` or
 
 If your configuration files are available with different names then you
 can point to them by system properties, `hazelcast.jet.config`  for
-server and `hazelcast.client.config` for client.
+server and `hazelcast.client.config` for client. You can also use
+config properties, `hazelcast.jet.server.config` for server and
+`hazelcast.jet.client.config` for client.
+
+If you want to configure the underlying `HazelcastInstance`, you need
+to put `hazelcast.yaml` or `hazelcast.xml` to the classpath or to the
+root directory. You can use the system property `hazelcast.config` or
+config property `hazelcast.jet.imdg.config` to explicitly set the
+configuration file.
 
 If no configuration file is present or explicitly specified, the
 starter creates a server instance using the default configuration file
