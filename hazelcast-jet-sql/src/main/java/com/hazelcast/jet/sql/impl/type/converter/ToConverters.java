@@ -156,7 +156,7 @@ public final class ToConverters {
         @Override
         public Object from(Object canonicalValue) {
             ZonedDateTime zdt = ((OffsetDateTime) canonicalValue).toZonedDateTime();
-            return GregorianCalendar.from(zdt);
+            return GregorianCalendar.from(zdt); // TODO: support other calendar types ?
         }
     }
 }

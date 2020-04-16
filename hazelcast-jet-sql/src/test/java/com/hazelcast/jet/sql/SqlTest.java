@@ -55,8 +55,6 @@ public class SqlTest extends SimpleTestInClusterSupport {
     private static final String PERSON_MAP_SRC = "person_map_src";
     private static final String PERSON_MAP_SINK = "person_map_sink";
 
-    private static final String ALL_TYPES_MAP = "all_types_map";
-
     private static final Person PERSON_ALICE = new Person("Alice", 30);
     private static final Person PERSON_BOB = new Person("Bob", 40);
     private static final Person PERSON_CECILE = new Person("Cecile", 50);
@@ -90,41 +88,6 @@ public class SqlTest extends SimpleTestInClusterSupport {
         sqlService.createTable(PERSON_MAP_SINK, JetSchema.IMAP_LOCAL_SERVER,
                 createMap(TO_VALUE_CLASS, Person.class.getName()),
                 personMapFields);
-
-        // an imap with a field of every type
-        sqlService.createTable(ALL_TYPES_MAP, JetSchema.IMAP_LOCAL_SERVER,
-                createMap(TO_VALUE_CLASS, AllTypesValue.class.getName()),
-                asList(
-                        entry("__key", QueryDataType.INT),
-                        entry("string", QueryDataType.VARCHAR),
-                        entry("character0", QueryDataType.VARCHAR_CHARACTER),
-                        entry("character1", QueryDataType.VARCHAR_CHARACTER),
-                        entry("boolean0", QueryDataType.BOOLEAN),
-                        entry("boolean1", QueryDataType.BOOLEAN),
-                        entry("byte0", QueryDataType.TINYINT),
-                        entry("byte1", QueryDataType.TINYINT),
-                        entry("short0", QueryDataType.SMALLINT),
-                        entry("short1", QueryDataType.SMALLINT),
-                        entry("int0", QueryDataType.INT),
-                        entry("int1", QueryDataType.INT),
-                        entry("long0", QueryDataType.BIGINT),
-                        entry("long1", QueryDataType.BIGINT),
-                        entry("bigDecimal", QueryDataType.DECIMAL),
-                        entry("bigInteger", QueryDataType.DECIMAL_BIG_INTEGER),
-                        entry("float0", QueryDataType.REAL),
-                        entry("float1", QueryDataType.REAL),
-                        entry("double0", QueryDataType.DOUBLE),
-                        entry("double1", QueryDataType.DOUBLE),
-                        entry("localTime", QueryDataType.TIME),
-                        entry("localDate", QueryDataType.DATE),
-                        entry("localDateTime", QueryDataType.TIMESTAMP),
-                        entry("date", QueryDataType.TIMESTAMP_WITH_TZ_DATE),
-                        entry("calendar", QueryDataType.TIMESTAMP_WITH_TZ_CALENDAR),
-                        entry("instant", QueryDataType.TIMESTAMP_WITH_TZ_INSTANT),
-                        entry("zonedDateTime", QueryDataType.TIMESTAMP_WITH_TZ_ZONED_DATE_TIME),
-                        entry("offsetDateTime", QueryDataType.TIMESTAMP_WITH_TZ_OFFSET_DATE_TIME),
-                        entry("yearMonthInterval", QueryDataType.INTERVAL_YEAR_MONTH),
-                        entry("daySecondInterval", QueryDataType.INTERVAL_DAY_SECOND)));
     }
 
     @Before
@@ -242,46 +205,6 @@ public class SqlTest extends SimpleTestInClusterSupport {
         sqlService.createServer("test", KAFKA_CONNECTOR, createMap(
 
         ));
-    }
-
-    @Test
-    public void insert_allTypes() {
-        assertMap(ALL_TYPES_MAP, "INSERT INTO " + ALL_TYPES_MAP + " VALUES (" +
-                        "0, --key\n" +
-                        "'string', --varchar\n" +
-                        "'a', --character\n" +
-                        "'b',\n" +
-                        "true, --boolean\n" +
-                        "false,\n" +
-                        "126, --byte\n" +
-                        "127, \n" +
-                        "32766, --short\n" +
-                        "32767, \n" +
-                        "2147483646, --int \n" +
-                        "2147483647,\n" +
-                        "9223372036854775806, --long\n" +
-                        "9223372036854775807,\n" +
-                        // this is bigDecimal, but it's still limited to 64-bit unscaled value, see
-                        // SqlValidatorImpl.validateLiteral()
-                        "9223372036854775.123, --bigDecimal\n" +
-                        "9223372036854775222, --bigInteger\n" +
-                        "1234567890.1, --float\n" +
-                        "1234567890.2, \n" +
-                        "123451234567890.1, --double\n" +
-                        "123451234567890.2,\n" +
-                        "time'12:23:34', -- local time\n" +
-                        "date'2020-04-15', -- local date \n" +
-                        "timestamp'2020-04-15 12:23:34.1', --timestamp\n" +
-                        // there's no timestamp-with-tz literal in calcite apparently
-                        "timestamp'2020-04-15 12:23:34.2', --timestamp with tz\n" +
-                        "timestamp'2020-04-15 12:23:34.3', --timestamp with tz\n" +
-                        "timestamp'2020-04-15 12:23:34.4', --timestamp with tz\n" +
-                        "timestamp'2020-04-15 12:23:34.5', --timestamp with tz\n" +
-                        "timestamp'2020-04-15 12:23:34.6', --timestamp with tz\n" +
-                        "INTERVAL '1' YEAR, -- year-to-month interval\n" +
-                        "INTERVAL '1' HOUR -- day-to-second interval\n)",
-                // TODO assert result
-                createMap());
     }
 
     private <K, V> void assertMap(String mapName, String sql, Map<K, V> expected) {
