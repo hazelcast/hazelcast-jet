@@ -252,6 +252,7 @@ public class SqlTest extends SimpleTestInClusterSupport {
 
     @SuppressWarnings("unused")
     public static final class Person implements Serializable {
+
         private String name;
         private int age;
 

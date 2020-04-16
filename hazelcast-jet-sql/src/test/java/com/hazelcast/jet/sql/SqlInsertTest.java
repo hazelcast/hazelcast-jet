@@ -53,7 +53,7 @@ public class SqlInsertTest extends SimpleTestInClusterSupport {
                 )
         );
 
-        // an imap with a field of every type
+        // an IMap with a field of every type
         sqlService.createTable(ALL_TYPES_MAP, JetSchema.IMAP_LOCAL_SERVER,
                 createMap(TO_VALUE_CLASS, AllTypesValue.class.getName()),
                 asList(
@@ -87,6 +87,13 @@ public class SqlInsertTest extends SimpleTestInClusterSupport {
                         entry("offsetDateTime", QueryDataType.TIMESTAMP_WITH_TZ_OFFSET_DATE_TIME)/*,
                         entry("yearMonthInterval", QueryDataType.INTERVAL_YEAR_MONTH),
                         entry("daySecondInterval", QueryDataType.INTERVAL_DAY_SECOND)*/));
+    }
+
+    @Test
+    public void insert_null() {
+        assertMap(
+                PERSON_MAP_SINK, "INSERT INTO " + PERSON_MAP_SINK + "(birthday) VALUES (null)",
+                createMap(new Person(), new Person()));
     }
 
     @Test
@@ -185,8 +192,6 @@ public class SqlInsertTest extends SimpleTestInClusterSupport {
                         "'2147483647',\n" +
                         "'9223372036854775806', --long\n" +
                         "'9223372036854775807',\n" +
-                        // this is bigDecimal, but it's still limited to 64-bit unscaled value, see
-                        // SqlValidatorImpl.validateLiteral()
                         "'9223372036854775.123', --bigDecimal\n" +
                         "'9223372036854775222', --bigInteger\n" +
                         "'1234567890.1', --float\n" +
@@ -196,7 +201,6 @@ public class SqlInsertTest extends SimpleTestInClusterSupport {
                         "'12:23:34', -- local time\n" +
                         "'2020-04-15', -- local date \n" +
                         "'2020-04-15T12:23:34.1', --timestamp\n" +
-                        // there's no timestamp-with-tz literal in calcite apparently
                         "'2020-04-15T12:23:34.2Z', --timestamp with tz\n" +
                         "'2020-04-15T12:23:34.3Z', --timestamp with tz\n" +
                         "'2020-04-15T12:23:34.4Z', --timestamp with tz\n" +
