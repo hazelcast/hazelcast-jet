@@ -1080,8 +1080,8 @@ public class BatchStageTest extends PipelineTestSupport {
 
         // When
         HashJoinBuilder<Integer> b = batchStageFromList(input).hashJoinBuilder();
-        Tag<String> tagA = b.add(enrichingStage1, joinMapEntries(wholeItem()));
-        Tag<String> tagB = b.add(enrichingStage2, joinMapEntries(wholeItem()));
+        Tag<String> tagA = b.addInner(enrichingStage1, joinMapEntries(wholeItem()));
+        Tag<String> tagB = b.addInner(enrichingStage2, joinMapEntries(wholeItem()));
         GeneralStage<Tuple2<Integer, ItemsByTag>> joined =
                 b.build(Tuple2::tuple2);
 

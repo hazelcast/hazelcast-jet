@@ -89,6 +89,8 @@ public abstract class GeneralHashJoinBuilder<T0> {
     /**
      * Adds another contributing pipeline stage to the hash-join operation.
      *
+     * If no matching items for returned {@linkplain Tag tag} is found, all records for given key won't be added.
+     *
      * @param stage the contributing stage
      * @param joinClause specifies how to join the contributing stage
      * @param <K> the type of the join key
@@ -120,7 +122,7 @@ public abstract class GeneralHashJoinBuilder<T0> {
                 .stream()
                 .map(e -> e.getValue().clause())
                 .map(joinClause -> fnAdapter.adaptJoinClause(joinClause));
-        Stream<Boolean> nullabilityPossibility = orderedClauses
+        Stream<Boolean> whereNullNotAllowed = orderedClauses
                 .stream()
                 .map(e -> e.getValue().inner);
         BiFunctionEx<?, ? super ItemsByTag, ?> mapToOutputBiFn = fnAdapter.adaptHashJoinOutputFn(mapToOutputFn);
@@ -131,7 +133,7 @@ public abstract class GeneralHashJoinBuilder<T0> {
                               .map(Entry::getKey)
                               .collect(toList()),
                 mapToOutputBiFn,
-                nullabilityPossibility.collect(toList()));
+                whereNullNotAllowed.collect(toList()));
         pipelineImpl.connect(upstream, hashJoinTransform);
         return createOutStageFn.get(hashJoinTransform, fnAdapter, pipelineImpl);
     }

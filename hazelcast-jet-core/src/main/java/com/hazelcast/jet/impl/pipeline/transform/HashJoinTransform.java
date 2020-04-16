@@ -151,11 +151,11 @@ public class HashJoinTransform<T0, R> extends AbstractTransform {
         }
     }
 
-    private static BiFunctionEx<List<Tag>, Object[], ItemsByTag> tupleToItemsByTag(List<Boolean> nullsAllowed) {
+    private static BiFunctionEx<List<Tag>, Object[], ItemsByTag> tupleToItemsByTag(List<Boolean> nullsNotAllowed) {
         return (tagList, tuple) -> {
             ItemsByTag res = new ItemsByTag();
             for (int i = 0; i < tagList.size(); i++) {
-                if (tuple[i] == null && !nullsAllowed.get(i)) {
+                if (tuple[i] == null && nullsNotAllowed.get(i)) {
                     return null;
                 }
                 res.put(tagList.get(i), tuple[i]);
