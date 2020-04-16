@@ -17,7 +17,6 @@
 package com.hazelcast.jet.core;
 
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.JetTestInstanceFactory;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.Observable;
 import com.hazelcast.jet.function.Observer;
@@ -26,28 +25,20 @@ import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.StreamStage;
 import com.hazelcast.jet.pipeline.test.SimpleEvent;
 import com.hazelcast.jet.pipeline.test.TestSources;
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
 import javax.annotation.Nonnull;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Stream;
 
-import static com.hazelcast.jet.core.JetTestSupport.assertJobStatusEventually;
-import static com.hazelcast.test.HazelcastTestSupport.assertTrueEventually;
-import static com.hazelcast.test.HazelcastTestSupport.spawn;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-public class ObservableShutdownTest {
+public class ObservableShutdownTest extends JetTestSupport {
 
     private static final int MEMBER_COUNT = 3;
-
-    private JetTestInstanceFactory factory;
 
     private JetInstance[] members;
     private JetInstance client;
@@ -60,9 +51,8 @@ public class ObservableShutdownTest {
 
     @Before
     public void before() {
-        factory = new JetTestInstanceFactory();
-        members = Stream.generate(factory::newMember).limit(MEMBER_COUNT).toArray(JetInstance[]::new);
-        client = factory.newClient();
+        members = createJetMembers(MEMBER_COUNT);
+        client = createJetClient();
 
         memberObserver = new TestObserver();
         memberObservable = members[members.length - 1].newObservable();
@@ -71,12 +61,6 @@ public class ObservableShutdownTest {
         clientObserver = new TestObserver();
         clientObservable = client.newObservable();
         clientObservable.addObserver(clientObserver);
-    }
-
-    @After
-    public void after() throws Exception {
-        spawn(() -> factory.terminateAll())
-                .get(1, TimeUnit.MINUTES);
     }
 
     @Test
