@@ -97,8 +97,7 @@ public class SqlWriters {
             }
         }
 
-        return new EntryWriter(keyIndex, keyClassName, valueIndex, valueClassName,
-                keyIndices, fieldNames.toArray(new String[0]), fieldClassNames);
+        return new EntryWriter(fields, keyIndex, keyClassName, valueIndex, valueClassName, keyIndices, fieldClassNames);
     }
 
     private static Map<String, Class<?>> propertiesOf(String className) {
@@ -108,6 +107,8 @@ public class SqlWriters {
 
     public static class EntryWriter implements FunctionEx<Object[], Entry<Object, Object>> {
 
+        private final List<Entry<String, QueryDataType>> fields;
+
         private final int wholeKeyIndex;
         private final String keyClassName;
 
@@ -115,39 +116,42 @@ public class SqlWriters {
         private final String valueClassName;
 
         private final BitSet keyIndices;
-        private final String[] fieldNames;
         private final String[] fieldClassNames;
 
-        public EntryWriter(int wholeKeyIndex, String keyClassName,
+        public EntryWriter(List<Entry<String, QueryDataType>> fields,
+                           int wholeKeyIndex, String keyClassName,
                            int wholeValueIndex, String valueClassName,
-                           BitSet keyIndices, String[] fieldNames, String[] fieldClassNames) {
+                           BitSet keyIndices, String[] fieldClassNames) {
+            this.fields = fields;
+
             this.wholeKeyIndex = wholeKeyIndex;
             this.keyClassName = keyClassName;
 
             this.wholeValueIndex = wholeValueIndex;
             this.valueClassName = valueClassName;
 
-            this.fieldNames = fieldNames;
-            this.fieldClassNames = fieldClassNames;
-
             this.keyIndices = keyIndices;
+            this.fieldClassNames = fieldClassNames;
         }
 
         @Override
         public Entry<Object, Object> applyEx(Object[] row) throws Exception {
             assert row.length == fieldClassNames.length;
 
-            Object key = wholeKeyIndex >= 0 ? getToConverter(fieldClassNames[wholeKeyIndex]).convert(row[wholeKeyIndex]) :
+            Object key = wholeKeyIndex >= 0 ?
+                    getToConverter(fields.get(wholeKeyIndex).getValue()).convert(row[wholeKeyIndex]) :
                     newInstance(keyClassName);
-            Object value = wholeValueIndex >= 0 ? getToConverter(fieldClassNames[wholeValueIndex]).convert(row[wholeValueIndex]) :
+            Object value = wholeValueIndex >= 0 ?
+                    getToConverter(fields.get(wholeValueIndex).getValue()).convert(row[wholeValueIndex]) :
                     newInstance(valueClassName);
+
             for (int index = 0; index < row.length; index++) {
                 if (index != wholeKeyIndex && index != wholeValueIndex && row[index] != null) {
-                    assert fieldClassNames[index] != null; // expects only null values
+                    assert fieldClassNames[index] != null; // expects just null values otherwise
 
                     Object target = keyIndices.get(index) ? key : value;
-                    Object converted = getToConverter(fieldClassNames[index]).convert(row[index]);
-                    setProperty(target, fieldNames[index], converted);
+                    Object converted = getToConverter(fields.get(index).getValue()).convert(row[index]);
+                    setProperty(target, fields.get(index).getKey(), converted);
                 }
             }
             return entry(key, value);
