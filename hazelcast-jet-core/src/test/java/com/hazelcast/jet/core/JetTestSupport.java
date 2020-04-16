@@ -172,17 +172,22 @@ public abstract class JetTestSupport extends HazelcastTestSupport {
      *
      * @param ignoredExecutionId If job is running and has this execution ID,
      *      wait longer. If null, no execution ID is ignored.
-     * @return the execution ID of the new execution
+     * @return the execution ID of the new execution or 0 if {@code
+     *      ignoredExecutionId == null}
      */
     public static long assertJobRunningEventually(JetInstance instance, Job job, Long ignoredExecutionId) {
-        long executionId;
+        Long executionId = 0L;
         JobExecutionService service = getNodeEngineImpl(instance)
                 .<JetService>getService(JetService.SERVICE_NAME)
                 .getJobExecutionService();
         do {
             assertJobStatusEventually(job, RUNNING);
+            if (ignoredExecutionId == null) {
+                break;
+            }
+            // executionId can be null if the execution just terminated
             executionId = service.getExecutionIdForJobId(job.getId());
-        } while (ignoredExecutionId != null && executionId == ignoredExecutionId);
+        } while (executionId == null || executionId == ignoredExecutionId.longValue());
         return executionId;
     }
 
