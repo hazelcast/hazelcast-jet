@@ -73,6 +73,7 @@ public class ObservableResultsTest extends TestInClusterSupport {
     }
 
     @After
+    @Override
     public void after() throws Exception {
         jet().getObservables().forEach(Observable::destroy);
         super.after();
