@@ -169,6 +169,74 @@ public class SqlInsertTest extends SimpleTestInClusterSupport {
                 )));
     }
 
+    @Test
+    public void insert_allTypes_as_strings() {
+        assertMap(ALL_TYPES_MAP, "INSERT INTO " + ALL_TYPES_MAP + " VALUES (" +
+                        "'1', --key\n" +
+                        "'string', --varchar\n" +
+                        "'a', --character\n" +
+                        "'b',\n" +
+                        "'true', --boolean\n" +
+                        "'false',\n" +
+                        "'126', --byte\n" +
+                        "'127', \n" +
+                        "'32766', --short\n" +
+                        "'32767', \n" +
+                        "'2147483646', --int \n" +
+                        "'2147483647',\n" +
+                        "'9223372036854775806', --long\n" +
+                        "'9223372036854775807',\n" +
+                        // this is bigDecimal, but it's still limited to 64-bit unscaled value, see
+                        // SqlValidatorImpl.validateLiteral()
+                        "'9223372036854775.123', --bigDecimal\n" +
+                        "'9223372036854775222', --bigInteger\n" +
+                        "'1234567890.1', --float\n" +
+                        "'1234567890.2', \n" +
+                        "'123451234567890.1', --double\n" +
+                        "'123451234567890.2',\n" +
+                        "'12:23:34', -- local time\n" +
+                        "'2020-04-15', -- local date \n" +
+                        "'2020-04-15T12:23:34.1', --timestamp\n" +
+                        // there's no timestamp-with-tz literal in calcite apparently
+                        "'2020-04-15T12:23:34.2Z', --timestamp with tz\n" +
+                        "'2020-04-15T12:23:34.3Z', --timestamp with tz\n" +
+                        "'2020-04-15T12:23:34.4Z', --timestamp with tz\n" +
+                        "'2020-04-15T12:23:34.5Z', --timestamp with tz\n" +
+                        "'2020-04-15T12:23:34.6Z' --timestamp with tz\n" +
+                        /*"INTERVAL '1' YEAR, -- year-to-month interval\n" +
+                        "INTERVAL '1' HOUR -- day-to-second interval\n" +*/
+                        ")",
+                createMap(BigInteger.valueOf(1), new AllTypesValue(
+                        "string",
+                        'a',
+                        'b',
+                        true,
+                        false,
+                        (byte) 126,
+                        (byte) 127,
+                        (short) 32766,
+                        (short) 32767,
+                        2147483646,
+                        2147483647,
+                        9223372036854775806L,
+                        9223372036854775807L,
+                        new BigDecimal("9223372036854775.123"),
+                        new BigInteger("9223372036854775222"),
+                        1234567890.1f,
+                        1234567890.2f,
+                        123451234567890.1,
+                        123451234567890.2,
+                        LocalTime.of(12, 23, 34),
+                        LocalDate.of(2020, 4, 15),
+                        LocalDateTime.of(2020, 4, 15, 12, 23, 34, 100_000_000),
+                        Date.from(LocalDateTime.of(2020, 4, 15, 12, 23, 34, 200_000_000).atZone(UTC).withZoneSameInstant(systemDefault()).toInstant()),
+                        GregorianCalendar.from(ZonedDateTime.of(2020, 4, 15, 12, 23, 34, 300_000_000, UTC)),
+                        Instant.ofEpochMilli(1586953414400L),
+                        ZonedDateTime.of(2020, 4, 15, 12, 23, 34, 500_000_000, UTC),
+                        OffsetDateTime.of(2020, 4, 15, 12, 23, 34, 600_000_000, UTC)
+                )));
+    }
+
     private <K, V> void assertMap(String name, String sql, Map<K, V> expected) {
         sqlService.execute(sql).join();
         assertEquals(expected, new HashMap<>(instance().getMap(name)));
