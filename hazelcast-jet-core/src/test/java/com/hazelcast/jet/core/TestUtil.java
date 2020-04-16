@@ -69,7 +69,9 @@ public final class TestUtil {
         boolean found = false;
         Throwable t = caught;
         while (!found && t != null) {
-            found = Objects.equals(t.getMessage(), expected.getMessage()) && t.getClass() == expected.getClass();
+            found = Objects.equals(t.getMessage(), expected.getMessage()) && t.getClass() == expected.getClass() ||
+                    (t.getMessage().contains(expected.getMessage()) &&
+                            t.getMessage().contains(expected.getClass().getName()));
             t = t.getCause();
         }
 
