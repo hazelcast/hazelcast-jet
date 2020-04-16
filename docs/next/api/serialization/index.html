@@ -229,10 +229,10 @@ SerializationBenchmark.stream         thrpt    3  4.828 ± 1.227  ops/us
 <p>The very same object instantiated with sample data will also be encoded
 with different number of bytes depending on used strategy:</p>
 <pre><code class="hljs css language-text">Strategy                                        Number of Bytes  Overhead %
-com.hazelcast.nio.serialization.StreamSerializer             26           0
-com.hazelcast.nio.serialization.Portable                    104         300
-java.io.Externalizable                                       87         234
 java.io.Serializable                                        162         523
+java.io.Externalizable                                       87         234
+com.hazelcast.nio.serialization.Portable                    104         300
+com.hazelcast.nio.serialization.StreamSerializer             26           0
 </code></pre>
 <p>You can see that using plain <code>Serializable</code> can easily become a
 bottleneck in your application, as even with this simple data type it's
