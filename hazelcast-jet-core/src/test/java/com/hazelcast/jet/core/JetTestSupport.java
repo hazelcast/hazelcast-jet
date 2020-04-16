@@ -176,18 +176,16 @@ public abstract class JetTestSupport extends HazelcastTestSupport {
      *      ignoredExecutionId == null}
      */
     public static long assertJobRunningEventually(JetInstance instance, Job job, Long ignoredExecutionId) {
-        Long executionId = 0L;
+        Long executionId;
         JobExecutionService service = getNodeEngineImpl(instance)
                 .<JetService>getService(JetService.SERVICE_NAME)
                 .getJobExecutionService();
         do {
             assertJobStatusEventually(job, RUNNING);
-            if (ignoredExecutionId == null) {
-                break;
-            }
             // executionId can be null if the execution just terminated
             executionId = service.getExecutionIdForJobId(job.getId());
-        } while (executionId == null || executionId == ignoredExecutionId.longValue());
+        } while (executionId == null
+                || ignoredExecutionId != null && executionId == ignoredExecutionId.longValue());
         return executionId;
     }
 
