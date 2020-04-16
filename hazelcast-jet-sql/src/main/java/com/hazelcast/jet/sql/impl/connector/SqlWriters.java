@@ -78,7 +78,6 @@ public class SqlWriters {
 
         Set<String> keyProperties = keyClassName == null ? emptySet() : propertiesOf(keyClassName);
         Set<String> valueProperties = valueClassName == null ? emptySet() : propertiesOf(valueClassName);
-
         BitSet keyIndices = new BitSet(fields.size());
         for (int index = 0; index < fields.size(); index++) {
             if (index != keyIndex && index != valueIndex) {

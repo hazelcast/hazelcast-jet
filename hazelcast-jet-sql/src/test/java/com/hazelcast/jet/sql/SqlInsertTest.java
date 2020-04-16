@@ -37,6 +37,8 @@ import static org.junit.Assert.assertEquals;
 public class SqlInsertTest extends SimpleTestInClusterSupport {
 
     private static final String PERSON_MAP_SINK = "person_map_sink";
+    private static final String OBJECT_MAP_SINK = "object_map_sink";
+
     private static final String ALL_TYPES_MAP = "all_types_map";
 
     private static JetSqlService sqlService;
@@ -50,6 +52,13 @@ public class SqlInsertTest extends SimpleTestInClusterSupport {
                 ImmutableMap.of(TO_KEY_CLASS, Person.class.getName(), TO_VALUE_CLASS, Person.class.getName()),
                 singletonList(
                         entry("birthday", QueryDataType.DATE)
+                )
+        );
+
+        sqlService.createTable(OBJECT_MAP_SINK, JetSchema.IMAP_LOCAL_SERVER,
+                ImmutableMap.of(TO_KEY_CLASS, SerializableObject.class.getName(), TO_VALUE_CLASS, SerializableObject.class.getName()),
+                singletonList(
+                        entry("nonExistingProperty", QueryDataType.INT)
                 )
         );
 
@@ -94,6 +103,13 @@ public class SqlInsertTest extends SimpleTestInClusterSupport {
         assertMap(
                 PERSON_MAP_SINK, "INSERT INTO " + PERSON_MAP_SINK + "(birthday) VALUES (null)",
                 createMap(new Person(), new Person()));
+    }
+
+    @Test
+    public void insert_toleratesNullNonExistingProperties() {
+        assertMap(
+                OBJECT_MAP_SINK, "INSERT INTO " + OBJECT_MAP_SINK + "(nonExistingProperty) VALUES (null)",
+                createMap(new SerializableObject(), new SerializableObject()));
     }
 
     @Test
@@ -287,6 +303,19 @@ public class SqlInsertTest extends SimpleTestInClusterSupport {
         @Override
         public int hashCode() {
             return Objects.hash(birthday);
+        }
+    }
+
+    public static final class SerializableObject implements Serializable {
+
+        @Override
+        public int hashCode() {
+            return 1;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            return obj instanceof SerializableObject;
         }
     }
 }

@@ -16,7 +16,6 @@
 
 package com.hazelcast.jet.sql;
 
-import com.hazelcast.jet.Job;
 import com.hazelcast.jet.Observable;
 import com.hazelcast.jet.SimpleTestInClusterSupport;
 import com.hazelcast.jet.sql.impl.schema.JetSchema;
@@ -208,8 +207,7 @@ public class SqlTest extends SimpleTestInClusterSupport {
     }
 
     private <K, V> void assertMap(String mapName, String sql, Map<K, V> expected) {
-        Job job = sqlService.execute(sql);
-        job.join();
+        sqlService.execute(sql).join();
         assertEquals(expected, new HashMap<>(instance().getMap(mapName)));
     }
 
