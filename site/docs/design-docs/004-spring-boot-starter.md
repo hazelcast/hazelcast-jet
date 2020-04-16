@@ -59,20 +59,20 @@ class first.
 
 - If `JetConfig` is available as a bean, a member will be created using
   the bean.
-
-- If `hazelcast.jet.config` system property is defined, a member will
-  be created using the defined configuration file.
+  
+- If `ClientConfig` is available as a bean, a client will be created
+  using the bean.
 
 - If `hazelcast.jet.server.config` config property is defined, a member
   will be created using the defined configuration file.
 
-- If `ClientConfig` is available as a bean, a client will be created
-  using the bean.
-
-- If `hazelcast.client.config` system property is defined, a client
-  will be created using the defined configuration file.
+- If `hazelcast.jet.config` system property is defined, a member will
+  be created using the defined configuration file.
 
 - If `hazelcast.jet.client.config` config property is defined, a client
+  will be created using the defined configuration file.
+
+- If `hazelcast.client.config` system property is defined, a client
   will be created using the defined configuration file.
 
 - If `hazelcast-jet.(yaml|yml|xml)` found on the classpath or at the
