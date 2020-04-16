@@ -184,8 +184,7 @@ public abstract class JetTestSupport extends HazelcastTestSupport {
             assertJobStatusEventually(job, RUNNING);
             // executionId can be null if the execution just terminated
             executionId = service.getExecutionIdForJobId(job.getId());
-        } while (executionId == null
-                || ignoredExecutionId != null && executionId == ignoredExecutionId.longValue());
+        } while (executionId == null || executionId.equals(ignoredExecutionId));
         return executionId;
     }
 
