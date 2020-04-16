@@ -209,9 +209,12 @@ public class KafkaSqlConnector implements SqlConnector {
 
         EntryWriter writer = table.getWriter();
         Vertex vStart = dag.newVertex("project", mapP(writer));
-        Vertex vEnd = dag.newVertex("kafka(" + table.getTopicName() + ')',
+
+        String topicName = table.getTopicName();
+        Vertex vEnd = dag.newVertex("kafka(" + topicName + ')',
                 KafkaProcessors.<Entry<Object, Object>, Object, Object>writeKafkaP(
-                        table.getKafkaProperties(), table.getTopicName(), Entry::getKey, Entry::getValue, true));
+                        table.getKafkaProperties(), topicName, Entry::getKey, Entry::getValue, true));
+
         dag.edge(between(vStart, vEnd));
         return vStart;
     }

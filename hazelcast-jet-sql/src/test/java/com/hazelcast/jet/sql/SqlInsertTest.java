@@ -29,7 +29,6 @@ import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.core.TestUtil.createMap;
 import static com.hazelcast.jet.sql.impl.connector.imap.IMapSqlConnector.TO_KEY_CLASS;
 import static com.hazelcast.jet.sql.impl.connector.imap.IMapSqlConnector.TO_VALUE_CLASS;
-import static java.time.ZoneId.systemDefault;
 import static java.time.ZoneOffset.UTC;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
@@ -157,7 +156,7 @@ public class SqlInsertTest extends SimpleTestInClusterSupport {
                         LocalTime.of(12, 23, 34),
                         LocalDate.of(2020, 4, 15),
                         LocalDateTime.of(2020, 4, 15, 12, 23, 34, 100_000_000),
-                        Date.from(LocalDateTime.of(2020, 4, 15, 12, 23, 34, 200_000_000).atZone(UTC).withZoneSameInstant(systemDefault()).toInstant()),
+                        Date.from(Instant.ofEpochMilli(1586953414200L)),
                         (GregorianCalendar) new Calendar.Builder()
                                 .setTimeZone(TimeZone.getTimeZone(UTC))
                                 .setLocale(Locale.getDefault(Locale.Category.FORMAT))
@@ -229,7 +228,7 @@ public class SqlInsertTest extends SimpleTestInClusterSupport {
                         LocalTime.of(12, 23, 34),
                         LocalDate.of(2020, 4, 15),
                         LocalDateTime.of(2020, 4, 15, 12, 23, 34, 100_000_000),
-                        Date.from(LocalDateTime.of(2020, 4, 15, 12, 23, 34, 200_000_000).atZone(UTC).withZoneSameInstant(systemDefault()).toInstant()),
+                        Date.from(Instant.ofEpochMilli(1586953414200L)),
                         GregorianCalendar.from(ZonedDateTime.of(2020, 4, 15, 12, 23, 34, 300_000_000, UTC)),
                         Instant.ofEpochMilli(1586953414400L),
                         ZonedDateTime.of(2020, 4, 15, 12, 23, 34, 500_000_000, UTC),

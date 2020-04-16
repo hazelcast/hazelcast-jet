@@ -226,6 +226,7 @@ public class IMapSqlConnector implements SqlConnector {
 
         String mapName = table.getMapName();
         Vertex vEnd = dag.newVertex("mapSink", SinkProcessors.writeMapP(mapName));
+
         dag.edge(between(vStart, vEnd));
         return vStart;
     }
