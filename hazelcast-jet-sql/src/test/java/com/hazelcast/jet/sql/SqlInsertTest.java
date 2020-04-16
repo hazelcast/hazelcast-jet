@@ -160,7 +160,7 @@ public class SqlInsertTest extends SimpleTestInClusterSupport {
                         (GregorianCalendar) new Calendar.Builder()
                                 .setTimeZone(TimeZone.getTimeZone(UTC))
                                 .setLocale(Locale.getDefault(Locale.Category.FORMAT))
-                                .setInstant(ZonedDateTime.of(2020, 4, 15, 12, 23, 34, 300_000_000, UTC).toInstant().toEpochMilli())
+                                .setInstant(1586953414300L)
                                 .build(),
                         Instant.ofEpochMilli(1586953414400L),
                         ZonedDateTime.of(2020, 4, 15, 12, 23, 34, 500_000_000, UTC),
