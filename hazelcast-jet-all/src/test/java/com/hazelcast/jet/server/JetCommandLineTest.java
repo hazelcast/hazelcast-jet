@@ -125,7 +125,7 @@ public class JetCommandLineTest extends JetTestSupport {
     }
 
     public boolean isJarFileExists() {
-        return testJobJarFile.toFile().exists();
+        return Files.exists(testJobJarFile);
     }
 
     @After
