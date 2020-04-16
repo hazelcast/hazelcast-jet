@@ -158,7 +158,7 @@ You can also set configuration files using system property:
 
 ```java
 System.setProperty("hazelcast.jet.config", "config/hazelcast-jet-tutorial.yaml");
-System.setProperty("hazelcast.config", "config/hazelcast-jet-tutorial.yaml");
+System.setProperty("hazelcast.config", "config/hazelcast-tutorial.yaml");
 ```
 
 This will work if your configuration files are at the working
