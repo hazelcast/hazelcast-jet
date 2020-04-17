@@ -15,7 +15,6 @@ class Demos extends React.Component {
 
         const cardStyle = {
             root: {
-                // backgroundColor: "#fff5e0",
                 display: "inline-block",
                 marginLeft: "3em",
                 marginTop: "1em",
@@ -46,13 +45,14 @@ class Demos extends React.Component {
                 marginLeft: "1em",
                 marginRight: "1em",
                 marginTop: "1.5em",
-                textAlign: "center",
+                textAlign: "left",
                 fontSize: "1em",
                 minHeight: "14.5em",
                 maxHeight: "14.5em",
             },
             title: {
                 textAlign: "center",
+                paddingTop: "0.25em",
                 display: "block",
                 backgroundColor: "#e6e6e6",
                 minHeight: "2em",
