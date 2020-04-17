@@ -24,10 +24,6 @@ class Demos extends React.Component {
                 borderWidth: "1px",
                 borderColor: "#e6e6e6",
             },
-            actionArea: {
-                minWidth: "22.75em",
-                maxWidth: "22.75em",
-            },
             button: {
                 marginLeft: "6.5em",
                 textAlign: "center",
