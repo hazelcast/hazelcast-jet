@@ -10,9 +10,6 @@ class Demos extends React.Component {
 
     render() {
         const {config: siteConfig, language = ''} = this.props;
-        const {baseUrl} = siteConfig;
-        const repoUrl = `https://github.com/${siteConfig.organizationName}/${siteConfig.projectName}`;
-
         const cardStyle = {
             root: {
                 display: "inline-block",
@@ -33,7 +30,6 @@ class Demos extends React.Component {
             },
             button: {
                 marginLeft: "6.5em",
-                // color: "#29444e",
                 textAlign: "center",
                 minHeight: "3em",
                 minWidth: "15em",
@@ -158,6 +154,13 @@ class Demos extends React.Component {
                             the sentiment score. Jet aggregates scores from the last 30 seconds, last minute and last 5
                             minutes and prints the coin popularity table.
                         </MediaCard>
+                        <MediaCard title="Bitcoin Death Cross"
+                                   link="https://github.com/hazelcast/hazelcast-jet-demos/tree/master/bitcoin-death-cross">
+                            This example shows how Jet is used to spot the dramatically-named Death Cross for the price
+                            of Bitcoin, which is an indication to sell, Sell, SELL!. The idea here is that we could
+                            automatically analyze stock market prices and use this information to guide our buying and
+                            selling decisions.
+                        </MediaCard>
                         <MediaCard title="H2O ML Model Inference"
                                    link="https://github.com/hazelcast/hazelcast-jet-demos/tree/master/h2o-breast-cancer-classification">
                             This is an example of enabling H2O data models for use in real-time stream processing by
@@ -165,6 +168,20 @@ class Demos extends React.Component {
                             create an H2O Deep Learning model, train it with a sample data set (Breast Cancer Wisconsin
                             (Diagnostic) Data Set) to prove statistical classification, export the model to a MOJO and
                             incorporate the MOJO into a Jet Pipeline.
+                        </MediaCard>
+                        <MediaCard title="Change Data Capture Demo With Kafka"
+                                   link="https://github.com/hazelcast/hazelcast-jet-demos/tree/master/debezium-cdc-with-kafka">
+                            This demo includes an example for Change Data Capture scenario with Debezium, Kafka, MySQL
+                            and a Hazelcast Jet cluster inside Docker environment with Docker Compose. By using
+                            Debezium, the changes on MySQL table are captured, and then published into a Kafka topic.
+                            The Hazelcast Jet pipeline listen for changes on the Kafka topic, logs the events as they
+                            arrive to the standard out and puts them to an IMap.
+                        </MediaCard>
+                        <MediaCard title="Change Data Capture Demo Without Kafka"
+                                   link="https://github.com/hazelcast/hazelcast-jet-demos/tree/master/debezium-cdc-without-kafka">
+                            This example includes a Jet job that listen for changes on the configured inventory database
+                            and logs the events as they arrive to the standard out. Here, The job are going on without
+                            using Kafka.
                         </MediaCard>
                     </CompLibrary.Container>
                 </div>
