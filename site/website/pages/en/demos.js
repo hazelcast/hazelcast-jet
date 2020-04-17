@@ -13,7 +13,7 @@ class Demos extends React.Component {
         const cardStyle = {
             root: {
                 display: "inline-block",
-                marginLeft: "3em",
+                marginRight: "3em",
                 marginTop: "1em",
                 marginBottom: "1em",
                 minWidth: "23em",
