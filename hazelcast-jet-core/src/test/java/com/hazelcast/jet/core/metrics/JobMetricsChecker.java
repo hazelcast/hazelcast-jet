@@ -66,7 +66,7 @@ final class JobMetricsChecker {
 
     long assertRandomMetricValueAtLeast(String metricName, long minExpectedValue) {
         return assertAggregatedMetricValueAtLeast(metricName, minExpectedValue,
-                m -> m.stream().mapToLong(Measurement::value).sum());
+                m -> m.stream().limit(1).mapToLong(Measurement::value).sum());
     }
 
     private void assertAggregatedMetricValue(String metricName, long expectedValue,
