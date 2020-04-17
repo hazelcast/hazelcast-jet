@@ -89,8 +89,8 @@ public abstract class GeneralHashJoinBuilder<T0> {
     /**
      * Adds another contributing pipeline stage to the hash-join operation.
      *
-     * If no matching items for returned {@linkplain Tag tag} is found, no records
-     * for given key will be added.
+     * If no matching items for returned {@linkplain Tag tag} is found, no
+     * records for given key will be added.
      *
      * @param stage the contributing stage
      * @param joinClause specifies how to join the contributing stage
