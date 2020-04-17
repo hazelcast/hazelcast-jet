@@ -368,7 +368,8 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
         for (EdgeDef edge : srcVertex.outboundEdges()) {
             Map<Address, ConcurrentConveyor<Object>> memberToSenderConveyorMap = null;
             if (edge.isDistributed()) {
-                memberToSenderConveyorMap = memberToSenderConveyorMap(edgeSenderConveyorMap, edge, jobSerializationService);
+                memberToSenderConveyorMap =
+                        memberToSenderConveyorMap(edgeSenderConveyorMap, edge, jobSerializationService);
             }
             outboundStreams.add(createOutboundEdgeStream(edge, processorIdx, memberToSenderConveyorMap,
                     jobSerializationService));
