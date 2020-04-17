@@ -31,6 +31,7 @@ import com.hazelcast.jet.datamodel.ItemsByTag;
 import com.hazelcast.jet.datamodel.Tag;
 import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.datamodel.Tuple3;
+import com.hazelcast.jet.function.QuadFunction;
 import com.hazelcast.jet.function.TriFunction;
 import com.hazelcast.jet.pipeline.test.TestSources;
 import com.hazelcast.map.IMap;
@@ -62,6 +63,7 @@ import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
 import static com.hazelcast.jet.core.processor.Processors.noopP;
 import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
 import static com.hazelcast.jet.datamodel.Tuple3.tuple3;
+import static com.hazelcast.jet.datamodel.Tuple4.tuple4;
 import static com.hazelcast.jet.impl.pipeline.AbstractStage.transformOf;
 import static com.hazelcast.jet.pipeline.JoinClause.joinMapEntries;
 import static com.hazelcast.jet.pipeline.ServiceFactories.nonSharedService;
@@ -1063,7 +1065,7 @@ public class BatchStageTest extends PipelineTestSupport {
     @Test
     public void when_hashJoinBuilderAddInner_then_filterOutNulls() {
         // Given
-        int itemCountLocal = itemCount;
+        int itemCountLocal = 16;
         List<Integer> input = sequence(itemCountLocal);
         String prefixA = "A-";
         String prefixB = "B-";
@@ -1076,31 +1078,39 @@ public class BatchStageTest extends PipelineTestSupport {
         BatchStage<Entry<Integer, String>> enrichingStage2 =
                 batchStageFromList(input)
                         .filter(e -> e <= itemCountLocal / 4)
-                        .flatMap(i -> traverseItems(entry(i, prefixC + i), entry(i, prefixD + i)));
+                        .flatMap(i -> traverseItems(entry(i, prefixC + i)));
+        BatchStage<Entry<Integer, String>> enrichingStage3 =
+                batchStageFromList(input)
+                        .filter(e -> e <= itemCountLocal / 8)
+                        .flatMap(i -> traverseItems(entry(i, prefixD + i)));
 
         // When
         HashJoinBuilder<Integer> b = batchStageFromList(input).hashJoinBuilder();
         Tag<String> tagA = b.addInner(enrichingStage1, joinMapEntries(wholeItem()));
         Tag<String> tagB = b.addInner(enrichingStage2, joinMapEntries(wholeItem()));
+        Tag<String> tagC = b.add(enrichingStage3, joinMapEntries(wholeItem()));
         GeneralStage<Tuple2<Integer, ItemsByTag>> joined =
                 b.build(Tuple2::tuple2);
 
         // Then
         joined.writeTo(sink);
         execute();
-        TriFunction<Integer, String, String, String> formatFn =
-                (i, v1, v2) -> String.format("(%04d, %s, %s)", i, v1, v2);
+        QuadFunction<Integer, String, String, String, String> formatFn =
+                (i, v1, v2, v3) -> String.format("(%04d, %s, %s, %s)", i, v1, v2, v3);
+        int rangeForD = itemCountLocal / 8;
         assertEquals(
                 streamToString(input.stream()
-                                .filter(i ->  i <= itemCountLocal / 4)
+                                .filter(i -> i <= itemCountLocal / 4)
                                 .flatMap(i -> Stream.of(
-                                        tuple3(i, prefixA, prefixC),
-                                        tuple3(i, prefixA, prefixD),
-                                        tuple3(i, prefixB, prefixC),
-                                        tuple3(i, prefixB, prefixD))),
-                        t -> formatFn.apply(t.f0(), t.f1() + t.f0(), t.f2() + t.f0())),
+                                        tuple4(i, prefixA, prefixC, prefixD),
+                                        tuple4(i, prefixB, prefixC, prefixD)
+                                )),
+                        t -> formatFn.apply(t.f0(), t.f1() + t.f0(), t.f2() + t.f0(),
+                                t.f0() < rangeForD ? t.f3() + t.f0() : null)),
                 streamToString(sinkList.stream().map(o -> (Tuple2<Integer, ItemsByTag>) o),
-                        t2 -> formatFn.apply(t2.f0(), t2.f1().get(tagA), t2.f1().get(tagB)))
+                        t2 -> formatFn.apply(t2.f0(), t2.f1().get(tagA), t2.f1().get(tagB),
+                                t2.f0() < rangeForD ? t2.f1().get(tagC) : "null")
+                )
         );
     }
 
