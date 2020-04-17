@@ -129,7 +129,7 @@ public final class JetBootstrap {
                 try {
                     remembered.shutdown();
                 } catch (Throwable t) {
-                    System.err.println("Client shutdown failed with:");
+                    System.err.println("Shutdown failed with:");
                     t.printStackTrace();
                 }
             }
