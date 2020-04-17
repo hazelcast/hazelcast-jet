@@ -111,12 +111,13 @@ public class IMapSqlConnector implements SqlConnector {
             @Nonnull List<Expression<?>> projections
     ) {
         IMapTable table = (IMapTable) jetTable;
+
         FunctionEx<Entry<Object, Object>, Object[]> mapProjection =
                 ExpressionUtil.projectionFn(jetTable, predicate, projections);
 
         String mapName = table.getMapName();
         return dag.newVertex("map(" + mapName + ")",
-                readMapP(mapName, Predicates.alwaysTrue(), entry -> mapProjection.apply(entry)));
+                readMapP(mapName, Predicates.alwaysTrue(), mapProjection::apply));
     }
 
     @Nullable @Override

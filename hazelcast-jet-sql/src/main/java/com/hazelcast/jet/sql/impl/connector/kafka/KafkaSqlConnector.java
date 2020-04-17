@@ -100,7 +100,7 @@ public class KafkaSqlConnector implements SqlConnector {
 //        if (!serverOptions.isEmpty()) {
 //            throw new JetException("Only local maps are supported for now");
 //        }
-        String mapName = tableOptions.getOrDefault(TO_TOPIC_NAME, tableName);
+        String topicName = tableOptions.getOrDefault(TO_TOPIC_NAME, tableName);
         Properties kafkaProperties = new Properties();
         kafkaProperties.putAll(serverOptions);
         kafkaProperties.putAll(tableOptions);
@@ -108,7 +108,7 @@ public class KafkaSqlConnector implements SqlConnector {
         kafkaProperties.remove(TO_KEY_CLASS);
         kafkaProperties.remove(TO_VALUE_CLASS);
         EntryWriter writer = entryWriter(fields, tableOptions.get(TO_KEY_CLASS), tableOptions.get(TO_VALUE_CLASS));
-        return new KafkaTable(this, mapName, fields, writer, kafkaProperties);
+        return new KafkaTable(this, topicName, fields, writer, kafkaProperties);
     }
 
     @Override
@@ -125,14 +125,15 @@ public class KafkaSqlConnector implements SqlConnector {
             @Nonnull List<Expression<?>> projections
     ) {
         KafkaTable table = (KafkaTable) jetTable;
+
         String topicName = table.getTopicName();
-
-        FunctionEx<Entry<Object, Object>, Object[]> mapFn = projectionFn(jetTable, predicate, projections);
-        FunctionEx<ConsumerRecord<Object, Object>, Object[]> mapFn1 = cr -> mapFn.apply(entry(cr.key(), cr.value()));
-
         Vertex sourceVertex = dag.newVertex("kafka(" + topicName + ")",
                 KafkaProcessors.streamKafkaP(table.getKafkaProperties(), FunctionEx.identity(), noEventTime(), topicName));
+
+        FunctionEx<Entry<Object, Object>, Object[]> mapFn = projectionFn(jetTable, predicate, projections);
+        FunctionEx<ConsumerRecord<Object, Object>, Object[]> mapFn1 = record -> mapFn.apply(entry(record.key(), record.value()));
         Vertex filterVertex = dag.newVertex("kafka-project-filter", mapP(mapFn1));
+
         dag.edge(between(sourceVertex, filterVertex).isolated());
         return filterVertex;
     }

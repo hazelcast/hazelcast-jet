@@ -199,13 +199,6 @@ public class SqlTest extends SimpleTestInClusterSupport {
                         1, new Person("Foo", 25)));
     }
 
-    @Test
-    public void stream_kafka() {
-        sqlService.createServer("test", KAFKA_CONNECTOR, createMap(
-
-        ));
-    }
-
     private <K, V> void assertMap(String mapName, String sql, Map<K, V> expected) {
         sqlService.execute(sql).join();
         assertEquals(expected, new HashMap<>(instance().getMap(mapName)));
