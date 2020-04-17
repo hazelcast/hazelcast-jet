@@ -7,7 +7,7 @@ description: Out of box support for additional serialization types such as Avro 
 
 ## Problem statement
 
-In Jet 4.0 we support 4 interfaces to serialize custom types. However,
+In Jet {jet-version} we support 4 interfaces to serialize custom types. However,
 either implementations are slow (`java.io.Serializable` &
 `java.io.Externalizable`) or must depend on IMDG specific classes and
 require hand crafted code from the user which is cumbersome and error

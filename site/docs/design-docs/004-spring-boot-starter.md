@@ -123,7 +123,7 @@ The health indicator for Jet actually uses the wrapped
 `HazelcastHealthIndicator` which is already available in Spring Boot
 distribution instead of creating a Jet specific one. The problem is
 Spring Boot still uses IMDG `3.12.x` and `com.hazelcast.core.Endpoint`
-is moved to `com.hazelcast.cluster.Endpoint` in `4.0`. Since this class
-is used in `HazelcastHealthIndicator` we should wait for Spring Boot to
-upgrade to IMDG `4.0` to continue this unification. See the
-[issue](https://github.com/hazelcast/hazelcast-jet-contrib/issues/63).
+is moved to `com.hazelcast.cluster.Endpoint` in `{imdg-version}`. Since
+this class is used in `HazelcastHealthIndicator` we should wait for
+Spring Boot to upgrade to IMDG `{imdg-version}` to continue this
+unification. See the [issue](https://github.com/hazelcast/hazelcast-jet-contrib/issues/63).
