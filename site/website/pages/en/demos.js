@@ -1,5 +1,6 @@
 const React = require('react');
 const CompLibrary = require('../../core/CompLibrary');
+const Container = CompLibrary.Container;
 const MarkdownBlock = CompLibrary.MarkdownBlock;
 const MaterialUICore = require('@material-ui/core');
 const Card = MaterialUICore.Card;
@@ -83,7 +84,7 @@ class Demos extends React.Component {
         return (
             <div>
                 <div>
-                    <CompLibrary.Container padding={['left', 'bottom', 'top']}
+                    <Container className="mainContainer documentContainer postContainer" padding={['left', 'bottom']}
                                            background="light">
                         <header>
                             <h1>{siteConfig.title} Demos</h1>
@@ -179,7 +180,7 @@ class Demos extends React.Component {
                             and logs the events as they arrive to the standard out. Here, The job are going on without
                             using Kafka.
                         </MediaCard>
-                    </CompLibrary.Container>
+                    </Container>
                 </div>
             </div>
         );
