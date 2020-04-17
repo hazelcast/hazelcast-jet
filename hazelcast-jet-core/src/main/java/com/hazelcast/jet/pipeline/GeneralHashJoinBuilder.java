@@ -124,9 +124,6 @@ public abstract class GeneralHashJoinBuilder<T0> {
                 .stream()
                 .map(e -> e.getValue().clause())
                 .map(joinClause -> fnAdapter.adaptJoinClause(joinClause));
-        Stream<Boolean> whereNullNotAllowed = orderedClauses
-                .stream()
-                .map(e -> e.getValue().inner);
         BiFunctionEx<?, ? super ItemsByTag, ?> mapToOutputBiFn = fnAdapter.adaptHashJoinOutputFn(mapToOutputFn);
         HashJoinTransform<T0, R> hashJoinTransform = new HashJoinTransform<>(
                 upstream,
@@ -135,7 +132,10 @@ public abstract class GeneralHashJoinBuilder<T0> {
                               .map(Entry::getKey)
                               .collect(toList()),
                 mapToOutputBiFn,
-                whereNullNotAllowed.collect(toList()));
+                orderedClauses
+                        .stream()
+                        .map(e -> e.getValue().inner)
+                        .collect(toList()));
         pipelineImpl.connect(upstream, hashJoinTransform);
         return createOutStageFn.get(hashJoinTransform, fnAdapter, pipelineImpl);
     }
