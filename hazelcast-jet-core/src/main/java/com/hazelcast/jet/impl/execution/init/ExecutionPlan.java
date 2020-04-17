@@ -148,7 +148,7 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
         this.nodeEngine = (NodeEngineImpl) nodeEngine;
         this.executionId = executionId;
         initProcSuppliers(jobId, executionId, tempDirectories, serializationService);
-        initDag();
+        initDag(serializationService);
 
         this.ptionArrgmt = new PartitionArrangement(partitionOwners, nodeEngine.getThisAddress());
         JetInstance instance = getJetInstance(nodeEngine);
@@ -332,7 +332,7 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
         }
     }
 
-    private void initDag() {
+    private void initDag(InternalSerializationService serializationService) {
         final Map<Integer, VertexDef> vMap = vertices.stream().collect(toMap(VertexDef::vertexId, v -> v));
         for (VertexDef v : vertices) {
             v.inboundEdges().forEach(e -> e.initTransientFields(vMap, v, false));
@@ -344,7 +344,8 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
                 .flatMap(List::stream)
                 .map(EdgeDef::partitioner)
                 .filter(Objects::nonNull)
-                .forEach(p -> p.init(partitionService::getPartitionId));
+                .forEach(partitioner ->
+                        partitioner.init(object -> partitionService.getPartitionId(serializationService.toData(object))));
     }
 
     private static Collection<? extends Processor> createProcessors(VertexDef vertexDef, int parallelism) {
