@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.sql.impl.connector.imap;
 
+import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Vertex;
@@ -25,34 +26,23 @@ import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.pipeline.ServiceFactories;
 import com.hazelcast.jet.sql.SqlConnector;
 import com.hazelcast.jet.sql.impl.connector.SqlWriters.EntryWriter;
+import com.hazelcast.jet.sql.impl.expression.ExpressionUtil;
 import com.hazelcast.jet.sql.impl.schema.JetTable;
-import com.hazelcast.projection.Projection;
-import com.hazelcast.query.Predicate;
 import com.hazelcast.query.Predicates;
-import com.hazelcast.sql.impl.exec.KeyValueRowExtractor;
 import com.hazelcast.sql.impl.expression.Expression;
-import com.hazelcast.sql.impl.expression.ExpressionEvalContext;
-import com.hazelcast.sql.impl.row.KeyValueRow;
 import com.hazelcast.sql.impl.type.QueryDataType;
-import org.apache.commons.beanutils.PropertyUtils;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.lang.reflect.InvocationTargetException;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.processor.Processors.mapP;
 import static com.hazelcast.jet.core.processor.SourceProcessors.readMapP;
 import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
-import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
-import static com.hazelcast.jet.impl.util.Util.toList;
 import static com.hazelcast.jet.sql.impl.connector.SqlWriters.entryWriter;
-import static com.hazelcast.query.QueryConstants.KEY_ATTRIBUTE_NAME;
-import static com.hazelcast.query.QueryConstants.THIS_ATTRIBUTE_NAME;
 
 public class IMapSqlConnector implements SqlConnector {
 
@@ -79,18 +69,6 @@ public class IMapSqlConnector implements SqlConnector {
      * one of the columns.
      */
     public static final String TO_VALUE_CLASS = "valueClass";
-
-    private static final KeyValueRowExtractor KEY_VALUE_ROW_EXTRACTOR = (key, value, path) -> {
-        try {
-            return PropertyUtils.getProperty(entry(key, value), path); // TODO: custom Row implementation so we don't have to create Entry ???
-        } catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
-            throw sneakyThrow(e);
-        }
-    };
-
-    private static final ExpressionEvalContext ZERO_ARGUMENTS_CONTEXT = index -> {
-        throw new IndexOutOfBoundsException("" + index);
-    };
 
     @Override
     public boolean isStream() {
@@ -133,60 +111,12 @@ public class IMapSqlConnector implements SqlConnector {
             @Nonnull List<Expression<?>> projections
     ) {
         IMapTable table = (IMapTable) jetTable;
-        List<QueryDataType> fieldTypes = table.getFieldTypes();
-
-        // convert the projection
-        List<String> fieldNames = toList(table.getFieldNames(), fieldName -> {
-            // convert field name, the property path must start with "key" or "value", we're getting
-            // it from a java.util.Map.Entry. Examples:
-            //     "__key" -> "key"
-            //     "__key.fieldA" -> "key.fieldA"
-            //     "fieldB" -> "value.fieldB"
-            //     "this" -> "value"
-            //     "this.fieldB" -> "value.fieldB"
-            if (fieldName.equals(KEY_ATTRIBUTE_NAME.value())) {
-                return "key";
-            } else if (fieldName.startsWith(KEY_ATTRIBUTE_NAME.value())) {
-                return "key." + fieldName.substring(KEY_ATTRIBUTE_NAME.value().length());
-            } else if (fieldName.equals(THIS_ATTRIBUTE_NAME.value())) {
-                return "value";
-            } else if (fieldName.startsWith(THIS_ATTRIBUTE_NAME.value())) {
-                return "value." + fieldName.substring(THIS_ATTRIBUTE_NAME.value().length());
-            } else {
-                return "value." + fieldName;
-            }
-        });
-
-        // convert the predicate
-        // TODO make the ReadMapOrCacheP.LocalProcessorMetaSupplier implement IdentifiedDataSerializable
-        Predicate<Object, Object> mapPredicate;
-        if (predicate == null) {
-            mapPredicate = Predicates.alwaysTrue();
-        } else {
-            mapPredicate = entry -> {
-                KeyValueRow row = new KeyValueRow(fieldNames, fieldTypes, KEY_VALUE_ROW_EXTRACTOR);
-                row.setKeyValue(entry.getKey(), entry.getValue());
-
-                boolean result = predicate.eval(row, ZERO_ARGUMENTS_CONTEXT) == Boolean.TRUE;
-                System.out.println("evaluated " + entry + " to " + result);
-                return result;
-            };
-        }
-
-        Projection<Entry<Object, Object>, Object[]> mapProjection = entry -> {
-            KeyValueRow row = new KeyValueRow(fieldNames, fieldTypes, KEY_VALUE_ROW_EXTRACTOR);
-            row.setKeyValue(entry.getKey(), entry.getValue());
-
-            Object[] result = new Object[projections.size()];
-            for (int i = 0; i < projections.size(); i++) {
-                result[i] = projections.get(i).eval(row, ZERO_ARGUMENTS_CONTEXT);
-            }
-            return result;
-        };
+        FunctionEx<Entry<Object, Object>, Object[]> mapProjection =
+                ExpressionUtil.projectionFn(jetTable, predicate, projections);
 
         String mapName = table.getMapName();
         return dag.newVertex("map(" + mapName + ")",
-                readMapP(mapName, mapPredicate, mapProjection));
+                readMapP(mapName, Predicates.alwaysTrue(), entry -> mapProjection.apply(entry)));
     }
 
     @Nullable @Override

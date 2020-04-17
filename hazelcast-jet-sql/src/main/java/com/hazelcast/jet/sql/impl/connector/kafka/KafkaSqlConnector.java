@@ -24,18 +24,13 @@ import com.hazelcast.jet.kafka.KafkaProcessors;
 import com.hazelcast.jet.sql.SqlConnector;
 import com.hazelcast.jet.sql.impl.connector.SqlWriters.EntryWriter;
 import com.hazelcast.jet.sql.impl.schema.JetTable;
-import com.hazelcast.sql.impl.exec.KeyValueRowExtractor;
-import com.hazelcast.sql.impl.expression.ConstantExpression;
 import com.hazelcast.sql.impl.expression.Expression;
 import com.hazelcast.sql.impl.expression.ExpressionEvalContext;
-import com.hazelcast.sql.impl.row.KeyValueRow;
 import com.hazelcast.sql.impl.type.QueryDataType;
-import org.apache.commons.beanutils.PropertyUtils;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.lang.reflect.InvocationTargetException;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -44,13 +39,9 @@ import java.util.Properties;
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.EventTimePolicy.noEventTime;
-import static com.hazelcast.jet.core.processor.DiagnosticProcessors.peekOutputP;
 import static com.hazelcast.jet.core.processor.Processors.mapP;
-import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
-import static com.hazelcast.jet.impl.util.Util.toList;
 import static com.hazelcast.jet.sql.impl.connector.SqlWriters.entryWriter;
-import static com.hazelcast.query.QueryConstants.KEY_ATTRIBUTE_NAME;
-import static com.hazelcast.query.QueryConstants.THIS_ATTRIBUTE_NAME;
+import static com.hazelcast.jet.sql.impl.expression.ExpressionUtil.projectionFn;
 
 public class KafkaSqlConnector implements SqlConnector {
 
@@ -77,14 +68,6 @@ public class KafkaSqlConnector implements SqlConnector {
      * one of the columns.
      */
     public static final String TO_VALUE_CLASS = "valueClass";
-
-    private static final KeyValueRowExtractor KEY_VALUE_ROW_EXTRACTOR = (key, value, path) -> {
-        try {
-            return PropertyUtils.getProperty(entry(key, value), path); // TODO: custom Row implementation so we don't have to create Entry ???
-        } catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
-            throw sneakyThrow(e);
-        }
-    };
 
     private static final ExpressionEvalContext ZERO_ARGUMENTS_CONTEXT = index -> {
         throw new IndexOutOfBoundsException("" + index);
@@ -144,53 +127,12 @@ public class KafkaSqlConnector implements SqlConnector {
         KafkaTable table = (KafkaTable) jetTable;
         String topicName = table.getTopicName();
 
-        List<QueryDataType> fieldTypes = table.getFieldTypes();
-
-        // convert the projection
-        List<String> fieldNames = toList(table.getFieldNames(), fieldName -> {
-            // convert field name, the property path must start with "key" or "value", we're getting
-            // it from a java.util.Map.Entry. Examples:
-            //     "__key" -> "key"
-            //     "__key.fieldA" -> "key.fieldA"
-            //     "fieldB" -> "value.fieldB"
-            //     "this" -> "value"
-            //     "this.fieldB" -> "value.fieldB"
-            if (fieldName.equals(KEY_ATTRIBUTE_NAME.value())) {
-                return "key";
-            } else if (fieldName.startsWith(KEY_ATTRIBUTE_NAME.value())) {
-                return "key." + fieldName.substring(KEY_ATTRIBUTE_NAME.value().length());
-            } else if (fieldName.equals(THIS_ATTRIBUTE_NAME.value())) {
-                return "value";
-            } else if (fieldName.startsWith(THIS_ATTRIBUTE_NAME.value())) {
-                return "value." + fieldName.substring(THIS_ATTRIBUTE_NAME.value().length());
-            } else {
-                return "value." + fieldName;
-            }
-        });
-
-        @SuppressWarnings("unchecked")
-        Expression<Boolean> predicate0 = predicate != null ? predicate
-                : (Expression<Boolean>) ConstantExpression.create(QueryDataType.BOOLEAN, true);
-
-        // convert the predicate and filter
-        FunctionEx<ConsumerRecord<Object, Object>, Object[]> projectionAndFilter = record -> {
-            KeyValueRow row = new KeyValueRow(fieldNames, fieldTypes, KEY_VALUE_ROW_EXTRACTOR);
-            row.setKeyValue(record.key(), record.value());
-
-            boolean passed = Boolean.TRUE.equals(predicate0.eval(row, ZERO_ARGUMENTS_CONTEXT));
-            if (!passed) {
-                return null;
-            }
-            Object[] result = new Object[projections.size()];
-            for (int i = 0; i < projections.size(); i++) {
-                result[i] = projections.get(i).eval(row, ZERO_ARGUMENTS_CONTEXT);
-            }
-            return result;
-        };
+        FunctionEx<Entry<Object, Object>, Object[]> mapFn = projectionFn(jetTable, predicate, projections);
+        FunctionEx<ConsumerRecord<Object, Object>, Object[]> mapFn1 = cr -> mapFn.apply(entry(cr.key(), cr.value()));
 
         Vertex sourceVertex = dag.newVertex("kafka(" + topicName + ")",
-                peekOutputP(KafkaProcessors.streamKafkaP(table.getKafkaProperties(), FunctionEx.identity(), noEventTime(), topicName)));
-        Vertex filterVertex = dag.newVertex("kafka-project-filter", peekOutputP(mapP(projectionAndFilter)));
+                KafkaProcessors.streamKafkaP(table.getKafkaProperties(), FunctionEx.identity(), noEventTime(), topicName));
+        Vertex filterVertex = dag.newVertex("kafka-project-filter", mapP(mapFn1));
         dag.edge(between(sourceVertex, filterVertex).isolated());
         return filterVertex;
     }
