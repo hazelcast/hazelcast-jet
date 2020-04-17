@@ -751,10 +751,9 @@ public interface GeneralStage<T> extends Stage {
     );
 
     /**
-     * Attaches to both this and the supplied stage
-     * an inner-hash-joining stage and  returns it.
-     * This stage plays the role of the <em>primary stage</em> in
-     * the hash-join. Please refer to the {@link com.hazelcast.jet.pipeline
+     * Attaches to both this and the supplied stage an inner hash-joining stage
+     * and  returns it. This stage plays the role of the <em>primary stage</em>
+     * in the hash-join. Please refer to the {@link com.hazelcast.jet.pipeline
      * package javadoc} for a detailed description of the hash-join transform.
      * <p>
      * This sample joins a stream of users to a stream of countries and outputs
@@ -772,10 +771,9 @@ public interface GeneralStage<T> extends Stage {
      * }</pre>
      *
      * <p>
-     * This method is similar
-     * to {@link #hashJoin(BatchStage, JoinClause, BiFunctionEx)} method,
-     * but it guarantees that both input items will be not-null.
-     * Nulls will be filtered out before reaching {@code #mapToOutputFn}.
+     * This method is similar to {@link #hashJoin(BatchStage, JoinClause, BiFunctionEx)}
+     * method, but it guarantees that both input items will be not-null. Nulls will
+     * be filtered out before reaching {@code #mapToOutputFn}.
      *
      * @param stage1        the stage to hash-join with this one
      * @param joinClause1   specifies how to join the two streams
@@ -861,6 +859,11 @@ public interface GeneralStage<T> extends Stage {
      *     (user, country, company) -> user.setCountry(country).setCompany(company)
      * )
      * }</pre>
+     *
+     * <p>
+     * This method is similar to {@link #hashJoin2(BatchStage, JoinClause, BatchStage, JoinClause, TriFunction)}
+     * method, but it guarantees that both input items will be not-null. Nulls will
+     * be filtered out before reaching {@code #mapToOutputFn}.
      *
      * @param stage1        the first stage to join
      * @param joinClause1   specifies how to join with {@code stage1}
