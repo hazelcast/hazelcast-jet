@@ -478,7 +478,7 @@ public class JobRepository {
             // The error message is later thrown as JetException
             // Remove leading 'com.hazelcast.jet.JetException: ' from the stack trace to avoid double JetException
             // in the final stacktrace
-            return stackTrace.substring(stackTrace.indexOf(' '));
+            return stackTrace.substring(stackTrace.indexOf(' ') + 1);
         }
         return ExceptionUtil.stackTraceToString(error);
     }
