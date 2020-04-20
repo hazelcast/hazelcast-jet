@@ -124,7 +124,7 @@ public interface SqlConnector {
 
     default boolean supportsFullScanReader() {
         return false;
-}
+    }
 
     default boolean supportsNestedLoopReader() {
         return false;

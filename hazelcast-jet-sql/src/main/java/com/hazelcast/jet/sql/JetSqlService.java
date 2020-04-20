@@ -39,6 +39,7 @@ import com.hazelcast.jet.sql.impl.RowCountMetadata;
 import com.hazelcast.jet.sql.impl.cost.CostFactory;
 import com.hazelcast.jet.sql.impl.rule.FullScanPhysicalRule;
 import com.hazelcast.jet.sql.impl.schema.JetSchema;
+import com.hazelcast.jet.sql.parser.JetSqlParserImpl;
 import com.hazelcast.sql.impl.type.QueryDataType;
 import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.avatica.util.Casing;
@@ -124,10 +125,48 @@ public class JetSqlService {
     public JetSqlService(JetInstance instance) {
         this.instance = instance;
         this.schema = new JetSchema(instance);
-        this.validator = createValidator();
-        
+        this.validator = createValidator(schema);
+
         connectionConfig = createConnectionConfig();
         planner = createPlanner(connectionConfig);
+    }
+
+    private static SqlValidator createValidator(JetSchema schema) {
+        SqlOperatorTable opTab = SqlStdOperatorTable.instance();
+
+        JetTypeFactory typeFactory = new JetTypeFactory();
+        CalciteConnectionConfig connectionConfig = createConnectionConfig();
+        Prepare.CatalogReader catalogReader = createCatalogReader(typeFactory, connectionConfig, schema);
+
+        return new JetSqlValidator(
+                opTab,
+                catalogReader,
+                typeFactory,
+                JetSqlConformance.INSTANCE
+        );
+    }
+
+    private static Prepare.CatalogReader createCatalogReader(
+            JavaTypeFactory typeFactory,
+            CalciteConnectionConfig config,
+            JetSchema schema
+    ) {
+        return new CalciteCatalogReader(
+                new JetRootCalciteSchema(schema),
+                Collections.emptyList(),
+                typeFactory,
+                config
+        );
+    }
+
+    private static CalciteConnectionConfig createConnectionConfig() {
+        Properties properties = new Properties();
+
+        properties.put(CalciteConnectionProperty.CASE_SENSITIVE.camelName(), Boolean.TRUE.toString());
+        properties.put(CalciteConnectionProperty.UNQUOTED_CASING.camelName(), Casing.UNCHANGED.toString());
+        properties.put(CalciteConnectionProperty.QUOTED_CASING.camelName(), Casing.UNCHANGED.toString());
+
+        return new CalciteConnectionConfigImpl(properties);
     }
 
     /// SCHEMA METHODS
@@ -213,14 +252,15 @@ public class JetSqlService {
         SqlNode node;
 
         try {
-            SqlParser.ConfigBuilder parserConfig = SqlParser.configBuilder();
+            SqlParser.Config config = SqlParser.configBuilder()
+                                               .setParserFactory(JetSqlParserImpl.FACTORY)
+                                               .setCaseSensitive(true)
+                                               .setUnquotedCasing(Casing.UNCHANGED)
+                                               .setQuotedCasing(Casing.UNCHANGED)
+                                               .setConformance(JetSqlConformance.INSTANCE)
+                                               .build();
 
-            parserConfig.setCaseSensitive(true);
-            parserConfig.setUnquotedCasing(Casing.UNCHANGED);
-            parserConfig.setQuotedCasing(Casing.UNCHANGED);
-            parserConfig.setConformance(JetSqlConformance.INSTANCE);
-
-            SqlParser parser = SqlParser.create(sqlQuery, parserConfig.build());
+            SqlParser parser = SqlParser.create(sqlQuery, config);
 
             node = parser.parseStmt();
         } catch (Exception e) {
@@ -238,11 +278,11 @@ public class JetSqlService {
      */
     private RelNode convert(SqlNode node) {
         JavaTypeFactory typeFactory = new JetTypeFactory();
-        
+
         Prepare.CatalogReader catalogReader = createCatalogReader(typeFactory, connectionConfig, schema);
         RelOptCluster cluster = createCluster(planner, typeFactory);
         SqlToRelConverter sqlToRelConverter = createSqlToRelConverter(catalogReader, validator, cluster);
-        
+
         // 1. Perform initial conversion.
         RelRoot root = sqlToRelConverter.convertQuery(node, false, true);
 
@@ -379,43 +419,5 @@ public class JetSqlService {
         planner.setRoot(rel);
 
         return planner.findBestExp();
-    }
-
-    private SqlValidator createValidator() {
-        SqlOperatorTable opTab = SqlStdOperatorTable.instance();
-
-        JetTypeFactory typeFactory = new JetTypeFactory();
-        CalciteConnectionConfig connectionConfig = createConnectionConfig();
-        Prepare.CatalogReader catalogReader = createCatalogReader(typeFactory, connectionConfig, schema);
-
-        return new JetSqlValidator(
-                opTab,
-                catalogReader,
-                typeFactory,
-                JetSqlConformance.INSTANCE
-        );
-    }
-
-    private static CalciteConnectionConfig createConnectionConfig() {
-        Properties properties = new Properties();
-
-        properties.put(CalciteConnectionProperty.CASE_SENSITIVE.camelName(), Boolean.TRUE.toString());
-        properties.put(CalciteConnectionProperty.UNQUOTED_CASING.camelName(), Casing.UNCHANGED.toString());
-        properties.put(CalciteConnectionProperty.QUOTED_CASING.camelName(), Casing.UNCHANGED.toString());
-
-        return new CalciteConnectionConfigImpl(properties);
-    }
-
-    private static Prepare.CatalogReader createCatalogReader(
-            JavaTypeFactory typeFactory,
-            CalciteConnectionConfig config,
-            JetSchema rootSchema
-    ) {
-        return new CalciteCatalogReader(
-                new JetRootCalciteSchema(rootSchema),
-                Collections.emptyList(),
-                typeFactory,
-                config
-        );
     }
 }

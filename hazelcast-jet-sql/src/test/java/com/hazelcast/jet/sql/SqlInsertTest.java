@@ -256,6 +256,13 @@ public class SqlInsertTest extends SimpleTestInClusterSupport {
                 )));
     }
 
+    @Test
+    public void insert_overwrite() {
+        assertMap(
+                PERSON_MAP_SINK, "INSERT OVERWRITE " + PERSON_MAP_SINK + "(birthday) VALUES ('2020-01-01')",
+                createMap(new Person(), new Person(LocalDate.of(2020, 1, 1))));
+    }
+
     private <K, V> void assertMap(String name, String sql, Map<K, V> expected) {
         sqlService.execute(sql).join();
         assertEquals(expected, new HashMap<>(instance().getMap(name)));

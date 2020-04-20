@@ -23,11 +23,12 @@ import org.apache.calcite.sql.validate.SqlValidatorCatalogReader;
 import org.apache.calcite.sql.validate.SqlValidatorImpl;
 
 public class JetSqlValidator extends SqlValidatorImpl {
+
     public JetSqlValidator(
-        SqlOperatorTable opTab,
-        SqlValidatorCatalogReader catalogReader,
+            SqlOperatorTable opTab,
+            SqlValidatorCatalogReader catalogReader,
             RelDataTypeFactory typeFactory,
-        SqlConformance conformance
+            SqlConformance conformance
     ) {
         super(opTab, catalogReader, typeFactory, conformance);
     }

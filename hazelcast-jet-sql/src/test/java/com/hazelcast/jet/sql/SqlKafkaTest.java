@@ -16,7 +16,6 @@
 
 package com.hazelcast.jet.sql;
 
-import com.hazelcast.jet.Job;
 import com.hazelcast.jet.Observable;
 import com.hazelcast.jet.SimpleTestInClusterSupport;
 import com.hazelcast.jet.kafka.impl.KafkaTestSupport;
@@ -117,15 +116,14 @@ public class SqlKafkaTest extends SimpleTestInClusterSupport {
     }
 
     private void assertTopic(String sql, Map<Integer, String> expected) {
-        Job job = sqlService.execute(sql);
-        job.join();
+        sqlService.execute(sql).join();
         kafkaTestSupport.assertTopicContentsEventually(topicName, expected, false);
     }
 
     private void assertRowsEventuallyAnyOrder(String sql, Collection<Row> expectedRows) {
         Observable<Object[]> observable = sqlService.executeQuery(sql);
         BlockingQueue<Object[]> rows = new LinkedBlockingQueue<>();
-        observable.addObserver(row -> rows.add(row));
+        observable.addObserver(rows::add);
 
         assertTrueEventually(() -> assertEquals(expectedRows.size(), rows.size()));
 
@@ -133,9 +131,10 @@ public class SqlKafkaTest extends SimpleTestInClusterSupport {
     }
 
     private static final class Row {
+
         Object[] values;
 
-        Row(Object ... values) {
+        Row(Object... values) {
             this.values = values;
         }
 
