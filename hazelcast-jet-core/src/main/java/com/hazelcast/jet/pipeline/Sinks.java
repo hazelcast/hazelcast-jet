@@ -125,6 +125,8 @@ public final class Sinks {
      * items will not change the state in the target map.
      * <p>
      * The default local parallelism for this sink is 1.
+     *
+     * @since 4.1
      */
     @Nonnull
     public static <K, V> Sink<Entry<K, V>> map(@Nonnull String mapName, boolean jsonKey, boolean jsonValue) {
@@ -143,6 +145,8 @@ public final class Sinks {
      * items will not change the state in the target map.
      * <p>
      * The default local parallelism for this sink is 1.
+     *
+     * @since 4.1
      */
     @Nonnull
     public static <T, K, V> Sink<T> map(
@@ -205,6 +209,8 @@ public final class Sinks {
      * items will not change the state in the target map.
      * <p>
      * The default local parallelism for this sink is 1.
+     *
+     * @since 4.1
      */
     @Nonnull
     public static <K, V> Sink<Entry<K, V>> remoteMap(
@@ -229,6 +235,8 @@ public final class Sinks {
      * items will not change the state in the target map.
      * <p>
      * The default local parallelism for this sink is 1.
+     *
+     * @since 4.1
      */
     @Nonnull
     public static <T, K, V> Sink<T> remoteMap(
