@@ -24,7 +24,7 @@ CDC connectors for a
 The [Kafka Connect API](http://kafka.apache.org/documentation.html#connect)
 is an interface developed for Kafka, that simplifies and automates the
 integration of a new data source (or sink) with your Kafka cluster.
-Since version {jet-version} Jet includes a generic Kafka Connect Source,
+Since version 4.0 Jet includes a generic Kafka Connect Source,
 thus making the integration of Debezium's connectors easy.
 
 Let's see an example, how to process change events from a MySQL database
