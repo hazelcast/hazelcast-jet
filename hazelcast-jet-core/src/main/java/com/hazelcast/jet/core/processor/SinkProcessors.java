@@ -45,6 +45,7 @@ import java.io.OutputStreamWriter;
 import java.net.Socket;
 import java.nio.charset.Charset;
 import java.sql.PreparedStatement;
+import java.util.Map;
 
 import static com.hazelcast.function.FunctionEx.identity;
 import static com.hazelcast.internal.util.Preconditions.checkNotNull;
@@ -68,7 +69,7 @@ public final class SinkProcessors {
      */
     @Nonnull
     public static <K, V> ProcessorMetaSupplier writeMapP(@Nonnull String mapName) {
-        return writeMapP(mapName, identity(), identity());
+        return writeMapP(mapName, Map.Entry<K, V>::getKey, Map.Entry<K, V>::getValue);
     }
 
     /**
