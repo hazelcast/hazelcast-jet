@@ -566,9 +566,9 @@ public class ObservableResultsTest extends TestInClusterSupport {
 
         //then
         assertTrueEventually(() -> {
-            Set<String> activeObservables = jet().getObservables().stream().map(Observable::name).collect(Collectors.toSet());
-            assertTrue(activeObservables.containsAll(Arrays.asList(a.name(), c.name())));
-            assertFalse(activeObservables.contains(b.name()));
+            Set<String> observables = jet().getObservables().stream().map(Observable::name).collect(Collectors.toSet());
+            assertTrue(observables.containsAll(Arrays.asList(a.name(), c.name())));
+            assertFalse(observables.contains(b.name()));
         });
     }
 
