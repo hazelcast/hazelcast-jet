@@ -60,17 +60,21 @@ or
 stage.rebalance(Person::getName).aggregate(...)
 ```
 
-Jet uses single-stage aggregation instead of the default two-stage,
-but global aggregation still requires all computation to happen on one
-processor. The actual effect is the opposite of rebalancing, maybe we
-should just throw an error for this.
+Global aggregation results in a single value, which means the second
+stage is non-parallelizable. Rebalancing the first stage makes sense as
+it parallelizes the load of accumulating the value.
 
 ```java
 stage.rebalance().groupingKey(Person:getAge).aggregate(...)
 ```
 
-Jet uses single-stage aggregation, partitions the edge with the grouping
-key.
+Keyed aggregation computes many independent values. By default, Jet uses
+two-stage aggregation so that it accumulates the running value locally
+and sends the partial results for distributed combining only after
+having received all the data.
+
+Applying rebalancing removes the first local stage and uses single-stage
+aggregation. Jet partitions the edge with the grouping key.
 
 ```java
 stage.rebalance(Person::getName).groupingKey(Person:getAge)
@@ -80,12 +84,9 @@ For all transforms except aggregation, rebalancing has no effect here
 since `groupingKey()` by itself results in a distributed-partitioned
 edge.
 
-Aggregation is by default two-stage and `rebalance()` makes it
-single-stage, so it has some effect but still the rebalancing key is
-ignored. The grouping key must be used for semantic correctness.
-
-Maybe we should throw an error for any `rebalance(fn1).groupingKey(fn2)`
-call. The same applies to `rebalance(fn1).window(wDef).groupingKey(fn2)`
+Rebalancing changes keyed aggregation to single-stage, so it has some
+effect but still the rebalancing key is ignored. The grouping key must
+be used for semantic correctness.
 
 ```java
 stage0 = stage.groupingKey(Person:getAge)
