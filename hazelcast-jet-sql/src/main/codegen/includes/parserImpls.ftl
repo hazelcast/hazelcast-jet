@@ -15,20 +15,19 @@
 -->
 
 /**
-* Parses an INSERT statement.
+* Parses an extended INSERT statement.
 */
 SqlNode JetSqlInsert() :
 {
+    Span span;
+    SqlNode table;
+    SqlNode source;
     List<SqlLiteral> keywords = new ArrayList<SqlLiteral>();
     SqlNodeList keywordList;
     List<SqlLiteral> extendedKeywords = new ArrayList<SqlLiteral>();
     SqlNodeList extendedKeywordList;
-    SqlNode table;
     SqlNodeList extendList = null;
-    SqlNode source;
-    SqlNodeList partitionList = new SqlNodeList(getPos());
     SqlNodeList columnList = null;
-    Span s;
 }
 {
     (
@@ -47,10 +46,10 @@ SqlNode JetSqlInsert() :
             extendedKeywords.add(JetSqlInsertKeyword.OVERWRITE.symbol(getPos()));
         }
     )
-    { s = span(); }
+    { span = span(); }
     SqlInsertKeywords(keywords) {
-        keywordList = new SqlNodeList(keywords, s.addAll(keywords).pos());
-        extendedKeywordList = new SqlNodeList(extendedKeywords, s.addAll(extendedKeywords).pos());
+        keywordList = new SqlNodeList(keywords, span.addAll(keywords).pos());
+        extendedKeywordList = new SqlNodeList(extendedKeywords, span.addAll(extendedKeywords).pos());
     }
     table = TableRefWithHintsOpt()
     [
@@ -62,7 +61,7 @@ SqlNode JetSqlInsert() :
     ]
     [
         LOOKAHEAD(2)
-        { final Pair<SqlNodeList, SqlNodeList> p; }
+        { Pair<SqlNodeList, SqlNodeList> p; }
         p = ParenthesizedCompoundIdentifierList() {
             if (p.right.size() > 0) {
                 table = extend(table, p.right);
@@ -73,6 +72,6 @@ SqlNode JetSqlInsert() :
         }
     ]
     source = OrderedQueryOrExpr(ExprContext.ACCEPT_QUERY) {
-        return new JetSqlInsert(s.end(source), keywordList, extendedKeywordList, table, source, columnList);
+        return new JetSqlInsert(span.end(source), table, source, keywordList, extendedKeywordList, columnList);
     }
 }

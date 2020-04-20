@@ -211,6 +211,7 @@ public class SqlTest extends SimpleTestInClusterSupport {
     }
 
     private static final class Row {
+
         Object[] values;
 
         Row(Object... values) {

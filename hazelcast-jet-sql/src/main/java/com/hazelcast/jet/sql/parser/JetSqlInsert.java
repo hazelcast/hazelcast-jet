@@ -34,18 +34,18 @@ public class JetSqlInsert extends SqlInsert {
     private final String tableName;
 
     public JetSqlInsert(SqlParserPos pos,
+                        SqlNode table,
+                        SqlNode source,
                         SqlNodeList keywords,
                         SqlNodeList extendedKeywords,
-                        SqlNode targetTable,
-                        SqlNode source,
                         SqlNodeList columnList) {
-        super(pos, keywords, targetTable, source, columnList);
+        super(pos, keywords, table, source, columnList);
         this.extendedKeywords = extendedKeywords;
-        if (targetTable instanceof SqlTableRef) {
-            SqlTableRef tableRef = (SqlTableRef) targetTable;
+        if (table instanceof SqlTableRef) {
+            SqlTableRef tableRef = (SqlTableRef) table;
             this.tableName = ((SqlIdentifier) tableRef.operand(0)).getSimple();
         } else {
-            this.tableName = ((SqlIdentifier) targetTable).getSimple();
+            this.tableName = ((SqlIdentifier) table).getSimple();
         }
     }
 
