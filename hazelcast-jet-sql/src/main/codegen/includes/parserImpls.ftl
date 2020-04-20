@@ -17,7 +17,7 @@
 /**
 * Parses an INSERT statement.
 */
-SqlNode RichSqlInsert() :
+SqlNode ExtendedSqlInsert() :
 {
     List<SqlLiteral> keywords = new ArrayList<SqlLiteral>();
     SqlNodeList keywordList;
@@ -40,11 +40,11 @@ SqlNode RichSqlInsert() :
         <INTO>
     |
         <OVERWRITE> {
-            if (RichSqlInsert.isUpsert(keywords)) {
+            if (ExtendedSqlInsert.isUpsert(keywords)) {
                 throw SqlUtil.newContextException(getPos(),
                                     ParserResource.RESOURCE.overwriteIsOnlyUsedWithInsert());
             }
-            extendedKeywords.add(RichSqlInsertKeyword.OVERWRITE.symbol(getPos()));
+            extendedKeywords.add(ExtendedSqlInsertKeyword.OVERWRITE.symbol(getPos()));
         }
     )
     { s = span(); }
@@ -73,6 +73,6 @@ SqlNode RichSqlInsert() :
         }
     ]
     source = OrderedQueryOrExpr(ExprContext.ACCEPT_QUERY) {
-        return new RichSqlInsert(s.end(source), keywordList, extendedKeywordList, table, source, columnList);
+        return new ExtendedSqlInsert(s.end(source), keywordList, extendedKeywordList, table, source, columnList);
     }
 }

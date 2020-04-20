@@ -176,7 +176,7 @@ public class SqlTest extends SimpleTestInClusterSupport {
     @Test
     public void insert() {
         assertMap(
-                INT_TO_STRING_MAP_SINK, "INSERT INTO " + INT_TO_STRING_MAP_SINK + " SELECT * FROM " + INT_TO_STRING_MAP_SRC,
+                INT_TO_STRING_MAP_SINK, "INSERT OVERWRITE " + INT_TO_STRING_MAP_SINK + " SELECT * FROM " + INT_TO_STRING_MAP_SRC,
                 createMap(
                         0, "value-0",
                         1, "value-1",
@@ -186,14 +186,14 @@ public class SqlTest extends SimpleTestInClusterSupport {
     @Test
     public void insert_values() {
         assertMap(
-                INT_TO_STRING_MAP_SINK, "INSERT INTO " + INT_TO_STRING_MAP_SINK + "(this, __key) values (2, 1)",
+                INT_TO_STRING_MAP_SINK, "INSERT OVERWRITE " + INT_TO_STRING_MAP_SINK + "(this, __key) values (2, 1)",
                 createMap(1, "2"));
     }
 
     @Test
     public void insert_person() {
         assertMap(
-                PERSON_MAP_SINK, "INSERT INTO " + PERSON_MAP_SINK + " VALUES (1, 'Foo', 25)",
+                PERSON_MAP_SINK, "INSERT OVERWRITE " + PERSON_MAP_SINK + " VALUES (1, 'Foo', 25)",
                 createMap(
                         1, new Person("Foo", 25)));
     }

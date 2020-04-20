@@ -115,6 +115,12 @@ public class SqlKafkaTest extends SimpleTestInClusterSupport {
                 createMap(1, "value-1"));
     }
 
+    @Test
+    public void write_kafkaWithOverwrite() {
+        assertTopic("INSERT OVERWRITE " + topicName + " VALUES(1, 'value-1')",
+                createMap(1, "value-1"));
+    }
+
     private void assertTopic(String sql, Map<Integer, String> expected) {
         sqlService.execute(sql).join();
         kafkaTestSupport.assertTopicContentsEventually(topicName, expected, false);

@@ -176,4 +176,9 @@ public class IMapSqlConnector implements SqlConnector {
     public boolean supportsSink() {
         return true;
     }
+
+    @Override
+    public boolean supportsPlainInserts() {
+        return false;
+    }
 }

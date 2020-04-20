@@ -19,7 +19,7 @@ package com.hazelcast.jet.sql.parser;
 import org.apache.calcite.sql.SqlLiteral;
 import org.apache.calcite.sql.parser.SqlParserPos;
 
-public enum RichSqlInsertKeyword {
+public enum ExtendedSqlInsertKeyword {
     OVERWRITE;
 
     public SqlLiteral symbol(SqlParserPos pos) {

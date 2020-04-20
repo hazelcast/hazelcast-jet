@@ -22,8 +22,8 @@ data: {
     # Example. "org.apache.calcite.sql.*", "java.util.List".
     imports: [
       "com.hazelcast.jet.sql.parser.ParserResource",
-      "com.hazelcast.jet.sql.parser.RichSqlInsert",
-      "com.hazelcast.jet.sql.parser.RichSqlInsertKeyword",
+      "com.hazelcast.jet.sql.parser.ExtendedSqlInsert",
+      "com.hazelcast.jet.sql.parser.ExtendedSqlInsertKeyword",
     ]
 
     # List of new keywords. Example: "DATABASES", "TABLES". If the keyword is not a reserved
@@ -365,7 +365,7 @@ data: {
     # Return type of method implementation should be 'SqlNode'.
     # Example: SqlShowDatabases(), SqlShowTables().
     statementParserMethods: [
-        "RichSqlInsert()"
+        "ExtendedSqlInsert()"
     ]
 
     # List of methods for parsing custom literals.

@@ -133,4 +133,9 @@ public interface SqlConnector {
     default boolean supportsSink() {
         return false;
     }
+
+    // TODO: naming ...
+    default boolean supportsPlainInserts() {
+        return true;
+    }
 }

@@ -28,17 +28,17 @@ import org.apache.calcite.sql.parser.SqlParserPos;
 
 import java.util.List;
 
-public class RichSqlInsert extends SqlInsert {
+public class ExtendedSqlInsert extends SqlInsert {
 
     private final SqlNodeList extendedKeywords;
     private final String tableName;
 
-    public RichSqlInsert(SqlParserPos pos,
-                         SqlNodeList keywords,
-                         SqlNodeList extendedKeywords,
-                         SqlNode targetTable,
-                         SqlNode source,
-                         SqlNodeList columnList) {
+    public ExtendedSqlInsert(SqlParserPos pos,
+                             SqlNodeList keywords,
+                             SqlNodeList extendedKeywords,
+                             SqlNode targetTable,
+                             SqlNode source,
+                             SqlNodeList columnList) {
         super(pos, keywords, targetTable, source, columnList);
         this.extendedKeywords = extendedKeywords;
         if (targetTable instanceof SqlTableRef) {
@@ -84,7 +84,7 @@ public class RichSqlInsert extends SqlInsert {
 
     public boolean isOverwrite() {
         for (SqlNode keyword : extendedKeywords) {
-            if (((SqlLiteral) keyword).symbolValue(RichSqlInsertKeyword.class) == RichSqlInsertKeyword.OVERWRITE) {
+            if (((SqlLiteral) keyword).symbolValue(ExtendedSqlInsertKeyword.class) == ExtendedSqlInsertKeyword.OVERWRITE) {
                 return true;
             }
         }

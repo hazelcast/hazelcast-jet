@@ -1,6 +1,7 @@
 package com.hazelcast.jet.sql;
 
 import com.google.common.collect.ImmutableMap;
+import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.SimpleTestInClusterSupport;
 import com.hazelcast.jet.sql.impl.schema.JetSchema;
 import com.hazelcast.sql.impl.type.QueryDataType;
@@ -32,6 +33,7 @@ import static com.hazelcast.jet.sql.impl.connector.imap.IMapSqlConnector.TO_VALU
 import static java.time.ZoneOffset.UTC;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.Assert.assertEquals;
 
 public class SqlInsertTest extends SimpleTestInClusterSupport {
@@ -101,27 +103,27 @@ public class SqlInsertTest extends SimpleTestInClusterSupport {
     @Test
     public void insert_null() {
         assertMap(
-                PERSON_MAP_SINK, "INSERT INTO " + PERSON_MAP_SINK + "(birthday) VALUES (null)",
+                PERSON_MAP_SINK, "INSERT OVERWRITE " + PERSON_MAP_SINK + "(birthday) VALUES (null)",
                 createMap(new Person(), new Person()));
     }
 
     @Test
     public void insert_toleratesNullNonExistingProperties() {
         assertMap(
-                OBJECT_MAP_SINK, "INSERT INTO " + OBJECT_MAP_SINK + "(nonExistingProperty) VALUES (null)",
+                OBJECT_MAP_SINK, "INSERT OVERWRITE " + OBJECT_MAP_SINK + "(nonExistingProperty) VALUES (null)",
                 createMap(new SerializableObject(), new SerializableObject()));
     }
 
     @Test
-    public void insert_value_shadows_key() {
+    public void insert_valueShadowsKey() {
         assertMap(
-                PERSON_MAP_SINK, "INSERT INTO " + PERSON_MAP_SINK + "(birthday) VALUES ('2020-01-01')",
+                PERSON_MAP_SINK, "INSERT OVERWRITE " + PERSON_MAP_SINK + "(birthday) VALUES ('2020-01-01')",
                 createMap(new Person(), new Person(LocalDate.of(2020, 1, 1))));
     }
 
     @Test
     public void insert_allTypes() {
-        assertMap(ALL_TYPES_MAP, "INSERT INTO " + ALL_TYPES_MAP + " VALUES (" +
+        assertMap(ALL_TYPES_MAP, "INSERT OVERWRITE " + ALL_TYPES_MAP + " VALUES (" +
                         "1, --key\n" +
                         "'string', --varchar\n" +
                         "'a', --character\n" +
@@ -192,8 +194,8 @@ public class SqlInsertTest extends SimpleTestInClusterSupport {
     }
 
     @Test
-    public void insert_allTypes_as_strings() {
-        assertMap(ALL_TYPES_MAP, "INSERT INTO " + ALL_TYPES_MAP + " VALUES (" +
+    public void insert_allTypesAsStrings() {
+        assertMap(ALL_TYPES_MAP, "INSERT OVERWRITE " + ALL_TYPES_MAP + " VALUES (" +
                         "'1', --key\n" +
                         "'string', --varchar\n" +
                         "'a', --character\n" +
@@ -257,10 +259,9 @@ public class SqlInsertTest extends SimpleTestInClusterSupport {
     }
 
     @Test
-    public void insert_overwrite() {
-        assertMap(
-                PERSON_MAP_SINK, "INSERT OVERWRITE " + PERSON_MAP_SINK + "(birthday) VALUES ('2020-01-01')",
-                createMap(new Person(), new Person(LocalDate.of(2020, 1, 1))));
+    public void insert_intoMapFails() {
+        assertThatThrownBy(() -> sqlService.execute("INSERT INTO " + PERSON_MAP_SINK + "(birthday) VALUES ('2020-01-01')").join())
+                .isInstanceOf(JetException.class);
     }
 
     private <K, V> void assertMap(String name, String sql, Map<K, V> expected) {
