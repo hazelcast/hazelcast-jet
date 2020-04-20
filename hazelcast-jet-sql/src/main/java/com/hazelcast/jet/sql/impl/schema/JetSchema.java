@@ -67,11 +67,13 @@ public class JetSchema extends AbstractSchema {
 
     public JetSchema(JetInstance instance) {
         this.instance = instance;
+
         // insert the IMap connector and local cluster server by default
         createConnector(IMAP_CONNECTOR, new IMapSqlConnector());
+        createServer(IMAP_LOCAL_SERVER, IMAP_CONNECTOR, emptyMap());
+
         // TODO KafkaSqlConnector is an optional dependency, don't add hard dependency on it
         createConnector(KAFKA_CONNECTOR, new KafkaSqlConnector());
-        createServer(IMAP_LOCAL_SERVER, IMAP_CONNECTOR, emptyMap());
     }
 
     @Override

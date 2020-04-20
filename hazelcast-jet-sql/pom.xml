@@ -52,6 +52,7 @@
             <optional>true</optional>
         </dependency>
 
+        <!-- updating calcite might require updating src/main/codegen/config.fmpp as well-->
         <dependency>
             <groupId>org.apache.calcite</groupId>
             <artifactId>calcite-core</artifactId>

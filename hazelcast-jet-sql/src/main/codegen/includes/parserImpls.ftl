@@ -17,7 +17,7 @@
 /**
 * Parses an INSERT statement.
 */
-SqlNode ExtendedSqlInsert() :
+SqlNode JetSqlInsert() :
 {
     List<SqlLiteral> keywords = new ArrayList<SqlLiteral>();
     SqlNodeList keywordList;
@@ -40,11 +40,11 @@ SqlNode ExtendedSqlInsert() :
         <INTO>
     |
         <OVERWRITE> {
-            if (ExtendedSqlInsert.isUpsert(keywords)) {
+            if (JetSqlInsert.isUpsert(keywords)) {
                 throw SqlUtil.newContextException(getPos(),
                                     ParserResource.RESOURCE.overwriteIsOnlyUsedWithInsert());
             }
-            extendedKeywords.add(ExtendedSqlInsertKeyword.OVERWRITE.symbol(getPos()));
+            extendedKeywords.add(JetSqlInsertKeyword.OVERWRITE.symbol(getPos()));
         }
     )
     { s = span(); }
@@ -73,6 +73,6 @@ SqlNode ExtendedSqlInsert() :
         }
     ]
     source = OrderedQueryOrExpr(ExprContext.ACCEPT_QUERY) {
-        return new ExtendedSqlInsert(s.end(source), keywordList, extendedKeywordList, table, source, columnList);
+        return new JetSqlInsert(s.end(source), keywordList, extendedKeywordList, table, source, columnList);
     }
 }

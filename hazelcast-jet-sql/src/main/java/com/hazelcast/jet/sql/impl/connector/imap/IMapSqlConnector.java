@@ -94,9 +94,9 @@ public class IMapSqlConnector implements SqlConnector {
             @Nonnull List<Entry<String, QueryDataType>> fields
     ) {
         // TODO validate options
-//        if (!serverOptions.isEmpty()) {
-//            throw new JetException("Only local maps are supported for now");
-//        }
+        // if (!serverOptions.isEmpty()) {
+        //     throw new JetException("Only local maps are supported for now");
+        // }
         String mapName = tableOptions.getOrDefault(TO_MAP_NAME, tableName);
         EntryWriter writer = entryWriter(fields, tableOptions.get(TO_KEY_CLASS), tableOptions.get(TO_VALUE_CLASS));
         return new IMapTable(this, mapName, fields, writer);

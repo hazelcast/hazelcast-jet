@@ -118,6 +118,7 @@ public class JetSqlService {
 
     private final JetInstance instance;
     private final JetSchema schema;
+
     private final SqlValidator validator;
     private final VolcanoPlanner planner;
     private final CalciteConnectionConfig connectionConfig;
@@ -125,10 +126,10 @@ public class JetSqlService {
     public JetSqlService(JetInstance instance) {
         this.instance = instance;
         this.schema = new JetSchema(instance);
-        this.validator = createValidator(schema);
 
-        connectionConfig = createConnectionConfig();
-        planner = createPlanner(connectionConfig);
+        this.validator = createValidator(schema);
+        this.connectionConfig = createConnectionConfig();
+        this.planner = createPlanner(connectionConfig);
     }
 
     private static SqlValidator createValidator(JetSchema schema) {
@@ -169,6 +170,20 @@ public class JetSqlService {
         return new CalciteConnectionConfigImpl(properties);
     }
 
+    private static VolcanoPlanner createPlanner(CalciteConnectionConfig config) {
+        VolcanoPlanner planner = new VolcanoPlanner(
+                CostFactory.INSTANCE,
+                Contexts.of(config)
+        );
+
+        planner.clearRelTraitDefs();
+        planner.addRelTraitDef(ConventionTraitDef.INSTANCE);
+        // planner.addRelTraitDef(DistributionTraitDef.INSTANCE);
+        planner.addRelTraitDef(RelCollationTraitDef.INSTANCE);
+
+        return planner;
+    }
+
     /// SCHEMA METHODS
 
     public void createConnector(@Nonnull String connectorName, @Nonnull SqlConnector connector) {
@@ -200,46 +215,43 @@ public class JetSqlService {
         schema.createTableInt(tableName, serverName, tableOptions, fields);
     }
 
-    private static RelOptCluster createCluster(VolcanoPlanner planner, JavaTypeFactory typeFactory) {
-        // TODO: Use CachingRelMetadataProvider instead?
-        RelMetadataProvider relMetadataProvider = JaninoRelMetadataProvider.of(METADATA_PROVIDER_INSTANCE);
+    /**
+     * Executes a DML query. Currently only {@code INSERT INTO ... SELECT ...}
+     * is supported.
+     */
+    public Job execute(String sql) {
+        SqlNode node = parse(sql);
+        RelNode rel = convert(node);
 
-        RelOptCluster cluster = RelOptCluster.create(planner, new RexBuilder(typeFactory));
-        cluster.setMetadataProvider(relMetadataProvider);
+        System.out.println("before logical opt:\n" + RelOptUtil.toString(rel));
+        LogicalRel logicalRel = optimizeLogical(rel);
+        System.out.println("after logical opt:\n" + RelOptUtil.toString(logicalRel));
+        PhysicalRel physicalRel = optimizePhysical(logicalRel);
+        System.out.println("after physical opt:\n" + RelOptUtil.toString(physicalRel));
 
-        return cluster;
+        DAG dag = createDag(physicalRel, null);
+        // submit the job
+        return instance.newJob(dag);
     }
 
-    private static VolcanoPlanner createPlanner(CalciteConnectionConfig config) {
-        VolcanoPlanner planner = new VolcanoPlanner(
-                CostFactory.INSTANCE,
-                Contexts.of(config)
-        );
+    /**
+     * Executes a DQL query (a SELECT query).
+     */
+    public Observable<Object[]> executeQuery(String sql) {
+        SqlNode node = parse(sql);
+        RelNode rel = convert(node);
 
-        planner.clearRelTraitDefs();
-        planner.addRelTraitDef(ConventionTraitDef.INSTANCE);
-//        planner.addRelTraitDef(DistributionTraitDef.INSTANCE);
-        planner.addRelTraitDef(RelCollationTraitDef.INSTANCE);
+        System.out.println("before logical opt:\n" + RelOptUtil.toString(rel));
+        LogicalRel logicalRel = optimizeLogical(rel);
+        System.out.println("after logical opt:\n" + RelOptUtil.toString(logicalRel));
+        PhysicalRel physicalRel = optimizePhysical(logicalRel);
+        System.out.println("after physical opt:\n" + RelOptUtil.toString(physicalRel));
 
-        return planner;
-    }
-
-    private static SqlToRelConverter createSqlToRelConverter(
-            Prepare.CatalogReader catalogReader,
-            SqlValidator validator,
-            RelOptCluster cluster
-    ) {
-        SqlToRelConverter.ConfigBuilder sqlToRelConfigBuilder = SqlToRelConverter.configBuilder()
-                .withConvertTableAccess(CONVERTER_CONVERT_TABLE_ACCESS)
-                .withTrimUnusedFields(CONVERTER_TRIM_UNUSED_FIELDS)
-                .withExpand(CONVERTER_EXPAND);
-        return new SqlToRelConverter(
-                null,
-                validator,
-                catalogReader,
-                cluster,
-                StandardConvertletTable.INSTANCE,
-                sqlToRelConfigBuilder.build());
+        String observableName = "sql-sink-" + UUID.randomUUID().toString();
+        DAG dag = createDag(physicalRel, SinkProcessors.writeObservableP(observableName));
+        // submit the job
+        instance.newJob(dag);
+        return instance.getObservable(observableName);
     }
 
     /**
@@ -296,56 +308,57 @@ public class JetSqlService {
 
         // 4. The side effect of subquery rewrite and decorrelation in Apache Calcite is a number of unnecessary fields,
         // primarily in projections. This steps removes unused fields from the tree.
-
         return sqlToRelConverter.trimUnusedFields(true, relDecorrelated);
     }
 
-    /**
-     * Executes a DML query. Currently only {@code INSERT INTO ... SELECT ...}
-     * is supported.
-     */
-    public Job execute(String sql) {
-        SqlNode node = parse(sql);
-        RelNode rel = convert(node);
+    private static RelOptCluster createCluster(VolcanoPlanner planner, JavaTypeFactory typeFactory) {
+        // TODO: Use CachingRelMetadataProvider instead?
+        RelMetadataProvider relMetadataProvider = JaninoRelMetadataProvider.of(METADATA_PROVIDER_INSTANCE);
 
-        System.out.println("before logical opt:\n" + RelOptUtil.toString(rel));
-        LogicalRel logicalRel = optimizeLogical(rel);
-        System.out.println("after logical opt:\n" + RelOptUtil.toString(logicalRel));
-        PhysicalRel physicalRel = optimizePhysical(logicalRel);
-        System.out.println("after physical opt:\n" + RelOptUtil.toString(physicalRel));
+        RelOptCluster cluster = RelOptCluster.create(planner, new RexBuilder(typeFactory));
+        cluster.setMetadataProvider(relMetadataProvider);
 
-        DAG dag = createDag(physicalRel, null);
-        // submit the job
-        return instance.newJob(dag);
+        return cluster;
+    }
+
+    private static SqlToRelConverter createSqlToRelConverter(
+            Prepare.CatalogReader catalogReader,
+            SqlValidator validator,
+            RelOptCluster cluster
+    ) {
+        SqlToRelConverter.ConfigBuilder sqlToRelConfigBuilder =
+                SqlToRelConverter.configBuilder()
+                                 .withConvertTableAccess(CONVERTER_CONVERT_TABLE_ACCESS)
+                                 .withTrimUnusedFields(CONVERTER_TRIM_UNUSED_FIELDS)
+                                 .withExpand(CONVERTER_EXPAND);
+        return new SqlToRelConverter(
+                null,
+                validator,
+                catalogReader,
+                cluster,
+                StandardConvertletTable.INSTANCE,
+                sqlToRelConfigBuilder.build());
     }
 
     /**
-     * Executes a DQL query (a SELECT query).
+     * Special substep of an initial query conversion which eliminates correlated subqueries, converting them to various forms
+     * of joins. It is used instead of "expand" flag due to bugs in Calcite (see {@link #CONVERTER_EXPAND}).
+     *
+     * @param rel Initial relation.
+     * @return Resulting relation.
      */
-    public Observable<Object[]> executeQuery(String sql) {
-        SqlNode node = parse(sql);
-        RelNode rel = convert(node);
+    private RelNode rewriteSubqueries(RelNode rel) {
+        HepProgramBuilder hepPgmBldr = new HepProgramBuilder();
 
-        System.out.println("before logical opt:\n" + RelOptUtil.toString(rel));
-        LogicalRel logicalRel = optimizeLogical(rel);
-        System.out.println("after logical opt:\n" + RelOptUtil.toString(logicalRel));
-        PhysicalRel physicalRel = optimizePhysical(logicalRel);
-        System.out.println("after physical opt:\n" + RelOptUtil.toString(physicalRel));
+        hepPgmBldr.addRuleInstance(SubQueryRemoveRule.FILTER);
+        hepPgmBldr.addRuleInstance(SubQueryRemoveRule.PROJECT);
+        hepPgmBldr.addRuleInstance(SubQueryRemoveRule.JOIN);
 
-        String observableName = "sql-sink-" + UUID.randomUUID().toString();
-        DAG dag = createDag(physicalRel, SinkProcessors.writeObservableP(observableName));
-        // submit the job
-        instance.newJob(dag);
-        return instance.getObservable(observableName);
-    }
+        HepPlanner planner = new HepPlanner(hepPgmBldr.build(), Contexts.empty(), true, null, RelOptCostImpl.FACTORY);
 
-    private DAG createDag(PhysicalRel physicalRel, ProcessorMetaSupplier sinkSupplier) {
-        DAG dag = new DAG();
-        Vertex sink = sinkSupplier != null ? dag.newVertex("sink", sinkSupplier) : null;
+        planner.setRoot(rel);
 
-        CreateDagVisitor visitor = new CreateDagVisitor(dag, sink);
-        physicalRel.visit(visitor);
-        return dag;
+        return planner.findBestExp();
     }
 
     /**
@@ -379,13 +392,12 @@ public class JetSqlService {
         RuleSet rules = RuleSets.ofList(
                 JetTableInsertPhysicalRule.INSTANCE,
                 JetValuesPhysicalRule.INSTANCE,
-//                SortPhysicalRule.INSTANCE,
-//                RootPhysicalRule.INSTANCE,
-//                FilterPhysicalRule.INSTANCE,
+                // SortPhysicalRule.INSTANCE,
+                // RootPhysicalRule.INSTANCE,
+                // FilterPhysicalRule.INSTANCE,
                 FullScanPhysicalRule.INSTANCE,
-//                AggregatePhysicalRule.INSTANCE,
-//                JoinPhysicalRule.INSTANCE,
-
+                // AggregatePhysicalRule.INSTANCE,
+                // JoinPhysicalRule.INSTANCE,
                 new AbstractConverter.ExpandConversionRule(RelFactories.LOGICAL_BUILDER)
         );
 
@@ -400,24 +412,12 @@ public class JetSqlService {
         return (PhysicalRel) res;
     }
 
-    /**
-     * Special substep of an initial query conversion which eliminates correlated subqueries, converting them to various forms
-     * of joins. It is used instead of "expand" flag due to bugs in Calcite (see {@link #CONVERTER_EXPAND}).
-     *
-     * @param rel Initial relation.
-     * @return Resulting relation.
-     */
-    private RelNode rewriteSubqueries(RelNode rel) {
-        HepProgramBuilder hepPgmBldr = new HepProgramBuilder();
+    private DAG createDag(PhysicalRel physicalRel, ProcessorMetaSupplier sinkSupplier) {
+        DAG dag = new DAG();
+        Vertex sink = sinkSupplier != null ? dag.newVertex("sink", sinkSupplier) : null;
 
-        hepPgmBldr.addRuleInstance(SubQueryRemoveRule.FILTER);
-        hepPgmBldr.addRuleInstance(SubQueryRemoveRule.PROJECT);
-        hepPgmBldr.addRuleInstance(SubQueryRemoveRule.JOIN);
-
-        HepPlanner planner = new HepPlanner(hepPgmBldr.build(), Contexts.empty(), true, null, RelOptCostImpl.FACTORY);
-
-        planner.setRoot(rel);
-
-        return planner.findBestExp();
+        CreateDagVisitor visitor = new CreateDagVisitor(dag, sink);
+        physicalRel.visit(visitor);
+        return dag;
     }
 }
