@@ -107,9 +107,11 @@ public class GrAggBuilder<K> {
     public <A, R> StreamStage<KeyedWindowResult<K, R>> buildStream(@Nonnull AggregateOperation<A, ? extends R> aggrOp) {
         List<Transform> upstreamTransforms = toList(upstreamStages, s -> s.transform);
         FunctionAdapter fnAdapter = ADAPT_TO_JET_EVENT;
-        List<FunctionEx<?, ? extends K>> adaptedKeyFns = keyFns
+        // Casts in this expression are a workaround for JDK 8 compiler bug:
+        @SuppressWarnings("unchecked")
+        List<FunctionEx<?, ? extends K>> adaptedKeyFns = (List<FunctionEx<?, ? extends K>>) (List) keyFns
                 .stream()
-                .<FunctionEx<?, ? extends K>>map(fn -> fnAdapter.adaptKeyFn(fn))
+                .map(fn -> fnAdapter.adaptKeyFn((FunctionEx) fn))
                 .collect(Collectors.toList());
         AbstractTransform transform = new WindowGroupTransform<K, R>(
                 upstreamTransforms, wDef, adaptedKeyFns, fnAdapter.adaptAggregateOperation(aggrOp));
