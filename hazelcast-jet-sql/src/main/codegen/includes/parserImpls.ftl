@@ -15,6 +15,119 @@
 -->
 
 /**
+* Parser CREATE FOREIGN TABLE statement.
+*/
+SqlCreate JetSqlCreateTable(Span span, boolean replace) :
+{
+    SqlParserPos startPos = span.pos();
+    SqlIdentifier tableName;
+    SqlNodeList columns = SqlNodeList.EMPTY;
+    SqlNodeList properties = SqlNodeList.EMPTY;
+    SqlIdentifier server;
+}
+{
+    <FOREIGN> <TABLE>
+    tableName = CompoundIdentifier()
+    columns = TableColumns()
+    [
+        <OPTIONS>
+        properties = TableProperties()
+    ]
+    <SERVER>
+    server = SimpleIdentifier()
+    {
+        return new JetSqlCreateTable(startPos.plus(getPos()),
+                tableName,
+                columns,
+                properties,
+                server,
+                replace);
+    }
+}
+
+SqlNodeList TableColumns():
+{
+    Span span;
+    SqlTableColumn column;
+    Map<String, SqlNode> columns = new HashMap<String, SqlNode>();
+}
+{
+    <LPAREN> { span = span(); }
+    column = TableColumn()
+    {
+        columns.put(column.name(), column);
+    }
+    (
+        <COMMA> column = TableColumn()
+        {
+            if (columns.putIfAbsent(column.name(), column) != null) {
+               throw SqlUtil.newContextException(getPos(),
+                   ParserResource.RESOURCE.duplicateColumn(column.name()));
+            }
+        }
+    )*
+    <RPAREN>
+    {
+        return new SqlNodeList(columns.values(), span.end(this));
+    }
+}
+
+SqlTableColumn TableColumn() :
+{
+    SqlIdentifier name;
+    SqlDataTypeSpec type;
+}
+{
+    name = SimpleIdentifier()
+    type = DataType()
+    {
+        return new SqlTableColumn(getPos(), name, type);
+    }
+}
+
+SqlNodeList TableProperties():
+{
+    Span span;
+    SqlProperty property;
+    Map<String, SqlNode> properties = new HashMap<String, SqlNode>();
+}
+{
+    <LPAREN> { span = span(); }
+    [
+        property = TableProperty()
+        {
+            properties.put(property.key(), property);
+        }
+        (
+            <COMMA> property = TableProperty()
+            {
+                if (properties.putIfAbsent(property.key(), property) != null) {
+                    throw SqlUtil.newContextException(getPos(),
+                        ParserResource.RESOURCE.duplicateProperty(property.key()));
+                }
+            }
+        )*
+    ]
+    <RPAREN>
+    {
+        return new SqlNodeList(properties.values(), span.end(this));
+    }
+}
+
+SqlProperty TableProperty() :
+{
+    SqlIdentifier key;
+    SqlNode value;
+}
+{
+    key = SimpleIdentifier()
+    value = StringLiteral()
+    {
+        return new SqlProperty(getPos(), key, value);
+    }
+}
+
+/**
 * Parses an extended INSERT statement.
 */
 SqlNode JetSqlInsert() :
@@ -41,7 +154,7 @@ SqlNode JetSqlInsert() :
         <OVERWRITE> {
             if (JetSqlInsert.isUpsert(keywords)) {
                 throw SqlUtil.newContextException(getPos(),
-                                    ParserResource.RESOURCE.overwriteIsOnlyUsedWithInsert());
+                    ParserResource.RESOURCE.overwriteIsOnlyUsedWithInsert());
             }
             extendedKeywords.add(JetSqlInsertKeyword.OVERWRITE.symbol(getPos()));
         }

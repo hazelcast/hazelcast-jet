@@ -18,9 +18,7 @@ package com.hazelcast.jet.sql;
 
 import com.hazelcast.jet.Observable;
 import com.hazelcast.jet.SimpleTestInClusterSupport;
-import com.hazelcast.jet.sql.impl.schema.JetSchema;
 import com.hazelcast.map.IMap;
-import com.hazelcast.sql.impl.type.QueryDataType;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -32,14 +30,13 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Objects;
 
-import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.core.TestUtil.createMap;
 import static com.hazelcast.jet.sql.impl.connector.imap.IMapSqlConnector.TO_VALUE_CLASS;
+import static com.hazelcast.jet.sql.impl.schema.JetSchema.IMAP_LOCAL_SERVER;
+import static java.lang.String.format;
 import static java.util.Arrays.asList;
-import static java.util.Collections.emptyMap;
 import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
@@ -64,28 +61,15 @@ public class SqlTest extends SimpleTestInClusterSupport {
         initialize(1, null);
         sqlService = new JetSqlService(instance());
 
-        List<Entry<String, QueryDataType>> intToStringMapFields = asList(
-                entry("__key", QueryDataType.INT),
-                entry("this", QueryDataType.VARCHAR));
-        sqlService.createTable(INT_TO_STRING_MAP_SRC, JetSchema.IMAP_LOCAL_SERVER,
-                emptyMap(),
-                intToStringMapFields);
+        sqlService.execute(format("CREATE FOREIGN TABLE %s (__key INT, this VARCHAR) SERVER %s",
+                INT_TO_STRING_MAP_SRC, IMAP_LOCAL_SERVER));
+        sqlService.execute(format("CREATE FOREIGN TABLE %s (__key INT, this VARCHAR) SERVER %s",
+                INT_TO_STRING_MAP_SINK, IMAP_LOCAL_SERVER));
 
-        sqlService.createTable(INT_TO_STRING_MAP_SINK, JetSchema.IMAP_LOCAL_SERVER,
-                emptyMap(),
-                intToStringMapFields);
-
-        List<Entry<String, QueryDataType>> personMapFields = asList(
-                entry("__key", QueryDataType.INT),
-                entry("name", QueryDataType.VARCHAR),
-                entry("age", QueryDataType.INT));
-        sqlService.createTable(PERSON_MAP_SRC, JetSchema.IMAP_LOCAL_SERVER,
-                createMap(TO_VALUE_CLASS, Person.class.getName()),
-                personMapFields);
-
-        sqlService.createTable(PERSON_MAP_SINK, JetSchema.IMAP_LOCAL_SERVER,
-                createMap(TO_VALUE_CLASS, Person.class.getName()),
-                personMapFields);
+        sqlService.execute(format("CREATE FOREIGN TABLE %s (__key INT, name VARCHAR, age INT) OPTIONS (%s '%s') SERVER %s",
+                PERSON_MAP_SRC, TO_VALUE_CLASS, Person.class.getName(), IMAP_LOCAL_SERVER));
+        sqlService.execute(format("CREATE FOREIGN TABLE %s (__key INT, name VARCHAR, age INT) OPTIONS (%s '%s') SERVER %s",
+                PERSON_MAP_SINK, TO_VALUE_CLASS, Person.class.getName(), IMAP_LOCAL_SERVER));
     }
 
     @Before

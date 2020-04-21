@@ -43,9 +43,10 @@ public class JetSqlValidator extends SqlValidatorImpl {
     @Override
     public SqlNode validate(SqlNode topNode) {
         SqlNode validated = super.validate(topNode);
+        // TODO: not sure if this is the right place for it...
         if (validated instanceof JetSqlInsert) {
             JetSqlInsert insert = ((JetSqlInsert) validated);
-            JetTable table = (JetTable) catalog.getRootSchema().getTable(insert.getTableName(), true).getTable();
+            JetTable table = (JetTable) catalog.getRootSchema().getTable(insert.tableName(), true).getTable();
             if (!insert.isOverwrite() && !table.getSqlConnector().supportsPlainInserts()) {
                 throw new JetException(table.getSqlConnector().getClass().getSimpleName() +
                         " does not support plain INSERT INTO statement."); // TODO: wording

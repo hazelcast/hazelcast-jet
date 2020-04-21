@@ -17,12 +17,21 @@
 package com.hazelcast.jet.sql.parser;
 
 import com.hazelcast.jet.JetException;
+import org.apache.calcite.runtime.CalciteException;
 import org.apache.calcite.runtime.Resources;
+import org.apache.calcite.runtime.Resources.BaseMessage;
+import org.apache.calcite.runtime.Resources.ExInst;
 
 public interface ParserResource {
 
     ParserResource RESOURCE = Resources.create(ParserResource.class);
 
-    @Resources.BaseMessage("OVERWRITE expression is only used with INSERT statement.")
+    @BaseMessage("Duplicate column ''{0}''")
+    ExInst<CalciteException> duplicateColumn(String columnName);
+
+    @BaseMessage("Duplicate property ''{0}''")
+    ExInst<CalciteException> duplicateProperty(String propertyName);
+
+    @BaseMessage("OVERWRITE expression is only used with INSERT statement.")
     Resources.ExInst<JetException> overwriteIsOnlyUsedWithInsert();
 }

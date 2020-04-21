@@ -19,7 +19,6 @@ package com.hazelcast.jet.sql;
 import com.hazelcast.jet.Observable;
 import com.hazelcast.jet.SimpleTestInClusterSupport;
 import com.hazelcast.jet.kafka.impl.KafkaTestSupport;
-import com.hazelcast.sql.impl.type.QueryDataType;
 import org.apache.kafka.common.serialization.IntegerDeserializer;
 import org.apache.kafka.common.serialization.IntegerSerializer;
 import org.apache.kafka.common.serialization.StringDeserializer;
@@ -33,17 +32,14 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
-import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.core.TestUtil.createMap;
 import static com.hazelcast.jet.sql.impl.schema.JetSchema.KAFKA_CONNECTOR;
+import static java.lang.String.format;
 import static java.util.Arrays.asList;
-import static java.util.Collections.emptyMap;
 import static java.util.stream.Collectors.toSet;
 import static org.junit.Assert.assertEquals;
 
@@ -78,13 +74,8 @@ public class SqlKafkaTest extends SimpleTestInClusterSupport {
         topicName = "t_" + randomString().replace('-', '_');
         kafkaTestSupport.createTopic(topicName, INITIAL_PARTITION_COUNT);
 
-        List<Entry<String, QueryDataType>> intToStringMapFields = asList(
-                entry("__key", QueryDataType.INT),
-                entry("this", QueryDataType.VARCHAR));
-
-        sqlService.createTable(topicName, "kafka_test_server",
-                emptyMap(),
-                intToStringMapFields);
+        sqlService.execute(format("CREATE FOREIGN TABLE %s (__key INT, this VARCHAR) SERVER %s",
+                topicName, "kafka_test_server"));
     }
 
     @AfterClass

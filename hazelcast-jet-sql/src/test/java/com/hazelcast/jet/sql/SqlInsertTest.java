@@ -1,6 +1,5 @@
 package com.hazelcast.jet.sql;
 
-import com.google.common.collect.ImmutableMap;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.SimpleTestInClusterSupport;
 import com.hazelcast.jet.sql.impl.schema.JetSchema;
@@ -30,9 +29,10 @@ import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.core.TestUtil.createMap;
 import static com.hazelcast.jet.sql.impl.connector.imap.IMapSqlConnector.TO_KEY_CLASS;
 import static com.hazelcast.jet.sql.impl.connector.imap.IMapSqlConnector.TO_VALUE_CLASS;
+import static com.hazelcast.jet.sql.impl.schema.JetSchema.IMAP_LOCAL_SERVER;
+import static java.lang.String.format;
 import static java.time.ZoneOffset.UTC;
 import static java.util.Arrays.asList;
-import static java.util.Collections.singletonList;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.Assert.assertEquals;
 
@@ -50,19 +50,11 @@ public class SqlInsertTest extends SimpleTestInClusterSupport {
         initialize(1, null);
         sqlService = new JetSqlService(instance());
 
-        sqlService.createTable(PERSON_MAP_SINK, JetSchema.IMAP_LOCAL_SERVER,
-                ImmutableMap.of(TO_KEY_CLASS, Person.class.getName(), TO_VALUE_CLASS, Person.class.getName()),
-                singletonList(
-                        entry("birthday", QueryDataType.DATE)
-                )
-        );
+        sqlService.execute(format("CREATE FOREIGN TABLE %s (birthday DATE) OPTIONS (%s '%s', %s '%s') SERVER %s",
+                PERSON_MAP_SINK, TO_KEY_CLASS, Person.class.getName(), TO_VALUE_CLASS, Person.class.getName(), IMAP_LOCAL_SERVER));
 
-        sqlService.createTable(OBJECT_MAP_SINK, JetSchema.IMAP_LOCAL_SERVER,
-                ImmutableMap.of(TO_KEY_CLASS, SerializableObject.class.getName(), TO_VALUE_CLASS, SerializableObject.class.getName()),
-                singletonList(
-                        entry("nonExistingProperty", QueryDataType.INT)
-                )
-        );
+        sqlService.execute(format("CREATE FOREIGN TABLE %s (nonExistingProperty INT) OPTIONS (%s '%s', %s '%s') SERVER %s",
+                OBJECT_MAP_SINK, TO_KEY_CLASS, SerializableObject.class.getName(), TO_VALUE_CLASS, SerializableObject.class.getName(), IMAP_LOCAL_SERVER));
 
         // an IMap with a field of every type
         sqlService.createTable(ALL_TYPES_MAP, JetSchema.IMAP_LOCAL_SERVER,

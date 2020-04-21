@@ -38,8 +38,8 @@ public class JetSqlInsert extends SqlInsert {
                         SqlNode source,
                         SqlNodeList keywords,
                         SqlNodeList extendedKeywords,
-                        SqlNodeList columnList) {
-        super(pos, keywords, table, source, columnList);
+                        SqlNodeList columns) {
+        super(pos, keywords, table, source, columns);
         this.extendedKeywords = extendedKeywords;
         if (table instanceof SqlTableRef) {
             SqlTableRef tableRef = (SqlTableRef) table;
@@ -49,7 +49,7 @@ public class JetSqlInsert extends SqlInsert {
         }
     }
 
-    public String getTableName() {
+    public String tableName() {
         return tableName;
     }
 

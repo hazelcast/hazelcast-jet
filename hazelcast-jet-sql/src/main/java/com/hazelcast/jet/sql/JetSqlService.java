@@ -37,9 +37,12 @@ import com.hazelcast.jet.sql.impl.OptUtils;
 import com.hazelcast.jet.sql.impl.PhysicalRel;
 import com.hazelcast.jet.sql.impl.RowCountMetadata;
 import com.hazelcast.jet.sql.impl.cost.CostFactory;
+import com.hazelcast.jet.sql.impl.expression.SqlToQueryType;
 import com.hazelcast.jet.sql.impl.rule.FullScanPhysicalRule;
 import com.hazelcast.jet.sql.impl.schema.JetSchema;
+import com.hazelcast.jet.sql.parser.JetSqlCreateTable;
 import com.hazelcast.jet.sql.parser.JetSqlParserImpl;
+import com.hazelcast.jet.sql.parser.SqlProperty;
 import com.hazelcast.sql.impl.type.QueryDataType;
 import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.avatica.util.Casing;
@@ -68,6 +71,8 @@ import org.apache.calcite.rel.metadata.JaninoRelMetadataProvider;
 import org.apache.calcite.rel.metadata.RelMetadataProvider;
 import org.apache.calcite.rel.rules.SubQueryRemoveRule;
 import org.apache.calcite.rex.RexBuilder;
+import org.apache.calcite.sql.SqlDataTypeSpec;
+import org.apache.calcite.sql.SqlDdl;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlOperatorTable;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
@@ -81,12 +86,16 @@ import org.apache.calcite.tools.RuleSet;
 import org.apache.calcite.tools.RuleSets;
 
 import javax.annotation.Nonnull;
+import java.util.AbstractMap.SimpleEntry;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.UUID;
+
+import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toMap;
 
 public class JetSqlService {
 
@@ -216,22 +225,42 @@ public class JetSqlService {
     }
 
     /**
-     * Executes a DML query. Currently only {@code INSERT INTO ... SELECT ...}
-     * is supported.
+     * Executes a DML (currently only {@code INSERT INTO ... SELECT ...} is supported)
+     * or DDL query.
      */
+    // TODO: split/extract/refactor
     public Job execute(String sql) {
         SqlNode node = parse(sql);
-        RelNode rel = convert(node);
+        if (node instanceof JetSqlCreateTable) {
+            JetSqlCreateTable create = (JetSqlCreateTable) node;
 
-        System.out.println("before logical opt:\n" + RelOptUtil.toString(rel));
-        LogicalRel logicalRel = optimizeLogical(rel);
-        System.out.println("after logical opt:\n" + RelOptUtil.toString(logicalRel));
-        PhysicalRel physicalRel = optimizePhysical(logicalRel);
-        System.out.println("after physical opt:\n" + RelOptUtil.toString(physicalRel));
+            Map<String, String> options = create.options()
+                                                .collect(toMap(SqlProperty::key, SqlProperty::value));
+            List<Entry<String, QueryDataType>> columns =
+                    create.columns()
+                          .map(column -> new SimpleEntry<>(column.name(), toQueryDataType(column.type())))
+                          .collect(toList());
+            schema.createTableInt(create.name(), create.server(), options, columns);
+            return null;
+        } else if (!(node instanceof SqlDdl)) {
+            RelNode rel = convert(validator.validate(node));
 
-        DAG dag = createDag(physicalRel, null);
-        // submit the job
-        return instance.newJob(dag);
+            System.out.println("before logical opt:\n" + RelOptUtil.toString(rel));
+            LogicalRel logicalRel = optimizeLogical(rel);
+            System.out.println("after logical opt:\n" + RelOptUtil.toString(logicalRel));
+            PhysicalRel physicalRel = optimizePhysical(logicalRel);
+            System.out.println("after physical opt:\n" + RelOptUtil.toString(physicalRel));
+
+            DAG dag = createDag(physicalRel, null);
+            // submit the job
+            return instance.newJob(dag);
+        } else {
+            throw new JetException("Unsupported statament - " + node);
+        }
+    }
+
+    private QueryDataType toQueryDataType(SqlDataTypeSpec type) {
+        return SqlToQueryType.map(type.deriveType(validator).getSqlTypeName());
     }
 
     /**
@@ -239,7 +268,9 @@ public class JetSqlService {
      */
     public Observable<Object[]> executeQuery(String sql) {
         SqlNode node = parse(sql);
-        RelNode rel = convert(node);
+        assert !(node instanceof SqlDdl);
+
+        RelNode rel = convert(validator.validate(node));
 
         System.out.println("before logical opt:\n" + RelOptUtil.toString(rel));
         LogicalRel logicalRel = optimizeLogical(rel);
@@ -261,8 +292,6 @@ public class JetSqlService {
      * @return SQL tree.
      */
     private SqlNode parse(String sqlQuery) {
-        SqlNode node;
-
         try {
             SqlParser.Config config = SqlParser.configBuilder()
                                                .setParserFactory(JetSqlParserImpl.FACTORY)
@@ -273,13 +302,10 @@ public class JetSqlService {
                                                .build();
 
             SqlParser parser = SqlParser.create(sqlQuery, config);
-
-            node = parser.parseStmt();
+            return parser.parseStmt();
         } catch (Exception e) {
             throw new JetException("Failed to parse SQL: " + e, e);
         }
-
-        return validator.validate(node);
     }
 
     /**
