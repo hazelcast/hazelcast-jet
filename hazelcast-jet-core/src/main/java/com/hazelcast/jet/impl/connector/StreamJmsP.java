@@ -53,6 +53,7 @@ import static com.hazelcast.jet.config.ProcessingGuarantee.NONE;
 import static com.hazelcast.jet.core.BroadcastKey.broadcastKey;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 import static com.hazelcast.jet.impl.util.LoggingUtil.logFine;
+import static com.hazelcast.jet.impl.util.LoggingUtil.logFinest;
 import static com.hazelcast.jet.impl.util.Util.checkSerializable;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static java.util.stream.IntStream.range;
@@ -136,6 +137,7 @@ public class StreamJmsP<T> extends AbstractProcessor {
                     pendingTraverser = eventTimeMapper.flatMapIdle();
                     break;
                 }
+                logFinest(getLogger(), "Received: %s", t);
                 if (guarantee == EXACTLY_ONCE) {
                     // We don't know whether the messages with the restored IDs were acknowledged in the previous
                     // execution or not. They are acknowledged in phase-2 of the snapshot which might not be executed.
@@ -159,6 +161,7 @@ public class StreamJmsP<T> extends AbstractProcessor {
                     }
                     seenIds.add(msgId);
                     if (restoredIds.remove(msgId)) {
+                        logFine(getLogger(), "Redelivered message dropped: %s", t);
                         continue;
                     }
                 }
@@ -184,7 +187,7 @@ public class StreamJmsP<T> extends AbstractProcessor {
                     .filter(ids -> !ids.isEmpty())
                     .map(ids -> entry(SEEN_IDS_KEY, ids))
                     .onFirstNull(() -> snapshotTraverser = null);
-            logFine(getLogger(), "Saved %d message(s) IDs to snapshot", seenIds.size());
+            logFine(getLogger(), "Saved %d seenIds and %d restoredIds to snapshot", seenIds.size(), restoredIds.size());
         }
         return emitFromTraverserToSnapshot(snapshotTraverser);
     }
@@ -218,8 +221,8 @@ public class StreamJmsP<T> extends AbstractProcessor {
         }
         // Ignore if not in ex-once mode. The user could cancelAndExportSnapshot() and restart with
         // a lower guarantee.
-        // We could restore multiple collections: each processor saves one and it's restored to all
-        // because we can't control which processor receives which messages.
+        // We could restore multiple collections: each processor saves up to two collections and it's restored to
+        // all processors because we can't control which processor receives which messages.
         if (guarantee == EXACTLY_ONCE) {
             @SuppressWarnings("unchecked")
             Set<Object> castValue = (Set<Object>) value;

@@ -320,7 +320,6 @@ public abstract class JmsSourceIntegrationTestBase extends SimpleTestInClusterSu
                           .maxGuarantee(maxGuarantee)
                           .build(msg -> Long.parseLong(((TextMessage) msg).getText())))
          .withoutTimestamps()
-         .peek()
          .mapStateful(CopyOnWriteArrayList<Long>::new,
                  (list, item) -> {
                      lastListInStressTest = list;
@@ -346,6 +345,7 @@ public abstract class JmsSourceIntegrationTestBase extends SimpleTestInClusterSu
                 long startTime = System.nanoTime();
                 for (int i = 0; i < MESSAGE_COUNT; i++) {
                     producer.send(session.createTextMessage(String.valueOf(i)));
+                    logger.fine("Message produced: " + i);
                     Thread.sleep(Math.max(0, i - NANOSECONDS.toMillis(System.nanoTime() - startTime)));
                 }
             } catch (Exception e) {
