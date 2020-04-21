@@ -46,6 +46,9 @@ SqlCreate JetSqlCreateConnector(Span span, boolean replace) :
     <DATA> <WRAPPER>
     connectorName = CompoundIdentifier()
     [
+        <LANGUAGE> <JAVA>
+    ]
+    [
         <OPTIONS>
         connectorOptions = GenericOptions()
     ]

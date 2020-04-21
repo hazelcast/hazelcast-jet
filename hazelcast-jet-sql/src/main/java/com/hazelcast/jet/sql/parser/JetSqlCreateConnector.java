@@ -72,6 +72,7 @@ public class JetSqlCreateConnector extends SqlCreate {
 
     @Override
     public void unparse(SqlWriter writer, int leftPrec, int rightPrec) {
+        writer.keyword("CREATE");
         writer.keyword("FOREIGN");
         writer.keyword("DATA");
         writer.keyword("WRAPPER");

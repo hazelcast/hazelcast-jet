@@ -43,7 +43,7 @@ import com.hazelcast.jet.sql.impl.schema.JetSchema;
 import com.hazelcast.jet.sql.parser.JetSqlCreateConnector;
 import com.hazelcast.jet.sql.parser.JetSqlCreateServer;
 import com.hazelcast.jet.sql.parser.JetSqlCreateTable;
-import com.hazelcast.jet.sql.parser.JetSqlParserImpl;
+import com.hazelcast.jet.sql.parser.JetSqlParser;
 import com.hazelcast.jet.sql.parser.SqlOption;
 import com.hazelcast.sql.impl.type.QueryDataType;
 import org.apache.calcite.adapter.java.JavaTypeFactory;
@@ -288,7 +288,7 @@ public class JetSqlService {
     private SqlNode parse(String sqlQuery) {
         try {
             SqlParser.Config config = SqlParser.configBuilder()
-                                               .setParserFactory(JetSqlParserImpl.FACTORY)
+                                               .setParserFactory(JetSqlParser.FACTORY)
                                                .setCaseSensitive(true)
                                                .setUnquotedCasing(Casing.UNCHANGED)
                                                .setQuotedCasing(Casing.UNCHANGED)

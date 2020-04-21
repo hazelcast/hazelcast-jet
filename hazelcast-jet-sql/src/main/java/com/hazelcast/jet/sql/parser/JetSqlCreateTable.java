@@ -36,7 +36,7 @@ import static java.util.Objects.requireNonNull;
 public class JetSqlCreateTable extends SqlCreate {
 
     private static final SqlSpecialOperator OPERATOR =
-            new SqlSpecialOperator("CREATE FOREIGN TABLE", SqlKind.CREATE_TABLE);
+            new SqlSpecialOperator("CREATE FOREIGN TABLE", SqlKind.OTHER_DDL);
 
     private final SqlIdentifier name;
     private final SqlNodeList columns;
