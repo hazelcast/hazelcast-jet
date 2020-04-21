@@ -29,8 +29,8 @@ public interface ParserResource {
     @BaseMessage("Duplicate column ''{0}''")
     ExInst<CalciteException> duplicateColumn(String columnName);
 
-    @BaseMessage("Duplicate property ''{0}''")
-    ExInst<CalciteException> duplicateProperty(String propertyName);
+    @BaseMessage("Duplicate option ''{0}''")
+    ExInst<CalciteException> duplicateOption(String optionName);
 
     @BaseMessage("OVERWRITE expression is only used with INSERT statement.")
     Resources.ExInst<JetException> overwriteIsOnlyUsedWithInsert();

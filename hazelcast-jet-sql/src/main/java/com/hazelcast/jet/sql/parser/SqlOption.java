@@ -33,18 +33,18 @@ import java.util.List;
 
 import static java.util.Objects.requireNonNull;
 
-public class SqlProperty extends SqlCall {
+public class SqlOption extends SqlCall {
 
     private static final SqlOperator OPERATOR =
-            new SqlSpecialOperator("PROPERTY DECLARATION", SqlKind.OTHER);
+            new SqlSpecialOperator("OPTION DECLARATION", SqlKind.OTHER);
 
     private final SqlIdentifier key;
     private final SqlNode value;
 
-    public SqlProperty(SqlParserPos pos, SqlIdentifier key, SqlNode value) {
+    public SqlOption(SqlParserPos pos, SqlIdentifier key, SqlNode value) {
         super(pos);
-        this.key = requireNonNull(key, "Property key is missing");
-        this.value = requireNonNull(value, "Property value is missing");
+        this.key = requireNonNull(key, "Option key is missing");
+        this.value = requireNonNull(value, "Option value is missing");
     }
 
     public String key() {

@@ -50,11 +50,11 @@ public class SqlInsertTest extends SimpleTestInClusterSupport {
         initialize(1, null);
         sqlService = new JetSqlService(instance());
 
-        sqlService.execute(format("CREATE FOREIGN TABLE %s (birthday DATE) OPTIONS (%s '%s', %s '%s') SERVER %s",
-                PERSON_MAP_SINK, TO_KEY_CLASS, Person.class.getName(), TO_VALUE_CLASS, Person.class.getName(), IMAP_LOCAL_SERVER));
+        sqlService.execute(format("CREATE FOREIGN TABLE %s (birthday DATE) SERVER %s OPTIONS (%s '%s', %s '%s')",
+                PERSON_MAP_SINK, IMAP_LOCAL_SERVER, TO_KEY_CLASS, Person.class.getName(), TO_VALUE_CLASS, Person.class.getName()));
 
-        sqlService.execute(format("CREATE FOREIGN TABLE %s (nonExistingProperty INT) OPTIONS (%s '%s', %s '%s') SERVER %s",
-                OBJECT_MAP_SINK, TO_KEY_CLASS, SerializableObject.class.getName(), TO_VALUE_CLASS, SerializableObject.class.getName(), IMAP_LOCAL_SERVER));
+        sqlService.execute(format("CREATE FOREIGN TABLE %s (nonExistingProperty INT) SERVER %s OPTIONS (%s '%s', %s '%s')",
+                OBJECT_MAP_SINK, IMAP_LOCAL_SERVER, TO_KEY_CLASS, SerializableObject.class.getName(), TO_VALUE_CLASS, SerializableObject.class.getName()));
 
         // an IMap with a field of every type
         sqlService.createTable(ALL_TYPES_MAP, JetSchema.IMAP_LOCAL_SERVER,

@@ -21,57 +21,57 @@ SqlCreate JetSqlCreateServer(Span span, boolean replace) :
 {
     SqlParserPos startPos = span.pos();
     SqlIdentifier serverName;
-    SqlNodeList properties = SqlNodeList.EMPTY;
     SqlIdentifier connector;
+    SqlNodeList serverOptions = SqlNodeList.EMPTY;
 }
 {
     <SERVER>
     serverName = CompoundIdentifier()
+    <FOREIGN> <DATA> <WRAPPER>
+    connector = SimpleIdentifier()
     [
         <OPTIONS>
-        properties = ServerProperties()
+        serverOptions = ServerOptions()
     ]
-    <CONNECTOR>
-    connector = SimpleIdentifier()
     {
         return new JetSqlCreateServer(startPos.plus(getPos()),
                 serverName,
-                properties,
                 connector,
+                serverOptions,
                 replace);
     }
 }
 
-SqlNodeList ServerProperties():
+SqlNodeList ServerOptions():
 {
     Span span;
-    SqlProperty property;
-    Map<String, SqlNode> properties = new HashMap<String, SqlNode>();
+    SqlOption sqlOption;
+    Map<String, SqlNode> sqlOptions = new HashMap<String, SqlNode>();
 }
 {
     <LPAREN> { span = span(); }
     [
-        property = ServerProperty()
+        sqlOption = ServerOption()
         {
-            properties.put(property.key(), property);
+            sqlOptions.put(sqlOption.key(), sqlOption);
         }
         (
-            <COMMA> property = ServerProperty()
+            <COMMA> sqlOption = ServerOption()
             {
-                if (properties.putIfAbsent(property.key(), property) != null) {
+                if (sqlOptions.putIfAbsent(sqlOption.key(), sqlOption) != null) {
                     throw SqlUtil.newContextException(getPos(),
-                        ParserResource.RESOURCE.duplicateProperty(property.key()));
+                        ParserResource.RESOURCE.duplicateOption(sqlOption.key()));
                 }
             }
         )*
     ]
     <RPAREN>
     {
-        return new SqlNodeList(properties.values(), span.end(this));
+        return new SqlNodeList(sqlOptions.values(), span.end(this));
     }
 }
 
-SqlProperty ServerProperty() :
+SqlOption ServerOption() :
 {
     SqlIdentifier key;
     SqlNode value;
@@ -80,7 +80,7 @@ SqlProperty ServerProperty() :
     key = SimpleIdentifier()
     value = StringLiteral()
     {
-        return new SqlProperty(getPos(), key, value);
+        return new SqlOption(getPos(), key, value);
     }
 }
 
@@ -92,25 +92,25 @@ SqlCreate JetSqlCreateTable(Span span, boolean replace) :
     SqlParserPos startPos = span.pos();
     SqlIdentifier tableName;
     SqlNodeList columns = SqlNodeList.EMPTY;
-    SqlNodeList properties = SqlNodeList.EMPTY;
     SqlIdentifier server;
+    SqlNodeList tableOptions = SqlNodeList.EMPTY;
 }
 {
     <FOREIGN> <TABLE>
     tableName = CompoundIdentifier()
     columns = TableColumns()
-    [
-        <OPTIONS>
-        properties = TableProperties()
-    ]
     <SERVER>
     server = SimpleIdentifier()
+    [
+        <OPTIONS>
+        tableOptions = TableOptions()
+    ]
     {
         return new JetSqlCreateTable(startPos.plus(getPos()),
                 tableName,
                 columns,
-                properties,
                 server,
+                tableOptions,
                 replace);
     }
 }
@@ -155,36 +155,36 @@ SqlTableColumn TableColumn() :
     }
 }
 
-SqlNodeList TableProperties():
+SqlNodeList TableOptions():
 {
     Span span;
-    SqlProperty property;
-    Map<String, SqlNode> properties = new HashMap<String, SqlNode>();
+    SqlOption sqlOption;
+    Map<String, SqlNode> sqlOptions = new HashMap<String, SqlNode>();
 }
 {
     <LPAREN> { span = span(); }
     [
-        property = TableProperty()
+        sqlOption = TableOption()
         {
-            properties.put(property.key(), property);
+            sqlOptions.put(sqlOption.key(), sqlOption);
         }
         (
-            <COMMA> property = TableProperty()
+            <COMMA> sqlOption = TableOption()
             {
-                if (properties.putIfAbsent(property.key(), property) != null) {
+                if (sqlOptions.putIfAbsent(sqlOption.key(), sqlOption) != null) {
                     throw SqlUtil.newContextException(getPos(),
-                        ParserResource.RESOURCE.duplicateProperty(property.key()));
+                        ParserResource.RESOURCE.duplicateOption(sqlOption.key()));
                 }
             }
         )*
     ]
     <RPAREN>
     {
-        return new SqlNodeList(properties.values(), span.end(this));
+        return new SqlNodeList(sqlOptions.values(), span.end(this));
     }
 }
 
-SqlProperty TableProperty() :
+SqlOption TableOption() :
 {
     SqlIdentifier key;
     SqlNode value;
@@ -193,7 +193,7 @@ SqlProperty TableProperty() :
     key = SimpleIdentifier()
     value = StringLiteral()
     {
-        return new SqlProperty(getPos(), key, value);
+        return new SqlOption(getPos(), key, value);
     }
 }
 

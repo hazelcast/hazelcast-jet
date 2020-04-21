@@ -40,20 +40,20 @@ public class JetSqlCreateTable extends SqlCreate {
 
     private final SqlIdentifier name;
     private final SqlNodeList columns;
-    private final SqlNodeList options;
     private final SqlIdentifier server;
+    private final SqlNodeList options;
 
     public JetSqlCreateTable(SqlParserPos pos,
                              SqlIdentifier name,
                              SqlNodeList columns,
-                             SqlNodeList options,
                              SqlIdentifier server,
+                             SqlNodeList options,
                              boolean replace) {
         super(OPERATOR, pos, replace, false);
         this.name = requireNonNull(name, "name should not be null");
         this.columns = requireNonNull(columns, "columns should not be null");
-        this.options = requireNonNull(options, "options should not be null");
         this.server = requireNonNull(server, "server should not be null");
+        this.options = requireNonNull(options, "options should not be null");
     }
 
     public String name() {
@@ -64,12 +64,12 @@ public class JetSqlCreateTable extends SqlCreate {
         return columns.getList().stream().map(node -> (SqlTableColumn) node);
     }
 
-    public Stream<SqlProperty> options() {
-        return options.getList().stream().map(node -> (SqlProperty) node);
-    }
-
     public String server() {
         return server.getSimple();
+    }
+
+    public Stream<SqlOption> options() {
+        return options.getList().stream().map(node -> (SqlOption) node);
     }
 
     @Override
@@ -81,7 +81,7 @@ public class JetSqlCreateTable extends SqlCreate {
     @Override
     @Nonnull
     public List<SqlNode> getOperandList() {
-        return ImmutableNullableList.of(name, columns, options, server);
+        return ImmutableNullableList.of(name, columns, server, options);
     }
 
     @Override
@@ -99,7 +99,13 @@ public class JetSqlCreateTable extends SqlCreate {
             writer.newlineAndIndent();
             writer.endList(frame);
         }
+
+        writer.newlineAndIndent();
+        writer.keyword("SERVER");
+        server.unparse(writer, leftPrec, rightPrec);
+
         if (options.size() > 0) {
+            writer.newlineAndIndent();
             writer.keyword("OPTIONS");
             SqlWriter.Frame withFrame = writer.startList("(", ")");
             for (SqlNode property : options) {
@@ -109,13 +115,11 @@ public class JetSqlCreateTable extends SqlCreate {
             writer.newlineAndIndent();
             writer.endList(withFrame);
         }
-        writer.keyword("SERVER");
-        server.unparse(writer, leftPrec, rightPrec);
     }
 
     private void printIndent(SqlWriter writer) {
         writer.sep(",", false);
         writer.newlineAndIndent();
-        writer.print("  ");
+        writer.print(" ");
     }
 }

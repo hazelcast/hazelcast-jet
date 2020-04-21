@@ -39,26 +39,26 @@ public class JetSqlCreateServer extends SqlCreate {
             new SqlSpecialOperator("CREATE SERVER", SqlKind.OTHER_DDL);
 
     private final SqlIdentifier name;
-    private final SqlNodeList options;
     private final SqlIdentifier connector;
+    private final SqlNodeList options;
 
     public JetSqlCreateServer(SqlParserPos pos,
                               SqlIdentifier name,
-                              SqlNodeList options,
                               SqlIdentifier connector,
+                              SqlNodeList options,
                               boolean replace) {
         super(OPERATOR, pos, replace, false);
         this.name = requireNonNull(name, "name should not be null");
-        this.options = requireNonNull(options, "options should not be null");
         this.connector = requireNonNull(connector, "connector should not be null");
+        this.options = requireNonNull(options, "options should not be null");
     }
 
     public String name() {
         return name.getSimple();
     }
 
-    public Stream<SqlProperty> options() {
-        return options.getList().stream().map(node -> (SqlProperty) node);
+    public Stream<SqlOption> options() {
+        return options.getList().stream().map(node -> (SqlOption) node);
     }
 
     public String connector() {
@@ -74,7 +74,7 @@ public class JetSqlCreateServer extends SqlCreate {
     @Override
     @Nonnull
     public List<SqlNode> getOperandList() {
-        return ImmutableNullableList.of(name, options, connector);
+        return ImmutableNullableList.of(name, connector, options);
     }
 
     @Override
@@ -82,7 +82,15 @@ public class JetSqlCreateServer extends SqlCreate {
         writer.keyword("CREATE");
         writer.keyword("SERVER");
         name.unparse(writer, leftPrec, rightPrec);
+
+        writer.newlineAndIndent();
+        writer.keyword("FOREIGN");
+        writer.keyword("DATA");
+        writer.keyword("WRAPPER");
+        connector.unparse(writer, leftPrec, rightPrec);
+
         if (options.size() > 0) {
+            writer.newlineAndIndent();
             writer.keyword("OPTIONS");
             SqlWriter.Frame withFrame = writer.startList("(", ")");
             for (SqlNode property : options) {
@@ -92,13 +100,11 @@ public class JetSqlCreateServer extends SqlCreate {
             writer.newlineAndIndent();
             writer.endList(withFrame);
         }
-        writer.keyword("CONNECTOR");
-        connector.unparse(writer, leftPrec, rightPrec);
     }
 
     private void printIndent(SqlWriter writer) {
         writer.sep(",", false);
         writer.newlineAndIndent();
-        writer.print("  ");
+        writer.print(" ");
     }
 }

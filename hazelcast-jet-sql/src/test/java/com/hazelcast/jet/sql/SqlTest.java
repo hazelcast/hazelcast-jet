@@ -66,10 +66,10 @@ public class SqlTest extends SimpleTestInClusterSupport {
         sqlService.execute(format("CREATE FOREIGN TABLE %s (__key INT, this VARCHAR) SERVER %s",
                 INT_TO_STRING_MAP_SINK, IMAP_LOCAL_SERVER));
 
-        sqlService.execute(format("CREATE FOREIGN TABLE %s (__key INT, name VARCHAR, age INT) OPTIONS (%s '%s') SERVER %s",
-                PERSON_MAP_SRC, TO_VALUE_CLASS, Person.class.getName(), IMAP_LOCAL_SERVER));
-        sqlService.execute(format("CREATE FOREIGN TABLE %s (__key INT, name VARCHAR, age INT) OPTIONS (%s '%s') SERVER %s",
-                PERSON_MAP_SINK, TO_VALUE_CLASS, Person.class.getName(), IMAP_LOCAL_SERVER));
+        sqlService.execute(format("CREATE FOREIGN TABLE %s (__key INT, name VARCHAR, age INT) SERVER %s OPTIONS (%s '%s')",
+                PERSON_MAP_SRC, IMAP_LOCAL_SERVER, TO_VALUE_CLASS, Person.class.getName()));
+        sqlService.execute(format("CREATE FOREIGN TABLE %s (__key INT, name VARCHAR, age INT) SERVER %s OPTIONS (%s '%s')",
+                PERSON_MAP_SINK, IMAP_LOCAL_SERVER, TO_VALUE_CLASS, Person.class.getName()));
     }
 
     @Before

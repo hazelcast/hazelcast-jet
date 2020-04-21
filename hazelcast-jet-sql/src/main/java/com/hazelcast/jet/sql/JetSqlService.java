@@ -43,7 +43,7 @@ import com.hazelcast.jet.sql.impl.schema.JetSchema;
 import com.hazelcast.jet.sql.parser.JetSqlCreateServer;
 import com.hazelcast.jet.sql.parser.JetSqlCreateTable;
 import com.hazelcast.jet.sql.parser.JetSqlParserImpl;
-import com.hazelcast.jet.sql.parser.SqlProperty;
+import com.hazelcast.jet.sql.parser.SqlOption;
 import com.hazelcast.sql.impl.type.QueryDataType;
 import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.avatica.util.Casing;
@@ -232,21 +232,21 @@ public class JetSqlService {
     // TODO: split/extract/refactor
     public Job execute(String sql) {
         SqlNode node = parse(sql);
-        if (node instanceof JetSqlCreateTable) {
+        if (node instanceof JetSqlCreateServer) {
+            JetSqlCreateServer create = (JetSqlCreateServer) node;
+
+            Map<String, String> options = create.options().collect(toMap(SqlOption::key, SqlOption::value));
+            schema.createServer(create.name(), create.connector(), options);
+            return null;
+        } else if (node instanceof JetSqlCreateTable) {
             JetSqlCreateTable create = (JetSqlCreateTable) node;
 
-            Map<String, String> options = create.options().collect(toMap(SqlProperty::key, SqlProperty::value));
+            Map<String, String> options = create.options().collect(toMap(SqlOption::key, SqlOption::value));
             List<Entry<String, QueryDataType>> columns =
                     create.columns()
                           .map(column -> new SimpleEntry<>(column.name(), toQueryDataType(column.type())))
                           .collect(toList());
             schema.createTable(create.name(), create.server(), options, columns);
-            return null;
-        } else if (node instanceof JetSqlCreateServer) {
-            JetSqlCreateServer create = (JetSqlCreateServer) node;
-
-            Map<String, String> options = create.options().collect(toMap(SqlProperty::key, SqlProperty::value));
-            schema.createServer(create.name(), create.connector(), options);
             return null;
         } else if (!(node instanceof SqlDdl)) {
             RelNode rel = convert(validator.validate(node));

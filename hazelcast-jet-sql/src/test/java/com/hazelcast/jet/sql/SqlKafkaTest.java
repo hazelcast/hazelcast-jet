@@ -60,22 +60,22 @@ public class SqlKafkaTest extends SimpleTestInClusterSupport {
 
         sqlService = new JetSqlService(instance());
 
-        sqlService.execute(format("CREATE SERVER %s OPTIONS (" +
+        sqlService.execute(format("CREATE SERVER %s FOREIGN DATA WRAPPER %s OPTIONS (" +
                         "%s '%s', " +
                         "%s '%s', " +
                         "%s '%s', " +
                         "%s '%s', " +
                         "%s '%s', " +
                         "%s '%s'" +
-                        ") CONNECTOR %s",
-                "kafka_test_server",
+                        ")",
+                "kafka_test_server", KAFKA_CONNECTOR,
                 "\"bootstrap.servers\"", kafkaTestSupport.getBrokerConnectionString(),
                 "\"key.serializer\"", IntegerSerializer.class.getCanonicalName(),
                 "\"key.deserializer\"", IntegerDeserializer.class.getCanonicalName(),
                 "\"value.serializer\"", StringSerializer.class.getCanonicalName(),
                 "\"value.deserializer\"", StringDeserializer.class.getCanonicalName(),
-                "\"auto.offset.reset\"", "earliest",
-                KAFKA_CONNECTOR));
+                "\"auto.offset.reset\"", "earliest")
+        );
     }
 
     @Before
