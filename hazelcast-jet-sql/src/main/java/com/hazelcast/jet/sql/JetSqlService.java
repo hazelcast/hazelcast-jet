@@ -40,6 +40,7 @@ import com.hazelcast.jet.sql.impl.cost.CostFactory;
 import com.hazelcast.jet.sql.impl.expression.SqlToQueryType;
 import com.hazelcast.jet.sql.impl.rule.FullScanPhysicalRule;
 import com.hazelcast.jet.sql.impl.schema.JetSchema;
+import com.hazelcast.jet.sql.parser.JetSqlCreateConnector;
 import com.hazelcast.jet.sql.parser.JetSqlCreateServer;
 import com.hazelcast.jet.sql.parser.JetSqlCreateTable;
 import com.hazelcast.jet.sql.parser.JetSqlParserImpl;
@@ -196,26 +197,7 @@ public class JetSqlService {
 
     /// SCHEMA METHODS
 
-    public void createConnector(@Nonnull String connectorName, @Nonnull SqlConnector connector) {
-        schema.createConnector(connectorName, connector);
-    }
-
-    public void createServer(
-            @Nonnull String serverName,
-            @Nonnull String connectorName,
-            @Nonnull Map<String, String> serverOptions
-    ) {
-        schema.createServer(serverName, connectorName, serverOptions);
-    }
-
-    public void createTable(
-            @Nonnull String tableName,
-            @Nonnull String serverName,
-            @Nonnull Map<String, String> tableOptions
-    ) {
-        schema.createTable(tableName, serverName, tableOptions, null);
-    }
-
+    // TODO: eventually remove ???
     public void createTable(
             @Nonnull String tableName,
             @Nonnull String serverName,
@@ -232,7 +214,13 @@ public class JetSqlService {
     // TODO: split/extract/refactor
     public Job execute(String sql) {
         SqlNode node = parse(sql);
-        if (node instanceof JetSqlCreateServer) {
+        if (node instanceof JetSqlCreateConnector) {
+            JetSqlCreateConnector create = (JetSqlCreateConnector) node;
+
+            Map<String, String> options = create.options().collect(toMap(SqlOption::key, SqlOption::value));
+            schema.createConnector(create.name(), options);
+            return null;
+        } else if (node instanceof JetSqlCreateServer) {
             JetSqlCreateServer create = (JetSqlCreateServer) node;
 
             Map<String, String> options = create.options().collect(toMap(SqlOption::key, SqlOption::value));

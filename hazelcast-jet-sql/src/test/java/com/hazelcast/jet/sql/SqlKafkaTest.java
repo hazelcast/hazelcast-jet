@@ -19,6 +19,7 @@ package com.hazelcast.jet.sql;
 import com.hazelcast.jet.Observable;
 import com.hazelcast.jet.SimpleTestInClusterSupport;
 import com.hazelcast.jet.kafka.impl.KafkaTestSupport;
+import com.hazelcast.jet.sql.impl.connector.kafka.KafkaSqlConnector;
 import org.apache.kafka.common.serialization.IntegerDeserializer;
 import org.apache.kafka.common.serialization.IntegerSerializer;
 import org.apache.kafka.common.serialization.StringDeserializer;
@@ -37,7 +38,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
 import static com.hazelcast.jet.core.TestUtil.createMap;
-import static com.hazelcast.jet.sql.impl.schema.JetSchema.KAFKA_CONNECTOR;
+import static com.hazelcast.jet.sql.impl.schema.JetSchema.OPTION_CLASS_NAME;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
 import static java.util.stream.Collectors.toSet;
@@ -45,6 +46,7 @@ import static org.junit.Assert.assertEquals;
 
 public class SqlKafkaTest extends SimpleTestInClusterSupport {
 
+    private static final String KAFKA_CONNECTOR_NAME = "kafka";
     private static final int INITIAL_PARTITION_COUNT = 4;
 
     private static JetSqlService sqlService;
@@ -60,6 +62,8 @@ public class SqlKafkaTest extends SimpleTestInClusterSupport {
 
         sqlService = new JetSqlService(instance());
 
+        sqlService.execute(format("CREATE FOREIGN DATA WRAPPER %s OPTIONS (%s '%s')",
+                KAFKA_CONNECTOR_NAME, OPTION_CLASS_NAME, KafkaSqlConnector.class.getName()));
         sqlService.execute(format("CREATE SERVER %s FOREIGN DATA WRAPPER %s OPTIONS (" +
                         "%s '%s', " +
                         "%s '%s', " +
@@ -68,7 +72,7 @@ public class SqlKafkaTest extends SimpleTestInClusterSupport {
                         "%s '%s', " +
                         "%s '%s'" +
                         ")",
-                "kafka_test_server", KAFKA_CONNECTOR,
+                "kafka_test_server", KAFKA_CONNECTOR_NAME,
                 "\"bootstrap.servers\"", kafkaTestSupport.getBrokerConnectionString(),
                 "\"key.serializer\"", IntegerSerializer.class.getCanonicalName(),
                 "\"key.deserializer\"", IntegerDeserializer.class.getCanonicalName(),

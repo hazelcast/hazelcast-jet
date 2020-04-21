@@ -19,7 +19,6 @@ package com.hazelcast.jet.sql.impl.schema;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.sql.SqlConnector;
 import com.hazelcast.jet.sql.impl.connector.imap.IMapSqlConnector;
-import com.hazelcast.jet.sql.impl.connector.kafka.KafkaSqlConnector;
 import com.hazelcast.sql.impl.type.QueryDataType;
 import org.apache.calcite.schema.Table;
 import org.apache.calcite.schema.impl.AbstractSchema;
@@ -34,7 +33,9 @@ import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+import static com.hazelcast.jet.impl.util.ReflectionUtils.newInstance;
 import static java.util.Collections.emptyMap;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Schema operating on registered sources/sinks
@@ -46,17 +47,13 @@ public class JetSchema extends AbstractSchema {
      * argument to {@link #createServer} when connecting to remote cluster.
      */
     public static final String IMAP_CONNECTOR = "imap";
-    /**
-     * The name under which the Apache Kafka connector is registered. Use as an
-     * argument to {@link #createServer} when connecting to a broker.
-     */
-    public static final String KAFKA_CONNECTOR = "kafka";
 
     /**
      * The server name under which the local hazelcast IMap connector registered.
      */
     public static final String IMAP_LOCAL_SERVER = "local_imap";
 
+    public static final String OPTION_CLASS_NAME = "className";
     private static final String OPTION_CONNECTOR_NAME = JetSchema.class + ".connectorName";
     private static final String OPTION_SERVER_NAME = JetSchema.class + ".serverName";
 
@@ -73,9 +70,6 @@ public class JetSchema extends AbstractSchema {
         // insert the IMap connector and local cluster server by default
         createConnector(IMAP_CONNECTOR, new IMapSqlConnector());
         createServer(IMAP_LOCAL_SERVER, IMAP_CONNECTOR, emptyMap());
-
-        // TODO KafkaSqlConnector is an optional dependency, don't add hard dependency on it
-        createConnector(KAFKA_CONNECTOR, new KafkaSqlConnector());
     }
 
     @Override
@@ -83,7 +77,13 @@ public class JetSchema extends AbstractSchema {
         return unmodifiableTableMap;
     }
 
-    public void createConnector(String connectorName, SqlConnector connector) {
+    public void createConnector(String connectorName, Map<String, String> connectorOptions) {
+        String className = requireNonNull(connectorOptions.get(OPTION_CLASS_NAME), "missing " + OPTION_CLASS_NAME + " option");
+        SqlConnector connector = newInstance(className);
+        createConnector(connectorName, connector);
+    }
+
+    private void createConnector(String connectorName, SqlConnector connector) {
         connectorMap.put(connectorName, connector);
     }
 

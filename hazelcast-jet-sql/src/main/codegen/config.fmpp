@@ -28,6 +28,7 @@ data: {
       "org.apache.calcite.sql.SqlCreate"
       "com.hazelcast.jet.sql.parser.ParserResource"
       "com.hazelcast.jet.sql.parser.SqlOption"
+      "com.hazelcast.jet.sql.parser.JetSqlCreateConnector"
       "com.hazelcast.jet.sql.parser.JetSqlCreateServer"
       "com.hazelcast.jet.sql.parser.SqlTableColumn"
       "com.hazelcast.jet.sql.parser.JetSqlCreateTable"
@@ -404,8 +405,8 @@ data: {
     # List of methods for parsing extensions to "CREATE [OR REPLACE]" calls.
     # Each must accept arguments "(SqlParserPos pos, boolean replace)".
     createStatementParserMethods: [
+      "JetSqlCreateConnectorOrTable"
       "JetSqlCreateServer"
-      "JetSqlCreateTable"
     ]
 
     # List of methods for parsing extensions to "DROP" calls.

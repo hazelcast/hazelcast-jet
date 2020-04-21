@@ -15,7 +15,50 @@
 -->
 
 /**
-* Parser CREATE SERVER statement.
+* Parses CREATE FOREIGN [DATA WRAPPER|TABLE] statement.
+*/
+SqlCreate JetSqlCreateConnectorOrTable(Span span, boolean replace) :
+{
+    SqlCreate create;
+}
+{
+    <FOREIGN>
+    (LOOKAHEAD(1)
+        create = JetSqlCreateConnector(span, replace)
+    |
+        create = JetSqlCreateTable(span, replace)
+    )
+    {
+        return create;
+    }
+}
+
+/**
+* Parses CREATE FOREIGN DATA WRAPPER statement.
+*/
+SqlCreate JetSqlCreateConnector(Span span, boolean replace) :
+{
+    SqlParserPos startPos = span.pos();
+    SqlIdentifier connectorName;
+    SqlNodeList connectorOptions = SqlNodeList.EMPTY;
+}
+{
+    <DATA> <WRAPPER>
+    connectorName = CompoundIdentifier()
+    [
+        <OPTIONS>
+        connectorOptions = GenericOptions()
+    ]
+    {
+        return new JetSqlCreateConnector(startPos.plus(getPos()),
+                connectorName,
+                connectorOptions,
+                replace);
+    }
+}
+
+/**
+* Parses CREATE SERVER statement.
 */
 SqlCreate JetSqlCreateServer(Span span, boolean replace) :
 {
@@ -31,7 +74,7 @@ SqlCreate JetSqlCreateServer(Span span, boolean replace) :
     connector = SimpleIdentifier()
     [
         <OPTIONS>
-        serverOptions = ServerOptions()
+        serverOptions = GenericOptions()
     ]
     {
         return new JetSqlCreateServer(startPos.plus(getPos()),
@@ -42,50 +85,8 @@ SqlCreate JetSqlCreateServer(Span span, boolean replace) :
     }
 }
 
-SqlNodeList ServerOptions():
-{
-    Span span;
-    SqlOption sqlOption;
-    Map<String, SqlNode> sqlOptions = new HashMap<String, SqlNode>();
-}
-{
-    <LPAREN> { span = span(); }
-    [
-        sqlOption = ServerOption()
-        {
-            sqlOptions.put(sqlOption.key(), sqlOption);
-        }
-        (
-            <COMMA> sqlOption = ServerOption()
-            {
-                if (sqlOptions.putIfAbsent(sqlOption.key(), sqlOption) != null) {
-                    throw SqlUtil.newContextException(getPos(),
-                        ParserResource.RESOURCE.duplicateOption(sqlOption.key()));
-                }
-            }
-        )*
-    ]
-    <RPAREN>
-    {
-        return new SqlNodeList(sqlOptions.values(), span.end(this));
-    }
-}
-
-SqlOption ServerOption() :
-{
-    SqlIdentifier key;
-    SqlNode value;
-}
-{
-    key = SimpleIdentifier()
-    value = StringLiteral()
-    {
-        return new SqlOption(getPos(), key, value);
-    }
-}
-
 /**
-* Parser CREATE FOREIGN TABLE statement.
+* Parses CREATE FOREIGN TABLE statement.
 */
 SqlCreate JetSqlCreateTable(Span span, boolean replace) :
 {
@@ -96,14 +97,14 @@ SqlCreate JetSqlCreateTable(Span span, boolean replace) :
     SqlNodeList tableOptions = SqlNodeList.EMPTY;
 }
 {
-    <FOREIGN> <TABLE>
+    <TABLE>
     tableName = CompoundIdentifier()
     columns = TableColumns()
     <SERVER>
     server = SimpleIdentifier()
     [
         <OPTIONS>
-        tableOptions = TableOptions()
+        tableOptions = GenericOptions()
     ]
     {
         return new JetSqlCreateTable(startPos.plus(getPos()),
@@ -155,7 +156,10 @@ SqlTableColumn TableColumn() :
     }
 }
 
-SqlNodeList TableOptions():
+/**
+* Parses OPTIONS.
+*/
+SqlNodeList GenericOptions():
 {
     Span span;
     SqlOption sqlOption;
@@ -164,12 +168,12 @@ SqlNodeList TableOptions():
 {
     <LPAREN> { span = span(); }
     [
-        sqlOption = TableOption()
+        sqlOption = GenericOption()
         {
             sqlOptions.put(sqlOption.key(), sqlOption);
         }
         (
-            <COMMA> sqlOption = TableOption()
+            <COMMA> sqlOption = GenericOption()
             {
                 if (sqlOptions.putIfAbsent(sqlOption.key(), sqlOption) != null) {
                     throw SqlUtil.newContextException(getPos(),
@@ -184,7 +188,7 @@ SqlNodeList TableOptions():
     }
 }
 
-SqlOption TableOption() :
+SqlOption GenericOption() :
 {
     SqlIdentifier key;
     SqlNode value;
