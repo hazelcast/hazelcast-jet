@@ -45,7 +45,6 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
-import static com.hazelcast.jet.cdc.Operation.DELETE;
 import static com.hazelcast.jet.pipeline.test.AssertionSinks.assertCollectedEventually;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -82,11 +81,9 @@ public class MySqlIntegrationTest extends AbstractIntegrationTest {
                         (accumulator, customerId, event) -> {
                             long count = accumulator.get();
                             accumulator.add(1);
-                            ChangeEventValue eventValue = event.value();
-                            Operation operation = eventValue.operation();
-                            ChangeEventElement mostRecentImage = DELETE.equals(operation) ?
-                                    eventValue.before() : eventValue.after();
-                            Customer customer = mostRecentImage.mapToObj(Customer.class);
+                            Operation operation = event.operation();
+                            ChangeEventElement eventValue = event.value();
+                            Customer customer = eventValue.mapToObj(Customer.class);
                             return customerId + "/" + count + ":" + operation + ":" + customer;
                         })
                 .setLocalParallelism(1)
@@ -147,11 +144,9 @@ public class MySqlIntegrationTest extends AbstractIntegrationTest {
                         (accumulator, orderId, event) -> {
                             long count = accumulator.get();
                             accumulator.add(1);
-                            ChangeEventValue eventValue = event.value();
-                            Operation operation = eventValue.operation();
-                            ChangeEventElement mostRecentImage = DELETE.equals(operation) ?
-                                    eventValue.before() : eventValue.after();
-                            Order order = mostRecentImage.mapToObj(Order.class);
+                            Operation operation = event.operation();
+                            ChangeEventElement eventValue = event.value();
+                            Order order = eventValue.mapToObj(Order.class);
                             return orderId + "/" + count + ":" + operation + ":" + order;
                         })
                 .setLocalParallelism(1)

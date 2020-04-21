@@ -17,8 +17,9 @@
 package com.hazelcast.jet.cdc.impl;
 
 import com.hazelcast.jet.cdc.ChangeEvent;
-import com.hazelcast.jet.cdc.ChangeEventKey;
-import com.hazelcast.jet.cdc.ChangeEventValue;
+import com.hazelcast.jet.cdc.ChangeEventElement;
+import com.hazelcast.jet.cdc.Operation;
+import com.hazelcast.jet.cdc.ParsingException;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
@@ -33,8 +34,10 @@ public class ChangeEventJsonImpl implements ChangeEvent, IdentifiedDataSerializa
     private String valueJson;
 
     private String json;
-    private ChangeEventKey key;
-    private ChangeEventValue value;
+    private Long timestamp;
+    private Operation operation;
+    private ChangeEventElement key;
+    private ChangeEventElement value;
 
     ChangeEventJsonImpl() { //needed for deserialization
     }
@@ -45,19 +48,37 @@ public class ChangeEventJsonImpl implements ChangeEvent, IdentifiedDataSerializa
     }
 
     @Override
+    public long timestamp() throws ParsingException {
+        if (timestamp == null) {
+            timestamp = value().getLong("__ts_ms")
+                    .orElseThrow(() -> new ParsingException("No parsable timestamp field found"));
+        }
+        return timestamp;
+    }
+
+    @Override
     @Nonnull
-    public ChangeEventKey key() {
+    public Operation operation() throws ParsingException {
+        if (operation == null) {
+            operation = Operation.get(value().getString("__op").orElse(null));
+        }
+        return operation;
+    }
+
+    @Override
+    @Nonnull
+    public ChangeEventElement key() {
         if (key == null) {
-            key = new ChangeEventKeyJsonImpl(keyJson);
+            key = new ChangeEventElementJsonImpl(keyJson);
         }
         return key;
     }
 
     @Override
     @Nonnull
-    public ChangeEventValue value() {
+    public ChangeEventElement value() {
         if (value == null) {
-            value = new ChangeEventValueJsonImpl(valueJson);
+            value = new ChangeEventElementJsonImpl(valueJson);
         }
         return value;
     }

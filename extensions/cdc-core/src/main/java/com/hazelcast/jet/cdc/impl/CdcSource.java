@@ -16,13 +16,15 @@
 
 package com.hazelcast.jet.cdc.impl;
 
-import com.hazelcast.function.FunctionEx;
 import com.hazelcast.instance.impl.HazelcastInstanceFactory;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.cdc.ChangeEvent;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.pipeline.SourceBuilder;
+import io.debezium.transforms.ExtractNewRecordState;
 import org.apache.kafka.connect.connector.ConnectorContext;
+import org.apache.kafka.connect.data.Struct;
+import org.apache.kafka.connect.data.Values;
 import org.apache.kafka.connect.source.SourceConnector;
 import org.apache.kafka.connect.source.SourceRecord;
 import org.apache.kafka.connect.source.SourceTask;
@@ -38,13 +40,12 @@ import java.util.Properties;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
 
-class KafkaConnectSource {
+class CdcSource {
 
     private final SourceConnector connector;
     private final SourceTask task;
     private final Map<String, String> taskConfig;
-    private final FunctionEx<SourceRecord, ChangeEvent> recordToEventMapper;
-    private final FunctionEx<ChangeEvent, Long> timestampProjectionFn;
+    private final ExtractNewRecordState<SourceRecord> smt;
 
     /**
      * Key represents the partition which the record originated from. Value
@@ -56,12 +57,7 @@ class KafkaConnectSource {
     private Map<Map<String, ?>, Map<String, ?>> partitionsToOffset = new HashMap<>();
     private boolean taskInit;
 
-    KafkaConnectSource(
-            Processor.Context ctx,
-            Properties properties,
-            FunctionEx<SourceRecord, ChangeEvent> recordToEventMapper,
-            FunctionEx<ChangeEvent, Long> eventToTimestampMapper
-    ) {
+    CdcSource(Processor.Context ctx, Properties properties) {
         try {
             String connectorClazz = properties.getProperty("connector.class");
             Class<?> connectorClass = Thread.currentThread().getContextClassLoader().loadClass(connectorClazz);
@@ -69,11 +65,10 @@ class KafkaConnectSource {
             connector.initialize(new JetConnectorContext());
             connector.start((Map) injectHazelcastInstanceNameProperty(ctx, properties));
 
+            smt = initSmt();
+
             taskConfig = connector.taskConfigs(1).get(0);
             task = (SourceTask) connector.taskClass().getConstructor().newInstance();
-
-            this.recordToEventMapper = recordToEventMapper;
-            this.timestampProjectionFn = eventToTimestampMapper;
         } catch (Exception e) {
             throw rethrow(e);
         }
@@ -103,10 +98,11 @@ class KafkaConnectSource {
     }
 
     private boolean addToBuffer(SourceRecord record, SourceBuilder.TimestampedSourceBuffer<ChangeEvent> buf) {
-        ChangeEvent event = recordToEventMapper.apply(record);
-        if (event != null) {
-            long ts = timestampProjectionFn.apply(event);
-            buf.add(event, ts);
+        record = smt.apply(record);
+        if (record != null) {
+            ChangeEvent event = extractEvent(record);
+            long timestamp = extractTimestamp(record);
+            buf.add(event, timestamp);
             return true;
         }
         return false;
@@ -126,6 +122,31 @@ class KafkaConnectSource {
 
     public void restoreSnapshot(List<Map<Map<String, ?>, Map<String, ?>>> snapshots) {
         this.partitionsToOffset = snapshots.get(0);
+    }
+
+    private static ExtractNewRecordState<SourceRecord> initSmt() {
+        ExtractNewRecordState<SourceRecord> smt = new ExtractNewRecordState<>();
+
+        Map<String, String> config = new HashMap<>();
+        config.put("add.fields", "op, ts_ms");
+        config.put("delete.handling.mode", "rewrite");
+        smt.configure(config);
+
+        return smt;
+    }
+
+    private static ChangeEvent extractEvent(SourceRecord record) {
+        String keyJson = Values.convertToString(record.keySchema(), record.key());
+        String valueJson = Values.convertToString(record.valueSchema(), record.value());
+        return new ChangeEventJsonImpl(keyJson, valueJson);
+    }
+
+    private static long extractTimestamp(SourceRecord record) {
+        if (record.valueSchema().field("__ts_ms") == null) {
+            return 0L;
+        } else {
+            return ((Struct) record.value()).getInt64("__ts_ms");
+        }
     }
 
     private class SourceOffsetStorageReader implements OffsetStorageReader {
@@ -162,7 +183,7 @@ class KafkaConnectSource {
 
         @Override
         public void raiseError(Exception e) {
-            rethrow(e);
+            throw rethrow(e);
         }
     }
 

@@ -54,35 +54,49 @@ import javax.annotation.Nonnull;
 public interface ChangeEvent {
 
     /**
-     * Convenience method, see {@link ChangeEventValue#timestamp()} for
-     * details.
+     * Specifies the moment in time when the event happened. This
+     * timestamp is "real" in the sense that it comes from the database
+     * change-log, so it's not "processing time", it's not the moment
+     * when the event was observed by our system. Keep in mind though
+     * that not all events come from the change-log. The change-log goes
+     * back in time only to a limited extent, all older events are parts
+     * of a database snapshot constructed when we start monitoring the
+     * database and their timestamps are accordingly artificial.
+     * Identifying snapshot events is possible most of the time, because
+     * their operation will be {@link Operation#SYNC} instead of
+     * {@link Operation#INSERT} (one notable exception being MySQL).
+     *
+     * @throws ParsingException if no parsable timestamp field present
      */
-    default long timestamp() throws ParsingException {
-        return value().timestamp();
-    }
+    long timestamp() throws ParsingException;
 
     /**
-     * Convenience method, see {@link ChangeEventValue#operation()} for
-     * details.
+     * Specifies the type of change being described (insertion, delete or
+     * update). Only some special events, like heartbeats don't have an
+     * operation value.
+     *
+     * @return {@link Operation#UNSPECIFIED} if this {@code ChangeEventValue}
+     * doesn't have an operation field or appropriate {@link Operation}
+     * that matches what's found in the operation field
+     * @throws ParsingException if there is an operation field, but it's
+     *                          value is not among the handled ones.
      */
     @Nonnull
-    default Operation operation() throws ParsingException {
-        return value().operation();
-    }
+    Operation operation() throws ParsingException;
 
     /**
      * Identifies the particular record or document being affected
      * by the change event.
      */
     @Nonnull
-    ChangeEventKey key();
+    ChangeEventElement key();
 
     /**
      * Describes the actual change affected on the record or document
      * by the change event.
      */
     @Nonnull
-    ChangeEventValue value();
+    ChangeEventElement value();
 
     /**
      * Returns raw JSON string which the content of this event is

@@ -18,9 +18,7 @@ package com.hazelcast.jet.cdc;
 
 import com.hazelcast.jet.annotation.EvolvingApi;
 import com.hazelcast.jet.cdc.impl.AbstractSourceBuilder;
-import com.hazelcast.jet.cdc.impl.ChangeEventJsonImpl;
 import com.hazelcast.jet.pipeline.StreamSource;
-import org.apache.kafka.connect.data.Values;
 
 /**
  * Contains factory methods for creating change data capture sources
@@ -64,14 +62,7 @@ public final class DebeziumCdcSources {
          * Returns an actual source based on the properties set so far.
          */
         public StreamSource<ChangeEvent> build() {
-            return connect(properties,
-                    (event) -> event.value().getLong("ts_ms").orElse(0L),
-                    (record) -> {
-                        String keyJson = Values.convertToString(record.keySchema(), record.key());
-                        String valueJson = Values.convertToString(record.valueSchema(), record.value());
-                        return new ChangeEventJsonImpl(keyJson, valueJson);
-                    }
-            );
+            return connect(properties);
         }
     }
 
