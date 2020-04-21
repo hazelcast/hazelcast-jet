@@ -28,6 +28,7 @@ data: {
       "org.apache.calcite.sql.SqlCreate"
       "com.hazelcast.jet.sql.parser.ParserResource"
       "com.hazelcast.jet.sql.parser.SqlProperty"
+      "com.hazelcast.jet.sql.parser.JetSqlCreateServer"
       "com.hazelcast.jet.sql.parser.SqlTableColumn"
       "com.hazelcast.jet.sql.parser.JetSqlCreateTable"
       "com.hazelcast.jet.sql.parser.JetSqlInsert"
@@ -37,6 +38,7 @@ data: {
     # List of new keywords. Example: "DATABASES", "TABLES". If the keyword is not a reserved
     # keyword add it to 'nonReservedKeywords' section.
     keywords: [
+      "CONNECTOR"
       "OVERWRITE"
     ]
 
@@ -403,6 +405,7 @@ data: {
     # List of methods for parsing extensions to "CREATE [OR REPLACE]" calls.
     # Each must accept arguments "(SqlParserPos pos, boolean replace)".
     createStatementParserMethods: [
+      "JetSqlCreateServer"
       "JetSqlCreateTable"
     ]
 

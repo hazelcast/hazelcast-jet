@@ -15,6 +15,76 @@
 -->
 
 /**
+* Parser CREATE SERVER statement.
+*/
+SqlCreate JetSqlCreateServer(Span span, boolean replace) :
+{
+    SqlParserPos startPos = span.pos();
+    SqlIdentifier serverName;
+    SqlNodeList properties = SqlNodeList.EMPTY;
+    SqlIdentifier connector;
+}
+{
+    <SERVER>
+    serverName = CompoundIdentifier()
+    [
+        <OPTIONS>
+        properties = ServerProperties()
+    ]
+    <CONNECTOR>
+    connector = SimpleIdentifier()
+    {
+        return new JetSqlCreateServer(startPos.plus(getPos()),
+                serverName,
+                properties,
+                connector,
+                replace);
+    }
+}
+
+SqlNodeList ServerProperties():
+{
+    Span span;
+    SqlProperty property;
+    Map<String, SqlNode> properties = new HashMap<String, SqlNode>();
+}
+{
+    <LPAREN> { span = span(); }
+    [
+        property = ServerProperty()
+        {
+            properties.put(property.key(), property);
+        }
+        (
+            <COMMA> property = ServerProperty()
+            {
+                if (properties.putIfAbsent(property.key(), property) != null) {
+                    throw SqlUtil.newContextException(getPos(),
+                        ParserResource.RESOURCE.duplicateProperty(property.key()));
+                }
+            }
+        )*
+    ]
+    <RPAREN>
+    {
+        return new SqlNodeList(properties.values(), span.end(this));
+    }
+}
+
+SqlProperty ServerProperty() :
+{
+    SqlIdentifier key;
+    SqlNode value;
+}
+{
+    key = SimpleIdentifier()
+    value = StringLiteral()
+    {
+        return new SqlProperty(getPos(), key, value);
+    }
+}
+
+/**
 * Parser CREATE FOREIGN TABLE statement.
 */
 SqlCreate JetSqlCreateTable(Span span, boolean replace) :

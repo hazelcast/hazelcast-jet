@@ -40,6 +40,7 @@ import com.hazelcast.jet.sql.impl.cost.CostFactory;
 import com.hazelcast.jet.sql.impl.expression.SqlToQueryType;
 import com.hazelcast.jet.sql.impl.rule.FullScanPhysicalRule;
 import com.hazelcast.jet.sql.impl.schema.JetSchema;
+import com.hazelcast.jet.sql.parser.JetSqlCreateServer;
 import com.hazelcast.jet.sql.parser.JetSqlCreateTable;
 import com.hazelcast.jet.sql.parser.JetSqlParserImpl;
 import com.hazelcast.jet.sql.parser.SqlProperty;
@@ -212,7 +213,7 @@ public class JetSqlService {
             @Nonnull String serverName,
             @Nonnull Map<String, String> tableOptions
     ) {
-        schema.createTableInt(tableName, serverName, tableOptions, null);
+        schema.createTable(tableName, serverName, tableOptions, null);
     }
 
     public void createTable(
@@ -221,7 +222,7 @@ public class JetSqlService {
             @Nonnull Map<String, String> tableOptions,
             @Nonnull List<Entry<String, QueryDataType>> fields
     ) {
-        schema.createTableInt(tableName, serverName, tableOptions, fields);
+        schema.createTable(tableName, serverName, tableOptions, fields);
     }
 
     /**
@@ -234,13 +235,18 @@ public class JetSqlService {
         if (node instanceof JetSqlCreateTable) {
             JetSqlCreateTable create = (JetSqlCreateTable) node;
 
-            Map<String, String> options = create.options()
-                                                .collect(toMap(SqlProperty::key, SqlProperty::value));
+            Map<String, String> options = create.options().collect(toMap(SqlProperty::key, SqlProperty::value));
             List<Entry<String, QueryDataType>> columns =
                     create.columns()
                           .map(column -> new SimpleEntry<>(column.name(), toQueryDataType(column.type())))
                           .collect(toList());
-            schema.createTableInt(create.name(), create.server(), options, columns);
+            schema.createTable(create.name(), create.server(), options, columns);
+            return null;
+        } else if (node instanceof JetSqlCreateServer) {
+            JetSqlCreateServer create = (JetSqlCreateServer) node;
+
+            Map<String, String> options = create.options().collect(toMap(SqlProperty::key, SqlProperty::value));
+            schema.createServer(create.name(), create.connector(), options);
             return null;
         } else if (!(node instanceof SqlDdl)) {
             RelNode rel = convert(validator.validate(node));

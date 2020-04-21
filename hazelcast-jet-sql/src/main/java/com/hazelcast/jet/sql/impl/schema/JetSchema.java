@@ -52,7 +52,9 @@ public class JetSchema extends AbstractSchema {
      */
     public static final String KAFKA_CONNECTOR = "kafka";
 
-    /** The server name under which the local hazelcast IMap connector registered. */
+    /**
+     * The server name under which the local hazelcast IMap connector registered.
+     */
     public static final String IMAP_LOCAL_SERVER = "local_imap";
 
     private static final String OPTION_CONNECTOR_NAME = JetSchema.class + ".connectorName";
@@ -96,7 +98,7 @@ public class JetSchema extends AbstractSchema {
         serverMap.put(serverName, serverOptions);
     }
 
-    public void createTableInt(
+    public void createTable(
             @Nonnull String tableName,
             @Nonnull String serverName,
             @Nonnull Map<String, String> tableOptions,
