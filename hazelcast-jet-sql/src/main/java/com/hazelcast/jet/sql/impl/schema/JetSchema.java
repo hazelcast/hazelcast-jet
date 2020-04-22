@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.sql.impl.schema;
 
+import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.sql.SqlConnector;
 import com.hazelcast.jet.sql.impl.connector.imap.IMapSqlConnector;
@@ -57,19 +58,19 @@ public class JetSchema extends AbstractSchema {
     private static final String OPTION_CONNECTOR_NAME = JetSchema.class + ".connectorName";
     private static final String OPTION_SERVER_NAME = JetSchema.class + ".serverName";
 
-    private final ConcurrentMap<String, SqlConnector> connectorMap = new ConcurrentHashMap<>();
-    private final ConcurrentMap<String, Map<String, String>> serverMap = new ConcurrentHashMap<>();
-    private final ConcurrentMap<String, JetTable> tableMap = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, SqlConnector> connectorsByName = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, Map<String, String>> serversByName = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, JetTable> tablesByName = new ConcurrentHashMap<>();
 
-    private final Map<String, Table> unmodifiableTableMap = Collections.unmodifiableMap(tableMap);
+    private final Map<String, Table> unmodifiableTableMap = Collections.unmodifiableMap(tablesByName);
     private final JetInstance instance;
 
     public JetSchema(JetInstance instance) {
         this.instance = instance;
 
         // insert the IMap connector and local cluster server by default
-        createConnector(IMAP_CONNECTOR, new IMapSqlConnector());
-        createServer(IMAP_LOCAL_SERVER, IMAP_CONNECTOR, emptyMap());
+        createConnector(IMAP_CONNECTOR, new IMapSqlConnector(), false);
+        createServer(IMAP_LOCAL_SERVER, IMAP_CONNECTOR, emptyMap(), false);
     }
 
     @Override
@@ -77,40 +78,63 @@ public class JetSchema extends AbstractSchema {
         return unmodifiableTableMap;
     }
 
-    public void createConnector(String connectorName, Map<String, String> connectorOptions) {
+    public void createConnector(
+            String connectorName,
+            Map<String, String> connectorOptions,
+            boolean replace
+    ) {
         String className = requireNonNull(connectorOptions.get(OPTION_CLASS_NAME), "missing " + OPTION_CLASS_NAME + " option");
         SqlConnector connector = newInstance(className);
-        createConnector(connectorName, connector);
+        createConnector(connectorName, connector, replace);
     }
 
-    private void createConnector(String connectorName, SqlConnector connector) {
-        connectorMap.put(connectorName, connector);
+    private void createConnector(
+            String connectorName,
+            SqlConnector connector,
+            boolean replace
+    ) {
+        if (replace) {
+            connectorsByName.put(connectorName, connector);
+        } else if (connectorsByName.putIfAbsent(connectorName, connector) != null) {
+            throw new JetException("'" + connectorName + "' connector already exists");
+        }
     }
 
-    public void createServer(String serverName, String connectorName, Map<String, String> serverOptions) {
+    public void createServer(
+            @Nonnull String serverName,
+            @Nonnull String connectorName,
+            @Nonnull Map<String, String> serverOptions,
+            boolean replace
+    ) {
         serverOptions = new HashMap<>(serverOptions); // convert to a HashMap so that we can mutate it
-        if (!connectorMap.containsKey(connectorName)) {
+        if (!connectorsByName.containsKey(connectorName)) {
             throw new IllegalArgumentException("Unknown connector: " + connectorName);
         }
         if (serverOptions.put(OPTION_CONNECTOR_NAME, connectorName) != null) {
             throw new IllegalArgumentException("Private option used");
         }
-        serverMap.put(serverName, serverOptions);
+
+        if (replace) {
+            serversByName.put(serverName, serverOptions);
+        } else if (serversByName.putIfAbsent(serverName, serverOptions) != null) {
+            throw new JetException("'" + serverName + "' server already exists");
+        }
     }
 
     public void createTable(
             @Nonnull String tableName,
             @Nonnull String serverName,
             @Nonnull Map<String, String> tableOptions,
-            @Nullable List<Entry<String, QueryDataType>> fields
+            @Nullable List<Entry<String, QueryDataType>> fields,
+            boolean replace
     ) {
         tableOptions = new HashMap<>(tableOptions); // convert to a HashMap so that we can mutate it
-        Map<String, String> serverOptions = serverMap.get(serverName);
+        Map<String, String> serverOptions = serversByName.get(serverName);
         if (serverOptions == null) {
             throw new IllegalArgumentException("Unknown server: " + serverName);
         }
         String connectorName = serverOptions.get(OPTION_CONNECTOR_NAME);
-        SqlConnector connector = connectorMap.get(connectorName);
+        SqlConnector connector = connectorsByName.get(connectorName);
         if (connector == null) {
             throw new IllegalArgumentException("Server references unknown connector: " + connectorName);
         }
@@ -130,6 +154,11 @@ public class JetSchema extends AbstractSchema {
             }
             table = connector.createTable(instance, tableName, serverOptions, tableOptions, fields);
         }
-        tableMap.put(tableName, table);
+
+        if (replace) {
+            tablesByName.put(tableName, table);
+        } else if (tablesByName.putIfAbsent(tableName, table) != null) {
+            throw new JetException("'" + tableName + "' table already exists");
+        }
     }
 }

@@ -204,7 +204,7 @@ public class JetSqlService {
             @Nonnull Map<String, String> tableOptions,
             @Nonnull List<Entry<String, QueryDataType>> fields
     ) {
-        schema.createTable(tableName, serverName, tableOptions, fields);
+        schema.createTable(tableName, serverName, tableOptions, fields, false);
     }
 
     /**
@@ -218,13 +218,13 @@ public class JetSqlService {
             JetSqlCreateConnector create = (JetSqlCreateConnector) node;
 
             Map<String, String> options = create.options().collect(toMap(SqlOption::key, SqlOption::value));
-            schema.createConnector(create.name(), options);
+            schema.createConnector(create.name(), options, create.getReplace());
             return null;
         } else if (node instanceof JetSqlCreateServer) {
             JetSqlCreateServer create = (JetSqlCreateServer) node;
 
             Map<String, String> options = create.options().collect(toMap(SqlOption::key, SqlOption::value));
-            schema.createServer(create.name(), create.connector(), options);
+            schema.createServer(create.name(), create.connector(), options, create.getReplace());
             return null;
         } else if (node instanceof JetSqlCreateTable) {
             JetSqlCreateTable create = (JetSqlCreateTable) node;
@@ -234,7 +234,7 @@ public class JetSqlService {
                     create.columns()
                           .map(column -> new SimpleEntry<>(column.name(), toQueryDataType(column.type())))
                           .collect(toList());
-            schema.createTable(create.name(), create.server(), options, columns);
+            schema.createTable(create.name(), create.server(), options, columns, create.getReplace());
             return null;
         } else if (!(node instanceof SqlDdl)) {
             RelNode rel = convert(validator.validate(node));
