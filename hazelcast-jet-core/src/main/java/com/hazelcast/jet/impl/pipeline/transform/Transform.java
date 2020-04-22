@@ -47,9 +47,9 @@ public interface Transform {
 
     void setRebalanceInput(int ordinal, boolean value);
 
-    boolean shouldRebalanceInput(int ordinal);
-
     void setRebalanceKeyForInput(int ordinal, FunctionEx<?, ?> keyFn);
+
+    boolean shouldRebalanceInput(int ordinal);
 
     FunctionEx<?, ?> partitionKeyFnForInput(int ordinal);
 

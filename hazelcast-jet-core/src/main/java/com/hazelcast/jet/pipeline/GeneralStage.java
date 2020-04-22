@@ -992,7 +992,7 @@ public interface GeneralStage<T> extends Stage {
      * @return a new stage using the same transform as this one, only with a
      *         rebalancing flag raised that will affect data routing into the next
      *         stage.
-     * @since 4.1
+     * @since 4.2
      */
     @Nonnull
     GeneralStage<T> rebalance();
@@ -1053,7 +1053,7 @@ public interface GeneralStage<T> extends Stage {
      * @return a new stage using the same transform as this one, only with a
      *         rebalancing flag raised that will affect data routing into the next
      *         stage.
-     * @since 4.1
+     * @since 4.2
      */
     @Nonnull
     <K> GeneralStage<T> rebalance(@Nonnull FunctionEx<? super T, ? extends K> keyFn);

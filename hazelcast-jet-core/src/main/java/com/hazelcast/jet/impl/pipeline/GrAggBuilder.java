@@ -37,7 +37,6 @@ import com.hazelcast.jet.pipeline.WindowGroupAggregateBuilder1;
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import static com.hazelcast.jet.datamodel.Tag.tag;
 import static com.hazelcast.jet.impl.pipeline.ComputeStageImplBase.ADAPT_TO_JET_EVENT;
@@ -109,10 +108,7 @@ public class GrAggBuilder<K> {
         FunctionAdapter fnAdapter = ADAPT_TO_JET_EVENT;
         // Casts in this expression are a workaround for JDK 8 compiler bug:
         @SuppressWarnings("unchecked")
-        List<FunctionEx<?, ? extends K>> adaptedKeyFns = (List<FunctionEx<?, ? extends K>>) (List) keyFns
-                .stream()
-                .map(fn -> fnAdapter.adaptKeyFn((FunctionEx) fn))
-                .collect(Collectors.toList());
+        List<FunctionEx<?, ? extends K>> adaptedKeyFns = toList(keyFns, fn -> fnAdapter.adaptKeyFn((FunctionEx) fn));
         AbstractTransform transform = new WindowGroupTransform<K, R>(
                 upstreamTransforms, wDef, adaptedKeyFns, fnAdapter.adaptAggregateOperation(aggrOp));
         pipelineImpl.connect(upstreamStages, transform);

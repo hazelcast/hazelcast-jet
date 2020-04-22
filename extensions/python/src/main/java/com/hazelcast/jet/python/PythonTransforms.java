@@ -67,6 +67,7 @@ public final class PythonTransforms {
      * @deprecated Jet now has first-class support for data rebalancing, see
      * {@link GeneralStage#rebalance()} and {@link GeneralStage#rebalance(FunctionEx)}.
      */
+    @Deprecated
     @Nonnull
     public static <K> FunctionEx<StreamStage<String>, StreamStage<String>> mapUsingPython(
             @Nonnull FunctionEx<? super String, ? extends K> keyFn,

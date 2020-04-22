@@ -39,11 +39,14 @@ stage.rebalance(Person::getName).map(Person::getAge)
 Jet uses a distributed edge partitioned by `Person::getName`.
 
 ```java
-stage.map(Person::getName).rebalance().flatMap(s -> traverseArray(s.toCharArray()))
+stage.map(Person::getName)
+     .rebalance()
+     .flatMap(s -> traverseArray(s.toCharArray()))
 ```
 
 Jet doesn't fuse `map` and `flatMap`, uses a distributed round-robin
-edge between them.
+edge between them. The processing in `map` will execute locally and the
+items passed to `flatMap` will be rebalanced.
 
 ```java
 stage0 = ...
@@ -91,10 +94,10 @@ be used for semantic correctness.
 stage0 = stage.groupingKey(Person:getAge)
 stage1 = stage.rebalance().groupingKey(Person:getAge)
 
-stage0.aggregate(stage1, ...)
+stage0.aggregate2(stage1, ...)
 ```
 
-If any of the joined stages are rebalanced, Jet uses single-stage
+If any of the joined stages are rebalanced, Jet uses a single-stage
 aggregation.
 
 ```java
