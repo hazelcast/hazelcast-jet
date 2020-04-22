@@ -10,7 +10,8 @@ class Demos extends React.Component {
         const cardStyle = {
             root: {
                 display: "inline-block",
-                marginRight: "3em",
+                marginLeft: "0.5em",
+                marginRight: "0.5em",
                 marginTop: "1em",
                 marginBottom: "1em",
                 minWidth: "23em",
@@ -79,7 +80,7 @@ class Demos extends React.Component {
         return (
             <div>
                 <div>
-                    <Container className="mainContainer documentContainer postContainer" padding={['left', 'bottom']}
+                    <Container className="mainContainer documentContainer postContainer" padding={['bottom']}
                                background="light">
                         <header>
                             <h1>{siteConfig.title} Demos</h1>
