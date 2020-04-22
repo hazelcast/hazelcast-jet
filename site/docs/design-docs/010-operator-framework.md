@@ -126,18 +126,15 @@ certified operator.
 
 For community/non-certified versions of the operators which gets
 published to the [OperatorHub.io](https://operatorhub.io/) are tested
-by deploying them to a regular Kubernetes clusters by following the
-installation instructions in the README files in [this repository](https://github.com/hazelcast/hazelcast-jet-operator)
-. Testing of these operators should also be automated with a Jenkins
-pipeline.
+automatically with a corresponding Jenkins pipeline which
+deploys them to a regular Kubernetes cluster and verifies the cluster
+formation.
 
-Automated test pipeline which creates a Hazelcast Jet cluster with
-Management Center using OpenShift specific images and verifies its
-health has been added to the Jenkins.
+Automated test pipeline, which creates a Hazelcast Jet cluster with
+Management Center using OpenShift specific images then verifies its
+health, has been added to the Jenkins.
 
 ## Future Improvements
-
-Automated test coverage can be increased.
 
 It is logical to extend capabilities of the operators to cover more
 scenarios rather than the basic installation.
