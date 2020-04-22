@@ -69,10 +69,11 @@ data and resumes the jobs.</p>
 <p>This allows Jet cluster to be shut down gracefully and restarted without
 a data loss. When the cluster restarts, the jobs will automatically be
 restarted, without having to submit them to the cluster again.</p>
-<p>Jet regularly <a href="../architecture/fault-tolerance">snapshots</a> it's state.
-The state snapshot can be used as a recovery point. Snapshots are stored
-in memory. Lossless Cluster Restart works by persisting the RAM-based
-snapshot data to disk. It uses the <a href="https://docs.hazelcast.org/docs/latest/manual/html-single/index.html#hot-restart-persistence">Hot Restart Persistence</a>
+<p>Jet jobs regularly <a href="../architecture/fault-tolerance">snapshot</a> their
+state. A state snapshot can be used as a recovery point. Snapshots are
+stored in memory. Lossless Cluster Restart works by persisting the
+RAM-based snapshot data to disk. It uses the <a href="https://docs.hazelcast.org/docs/latest/manual/html-single/index.html#hot-restart-persistence">Hot Restart
+Persistence</a>
 feature of Hazelcast under the hood.</p>
 <h2><a class="anchor" aria-hidden="true" id="enabling-lossless-restart"></a><a href="#enabling-lossless-restart" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Enabling Lossless Restart</h2>
 <p>To enable Lossless Cluster Restart, you need to enable it in
@@ -81,9 +82,9 @@ feature of Hazelcast under the hood.</p>
   <span class="hljs-attr">instance:</span>
     <span class="hljs-attr">lossless-restart-enabled:</span> <span class="hljs-literal">true</span>
 </code></pre>
-<p>By the default the snapshot will be written to <code>&lt;JET_HOME&gt;/recovery</code>
-folder . To change this directory where the data will be stored,
-configure the <code>hot-restart-persistence</code> option in <code>hazelcast.yaml</code>:</p>
+<p>By default the snapshot will be written to <code>&lt;JET_HOME&gt;/recovery</code> folder.
+To change the directory where the data will be stored, configure the
+<code>hot-restart-persistence</code> option in <code>hazelcast.yaml</code>:</p>
 <pre><code class="hljs css language-yml"><span class="hljs-attr">hazelcast:</span>
   <span class="hljs-attr">hot-restart-persistence:</span>
     <span class="hljs-attr">enabled:</span> <span class="hljs-literal">true</span>
@@ -91,12 +92,12 @@ configure the <code>hot-restart-persistence</code> option in <code>hazelcast.yam
 </code></pre>
 <p>See the
 <a href="https://docs.hazelcast.org/docs/4.0/manual/html-single/index.html#hot-restart-persistence">docs</a>
-for detailed description including fine-tuning.</p>
-<h2><a class="anchor" aria-hidden="true" id="safely-shutting-down-a-jet-cluster"></a><a href="#safely-shutting-down-a-jet-cluster" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Safely Shutting Down A Jet Cluster</h2>
-<p>For lossless restart to work, the cluster must be shutdown gracefully.
-When members are shutdown one by one in rapid succession, this starts an
-automatic rebalancing process where backup partitions are promoted and
-new backups are created for each member. This may result in
+for a detailed description including fine tuning.</p>
+<h2><a class="anchor" aria-hidden="true" id="safely-shutting-down-a-jet-cluster"></a><a href="#safely-shutting-down-a-jet-cluster" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Safely Shutting Down a Jet Cluster</h2>
+<p>For lossless restart to work the cluster must be shut down gracefully.
+When members are shutdown one by one in a rapid succession, Jet triggers
+an automatic rebalancing process where backup partitions are promoted
+and new backups are created for each member. This may result in
 out-of-memory errors or data loss.</p>
 <p>The entire cluster can be shut down using the <code>jet-cluster-admin</code>
 command line tool.</p>
@@ -130,17 +131,17 @@ and resume the jobs.</p>
 <p>Lossless Cluster Restart is a <em>maintenance</em> tool. It isn't a means of
 fault tolerance.</p>
 <p>The purpose of the Lossless Cluster Restart is to provide a maintenance
-window for member operations and restart the cluster in a fast way. As
-a part of the ordered shutdown process, Jet makes sure that the
-in-memory snapshot data were persisted safely.</p>
-<p>The fault tolerance of Jet is entirely RAM-based. Snapshots is stored in
-multiple in-memory replicas across the cluster. Given the redundancy
-present in the cluster, this is sufficient to maintain a running cluster
+window for member operations and restart the cluster in a fast way. As a
+part of the graceful shutdown process Jet makes sure that the in-memory
+snapshot data were persisted safely.</p>
+<p>The fault tolerance of Jet is entirely RAM-based. Snapshots are stored
+in multiple in-memory replicas across the cluster. Given the redundancy
+present in the cluster this is sufficient to maintain a running cluster
 across single-node failures (or multiple-node, depending on the backup
 count), but it doesn’t cover the case when the entire cluster must shut
 down.</p>
 <p>This design decision allows Jet to exclude disk from the operations that
-affect Job execution, leading to low and predictable latency.</p>
+affect job execution, leading to low and predictable latency.</p>
 <h2><a class="anchor" aria-hidden="true" id="performance-considerations"></a><a href="#performance-considerations" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Performance considerations</h2>
 <p>Even with the fastest solid-state storage, Lossless Cluster Restart
 reduces the maximum snapshotting throughput available to Jet:
@@ -151,7 +152,7 @@ Also, this throughput limit does not apply to the data going through the
 Jet pipeline, but only to the periodic saving of the state present in
 the pipeline. Typically the state scales with the number of distinct
 keys seen within the time window.</p>
-</span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/docs/next/enterprise/job-update"><span class="arrow-prev">← </span><span>Updating Jobs</span></a><a class="docs-next button" href="/docs/next/enterprise/off-heap"><span>Off-Heap Data Structures</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#enabling-lossless-restart">Enabling Lossless Restart</a></li><li><a href="#safely-shutting-down-a-jet-cluster">Safely Shutting Down A Jet Cluster</a></li><li><a href="#fault-tolerance-considerations">Fault Tolerance Considerations</a></li><li><a href="#performance-considerations">Performance considerations</a></li></ul></nav></div><footer class="nav-footer" id="footer"><section class="sitemap"><a href="/" class="nav-home"><img src="/img/logo-light.svg" alt="Hazelcast Jet" width="200" height="40"/></a><div><h5>Docs</h5><a href="/docs/get-started/intro">Get Started</a><a href="/docs/concepts/dag">Concepts and Architecture</a><a href="/docs/tutorials/kafka">Tutorials</a><a href="/docs/operations/installation">Operations Guide</a><a href="/docs/enterprise">Enterprise Edition</a></div><div><h5>Community</h5><a href="https://groups.google.com/forum/#!forum/hazelcast-jet" target="_blank" rel="noreferrer noopener">Google Groups</a><a href="http://stackoverflow.com/questions/tagged/hazelcast-jet" target="_blank" rel="noreferrer noopener">Stack Overflow</a><a href="https://gitter.im/hazelcast/hazelcast-jet">Gitter Chat</a></div><div><h5>Latest From the Blog</h5><a href="/blog/2020/04/01/upgrading-to-jet-40">Upgrading to Jet 4.0</a><a href="/blog/2020/03/30/ml-inference">Machine Learning Inference at Scale</a><a href="/blog/2020/03/02/jet-40-is-released">Jet 4.0 is Released</a><a href="/blog/2020/02/20/transactional-processors">Transactional connectors in Hazelcast Jet</a><a href="/blog/2020/01/28/new-website">Announcing New Documentation Website</a></div><div><h5>More</h5><a href="https://github.com/hazelcast/hazelcast-jet">GitHub Project</a><a href="https://github.com/hazelcast/hazelcast-jet/issues">Issue Tracker</a><a href="http://hazelcast.com/company/careers/">Work at Hazelcast</a><a href="/license">License</a><a class="github-button" href="https://github.com/hazelcast/hazelcast-jet" data-icon="octicon-star" data-count-href="/facebook/docusaurus/stargazers" data-show-count="true" data-count-aria-label="# stargazers on GitHub" aria-label="Star this project on GitHub">Star</a></div></section><section class="copyright">Copyright © 2020 Hazelcast Inc.</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
+</span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/docs/next/enterprise/job-update"><span class="arrow-prev">← </span><span>Updating Jobs</span></a><a class="docs-next button" href="/docs/next/enterprise/off-heap"><span>Off-Heap Data Structures</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#enabling-lossless-restart">Enabling Lossless Restart</a></li><li><a href="#safely-shutting-down-a-jet-cluster">Safely Shutting Down a Jet Cluster</a></li><li><a href="#fault-tolerance-considerations">Fault Tolerance Considerations</a></li><li><a href="#performance-considerations">Performance considerations</a></li></ul></nav></div><footer class="nav-footer" id="footer"><section class="sitemap"><a href="/" class="nav-home"><img src="/img/logo-light.svg" alt="Hazelcast Jet" width="200" height="40"/></a><div><h5>Docs</h5><a href="/docs/get-started/intro">Get Started</a><a href="/docs/concepts/dag">Concepts and Architecture</a><a href="/docs/tutorials/kafka">Tutorials</a><a href="/docs/operations/installation">Operations Guide</a><a href="/docs/enterprise">Enterprise Edition</a></div><div><h5>Community</h5><a href="https://groups.google.com/forum/#!forum/hazelcast-jet" target="_blank" rel="noreferrer noopener">Google Groups</a><a href="http://stackoverflow.com/questions/tagged/hazelcast-jet" target="_blank" rel="noreferrer noopener">Stack Overflow</a><a href="https://gitter.im/hazelcast/hazelcast-jet">Gitter Chat</a></div><div><h5>Latest From the Blog</h5><a href="/blog/2020/04/01/upgrading-to-jet-40">Upgrading to Jet 4.0</a><a href="/blog/2020/03/30/ml-inference">Machine Learning Inference at Scale</a><a href="/blog/2020/03/02/jet-40-is-released">Jet 4.0 is Released</a><a href="/blog/2020/02/20/transactional-processors">Transactional connectors in Hazelcast Jet</a><a href="/blog/2020/01/28/new-website">Announcing New Documentation Website</a></div><div><h5>More</h5><a href="https://github.com/hazelcast/hazelcast-jet">GitHub Project</a><a href="https://github.com/hazelcast/hazelcast-jet/issues">Issue Tracker</a><a href="http://hazelcast.com/company/careers/">Work at Hazelcast</a><a href="/license">License</a><a class="github-button" href="https://github.com/hazelcast/hazelcast-jet" data-icon="octicon-star" data-count-href="/facebook/docusaurus/stargazers" data-show-count="true" data-count-aria-label="# stargazers on GitHub" aria-label="Star this project on GitHub">Star</a></div></section><section class="copyright">Copyright © 2020 Hazelcast Inc.</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
                 document.addEventListener('keyup', function(e) {
                   if (e.target !== document.body) {
                     return;
