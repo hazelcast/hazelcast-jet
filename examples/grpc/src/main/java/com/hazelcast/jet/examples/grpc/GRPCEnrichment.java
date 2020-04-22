@@ -82,14 +82,13 @@ public final class GRPCEnrichment {
      * using the {@link StreamStage#mapUsingServiceAsync}
      * method.
      */
-    public static Pipeline enrichUsingGRPC() throws Exception {
+    public static Pipeline enrichUsingGRPC() {
         // The stream to be enriched: trades
         Pipeline p = Pipeline.create();
         StreamStage<Trade> trades = p
                 .readFrom(Sources.<Object, Trade>mapJournal(TRADES, START_FROM_CURRENT))
                 .withoutTimestamps()
                 .map(entryValue());
-
 
         ServiceFactory<?, ? extends GrpcService<ProductInfoRequest, ProductInfoReply>> productService = unaryService(
                 () -> ManagedChannelBuilder.forAddress("localhost", PORT).useTransportSecurity().usePlaintext(),
