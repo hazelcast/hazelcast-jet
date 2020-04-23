@@ -211,6 +211,6 @@ samples using the Core API.
 - [Spring Boot App that Runs a Jet
   Job](spring-boot/src/main/java/com/hazelcast/jet/examples/spring/SpringBootSample.java)
 
-### Google Proto Buffers
+### Google Protocol Buffers
 - [Protobuf Serializer Adapter](protobuf/src/main/java/com/hazelcast/jet/examples/protobuf/ProtobufSerializerAdapter.java)
 - [Protobuf Serializer Hook Adapter](protobuf/src/main/java/com/hazelcast/jet/examples/protobuf/ProtobufSerializerHookAdapter.java)
