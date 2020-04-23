@@ -5,7 +5,6 @@ import com.hazelcast.sql.impl.type.converter.Converter;
 import com.hazelcast.sql.impl.type.converter.Converters;
 
 import java.util.Calendar;
-import java.util.GregorianCalendar;
 
 /**
  * Complementary interface to {@link Converter} that converts values back to
@@ -13,7 +12,7 @@ import java.util.GregorianCalendar;
  */
 public abstract class ToConverter {
 
-    protected final Converter converter;
+    private final Converter converter;
 
     protected ToConverter(QueryDataType type) {
         this.converter = type.getConverter();
@@ -23,7 +22,7 @@ public abstract class ToConverter {
         Class<?> valueClass = converter.getValueClass();
         if (value == null ||
                 valueClass == value.getClass() ||
-                (valueClass == Calendar.class && value instanceof GregorianCalendar)) { // TODO: support other calendar types ?
+                (valueClass == Calendar.class && value instanceof Calendar)) {
             return value;
         }
         Converter valueConverter = Converters.getConverter(value.getClass());

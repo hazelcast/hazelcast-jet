@@ -2,8 +2,6 @@ package com.hazelcast.jet.sql;
 
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.SimpleTestInClusterSupport;
-import com.hazelcast.jet.sql.impl.schema.JetSchema;
-import com.hazelcast.sql.impl.type.QueryDataType;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -25,14 +23,12 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.TimeZone;
 
-import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.core.TestUtil.createMap;
 import static com.hazelcast.jet.sql.impl.connector.imap.IMapSqlConnector.TO_KEY_CLASS;
 import static com.hazelcast.jet.sql.impl.connector.imap.IMapSqlConnector.TO_VALUE_CLASS;
 import static com.hazelcast.jet.sql.impl.schema.JetSchema.IMAP_LOCAL_SERVER;
 import static java.lang.String.format;
 import static java.time.ZoneOffset.UTC;
-import static java.util.Arrays.asList;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.Assert.assertEquals;
 
@@ -57,39 +53,42 @@ public class SqlInsertTest extends SimpleTestInClusterSupport {
                 OBJECT_MAP_SINK, IMAP_LOCAL_SERVER, TO_KEY_CLASS, SerializableObject.class.getName(), TO_VALUE_CLASS, SerializableObject.class.getName()));
 
         // an IMap with a field of every type
-        sqlService.createTable(ALL_TYPES_MAP, JetSchema.IMAP_LOCAL_SERVER,
-                createMap(TO_VALUE_CLASS, AllTypesValue.class.getName()),
-                asList(
-                        entry("__key", QueryDataType.DECIMAL_BIG_INTEGER),
-                        entry("string", QueryDataType.VARCHAR),
-                        entry("character0", QueryDataType.VARCHAR_CHARACTER),
-                        entry("character1", QueryDataType.VARCHAR_CHARACTER),
-                        entry("boolean0", QueryDataType.BOOLEAN),
-                        entry("boolean1", QueryDataType.BOOLEAN),
-                        entry("byte0", QueryDataType.TINYINT),
-                        entry("byte1", QueryDataType.TINYINT),
-                        entry("short0", QueryDataType.SMALLINT),
-                        entry("short1", QueryDataType.SMALLINT),
-                        entry("int0", QueryDataType.INT),
-                        entry("int1", QueryDataType.INT),
-                        entry("long0", QueryDataType.BIGINT),
-                        entry("long1", QueryDataType.BIGINT),
-                        entry("bigDecimal", QueryDataType.DECIMAL),
-                        entry("bigInteger", QueryDataType.DECIMAL_BIG_INTEGER),
-                        entry("float0", QueryDataType.REAL),
-                        entry("float1", QueryDataType.REAL),
-                        entry("double0", QueryDataType.DOUBLE),
-                        entry("double1", QueryDataType.DOUBLE),
-                        entry("localTime", QueryDataType.TIME),
-                        entry("localDate", QueryDataType.DATE),
-                        entry("localDateTime", QueryDataType.TIMESTAMP),
-                        entry("date", QueryDataType.TIMESTAMP_WITH_TZ_DATE),
-                        entry("calendar", QueryDataType.TIMESTAMP_WITH_TZ_CALENDAR),
-                        entry("instant", QueryDataType.TIMESTAMP_WITH_TZ_INSTANT),
-                        entry("zonedDateTime", QueryDataType.TIMESTAMP_WITH_TZ_ZONED_DATE_TIME),
-                        entry("offsetDateTime", QueryDataType.TIMESTAMP_WITH_TZ_OFFSET_DATE_TIME)/*,
-                        entry("yearMonthInterval", QueryDataType.INTERVAL_YEAR_MONTH),
-                        entry("daySecondInterval", QueryDataType.INTERVAL_DAY_SECOND)*/));
+        sqlService.execute(format("CREATE FOREIGN TABLE %s (" +
+                        "__key DECIMAL(10, 0), " +
+                        "string VARCHAR," +
+                        "character0 CHAR, " +
+                        "character1 CHARACTER, " +
+                        "boolean0 BOOLEAN, " +
+                        "boolean1 BOOLEAN, " +
+                        "byte0 TINYINT, " +
+                        "byte1 TINYINT, " +
+                        "short0 SMALLINT, " +
+                        "short1 SMALLINT," +
+                        "int0 INT, " +
+                        "int1 INTEGER," +
+                        "long0 BIGINT, " +
+                        "long1 BIGINT, " +
+                        "bigDecimal DEC(10, 1), " +
+                        "bigInteger NUMERIC(5, 0), " +
+                        "float0 REAL, " +
+                        "float1 REAL, " +
+                        "double0 DOUBLE, " +
+                        "double1 DOUBLE PRECISION, " +
+                        "\"localTime\" TIME, " +
+                        "localDate DATE, " +
+                        "localDateTime TIMESTAMP, " +
+                        "\"date\" TIMESTAMP WITH LOCAL TIME ZONE, " +
+                        "calendar TIMESTAMP WITH LOCAL TIME ZONE, " +
+                        "instant TIMESTAMP WITH LOCAL TIME ZONE, " +
+                        "zonedDateTime TIMESTAMP WITH LOCAL TIME ZONE, " +
+                        "offsetDateTime TIMESTAMP WITH LOCAL TIME ZONE " +
+                        /*"yearMonthInterval INTERVAL_YEAR_MONTH, " +
+                        "offsetDateTime INTERVAL_DAY_SECOND, " +*/
+                        ") SERVER %s OPTIONS (%s '%s', %s '%s')",
+                ALL_TYPES_MAP, IMAP_LOCAL_SERVER,
+                TO_KEY_CLASS, BigInteger.class.getName(),
+                TO_VALUE_CLASS, AllTypesValue.class.getName()
+        ));
     }
 
     @Test

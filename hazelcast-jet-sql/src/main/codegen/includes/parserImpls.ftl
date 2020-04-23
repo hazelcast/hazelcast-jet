@@ -22,8 +22,7 @@ SqlCreate JetSqlCreateConnectorOrTable(Span span, boolean replace) :
     SqlCreate create;
 }
 {
-    <FOREIGN>
-    (LOOKAHEAD(1)
+    (LOOKAHEAD(2)
         create = JetSqlCreateConnector(span, replace)
     |
         create = JetSqlCreateTable(span, replace)
@@ -43,7 +42,7 @@ SqlCreate JetSqlCreateConnector(Span span, boolean replace) :
     SqlNodeList connectorOptions = SqlNodeList.EMPTY;
 }
 {
-    <DATA> <WRAPPER>
+    <FOREIGN> <DATA> <WRAPPER>
     connectorName = CompoundIdentifier()
     [
         <LANGUAGE> <JAVA>
@@ -100,7 +99,7 @@ SqlCreate JetSqlCreateTable(Span span, boolean replace) :
     SqlNodeList tableOptions = SqlNodeList.EMPTY;
 }
 {
-    <TABLE>
+    <FOREIGN> <TABLE>
     tableName = CompoundIdentifier()
     columns = TableColumns()
     <SERVER>
@@ -123,7 +122,7 @@ SqlNodeList TableColumns():
 {
     Span span;
     SqlTableColumn column;
-    Map<String, SqlNode> columns = new HashMap<String, SqlNode>();
+    Map<String, SqlNode> columns = new LinkedHashMap<String, SqlNode>();
 }
 {
     <LPAREN> { span = span(); }
@@ -166,7 +165,7 @@ SqlNodeList GenericOptions():
 {
     Span span;
     SqlOption sqlOption;
-    Map<String, SqlNode> sqlOptions = new HashMap<String, SqlNode>();
+    Map<String, SqlNode> sqlOptions = new LinkedHashMap<String, SqlNode>();
 }
 {
     <LPAREN> { span = span(); }

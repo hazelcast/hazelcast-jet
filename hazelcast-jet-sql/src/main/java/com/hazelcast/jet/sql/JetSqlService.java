@@ -87,7 +87,6 @@ import org.apache.calcite.tools.Programs;
 import org.apache.calcite.tools.RuleSet;
 import org.apache.calcite.tools.RuleSets;
 
-import javax.annotation.Nonnull;
 import java.util.AbstractMap.SimpleEntry;
 import java.util.Collections;
 import java.util.List;
@@ -197,16 +196,6 @@ public class JetSqlService {
 
     /// SCHEMA METHODS
 
-    // TODO: eventually remove ???
-    public void createTable(
-            @Nonnull String tableName,
-            @Nonnull String serverName,
-            @Nonnull Map<String, String> tableOptions,
-            @Nonnull List<Entry<String, QueryDataType>> fields
-    ) {
-        schema.createTable(tableName, serverName, tableOptions, fields, false);
-    }
-
     /**
      * Executes a DML (currently only {@code INSERT INTO ... SELECT ...} is supported)
      * or DDL query.
@@ -249,7 +238,7 @@ public class JetSqlService {
             // submit the job
             return instance.newJob(dag);
         } else {
-            throw new JetException("Unsupported statament - " + node);
+            throw new JetException("Unsupported statement - " + node);
         }
     }
 

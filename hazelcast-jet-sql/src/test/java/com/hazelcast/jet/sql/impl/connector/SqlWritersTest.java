@@ -26,10 +26,8 @@ import static com.hazelcast.query.QueryConstants.KEY_ATTRIBUTE_NAME;
 import static com.hazelcast.query.QueryConstants.THIS_ATTRIBUTE_NAME;
 import static com.hazelcast.sql.impl.type.QueryDataType.BIGINT;
 import static com.hazelcast.sql.impl.type.QueryDataType.INT;
-import static com.hazelcast.sql.impl.type.QueryDataType.OBJECT;
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
-import static java.util.Collections.singletonList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -47,17 +45,6 @@ public class SqlWritersTest {
     }
 
     @Test
-    public void when_createsEntryWriterWithRecordKey_then_throws() {
-        // When
-        // Then
-        assertThatThrownBy(() -> entryWriter(
-                singletonList(entry(KEY_ATTRIBUTE_NAME.value(), OBJECT)),
-                AnObject.class.getName(),
-                AnObject.class.getName()
-        )).isInstanceOf(JetException.class);
-    }
-
-    @Test
     public void when_createsEntryWriterWithoutValue_then_throws() {
         // When
         // Then
@@ -65,17 +52,6 @@ public class SqlWritersTest {
                 emptyList(),
                 AnObject.class.getName(),
                 null
-        )).isInstanceOf(JetException.class);
-    }
-
-    @Test
-    public void when_createsEntryWriterWithRecordValue_then_throws() {
-        // When
-        // Then
-        assertThatThrownBy(() -> entryWriter(
-                singletonList(entry(THIS_ATTRIBUTE_NAME.value(), OBJECT)),
-                AnObject.class.getName(),
-                AnObject.class.getName()
         )).isInstanceOf(JetException.class);
     }
 

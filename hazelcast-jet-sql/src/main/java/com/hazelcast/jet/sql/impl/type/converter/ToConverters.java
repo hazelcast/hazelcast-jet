@@ -107,13 +107,28 @@ public final class ToConverters {
         private static final ToTimestampWithTzDateConverter INSTANCE = new ToTimestampWithTzDateConverter();
 
         private ToTimestampWithTzDateConverter() {
-            super(QueryDataType.TIMESTAMP_WITH_TZ_OFFSET_DATE_TIME);
+            super(QueryDataType.TIMESTAMP_WITH_TZ_DATE);
         }
 
         @Override
         public Object from(Object canonicalValue) {
             Instant instant = ((OffsetDateTime) canonicalValue).toInstant();
             return Date.from(instant);
+        }
+    }
+
+    private static class ToTimestampWithTzCalendarConverter extends ToConverter {
+
+        private static final ToTimestampWithTzCalendarConverter INSTANCE = new ToTimestampWithTzCalendarConverter();
+
+        private ToTimestampWithTzCalendarConverter() {
+            super(QueryDataType.TIMESTAMP_WITH_TZ_CALENDAR);
+        }
+
+        @Override
+        public Object from(Object canonicalValue) {
+            ZonedDateTime zdt = ((OffsetDateTime) canonicalValue).toZonedDateTime();
+            return GregorianCalendar.from(zdt); // TODO: support other calendar types ?
         }
     }
 
@@ -142,21 +157,6 @@ public final class ToConverters {
         @Override
         public Object from(Object canonicalValue) {
             return ((OffsetDateTime) canonicalValue).toZonedDateTime();
-        }
-    }
-
-    private static class ToTimestampWithTzCalendarConverter extends ToConverter {
-
-        private static final ToTimestampWithTzCalendarConverter INSTANCE = new ToTimestampWithTzCalendarConverter();
-
-        private ToTimestampWithTzCalendarConverter() {
-            super(QueryDataType.TIMESTAMP_WITH_TZ_CALENDAR);
-        }
-
-        @Override
-        public Object from(Object canonicalValue) {
-            ZonedDateTime zdt = ((OffsetDateTime) canonicalValue).toZonedDateTime();
-            return GregorianCalendar.from(zdt); // TODO: support other calendar types ?
         }
     }
 }
