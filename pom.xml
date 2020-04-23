@@ -62,6 +62,8 @@
             -Dhazelcast.logging.details.enabled=true
             -Dhazelcast.test.use.network=false
             -Djava.net.preferIPv4Stack=true
+            -XX:+HeapDumpOnOutOfMemoryError
+            -XX:HeapDumpPath=${project.build.directory}
         </argLine>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
@@ -312,6 +314,9 @@
                     <source>${jdk.version}</source>
                     <target>${jdk.version}</target>
                     <encoding>${project.build.sourceEncoding}</encoding>
+                    <compilerArgs>
+                        <arg>-Xpkginfo:always</arg>
+                    </compilerArgs>
                 </configuration>
             </plugin>
             <plugin>

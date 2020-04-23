@@ -173,17 +173,19 @@ public abstract class JetTestSupport extends HazelcastTestSupport {
      *
      * @param ignoredExecutionId If job is running and has this execution ID,
      *      wait longer. If null, no execution ID is ignored.
-     * @return the execution ID of the new execution
+     * @return the execution ID of the new execution or 0 if {@code
+     *      ignoredExecutionId == null}
      */
     public static long assertJobRunningEventually(JetInstance instance, Job job, Long ignoredExecutionId) {
-        long executionId;
+        Long executionId;
         JobExecutionService service = getNodeEngineImpl(instance)
                 .<JetService>getService(JetService.SERVICE_NAME)
                 .getJobExecutionService();
         do {
             assertJobStatusEventually(job, RUNNING);
+            // executionId can be null if the execution just terminated
             executionId = service.getExecutionIdForJobId(job.getId());
-        } while (ignoredExecutionId != null && executionId == ignoredExecutionId);
+        } while (executionId == null || executionId.equals(ignoredExecutionId));
         return executionId;
     }
 
@@ -275,14 +277,14 @@ public abstract class JetTestSupport extends HazelcastTestSupport {
      * Clean up the cluster and make it ready to run a next test. If we fail
      * to, shut it down so that next tests don't run on a messed-up cluster.
      *
-     * @param instancesToShutDown cluster instances, must contain at least
+     * @param instances cluster instances, must contain at least
      *                            one instance
      */
-    public void cleanUpCluster(JetInstance ... instancesToShutDown) {
-        for (Job job : instancesToShutDown[0].getJobs()) {
-            ditchJob(job, instancesToShutDown);
+    public void cleanUpCluster(JetInstance ... instances) {
+        for (Job job : instances[0].getJobs()) {
+            ditchJob(job, instances);
         }
-        for (DistributedObject o : instancesToShutDown[0].getHazelcastInstance().getDistributedObjects()) {
+        for (DistributedObject o : instances[0].getHazelcastInstance().getDistributedObjects()) {
             o.destroy();
         }
     }
