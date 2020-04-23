@@ -61,6 +61,8 @@
             -Dhazelcast.logging.details.enabled=true
             -Dhazelcast.test.use.network=false
             -Djava.net.preferIPv4Stack=true
+            -XX:+HeapDumpOnOutOfMemoryError
+            -XX:HeapDumpPath=${project.build.directory}
         </argLine>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
@@ -70,7 +72,7 @@
         <timestamp>${maven.build.timestamp}</timestamp>
 
         <!-- Main IMDG dependency -->
-        <hazelcast.version>4.0.1-SNAPSHOT</hazelcast.version>
+        <hazelcast.version>4.0.1</hazelcast.version>
         <!-- Dependencies on IMDG modules: must be the same versions IMDG depends on! -->
         <hazelcast.aws.version>3.1</hazelcast.aws.version>
         <hazelcast.kubernetes.version>2.0.1</hazelcast.kubernetes.version>
@@ -311,6 +313,9 @@
                     <source>${jdk.version}</source>
                     <target>${jdk.version}</target>
                     <encoding>${project.build.sourceEncoding}</encoding>
+                    <compilerArgs>
+                        <arg>-Xpkginfo:always</arg>
+                    </compilerArgs>
                 </configuration>
             </plugin>
             <plugin>

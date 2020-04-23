@@ -157,8 +157,8 @@ types:
 
 - [java.io.Serializable](https://docs.oracle.com/javase/8/docs/api/java/io/Serializable.html)
 - [java.io.Externalizable](https://docs.oracle.com/javase/8/docs/api/java/io/Externalizable.html)
-- [com.hazelcast.nio.serialization.Portable](/javadoc/4.0/com/hazelcast/nio/serialization/Portable.html)
-- [com.hazelcast.nio.serialization.StreamSerializer](/javadoc/4.0/com/hazelcast/nio/serialization/StreamSerializer.html)
+- [com.hazelcast.nio.serialization.Portable](/javadoc/{imdg-version}/com/hazelcast/nio/serialization/Portable.html)
+- [com.hazelcast.nio.serialization.StreamSerializer](/javadoc/{imdg-version}/com/hazelcast/nio/serialization/StreamSerializer.html)
 
 The following table provides a comparison between them to help you in
 deciding which interface to use in your applications.
@@ -200,10 +200,10 @@ with different number of bytes depending on used strategy:
 
 ```text
 Strategy                                        Number of Bytes  Overhead %
-com.hazelcast.nio.serialization.StreamSerializer             26           0
-com.hazelcast.nio.serialization.Portable                    104         300
-java.io.Externalizable                                       87         234
 java.io.Serializable                                        162         523
+java.io.Externalizable                                       87         234
+com.hazelcast.nio.serialization.Portable                    104         300
+com.hazelcast.nio.serialization.StreamSerializer             26           0
 ```
 
 You can see that using plain `Serializable` can easily become a
@@ -215,7 +215,7 @@ not to mention very wasteful with memory.
 
 For the best performance and simplest implementation we recommend using
 the Hazelcast
-[StreamSerializer](/javadoc/4.0/com/hazelcast/nio/serialization/StreamSerializer.html)
+[StreamSerializer](/javadoc/{imdg-version}/com/hazelcast/nio/serialization/StreamSerializer.html)
 mechanism. Here is a sample implementation for a `Person` class:
 
 ```java
@@ -356,7 +356,8 @@ compile "com.hazelcast.jet:hazelcast-jet-protobuf:${hazelcast.jet.version}"
 
 <!--END_DOCUSAURUS_CODE_TABS-->
 
-Implement the adapter by extending the provided class:
+Implement the adapter by extending the provided class (where `Person`
+is of any Protobuf `GeneratedMessageV3` type):
 
 ```java
 class PersonSerializer extends ProtobufSerializer<Person> {

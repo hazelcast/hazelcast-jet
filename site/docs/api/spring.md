@@ -187,9 +187,9 @@ Here’s how your namespace and schema instance declarations may look:
        xsi:schemaLocation="http://www.springframework.org/schema/beans
         http://www.springframework.org/schema/beans/spring-beans-2.5.xsd
         http://www.hazelcast.com/schema/spring
-        http://www.hazelcast.com/schema/spring/hazelcast-spring-4.0.xsd
+        http://www.hazelcast.com/schema/spring/hazelcast-spring-{imdg-version}.xsd
         http://www.hazelcast.com/schema/jet-spring
-        http://www.hazelcast.com/schema/jet-spring/hazelcast-jet-spring-4.0.xsd">
+        http://www.hazelcast.com/schema/jet-spring/hazelcast-jet-spring-{jet-version}.xsd">
         <!-- ... -->
  </beans>
 ```
@@ -258,9 +258,9 @@ beans:
        xsi:schemaLocation="http://www.springframework.org/schema/beans
         http://www.springframework.org/schema/beans/spring-beans-2.5.xsd
         http://www.hazelcast.com/schema/spring
-        http://www.hazelcast.com/schema/spring/hazelcast-spring-4.0.xsd
+        http://www.hazelcast.com/schema/spring/hazelcast-spring-{imdg-version}.xsd
         http://www.hazelcast.com/schema/jet-spring
-        http://www.hazelcast.com/schema/jet-spring/hazelcast-jet-spring-4.0.xsd">
+        http://www.hazelcast.com/schema/jet-spring/hazelcast-jet-spring-{jet-version}.xsd">
 
     <!-- Obtain Hazelcast IMDG instance from Hazelcast Jet instance-->
     <jet:hazelcast jet-instance-ref="jet-instance" id="hazelcast-instance"/>
@@ -319,7 +319,7 @@ attributes.
        xsi:schemaLocation="http://www.springframework.org/schema/beans
         http://www.springframework.org/schema/beans/spring-beans-2.5.xsd
         http://www.hazelcast.com/schema/jet-spring
-        http://www.hazelcast.com/schema/jet-spring/hazelcast-jet-spring-4.0.xsd">
+        http://www.hazelcast.com/schema/jet-spring/hazelcast-jet-spring-{jet-version}.xsd">
     <jet:instance id="instance" lazy-init="true" scope="singleton">
     <!-- ... -->
     </jet:instance>
@@ -342,8 +342,16 @@ create a client instance you need to put `hazelcast-client.yaml` or
 `hazelcast-client.xml` to the classpath or to the root directory.
 
 If your configuration files are available with different names then you
-can point to them by system properties, `hazelcast.jet.config`  for
-server and `hazelcast.client.config` for client.
+can point to them by config properties, `hazelcast.jet.server.config`
+for server and `hazelcast.jet.client.config` for client. You can also
+use system properties, `hazelcast.jet.config` for server and
+`hazelcast.client.config` for client.
+
+If you want to configure the underlying `HazelcastInstance`, you need
+to put `hazelcast.yaml` or `hazelcast.xml` to the classpath or to the
+root directory. You can use the config property
+`hazelcast.jet.imdg.config` or system property
+`hazelcast.config` to explicitly set the configuration file.
 
 If no configuration file is present or explicitly specified, the
 starter creates a server instance using the default configuration file
