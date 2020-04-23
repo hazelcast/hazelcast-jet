@@ -23,13 +23,25 @@ Here we'll show you how to use these services in your pipeline.
 
 Add this dependency to your Java project:
 
+<!--DOCUSAURUS_CODE_TABS-->
+
+<!--Gradle-->
+
+```groovy
+compile 'com.hazelcast.jet:hazelcast-jet-grpc:{jet-version}'
+```
+
+<!--Maven-->
+
 ```xml
 <dependency>
-    <groupId>com.hazelcast.jet</groupId>
-    <artifactId>hazelcast-jet-grpc</artifactId>
-    <version>4.1</version>
+  <groupId>com.hazelcast.jet</groupId>
+  <artifactId>hazelcast-jet-grpc</artifactId>
+  <version>{jet-version}</version>
 </dependency>
 ```
+
+<!--END_DOCUSAURUS_CODE_TABS-->
 
 The Hazelcast Jet cluster must also have this module on the classpath.
 It is in the `opt` directory of the distribution package so you can just
@@ -48,6 +60,14 @@ service ProductService {
   rpc ProductInfo (ProductInfoRequest)
       returns (ProductInfoReply) {}
 }
+
+message ProductInfoRequest {
+  int32 id = 1;
+}
+
+message ProductInfoReply {
+  string productName = 1;
+}
 ```
 
 To call this service, use `GrpcServices.unaryService()`:
@@ -55,16 +75,15 @@ To call this service, use `GrpcServices.unaryService()`:
 ```java
 ServiceFactory<?, ? extends GrpcService<ProductInfoRequest, ProductInfoReply>>
 productService = unaryService(
-    () -> ManagedChannelBuilder.forAddress("localhost", PORT)
-                               .useTransportSecurity()
-                               .usePlaintext(),
+    () -> ManagedChannelBuilder.forAddress("localhost", PORT) .usePlaintext(),
     channel -> ProductServiceGrpc.newStub(channel)::productInfo
 );
 ```
 
 The first parameter is a factory function that returns a channel
 builder. Modify the builder settings as required, as an example we
-enabled TLS via `io.grpc.ManagedChannelBuilder.useTransportSecurity()`.
+could have enabled TLS via
+`io.grpc.ManagedChannelBuilder.useTransportSecurity()`.
 
 The second parameter is a function which, given a gRPC network channel,
 creates a client-side stub and returns a reference to its method that
@@ -120,6 +139,14 @@ This is an example of a bidirectional streaming RPC definition:
 service BrokerService {
   rpc BrokerInfo (stream BrokerInfoRequest)
       returns (stream BrokerInfoReply) {}
+}
+
+message BrokerInfoRequest {
+  int32 id = 1;
+}
+
+message BrokerInfoReply {
+  string brokerName = 1;
 }
 ```
 
