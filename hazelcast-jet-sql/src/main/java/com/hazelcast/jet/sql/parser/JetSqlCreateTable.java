@@ -90,15 +90,14 @@ public class JetSqlCreateTable extends SqlCreate {
         writer.keyword("FOREIGN");
         writer.keyword("TABLE");
         name.unparse(writer, leftPrec, rightPrec);
-        if (columns != null) {
-            SqlWriter.Frame frame = writer.startList("(", ")");
-            for (SqlNode column : columns) {
-                printIndent(writer);
-                column.unparse(writer, 0, 0);
-            }
-            writer.newlineAndIndent();
-            writer.endList(frame);
+
+        SqlWriter.Frame frame = writer.startList("(", ")");
+        for (SqlNode column : columns) {
+            printIndent(writer);
+            column.unparse(writer, 0, 0);
         }
+        writer.newlineAndIndent();
+        writer.endList(frame);
 
         writer.newlineAndIndent();
         writer.keyword("SERVER");

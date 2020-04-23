@@ -17,7 +17,6 @@
 package com.hazelcast.jet.sql.parser;
 
 import org.apache.calcite.sql.SqlCall;
-import org.apache.calcite.sql.SqlDataTypeSpec;
 import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlNode;
@@ -38,11 +37,11 @@ public class SqlTableColumn extends SqlCall {
             new SqlSpecialOperator("COLUMN DECLARATION", SqlKind.COLUMN_DECL);
 
     private final SqlIdentifier name;
-    private final SqlDataTypeSpec type;
+    private final SqlDataType type;
 
     public SqlTableColumn(SqlParserPos pos,
                           SqlIdentifier name,
-                          SqlDataTypeSpec type) {
+                          SqlDataType type) {
         super(pos);
         this.name = requireNonNull(name, "Column name should not be null");
         this.type = requireNonNull(type, "Column type should not be null");
@@ -52,7 +51,7 @@ public class SqlTableColumn extends SqlCall {
         return name.getSimple();
     }
 
-    public SqlDataTypeSpec type() {
+    public SqlDataType type() {
         return type;
     }
 

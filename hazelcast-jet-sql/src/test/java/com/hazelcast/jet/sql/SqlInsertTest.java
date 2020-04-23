@@ -71,22 +71,21 @@ public class SqlInsertTest extends SimpleTestInClusterSupport {
                         "bigDecimal DEC(10, 1), " +
                         "bigInteger NUMERIC(5, 0), " +
                         "float0 REAL, " +
-                        "float1 REAL, " +
+                        "float1 FLOAT, " +
                         "double0 DOUBLE, " +
                         "double1 DOUBLE PRECISION, " +
                         "\"localTime\" TIME, " +
                         "localDate DATE, " +
                         "localDateTime TIMESTAMP, " +
-                        "\"date\" TIMESTAMP WITH LOCAL TIME ZONE, " +
-                        "calendar TIMESTAMP WITH LOCAL TIME ZONE, " +
+                        "\"date\" TIMESTAMP WITH LOCAL TIME ZONE (\"DATE\"), " +
+                        "\"calendar\" TIMESTAMP WITH TIME ZONE (\"CALENDAR\"), " +
                         "instant TIMESTAMP WITH LOCAL TIME ZONE, " +
-                        "zonedDateTime TIMESTAMP WITH LOCAL TIME ZONE, " +
-                        "offsetDateTime TIMESTAMP WITH LOCAL TIME ZONE " +
+                        "zonedDateTime TIMESTAMP WITH TIME ZONE (\"ZONED_DATE_TIME\"), " +
+                        "offsetDateTime TIMESTAMP WITH TIME ZONE " +
                         /*"yearMonthInterval INTERVAL_YEAR_MONTH, " +
                         "offsetDateTime INTERVAL_DAY_SECOND, " +*/
-                        ") SERVER %s OPTIONS (%s '%s', %s '%s')",
+                        ") SERVER %s OPTIONS (%s '%s')",
                 ALL_TYPES_MAP, IMAP_LOCAL_SERVER,
-                TO_KEY_CLASS, BigInteger.class.getName(),
                 TO_VALUE_CLASS, AllTypesValue.class.getName()
         ));
     }

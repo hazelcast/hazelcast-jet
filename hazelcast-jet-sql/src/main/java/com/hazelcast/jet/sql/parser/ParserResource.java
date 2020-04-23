@@ -32,6 +32,9 @@ public interface ParserResource {
     @BaseMessage("Duplicate option ''{0}''")
     ExInst<CalciteException> duplicateOption(String optionName);
 
+    @BaseMessage("Unrecognized TIMESTAMP variant ''{0}''")
+    ExInst<CalciteException> unknownTimestampVariant(String variant);
+
     @BaseMessage("OVERWRITE expression is only used with INSERT statement.")
     Resources.ExInst<JetException> overwriteIsOnlyUsedWithInsert();
 }

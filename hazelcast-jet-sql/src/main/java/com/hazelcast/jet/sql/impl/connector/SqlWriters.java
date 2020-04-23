@@ -18,18 +18,16 @@ package com.hazelcast.jet.sql.impl.connector;
 
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.JetException;
-import com.hazelcast.jet.sql.impl.type.converter.QueryToValueType;
 import com.hazelcast.sql.impl.type.QueryDataType;
 import org.apache.calcite.util.Pair;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.beans.PropertyDescriptor;
-import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.impl.util.ReflectionUtils.loadClass;
@@ -40,8 +38,8 @@ import static com.hazelcast.jet.sql.impl.type.converter.ToConverters.getToConver
 import static com.hazelcast.query.QueryConstants.KEY_ATTRIBUTE_NAME;
 import static com.hazelcast.query.QueryConstants.THIS_ATTRIBUTE_NAME;
 import static java.util.Arrays.stream;
-import static java.util.Collections.emptyMap;
-import static java.util.stream.Collectors.toMap;
+import static java.util.Collections.emptySet;
+import static java.util.stream.Collectors.toSet;
 import static org.apache.commons.beanutils.PropertyUtils.getPropertyDescriptors;
 import static org.apache.commons.beanutils.PropertyUtils.setProperty;
 
@@ -61,13 +59,13 @@ public class SqlWriters {
         int keyIndex = fieldNames.indexOf(KEY_ATTRIBUTE_NAME.value());
         int valueIndex = fieldNames.indexOf(THIS_ATTRIBUTE_NAME.value());
 
-        if (keyClassName == null && keyIndex == -1) {
+        if ((keyClassName == null && keyIndex == -1) || (keyClassName != null && keyIndex >= 0)) {
             throw new JetException("You need to either specify " + TO_KEY_CLASS + " in table options or declare the " +
-                    KEY_ATTRIBUTE_NAME.value() + " column");
+                    KEY_ATTRIBUTE_NAME.value() + " column but not both");
         }
-        if (valueClassName == null && valueIndex == -1) {
+        if ((valueClassName == null && valueIndex == -1) || (valueClassName != null && valueIndex >= 0)) {
             throw new JetException("You need to either specify " + TO_VALUE_CLASS + " in table options or declare the " +
-                    THIS_ATTRIBUTE_NAME.value() + " column");
+                    THIS_ATTRIBUTE_NAME.value() + " column but not both");
         }
     }
 
@@ -78,36 +76,25 @@ public class SqlWriters {
         int keyIndex = fieldNames.indexOf(KEY_ATTRIBUTE_NAME.value());
         int valueIndex = fieldNames.indexOf(THIS_ATTRIBUTE_NAME.value());
 
-        Map<String, String> keyProperties = keyClassName == null ? emptyMap() : propertiesOf(keyClassName);
-        Map<String, String> valueProperties = valueClassName == null ? emptyMap() : propertiesOf(valueClassName);
-
+        Set<String> keyProperties = keyClassName == null ? emptySet() : propertiesOf(keyClassName);
+        Set<String> valueProperties = valueClassName == null ? emptySet() : propertiesOf(valueClassName);
         BitSet keyIndices = new BitSet(fields.size());
-        List<Entry<String, QueryDataType>> targetFields = new ArrayList<>(fields.size());
         for (int index = 0; index < fields.size(); index++) {
-            String fieldName = fields.get(index).getKey();
-            QueryDataType fieldType = fields.get(index).getValue();
-
-            if (index == keyIndex) {
-                targetFields.add(entry(fieldName, QueryToValueType.map(fieldType, keyClassName)));
-            } else if (index == valueIndex) {
-                targetFields.add(entry(fieldName, QueryToValueType.map(fieldType, valueClassName)));
-            } else {
-                if (valueProperties.containsKey(fieldName)) {
-                    targetFields.add(entry(fieldName, QueryToValueType.map(fieldType, valueProperties.get(fieldName))));
-                } else if (keyProperties.containsKey(fieldName)) {
-                    targetFields.add(entry(fieldName, QueryToValueType.map(fieldType, keyProperties.get(fieldName))));
-                } else {
-                    targetFields.add(entry(fieldName, fieldType));
+            if (index != keyIndex && index != valueIndex) {
+                String fieldName = fields.get(index).getKey();
+                if (!valueProperties.contains(fieldName) && keyProperties.contains(fieldName)) {
+                    keyIndices.set(index);
                 }
             }
         }
 
-        return new EntryWriter(keyIndex, keyClassName, valueIndex, valueClassName, keyIndices, targetFields);
+        return new EntryWriter(keyIndex, keyClassName, valueIndex, valueClassName, keyIndices, fields);
     }
 
-    private static Map<String, String> propertiesOf(String className) {
+    private static Set<String> propertiesOf(String className) {
         return stream(getPropertyDescriptors(loadClass(className)))
-                .collect(toMap(PropertyDescriptor::getName, property -> property.getPropertyType().getName()));
+                .map(PropertyDescriptor::getName)
+                .collect(toSet());
     }
 
     public static class EntryWriter implements FunctionEx<Object[], Entry<Object, Object>> {

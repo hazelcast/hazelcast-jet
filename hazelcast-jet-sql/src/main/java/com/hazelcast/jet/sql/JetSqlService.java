@@ -37,7 +37,6 @@ import com.hazelcast.jet.sql.impl.OptUtils;
 import com.hazelcast.jet.sql.impl.PhysicalRel;
 import com.hazelcast.jet.sql.impl.RowCountMetadata;
 import com.hazelcast.jet.sql.impl.cost.CostFactory;
-import com.hazelcast.jet.sql.impl.expression.SqlToQueryType;
 import com.hazelcast.jet.sql.impl.rule.FullScanPhysicalRule;
 import com.hazelcast.jet.sql.impl.schema.JetSchema;
 import com.hazelcast.jet.sql.parser.JetSqlCreateConnector;
@@ -73,7 +72,6 @@ import org.apache.calcite.rel.metadata.JaninoRelMetadataProvider;
 import org.apache.calcite.rel.metadata.RelMetadataProvider;
 import org.apache.calcite.rel.rules.SubQueryRemoveRule;
 import org.apache.calcite.rex.RexBuilder;
-import org.apache.calcite.sql.SqlDataTypeSpec;
 import org.apache.calcite.sql.SqlDdl;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlOperatorTable;
@@ -87,7 +85,6 @@ import org.apache.calcite.tools.Programs;
 import org.apache.calcite.tools.RuleSet;
 import org.apache.calcite.tools.RuleSets;
 
-import java.util.AbstractMap.SimpleEntry;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -95,6 +92,7 @@ import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.UUID;
 
+import static com.hazelcast.jet.Util.entry;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 
@@ -221,7 +219,7 @@ public class JetSqlService {
             Map<String, String> options = create.options().collect(toMap(SqlOption::key, SqlOption::value));
             List<Entry<String, QueryDataType>> columns =
                     create.columns()
-                          .map(column -> new SimpleEntry<>(column.name(), toQueryDataType(column.type())))
+                          .map(column -> entry(column.name(), column.type().type()))
                           .collect(toList());
             schema.createTable(create.name(), create.server(), options, columns, create.getReplace());
             return null;
@@ -240,10 +238,6 @@ public class JetSqlService {
         } else {
             throw new JetException("Unsupported statement - " + node);
         }
-    }
-
-    private QueryDataType toQueryDataType(SqlDataTypeSpec type) {
-        return SqlToQueryType.map(type.deriveType(validator).getSqlTypeName());
     }
 
     /**

@@ -26,10 +26,12 @@ data: {
       "java.util.Map"
       "java.util.LinkedHashMap"
       "org.apache.calcite.sql.SqlCreate"
+      "com.hazelcast.sql.impl.type.QueryDataType"
       "com.hazelcast.jet.sql.parser.JetSqlCreateConnector"
       "com.hazelcast.jet.sql.parser.JetSqlCreateServer"
       "com.hazelcast.jet.sql.parser.JetSqlCreateTable"
       "com.hazelcast.jet.sql.parser.SqlTableColumn"
+      "com.hazelcast.jet.sql.parser.SqlDataType"
       "com.hazelcast.jet.sql.parser.SqlOption"
       "com.hazelcast.jet.sql.parser.JetSqlInsert"
       "com.hazelcast.jet.sql.parser.JetSqlInsertKeyword"
@@ -39,6 +41,8 @@ data: {
     # List of new keywords. Example: "DATABASES", "TABLES". If the keyword is not a reserved
     # keyword add it to 'nonReservedKeywords' section.
     keywords: [
+      "CALENDAR"
+      "ZONED_DATE_TIME"
       "OVERWRITE"
     ]
 

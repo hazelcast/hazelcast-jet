@@ -20,8 +20,8 @@ import com.hazelcast.function.ConsumerEx;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Vertex;
-import com.hazelcast.jet.sql.impl.rel.FullScanPhysicalRel;
 import com.hazelcast.jet.sql.impl.expression.RexToExpressionVisitor;
+import com.hazelcast.jet.sql.impl.rel.FullScanPhysicalRel;
 import com.hazelcast.jet.sql.impl.schema.JetTable;
 import com.hazelcast.sql.impl.expression.Expression;
 import com.hazelcast.sql.impl.plan.node.PlanNodeFieldTypeProvider;
@@ -30,6 +30,7 @@ import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.util.ConversionUtil;
 import org.apache.calcite.util.NlsString;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.ArrayDeque;
 import java.util.Deque;
@@ -42,11 +43,13 @@ import static java.util.stream.Collectors.toList;
 
 public class CreateDagVisitor {
 
-    private DAG dag;
-    private Deque<VertexAndOrdinal> vertexStack = new ArrayDeque<>();
+    private final DAG dag;
+    private final Deque<VertexAndOrdinal> vertexStack;
 
-    public CreateDagVisitor(DAG dag, @Nullable Vertex sink) {
+    public CreateDagVisitor(@Nonnull DAG dag, @Nullable Vertex sink) {
         this.dag = dag;
+        this.vertexStack = new ArrayDeque<>();
+
         if (sink != null) {
             vertexStack.push(new VertexAndOrdinal(sink));
         }
