@@ -1099,8 +1099,8 @@ p.readFrom(TestSources.items("a", "b", "c", "d"))
  .writeTo(Sinks.observable(observable));
 
 Future<List<String>> future = observable.toFuture(
-    s -> s.collect(Collectors.toList()));
-
+    s -> s.collect(Collectors.toList())
+);
 jet.newJob(p);
 
 try {

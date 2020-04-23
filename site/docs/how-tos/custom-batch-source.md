@@ -1,6 +1,6 @@
 ---
 title: Add Batching to Custom Source
-description: How to create a custom batch source for Jet.
+description: Improve throughput by adding batching to a custom data source
 ---
 
 In the [Custom Sources and
