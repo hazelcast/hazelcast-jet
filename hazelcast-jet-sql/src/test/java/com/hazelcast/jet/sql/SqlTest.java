@@ -24,6 +24,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.io.Serializable;
+import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
@@ -50,6 +51,8 @@ public class SqlTest extends SimpleTestInClusterSupport {
     private static final String PERSON_MAP_SRC = "person_map_src";
     private static final String PERSON_MAP_SINK = "person_map_sink";
 
+    private static final String BIG_INTEGER_TO_CHAR_MAP = "big_integer_to_char_map";
+
     private static final Person PERSON_ALICE = new Person("Alice", 30);
     private static final Person PERSON_BOB = new Person("Bob", 40);
     private static final Person PERSON_CECILE = new Person("Cecile", 50);
@@ -70,6 +73,9 @@ public class SqlTest extends SimpleTestInClusterSupport {
                 PERSON_MAP_SRC, IMAP_LOCAL_SERVER, TO_VALUE_CLASS, Person.class.getName()));
         sqlService.execute(format("CREATE FOREIGN TABLE %s (__key INT, name VARCHAR, age INT) SERVER %s OPTIONS (%s '%s')",
                 PERSON_MAP_SINK, IMAP_LOCAL_SERVER, TO_VALUE_CLASS, Person.class.getName()));
+
+        sqlService.execute(format("CREATE FOREIGN TABLE %s (__key DECIMAL(10, 0), this CHAR) SERVER %s",
+                BIG_INTEGER_TO_CHAR_MAP, IMAP_LOCAL_SERVER));
     }
 
     @Before
@@ -155,6 +161,15 @@ public class SqlTest extends SimpleTestInClusterSupport {
         assertRowsAnyOrder(
                 "SELECT '喷气式飞机'",
                 singletonList(new Row("喷气式飞机")));
+    }
+
+    @Test
+    public void selectWithConversion() throws Exception {
+        sqlService.execute("INSERT OVERWRITE " + BIG_INTEGER_TO_CHAR_MAP + " VALUES (12, 'a')").join();
+
+        assertRowsAnyOrder(
+                "SELECT __key + 1, this FROM " + BIG_INTEGER_TO_CHAR_MAP,
+                singletonList(new Row(BigDecimal.valueOf(13), 'a')));
     }
 
     @Test
