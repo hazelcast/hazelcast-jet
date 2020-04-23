@@ -1,25 +1,28 @@
 ---
-title: Add Batching to Custom Source
+title: Create a Batch Source
 description: How to create a custom batch source for Jet.
 ---
 
-In the [Custom Sources and
-Sinks](../api/sources-sinks.md#custom-sources-and-sinks) section of our
-[Sources and Sinks](../api/sources-sinks.md) programming guide we have
-seen some basic examples of user-defined sources and sinks. Here we
-extend this topic by showing you how to add batching
+In the [Custom Sources and Sinks](../api/sources-sinks.md#custom-sources-and-sinks)
+section of our [Sources and Sinks](../api/sources-sinks.md) programming
+guide we have seen some basic examples of user-defined sources and
+sinks. Let us now examine more examples which cover some of the
+trickier aspects of writing our own sources.
 
-## 1. Define the Source
+Here we will focus on batch sources, ones reading bounded input data.
 
-Here is how you create a source that reads lines of text from a file:
+## 1. Define Source
+
+A simple custom batch source, which is capable of reading lines of text
+from a file would could, for example, be constructed like this:
 
 ```java
-public class Sources {
+class Sources {
 
-    public static BatchSource<String> buildLineSource() {
+    static BatchSource<String> buildLineSource() {
         return SourceBuilder
-                .batch("line-source", x ->
-                        new BufferedReader(new FileReader("lines.txt")))
+                .batch("line-source", x -> new BufferedReader(
+                                                new FileReader("lines.txt")))
                 .<String>fillBufferFn((in, buf) -> {
                     String line = in.readLine();
                     if (line != null) {
@@ -35,8 +38,7 @@ public class Sources {
 }
 ```
 
-Now it is ready to be used from the pipeline, just like a built-in
-source:
+Using it in a pipeline happens just as with built-in sources:
 
 ```java
 Pipeline p = Pipeline.create();
@@ -46,15 +48,17 @@ p.readFrom(Sources.buildLineSource())
 
 ## 2. Add Batching
 
-While this simple source functions correctly, it's not optimal because
-it reads just one line and returns. There are some overheads to
-repeatedly calling `fillBufferFn` and you can add more than one item to
-the buffer:
+While this simple source functions correctly, it's not efficient,
+because it always just retrieves one line at a time. Optimally the
+`fillBufferFn` should fill the buffer with all the items it can acquire
+without blocking.
+
+To make it more efficient we could change our `fillBufferFn` like this:
 
 ```java
 SourceBuilder
-    .batch("line-source",
-            x -> new BufferedReader(new FileReader("lines.txt")))
+    .batch("line-source", x -> new BufferedReader(
+                                            new FileReader("lines.txt")))
     .<String>fillBufferFn((in, buf) -> {
         for (int i = 0; i < 128; i++) {
             String line = in.readLine();
@@ -68,7 +72,3 @@ SourceBuilder
     .destroyFn(buf -> buf.close())
     .build();
 ```
-
-This code adds 128 lines at a time. In your specific case you should
-use the rule of thumb to target about 1 millisecond spent in a single
-invocation of `fillBufferFn`.
