@@ -32,6 +32,7 @@ import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
 import com.hazelcast.jet.pipeline.StreamSource;
+import com.hazelcast.test.annotation.Repeat;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
