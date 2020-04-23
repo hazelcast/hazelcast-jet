@@ -64,6 +64,7 @@
       "design-docs/009-pulsar-connector",
       "design-docs/007-grpc-support",
       "design-docs/006-declarative-serialization",
+      "design-docs/005-cdc-sources",
       "design-docs/004-spring-boot-starter",
       "design-docs/002-job-level-serialization",
       "design-docs/001-code-deployment-improvements"

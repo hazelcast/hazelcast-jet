@@ -367,7 +367,40 @@ include the core).
 
 ## Performance
 
-> Has to be addressed still. Research will focus on MySQL at first.
-> There the impact should be minimal if a DB cluster replica is used as
-> the source for the connector. All the primary cluster needs extra in
-> that case is for global transaction IDs to be enabled.
+### Setup
+
+Initial performance tests have been performed on non-production grade
+hardware, but results should still be relevant:
+
+* MySQL v5.7 running via Docker on a dedicated Ubuntu 19.10 box (quad
+  core i7-6700K CPU @ 4.0GHz, 16GB memory, AMD Radeon R3 SSD drive)
+* Jet CDC pipeline running in a single node Jet cluster on a MacBook
+  Pro (6 core i7 CPU @ 2.6GHz, 32GB memory, Apple AP0512M SSD)
+
+### Results
+
+Maximum number of *sustained* record change events that could be
+produced in the database (by continuously inserting into and then
+deleting data from) was around **100,000 rows/second**. The Jet job
+processing all the corresponding CDC events (reading them and mapping
+them to user data objects) had no problems with keeping up, no lagging
+behind observed.
+
+*Peak* even handling rate of the Jet pipeline has been observed around
+**200,000 events/second**. This scenario was achieved by making the
+connector snapshot a very large table and inserting into the table at
+peak rate while snapshotting was going on. Once the connector finished
+snapshotting and switched to reading the binlog the above peak rate
+seems to be what it's capable of.
+
+*Snapshotting* seems to be pretty fast too, was observed to happen at
+around **185,000 rows/second** (10 million row table finished in under
+one minute).
+
+### Database Hit
+
+Enabling the *binlog* on the MySQL database has been observed to produce
+a **15%** performance hit on the number of update/insert/delete events
+it's able to process.
+
+The effects of enabling *global transaction IDs* has not been tested.
