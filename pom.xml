@@ -383,7 +383,7 @@
                             <skip>${maven.test.skip}</skip>
                             <forkCount>4</forkCount>
                             <includes>
-                                <include>/com/hazelcast/jet/**/JmsSourceIntegrationTest_ActiveMqArtemis.java</include>
+                                <include>/com/hazelcast/jet/**/**.java</include>
                             </includes>
                             <excludedGroups>
                                 com.hazelcast.jet.test.SerialTest,com.hazelcast.test.annotation.SlowTest,com.hazelcast.test.annotation.NightlyTest

@@ -32,7 +32,6 @@ import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
 import com.hazelcast.jet.pipeline.StreamSource;
-import com.hazelcast.test.annotation.Repeat;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -93,7 +92,6 @@ public abstract class JmsSourceIntegrationTestBase extends SimpleTestInClusterSu
     private String destinationName = "dest" + counter++;
 
     private Pipeline p = Pipeline.create();
-    private IList<Object> srcList;
     private IList<Object> sinkList;
 
     @BeforeClass
@@ -103,11 +101,10 @@ public abstract class JmsSourceIntegrationTestBase extends SimpleTestInClusterSu
 
     @Before
     public void before() {
-        srcList = instance().getList("src-" + counter++);
         sinkList = instance().getList("sink-" + counter++);
     }
 
-
+    @Test
     public void sourceQueue() throws JMSException {
         p.readFrom(Sources.jmsQueue(destinationName, getConnectionFactory()))
          .withoutTimestamps()
@@ -121,7 +118,7 @@ public abstract class JmsSourceIntegrationTestBase extends SimpleTestInClusterSu
         assertContainsAll(sinkList, messages);
     }
 
-
+    @Test
     public void sourceTopic() throws JMSException {
         p.readFrom(Sources.jmsTopic(destinationName, getConnectionFactory()))
          .withoutTimestamps()
@@ -144,7 +141,7 @@ public abstract class JmsSourceIntegrationTestBase extends SimpleTestInClusterSu
         });
     }
 
-
+    @Test
     public void sourceQueue_whenBuilder() throws JMSException {
         StreamSource<Message> source = Sources.jmsQueueBuilder(getConnectionFactory())
                                               .destinationName(destinationName)
@@ -162,7 +159,7 @@ public abstract class JmsSourceIntegrationTestBase extends SimpleTestInClusterSu
         assertContainsAll(sinkList, messages);
     }
 
-
+    @Test
     public void sourceQueue_whenBuilder_withFunctions() throws JMSException {
         String queueName = destinationName;
         StreamSource<String> source = Sources.jmsQueueBuilder(getConnectionFactory())
@@ -182,7 +179,7 @@ public abstract class JmsSourceIntegrationTestBase extends SimpleTestInClusterSu
         assertContainsAll(sinkList, messages);
     }
 
-
+    @Test
     public void when_messageIdFn_then_used() throws JMSException {
         StreamSource<String> source = Sources.jmsQueueBuilder(getConnectionFactory())
                                              .destinationName(destinationName)
@@ -202,7 +199,7 @@ public abstract class JmsSourceIntegrationTestBase extends SimpleTestInClusterSu
         }
     }
 
-
+    @Test
     public void when_exactlyOnceTopicDefaultConsumer_then_noGuaranteeUsed() {
         SupplierEx<ConnectionFactory> mockSupplier = () -> {
             ConnectionFactory mockConnectionFactory = mock(ConnectionFactory.class);
@@ -228,7 +225,7 @@ public abstract class JmsSourceIntegrationTestBase extends SimpleTestInClusterSu
         assertTrueAllTheTime(() -> assertEquals(RUNNING, job.getStatus()), 1);
     }
 
-
+    @Test
     public void sourceTopic_withNativeTimestamps() throws Exception {
         p.readFrom(Sources.jmsTopic(destinationName, getConnectionFactory()))
          .withNativeTimestamps(0)
@@ -255,7 +252,7 @@ public abstract class JmsSourceIntegrationTestBase extends SimpleTestInClusterSu
         }, 10);
     }
 
-
+    @Test
     public void sourceTopic_whenBuilder() throws JMSException {
         StreamSource<String> source = Sources.jmsTopicBuilder(getConnectionFactory())
                                              .destinationName(destinationName)
@@ -270,28 +267,27 @@ public abstract class JmsSourceIntegrationTestBase extends SimpleTestInClusterSu
         assertTrueEventually(() -> assertContainsAll(sinkList, messages));
     }
 
-
+    @Test
     public void stressTest_exactlyOnce_forceful() throws Exception {
         stressTest(false, EXACTLY_ONCE, false);
     }
 
     @Test
-    @Repeat(100)
     public void stressTest_exactlyOnce_graceful() throws Exception {
         stressTest(true, EXACTLY_ONCE, false);
     }
 
-
+    @Test
     public void stressTest_atLeastOnce_forceful() throws Exception {
         stressTest(false, AT_LEAST_ONCE, false);
     }
 
-
+    @Test
     public void stressTest_noGuarantee_forceful() throws Exception {
         stressTest(false, NONE, false);
     }
 
-
+    @Test
     public void stressTest_exactlyOnce_forceful_durableTopic() throws Exception {
         stressTest(false, EXACTLY_ONCE, true);
     }
@@ -322,6 +318,7 @@ public abstract class JmsSourceIntegrationTestBase extends SimpleTestInClusterSu
                           .maxGuarantee(maxGuarantee)
                           .build(msg -> Long.parseLong(((TextMessage) msg).getText())))
          .withoutTimestamps()
+         .peek()
          .mapStateful(CopyOnWriteArrayList<Long>::new,
                  (list, item) -> {
                      lastListInStressTest = list;
@@ -347,7 +344,6 @@ public abstract class JmsSourceIntegrationTestBase extends SimpleTestInClusterSu
                 long startTime = System.nanoTime();
                 for (int i = 0; i < MESSAGE_COUNT; i++) {
                     producer.send(session.createTextMessage(String.valueOf(i)));
-                    logger.fine("Message produced: " + i);
                     Thread.sleep(Math.max(0, i - NANOSECONDS.toMillis(System.nanoTime() - startTime)));
                 }
             } catch (Exception e) {
@@ -391,7 +387,7 @@ public abstract class JmsSourceIntegrationTestBase extends SimpleTestInClusterSu
         assertEquals(job.getStatus(), RUNNING);
     }
 
-
+    @Test
     public void when_noMessages_then_idle() throws Exception {
         // Design of this test:
         // We'll have 2 processors and only one message. One of the processors will receive
@@ -424,12 +420,12 @@ public abstract class JmsSourceIntegrationTestBase extends SimpleTestInClusterSu
         assertStartsWith("wm(", (String) sinkList.get(0));
     }
 
-
+    @Test
     public void when_jobCancelled_then_rollsBackNonPreparedTransactions_xa() throws Exception {
         when_jobCancelled_then_rollsBackNonPreparedTransactions(true);
     }
 
-
+    @Test
     public void when_jobCancelled_then_rollsBackNonPreparedTransactions_nonXa() throws Exception {
         when_jobCancelled_then_rollsBackNonPreparedTransactions(false);
     }

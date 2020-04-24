@@ -40,7 +40,6 @@ import javax.jms.JMSException;
 import javax.jms.Message;
 import javax.jms.MessageConsumer;
 import javax.jms.Session;
-import javax.jms.TextMessage;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
@@ -136,9 +135,6 @@ public class StreamJmsP<T> extends AbstractProcessor {
                 if (t == null) {
                     pendingTraverser = eventTimeMapper.flatMapIdle();
                     break;
-                }
-                if (t instanceof TextMessage) {
-                    getLogger().fine("Received: " + ((TextMessage) t).getText());
                 }
                 if (guarantee == EXACTLY_ONCE) {
                     // We don't know whether the messages with the restored IDs were acknowledged in the previous
