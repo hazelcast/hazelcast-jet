@@ -97,7 +97,7 @@ stage1 = stage.rebalance().groupingKey(Person:getAge)
 stage0.aggregate2(stage1, ...)
 ```
 
-If any of the joined stages are rebalanced, Jet uses a single-stage
+If any of the joined stages are rebalanced, Jet uses single-stage
 aggregation.
 
 ```java
