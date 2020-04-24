@@ -40,6 +40,7 @@ import javax.jms.JMSException;
 import javax.jms.Message;
 import javax.jms.MessageConsumer;
 import javax.jms.Session;
+import javax.jms.TextMessage;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
@@ -83,7 +84,6 @@ public class StreamJmsP<T> extends AbstractProcessor {
     private Traverser<Object> pendingTraverser = Traversers.empty();
     private boolean snapshotInProgress;
     private Traverser<Entry<BroadcastKey<String>, Set<Object>>> snapshotTraverser;
-    private boolean finestLoggingEnabled;
 
     StreamJmsP(Connection connection,
                FunctionEx<? super Session, ? extends MessageConsumer> consumerFn,
@@ -114,7 +114,6 @@ public class StreamJmsP<T> extends AbstractProcessor {
     protected void init(@Nonnull Context context) throws JMSException {
         session = connection.createSession(guarantee != NONE, DUPS_OK_ACKNOWLEDGE);
         consumer = consumerFn.apply(session);
-        finestLoggingEnabled = getLogger().isFinestEnabled();
     }
 
     private static long handleJmsTimestamp(Message msg) {
@@ -138,8 +137,8 @@ public class StreamJmsP<T> extends AbstractProcessor {
                     pendingTraverser = eventTimeMapper.flatMapIdle();
                     break;
                 }
-                if (finestLoggingEnabled) {
-                    getLogger().finest("Received: " + t);
+                if (t instanceof TextMessage) {
+                    getLogger().fine("Received: " + ((TextMessage) t).getText());
                 }
                 if (guarantee == EXACTLY_ONCE) {
                     // We don't know whether the messages with the restored IDs were acknowledged in the previous
