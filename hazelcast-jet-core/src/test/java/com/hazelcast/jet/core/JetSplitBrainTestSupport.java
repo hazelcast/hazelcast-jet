@@ -19,11 +19,13 @@ package com.hazelcast.jet.core;
 import com.hazelcast.cluster.Address;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.HazelcastInstanceNotActiveException;
+import com.hazelcast.instance.EndpointQualifier;
 import com.hazelcast.instance.impl.HazelcastInstanceImpl;
 import com.hazelcast.instance.impl.HazelcastInstanceProxy;
 import com.hazelcast.instance.impl.Node;
 import com.hazelcast.instance.impl.NodeState;
-import com.hazelcast.internal.server.FirewallingServer.FirewallingEndpointManager;
+import com.hazelcast.internal.server.FirewallingServer.FirewallingServerConnectionManager;
+import com.hazelcast.internal.server.ServerConnectionManager;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.logging.ILogger;
@@ -160,7 +162,7 @@ public abstract class JetSplitBrainTestSupport extends JetTestSupport {
             if (isInstanceActive(anInstancesToBlock)) {
                 addressesToBlock.add(getAddress(anInstancesToBlock));
                 // block communication from these instances to the new address
-                FirewallingEndpointManager connectionManager = getFireWalledEndpointManager(anInstancesToBlock);
+                FirewallingServerConnectionManager connectionManager = getFireWalledEndpointManager(anInstancesToBlock);
                 connectionManager.blockNewConnection(newMemberAddress);
                 connectionManager.closeActiveConnection(newMemberAddress);
             }
@@ -199,8 +201,9 @@ public abstract class JetSplitBrainTestSupport extends JetTestSupport {
         waitAllForSafeState(Stream.of(instances).map(JetInstance::getHazelcastInstance).collect(toList()));
     }
 
-    private static FirewallingEndpointManager getFireWalledEndpointManager(JetInstance hz) {
-        return (FirewallingEndpointManager) getNode(hz).getConnectionManager();
+    private static FirewallingServerConnectionManager getFireWalledEndpointManager(JetInstance hz) {
+        ServerConnectionManager cm = getNode(hz).getServer().getConnectionManager(EndpointQualifier.MEMBER);
+        return (FirewallingServerConnectionManager) cm;
     }
 
     private Brains getBrains(JetInstance[] instances, int firstSubClusterSize, int secondSubClusterSize) {
