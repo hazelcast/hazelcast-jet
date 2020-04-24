@@ -40,6 +40,9 @@ import com.hazelcast.jet.sql.impl.cost.CostFactory;
 import com.hazelcast.jet.sql.impl.parser.JetSqlCreateConnector;
 import com.hazelcast.jet.sql.impl.parser.JetSqlCreateServer;
 import com.hazelcast.jet.sql.impl.parser.JetSqlCreateTable;
+import com.hazelcast.jet.sql.impl.parser.JetSqlDropConnector;
+import com.hazelcast.jet.sql.impl.parser.JetSqlDropServer;
+import com.hazelcast.jet.sql.impl.parser.JetSqlDropTable;
 import com.hazelcast.jet.sql.impl.parser.JetSqlParser;
 import com.hazelcast.jet.sql.impl.parser.SqlOption;
 import com.hazelcast.jet.sql.impl.rule.FullScanPhysicalRule;
@@ -202,26 +205,22 @@ public class JetSqlService {
     public Job execute(String sql) {
         SqlNode node = parse(sql);
         if (node instanceof JetSqlCreateConnector) {
-            JetSqlCreateConnector create = (JetSqlCreateConnector) node;
-
-            Map<String, String> options = create.options().collect(toMap(SqlOption::key, SqlOption::value));
-            schema.createConnector(create.name(), options, create.getReplace());
+            createConnector((JetSqlCreateConnector) node);
             return null;
         } else if (node instanceof JetSqlCreateServer) {
-            JetSqlCreateServer create = (JetSqlCreateServer) node;
-
-            Map<String, String> options = create.options().collect(toMap(SqlOption::key, SqlOption::value));
-            schema.createServer(create.name(), create.connector(), options, create.getReplace());
+            createServer((JetSqlCreateServer) node);
             return null;
         } else if (node instanceof JetSqlCreateTable) {
-            JetSqlCreateTable create = (JetSqlCreateTable) node;
-
-            Map<String, String> options = create.options().collect(toMap(SqlOption::key, SqlOption::value));
-            List<Entry<String, QueryDataType>> columns =
-                    create.columns()
-                          .map(column -> entry(column.name(), column.type().type()))
-                          .collect(toList());
-            schema.createTable(create.name(), create.server(), options, columns, create.getReplace());
+            createTable((JetSqlCreateTable) node);
+            return null;
+        } else if (node instanceof JetSqlDropConnector) {
+            dropConnector((JetSqlDropConnector) node);
+            return null;
+        } else if (node instanceof JetSqlDropServer) {
+            dropServer((JetSqlDropServer) node);
+            return null;
+        } else if (node instanceof JetSqlDropTable) {
+            dropTable((JetSqlDropTable) node);
             return null;
         } else if (!(node instanceof SqlDdl)) {
             RelNode rel = convert(validator.validate(node));
@@ -238,6 +237,37 @@ public class JetSqlService {
         } else {
             throw new JetException("Unsupported statement - " + node);
         }
+    }
+
+    private void createConnector(JetSqlCreateConnector create) {
+        Map<String, String> options = create.options().collect(toMap(SqlOption::key, SqlOption::value));
+        schema.createConnector(create.name(), options, create.getReplace());
+    }
+
+    private void createServer(JetSqlCreateServer create) {
+        Map<String, String> options = create.options().collect(toMap(SqlOption::key, SqlOption::value));
+        schema.createServer(create.name(), create.connector(), options, create.getReplace());
+    }
+
+    private void createTable(JetSqlCreateTable create) {
+        Map<String, String> options = create.options().collect(toMap(SqlOption::key, SqlOption::value));
+        List<Entry<String, QueryDataType>> columns =
+                create.columns()
+                      .map(column -> entry(column.name(), column.type().type()))
+                      .collect(toList());
+        schema.createTable(create.name(), create.server(), options, columns, create.getReplace());
+    }
+
+    private void dropConnector(JetSqlDropConnector drop) {
+        schema.removeConnector(drop.name());
+    }
+
+    private void dropServer(JetSqlDropServer drop) {
+        schema.removeServer(drop.name());
+    }
+
+    private void dropTable(JetSqlDropTable drop) {
+        schema.removeTable(drop.name());
     }
 
     /**

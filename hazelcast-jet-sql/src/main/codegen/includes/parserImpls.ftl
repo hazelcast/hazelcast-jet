@@ -349,6 +349,75 @@ SqlOption GenericOption() :
 }
 
 /**
+* Parses DROP FOREIGN [DATA WRAPPER|TABLE] statement.
+*/
+SqlDrop JetSqlDropConnectorOrTable(Span span, boolean replace) :
+{
+    SqlDrop drop;
+}
+{
+    (LOOKAHEAD(2)
+        drop = JetSqlDropConnector(span, replace)
+    |
+        drop = JetSqlDropTable(span, replace)
+    )
+    {
+        return drop;
+    }
+}
+
+/**
+* Parses DROP FOREIGN DATA WRAPPER statement.
+*/
+SqlDrop JetSqlDropConnector(Span span, boolean replace) :
+{
+    SqlParserPos startPos = span.pos();
+    SqlIdentifier connectorName;
+}
+{
+    <FOREIGN> <DATA> <WRAPPER>
+    connectorName = SimpleIdentifier()
+    {
+        return new JetSqlDropConnector(startPos.plus(getPos()),
+                connectorName);
+    }
+}
+
+/**
+* Parses DROP SERVER statement.
+*/
+SqlDrop JetSqlDropServer(Span span, boolean replace) :
+{
+    SqlParserPos startPos = span.pos();
+    SqlIdentifier serverName;
+}
+{
+    <SERVER>
+    serverName = SimpleIdentifier()
+    {
+        return new JetSqlDropServer(startPos.plus(getPos()),
+                serverName);
+    }
+}
+
+/**
+* Parses DROP FOREIGN TABLE statement.
+*/
+SqlDrop JetSqlDropTable(Span span, boolean replace) :
+{
+    SqlParserPos startPos = span.pos();
+    SqlIdentifier tableName;
+}
+{
+    <FOREIGN> <TABLE>
+    tableName = SimpleIdentifier()
+    {
+        return new JetSqlDropTable(startPos.plus(getPos()),
+                tableName);
+    }
+}
+
+/**
 * Parses an extended INSERT statement.
 */
 SqlNode JetSqlInsert() :

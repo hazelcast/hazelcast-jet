@@ -26,6 +26,7 @@ data: {
       "java.util.Map"
       "java.util.LinkedHashMap"
       "org.apache.calcite.sql.SqlCreate"
+      "org.apache.calcite.sql.SqlDrop"
       "com.hazelcast.sql.impl.type.QueryDataType"
       "com.hazelcast.jet.sql.impl.parser.JetSqlCreateConnector"
       "com.hazelcast.jet.sql.impl.parser.JetSqlCreateServer"
@@ -33,6 +34,9 @@ data: {
       "com.hazelcast.jet.sql.impl.parser.SqlTableColumn"
       "com.hazelcast.jet.sql.impl.parser.SqlDataType"
       "com.hazelcast.jet.sql.impl.parser.SqlOption"
+      "com.hazelcast.jet.sql.impl.parser.JetSqlDropConnector"
+      "com.hazelcast.jet.sql.impl.parser.JetSqlDropServer"
+      "com.hazelcast.jet.sql.impl.parser.JetSqlDropTable"
       "com.hazelcast.jet.sql.impl.parser.JetSqlInsert"
       "com.hazelcast.jet.sql.impl.parser.JetSqlInsertKeyword"
       "com.hazelcast.jet.sql.impl.parser.ParserResource"
@@ -416,6 +420,8 @@ data: {
     # List of methods for parsing extensions to "DROP" calls.
     # Each must accept arguments "(SqlParserPos pos)".
     dropStatementParserMethods: [
+      "JetSqlDropConnectorOrTable"
+      "JetSqlDropServer"
     ]
 
     # Binary operators tokens

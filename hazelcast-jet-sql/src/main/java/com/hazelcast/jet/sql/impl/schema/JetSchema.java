@@ -24,15 +24,12 @@ import com.hazelcast.sql.impl.type.QueryDataType;
 import org.apache.calcite.schema.Table;
 import org.apache.calcite.schema.impl.AbstractSchema;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 
 import static com.hazelcast.jet.impl.util.ReflectionUtils.newInstance;
 import static java.util.Collections.emptyMap;
@@ -58,15 +55,23 @@ public class JetSchema extends AbstractSchema {
     private static final String OPTION_CONNECTOR_NAME = JetSchema.class + ".connectorName";
     private static final String OPTION_SERVER_NAME = JetSchema.class + ".serverName";
 
-    private final ConcurrentMap<String, SqlConnector> connectorsByName = new ConcurrentHashMap<>();
-    private final ConcurrentMap<String, Map<String, String>> serversByName = new ConcurrentHashMap<>();
-    private final ConcurrentMap<String, JetTable> tablesByName = new ConcurrentHashMap<>();
-
-    private final Map<String, Table> unmodifiableTableMap = Collections.unmodifiableMap(tablesByName);
     private final JetInstance instance;
+
+    private final Map<String, SqlConnector> connectorsByName;
+    private final Map<String, JetServer> serversByName;
+    // TODO: add serverName to JetTable ?
+    private final Map<String, String> serverNamesByTableName;
+    private final Map<String, JetTable> tablesByName;
+    private final Map<String, Table> unmodifiableTableMap;
 
     public JetSchema(JetInstance instance) {
         this.instance = instance;
+
+        this.connectorsByName = new HashMap<>();
+        this.serversByName = new HashMap<>();
+        this.serverNamesByTableName = new HashMap<>();
+        this.tablesByName = new ConcurrentHashMap<>();
+        this.unmodifiableTableMap = Collections.unmodifiableMap(tablesByName);
 
         // insert the IMap connector and local cluster server by default
         createConnector(IMAP_CONNECTOR, new IMapSqlConnector(), false);
@@ -78,17 +83,18 @@ public class JetSchema extends AbstractSchema {
         return unmodifiableTableMap;
     }
 
-    public void createConnector(
+    public synchronized void createConnector(
             String connectorName,
             Map<String, String> connectorOptions,
             boolean replace
     ) {
-        String className = requireNonNull(connectorOptions.get(OPTION_CLASS_NAME), "missing " + OPTION_CLASS_NAME + " option");
+        String className = requireNonNull(connectorOptions.get(OPTION_CLASS_NAME),
+                "missing " + OPTION_CLASS_NAME + " option");
         SqlConnector connector = newInstance(className);
         createConnector(connectorName, connector, replace);
     }
 
-    private void createConnector(
+    private synchronized void createConnector(
             String connectorName,
             SqlConnector connector,
             boolean replace
@@ -100,51 +106,73 @@ public class JetSchema extends AbstractSchema {
         }
     }
 
-    public void createServer(
-            @Nonnull String serverName,
-            @Nonnull String connectorName,
-            @Nonnull Map<String, String> serverOptions,
+    public synchronized void removeConnector(String connectorName) {
+        if (connectorsByName.remove(connectorName) == null) {
+            throw new IllegalArgumentException("'" + connectorName + "' does not exist");
+        }
+        for (Entry<String, JetServer> server : serversByName.entrySet()) {
+            if (connectorName.equals(server.getValue().connectorName())) {
+                removeServer(server.getKey());
+            }
+        }
+    }
+
+    public synchronized void createServer(
+            String serverName,
+            String connectorName,
+            Map<String, String> serverOptions,
             boolean replace
     ) {
-        serverOptions = new HashMap<>(serverOptions); // convert to a HashMap so that we can mutate it
         if (!connectorsByName.containsKey(connectorName)) {
             throw new IllegalArgumentException("Unknown connector: " + connectorName);
         }
+        serverOptions = new HashMap<>(serverOptions); // convert to a HashMap so that we can mutate it
         if (serverOptions.put(OPTION_CONNECTOR_NAME, connectorName) != null) {
             throw new IllegalArgumentException("Private option used");
         }
 
+        JetServer server = new JetServer(serverName, connectorName, serverOptions);
         if (replace) {
-            serversByName.put(serverName, serverOptions);
-        } else if (serversByName.putIfAbsent(serverName, serverOptions) != null) {
+            serversByName.put(serverName, server);
+        } else if (serversByName.putIfAbsent(serverName, server) != null) {
             throw new JetException("'" + serverName + "' server already exists");
         }
     }
 
-    public void createTable(
-            @Nonnull String tableName,
-            @Nonnull String serverName,
-            @Nonnull Map<String, String> tableOptions,
-            @Nullable List<Entry<String, QueryDataType>> fields,
+    public synchronized void removeServer(String serverName) {
+        if (serversByName.remove(serverName) == null) {
+            throw new IllegalArgumentException("'" + serverName + "' does not exist");
+        }
+        for (Entry<String, String> tableToServer : serverNamesByTableName.entrySet()) {
+            if (serverName.equals(tableToServer.getValue())) {
+                removeTable(tableToServer.getKey());
+            }
+        }
+    }
+
+    public synchronized void createTable(
+            String tableName,
+            String serverName,
+            Map<String, String> tableOptions,
+            List<Entry<String, QueryDataType>> fields,
             boolean replace
     ) {
-        tableOptions = new HashMap<>(tableOptions); // convert to a HashMap so that we can mutate it
-        Map<String, String> serverOptions = serversByName.get(serverName);
-        if (serverOptions == null) {
+        JetServer server = serversByName.get(serverName);
+        if (server == null) {
             throw new IllegalArgumentException("Unknown server: " + serverName);
         }
-        String connectorName = serverOptions.get(OPTION_CONNECTOR_NAME);
-        SqlConnector connector = connectorsByName.get(connectorName);
+        SqlConnector connector = connectorsByName.get(server.connectorName());
         if (connector == null) {
-            throw new IllegalArgumentException("Server references unknown connector: " + connectorName);
+            throw new IllegalArgumentException("Server references unknown connector: " + server.connectorName());
         }
+        tableOptions = new HashMap<>(tableOptions); // convert to a HashMap so that we can mutate it
         if (tableOptions.put(OPTION_SERVER_NAME, serverName) != null) {
             throw new IllegalArgumentException("Private option used");
         }
 
         JetTable table;
         if (fields == null) {
-            table = connector.createTable(instance, tableName, serverOptions, tableOptions);
+            table = connector.createTable(instance, tableName, server.options(), tableOptions);
         } else {
             if (fields.isEmpty()) {
                 throw new IllegalArgumentException("zero fields");
@@ -152,7 +180,7 @@ public class JetSchema extends AbstractSchema {
             if (fields.stream().anyMatch(e -> e.getValue() == QueryDataType.NULL)) {
                 throw new IllegalArgumentException("NULL type not supported");
             }
-            table = connector.createTable(instance, tableName, serverOptions, tableOptions, fields);
+            table = connector.createTable(instance, tableName, server.options(), tableOptions, fields);
         }
 
         if (replace) {
@@ -160,5 +188,13 @@ public class JetSchema extends AbstractSchema {
         } else if (tablesByName.putIfAbsent(tableName, table) != null) {
             throw new JetException("'" + tableName + "' table already exists");
         }
+        serverNamesByTableName.put(tableName, server.name());
+    }
+
+    public synchronized void removeTable(String tableName) {
+        if (tablesByName.remove(tableName) == null) {
+            throw new IllegalArgumentException("'" + tableName + "' does not exist");
+        }
+        serverNamesByTableName.remove(tableName);
     }
 }

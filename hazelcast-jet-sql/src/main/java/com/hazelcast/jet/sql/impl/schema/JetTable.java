@@ -23,7 +23,6 @@ import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.schema.impl.AbstractTable;
 import org.apache.calcite.sql.type.SqlTypeName;
 
-import javax.annotation.Nonnull;
 import java.util.List;
 import java.util.Map.Entry;
 
@@ -36,7 +35,7 @@ public abstract class JetTable extends AbstractTable {
     private final List<String> fieldNames;
     private final List<QueryDataType> fieldTypes;
 
-    protected JetTable(SqlConnector sqlConnector, @Nonnull List<Entry<String, QueryDataType>> fields) {
+    protected JetTable(SqlConnector sqlConnector, List<Entry<String, QueryDataType>> fields) {
         this.sqlConnector = sqlConnector;
 
         this.fields = fields;
