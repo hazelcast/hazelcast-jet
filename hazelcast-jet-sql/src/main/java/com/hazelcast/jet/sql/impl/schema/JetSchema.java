@@ -84,7 +84,7 @@ public class JetSchema extends AbstractSchema {
         return unmodifiableTableMap;
     }
 
-    public synchronized void createConnector(
+    public void createConnector(
             String connectorName,
             Map<String, String> connectorOptions,
             boolean replace

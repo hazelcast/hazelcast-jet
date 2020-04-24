@@ -101,7 +101,7 @@ public class SqlDdlTest extends SimpleTestInClusterSupport {
 
     @Test
     public void when_dropsServerWithDependantTables_then_throws() {
-        assertThatThrownBy(() -> sqlService.execute(format("DROP SERVER %s", SERVER_NAME)))
+        assertThatThrownBy(() -> sqlService.execute(format("DROP SERVER %s RESTRICT", SERVER_NAME)))
                 .isInstanceOf(IllegalStateException.class);
     }
 

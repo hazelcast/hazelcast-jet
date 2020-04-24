@@ -379,7 +379,9 @@ SqlDrop JetSqlDropConnector(Span span, boolean replace) :
     <FOREIGN> <DATA> <WRAPPER>
     connectorName = SimpleIdentifier()
     [
-        <CASCADE> { cascade = false; }
+        <CASCADE> { cascade = true; }
+    |
+        <RESTRICT>
     ]
     {
         return new JetSqlDropConnector(startPos.plus(getPos()),
@@ -401,6 +403,8 @@ SqlDrop JetSqlDropServer(Span span, boolean replace) :
     serverName = SimpleIdentifier()
     [
         <CASCADE> { cascade = true; }
+    |
+        <RESTRICT>
     ]
     {
         return new JetSqlDropServer(startPos.plus(getPos()),
