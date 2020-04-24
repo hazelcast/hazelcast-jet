@@ -2,53 +2,12 @@ const React = require('react');
 const CompLibrary = require('../../core/CompLibrary');
 const Container = CompLibrary.Container;
 const MarkdownBlock = CompLibrary.MarkdownBlock;
+const cardStyle = require(process.cwd() + "/static/jss/card.js");
 
 class Demos extends React.Component {
 
     render() {
-        const {config: siteConfig, language = ''} = this.props;
-        const cardStyle = {
-            root: {
-                display: "inline-block",
-                marginLeft: "0.5em",
-                marginRight: "0.5em",
-                marginTop: "1em",
-                marginBottom: "1em",
-                minWidth: "23em",
-                maxWidth: "23em",
-                minHeight: "22em",
-                maxHeight: "22em",
-                borderStyle: "solid",
-                borderWidth: "1px",
-                borderColor: "#e6e6e6",
-            },
-            button: {
-                marginLeft: "6.5em",
-                textAlign: "center",
-                minHeight: "3em",
-                minWidth: "15em",
-                maxWidth: "15em",
-                borderWidth: "medium",
-                borderColor: "#29444e",
-            },
-            content: {
-                marginLeft: "1em",
-                marginRight: "1em",
-                marginTop: "1.5em",
-                textAlign: "left",
-                fontSize: "1em",
-                minHeight: "14.5em",
-                maxHeight: "14.5em",
-            },
-            title: {
-                textAlign: "center",
-                paddingTop: "0.25em",
-                display: "block",
-                backgroundColor: "#e6e6e6",
-                minHeight: "2em",
-                fontSize: "1em",
-            }
-        };
+        const {config: siteConfig} = this.props;
         const Button = props => (
             <div className="pluginWrapper buttonWrapper">
                 <a className="button" href={props.href} style={cardStyle.button} target={props.target}>
@@ -56,6 +15,7 @@ class Demos extends React.Component {
                 </a>
             </div>
         );
+
         const CustomCard = props => {
             return (
                 <div style={cardStyle.root}>
