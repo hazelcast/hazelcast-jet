@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.sql.parser;
+package com.hazelcast.jet.sql.impl.parser;
 
 import org.apache.calcite.sql.SqlCreate;
 import org.apache.calcite.sql.SqlIdentifier;
@@ -33,20 +33,23 @@ import java.util.stream.Stream;
 
 import static java.util.Objects.requireNonNull;
 
-public class JetSqlCreateConnector extends SqlCreate {
+public class JetSqlCreateServer extends SqlCreate {
 
     private static final SqlSpecialOperator OPERATOR =
-            new SqlSpecialOperator("CREATE FOREIGN DATA WRAPPER", SqlKind.OTHER_DDL);
+            new SqlSpecialOperator("CREATE SERVER", SqlKind.OTHER_DDL);
 
     private final SqlIdentifier name;
+    private final SqlIdentifier connector;
     private final SqlNodeList options;
 
-    public JetSqlCreateConnector(SqlParserPos pos,
-                                 SqlIdentifier name,
-                                 SqlNodeList options,
-                                 boolean replace) {
+    public JetSqlCreateServer(SqlParserPos pos,
+                              SqlIdentifier name,
+                              SqlIdentifier connector,
+                              SqlNodeList options,
+                              boolean replace) {
         super(OPERATOR, pos, replace, false);
         this.name = requireNonNull(name, "name should not be null");
+        this.connector = requireNonNull(connector, "connector should not be null");
         this.options = requireNonNull(options, "options should not be null");
     }
 
@@ -58,6 +61,10 @@ public class JetSqlCreateConnector extends SqlCreate {
         return options.getList().stream().map(node -> (SqlOption) node);
     }
 
+    public String connector() {
+        return connector.getSimple();
+    }
+
     @Override
     @Nonnull
     public SqlOperator getOperator() {
@@ -67,16 +74,20 @@ public class JetSqlCreateConnector extends SqlCreate {
     @Override
     @Nonnull
     public List<SqlNode> getOperandList() {
-        return ImmutableNullableList.of(name, options);
+        return ImmutableNullableList.of(name, connector, options);
     }
 
     @Override
     public void unparse(SqlWriter writer, int leftPrec, int rightPrec) {
         writer.keyword("CREATE");
+        writer.keyword("SERVER");
+        name.unparse(writer, leftPrec, rightPrec);
+
+        writer.newlineAndIndent();
         writer.keyword("FOREIGN");
         writer.keyword("DATA");
         writer.keyword("WRAPPER");
-        name.unparse(writer, leftPrec, rightPrec);
+        connector.unparse(writer, leftPrec, rightPrec);
 
         if (options.size() > 0) {
             writer.newlineAndIndent();

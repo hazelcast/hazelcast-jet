@@ -18,7 +18,7 @@ package com.hazelcast.jet.sql.impl;
 
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.sql.impl.schema.JetTable;
-import com.hazelcast.jet.sql.parser.JetSqlInsert;
+import com.hazelcast.jet.sql.impl.parser.JetSqlInsert;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlOperatorTable;

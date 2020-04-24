@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.sql.parser;
+package com.hazelcast.jet.sql.impl.parser;
 
 import com.hazelcast.sql.impl.type.QueryDataType;
 import org.apache.calcite.sql.SqlIdentifier;

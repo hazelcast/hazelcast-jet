@@ -43,7 +43,7 @@ SqlCreate JetSqlCreateConnector(Span span, boolean replace) :
 }
 {
     <FOREIGN> <DATA> <WRAPPER>
-    connectorName = CompoundIdentifier()
+    connectorName = SimpleIdentifier()
     [
         <LANGUAGE> <JAVA>
     ]
@@ -71,7 +71,7 @@ SqlCreate JetSqlCreateServer(Span span, boolean replace) :
 }
 {
     <SERVER>
-    serverName = CompoundIdentifier()
+    serverName = SimpleIdentifier()
     <FOREIGN> <DATA> <WRAPPER>
     connector = SimpleIdentifier()
     [
@@ -100,7 +100,7 @@ SqlCreate JetSqlCreateTable(Span span, boolean replace) :
 }
 {
     <FOREIGN> <TABLE>
-    tableName = CompoundIdentifier()
+    tableName = SimpleIdentifier()
     columns = TableColumns()
     <SERVER>
     server = SimpleIdentifier()

@@ -14,45 +14,45 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.sql.parser;
+package com.hazelcast.jet.sql.impl.parser;
 
 import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlKind;
-import org.apache.calcite.sql.SqlLiteral;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.SqlSpecialOperator;
 import org.apache.calcite.sql.SqlWriter;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.util.ImmutableNullableList;
-import org.apache.calcite.util.NlsString;
 
 import javax.annotation.Nonnull;
 import java.util.List;
 
 import static java.util.Objects.requireNonNull;
 
-public class SqlOption extends SqlCall {
+public class SqlTableColumn extends SqlCall {
 
-    private static final SqlOperator OPERATOR =
-            new SqlSpecialOperator("OPTION DECLARATION", SqlKind.OTHER);
+    private static final SqlSpecialOperator OPERATOR =
+            new SqlSpecialOperator("COLUMN DECLARATION", SqlKind.COLUMN_DECL);
 
-    private final SqlIdentifier key;
-    private final SqlNode value;
+    private final SqlIdentifier name;
+    private final SqlDataType type;
 
-    public SqlOption(SqlParserPos pos, SqlIdentifier key, SqlNode value) {
+    public SqlTableColumn(SqlParserPos pos,
+                          SqlIdentifier name,
+                          SqlDataType type) {
         super(pos);
-        this.key = requireNonNull(key, "Option key is missing");
-        this.value = requireNonNull(value, "Option value is missing");
+        this.name = requireNonNull(name, "Column name should not be null");
+        this.type = requireNonNull(type, "Column type should not be null");
     }
 
-    public String key() {
-        return key.getSimple();
+    public String name() {
+        return name.getSimple();
     }
 
-    public String value() {
-        return ((NlsString) SqlLiteral.value(value)).getValue();
+    public SqlDataType type() {
+        return type;
     }
 
     @Override
@@ -64,13 +64,14 @@ public class SqlOption extends SqlCall {
     @Override
     @Nonnull
     public List<SqlNode> getOperandList() {
-        return ImmutableNullableList.of(key, value);
+        return ImmutableNullableList.of(name, type);
     }
 
     @Override
     public void unparse(SqlWriter writer, int leftPrec, int rightPrec) {
-        key.unparse(writer, leftPrec, rightPrec);
-        writer.keyword(" ");
-        value.unparse(writer, leftPrec, rightPrec);
+        name.unparse(writer, leftPrec, rightPrec);
+        writer.print(" ");
+        type.unparse(writer, leftPrec, rightPrec);
     }
 }
+

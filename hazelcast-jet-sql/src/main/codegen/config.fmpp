@@ -15,7 +15,7 @@
 data: {
   parser: {
     # Generated parser implementation package and class name.
-    package: "com.hazelcast.jet.sql.parser",
+    package: "com.hazelcast.jet.sql.impl.parser",
     class: "JetSqlParser",
 
     # List of additional classes and packages to import.
@@ -27,15 +27,15 @@ data: {
       "java.util.LinkedHashMap"
       "org.apache.calcite.sql.SqlCreate"
       "com.hazelcast.sql.impl.type.QueryDataType"
-      "com.hazelcast.jet.sql.parser.JetSqlCreateConnector"
-      "com.hazelcast.jet.sql.parser.JetSqlCreateServer"
-      "com.hazelcast.jet.sql.parser.JetSqlCreateTable"
-      "com.hazelcast.jet.sql.parser.SqlTableColumn"
-      "com.hazelcast.jet.sql.parser.SqlDataType"
-      "com.hazelcast.jet.sql.parser.SqlOption"
-      "com.hazelcast.jet.sql.parser.JetSqlInsert"
-      "com.hazelcast.jet.sql.parser.JetSqlInsertKeyword"
-      "com.hazelcast.jet.sql.parser.ParserResource"
+      "com.hazelcast.jet.sql.impl.parser.JetSqlCreateConnector"
+      "com.hazelcast.jet.sql.impl.parser.JetSqlCreateServer"
+      "com.hazelcast.jet.sql.impl.parser.JetSqlCreateTable"
+      "com.hazelcast.jet.sql.impl.parser.SqlTableColumn"
+      "com.hazelcast.jet.sql.impl.parser.SqlDataType"
+      "com.hazelcast.jet.sql.impl.parser.SqlOption"
+      "com.hazelcast.jet.sql.impl.parser.JetSqlInsert"
+      "com.hazelcast.jet.sql.impl.parser.JetSqlInsertKeyword"
+      "com.hazelcast.jet.sql.impl.parser.ParserResource"
     ]
 
     # List of new keywords. Example: "DATABASES", "TABLES". If the keyword is not a reserved
