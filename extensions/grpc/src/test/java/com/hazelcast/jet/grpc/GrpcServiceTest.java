@@ -132,11 +132,7 @@ public class GrpcServiceTest extends SimpleTestInClusterSupport {
         // When
         BatchStage<String> mapped = stage.mapUsingService(bidirectionalStreaming(port), (service, key, item) -> {
             HelloRequest req = HelloRequest.newBuilder().setName(item).build();
-            try {
-                return service.call(req).get().getMessage();
-            } catch (Exception ex) {
-                throw new RuntimeException(ex);
-            }
+            return service.call(req).thenApply(HelloReply::getMessage).get();
         });
 
         // Then
@@ -236,11 +232,7 @@ public class GrpcServiceTest extends SimpleTestInClusterSupport {
         // When
         BatchStage<String> mapped = stage.mapUsingService(unary(port), (service, key, item) -> {
             HelloRequest req = HelloRequest.newBuilder().setName(item).build();
-            try {
-                return service.call(req).get().getMessage();
-            } catch (Exception ex) {
-                throw new RuntimeException(ex);
-            }
+            return service.call(req).thenApply(HelloReply::getMessage).get();
         });
 
         // Then
