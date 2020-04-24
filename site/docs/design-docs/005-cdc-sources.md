@@ -37,135 +37,69 @@ These are the problems we are trying to address for the next version(s).
 We want to help users not to have to deal with low level JSON messages
 directly. In order to achieve this we:
 
+* **flatten** the original Debezium event's complex structure using the
+  [Kafka Connect
+  SMT](https://docs.confluent.io/current/connect/transforms/index.html)
+  they themselves provide (see [Record State
+  Extraction](https://debezium.io/documentation/reference/1.1/configuration/event-flattening.html))
 * define standard interfaces which offer **event structure**
 * offer support for mapping various event component directly into
-  **POJO data objects**
+  **POJO data objects** or to simply extract individual from them
 
-### Event Structure Interfaces
+### Event Structure
 
 The interfaces framing the general structure of change events are
-quite simple, but they have proven a nice fit across all connectors.
+quite simple:
 
 ```java
 public interface ChangeEvent {
 
-    // ...
-
-    /**
-     * Identifies the particular record or document being affected
-     * by the change event.
-     */
-    ChangeEventKey key();
-
-    /**
-     * Describes the actual change affected on the record or ducument
-     * by the change event.
-     */
-    ChangeEventValue value();
-}
-```
-
-```java
-public interface ChangeEventKey extends ChangeEventElement {
-}
-```
-
-```java
-public interface ChangeEventValue extends ChangeEventElement {
-
-    // ...
-
-    /**
-     * Specifies the moment in time when the event happened. ...
-     */
     long timestamp() throws ParsingException;
 
-    /**
-     * Specifies the type of change being described (insertion, delete or
-     * update). ...
-     */
     Operation operation() throws ParsingException;
 
-    /**
-     * Describes how the database record looked like BEFORE applying the
-     * change event.
-     */
-    ChangeEventElement before() throws ParsingException;
+    ChangeEventKey key();
 
-    /**
-     * Describes how the database record looks like AFTER the change
-     * event has been applied.
-     */
-    ChangeEventElement after() throws ParsingException;
+    ChangeEventValue value();
+
+    // some specialized functionality omitted
+}
+```
+
+```java
+public interface ChangeEventElement {
+
+    <T> T mapToObj(Class<T> clazz) throws ParsingException;
+
+    Optional<ChangeEventElement> getChild(String key) throws ParsingException;
+
+    Optional<String> getString(String key) throws ParsingException;
+    Optional<Integer> getInteger(String key) throws ParsingException;
+    Optional<Long> getLong(String key) throws ParsingException;
+    Optional<Double> getDouble(String key) throws ParsingException;
+    Optional<Boolean> getBoolean(String key) throws ParsingException;
+
+    <T> Optional<List<Optional<T>>> getList(String key, Class<T> clazz) throws ParsingException;
+
+    // some specialized functionality omitted
 
 }
 ```
 
 ### Content Extraction
 
-As can be noticed from the [event structure interfaces](#event-structure-interfaces),
+As can be noticed from the [event structure interfaces](#event-structure),
 all actual content can be found in the form of `ChangeEventElement`
 instances.
 
 Such an object is basically an encapsulated JSON message (part of the
-original, big event message) and offers following methods to access the
-data.
+original, big event message) and offers various methods to access the
+data:
 
-```java
-public interface ChangeEventElement extends Serializable {
-
-    /**
-     * Maps the entire element to an instance of the specified class.
-     * <p>
-     * For databases providing standard JSON syntax, parsing it is based
-     * on <a href="https://github.com/FasterXML/jackson-databind">Jackson Databind</a>,
-     * in particular on the Jackson {@code ObjectMapper}, so the
-     * parameter class needs to be annotated accordingly.
-     */
-    <T> T mapToObj(Class<T> clazz) throws ParsingException;
-
-    /**
-     * Returns the value of the specified (top level) key in the
-     * underlying JSON message as a child {@code ChangeEventElement}.
-     */
-    Optional<ChangeEventElement> getChild(String key) throws ParsingException;
-
-    /** ... */
-    Optional<String> getString(String key) throws ParsingException;
-
-    /** ... */
-    Optional<Integer> getInteger(String key) throws ParsingException;
-
-    /** ... */
-    Optional<Long> getLong(String key) throws ParsingException;
-
-    /** ... */
-    Optional<Double> getDouble(String key) throws ParsingException;
-
-    /** ... */
-    Optional<Boolean> getBoolean(String key) throws ParsingException;
-
-    /**
-     * Returns the value of the specified (top level) key in the
-     * underlying JSON message AS IS, without attempting to parse it in
-     * any way. This means that it can return objects specific to the
-     * parsing used by internal implementations, so Jackson classes
-     * (mostly {@link JsonNode} implementations).
-     * <p>
-     * Should not be used normally, is intended as a fallback in case
-     * regular parsing fails for some reason.
-     */
-    Optional<Object> getRaw(String key) throws ParsingException;
-
-}
-```
-
-There are multiple options there, main ones being:
-
-* fetching values and child elements via their name/key
-* mapping the entire content to a POJO directly (more on that in the
+* fetching **values** and **child elements** via their name/key
+* mapping the entire content to a **POJO** directly (more on that in the
   sections describing the various JSON formats used by the connectors)
-* fetching low level JSON elements without attempting to interpret them,
+* fetching **low level JSON elements** without attempting to interpret them,
   potentially needing to deal with objects specific to the parsing
   framework employed, so Jackson classes (mostly {@link JsonNode}
   implementations); this option is meant only as a fallback in case
@@ -183,20 +117,17 @@ interfaces contains an extra `asJson()` method, which will provide the
 raw JSON message the object is based on:
 
 * `ChangeEvent.asJson()` gives you the original message from the
-  connector, without anything having been done to it; if all else fails
-  this will still work
+  connector (although already flattened), without anything having been
+  done to it; if all else fails this will still work
 * `ChangeEventElement.asJson()` gives you the JSON message of that
   particular fragment
-* `ChangeEventKey.asJson()` & `ChangeEventValue.asJson()` (both of them
-  are also `ChangeEventElements`) will give you the key and value parts
-  of the original message
 
 ### JSON parsing
 
 Debezium database connecters provide messages in standard JSON format
 which can be parsed by any one of the well-known JSON parsing libraries
 out there. For backing the implementations of our [event structure
-interfaces](#event-structure-interfaces) we have chosen to use [Jackson
+interfaces](#event-structure) we have chosen to use [Jackson
 Databind](https://github.com/FasterXML/jackson-databind).
 
 This is mostly an internal implementation detail, most of
@@ -237,11 +168,8 @@ simple data objects:
 StreamStage<Customer> stage = pipeline.readFrom(source)
     .withNativeTimestamps(0)
     .map(event -> {
-        ChangeEventValue eventValue = event.value();
-        Operation operation = eventValue.operation();
-        ChangeEventElement mostRecentImage = DELETE.equals(operation) ?
-                eventValue.before() : eventValue.after();
-        return mostRecentImage.map(Customer.class);
+        ChangeEventElement eventValue = event.value();
+        return eventValue.mapToObj(Customer.class);
     });
 ```
 
