@@ -37,15 +37,22 @@ public class JetSqlDropConnector extends SqlDrop {
             new SqlSpecialOperator("DROP FOREIGN DATA WRAPPER", SqlKind.OTHER_DDL);
 
     private final SqlIdentifier name;
+    private final boolean cascade;
 
     public JetSqlDropConnector(SqlParserPos pos,
-                               SqlIdentifier name) {
+                               SqlIdentifier name,
+                               boolean cascade) {
         super(OPERATOR, pos, false);
         this.name = requireNonNull(name, "name should not be null");
+        this.cascade = cascade;
     }
 
     public String name() {
         return name.getSimple();
+    }
+
+    public boolean cascade() {
+        return cascade;
     }
 
     @Override
@@ -67,5 +74,9 @@ public class JetSqlDropConnector extends SqlDrop {
         writer.keyword("DATA");
         writer.keyword("WRAPPER");
         name.unparse(writer, leftPrec, rightPrec);
+
+        if (cascade) {
+            writer.keyword("CASCADE");
+        }
     }
 }

@@ -37,15 +37,22 @@ public class JetSqlDropServer extends SqlDrop {
             new SqlSpecialOperator("DROP SERVER", SqlKind.OTHER_DDL);
 
     private final SqlIdentifier name;
+    private final boolean cascade;
 
     public JetSqlDropServer(SqlParserPos pos,
-                            SqlIdentifier name) {
+                            SqlIdentifier name,
+                            boolean cascade) {
         super(OPERATOR, pos, false);
         this.name = requireNonNull(name, "name should not be null");
+        this.cascade = cascade;
     }
 
     public String name() {
         return name.getSimple();
+    }
+
+    public boolean cascade() {
+        return cascade;
     }
 
     @Override
@@ -65,5 +72,9 @@ public class JetSqlDropServer extends SqlDrop {
         writer.keyword("DROP");
         writer.keyword("SERVER");
         name.unparse(writer, leftPrec, rightPrec);
+
+        if (cascade) {
+            writer.keyword("CASCADE");
+        }
     }
 }

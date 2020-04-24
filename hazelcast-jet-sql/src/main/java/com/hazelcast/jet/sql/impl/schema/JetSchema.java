@@ -34,6 +34,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import static com.hazelcast.jet.impl.util.ReflectionUtils.newInstance;
 import static java.util.Collections.emptyMap;
 import static java.util.Objects.requireNonNull;
+import static java.util.stream.Collectors.toList;
 
 /**
  * Schema operating on registered sources/sinks
@@ -106,15 +107,20 @@ public class JetSchema extends AbstractSchema {
         }
     }
 
-    public synchronized void removeConnector(String connectorName) {
-        if (connectorsByName.remove(connectorName) == null) {
+    public synchronized void removeConnector(String connectorName, boolean cascade) {
+        if (!connectorsByName.containsKey(connectorName)) {
             throw new IllegalArgumentException("'" + connectorName + "' does not exist");
         }
-        for (Entry<String, JetServer> server : serversByName.entrySet()) {
-            if (connectorName.equals(server.getValue().connectorName())) {
-                removeServer(server.getKey());
-            }
+        if (cascade) {
+            List<String> serversToRemove = serversByName.entrySet().stream()
+                                                        .filter(entry -> connectorName.equals(entry.getValue().connectorName()))
+                                                        .map(Entry::getKey)
+                                                        .collect(toList());
+            serversToRemove.forEach(serverName -> removeServer(serverName, true));
+        } else if (serversByName.values().stream().anyMatch(server -> connectorName.equals(server.connectorName()))) {
+            throw new IllegalStateException("Can not drop '" + connectorName + "', dependant server exists");
         }
+        connectorsByName.remove(connectorName);
     }
 
     public synchronized void createServer(
@@ -139,15 +145,20 @@ public class JetSchema extends AbstractSchema {
         }
     }
 
-    public synchronized void removeServer(String serverName) {
-        if (serversByName.remove(serverName) == null) {
+    public synchronized void removeServer(String serverName, boolean cascade) {
+        if (!serversByName.containsKey(serverName)) {
             throw new IllegalArgumentException("'" + serverName + "' does not exist");
         }
-        for (Entry<String, String> tableToServer : serverNamesByTableName.entrySet()) {
-            if (serverName.equals(tableToServer.getValue())) {
-                removeTable(tableToServer.getKey());
-            }
+        if (cascade) {
+            List<String> tablesToRemove = serverNamesByTableName.entrySet().stream()
+                                                                .filter(entry -> serverName.equals(entry.getValue()))
+                                                                .map(Entry::getKey)
+                                                                .collect(toList());
+            tablesToRemove.forEach(this::removeTable);
+        } else if (serverNamesByTableName.values().stream().anyMatch(serverName::equals)) {
+            throw new IllegalStateException("Can not drop '" + serverName + "', dependant table exist");
         }
+        serversByName.remove(serverName);
     }
 
     public synchronized void createTable(

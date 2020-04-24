@@ -259,11 +259,11 @@ public class JetSqlService {
     }
 
     private void dropConnector(JetSqlDropConnector drop) {
-        schema.removeConnector(drop.name());
+        schema.removeConnector(drop.name(), drop.cascade());
     }
 
     private void dropServer(JetSqlDropServer drop) {
-        schema.removeServer(drop.name());
+        schema.removeServer(drop.name(), drop.cascade());
     }
 
     private void dropTable(JetSqlDropTable drop) {

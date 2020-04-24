@@ -94,6 +94,18 @@ public class SqlDdlTest extends SimpleTestInClusterSupport {
     }
 
     @Test
+    public void when_dropsConnectorWithDependantServers_then_throws() {
+        assertThatThrownBy(() -> sqlService.execute(format("DROP FOREIGN DATA WRAPPER %s", CONNECTOR_NAME)))
+                .isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    public void when_dropsServerWithDependantTables_then_throws() {
+        assertThatThrownBy(() -> sqlService.execute(format("DROP SERVER %s", SERVER_NAME)))
+                .isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
     public void when_dropsUnknownConnector_then_throws() {
         assertThatThrownBy(() -> sqlService.execute("DROP FOREIGN TABLE unknown_connector"))
                 .isInstanceOf(IllegalArgumentException.class);
@@ -112,8 +124,8 @@ public class SqlDdlTest extends SimpleTestInClusterSupport {
     }
 
     @Test
-    public void when_dropsConnector_then_dropsServersAndTablesAsWell() {
-        sqlService.execute(format("DROP FOREIGN DATA WRAPPER %s", CONNECTOR_TO_REMOVE_NAME));
+    public void when_dropsCascadeConnector_then_dropsServersAndTablesAsWell() {
+        sqlService.execute(format("DROP FOREIGN DATA WRAPPER %s CASCADE", CONNECTOR_TO_REMOVE_NAME));
 
         assertThatThrownBy(() -> sqlService.execute(format("CREATE SERVER %s FOREIGN DATA WRAPPER %s",
                 SERVER_TO_REMOVE_NAME, CONNECTOR_TO_REMOVE_NAME))
