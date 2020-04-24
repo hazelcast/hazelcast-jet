@@ -153,7 +153,7 @@ snapshot time). But if the job fails during the snapshot, there is no
 way to rollback these acknowledgments.  As a result, after the restart
 of the job, the job loses these acknowledged messages. If the Consumer
 API had a commit mechanism, it could guarantee exactly-once processing.</p>
-<p>To avoid these complications, one could remove acknowledgment logic
+<p>To avoid these complications, you could remove acknowledgment logic
 entirely. But, this would introduce another short come: all of the
 messages would be stored permanently unless any eviction mechanism
 exists. For the continuous processes, this may cause excessive storage
@@ -178,7 +178,7 @@ a message.</li>
 <p>The Reader API is a lower-level API of the Pulsar. It does not have any
 subscription mode or so. A user can simply read from a topic by telling
 the Reader API from which message it should read onwards. The Reader API
-provides us the <code>MessageId</code> of the earliest or latest message. One can use
+provides us the <code>MessageId</code> of the earliest or latest message. You can use
 one of these as the starting point for message reading. Or, the user can
 declare the exact starting position by giving <code>MessageId</code> between these two
 ends.  That being said, the current implementation of the source using

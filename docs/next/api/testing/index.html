@@ -84,7 +84,7 @@ communicate with each other using intra-process communication methods.
 This means we can create multiple lightweight Hazelcast Jet instances
 in our tests without using any networking resources.</p>
 <p>To create Hazelcast Jet instances with mock network(along with a lot
-of convenience methods), one needs to extend <code>com.hazelcast.jet.core.JetTestSupport</code>
+of convenience methods), you need to extend <code>com.hazelcast.jet.core.JetTestSupport</code>
 class.</p>
 <p>Here is a simple test harness which creates 2 node Hazelcast Jet cluster
 with mock network:</p>
@@ -129,7 +129,7 @@ like below:</p>
 <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span>
 <span class="token punctuation">}</span>
 </code></pre>
-<p>Similar to the Hazelcast Jet nodes, one can create Hazelcast Jet clients
+<p>Similar to the Hazelcast Jet nodes, you can create Hazelcast Jet clients
 with the same factories. There is no need to provide any network
 configuration for clients to discover nodes since they are using the
 same factory. The discovery will work out of the box.</p>
@@ -182,13 +182,13 @@ class to create the test environments. Let's explore other utilities to
 write meaningful test.</p>
 <h2><a class="anchor" aria-hidden="true" id="integration-tests"></a><a href="#integration-tests" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Integration Tests</h2>
 <p>For integration testing, there might be a need to create real instances
-without the mock network. For those cases one can create real instances
+without the mock network. For those cases you can create real instances
 with <code>Jet.newJetInstance()</code> method.</p>
 <h2><a class="anchor" aria-hidden="true" id="using-random-cluster-names"></a><a href="#using-random-cluster-names" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Using random cluster names</h2>
 <p>If multiple tests are running in parallel there is a chance that the
 clusters in each test can discover others, interfere the test
 execution and most of the time causing both of them to fail.</p>
-<p>To avoid such scenarios, one needs to isolate the clusters in each test
+<p>To avoid such scenarios, you need to isolate the clusters in each test
 execution by giving them unique cluster names. This way, they won't
 try to connect each other since the nodes will only try to connect to
 other members with the same cluster name property.</p>
@@ -225,14 +225,14 @@ class.</p>
 <p>Mock instances created from the factory of <code>com.hazelcast.jet.core.JetTestSupport</code>
 are cleaned-up automatically after the test execution has been finished.</p>
 <p>If the test contains real instances, then they either needs to be
-tracked individually and shut down when the test finished or one can
+tracked individually and shut down when the test finished or you can
 write a teardown method like below to shut down all instances created.</p>
 <pre><code class="hljs css language-java">    <span class="token annotation punctuation">@After</span>
     <span class="token keyword">public</span> <span class="token keyword">void</span> <span class="token function">after</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
         <span class="token class-name">Jet</span><span class="token punctuation">.</span><span class="token function">shutdownAll</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
     <span class="token punctuation">}</span>
 </code></pre>
-<p>Either way one has to shut down Hazelcast Jet instances after the test
+<p>Either way you have to shut down Hazelcast Jet instances after the test
 has been finished to reclaim resources and not to leave a room for
 interference with the next test execution due to distributed
 nature of the product.</p>
@@ -457,7 +457,7 @@ Finished Running Test: test in 0.009 seconds.
 <p>Note: <code>@Repeat</code> annotation only works with Hazelcast Class runners.</p>
 </blockquote>
 <h2><a class="anchor" aria-hidden="true" id="waiting-for-job-to-be-in-desired-state"></a><a href="#waiting-for-job-to-be-in-desired-state" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Waiting for job to be in desired state</h2>
-<p>On some use cases, one needs to make the job is submitted and running
+<p>On some use cases, you need to make the job is submitted and running
 on the cluster before generating any events on the controlled source
 to observe results. To achieve that following assertion could be used
 to validate job is in the desired state.</p>
