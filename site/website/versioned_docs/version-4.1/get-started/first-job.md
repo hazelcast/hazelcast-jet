@@ -28,7 +28,7 @@ version '1.0-SNAPSHOT'
 repositories.mavenCentral()
 
 dependencies {
-    compile 'com.hazelcast.jet:hazelcast-jet:{jet-version}'
+    compile 'com.hazelcast.jet:hazelcast-jet:4.1'
 }
 
 application {
@@ -59,7 +59,7 @@ application {
       <dependency>
         <groupId>com.hazelcast.jet</groupId>
         <artifactId>hazelcast-jet</artifactId>
-        <version>{jet-version}</version>
+        <version>4.1</version>
       </dependency>
     </dependencies>
 

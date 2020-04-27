@@ -30,7 +30,7 @@ Add this dependency to your Java project:
 <!--Gradle-->
 
 ```groovy
-compile 'com.hazelcast.jet:hazelcast-jet-grpc:{jet-version}'
+compile 'com.hazelcast.jet:hazelcast-jet-grpc:4.1'
 ```
 
 <!--Maven-->
@@ -39,7 +39,7 @@ compile 'com.hazelcast.jet:hazelcast-jet-grpc:{jet-version}'
 <dependency>
   <groupId>com.hazelcast.jet</groupId>
   <artifactId>hazelcast-jet-grpc</artifactId>
-  <version>{jet-version}</version>
+  <version>4.1</version>
 </dependency>
 ```
 

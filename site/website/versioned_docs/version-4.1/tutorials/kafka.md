@@ -21,15 +21,15 @@ From now on we assume Kafka is running on your machine.
 
 ## 2. Start Hazelcast Jet
 
-1. [Download](https://github.com/hazelcast/hazelcast-jet/releases/download/v{jet-version}/hazelcast-jet-{jet-version}.tar.gz)
+1. [Download](https://github.com/hazelcast/hazelcast-jet/releases/download/v4.1/hazelcast-jet-4.1.tar.gz)
   Hazelcast Jet
 
 2. Unzip it:
 
 ```bash
 cd <where_you_downloaded_it>
-tar zxvf hazelcast-jet-{jet-version}.tar.gz
-cd hazelcast-jet-{jet-version}
+tar zxvf hazelcast-jet-4.1.tar.gz
+cd hazelcast-jet-4.1
 ```
 
 If you already have Jet and you skipped the above steps, make sure to
@@ -38,7 +38,7 @@ follow from here on.
 3. Activate the Apache Kafka Connector plugin:
 
 ```bash
-mv opt/hazelcast-jet-kafka-{jet-version}.jar lib/
+mv opt/hazelcast-jet-kafka-4.1.jar lib/
 ```
 
 4. Start Jet:
@@ -77,8 +77,8 @@ version '1.0-SNAPSHOT'
 repositories.mavenCentral()
 
 dependencies {
-    compile 'com.hazelcast.jet:hazelcast-jet:{jet-version}'
-    compile 'com.hazelcast.jet:hazelcast-jet-kafka:{jet-version}'
+    compile 'com.hazelcast.jet:hazelcast-jet:4.1'
+    compile 'com.hazelcast.jet:hazelcast-jet-kafka:4.1'
 }
 
 jar.manifest.attributes 'Main-Class': 'org.example.JetJob'
@@ -105,12 +105,12 @@ jar.manifest.attributes 'Main-Class': 'org.example.JetJob'
         <dependency>
             <groupId>com.hazelcast.jet</groupId>
             <artifactId>hazelcast-jet</artifactId>
-            <version>{jet-version}</version>
+            <version>4.1</version>
         </dependency>
         <dependency>
             <groupId>com.hazelcast.jet</groupId>
             <artifactId>hazelcast-jet-kafka</artifactId>
-            <version>{jet-version}</version>
+            <version>4.1</version>
         </dependency>
     </dependencies>
 

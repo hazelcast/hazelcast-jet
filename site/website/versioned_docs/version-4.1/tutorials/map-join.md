@@ -26,15 +26,15 @@ We will use the ticker to lookup the full company name in a replicated map.
 
 ## 1. Start Hazelcast Jet
 
-1. [Download](https://github.com/hazelcast/hazelcast-jet/releases/download/v{jet-version}/hazelcast-jet-{jet-version}.tar.gz)
+1. [Download](https://github.com/hazelcast/hazelcast-jet/releases/download/v4.1/hazelcast-jet-4.1.tar.gz)
   Hazelcast Jet
 
 2. Unzip it:
 
 ```bash
 cd <where_you_downloaded_it>
-tar zxvf hazelcast-jet-{jet-version}.tar.gz
-cd hazelcast-jet-{jet-version}
+tar zxvf hazelcast-jet-4.1.tar.gz
+cd hazelcast-jet-4.1
 ```
 
 3. Start Jet:
@@ -74,8 +74,8 @@ version '1.0-SNAPSHOT'
 repositories.mavenCentral()
 
 dependencies {
-    compile 'com.hazelcast.jet:hazelcast-jet:{jet-version}'
-    compile 'com.hazelcast.jet.examples:hazelcast-jet-examples-trade-source:{jet-version}'
+    compile 'com.hazelcast.jet:hazelcast-jet:4.1'
+    compile 'com.hazelcast.jet.examples:hazelcast-jet-examples-trade-source:4.1'
 }
 
 jar {
@@ -86,7 +86,7 @@ jar {
 
 shadowJar {
     dependencies {
-        exclude(dependency('com.hazelcast.jet:hazelcast-jet:{jet-version}'))
+        exclude(dependency('com.hazelcast.jet:hazelcast-jet:4.1'))
     }
 }
 ```
@@ -112,12 +112,12 @@ shadowJar {
         <dependency>
             <groupId>com.hazelcast.jet</groupId>
             <artifactId>hazelcast-jet</artifactId>
-            <version>{jet-version}</version>
+            <version>4.1</version>
         </dependency>
         <dependency>
             <groupId>com.hazelcast.jet.examples</groupId>
             <artifactId>hazelcast-jet-examples-trade-source</artifactId>
-            <version>{jet-version}</version>
+            <version>4.1</version>
         </dependency>
     </dependencies>
 

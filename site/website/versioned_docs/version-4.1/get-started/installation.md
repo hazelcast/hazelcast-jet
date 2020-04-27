@@ -15,7 +15,7 @@ There are two main approaches to setting up a local Hazelcast Jet
 cluster: as a classic Java process or as a Docker instance. In order to
 follow the tutorial, in both cases you'll need the Hazelcast Jet
 distribution package. Download it from
-[here](https://github.com/hazelcast/hazelcast-jet/releases/download/v{jet-version}/hazelcast-jet-{jet-version}.tar.gz)
+[here](https://github.com/hazelcast/hazelcast-jet/releases/download/v4.1/hazelcast-jet-4.1.tar.gz)
 and unzip it to a directory we'll refer to as `<jet_home>`.
 
 ## As a Java Process
@@ -40,7 +40,7 @@ command. For example, let's check the cluster state:
 ```bash
 $ bin/jet cluster
 State: ACTIVE
-Version: {jet-version}
+Version: 4.1
 Size: 1
 
 ADDRESS                  UUID

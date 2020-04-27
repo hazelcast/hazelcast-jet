@@ -76,7 +76,7 @@ To tolerate the failure of one member, we recommend to size your cluster
 to operate with ```n-1``` members setup.
 
 You can use Hazelcast [IMap and ICache Event
-Journal](https://docs.hazelcast.org/docs/jet/{jet-version}/manual/#connector-imdg-journal)
+Journal](https://docs.hazelcast.org/docs/jet/4.1/manual/#connector-imdg-journal)
 
 to ingest the streaming data. Journal is an in-memory structure with a
 fixed capacity. If the jobs consuming the journal can't keep up there is
@@ -84,7 +84,7 @@ a risk of data loss.  The pace of the data producers and the capacity of
 the Journal therefore determine the length of an error window of your
 application. If you can't afford losing data, consider increasing the
 journal size or ingest streaming data using a persistent storage such as
-[Apache Kafka](https://docs.hazelcast.org/docs/jet/{jet-version}/manual/#kafka)
+[Apache Kafka](https://docs.hazelcast.org/docs/jet/4.1/manual/#kafka)
 or Apache Pulsar.
 
 Another approach to increase the fault-tolerance is splitting the Jet
@@ -219,7 +219,7 @@ Consider using more performant disks when:
 
 * You use the cluster file system as a source or sink - faster disks
  improve the performance
-* Using disk persistence for [Lossless Cluster Restart](https://docs.hazelcast.org/docs/jet/{jet-version}/manual/#configure-lossless-cluster-restart-enterprise-only)
+* Using disk persistence for [Lossless Cluster Restart](https://docs.hazelcast.org/docs/jet/4.1/manual/#configure-lossless-cluster-restart-enterprise-only)
 
 ## Data flow
 
@@ -341,7 +341,7 @@ machines, each of 8 CPU, 16 GB RAM, 10 Gbps network.
 ### Fault-Tolerance
 
 The [Event
-Journal](https://docs.hazelcast.org/docs/{imdg-version}/manual/html-single/index.html#event-journal)
+Journal](https://docs.hazelcast.org/docs/4.0.1/manual/html-single/index.html#event-journal)
 capacity was set to 1.5 million items. With a input data production rate
 of 50k events each second, the data are kept for 30 seconds before being
 overwritten. The job snapshot frequency was set to 1 second.
@@ -353,5 +353,5 @@ snapshot) giving the job enough time to reprocess the 3 seconds (~ 150k
 events) of data it missed.
 
 More aggressive [failure
-detector](https://docs.hazelcast.org/docs/{imdg-version}/manual/html-single/index.html#failure-detector-configuration)
+detector](https://docs.hazelcast.org/docs/4.0.1/manual/html-single/index.html#failure-detector-configuration)
 and a larger event journal can be used to stretch the error window.

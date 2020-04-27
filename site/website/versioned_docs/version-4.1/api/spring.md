@@ -189,9 +189,9 @@ Here’s how your namespace and schema instance declarations may look:
        xsi:schemaLocation="http://www.springframework.org/schema/beans
         http://www.springframework.org/schema/beans/spring-beans-2.5.xsd
         http://www.hazelcast.com/schema/spring
-        http://www.hazelcast.com/schema/spring/hazelcast-spring-{imdg-version}.xsd
+        http://www.hazelcast.com/schema/spring/hazelcast-spring-4.0.1.xsd
         http://www.hazelcast.com/schema/jet-spring
-        http://www.hazelcast.com/schema/jet-spring/hazelcast-jet-spring-{jet-version}.xsd">
+        http://www.hazelcast.com/schema/jet-spring/hazelcast-jet-spring-4.1.xsd">
         <!-- ... -->
  </beans>
 ```
@@ -260,9 +260,9 @@ beans:
        xsi:schemaLocation="http://www.springframework.org/schema/beans
         http://www.springframework.org/schema/beans/spring-beans-2.5.xsd
         http://www.hazelcast.com/schema/spring
-        http://www.hazelcast.com/schema/spring/hazelcast-spring-{imdg-version}.xsd
+        http://www.hazelcast.com/schema/spring/hazelcast-spring-4.0.1.xsd
         http://www.hazelcast.com/schema/jet-spring
-        http://www.hazelcast.com/schema/jet-spring/hazelcast-jet-spring-{jet-version}.xsd">
+        http://www.hazelcast.com/schema/jet-spring/hazelcast-jet-spring-4.1.xsd">
 
     <!-- Obtain Hazelcast IMDG instance from Hazelcast Jet instance-->
     <jet:hazelcast jet-instance-ref="jet-instance" id="hazelcast-instance"/>
@@ -321,7 +321,7 @@ attributes.
        xsi:schemaLocation="http://www.springframework.org/schema/beans
         http://www.springframework.org/schema/beans/spring-beans-2.5.xsd
         http://www.hazelcast.com/schema/jet-spring
-        http://www.hazelcast.com/schema/jet-spring/hazelcast-jet-spring-{jet-version}.xsd">
+        http://www.hazelcast.com/schema/jet-spring/hazelcast-jet-spring-4.1.xsd">
     <jet:instance id="instance" lazy-init="true" scope="singleton">
     <!-- ... -->
     </jet:instance>
