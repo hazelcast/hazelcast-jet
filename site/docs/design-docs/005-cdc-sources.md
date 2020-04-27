@@ -287,12 +287,6 @@ registered with the cluster when the `cdc-core` jar is put on the
 classpath (or any of the other, database specific jars, which also
 include the core).
 
-## Distributedness
-
-> To be explored. All Debezium connectors are based on Kafka Connect,
-> which does have a [distributed mode](https://docs.confluent.io/current/connect/userguide.html#distributed-mode)
-> and perhaps we can/should make use of that somehow.
-
 ## Performance
 
 ### Setup
