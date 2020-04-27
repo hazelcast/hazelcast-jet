@@ -114,13 +114,14 @@ public class JetSchema extends AbstractSchema {
     }
 
     public synchronized void removeConnector(String connectorName, boolean ifExists, boolean cascade) {
-        if (ifExists && !connectorsByName.containsKey(connectorName)) {
-            return;
+        if (!connectorsByName.containsKey(connectorName)) {
+            if (ifExists) {
+                return;
+            } else {
+                throw new IllegalArgumentException("'" + connectorName + "' does not exist");
+            }
         }
 
-        if (!connectorsByName.containsKey(connectorName)) {
-            throw new IllegalArgumentException("'" + connectorName + "' does not exist");
-        }
         if (cascade) {
             List<String> serversToRemove = serversByName.entrySet().stream()
                                                         .filter(entry -> connectorName.equals(entry.getValue().connectorName()))
@@ -161,13 +162,14 @@ public class JetSchema extends AbstractSchema {
     }
 
     public synchronized void removeServer(String serverName, boolean ifExists, boolean cascade) {
-        if (ifExists && !connectorsByName.containsKey(serverName)) {
-            return;
+        if (!serversByName.containsKey(serverName)) {
+            if (ifExists) {
+                return;
+            } else {
+                throw new IllegalArgumentException("'" + serverName + "' does not exist");
+            }
         }
 
-        if (!serversByName.containsKey(serverName)) {
-            throw new IllegalArgumentException("'" + serverName + "' does not exist");
-        }
         if (cascade) {
             List<String> tablesToRemove = serverNamesByTableName.entrySet().stream()
                                                                 .filter(entry -> serverName.equals(entry.getValue()))
@@ -227,13 +229,15 @@ public class JetSchema extends AbstractSchema {
     }
 
     public synchronized void removeTable(String tableName, boolean ifExists) {
-        if (ifExists && !connectorsByName.containsKey(tableName)) {
-            return;
+        if (!tablesByName.containsKey(tableName)) {
+            if (ifExists) {
+                return;
+            } else {
+                throw new IllegalArgumentException("'" + tableName + "' does not exist");
+            }
         }
 
-        if (tablesByName.remove(tableName) == null) {
-            throw new IllegalArgumentException("'" + tableName + "' does not exist");
-        }
+        tablesByName.remove(tableName);
         serverNamesByTableName.remove(tableName);
     }
 }
