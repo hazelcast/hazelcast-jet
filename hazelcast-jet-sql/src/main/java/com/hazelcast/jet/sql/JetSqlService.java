@@ -241,12 +241,12 @@ public class JetSqlService {
 
     private void createConnector(JetSqlCreateConnector create) {
         Map<String, String> options = create.options().collect(toMap(SqlOption::key, SqlOption::value));
-        schema.createConnector(create.name(), options, create.getReplace());
+        schema.createConnector(create.name(), options, create.getReplace(), create.ifNotExists());
     }
 
     private void createServer(JetSqlCreateServer create) {
         Map<String, String> options = create.options().collect(toMap(SqlOption::key, SqlOption::value));
-        schema.createServer(create.name(), create.connector(), options, create.getReplace());
+        schema.createServer(create.name(), create.connector(), options, create.getReplace(), create.ifNotExists());
     }
 
     private void createTable(JetSqlCreateTable create) {
@@ -255,19 +255,19 @@ public class JetSqlService {
                 create.columns()
                       .map(column -> entry(column.name(), column.type().type()))
                       .collect(toList());
-        schema.createTable(create.name(), create.server(), options, columns, create.getReplace());
+        schema.createTable(create.name(), create.server(), options, columns, create.getReplace(), create.ifNotExists());
     }
 
     private void dropConnector(JetSqlDropConnector drop) {
-        schema.removeConnector(drop.name(), drop.cascade());
+        schema.removeConnector(drop.name(), drop.ifExists(), drop.cascade());
     }
 
     private void dropServer(JetSqlDropServer drop) {
-        schema.removeServer(drop.name(), drop.cascade());
+        schema.removeServer(drop.name(),drop.ifExists(), drop.cascade());
     }
 
     private void dropTable(JetSqlDropTable drop) {
-        schema.removeTable(drop.name());
+        schema.removeTable(drop.name(), drop.ifExists());
     }
 
     /**

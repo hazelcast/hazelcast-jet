@@ -75,8 +75,8 @@ public class JetSchema extends AbstractSchema {
         this.unmodifiableTableMap = Collections.unmodifiableMap(tablesByName);
 
         // insert the IMap connector and local cluster server by default
-        createConnector(IMAP_CONNECTOR, new IMapSqlConnector(), false);
-        createServer(IMAP_LOCAL_SERVER, IMAP_CONNECTOR, emptyMap(), false);
+        createConnector(IMAP_CONNECTOR, new IMapSqlConnector(), false, false);
+        createServer(IMAP_LOCAL_SERVER, IMAP_CONNECTOR, emptyMap(), false, false);
     }
 
     @Override
@@ -87,19 +87,25 @@ public class JetSchema extends AbstractSchema {
     public void createConnector(
             String connectorName,
             Map<String, String> connectorOptions,
-            boolean replace
+            boolean replace,
+            boolean ifNotExists
     ) {
         String className = requireNonNull(connectorOptions.get(OPTION_CLASS_NAME),
                 "missing " + OPTION_CLASS_NAME + " option");
         SqlConnector connector = newInstance(className);
-        createConnector(connectorName, connector, replace);
+        createConnector(connectorName, connector, replace, ifNotExists);
     }
 
     private synchronized void createConnector(
             String connectorName,
             SqlConnector connector,
-            boolean replace
+            boolean replace,
+            boolean ifNotExists
     ) {
+        if (ifNotExists && connectorsByName.containsKey(connectorName)) {
+            return;
+        }
+
         if (replace) {
             connectorsByName.put(connectorName, connector);
         } else if (connectorsByName.putIfAbsent(connectorName, connector) != null) {
@@ -107,7 +113,11 @@ public class JetSchema extends AbstractSchema {
         }
     }
 
-    public synchronized void removeConnector(String connectorName, boolean cascade) {
+    public synchronized void removeConnector(String connectorName, boolean ifExists, boolean cascade) {
+        if (ifExists && !connectorsByName.containsKey(connectorName)) {
+            return;
+        }
+
         if (!connectorsByName.containsKey(connectorName)) {
             throw new IllegalArgumentException("'" + connectorName + "' does not exist");
         }
@@ -116,7 +126,7 @@ public class JetSchema extends AbstractSchema {
                                                         .filter(entry -> connectorName.equals(entry.getValue().connectorName()))
                                                         .map(Entry::getKey)
                                                         .collect(toList());
-            serversToRemove.forEach(serverName -> removeServer(serverName, true));
+            serversToRemove.forEach(serverName -> removeServer(serverName, false, true));
         } else if (serversByName.values().stream().anyMatch(server -> connectorName.equals(server.connectorName()))) {
             throw new IllegalStateException("Can not drop '" + connectorName + "', dependant server exists");
         }
@@ -127,8 +137,13 @@ public class JetSchema extends AbstractSchema {
             String serverName,
             String connectorName,
             Map<String, String> serverOptions,
-            boolean replace
+            boolean replace,
+            boolean ifNotExists
     ) {
+        if (ifNotExists && serversByName.containsKey(serverName)) {
+            return;
+        }
+
         if (!connectorsByName.containsKey(connectorName)) {
             throw new IllegalArgumentException("Unknown connector: " + connectorName);
         }
@@ -145,7 +160,11 @@ public class JetSchema extends AbstractSchema {
         }
     }
 
-    public synchronized void removeServer(String serverName, boolean cascade) {
+    public synchronized void removeServer(String serverName, boolean ifExists, boolean cascade) {
+        if (ifExists && !connectorsByName.containsKey(serverName)) {
+            return;
+        }
+
         if (!serversByName.containsKey(serverName)) {
             throw new IllegalArgumentException("'" + serverName + "' does not exist");
         }
@@ -154,7 +173,7 @@ public class JetSchema extends AbstractSchema {
                                                                 .filter(entry -> serverName.equals(entry.getValue()))
                                                                 .map(Entry::getKey)
                                                                 .collect(toList());
-            tablesToRemove.forEach(this::removeTable);
+            tablesToRemove.forEach(tableName -> removeTable(tableName, false));
         } else if (serverNamesByTableName.values().stream().anyMatch(serverName::equals)) {
             throw new IllegalStateException("Can not drop '" + serverName + "', dependant table exist");
         }
@@ -166,8 +185,13 @@ public class JetSchema extends AbstractSchema {
             String serverName,
             Map<String, String> tableOptions,
             List<Entry<String, QueryDataType>> fields,
-            boolean replace
+            boolean replace,
+            boolean ifNotExists
     ) {
+        if (ifNotExists && tablesByName.containsKey(tableName)) {
+            return;
+        }
+
         JetServer server = serversByName.get(serverName);
         if (server == null) {
             throw new IllegalArgumentException("Unknown server: " + serverName);
@@ -202,7 +226,11 @@ public class JetSchema extends AbstractSchema {
         serverNamesByTableName.put(tableName, server.name());
     }
 
-    public synchronized void removeTable(String tableName) {
+    public synchronized void removeTable(String tableName, boolean ifExists) {
+        if (ifExists && !connectorsByName.containsKey(tableName)) {
+            return;
+        }
+
         if (tablesByName.remove(tableName) == null) {
             throw new IllegalArgumentException("'" + tableName + "' does not exist");
         }

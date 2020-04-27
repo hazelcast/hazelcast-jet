@@ -41,14 +41,19 @@ public class JetSqlDropServer extends SqlDrop {
 
     public JetSqlDropServer(SqlParserPos pos,
                             SqlIdentifier name,
+                            boolean ifExists,
                             boolean cascade) {
-        super(OPERATOR, pos, false);
+        super(OPERATOR, pos, ifExists);
         this.name = requireNonNull(name, "name should not be null");
         this.cascade = cascade;
     }
 
     public String name() {
         return name.getSimple();
+    }
+
+    public boolean ifExists() {
+        return ifExists;
     }
 
     public boolean cascade() {
@@ -71,6 +76,12 @@ public class JetSqlDropServer extends SqlDrop {
     public void unparse(SqlWriter writer, int leftPrec, int rightPrec) {
         writer.keyword("DROP");
         writer.keyword("SERVER");
+
+        if (ifExists) {
+            writer.keyword("IF");
+            writer.keyword("EXISTS");
+        }
+
         name.unparse(writer, leftPrec, rightPrec);
 
         if (cascade) {
