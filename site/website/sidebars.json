@@ -49,7 +49,8 @@
       "operations/job-management",
       "operations/kubernetes",
       "operations/monitoring",
-      "operations/version-compatibility"
+      "operations/version-compatibility",
+      "operations/cdc-deployment"
     ],
     "Architecture": [
       "architecture/distributed-computing",

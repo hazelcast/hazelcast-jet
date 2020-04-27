@@ -7,7 +7,7 @@ description: Change Data Capture (CDC) Sources
 
 ## Goal
 
-Make Jet's CDC sources production ready: consistent with eachother in
+Make Jet's CDC sources production ready: consistent with each other in
 behaviour, easy to use, reliable and performant.
 
 ## Background
@@ -325,4 +325,5 @@ Enabling the *binlog* on the MySQL database has been observed to produce
 a **15%** performance hit on the number of update/insert/delete events
 it's able to process.
 
-The effects of enabling *global transaction IDs* has not been tested.
+Enabling *global transaction IDs* doesn't seem to produce a
+significant performance impact.

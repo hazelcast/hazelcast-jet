@@ -6,20 +6,10 @@ description: How to monitor Change Data Capture data from a MySQL database in Je
 > NOTE: This feature is currently in incubating state, i.e. API,
 > configuration etc. might still change in future revisions.
 
-**Change data capture** refers to the process of **observing changes
-made to a database** and extracting them in a form usable by other
-systems, for the purposes of replication, analysis and many many more.
-
-Change Data Capture is especially important to Jet, because it allows
-for the **integration with legacy systems**. Database changes form a
-stream of events which can be efficiently processed by Jet.
-
-Implementation of CDC in Jet is based on
-[Debezium](https://debezium.io/). Jet offers a generic Debezium source
-which can handle CDC events from [any database supported by
-Debezium](https://debezium.io/documentation/reference/1.0/connectors/index.html),
-but we're also striving to make CDC sources first class citizens in Jet.
-The one for MySQL is already one (since Jet version 4.2).
+As we've seen in the [CDC section of our Sources and Sinks
+ guide](../api/sources-sinks.md#cdc) of our, change data capture is
+ especially important to Jet, because it allows for the **integration
+ with legacy systems**.
 
 Let's see an example, how to process change events from a MySQL database
 in Jet.
