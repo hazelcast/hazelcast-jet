@@ -72,17 +72,7 @@ public class MySqlIntegrationTest extends AbstractIntegrationTest {
 
         Pipeline pipeline = Pipeline.create();
 
-        StreamSource<ChangeEvent> source = MySqlCdcSources.mysql("customers")
-                .setDatabaseAddress(mysql.getContainerIpAddress())
-                .setDatabasePort(mysql.getMappedPort(MYSQL_PORT))
-                .setDatabaseUser("debezium")
-                .setDatabasePassword("dbz")
-                .setClusterName("dbserver1")
-                .setDatabaseWhitelist("inventory")
-                .setTableWhitelist("inventory." + "customers")
-                .build();
-
-        pipeline.readFrom(source)
+        pipeline.readFrom(source("customers"))
                 .withNativeTimestamps(0)
                 .<ChangeEvent>customTransform("filter_timestamps", filterTimestampsProcessorSupplier())
                 .groupingKey(event -> event.key().getInteger("id").orElse(0))
