@@ -53,7 +53,7 @@ import static org.testcontainers.containers.MySQLContainer.MYSQL_PORT;
 public class MySqlIntegrationTest extends AbstractIntegrationTest {
 
     @Rule
-    public MySQLContainer<?> mysql = new MySQLContainer<>("debezium/example-mysql")
+    public MySQLContainer<?> mysql = new MySQLContainer<>("debezium/example-mysql:1.2")
             .withUsername("mysqluser")
             .withPassword("mysqlpw");
 
@@ -72,7 +72,17 @@ public class MySqlIntegrationTest extends AbstractIntegrationTest {
 
         Pipeline pipeline = Pipeline.create();
 
-        pipeline.readFrom(source("customers"))
+        StreamSource<ChangeEvent> source = MySqlCdcSources.mysql("customers")
+                .setDatabaseAddress(mysql.getContainerIpAddress())
+                .setDatabasePort(mysql.getMappedPort(MYSQL_PORT))
+                .setDatabaseUser("debezium")
+                .setDatabasePassword("dbz")
+                .setClusterName("dbserver1")
+                .setDatabaseWhitelist("inventory")
+                .setTableWhitelist("inventory." + "customers")
+                .build();
+
+        pipeline.readFrom(source)
                 .withNativeTimestamps(0)
                 .<ChangeEvent>customTransform("filter_timestamps", filterTimestampsProcessorSupplier())
                 .groupingKey(event -> event.key().getInteger("id").orElse(0))
