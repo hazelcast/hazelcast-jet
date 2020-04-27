@@ -73,6 +73,7 @@
                             <include>com.hazelcast:*</include>
                             <include>info.picocli:picocli</include>
                             <include>io.github.classgraph:classgraph</include>
+                            <include>com.fasterxml.jackson.jr:jackson-jr-all</include>
                         </includes>
                     </artifactSet>
                     <relocations>
@@ -87,6 +88,10 @@
                         <relocation>
                             <pattern>nonapi.io.github.classgraph.</pattern>
                             <shadedPattern>com.hazelcast.jet.nonapi.io.github.classgraph.</shadedPattern>
+                        </relocation>
+                        <relocation>
+                            <pattern>com.fasterxml.jackson.jr.</pattern>
+                            <shadedPattern>com.hazelcast.jet.com.fasterxml.jackson.jr.</shadedPattern>
                         </relocation>
                     </relocations>
                     <transformers>

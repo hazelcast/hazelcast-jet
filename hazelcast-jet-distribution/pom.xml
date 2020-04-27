@@ -141,6 +141,11 @@
                             <version>${classgraph.version}</version>
                         </dependency>
                         <dependency>
+                            <groupId>com.fasterxml.jackson.jr</groupId>
+                            <artifactId>jackson-jr-all</artifactId>
+                            <version>${jackson.jr.version}</version>
+                        </dependency>
+                        <dependency>
                             <groupId>org.apache.hadoop</groupId>
                             <artifactId>hadoop-hdfs</artifactId>
                             <version>${hadoop.version}</version>
