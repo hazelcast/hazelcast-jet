@@ -77,9 +77,9 @@ public final class WriteMapP<T, K, V> extends AsyncHazelcastWriterP {
             };
         } else if (map instanceof ClientMapProxy) {
             // TODO: add strategy/unify after https://github.com/hazelcast/hazelcast/issues/13950 is fixed
-            addToBuffer = entry -> {
-                Data key = serializationService.toData(key(entry));
-                Data value = serializationService.toData(value(entry));
+            addToBuffer = item -> {
+                Data key = serializationService.toData(key(item));
+                Data value = serializationService.toData(value(item));
                 buffer.add(new SimpleEntry<>(key, value));
             };
         } else {

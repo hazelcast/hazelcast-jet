@@ -18,6 +18,8 @@ package com.hazelcast.jet.json;
 
 import com.hazelcast.core.HazelcastJsonValue;
 
+import java.util.Map;
+
 public final class JsonUtil {
 
     private JsonUtil() {
@@ -29,6 +31,23 @@ public final class JsonUtil {
      */
     public static <T> HazelcastJsonValue hazelcastJsonValue(T object) {
         return new HazelcastJsonValue(object.toString());
+    }
+
+
+    /**
+     * Creates a {@link HazelcastJsonValue} by converting the key of the given
+     * entry to string using {@link Object#toString()}.
+     */
+    public static <K> HazelcastJsonValue asJsonKey(Map.Entry<K, ?> entry) {
+        return new HazelcastJsonValue(entry.getKey().toString());
+    }
+
+    /**
+     * Creates a {@link HazelcastJsonValue} by converting the value of the
+     * given entry to string using {@link Object#toString()}.
+     */
+    public static <V> HazelcastJsonValue asJsonValue(Map.Entry<?, V> entry) {
+        return new HazelcastJsonValue(entry.getValue().toString());
     }
 
 }

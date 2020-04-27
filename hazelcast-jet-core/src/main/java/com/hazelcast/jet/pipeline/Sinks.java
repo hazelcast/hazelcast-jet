@@ -18,7 +18,6 @@ package com.hazelcast.jet.pipeline;
 
 import com.hazelcast.client.config.ClientConfig;
 import com.hazelcast.collection.IList;
-import com.hazelcast.core.HazelcastJsonValue;
 import com.hazelcast.core.Offloadable;
 import com.hazelcast.function.BiConsumerEx;
 import com.hazelcast.function.BiFunctionEx;
@@ -30,7 +29,6 @@ import com.hazelcast.jet.Observable;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.processor.SinkProcessors;
 import com.hazelcast.jet.impl.pipeline.SinkImpl;
-import com.hazelcast.jet.json.JsonUtil;
 import com.hazelcast.map.EntryProcessor;
 import com.hazelcast.map.IMap;
 import com.hazelcast.topic.ITopic;
@@ -115,51 +113,6 @@ public final class Sinks {
     }
 
     /**
-     * Returns a sink that converts the key and value of {@code Map.Entry}s it
-     * receives to {@link HazelcastJsonValue} and put them into a Hazelcast
-     * {@code IMap} with the specified name.
-     * <p>
-     * This sink provides the exactly-once guarantee thanks to <i>idempotent
-     * updates</i>. It means that the value with the same key is not appended,
-     * but overwritten. After the job is restarted from snapshot, duplicate
-     * items will not change the state in the target map.
-     * <p>
-     * The default local parallelism for this sink is 1.
-     *
-     * @since 4.1
-     */
-    @Nonnull
-    public static <K, V> Sink<Entry<K, V>> map(@Nonnull String mapName, boolean jsonKey, boolean jsonValue) {
-        return map(mapName,
-                e -> jsonKey ? JsonUtil.hazelcastJsonValue(e.getKey()) : e.getKey(),
-                e -> jsonValue ? JsonUtil.hazelcastJsonValue(e.getValue()) : e.getValue());
-    }
-
-    /**
-     * Returns a sink that uses the supplied functions to extract the key
-     * and value with which to put to a Hazelcast {@code IMap}.
-     * <p>
-     * This sink provides the exactly-once guarantee thanks to <i>idempotent
-     * updates</i>. It means that the value with the same key is not appended,
-     * but overwritten. After the job is restarted from snapshot, duplicate
-     * items will not change the state in the target map.
-     * <p>
-     * The default local parallelism for this sink is 1.
-     *
-     * @since 4.1
-     */
-    @Nonnull
-    public static <T, K, V> Sink<T> map(
-            @Nonnull String mapName,
-            @Nonnull FunctionEx<? super T, ? extends K> toKeyFn,
-            @Nonnull FunctionEx<? super T, ? extends V> toValueFn
-
-    ) {
-        return new SinkImpl<>("mapSink(" + mapName + ')',
-                writeMapP(mapName, toKeyFn, toValueFn), false, toKeyFn);
-    }
-
-    /**
      * Returns a sink that puts {@code Map.Entry}s it receives into the given
      * Hazelcast {@code IMap}.
      * <p>
@@ -180,6 +133,60 @@ public final class Sinks {
         return map(map.getName());
     }
 
+
+    /**
+     * Returns a sink that uses the supplied functions to extract the key
+     * and value with which to put to a Hazelcast {@code IMap} with the
+     * specified name.
+     * <p>
+     * This sink provides the exactly-once guarantee thanks to <i>idempotent
+     * updates</i>. It means that the value with the same key is not appended,
+     * but overwritten. After the job is restarted from snapshot, duplicate
+     * items will not change the state in the target map.
+     * <p>
+     * The default local parallelism for this sink is 1.
+     *
+     * @since 4.2
+     */
+    @Nonnull
+    public static <T, K, V> Sink<T> map(
+            @Nonnull String mapName,
+            @Nonnull FunctionEx<? super T, ? extends K> toKeyFn,
+            @Nonnull FunctionEx<? super T, ? extends V> toValueFn
+
+    ) {
+        return new SinkImpl<>("mapSink(" + mapName + ')',
+                writeMapP(mapName, toKeyFn, toValueFn), false, toKeyFn);
+    }
+
+    /**
+     * Returns a sink that uses the supplied functions to extract the key
+     * and value with which to put to given Hazelcast {@code IMap}.
+     * <p>
+     * <strong>NOTE:</strong> Jet only remembers the name of the map you supply
+     * and acquires a map with that name on the local cluster. If you supply a
+     * map instance from another cluster, no error will be thrown to indicate
+     * this.
+     * <p>
+     * This sink provides the exactly-once guarantee thanks to <i>idempotent
+     * updates</i>. It means that the value with the same key is not appended,
+     * but overwritten. After the job is restarted from snapshot, duplicate
+     * items will not change the state in the target map.
+     * <p>
+     * The default local parallelism for this sink is 1.
+     *
+     * @since 4.2
+     */
+    @Nonnull
+    public static <T, K, V> Sink<T> map(
+            @Nonnull IMap<? super K, ? super V> map,
+            @Nonnull FunctionEx<? super T, ? extends K> toKeyFn,
+            @Nonnull FunctionEx<? super T, ? extends V> toValueFn
+
+    ) {
+        return map(map.getName(), toKeyFn, toValueFn);
+    }
+
     /**
      * Returns a sink that puts {@code Map.Entry}s it receives into a Hazelcast
      * {@code IMap} with the specified name in a remote cluster identified by
@@ -198,33 +205,6 @@ public final class Sinks {
     }
 
     /**
-     * Returns a sink that converts the key and value of {@code Map.Entry}s it
-     * receives to {@link HazelcastJsonValue} and put them into a Hazelcast
-     * {@code IMap} with the specified name in a remote cluster identified by
-     * the supplied {@code ClientConfig}.
-     * <p>
-     * This sink provides the exactly-once guarantee thanks to <i>idempotent
-     * updates</i>. It means that the value with the same key is not appended,
-     * but overwritten. After the job is restarted from snapshot, duplicate
-     * items will not change the state in the target map.
-     * <p>
-     * The default local parallelism for this sink is 1.
-     *
-     * @since 4.1
-     */
-    @Nonnull
-    public static <K, V> Sink<Entry<K, V>> remoteMap(
-            @Nonnull String mapName,
-            @Nonnull ClientConfig clientConfig,
-            boolean jsonKey,
-            boolean jsonValue
-    ) {
-        return remoteMap(mapName, clientConfig,
-                e -> jsonKey ? JsonUtil.hazelcastJsonValue(e.getKey()) : e.getKey(),
-                e -> jsonValue ? JsonUtil.hazelcastJsonValue(e.getValue()) : e.getValue());
-    }
-
-    /**
      * Returns a sink that uses the supplied functions to extract the key
      * and value with which to put to a Hazelcast {@code IMap} in a remote
      * cluster identified by the supplied {@code ClientConfig}.
@@ -236,7 +216,7 @@ public final class Sinks {
      * <p>
      * The default local parallelism for this sink is 1.
      *
-     * @since 4.1
+     * @since 4.2
      */
     @Nonnull
     public static <T, K, V> Sink<T> remoteMap(
