@@ -198,7 +198,7 @@ Maven snippet:
     <dependency>
         <groupId>com.hazelcast.jet</groupId>
         <artifactId>hazelcast-jet</artifactId>
-        <version>4.1-SNAPSHOT</version>
+        <version>4.2-SNAPSHOT</version>
     </dependency>
 </dependencies>
 ```
