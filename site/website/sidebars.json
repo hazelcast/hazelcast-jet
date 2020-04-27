@@ -38,7 +38,8 @@
       "how-tos/custom-batch-source",
       "how-tos/custom-stream-source",
       "how-tos/custom-sink",
-      "how-tos/xa"
+      "how-tos/xa",
+      "how-tos/grpc"
     ],
     "Operations Guide": [
       "operations/installation",
@@ -61,6 +62,7 @@
     ],
     "Design Documents": [
       "design-docs/index",
+      "design-docs/010-operator-framework",
       "design-docs/009-pulsar-connector",
       "design-docs/007-grpc-support",
       "design-docs/006-declarative-serialization",
