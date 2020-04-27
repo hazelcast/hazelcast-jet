@@ -179,7 +179,7 @@ public final class FileSourceBuilder {
      * CPU is available).
      *
      */
-    public <T> BatchSource<T> buildJson(Class<T> objectClass) {
+    public <T> BatchSource<T> buildJson(@Nonnull Class<T> objectClass) {
         String charsetName = charset.name();
         return build(path ->
                 new StreamJsonParser<>(new InputStreamReader(new FileInputStream(path.toFile()), charsetName), objectClass)
