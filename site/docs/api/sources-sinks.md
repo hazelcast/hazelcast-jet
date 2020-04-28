@@ -1210,8 +1210,8 @@ processing even with at-least-once sinks.
 |`S3Sinks.s3`|`hazelcast-jet-s3`|no|N/A|
 |`Sinks.cache`|`hazelcast-jet`|yes|at-least-once|
 |`Sinks.files`|`hazelcast-jet`|yes|exactly-once|
-|`Sinks.jdbc`|`hazelcast-jet`|yes|at-least-once|
-|`Sinks.jmsQueue`|`hazelcast-jet`|yes|at-least-once|
+|`Sinks.jdbc`|`hazelcast-jet`|yes|exactly-once|
+|`Sinks.jmsQueue`|`hazelcast-jet`|yes|exactly-once|
 |`Sinks.list`|`hazelcast-jet`|no|N/A|
 |`Sinks.map`|`hazelcast-jet`|yes|at-least-once|
 |`Sinks.observable`|`hazelcast-jet`|yes|at-least-once|
