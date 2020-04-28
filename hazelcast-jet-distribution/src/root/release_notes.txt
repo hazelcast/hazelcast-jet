@@ -5,7 +5,7 @@ issues at https://github.com/hazelcast/hazelcast-jet/issues/<issue number>.
 
 The label in the brackets refer to the respective module.
 
-** Hazelcast Jet 4.1 **
+** Hazelcast Jet 4.2 **
 
 1. New Features
 
