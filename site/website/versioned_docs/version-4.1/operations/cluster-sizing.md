@@ -5,98 +5,100 @@ id: version-4.1-cluster-sizing
 original_id: cluster-sizing
 ---
 
-Jet cluster performance depends on multiple factors including the
-pipeline design and user defined functions. Therefore, planning the Jet
-cluster remains a complex task that requires a knowledge of the Jet
-architecture and concepts. We will introduce a basic guideline that will
-help you size your cluster.
+Jet cluster performance depends on multiple factors, including pipeline
+design and user-defined functions. Therefore, planning the Jet
+cluster remains a complex task that requires the knowledge of Jet's
+architecture and concepts. Here we'll introduce you to a basic guideline
+that will help you size your cluster.
 
-We recommend always benchmark your setup before deploying it to
-production. See a sample cluster sizing with benchmark that can be used
-as a reference.
+We recommend you to always benchmark your setup before deploying it to
+production. We prepared an [example](#benchmarking-and-sizing-example)
+that you can use as a starting point.
 
 Please read the Hazelcast IMDG Deployment and Operations Guide when
-storing the data [inside Jet cluster](architecture/in-memory-storage.md#relationship-with-hazelcast-imdg)
+storing the data [inside the Jet
+cluster](architecture/in-memory-storage.md#relationship-with-hazelcast-imdg)
 setup. Your Jet cluster will run both data processing and data storage
 workloads so you should plan for it.
 
-## Sizing considerations
+## Factors that Affect Cluster Sizing
 
-To size the cluster for your use case, you must first be able to answer
-the following questions:
+To size the cluster for your use case, find the answers to these
+questions:
 
 * What are the throughput and latency requirements?
-* How many concurrent Jobs shall the cluster run?
+* How many concurrent Jobs will the cluster run?
 * Fault tolerance requirements
-* How long is the error window?
+* How long is the failure window of your hardware?
 * Shape of the pipelines (operations used, external systems involved)
 * Characteristics of the data to be processed such as partitioning, key
   distribution and record size
 * Source and sink capacity
 
-## Determining cluster size
+## Determine the Cluster Size
 
 Even a single Jet instance running on a [recommended
 server](#recommended-configuration) can host hundreds of jobs at a time.
-The clustered setup improves the  performance (throughput and latency)
-of hosted jobs and increases the  resilience.
+A clustered setup improves the performance (throughput and latency) of
+hosted jobs and increases resilience.
 
-A cluster with 3 members is a minimum count for fault tolerant
-operations. Generally, you need ```n+1``` cluster members to tolerate
-`n` member failures with the next higher odd number chosen for a split
-brain detection.
+To make fault tolerance possible, your cluster must have at least three
+members. Generally, you need `n+1` cluster members to tolerate `n`
+simultaneous member failures, and the number must be odd for split-brain
+detection to work.
 
-Jet can utilise hundreds of CPU cores efficiently by exploiting data and
-task parallelism. Adding more members to the cluster therefore helps
-with scaling the CPU-bound computations. Better performance is achieved
-by distributing the data partitions across the cluster to process them
-in parallel.
+Jet can use hundreds of CPU cores efficiently by exploiting data and
+task parallelism. When you add more members to the cluster, the capacity
+for CPU-bound computation rises. You can achieve better performance by
+distributing the data partitions across the cluster to process them in
+parallel.
 
 Benchmark your jobs in a clustered setup to see the differences in
 performance, see the [Sizing Example](#benchmarking-and-sizing-example).
 
-## Sizing for failures
+## Size for Failures
 
 Jet cluster is elastic to deal with failures and performance spikes.
 
-Elasticity is very useful feature to prevent over-provisioning. Cluster
-can be up-scaled when resource consumption reaches a watermark
-(autoscale isn't built in, connect Jet metrics to the resource manager)
-or before expected usage spike. Up-scales however temporarily increase
-the stress on the cluster as the cluster has regroup and [replay missed
-data](concepts/processing-guarantees.md).
+Elasticity is a very useful feature to prevent over-provisioning. The
+cluster can be scaled up when resource consumption reaches a watermark
+(autoscaling isn't built in, you should connect Jet metrics to a resource
+manager) or before expected usage spike. Scaling up, however, temporarily
+increases the stress on the cluster as it must regroup and [replay the
+data backlog](concepts/processing-guarantees.md).
 
-The failures reduce the cluster resources and increase the stress on
-remaining members until the failed member is fixed.  The data previously
-owned by the newly offline member is distributed among the remaining
-members. The cluster must catch up the missed data in the stream and
-keep up with the head of the stream with less CPU.
+When a cluster member fails, this reduces available resources and
+increases stress on the remaining members until recovery. The data
+previously owned by the failed member gets distributed among the
+surviving ones. The cluster must catch up with the data that has
+accumulated while it was adapting to the new size, and it must keep up
+with the head of the stream without the CPU capacity of the lost member.
 
-To tolerate the failure of one member, we recommend to size your cluster
-to operate with ```n-1``` members setup.
+To tolerate the failure of one member, we recommend sizing your cluster
+so it can operate well with `n-1` members.
 
-You can use Hazelcast [IMap and ICache Event
-Journal](https://docs.hazelcast.org/docs/jet/4.1/manual/#connector-imdg-journal)
+You can use the Hazelcast [IMap and ICache Event
+Journal](/docs/api/sources-sinks#imap) to ingest streaming data. Journal
+is a bounded in-memory structure with lossy behavior. If the jobs
+consuming the journal can't keep up, you will start losing data. The
+pace of the data producers and the capacity of the journal determine the
+length of the failure window of your application. If you can't afford
+losing data, consider increasing the journal size or ingest streaming
+data using persistent storage such as [Apache
+Kafka](/docs/api/sources-sinks#apache-kafka) or Apache Pulsar.
 
-to ingest the streaming data. Journal is an in-memory structure with a
-fixed capacity. If the jobs consuming the journal can't keep up there is
-a risk of data loss.  The pace of the data producers and the capacity of
-the Journal therefore determine the length of an error window of your
-application. If you can't afford losing data, consider increasing the
-journal size or ingest streaming data using a persistent storage such as
-[Apache Kafka](https://docs.hazelcast.org/docs/jet/4.1/manual/#kafka)
-or Apache Pulsar.
+Another approach to improve fault-tolerance is to separate the concerns
+of data storage and computation into two separate clusters. Use one
+cluster for IMaps and their event journals and another one for running
+Jet jobs. This way a single failure doesn't simultaneously hurt both
+the storage and the computation capacity.
 
-Another approach to increase the fault-tolerance is splitting the Jet
-jobs and the data storage. Streaming data can be stored in another Jet
-cluster to isolate failures and performance spikes.
+## Start Independent Clusters for Job Performance Isolation
 
-## Balancing cluster size with job count
-
-The jobs running in one cluster share the resources to maximise the HW
-utilisation. This is efficient for setups without a risk of [noisy
+The jobs running in one cluster share the resources to maximize hardware
+utilization. This is efficient for setups without the risk of [noisy
 neighbours](https://searchcloudcomputing.techtarget.com/definition/noisy-neighbor-cloud-computing-performance)
- such as:
+such as:
 
 * Clusters hosting many short-living jobs
 * Clusters hosting jobs with a predictable performance
@@ -104,10 +106,10 @@ neighbours](https://searchcloudcomputing.techtarget.com/definition/noisy-neighbo
 
 For stronger resource isolation (multi-tenant environments, strict
 SLAs), consider starting multiple smaller clusters with resources
-allocated on an OS level or using a resource manager such as
+allocated at the OS level or using a resource manager such as
 [Kubernetes](operations/kubernetes.md).
 
-## Hardware Planning
+## Uniform Hardware
 
 Jet is designed to run efficiently on homogeneous clusters. All JVM
 processes that participate in the cluster should have equal CPU, memory
@@ -116,13 +118,13 @@ of the whole cluster.
 
 ### Minimal Configuration
 
-Jet is a lightweight framework and is reported to run on devices such
-as Raspberry Pi Zero (1GHz single-core CPU, 512MB RAM).
+Jet is a lightweight framework and is reported to run well on devices
+such as Raspberry Pi Zero (1GHz single-core CPU, 512MB RAM).
 
 ### Recommended Configuration
 
-As a starting point for a data-intensive operations consider machines
-such as [c5.2xlarge](https://aws.amazon.com/ec2/instance-types/c5/)
+As a starting point for data-intensive operations, consider machines
+such as AWS [c5.2xlarge](https://aws.amazon.com/ec2/instance-types/c5/)
 with:
 
 * 8 CPU cores
@@ -131,7 +133,7 @@ with:
 
 ### CPU
 
-Jet can utilise hundreds of CPU cores efficiently by exploiting data and
+Jet can use hundreds of CPU cores efficiently by exploiting data and
 task parallelism. Adding more CPU can therefore help with scaling the
 CPU-bound computations. Read about the [Execution
 model](architecture/execution-engine.md) to understand how Jet makes the
@@ -217,11 +219,11 @@ performance.
 
 Consider using more performant disks when:
 
-* You use the cluster file system as a source or sink - faster disks
- improve the performance
-* Using disk persistence for [Lossless Cluster Restart](https://docs.hazelcast.org/docs/jet/4.1/manual/#configure-lossless-cluster-restart-enterprise-only)
+* using the cluster file system as a source or sink &mdash; faster disks
+  improve the performance
+* using disk persistence for [Lossless Cluster Restart](/docs/enterprise/lossless-restart)
 
-## Data flow
+## Data Flow
 
 Consider the capacity of data sources and sinks when planning the Jet
 cluster.
@@ -231,8 +233,8 @@ reads the data from the sources and writes the results to the sinks. The
 capacity of all components of the data pipeline must be balanced to
 avoid bottlenecks.
 
-For slow sinks, Jet applies the back pressure and slows down the
-processing and source data consumption. The data sources should be
+If a data sink is slow, Jet applies backpressure all the way to the
+source, slowing down data consumption. The data sources should be
 designed to participate by reducing the pace of data production or by
 buffering the data.
 
@@ -248,35 +250,35 @@ production data, notably:
 * Partitioning of the input data
 * Key distribution and count
 
-Jet splits the data across the cluster to process it in parallel. It
-builds on the prerequisite of balanced partitions to perform well.
-Imbalanced partitions may create a hot spot in your cluster. The
-partitioning is determined by the data source and by the grouping
-keys used in the Jet application.
+Jet splits the data across the cluster to process it in parallel. It is
+designed to perform well under the assumption of balanced partitions.
+Imbalanced partitions may create a hot spot in your cluster. Factors
+that affect partitioning are the data source and the grouping keys
+used in the Jet application.
 
 A frequent source of the partition imbalance are special cases: in a
 payment processing application, there might be a small number of
-accounts with very high  activity. Imagine a retail company account with
-thousands of payments per  minute vs personal accounts with just few
-payments in a day. Using account as a grouping key would lead to
-imbalanced partitions. Consider special cases when designing your
-pipelines and the testing data.
+accounts with very high activity. Imagine a retail company account with
+thousands of payments per minute vs personal accounts with just a few
+payments in a day. Using account as a grouping key leads to imbalanced
+partitions. Consider such special cases when designing your pipelines
+and the test datasets.
 
 ## Benchmarking and Sizing Example
 
 ### Requirements
 
 The sample application is a [real-time trade
-analyser](https://github.com/hazelcast/big-data-benchmark/tree/master/trade-monitor/jet-trade-monitor).
-Every second, it counts the trades completed over the previous minute
-for each trading symbol. Jet is also used to ingest and buffer the
-stream of trades. So, the remote trading applications write trade events
-to an IMap data structure in Jet cluster. The analytical job reads the
-IMap Event Journal and writes processed results to a rolling file.
+analyzer](https://github.com/hazelcast/big-data-benchmark/tree/master/trade-monitor/jet-trade-monitor).
+Every second it counts the trades completed over the previous minute for
+each trading symbol. Jet is also used to ingest and buffer the stream of
+trades. The remote trading applications write trade events to an IMap
+data structure in the Jet cluster. The analytical job reads the IMap
+Event Journal and writes the processed results to a rolling file.
 
 The job is configured to be
-[fault-tolerant](concepts/processing-guarantees.md) with exactly-once
-processing guarantee.
+[fault-tolerant](concepts/processing-guarantees.md) with the
+exactly-once processing guarantee.
 
 The cluster is expected to process 50k trade events per second with 10k
 trade symbols (distinct keys).
@@ -285,7 +287,7 @@ trade symbols (distinct keys).
 
 The
 [benchmark](https://hazelcast.com/resources/jet-3-0-streaming-benchmark/)
-generates the expected data stream (50k events / second,  10k distinct
+generates the expected data stream (50k events / second, 10k distinct
 keys) and measures how the cluster size affects the processing latency.
 
 We benchmarked this job on a cluster of 3, 5 and 9 nodes. We started
@@ -342,9 +344,9 @@ machines, each of 8 CPU, 16 GB RAM, 10 Gbps network.
 
 The [Event
 Journal](https://docs.hazelcast.org/docs/4.0.1/manual/html-single/index.html#event-journal)
-capacity was set to 1.5 million items. With a input data production rate
-of 50k events each second, the data are kept for 30 seconds before being
-overwritten. The job snapshot frequency was set to 1 second.
+capacity was set to 1.5 million items. With an input data production
+rate of 50k events per second, the data is kept for 30 seconds before
+being overwritten. The job snapshot frequency was set to 1 second.
 
 The job is restarted from the last snapshot if a cluster member fails.
 In our test, the cluster restarted the processing in under 3 seconds
