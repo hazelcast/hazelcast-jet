@@ -16,9 +16,12 @@
 
 package com.hazelcast.jet.json;
 
+import com.fasterxml.jackson.jr.ob.JSON;
 import com.hazelcast.core.HazelcastJsonValue;
 
 import java.util.Map;
+
+import static com.hazelcast.jet.impl.util.Util.uncheckCall;
 
 public final class JsonUtil {
 
@@ -32,7 +35,6 @@ public final class JsonUtil {
     public static <T> HazelcastJsonValue hazelcastJsonValue(T object) {
         return new HazelcastJsonValue(object.toString());
     }
-
 
     /**
      * Creates a {@link HazelcastJsonValue} by converting the key of the given
@@ -50,4 +52,17 @@ public final class JsonUtil {
         return new HazelcastJsonValue(entry.getValue().toString());
     }
 
+    /**
+     * Converts a JSON string to a object of given type.
+     */
+    public static <T> T map(Class<T> type, String jsonString) {
+        return uncheckCall(() -> JSON.std.beanFrom(type, jsonString));
+    }
+
+    /**
+     * Creates a JSON string for the given object.
+     */
+    public static <T> String asString(T object) {
+        return uncheckCall(() -> JSON.std.asString(object));
+    }
 }

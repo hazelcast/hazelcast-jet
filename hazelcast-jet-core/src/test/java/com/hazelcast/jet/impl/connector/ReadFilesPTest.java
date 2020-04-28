@@ -32,6 +32,7 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.stream.IntStream;
 
 import static com.hazelcast.jet.Util.entry;
@@ -42,7 +43,7 @@ public class ReadFilesPTest extends SimpleTestInClusterSupport {
 
     private File directory;
     private IList<Entry<String, String>> list;
-    private IList listJson;
+    private IList<TestPerson> listJson;
 
     @BeforeClass
     public static void beforeClass() {
@@ -119,7 +120,7 @@ public class ReadFilesPTest extends SimpleTestInClusterSupport {
 
     @Test
     public void testJsonFiles_when_asObject_thenObjects() throws IOException {
-        Pipeline p = pipelineJson(TestPerson.class);
+        Pipeline p = pipelineJson();
 
         File file1 = new File(directory, randomName());
         appendToFile(file1, "{\"name\": \"hello world\", \"age\": 5, \"status\": true}",
@@ -137,26 +138,6 @@ public class ReadFilesPTest extends SimpleTestInClusterSupport {
         finishDirectory(file1, file2);
     }
 
-    @Test
-    public void testJsonFiles_when_asArray_thenObjectArrays() throws IOException {
-        Pipeline p = pipelineJson(TestPerson[].class);
-
-        File file1 = new File(directory, randomName());
-        appendToFile(file1, "[{\"name\": \"hello world\", \"age\": 5}, {\"name\": \"hello venus\"}]",
-                "[{\"name\": \"hello world\", \"age\": 5}, {\"name\": \"hello venus\"}]");
-        File file2 = new File(directory, randomName());
-        appendToFile(file2, "[{\"name\": \"hello jupiter\", \"age\": 8}, {\"name\": \"hello mars\"}]",
-                "[{\"name\": \"hello jupiter\", \"age\": 8}, {\"name\": \"hello mars\"}]");
-
-        instance().newJob(p).join();
-
-        assertEquals(4, listJson.size());
-        TestPerson[] testPerson = (TestPerson[]) listJson.get(0);
-
-        assertTrue(testPerson[0].name.startsWith("hello"));
-        finishDirectory(file1, file2);
-    }
-
     private Pipeline pipeline(String glob) {
         Pipeline p = Pipeline.create();
         p.readFrom(Sources.filesBuilder(directory.getPath())
@@ -167,10 +148,10 @@ public class ReadFilesPTest extends SimpleTestInClusterSupport {
         return p;
     }
 
-    private Pipeline pipelineJson(Class<?> objectClass) {
+    private Pipeline pipelineJson() {
         Pipeline p = Pipeline.create();
         p.readFrom(Sources.filesBuilder(directory.getPath())
-                          .buildJson(objectClass))
+                          .buildJson(TestPerson.class))
          .writeTo(Sinks.list(listJson));
 
         return p;
@@ -183,9 +164,62 @@ public class ReadFilesPTest extends SimpleTestInClusterSupport {
         assertTrue(directory.delete());
     }
 
-    static class TestPerson implements Serializable {
-        public String name;
-        public int age;
-        public boolean status;
+    public static class TestPerson implements Serializable {
+
+        private String name;
+        private int age;
+        private boolean status;
+
+        public TestPerson() {
+        }
+
+        public TestPerson(String name, int age, boolean status) {
+            this.name = name;
+            this.age = age;
+            this.status = status;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+        }
+
+        public int getAge() {
+            return age;
+        }
+
+        public void setAge(int age) {
+            this.age = age;
+        }
+
+        public boolean isStatus() {
+            return status;
+        }
+
+        public void setStatus(boolean status) {
+            this.status = status;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
+            TestPerson that = (TestPerson) o;
+            return age == that.age &&
+                    status == that.status &&
+                    Objects.equals(name, that.name);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(name, age, status);
+        }
     }
 }

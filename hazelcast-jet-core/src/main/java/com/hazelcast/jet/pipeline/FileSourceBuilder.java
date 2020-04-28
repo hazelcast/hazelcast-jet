@@ -16,10 +16,11 @@
 
 package com.hazelcast.jet.pipeline;
 
+import com.fasterxml.jackson.jr.ob.JSON;
+import com.fasterxml.jackson.jr.ob.ValueIterator;
 import com.hazelcast.function.BiFunctionEx;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.core.processor.SourceProcessors;
-import com.hazelcast.jet.impl.json.StreamJsonParser;
 
 import javax.annotation.Nonnull;
 import java.io.File;
@@ -28,7 +29,10 @@ import java.io.InputStreamReader;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Spliterator;
+import java.util.Spliterators;
 import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 import static com.hazelcast.jet.pipeline.Sources.batchFromProcessor;
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -166,8 +170,7 @@ public final class FileSourceBuilder {
 
     /**
      * Builds a JSON file {@link BatchSource} with supplied components. The
-     * source expects a stream of JSON objects or arrays as the content of the
-     * file.
+     * source expects a stream of JSON objects as the content of the file.
      <p>
      * The source does not save any state to snapshot. If the job is restarted,
      * it will re-emit all entries.
@@ -179,11 +182,15 @@ public final class FileSourceBuilder {
      * CPU is available).
      *
      */
-    public <T> BatchSource<T> buildJson(@Nonnull Class<T> objectClass) {
+    public <T> BatchSource<T> buildJson(@Nonnull Class<T> type) {
         String charsetName = charset.name();
-        return build(path ->
-                new StreamJsonParser<>(new InputStreamReader(new FileInputStream(path.toFile()), charsetName), objectClass)
-                        .stream());
+        return build(path -> {
+            InputStreamReader reader = new InputStreamReader(new FileInputStream(path.toFile()), charsetName);
+            ValueIterator<T> valueIterator = JSON.std.beanSequenceFrom(type, reader);
+            Spliterator<T> spliterator = Spliterators
+                    .spliteratorUnknownSize(valueIterator, Spliterator.ORDERED | Spliterator.NONNULL);
+            return StreamSupport.stream(spliterator, false);
+        });
     }
 
     /**
