@@ -38,10 +38,11 @@ Thank you for your valuable contributions!
 
 [jms] Exactly-once guarantee for JMS sink (#1813)
 [jdbc] Exactly-once guarantee for JDBC sink (#1813)
-[core] JobConfig.addClass() automatically adds nested classes to the job (#1932, #2077)
+[core] JobConfig.addClass() automatically adds nested classes to the job (#1932)
+[core] JobConfig.addPackage() adds a whole Java package to the job (#1932, #2077)
 [core] Job-scoped serializer deployment (#2020, #2038, #2039, #2043, #2071, #2075, #2082, #2190)
-[pipeline-api] [007] Support gRPC for mapUsingService (#2095, #2185)
 [core] [006] Protobuf serializer support (#2100)
+[pipeline-api] [007] Support gRPC for mapUsingService (#2095, #2185)
 
 2. Enhancements
 
@@ -58,7 +59,7 @@ Thank you for your valuable contributions!
 
 3. Fixes
 
-[core] Avoid thread interruption when terminating (#1971)
+[core] Don't send the interrupt signal to blocking threads when a job is terminating (#1971)
 [core] Consistently prefer YAML over XML config files when both present (#2033)
 
 4. Breaking Changes
