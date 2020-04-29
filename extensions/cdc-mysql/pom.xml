@@ -46,7 +46,7 @@
                 <configuration>
                     <archive>
                         <manifestEntries>
-                            <Automatic-Module-Name>com.hazelcast.jet.cdc-mysql</Automatic-Module-Name>
+                            <Automatic-Module-Name>com.hazelcast.jet.cdc.mysql</Automatic-Module-Name>
                         </manifestEntries>
                     </archive>
                 </configuration>

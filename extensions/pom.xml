@@ -34,7 +34,7 @@
 
     <modules>
         <module>avro</module>
-        <module>cdc-core</module>
+        <module>cdc-debezium</module>
         <module>cdc-mysql</module>
         <module>grpc</module>
         <module>hadoop</module>
