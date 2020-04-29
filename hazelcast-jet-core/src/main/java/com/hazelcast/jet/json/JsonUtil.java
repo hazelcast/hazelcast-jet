@@ -17,8 +17,10 @@
 package com.hazelcast.jet.json;
 
 import com.fasterxml.jackson.jr.ob.JSON;
+import com.fasterxml.jackson.jr.ob.JSON.Feature;
 import com.hazelcast.core.HazelcastJsonValue;
 
+import java.util.List;
 import java.util.Map;
 
 import static com.hazelcast.jet.impl.util.Util.uncheckCall;
@@ -55,8 +57,60 @@ public final class JsonUtil {
     /**
      * Converts a JSON string to a object of given type.
      */
-    public static <T> T map(Class<T> type, String jsonString) {
+    public static <T> T parse(Class<T> type, String jsonString) {
         return uncheckCall(() -> JSON.std.beanFrom(type, jsonString));
+    }
+
+    /**
+     * Converts a JSON string to a {@link Map}.
+     */
+    public static Map<String, Object> parse(String jsonString) {
+        return uncheckCall(() -> JSON.std.with(Feature.READ_ONLY).mapFrom(jsonString));
+    }
+
+    /**
+     * Extracts a string value from given JSON string.
+     */
+    public static String getString(String jsonString, String key) {
+        return (String) parse(jsonString).get(key);
+    }
+
+    /**
+     * Extracts an integer value from given JSON string.
+     */
+    public static int getInt(String jsonString, String key) {
+        return (int) parse(jsonString).get(key);
+    }
+
+    /**
+     * Extracts a boolean value from given JSON string.
+     */
+    public static boolean getBoolean(String jsonString, String key) {
+        return (boolean) parse(jsonString).get(key);
+    }
+
+    /**
+     * Extracts an array value as a {@link List} from given JSON string.
+     */
+    public static List<Object> getList(String jsonString, String key) {
+        return (List) parse(jsonString).get(key);
+    }
+
+    /**
+     * Extracts an array value as a {@link Object Object[]} from given JSON string.
+     */
+    public static Object[] getArray(String jsonString, String key) {
+        Map<String, Object> map = uncheckCall(() -> JSON.std.with(Feature.READ_ONLY)
+                                                            .with(Feature.READ_JSON_ARRAYS_AS_JAVA_ARRAYS)
+                                                            .mapFrom(jsonString));
+        return (Object[]) map.get(key);
+    }
+
+    /**
+     * Extracts an object as a {@link Map} from given JSON string.
+     */
+    public static Map<String, Object> getObject(String jsonString, String key) {
+        return (Map<String, Object>) parse(jsonString).get(key);
     }
 
     /**
@@ -65,4 +119,5 @@ public final class JsonUtil {
     public static <T> String asString(T object) {
         return uncheckCall(() -> JSON.std.asString(object));
     }
+
 }
