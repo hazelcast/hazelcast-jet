@@ -25,7 +25,7 @@ import com.hazelcast.jet.pipeline.StreamSource;
  * Contains factory methods for creating change data capture sources
  * based on MySQL databases.
  *
- * @since 4.1
+ * @since 4.2
  */
 @EvolvingApi
 public final class MySqlCdcSources {

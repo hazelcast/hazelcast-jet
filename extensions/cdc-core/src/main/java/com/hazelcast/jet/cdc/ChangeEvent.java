@@ -48,7 +48,7 @@ import javax.annotation.Nonnull;
  * because their operation will be {@link Operation#SYNC} instead of
  * {@link Operation#INSERT} (one notable exception being MySQL).
  *
- * @since 4.1
+ * @since 4.2
  */
 @EvolvingApi
 public interface ChangeEvent {

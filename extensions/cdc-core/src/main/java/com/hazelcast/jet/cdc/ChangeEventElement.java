@@ -29,7 +29,7 @@ import java.util.Optional;
  * expression. Contains various methods for retrieving component values
  * or for mapping itself to data objects.
  *
- * @since 4.1
+ * @since 4.2
  */
 @EvolvingApi
 public interface ChangeEventElement {

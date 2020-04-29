@@ -29,7 +29,7 @@ import java.util.Objects;
  * database changelog) and "unspecified" which is used for a few special
  * CDC events, like heartbeats.
  *
- * @since 4.1
+ * @since 4.2
  */
 @EvolvingApi
 public enum Operation {
