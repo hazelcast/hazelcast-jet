@@ -24,11 +24,11 @@ import java.util.Set;
 
 public class PropertyRules {
 
-    private final Set<String> mandatories = new HashSet<>();
+    private final Set<String> required = new HashSet<>();
     private final Map<String, String> excludes = new HashMap<>();
 
-    public PropertyRules mandatory(String property) {
-        mandatories.add(property);
+    public PropertyRules required(String property) {
+        required.add(property);
         return this;
     }
 
@@ -38,7 +38,7 @@ public class PropertyRules {
     }
 
     public void check(Properties properties) {
-        for (String mandatory : mandatories) {
+        for (String mandatory : required) {
             if (!properties.containsKey(mandatory)) {
                 throw new IllegalStateException(mandatory + " must be specified");
             }

@@ -56,10 +56,10 @@ public final class MySqlCdcSources {
     public static final class Builder extends AbstractSourceBuilder<Builder> {
 
         private static final PropertyRules RULES = new PropertyRules()
-                .mandatory("database.hostname")
-                .mandatory("database.user")
-                .mandatory("database.password")
-                .mandatory("database.server.name")
+                .required("database.hostname")
+                .required("database.user")
+                .required("database.password")
+                .required("database.server.name")
                 .exclusive("database.whitelist", "database.blacklist")
                 .exclusive("table.whitelist", "table.blacklist");
 
