@@ -4,19 +4,19 @@
 
 This document keeps the history of Hazelcast Jet releases. We try to
 enumerate all the non-trivial changes done to the product. The changes
-are catogerized into:
+are categorized into the following:
 
     1. New features
     2. Enhancements to the existing features
     3. Fixes of bugs and other problems
-    4. Breaking changes: those that result either in compile errors or changes
-       in runtime behavior
+    4. Breaking changes (those that result in either compile errors or changes
+       in runtime behavior)
 
 The items in the lists follow this format:
 
 [module] Description [PR_or_issue_number]
 
-For major features that have an associated design focument, [TDD_number]
+For major features that have an associated design document, [TDD_number]
 appears at the start of the description.
 
 To expand an issue number into a full GitHub link, use this template:
