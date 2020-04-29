@@ -23,6 +23,7 @@ import com.hazelcast.jet.pipeline.SourceBuilder;
 import com.hazelcast.jet.pipeline.StreamSource;
 
 import javax.annotation.Nonnull;
+import java.util.Objects;
 import java.util.Properties;
 
 public abstract class AbstractSourceBuilder<SELF extends AbstractSourceBuilder<SELF>> {
@@ -37,6 +38,9 @@ public abstract class AbstractSourceBuilder<SELF extends AbstractSourceBuilder<S
      *                       hardcoded for each type of DB
      */
     protected AbstractSourceBuilder(String name, String connectorClass) {
+        Objects.requireNonNull(name, "name");
+        Objects.requireNonNull(connectorClass, "connectorClass");
+
         properties.put("name", name);
         properties.put("connector.class", connectorClass);
         properties.put("database.history", HazelcastListDatabaseHistory.class.getName());
@@ -52,12 +56,15 @@ public abstract class AbstractSourceBuilder<SELF extends AbstractSourceBuilder<S
      * @param value the value of the property to set
      * @return the builder itself
      */
-    public SELF setCustomProperty(String key, String value) {
-        properties.put(key, value);
-        return (SELF) this;
+    @Nonnull
+    public SELF setCustomProperty(@Nonnull String key, @Nonnull String value) {
+        return setProperty(key, value);
     }
 
     protected SELF setProperty(String key, String value) {
+        Objects.requireNonNull(key, "key");
+        Objects.requireNonNull(value, "value");
+
         properties.put(key, value);
         return (SELF) this;
     }
@@ -71,6 +78,10 @@ public abstract class AbstractSourceBuilder<SELF extends AbstractSourceBuilder<S
     }
 
     protected SELF setProperty(String key, String... values) {
+        Objects.requireNonNull(values, "values");
+        for (int i = 0; i < values.length; i++) {
+            Objects.requireNonNull(values[i], "values[" + i + "]");
+        }
         return setProperty(key, String.join(",", values));
     }
 

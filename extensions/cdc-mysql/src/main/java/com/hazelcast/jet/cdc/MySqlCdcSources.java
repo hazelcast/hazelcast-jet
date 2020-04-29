@@ -21,6 +21,8 @@ import com.hazelcast.jet.cdc.impl.AbstractSourceBuilder;
 import com.hazelcast.jet.cdc.impl.PropertyRules;
 import com.hazelcast.jet.pipeline.StreamSource;
 
+import javax.annotation.Nonnull;
+
 /**
  * Contains factory methods for creating change data capture sources
  * based on MySQL databases.
@@ -42,7 +44,8 @@ public final class MySqlCdcSources {
      * @return builder that can be used to set source properties and also
      * to construct the source once configuration is done
      */
-    public static Builder mysql(String name) {
+    @Nonnull
+    public static Builder mysql(@Nonnull String name) {
         return new Builder(name);
     }
 
@@ -74,7 +77,8 @@ public final class MySqlCdcSources {
          * IP address or hostname of the database server, has to be
          * specified.
          */
-        public Builder setDatabaseAddress(String address) {
+        @Nonnull
+        public Builder setDatabaseAddress(@Nonnull String address) {
             return setProperty("database.hostname", address);
         }
 
@@ -82,6 +86,7 @@ public final class MySqlCdcSources {
          * Optional port number of the database server, if unspecified
          * defaults to the database specific default port (3306).
          */
+        @Nonnull
         public Builder setDatabasePort(int port) {
             return setProperty("database.port", Integer.toString(port));
         }
@@ -90,7 +95,8 @@ public final class MySqlCdcSources {
          * Database user for connecting to the database server. Has to
          * be specified.
          */
-        public Builder setDatabaseUser(String user) {
+        @Nonnull
+        public Builder setDatabaseUser(@Nonnull String user) {
             return setProperty("database.user", user);
         }
 
@@ -98,7 +104,8 @@ public final class MySqlCdcSources {
          * Database user password for connecting to the database server.
          * Has to be specified.
          */
-        public Builder setDatabasePassword(String password) {
+        @Nonnull
+        public Builder setDatabasePassword(@Nonnull String password) {
             return setProperty("database.password", password);
         }
 
@@ -109,7 +116,8 @@ public final class MySqlCdcSources {
          * Only alphanumeric characters and underscores should be used.
          * Has to be specified.
          */
-        public Builder setClusterName(String cluster) {
+        @Nonnull
+        public Builder setClusterName(@Nonnull String cluster) {
             return setProperty("database.server.name", cluster);
         }
 
@@ -121,6 +129,7 @@ public final class MySqlCdcSources {
          * binlog. By default, a random number is generated between
          * 5400 and 6400, though we recommend setting an explicit value.
          */
+        @Nonnull
         public Builder setDatabaseClientId(int clientId) {
             return setProperty("database.server.id", clientId);
         }
@@ -132,7 +141,8 @@ public final class MySqlCdcSources {
          * will be monitored. May not be used with
          * {@link #setDatabaseBlacklist(String...) database blacklist}.
          */
-        public Builder setDatabaseWhitelist(String... dbNameRegExps) {
+        @Nonnull
+        public Builder setDatabaseWhitelist(@Nonnull String... dbNameRegExps) {
             return setProperty("database.whitelist", dbNameRegExps);
         }
 
@@ -142,7 +152,8 @@ public final class MySqlCdcSources {
          * the blacklist will be monitored. May not be used with
          * {@link #setDatabaseWhitelist(String...) database whitelist}.
          */
-        public Builder setDatabaseBlacklist(String... dbNameRegExps) {
+        @Nonnull
+        public Builder setDatabaseBlacklist(@Nonnull String... dbNameRegExps) {
             return setProperty("database.blacklist", dbNameRegExps);
         }
 
@@ -155,7 +166,8 @@ public final class MySqlCdcSources {
          * in each monitored database. May not be used with
          * {@link #setTableBlacklist(String...) table blacklist}.
          */
-        public Builder setTableWhitelist(String... tableNameRegExps) {
+        @Nonnull
+        public Builder setTableWhitelist(@Nonnull String... tableNameRegExps) {
             return setProperty("table.whitelist", tableNameRegExps);
         }
 
@@ -167,7 +179,8 @@ public final class MySqlCdcSources {
          * not be used with
          * {@link #setTableWhitelist(String...) table whitelist}.
          */
-        public Builder setTableBlacklist(String... tableNameRegExps) {
+        @Nonnull
+        public Builder setTableBlacklist(@Nonnull String... tableNameRegExps) {
             return setProperty("table.blacklist", tableNameRegExps);
         }
 
@@ -178,13 +191,15 @@ public final class MySqlCdcSources {
          * form <i>databaseName.tableName.columnName</i>, or
          * <i>databaseName.schemaName.tableName.columnName</i>.
          */
-        public Builder setColumnBlacklist(String... columnNameRegExps) {
+        @Nonnull
+        public Builder setColumnBlacklist(@Nonnull String... columnNameRegExps) {
             return setProperty("column.blacklist", columnNameRegExps);
         }
 
         /**
          * Returns an actual source based on the properties set so far.
          */
+        @Nonnull
         public StreamSource<ChangeEvent> build() {
             RULES.check(properties);
             return connect(properties);

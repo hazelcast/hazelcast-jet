@@ -20,6 +20,8 @@ import com.hazelcast.jet.annotation.EvolvingApi;
 import com.hazelcast.jet.cdc.impl.AbstractSourceBuilder;
 import com.hazelcast.jet.pipeline.StreamSource;
 
+import javax.annotation.Nonnull;
+
 /**
  * Contains factory methods for creating change data capture sources
  *
@@ -40,7 +42,8 @@ public final class DebeziumCdcSources {
      * @return builder that can be used to set source properties and also
      * to construct the source once configuration is done
      */
-    public static Builder debezium(String name, String connectorClass) {
+    @Nonnull
+    public static Builder debezium(@Nonnull String name, @Nonnull String connectorClass) {
         return new Builder(name, connectorClass);
     }
 
@@ -61,6 +64,7 @@ public final class DebeziumCdcSources {
         /**
          * Returns an actual source based on the properties set so far.
          */
+        @Nonnull
         public StreamSource<ChangeEvent> build() {
             return connect(properties);
         }
