@@ -83,13 +83,13 @@ public abstract class AbstractTransform implements Transform {
     }
 
     @Override
-    public void setRebalanceKeyForInput(int ordinal, FunctionEx<?, ?> keyFn) {
-        upstreamPartitionKeyFns[ordinal] = keyFn;
+    public boolean shouldRebalanceInput(int ordinal) {
+        return upstreamRebalancingFlags[ordinal];
     }
 
     @Override
-    public boolean shouldRebalanceInput(int ordinal) {
-        return upstreamRebalancingFlags[ordinal];
+    public void setPartitionKeyFnForInput(int ordinal, FunctionEx<?, ?> keyFn) {
+        upstreamPartitionKeyFns[ordinal] = keyFn;
     }
 
     @Override

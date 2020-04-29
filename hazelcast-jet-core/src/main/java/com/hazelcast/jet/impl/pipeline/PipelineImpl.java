@@ -117,7 +117,7 @@ public class PipelineImpl implements Pipeline {
         for (int i = 0; i < upstreamTransforms.size(); i++) {
             ComputeStageImplBase us = stages.get(i);
             transform.setRebalanceInput(i, us.isRebalanceOutput);
-            transform.setRebalanceKeyForInput(i, us.rebalanceKeyFn);
+            transform.setPartitionKeyFnForInput(i, us.rebalanceKeyFn);
         }
         upstreamTransforms.forEach(u -> adjacencyMap.get(u).add(transform));
         register(transform);
