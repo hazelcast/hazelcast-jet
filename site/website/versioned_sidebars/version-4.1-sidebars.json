@@ -13,8 +13,7 @@
       "version-4.1-tutorials/map-join",
       "version-4.1-tutorials/windowing",
       "version-4.1-tutorials/python",
-      "version-4.1-tutorials/spring-boot",
-      "version-4.1-tutorials/pulsar"
+      "version-4.1-tutorials/spring-boot"
     ],
     "Concepts": [
       "version-4.1-concepts/dag",
@@ -63,7 +62,6 @@
     "Design Documents": [
       "version-4.1-design-docs/index",
       "version-4.1-design-docs/010-operator-framework",
-      "version-4.1-design-docs/009-pulsar-connector",
       "version-4.1-design-docs/007-grpc-support",
       "version-4.1-design-docs/006-declarative-serialization",
       "version-4.1-design-docs/004-spring-boot-starter",
