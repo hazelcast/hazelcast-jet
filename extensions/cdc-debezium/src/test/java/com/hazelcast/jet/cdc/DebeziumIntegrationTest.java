@@ -39,7 +39,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.testcontainers.containers.MySQLContainer.MYSQL_PORT;
 
-public class GenericDebeziumIntegrationTest extends AbstractIntegrationTest {
+public class DebeziumIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     public void mysql() throws Exception {
@@ -78,7 +78,7 @@ public class GenericDebeziumIntegrationTest extends AbstractIntegrationTest {
             pipeline.readFrom(source)
                     .withNativeTimestamps(0)
                     .<ChangeEvent>customTransform("filter_timestamps", filterTimestampsProcessorSupplier())
-                    .groupingKey(event -> event.key().getInteger("id").orElse(0))
+                    .groupingKey(event -> (Integer) event.key().asMap().get("id"))
                     .mapStateful(
                             LongAccumulator::new,
                             (accumulator, customerId, event) -> {
@@ -86,14 +86,14 @@ public class GenericDebeziumIntegrationTest extends AbstractIntegrationTest {
                                 accumulator.add(1);
                                 Operation operation = event.operation();
                                 ChangeEventElement eventValue = event.value();
-                                Customer customer = eventValue.mapToObj(Customer.class);
+                                Customer customer = eventValue.asPojo(Customer.class);
                                 return customerId + "/" + count + ":" + operation + ":" + customer;
                             })
                     .setLocalParallelism(1)
                     .writeTo(assertCollectedEventually(30, assertListFn(expectedEvents)));
 
             // when
-            JetInstance jet = createJetMember();
+            JetInstance jet = createJetMembers(2)[0];
             Job job = jet.newJob(pipeline);
             JetTestSupport.assertJobStatusEventually(job, JobStatus.RUNNING);
 

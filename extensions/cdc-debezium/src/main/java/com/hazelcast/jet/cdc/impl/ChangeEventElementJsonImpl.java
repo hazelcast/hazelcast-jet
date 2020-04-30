@@ -16,7 +16,8 @@
 
 package com.hazelcast.jet.cdc.impl;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.jr.annotationsupport.JacksonAnnotationExtension;
+import com.fasterxml.jackson.jr.ob.JSON;
 import com.hazelcast.jet.cdc.ChangeEventElement;
 import com.hazelcast.jet.cdc.ParsingException;
 import com.hazelcast.nio.ObjectDataInput;
@@ -24,104 +25,49 @@ import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import java.io.IOException;
-import java.util.List;
-import java.util.Optional;
+import java.util.Map;
+import java.util.Objects;
 
 class ChangeEventElementJsonImpl implements ChangeEventElement, IdentifiedDataSerializable {
 
+    private static final JSON J = JSON.builder().register(JacksonAnnotationExtension.std).build();
+
     private String json;
-    private JsonNode node;
+    private Map<String, Object> content;
 
     ChangeEventElementJsonImpl() { //needed for deserialization
     }
 
     ChangeEventElementJsonImpl(@Nonnull String json) {
-        this(null, json);
+        this.json = Objects.requireNonNull(json);
     }
 
-    ChangeEventElementJsonImpl(@Nonnull JsonNode node) {
-        this(node, null);
-    }
-
-    private ChangeEventElementJsonImpl(
-            @Nullable JsonNode node,
-            @Nullable String json) {
-        if (node == null && json == null) {
-            throw new IllegalStateException("Need some input");
+    @Override
+    @Nonnull
+    public <T> T asPojo(Class<T> clazz) throws ParsingException {
+        try {
+            return J.beanFrom(clazz, json);
+        } catch (IOException e) {
+            throw new ParsingException(e.getMessage(), e);
         }
-        this.json = json;
-        this.node = node;
     }
 
     @Override
-    @Nonnull
-    public <T> T mapToObj(Class<T> clazz) throws ParsingException {
-        return JsonParsing.mapToObj(node(), clazz);
-    }
-
-    @Override
-    @Nonnull
-    public Optional<ChangeEventElement> getChild(String key) throws ParsingException {
-        return JsonParsing.getChild(node(), key).map(ChangeEventElementJsonImpl::new);
-    }
-
-    @Override
-    @Nonnull
-    public Optional<Object> getRaw(String key) throws ParsingException {
-        return JsonParsing.getObject(node(), key);
-    }
-
-    @Override
-    @Nonnull
-    public Optional<String> getString(String key) throws ParsingException {
-        return JsonParsing.getString(node(), key);
-    }
-
-    @Override
-    @Nonnull
-    public Optional<Integer> getInteger(String key) throws ParsingException {
-        return JsonParsing.getInteger(node(), key);
-    }
-
-    @Override
-    @Nonnull
-    public Optional<Long> getLong(String key) throws ParsingException {
-        return JsonParsing.getLong(node(), key);
-    }
-
-    @Override
-    @Nonnull
-    public Optional<Double> getDouble(String key) throws ParsingException {
-        return JsonParsing.getDouble(node(), key);
-    }
-
-    @Override
-    @Nonnull
-    public Optional<Boolean> getBoolean(String key) throws ParsingException {
-        return JsonParsing.getBoolean(node(), key);
-    }
-
-    @Override
-    @Nonnull
-    public <T> Optional<List<Optional<T>>> getList(String key, Class<T> clazz) throws ParsingException {
-        return JsonParsing.getList(node(), key, clazz);
-    }
-
-    protected JsonNode node() throws ParsingException {
-        if (node == null) {
-            node = JsonParsing.parse(json);
+    public Map<String, Object> asMap() throws ParsingException {
+        if (content == null) {
+            try {
+                content = J.mapFrom(json);
+            } catch (IOException e) {
+                throw new ParsingException(e.getMessage(), e);
+            }
         }
-        return node;
+        return content;
     }
 
     @Override
     @Nonnull
     public String asJson() {
-        if (json == null) {
-            json = node.textValue();
-        }
         return json;
     }
 
@@ -142,7 +88,7 @@ class ChangeEventElementJsonImpl implements ChangeEventElement, IdentifiedDataSe
 
     @Override
     public void writeData(ObjectDataOutput out) throws IOException {
-        out.writeUTF(asJson());
+        out.writeUTF(json);
     }
 
     @Override

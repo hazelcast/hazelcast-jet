@@ -204,7 +204,8 @@ repositories.mavenCentral()
 dependencies {
     compile 'com.hazelcast.jet:hazelcast-jet:{jet-version}'
     compile 'com.hazelcast.jet:hazelcast-jet-cdc-mysql:{jet-version}'
-    compile 'com.fasterxml.jackson.core:jackson-databind:2.10.3'
+    compile 'com.fasterxml.jackson.jr:jackson-jr-objects:2.11.0'
+    compile 'com.fasterxml.jackson.jr:jackson-jr-annotation-support:2.11.0'
 }
 
 jar {
@@ -249,9 +250,14 @@ shadowJar {
            <version>{jet-version}</version>
        </dependency>
        <dependency>
-           <groupId>com.fasterxml.jackson.core</groupId>
-           <artifactId>jackson-databind</artifactId>
-           <version>2.10.3</version>
+           <groupId>com.fasterxml.jackson.jr</groupId>
+           <artifactId>jackson-jr-objects</artifactId>
+           <version>2.11.0</version>
+       </dependency>
+       <dependency>
+           <groupId>com.fasterxml.jackson.jr</groupId>
+           <artifactId>jackson-jr-annotation-support</artifactId>
+           <version>2.11.0</version>
        </dependency>
    </dependencies>
 
@@ -336,7 +342,7 @@ public class JetJob {
         Pipeline pipeline = Pipeline.create();
         pipeline.readFrom(source)
                 .withoutTimestamps()
-                .map(event -> event.value().mapToObj(Customer.class))
+                .map(event -> event.value().asPojo(Customer.class))
                 .map(customer -> Util.entry(customer.id, customer))
                 .peek()
                 .writeTo(Sinks.map("customers"));
@@ -360,6 +366,8 @@ import java.io.Serializable;
 import java.util.Objects;
 
 public class Customer implements Serializable {
+
+    @JsonProperty("id")
     public int id;
 
     @JsonProperty("first_name")
@@ -368,6 +376,7 @@ public class Customer implements Serializable {
     @JsonProperty("last_name")
     public String lastName;
 
+    @JsonProperty("email")
     public String email;
 
     public Customer() {

@@ -58,52 +58,41 @@ public interface ChangeEvent {
 
     Operation operation() throws ParsingException;
 
-    ChangeEventKey key();
+    ChangeEventElement key();
 
-    ChangeEventValue value();
+    ChangeEventElement value();
 
-    // some specialized functionality omitted
+    String asJson();
 }
 ```
 
 ```java
 public interface ChangeEventElement {
 
-    <T> T mapToObj(Class<T> clazz) throws ParsingException;
+    <T> T asPojo(Class<T> clazz) throws ParsingException;
 
-    Optional<ChangeEventElement> getChild(String key) throws ParsingException;
+    Map<String, Object> asMap() throws ParsingException;
 
-    Optional<String> getString(String key) throws ParsingException;
-    Optional<Integer> getInteger(String key) throws ParsingException;
-    Optional<Long> getLong(String key) throws ParsingException;
-    Optional<Double> getDouble(String key) throws ParsingException;
-    Optional<Boolean> getBoolean(String key) throws ParsingException;
-
-    <T> Optional<List<Optional<T>>> getList(String key, Class<T> clazz) throws ParsingException;
-
-    // some specialized functionality omitted
+    String asJson();
 
 }
 ```
 
 ### Content Extraction
 
-As can be noticed from the [event structure interfaces](#event-structure),
-all actual content can be found in the form of `ChangeEventElement`
-instances.
+As can be noticed from the [event structure
+interfaces](#event-structure), most content can be found in the form of
+`ChangeEventElement` instances.
 
 Such an object is basically an encapsulated JSON message (part of the
-original, big event message) and offers various methods to access the
+original, big event message) and offers two main methods to access the
 data:
 
-* fetching **values** and **child elements** via their name/key
-* mapping the entire content to a **POJO** directly (more on that in the
-  sections describing the various JSON formats used by the connectors)
-* fetching **low level JSON elements** without attempting to interpret them,
-  potentially needing to deal with objects specific to the parsing
-  framework employed, so Jackson classes (mostly {@link JsonNode}
-  implementations); this option is meant only as a fallback in case
-  something in our parsing is faulty
+* mapping the entire content to a **POJO** directly
+* parsing the JSON into an easy to work with **map** form
+
+More information on both will be presented in the [JSON
+Parsing](#json-parsing) section.
 
 ### Fallback
 
@@ -128,13 +117,25 @@ Debezium database connecters provide messages in standard JSON format
 which can be parsed by any one of the well-known JSON parsing libraries
 out there. For backing the implementations of our [event structure
 interfaces](#event-structure) we have chosen to use [Jackson
-Databind](https://github.com/FasterXML/jackson-databind).
+jr](https://github.com/FasterXML/jackson-jr) with
+[annotation support](https://github.com/FasterXML/jackson-jr/tree/master/jr-annotation-support).
 
-This is mostly an internal implementation detail, most of
-``ChangeEventElement``'s methods don't reveal it. Where it becomes
-visible is `getRaw()` and the object mapping method. The latter is
-based on Jackson's `ObjectMapper` and the classes we pass to it expose
-this fact via the annotations we have to use in them. For example:
+The consequence of this for object mapping is that the classes we intend
+to map to need to define Bean style accessors. Further details in the
+[Jackson jr documentation](https://github.com/FasterXML/jackson-jr). The
+[annotation
+support](https://github.com/FasterXML/jackson-jr/tree/master/jr-annotation-support)
+can simplify things. Accessors can be replaced with `@JsonProperty`
+annotations, Bean fields can be named differently then JSON ones and so
+on.
+
+For example a `Customer` class to which we could map JSON like
+
+```json
+"id":1004,"first_name":"Anne Marie","last_name":"Kretchmar","email":"annek@noanswer.org"
+```
+
+could be defined as follows:
 
 ```java
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -169,7 +170,7 @@ StreamStage<Customer> stage = pipeline.readFrom(source)
     .withNativeTimestamps(0)
     .map(event -> {
         ChangeEventElement eventValue = event.value();
-        return eventValue.mapToObj(Customer.class);
+        return eventValue.asPojo(Customer.class);
     });
 ```
 
@@ -259,10 +260,10 @@ satisfied.
 
 CDC sources in Jet are set up as extension modules:
 
-* [cdc-core](https://github.com/hazelcast/hazelcast-jet/tree/master/extensions/cdc-core):
+* [cdc-debezium](https://github.com/hazelcast/hazelcast-jet/tree/master/extensions/cdc-debezium):
   contains all the helper classes we have defined and also allows for
   the creation of generic Debezium sources (see
-  [DebeziumCdcSources](https://github.com/hazelcast/hazelcast-jet/tree/master/extensions/cdc-core/src/main/java/com/hazelcast/jet/cdc/DebeziumCdcSources.java))
+  [DebeziumCdcSources](https://github.com/hazelcast/hazelcast-jet/tree/master/extensions/cdc-debezium/src/main/java/com/hazelcast/jet/cdc/DebeziumCdcSources.java))
 * [cdc-mysql](https://github.com/hazelcast/hazelcast-jet/tree/master/extensions/cdc-mysql):
   allows for the creation of MySQL based CDC sources (see [MySqlCdcSources](https://github.com/hazelcast/hazelcast-jet/tree/master/extensions/cdc-mysql/src/main/java/com/hazelcast/jet/cdc/MySqlCdcSources.java))
 * more supported databases coming in future versions
@@ -278,14 +279,15 @@ to explicitly deal with Debezium connector jars or anything else.
 
 ## Serialization
 
-The helper classes defined in `cdc-core`, such as `ChangeEvent` and its
-innards are data objects that need to travel around in Jet clusters. For
-that they need to be serializable. Among the [serialization options
-available in Jet](../api/serialization.md#serialization-of-data-types)
-they implement the `StreamSerializer` and their `SerializerHook` gets
-registered with the cluster when the `cdc-core` jar is put on the
-classpath (or any of the other, database specific jars, which also
-include the core).
+The helper classes defined in `cdc-debezium`, such as `ChangeEvent` and
+ its innards are data objects that need to travel around in Jet
+ clusters. For that they need to be serializable. Among the
+ [serialization options available in
+ Jet](../api/serialization.md#serialization-of-data-types) they
+ implement the `StreamSerializer` and their `SerializerHook` gets
+ registered with the cluster when the `cdc-debezium` jar is put on the
+ classpath (or any of the other, database specific jars, which also
+ include the core).
 
 ## Performance
 

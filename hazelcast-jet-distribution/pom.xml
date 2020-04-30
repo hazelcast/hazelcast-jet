@@ -210,7 +210,7 @@
         </dependency>
         <dependency>
             <groupId>com.hazelcast.jet</groupId>
-            <artifactId>hazelcast-jet-cdc-core</artifactId>
+            <artifactId>hazelcast-jet-cdc-debezium</artifactId>
             <version>${project.version}</version>
             <classifier>jar-with-dependencies</classifier>
         </dependency>

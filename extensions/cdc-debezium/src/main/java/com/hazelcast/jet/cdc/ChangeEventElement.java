@@ -16,12 +16,10 @@
 
 package com.hazelcast.jet.cdc;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.hazelcast.jet.annotation.EvolvingApi;
 
 import javax.annotation.Nonnull;
-import java.util.List;
-import java.util.Optional;
+import java.util.Map;
 
 /**
  * Arbitrary part of a {@link ChangeEvent}, as big as the whole body or
@@ -37,146 +35,33 @@ public interface ChangeEventElement {
     /**
      * Maps the entire element to an instance of the specified class.
      * <p>
-     * For databases providing standard JSON syntax, parsing it is based
-     * on <a
-     * href="https://github.com/FasterXML/jackson-databind">Jackson
-     * Databind</a>, in particular on the Jackson {@code ObjectMapper},
-     * so the parameter class needs to be annotated accordingly.
+     * Parsing it is based on <a href="https://github.com/FasterXML/jackson-jr">Jackson jr</a>,
+     * with <a href="https://github.com/FasterXML/jackson-jr/tree/master/jr-annotation-support">annotation support</a>,
+     * so the parameter class can be annotated accordingly.
      *
-     * @return optional {@code Object} value, which is empty only if the
-     * specified key is not found or if it's value is null
+     * @return object of type {@code T}, obtained as the result of the
+     * mapping
      * @throws ParsingException if the whole structure containing this
      *                          element is unparsable or the mapping
      *                          fails to produce a result
      */
     @Nonnull
-    <T> T mapToObj(Class<T> clazz) throws ParsingException;
+    <T> T asPojo(Class<T> clazz) throws ParsingException;
 
     /**
-     * Returns the value of the specified (top level) key in the
-     * underlying JSON message as a child {@code ChangeEventElement}.
-     *
-     * @return optional {@code ChangeEventElement}, which is empty if
-     * the specified key is not found or if the value is null.
-     * @throws ParsingException if the underlying JSON message, or any
-     *                          of its parent messages are unparsable
-     */
-    Optional<ChangeEventElement> getChild(String key) throws ParsingException;
-
-    /**
-     * Returns the value of the specified (top level) key in the
-     * underlying JSON message as a {@link String}, but only as long as
-     * the value is indeed a simple text value. So numbers, booleans,
-     * complex structures like arrays and collections won't be handled
-     * (returned {@code Optional} will be empty).
-     *
-     * @return optional {@code String} value, which is empty if the
-     * specified key is not found or if the value is null or doesn't
-     * represent a simple text value.
-     * @throws ParsingException if the underlying JSON message, or any
-     *                          of its parent messages are unparsable
-     */
-    @Nonnull
-    Optional<String> getString(String key) throws ParsingException;
-
-    /**
-     * Returns the value of the specified (top level) key in the
-     * underlying JSON message as an {@link Integer}, but only as long
-     * as the value is indeed a number. Various number types (like
-     * floating point, integer and so on) will all be handled, but
-     * strings won't be attempted to be parsed as numbers (returned
-     * {@code Optional} will be empty).
-     *
-     * @return optional {@code Integer} value, which is empty if the
-     * specified key is not found or if the value is null or if it isn't
-     * a number
-     * @throws ParsingException if the underlying JSON message, or any
-     *                          of its parent messages are unparsable
-     */
-    @Nonnull
-    Optional<Integer> getInteger(String key) throws ParsingException;
-
-    /**
-     * Returns the value of the specified (top level) key in the
-     * underlying JSON message as an {@link Long}, but only as long as
-     * the value is indeed a number. Various number types (like floating
-     * point, integer and so on) will all be handled, but strings won't
-     * be attempted to be parsed as numbers (returned {@code Optional}
-     * will be empty).
-     *
-     * @return optional {@code Long} value, which is empty if the
-     * specified key is not found or if the value is null or if it isn't
-     * a number
-     * @throws ParsingException if the underlying JSON message, or any
-     *                          of its parent messages are unparsable
-     */
-    @Nonnull
-    Optional<Long> getLong(String key) throws ParsingException;
-
-    /**
-     * Returns the value of the specified (top level) key in the
-     * underlying JSON message as an {@link Double}, but only as long as
-     * the value is indeed a number. Various number types (like floating
-     * point, integer and so on) will all be handled, but strings won't
-     * be attempted to be parsed as numbers (returned {@code Optional}
-     * will be empty).
-     *
-     * @return optional {@code Double} value, which is empty if the
-     * specified key is not found or if the value is null or if it isn't
-     * a number
-     * @throws ParsingException if the underlying JSON message, or any
-     *                          of its parent messages are unparsable
-     */
-    @Nonnull
-    Optional<Double> getDouble(String key) throws ParsingException;
-
-    /**
-     * Returns the value of the specified (top level) key in the
-     * underlying JSON message as an {@link Boolean}, but only as long
-     * as the value is indeed of a boolean type (so not a string, not a
-     * number or any other complex structures).
-     *
-     * @return optional {@code Boolean} value, which is empty if the
-     * specified key is not found or if the value is null or if it isn't
-     * a boolean
-     * @throws ParsingException if the underlying JSON message, or any
-     *                          of its parent messages are unparsable
-     */
-    @Nonnull
-    Optional<Boolean> getBoolean(String key) throws ParsingException;
-
-    /**
-     * Returns the value of the specified (top level) key in the
-     * underlying JSON message as a {@link List} of optional values of a
-     * certain type.
-     *
-     * @param <T> type of elements in the list
-     * @return optional {@code List} value, which is empty only if the
-     * specified key is not found or if the value is null or not a
-     * collection type; the optional {@code T} elements in the list are
-     * empty if they are null or aren't of the specified type
-     * @throws ParsingException if the underlying JSON message, or any
-     *                          of its parent messages are unparsable
-     */
-    @Nonnull
-    <T> Optional<List<Optional<T>>> getList(String key, Class<T> clazz) throws ParsingException;
-
-    /**
-     * Returns the value of the specified (top level) key in the
-     * underlying JSON message AS IS, without attempting to parse it in
-     * any way. This means that it can return objects specific to the
-     * parsing used by internal implementations, so Jackson classes
-     * (mostly {@link JsonNode} implementations).
+     * Presents a parsed form of the underlying JSON message, as a
+     * {@code Map}. The keys in the map are the top level fields from
+     * the JSON and the values can range from simple strings, numbers,
+     * collections and sub-maps.
      * <p>
-     * Should not be used normally, is intended as a fallback in case
-     * regular parsing fails for some reason.
+     * Parsing it is based on <a href="https://github.com/FasterXML/jackson-jr">Jackson jr</a>,
+     * that's where further details can be found.
      *
-     * @throws ParsingException if the whole structure containing this
-     *                          element or the element itself is
-     *                          unparsable
+     * @return {@code Map} representation of the JSON data
+     * @throws ParsingException if the underlying JSON message, or any
+     *                          of its parent messages are unparsable
      */
-    @Nonnull
-    Optional<Object> getRaw(String key) throws ParsingException;
+    Map<String, Object> asMap() throws ParsingException;
 
     /**
      * Returns raw JSON string which the content of this event element

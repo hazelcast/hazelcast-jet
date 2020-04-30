@@ -26,6 +26,7 @@ import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 
 import javax.annotation.Nonnull;
 import java.io.IOException;
+import java.util.Map;
 import java.util.Objects;
 
 public class ChangeEventJsonImpl implements ChangeEvent, IdentifiedDataSerializable {
@@ -50,8 +51,11 @@ public class ChangeEventJsonImpl implements ChangeEvent, IdentifiedDataSerializa
     @Override
     public long timestamp() throws ParsingException {
         if (timestamp == null) {
-            timestamp = value().getLong("__ts_ms")
-                    .orElseThrow(() -> new ParsingException("No parsable timestamp field found"));
+            Long millis = get(value().asMap(), "__ts_ms", Long.class);
+            if (millis == null) {
+                throw new ParsingException("No parsable timestamp field found");
+            }
+            timestamp = millis;
         }
         return timestamp;
     }
@@ -60,7 +64,8 @@ public class ChangeEventJsonImpl implements ChangeEvent, IdentifiedDataSerializa
     @Nonnull
     public Operation operation() throws ParsingException {
         if (operation == null) {
-            operation = Operation.get(value().getString("__op").orElse(null));
+            String opAlias = get(value().asMap(), "__op", String.class);
+            operation = Operation.get(opAlias);
         }
         return operation;
     }
@@ -117,6 +122,14 @@ public class ChangeEventJsonImpl implements ChangeEvent, IdentifiedDataSerializa
     public void readData(ObjectDataInput in) throws IOException {
         keyJson = in.readUTF();
         valueJson = in.readUTF();
+    }
+
+    private static <T> T get(Map<String, Object> map, String key, Class<T> clazz) {
+        Object obj = map.get(key);
+        if (obj != null && clazz.isInstance(obj)) {
+            return (T) obj;
+        }
+        return null;
     }
 
 }

@@ -76,7 +76,7 @@
     <dependencies>
         <dependency>
             <groupId>com.hazelcast.jet</groupId>
-            <artifactId>hazelcast-jet-cdc-core</artifactId>
+            <artifactId>hazelcast-jet-cdc-debezium</artifactId>
             <version>${project.parent.version}</version>
             <scope>compile</scope>
         </dependency>
@@ -84,7 +84,7 @@
         <!-- TEST -->
         <dependency>
             <groupId>com.hazelcast.jet</groupId>
-            <artifactId>hazelcast-jet-cdc-core</artifactId>
+            <artifactId>hazelcast-jet-cdc-debezium</artifactId>
             <version>${project.parent.version}</version>
             <scope>test</scope>
             <classifier>tests</classifier>

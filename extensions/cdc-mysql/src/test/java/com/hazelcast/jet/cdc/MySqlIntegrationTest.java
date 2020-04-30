@@ -16,12 +16,7 @@
 
 package com.hazelcast.jet.cdc;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.databind.DeserializationContext;
-import com.fasterxml.jackson.databind.JsonDeserializer;
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.accumulator.LongAccumulator;
@@ -31,12 +26,12 @@ import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.StreamSource;
 import com.hazelcast.jet.pipeline.test.AssertionCompletedException;
 import com.hazelcast.test.HazelcastTestSupport;
+import jdk.nashorn.internal.objects.annotations.Setter;
 import org.junit.Rule;
 import org.junit.Test;
 import org.testcontainers.containers.MySQLContainer;
 
 import javax.annotation.Nonnull;
-import java.io.IOException;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.util.Date;
@@ -75,7 +70,7 @@ public class MySqlIntegrationTest extends AbstractIntegrationTest {
         pipeline.readFrom(source("customers"))
                 .withNativeTimestamps(0)
                 .<ChangeEvent>customTransform("filter_timestamps", filterTimestampsProcessorSupplier())
-                .groupingKey(event -> event.key().getInteger("id").orElse(0))
+                .groupingKey(event -> (Integer) event.key().asMap().get("id"))
                 .mapStateful(
                         LongAccumulator::new,
                         (accumulator, customerId, event) -> {
@@ -83,14 +78,14 @@ public class MySqlIntegrationTest extends AbstractIntegrationTest {
                             accumulator.add(1);
                             Operation operation = event.operation();
                             ChangeEventElement eventValue = event.value();
-                            Customer customer = eventValue.mapToObj(Customer.class);
+                            Customer customer = eventValue.asPojo(Customer.class);
                             return customerId + "/" + count + ":" + operation + ":" + customer;
                         })
                 .setLocalParallelism(1)
                 .writeTo(assertCollectedEventually(30, assertListFn(expectedEvents)));
 
         // when
-        JetInstance jet = createJetMember();
+        JetInstance jet = createJetMembers(2)[0];
         Job job = jet.newJob(pipeline);
         JetTestSupport.assertJobStatusEventually(job, JobStatus.RUNNING);
 
@@ -146,7 +141,7 @@ public class MySqlIntegrationTest extends AbstractIntegrationTest {
                             accumulator.add(1);
                             Operation operation = event.operation();
                             ChangeEventElement eventValue = event.value();
-                            Order order = eventValue.mapToObj(Order.class);
+                            Order order = eventValue.asPojo(Order.class);
                             return orderId + "/" + count + ":" + operation + ":" + order;
                         })
                 .setLocalParallelism(1)
@@ -154,7 +149,7 @@ public class MySqlIntegrationTest extends AbstractIntegrationTest {
                         assertListFn(expectedEvents)));
 
         // when
-        JetInstance jet = createJetMember();
+        JetInstance jet = createJetMembers(2)[0];
         Job job = jet.newJob(pipeline);
         JetTestSupport.assertJobStatusEventually(job, JobStatus.RUNNING);
 
@@ -187,9 +182,9 @@ public class MySqlIntegrationTest extends AbstractIntegrationTest {
         //pick random method for extracting ID in order to test all code paths
         boolean primitive = ThreadLocalRandom.current().nextBoolean();
         if (primitive) {
-            return event.key().getInteger("order_number").orElse(0);
+            return (Integer) event.key().asMap().get("order_number");
         } else {
-            return event.key().mapToObj(OrderPrimaryKey.class).id;
+            return event.key().asPojo(OrderPrimaryKey.class).id;
         }
     }
 
@@ -236,13 +231,11 @@ public class MySqlIntegrationTest extends AbstractIntegrationTest {
         }
     }
 
-    @JsonIgnoreProperties({"purchaser"})
     private static class Order {
 
         @JsonProperty("order_number")
         public int orderNumber;
 
-        @JsonDeserialize(using = DateHandler.class)
         @JsonProperty("order_date")
         public Date orderDate;
 
@@ -253,6 +246,12 @@ public class MySqlIntegrationTest extends AbstractIntegrationTest {
         public int productId;
 
         Order() {
+        }
+
+        @Setter
+        public void setOrderDate(Date orderDate) {
+            long days = orderDate.getTime(); //database provides no of days for some reason, fixing it here
+            this.orderDate = new Date(TimeUnit.DAYS.toMillis(days));
         }
 
         @Override
@@ -279,19 +278,6 @@ public class MySqlIntegrationTest extends AbstractIntegrationTest {
         public String toString() {
             return "Order {orderNumber=" + orderNumber + ", orderDate=" + orderDate + ", quantity=" + quantity +
                     ", productId=" + productId + '}';
-        }
-
-        public static class DateHandler extends JsonDeserializer<Date> {
-
-            @Override
-            public Date deserialize(JsonParser parser, DeserializationContext ctxt) throws IOException {
-                long days = parser.getLongValue();
-                try {
-                    return new Date(TimeUnit.DAYS.toMillis(days));
-                } catch (Exception e) {
-                    return null;
-                }
-            }
         }
 
     }
