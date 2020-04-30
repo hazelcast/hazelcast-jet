@@ -17,11 +17,9 @@ const cardStyle = {
     button: {
         marginLeft: "6.5em",
         textAlign: "center",
-        minHeight: "3em",
+        minHeight: "2em",
         minWidth: "15em",
         maxWidth: "15em",
-        borderWidth: "medium",
-        borderColor: "#29444e",
     },
     content: {
         marginLeft: "1em",

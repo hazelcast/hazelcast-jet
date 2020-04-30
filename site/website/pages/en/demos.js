@@ -32,7 +32,7 @@ class Demos extends React.Component {
                             {props.children}
                         </div>
                     </div>
-                    <Button style={cardStyle.button} href={props.link}>Learn more</Button>
+                    <Button href={props.link}>Learn more</Button>
                 </div>
             );
         }
