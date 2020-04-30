@@ -46,7 +46,7 @@ public interface ChangeEventElement {
      *                          fails to produce a result
      */
     @Nonnull
-    <T> T asPojo(Class<T> clazz) throws ParsingException;
+    <T> T asPojo(@Nonnull Class<T> clazz) throws ParsingException;
 
     /**
      * Presents a parsed form of the underlying JSON message, as a
@@ -61,6 +61,7 @@ public interface ChangeEventElement {
      * @throws ParsingException if the underlying JSON message, or any
      *                          of its parent messages are unparsable
      */
+    @Nonnull
     Map<String, Object> asMap() throws ParsingException;
 
     /**

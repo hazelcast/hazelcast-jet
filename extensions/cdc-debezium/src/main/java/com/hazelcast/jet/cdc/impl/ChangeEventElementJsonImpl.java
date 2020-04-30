@@ -45,7 +45,8 @@ class ChangeEventElementJsonImpl implements ChangeEventElement, IdentifiedDataSe
 
     @Override
     @Nonnull
-    public <T> T asPojo(Class<T> clazz) throws ParsingException {
+    public <T> T asPojo(@Nonnull Class<T> clazz) throws ParsingException {
+        Objects.requireNonNull(clazz, "class");
         try {
             return J.beanFrom(clazz, json);
         } catch (IOException e) {
