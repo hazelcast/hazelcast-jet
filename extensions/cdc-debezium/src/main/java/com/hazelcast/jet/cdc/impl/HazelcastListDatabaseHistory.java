@@ -19,7 +19,6 @@ package com.hazelcast.jet.cdc.impl;
 import com.hazelcast.collection.IList;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.instance.impl.HazelcastInstanceFactory;
-import com.hazelcast.internal.util.Preconditions;
 import io.debezium.config.Configuration;
 import io.debezium.document.Document;
 import io.debezium.document.DocumentReader;
@@ -31,6 +30,7 @@ import io.debezium.relational.history.HistoryRecord;
 import io.debezium.relational.history.HistoryRecordComparator;
 
 import java.io.IOException;
+import java.util.Objects;
 import java.util.function.Consumer;
 
 /**
@@ -45,40 +45,42 @@ public class HazelcastListDatabaseHistory extends AbstractDatabaseHistory {
      */
     public static final String LIST_NAME_PROPERTY = "database.history.hazelcast.list.name";
 
-    private String listName;
-    private HazelcastInstance instance;
-    private IList<byte[]> list;
+    private volatile String instanceName;
+    private volatile String listName;
 
-    private final DocumentWriter writer = DocumentWriter.defaultWriter();
-    private final DocumentReader reader = DocumentReader.defaultReader();
+    private volatile IList<byte[]> list;
 
     @Override
     public void configure(Configuration config, HistoryRecordComparator comparator,
                           DatabaseHistoryListener listener, boolean useCatalogBeforeSchema) {
         super.configure(config, comparator, listener, useCatalogBeforeSchema);
-        String instanceName = config.getString("database.history.hazelcast.instance.name");
-        this.instance = HazelcastInstanceFactory.getHazelcastInstance(instanceName);
+
+        instanceName = config.getString("database.history.hazelcast.instance.name");
+        Objects.requireNonNull(instanceName, "instance name");
+
         listName = config.getString(LIST_NAME_PROPERTY);
-        Preconditions.checkHasText(listName, LIST_NAME_PROPERTY + " property cannot have null value");
+        Objects.requireNonNull(listName, "list name");
     }
 
     @Override
     public void start() {
         super.start();
+
+        HazelcastInstance instance = HazelcastInstanceFactory.getHazelcastInstance(instanceName);
         list = instance.getList(listName);
     }
 
 
     @Override
     protected void storeRecord(HistoryRecord historyRecord) throws DatabaseHistoryException {
-        list.add(writer.writeAsBytes(historyRecord.document()));
+        list.add(DocumentWriter.defaultWriter().writeAsBytes(historyRecord.document()));
     }
 
     @Override
     protected void recoverRecords(Consumer<HistoryRecord> consumer) {
         try {
             for (byte[] r : list) {
-                Document doc = reader.read(r);
+                Document doc = DocumentReader.defaultReader().read(r);
                 consumer.accept(new HistoryRecord(doc));
             }
         } catch (IOException e) {
@@ -89,15 +91,17 @@ public class HazelcastListDatabaseHistory extends AbstractDatabaseHistory {
     @Override
     public void stop() {
         super.stop();
+        list.destroy();
+        list = null;
     }
 
     @Override
     public boolean exists() {
-        return !instance.getList(listName).isEmpty();
+        return !list.isEmpty();
     }
 
     @Override
     public void initializeStorage() {
-        instance.getList(listName).clear();
+        list.clear();
     }
 }
