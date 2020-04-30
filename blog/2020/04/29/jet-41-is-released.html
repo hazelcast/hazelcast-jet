@@ -195,9 +195,12 @@ guide</a>.</p>
 <ul>
 <li>[jms] Exactly-once guarantee for JMS sink (#1813)</li>
 <li>[jdbc] Exactly-once guarantee for JDBC sink (#1813)</li>
-<li>[core] JobConfig.addClass() automatically adds nested classes to the job (#1932)</li>
-<li>[core] JobConfig.addPackage() adds a whole Java package to the job (#1932, #2077)</li>
-<li>[core] Job-scoped serializer deployment (#2020, #2038, #2039, #2043, #2071, #2075, #2082, #2190)</li>
+<li>[core] JobConfig.addClass() automatically adds nested classes to the
+job (#1932)</li>
+<li>[core] JobConfig.addPackage() adds a whole Java package to the job
+(#1932, #2077)</li>
+<li>[core] Job-scoped serializer deployment (#2020, #2038, #2039, #2043,
+#2071, #2075, #2082, #2190)</li>
 <li>[core] [006] Protobuf serializer support (#2100)</li>
 <li>[pipeline-api] [007] Support gRPC for mapUsingService (#2095, #2185)</li>
 </ul>
@@ -208,24 +211,32 @@ guide</a>.</p>
 <li>[core] Add useful error message when serializer not registered (#2061)</li>
 <li>[jet-cli] Add hazelcast-azure cluster self-discovery plugin to the
 fat JAR in the distribution archive (#2079)</li>
-<li>[pipeline-api] First-class support for inner hash join (@TomaszGaweda #2089)</li>
-<li>[core] When Jet starts up, it now logs the cluster name (@caioguedes #2105)</li>
-<li>[core] Add useful error message when trying to deploy a JDK class with JobConfig (#2108)</li>
+<li>[pipeline-api] First-class support for inner hash join (@TomaszGaweda
+#2089)</li>
+<li>[core] When Jet starts up, it now logs the cluster name (@caioguedes
+#2105)</li>
+<li>[core] Add useful error message when trying to deploy a JDK class with
+JobConfig (#2108)</li>
 <li>[core] Implement JobConfig.toString (@SapnaDerajeRadhakrishna #2152)</li>
 <li>[core] Do not destroy Observable on shutdown (#2170)</li>
 </ul>
 <h3><a class="anchor" aria-hidden="true" id="fixes"></a><a href="#fixes" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Fixes</h3>
 <ul>
-<li>[core] Don't send the interrupt signal to blocking threads when a job is terminating (#1971)</li>
-<li>[core] Consistently prefer YAML over XML config files when both present (#2033)</li>
+<li>[core] Don't send the interrupt signal to blocking threads when a job
+is terminating (#1971)</li>
+<li>[core] Consistently prefer YAML over XML config files when both
+present (#2033)</li>
 </ul>
 <h3><a class="anchor" aria-hidden="true" id="breaking-changes"></a><a href="#breaking-changes" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Breaking Changes</h3>
 <ul>
 <li>[avro] Replace Supplier<Schema> with just Schema for Avro Sink (#2005)</li>
-<li>[jms] Reorder parameters in JMS source so the lambda comes last (#2062)</li>
-<li>[jet-cli] Change smart routing (connecting to all cluster members) default to disabled (#2104)</li>
-<li>[pipeline-api] For xUsingServiceAsync transforms, reduce the default number of concurrent
-service calls per processor. Before: 256; now: 4. (#2204)</li>
+<li>[jms] Reorder parameters in JMS source so the lambda comes last
+(#2062)</li>
+<li>[jet-cli] Change smart routing (connecting to all cluster members)
+default to disabled (#2104)</li>
+<li>[pipeline-api] For xUsingServiceAsync transforms, reduce the default
+number of concurrent service calls per processor. Before: 256; now: 4.
+(#2204)</li>
 </ul>
 </span></div></div><div class="blogSocialSection"></div></div><div class="blog-recent"><a class="button" href="/blog/">Recent Posts</a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#extended-grpc-support">Extended gRPC Support</a></li><li><a href="#transactional-jdbc-and-jms-sinks">Transactional JDBC and JMS sinks</a></li><li><a href="#code-deployment-improvements">Code Deployment Improvements</a></li><li><a href="#job-scoped-serializer-support">Job-Scoped Serializer Support</a></li><li><a href="#protocol-buffers-support">Protocol Buffers Support</a></li><li><a href="#spring-boot-starter">Spring Boot Starter</a></li><li><a href="#kubernetes-operator-and-openshift-support">Kubernetes Operator and OpenShift Support</a></li><li><a href="#discovery-support-for-microsoft-azure">Discovery Support for Microsoft Azure</a></li><li><a href="#full-release-notes">Full Release Notes</a><ul class="toc-headings"><li><a href="#new-features">New Features</a></li><li><a href="#enhancements">Enhancements</a></li><li><a href="#fixes">Fixes</a></li><li><a href="#breaking-changes">Breaking Changes</a></li></ul></li></ul></nav></div><footer class="nav-footer" id="footer"><section class="sitemap"><a href="/" class="nav-home"><img src="/img/logo-light.svg" alt="Hazelcast Jet" width="200" height="40"/></a><div><h5>Docs</h5><a href="/docs/get-started/intro">Get Started</a><a href="/docs/concepts/dag">Concepts and Architecture</a><a href="/docs/tutorials/kafka">Tutorials</a><a href="/docs/operations/installation">Operations Guide</a><a href="/docs/enterprise">Enterprise Edition</a></div><div><h5>Community</h5><a href="https://groups.google.com/forum/#!forum/hazelcast-jet" target="_blank" rel="noreferrer noopener">Google Groups</a><a href="http://stackoverflow.com/questions/tagged/hazelcast-jet" target="_blank" rel="noreferrer noopener">Stack Overflow</a><a href="https://gitter.im/hazelcast/hazelcast-jet">Gitter Chat</a></div><div><h5>Latest From the Blog</h5><a href="/blog/2020/04/29/jet-41-is-released">Jet 4.1 is Released</a><a href="/blog/2020/04/01/upgrading-to-jet-40">Upgrading to Jet 4.0</a><a href="/blog/2020/03/30/ml-inference">Machine Learning Inference at Scale</a><a href="/blog/2020/03/02/jet-40-is-released">Jet 4.0 is Released</a><a href="/blog/2020/02/20/transactional-processors">Transactional connectors in Hazelcast Jet</a></div><div><h5>More</h5><a href="https://github.com/hazelcast/hazelcast-jet">GitHub Project</a><a href="https://github.com/hazelcast/hazelcast-jet/issues">Issue Tracker</a><a href="http://hazelcast.com/company/careers/">Work at Hazelcast</a><a href="/license">License</a><a class="github-button" href="https://github.com/hazelcast/hazelcast-jet" data-icon="octicon-star" data-count-href="/facebook/docusaurus/stargazers" data-show-count="true" data-count-aria-label="# stargazers on GitHub" aria-label="Star this project on GitHub">Star</a></div></section><section class="copyright">Copyright © 2020 Hazelcast Inc.</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
                 document.addEventListener('keyup', function(e) {
