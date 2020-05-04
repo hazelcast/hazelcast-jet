@@ -45,7 +45,7 @@ class CdcSource {
     private final SourceConnector connector;
     private final SourceTask task;
     private final Map<String, String> taskConfig;
-    private final ExtractNewRecordState<SourceRecord> smt;
+    private final ExtractNewRecordState<SourceRecord> transform;
 
     /**
      * Key represents the partition which the record originated from. Value
@@ -65,7 +65,7 @@ class CdcSource {
             connector.initialize(new JetConnectorContext());
             connector.start((Map) injectHazelcastInstanceNameProperty(ctx, properties));
 
-            smt = initSmt();
+            transform = initTransform();
 
             taskConfig = connector.taskConfigs(1).get(0);
             task = (SourceTask) connector.taskClass().getConstructor().newInstance();
@@ -98,7 +98,7 @@ class CdcSource {
     }
 
     private boolean addToBuffer(SourceRecord sourceRecord, SourceBuilder.TimestampedSourceBuffer<ChangeRecord> buf) {
-        sourceRecord = smt.apply(sourceRecord);
+        sourceRecord = transform.apply(sourceRecord);
         if (sourceRecord != null) {
             ChangeRecord changeRecord = toChangeRecord(sourceRecord);
             long timestamp = extractTimestamp(sourceRecord);
@@ -124,15 +124,15 @@ class CdcSource {
         this.partitionsToOffset = snapshots.get(0);
     }
 
-    private static ExtractNewRecordState<SourceRecord> initSmt() {
-        ExtractNewRecordState<SourceRecord> smt = new ExtractNewRecordState<>();
+    private static ExtractNewRecordState<SourceRecord> initTransform() {
+        ExtractNewRecordState<SourceRecord> transform = new ExtractNewRecordState<>();
 
         Map<String, String> config = new HashMap<>();
         config.put("add.fields", "op, ts_ms");
         config.put("delete.handling.mode", "rewrite");
-        smt.configure(config);
+        transform.configure(config);
 
-        return smt;
+        return transform;
     }
 
     private static ChangeRecord toChangeRecord(SourceRecord record) {
