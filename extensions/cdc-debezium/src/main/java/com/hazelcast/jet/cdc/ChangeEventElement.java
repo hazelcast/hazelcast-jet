@@ -22,10 +22,11 @@ import javax.annotation.Nonnull;
 import java.util.Map;
 
 /**
- * Arbitrary part of a {@link ChangeEvent}, as big as the whole body or
- * as small as a single patch expression, based on a complete JSON
- * expression. Contains various methods for retrieving component values
- * or for mapping itself to data objects.
+ * High level component of a {@link ChangeEvent}, such as the <i>key</i>
+ * or the <i>value</i> of it, but can also be thought of as a simple
+ * convenience wrapper of a JSON expression. Contains various methods
+ * for retrieving component values or for mapping itself to data
+ * objects.
  *
  * @since 4.2
  */
@@ -35,15 +36,15 @@ public interface ChangeEventElement {
     /**
      * Maps the entire element to an instance of the specified class.
      * <p>
-     * Parsing it is based on <a href="https://github.com/FasterXML/jackson-jr">Jackson jr</a>,
-     * with <a href="https://github.com/FasterXML/jackson-jr/tree/master/jr-annotation-support">annotation support</a>,
-     * so the parameter class can be annotated accordingly.
+     * Parsing it is based on <a
+     * href="https://github.com/FasterXML/jackson-jr">Jackson jr</a>,
+     * with <a
+     * href="https://github.com/FasterXML/jackson-jr/tree/master/jr-annotation-support">annotation
+     * support</a>, so the parameter class can be annotated accordingly.
      *
      * @return object of type {@code T}, obtained as the result of the
      * mapping
-     * @throws ParsingException if the whole structure containing this
-     *                          element is unparsable or the mapping
-     *                          fails to produce a result
+     * @throws ParsingException if the mapping fails to produce a result
      */
     @Nonnull
     <T> T asPojo(@Nonnull Class<T> clazz) throws ParsingException;
@@ -54,12 +55,13 @@ public interface ChangeEventElement {
      * the JSON and the values can range from simple strings, numbers,
      * collections and sub-maps.
      * <p>
-     * Parsing it is based on <a href="https://github.com/FasterXML/jackson-jr">Jackson jr</a>,
+     * Parsing it is based on <a
+     * href="https://github.com/FasterXML/jackson-jr">Jackson jr</a>,
      * that's where further details can be found.
      *
      * @return {@code Map} representation of the JSON data
-     * @throws ParsingException if the underlying JSON message, or any
-     *                          of its parent messages are unparsable
+     * @throws ParsingException if the underlying JSON message fails to
+     * parse
      */
     @Nonnull
     Map<String, Object> asMap() throws ParsingException;
