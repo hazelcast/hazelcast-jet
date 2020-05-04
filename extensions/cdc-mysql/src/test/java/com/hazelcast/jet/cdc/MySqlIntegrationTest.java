@@ -20,6 +20,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.accumulator.LongAccumulator;
+import com.hazelcast.jet.config.JobConfig;
+import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.core.JetTestSupport;
 import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.pipeline.Pipeline;
@@ -66,7 +68,6 @@ public class MySqlIntegrationTest extends AbstractIntegrationTest {
         };
 
         Pipeline pipeline = Pipeline.create();
-
         pipeline.readFrom(source("customers"))
                 .withNativeTimestamps(0)
                 .<ChangeRecord>customTransform("filter_timestamps", filterTimestampsProcessorSupplier())
@@ -152,6 +153,70 @@ public class MySqlIntegrationTest extends AbstractIntegrationTest {
         JetInstance jet = createJetMembers(2)[0];
         Job job = jet.newJob(pipeline);
         JetTestSupport.assertJobStatusEventually(job, JobStatus.RUNNING);
+
+        // then
+        try {
+            job.join();
+            fail("Job should have completed with an AssertionCompletedException, but completed normally");
+        } catch (CompletionException e) {
+            String errorMsg = e.getCause().getMessage();
+            assertTrue("Job was expected to complete with " +
+                            "AssertionCompletedException, but completed with: " + e.getCause(),
+                    errorMsg.contains(AssertionCompletedException.class.getName()));
+        }
+    }
+
+    @Test
+    public void restart() throws Exception {
+        // given
+        String[] expectedRecords = {
+                "1004/1:UPDATE:Customer {id=1004, firstName=Anne Marie, lastName=Kretchmar, email=annek@noanswer.org}",
+                "1005/0:INSERT:Customer {id=1005, firstName=Jason, lastName=Bourne, email=jason@bourne.org}",
+                "1005/1:DELETE:Customer {id=1005, firstName=Jason, lastName=Bourne, email=jason@bourne.org}"
+        };
+
+        Pipeline pipeline = Pipeline.create();
+        pipeline.readFrom(source("customers"))
+                .withNativeTimestamps(0)
+                .<ChangeRecord>customTransform("filter_timestamps", filterTimestampsProcessorSupplier())
+                .groupingKey(record -> (Integer) record.key().toMap().get("id"))
+                .mapStateful(
+                        LongAccumulator::new,
+                        (accumulator, customerId, record) -> {
+                            long count = accumulator.get();
+                            accumulator.add(1);
+                            Operation operation = record.operation();
+                            RecordPart value = record.value();
+                            Customer customer = value.toObject(Customer.class);
+                            return customerId + "/" + count + ":" + operation + ":" + customer;
+                        })
+                .setLocalParallelism(1)
+                .writeTo(assertCollectedEventually(30, assertListFn(expectedRecords)));
+
+
+        // when
+        JetInstance jet = createJetMembers(2)[0];
+        JobConfig jobConfig = new JobConfig().setProcessingGuarantee(ProcessingGuarantee.AT_LEAST_ONCE);
+        Job job = jet.newJob(pipeline, jobConfig);
+        JetTestSupport.assertJobStatusEventually(job, JobStatus.RUNNING);
+        HazelcastTestSupport.sleepAtLeastSeconds(10);
+
+        job.restart();
+        JetTestSupport.assertJobStatusEventually(job, JobStatus.RUNNING);
+
+        // update a record
+        try (Connection connection = DriverManager.getConnection(mysql.withDatabaseName("inventory").getJdbcUrl(),
+                mysql.getUsername(), mysql.getPassword())) {
+            connection
+                    .prepareStatement("UPDATE customers SET first_name='Anne Marie' WHERE id=1004")
+                    .executeUpdate();
+            connection
+                    .prepareStatement("INSERT INTO customers VALUES (1005, 'Jason', 'Bourne', 'jason@bourne.org')")
+                    .executeUpdate();
+            connection
+                    .prepareStatement("DELETE FROM customers WHERE id=1005")
+                    .executeUpdate();
+        }
 
         // then
         try {

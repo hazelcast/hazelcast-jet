@@ -91,7 +91,6 @@ public class HazelcastListDatabaseHistory extends AbstractDatabaseHistory {
     @Override
     public void stop() {
         super.stop();
-        list.destroy();
         list = null;
     }
 
