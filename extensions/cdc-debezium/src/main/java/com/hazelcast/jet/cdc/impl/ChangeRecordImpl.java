@@ -51,7 +51,7 @@ public class ChangeRecordImpl implements ChangeRecord, IdentifiedDataSerializabl
     @Override
     public long timestamp() throws ParsingException {
         if (timestamp == null) {
-            Long millis = get(value().asMap(), "__ts_ms", Long.class);
+            Long millis = get(value().toMap(), "__ts_ms", Long.class);
             if (millis == null) {
                 throw new ParsingException("No parsable timestamp field found");
             }
@@ -64,7 +64,7 @@ public class ChangeRecordImpl implements ChangeRecord, IdentifiedDataSerializabl
     @Nonnull
     public Operation operation() throws ParsingException {
         if (operation == null) {
-            String opAlias = get(value().asMap(), "__op", String.class);
+            String opAlias = get(value().toMap(), "__op", String.class);
             operation = Operation.get(opAlias);
         }
         return operation;
@@ -90,7 +90,7 @@ public class ChangeRecordImpl implements ChangeRecord, IdentifiedDataSerializabl
 
     @Override
     @Nonnull
-    public String asJson() {
+    public String toJson() {
         if (json == null) {
             json = String.format("key:{%s}, value:{%s}", keyJson, valueJson);
         }
@@ -99,7 +99,7 @@ public class ChangeRecordImpl implements ChangeRecord, IdentifiedDataSerializabl
 
     @Override
     public String toString() {
-        return asJson();
+        return toJson();
     }
 
     @Override

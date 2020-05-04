@@ -45,7 +45,7 @@ class RecordPartImpl implements RecordPart, IdentifiedDataSerializable {
 
     @Override
     @Nonnull
-    public <T> T asPojo(@Nonnull Class<T> clazz) throws ParsingException {
+    public <T> T toObject(@Nonnull Class<T> clazz) throws ParsingException {
         Objects.requireNonNull(clazz, "class");
         try {
             return J.beanFrom(clazz, json);
@@ -55,7 +55,7 @@ class RecordPartImpl implements RecordPart, IdentifiedDataSerializable {
     }
 
     @Override
-    public Map<String, Object> asMap() throws ParsingException {
+    public Map<String, Object> toMap() throws ParsingException {
         if (content == null) {
             try {
                 content = J.mapFrom(json);
@@ -68,13 +68,13 @@ class RecordPartImpl implements RecordPart, IdentifiedDataSerializable {
 
     @Override
     @Nonnull
-    public String asJson() {
+    public String toJson() {
         return json;
     }
 
     @Override
     public String toString() {
-        return asJson();
+        return toJson();
     }
 
     @Override

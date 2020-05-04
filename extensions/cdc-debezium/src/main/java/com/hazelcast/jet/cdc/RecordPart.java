@@ -47,7 +47,7 @@ public interface RecordPart {
      * @throws ParsingException if the mapping fails to produce a result
      */
     @Nonnull
-    <T> T asPojo(@Nonnull Class<T> clazz) throws ParsingException;
+    <T> T toObject(@Nonnull Class<T> clazz) throws ParsingException;
 
     /**
      * Presents a parsed form of the underlying JSON message, as a
@@ -64,7 +64,7 @@ public interface RecordPart {
      * parse
      */
     @Nonnull
-    Map<String, Object> asMap() throws ParsingException;
+    Map<String, Object> toMap() throws ParsingException;
 
     /**
      * Returns raw JSON string which the content of this event element
@@ -72,6 +72,6 @@ public interface RecordPart {
      * example on some untested DB-connector version combination).
      */
     @Nonnull
-    String asJson();
+    String toJson();
 
 }

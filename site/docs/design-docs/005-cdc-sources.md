@@ -62,18 +62,18 @@ public interface ChangeRecord {
 
     RecordPart value();
 
-    String asJson();
+    String toJson();
 }
 ```
 
 ```java
 public interface RecordPart {
 
-    <T> T asPojo(Class<T> clazz) throws ParsingException;
+    <T> T toObject(Class<T> clazz) throws ParsingException;
 
-    Map<String, Object> asMap() throws ParsingException;
+    Map<String, Object> toMap() throws ParsingException;
 
-    String asJson();
+    String toJson();
 
 }
 ```
@@ -102,13 +102,13 @@ can fail in some scenarios (for example on some untested DB-connector
 version combination).
 
 To prevent a total API failure in this case each of the record structure
-interfaces contains an extra `asJson()` method, which will provide the
+interfaces contains an extra `toJson()` method, which will provide the
 raw JSON message the object is based on:
 
-* `ChangeRecord.asJson()` gives you the original message from the
+* `ChangeRecord.toJson()` gives you the original message from the
   connector (although already flattened), without anything having been
   done to it; if all else fails this will still work
-* `RecordPart.asJson()` gives you the JSON message of that particular
+* `RecordPart.toJson()` gives you the JSON message of that particular
   fragment
 
 ### JSON parsing
@@ -170,7 +170,7 @@ StreamStage<Customer> stage = pipeline.readFrom(source)
     .withNativeTimestamps(0)
     .map(record -> {
         RecordPart value = record.value();
-        return value.asPojo(Customer.class);
+        return value.toObject(Customer.class);
     });
 ```
 

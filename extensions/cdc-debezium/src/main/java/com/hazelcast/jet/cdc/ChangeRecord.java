@@ -105,5 +105,5 @@ public interface ChangeRecord {
      * DB-connector version combination).
      */
     @Nonnull
-    String asJson();
+    String toJson();
 }

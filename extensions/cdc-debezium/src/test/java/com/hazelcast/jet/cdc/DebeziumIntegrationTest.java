@@ -78,7 +78,7 @@ public class DebeziumIntegrationTest extends AbstractIntegrationTest {
             pipeline.readFrom(source)
                     .withNativeTimestamps(0)
                     .<ChangeRecord>customTransform("filter_timestamps", filterTimestampsProcessorSupplier())
-                    .groupingKey(record -> (Integer) record.key().asMap().get("id"))
+                    .groupingKey(record -> (Integer) record.key().toMap().get("id"))
                     .mapStateful(
                             LongAccumulator::new,
                             (accumulator, customerId, record) -> {
@@ -86,7 +86,7 @@ public class DebeziumIntegrationTest extends AbstractIntegrationTest {
                                 accumulator.add(1);
                                 Operation operation = record.operation();
                                 RecordPart value = record.value();
-                                Customer customer = value.asPojo(Customer.class);
+                                Customer customer = value.toObject(Customer.class);
                                 return customerId + "/" + count + ":" + operation + ":" + customer;
                             })
                     .setLocalParallelism(1)

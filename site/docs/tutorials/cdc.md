@@ -342,7 +342,7 @@ public class JetJob {
         Pipeline pipeline = Pipeline.create();
         pipeline.readFrom(source)
                 .withoutTimestamps()
-                .map(record -> record.value().asPojo(Customer.class))
+                .map(record -> record.value().toObject(Customer.class))
                 .map(customer -> Util.entry(customer.id, customer))
                 .peek()
                 .writeTo(Sinks.map("customers"));

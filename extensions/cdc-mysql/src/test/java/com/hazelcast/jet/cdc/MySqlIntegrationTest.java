@@ -70,7 +70,7 @@ public class MySqlIntegrationTest extends AbstractIntegrationTest {
         pipeline.readFrom(source("customers"))
                 .withNativeTimestamps(0)
                 .<ChangeRecord>customTransform("filter_timestamps", filterTimestampsProcessorSupplier())
-                .groupingKey(record -> (Integer) record.key().asMap().get("id"))
+                .groupingKey(record -> (Integer) record.key().toMap().get("id"))
                 .mapStateful(
                         LongAccumulator::new,
                         (accumulator, customerId, record) -> {
@@ -78,7 +78,7 @@ public class MySqlIntegrationTest extends AbstractIntegrationTest {
                             accumulator.add(1);
                             Operation operation = record.operation();
                             RecordPart value = record.value();
-                            Customer customer = value.asPojo(Customer.class);
+                            Customer customer = value.toObject(Customer.class);
                             return customerId + "/" + count + ":" + operation + ":" + customer;
                         })
                 .setLocalParallelism(1)
@@ -141,7 +141,7 @@ public class MySqlIntegrationTest extends AbstractIntegrationTest {
                             accumulator.add(1);
                             Operation operation = record.operation();
                             RecordPart value = record.value();
-                            Order order = value.asPojo(Order.class);
+                            Order order = value.toObject(Order.class);
                             return orderId + "/" + count + ":" + operation + ":" + order;
                         })
                 .setLocalParallelism(1)
@@ -182,9 +182,9 @@ public class MySqlIntegrationTest extends AbstractIntegrationTest {
         //pick random method for extracting ID in order to test all code paths
         boolean primitive = ThreadLocalRandom.current().nextBoolean();
         if (primitive) {
-            return (Integer) record.key().asMap().get("order_number");
+            return (Integer) record.key().toMap().get("order_number");
         } else {
-            return record.key().asPojo(OrderPrimaryKey.class).id;
+            return record.key().toObject(OrderPrimaryKey.class).id;
         }
     }
 
