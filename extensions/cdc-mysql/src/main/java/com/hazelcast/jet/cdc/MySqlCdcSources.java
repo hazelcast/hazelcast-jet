@@ -17,7 +17,7 @@
 package com.hazelcast.jet.cdc;
 
 import com.hazelcast.jet.annotation.EvolvingApi;
-import com.hazelcast.jet.cdc.impl.AbstractSourceBuilder;
+import com.hazelcast.jet.cdc.impl.DebeziumConfig;
 import com.hazelcast.jet.cdc.impl.PropertyRules;
 import com.hazelcast.jet.pipeline.StreamSource;
 
@@ -53,7 +53,7 @@ public final class MySqlCdcSources {
      * Builder for configuring a CDC source that streams change data
      * from a MySQL database to Hazelcast Jet.
      */
-    public static final class Builder extends AbstractSourceBuilder<Builder> {
+    public static final class Builder {
 
         private static final PropertyRules RULES = new PropertyRules()
                 .required("database.hostname")
@@ -63,14 +63,16 @@ public final class MySqlCdcSources {
                 .exclusive("database.whitelist", "database.blacklist")
                 .exclusive("table.whitelist", "table.blacklist");
 
+        private final DebeziumConfig config;
 
         /**
-         * Name of the source, needs to be unique, will be passed to the
-         * underlying Kafka Connect source.
+         * @param name name of the source, needs to be unique,
+         *             will be passed to the underlying Kafka
+         *             Connect source
          */
         private Builder(String name) {
-            super(name, "io.debezium.connector.mysql.MySqlConnector");
-            properties.put("include.schema.changes", "false");
+            config = new DebeziumConfig(name, "io.debezium.connector.mysql.MySqlConnector");
+            config.setProperty("include.schema.changes", "false");
         }
 
         /**
@@ -79,7 +81,8 @@ public final class MySqlCdcSources {
          */
         @Nonnull
         public Builder setDatabaseAddress(@Nonnull String address) {
-            return setProperty("database.hostname", address);
+            config.setProperty("database.hostname", address);
+            return this;
         }
 
         /**
@@ -88,7 +91,8 @@ public final class MySqlCdcSources {
          */
         @Nonnull
         public Builder setDatabasePort(int port) {
-            return setProperty("database.port", Integer.toString(port));
+            config.setProperty("database.port", Integer.toString(port));
+            return this;
         }
 
         /**
@@ -97,7 +101,8 @@ public final class MySqlCdcSources {
          */
         @Nonnull
         public Builder setDatabaseUser(@Nonnull String user) {
-            return setProperty("database.user", user);
+            config.setProperty("database.user", user);
+            return this;
         }
 
         /**
@@ -106,7 +111,8 @@ public final class MySqlCdcSources {
          */
         @Nonnull
         public Builder setDatabasePassword(@Nonnull String password) {
-            return setProperty("database.password", password);
+            config.setProperty("database.password", password);
+            return this;
         }
 
         /**
@@ -118,7 +124,8 @@ public final class MySqlCdcSources {
          */
         @Nonnull
         public Builder setClusterName(@Nonnull String cluster) {
-            return setProperty("database.server.name", cluster);
+            config.setProperty("database.server.name", cluster);
+            return this;
         }
 
         /**
@@ -131,7 +138,8 @@ public final class MySqlCdcSources {
          */
         @Nonnull
         public Builder setDatabaseClientId(int clientId) {
-            return setProperty("database.server.id", clientId);
+            config.setProperty("database.server.id", clientId);
+            return this;
         }
 
         /**
@@ -143,7 +151,8 @@ public final class MySqlCdcSources {
          */
         @Nonnull
         public Builder setDatabaseWhitelist(@Nonnull String... dbNameRegExps) {
-            return setProperty("database.whitelist", dbNameRegExps);
+            config.setProperty("database.whitelist", dbNameRegExps);
+            return this;
         }
 
         /**
@@ -154,7 +163,8 @@ public final class MySqlCdcSources {
          */
         @Nonnull
         public Builder setDatabaseBlacklist(@Nonnull String... dbNameRegExps) {
-            return setProperty("database.blacklist", dbNameRegExps);
+            config.setProperty("database.blacklist", dbNameRegExps);
+            return this;
         }
 
         /**
@@ -168,7 +178,8 @@ public final class MySqlCdcSources {
          */
         @Nonnull
         public Builder setTableWhitelist(@Nonnull String... tableNameRegExps) {
-            return setProperty("table.whitelist", tableNameRegExps);
+            config.setProperty("table.whitelist", tableNameRegExps);
+            return this;
         }
 
         /**
@@ -181,7 +192,8 @@ public final class MySqlCdcSources {
          */
         @Nonnull
         public Builder setTableBlacklist(@Nonnull String... tableNameRegExps) {
-            return setProperty("table.blacklist", tableNameRegExps);
+            config.setProperty("table.blacklist", tableNameRegExps);
+            return this;
         }
 
         /**
@@ -193,7 +205,18 @@ public final class MySqlCdcSources {
          */
         @Nonnull
         public Builder setColumnBlacklist(@Nonnull String... columnNameRegExps) {
-            return setProperty("column.blacklist", columnNameRegExps);
+            config.setProperty("column.blacklist", columnNameRegExps);
+            return this;
+        }
+
+        /**
+         * Can be used to set any property not explicitly covered by
+         * other methods or to override properties we have hidden.
+         */
+        @Nonnull
+        public Builder setCustomProperty(@Nonnull String key, @Nonnull String value) {
+            config.setProperty(key, value);
+            return this;
         }
 
         /**
@@ -201,8 +224,8 @@ public final class MySqlCdcSources {
          */
         @Nonnull
         public StreamSource<ChangeRecord> build() {
-            RULES.check(properties);
-            return connect(properties);
+            config.check(RULES);
+            return config.createSource();
         }
 
     }

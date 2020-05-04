@@ -63,15 +63,15 @@ public class DebeziumIntegrationTest extends AbstractIntegrationTest {
 
             StreamSource<ChangeRecord> source = DebeziumCdcSources.debezium("mysql",
                     "io.debezium.connector.mysql.MySqlConnector")
-                    .setCustomProperty("include.schema.changes", "false")
-                    .setCustomProperty("database.hostname", container.getContainerIpAddress())
-                    .setCustomProperty("database.port", Integer.toString(container.getMappedPort(MYSQL_PORT)))
-                    .setCustomProperty("database.user", "debezium")
-                    .setCustomProperty("database.password", "dbz")
-                    .setCustomProperty("database.server.id", "184054")
-                    .setCustomProperty("database.server.name", "dbserver1")
-                    .setCustomProperty("database.whitelist", "inventory")
-                    .setCustomProperty("table.whitelist", "inventory.customers")
+                    .setProperty("include.schema.changes", "false")
+                    .setProperty("database.hostname", container.getContainerIpAddress())
+                    .setProperty("database.port", Integer.toString(container.getMappedPort(MYSQL_PORT)))
+                    .setProperty("database.user", "debezium")
+                    .setProperty("database.password", "dbz")
+                    .setProperty("database.server.id", "184054")
+                    .setProperty("database.server.name", "dbserver1")
+                    .setProperty("database.whitelist", "inventory")
+                    .setProperty("table.whitelist", "inventory.customers")
                     .build();
 
             Pipeline pipeline = Pipeline.create();

@@ -17,7 +17,7 @@
 package com.hazelcast.jet.cdc;
 
 import com.hazelcast.jet.annotation.EvolvingApi;
-import com.hazelcast.jet.cdc.impl.AbstractSourceBuilder;
+import com.hazelcast.jet.cdc.impl.DebeziumConfig;
 import com.hazelcast.jet.pipeline.StreamSource;
 
 import javax.annotation.Nonnull;
@@ -51,14 +51,28 @@ public final class DebeziumCdcSources {
      * Builder for configuring a CDC source that streams change data
      * from any Debezium supported database to Hazelcast Jet.
      */
-    public static final class Builder extends AbstractSourceBuilder<Builder> {
+    public static final class Builder {
+
+        private final DebeziumConfig config;
 
         /**
-         * Name of the source, needs to be unique, will be passed to the
-         * underlying Kafka Connect source.
+         * @param name           name of the source, needs to be unique,
+         *                       will be passed to the underlying Kafka
+         *                       Connect source
+         * @param connectorClass name of the Java class for the connector,
+         *                       hardcoded for each type of DB
          */
         private Builder(String name, String connectorClass) {
-            super(name, connectorClass);
+            config = new DebeziumConfig(name, connectorClass);
+        }
+
+        /**
+         * Can be used to set any property supported by Debezium.
+         */
+        @Nonnull
+        public Builder setProperty(@Nonnull String key, @Nonnull String value) {
+            config.setProperty(key, value);
+            return this;
         }
 
         /**
@@ -66,7 +80,7 @@ public final class DebeziumCdcSources {
          */
         @Nonnull
         public StreamSource<ChangeRecord> build() {
-            return connect(properties);
+            return config.createSource();
         }
     }
 

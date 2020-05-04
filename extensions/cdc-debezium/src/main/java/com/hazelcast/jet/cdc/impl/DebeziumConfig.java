@@ -22,22 +22,14 @@ import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.pipeline.SourceBuilder;
 import com.hazelcast.jet.pipeline.StreamSource;
 
-import javax.annotation.Nonnull;
 import java.util.Objects;
 import java.util.Properties;
 
-public abstract class AbstractSourceBuilder<SELF extends AbstractSourceBuilder<SELF>> {
+public class DebeziumConfig {
 
-    protected final Properties properties = new Properties();
+    private final Properties properties = new Properties();
 
-    /**
-     * @param name           name of the source, needs to be unique,
-     *                       will be passed to the underlying Kafka
-     *                       Connect source
-     * @param connectorClass name of the Java class for the connector,
-     *                       hardcoded for each type of DB
-     */
-    protected AbstractSourceBuilder(String name, String connectorClass) {
+    public DebeziumConfig(String name, String connectorClass) {
         Objects.requireNonNull(name, "name");
         Objects.requireNonNull(connectorClass, "connectorClass");
 
@@ -48,44 +40,38 @@ public abstract class AbstractSourceBuilder<SELF extends AbstractSourceBuilder<S
         properties.put("tombstones.on.delete", "false");
     }
 
-    /**
-     * Can be used to set any property not covered by our builders,
-     * or to override properties we have hidden.
-     *
-     * @param key   the name of the property to set
-     * @param value the value of the property to set
-     * @return the builder itself
-     */
-    @Nonnull
-    public SELF setCustomProperty(@Nonnull String key, @Nonnull String value) {
-        return setProperty(key, value);
-    }
-
-    protected SELF setProperty(String key, String value) {
+    public void setProperty(String key, String value) {
         Objects.requireNonNull(key, "key");
         Objects.requireNonNull(value, "value");
 
         properties.put(key, value);
-        return (SELF) this;
     }
 
-    protected SELF setProperty(String key, int value) {
-        return setProperty(key, Integer.toString(value));
+    public void setProperty(String key, int value) {
+        setProperty(key, Integer.toString(value));
     }
 
-    protected SELF setProperty(String key, boolean value) {
-        return setProperty(key, Boolean.toString(value));
+    public void setProperty(String key, boolean value) {
+        setProperty(key, Boolean.toString(value));
     }
 
-    protected SELF setProperty(String key, String... values) {
+    public void setProperty(String key, String... values) {
         Objects.requireNonNull(values, "values");
         for (int i = 0; i < values.length; i++) {
             Objects.requireNonNull(values[i], "values[" + i + "]");
         }
-        return setProperty(key, String.join(",", values));
+        setProperty(key, String.join(",", values));
     }
 
-    protected static StreamSource<ChangeRecord> connect(@Nonnull Properties properties) {
+    public void check(PropertyRules rules) {
+        rules.check(properties);
+    }
+
+    public StreamSource<ChangeRecord> createSource() {
+        return createSource(properties);
+    }
+
+    private static StreamSource<ChangeRecord> createSource(Properties properties) {
         String name = properties.getProperty("name");
         FunctionEx<Processor.Context, CdcSource> createFn = ctx -> new CdcSource(ctx, properties);
         return SourceBuilder.timestampedStream(name, createFn)
@@ -95,5 +81,4 @@ public abstract class AbstractSourceBuilder<SELF extends AbstractSourceBuilder<S
                 .destroyFn(CdcSource::destroy)
                 .build();
     }
-
 }
