@@ -200,7 +200,7 @@ public final class MySqlCdcSources {
          * Returns an actual source based on the properties set so far.
          */
         @Nonnull
-        public StreamSource<ChangeEvent> build() {
+        public StreamSource<ChangeRecord> build() {
             RULES.check(properties);
             return connect(properties);
         }

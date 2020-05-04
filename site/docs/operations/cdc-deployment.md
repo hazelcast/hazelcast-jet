@@ -7,8 +7,7 @@ description: Guide for deploying CDC connectors and target databases.
 
 When using [CDC data sources](../api/sources-sinks#cdc) in Jet, one must
 also take care that the source databases are set up correctly, meaning
-they have all the features required for change data event capture
-enabled.
+they have all the features required for change data capture enabled.
 
 ## MySQL
 

@@ -18,7 +18,7 @@ package com.hazelcast.jet.cdc.impl;
 
 import com.fasterxml.jackson.jr.annotationsupport.JacksonAnnotationExtension;
 import com.fasterxml.jackson.jr.ob.JSON;
-import com.hazelcast.jet.cdc.ChangeEventElement;
+import com.hazelcast.jet.cdc.RecordPart;
 import com.hazelcast.jet.cdc.ParsingException;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
@@ -29,17 +29,17 @@ import java.io.IOException;
 import java.util.Map;
 import java.util.Objects;
 
-class ChangeEventElementJsonImpl implements ChangeEventElement, IdentifiedDataSerializable {
+class RecordPartImpl implements RecordPart, IdentifiedDataSerializable {
 
     private static final JSON J = JSON.builder().register(JacksonAnnotationExtension.std).build();
 
     private String json;
     private Map<String, Object> content;
 
-    ChangeEventElementJsonImpl() { //needed for deserialization
+    RecordPartImpl() { //needed for deserialization
     }
 
-    ChangeEventElementJsonImpl(@Nonnull String json) {
+    RecordPartImpl(@Nonnull String json) {
         this.json = Objects.requireNonNull(json);
     }
 

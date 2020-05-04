@@ -22,7 +22,7 @@ import javax.annotation.Nonnull;
 import java.util.Map;
 
 /**
- * High level component of a {@link ChangeEvent}, such as the <i>key</i>
+ * High level component of a {@link ChangeRecord}, such as the <i>key</i>
  * or the <i>value</i> of it, but can also be thought of as a simple
  * convenience wrapper of a JSON expression. Contains various methods
  * for retrieving component values or for mapping itself to data
@@ -31,7 +31,7 @@ import java.util.Map;
  * @since 4.2
  */
 @EvolvingApi
-public interface ChangeEventElement {
+public interface RecordPart {
 
     /**
      * Maps the entire element to an instance of the specified class.

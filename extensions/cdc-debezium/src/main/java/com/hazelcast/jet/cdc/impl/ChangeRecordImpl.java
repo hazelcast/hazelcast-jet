@@ -16,8 +16,8 @@
 
 package com.hazelcast.jet.cdc.impl;
 
-import com.hazelcast.jet.cdc.ChangeEvent;
-import com.hazelcast.jet.cdc.ChangeEventElement;
+import com.hazelcast.jet.cdc.ChangeRecord;
+import com.hazelcast.jet.cdc.RecordPart;
 import com.hazelcast.jet.cdc.Operation;
 import com.hazelcast.jet.cdc.ParsingException;
 import com.hazelcast.nio.ObjectDataInput;
@@ -29,7 +29,7 @@ import java.io.IOException;
 import java.util.Map;
 import java.util.Objects;
 
-public class ChangeEventJsonImpl implements ChangeEvent, IdentifiedDataSerializable {
+public class ChangeRecordImpl implements ChangeRecord, IdentifiedDataSerializable {
 
     private String keyJson;
     private String valueJson;
@@ -37,13 +37,13 @@ public class ChangeEventJsonImpl implements ChangeEvent, IdentifiedDataSerializa
     private String json;
     private Long timestamp;
     private Operation operation;
-    private ChangeEventElement key;
-    private ChangeEventElement value;
+    private RecordPart key;
+    private RecordPart value;
 
-    ChangeEventJsonImpl() { //needed for deserialization
+    ChangeRecordImpl() { //needed for deserialization
     }
 
-    public ChangeEventJsonImpl(@Nonnull String keyJson, @Nonnull String valueJson) {
+    public ChangeRecordImpl(@Nonnull String keyJson, @Nonnull String valueJson) {
         this.keyJson = Objects.requireNonNull(keyJson, "keyJson");
         this.valueJson = Objects.requireNonNull(valueJson, "valueJson");
     }
@@ -72,18 +72,18 @@ public class ChangeEventJsonImpl implements ChangeEvent, IdentifiedDataSerializa
 
     @Override
     @Nonnull
-    public ChangeEventElement key() {
+    public RecordPart key() {
         if (key == null) {
-            key = new ChangeEventElementJsonImpl(keyJson);
+            key = new RecordPartImpl(keyJson);
         }
         return key;
     }
 
     @Override
     @Nonnull
-    public ChangeEventElement value() {
+    public RecordPart value() {
         if (value == null) {
-            value = new ChangeEventElementJsonImpl(valueJson);
+            value = new RecordPartImpl(valueJson);
         }
         return value;
     }

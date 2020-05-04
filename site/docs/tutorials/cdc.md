@@ -319,7 +319,7 @@ package org.example;
 
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.Util;
-import com.hazelcast.jet.cdc.ChangeEvent;
+import com.hazelcast.jet.cdc.ChangeRecord;
 import com.hazelcast.jet.cdc.MySqlCdcSources;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.pipeline.Pipeline;
@@ -329,7 +329,7 @@ import com.hazelcast.jet.pipeline.StreamSource;
 public class JetJob {
 
     public static void main(String[] args) {
-        StreamSource<ChangeEvent> source = MySqlCdcSources.mysql("source")
+        StreamSource<ChangeRecord> source = MySqlCdcSources.mysql("source")
                 .setDatabaseAddress("127.0.0.1")
                 .setDatabasePort(3306)
                 .setDatabaseUser("debezium")
@@ -342,7 +342,7 @@ public class JetJob {
         Pipeline pipeline = Pipeline.create();
         pipeline.readFrom(source)
                 .withoutTimestamps()
-                .map(event -> event.value().asPojo(Customer.class))
+                .map(record -> record.value().asPojo(Customer.class))
                 .map(customer -> Util.entry(customer.id, customer))
                 .peek()
                 .writeTo(Sinks.map("customers"));

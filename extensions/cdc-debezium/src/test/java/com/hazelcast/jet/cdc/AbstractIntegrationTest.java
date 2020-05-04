@@ -50,7 +50,7 @@ public class AbstractIntegrationTest extends JetTestSupport {
     @Nonnull
     protected static ProcessorMetaSupplier filterTimestampsProcessorSupplier() {
         /* Trying to make sure that items on the stream have native
-         * timestamps. All events should be processed in a short amount
+         * timestamps. All records should be processed in a short amount
          * of time by Jet, so there is no reason why the difference
          * between their event times and the current time on processing
          * should be significantly different. It is a hack, but it does

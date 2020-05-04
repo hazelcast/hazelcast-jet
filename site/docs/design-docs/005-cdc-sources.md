@@ -46,28 +46,28 @@ directly. In order to achieve this we:
 * offer support for mapping various event component directly into
   **POJO data objects** or to simply extract individual from them
 
-### Event Structure
+### Record Structure
 
-The interfaces framing the general structure of change events are
-quite simple:
+The interfaces framing the general structure of change events (we call
+them "records") are quite simple:
 
 ```java
-public interface ChangeEvent {
+public interface ChangeRecord {
 
     long timestamp() throws ParsingException;
 
     Operation operation() throws ParsingException;
 
-    ChangeEventElement key();
+    RecordPart key();
 
-    ChangeEventElement value();
+    RecordPart value();
 
     String asJson();
 }
 ```
 
 ```java
-public interface ChangeEventElement {
+public interface RecordPart {
 
     <T> T asPojo(Class<T> clazz) throws ParsingException;
 
@@ -80,12 +80,12 @@ public interface ChangeEventElement {
 
 ### Content Extraction
 
-As can be noticed from the [event structure
-interfaces](#event-structure), most content can be found in the form of
-`ChangeEventElement` instances.
+As can be noticed from the [record structure
+interfaces](#record-structure), most content can be found in the form of
+`RecordPart` instances.
 
 Such an object is basically an encapsulated JSON message (part of the
-original, big event message) and offers two main methods to access the
+original, big message) and offers two main methods to access the
 data:
 
 * mapping the entire content to a **POJO** directly
@@ -101,24 +101,24 @@ varying formats it is clear that parsing them can be error prone and
 can fail in some scenarios (for example on some untested DB-connector
 version combination).
 
-To prevent a total API failure in this case each of the event structure
+To prevent a total API failure in this case each of the record structure
 interfaces contains an extra `asJson()` method, which will provide the
 raw JSON message the object is based on:
 
-* `ChangeEvent.asJson()` gives you the original message from the
+* `ChangeRecord.asJson()` gives you the original message from the
   connector (although already flattened), without anything having been
   done to it; if all else fails this will still work
-* `ChangeEventElement.asJson()` gives you the JSON message of that
-  particular fragment
+* `RecordPart.asJson()` gives you the JSON message of that particular
+  fragment
 
 ### JSON parsing
 
 Debezium database connecters provide messages in standard JSON format
 which can be parsed by any one of the well-known JSON parsing libraries
-out there. For backing the implementations of our [event structure
-interfaces](#event-structure) we have chosen to use [Jackson
-jr](https://github.com/FasterXML/jackson-jr) with
-[annotation support](https://github.com/FasterXML/jackson-jr/tree/master/jr-annotation-support).
+out there. For backing the implementations of our [record structure
+interfaces](#record-structure) we have chosen to use [Jackson
+jr](https://github.com/FasterXML/jackson-jr) with [annotation
+support](https://github.com/FasterXML/jackson-jr/tree/master/jr-annotation-support).
 
 The consequence of this for object mapping is that the classes we intend
 to map to need to define Bean style accessors. Further details in the
@@ -168,9 +168,9 @@ simple data objects:
 ```java
 StreamStage<Customer> stage = pipeline.readFrom(source)
     .withNativeTimestamps(0)
-    .map(event -> {
-        ChangeEventElement eventValue = event.value();
-        return eventValue.asPojo(Customer.class);
+    .map(record -> {
+        RecordPart value = record.value();
+        return value.asPojo(Customer.class);
     });
 ```
 
@@ -186,7 +186,7 @@ overwritten, even if for some reason we forgot or failed to handle them.
 For this we are going to use builders:
 
 ```java
-StreamSource<ChangeEvent> source = MySqlCdcSources.mysql(tableName)
+StreamSource<ChangeRecord> source = MySqlCdcSources.mysql(tableName)
     //set any of the essential properties we cover
     .setDatabaseAddress(mysql.getContainerIpAddress())
     .setDatabasePort(mysql.getMappedPort(MYSQL_PORT))
@@ -219,10 +219,11 @@ The current version of the sources does fix timestamps, because they
 haven't been working before, but beyond that timestamps have a big
 weakness, which we need to at least document.
 
-The timestamps we normally get from these sources are proper
-event-times, sourced from the database change-log. The problem is with
-fault tolerance. If the connector needs to be restarted it will need to
-re-fetch some events (that happened after the last Jet snapshot).
+The timestamps we normally get from these sources are proper event
+times, sourced from the database change-log. The problem is with fault
+tolerance. If the connector needs to be restarted it will need to
+re-fetch some change records (that happened after the last Jet
+snapshot).
 
 It can happen in such cases, that not all these events are in the quite
 limited database changelog. In such cases the connector uses a snapshot
@@ -231,7 +232,7 @@ image. Not only do events get lost for good, the timestamps in the
 snapshot ones aren't event times any longer.
 
 Luckily change events that come from snapshots can be simply identified.
-They are basically insert events and their `Operation` field will not
+They are basically insert records and their `Operation` field will not
 only reflect that, but use a special type of insert value, called `SYNC`
 for them. Except some, see [further inconsistencies](#snapshots-are-not-marked-in-mysql).
 
@@ -241,11 +242,12 @@ still, they can be and we need to make that clear in our documentation.
 
 ### Snapshots are not marked in MySQL
 
-As discussed in the [section about timestamps](#timestamps-arent-always-event-times)
-there is a need to identify events that originate in database snapshots
-(as opposed to database changelogs).
+As discussed in the [section about
+timestamps](#timestamps-arent-always-event-times) there is a need to
+identify change records that originate in database snapshots (as opposed
+to database changelogs).
 
-This is almost always possible, because such events will have `SYNC` as
+This is almost always possible, because such records will have `SYNC` as
 their operation, except one case, MySQL which does not mark them the
 same way. We could fix this in our implementation, but the fix might not
 work as expected in some messages we fail to consider, causing their
@@ -279,7 +281,7 @@ to explicitly deal with Debezium connector jars or anything else.
 
 ## Serialization
 
-The helper classes defined in `cdc-debezium`, such as `ChangeEvent` and
+The helper classes defined in `cdc-debezium`, such as `ChangeRecord` and
  its innards are data objects that need to travel around in Jet
  clusters. For that they need to be serializable. Among the
  [serialization options available in
@@ -303,15 +305,14 @@ hardware, but results should still be relevant:
 
 ### Results
 
-Maximum number of *sustained* record change events that could be
-produced in the database (by continuously inserting into and then
-deleting data from) was around **100,000 rows/second**. The Jet job
-processing all the corresponding CDC events (reading them and mapping
-them to user data objects) had no problems with keeping up, no lagging
-behind observed.
+Maximum number of *sustained* change records that could be produced in
+the database (by continuously inserting into and then deleting data
+from) was around **100,000 rows/second**. The Jet job processing all the
+corresponding CDC events (reading them and mapping them to user data
+objects) had no problems with keeping up, no lagging behind observed.
 
 *Peak* even handling rate of the Jet pipeline has been observed around
-**200,000 events/second**. This scenario was achieved by making the
+**200,000 records/second**. This scenario was achieved by making the
 connector snapshot a very large table and inserting into the table at
 peak rate while snapshotting was going on. Once the connector finished
 snapshotting and switched to reading the binlog the above peak rate

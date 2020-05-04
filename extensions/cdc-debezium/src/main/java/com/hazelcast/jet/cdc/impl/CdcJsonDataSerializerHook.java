@@ -46,9 +46,9 @@ public class CdcJsonDataSerializerHook implements DataSerializerHook {
         public IdentifiedDataSerializable create(int typeId) {
             switch (typeId) {
                 case ELEMENT:
-                    return new ChangeEventElementJsonImpl();
+                    return new RecordPartImpl();
                 case EVENT:
-                    return new ChangeEventJsonImpl();
+                    return new ChangeRecordImpl();
                 default:
                     throw new IllegalArgumentException("Unknown type id " + typeId);
             }

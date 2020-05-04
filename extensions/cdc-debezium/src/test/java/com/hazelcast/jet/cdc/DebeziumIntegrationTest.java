@@ -51,7 +51,7 @@ public class DebeziumIntegrationTest extends AbstractIntegrationTest {
             container.start();
 
             // given
-            String[] expectedEvents = {
+            String[] expectedRecords = {
                     "1001/0:INSERT:Customer {id=1001, firstName=Sally, lastName=Thomas, email=sally.thomas@acme.com}",
                     "1002/0:INSERT:Customer {id=1002, firstName=George, lastName=Bailey, email=gbailey@foobar.com}",
                     "1003/0:INSERT:Customer {id=1003, firstName=Edward, lastName=Walker, email=ed@walker.com}",
@@ -61,7 +61,7 @@ public class DebeziumIntegrationTest extends AbstractIntegrationTest {
                     "1005/1:DELETE:Customer {id=1005, firstName=Jason, lastName=Bourne, email=jason@bourne.org}"
             };
 
-            StreamSource<ChangeEvent> source = DebeziumCdcSources.debezium("mysql",
+            StreamSource<ChangeRecord> source = DebeziumCdcSources.debezium("mysql",
                     "io.debezium.connector.mysql.MySqlConnector")
                     .setCustomProperty("include.schema.changes", "false")
                     .setCustomProperty("database.hostname", container.getContainerIpAddress())
@@ -77,20 +77,20 @@ public class DebeziumIntegrationTest extends AbstractIntegrationTest {
             Pipeline pipeline = Pipeline.create();
             pipeline.readFrom(source)
                     .withNativeTimestamps(0)
-                    .<ChangeEvent>customTransform("filter_timestamps", filterTimestampsProcessorSupplier())
-                    .groupingKey(event -> (Integer) event.key().asMap().get("id"))
+                    .<ChangeRecord>customTransform("filter_timestamps", filterTimestampsProcessorSupplier())
+                    .groupingKey(record -> (Integer) record.key().asMap().get("id"))
                     .mapStateful(
                             LongAccumulator::new,
-                            (accumulator, customerId, event) -> {
+                            (accumulator, customerId, record) -> {
                                 long count = accumulator.get();
                                 accumulator.add(1);
-                                Operation operation = event.operation();
-                                ChangeEventElement eventValue = event.value();
-                                Customer customer = eventValue.asPojo(Customer.class);
+                                Operation operation = record.operation();
+                                RecordPart value = record.value();
+                                Customer customer = value.asPojo(Customer.class);
                                 return customerId + "/" + count + ":" + operation + ":" + customer;
                             })
                     .setLocalParallelism(1)
-                    .writeTo(assertCollectedEventually(30, assertListFn(expectedEvents)));
+                    .writeTo(assertCollectedEventually(30, assertListFn(expectedRecords)));
 
             // when
             JetInstance jet = createJetMembers(2)[0];

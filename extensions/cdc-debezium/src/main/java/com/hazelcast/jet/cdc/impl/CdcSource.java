@@ -18,7 +18,7 @@ package com.hazelcast.jet.cdc.impl;
 
 import com.hazelcast.instance.impl.HazelcastInstanceFactory;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.cdc.ChangeEvent;
+import com.hazelcast.jet.cdc.ChangeRecord;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.pipeline.SourceBuilder;
 import io.debezium.transforms.ExtractNewRecordState;
@@ -74,7 +74,7 @@ class CdcSource {
         }
     }
 
-    public void fillBuffer(SourceBuilder.TimestampedSourceBuffer<ChangeEvent> buf) {
+    public void fillBuffer(SourceBuilder.TimestampedSourceBuffer<ChangeRecord> buf) {
         if (!taskInit) {
             task.initialize(new JetSourceTaskContext());
             task.start(taskConfig);
@@ -97,12 +97,12 @@ class CdcSource {
         }
     }
 
-    private boolean addToBuffer(SourceRecord record, SourceBuilder.TimestampedSourceBuffer<ChangeEvent> buf) {
-        record = smt.apply(record);
-        if (record != null) {
-            ChangeEvent event = extractEvent(record);
-            long timestamp = extractTimestamp(record);
-            buf.add(event, timestamp);
+    private boolean addToBuffer(SourceRecord sourceRecord, SourceBuilder.TimestampedSourceBuffer<ChangeRecord> buf) {
+        sourceRecord = smt.apply(sourceRecord);
+        if (sourceRecord != null) {
+            ChangeRecord changeRecord = toChangeRecord(sourceRecord);
+            long timestamp = extractTimestamp(sourceRecord);
+            buf.add(changeRecord, timestamp);
             return true;
         }
         return false;
@@ -135,10 +135,10 @@ class CdcSource {
         return smt;
     }
 
-    private static ChangeEvent extractEvent(SourceRecord record) {
+    private static ChangeRecord toChangeRecord(SourceRecord record) {
         String keyJson = Values.convertToString(record.keySchema(), record.key());
         String valueJson = Values.convertToString(record.valueSchema(), record.value());
-        return new ChangeEventJsonImpl(keyJson, valueJson);
+        return new ChangeRecordImpl(keyJson, valueJson);
     }
 
     private static long extractTimestamp(SourceRecord record) {

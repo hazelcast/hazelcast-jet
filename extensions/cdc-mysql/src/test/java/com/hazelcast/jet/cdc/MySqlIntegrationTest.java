@@ -55,7 +55,7 @@ public class MySqlIntegrationTest extends AbstractIntegrationTest {
     @Test
     public void customers() throws Exception {
         // given
-        String[] expectedEvents = {
+        String[] expectedRecords = {
                 "1001/0:INSERT:Customer {id=1001, firstName=Sally, lastName=Thomas, email=sally.thomas@acme.com}",
                 "1002/0:INSERT:Customer {id=1002, firstName=George, lastName=Bailey, email=gbailey@foobar.com}",
                 "1003/0:INSERT:Customer {id=1003, firstName=Edward, lastName=Walker, email=ed@walker.com}",
@@ -69,20 +69,20 @@ public class MySqlIntegrationTest extends AbstractIntegrationTest {
 
         pipeline.readFrom(source("customers"))
                 .withNativeTimestamps(0)
-                .<ChangeEvent>customTransform("filter_timestamps", filterTimestampsProcessorSupplier())
-                .groupingKey(event -> (Integer) event.key().asMap().get("id"))
+                .<ChangeRecord>customTransform("filter_timestamps", filterTimestampsProcessorSupplier())
+                .groupingKey(record -> (Integer) record.key().asMap().get("id"))
                 .mapStateful(
                         LongAccumulator::new,
-                        (accumulator, customerId, event) -> {
+                        (accumulator, customerId, record) -> {
                             long count = accumulator.get();
                             accumulator.add(1);
-                            Operation operation = event.operation();
-                            ChangeEventElement eventValue = event.value();
-                            Customer customer = eventValue.asPojo(Customer.class);
+                            Operation operation = record.operation();
+                            RecordPart value = record.value();
+                            Customer customer = value.asPojo(Customer.class);
                             return customerId + "/" + count + ":" + operation + ":" + customer;
                         })
                 .setLocalParallelism(1)
-                .writeTo(assertCollectedEventually(30, assertListFn(expectedEvents)));
+                .writeTo(assertCollectedEventually(30, assertListFn(expectedRecords)));
 
         // when
         JetInstance jet = createJetMembers(2)[0];
@@ -119,7 +119,7 @@ public class MySqlIntegrationTest extends AbstractIntegrationTest {
     @Test
     public void orders() {
         // given
-        String[] expectedEvents = {
+        String[] expectedRecords = {
                 "10001/0:INSERT:Order {orderNumber=10001, orderDate=" + new Date(1452902400000L) +
                         ", quantity=1, productId=102}",
                 "10002/0:INSERT:Order {orderNumber=10002, orderDate=" + new Date(1452988800000L) +
@@ -136,17 +136,17 @@ public class MySqlIntegrationTest extends AbstractIntegrationTest {
                 .groupingKey(MySqlIntegrationTest::getOrderNumber)
                 .mapStateful(
                         LongAccumulator::new,
-                        (accumulator, orderId, event) -> {
+                        (accumulator, orderId, record) -> {
                             long count = accumulator.get();
                             accumulator.add(1);
-                            Operation operation = event.operation();
-                            ChangeEventElement eventValue = event.value();
-                            Order order = eventValue.asPojo(Order.class);
+                            Operation operation = record.operation();
+                            RecordPart value = record.value();
+                            Order order = value.asPojo(Order.class);
                             return orderId + "/" + count + ":" + operation + ":" + order;
                         })
                 .setLocalParallelism(1)
                 .writeTo(assertCollectedEventually(30,
-                        assertListFn(expectedEvents)));
+                        assertListFn(expectedRecords)));
 
         // when
         JetInstance jet = createJetMembers(2)[0];
@@ -166,7 +166,7 @@ public class MySqlIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Nonnull
-    private StreamSource<ChangeEvent> source(String tableName) {
+    private StreamSource<ChangeRecord> source(String tableName) {
         return MySqlCdcSources.mysql(tableName)
                 .setDatabaseAddress(mysql.getContainerIpAddress())
                 .setDatabasePort(mysql.getMappedPort(MYSQL_PORT))
@@ -178,13 +178,13 @@ public class MySqlIntegrationTest extends AbstractIntegrationTest {
                 .build();
     }
 
-    private static int getOrderNumber(ChangeEvent event) throws ParsingException {
+    private static int getOrderNumber(ChangeRecord record) throws ParsingException {
         //pick random method for extracting ID in order to test all code paths
         boolean primitive = ThreadLocalRandom.current().nextBoolean();
         if (primitive) {
-            return (Integer) event.key().asMap().get("order_number");
+            return (Integer) record.key().asMap().get("order_number");
         } else {
-            return event.key().asPojo(OrderPrimaryKey.class).id;
+            return record.key().asPojo(OrderPrimaryKey.class).id;
         }
     }
 

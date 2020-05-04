@@ -51,7 +51,7 @@ import javax.annotation.Nonnull;
  * @since 4.2
  */
 @EvolvingApi
-public interface ChangeEvent {
+public interface ChangeRecord {
 
     /**
      * Specifies the moment in time when the event happened. This
@@ -75,7 +75,7 @@ public interface ChangeEvent {
      * update). Only some special events, like heartbeats don't have an
      * operation value.
      *
-     * @return {@link Operation#UNSPECIFIED} if this {@code ChangeEventValue}
+     * @return {@link Operation#UNSPECIFIED} if this {@code ChangeRecord}
      * doesn't have an operation field or appropriate {@link Operation}
      * that matches what's found in the operation field
      * @throws ParsingException if there is an operation field, but it's
@@ -85,18 +85,18 @@ public interface ChangeEvent {
     Operation operation() throws ParsingException;
 
     /**
-     * Identifies the particular record or document being affected
-     * by the change event.
+     * Identifies the particular record being affected by the change
+     * event.
      */
     @Nonnull
-    ChangeEventElement key();
+    RecordPart key();
 
     /**
-     * Describes the actual change affected on the record or document
-     * by the change event.
+     * Describes the actual change affected on the record by the change
+     * event.
      */
     @Nonnull
-    ChangeEventElement value();
+    RecordPart value();
 
     /**
      * Returns raw JSON string which the content of this event is

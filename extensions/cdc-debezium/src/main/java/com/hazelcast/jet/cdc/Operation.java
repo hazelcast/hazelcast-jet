@@ -34,7 +34,7 @@ import java.util.Objects;
 @EvolvingApi
 public enum Operation {
     /**
-     * Change event doesn't have an operation field, for example
+     * {@code ChangeRecord} doesn't have an operation field, for example
      * heartbeats.
      */
     UNSPECIFIED(null),

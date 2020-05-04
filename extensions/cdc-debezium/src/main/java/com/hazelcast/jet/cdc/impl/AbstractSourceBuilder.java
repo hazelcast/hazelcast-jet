@@ -17,7 +17,7 @@
 package com.hazelcast.jet.cdc.impl;
 
 import com.hazelcast.function.FunctionEx;
-import com.hazelcast.jet.cdc.ChangeEvent;
+import com.hazelcast.jet.cdc.ChangeRecord;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.pipeline.SourceBuilder;
 import com.hazelcast.jet.pipeline.StreamSource;
@@ -85,7 +85,7 @@ public abstract class AbstractSourceBuilder<SELF extends AbstractSourceBuilder<S
         return setProperty(key, String.join(",", values));
     }
 
-    protected static StreamSource<ChangeEvent> connect(@Nonnull Properties properties) {
+    protected static StreamSource<ChangeRecord> connect(@Nonnull Properties properties) {
         String name = properties.getProperty("name");
         FunctionEx<Processor.Context, CdcSource> createFn = ctx -> new CdcSource(ctx, properties);
         return SourceBuilder.timestampedStream(name, createFn)

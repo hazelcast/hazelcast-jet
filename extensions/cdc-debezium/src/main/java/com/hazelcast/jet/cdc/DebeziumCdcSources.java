@@ -65,7 +65,7 @@ public final class DebeziumCdcSources {
          * Returns an actual source based on the properties set so far.
          */
         @Nonnull
-        public StreamSource<ChangeEvent> build() {
+        public StreamSource<ChangeRecord> build() {
             return connect(properties);
         }
     }
