@@ -29,7 +29,6 @@ import org.elasticsearch.client.RestHighLevelClient;
 import org.elasticsearch.search.SearchHit;
 
 import javax.annotation.Nonnull;
-import java.io.Serializable;
 
 import static com.hazelcast.jet.impl.util.Util.checkNonNullAndSerializable;
 import static com.hazelcast.jet.impl.util.Util.checkSerializable;
@@ -52,9 +51,7 @@ import static java.util.Objects.requireNonNull;
  * @param <T> type of the output of the mapping function from {@link SearchHit} -> T
  * @since 4.1
  */
-public class ElasticSourceBuilder<T> implements Serializable {
-
-    private static final long serialVersionUID = 1L;
+public class ElasticSourceBuilder<T> {
 
     private static final String DEFAULT_NAME = "elastic";
 
@@ -79,7 +76,11 @@ public class ElasticSourceBuilder<T> implements Serializable {
         requireNonNull(searchRequestSupplier, "searchRequestSupplier must be set");
         requireNonNull(mapHitFn, "mapHitFn must be set");
 
-        ElasticProcessorMetaSupplier<T> metaSupplier = new ElasticProcessorMetaSupplier<>(this);
+        ElasticSourceConfiguration<T> configuration = new ElasticSourceConfiguration<T>(
+                clientSupplier, destroyFn, searchRequestSupplier, optionsFn, mapHitFn, slicing, coLocatedReading,
+                scrollKeepAlive, preferredLocalParallelism
+        );
+        ElasticProcessorMetaSupplier<T> metaSupplier = new ElasticProcessorMetaSupplier<T>(configuration);
         return Sources.batchFromProcessor(DEFAULT_NAME, metaSupplier);
     }
 
@@ -94,11 +95,6 @@ public class ElasticSourceBuilder<T> implements Serializable {
         return this;
     }
 
-    @Nonnull
-    public SupplierEx<? extends RestHighLevelClient> clientSupplier() {
-        return clientSupplier;
-    }
-
     /**
      * Set the destroy function called on completion, defaults to {@link RestHighLevelClient#close()}
      *
@@ -108,11 +104,6 @@ public class ElasticSourceBuilder<T> implements Serializable {
     public ElasticSourceBuilder<T> destroyFn(@Nonnull ConsumerEx<? super RestHighLevelClient> destroyFn) {
         this.destroyFn = checkNonNullAndSerializable(destroyFn, "destroyFn");
         return this;
-    }
-
-    @Nonnull
-    public ConsumerEx<? super RestHighLevelClient> destroyFn() {
-        return destroyFn;
     }
 
     /**
@@ -126,11 +117,6 @@ public class ElasticSourceBuilder<T> implements Serializable {
         return this;
     }
 
-    @Nonnull
-    public SupplierEx<SearchRequest> searchRequestSupplier() {
-        return searchRequestSupplier;
-    }
-
     /**
      * Set the function to map SearchHit to custom result
      *
@@ -142,11 +128,6 @@ public class ElasticSourceBuilder<T> implements Serializable {
         return this;
     }
 
-    @Nonnull
-    public FunctionEx<? super SearchHit, T> mapHitFn() {
-        return mapHitFn;
-    }
-
     /**
      * Set the function that provides {@link RequestOptions} based on given request
      *
@@ -156,10 +137,6 @@ public class ElasticSourceBuilder<T> implements Serializable {
     public ElasticSourceBuilder<T> optionsFn(@Nonnull FunctionEx<? super ActionRequest, RequestOptions> optionsFn) {
         this.optionsFn = checkSerializable(optionsFn, "optionsFn");
         return this;
-    }
-
-    public FunctionEx<? super ActionRequest, RequestOptions> optionsFn() {
-        return optionsFn;
     }
 
     /**
@@ -180,10 +157,6 @@ public class ElasticSourceBuilder<T> implements Serializable {
         return this;
     }
 
-    public boolean slicing() {
-        return slicing;
-    }
-
     /**
      * Turns on co-located reading
      *
@@ -195,10 +168,6 @@ public class ElasticSourceBuilder<T> implements Serializable {
     public ElasticSourceBuilder<T> coLocatedReading(boolean coLocatedRead) {
         this.coLocatedReading = coLocatedRead;
         return this;
-    }
-
-    public boolean coLocatedReading() {
-        return coLocatedReading;
     }
 
     /**
@@ -215,10 +184,6 @@ public class ElasticSourceBuilder<T> implements Serializable {
         return this;
     }
 
-    public String scrollKeepAlive() {
-        return scrollKeepAlive;
-    }
-
     /**
      * Set the preferred local parallelism
      *
@@ -230,7 +195,4 @@ public class ElasticSourceBuilder<T> implements Serializable {
         return this;
     }
 
-    public int preferredLocalParallelism() {
-        return preferredLocalParallelism;
-    }
 }

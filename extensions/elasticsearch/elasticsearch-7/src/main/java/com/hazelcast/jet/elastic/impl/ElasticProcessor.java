@@ -22,7 +22,7 @@ import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.Traversers;
 import com.hazelcast.jet.core.AbstractProcessor;
-import com.hazelcast.jet.elastic.ElasticSourceBuilder;
+import com.hazelcast.jet.elastic.ElasticSourceConfiguration;
 import com.hazelcast.logging.ILogger;
 import org.apache.http.HttpHost;
 import org.apache.lucene.search.TotalHits;
@@ -50,12 +50,12 @@ import static java.util.stream.Collectors.toList;
 
 final class ElasticProcessor<T> extends AbstractProcessor {
 
-    private ElasticSourceBuilder<T> builder;
+    private ElasticSourceConfiguration<T> configuration;
     private final List<Shard> shards;
     private Traverser<T> traverser;
 
-    ElasticProcessor(ElasticSourceBuilder<T> builder, List<Shard> shards) {
-        this.builder = builder;
+    ElasticProcessor(ElasticSourceConfiguration<T> configuration, List<Shard> shards) {
+        this.configuration = configuration;
         this.shards = shards;
     }
 
@@ -66,12 +66,12 @@ final class ElasticProcessor<T> extends AbstractProcessor {
         ILogger logger = context.logger();
         logger.fine("init");
 
-        RestHighLevelClient client = builder.clientSupplier().get();
-        SearchRequest sr = builder.searchRequestSupplier().get();
-        sr.scroll(builder.scrollKeepAlive());
+        RestHighLevelClient client = configuration.clientSupplier().get();
+        SearchRequest sr = configuration.searchRequestSupplier().get();
+        sr.scroll(configuration.scrollKeepAlive());
 
-        if (builder.slicing()) {
-            if (builder.coLocatedReading()) {
+        if (configuration.slicing()) {
+            if (configuration.coLocatedReading()) {
                 int sliceId = context.localProcessorIndex();
                 int totalSlices = context.localParallelism();
                 if (totalSlices > 1) {
@@ -88,7 +88,7 @@ final class ElasticProcessor<T> extends AbstractProcessor {
             }
         }
 
-        if (builder.coLocatedReading()) {
+        if (configuration.coLocatedReading()) {
             logger.fine("Assigned shards: " + shards);
             if (shards.isEmpty()) {
                 traverser = Traversers.empty();
@@ -103,7 +103,7 @@ final class ElasticProcessor<T> extends AbstractProcessor {
             sr.preference(preference);
         }
 
-        traverser = new ElasticScrollTraverser(builder, client, sr, logger).map(builder.mapHitFn());
+        traverser = new ElasticScrollTraverser(configuration, client, sr, logger).map(configuration.mapHitFn());
     }
 
     private Node createLocalElasticNode() {
@@ -146,12 +146,12 @@ final class ElasticProcessor<T> extends AbstractProcessor {
         private int nextHit;
         private String scrollId;
 
-        ElasticScrollTraverser(ElasticSourceBuilder<?> builder, RestHighLevelClient client, SearchRequest sr,
+        ElasticScrollTraverser(ElasticSourceConfiguration<?> configuration, RestHighLevelClient client, SearchRequest sr,
                                ILogger logger) {
             this.client = client;
-            this.optionsFn = builder.optionsFn();
-            this.destroyFn = builder.destroyFn();
-            this.scrollKeepAlive = builder.scrollKeepAlive();
+            this.optionsFn = configuration.optionsFn();
+            this.destroyFn = configuration.destroyFn();
+            this.scrollKeepAlive = configuration.scrollKeepAlive();
             this.logger = logger;
 
             try {

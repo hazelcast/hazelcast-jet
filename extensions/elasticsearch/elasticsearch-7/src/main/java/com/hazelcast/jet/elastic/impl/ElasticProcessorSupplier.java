@@ -18,7 +18,7 @@ package com.hazelcast.jet.elastic.impl;
 
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorSupplier;
-import com.hazelcast.jet.elastic.ElasticSourceBuilder;
+import com.hazelcast.jet.elastic.ElasticSourceConfiguration;
 import com.hazelcast.jet.impl.util.Util;
 
 import javax.annotation.Nonnull;
@@ -34,22 +34,22 @@ import static java.util.stream.Collectors.toList;
 
 class ElasticProcessorSupplier<T> implements ProcessorSupplier {
 
-    private final ElasticSourceBuilder<T> builder;
+    private final ElasticSourceConfiguration<T> configuration;
 
     private final List<Shard> shards;
     private Map<Integer, List<Shard>> shardsByProcessor;
 
-    ElasticProcessorSupplier(@Nonnull ElasticSourceBuilder<T> builder,
+    ElasticProcessorSupplier(@Nonnull ElasticSourceConfiguration<T> configuration,
                              @Nonnull List<Shard> shards) {
-        this.builder = requireNonNull(builder);
+        this.configuration = requireNonNull(configuration);
         this.shards = requireNonNull(shards);
     }
 
 
     @Override
     public void init(@Nonnull Context context) {
-        if (builder.coLocatedReading()) {
-            if (builder.slicing()) {
+        if (configuration.coLocatedReading()) {
+            if (configuration.slicing()) {
                 shardsByProcessor = new HashMap<>();
                 for (int i = 0; i < context.localParallelism(); i++) {
                     shardsByProcessor.put(i, shards);
@@ -64,9 +64,9 @@ class ElasticProcessorSupplier<T> implements ProcessorSupplier {
     @Override
     public Collection<? extends Processor> get(int count) {
         return IntStream.range(0, count)
-                        .mapToObj(i -> builder.coLocatedReading() ?
-                                new ElasticProcessor<>(builder, shardsByProcessor.get(i)) :
-                                new ElasticProcessor<>(builder, emptyList()))
+                        .mapToObj(i -> configuration.coLocatedReading() ?
+                                new ElasticProcessor<>(configuration, shardsByProcessor.get(i)) :
+                                new ElasticProcessor<>(configuration, emptyList()))
                         .collect(toList());
     }
 

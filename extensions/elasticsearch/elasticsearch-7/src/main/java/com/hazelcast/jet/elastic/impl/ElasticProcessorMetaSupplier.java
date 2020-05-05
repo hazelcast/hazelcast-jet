@@ -21,7 +21,7 @@ import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.processor.Processors;
-import com.hazelcast.jet.elastic.ElasticSourceBuilder;
+import com.hazelcast.jet.elastic.ElasticSourceConfiguration;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
@@ -45,19 +45,19 @@ public class ElasticProcessorMetaSupplier<T> implements ProcessorMetaSupplier {
     private static final long serialVersionUID = 1L;
 
     @Nonnull
-    private final ElasticSourceBuilder<T> builder;
+    private final ElasticSourceConfiguration<T> configuration;
 
     private Map<String, List<Shard>> assignedShards;
     private transient Address ownerAddress;
 
-    public ElasticProcessorMetaSupplier(@Nonnull ElasticSourceBuilder<T> builder) {
-        this.builder = builder;
+    public ElasticProcessorMetaSupplier(@Nonnull ElasticSourceConfiguration<T> configuration) {
+        this.configuration = configuration;
     }
 
     @Override
     public int preferredLocalParallelism() {
-        if (builder.coLocatedReading() || builder.slicing()) {
-            return builder.preferredLocalParallelism();
+        if (configuration.coLocatedReading() || configuration.slicing()) {
+            return configuration.preferredLocalParallelism();
         } else {
             return 1;
         }
@@ -66,10 +66,10 @@ public class ElasticProcessorMetaSupplier<T> implements ProcessorMetaSupplier {
 
     @Override
     public void init(@Nonnull Context context) throws Exception {
-        ElasticCatClient catClient = new ElasticCatClient(builder.clientSupplier().get().getLowLevelClient());
-        List<Shard> shards = catClient.shards(builder.searchRequestSupplier().get().indices());
+        ElasticCatClient catClient = new ElasticCatClient(configuration.clientSupplier().get().getLowLevelClient());
+        List<Shard> shards = catClient.shards(configuration.searchRequestSupplier().get().indices());
 
-        if (builder.coLocatedReading()) {
+        if (configuration.coLocatedReading()) {
             Set<String> addresses = context
                     .jetInstance().getCluster().getMembers().stream()
                     .map(m -> uncheckCall((() -> m.getAddress().getInetAddress().getHostAddress())))
@@ -124,14 +124,14 @@ public class ElasticProcessorMetaSupplier<T> implements ProcessorMetaSupplier {
     @Nonnull
     @Override
     public Function<? super Address, ? extends ProcessorSupplier> get(@Nonnull List<Address> addresses) {
-        if (builder.slicing() || builder.coLocatedReading()) {
+        if (configuration.slicing() || configuration.coLocatedReading()) {
             return address -> {
                 String ipAddress = uncheckCall(() -> address.getInetAddress().getHostAddress());
                 List<Shard> shards = assignedShards.getOrDefault(ipAddress, emptyList());
-                return new ElasticProcessorSupplier<>(builder, shards);
+                return new ElasticProcessorSupplier<>(configuration, shards);
             };
         } else {
-            return address -> address.equals(ownerAddress) ? new ElasticProcessorSupplier<>(builder, emptyList())
+            return address -> address.equals(ownerAddress) ? new ElasticProcessorSupplier<>(configuration, emptyList())
                     : count -> nCopies(count, Processors.noopP().get());
         }
     }

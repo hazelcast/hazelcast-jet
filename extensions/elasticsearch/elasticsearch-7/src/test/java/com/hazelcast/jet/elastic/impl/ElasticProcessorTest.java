@@ -19,7 +19,7 @@ package com.hazelcast.jet.elastic.impl;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.core.test.TestOutbox;
 import com.hazelcast.jet.core.test.TestProcessorContext;
-import com.hazelcast.jet.elastic.ElasticSourceBuilder;
+import com.hazelcast.jet.elastic.ElasticSourceConfiguration;
 import com.hazelcast.jet.elastic.impl.Shard.Prirep;
 import org.apache.lucene.search.TotalHits;
 import org.elasticsearch.action.ActionRequest;
@@ -108,14 +108,17 @@ public class ElasticProcessorTest {
             throws Exception {
 
         RestHighLevelClient client = mockClient;
-        ElasticSourceBuilder<String> builder = new ElasticSourceBuilder<String>()
-                .clientSupplier(() -> client)
-                .searchRequestSupplier(() -> new SearchRequest("*"))
-                .optionsFn(optionsFn)
-                .mapHitFn(SearchHit::getSourceAsString)
-                .scrollKeepAlive(KEEP_ALIVE)
-                .slicing(slicing)
-                .coLocatedReading(coLocatedReading);
+        ElasticSourceConfiguration<String> builder = new ElasticSourceConfiguration<String>(
+                () -> client,
+                RestHighLevelClient::close,
+                () -> new SearchRequest("*"),
+                optionsFn,
+                SearchHit::getSourceAsString,
+                slicing,
+                coLocatedReading,
+                KEEP_ALIVE,
+                2
+        );
 
         // This constructor calls the client so it has to be called after specific mock setup in each test method
         // rather than in setUp()
