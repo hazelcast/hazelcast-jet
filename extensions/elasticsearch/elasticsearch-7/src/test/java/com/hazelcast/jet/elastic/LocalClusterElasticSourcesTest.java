@@ -20,6 +20,7 @@ import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.JetTestInstanceFactory;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.impl.util.Util;
+import org.junit.AfterClass;
 
 import java.util.function.Supplier;
 
@@ -28,13 +29,25 @@ import java.util.function.Supplier;
  */
 public class LocalClusterElasticSourcesTest extends CommonElasticSourcesTest {
 
+    private static JetInstance[] instances;
+
     // Cluster startup takes >1s, reusing the cluster between tests
     private static Supplier<JetInstance> jet = Util.memoize(() -> {
         JetTestInstanceFactory factory = new JetTestInstanceFactory();
-        JetInstance[] instances = factory.newMembers(new JetConfig(), 3);
-        Runtime.getRuntime().addShutdownHook(new Thread(factory::terminateAll));
+        instances = factory.newMembers(new JetConfig(), 3);
         return instances[0];
     });
+
+
+    @AfterClass
+    public static void afterClass() {
+        if (instances != null) {
+            for (JetInstance instance : instances) {
+                instance.shutdown();
+            }
+            instances = null;
+        }
+    }
 
     @Override
     protected JetInstance createJetInstance() {
