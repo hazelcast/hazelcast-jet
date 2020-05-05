@@ -31,11 +31,20 @@ import static com.hazelcast.jet.impl.util.Util.uncheckCall;
 
 public final class JsonUtil {
 
-    private static final JSON JSON_JR = JSON.builder()
-                                            .register(JacksonAnnotationExtension.std).build();
-    private static final JSON JSON_JR_WITH_ARRAYS = JSON.builder()
-                                                        .register(JacksonAnnotationExtension.std)
-                                                        .build().with(Feature.READ_JSON_ARRAYS_AS_JAVA_ARRAYS);
+    private static final JSON JSON_JR;
+    private static final JSON JSON_JR_WITH_ARRAYS;
+
+    static {
+        JSON.Builder builder = JSON.builder();
+        try {
+            Class.forName("com.fasterxml.jackson.annotation.JacksonAnnotation", false, JsonUtil.class.getClassLoader());
+            builder.register(JacksonAnnotationExtension.std);
+        } catch (ClassNotFoundException ignored) {
+        }
+
+        JSON_JR = builder.build();
+        JSON_JR_WITH_ARRAYS = builder.build().with(Feature.READ_JSON_ARRAYS_AS_JAVA_ARRAYS);
+    }
 
     private JsonUtil() {
     }
