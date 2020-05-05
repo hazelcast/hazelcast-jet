@@ -31,6 +31,7 @@ import io.grpc.stub.StreamObserver;
 
 import javax.annotation.Nonnull;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ForkJoinPool;
 
 /**
  * Provides {@link ServiceFactory} implementations for calling gRPC
@@ -105,7 +106,7 @@ public final class GrpcServices {
             @Nonnull FunctionEx<? super ManagedChannel, ? extends BiConsumerEx<T, StreamObserver<R>>> callStubFn
     ) {
         return ServiceFactories.nonSharedService(
-                ctx -> new UnaryService<>(ctx, channelFn.get().build(), callStubFn),
+                ctx -> new UnaryService<>(ctx, channelFn.get().executor(ForkJoinPool.commonPool()).build(), callStubFn),
                 UnaryService::destroy
         );
     }
@@ -168,7 +169,7 @@ public final class GrpcServices {
                     callStubFn
     ) {
         return ServiceFactories.nonSharedService(
-                ctx -> new BidirectionalStreamingService<>(ctx, channelFn.get().build(), callStubFn),
+                ctx -> new BidirectionalStreamingService<>(ctx, channelFn.get().executor(ForkJoinPool.commonPool()).build(), callStubFn),
                 BidirectionalStreamingService::destroy
         );
     }
