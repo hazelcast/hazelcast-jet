@@ -4,9 +4,9 @@ description: Options available for (de)serialization when using Jet.
 ---
 
 To be able to send object state over a network or store it in a file
-one has to first serialize it into raw bytes. Similarly, to be able to
+you have to first serialize it into raw bytes. Similarly, to be able to
 fetch an object state over a wire or read it from a persistent storage
-one has to deserialize it from raw bytes first. As Hazelcast Jet is a
+you have to deserialize it from raw bytes first. As Hazelcast Jet is a
 distributed system by nature serialization is integral part of it.
 Understanding, when it is involved, how does it support the pipelines
 and knowing differences between supported strategies is crucial to
@@ -140,7 +140,7 @@ src.mapUsingService(serviceFactory,
 ## Serialization of Data Types
 
 Hazelcast Jet closely integrates with Hazelcast IMDG exposing many of
-its features to Jet users. In particular, one can use IMDG data
+its features to Jet users. In particular, you can use IMDG data
 structure as Jet `Source` and/or `Sink`. Objects retrieved from and
 stored in those have to be serializable.
 
@@ -157,8 +157,8 @@ types:
 
 - [java.io.Serializable](https://docs.oracle.com/javase/8/docs/api/java/io/Serializable.html)
 - [java.io.Externalizable](https://docs.oracle.com/javase/8/docs/api/java/io/Externalizable.html)
-- [com.hazelcast.nio.serialization.Portable](/javadoc/4.0/com/hazelcast/nio/serialization/Portable.html)
-- [com.hazelcast.nio.serialization.StreamSerializer](/javadoc/4.0/com/hazelcast/nio/serialization/StreamSerializer.html)
+- [com.hazelcast.nio.serialization.Portable](/javadoc/{jet-version}/com/hazelcast/nio/serialization/Portable.html)
+- [com.hazelcast.nio.serialization.StreamSerializer](/javadoc/{jet-version}/com/hazelcast/nio/serialization/StreamSerializer.html)
 
 The following table provides a comparison between them to help you in
 deciding which interface to use in your applications.
@@ -169,7 +169,7 @@ deciding which interface to use in your applications.
 |Portable|Faster and more space efficient than java standard interfaces. Supports versioningSupports partial deserialization|Requires implementation and factory registration during cluster setup|
 |StreamSerializer|The fastest and lightest out of supported interfaces|Requires implementation and registration during cluster setup|
 
-Below you can find rough performance numbers one can expect when
+Below you can find rough performance numbers you can expect when
 employing each of those strategies. A straightforward benchmark which
 continuously serializes and then deserializes very simple object:
 
@@ -200,10 +200,10 @@ with different number of bytes depending on used strategy:
 
 ```text
 Strategy                                        Number of Bytes  Overhead %
-com.hazelcast.nio.serialization.StreamSerializer             26           0
-com.hazelcast.nio.serialization.Portable                    104         300
-java.io.Externalizable                                       87         234
 java.io.Serializable                                        162         523
+java.io.Externalizable                                       87         234
+com.hazelcast.nio.serialization.Portable                    104         300
+com.hazelcast.nio.serialization.StreamSerializer             26           0
 ```
 
 You can see that using plain `Serializable` can easily become a
@@ -215,7 +215,7 @@ not to mention very wasteful with memory.
 
 For the best performance and simplest implementation we recommend using
 the Hazelcast
-[StreamSerializer](/javadoc/4.0/com/hazelcast/nio/serialization/StreamSerializer.html)
+[StreamSerializer](/javadoc/{jet-version}/com/hazelcast/nio/serialization/StreamSerializer.html)
 mechanism. Here is a sample implementation for a `Person` class:
 
 ```java
@@ -341,7 +341,7 @@ dependency to your Jet job's project:
 <!--Gradle-->
 
 ```groovy
-compile "com.hazelcast.jet:hazelcast-jet-protobuf:${hazelcast.jet.version}"
+compile "com.hazelcast.jet:hazelcast-jet-protobuf:${jet-version}"
 ```
 
 <!--Maven-->
@@ -350,13 +350,14 @@ compile "com.hazelcast.jet:hazelcast-jet-protobuf:${hazelcast.jet.version}"
 <dependency>
     <groupId>com.hazelcast.jet</groupId>
     <artifactId>hazelcast-jet-protobuf</artifactId>
-    <version>${hazelcast.jet.version}</version>
+    <version>${jet-version}</version>
 </dependency>
 ```
 
 <!--END_DOCUSAURUS_CODE_TABS-->
 
-Implement the adapter by extending the provided class:
+Implement the adapter by extending the provided class (where `Person`
+is of any Protobuf `GeneratedMessageV3` type):
 
 ```java
 class PersonSerializer extends ProtobufSerializer<Person> {

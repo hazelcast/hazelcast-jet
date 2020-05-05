@@ -18,11 +18,11 @@ package com.hazelcast.jet.python;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.grpc.impl.GrpcUtil;
 import com.hazelcast.jet.pipeline.ServiceFactory;
-import com.hazelcast.jet.python.grpc.InputMessage;
-import com.hazelcast.jet.python.grpc.InputMessage.Builder;
-import com.hazelcast.jet.python.grpc.JetToPythonGrpc;
-import com.hazelcast.jet.python.grpc.JetToPythonGrpc.JetToPythonStub;
-import com.hazelcast.jet.python.grpc.OutputMessage;
+import com.hazelcast.jet.python.impl.grpc.InputMessage;
+import com.hazelcast.jet.python.impl.grpc.InputMessage.Builder;
+import com.hazelcast.jet.python.impl.grpc.JetToPythonGrpc;
+import com.hazelcast.jet.python.impl.grpc.JetToPythonGrpc.JetToPythonStub;
+import com.hazelcast.jet.python.impl.grpc.OutputMessage;
 import com.hazelcast.logging.ILogger;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import io.grpc.ManagedChannel;
@@ -158,12 +158,7 @@ final class PythonService {
             if (!completionLatch.await(1, SECONDS)) {
                 logger.info("gRPC call has not completed on time");
             }
-            if (!chan.shutdown().awaitTermination(1, SECONDS)) {
-                logger.info("gRPC client has not shut down on time");
-            }
-            if (!chan.shutdownNow().awaitTermination(1, SECONDS)) {
-                logger.info("gRPC client has not shut down on time, even after forceful shutdown");
-            }
+            GrpcUtil.shutdownChannel(chan, logger);
             server.stop();
         } catch (Exception e) {
             throw new JetException("PythonService.destroy() failed: " + e, e);

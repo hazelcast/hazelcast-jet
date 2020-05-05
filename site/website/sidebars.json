@@ -13,7 +13,8 @@
       "tutorials/map-join",
       "tutorials/windowing",
       "tutorials/python",
-      "tutorials/spring-boot"
+      "tutorials/spring-boot",
+      "tutorials/pulsar"
     ],
     "Concepts": [
       "concepts/dag",
@@ -24,6 +25,7 @@
       "api/pipeline",
       "api/stateless-transforms",
       "api/stateful-transforms",
+      "api/more-transforms",
       "api/sources-sinks",
       "api/submitting-jobs",
       "api/data-structures",
@@ -37,7 +39,8 @@
       "how-tos/custom-batch-source",
       "how-tos/custom-stream-source",
       "how-tos/custom-sink",
-      "how-tos/xa"
+      "how-tos/xa",
+      "how-tos/grpc"
     ],
     "Operations Guide": [
       "operations/installation",
@@ -60,10 +63,12 @@
     ],
     "Design Documents": [
       "design-docs/index",
+      "design-docs/010-operator-framework",
+      "design-docs/009-pulsar-connector",
+      "design-docs/008-stage-rebalance",
+      "design-docs/007-grpc-support",
       "design-docs/006-declarative-serialization",
-      "design-docs/005-cdc-sources",
       "design-docs/004-spring-boot-starter",
-      "design-docs/003-elasticsearch-connector",
       "design-docs/002-job-level-serialization",
       "design-docs/001-code-deployment-improvements"
     ]

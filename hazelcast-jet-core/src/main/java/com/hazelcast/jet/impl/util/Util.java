@@ -32,6 +32,7 @@ import com.hazelcast.spi.impl.NodeEngine;
 
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.InvalidClassException;
 import java.io.NotSerializableException;
@@ -166,7 +167,8 @@ public final class Util {
      * @return given object
      * @throws IllegalArgumentException if {@code object} is not serializable
      */
-    public static <T> T checkSerializable(T object, String objectName) {
+    @Nullable
+    public static <T> T checkSerializable(@Nullable T object, @Nonnull String objectName) {
         if (object == null) {
             return null;
         }
@@ -202,7 +204,9 @@ public final class Util {
      * @return given object
      * @throws IllegalArgumentException if {@code object} is not serializable
      */
-    public static <T> T checkNonNullAndSerializable(T object, String objectName) {
+    @Nonnull
+    public static <T> T checkNonNullAndSerializable(@Nonnull T object, @Nonnull String objectName) {
+        //noinspection ConstantConditions
         if (object == null) {
             throw new IllegalArgumentException('"' + objectName + "\" must not be null");
         }
