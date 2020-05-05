@@ -16,11 +16,10 @@
 
 package com.hazelcast.jet.pipeline;
 
-import com.fasterxml.jackson.jr.ob.JSON;
-import com.fasterxml.jackson.jr.ob.ValueIterator;
 import com.hazelcast.function.BiFunctionEx;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.core.processor.SourceProcessors;
+import com.hazelcast.jet.json.JsonUtil;
 
 import javax.annotation.Nonnull;
 import java.io.File;
@@ -186,9 +185,8 @@ public final class FileSourceBuilder {
         String charsetName = charset.name();
         return build(path -> {
             InputStreamReader reader = new InputStreamReader(new FileInputStream(path.toFile()), charsetName);
-            ValueIterator<T> valueIterator = JSON.std.beanSequenceFrom(type, reader);
-            Spliterator<T> spliterator = Spliterators
-                    .spliteratorUnknownSize(valueIterator, Spliterator.ORDERED | Spliterator.NONNULL);
+            Spliterator<T> spliterator = Spliterators.spliteratorUnknownSize(JsonUtil.parseSequence(type, reader),
+                    Spliterator.ORDERED | Spliterator.NONNULL);
             return StreamSupport.stream(spliterator, false);
         });
     }

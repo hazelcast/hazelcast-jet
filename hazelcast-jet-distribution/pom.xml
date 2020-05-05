@@ -142,7 +142,17 @@
                         </dependency>
                         <dependency>
                             <groupId>com.fasterxml.jackson.jr</groupId>
-                            <artifactId>jackson-jr-all</artifactId>
+                            <artifactId>jackson-jr-objects</artifactId>
+                            <version>${jackson.jr.version}</version>
+                        </dependency>
+                        <dependency>
+                            <groupId>com.fasterxml.jackson.jr</groupId>
+                            <artifactId>jackson-jr-annotation-support</artifactId>
+                            <version>${jackson.jr.version}</version>
+                        </dependency>
+                        <dependency>
+                            <groupId>com.fasterxml.jackson.core</groupId>
+                            <artifactId>jackson-core</artifactId>
                             <version>${jackson.jr.version}</version>
                         </dependency>
                         <dependency>
