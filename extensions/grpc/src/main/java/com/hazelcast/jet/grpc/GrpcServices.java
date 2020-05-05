@@ -92,8 +92,7 @@ public final class GrpcServices {
      * will be completed with that exception. To catch and handle it, use the
      * {@code CompletableFuture} API.
      *
-     * @param channelFn creates the channel builder. A single channel is created per Jet member
-     *                  and shared among the processor instances.
+     * @param channelFn creates the channel builder. A single channel is created per processor instance.
      * @param callStubFn a function which, given a channel, creates the stub and returns a
      *                   function that calls the stub given the input item and the observer.
      *                   It will be called once per input item.
@@ -154,8 +153,7 @@ public final class GrpcServices {
      * will be completed with that exception. To catch and handle it, use the
      * {@code CompletableFuture} API.
      *
-     * @param channelFn creates the channel builder. A single channel is created per Jet member
-     *                  and shared among the processor instances.
+     * @param channelFn creates the channel builder. A single channel is created per processor instance.
      * @param callStubFn a function which, given a channel, creates the stub and returns a
      *                   function that calls the stub given the input item and the observer.
      *                   It will be called once per input item.
