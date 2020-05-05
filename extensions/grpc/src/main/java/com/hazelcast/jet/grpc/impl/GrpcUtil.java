@@ -52,8 +52,8 @@ public final class GrpcUtil {
      * Tries orderly shutdown first {@link ManagedChannel#shutdown()}, then forceful shutdown
      * {@link ManagedChannel#shutdownNow()}.
      */
-    public static void shutdownChannel(ManagedChannel channel, ILogger logger) throws InterruptedException {
-        if (!channel.shutdown().awaitTermination(1, SECONDS)) {
+    public static void shutdownChannel(ManagedChannel channel, ILogger logger, long timeout) throws InterruptedException {
+        if (!channel.shutdown().awaitTermination(timeout, SECONDS)) {
             logger.info("gRPC client has not shut down on time");
 
             if (!channel.shutdownNow().awaitTermination(1, SECONDS)) {

@@ -21,6 +21,7 @@ import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.core.Processor.Context;
 import com.hazelcast.jet.grpc.GrpcService;
 import com.hazelcast.logging.ILogger;
+import com.hazelcast.spi.properties.HazelcastProperties;
 import io.grpc.ManagedChannel;
 import io.grpc.stub.StreamObserver;
 
@@ -39,15 +40,25 @@ public final class BidirectionalStreamingService<T, R> implements GrpcService<T,
     private final Queue<CompletableFuture<R>> futureQueue = new ConcurrentLinkedQueue<>();
     private final CountDownLatch completionLatch = new CountDownLatch(1);
     private final ILogger logger;
+    private final ManagedChannel channel;
     private volatile Throwable exceptionInOutputObserver;
 
+    private final long destroyTimeout;
+    private final long shutdownTimeout;
+
     public BidirectionalStreamingService(
-            Context context,
-            ManagedChannel channel,
-            FunctionEx<? super ManagedChannel, ? extends FunctionEx<StreamObserver<R>, StreamObserver<T>>> callStubFn
+            @Nonnull Context context,
+            @Nonnull ManagedChannel channel,
+            @Nonnull FunctionEx<? super ManagedChannel, ? extends FunctionEx<StreamObserver<R>, StreamObserver<T>>>
+                    callStubFn
     ) {
         logger = context.logger();
+        this.channel = channel;
         sink = callStubFn.apply(channel).apply(new OutputMessageObserver());
+
+        HazelcastProperties properties = new HazelcastProperties(context.jetInstance().getConfig().getProperties());
+        destroyTimeout = properties.getSeconds(GrpcProperties.DESTROY_TIMEOUT);
+        shutdownTimeout = properties.getSeconds(GrpcProperties.SHUTDOWN_TIMEOUT);
     }
 
     @Nonnull @Override
@@ -67,9 +78,11 @@ public final class BidirectionalStreamingService<T, R> implements GrpcService<T,
 
     public void destroy() throws InterruptedException {
         sink.onCompleted();
-        if (!completionLatch.await(1, SECONDS)) {
+
+        if (!completionLatch.await(destroyTimeout, SECONDS)) {
             logger.info("gRPC call has not completed on time");
         }
+        GrpcUtil.shutdownChannel(channel, logger, shutdownTimeout);
     }
 
     private class OutputMessageObserver implements StreamObserver<R> {
