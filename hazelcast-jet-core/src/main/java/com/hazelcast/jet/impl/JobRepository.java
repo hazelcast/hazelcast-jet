@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.impl;
 
+import com.hazelcast.collection.impl.list.ListService;
 import com.hazelcast.core.DistributedObject;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.flakeidgen.FlakeIdGenerator;
@@ -152,6 +153,12 @@ public class JobRepository {
      * Which one of these is determined in {@link JobExecutionRecord}.
      */
     public static final String SNAPSHOT_DATA_MAP_PREFIX = INTERNAL_JET_OBJECTS_PREFIX + "snapshot.";
+
+    /**
+     * Prefix for any internal IList used to accomplish job-specific functionalities and which
+     * should be cleaned up once the job is gone.
+     */
+    public static final String JOB_SPECIFIC_LIST_PREFIX = INTERNAL_JET_OBJECTS_PREFIX + "list.";
 
     /**
      * Only do the cleanup if the number of JobResults exceeds the maximum
@@ -410,6 +417,33 @@ public class JobRepository {
      */
     void cleanup(NodeEngine nodeEngine) {
         long start = System.nanoTime();
+
+        cleanupLists(nodeEngine);
+        cleanupMaps(nodeEngine);
+        cleanupJobResults(nodeEngine);
+
+        long elapsed = System.nanoTime() - start;
+        logger.fine("Job cleanup took " + TimeUnit.NANOSECONDS.toMillis(elapsed) + "ms");
+    }
+
+    private void cleanupLists(NodeEngine nodeEngine) {
+        Collection<DistributedObject> lists = nodeEngine.getProxyService().getDistributedObjects(ListService.SERVICE_NAME);
+
+        // we need to take the list of active job records after getting the list of maps --
+        // otherwise the job records could be missing newly submitted jobs
+        Set<Long> activeJobs = jobRecords.keySet();
+
+        for (DistributedObject list : lists) {
+            if (list.getName().startsWith(JOB_SPECIFIC_LIST_PREFIX)) {
+                long id = jobIdFromPrefixedName(list.getName(), JOB_SPECIFIC_LIST_PREFIX);
+                if (!activeJobs.contains(id)) {
+                    list.destroy();
+                }
+            }
+        }
+    }
+
+    private void cleanupMaps(NodeEngine nodeEngine) {
         Collection<DistributedObject> maps =
                 nodeEngine.getProxyService().getDistributedObjects(MapService.SERVICE_NAME);
 
@@ -419,7 +453,7 @@ public class JobRepository {
 
         for (DistributedObject map : maps) {
             if (map.getName().startsWith(SNAPSHOT_DATA_MAP_PREFIX)) {
-                long id = jobIdFromMapName(map.getName(), SNAPSHOT_DATA_MAP_PREFIX);
+                long id = jobIdFromPrefixedName(map.getName(), SNAPSHOT_DATA_MAP_PREFIX);
                 if (!activeJobs.contains(id)) {
                     logFine(logger, "Deleting snapshot data map '%s' because job already finished", map.getName());
                     map.destroy();
@@ -428,24 +462,10 @@ public class JobRepository {
                 deleteMap(activeJobs, map);
             }
         }
-        int maxNoResults = Math.max(1, nodeEngine.getProperties().getInteger(JetProperties.JOB_RESULTS_MAX_SIZE));
-        // delete oldest job results
-        if (jobResults.size() > Util.addClamped(maxNoResults, maxNoResults / MAX_NO_RESULTS_OVERHEAD)) {
-            jobResults.values().stream().sorted(comparing(JobResult::getCompletionTime).reversed())
-                      .skip(maxNoResults)
-                      .map(JobResult::getJobId)
-                      .collect(Collectors.toList())
-                      .forEach(id -> {
-                          jobMetrics.delete(id);
-                          jobResults.delete(id);
-                      });
-        }
-        long elapsed = System.nanoTime() - start;
-        logger.fine("Job cleanup took " + TimeUnit.NANOSECONDS.toMillis(elapsed) + "ms");
     }
 
     private void deleteMap(Set<Long> activeJobs, DistributedObject map) {
-        long id = jobIdFromMapName(map.getName(), RESOURCES_MAP_NAME_PREFIX);
+        long id = jobIdFromPrefixedName(map.getName(), RESOURCES_MAP_NAME_PREFIX);
         if (activeJobs.contains(id)) {
             // job is still active, do nothing
             return;
@@ -469,6 +489,21 @@ public class JobRepository {
         }
     }
 
+    private void cleanupJobResults(NodeEngine nodeEngine) {
+        int maxNoResults = Math.max(1, nodeEngine.getProperties().getInteger(JetProperties.JOB_RESULTS_MAX_SIZE));
+        // delete oldest job results
+        if (jobResults.size() > Util.addClamped(maxNoResults, maxNoResults / MAX_NO_RESULTS_OVERHEAD)) {
+            jobResults.values().stream().sorted(comparing(JobResult::getCompletionTime).reversed())
+                    .skip(maxNoResults)
+                    .map(JobResult::getJobId)
+                    .collect(Collectors.toList())
+                    .forEach(id -> {
+                        jobMetrics.delete(id);
+                        jobResults.delete(id);
+                    });
+        }
+    }
+
     private static String toErrorMsg(@Nullable Throwable error) {
         if (error == null) {
             return null;
@@ -483,9 +518,9 @@ public class JobRepository {
         return ExceptionUtil.stackTraceToString(error);
     }
 
-    private static long jobIdFromMapName(String map, String prefix) {
+    private static long jobIdFromPrefixedName(String name, String prefix) {
         int idx = prefix.length();
-        String jobId = map.substring(idx, idx + JOB_ID_STRING_LENGTH);
+        String jobId = name.substring(idx, idx + JOB_ID_STRING_LENGTH);
         return idFromString(jobId);
     }
 
@@ -567,6 +602,10 @@ public class JobRepository {
      */
     public static String jobResourcesMapName(long jobId) {
         return RESOURCES_MAP_NAME_PREFIX + idToString(jobId);
+    }
+
+    public static String jobListName(long jobId, String suffix) {
+        return JOB_SPECIFIC_LIST_PREFIX + idToString(jobId) + '.';
     }
 
     /**

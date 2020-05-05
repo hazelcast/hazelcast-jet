@@ -40,11 +40,6 @@ import java.util.function.Consumer;
  */
 public class HazelcastListDatabaseHistory extends AbstractDatabaseHistory {
 
-    /**
-     * Hazelcast IList {@link IList} name property.
-     */
-    public static final String LIST_NAME_PROPERTY = "database.history.hazelcast.list.name";
-
     private volatile String instanceName;
     private volatile String listName;
 
@@ -58,7 +53,7 @@ public class HazelcastListDatabaseHistory extends AbstractDatabaseHistory {
         instanceName = config.getString("database.history.hazelcast.instance.name");
         Objects.requireNonNull(instanceName, "instance name");
 
-        listName = config.getString(LIST_NAME_PROPERTY);
+        listName = config.getString("database.history.hazelcast.list.name");
         Objects.requireNonNull(listName, "list name");
     }
 

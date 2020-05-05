@@ -36,7 +36,6 @@ public class DebeziumConfig {
         properties.put("name", name);
         properties.put("connector.class", connectorClass);
         properties.put("database.history", HazelcastListDatabaseHistory.class.getName());
-        properties.put("database.history.hazelcast.list.name", name);
         properties.put("tombstones.on.delete", "false");
     }
 

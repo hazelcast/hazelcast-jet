@@ -20,10 +20,12 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.accumulator.LongAccumulator;
+import com.hazelcast.jet.cdc.impl.CdcSource;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.core.JetTestSupport;
 import com.hazelcast.jet.core.JobStatus;
+import com.hazelcast.jet.impl.JobRepository;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.StreamSource;
 import com.hazelcast.jet.pipeline.test.AssertionCompletedException;
@@ -43,6 +45,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
 import static com.hazelcast.jet.pipeline.test.AssertionSinks.assertCollectedEventually;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.testcontainers.containers.MySQLContainer.MYSQL_PORT;
@@ -228,6 +231,10 @@ public class MySqlIntegrationTest extends AbstractIntegrationTest {
                             "AssertionCompletedException, but completed with: " + e.getCause(),
                     errorMsg.contains(AssertionCompletedException.class.getName()));
         }
+
+        long jobId = job.getId();
+        String dbHistoryListName = JobRepository.jobListName(jobId, CdcSource.dbHistoryListSuffix("customers"));
+        assertTrueEventually(() -> assertEquals(0, jet.getList(dbHistoryListName).size()));
     }
 
     @Nonnull

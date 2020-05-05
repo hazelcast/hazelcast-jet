@@ -20,6 +20,7 @@ import com.hazelcast.instance.impl.HazelcastInstanceFactory;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.cdc.ChangeRecord;
 import com.hazelcast.jet.core.Processor;
+import com.hazelcast.jet.impl.JobRepository;
 import com.hazelcast.jet.pipeline.SourceBuilder;
 import io.debezium.transforms.ExtractNewRecordState;
 import org.apache.kafka.connect.connector.ConnectorContext;
@@ -40,7 +41,7 @@ import java.util.Properties;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
 
-class CdcSource {
+public class CdcSource {
 
     private final SourceConnector connector;
     private final SourceTask task;
@@ -63,7 +64,7 @@ class CdcSource {
             Class<?> connectorClass = Thread.currentThread().getContextClassLoader().loadClass(connectorClazz);
             connector = (SourceConnector) connectorClass.getConstructor().newInstance();
             connector.initialize(new JetConnectorContext());
-            connector.start((Map) injectHazelcastInstanceNameProperty(ctx, properties));
+            connector.start((Map) injectContextSpecificProperties(ctx, properties));
 
             transform = initTransform();
 
@@ -124,6 +125,10 @@ class CdcSource {
         this.partitionsToOffset = snapshots.get(0);
     }
 
+    public static String dbHistoryListSuffix(Object sourceName) {
+        return "cdc-db-history." + sourceName;
+    }
+
     private static ExtractNewRecordState<SourceRecord> initTransform() {
         ExtractNewRecordState<SourceRecord> transform = new ExtractNewRecordState<>();
 
@@ -149,6 +154,18 @@ class CdcSource {
         }
     }
 
+    private class JetSourceTaskContext implements SourceTaskContext {
+        @Override
+        public Map<String, String> configs() {
+            return taskConfig;
+        }
+
+        @Override
+        public OffsetStorageReader offsetStorageReader() {
+            return new SourceOffsetStorageReader();
+        }
+    }
+
     private class SourceOffsetStorageReader implements OffsetStorageReader {
         @Override
         public <V> Map<String, Object> offset(Map<String, V> partition) {
@@ -166,12 +183,17 @@ class CdcSource {
         }
     }
 
-    private static Properties injectHazelcastInstanceNameProperty(Processor.Context ctx, Properties properties) {
+    private static Properties injectContextSpecificProperties(Processor.Context ctx, Properties properties) {
         JetInstance jet = ctx.jetInstance();
         String instanceName = HazelcastInstanceFactory.getInstanceName(jet.getName(),
                 jet.getHazelcastInstance().getConfig());
         properties.setProperty("database.history.hazelcast.instance.name", instanceName);
-        //needed only by CDC sources... could be achieved via one more lambda, but we do have enough of those...
+
+        Object sourceName = properties.get("name");
+        long jobId = ctx.jobId();
+        String historyListName = JobRepository.jobListName(jobId, dbHistoryListSuffix(sourceName));
+        properties.put("database.history.hazelcast.list.name", historyListName);
+
         return properties;
     }
 
@@ -184,18 +206,6 @@ class CdcSource {
         @Override
         public void raiseError(Exception e) {
             throw rethrow(e);
-        }
-    }
-
-    private class JetSourceTaskContext implements SourceTaskContext {
-        @Override
-        public Map<String, String> configs() {
-            return taskConfig;
-        }
-
-        @Override
-        public OffsetStorageReader offsetStorageReader() {
-            return new SourceOffsetStorageReader();
         }
     }
 }
