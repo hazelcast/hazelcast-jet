@@ -22,14 +22,15 @@ import com.hazelcast.jet.elastic.ElasticSourceBuilder;
 import com.hazelcast.jet.impl.util.Util;
 
 import javax.annotation.Nonnull;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.IntStream;
 
 import static java.util.Collections.emptyList;
 import static java.util.Objects.requireNonNull;
+import static java.util.stream.Collectors.toList;
 
 class ElasticProcessorSupplier<T> implements ProcessorSupplier {
 
@@ -62,15 +63,11 @@ class ElasticProcessorSupplier<T> implements ProcessorSupplier {
     @Nonnull
     @Override
     public Collection<? extends Processor> get(int count) {
-        List<Processor> processors = new ArrayList<>();
-        for (int i = 0; i < count; i++) {
-            if (builder.coLocatedReading()) {
-                processors.add(new ElasticProcessor<>(builder, shardsByProcessor.get(i)));
-            } else {
-                processors.add(new ElasticProcessor<>(builder, emptyList()));
-            }
-        }
-        return processors;
+        return IntStream.range(0, count)
+                        .mapToObj(i -> builder.coLocatedReading() ?
+                                new ElasticProcessor<>(builder, shardsByProcessor.get(i)) :
+                                new ElasticProcessor<>(builder, emptyList()))
+                        .collect(toList());
     }
 
 }

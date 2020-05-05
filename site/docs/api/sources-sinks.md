@@ -950,14 +950,14 @@ doesn't use XA transactions.
 
 ### Elasticsearch
 
-Elasticsearch is a popular fulltext search engine.
-Hazelcast Jet can use it both as a source and a sink.
+Elasticsearch is a popular fulltext search engine. Hazelcast Jet can
+use it both as a source and a sink.
 
 #### Source
 
-The Elasticsearch connector source provides a builder and several 
-convenience factory methods.
-Most commonly on needs to provide
+The Elasticsearch connector source provides a builder and several
+convenience factory methods. Most commonly one needs to provide:
+
 - a client supplier, which returns a configured instance of
 RestHighLevelClient (see
 [Elasticsearch documentation](https://www.elastic.co/guide/en/elasticsearch/client/java-rest/current/java-rest-high.html)), 
@@ -990,9 +990,9 @@ BatchSource<String> elasticsearch = new ElasticsearchSourceBuilder<String>()
         .build();
 ```
 
-By default the connector uses a single scroll to read data from 
-Elasticsearch - there is only a single reader on a single node in whole 
-cluster.
+By default, the connector uses a single scroll to read data from 
+Elasticsearch - there is only a single reader on a single node in the
+whole cluster.
 
 Slicing can be used to parallelize reading from an index with more
 shards. Number of slices equals to globalParallelism.
@@ -1003,9 +1003,9 @@ overhead of physical network.
 
 #### Sink
 
-The Elasticsearch connector sink provides a builder and several 
-convenience factory methods.
-Most commonly you need to provide
+The Elasticsearch connector sink provides a builder and several
+convenience factory methods. Most commonly you need to provide:
+
 - a client supplier, which returns a configured instance of
 RestHighLevelClient (see
 [Elasticsearch documentation](https://www.elastic.co/guide/en/elasticsearch/client/java-rest/current/java-rest-high.html)),

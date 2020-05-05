@@ -49,7 +49,7 @@ import static java.util.Objects.requireNonNull;
  *
  * BatchStage<String> stage = p.readFrom(source);
  * }</pre>
- * @param <T> type of the mapping function from {@link SearchHit} -> T
+ * @param <T> type of the output of the mapping function from {@link SearchHit} -> T
  * @since 4.1
  */
 public class ElasticSourceBuilder<T> implements Serializable {

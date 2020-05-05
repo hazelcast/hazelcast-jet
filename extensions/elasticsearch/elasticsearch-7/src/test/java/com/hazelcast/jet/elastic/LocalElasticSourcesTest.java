@@ -23,11 +23,9 @@ import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.pipeline.BatchSource;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
-import com.hazelcast.jet.test.SerialTest;
 import org.elasticsearch.action.search.SearchRequest;
 import org.junit.After;
 import org.junit.Test;
-import org.junit.experimental.categories.Category;
 
 import static com.google.common.collect.ImmutableMap.of;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -35,7 +33,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 /**
  * Test running single Jet member locally and Elastic in docker
  */
-@Category(SerialTest.class)
 public class LocalElasticSourcesTest extends CommonElasticSourcesTest {
 
     private JetTestInstanceFactory factory = new JetTestInstanceFactory();

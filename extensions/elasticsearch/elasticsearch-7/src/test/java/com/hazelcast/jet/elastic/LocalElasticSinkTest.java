@@ -19,14 +19,11 @@ package com.hazelcast.jet.elastic;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.JetTestInstanceFactory;
 import com.hazelcast.jet.config.JetConfig;
-import com.hazelcast.jet.test.SerialTest;
 import org.junit.After;
-import org.junit.experimental.categories.Category;
 
 /**
  * Test running single Jet member locally and Elastic in docker
  */
-@Category(SerialTest.class)
 public class LocalElasticSinkTest extends CommonElasticSinksTest {
 
     private JetTestInstanceFactory factory = new JetTestInstanceFactory();

@@ -22,6 +22,7 @@ import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.pipeline.Pipeline;
+import com.hazelcast.test.HazelcastSerialClassRunner;
 import org.elasticsearch.action.admin.indices.delete.DeleteIndexRequest;
 import org.elasticsearch.action.bulk.BulkItemResponse;
 import org.elasticsearch.action.bulk.BulkRequest;
@@ -34,6 +35,7 @@ import org.elasticsearch.client.indices.CreateIndexRequest;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.index.reindex.DeleteByQueryRequest;
 import org.junit.Before;
+import org.junit.runner.RunWith;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -55,6 +57,7 @@ import static org.elasticsearch.index.query.QueryBuilders.matchAllQuery;
  * - {@link #createJetInstance()}
  * Subclasses are free to cache
  */
+@RunWith(HazelcastSerialClassRunner.class)
 public abstract class BaseElasticTest {
 
     protected static final int BATCH_SIZE = 42;
