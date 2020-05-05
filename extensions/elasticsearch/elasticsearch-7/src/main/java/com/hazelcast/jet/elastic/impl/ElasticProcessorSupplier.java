@@ -31,14 +31,14 @@ import java.util.Map;
 import static java.util.Collections.emptyList;
 import static java.util.Objects.requireNonNull;
 
-class ElasticProcessorSupplier<R> implements ProcessorSupplier {
+class ElasticProcessorSupplier<T> implements ProcessorSupplier {
 
-    private final ElasticSourceBuilder<R> builder;
+    private final ElasticSourceBuilder<T> builder;
 
     private final List<Shard> shards;
     private Map<Integer, List<Shard>> shardsByProcessor;
 
-    ElasticProcessorSupplier(@Nonnull ElasticSourceBuilder<R> builder,
+    ElasticProcessorSupplier(@Nonnull ElasticSourceBuilder<T> builder,
                              @Nonnull List<Shard> shards) {
         this.builder = requireNonNull(builder);
         this.shards = requireNonNull(shards);
