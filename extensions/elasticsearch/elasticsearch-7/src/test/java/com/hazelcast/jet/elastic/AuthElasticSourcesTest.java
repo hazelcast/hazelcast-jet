@@ -34,9 +34,8 @@ import org.testcontainers.elasticsearch.ElasticsearchContainer;
 
 import java.util.function.Supplier;
 
-import static com.hazelcast.jet.elastic.ElasticBaseTest.ELASTICSEARCH_IMAGE;
 import static com.hazelcast.jet.elastic.ElasticClients.client;
-import static com.hazelcast.jet.elastic.ElasticSources.elastic;
+import static com.hazelcast.jet.elastic.ElasticSupport.ELASTICSEARCH_IMAGE;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @Category(SerialTest.class)

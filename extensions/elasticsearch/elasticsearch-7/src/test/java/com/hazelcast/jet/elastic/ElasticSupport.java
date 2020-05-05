@@ -27,9 +27,11 @@ import java.util.function.Supplier;
 
 public final class ElasticSupport {
 
+    public static final String ELASTICSEARCH_IMAGE = "elasticsearch:7.6.1";
+
     // Elastic container takes long time to start up, reusing the container for speedup
     public static final Supplier<ElasticsearchContainer> elastic = Util.memoize(() -> {
-        ElasticsearchContainer elastic = new ElasticsearchContainer(ElasticBaseTest.ELASTICSEARCH_IMAGE);
+        ElasticsearchContainer elastic = new ElasticsearchContainer(ELASTICSEARCH_IMAGE);
         elastic.start();
         Runtime.getRuntime().addShutdownHook(new Thread(elastic::stop));
         return elastic;
