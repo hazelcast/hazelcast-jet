@@ -282,8 +282,5 @@ public class CdcSource {
         public boolean exists() {
             return history != null && !history.isEmpty();
         }
-
-
-
     }
 }
