@@ -88,33 +88,28 @@ public enum Operation {
 
     private static class Lookup {
 
-        private static final int OFFSET;
         private static final Operation[] ARRAY;
 
         static {
-            int min = Character.MAX_VALUE;
-            int max = Character.MIN_VALUE;
+            int max = 0;
             for (Operation op : values()) {
                 if (op.id == null) {
                     continue;
                 }
-                min = op.id < min ? op.id : min;
                 max = op.id > max ? op.id : max;
             }
 
-            OFFSET = min;
-
-            ARRAY = new Operation[max - min + 1];
+            ARRAY = new Operation[max + 1];
             for (Operation op : values()) {
                 if (op.id == null) {
                     continue;
                 }
-                ARRAY[op.id - OFFSET] = op;
+                ARRAY[op.id] = op;
             }
         }
 
         static Operation get(char id) {
-            return ARRAY[id - OFFSET];
+            return ARRAY[id];
         }
     }
 }
