@@ -19,6 +19,7 @@ package com.hazelcast.jet.cdc;
 import com.hazelcast.jet.annotation.EvolvingApi;
 
 import javax.annotation.Nullable;
+import java.util.stream.Stream;
 
 /**
  * Describes the nature of the event in CDC data. Equivalent to various
@@ -68,22 +69,14 @@ public enum Operation {
      * Null will be parsed as {@link #UNSPECIFIED}.
      *
      * @throws ParsingException if the input string doesn't represent
-     * an expected value.
+     *                          an expected value.
      */
-    public static Operation get(@Nullable String alias) throws ParsingException {
-        if (alias == null) {
-            return UNSPECIFIED;
+    public static Operation get(@Nullable String opcode) throws ParsingException {
+        Operation op = Lookup.get(opcode);
+        if (op == null) {
+            throw new ParsingException("'" + opcode + "' is not a valid operation id");
         }
-
-        if (alias.length() == 1) {
-            char id = alias.charAt(0);
-            Operation op = Lookup.get(id);
-            if (op != null) {
-                return op;
-            }
-        }
-
-        throw new ParsingException("'" + alias + "' is not a valid operation id");
+        return op;
     }
 
     private static class Lookup {
@@ -91,28 +84,31 @@ public enum Operation {
         private static final Operation[] ARRAY;
 
         static {
-            int max = 0;
-            for (Operation op : values()) {
-                if (op.id == null) {
-                    continue;
-                }
-                max = op.id > max ? op.id : max;
-            }
+            int maxId = Stream.of(values())
+                    .filter(op -> op.id != null)
+                    .map(op -> (int) op.id)
+                    .max(Integer::compareTo)
+                    .orElse(0);
 
-            ARRAY = new Operation[max + 1];
-            for (Operation op : values()) {
-                if (op.id == null) {
-                    continue;
-                }
-                ARRAY[op.id] = op;
-            }
+            ARRAY = new Operation[maxId + 1];
+            Stream.of(values())
+                    .filter(op -> op.id != null)
+                    .forEach(op -> ARRAY[op.id] = op);
         }
 
-        static Operation get(char id) {
-            if (id >= ARRAY.length) {
+        static Operation get(String opcode) {
+            if (opcode == null) {
+                return UNSPECIFIED;
+            }
+            if (opcode.length() != 1) {
                 return null;
             }
-            return ARRAY[id];
+            int index = opcode.charAt(0);
+            if (index >= ARRAY.length) {
+                return null;
+            }
+            return ARRAY[index];
         }
+
     }
 }
