@@ -26,8 +26,8 @@ import static com.hazelcast.jet.impl.JetFactoryIdHelper.JET_CDC_JSON_DS_FACTORY_
 
 public class CdcJsonDataSerializerHook implements DataSerializerHook {
 
-    public static final int ELEMENT = 1;
-    public static final int EVENT = 2;
+    public static final int RECORD = 1;
+    public static final int PART = 2;
 
     public static final int FACTORY_ID = FactoryIdHelper.getFactoryId(JET_CDC_JSON_DS_FACTORY, JET_CDC_JSON_DS_FACTORY_ID);
 
@@ -45,10 +45,10 @@ public class CdcJsonDataSerializerHook implements DataSerializerHook {
         @Override
         public IdentifiedDataSerializable create(int typeId) {
             switch (typeId) {
-                case ELEMENT:
-                    return new RecordPartImpl();
-                case EVENT:
+                case RECORD:
                     return new ChangeRecordImpl();
+                case PART:
+                    return new RecordPartImpl();
                 default:
                     throw new IllegalArgumentException("Unknown type id " + typeId);
             }
