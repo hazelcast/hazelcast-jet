@@ -70,20 +70,20 @@ public enum Operation {
      * @throws ParsingException if the input string doesn't represent
      * an expected value.
      */
-    public static Operation get(@Nullable String string) throws ParsingException {
-        if (string == null) {
+    public static Operation get(@Nullable String alias) throws ParsingException {
+        if (alias == null) {
             return UNSPECIFIED;
         }
 
-        if (string.length() == 1) {
-            char id = string.charAt(0);
+        if (alias.length() == 1) {
+            char id = alias.charAt(0);
             Operation op = Lookup.get(id);
             if (op != null) {
                 return op;
             }
         }
 
-        throw new ParsingException("'" + string + "' is not a valid operation id");
+        throw new ParsingException("'" + alias + "' is not a valid operation id");
     }
 
     private static class Lookup {
@@ -109,6 +109,9 @@ public enum Operation {
         }
 
         static Operation get(char id) {
+            if (id >= ARRAY.length) {
+                return null;
+            }
             return ARRAY[id];
         }
     }
