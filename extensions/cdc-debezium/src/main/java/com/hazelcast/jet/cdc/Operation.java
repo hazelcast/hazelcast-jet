@@ -19,7 +19,6 @@ package com.hazelcast.jet.cdc;
 import com.hazelcast.jet.annotation.EvolvingApi;
 
 import javax.annotation.Nullable;
-import java.util.Objects;
 
 /**
  * Describes the nature of the event in CDC data. Equivalent to various
@@ -42,23 +41,48 @@ public enum Operation {
      * Just like {@link #INSERT}, but coming from the DB snapshot (as
      * opposed to trailing the DB changelog).
      */
-    SYNC("r"),
+    SYNC('r'),
     /**
      * Record insertion, sourced from the DB changelog.
      */
-    INSERT("c"),
+    INSERT('c'),
     /**
      * Record update, sourced from the DB changelog.
      */
-    UPDATE("u"),
+    UPDATE('u'),
     /**
      * Record deletion, sourced from the DB changelog.
      */
-    DELETE("d");
+    DELETE('d');
 
-    private final String id;
+    private static final int OFFSET;
+    private static final Operation[] ARRAY;
 
-    Operation(String id) {
+    static {
+        int min = Character.MAX_VALUE;
+        int max = Character.MIN_VALUE;
+        for (Operation op : values()) {
+            if (op.id == null) {
+                continue;
+            }
+            min = op.id < min ? op.id : min;
+            max = op.id > max ? op.id : max;
+        }
+
+        OFFSET = min;
+
+        ARRAY = new Operation[max - min + 1];
+        for (Operation op : values()) {
+            if (op.id == null) {
+                continue;
+            }
+            ARRAY[op.id - OFFSET] = op;
+        }
+    }
+
+    private final Character id;
+
+    Operation(Character id) {
         this.id = id;
     }
 
@@ -71,13 +95,19 @@ public enum Operation {
      * @throws ParsingException if the input string doesn't represent
      * an expected value.
      */
-    public static Operation get(@Nullable String id) throws ParsingException {
-        Operation[] values = values();
-        for (Operation value : values) {
-            if (Objects.equals(value.id, id)) {
-                return value;
+    public static Operation get(@Nullable String string) throws ParsingException {
+        if (string == null) {
+            return UNSPECIFIED;
+        }
+
+        if (string.length() == 1) {
+            char id = string.charAt(0);
+            Operation op = ARRAY[id - OFFSET];
+            if (op != null) {
+                return op;
             }
         }
-        throw new ParsingException("'" + id + "' is not a valid operation id");
+
+        throw new ParsingException("'" + string + "' is not a valid operation id");
     }
 }
