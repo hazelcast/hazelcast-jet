@@ -180,6 +180,7 @@ public final class FileSourceBuilder {
      * The default local parallelism for this processor is 2 (or 1 if just 1
      * CPU is available).
      *
+     * TODO: missing since tag. API needs refactoring
      */
     public <T> BatchSource<T> buildJson(@Nonnull Class<T> type) {
         String charsetName = charset.name();

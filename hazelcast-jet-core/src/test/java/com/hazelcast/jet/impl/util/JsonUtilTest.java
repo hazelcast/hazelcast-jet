@@ -23,6 +23,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -32,7 +33,6 @@ import java.util.Map;
 import java.util.Objects;
 
 import static java.util.stream.Collectors.toList;
-import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 
 @RunWith(HazelcastSerialClassRunner.class)
@@ -57,7 +57,7 @@ public class JsonUtilTest extends JetTestSupport {
     }
 
     @Test
-    public void testParseToMap() {
+    public void testParseToMap() throws IOException {
         Map<String, Object> objectMap = JsonUtil.parse(jsonString);
 
         assertEquals(6, objectMap.size());
@@ -77,45 +77,8 @@ public class JsonUtilTest extends JetTestSupport {
     }
 
     @Test
-    public void testExtractString() {
-        String name = JsonUtil.getString(jsonString, "name");
-        assertEquals(testJsonObject.name, name);
-    }
-
-    @Test
-    public void testExtractInt() {
-        int age = JsonUtil.getInt(jsonString, "age");
-        assertEquals(testJsonObject.age, age);
-    }
-
-    @Test
-    public void testExtractBoolean() {
-        boolean status = JsonUtil.getBoolean(jsonString, "status");
-        assertEquals(testJsonObject.status, status);
-    }
-
-    @Test
-    public void testExtractList() {
-        List<Object> objects = JsonUtil.getList(jsonString, "stringArray");
-        assertEquals(Arrays.asList(testJsonObject.stringArray), objects);
-    }
-
-    @Test
-    public void testExtractArray() {
-        Object[] objects = JsonUtil.getArray(jsonString, "stringArray");
-        assertArrayEquals(testJsonObject.stringArray, objects);
-    }
-
-    @Test
-    public void testExtractObject() {
-        Map<String, Object> innerObject = JsonUtil.getObject(jsonString, "innerObject");
-        assertEquals(1, innerObject.size());
-        assertEquals(testJsonObject.innerObject.val, innerObject.get("val"));
-    }
-
-    @Test
-    public void testConvertToJsonString() {
-        assertEquals(jsonString, JsonUtil.asString(testJsonObject));
+    public void testConvertToJsonString() throws IOException {
+        assertEquals(jsonString, JsonUtil.asJson(testJsonObject));
     }
 
     public static class TestJsonObject {

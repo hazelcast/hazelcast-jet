@@ -162,10 +162,12 @@ public final class FileSinkBuilder<T> {
      * components. The sink converts each item to a JSON string.
      * <p>
      * The call to {@link #toStringFn(FunctionEx)} will be ignored.
+     *
+     * TODO: missing since tag. API needs refactoring
      */
     @Nonnull
     public Sink<T> buildJson() {
-        toStringFn = JsonUtil::asString;
+        toStringFn = JsonUtil::asJson;
         return buildInternal("filesJsonSink(" + directoryName + ')');
     }
 
