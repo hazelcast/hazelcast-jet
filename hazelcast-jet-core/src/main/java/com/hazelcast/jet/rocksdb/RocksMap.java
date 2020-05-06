@@ -24,7 +24,7 @@ import java.util.function.BiFunction;
 
 /**
  * RocksMap is RocksDB-backed HashMap.
- * Responsible for providing the interface of HashMap to tasks.
+ * Responsible for providing the interface of HashMap to processors.
  *
  * @param <K> the type of key
  * @param <V> the type of value
@@ -54,10 +54,12 @@ public class RocksMap<K, V> {
         return null;
     }
 
-    //We may choose to implement this method
-    //relies on rocksdb merge operator. see : https://github.com/facebook/rocksdb/wiki/Merge-Operator
-    //instead of getting the list in the value
-    //modifying it, then writing it back, just merge the value in one step
+    /** We may choose to implement this method
+      * relies on rocksdb merge operator.
+      * see : https://github.com/facebook/rocksdb/wiki/Merge-Operator
+      * instead of getting the list in the value
+      * modifying it, then writing it back, just merge the value in one step
+      */
     public void merge(K key, V value, BiFunction fn) {
     }
 

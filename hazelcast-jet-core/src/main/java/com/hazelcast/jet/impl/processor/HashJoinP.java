@@ -17,6 +17,7 @@
 package com.hazelcast.jet.impl.processor;
 
 import com.hazelcast.jet.Traverser;
+import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.rocksdb.RocksDBFactory;
 import com.hazelcast.jet.rocksdb.RocksDBStateBackend;
 import com.hazelcast.jet.rocksdb.RocksMap;
@@ -88,7 +89,6 @@ public class HashJoinP<E0> extends AbstractProcessor {
             @Nullable TriFunction mapToOutputTriFn
     ) {
         this.keyFns = keyFns;
-       // this.lookupTables = new ArrayList<>(Collections.nCopies(keyFns.size(), null));
         this.lookupTables = new ArrayList<>(Collections.nCopies(keyFns.size(), null));
         BiFunction<E0, Object[], Object> mapTupleToOutputFn;
         checkTrue(mapToOutputBiFn != null ^ mapToOutputTriFn != null,
@@ -115,6 +115,11 @@ public class HashJoinP<E0> extends AbstractProcessor {
 
         CombinationsTraverser traverser = new CombinationsTraverser(keyFns.size(), mapTupleToOutputFn);
         flatMapper = flatMapper(traverser::accept);
+    }
+
+    @Override
+    protected void init(@Nonnull Context context) throws Exception {
+        store = context.getStateStore();
     }
 
     @Override

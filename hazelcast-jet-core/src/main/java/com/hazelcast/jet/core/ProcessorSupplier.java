@@ -19,6 +19,7 @@ package com.hazelcast.jet.core;
 import com.hazelcast.core.ManagedContext;
 import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.config.JobConfig;
+import com.hazelcast.jet.rocksdb.RocksDBStateBackend;
 import com.hazelcast.logging.ILogger;
 
 import javax.annotation.Nonnull;
@@ -43,6 +44,7 @@ public interface ProcessorSupplier extends Serializable {
      * Called on each cluster member after deserialization.
      */
     default void init(@Nonnull Context context) throws Exception {
+
     }
 
     /**
@@ -138,5 +140,7 @@ public interface ProcessorSupplier extends Serializable {
          */
         @Nonnull
         ManagedContext managedContext();
+
+        RocksDBStateBackend getStateStore();
     }
 }
