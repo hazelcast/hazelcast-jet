@@ -21,6 +21,12 @@ import com.hazelcast.jet.pipeline.SourceBuilder;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
+import io.debezium.document.Document;
+import io.debezium.document.DocumentReader;
+import io.debezium.document.DocumentWriter;
+import io.debezium.relational.history.AbstractDatabaseHistory;
+import io.debezium.relational.history.DatabaseHistoryException;
+import io.debezium.relational.history.HistoryRecord;
 import io.debezium.transforms.ExtractNewRecordState;
 import org.apache.kafka.connect.connector.ConnectorContext;
 import org.apache.kafka.connect.data.Struct;
@@ -38,12 +44,17 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Properties;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.function.Consumer;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
 
 public class CdcSource {
+
+    private static final ThreadLocal<List<byte[]>> THREAD_LOCAL_HISTORY =
+            ThreadLocal.withInitial(CopyOnWriteArrayList::new);
 
     private final SourceConnector connector;
     private final SourceTask task;
@@ -73,9 +84,9 @@ public class CdcSource {
     public void fillBuffer(SourceBuilder.TimestampedSourceBuffer<ChangeRecord> buf) {
         if (!taskInit) {
             task.initialize(new JetSourceTaskContext());
-            DatabaseHistoryImpl.container().setHistory(state.getHistoryRecords());
+            THREAD_LOCAL_HISTORY.set(state.historyRecords);
             task.start(taskConfig);
-            DatabaseHistoryImpl.container().setHistory(null);
+            THREAD_LOCAL_HISTORY.remove();
             taskInit = true;
         }
         try {
@@ -208,10 +219,6 @@ public class CdcSource {
             partitionsToOffset.put(partition, offset);
         }
 
-        public List<byte[]> getHistoryRecords() {
-            return historyRecords;
-        }
-
         @Override
         public int getFactoryId() {
             return CdcJsonDataSerializerHook.FACTORY_ID;
@@ -244,5 +251,39 @@ public class CdcSource {
             }
             historyRecords.addAll(records);
         }
+    }
+
+    public static class DatabaseHistoryImpl extends AbstractDatabaseHistory {
+
+        private final List<byte[]> history;
+
+        public DatabaseHistoryImpl() {
+            this.history = Objects.requireNonNull(THREAD_LOCAL_HISTORY.get());
+        }
+
+        @Override
+        protected void storeRecord(HistoryRecord record) throws DatabaseHistoryException {
+            history.add(DocumentWriter.defaultWriter().writeAsBytes(record.document()));
+        }
+
+        @Override
+        protected void recoverRecords(Consumer<HistoryRecord> consumer) {
+            try {
+                for (byte[] record : history) {
+                    Document doc = DocumentReader.defaultReader().read(record);
+                    consumer.accept(new HistoryRecord(doc));
+                }
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        @Override
+        public boolean exists() {
+            return history != null && !history.isEmpty();
+        }
+
+
+
     }
 }
