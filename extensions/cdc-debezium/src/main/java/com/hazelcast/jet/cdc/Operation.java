@@ -55,31 +55,6 @@ public enum Operation {
      */
     DELETE('d');
 
-    private static final int OFFSET;
-    private static final Operation[] ARRAY;
-
-    static {
-        int min = Character.MAX_VALUE;
-        int max = Character.MIN_VALUE;
-        for (Operation op : values()) {
-            if (op.id == null) {
-                continue;
-            }
-            min = op.id < min ? op.id : min;
-            max = op.id > max ? op.id : max;
-        }
-
-        OFFSET = min;
-
-        ARRAY = new Operation[max - min + 1];
-        for (Operation op : values()) {
-            if (op.id == null) {
-                continue;
-            }
-            ARRAY[op.id - OFFSET] = op;
-        }
-    }
-
     private final Character id;
 
     Operation(Character id) {
@@ -102,12 +77,44 @@ public enum Operation {
 
         if (string.length() == 1) {
             char id = string.charAt(0);
-            Operation op = ARRAY[id - OFFSET];
+            Operation op = Lookup.get(id);
             if (op != null) {
                 return op;
             }
         }
 
         throw new ParsingException("'" + string + "' is not a valid operation id");
+    }
+
+    private static class Lookup {
+
+        private static final int OFFSET;
+        private static final Operation[] ARRAY;
+
+        static {
+            int min = Character.MAX_VALUE;
+            int max = Character.MIN_VALUE;
+            for (Operation op : values()) {
+                if (op.id == null) {
+                    continue;
+                }
+                min = op.id < min ? op.id : min;
+                max = op.id > max ? op.id : max;
+            }
+
+            OFFSET = min;
+
+            ARRAY = new Operation[max - min + 1];
+            for (Operation op : values()) {
+                if (op.id == null) {
+                    continue;
+                }
+                ARRAY[op.id - OFFSET] = op;
+            }
+        }
+
+        static Operation get(char id) {
+            return ARRAY[id - OFFSET];
+        }
     }
 }
