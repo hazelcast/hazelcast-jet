@@ -16,9 +16,7 @@
 
 package com.hazelcast.jet.cdc.impl;
 
-import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.cdc.ChangeRecord;
-import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.pipeline.SourceBuilder;
 import com.hazelcast.jet.pipeline.StreamSource;
 
@@ -35,7 +33,7 @@ public class DebeziumConfig {
 
         properties.put("name", name);
         properties.put("connector.class", connectorClass);
-        properties.put("database.history", HazelcastListDatabaseHistory.class.getName());
+        properties.put("database.history", DatabaseHistoryImpl.class.getName());
         properties.put("tombstones.on.delete", "false");
     }
 
@@ -72,8 +70,7 @@ public class DebeziumConfig {
 
     private static StreamSource<ChangeRecord> createSource(Properties properties) {
         String name = properties.getProperty("name");
-        FunctionEx<Processor.Context, CdcSource> createFn = ctx -> new CdcSource(ctx, properties);
-        return SourceBuilder.timestampedStream(name, createFn)
+        return SourceBuilder.timestampedStream(name, ctx -> new CdcSource(properties))
                 .fillBufferFn(CdcSource::fillBuffer)
                 .createSnapshotFn(CdcSource::createSnapshot)
                 .restoreSnapshotFn(CdcSource::restoreSnapshot)

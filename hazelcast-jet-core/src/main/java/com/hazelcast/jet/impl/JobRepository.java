@@ -16,7 +16,6 @@
 
 package com.hazelcast.jet.impl;
 
-import com.hazelcast.collection.impl.list.ListService;
 import com.hazelcast.core.DistributedObject;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.flakeidgen.FlakeIdGenerator;
@@ -153,12 +152,6 @@ public class JobRepository {
      * Which one of these is determined in {@link JobExecutionRecord}.
      */
     public static final String SNAPSHOT_DATA_MAP_PREFIX = INTERNAL_JET_OBJECTS_PREFIX + "snapshot.";
-
-    /**
-     * Prefix for any internal IList used to accomplish job-specific functionalities and which
-     * should be cleaned up once the job is gone.
-     */
-    public static final String JOB_SPECIFIC_LIST_PREFIX = INTERNAL_JET_OBJECTS_PREFIX + "list.";
 
     /**
      * Only do the cleanup if the number of JobResults exceeds the maximum
@@ -418,29 +411,11 @@ public class JobRepository {
     void cleanup(NodeEngine nodeEngine) {
         long start = System.nanoTime();
 
-        cleanupLists(nodeEngine);
         cleanupMaps(nodeEngine);
         cleanupJobResults(nodeEngine);
 
         long elapsed = System.nanoTime() - start;
         logger.fine("Job cleanup took " + TimeUnit.NANOSECONDS.toMillis(elapsed) + "ms");
-    }
-
-    private void cleanupLists(NodeEngine nodeEngine) {
-        Collection<DistributedObject> lists = nodeEngine.getProxyService().getDistributedObjects(ListService.SERVICE_NAME);
-
-        // we need to take the list of active job records after getting the list of maps --
-        // otherwise the job records could be missing newly submitted jobs
-        Set<Long> activeJobs = jobRecords.keySet();
-
-        for (DistributedObject list : lists) {
-            if (list.getName().startsWith(JOB_SPECIFIC_LIST_PREFIX)) {
-                long id = jobIdFromPrefixedName(list.getName(), JOB_SPECIFIC_LIST_PREFIX);
-                if (!activeJobs.contains(id)) {
-                    list.destroy();
-                }
-            }
-        }
     }
 
     private void cleanupMaps(NodeEngine nodeEngine) {
@@ -602,10 +577,6 @@ public class JobRepository {
      */
     public static String jobResourcesMapName(long jobId) {
         return RESOURCES_MAP_NAME_PREFIX + idToString(jobId);
-    }
-
-    public static String jobListName(long jobId, String suffix) {
-        return JOB_SPECIFIC_LIST_PREFIX + idToString(jobId) + '.';
     }
 
     /**

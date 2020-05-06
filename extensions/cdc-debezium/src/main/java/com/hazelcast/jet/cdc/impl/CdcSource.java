@@ -16,12 +16,11 @@
 
 package com.hazelcast.jet.cdc.impl;
 
-import com.hazelcast.instance.impl.HazelcastInstanceFactory;
-import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.cdc.ChangeRecord;
-import com.hazelcast.jet.core.Processor;
-import com.hazelcast.jet.impl.JobRepository;
 import com.hazelcast.jet.pipeline.SourceBuilder;
+import com.hazelcast.nio.ObjectDataInput;
+import com.hazelcast.nio.ObjectDataOutput;
+import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 import io.debezium.transforms.ExtractNewRecordState;
 import org.apache.kafka.connect.connector.ConnectorContext;
 import org.apache.kafka.connect.data.Struct;
@@ -32,12 +31,15 @@ import org.apache.kafka.connect.source.SourceTask;
 import org.apache.kafka.connect.source.SourceTaskContext;
 import org.apache.kafka.connect.storage.OffsetStorageReader;
 
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
 
@@ -48,23 +50,16 @@ public class CdcSource {
     private final Map<String, String> taskConfig;
     private final ExtractNewRecordState<SourceRecord> transform;
 
-    /**
-     * Key represents the partition which the record originated from. Value
-     * represents the offset within that partition. Kafka Connect represents
-     * the partition and offset as arbitrary values so that is why it is
-     * stored as map.
-     * See {@link SourceRecord} for more information regarding the format.
-     */
-    private Map<Map<String, ?>, Map<String, ?>> partitionsToOffset = new HashMap<>();
+    private State state = new State();
     private boolean taskInit;
 
-    CdcSource(Processor.Context ctx, Properties properties) {
+    CdcSource(Properties properties) {
         try {
             String connectorClazz = properties.getProperty("connector.class");
             Class<?> connectorClass = Thread.currentThread().getContextClassLoader().loadClass(connectorClazz);
             connector = (SourceConnector) connectorClass.getConstructor().newInstance();
             connector.initialize(new JetConnectorContext());
-            connector.start((Map) injectContextSpecificProperties(ctx, properties));
+            connector.start((Map) properties);
 
             transform = initTransform();
 
@@ -78,7 +73,9 @@ public class CdcSource {
     public void fillBuffer(SourceBuilder.TimestampedSourceBuffer<ChangeRecord> buf) {
         if (!taskInit) {
             task.initialize(new JetSourceTaskContext());
+            DatabaseHistoryImpl.container().setHistory(state.getHistoryRecords());
             task.start(taskConfig);
+            DatabaseHistoryImpl.container().setHistory(null);
             taskInit = true;
         }
         try {
@@ -90,7 +87,7 @@ public class CdcSource {
             for (SourceRecord record : records) {
                 boolean added = addToBuffer(record, buf);
                 if (added) {
-                    partitionsToOffset.put(record.sourcePartition(), record.sourceOffset());
+                    state.setOffset(record.sourcePartition(), record.sourceOffset());
                 }
             }
         } catch (InterruptedException e) {
@@ -117,16 +114,12 @@ public class CdcSource {
         }
     }
 
-    public Map<Map<String, ?>, Map<String, ?>> createSnapshot() {
-        return partitionsToOffset;
+    public State createSnapshot() {
+        return state;
     }
 
-    public void restoreSnapshot(List<Map<Map<String, ?>, Map<String, ?>>> snapshots) {
-        this.partitionsToOffset = snapshots.get(0);
-    }
-
-    public static String dbHistoryListSuffix(Object sourceName) {
-        return "cdc-db-history." + sourceName;
+    public void restoreSnapshot(List<State> snapshots) {
+        this.state = snapshots.get(0);
     }
 
     private static ExtractNewRecordState<SourceRecord> initTransform() {
@@ -176,25 +169,11 @@ public class CdcSource {
         public <V> Map<Map<String, V>, Map<String, Object>> offsets(Collection<Map<String, V>> partitions) {
             Map<Map<String, V>, Map<String, Object>> map = new HashMap<>();
             for (Map<String, V> partition : partitions) {
-                Map<String, Object> offset = (Map<String, Object>) partitionsToOffset.get(partition);
+                Map<String, Object> offset = (Map<String, Object>) state.getOffset(partition);
                 map.put(partition, offset);
             }
             return map;
         }
-    }
-
-    private static Properties injectContextSpecificProperties(Processor.Context ctx, Properties properties) {
-        JetInstance jet = ctx.jetInstance();
-        String instanceName = HazelcastInstanceFactory.getInstanceName(jet.getName(),
-                jet.getHazelcastInstance().getConfig());
-        properties.setProperty("database.history.hazelcast.instance.name", instanceName);
-
-        Object sourceName = properties.get("name");
-        long jobId = ctx.jobId();
-        String historyListName = JobRepository.jobListName(jobId, dbHistoryListSuffix(sourceName));
-        properties.put("database.history.hazelcast.list.name", historyListName);
-
-        return properties;
     }
 
     private static class JetConnectorContext implements ConnectorContext {
@@ -206,6 +185,64 @@ public class CdcSource {
         @Override
         public void raiseError(Exception e) {
             throw rethrow(e);
+        }
+    }
+
+    public static final class State implements IdentifiedDataSerializable {
+
+        /**
+         * Key represents the partition which the record originated from. Value
+         * represents the offset within that partition. Kafka Connect represents
+         * the partition and offset as arbitrary values so that is why it is
+         * stored as map.
+         * See {@link SourceRecord} for more information regarding the format.
+         */
+        private final Map<Map<String, ?>, Map<String, ?>> partitionsToOffset = new HashMap<>();
+        private final List<byte[]> historyRecords = new CopyOnWriteArrayList<>();
+
+        public Map<String, ?> getOffset(Map<String, ?> partition) {
+            return partitionsToOffset.get(partition);
+        }
+
+        public void setOffset(Map<String, ?> partition, Map<String, ?> offset) {
+            partitionsToOffset.put(partition, offset);
+        }
+
+        public List<byte[]> getHistoryRecords() {
+            return historyRecords;
+        }
+
+        @Override
+        public int getFactoryId() {
+            return CdcJsonDataSerializerHook.FACTORY_ID;
+        }
+
+        @Override
+        public int getClassId() {
+            return CdcJsonDataSerializerHook.SOURCE_STATE;
+        }
+
+        @Override
+        public void writeData(ObjectDataOutput out) throws IOException {
+            out.writeObject(partitionsToOffset);
+
+            List<byte[]> records = historyRecords;
+            out.writeInt(records.size());
+            for (byte[] record : records) {
+                out.writeByteArray(record);
+            }
+        }
+
+        @Override
+        public void readData(ObjectDataInput in) throws IOException {
+            partitionsToOffset.putAll(in.readObject());
+
+            int length = in.readInt();
+            List<byte[]> records = new ArrayList<>(length);
+            for (int i = 0; i < length; i++) {
+                records.add(in.readByteArray());
+            }
+            historyRecords.addAll(records);
         }
     }
 }

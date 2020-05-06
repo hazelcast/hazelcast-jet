@@ -84,7 +84,7 @@ class RecordPartImpl implements RecordPart, IdentifiedDataSerializable {
 
     @Override
     public int getClassId() {
-        return CdcJsonDataSerializerHook.PART;
+        return CdcJsonDataSerializerHook.RECORD_PART;
     }
 
     @Override

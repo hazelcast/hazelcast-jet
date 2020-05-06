@@ -109,7 +109,7 @@ public class ChangeRecordImpl implements ChangeRecord, IdentifiedDataSerializabl
 
     @Override
     public int getClassId() {
-        return CdcJsonDataSerializerHook.RECORD;
+        return CdcJsonDataSerializerHook.CHANGE_RECORD;
     }
 
     @Override
