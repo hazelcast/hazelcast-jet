@@ -18,7 +18,6 @@ package com.hazelcast.jet.json;
 
 import com.fasterxml.jackson.jr.annotationsupport.JacksonAnnotationExtension;
 import com.fasterxml.jackson.jr.ob.JSON;
-import com.fasterxml.jackson.jr.ob.JSON.Feature;
 import com.hazelcast.core.HazelcastJsonValue;
 
 import javax.annotation.Nonnull;
@@ -32,7 +31,6 @@ import static com.hazelcast.jet.impl.util.Util.uncheckCall;
 public final class JsonUtil {
 
     private static final JSON JSON_JR;
-    private static final JSON JSON_JR_WITH_ARRAYS;
 
     static {
         JSON.Builder builder = JSON.builder();
@@ -41,9 +39,7 @@ public final class JsonUtil {
             builder.register(JacksonAnnotationExtension.std);
         } catch (ClassNotFoundException ignored) {
         }
-
         JSON_JR = builder.build();
-        JSON_JR_WITH_ARRAYS = builder.build().with(Feature.READ_JSON_ARRAYS_AS_JAVA_ARRAYS);
     }
 
     private JsonUtil() {
@@ -159,8 +155,7 @@ public final class JsonUtil {
      */
     @Nonnull
     public static Object[] getArray(@Nonnull String jsonString, @Nonnull String key) {
-        Map<String, Object> map = uncheckCall(() -> JSON_JR_WITH_ARRAYS.mapFrom(jsonString));
-        return (Object[]) map.get(key);
+        return getList(jsonString, key).toArray();
     }
 
     /**
