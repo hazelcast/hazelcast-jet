@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.impl.processor;
 
+import com.hazelcast.function.BiFunctionEx;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.rocksdb.RocksDBFactory;
@@ -86,7 +87,8 @@ public class HashJoinP<E0> extends AbstractProcessor {
             @Nonnull List<Function<E0, Object>> keyFns,
             @Nonnull List<Tag> tags,
             @Nullable BiFunction mapToOutputBiFn,
-            @Nullable TriFunction mapToOutputTriFn
+            @Nullable TriFunction mapToOutputTriFn,
+            @Nullable BiFunctionEx<List<Tag>, Object[], ItemsByTag> tupleToItemsByTag
     ) {
         this.keyFns = keyFns;
         this.lookupTables = new ArrayList<>(Collections.nCopies(keyFns.size(), null));
@@ -96,11 +98,10 @@ public class HashJoinP<E0> extends AbstractProcessor {
         if (!tags.isEmpty()) {
             requireNonNull(mapToOutputBiFn, "mapToOutputBiFn required with tags");
             mapTupleToOutputFn = (item, tuple) -> {
-                ItemsByTag res = new ItemsByTag();
-                for (int i = 0; i < tags.size(); i++) {
-                    res.put(tags.get(i), tuple[i]);
-                }
-                return mapToOutputBiFn.apply(item, res);
+                ItemsByTag res = tupleToItemsByTag.apply(tags, tuple);
+                return res == null
+                        ? null
+                        : mapToOutputBiFn.apply(item, res);
             };
         } else if (keyFns.size() == 1) {
             BiFunction mapToOutput = requireNonNull(mapToOutputBiFn,

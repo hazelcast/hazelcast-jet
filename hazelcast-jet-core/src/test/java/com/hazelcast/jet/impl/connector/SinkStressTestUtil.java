@@ -36,8 +36,7 @@ import java.util.stream.IntStream;
 
 import static com.hazelcast.jet.config.ProcessingGuarantee.AT_LEAST_ONCE;
 import static com.hazelcast.jet.config.ProcessingGuarantee.EXACTLY_ONCE;
-import static com.hazelcast.jet.core.JetTestSupport.assertJobStatusEventually;
-import static com.hazelcast.jet.core.JobStatus.RUNNING;
+import static com.hazelcast.jet.core.JetTestSupport.assertJobRunningEventually;
 import static com.hazelcast.test.HazelcastTestSupport.sleepMillis;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.function.Function.identity;
@@ -86,10 +85,11 @@ public final class SinkStressTestUtil {
                                        .collect(joining("\n"));
         // We'll restart once, then restart again after a short sleep (possibly during initialization), then restart
         // again and then assert some output so that the test isn't constantly restarting without any progress
+        Long lastExecutionId = null;
         for (;;) {
-            assertJobStatusEventually(job, RUNNING);
+            lastExecutionId = assertJobRunningEventually(instance, job, lastExecutionId);
             job.restart(graceful);
-            assertJobStatusEventually(job, RUNNING);
+            lastExecutionId = assertJobRunningEventually(instance, job, lastExecutionId);
             sleepMillis(ThreadLocalRandom.current().nextInt(400));
             job.restart(graceful);
             try {
@@ -102,7 +102,7 @@ public final class SinkStressTestUtil {
                         && System.nanoTime() < endTime);
                 lastCount = distinctActualItems.size();
                 logger.info("number of committed items in the sink so far: " + lastCount);
-                if (exactlyOnce || graceful) {
+                if (exactlyOnce) {
                     String actualItemsStr = actualItems.stream()
                             .collect(groupingBy(identity(), TreeMap::new, counting()))
                             .entrySet().stream()

@@ -16,38 +16,83 @@
 
 package com.hazelcast.jet.impl.connector;
 
+import com.hazelcast.client.impl.proxy.ClientMapProxy;
 import com.hazelcast.core.HazelcastInstance;
+import com.hazelcast.function.FunctionEx;
+import com.hazelcast.internal.serialization.Data;
+import com.hazelcast.internal.serialization.SerializationService;
 import com.hazelcast.jet.config.EdgeConfig;
 import com.hazelcast.jet.core.Inbox;
 import com.hazelcast.jet.core.Outbox;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.impl.connector.HazelcastWriters.ArrayMap;
-import com.hazelcast.jet.impl.util.ImdgUtil;
 import com.hazelcast.map.IMap;
+import com.hazelcast.map.impl.proxy.MapProxyImpl;
+import com.hazelcast.partition.PartitioningStrategy;
 
 import javax.annotation.Nonnull;
-import java.util.Map.Entry;
+import java.util.AbstractMap.SimpleEntry;
 import java.util.function.Consumer;
 
 import static java.lang.Integer.max;
 
-public final class WriteMapP<K, V> extends AsyncHazelcastWriterP {
+public final class WriteMapP<T, K, V> extends AsyncHazelcastWriterP {
 
     private static final int BUFFER_LIMIT = 1024;
+
     private final String mapName;
-    private final ArrayMap<K, V> buffer = new ArrayMap<>(EdgeConfig.DEFAULT_QUEUE_SIZE);
+    private final SerializationService serializationService;
+    private final ArrayMap<Data, Data> buffer = new ArrayMap<>(EdgeConfig.DEFAULT_QUEUE_SIZE);
+    private final FunctionEx<? super T, ? extends K> toKeyFn;
+    private final FunctionEx<? super T, ? extends V> toValueFn;
 
-    private IMap<K, V> map;
-    private Consumer<Entry<K, V>> addToBuffer = buffer::add;
+    private IMap<Data, Data> map;
+    private Consumer<T> addToBuffer;
 
-    private WriteMapP(HazelcastInstance instance, int maxParallelAsyncOps, String mapName) {
+    private WriteMapP(
+            @Nonnull HazelcastInstance instance,
+            int maxParallelAsyncOps,
+            String mapName,
+            @Nonnull SerializationService serializationService,
+            @Nonnull FunctionEx<? super T, ? extends K> toKeyFn,
+            @Nonnull FunctionEx<? super T, ? extends V> toValueFn
+    ) {
         super(instance, maxParallelAsyncOps);
         this.mapName = mapName;
+        this.serializationService = serializationService;
+        this.toKeyFn = toKeyFn;
+        this.toValueFn = toValueFn;
     }
 
     @Override
     public void init(@Nonnull Outbox outbox, @Nonnull Context context) {
         map = instance().getMap(mapName);
+
+        if (map instanceof MapProxyImpl) {
+            PartitioningStrategy<?> partitionStrategy = ((MapProxyImpl<K, V>) map).getPartitionStrategy();
+            addToBuffer = item -> {
+                Data key = serializationService.toData(key(item), partitionStrategy);
+                Data value = serializationService.toData(value(item));
+                buffer.add(new SimpleEntry<>(key, value));
+            };
+        } else if (map instanceof ClientMapProxy) {
+            // TODO: add strategy/unify after https://github.com/hazelcast/hazelcast/issues/13950 is fixed
+            addToBuffer = item -> {
+                Data key = serializationService.toData(key(item));
+                Data value = serializationService.toData(value(item));
+                buffer.add(new SimpleEntry<>(key, value));
+            };
+        } else {
+            throw new RuntimeException("Unexpected map class: " + map.getClass().getName());
+        }
+    }
+
+    private K key(T item) {
+        return toKeyFn.apply(item);
+    }
+
+    private V value(T item) {
+        return toValueFn.apply(item);
     }
 
     @Override
@@ -70,12 +115,13 @@ public final class WriteMapP<K, V> extends AsyncHazelcastWriterP {
         if (!tryAcquirePermit()) {
             return false;
         }
-        setCallback(ImdgUtil.mapPutAllAsync(map, buffer));
+        setCallback(map.putAllAsync(buffer));
         buffer.clear();
         return true;
     }
 
-    public static class Supplier<K, V> extends AbstractHazelcastConnectorSupplier {
+    public static class Supplier<T, K, V> extends AbstractHazelcastConnectorSupplier {
+
         private static final long serialVersionUID = 1L;
 
         // use a conservative max parallelism to prevent overloading
@@ -83,11 +129,19 @@ public final class WriteMapP<K, V> extends AsyncHazelcastWriterP {
         private static final int MAX_PARALLELISM = 16;
 
         private final String mapName;
+        private final FunctionEx<? super T, ? extends K> toKeyFn;
+        private final FunctionEx<? super T, ? extends V> toValueFn;
         private int maxParallelAsyncOps;
 
-        public Supplier(String clientXml, String mapName) {
+        public Supplier(
+                String clientXml, String mapName,
+                @Nonnull FunctionEx<? super T, ? extends K> toKeyFn,
+                @Nonnull FunctionEx<? super T, ? extends V> toValueFn
+        ) {
             super(clientXml);
             this.mapName = mapName;
+            this.toKeyFn = toKeyFn;
+            this.toValueFn = toValueFn;
         }
 
         @Override
@@ -97,8 +151,8 @@ public final class WriteMapP<K, V> extends AsyncHazelcastWriterP {
         }
 
         @Override
-        protected Processor createProcessor(HazelcastInstance instance) {
-            return new WriteMapP<>(instance, maxParallelAsyncOps, mapName);
+        protected Processor createProcessor(HazelcastInstance instance, SerializationService serializationService) {
+            return new WriteMapP<>(instance, maxParallelAsyncOps, mapName, serializationService, toKeyFn, toValueFn);
         }
     }
 }

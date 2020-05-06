@@ -104,6 +104,14 @@ public class JobExecutionService implements DynamicMetricsProvider {
         registry.registerStaticMetrics(descriptor, this);
     }
 
+    public Long getExecutionIdForJobId(long jobId) {
+        return executionContexts.values().stream()
+                                .filter(ec -> ec.jobId() == jobId)
+                                .findAny()
+                                .map(ExecutionContext::executionId)
+                                .orElse(null);
+    }
+
     public ClassLoader getClassLoader(JobConfig config, long jobId) {
         return classLoaders.computeIfAbsent(jobId,
                 k -> AccessController.doPrivileged(
@@ -340,13 +348,13 @@ public class JobExecutionService implements DynamicMetricsProvider {
     public void completeExecution(long executionId, Throwable error) {
         ExecutionContext executionContext = executionContexts.remove(executionId);
         if (executionContext != null) {
-            JetClassLoader removed = classLoaders.remove(executionContext.jobId());
+            JetClassLoader removedClassLoader = classLoaders.remove(executionContext.jobId());
             try {
-                com.hazelcast.jet.impl.util.Util.doWithClassLoader(removed, () ->
+                com.hazelcast.jet.impl.util.Util.doWithClassLoader(removedClassLoader, () ->
                     executionContext.completeExecution(error));
             } finally {
                 executionCompleted.inc();
-                removed.shutdown();
+                removedClassLoader.shutdown();
                 executionContextJobIds.remove(executionContext.jobId());
                 logger.fine("Completed execution of " + executionContext.jobNameAndExecutionId());
             }

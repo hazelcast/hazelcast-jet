@@ -39,7 +39,7 @@ dependency:
 <dependency>
     <groupId>com.hazelcast.jet</groupId>
     <artifactId>hazelcast-jet</artifactId>
-    <version>4.0</version>
+    <version>4.1</version>
 </dependency>
 ```
 
@@ -54,16 +54,16 @@ computation:
 ```java
 String path = "books";
 
-JetInstance jet = Jet.newJetInstance();
+JetInstance jet = Jet.bootstrappedInstance();
 
 Pipeline p = Pipeline.create();
 
 p.readFrom(Sources.files(path))
-        .flatMap(line -> Traversers.traverseArray(line.toLowerCase().split("\\W+")))
-        .filter(word -> !word.isEmpty())
-        .groupingKey(word -> word)
-        .aggregate(AggregateOperations.counting())
-        .writeTo(Sinks.logger());
+ .flatMap(line -> Traversers.traverseArray(line.toLowerCase().split("\\W+")))
+ .filter(word -> !word.isEmpty())
+ .groupingKey(word -> word)
+ .aggregate(AggregateOperations.counting())
+ .writeTo(Sinks.logger());
 
 jet.newJob(p).join();
 ```
@@ -86,19 +86,19 @@ appended line. Here's the code you can try out:
 ```java
 String path = "books";
 
-JetInstance jet = Jet.newJetInstance();
+JetInstance jet = Jet.bootstrappedInstance();
 
 Pipeline p = Pipeline.create();
 
 p.readFrom(Sources.fileWatcher(path))
-        .withIngestionTimestamps()
-        .setLocalParallelism(1)
-        .flatMap(line -> Traversers.traverseArray(line.toLowerCase().split("\\W+")))
-        .filter(word -> !word.isEmpty())
-        .groupingKey(word -> word)
-        .window(WindowDefinition.tumbling(1000))
-        .aggregate(AggregateOperations.counting())
-        .writeTo(Sinks.logger());
+ .withIngestionTimestamps()
+ .setLocalParallelism(1)
+ .flatMap(line -> Traversers.traverseArray(line.toLowerCase().split("\\W+")))
+ .filter(word -> !word.isEmpty())
+ .groupingKey(word -> word)
+ .window(WindowDefinition.tumbling(1000))
+ .aggregate(AggregateOperations.counting())
+ .writeTo(Sinks.logger());
 
 jet.newJob(p).join();
 ```
@@ -134,7 +134,18 @@ See the [Hazelcast Jet Getting Started Guide](https://jet-start.sh/docs/get-star
 
 See [examples folder](examples) for some examples.
 
+## Architecture
+
+See the following architecture pages for more insight into the internals of Jet:
+
+* [Cooperative Multithreading](https://jet-start.sh/docs/architecture/execution-engine)
+* [Fault Tolerance](https://jet-start.sh/docs/architecture/fault-tolerance)
+* [In-memory storage](https://jet-start.sh/docs/architecture/in-memory-storage)
+* [Event-time processing](https://jet-start.sh/docs/architecture/event-time-processing)
+
 ## Connectors
+
+You can see a full list of connectors at the [Sources and Sink](https://jet-start.sh/docs/api/sources-sinks) section of the docs. A summary is below:
 
 | Name                                                         | Description                                                  |
 | ------------------------------------------------------------ | ------------------------------------------------------------ |
@@ -161,12 +172,6 @@ See [examples folder](examples) for some examples.
 
 See [hazelcast-jet-contrib](https://github.com/hazelcast/hazelcast-jet-contrib) repository for more detailed information on community supported connectors and tools. 
 
-## Architecture
-
-See the [architecture](https://jet-start.sh/docs/architecture/distributed-computing) and
-[performance](https://jet-start.sh/docs/architecture/execution-engine) pages for
-more details about Jet's internals and design.
-
 ## Start Developing Hazelcast Jet
 
 ### Use Latest Snapshot Release
@@ -192,7 +197,7 @@ Maven snippet:
     <dependency>
         <groupId>com.hazelcast.jet</groupId>
         <artifactId>hazelcast-jet</artifactId>
-        <version>4.1-SNAPSHOT</version>
+        <version>4.2-SNAPSHOT</version>
     </dependency>
 </dependencies>
 ```
@@ -223,7 +228,8 @@ To contribute:
 
 ### Community
 
-Hazelcast Jet team actively answers questions on [Stack Overflow](https://stackoverflow.com/tags/hazelcast-jet).
+Hazelcast Jet team actively answers questions on [Stack Overflow](https://stackoverflow.com/tags/hazelcast-jet)
+and [Gitter](https://gitter.im/hazelcast/hazelcast-jet).
 
 You are also encouraged to join the [hazelcast-jet mailing list](http://groups.google.com/group/hazelcast-jet)
 if you are interested in community discussions

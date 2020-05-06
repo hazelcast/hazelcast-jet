@@ -29,13 +29,15 @@
     <parent>
         <artifactId>hazelcast-jet-root</artifactId>
         <groupId>com.hazelcast.jet</groupId>
-        <version>4.1-SNAPSHOT</version>
+        <version>4.2-SNAPSHOT</version>
     </parent>
 
     <modules>
         <module>avro</module>
+        <module>grpc</module>
         <module>hadoop</module>
         <module>kafka</module>
+        <module>protobuf</module>
         <module>python</module>
         <module>s3</module>
     </modules>

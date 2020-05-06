@@ -92,7 +92,6 @@ public abstract class JmsSourceIntegrationTestBase extends SimpleTestInClusterSu
     private String destinationName = "dest" + counter++;
 
     private Pipeline p = Pipeline.create();
-    private IList<Object> srcList;
     private IList<Object> sinkList;
 
     @BeforeClass
@@ -102,13 +101,12 @@ public abstract class JmsSourceIntegrationTestBase extends SimpleTestInClusterSu
 
     @Before
     public void before() {
-        srcList = instance().getList("src-" + counter++);
         sinkList = instance().getList("sink-" + counter++);
     }
 
     @Test
     public void sourceQueue() throws JMSException {
-        p.readFrom(Sources.jmsQueue(getConnectionFactory(), destinationName))
+        p.readFrom(Sources.jmsQueue(destinationName, getConnectionFactory()))
          .withoutTimestamps()
          .map(TEXT_MESSAGE_FN)
          .writeTo(Sinks.list(sinkList));
@@ -122,7 +120,7 @@ public abstract class JmsSourceIntegrationTestBase extends SimpleTestInClusterSu
 
     @Test
     public void sourceTopic() throws JMSException {
-        p.readFrom(Sources.jmsTopic(getConnectionFactory(), destinationName))
+        p.readFrom(Sources.jmsTopic(destinationName, getConnectionFactory()))
          .withoutTimestamps()
          .map(TEXT_MESSAGE_FN)
          .writeTo(Sinks.list(sinkList));
@@ -216,7 +214,7 @@ public abstract class JmsSourceIntegrationTestBase extends SimpleTestInClusterSu
             return (ConnectionFactory) mockConnectionFactory;
         };
 
-        p.readFrom(Sources.jmsTopic(mockSupplier, destinationName))
+        p.readFrom(Sources.jmsTopic(destinationName, mockSupplier))
          .withoutTimestamps()
          .writeTo(Sinks.logger());
 
@@ -229,7 +227,7 @@ public abstract class JmsSourceIntegrationTestBase extends SimpleTestInClusterSu
 
     @Test
     public void sourceTopic_withNativeTimestamps() throws Exception {
-        p.readFrom(Sources.jmsTopic(getConnectionFactory(), destinationName))
+        p.readFrom(Sources.jmsTopic(destinationName, getConnectionFactory()))
          .withNativeTimestamps(0)
          .map(Message::getJMSTimestamp)
          .window(tumbling(1))
@@ -303,12 +301,8 @@ public abstract class JmsSourceIntegrationTestBase extends SimpleTestInClusterSu
         JmsSourceBuilder sourceBuilder;
         if (useTopic) {
             sourceBuilder = Sources.jmsTopicBuilder(getConnectionFactory())
-                    .connectionFn(f -> {
-                        Connection conn = f.createConnection();
-                        conn.setClientID("foo-client-id");
-                        return conn;
-                    })
-                    .consumerFn(s -> s.createDurableSubscriber(s.createTopic(destName), "foo-consumer"));
+                    .sharedConsumer(true)
+                    .consumerFn(s -> s.createSharedDurableConsumer(s.createTopic(destName), "foo-consumer"));
             // create the durable subscriber now so that it doesn't lose the initial messages
             try (Connection conn = getConnectionFactory().get().createConnection()) {
                 conn.setClientID("foo-client-id");
@@ -403,7 +397,7 @@ public abstract class JmsSourceIntegrationTestBase extends SimpleTestInClusterSu
 
         int idleTimeout = 2000;
         Pipeline p = Pipeline.create();
-        p.readFrom(Sources.jmsQueue(getConnectionFactory(), destinationName)
+        p.readFrom(Sources.jmsQueue(destinationName, getConnectionFactory())
                           .setPartitionIdleTimeout(idleTimeout))
          .withNativeTimestamps(0)
          .setLocalParallelism(2)
@@ -440,7 +434,7 @@ public abstract class JmsSourceIntegrationTestBase extends SimpleTestInClusterSu
         sendMessages(true, MESSAGE_COUNT);
 
         Pipeline p = Pipeline.create();
-        p.readFrom(Sources.jmsQueue(getConnectionFactory(), destinationName))
+        p.readFrom(Sources.jmsQueue(destinationName, getConnectionFactory()))
          .withoutTimestamps()
          .peek()
          .writeTo(Sinks.noop());

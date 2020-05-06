@@ -24,6 +24,8 @@ import java.io.Serializable;
 import java.net.URL;
 import java.util.Objects;
 
+import static com.hazelcast.jet.impl.util.ReflectionUtils.toClassResourceId;
+
 /**
  * Describes a single resource to deploy to the Jet cluster.
  *
@@ -62,10 +64,17 @@ public class ResourceConfig implements Serializable {
     ResourceConfig(@Nonnull Class<?> clazz) {
         Preconditions.checkNotNull(clazz, "clazz");
 
-        String id = clazz.getName().replace('.', '/') + ".class";
-        URL url = clazz.getClassLoader().getResource(id);
+        String id = toClassResourceId(clazz.getName());
+        ClassLoader cl = clazz.getClassLoader();
+        if (cl == null) {
+            throw new IllegalArgumentException(clazz.getName() + ".getClassLoader() returned null, cannot" +
+                    " access the class resource. You may have added a JDK class that is loaded by the" +
+                    " bootstrap classloader. There is no need to add JDK classes to the job configuration.");
+        }
+        URL url = cl.getResource(id);
         if (url == null) {
-            throw new IllegalArgumentException("Couldn't derive URL from class " + clazz);
+            throw new IllegalArgumentException("The classloader of " + clazz.getName() + " couldn't resolve" +
+                    " the resource URL of " + id);
         }
 
         this.id = id;

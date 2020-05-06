@@ -29,6 +29,7 @@ import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.function.RunnableEx;
 import com.hazelcast.jet.impl.JetService;
 import com.hazelcast.jet.impl.JobExecutionRecord;
+import com.hazelcast.jet.impl.JobExecutionService;
 import com.hazelcast.jet.impl.JobRepository;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.logging.Logger;
@@ -52,6 +53,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 import static com.hazelcast.jet.Util.idToString;
+import static com.hazelcast.jet.core.JobStatus.RUNNING;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -146,6 +148,46 @@ public abstract class JetTestSupport extends HazelcastTestSupport {
         assertJobStatusEventually(job, expected, ASSERT_TRUE_EVENTUALLY_TIMEOUT);
     }
 
+    /**
+     * Asserts that a job status is eventually RUNNING. When it's running,
+     * checks that the execution ID is different from the given {@code
+     * ignoredExecutionId}, if not, tries again.
+     * <p>
+     * This is useful when checking that the job is running after a restart:
+     * <pre>{@code
+     *     job.restart();
+     *     // This is racy, we might see the previous execution running.
+     *     // Subsequent steps can fail because the job is restarting.
+     *     assertJobStatusEventually(job, RUNNING);
+     * }</pre>
+     *
+     * This method allows an equivalent code:
+     * <pre>{@code
+     *     long oldExecutionId = assertJobRunningEventually(instance, job, null);
+     *     // now we're sure the job is safe to restart - restart fails if the job isn't running
+     *     job.restart();
+     *     assertJobRunningEventually(instance, job, oldExecutionId);
+     *     // now we're sure that a new execution is running
+     * }</pre>
+     *
+     * @param ignoredExecutionId If job is running and has this execution ID,
+     *      wait longer. If null, no execution ID is ignored.
+     * @return the execution ID of the new execution or 0 if {@code
+     *      ignoredExecutionId == null}
+     */
+    public static long assertJobRunningEventually(JetInstance instance, Job job, Long ignoredExecutionId) {
+        Long executionId;
+        JobExecutionService service = getNodeEngineImpl(instance)
+                .<JetService>getService(JetService.SERVICE_NAME)
+                .getJobExecutionService();
+        do {
+            assertJobStatusEventually(job, RUNNING);
+            // executionId can be null if the execution just terminated
+            executionId = service.getExecutionIdForJobId(job.getId());
+        } while (executionId == null || executionId.equals(ignoredExecutionId));
+        return executionId;
+    }
+
     public static void assertJobStatusEventually(Job job, JobStatus expected, int timeoutSeconds) {
         assertNotNull(job);
         assertTrueEventually(() ->
@@ -234,14 +276,14 @@ public abstract class JetTestSupport extends HazelcastTestSupport {
      * Clean up the cluster and make it ready to run a next test. If we fail
      * to, shut it down so that next tests don't run on a messed-up cluster.
      *
-     * @param instancesToShutDown cluster instances, must contain at least
+     * @param instances cluster instances, must contain at least
      *                            one instance
      */
-    public void cleanUpCluster(JetInstance ... instancesToShutDown) {
-        for (Job job : instancesToShutDown[0].getJobs()) {
-            ditchJob(job, instancesToShutDown);
+    public void cleanUpCluster(JetInstance ... instances) {
+        for (Job job : instances[0].getJobs()) {
+            ditchJob(job, instances);
         }
-        for (DistributedObject o : instancesToShutDown[0].getHazelcastInstance().getDistributedObjects()) {
+        for (DistributedObject o : instances[0].getHazelcastInstance().getDistributedObjects()) {
             o.destroy();
         }
     }

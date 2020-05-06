@@ -26,7 +26,7 @@
     <parent>
         <groupId>com.hazelcast.jet</groupId>
         <artifactId>hazelcast-jet-root</artifactId>
-        <version>4.1-SNAPSHOT</version>
+        <version>4.2-SNAPSHOT</version>
     </parent>
 
     <properties>
@@ -141,6 +141,21 @@
                             <version>${classgraph.version}</version>
                         </dependency>
                         <dependency>
+                            <groupId>com.fasterxml.jackson.jr</groupId>
+                            <artifactId>jackson-jr-objects</artifactId>
+                            <version>${jackson.jr.version}</version>
+                        </dependency>
+                        <dependency>
+                            <groupId>com.fasterxml.jackson.jr</groupId>
+                            <artifactId>jackson-jr-annotation-support</artifactId>
+                            <version>${jackson.jr.version}</version>
+                        </dependency>
+                        <dependency>
+                            <groupId>com.fasterxml.jackson.core</groupId>
+                            <artifactId>jackson-core</artifactId>
+                            <version>${jackson.jr.version}</version>
+                        </dependency>
+                        <dependency>
                             <groupId>org.apache.hadoop</groupId>
                             <artifactId>hadoop-hdfs</artifactId>
                             <version>${hadoop.version}</version>
@@ -210,8 +225,20 @@
         </dependency>
         <dependency>
             <groupId>com.hazelcast.jet</groupId>
+            <artifactId>hazelcast-jet-protobuf</artifactId>
+            <version>${project.version}</version>
+            <classifier>jar-with-dependencies</classifier>
+        </dependency>
+        <dependency>
+            <groupId>com.hazelcast.jet</groupId>
             <artifactId>hazelcast-jet-spring</artifactId>
             <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.hazelcast.jet</groupId>
+            <artifactId>hazelcast-jet-grpc</artifactId>
+            <version>${project.version}</version>
+            <classifier>jar-with-dependencies</classifier>
         </dependency>
         <dependency>
             <groupId>com.hazelcast.jet</groupId>

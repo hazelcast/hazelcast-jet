@@ -17,6 +17,8 @@
 package com.hazelcast.jet.impl.connector;
 
 import com.hazelcast.core.HazelcastInstance;
+import com.hazelcast.internal.serialization.Data;
+import com.hazelcast.internal.serialization.SerializationService;
 import com.hazelcast.jet.core.Inbox;
 import com.hazelcast.jet.core.Outbox;
 import com.hazelcast.jet.core.Processor;
@@ -28,6 +30,7 @@ import com.hazelcast.ringbuffer.impl.RingbufferProxy;
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Function;
 
 public final class WriteObservableP<T> extends AsyncHazelcastWriterP {
 
@@ -35,13 +38,17 @@ public final class WriteObservableP<T> extends AsyncHazelcastWriterP {
     private static final int MAX_BATCH_SIZE = RingbufferProxy.MAX_BATCH_SIZE;
 
     private final String observableName;
-    private final List<T> batch = new ArrayList<>(MAX_BATCH_SIZE);
+    private final Function<T, Data> mapper;
+    private final List<Data> batch = new ArrayList<>(MAX_BATCH_SIZE);
 
-    private Ringbuffer<Object> ringbuffer;
+    private Ringbuffer<Data> ringbuffer;
 
-    private WriteObservableP(String observableName, HazelcastInstance instance) {
+    private WriteObservableP(String observableName,
+                             @Nonnull HazelcastInstance instance,
+                             @Nonnull SerializationService serializationService) {
         super(instance, MAX_PARALLEL_ASYNC_OPS);
         this.observableName = observableName;
+        this.mapper = serializationService::toData;
     }
 
     @Override
@@ -55,7 +62,7 @@ public final class WriteObservableP<T> extends AsyncHazelcastWriterP {
     @Override
     protected void processInternal(Inbox inbox) {
         if (batch.size() < MAX_BATCH_SIZE) {
-            inbox.drainTo(batch, MAX_BATCH_SIZE - batch.size());
+            inbox.drainTo(batch, MAX_BATCH_SIZE - batch.size(), mapper);
         }
         tryFlush();
     }
@@ -87,9 +94,8 @@ public final class WriteObservableP<T> extends AsyncHazelcastWriterP {
         }
 
         @Override
-        protected Processor createProcessor(HazelcastInstance instance) {
-            return new WriteObservableP<>(observableName, instance);
+        protected Processor createProcessor(HazelcastInstance instance, SerializationService serializationService) {
+            return new WriteObservableP<>(observableName, instance, serializationService);
         }
     }
-
 }

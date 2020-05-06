@@ -48,7 +48,7 @@ import static java.util.Collections.singletonList;
 public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchStage<T> {
 
     BatchStageImpl(@Nonnull Transform transform, @Nonnull PipelineImpl pipeline) {
-        super(transform, DO_NOT_ADAPT, pipeline, true);
+        super(transform, DO_NOT_ADAPT, pipeline);
     }
 
     /**
@@ -59,10 +59,29 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
         this(transform, pipeline);
     }
 
+    BatchStageImpl(BatchStageImpl<T> toCopy, boolean rebalanceOutput) {
+        super(toCopy, rebalanceOutput);
+    }
+
+    <K> BatchStageImpl(BatchStageImpl<T> toCopy, FunctionEx<? super T, ? extends K> keyFn) {
+        super(toCopy, keyFn);
+    }
+
     @Nonnull @Override
     public <K> BatchStageWithKey<T, K> groupingKey(@Nonnull FunctionEx<? super T, ? extends K> keyFn) {
         checkSerializable(keyFn, "keyFn");
         return new BatchStageWithKeyImpl<>(this, keyFn);
+    }
+
+    @Nonnull @Override
+    public <K> BatchStage<T> rebalance(@Nonnull FunctionEx<? super T, ? extends K> keyFn) {
+        checkSerializable(keyFn, "keyFn");
+        return new BatchStageImpl<>(this, keyFn);
+    }
+
+    @Nonnull @Override
+    public BatchStage<T> rebalance() {
+        return new BatchStageImpl<>(this, true);
     }
 
     @Nonnull @Override
@@ -121,7 +140,7 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
             boolean preserveOrder,
             @Nonnull BiFunctionEx<? super S, ? super T, ? extends CompletableFuture<R>> mapAsyncFn
     ) {
-        return attachFlatMapUsingServiceAsync("map", serviceFactory, maxConcurrentOps, preserveOrder,
+        return attachMapUsingServiceAsync(serviceFactory, maxConcurrentOps, preserveOrder,
                 (s, t) -> mapAsyncFn.apply(s, t).thenApply(Traversers::singleton));
     }
 
@@ -131,7 +150,7 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
             int maxBatchSize,
             @Nonnull BiFunctionEx<? super S, ? super List<T>, ? extends CompletableFuture<List<R>>> mapAsyncFn
     ) {
-        return attachFlatMapUsingServiceAsyncBatched("map", serviceFactory, maxBatchSize,
+        return attachMapUsingServiceAsyncBatched(serviceFactory, maxBatchSize,
                 (s, t) -> mapAsyncFn.apply(s, t).thenApply(list -> toList(list, Traversers::singleton)));
     }
 
@@ -166,6 +185,21 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
     }
 
     @Nonnull @Override
+    public <K, T1_IN, T1, R> BatchStage<R> innerHashJoin(
+            @Nonnull BatchStage<T1_IN> stage1,
+            @Nonnull JoinClause<K, ? super T, ? super T1_IN, ? extends T1> joinClause1,
+            @Nonnull BiFunctionEx<T, T1, R> mapToOutputFn
+    ) {
+        BiFunctionEx<T, T1, R> finalOutputFn = (leftSide, rightSide) -> {
+            if (leftSide == null || rightSide == null) {
+                return null;
+            }
+            return mapToOutputFn.apply(leftSide, rightSide);
+        };
+        return attachHashJoin(stage1, joinClause1, finalOutputFn);
+    }
+
+    @Nonnull @Override
     public <K1, K2, T1_IN, T2_IN, T1, T2, R> BatchStage<R> hashJoin2(
             @Nonnull BatchStage<T1_IN> stage1,
             @Nonnull JoinClause<K1, ? super T, ? super T1_IN, ? extends T1> joinClause1,
@@ -174,6 +208,23 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
             @Nonnull TriFunction<T, T1, T2, R> mapToOutputFn
     ) {
         return attachHashJoin2(stage1, joinClause1, stage2, joinClause2, mapToOutputFn);
+    }
+
+    @Nonnull @Override
+    public <K1, K2, T1_IN, T2_IN, T1, T2, R> BatchStage<R> innerHashJoin2(
+            @Nonnull BatchStage<T1_IN> stage1,
+            @Nonnull JoinClause<K1, ? super T, ? super T1_IN, ? extends T1> joinClause1,
+            @Nonnull BatchStage<T2_IN> stage2,
+            @Nonnull JoinClause<K2, ? super T, ? super T2_IN, ? extends T2> joinClause2,
+            @Nonnull TriFunction<T, T1, T2, R> mapToOutputFn
+    ) {
+        TriFunction<T, T1, T2, R> finalOutputFn = (leftSide, middle, rightSide) -> {
+            if (leftSide == null || middle == null || rightSide == null) {
+                return null;
+            }
+            return mapToOutputFn.apply(leftSide, middle, rightSide);
+        };
+        return attachHashJoin2(stage1, joinClause1, stage2, joinClause2, finalOutputFn);
     }
 
     @Nonnull @Override
@@ -186,7 +237,10 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
             @Nonnull BatchStage<T1> stage1,
             @Nonnull AggregateOperation2<? super T, ? super T1, ?, ? extends R> aggrOp
     ) {
-        return attach(new AggregateTransform<>(asList(transform, transformOf(stage1)), aggrOp), DO_NOT_ADAPT);
+        return attach(
+                new AggregateTransform<>(asList(transform, transformOf(stage1)), aggrOp),
+                singletonList(stage1),
+                DO_NOT_ADAPT);
     }
 
     @Nonnull @Override
@@ -195,8 +249,8 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
             @Nonnull BatchStage<T2> stage2,
             @Nonnull AggregateOperation3<? super T, ? super T1, ? super T2, ?, ? extends R> aggrOp
     ) {
-        return attach(new AggregateTransform<>(
-                asList(transform, transformOf(stage1), transformOf(stage2)), aggrOp),
+        return attach(new AggregateTransform<>(asList(transform, transformOf(stage1), transformOf(stage2)), aggrOp),
+                asList(stage1, stage2),
                 DO_NOT_ADAPT);
     }
 
@@ -217,13 +271,6 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
     }
 
     @Nonnull @Override
-    @SuppressWarnings("unchecked")
-    <RET> RET attach(@Nonnull AbstractTransform transform, @Nonnull FunctionAdapter fnAdapter) {
-        pipelineImpl.connect(transform.upstream(), transform);
-        return (RET) new BatchStageImpl<>(transform, pipelineImpl);
-    }
-
-    @Nonnull @Override
     public BatchStage<T> setLocalParallelism(int localParallelism) {
         super.setLocalParallelism(localParallelism);
         return this;
@@ -233,5 +280,11 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
     public BatchStage<T> setName(@Nonnull String name) {
         super.setName(name);
         return this;
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    <RET> RET newStage(@Nonnull AbstractTransform transform, @Nonnull FunctionAdapter fnAdapter) {
+        return (RET) new BatchStageImpl<>(transform, pipelineImpl);
     }
 }

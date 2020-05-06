@@ -25,7 +25,7 @@
     <parent>
         <groupId>com.hazelcast.jet</groupId>
         <artifactId>hazelcast-jet-root</artifactId>
-        <version>4.1-SNAPSHOT</version>
+        <version>4.2-SNAPSHOT</version>
     </parent>
 
     <build>
@@ -73,8 +73,20 @@
                             <include>com.hazelcast:*</include>
                             <include>info.picocli:picocli</include>
                             <include>io.github.classgraph:classgraph</include>
+                            <include>com.fasterxml.jackson.jr:jackson-jr-objects</include>
+                            <include>com.fasterxml.jackson.jr:jackson-jr-annotation-support</include>
+                            <include>com.fasterxml.jackson.core:jackson-core</include>
                         </includes>
                     </artifactSet>
+                    <filters>
+                        <filter>
+                            <artifact>com.hazelcast:hazelcast</artifact>
+                            <excludes>
+                                <exclude>com/hazelcast/com/fasterxml/**</exclude>
+                                <exclue>META-INF/services/com.hazelcast.com.fasterxml.jackson.core.JsonFactory</exclue>
+                            </excludes>
+                        </filter>
+                    </filters>
                     <relocations>
                         <relocation>
                             <pattern>picocli.</pattern>
@@ -87,6 +99,14 @@
                         <relocation>
                             <pattern>nonapi.io.github.classgraph.</pattern>
                             <shadedPattern>com.hazelcast.jet.nonapi.io.github.classgraph.</shadedPattern>
+                        </relocation>
+                        <relocation>
+                            <pattern>com.fasterxml.jackson.jr.</pattern>
+                            <shadedPattern>com.hazelcast.com.fasterxml.jackson.jr.</shadedPattern>
+                        </relocation>
+                        <relocation>
+                            <pattern>com.fasterxml.jackson.core.</pattern>
+                            <shadedPattern>com.hazelcast.com.fasterxml.jackson.core.</shadedPattern>
                         </relocation>
                     </relocations>
                     <transformers>
@@ -137,6 +157,11 @@
             <groupId>com.hazelcast</groupId>
             <artifactId>hazelcast-gcp</artifactId>
             <version>${hazelcast.gcp.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.hazelcast</groupId>
+            <artifactId>hazelcast-azure</artifactId>
+            <version>${hazelcast.azure.version}</version>
         </dependency>
 
         <!-- Test dependencies -->

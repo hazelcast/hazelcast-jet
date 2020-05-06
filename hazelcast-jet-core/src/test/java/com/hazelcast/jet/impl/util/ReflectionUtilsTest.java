@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.impl.util;
 
+import com.hazelcast.jet.impl.util.ReflectionUtils.ClassResource;
 import com.hazelcast.jet.impl.util.ReflectionUtils.Resources;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import org.junit.Test;
@@ -28,7 +29,6 @@ import java.util.List;
 import static java.util.stream.Collectors.toList;
 import static org.hamcrest.CoreMatchers.hasItem;
 import static org.hamcrest.CoreMatchers.notNullValue;
-import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.hasSize;
@@ -87,17 +87,27 @@ public class ReflectionUtilsTest {
         Resources resources = ReflectionUtils.resourcesOf(OuterClass.class.getPackage().getName());
 
         // Then
-        Collection<Class<?>> classes = resources.classes().collect(toList());
-        assertThat(classes, hasSize(greaterThan(3)));
-        assertThat(classes, hasItem(OuterClass.class));
-        assertThat(classes, hasItem(OuterClass.NestedClass.class));
-        assertThat(classes, hasItem(OuterClass.NestedClass.DeeplyNestedClass.class));
-        assertThat(classes, hasItem(Class.forName(OuterClass.class.getName() + "$1")));
-        assertThat(classes, hasItem(Class.forName(OuterClass.NestedClass.DeeplyNestedClass.class.getName() + "$1")));
+        Collection<ClassResource> classes = resources.classes().collect(toList());
+        assertThat(classes, hasSize(greaterThan(5)));
+        assertThat(classes, hasItem(classResource(OuterClass.class)));
+        assertThat(classes, hasItem(classResource(OuterClass.NestedClass.class)));
+        assertThat(classes, hasItem(classResource(OuterClass.NestedClass.DeeplyNestedClass.class)));
+        assertThat(classes, hasItem(classResource(Class.forName(OuterClass.class.getName() + "$1"))));
+        assertThat(classes, hasItem(
+                classResource(Class.forName(OuterClass.NestedClass.DeeplyNestedClass.class.getName() + "$1"))
+        ));
 
         List<URL> nonClasses = resources.nonClasses().collect(toList());
-        assertThat(nonClasses, contains(hasToString(containsString("package.properties"))));
+        assertThat(nonClasses, hasSize(2));
+        assertThat(nonClasses, hasItem(hasToString(containsString("file.json"))));
+        assertThat(nonClasses, hasItem(hasToString(containsString("package.properties"))));
     }
+
+    private static ClassResource classResource(Class<?> clazz) {
+        URL url = clazz.getClassLoader().getResource(clazz.getName().replace('.', '/') + ".class");
+        return new ClassResource(clazz.getName(), url);
+    }
+
 
     @Test
     public void when_loadClass_then_returnsClass() {
