@@ -82,11 +82,6 @@ public class ElasticSinkBuilder<T> implements Serializable {
         return this;
     }
 
-    @Nonnull
-    public SupplierEx<? extends RestHighLevelClient> clientSupplier() {
-        return clientSupplier;
-    }
-
     /**
      * Set the destroy function called on completion, defaults to {@link RestHighLevelClient#close()}
      *
@@ -98,11 +93,6 @@ public class ElasticSinkBuilder<T> implements Serializable {
         return this;
     }
 
-    @Nonnull
-    public ConsumerEx<? super RestHighLevelClient> destroyFn() {
-        return destroyFn;
-    }
-
     /**
      * Set the bulkRequestSupplier, defaults to new {@link BulkRequest#BulkRequest()}
      *
@@ -112,11 +102,6 @@ public class ElasticSinkBuilder<T> implements Serializable {
     public ElasticSinkBuilder<T> bulkRequestSupplier(@Nonnull SupplierEx<BulkRequest> bulkRequestSupplier) {
         this.bulkRequestSupplier = checkNonNullAndSerializable(bulkRequestSupplier, "clientSupplier");
         return this;
-    }
-
-    @Nonnull
-    public SupplierEx<BulkRequest> bulkRequestSupplier() {
-        return bulkRequestSupplier;
     }
 
     /**
@@ -132,10 +117,6 @@ public class ElasticSinkBuilder<T> implements Serializable {
         return this;
     }
 
-    public FunctionEx<? super T, ? extends DocWriteRequest<?>> mapItemFn() {
-        return mapItemFn;
-    }
-
     /**
      * Set the function that provides {@link RequestOptions} based on given request
      *
@@ -147,18 +128,10 @@ public class ElasticSinkBuilder<T> implements Serializable {
         return this;
     }
 
-    public FunctionEx<? super ActionRequest, RequestOptions> optionsFn() {
-        return optionsFn;
-    }
-
     @Nonnull
     public ElasticSinkBuilder<T> preferredLocalParallelism(int preferredLocalParallelism) {
         this.preferredLocalParallelism = preferredLocalParallelism;
         return this;
-    }
-
-    public int preferredLocalParallelism() {
-        return preferredLocalParallelism;
     }
 
     /**
