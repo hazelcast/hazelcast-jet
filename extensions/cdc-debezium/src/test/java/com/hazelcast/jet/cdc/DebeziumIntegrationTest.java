@@ -20,23 +20,19 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.accumulator.LongAccumulator;
-import com.hazelcast.jet.core.JetTestSupport;
-import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.pipeline.Pipeline;
+import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.StreamSource;
-import com.hazelcast.jet.pipeline.test.AssertionCompletedException;
-import com.hazelcast.test.HazelcastTestSupport;
 import org.junit.Test;
 import org.testcontainers.containers.MySQLContainer;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Objects;
-import java.util.concurrent.CompletionException;
 
-import static com.hazelcast.jet.pipeline.test.AssertionSinks.assertCollectedEventually;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static com.hazelcast.jet.Util.entry;
 import static org.testcontainers.containers.MySQLContainer.MYSQL_PORT;
 
 public class DebeziumIntegrationTest extends AbstractIntegrationTest {
@@ -51,7 +47,7 @@ public class DebeziumIntegrationTest extends AbstractIntegrationTest {
             container.start();
 
             // given
-            String[] expectedRecords = {
+            List<String> expectedRecords = Arrays.asList(
                     "1001/0:INSERT:Customer {id=1001, firstName=Sally, lastName=Thomas, email=sally.thomas@acme.com}",
                     "1002/0:INSERT:Customer {id=1002, firstName=George, lastName=Bailey, email=gbailey@foobar.com}",
                     "1003/0:INSERT:Customer {id=1003, firstName=Edward, lastName=Walker, email=ed@walker.com}",
@@ -59,7 +55,7 @@ public class DebeziumIntegrationTest extends AbstractIntegrationTest {
                     "1004/1:UPDATE:Customer {id=1004, firstName=Anne Marie, lastName=Kretchmar, email=annek@noanswer.org}",
                     "1005/0:INSERT:Customer {id=1005, firstName=Jason, lastName=Bourne, email=jason@bourne.org}",
                     "1005/1:DELETE:Customer {id=1005, firstName=Jason, lastName=Bourne, email=jason@bourne.org}"
-            };
+            );
 
             StreamSource<ChangeRecord> source = DebeziumCdcSources.debezium("mysql",
                     "io.debezium.connector.mysql.MySqlConnector")
@@ -87,18 +83,19 @@ public class DebeziumIntegrationTest extends AbstractIntegrationTest {
                                 Operation operation = record.operation();
                                 RecordPart value = record.value();
                                 Customer customer = value.toObject(Customer.class);
-                                return customerId + "/" + count + ":" + operation + ":" + customer;
+                                return entry(customerId + "/" + count, operation + ":" + customer);
                             })
                     .setLocalParallelism(1)
-                    .writeTo(assertCollectedEventually(30, assertListFn(expectedRecords)));
+                    .writeTo(Sinks.map("results"));
 
             // when
             JetInstance jet = createJetMembers(2)[0];
             Job job = jet.newJob(pipeline);
-            JetTestSupport.assertJobStatusEventually(job, JobStatus.RUNNING);
 
-            HazelcastTestSupport.sleepAtLeastSeconds(10);
-            // update a record
+            //then
+            assertEqualsEventually(() -> jet.getMap("results").size(), 4);
+
+            //when
             try (Connection connection = DriverManager.getConnection(container.withDatabaseName("inventory").getJdbcUrl(),
                     container.getUsername(), container.getPassword())) {
                 connection
@@ -112,15 +109,11 @@ public class DebeziumIntegrationTest extends AbstractIntegrationTest {
                         .executeUpdate();
             }
 
-            // then
+            //then
             try {
-                job.join();
-                fail("Job should have completed with an AssertionCompletedException, but completed normally");
-            } catch (CompletionException e) {
-                String errorMsg = e.getCause().getMessage();
-                assertTrue("Job was expected to complete with " +
-                                "AssertionCompletedException, but completed with: " + e.getCause(),
-                        errorMsg.contains(AssertionCompletedException.class.getName()));
+                assertEqualsEventually(() -> mapResultsToSortedList(jet.getMap("results")), expectedRecords);
+            } finally {
+                job.cancel();
             }
         } finally {
             container.stop();

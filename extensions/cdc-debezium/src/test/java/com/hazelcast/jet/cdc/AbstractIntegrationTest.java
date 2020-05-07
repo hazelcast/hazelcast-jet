@@ -16,34 +16,26 @@
 
 package com.hazelcast.jet.cdc;
 
-import com.hazelcast.function.ConsumerEx;
 import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.core.JetTestSupport;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.impl.JetEvent;
-import org.junit.Assert;
+import com.hazelcast.map.IMap;
 
 import javax.annotation.Nonnull;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 public class AbstractIntegrationTest extends JetTestSupport {
 
     @Nonnull
-    protected static ConsumerEx<List<String>> assertListFn(String... expected) {
-        return actualList -> {
-            List<String> sortedActualList = new ArrayList<>(actualList);
-            sortedActualList.sort(String::compareTo);
-
-            List<String> sortedExpectedList = Arrays.asList(expected);
-            sortedExpectedList.sort(String::compareTo);
-
-            Assert.assertEquals(sortedExpectedList, sortedActualList);
-        };
+    protected static List<String> mapResultsToSortedList(IMap<?, ?> map) {
+        return map.entrySet().stream()
+                .map(e -> e.getKey() + ":" + e.getValue())
+                .sorted().collect(Collectors.toList());
     }
 
     @SuppressWarnings("unchecked")
