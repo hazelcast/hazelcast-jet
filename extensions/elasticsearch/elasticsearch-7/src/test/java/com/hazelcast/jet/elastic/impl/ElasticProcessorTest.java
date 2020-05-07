@@ -83,20 +83,20 @@ public class ElasticProcessorTest {
         when(mockClient.search(any(), any())).thenReturn(response);
     }
 
-    private TestSupport createProcessor() throws Exception {
-        return createProcessor(request -> RequestOptions.DEFAULT, emptyList(), false, false);
+    private TestSupport runProcessor() throws Exception {
+        return runProcessor(request -> RequestOptions.DEFAULT, emptyList(), false, false);
     }
 
-    private TestSupport createProcessor(FunctionEx<ActionRequest, RequestOptions> optionsFn) throws Exception {
-        return createProcessor(optionsFn, emptyList(), false, false);
+    private TestSupport runProcessor(FunctionEx<ActionRequest, RequestOptions> optionsFn) throws Exception {
+        return runProcessor(optionsFn, emptyList(), false, false);
     }
 
-    private TestSupport createProcessor(List<Shard> shards) throws Exception {
-        return createProcessor(request -> RequestOptions.DEFAULT, shards, false, true);
+    private TestSupport runProcessorWithCoLocation(List<Shard> shards) throws Exception {
+        return runProcessor(request -> RequestOptions.DEFAULT, shards, false, true);
     }
 
-    private TestSupport createProcessor(FunctionEx<ActionRequest, RequestOptions> optionsFn, List<Shard> shards,
-                                        boolean slicing, boolean coLocatedReading)
+    private TestSupport runProcessor(FunctionEx<ActionRequest, RequestOptions> optionsFn, List<Shard> shards,
+                                     boolean slicing, boolean coLocatedReading)
             throws Exception {
 
         RestHighLevelClient client = mockClient;
@@ -121,10 +121,10 @@ public class ElasticProcessorTest {
     }
 
     @Test
-    public void shouldUseScrollSearch() throws Exception {
+    public void when_runProcessor_then_executeSearchRequestWithScroll() throws Exception {
         when(response.getHits()).thenReturn(new SearchHits(new SearchHit[]{}, new TotalHits(0, EQUAL_TO), Float.NaN));
 
-        TestSupport support = createProcessor();
+        TestSupport support = runProcessor();
 
         support.expectOutput(emptyList());
 
@@ -136,11 +136,11 @@ public class ElasticProcessorTest {
     }
 
     @Test
-    public void shouldUseOptionsFnForSearch() throws Exception {
+    public void when_runProcessorWithOptionsFn_then_shouldUseOptionsFnForSearchRequest() throws Exception {
         when(response.getHits()).thenReturn(new SearchHits(new SearchHit[]{}, new TotalHits(0, EQUAL_TO), Float.NaN));
 
         // get different instance than default
-        TestSupport testSupport = createProcessor(request -> {
+        TestSupport testSupport = runProcessor(request -> {
             Builder builder = RequestOptions.DEFAULT.toBuilder();
             builder.addHeader("TestHeader", "value");
             return builder.build();
@@ -158,7 +158,7 @@ public class ElasticProcessorTest {
     }
 
     @Test
-    public void shouldProduceSingleHit() throws Exception {
+    public void given_singleHit_when_runProcessor_then_produceSingleHit() throws Exception {
         SearchHit hit = new SearchHit(0, "id-0", new Text("ignored"), emptyMap());
         hit.sourceRef(new BytesArray(HIT_SOURCE));
         when(response.getHits()).thenReturn(new SearchHits(new SearchHit[]{hit}, new TotalHits(1, EQUAL_TO), Float.NaN));
@@ -167,13 +167,13 @@ public class ElasticProcessorTest {
         when(response2.getHits()).thenReturn(new SearchHits(new SearchHit[]{}, new TotalHits(1, EQUAL_TO), Float.NaN));
         when(mockClient.scroll(any(), any())).thenReturn(response2);
 
-        TestSupport testSupport = createProcessor();
+        TestSupport testSupport = runProcessor();
 
         testSupport.expectOutput(newArrayList(HIT_SOURCE));
     }
 
     @Test
-    public void shouldUseScrollIdInFollowupScrollRequest() throws Exception {
+    public void givenMultipleResults_when_runProcessor_then_useScrollIdInFollowupScrollRequest() throws Exception {
         SearchHit hit = new SearchHit(0, "id-0", new Text("ignored"), emptyMap());
         hit.sourceRef(new BytesArray(HIT_SOURCE));
         when(response.getHits()).thenReturn(new SearchHits(new SearchHit[]{hit}, new TotalHits(3, EQUAL_TO), Float.NaN));
@@ -187,7 +187,7 @@ public class ElasticProcessorTest {
         when(response3.getHits()).thenReturn(new SearchHits(new SearchHit[]{}, new TotalHits(3, EQUAL_TO), Float.NaN));
         when(mockClient.scroll(any(), any())).thenReturn(response2, response3);
 
-        TestSupport testSupport = createProcessor();
+        TestSupport testSupport = runProcessor();
 
         testSupport.expectOutput(newArrayList(HIT_SOURCE, HIT_SOURCE2));
 
@@ -200,7 +200,7 @@ public class ElasticProcessorTest {
     }
 
     @Test
-    public void shouldUseOptionsFnForScroll() throws Exception {
+    public void when_runProcessorWithOptionsFn_then_shouldUseOptionsFnForScrollRequest() throws Exception {
         SearchHit hit = new SearchHit(0, "id-0", new Text("ignored"), emptyMap());
         hit.sourceRef(new BytesArray(HIT_SOURCE));
         when(response.getHits()).thenReturn(new SearchHits(new SearchHit[]{hit}, new TotalHits(1, EQUAL_TO), Float.NaN));
@@ -210,7 +210,7 @@ public class ElasticProcessorTest {
         when(mockClient.scroll(any(), any())).thenReturn(response2);
 
         // get different instance than default
-        TestSupport testSupport = createProcessor(request -> {
+        TestSupport testSupport = runProcessor(request -> {
             Builder builder = RequestOptions.DEFAULT.toBuilder();
             builder.addHeader("TestHeader", "value");
             return builder.build();
@@ -228,13 +228,14 @@ public class ElasticProcessorTest {
     }
 
     @Test
-    public void shouldUseLocalNodeOnly() throws Exception {
+    public void when_runProcessorWithCoLocation_then_useLocalNodeOnly() throws Exception {
         RestClient lowClient = mock(RestClient.class);
         when(mockClient.getLowLevelClient()).thenReturn(lowClient);
         when(response.getHits()).thenReturn(new SearchHits(new SearchHit[]{}, new TotalHits(0, EQUAL_TO), Float.NaN));
 
-        TestSupport testSupport = createProcessor(newArrayList(new Shard("my-index", 0, Prirep.p, 42,
-                "STARTED", "10.0.0.1", "10.0.0.1:9200", "es1")));
+        TestSupport testSupport = runProcessorWithCoLocation(newArrayList(
+                new Shard("my-index", 0, Prirep.p, 42, "STARTED", "10.0.0.1", "10.0.0.1:9200", "es1")
+        ));
         testSupport.expectOutput(emptyList());
 
         ArgumentCaptor<Collection<Node>> nodesCaptor = ArgumentCaptor.forClass(Collection.class);
@@ -249,10 +250,10 @@ public class ElasticProcessorTest {
     }
 
     @Test
-    public void shouldSearchShardsWithPreference() throws Exception {
+    public void when_runProcessorWithCoLocation_thenSearchShardsWithPreference() throws Exception {
         when(response.getHits()).thenReturn(new SearchHits(new SearchHit[]{}, new TotalHits(0, EQUAL_TO), Float.NaN));
 
-        TestSupport processor = createProcessor(newArrayList(
+        TestSupport processor = runProcessorWithCoLocation(newArrayList(
                 new Shard("my-index", 0, Prirep.p, 42, "STARTED", "10.0.0.1", "10.0.0.1:9200", "es1"),
                 new Shard("my-index", 1, Prirep.p, 42, "STARTED", "10.0.0.1", "10.0.0.1:9200", "es1"),
                 new Shard("my-index", 2, Prirep.p, 42, "STARTED", "10.0.0.1", "10.0.0.1:9200", "es1")
@@ -267,10 +268,10 @@ public class ElasticProcessorTest {
     }
 
     @Test
-    public void shouldUseSlicing() throws Exception {
+    public void when_runProcessorWithParallelism_thenUseSlicingBasedOnGlobalValues() throws Exception {
         when(response.getHits()).thenReturn(new SearchHits(new SearchHit[]{}, new TotalHits(0, EQUAL_TO), Float.NaN));
 
-        TestSupport testSupport = createProcessor((r) -> RequestOptions.DEFAULT, emptyList(), true, false);
+        TestSupport testSupport = runProcessor((r) -> RequestOptions.DEFAULT, emptyList(), true, false);
         testSupport.localProcessorIndex(1);
         testSupport.localParallelism(2);
         testSupport.globalProcessorIndex(4);
@@ -283,16 +284,16 @@ public class ElasticProcessorTest {
         SearchRequest request = captor.getValue();
         SliceBuilder slice = request.source().slice();
 
-        // Slicing across all, should use global values
+        // Slicing across all, should use global index / total parallelism
         assertThat(slice.getId()).isEqualTo(4);
         assertThat(slice.getMax()).isEqualTo(6);
     }
 
     @Test
-    public void useSlicingAndCoLocation() throws Exception {
+    public void when_runProcessorWithCoLocationAndSlicing_thenUseSlicingBasedOnLocalValues() throws Exception {
         when(response.getHits()).thenReturn(new SearchHits(new SearchHit[]{}, new TotalHits(0, EQUAL_TO), Float.NaN));
 
-        TestSupport testSupport = createProcessor((r) -> RequestOptions.DEFAULT,
+        TestSupport testSupport = runProcessor((r) -> RequestOptions.DEFAULT,
                 newArrayList(
                         new Shard("my-index", 0, Prirep.p, 42, "STARTED", "10.0.0.1", "10.0.0.1:9200", "es1"),
                         new Shard("my-index", 1, Prirep.p, 42, "STARTED", "10.0.0.1", "10.0.0.1:9200", "es1"),

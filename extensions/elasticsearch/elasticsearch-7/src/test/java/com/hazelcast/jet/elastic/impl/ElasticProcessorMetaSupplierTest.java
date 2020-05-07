@@ -34,7 +34,7 @@ import static org.assertj.core.util.Lists.newArrayList;
 public class ElasticProcessorMetaSupplierTest {
 
     @Test
-    public void shouldAssignToSingleAddress() {
+    public void given_singleNodeAdress_when_assignShards_then_shouldAssignAllShardsToSingleAddress() {
         List<Shard> shards = newArrayList(
                 new Shard("elastic-index", 0, Prirep.p, 10, "STARTED", "10.0.0.1", "10.0.0.1:9200", "node1"),
                 new Shard("elastic-index", 1, Prirep.p, 10, "STARTED", "10.0.0.1", "10.0.0.1:9200", "node2"),
@@ -50,7 +50,7 @@ public class ElasticProcessorMetaSupplierTest {
     }
 
     @Test
-    public void shouldAssignToEachAddress() {
+    public void given_multipleNodeAdresses_when_assignShards_then_shouldAssignSingleShardToEachAddress() {
         List<Shard> shards = newArrayList(
                 new Shard("elastic-index", 0, Prirep.p, 10, "STARTED", "10.0.0.1", "10.0.0.1:9200", "node1"),
                 new Shard("elastic-index", 1, Prirep.p, 10, "STARTED", "10.0.0.2", "10.0.0.1:9200", "node2"),
@@ -68,7 +68,7 @@ public class ElasticProcessorMetaSupplierTest {
     }
 
     @Test
-    public void shouldAssignOneReplicaOnly() {
+    public void given_multipleReplicasForEachShard_when_assignShards_then_shouldAssignOneReplicaOnly() {
         List<Shard> shards = newArrayList(
                 new Shard("elastic-index", 0, Prirep.p, 10, "STARTED", "10.0.0.1", "10.0.0.1:9200", "node1"),
                 new Shard("elastic-index", 0, Prirep.r, 10, "STARTED", "10.0.0.2", "10.0.0.1:9200", "node2"),
@@ -108,7 +108,7 @@ public class ElasticProcessorMetaSupplierTest {
     }
 
     @Test
-    public void noLocalCandidate() {
+    public void given_noCandidateForNode_when_assignShards_thenAssignNoShardToNode() {
         List<Shard> shards = newArrayList(
                 new Shard("elastic-index", 0, Prirep.p, 10, "STARTED", "10.0.0.1", "10.0.0.1:9200", "node1"),
                 new Shard("elastic-index", 1, Prirep.p, 10, "STARTED", "10.0.0.2", "10.0.0.1:9200", "node2")
@@ -124,7 +124,7 @@ public class ElasticProcessorMetaSupplierTest {
     }
 
     @Test(expected = JetException.class)
-    public void shouldNotAllowDisjunctClusters() {
+    public void given_noMatchingNode_when_assigneShards_thenThrowException() {
         List<Shard> shards = newArrayList(
                 new Shard("elastic-index", 0, Prirep.p, 10, "STARTED", "10.0.0.1", "10.0.0.1:9200", "node1")
         );

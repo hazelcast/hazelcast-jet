@@ -75,7 +75,7 @@ public class AuthElasticSourcesTest extends BaseElasticTest {
     }
 
     @Test
-    public void testAuthenticatedClient() {
+    public void given_authenticatedClient_whenReadFromElasticSource_thenFinishSuccessfully() {
         indexDocument("my-index", ImmutableMap.of("name", "Frantisek"));
 
         Pipeline p = Pipeline.create();
@@ -86,7 +86,7 @@ public class AuthElasticSourcesTest extends BaseElasticTest {
     }
 
     @Test
-    public void shouldFailWithAuthenticationException() {
+    public void given_clientWithWrongPassword_whenReadFromElasticSource_thenFailWithAuthenticationException() {
         ElasticsearchContainer container = elastic.get();
         String containerIp = container.getContainerIpAddress();
         Integer port = container.getMappedPort(PORT);

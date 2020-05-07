@@ -31,7 +31,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 public class ElasticSourceBuilderTest {
 
     @Test
-    public void sourceHasCorrectName() {
+    public void when_createElasticSourceUsingBuilder_then_sourceHasCorrectName() {
         BatchSource<Object> source = builderWithRequiredParams()
                 .build();
         assertThat(source.name()).isEqualTo("elastic");
@@ -46,7 +46,7 @@ public class ElasticSourceBuilderTest {
     }
 
     @Test
-    public void clientSupplierMustBeSet() {
+    public void when_createElasticSourceWithoutClientSupplier_then_throwException() {
         assertThatThrownBy(() -> new ElasticSourceBuilder<>()
                 .searchRequestSupplier(SearchRequest::new)
                 .mapHitFn(FunctionEx.identity())
@@ -55,7 +55,7 @@ public class ElasticSourceBuilderTest {
     }
 
     @Test
-    public void searchRequestSupplierMustBeSet() {
+    public void when_createElasticSourceWithoutSearchRequestSupplier_then_throwException() {
         assertThatThrownBy(() -> new ElasticSourceBuilder<>()
                 .clientSupplier(() -> new RestHighLevelClient(RestClient.builder(new HttpHost("localhost"))))
                 .mapHitFn(FunctionEx.identity())
@@ -64,8 +64,8 @@ public class ElasticSourceBuilderTest {
     }
 
     @Test
-    public void mapHitFnSupplierMustBeSet() {
-        assertThatThrownBy(() -> new ElasticSourceBuilder()
+    public void when_createElasticSourceWithoutMapHitFnSupplier_then_throwException() {
+        assertThatThrownBy(() -> new ElasticSourceBuilder<>()
                 .clientSupplier(() -> new RestHighLevelClient(RestClient.builder(new HttpHost("localhost"))))
                 .searchRequestSupplier(SearchRequest::new)
                 .build())

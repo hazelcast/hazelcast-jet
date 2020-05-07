@@ -41,7 +41,7 @@ import static org.elasticsearch.client.RequestOptions.DEFAULT;
 public abstract class CommonElasticSinksTest extends BaseElasticTest {
 
     @Test
-    public void shouldStoreDocument() throws Exception {
+    public void given_singleDocument_whenWriteToElasticSink_then_singleDocumentInIndex() throws Exception {
         Sink<TestItem> elasticSink = new ElasticSinkBuilder<TestItem>()
                 .clientSupplier(elasticClientSupplier())
                 .bulkRequestSupplier(() -> new BulkRequest().setRefreshPolicy(RefreshPolicy.IMMEDIATE))
@@ -58,7 +58,7 @@ public abstract class CommonElasticSinksTest extends BaseElasticTest {
     }
 
     @Test
-    public void shouldStoreBatchOfDocuments() throws IOException {
+    public void given_batchOfDocuments_whenWriteToElasticSink_then_batchOfDocumentsInIndex() throws IOException {
         Sink<TestItem> elasticSink = new ElasticSinkBuilder<TestItem>()
                 .clientSupplier(elasticClientSupplier())
                 .mapItemFn(item -> new IndexRequest("my-index").source(item.asMap()))
@@ -82,7 +82,7 @@ public abstract class CommonElasticSinksTest extends BaseElasticTest {
     }
 
     @Test
-    public void whenCreateSinkUsingFactoryMethodThenShouldStoreDocument() throws Exception {
+    public void given_winkCreatedByFactoryMethod_whenWriteToElasticSink_thenDocumentInIndex() throws Exception {
         Sink<TestItem> elasticSink = ElasticSinks.elastic(
                 elasticClientSupplier(),
                 item -> new IndexRequest("my-index").source(item.asMap())

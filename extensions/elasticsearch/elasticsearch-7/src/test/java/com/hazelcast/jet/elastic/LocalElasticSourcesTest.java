@@ -49,7 +49,7 @@ public class LocalElasticSourcesTest extends CommonElasticSourcesTest {
     }
 
     @Test
-    public void shouldThrowExceptionForCoLocatedReading() {
+    public void given_nonColocatedCluster_whenReadFromElasticSourceWithCoLocation_then_shouldThrowException() {
         indexDocument("my-index", of("name", "Frantisek"));
 
         Pipeline p = Pipeline.create();

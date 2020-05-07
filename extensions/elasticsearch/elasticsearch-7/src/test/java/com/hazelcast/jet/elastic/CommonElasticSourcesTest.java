@@ -17,7 +17,6 @@
 package com.hazelcast.jet.elastic;
 
 import com.hazelcast.jet.pipeline.BatchSource;
-import com.hazelcast.jet.pipeline.BatchStage;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import org.elasticsearch.action.search.SearchRequest;
@@ -47,10 +46,10 @@ import static org.elasticsearch.index.query.QueryBuilders.matchAllQuery;
 public abstract class CommonElasticSourcesTest extends BaseElasticTest {
 
     @Test
-    public void shouldReadEmptyIndex() throws IOException {
+    public void given_emptyIndex_when_readFromElasticSource_then_finishWithNoResults() throws IOException {
         // elasticClient.indices().create(new CreateIndexRequest("my-index"), DEFAULT);
 
-        // TODO ideally we would just create the index but it gives "field _id not found" when there are no documents
+        // Ideally we would just create the index but it gives "field _id not found" when there are no documents
         // in the index, not sure if it is an Elastic bug or wrong setup
         indexDocument("my-index", of("name", "Frantisek"));
         deleteDocuments();
@@ -63,8 +62,7 @@ public abstract class CommonElasticSourcesTest extends BaseElasticTest {
                 .mapHitFn(SearchHit::getSourceAsString)
                 .build();
 
-        BatchStage<String> stage = p.readFrom(source);
-        stage
+        p.readFrom(source)
          .writeTo(Sinks.list(results));
 
         submitJob(p);
@@ -73,7 +71,7 @@ public abstract class CommonElasticSourcesTest extends BaseElasticTest {
     }
 
     @Test
-    public void shouldReadSingleDocumentFromIndex() {
+    public void given_indexWithOneDocument_whenReadFromElasticSource_thenFinishWithOneResult() {
         indexDocument("my-index", of("name", "Frantisek"));
 
         Pipeline p = Pipeline.create();
@@ -92,7 +90,7 @@ public abstract class CommonElasticSourcesTest extends BaseElasticTest {
     }
 
     @Test
-    public void shouldReadSingleDocumentFromIndexUsingConvenienceFactoryMethod2() {
+    public void given_sourceCreatedByFactoryMethod2_whenReadFromElasticSource_thenFinishWithOneResult() {
         indexDocument("my-index", of("name", "Frantisek"));
 
         Pipeline p = Pipeline.create();
@@ -110,7 +108,7 @@ public abstract class CommonElasticSourcesTest extends BaseElasticTest {
     }
 
     @Test
-    public void shouldReadSingleDocumentFromIndexUsingConvenienceFactoryMethod3() {
+    public void given_sourceCreatedByFactoryMethod3_whenReadFromElasticSource_thenFinishWithOneResult() {
         indexDocument("my-index-1", of("name", "Frantisek"));
         indexDocument("my-index-2", of("name", "Vladimir"));
 
@@ -130,7 +128,9 @@ public abstract class CommonElasticSourcesTest extends BaseElasticTest {
     }
 
     @Test
-    public void shouldReadMultipleDocumentsFromIndexUsingScroll() throws IOException {
+    public void given_multipleDocuments_when_readFromElasticSourceWithScroll_then_resultHasAllDocuments()
+            throws IOException {
+
         indexBatchOfDocuments("my-index");
 
         Pipeline p = Pipeline.create();
@@ -155,7 +155,7 @@ public abstract class CommonElasticSourcesTest extends BaseElasticTest {
     }
 
     @Test
-    public void shouldReadFromMultipleIndexes() {
+    public void given_multipleIndexes_when_readFromElasticSourceWithIndexWildcard_then_resultDocumentsFromAllIndexes() {
         indexDocument("my-index-1", of("name", "Frantisek"));
         indexDocument("my-index-2", of("name", "Vladimir"));
 
@@ -175,7 +175,7 @@ public abstract class CommonElasticSourcesTest extends BaseElasticTest {
     }
 
     @Test
-    public void shouldNotReadFromIndexesNotSpecifiedInRequest() {
+    public void given_multipleIndexes_when_readFromElasticSourceWithIndex_then_resultHasNoDocumentFromOtherIndex() {
         indexDocument("my-index-1", of("name", "Frantisek"));
         indexDocument("my-index-2", of("name", "Vladimir"));
 
@@ -195,7 +195,7 @@ public abstract class CommonElasticSourcesTest extends BaseElasticTest {
     }
 
     @Test
-    public void shouldReadOnlyMatchingDocuments() {
+    public void given_documents_when_readFromElasticSourceWithQuery_then_resultHasMatchingDocuments() {
         indexDocument("my-index", of("name", "Frantisek"));
         indexDocument("my-index", of("name", "Vladimir"));
 
@@ -216,7 +216,7 @@ public abstract class CommonElasticSourcesTest extends BaseElasticTest {
     }
 
     @Test
-    public void shouldReadFromMultipleShardsUsingSlices() throws IOException {
+    public void given_documents_whenReadFromElasticSourceWithSlicing_then_resultHasAllDocuments() throws IOException {
         initShardedIndex("my-index");
 
         Pipeline p = Pipeline.create();
@@ -236,7 +236,9 @@ public abstract class CommonElasticSourcesTest extends BaseElasticTest {
     }
 
     @Test
-    public void shouldReadFromMultipleIndexesWithMultipleShardsUsingSlices() throws IOException {
+    public void given_documentsInMultipleIndexes_whenReadFromElasticSourceWithSlicing_then_resultHasAllDocuments()
+            throws IOException {
+
         initShardedIndex("my-index-1");
         initShardedIndex("my-index-2");
 
