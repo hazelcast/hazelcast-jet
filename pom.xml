@@ -26,7 +26,7 @@
 
     <groupId>com.hazelcast.jet</groupId>
     <artifactId>hazelcast-jet-root</artifactId>
-    <version>4.1-SNAPSHOT</version>
+    <version>4.2-SNAPSHOT</version>
 
     <modules>
         <module>examples</module>
@@ -422,7 +422,7 @@
                     <maxmemory>1024</maxmemory>
                     <detectJavaApiLink>true</detectJavaApiLink>
                     <excludePackageNames>
-                        *.impl:*.internal
+                        *.impl:*.internal:*.impl.*:*.internal.*
                     </excludePackageNames>
 
                     <!-- see https://bugs.openjdk.java.net/browse/JDK-8212233
