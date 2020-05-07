@@ -132,7 +132,7 @@ public class ReadFilesPTest extends SimpleTestInClusterSupport {
         instance().newJob(p).join();
 
         assertEquals(4, listJson.size());
-        TestPerson testPerson = (TestPerson) listJson.get(0);
+        TestPerson testPerson = listJson.get(0);
 
         assertTrue(testPerson.name.startsWith("hello"));
         finishDirectory(file1, file2);
@@ -150,8 +150,7 @@ public class ReadFilesPTest extends SimpleTestInClusterSupport {
 
     private Pipeline pipelineJson() {
         Pipeline p = Pipeline.create();
-        p.readFrom(Sources.filesBuilder(directory.getPath())
-                          .buildJson(TestPerson.class))
+        p.readFrom(Sources.json(directory.getPath(), TestPerson.class))
          .writeTo(Sinks.list(listJson));
 
         return p;

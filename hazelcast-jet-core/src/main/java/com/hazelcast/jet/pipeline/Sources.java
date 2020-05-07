@@ -35,6 +35,7 @@ import com.hazelcast.jet.core.processor.SourceProcessors;
 import com.hazelcast.jet.function.ToResultSetFunction;
 import com.hazelcast.jet.impl.pipeline.transform.BatchSourceTransform;
 import com.hazelcast.jet.impl.pipeline.transform.StreamSourceTransform;
+import com.hazelcast.jet.json.JsonUtil;
 import com.hazelcast.map.EventJournalMapEvent;
 import com.hazelcast.map.IMap;
 import com.hazelcast.projection.Projection;
@@ -969,8 +970,7 @@ public final class Sources {
      *      .charset(UTF_8)
      *      .glob(GLOB_WILDCARD)
      *      .sharedFileSystem(false)
-     *      .mapToOutputFn((fileName, line) -> line)
-     *      .build()
+     *      .build((fileName, line) -> line)
      * }</pre>
      * <p>
      * If files are appended to while being read, the addition might or might
@@ -985,6 +985,38 @@ public final class Sources {
     }
 
     /**
+     * A source to read all files in a directory in a batch way. The
+     * source treats each line as a JSON string and converts each line
+     * to an object of given type.
+     * <p>
+     * This method is a shortcut for: <pre>{@code
+     *   filesBuilder(directory)
+     *      .charset(UTF_8)
+     *      .glob(GLOB_WILDCARD)
+     *      .sharedFileSystem(false)
+     *      .build(JsonUtil.asJson(type))
+     * }</pre>
+     * <p>
+     * If files are appended to while being read, the addition might or might
+     * not be emitted or part of a line can be emitted. If files are modified
+     * in more complex ways, the behavior is undefined.
+     * <p>
+     * If file contains multi-line JSON string, you can use
+     * {@link #filesBuilder(String)} along with
+     * {@link JsonUtil#asMultilineJson(Class)}.
+     *
+     * See {@link #filesBuilder(String)}, {@link #files(String)} and
+     * {@link JsonUtil#asJson(Class)}.
+     *
+     * @since 4.2
+     */
+    @Nonnull
+    public static <T> BatchSource<T> json(@Nonnull String directory, Class<T> type) {
+        return filesBuilder(directory).build(JsonUtil.asJson(type));
+    }
+
+
+    /**
      * A source to stream lines added to files in a directory. This is a
      * streaming source, it will watch directory and emit lines as they are
      * appended to files in that directory.
@@ -994,8 +1026,7 @@ public final class Sources {
      *      .charset(UTF_8)
      *      .glob(GLOB_WILDCARD)
      *      .sharedFileSystem(false)
-     *      .mapToOutputFn((fileName, line) -> line)
-     *      .buildWatcher()
+     *      .buildWatcher((fileName, line) -> line)
      * }</pre>
      *
      * <h3>Appending lines using an text editor</h3>
@@ -1010,6 +1041,36 @@ public final class Sources {
     @Nonnull
     public static StreamSource<String> fileWatcher(@Nonnull String watchedDirectory) {
         return filesBuilder(watchedDirectory).buildWatcher();
+    }
+
+    /**
+     * A source to stream lines added to files in a directory. This is a
+     * streaming source, it will watch directory and emit objects of given
+     * {@code type} by converting each line as they are
+     * appended to files in that directory.
+     * <p>
+     * This method is a shortcut for: <pre>{@code
+     *   filesBuilder(directory)
+     *      .charset(UTF_8)
+     *      .glob(GLOB_WILDCARD)
+     *      .sharedFileSystem(false)
+     *      .buildWatcher((JsonUtil.asJson(type))
+     * }</pre>
+     *
+     * <h3>Appending lines using an text editor</h3>
+     * If you're testing this source, you might think of using a text editor to
+     * append the lines. However, it might not work as expected because some
+     * editors write to a temp file and then rename it or append extra newline
+     * character at the end which gets overwritten if more text is added in the
+     * editor. The best way to append is to use {@code echo text >> yourFile}.
+     *
+     * See {@link #filesBuilder(String)}, {@link #fileWatcher(String)},
+     * and {@link JsonUtil#asJson(Class)}.
+     *
+     * @since 4.2
+     */
+    public static <T> StreamSource<T> jsonWatcher(@Nonnull String watchedDirectory, Class<T> type) {
+        return filesBuilder(watchedDirectory).buildWatcher(JsonUtil.asJson(type));
     }
 
     /**

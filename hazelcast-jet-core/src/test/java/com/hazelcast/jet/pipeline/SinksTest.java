@@ -38,6 +38,7 @@ import com.hazelcast.jet.core.test.TestProcessorContext;
 import com.hazelcast.jet.core.test.TestProcessorSupplierContext;
 import com.hazelcast.jet.core.test.TestSupport;
 import com.hazelcast.jet.datamodel.KeyedWindowResult;
+import com.hazelcast.jet.json.JsonUtil;
 import com.hazelcast.jet.pipeline.test.TestSources;
 import com.hazelcast.map.EntryProcessor;
 import com.hazelcast.map.IMap;
@@ -236,11 +237,10 @@ public class SinksTest extends PipelineTestSupport {
     @Test
     public void map_withJsonKeyValue() {
         // Given
-        BatchStage<Entry<Integer, String>> sourceStage = p.readFrom(TestSources.items(0, 1, 2, 3, 4))
-                .map(t -> entry(t, t.toString()));
+        BatchStage<Integer> sourceStage = p.readFrom(TestSources.items(0, 1, 2, 3, 4));
 
         // When
-        sourceStage.writeTo(Sinks.map(sinkName, e -> hazelcastJsonValue(e.getKey()), e -> hazelcastJsonValue(e.getValue())));
+        sourceStage.writeTo(Sinks.map(sinkName, JsonUtil::hazelcastJsonValue, JsonUtil::hazelcastJsonValue));
 
         // Then
         execute();

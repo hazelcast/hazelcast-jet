@@ -19,6 +19,7 @@ package com.hazelcast.jet.examples.files;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.aggregate.AggregateOperations;
+import com.hazelcast.jet.json.JsonUtil;
 import com.hazelcast.jet.pipeline.BatchSource;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
@@ -41,7 +42,7 @@ public class SalesJsonAnalyzer {
 
         BatchSource<SalesRecord> source = Sources.filesBuilder(sourceDir)
                                                  .glob("*.json")
-                                                 .buildJson(SalesRecord.class);
+                                                 .build(JsonUtil.asJson(SalesRecord.class));
         p.readFrom(source)
          .filter(record -> record.price < 30)
          .groupingKey(r -> r.paymentType)
