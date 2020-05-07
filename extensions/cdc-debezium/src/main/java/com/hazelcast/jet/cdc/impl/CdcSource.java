@@ -83,9 +83,15 @@ public class CdcSource {
     public void fillBuffer(SourceBuilder.TimestampedSourceBuffer<ChangeRecord> buf) {
         if (!taskInit) {
             task.initialize(new JetSourceTaskContext());
+
+            // Our DatabaseHistory implementation will be created by the
+            // following start() call, on this thread (blocking worker
+            // thread) and this is how we pass it the list it should
+            // use for storing history records.
             THREAD_LOCAL_HISTORY.set(state.historyRecords);
             task.start(taskConfig);
             THREAD_LOCAL_HISTORY.remove();
+
             taskInit = true;
         }
         try {
@@ -208,6 +214,17 @@ public class CdcSource {
          * See {@link SourceRecord} for more information regarding the format.
          */
         private final Map<Map<String, ?>, Map<String, ?>> partitionsToOffset = new HashMap<>();
+
+        /**
+         * We use a copy-on-write-list because it will be written on a
+         * different thread (some internal Debezium snapshot thread) than
+         * is normally used to run the connector (one of Jet's blocking
+         * worker threads).
+         * <p>
+         * The performance penalty of copying the list is also acceptable
+         * since this list will be written rarely after the initial snapshot,
+         * only on table schema changes.
+         */
         private final List<byte[]> historyRecords = new CopyOnWriteArrayList<>();
 
         public Map<String, ?> getOffset(Map<String, ?> partition) {
