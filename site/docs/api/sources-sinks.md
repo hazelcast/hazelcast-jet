@@ -959,11 +959,10 @@ use it both as a source and a sink.
 The Elasticsearch connector source provides a builder and several
 convenience factory methods. Most commonly one needs to provide:
 
-- a client supplier, which returns a configured instance of
-RestHighLevelClient (see
-[Elasticsearch documentation](https://www.elastic.co/guide/en/elasticsearch/client/java-rest/current/java-rest-high.html)), 
-- a search request supplier specifying a query to Elasticsearch,
-- a mapping function from `SearchHit` to a desired type.
+* A client supplier, which returns a configured instance of
+ RestHighLevelClient (see [Elasticsearch documentation](https://www.elastic.co/guide/en/elasticsearch/client/java-rest/current/java-rest-high.html)),
+* A search request supplier specifying a query to Elasticsearch,
+* A mapping function from `SearchHit` to a desired type.
 
 Example using a factory method:
 
@@ -991,7 +990,7 @@ BatchSource<String> elasticsearch = new ElasticsearchSourceBuilder<String>()
         .build();
 ```
 
-By default, the connector uses a single scroll to read data from 
+By default, the connector uses a single scroll to read data from
 Elasticsearch - there is only a single reader on a single node in the
 whole cluster.
 
@@ -1007,10 +1006,11 @@ overhead of physical network.
 The Elasticsearch connector sink provides a builder and several
 convenience factory methods. Most commonly you need to provide:
 
-- a client supplier, which returns a configured instance of
+A client supplier, which returns a configured instance of
 RestHighLevelClient (see
 [Elasticsearch documentation](https://www.elastic.co/guide/en/elasticsearch/client/java-rest/current/java-rest-high.html)),
-- mapping function to map items from the pipeline to an instance of
+
+A mapping function to map items from the pipeline to an instance of
 one of `IndexRequest`, `UpdateRequest` or `DeleteRequest`.
 
 Suppose type of the items in the pipeline is `Map<String, Object>`, the

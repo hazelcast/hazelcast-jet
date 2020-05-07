@@ -122,11 +122,11 @@ It was suggested during the review that we could leverage Elastic's Writable
 to serialize the search request to avoid the use of a supplier. It wasn't
 implemented in the end for following reasons:
 
-- the serialization/deserialization is different across Elastic versions,
-making it harder to maintain
-- the deserialization requires non-trivial setup, consisting of internals of
-Elastic transport (communication between Elastic nodes) classes. 
- 
+- the serialization/deserialization is different across Elastic
+ versions, making it harder to maintain
+- the deserialization requires non-trivial setup, consisting of
+ internals of Elastic transport (communication between Elastic nodes) classes.
+
 ## New features
 
 ### Slicing
