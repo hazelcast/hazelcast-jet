@@ -38,7 +38,6 @@ import org.apache.kafka.connect.source.SourceTaskContext;
 import org.apache.kafka.connect.storage.OffsetStorageReader;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -248,24 +247,13 @@ public class CdcSource {
         @Override
         public void writeData(ObjectDataOutput out) throws IOException {
             out.writeObject(partitionsToOffset);
-
-            List<byte[]> records = historyRecords;
-            out.writeInt(records.size());
-            for (byte[] record : records) {
-                out.writeByteArray(record);
-            }
+            out.writeObject(historyRecords);
         }
 
         @Override
         public void readData(ObjectDataInput in) throws IOException {
             partitionsToOffset.putAll(in.readObject());
-
-            int length = in.readInt();
-            List<byte[]> records = new ArrayList<>(length);
-            for (int i = 0; i < length; i++) {
-                records.add(in.readByteArray());
-            }
-            historyRecords.addAll(records);
+            historyRecords.addAll(in.readObject());
         }
     }
 
