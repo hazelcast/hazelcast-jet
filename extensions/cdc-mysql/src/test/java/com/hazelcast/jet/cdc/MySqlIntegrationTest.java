@@ -17,7 +17,6 @@
 package com.hazelcast.jet.cdc;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonSetter;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.accumulator.LongAccumulator;
@@ -313,7 +312,6 @@ public class MySqlIntegrationTest extends AbstractIntegrationTest {
         Order() {
         }
 
-        @JsonSetter
         public void setOrderDate(Date orderDate) {
             long days = orderDate.getTime(); //database provides no of days for some reason, fixing it here
             this.orderDate = new Date(TimeUnit.DAYS.toMillis(days));

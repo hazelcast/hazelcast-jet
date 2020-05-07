@@ -53,8 +53,7 @@ import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
 
 public class CdcSource {
 
-    private static final ThreadLocal<List<byte[]>> THREAD_LOCAL_HISTORY =
-            ThreadLocal.withInitial(CopyOnWriteArrayList::new);
+    private static final ThreadLocal<List<byte[]>> THREAD_LOCAL_HISTORY = new ThreadLocal<>();
 
     private final SourceConnector connector;
     private final SourceTask task;
