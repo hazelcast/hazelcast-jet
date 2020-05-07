@@ -55,6 +55,8 @@ public final class AssertionSinks {
      * Since Jet jobs are distributed, input from multiple upstream processors
      * is merged in a non-deterministic way. Therefore this assertion is usable
      * only for testing of non-distributed sources.
+     * <p>
+     * Not usable in streaming jobs - use {@link #assertOrderedEventually}.
      */
     @Nonnull
     public static <T> Sink<T> assertOrdered(@Nullable String message, @Nonnull Collection<? extends T> expected) {
@@ -70,6 +72,8 @@ public final class AssertionSinks {
      * Since Jet jobs are distributed, input from multiple upstream processors
      * is merged in a non-deterministic way. Therefore this assertion is usable
      * only for testing of non-distributed sources.
+     * <p>
+     * Not usable in streaming jobs - use {@link #assertOrderedEventually}.
      */
     @Nonnull
     public static <T> Sink<T> assertOrdered(@Nonnull Collection<? extends T> expected) {
@@ -80,13 +84,15 @@ public final class AssertionSinks {
      * Asserts that the previous stage emitted the expected items in any order,
      * but nothing else. If the assertion fails, the job will fail with an
      * {@link AssertionError} with the given message.
+     * <p>
+     * Not usable in streaming jobs - use {@link #assertAnyOrderEventually}.
      */
     @Nonnull
     public static <T> Sink<T> assertAnyOrder(@Nullable String message, @Nonnull Collection<? extends T> expected) {
         Map<? extends T, Long> expBag = toBag(expected);
         return assertCollected(received -> {
             String msg = "Expected and received did not match. The items are printed in the format of a map as follows:" +
-                " {<item>=<num occurrences>}";
+                    " {<item>=<num occurrences>}";
             assertEquals(message == null ? msg : message + ", " + msg, expBag, toBag(received));
         });
     }
@@ -95,6 +101,8 @@ public final class AssertionSinks {
      * Asserts that the previous stage emitted the expected items in any order,
      * but nothing else. If the assertion fails, the job will fail with an
      * {@link AssertionError}.
+     * <p>
+     * Not usable in streaming jobs - use {@link #assertAnyOrderEventually}.
      */
     @Nonnull
     public static <T> Sink<T> assertAnyOrder(@Nonnull Collection<? extends T> expected) {
@@ -139,6 +147,46 @@ public final class AssertionSinks {
     }
 
     /**
+     * Asserts that the previous stage emitted the exact sequence of
+     * expected items and nothing else.
+     * <p>
+     * Is just a wrapper around {@link #assertCollectedEventually(int, ConsumerEx)},
+     * providing an {@code acceptFn} for doing the order-sensitive check.
+     * Consult that javadoc for further details on how to use.
+     */
+    @Nonnull
+    public static <T> Sink<T> assertOrderedEventually(
+            int timeoutSeconds,
+            @Nonnull Collection<? extends T> expected
+    ) {
+        final List<? super T> exp = new ArrayList<>(expected);
+        return assertCollectedEventually(timeoutSeconds,
+                received -> assertEquals(null, exp, received));
+    }
+
+    /**
+     * Asserts that the previous stage emitted the expected items in any order,
+     * but nothing else.
+     * <p>
+     * Is just a wrapper around {@link #assertCollectedEventually(int, ConsumerEx)},
+     * providing an {@code acceptFn} for doing the order-insensitive check.
+     * Consult that javadoc for further details on how to use.
+     */
+    @Nonnull
+    public static <T> Sink<T> assertAnyOrderEventually(
+            int timeoutSeconds,
+            @Nonnull Collection<? extends T> expected
+    ) {
+        Map<? extends T, Long> expBag = toBag(expected);
+        return assertCollectedEventually(timeoutSeconds,
+                received -> {
+                    String msg = "Expected and received did not match. The items are printed in the format of a map " +
+                            "as follows: {<item>=<num occurrences>}";
+                    assertEquals(msg, expBag, toBag(received));
+                });
+    }
+
+    /**
      * Collects all the received items into a list and runs the {@code assertFn}
      * every time a new item is received. An {@link AssertionError} thrown from
      * the {@code assertFn} will be ignored until {@code timeoutSeconds} have
@@ -167,7 +215,7 @@ public final class AssertionSinks {
      * }</pre>
      *
      * @param timeoutSeconds timeout in seconds, after which any assertion error will be propagated
-     * @param assertFn assertion to execute periodically
+     * @param assertFn       assertion to execute periodically
      */
     @Nonnull
     public static <T> Sink<T> assertCollectedEventually(
@@ -177,10 +225,10 @@ public final class AssertionSinks {
         return AssertionSinkBuilder
                 .assertionSink("assertCollectedEventually",
                         () -> new CollectingSinkWithTimer<>(assertFn, timeoutSeconds))
-            .<T>receiveFn(CollectingSinkWithTimer::receive)
-            .timerFn(CollectingSinkWithTimer::timer)
-            .completeFn(CollectingSinkWithTimer::complete)
-            .build();
+                .<T>receiveFn(CollectingSinkWithTimer::receive)
+                .timerFn(CollectingSinkWithTimer::timer)
+                .completeFn(CollectingSinkWithTimer::complete)
+                .build();
     }
 
     private static final class CollectingSinkWithTimer<T> {
