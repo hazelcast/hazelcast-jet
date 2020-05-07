@@ -67,20 +67,8 @@ public class JsonUtilTest extends JetTestSupport {
     }
 
     @Test
-    public void when_inputReader_then_parseToObject() throws IOException {
-        TestJsonObject jsonObject = JsonUtil.parse(TestJsonObject.class, new StringReader(jsonString));
-        assertEquals(testJsonObject, jsonObject);
-    }
-
-    @Test
     public void when_inputString_then_parseToMap() throws IOException {
         Map<String, Object> map = JsonUtil.parse(jsonString);
-        assertTestObjectAsMap(map, testJsonObject);
-    }
-
-    @Test
-    public void when_inputReader_then_parseToMap() throws IOException {
-        Map<String, Object> map = JsonUtil.parse(new StringReader(jsonString));
         assertTestObjectAsMap(map, testJsonObject);
     }
 
@@ -91,20 +79,8 @@ public class JsonUtilTest extends JetTestSupport {
     }
 
     @Test
-    public void when_inputReader_then_parseToListOfObject() throws IOException {
-        List<TestJsonObject> list = JsonUtil.parseList(TestJsonObject.class, new StringReader(jsonStringList));
-        assertListOfObjects(list);
-    }
-
-    @Test
     public void when_inputString_then_parseToList() throws IOException {
         List<Object> list = JsonUtil.parseList(jsonStringList);
-        assertListOfMap(list);
-    }
-
-    @Test
-    public void when_inputReader_then_parseToList() throws IOException {
-        List<Object> list = JsonUtil.parseList(new StringReader(jsonStringList));
         assertListOfMap(list);
     }
 
@@ -115,20 +91,8 @@ public class JsonUtilTest extends JetTestSupport {
     }
 
     @Test
-    public void when_inputReader_and_contentObject_then_parseAny() throws IOException {
-        Object o = JsonUtil.parseAny(new StringReader(jsonString));
-        assertTestObjectAsMap((Map) o, testJsonObject);
-    }
-
-    @Test
     public void when_inputString_and_contentList_then_parseAny() throws IOException {
         Object o = JsonUtil.parseAny(jsonStringList);
-        assertListOfMap((List) o);
-    }
-
-    @Test
-    public void when_inputReader_and_contentList_then_parseAny() throws IOException {
-        Object o = JsonUtil.parseAny(new StringReader(jsonStringList));
         assertListOfMap((List) o);
     }
 
@@ -139,20 +103,8 @@ public class JsonUtilTest extends JetTestSupport {
     }
 
     @Test
-    public void when_inputReader_and_contentString_then_parseAny() throws IOException {
-        Object o = JsonUtil.parseAny(new StringReader("\"abc\""));
-        assertEquals("abc", o);
-    }
-
-    @Test
     public void when_inputString_and_contentInt_then_parseAny() throws IOException {
         Object o = JsonUtil.parseAny("10");
-        assertEquals(10, (int) o);
-    }
-
-    @Test
-    public void when_inputReader_and_contentInt_then_parseAny() throws IOException {
-        Object o = JsonUtil.parseAny(new StringReader("10"));
         assertEquals(10, (int) o);
     }
 
@@ -163,32 +115,14 @@ public class JsonUtilTest extends JetTestSupport {
     }
 
     @Test
-    public void when_inputReader_and_contentDouble_then_parseAny() throws IOException {
-        Object o = JsonUtil.parseAny(new StringReader("10.5"));
-        assertEquals(10.5, (double) o, 0.0);
-    }
-
-    @Test
     public void when_inputString_and_contentBool_then_parseAny() throws IOException {
         Object o = JsonUtil.parseAny("true");
         assertTrue((boolean) o);
     }
 
     @Test
-    public void when_inputReader_and_contentBool_then_parseAny() throws IOException {
-        Object o = JsonUtil.parseAny(new StringReader("true"));
-        assertTrue((boolean) o);
-    }
-
-    @Test
     public void when_inputString_and_contentNull_then_parseAny() throws IOException {
         Object o = JsonUtil.parseAny("null");
-        assertNull(o);
-    }
-
-    @Test
-    public void when_inputReader_and_contentNull_then_parseAny() throws IOException {
-        Object o = JsonUtil.parseAny(new StringReader("null"));
         assertNull(o);
     }
 

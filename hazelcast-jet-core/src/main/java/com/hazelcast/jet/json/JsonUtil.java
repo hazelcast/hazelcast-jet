@@ -87,28 +87,11 @@ public final class JsonUtil {
     }
 
     /**
-     * Converts the contents of the specified {@code reader} to a object of
-     * given type.
-     */
-    @Nonnull
-    public static <T> T parse(@Nonnull Class<T> type, @Nonnull Reader reader) throws IOException {
-        return JSON_JR.beanFrom(type, reader);
-    }
-
-    /**
      * Converts a JSON string to a {@link Map}.
      */
     @Nonnull
     public static Map<String, Object> parse(@Nonnull String jsonString) throws IOException {
         return JSON_JR.mapFrom(jsonString);
-    }
-
-    /**
-     * Converts the contents of the specified {@code reader} to a {@link Map}.
-     */
-    @Nonnull
-    public static Map<String, Object> parse(@Nonnull Reader reader) throws IOException {
-        return JSON_JR.mapFrom(reader);
     }
 
     /**
@@ -120,28 +103,11 @@ public final class JsonUtil {
     }
 
     /**
-     * Converts the contents of the specified {@code reader} to a {@link List}.
-     * of given type.
-     */
-    @Nonnull
-    public static <T> List<T> parseList(@Nonnull Class<T> type, @Nonnull Reader reader) throws IOException {
-        return JSON_JR.listOfFrom(type, reader);
-    }
-
-    /**
      * Converts a JSON string to a {@link List}.
      */
     @Nonnull
     public static List<Object> parseList(@Nonnull String jsonString) throws IOException {
         return JSON_JR.listFrom(jsonString);
-    }
-
-    /**
-     * Converts the contents of the specified {@code reader} to a {@link List}.
-     */
-    @Nonnull
-    public static List<Object> parseList(@Nonnull Reader reader) throws IOException {
-        return JSON_JR.listFrom(reader);
     }
 
     /**
@@ -158,22 +124,6 @@ public final class JsonUtil {
      */
     public static Object parseAny(@Nonnull String jsonString) throws IOException {
         return JSON_JR.anyFrom(jsonString);
-    }
-
-    /**
-     * Converts the contents of the specified {@code reader} to an Object. The
-     * returned object will differ according to the content of the string:
-     * <ul>
-     *     <li>content is a JSON object, returns a {@link Map}. See
-     *     {@link #parse(String)}.</li>
-     *     <li>content is a JSON array, returns a {@link List}. See
-     *     {@link #parseList(String)}.</li>
-     *     <li>content is a String, null or primitive, returns String, null or
-     *     primitive.</li>
-     * </ul>
-     */
-    public static Object parseAny(@Nonnull Reader reader) throws IOException {
-        return JSON_JR.anyFrom(reader);
     }
 
     /**
@@ -199,8 +149,8 @@ public final class JsonUtil {
     /**
      * Returns a function which takes a file {@code Path} as input and
      * returns a stream of objects with the given type. The content of the file
-     * is considered to have a sequence of JSON strings which can span multiple
-     * lines. The function is designed to be used with
+     * is considered to have a sequence of JSON strings, each one can span
+     * multiple lines. The function is designed to be used with
      * {@link FileSourceBuilder#build(FunctionEx)}.
      * <p>
      * See {@link Sources#json(String, Class)}.
