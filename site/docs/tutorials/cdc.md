@@ -164,6 +164,7 @@ cd hazelcast-jet-{jet-version}
 3. Activate the MySQL CDC plugin:
 
 ```bash
+mv opt/hazelcast-jet-cdc-debezium-{jet-version}.jar lib; \
 mv opt/hazelcast-jet-cdc-mysql-{jet-version}.jar lib
 ```
 

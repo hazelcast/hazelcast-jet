@@ -270,14 +270,19 @@ CDC sources in Jet are set up as extension modules:
   allows for the creation of MySQL based CDC sources (see [MySqlCdcSources](https://github.com/hazelcast/hazelcast-jet/tree/master/extensions/cdc-mysql/src/main/java/com/hazelcast/jet/cdc/MySqlCdcSources.java))
 * more supported databases coming in future versions
 
-Each of these extension modules contains all the dependencies it needs.
-Each of them also generates a self contained JAR in the Jet
-distribution, stored in the `opt` folder of the distribution. So for
-example to make members of a cluster able to work with MySQL CDC sources
-all that one needs to do is to more the
-`hazelcast-jet-cdc-mysql-VERSION.jar` from the member's `opt` folder to
-the `lib` folder. That will take care of all the dependencies, no need
-to explicitly deal with Debezium connector jars or anything else.
+`cdc-debezium` is the core module. It generates a self contained JAR
+with all dependencies included and is stored in the `opt` folder of the
+distribution. The `cdc-mysql` jar is also in the `opt` folder of the
+distribution, but it does not contain dependencies, it has to be put on
+the classpath together with the `cdc-debezium` jar.
+
+For example to make members of a cluster able to work with MySQL CDC
+sources, what one needs to do is to move both the
+`hazelcast-jet-cdc-mysql-VERSION.jar` and the
+`hazelcast-jet-cdc-debezium-VERSION.jar` from the member's `opt` folder
+to the `lib` folder. That will take care of all external dependencies
+too, no need to explicitly deal with Debezium connector jars or anything
+else.
 
 ## Serialization
 
