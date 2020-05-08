@@ -38,7 +38,6 @@
       "how-tos/custom-batch-source",
       "how-tos/custom-stream-source",
       "how-tos/custom-sink",
-      "how-tos/operator-openshift",
       "how-tos/xa",
       "how-tos/grpc"
     ],
@@ -78,6 +77,7 @@
       "enterprise/installation",
       "enterprise/management-center",
       "enterprise/security",
+      "enterprise/operator-openshift",
       "enterprise/job-update",
       "enterprise/lossless-restart",
       "enterprise/off-heap",
