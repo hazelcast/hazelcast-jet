@@ -39,7 +39,7 @@ dependency:
 <dependency>
     <groupId>com.hazelcast.jet</groupId>
     <artifactId>hazelcast-jet</artifactId>
-    <version>4.0</version>
+    <version>4.1</version>
 </dependency>
 ```
 
