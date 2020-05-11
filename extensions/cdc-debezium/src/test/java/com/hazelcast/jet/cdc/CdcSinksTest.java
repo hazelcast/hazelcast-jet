@@ -168,7 +168,7 @@ public class CdcSinksTest extends PipelineTestSupport {
 
         p = Pipeline.create();
         p.readFrom(items(() -> Collections.singletonList(UPDATE1).iterator()))
-                .writeTo(CdcSinks.removeMap(MAP, clientConfig,
+                .writeTo(CdcSinks.remoteMap(MAP, clientConfig,
                         r -> (Integer) r.key().toMap().get(ID),
                         r -> null
                 ));
@@ -209,7 +209,7 @@ public class CdcSinksTest extends PipelineTestSupport {
     }
 
     private Sink<ChangeRecord> remoteSync(ClientConfig clientConfig) {
-        return CdcSinks.removeMap(MAP, clientConfig,
+        return CdcSinks.remoteMap(MAP, clientConfig,
                 r -> (Integer) r.key().toMap().get(ID),
                 r -> (String) r.value().toMap().get(EMAIL)
         );

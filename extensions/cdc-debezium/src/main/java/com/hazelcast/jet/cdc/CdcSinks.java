@@ -23,6 +23,7 @@ import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.impl.connector.HazelcastWriters;
 import com.hazelcast.jet.pipeline.Sink;
 import com.hazelcast.jet.pipeline.Sinks;
+import com.hazelcast.map.IMap;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -89,6 +90,22 @@ public final class CdcSinks {
     }
 
     /**
+     * Convenience for {@link #map(String, FunctionEx, FunctionEx)} with
+     * actual {@code IMap} instance being passed in, instead of just
+     * name.
+     *
+     * @since 4.2
+     */
+    @Nonnull
+    public static <K, V> Sink<ChangeRecord> map(
+            @Nonnull IMap<? super K, V> map,
+            @Nonnull FunctionEx<ChangeRecord, K> keyFn,
+            @Nonnull FunctionEx<ChangeRecord, V> valueFn
+    ) {
+        return map(map.getName(), keyFn, valueFn);
+    }
+
+    /**
      * Returns a sink equivalent to {@link #map}, but for a map in a
      * remote Hazelcast cluster identified by the supplied {@code
      * ClientConfig}.
@@ -98,7 +115,7 @@ public final class CdcSinks {
      * @since 4.2
      */
     @Nonnull
-    public static <K, V> Sink<ChangeRecord> removeMap(
+    public static <K, V> Sink<ChangeRecord> remoteMap(
             @Nonnull String map,
             @Nonnull ClientConfig clientConfig,
             @Nonnull FunctionEx<ChangeRecord, K> keyFn,
