@@ -337,7 +337,7 @@ public class JetJob {
                 .setDatabasePassword("dbz")
                 .setClusterName("dbserver1")
                 .setDatabaseWhitelist("inventory")
-                .setTableWhitelist("inventory." + "customers")
+                .setTableWhitelist("inventory.customers")
                 .build();
 
         Pipeline pipeline = Pipeline.create();

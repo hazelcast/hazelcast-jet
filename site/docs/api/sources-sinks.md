@@ -979,7 +979,7 @@ pipeline.readFrom(
             .setDatabasePassword("dbz")
             .setClusterName("dbserver1")
             .setDatabaseWhitelist("inventory")
-            .setTableWhitelist("inventory." + "customers")
+            .setTableWhitelist("inventory.customers")
             .build())
     .withNativeTimestamps(0)
     .writeTo(Sinks.logger());
