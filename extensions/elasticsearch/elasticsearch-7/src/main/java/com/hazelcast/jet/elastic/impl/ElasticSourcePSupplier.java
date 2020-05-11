@@ -32,15 +32,15 @@ import static java.util.Collections.emptyList;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
 
-class ElasticProcessorSupplier<T> implements ProcessorSupplier {
+class ElasticSourcePSupplier<T> implements ProcessorSupplier {
 
     private final ElasticSourceConfiguration<T> configuration;
 
     private final List<Shard> shards;
     private Map<Integer, List<Shard>> shardsByProcessor;
 
-    ElasticProcessorSupplier(@Nonnull ElasticSourceConfiguration<T> configuration,
-                             @Nonnull List<Shard> shards) {
+    ElasticSourcePSupplier(@Nonnull ElasticSourceConfiguration<T> configuration,
+                           @Nonnull List<Shard> shards) {
         this.configuration = requireNonNull(configuration);
         this.shards = requireNonNull(shards);
     }
@@ -65,8 +65,8 @@ class ElasticProcessorSupplier<T> implements ProcessorSupplier {
     public Collection<? extends Processor> get(int count) {
         return IntStream.range(0, count)
                         .mapToObj(i -> configuration.coLocatedReading() ?
-                                new ElasticProcessor<>(configuration, shardsByProcessor.get(i)) :
-                                new ElasticProcessor<>(configuration, emptyList()))
+                                new ElasticSourceP<>(configuration, shardsByProcessor.get(i)) :
+                                new ElasticSourceP<>(configuration, emptyList()))
                         .collect(toList());
     }
 

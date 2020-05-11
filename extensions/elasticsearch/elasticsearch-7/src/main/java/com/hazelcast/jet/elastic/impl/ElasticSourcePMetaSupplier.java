@@ -40,7 +40,7 @@ import static java.util.Collections.nCopies;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toSet;
 
-public class ElasticProcessorMetaSupplier<T> implements ProcessorMetaSupplier {
+public class ElasticSourcePMetaSupplier<T> implements ProcessorMetaSupplier {
 
     private static final long serialVersionUID = 1L;
 
@@ -50,7 +50,7 @@ public class ElasticProcessorMetaSupplier<T> implements ProcessorMetaSupplier {
     private Map<String, List<Shard>> assignedShards;
     private transient Address ownerAddress;
 
-    public ElasticProcessorMetaSupplier(@Nonnull ElasticSourceConfiguration<T> configuration) {
+    public ElasticSourcePMetaSupplier(@Nonnull ElasticSourceConfiguration<T> configuration) {
         this.configuration = configuration;
     }
 
@@ -90,8 +90,7 @@ public class ElasticProcessorMetaSupplier<T> implements ProcessorMetaSupplier {
 
         if (!addresses.containsAll(nodeCandidates.keySet())) {
             throw new JetException("Shard locations are not equal to Jet nodes locations, " +
-                    "shards=" + nodeCandidates.keySet() +
-                    ", Jet nodes=" + addresses);
+                    "shards=" + nodeCandidates.keySet() + ", Jet nodes=" + addresses);
         }
 
         int uniqueShards = (int) shards.stream().map(Shard::indexShard).distinct().count();
@@ -128,10 +127,10 @@ public class ElasticProcessorMetaSupplier<T> implements ProcessorMetaSupplier {
             return address -> {
                 String ipAddress = uncheckCall(() -> address.getInetAddress().getHostAddress());
                 List<Shard> shards = assignedShards.getOrDefault(ipAddress, emptyList());
-                return new ElasticProcessorSupplier<>(configuration, shards);
+                return new ElasticSourcePSupplier<>(configuration, shards);
             };
         } else {
-            return address -> address.equals(ownerAddress) ? new ElasticProcessorSupplier<>(configuration, emptyList())
+            return address -> address.equals(ownerAddress) ? new ElasticSourcePSupplier<>(configuration, emptyList())
                     : count -> nCopies(count, Processors.noopP().get());
         }
     }

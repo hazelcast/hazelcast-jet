@@ -48,13 +48,13 @@ import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 
-final class ElasticProcessor<T> extends AbstractProcessor {
+final class ElasticSourceP<T> extends AbstractProcessor {
 
     private ElasticSourceConfiguration<T> configuration;
     private final List<Shard> shards;
     private Traverser<T> traverser;
 
-    ElasticProcessor(ElasticSourceConfiguration<T> configuration, List<Shard> shards) {
+    ElasticSourceP(ElasticSourceConfiguration<T> configuration, List<Shard> shards) {
         this.configuration = configuration;
         this.shards = shards;
     }
@@ -127,7 +127,7 @@ final class ElasticProcessor<T> extends AbstractProcessor {
 
     @Override
     public void close() throws Exception {
-        if (traverser instanceof ElasticProcessor.ElasticScrollTraverser) {
+        if (traverser instanceof ElasticSourceP.ElasticScrollTraverser) {
             ElasticScrollTraverser scrollTraverser = (ElasticScrollTraverser) traverser;
             scrollTraverser.close();
         }

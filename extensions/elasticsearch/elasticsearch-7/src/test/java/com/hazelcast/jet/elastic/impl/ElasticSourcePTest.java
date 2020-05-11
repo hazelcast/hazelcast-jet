@@ -60,7 +60,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 
-public class ElasticProcessorTest {
+public class ElasticSourcePTest {
 
     public static final String HIT_SOURCE = "{\"name\": \"Frantisek\"}";
     public static final String HIT_SOURCE2 = "{\"name\": \"Vladimir\"}";
@@ -68,7 +68,7 @@ public class ElasticProcessorTest {
 
     private static final String KEEP_ALIVE = "42m";
 
-    private ElasticProcessor<String> processor;
+    private ElasticSourceP<String> processor;
     private SerializableRestClient mockClient;
     private SearchResponse response;
     private TestOutbox outbox;
@@ -114,7 +114,7 @@ public class ElasticProcessorTest {
 
         // This constructor calls the client so it has to be called after specific mock setup in each test method
         // rather than in setUp()
-        processor = new ElasticProcessor<>(configuration, shards);
+        processor = new ElasticSourceP<>(configuration, shards);
 
         return TestSupport.verifyProcessor(() -> processor)
                 .disableSnapshots();

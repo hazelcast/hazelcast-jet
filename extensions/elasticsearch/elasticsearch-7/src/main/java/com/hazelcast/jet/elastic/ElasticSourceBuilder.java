@@ -19,7 +19,7 @@ package com.hazelcast.jet.elastic;
 import com.hazelcast.function.ConsumerEx;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.function.SupplierEx;
-import com.hazelcast.jet.elastic.impl.ElasticProcessorMetaSupplier;
+import com.hazelcast.jet.elastic.impl.ElasticSourcePMetaSupplier;
 import com.hazelcast.jet.pipeline.BatchSource;
 import com.hazelcast.jet.pipeline.Sources;
 import org.elasticsearch.action.ActionRequest;
@@ -80,7 +80,7 @@ public class ElasticSourceBuilder<T> {
                 clientSupplier, destroyFn, searchRequestSupplier, optionsFn, mapHitFn, slicing, coLocatedReading,
                 scrollKeepAlive, preferredLocalParallelism
         );
-        ElasticProcessorMetaSupplier<T> metaSupplier = new ElasticProcessorMetaSupplier<T>(configuration);
+        ElasticSourcePMetaSupplier<T> metaSupplier = new ElasticSourcePMetaSupplier<T>(configuration);
         return Sources.batchFromProcessor(DEFAULT_NAME, metaSupplier);
     }
 

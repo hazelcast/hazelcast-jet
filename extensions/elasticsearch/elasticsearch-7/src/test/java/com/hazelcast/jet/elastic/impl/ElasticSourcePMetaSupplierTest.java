@@ -31,7 +31,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.entry;
 import static org.assertj.core.util.Lists.newArrayList;
 
-public class ElasticProcessorMetaSupplierTest {
+public class ElasticSourcePMetaSupplierTest {
 
     @Test
     public void given_singleNodeAdress_when_assignShards_then_shouldAssignAllShardsToSingleAddress() {
@@ -42,7 +42,7 @@ public class ElasticProcessorMetaSupplierTest {
         );
 
         List<String> addresses = newArrayList("10.0.0.1");
-        Map<String, List<Shard>> assignment = ElasticProcessorMetaSupplier.assignShards(shards, addresses);
+        Map<String, List<Shard>> assignment = ElasticSourcePMetaSupplier.assignShards(shards, addresses);
 
         assertThat(assignment).contains(
                 entry("10.0.0.1", shards)
@@ -58,7 +58,7 @@ public class ElasticProcessorMetaSupplierTest {
         );
 
         List<String> addresses = newArrayList("10.0.0.1", "10.0.0.2", "10.0.0.3");
-        Map<String, List<Shard>> assignment = ElasticProcessorMetaSupplier.assignShards(shards, addresses);
+        Map<String, List<Shard>> assignment = ElasticSourcePMetaSupplier.assignShards(shards, addresses);
 
         assertThat(assignment).contains(
                 entry("10.0.0.1", newArrayList(shards.get(0))),
@@ -86,7 +86,7 @@ public class ElasticProcessorMetaSupplierTest {
         Collections.shuffle(shards, new Random(1L)); // random but stable shuffle
 
         List<String> addresses = newArrayList("10.0.0.1", "10.0.0.2", "10.0.0.3");
-        Map<String, List<Shard>> assignment = ElasticProcessorMetaSupplier.assignShards(shards, addresses);
+        Map<String, List<Shard>> assignment = ElasticSourcePMetaSupplier.assignShards(shards, addresses);
 
         assertThat(assignment).containsKeys("10.0.0.1", "10.0.0.2", "10.0.0.3");
 
@@ -115,7 +115,7 @@ public class ElasticProcessorMetaSupplierTest {
         );
 
         List<String> addresses = newArrayList("10.0.0.1", "10.0.0.2", "10.0.0.3");
-        Map<String, List<Shard>> assignment = ElasticProcessorMetaSupplier.assignShards(shards, addresses);
+        Map<String, List<Shard>> assignment = ElasticSourcePMetaSupplier.assignShards(shards, addresses);
 
         assertThat(assignment).contains(
                 entry("10.0.0.1", newArrayList(shards.get(0))),
@@ -130,6 +130,6 @@ public class ElasticProcessorMetaSupplierTest {
         );
         List<String> addresses = newArrayList("10.0.0.2");
 
-        ElasticProcessorMetaSupplier.assignShards(shards, addresses);
+        ElasticSourcePMetaSupplier.assignShards(shards, addresses);
     }
 }
