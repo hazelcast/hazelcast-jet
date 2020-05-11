@@ -146,14 +146,13 @@ public class ElasticSourceBuilder<T> {
      * <p>
      * Use this option to read from multiple shards in parallel.
      *
-     * @param enabled {@code true} to enable slicing, default value {@code false}
      * @see
      * <a href="https://www.elastic.co/guide/en/elasticsearch/reference/current/search-request-body.html#sliced-scroll">
      *     Sliced Scroll</a>
      */
     @Nonnull
-    public ElasticSourceBuilder<T> slicing(boolean enabled) {
-        this.slicing = enabled;
+    public ElasticSourceBuilder<T> enableSlicing() {
+        this.slicing = true;
         return this;
     }
 
@@ -162,11 +161,10 @@ public class ElasticSourceBuilder<T> {
      *
      * Jet cluster member must run exactly on the same nodes as Elastic cluster.
      *
-     * @param coLocatedRead {@code true} to enable co-located reading, default value {@code false}
      */
     @Nonnull
-    public ElasticSourceBuilder<T> coLocatedReading(boolean coLocatedRead) {
-        this.coLocatedReading = coLocatedRead;
+    public ElasticSourceBuilder<T> enableCoLocatedReading() {
+        this.coLocatedReading = true;
         return this;
     }
 

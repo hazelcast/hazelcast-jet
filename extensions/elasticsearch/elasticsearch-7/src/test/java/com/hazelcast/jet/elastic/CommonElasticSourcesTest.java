@@ -225,7 +225,7 @@ public abstract class CommonElasticSourcesTest extends BaseElasticTest {
                 .clientSupplier(elasticClientSupplier())
                 .searchRequestSupplier(() -> new SearchRequest("my-index"))
                 .mapHitFn(SearchHit::getSourceAsString)
-                .slicing(true)
+                .enableSlicing()
                 .build();
 
         p.readFrom(source)
@@ -248,7 +248,7 @@ public abstract class CommonElasticSourcesTest extends BaseElasticTest {
                 .clientSupplier(elasticClientSupplier())
                 .searchRequestSupplier(() -> new SearchRequest("my-index-*"))
                 .mapHitFn(SearchHit::getSourceAsString)
-                .slicing(true)
+                .enableSlicing()
                 .build();
 
         p.readFrom(source)

@@ -48,8 +48,8 @@ class ElasticSourcePSupplier<T> implements ProcessorSupplier {
 
     @Override
     public void init(@Nonnull Context context) {
-        if (configuration.coLocatedReading()) {
-            if (configuration.slicing()) {
+        if (configuration.isCoLocatedReadingEnabled()) {
+            if (configuration.isSlicingEnabled()) {
                 shardsByProcessor = new HashMap<>();
                 for (int i = 0; i < context.localParallelism(); i++) {
                     shardsByProcessor.put(i, shards);
@@ -64,7 +64,7 @@ class ElasticSourcePSupplier<T> implements ProcessorSupplier {
     @Override
     public Collection<? extends Processor> get(int count) {
         return IntStream.range(0, count)
-                        .mapToObj(i -> configuration.coLocatedReading() ?
+                        .mapToObj(i -> configuration.isCoLocatedReadingEnabled() ?
                                 new ElasticSourceP<>(configuration, shardsByProcessor.get(i)) :
                                 new ElasticSourceP<>(configuration, emptyList()))
                         .collect(toList());

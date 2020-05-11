@@ -70,8 +70,8 @@ final class ElasticSourceP<T> extends AbstractProcessor {
         SearchRequest sr = configuration.searchRequestSupplier().get();
         sr.scroll(configuration.scrollKeepAlive());
 
-        if (configuration.slicing()) {
-            if (configuration.coLocatedReading()) {
+        if (configuration.isSlicingEnabled()) {
+            if (configuration.isCoLocatedReadingEnabled()) {
                 int sliceId = context.localProcessorIndex();
                 int totalSlices = context.localParallelism();
                 if (totalSlices > 1) {
@@ -88,7 +88,7 @@ final class ElasticSourceP<T> extends AbstractProcessor {
             }
         }
 
-        if (configuration.coLocatedReading()) {
+        if (configuration.isCoLocatedReadingEnabled()) {
             logger.fine("Assigned shards: " + shards);
             if (shards.isEmpty()) {
                 traverser = Traversers.empty();

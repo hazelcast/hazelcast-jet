@@ -86,11 +86,11 @@ public class ElasticSourceConfiguration<T> implements Serializable {
         return optionsFn;
     }
 
-    public boolean slicing() {
+    public boolean isSlicingEnabled() {
         return slicing;
     }
 
-    public boolean coLocatedReading() {
+    public boolean isCoLocatedReadingEnabled() {
         return coLocatedReading;
     }
 

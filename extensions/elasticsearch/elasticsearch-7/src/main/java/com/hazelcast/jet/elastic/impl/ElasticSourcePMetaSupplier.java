@@ -56,7 +56,7 @@ public class ElasticSourcePMetaSupplier<T> implements ProcessorMetaSupplier {
 
     @Override
     public int preferredLocalParallelism() {
-        if (configuration.coLocatedReading() || configuration.slicing()) {
+        if (configuration.isCoLocatedReadingEnabled() || configuration.isSlicingEnabled()) {
             return configuration.preferredLocalParallelism();
         } else {
             return 1;
@@ -69,7 +69,7 @@ public class ElasticSourcePMetaSupplier<T> implements ProcessorMetaSupplier {
         ElasticCatClient catClient = new ElasticCatClient(configuration.clientSupplier().get().getLowLevelClient());
         List<Shard> shards = catClient.shards(configuration.searchRequestSupplier().get().indices());
 
-        if (configuration.coLocatedReading()) {
+        if (configuration.isCoLocatedReadingEnabled()) {
             Set<String> addresses = context
                     .jetInstance().getCluster().getMembers().stream()
                     .map(m -> uncheckCall((() -> m.getAddress().getInetAddress().getHostAddress())))
@@ -123,7 +123,7 @@ public class ElasticSourcePMetaSupplier<T> implements ProcessorMetaSupplier {
     @Nonnull
     @Override
     public Function<? super Address, ? extends ProcessorSupplier> get(@Nonnull List<Address> addresses) {
-        if (configuration.slicing() || configuration.coLocatedReading()) {
+        if (configuration.isSlicingEnabled() || configuration.isCoLocatedReadingEnabled()) {
             return address -> {
                 String ipAddress = uncheckCall(() -> address.getInetAddress().getHostAddress());
                 List<Shard> shards = assignedShards.getOrDefault(ipAddress, emptyList());

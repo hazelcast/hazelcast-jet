@@ -58,7 +58,7 @@ public class LocalElasticSourcesTest extends CommonElasticSourcesTest {
                 .clientSupplier(elasticClientSupplier())
                 .searchRequestSupplier(() -> new SearchRequest("my-index"))
                 .mapHitFn(hit -> (String) hit.getSourceAsMap().get("name"))
-                .coLocatedReading(true)
+                .enableCoLocatedReading()
                 .build();
 
         p.readFrom(source)
