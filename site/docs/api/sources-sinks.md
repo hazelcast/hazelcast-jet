@@ -28,7 +28,28 @@ p.readFrom(Sources.files("/home/data/web-logs"))
  .writeTo(Sinks.logger());
 ```
 
-For CSV or JSON files it's possible to use the `filesBuilder` source:
+For JSON files, the source expects each line contains a valid JSON
+string and converts it to the given object type:
+
+```java
+Pipeline p = Pipeline.create();
+p.readFrom(Sources.json("/home/data/web-logs", SimpleLog.class))
+ .filter(log -> log.level().equals("ERROR"))
+ .writeTo(Sinks.logger());
+```
+
+If your JSON files contain JSON strings that each one spanning multiple
+lines, you can use `filesBuilder` source:
+
+```java
+Pipeline p = Pipeline.create();
+p.readFrom(Sources.filesBuilder(sourceDir)
+    .build(JsonUtil.asMultilineJson(SimpleLog.class)))
+ .filter(log -> log.level().equals("ERROR"))
+ .writeTo(Sinks.logger());
+```
+
+For CSV files it is also possible to use the `filesBuilder` source:
 
 ```java
 Pipeline p = Pipeline.create();
@@ -59,6 +80,16 @@ p.readFrom(TestSources.itemStream(100))
  .build());
 ```
 
+To write JSON files, you can use `Sinks.json` or `Sinks.filesBuilder`
+with `JsonUtil.asJson` as `toStringFn` :
+
+```java
+Pipeline p = Pipeline.create();
+p.readFrom(TestSources.itemStream(100))
+ .withoutTimestamps()
+ .writeTo(Sinks.json("out"));
+```
+
 Each node will write to a unique file with a numerical index. You can
 achieve the effect of a distributed sink if you manually collect all the
 output files on all members and combine their contents.
@@ -75,6 +106,15 @@ ways, the behavior is undefined.
 ```java
 Pipeline p = Pipeline.create();
 p.readFrom(Sources.fileWatcher("/home/data"))
+ .withoutTimestamps()
+ .writeTo(Sinks.logger());
+```
+
+You can create streaming file source for JSON files too:
+
+```java
+Pipeline p = Pipeline.create();
+p.readFrom(Sources.jsonWatcher("/home/data", Person.class))
  .withoutTimestamps()
  .writeTo(Sinks.logger());
 ```
