@@ -27,6 +27,9 @@ import javax.annotation.Nonnull;
 
 import static org.apache.http.auth.AuthScope.ANY;
 
+/**
+ * Collection of convenience factory methods for Elastic's {@link RestHighLevelClient}
+ */
 public final class ElasticClients {
 
     private static final int DEFAULT_PORT = 9200;
@@ -34,11 +37,17 @@ public final class ElasticClients {
     private ElasticClients() {
     }
 
+    /**
+     * Create Elastic client for an instance running on localhost on default port (9200)
+     */
     @Nonnull
     public static RestHighLevelClient client() {
         return client("localhost", DEFAULT_PORT);
     }
 
+    /**
+     * Create Elastic client for an instance running on given host and port
+     */
     @Nonnull
     public static RestHighLevelClient client(@Nonnull String hostname, int port) {
         return new RestHighLevelClient(

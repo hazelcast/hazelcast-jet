@@ -83,7 +83,7 @@ public abstract class BaseElasticTest {
     /**
      * RestHighLevelClient supplier, it is used to
      * - create a client before each test for use by all methods from this class interacting with elastic
-     * - may be used as as a parameter of {@link ElasticSourceBuilder#clientSupplier(SupplierEx)}
+     * - may be used as as a parameter of {@link ElasticSourceBuilder#clientFn(SupplierEx)}
      */
     protected SupplierEx<RestHighLevelClient> elasticClientSupplier() {
         return ElasticSupport.elasticClientSupplier();

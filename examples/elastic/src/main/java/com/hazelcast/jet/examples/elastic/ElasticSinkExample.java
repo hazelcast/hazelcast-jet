@@ -16,21 +16,17 @@
 
 package com.hazelcast.jet.examples.elastic;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.jr.ob.JSON;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.core.processor.SourceProcessors;
 import com.hazelcast.jet.elastic.ElasticSinks;
 import com.hazelcast.jet.pipeline.BatchSource;
 import com.hazelcast.jet.pipeline.Pipeline;
-import com.hazelcast.jet.pipeline.ServiceFactories;
-import com.hazelcast.jet.pipeline.ServiceFactory;
 import org.elasticsearch.action.index.IndexRequest;
 
 import java.io.File;
 import java.nio.file.Files;
-import java.util.Map;
 import java.util.stream.Stream;
 
 import static com.hazelcast.jet.pipeline.Pipeline.create;
@@ -41,14 +37,13 @@ public class ElasticSinkExample {
 
     public static void main(String[] args) {
         try {
-            ServiceFactory<?, ObjectMapper> service = ServiceFactories.sharedService((context) -> new ObjectMapper());
-
             Pipeline p = create();
             p.readFrom(files("src/main/resources/documents"))
-             .mapUsingService(service, (mapper, json) -> mapper.readValue(json, new TypeReference<Map<String, Object>>() {
-             }))
+             .map(JSON.std::mapFrom)
              .writeTo(ElasticSinks.elastic(map ->
-                     new IndexRequest("my-index").source(map)
+                     new IndexRequest("my-index")
+                             .source(map)
+                             .version((Long) map.get("version"))
              ));
 
             JetInstance jet = Jet.newJetInstance();

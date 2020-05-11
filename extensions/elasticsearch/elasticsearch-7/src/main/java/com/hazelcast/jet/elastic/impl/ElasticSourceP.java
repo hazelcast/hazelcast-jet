@@ -66,8 +66,8 @@ final class ElasticSourceP<T> extends AbstractProcessor {
         ILogger logger = context.logger();
         logger.fine("init");
 
-        RestHighLevelClient client = configuration.clientSupplier().get();
-        SearchRequest sr = configuration.searchRequestSupplier().get();
+        RestHighLevelClient client = configuration.clientFn().get();
+        SearchRequest sr = configuration.searchRequestFn().get();
         sr.scroll(configuration.scrollKeepAlive());
 
         if (configuration.isSlicingEnabled()) {
@@ -103,7 +103,7 @@ final class ElasticSourceP<T> extends AbstractProcessor {
             sr.preference(preference);
         }
 
-        traverser = new ElasticScrollTraverser(configuration, client, sr, logger).map(configuration.mapHitFn());
+        traverser = new ElasticScrollTraverser(configuration, client, sr, logger).map(configuration.mapToItemFn());
     }
 
     private Node createLocalElasticNode() {

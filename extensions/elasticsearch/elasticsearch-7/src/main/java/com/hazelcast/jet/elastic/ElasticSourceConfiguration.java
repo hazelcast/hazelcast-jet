@@ -32,26 +32,26 @@ public class ElasticSourceConfiguration<T> implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
-    private final SupplierEx<? extends RestHighLevelClient> clientSupplier;
+    private final SupplierEx<? extends RestHighLevelClient> clientFn;
     private final ConsumerEx<? super RestHighLevelClient> destroyFn;
-    private final SupplierEx<SearchRequest> searchRequestSupplier;
+    private final SupplierEx<SearchRequest> searchRequestFn;
     private final FunctionEx<? super ActionRequest, RequestOptions> optionsFn;
-    private final FunctionEx<? super SearchHit, T> mapHitFn;
+    private final FunctionEx<? super SearchHit, T> mapToItemFn;
     private final boolean slicing;
     private final boolean coLocatedReading;
     private final String scrollKeepAlive;
     private final int preferredLocalParallelism;
 
-    public ElasticSourceConfiguration(SupplierEx<? extends RestHighLevelClient> clientSupplier, ConsumerEx<?
-            super RestHighLevelClient> destroyFn, SupplierEx<SearchRequest> searchRequestSupplier, FunctionEx<?
-            super ActionRequest, RequestOptions> optionsFn, FunctionEx<? super SearchHit, T> mapHitFn,
+    public ElasticSourceConfiguration(SupplierEx<? extends RestHighLevelClient> clientFn, ConsumerEx<?
+            super RestHighLevelClient> destroyFn, SupplierEx<SearchRequest> searchRequestFn, FunctionEx<?
+            super ActionRequest, RequestOptions> optionsFn, FunctionEx<? super SearchHit, T> mapToItemFn,
                                       boolean slicing, boolean coLocatedReading, String scrollKeepAlive,
                                       int preferredLocalParallelism) {
-        this.clientSupplier = clientSupplier;
+        this.clientFn = clientFn;
         this.destroyFn = destroyFn;
-        this.searchRequestSupplier = searchRequestSupplier;
+        this.searchRequestFn = searchRequestFn;
         this.optionsFn = optionsFn;
-        this.mapHitFn = mapHitFn;
+        this.mapToItemFn = mapToItemFn;
         this.slicing = slicing;
         this.coLocatedReading = coLocatedReading;
         this.scrollKeepAlive = scrollKeepAlive;
@@ -59,8 +59,8 @@ public class ElasticSourceConfiguration<T> implements Serializable {
     }
 
     @Nonnull
-    public SupplierEx<? extends RestHighLevelClient> clientSupplier() {
-        return clientSupplier;
+    public SupplierEx<? extends RestHighLevelClient> clientFn() {
+        return clientFn;
     }
 
 
@@ -71,14 +71,14 @@ public class ElasticSourceConfiguration<T> implements Serializable {
 
 
     @Nonnull
-    public SupplierEx<SearchRequest> searchRequestSupplier() {
-        return searchRequestSupplier;
+    public SupplierEx<SearchRequest> searchRequestFn() {
+        return searchRequestFn;
     }
 
 
     @Nonnull
-    public FunctionEx<? super SearchHit, T> mapHitFn() {
-        return mapHitFn;
+    public FunctionEx<? super SearchHit, T> mapToItemFn() {
+        return mapToItemFn;
     }
 
 

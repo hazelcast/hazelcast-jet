@@ -55,9 +55,9 @@ public class LocalElasticSourcesTest extends CommonElasticSourcesTest {
         Pipeline p = Pipeline.create();
 
         BatchSource<String> source = new ElasticSourceBuilder<String>()
-                .clientSupplier(elasticClientSupplier())
-                .searchRequestSupplier(() -> new SearchRequest("my-index"))
-                .mapHitFn(hit -> (String) hit.getSourceAsMap().get("name"))
+                .clientFn(elasticClientSupplier())
+                .searchRequestFn(() -> new SearchRequest("my-index"))
+                .mapToItemFn(hit -> (String) hit.getSourceAsMap().get("name"))
                 .enableCoLocatedReading()
                 .build();
 

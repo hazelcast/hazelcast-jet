@@ -28,7 +28,7 @@ import javax.annotation.Nonnull;
  * Provides factory methods for Elasticsearch sinks.
  * Alternatively you can use {@link ElasticSinkBuilder}
  *
- * @since 4.1
+ * @since 4.2
  */
 public final class ElasticSinks {
 
@@ -38,28 +38,28 @@ public final class ElasticSinks {
     /**
      * Creates an Elasticsearch sink, uses a local instance of Elasticsearch
      *
-     * @param mapItemFn function that maps items from a stream to an indexing request
+     * @param mapToRequestFn function that maps items from a stream to an indexing request
      */
     @Nonnull
-    public static <T> Sink<T> elastic(@Nonnull FunctionEx<? super T, ? extends DocWriteRequest<?>> mapItemFn) {
-        return elastic(ElasticClients::client, mapItemFn);
+    public static <T> Sink<T> elastic(@Nonnull FunctionEx<? super T, ? extends DocWriteRequest<?>> mapToRequestFn) {
+        return elastic(ElasticClients::client, mapToRequestFn);
     }
 
     /**
-     * Creates an Elasticsearch sink, uses provided clientSupplier and mapItemFn
+     * Creates an Elasticsearch sink, uses provided clientFn and mapToRequestFn
      *
-     * @param clientSupplier client supplier
-     * @param mapItemFn      function that maps items from a stream to an indexing request
+     * @param clientFn client supplier
+     * @param mapToRequestFn      function that maps items from a stream to an indexing request
      * @param <T>            type of incoming items
      */
     @Nonnull
     public static <T> Sink<T> elastic(
-            @Nonnull SupplierEx<RestHighLevelClient> clientSupplier,
-            @Nonnull FunctionEx<? super T, ? extends DocWriteRequest<?>> mapItemFn
+            @Nonnull SupplierEx<RestHighLevelClient> clientFn,
+            @Nonnull FunctionEx<? super T, ? extends DocWriteRequest<?>> mapToRequestFn
     ) {
         return new ElasticSinkBuilder<T>()
-                .clientSupplier(clientSupplier)
-                .mapItemFn(mapItemFn)
+                .clientFn(clientFn)
+                .mapToRequestFn(mapToRequestFn)
                 .build();
     }
 

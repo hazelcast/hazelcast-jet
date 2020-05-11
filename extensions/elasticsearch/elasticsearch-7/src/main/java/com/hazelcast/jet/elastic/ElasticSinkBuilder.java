@@ -41,44 +41,52 @@ import static java.util.Objects.requireNonNull;
  * Builder for Elasticsearch Sink
  * <p>
  * The Sink first maps items from the pipeline using the provided
- * {@link #mapItemFn(FunctionEx)} and then using {@link BulkRequest}.
+ * {@link #mapToRequestFn(FunctionEx)} and then using {@link BulkRequest}.
  * <p>
  * {@link BulkRequest#BulkRequest()} is used by default, it can be
- * modified by providing custom {@link #bulkRequestSupplier(SupplierEx)}
+ * modified by providing custom {@link #bulkRequestFn(SupplierEx)}
  *
  * <p>
  * Usage:
  * <pre>{@code
  * Sink<Map<String, ?>> elasticSink = new ElasticSinkBuilder<Map<String, ?>>()
- *   .clientSupplier(() -> ElasticClients.client(host, port))
- *   .mapItemFn(item -> new IndexRequest("my-index").source(item))
+ *   .clientFn(() -> ElasticClients.client(host, port))
+ *   .mapToRequestFn(item -> new IndexRequest("my-index").source(item))
  *   .build();
  * }</pre>
  * <p>
- * Requires {@link #clientSupplier(SupplierEx)} and {@link #mapItemFn(FunctionEx)}.
+ * Requires {@link #clientFn(SupplierEx)} and {@link #mapToRequestFn(FunctionEx)}.
  *
  * @param <T>
- * @since 4.1
+ * @since 4.2
  */
 public class ElasticSinkBuilder<T> implements Serializable {
 
     private static final String DEFAULT_NAME = "elastic";
 
-    private SupplierEx<? extends RestHighLevelClient> clientSupplier;
+    private SupplierEx<? extends RestHighLevelClient> clientFn;
     private ConsumerEx<? super RestHighLevelClient> destroyFn = RestHighLevelClient::close;
-    private SupplierEx<BulkRequest> bulkRequestSupplier = BulkRequest::new;
-    private FunctionEx<? super T, ? extends DocWriteRequest<?>> mapItemFn;
+    private SupplierEx<BulkRequest> bulkRequestFn = BulkRequest::new;
+    private FunctionEx<? super T, ? extends DocWriteRequest<?>> mapToRequestFn;
     private FunctionEx<? super ActionRequest, RequestOptions> optionsFn = (request) -> RequestOptions.DEFAULT;
     private int preferredLocalParallelism = 2;
 
     /**
-     * Set the client supplier
+     * Set the client supplier function
+     * <p>
+     * The connector uses the returned instance to access Elasticsearch. Also see {@link ElasticClients} for convenience
+     * factory methods.
+     * <p>
+     * For example, to provide an authenticated client:
+     * <pre>{@code
+     * builder.clientFn(() -> client(host, port, username, password))
+     * }</pre>
      *
-     * @param clientSupplier supplier for configure Elasticsearch REST client
+     * @param clientFn supplier function returning configured Elasticsearch REST client
      */
     @Nonnull
-    public ElasticSinkBuilder<T> clientSupplier(@Nonnull SupplierEx<? extends RestHighLevelClient> clientSupplier) {
-        this.clientSupplier = checkNonNullAndSerializable(clientSupplier, "clientSupplier");
+    public ElasticSinkBuilder<T> clientFn(@Nonnull SupplierEx<? extends RestHighLevelClient> clientFn) {
+        this.clientFn = checkNonNullAndSerializable(clientFn, "clientFn");
         return this;
     }
 
@@ -94,33 +102,62 @@ public class ElasticSinkBuilder<T> implements Serializable {
     }
 
     /**
-     * Set the bulkRequestSupplier, defaults to new {@link BulkRequest#BulkRequest()}
+     * Set the supplier function for BulkRequest, defaults to new {@link BulkRequest#BulkRequest()}
+     * <p>
+     * For example, to modify the BulkRequest used to index documents:
+     * <pre>{@code
+     * builder.bulkRequestFn(() -> new BulkRequest().setRefreshPolicy(IMMEDIATE))
+     * }</pre>
      *
-     * @param bulkRequestSupplier supplier for the bulk request
+     * @param bulkRequestFn supplier function for the bulk request
+     * @see <a href="https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-update-settings.html#bulk">
+     * Bulk indexing usage</a> in Elastic documentation
      */
     @Nonnull
-    public ElasticSinkBuilder<T> bulkRequestSupplier(@Nonnull SupplierEx<BulkRequest> bulkRequestSupplier) {
-        this.bulkRequestSupplier = checkNonNullAndSerializable(bulkRequestSupplier, "clientSupplier");
+    public ElasticSinkBuilder<T> bulkRequestFn(@Nonnull SupplierEx<BulkRequest> bulkRequestFn) {
+        this.bulkRequestFn = checkNonNullAndSerializable(bulkRequestFn, "bulkRequestFn");
         return this;
     }
 
     /**
-     * Set the mapItemFn
+     * Set the function mapping the item from a pipeline item to an index request
+     * <p>
+     * For example, to create an IndexRequest for a versioned document:
+     * <pre>{@code
+     * builder.mapToRequestFn((mapItem) ->
+     *                      new IndexRequest("my-index")
+     *                              .source(map)
+     *                              .version((Long) map.get("version"))
+     * }</pre>
      *
-     * @param mapItemFn maps an item from the stream to an {@link org.elasticsearch.action.index.IndexRequest},
-     *                  {@link org.elasticsearch.action.update.UpdateRequest} or
-     *                  {@link org.elasticsearch.action.delete.DeleteRequest}
+     * @param mapToRequestFn maps an item from the stream to an {@link org.elasticsearch.action.index.IndexRequest},
+     *                       {@link org.elasticsearch.action.update.UpdateRequest} or
+     *                       {@link org.elasticsearch.action.delete.DeleteRequest}
      */
     @Nonnull
-    public ElasticSinkBuilder<T> mapItemFn(@Nonnull FunctionEx<? super T, ? extends DocWriteRequest<?>> mapItemFn) {
-        this.mapItemFn = checkNonNullAndSerializable(mapItemFn, "mapItemFn");
+    public ElasticSinkBuilder<T> mapToRequestFn(@Nonnull FunctionEx<? super T, ? extends DocWriteRequest<?>> mapToRequestFn) {
+        this.mapToRequestFn = checkNonNullAndSerializable(mapToRequestFn, "mapToRequestFn");
         return this;
     }
 
     /**
-     * Set the function that provides {@link RequestOptions} based on given request
+     * Set the function that provides {@link RequestOptions}
+     * <p>
+     * It can either return a constant value or a value based on provided request.
+     * <p>
+     * For example, to provide a custom authentication header:
+     * <pre>{@code
+     * sinkBuilder.optionsFn((request) -> {
+     *     RequestOptions.Builder builder = RequestOptions.DEFAULT.toBuilder();
+     *     builder.addHeader("Authorization", "Bearer " + TOKEN);
+     *     return builder.build();
+     * })
+     * }</pre>
      *
      * @param optionsFn function that provides {@link RequestOptions}
+     * @see
+     * <a href="https://www.elastic.co/guide/en/elasticsearch/client/java-rest/current/java-rest-low-usage-requests.html#java-rest-low-usage-request-options">
+     * RequestOptions</a> in Elastic documentation
      */
     @Nonnull
     public ElasticSinkBuilder<T> optionsFn(@Nonnull FunctionEx<? super ActionRequest, RequestOptions> optionsFn) {
@@ -128,6 +165,9 @@ public class ElasticSinkBuilder<T> implements Serializable {
         return this;
     }
 
+    /**
+     * Set the local parallelism of this sink. See {@link SinkBuilder#preferredLocalParallelism(int)}.
+     */
     @Nonnull
     public ElasticSinkBuilder<T> preferredLocalParallelism(int preferredLocalParallelism) {
         this.preferredLocalParallelism = preferredLocalParallelism;
@@ -139,14 +179,14 @@ public class ElasticSinkBuilder<T> implements Serializable {
      */
     @Nonnull
     public Sink<T> build() {
-        requireNonNull(clientSupplier, "clientSupplier is not set");
-        requireNonNull(mapItemFn, "mapItemFn is not set");
+        requireNonNull(clientFn, "clientFn is not set");
+        requireNonNull(mapToRequestFn, "mapToRequestFn is not set");
 
         return SinkBuilder
                 .sinkBuilder(DEFAULT_NAME, ctx ->
-                        new BulkContext(clientSupplier.get(), bulkRequestSupplier,
+                        new BulkContext(clientFn.get(), bulkRequestFn,
                                 optionsFn, destroyFn, ctx.logger()))
-                .<T>receiveFn((bulkContext, item) -> bulkContext.add(mapItemFn.apply(item)))
+                .<T>receiveFn((bulkContext, item) -> bulkContext.add(mapToRequestFn.apply(item)))
                 .flushFn(BulkContext::flush)
                 .destroyFn(BulkContext::close)
                 .preferredLocalParallelism(preferredLocalParallelism)

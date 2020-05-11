@@ -40,16 +40,16 @@ public class ElasticSourceBuilderTest {
     @NotNull
     private ElasticSourceBuilder<Object> builderWithRequiredParams() {
         return new ElasticSourceBuilder<>()
-                .clientSupplier(() -> new RestHighLevelClient(RestClient.builder(new HttpHost("localhost"))))
-                .searchRequestSupplier(SearchRequest::new)
-                .mapHitFn(FunctionEx.identity());
+                .clientFn(() -> new RestHighLevelClient(RestClient.builder(new HttpHost("localhost"))))
+                .searchRequestFn(SearchRequest::new)
+                .mapToItemFn(FunctionEx.identity());
     }
 
     @Test
     public void when_createElasticSourceWithoutClientSupplier_then_throwException() {
         assertThatThrownBy(() -> new ElasticSourceBuilder<>()
-                .searchRequestSupplier(SearchRequest::new)
-                .mapHitFn(FunctionEx.identity())
+                .searchRequestFn(SearchRequest::new)
+                .mapToItemFn(FunctionEx.identity())
                 .build())
                 .hasMessage("clientSupplier must be set");
     }
@@ -57,8 +57,8 @@ public class ElasticSourceBuilderTest {
     @Test
     public void when_createElasticSourceWithoutSearchRequestSupplier_then_throwException() {
         assertThatThrownBy(() -> new ElasticSourceBuilder<>()
-                .clientSupplier(() -> new RestHighLevelClient(RestClient.builder(new HttpHost("localhost"))))
-                .mapHitFn(FunctionEx.identity())
+                .clientFn(() -> new RestHighLevelClient(RestClient.builder(new HttpHost("localhost"))))
+                .mapToItemFn(FunctionEx.identity())
                 .build())
                 .hasMessage("searchRequestSupplier must be set");
     }
@@ -66,8 +66,8 @@ public class ElasticSourceBuilderTest {
     @Test
     public void when_createElasticSourceWithoutMapHitFnSupplier_then_throwException() {
         assertThatThrownBy(() -> new ElasticSourceBuilder<>()
-                .clientSupplier(() -> new RestHighLevelClient(RestClient.builder(new HttpHost("localhost"))))
-                .searchRequestSupplier(SearchRequest::new)
+                .clientFn(() -> new RestHighLevelClient(RestClient.builder(new HttpHost("localhost"))))
+                .searchRequestFn(SearchRequest::new)
                 .build())
                 .hasMessage("mapHitFn must be set");
     }

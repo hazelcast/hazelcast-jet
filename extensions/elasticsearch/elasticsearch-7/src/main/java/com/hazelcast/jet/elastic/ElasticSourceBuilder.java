@@ -21,6 +21,7 @@ import com.hazelcast.function.FunctionEx;
 import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.elastic.impl.ElasticSourcePMetaSupplier;
 import com.hazelcast.jet.pipeline.BatchSource;
+import com.hazelcast.jet.pipeline.SinkBuilder;
 import com.hazelcast.jet.pipeline.Sources;
 import org.elasticsearch.action.ActionRequest;
 import org.elasticsearch.action.search.SearchRequest;
@@ -36,30 +37,31 @@ import static java.util.Objects.requireNonNull;
 
 /**
  * Builder for Elasticsearch source which reads data from Elasticsearch and
- * converts SearchHits using provided {@code mapHitFn}
- *
+ * converts SearchHits using provided {@code mapToItemFn}
+ * <p>
  * Usage:
  * <pre>{@code
  * BatchSource<String> source = new ElasticSourceBuilder<String>()
- *   .clientSupplier(() -> client(host, port))
- *   .searchRequestSupplier(() -> new SearchRequest("my-index"))
- *   .mapHitFn(SearchHit::getSourceAsString)
+ *   .clientFn(() -> client(host, port))
+ *   .searchRequestFn(() -> new SearchRequest("my-index"))
+ *   .mapToItemFn(SearchHit::getSourceAsString)
  *   .build();
  *
  * BatchStage<String> stage = p.readFrom(source);
  * }</pre>
+ *
  * @param <T> type of the output of the mapping function from {@link SearchHit} -> T
- * @since 4.1
+ * @since 4.2
  */
 public class ElasticSourceBuilder<T> {
 
     private static final String DEFAULT_NAME = "elastic";
 
-    private SupplierEx<? extends RestHighLevelClient> clientSupplier;
+    private SupplierEx<? extends RestHighLevelClient> clientFn;
     private ConsumerEx<? super RestHighLevelClient> destroyFn = RestHighLevelClient::close;
-    private SupplierEx<SearchRequest> searchRequestSupplier;
+    private SupplierEx<SearchRequest> searchRequestFn;
     private FunctionEx<? super ActionRequest, RequestOptions> optionsFn = request -> RequestOptions.DEFAULT;
-    private FunctionEx<? super SearchHit, T> mapHitFn;
+    private FunctionEx<? super SearchHit, T> mapToItemFn;
     private boolean slicing;
     private boolean coLocatedReading;
     private String scrollKeepAlive = "1m"; // Using String because it needs to be Serializable
@@ -72,12 +74,12 @@ public class ElasticSourceBuilder<T> {
      */
     @Nonnull
     public BatchSource<T> build() {
-        requireNonNull(clientSupplier, "clientSupplier must be set");
-        requireNonNull(searchRequestSupplier, "searchRequestSupplier must be set");
-        requireNonNull(mapHitFn, "mapHitFn must be set");
+        requireNonNull(clientFn, "clientFn must be set");
+        requireNonNull(searchRequestFn, "searchRequestFn must be set");
+        requireNonNull(mapToItemFn, "mapToItemFn must be set");
 
         ElasticSourceConfiguration<T> configuration = new ElasticSourceConfiguration<T>(
-                clientSupplier, destroyFn, searchRequestSupplier, optionsFn, mapHitFn, slicing, coLocatedReading,
+                clientFn, destroyFn, searchRequestFn, optionsFn, mapToItemFn, slicing, coLocatedReading,
                 scrollKeepAlive, preferredLocalParallelism
         );
         ElasticSourcePMetaSupplier<T> metaSupplier = new ElasticSourcePMetaSupplier<T>(configuration);
@@ -85,13 +87,21 @@ public class ElasticSourceBuilder<T> {
     }
 
     /**
-     * Set the client supplier
+     * Set the client supplier function
+     * <p>
+     * The connector uses the returned instance to access Elasticsearch. Also see {@link ElasticClients} for convenience
+     * factory methods.
+     * <p>
+     * For example, to provide an authenticated client:
+     * <pre>{@code
+     * builder.clientFn(() -> client(host, port, username, password))
+     * }</pre>
      *
-     * @param clientSupplier supplier for configure Elasticsearch REST client
+     * @param clientFn supplier function returning configured Elasticsearch REST client
      */
     @Nonnull
-    public ElasticSourceBuilder<T> clientSupplier(@Nonnull SupplierEx<? extends RestHighLevelClient> clientSupplier) {
-        this.clientSupplier = checkNonNullAndSerializable(clientSupplier, "clientSupplier");
+    public ElasticSourceBuilder<T> clientFn(@Nonnull SupplierEx<? extends RestHighLevelClient> clientFn) {
+        this.clientFn = checkNonNullAndSerializable(clientFn, "clientFn");
         return this;
     }
 
@@ -107,40 +117,65 @@ public class ElasticSourceBuilder<T> {
     }
 
     /**
-     * Set the search request supplier
+     * Set the search request supplier function
+     * <p>
+     * The connector executes this search request to retrieve documents from Elasticsearch.
+     * <p>
+     * For example, to create SearchRequest limited to an index `logs`:
+     * <pre>{@code
+     * builder.searchRequestFn(() -> new SearchRequest("logs"))
+     * }</pre>
      *
-     * @param searchRequestSupplier search request supplier
+     * @param searchRequestFn search request supplier function
      */
     @Nonnull
-    public ElasticSourceBuilder<T> searchRequestSupplier(@Nonnull SupplierEx<SearchRequest> searchRequestSupplier) {
-        this.searchRequestSupplier = checkSerializable(searchRequestSupplier, "searchRequestSupplier");
+    public ElasticSourceBuilder<T> searchRequestFn(@Nonnull SupplierEx<SearchRequest> searchRequestFn) {
+        this.searchRequestFn = checkSerializable(searchRequestFn, "searchRequestFn");
         return this;
     }
 
     /**
-     * Set the function to map SearchHit to custom result
+     * Set the function to map SearchHit to a pipeline item
+     * <p>
+     * For example, to map a SearchHit to a value of a field `productId`:
+     * <pre>{@code
+     * builder.mapToItemFn(hit -> (String) hit.getSourceAsMap().get("productId"))
+     * }</pre>
      *
-     * @param mapHitFn maps search hits to output items
+     * @param mapToItemFn maps search hits to output items
      */
     @Nonnull
-    public ElasticSourceBuilder<T> mapHitFn(@Nonnull FunctionEx<? super SearchHit, T> mapHitFn) {
-        this.mapHitFn = checkSerializable(mapHitFn, "mapHitFn");
+    public ElasticSourceBuilder<T> mapToItemFn(@Nonnull FunctionEx<? super SearchHit, T> mapToItemFn) {
+        this.mapToItemFn = checkSerializable(mapToItemFn, "mapToItemFn");
         return this;
     }
 
     /**
-     * Set the function that provides {@link RequestOptions} based on given request
+     * Set the function that provides {@link RequestOptions}
+     * <p>
+     * It can either return a constant value or a value based on provided request.
+     * <p>
+     * For example, use this to provide a custom authentication header:
+     * <pre>{@code
+     * sourceBuilder.optionsFn((request) -> {
+     *     RequestOptions.Builder builder = RequestOptions.DEFAULT.toBuilder();
+     *     builder.addHeader("Authorization", "Bearer " + TOKEN);
+     *     return builder.build();
+     * })
+     * }</pre>
      *
      * @param optionsFn function that provides {@link RequestOptions}
-     */
-    @Nonnull
+     * @see
+     * <a href="https://www.elastic.co/guide/en/elasticsearch/client/java-rest/current/java-rest-low-usage-requests.html#java-rest-low-usage-request-options">
+     * RequestOptions</a> in Elastic documentation
+     */    @Nonnull
     public ElasticSourceBuilder<T> optionsFn(@Nonnull FunctionEx<? super ActionRequest, RequestOptions> optionsFn) {
         this.optionsFn = checkSerializable(optionsFn, "optionsFn");
         return this;
     }
 
     /**
-     * Set to true to enable slicing
+     * Enable slicing
      * <p>
      * Number of slices is equal to globalParallelism (localParallelism * numberOfNodes)
      * <p>
@@ -157,10 +192,9 @@ public class ElasticSourceBuilder<T> {
     }
 
     /**
-     * Turns on co-located reading
+     * Enable co-located reading
      *
      * Jet cluster member must run exactly on the same nodes as Elastic cluster.
-     *
      */
     @Nonnull
     public ElasticSourceBuilder<T> enableCoLocatedReading() {
@@ -183,9 +217,10 @@ public class ElasticSourceBuilder<T> {
     }
 
     /**
-     * Set the preferred local parallelism
+     * Set the local parallelism of this source.
      *
-     * @param preferredLocalParallelism preferred local parallelism
+     * Note this has an effect only when {@link #enableCoLocatedReading()} or {@link #enableSlicing()} is enabled,
+     * otherwise the data is read only from 1 processor in whole Jet cluster.
      */
     @Nonnull
     public ElasticSourceBuilder<T> preferredLocalParallelism(int preferredLocalParallelism) {

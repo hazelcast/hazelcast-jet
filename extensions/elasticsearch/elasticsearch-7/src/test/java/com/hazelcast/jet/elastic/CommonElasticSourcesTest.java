@@ -57,9 +57,9 @@ public abstract class CommonElasticSourcesTest extends BaseElasticTest {
         Pipeline p = Pipeline.create();
 
         BatchSource<String> source = new ElasticSourceBuilder<String>()
-                .clientSupplier(elasticClientSupplier())
-                .searchRequestSupplier(() -> new SearchRequest("my-index"))
-                .mapHitFn(SearchHit::getSourceAsString)
+                .clientFn(elasticClientSupplier())
+                .searchRequestFn(() -> new SearchRequest("my-index"))
+                .mapToItemFn(SearchHit::getSourceAsString)
                 .build();
 
         p.readFrom(source)
@@ -77,9 +77,9 @@ public abstract class CommonElasticSourcesTest extends BaseElasticTest {
         Pipeline p = Pipeline.create();
 
         BatchSource<String> source = new ElasticSourceBuilder<String>()
-                .clientSupplier(elasticClientSupplier())
-                .searchRequestSupplier(() -> new SearchRequest("my-index"))
-                .mapHitFn(hit -> (String) hit.getSourceAsMap().get("name"))
+                .clientFn(elasticClientSupplier())
+                .searchRequestFn(() -> new SearchRequest("my-index"))
+                .mapToItemFn(hit -> (String) hit.getSourceAsMap().get("name"))
                 .build();
 
         p.readFrom(source)
@@ -136,15 +136,15 @@ public abstract class CommonElasticSourcesTest extends BaseElasticTest {
         Pipeline p = Pipeline.create();
 
         BatchSource<String> source = new ElasticSourceBuilder<String>()
-                .clientSupplier(elasticClientSupplier())
-                .searchRequestSupplier(() -> {
+                .clientFn(elasticClientSupplier())
+                .searchRequestFn(() -> {
                     SearchRequest sr = new SearchRequest("my-index");
 
                     sr.source().size(10) // needs to scroll 5 times
                       .query(matchAllQuery());
                     return sr;
                 })
-                .mapHitFn(SearchHit::getSourceAsString)
+                .mapToItemFn(SearchHit::getSourceAsString)
                 .build();
 
         p.readFrom(source)
@@ -162,9 +162,9 @@ public abstract class CommonElasticSourcesTest extends BaseElasticTest {
         Pipeline p = Pipeline.create();
 
         BatchSource<String> source = new ElasticSourceBuilder<String>()
-                .clientSupplier(elasticClientSupplier())
-                .searchRequestSupplier(() -> new SearchRequest("my-index-*"))
-                .mapHitFn(hit -> (String) hit.getSourceAsMap().get("name"))
+                .clientFn(elasticClientSupplier())
+                .searchRequestFn(() -> new SearchRequest("my-index-*"))
+                .mapToItemFn(hit -> (String) hit.getSourceAsMap().get("name"))
                 .build();
 
         p.readFrom(source)
@@ -182,9 +182,9 @@ public abstract class CommonElasticSourcesTest extends BaseElasticTest {
         Pipeline p = Pipeline.create();
 
         BatchSource<String> source = new ElasticSourceBuilder<String>()
-                .clientSupplier(elasticClientSupplier())
-                .searchRequestSupplier(() -> new SearchRequest("my-index-1"))
-                .mapHitFn(hit -> (String) hit.getSourceAsMap().get("name"))
+                .clientFn(elasticClientSupplier())
+                .searchRequestFn(() -> new SearchRequest("my-index-1"))
+                .mapToItemFn(hit -> (String) hit.getSourceAsMap().get("name"))
                 .build();
 
         p.readFrom(source)
@@ -202,10 +202,10 @@ public abstract class CommonElasticSourcesTest extends BaseElasticTest {
         Pipeline p = Pipeline.create();
 
         BatchSource<String> source = new ElasticSourceBuilder<String>()
-                .clientSupplier(elasticClientSupplier())
-                .searchRequestSupplier(() -> new SearchRequest("my-index")
+                .clientFn(elasticClientSupplier())
+                .searchRequestFn(() -> new SearchRequest("my-index")
                         .source(new SearchSourceBuilder().query(QueryBuilders.matchQuery("name", "Frantisek"))))
-                .mapHitFn(hit -> (String) hit.getSourceAsMap().get("name"))
+                .mapToItemFn(hit -> (String) hit.getSourceAsMap().get("name"))
                 .build();
 
         p.readFrom(source)
@@ -222,9 +222,9 @@ public abstract class CommonElasticSourcesTest extends BaseElasticTest {
         Pipeline p = Pipeline.create();
 
         BatchSource<String> source = new ElasticSourceBuilder<String>()
-                .clientSupplier(elasticClientSupplier())
-                .searchRequestSupplier(() -> new SearchRequest("my-index"))
-                .mapHitFn(SearchHit::getSourceAsString)
+                .clientFn(elasticClientSupplier())
+                .searchRequestFn(() -> new SearchRequest("my-index"))
+                .mapToItemFn(SearchHit::getSourceAsString)
                 .enableSlicing()
                 .build();
 
@@ -245,9 +245,9 @@ public abstract class CommonElasticSourcesTest extends BaseElasticTest {
         Pipeline p = Pipeline.create();
 
         BatchSource<String> source = new ElasticSourceBuilder<String>()
-                .clientSupplier(elasticClientSupplier())
-                .searchRequestSupplier(() -> new SearchRequest("my-index-*"))
-                .mapHitFn(SearchHit::getSourceAsString)
+                .clientFn(elasticClientSupplier())
+                .searchRequestFn(() -> new SearchRequest("my-index-*"))
+                .mapToItemFn(SearchHit::getSourceAsString)
                 .enableSlicing()
                 .build();
 

@@ -26,6 +26,7 @@ import org.elasticsearch.action.index.IndexRequest;
 import org.elasticsearch.action.search.SearchRequest;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.support.WriteRequest.RefreshPolicy;
+import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.search.SearchHit;
 import org.junit.Test;
 
@@ -43,9 +44,14 @@ public abstract class CommonElasticSinksTest extends BaseElasticTest {
     @Test
     public void given_singleDocument_whenWriteToElasticSink_then_singleDocumentInIndex() throws Exception {
         Sink<TestItem> elasticSink = new ElasticSinkBuilder<TestItem>()
-                .clientSupplier(elasticClientSupplier())
-                .bulkRequestSupplier(() -> new BulkRequest().setRefreshPolicy(RefreshPolicy.IMMEDIATE))
-                .mapItemFn(item -> new IndexRequest("my-index").source(item.asMap()))
+                .clientFn(elasticClientSupplier())
+                .bulkRequestFn(() -> new BulkRequest().setRefreshPolicy(RefreshPolicy.IMMEDIATE))
+                .mapToRequestFn(item -> new IndexRequest("my-index").source(item.asMap()))
+                .optionsFn(() -> {
+                    RequestOptions.Builder builder = RequestOptions.DEFAULT.toBuilder();
+                    builder.addHeader("Authorization", "Bearer " + TOKEN);
+                    return builder.build();
+                })
                 .build();
 
         Pipeline p = Pipeline.create();
@@ -60,8 +66,8 @@ public abstract class CommonElasticSinksTest extends BaseElasticTest {
     @Test
     public void given_batchOfDocuments_whenWriteToElasticSink_then_batchOfDocumentsInIndex() throws IOException {
         Sink<TestItem> elasticSink = new ElasticSinkBuilder<TestItem>()
-                .clientSupplier(elasticClientSupplier())
-                .mapItemFn(item -> new IndexRequest("my-index").source(item.asMap()))
+                .clientFn(elasticClientSupplier())
+                .mapToRequestFn(item -> new IndexRequest("my-index").source(item.asMap()))
                 .build();
 
         int batchSize = 10_000;

@@ -29,7 +29,7 @@ import javax.annotation.Nonnull;
  * Provides factory methods for Elasticsearch sources.
  * Alternatively you can use {@link ElasticSourceBuilder}
  *
- * @since 4.1
+ * @since 4.2
  */
 public final class ElasticSources {
 
@@ -53,8 +53,8 @@ public final class ElasticSources {
      * Uses {@link SearchHit#getSourceAsString()} as mapping function
      */
     @Nonnull
-    public static BatchSource<String> elastic(@Nonnull SupplierEx<RestHighLevelClient> clientSupplier) {
-        return elastic(clientSupplier, SearchHit::getSourceAsString);
+    public static BatchSource<String> elastic(@Nonnull SupplierEx<RestHighLevelClient> clientFn) {
+        return elastic(clientFn, SearchHit::getSourceAsString);
     }
 
     /**
@@ -62,44 +62,44 @@ public final class ElasticSources {
      * Uses {@link SearchHit#getSourceAsString()} as mapping function
      */
     @Nonnull
-    public static <T> BatchSource<T> elastic(@Nonnull FunctionEx<? super SearchHit, T> mapHitFn) {
-        return elastic(ElasticClients::client, mapHitFn);
+    public static <T> BatchSource<T> elastic(@Nonnull FunctionEx<? super SearchHit, T> mapToItemFn) {
+        return elastic(ElasticClients::client, mapToItemFn);
     }
 
     /**
      * Creates a source which queries Elasticsearch using client obtained from {@link RestHighLevelClient} supplier.
-     * Uses provided mapHitFn to map results.
+     * Uses provided mapToItemFn to map results.
      * Queries all indexes for all documents.
      *
-     * @param clientSupplier RestHighLevelClient supplier
-     * @param mapHitFn       supplier of a function mapping the result from SearchHit to a result type
-     * @param <T>            result type returned by the map function
+     * @param clientFn    RestHighLevelClient supplier
+     * @param mapToItemFn supplier of a function mapping the result from SearchHit to a result type
+     * @param <T>         result type returned by the map function
      */
     @Nonnull
     public static <T> BatchSource<T> elastic(
-            @Nonnull SupplierEx<RestHighLevelClient> clientSupplier,
-            @Nonnull FunctionEx<? super SearchHit, T> mapHitFn) {
-        return elastic(clientSupplier, SearchRequest::new, mapHitFn);
+            @Nonnull SupplierEx<RestHighLevelClient> clientFn,
+            @Nonnull FunctionEx<? super SearchHit, T> mapToItemFn) {
+        return elastic(clientFn, SearchRequest::new, mapToItemFn);
     }
 
     /**
      * Creates a source which queries Elasticsearch using client obtained from {@link RestHighLevelClient} supplier.
      *
-     * @param clientSupplier        RestHighLevelClient supplier
-     * @param searchRequestSupplier supplier of a SearchRequest used to query for documents
-     * @param mapHitFn              supplier of a function mapping the result from SearchHit to a target type
-     * @param <T>                   result type returned by the map function
+     * @param clientFn        RestHighLevelClient supplier
+     * @param searchRequestFn supplier function of a SearchRequest used to query for documents
+     * @param mapToItemFn     supplier of a function mapping the result from SearchHit to a target type
+     * @param <T>             result type returned by the map function
      */
     @Nonnull
     public static <T> BatchSource<T> elastic(
-            @Nonnull SupplierEx<RestHighLevelClient> clientSupplier,
-            @Nonnull SupplierEx<SearchRequest> searchRequestSupplier,
-            @Nonnull FunctionEx<? super SearchHit, T> mapHitFn
+            @Nonnull SupplierEx<RestHighLevelClient> clientFn,
+            @Nonnull SupplierEx<SearchRequest> searchRequestFn,
+            @Nonnull FunctionEx<? super SearchHit, T> mapToItemFn
     ) {
         return ElasticSources.<T>builder()
-                .clientSupplier(clientSupplier)
-                .searchRequestSupplier(searchRequestSupplier)
-                .mapHitFn(mapHitFn)
+                .clientFn(clientFn)
+                .searchRequestFn(searchRequestFn)
+                .mapToItemFn(mapToItemFn)
                 .build();
     }
 
