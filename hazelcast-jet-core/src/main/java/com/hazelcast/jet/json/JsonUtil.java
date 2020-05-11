@@ -19,7 +19,6 @@ package com.hazelcast.jet.json;
 import com.fasterxml.jackson.jr.annotationsupport.JacksonAnnotationExtension;
 import com.fasterxml.jackson.jr.ob.JSON;
 import com.hazelcast.core.HazelcastJsonValue;
-import com.hazelcast.function.BiFunctionEx;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.pipeline.FileSourceBuilder;
 import com.hazelcast.jet.pipeline.Sources;
@@ -166,36 +165,6 @@ public final class JsonUtil {
                     Spliterator.ORDERED | Spliterator.NONNULL);
             return StreamSupport.stream(spliterator, false);
         };
-    }
-
-    /**
-     * Returns a bi-function which takes the fileName and line as input
-     * and returns an object by converting the line to an object of
-     * given {@code type}. The function is designed to be used with
-     * {@link FileSourceBuilder#build(BiFunctionEx)} and
-     * {@link FileSourceBuilder#buildWatcher(BiFunctionEx)}.
-     * <p>
-     * See {@link Sources#json(String, Class)} and
-     * {@link Sources#jsonWatcher(String, Class)}.
-     */
-    @Nonnull
-    public static <T> BiFunctionEx<String, String, ? extends T> asJson(@Nonnull Class<T> type) {
-        return (fileName, line) -> JsonUtil.mapFrom(type, line);
-    }
-
-    /**
-     * Returns a bi-function which takes the fileName and line as input, parses
-     * the line to the {@link Map} representation of the JSON string and
-     * returns it. The function is designed to be used with
-     * {@link FileSourceBuilder#build(BiFunctionEx)} and
-     * {@link FileSourceBuilder#buildWatcher(BiFunctionEx)}.
-     * <p>
-     * See {@link Sources#json(String)} and
-     * {@link Sources#jsonWatcher(String)}.
-     */
-    @Nonnull
-    public static BiFunctionEx<String, String, Map<String, Object>> asJson() {
-        return (fileName, line) -> JsonUtil.mapFrom(line);
     }
 
     /**

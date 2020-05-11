@@ -1006,8 +1006,7 @@ public final class Sources {
      * {@link #filesBuilder(String)} along with
      * {@link JsonUtil#asMultilineJson(Class)}.
      *
-     * See {@link #filesBuilder(String)}, {@link #files(String)} and
-     * {@link JsonUtil#asJson(Class)}.
+     * See {@link #filesBuilder(String)}, {@link #files(String)}.
      *
      * @since 4.2
      */
@@ -1015,18 +1014,20 @@ public final class Sources {
     public static <T> BatchSource<T> json(@Nonnull String directory, @Nonnull Class<T> type) {
         return filesBuilder(directory)
                 .glob("*.json")
-                .build(JsonUtil.asJson(type));
+                .build((fileName, line) -> JsonUtil.mapFrom(type, line));
     }
 
     /**
      * Convenience for {@link #json(String, Class)} which converts each
      * line to the {@link Map} representation of the JSON string.
+     *
+     * @since 4.2
      */
     @Nonnull
     public static BatchSource<Map<String, Object>> json(@Nonnull String directory) {
         return filesBuilder(directory)
                 .glob("*.json")
-                .build(JsonUtil.asJson());
+                .build((fileName, line) -> JsonUtil.mapFrom(line));
     }
 
 
@@ -1078,8 +1079,7 @@ public final class Sources {
      * character at the end which gets overwritten if more text is added in the
      * editor. The best way to append is to use {@code echo text >> yourFile}.
      *
-     * See {@link #filesBuilder(String)}, {@link #fileWatcher(String)},
-     * and {@link JsonUtil#asJson(Class)}.
+     * See {@link #filesBuilder(String)}, {@link #fileWatcher(String)}.
      *
      * @since 4.2
      */
@@ -1087,18 +1087,20 @@ public final class Sources {
     public static <T> StreamSource<T> jsonWatcher(@Nonnull String watchedDirectory, @Nonnull Class<T> type) {
         return filesBuilder(watchedDirectory)
                 .glob("*.json")
-                .buildWatcher(JsonUtil.asJson(type));
+                .buildWatcher((fileName, line) -> JsonUtil.mapFrom(type, line));
     }
 
     /**
      * Convenience for {@link #jsonWatcher(String, Class)} which converts each
      * line appended to the {@link Map} representation of the JSON string.
+     *
+     * @since 4.2
      */
     @Nonnull
     public static StreamSource<Map<String, Object>> jsonWatcher(@Nonnull String watchedDirectory) {
         return filesBuilder(watchedDirectory)
                 .glob("*.json")
-                .buildWatcher(JsonUtil.asJson());
+                .buildWatcher((fileName, line) -> JsonUtil.mapFrom(line));
     }
 
     /**
