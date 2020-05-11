@@ -167,7 +167,11 @@ public final class GrpcServices {
                     callStubFn
     ) {
         return ServiceFactories.nonSharedService(
-                ctx -> new BidirectionalStreamingService<>(ctx, channelFn.get().executor(ForkJoinPool.commonPool()).build(), callStubFn),
+                ctx -> new BidirectionalStreamingService<>(
+                        ctx,
+                        channelFn.get().executor(ForkJoinPool.commonPool()).build(),
+                        callStubFn
+                ),
                 BidirectionalStreamingService::destroy
         );
     }
