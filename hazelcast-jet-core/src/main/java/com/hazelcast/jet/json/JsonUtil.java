@@ -45,10 +45,11 @@ import static java.nio.charset.StandardCharsets.UTF_8;
  * convert objects to JSON strings.
  * <p>
  * We use the lightweight JSON library `jackson-jr` to parse the given
- * input or convert the given objects to JSON string. If
+ * input or to convert the given objects to JSON string. If
  * `jackson-annotations` library present on the classpath, we register
  * {@link JacksonAnnotationExtension} to so that the JSON conversion can
- * make us of annotations.
+ * make use of <a href="https://github.com/FasterXML/jackson-annotations/wiki/Jackson-Annotations">
+ * Jackson Annotations</a>.
  *
  * @since 4.2
  */

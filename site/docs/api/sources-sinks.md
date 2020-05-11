@@ -29,7 +29,8 @@ p.readFrom(Sources.files("/home/data/web-logs"))
 ```
 
 For JSON files, the source expects each line contains a valid JSON
-string and converts it to the given object type:
+string and converts it to the given object type or to a `Map` if no
+type is specified:
 
 ```java
 Pipeline p = Pipeline.create();
@@ -48,6 +49,11 @@ p.readFrom(Sources.filesBuilder(sourceDir)
  .filter(log -> log.level().equals("ERROR"))
  .writeTo(Sinks.logger());
 ```
+
+We use the lightweight JSON library `jackson-jr` to parse the given
+input or to convert the given objects to JSON string. You can use
+[Jackson Annotations](https://github.com/FasterXML/jackson-annotations/wiki/Jackson-Annotations)
+by adding `jackson-annotations` library to the classpath.
 
 For CSV files it is also possible to use the `filesBuilder` source:
 
@@ -81,7 +87,8 @@ p.readFrom(TestSources.itemStream(100))
 ```
 
 To write JSON files, you can use `Sinks.json` or `Sinks.filesBuilder`
-with `JsonUtil.asJson` as `toStringFn` :
+with `JsonUtil.toJson` as `toStringFn`. Sink converts each item to JSON
+string and writes it as a new line to the file:
 
 ```java
 Pipeline p = Pipeline.create();
