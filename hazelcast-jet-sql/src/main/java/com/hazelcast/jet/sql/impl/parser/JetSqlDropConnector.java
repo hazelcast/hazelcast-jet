@@ -41,14 +41,19 @@ public class JetSqlDropConnector extends SqlDrop {
 
     public JetSqlDropConnector(SqlParserPos pos,
                                SqlIdentifier name,
+                               boolean ifExists,
                                boolean cascade) {
-        super(OPERATOR, pos, false);
+        super(OPERATOR, pos, ifExists);
         this.name = requireNonNull(name, "name should not be null");
         this.cascade = cascade;
     }
 
     public String name() {
         return name.getSimple();
+    }
+
+    public boolean ifExists() {
+        return ifExists;
     }
 
     public boolean cascade() {
@@ -73,6 +78,12 @@ public class JetSqlDropConnector extends SqlDrop {
         writer.keyword("FOREIGN");
         writer.keyword("DATA");
         writer.keyword("WRAPPER");
+
+        if (ifExists) {
+            writer.keyword("IF");
+            writer.keyword("EXISTS");
+        }
+
         name.unparse(writer, leftPrec, rightPrec);
 
         if (cascade) {

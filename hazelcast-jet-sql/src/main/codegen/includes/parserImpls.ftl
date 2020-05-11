@@ -38,11 +38,15 @@ SqlCreate JetSqlCreateConnectorOrTable(Span span, boolean replace) :
 SqlCreate JetSqlCreateConnector(Span span, boolean replace) :
 {
     SqlParserPos startPos = span.pos();
+    boolean ifNotExists = false;
     SqlIdentifier connectorName;
     SqlNodeList connectorOptions = SqlNodeList.EMPTY;
 }
 {
     <FOREIGN> <DATA> <WRAPPER>
+    [
+        <IF> <NOT> <EXISTS> { ifNotExists = true; }
+    ]
     connectorName = SimpleIdentifier()
     [
         <LANGUAGE> <JAVA>
@@ -55,7 +59,8 @@ SqlCreate JetSqlCreateConnector(Span span, boolean replace) :
         return new JetSqlCreateConnector(startPos.plus(getPos()),
                 connectorName,
                 connectorOptions,
-                replace);
+                replace,
+                ifNotExists);
     }
 }
 
@@ -65,12 +70,16 @@ SqlCreate JetSqlCreateConnector(Span span, boolean replace) :
 SqlCreate JetSqlCreateServer(Span span, boolean replace) :
 {
     SqlParserPos startPos = span.pos();
+    boolean ifNotExists = false;
     SqlIdentifier serverName;
     SqlIdentifier connector;
     SqlNodeList serverOptions = SqlNodeList.EMPTY;
 }
 {
     <SERVER>
+    [
+        <IF> <NOT> <EXISTS> { ifNotExists = true; }
+    ]
     serverName = SimpleIdentifier()
     <FOREIGN> <DATA> <WRAPPER>
     connector = SimpleIdentifier()
@@ -83,7 +92,8 @@ SqlCreate JetSqlCreateServer(Span span, boolean replace) :
                 serverName,
                 connector,
                 serverOptions,
-                replace);
+                replace,
+                ifNotExists);
     }
 }
 
@@ -93,6 +103,7 @@ SqlCreate JetSqlCreateServer(Span span, boolean replace) :
 SqlCreate JetSqlCreateTable(Span span, boolean replace) :
 {
     SqlParserPos startPos = span.pos();
+    boolean ifNotExists = false;
     SqlIdentifier tableName;
     SqlNodeList columns = SqlNodeList.EMPTY;
     SqlIdentifier server;
@@ -100,6 +111,9 @@ SqlCreate JetSqlCreateTable(Span span, boolean replace) :
 }
 {
     <FOREIGN> <TABLE>
+    [
+        <IF> <NOT> <EXISTS> { ifNotExists = true; }
+    ]
     tableName = SimpleIdentifier()
     columns = TableColumns()
     <SERVER>
@@ -114,7 +128,8 @@ SqlCreate JetSqlCreateTable(Span span, boolean replace) :
                 columns,
                 server,
                 tableOptions,
-                replace);
+                replace,
+                ifNotExists);
     }
 }
 
@@ -372,11 +387,15 @@ SqlDrop JetSqlDropConnectorOrTable(Span span, boolean replace) :
 SqlDrop JetSqlDropConnector(Span span, boolean replace) :
 {
     SqlParserPos startPos = span.pos();
+    boolean ifExists = false;
     SqlIdentifier connectorName;
     boolean cascade = false;
 }
 {
     <FOREIGN> <DATA> <WRAPPER>
+    [
+        <IF> <EXISTS> { ifExists = true; }
+    ]
     connectorName = SimpleIdentifier()
     [
         <CASCADE> { cascade = true; }
@@ -385,7 +404,7 @@ SqlDrop JetSqlDropConnector(Span span, boolean replace) :
     ]
     {
         return new JetSqlDropConnector(startPos.plus(getPos()),
-                connectorName, cascade);
+                connectorName, ifExists, cascade);
     }
 }
 
@@ -395,11 +414,15 @@ SqlDrop JetSqlDropConnector(Span span, boolean replace) :
 SqlDrop JetSqlDropServer(Span span, boolean replace) :
 {
     SqlParserPos startPos = span.pos();
+    boolean ifExists = false;
     SqlIdentifier serverName;
     boolean cascade = false;
 }
 {
     <SERVER>
+    [
+        <IF> <EXISTS> { ifExists = true; }
+    ]
     serverName = SimpleIdentifier()
     [
         <CASCADE> { cascade = true; }
@@ -408,7 +431,7 @@ SqlDrop JetSqlDropServer(Span span, boolean replace) :
     ]
     {
         return new JetSqlDropServer(startPos.plus(getPos()),
-                serverName, cascade);
+                serverName, ifExists, cascade);
     }
 }
 
@@ -418,14 +441,18 @@ SqlDrop JetSqlDropServer(Span span, boolean replace) :
 SqlDrop JetSqlDropTable(Span span, boolean replace) :
 {
     SqlParserPos startPos = span.pos();
+    boolean ifExists = false;
     SqlIdentifier tableName;
 }
 {
     <FOREIGN> <TABLE>
+    [
+        <IF> <EXISTS> { ifExists = true; }
+    ]
     tableName = SimpleIdentifier()
     {
         return new JetSqlDropTable(startPos.plus(getPos()),
-                tableName);
+                tableName, ifExists);
     }
 }
 

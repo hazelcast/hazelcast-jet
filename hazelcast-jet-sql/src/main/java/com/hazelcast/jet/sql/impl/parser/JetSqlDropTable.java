@@ -39,13 +39,18 @@ public class JetSqlDropTable extends SqlDrop {
     private final SqlIdentifier name;
 
     public JetSqlDropTable(SqlParserPos pos,
-                           SqlIdentifier name) {
-        super(OPERATOR, pos, false);
+                           SqlIdentifier name,
+                           boolean ifExists) {
+        super(OPERATOR, pos, ifExists);
         this.name = requireNonNull(name, "name should not be null");
     }
 
     public String name() {
         return name.getSimple();
+    }
+
+    public boolean ifExists() {
+        return ifExists;
     }
 
     @Override
@@ -65,6 +70,12 @@ public class JetSqlDropTable extends SqlDrop {
         writer.keyword("DROP");
         writer.keyword("FOREIGN");
         writer.keyword("TABLE");
+
+        if (ifExists) {
+            writer.keyword("IF");
+            writer.keyword("EXISTS");
+        }
+
         name.unparse(writer, leftPrec, rightPrec);
     }
 }

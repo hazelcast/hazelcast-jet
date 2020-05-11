@@ -46,8 +46,9 @@ public class JetSqlCreateServer extends SqlCreate {
                               SqlIdentifier name,
                               SqlIdentifier connector,
                               SqlNodeList options,
-                              boolean replace) {
-        super(OPERATOR, pos, replace, false);
+                              boolean replace,
+                              boolean ifNotExists) {
+        super(OPERATOR, pos, replace, ifNotExists);
         this.name = requireNonNull(name, "name should not be null");
         this.connector = requireNonNull(connector, "connector should not be null");
         this.options = requireNonNull(options, "options should not be null");
@@ -55,6 +56,10 @@ public class JetSqlCreateServer extends SqlCreate {
 
     public String name() {
         return name.getSimple();
+    }
+
+    public boolean ifNotExists() {
+        return ifNotExists;
     }
 
     public Stream<SqlOption> options() {
@@ -80,7 +85,20 @@ public class JetSqlCreateServer extends SqlCreate {
     @Override
     public void unparse(SqlWriter writer, int leftPrec, int rightPrec) {
         writer.keyword("CREATE");
+
+        if (getReplace()) {
+            writer.keyword("OR");
+            writer.keyword("REPLACE");
+        }
+
         writer.keyword("SERVER");
+
+        if (ifNotExists) {
+            writer.keyword("IF");
+            writer.keyword("NOT");
+            writer.keyword("EXISTS");
+        }
+
         name.unparse(writer, leftPrec, rightPrec);
 
         writer.newlineAndIndent();

@@ -48,8 +48,9 @@ public class JetSqlCreateTable extends SqlCreate {
                              SqlNodeList columns,
                              SqlIdentifier server,
                              SqlNodeList options,
-                             boolean replace) {
-        super(OPERATOR, pos, replace, false);
+                             boolean replace,
+                             boolean ifNotExists) {
+        super(OPERATOR, pos, replace, ifNotExists);
         this.name = requireNonNull(name, "name should not be null");
         this.columns = requireNonNull(columns, "columns should not be null");
         this.server = requireNonNull(server, "server should not be null");
@@ -58,6 +59,10 @@ public class JetSqlCreateTable extends SqlCreate {
 
     public String name() {
         return name.getSimple();
+    }
+
+    public boolean ifNotExists() {
+        return ifNotExists;
     }
 
     public Stream<SqlTableColumn> columns() {
@@ -87,8 +92,21 @@ public class JetSqlCreateTable extends SqlCreate {
     @Override
     public void unparse(SqlWriter writer, int leftPrec, int rightPrec) {
         writer.keyword("CREATE");
+
+        if (getReplace()) {
+            writer.keyword("OR");
+            writer.keyword("REPLACE");
+        }
+
         writer.keyword("FOREIGN");
         writer.keyword("TABLE");
+
+        if (ifNotExists) {
+            writer.keyword("IF");
+            writer.keyword("NOT");
+            writer.keyword("EXISTS");
+        }
+
         name.unparse(writer, leftPrec, rightPrec);
 
         SqlWriter.Frame frame = writer.startList("(", ")");
