@@ -985,9 +985,9 @@ public final class Sources {
     }
 
     /**
-     * A source to read all files in a directory in a batch way. The
-     * source treats each line as a JSON string and converts each line
-     * to an object of given type.
+     * A source to read all files with a `.json` extension in a directory in a
+     * batch way. The source treats each line as a JSON string and converts
+     * each line to an object of given type.
      * <p>
      * This method is a shortcut for: <pre>{@code
      *   filesBuilder(directory)
@@ -1046,9 +1046,9 @@ public final class Sources {
     }
 
     /**
-     * A source to stream lines added to files in a directory. This is a
-     * streaming source, it will watch directory and emit objects of given
-     * {@code type} by converting each line as they are
+     * A source to stream lines added to files with a `.json` extension in a
+     * directory. This is a streaming source, it will watch directory and emit
+     * objects of given {@code type} by converting each line as they are
      * appended to files in that directory.
      * <p>
      * This method is a shortcut for: <pre>{@code

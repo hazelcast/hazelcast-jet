@@ -951,7 +951,7 @@ public final class Sinks {
     /**
      * Convenience for {@link #filesBuilder} with the UTF-8 charset and with
      * overwriting of existing files. The sink converts each item to a JSON
-     * string.
+     * string adds it to the file as a line.
      */
     @Nonnull
     public static <T> Sink<T> json(@Nonnull String directoryName) {
