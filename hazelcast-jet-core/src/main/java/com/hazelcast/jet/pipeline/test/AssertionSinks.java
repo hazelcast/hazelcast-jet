@@ -48,13 +48,13 @@ public final class AssertionSinks {
     }
 
     /**
-     * Asserts that the previous stage emitted the exact sequence of expected
-     * items and nothing else. If the assertion fails, the job will fail with an
-     * {@link AssertionError} with the given message.
+     * Asserts that the previous stage emitted the exact sequence of
+     * expected items and nothing else. If the assertion fails, the job
+     * will fail with an {@link AssertionError} with the given message.
      * <p>
-     * Since Jet jobs are distributed, input from multiple upstream processors
-     * is merged in a non-deterministic way. Therefore this assertion is usable
-     * only for testing of non-distributed sources.
+     * Since Jet jobs are distributed, input from multiple upstream
+     * processors is merged in a non-deterministic way. Therefore this
+     * assertion is usable only for testing of non-distributed sources.
      * <p>
      * Not usable in streaming jobs - use {@link #assertOrderedEventually}.
      */
@@ -65,13 +65,13 @@ public final class AssertionSinks {
     }
 
     /**
-     * Asserts that the previous stage emitted the exact sequence of expected
-     * items and nothing else. If the assertion fails, the job will fail with an
-     * {@link AssertionError}.
+     * Asserts that the previous stage emitted the exact sequence of
+     * expected items and nothing else. If the assertion fails, the job
+     * will fail with an {@link AssertionError}.
      * <p>
-     * Since Jet jobs are distributed, input from multiple upstream processors
-     * is merged in a non-deterministic way. Therefore this assertion is usable
-     * only for testing of non-distributed sources.
+     * Since Jet jobs are distributed, input from multiple upstream
+     * processors is merged in a non-deterministic way. Therefore this
+     * assertion is usable only for testing of non-distributed sources.
      * <p>
      * Not usable in streaming jobs - use {@link #assertOrderedEventually}.
      */
@@ -81,9 +81,9 @@ public final class AssertionSinks {
     }
 
     /**
-     * Asserts that the previous stage emitted the expected items in any order,
-     * but nothing else. If the assertion fails, the job will fail with an
-     * {@link AssertionError} with the given message.
+     * Asserts that the previous stage emitted the expected items in any
+     * order, but nothing else. If the assertion fails, the job will
+     * fail with an {@link AssertionError} with the given message.
      * <p>
      * Not usable in streaming jobs - use {@link #assertAnyOrderEventually}.
      */
@@ -98,9 +98,9 @@ public final class AssertionSinks {
     }
 
     /**
-     * Asserts that the previous stage emitted the expected items in any order,
-     * but nothing else. If the assertion fails, the job will fail with an
-     * {@link AssertionError}.
+     * Asserts that the previous stage emitted the expected items in any
+     * order, but nothing else. If the assertion fails, the job will
+     * fail with an {@link AssertionError}.
      * <p>
      * Not usable in streaming jobs - use {@link #assertAnyOrderEventually}.
      */
@@ -114,9 +114,9 @@ public final class AssertionSinks {
     }
 
     /**
-     * Asserts that the previous stage emitted all of the given items in any order.
-     * If the assertion fails, the job will fail with a {@link AssertionError} with
-     * the given message.
+     * Asserts that the previous stage emitted all of the given items in
+     * any order. If the assertion fails, the job will fail with a
+     * {@link AssertionError} with the given message.
      */
     @Nonnull
     public static <T> Sink<T> assertContains(@Nullable String message, @Nonnull Collection<? extends T> expected) {
@@ -130,9 +130,10 @@ public final class AssertionSinks {
     }
 
     /**
-     * Collects all the received items in a list and once the upstream stage is
-     * completed it executes the assertion supplied by {@code assertFn}. If no
-     * items were collected, it will be called with empty list.
+     * Collects all the received items in a list and once the upstream
+     * stage is completed it executes the assertion supplied by
+     * {@code assertFn}. If no items were collected, it will be called
+     * with empty list.
      * <p>
      * Not usable in streaming jobs - use {@link #assertCollectedEventually}.
      *
@@ -148,7 +149,7 @@ public final class AssertionSinks {
 
     /**
      * Asserts that the previous stage emitted the exact sequence of
-     * expected items and nothing else.
+     * expected items.
      * <p>
      * Is just a wrapper around {@link #assertCollectedEventually(int, ConsumerEx)},
      * providing an {@code acceptFn} for doing the order-sensitive check.
@@ -165,12 +166,13 @@ public final class AssertionSinks {
     }
 
     /**
-     * Asserts that the previous stage emitted the expected items in any order,
-     * but nothing else.
+     * Asserts that the previous stage emitted the expected items in any
+     * order.
      * <p>
-     * Is just a wrapper around {@link #assertCollectedEventually(int, ConsumerEx)},
-     * providing an {@code acceptFn} for doing the order-insensitive check.
-     * Consult that javadoc for further details on how to use.
+     * Is just a wrapper around {@link #assertCollectedEventually(int,
+     * ConsumerEx)}, providing an {@code acceptFn} for doing the
+     * order-insensitive check. Consult that javadoc for further details
+     * on how to use.
      */
     @Nonnull
     public static <T> Sink<T> assertAnyOrderEventually(
@@ -187,18 +189,19 @@ public final class AssertionSinks {
     }
 
     /**
-     * Collects all the received items into a list and runs the {@code assertFn}
-     * every time a new item is received. An {@link AssertionError} thrown from
-     * the {@code assertFn} will be ignored until {@code timeoutSeconds} have
-     * passed, after which the last {@code AssertionError} will be rethrown.
-     * If {@code assertFn} throws any other exception, it will be rethrown
-     * immediately.
+     * Collects all the received items into a list and runs the
+     * {@code assertFn} every time a new item is received. An
+     * {@link AssertionError} thrown from the {@code assertFn} will be
+     * ignored until {@code timeoutSeconds} have passed, after which the
+     * last {@code AssertionError} will be rethrown. If {@code assertFn}
+     * throws any other exception, it will be rethrown immediately.
      * <p>
-     * When {@code assertFn} completes without any error, the sink will throw
-     * an {@link AssertionCompletedException} to indicate success. Exception is
-     * used to terminate the job so that you can {@code join()} it. This also
-     * requires that there are no other assertions in the job as this one can
-     * complete the job before the other ones succeeded.
+     * When {@code assertFn} completes without any error, the sink will
+     * throw an {@link AssertionCompletedException} to indicate success.
+     * Exception is used to terminate the job so that you can
+     * {@code join()} it. This also requires that there are no other
+     * assertions in the job as this one can complete the job before the
+     * other ones succeeded.
      * <p>
      * The assertion can be validated as follows:
      * <pre>{@code
