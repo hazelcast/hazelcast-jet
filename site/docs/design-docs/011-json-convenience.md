@@ -123,7 +123,54 @@ JSON_JR = builder.build();
 
 ### JSON File Source
 
+We've used `FileSourceBuilder` to create a JSON File Source. The source
+reads each line and converts it to the given type or to a `Map` if no
+type is specified. The source has `*.json` as `glob` parameter which
+filters out all files without `.json` extension.
+
+```java
+public static <T> BatchSource<T> json(@Nonnull String directory, @Nonnull Class<T> type) {
+    return filesBuilder(directory)
+            .glob("*.json")
+            .build(JsonUtil.asJson(type));
+}
+```
+
+We've added a streaming source for JSON files which again uses the
+`FileSourceBuilder`. The source watches the changes on the files and
+converts each line appended to the given type or to a `Map` if no type
+is specified. The source has `*.json` as `glob` parameter which filters
+out all files without `.json` extension.
+
+```java
+public static <T> StreamSource<T> jsonWatcher(@Nonnull String watchedDirectory, @Nonnull Class<T> type) {
+    return filesBuilder(watchedDirectory)
+            .glob("*.json")
+            .buildWatcher(JsonUtil.asJson(type));
+}
+```
+
+Both of these sources expects a valid JSON string at each line, if you
+have a file with json strings spanning multiple lines then you need to
+build a source using `FileSourceBuilder` yourself.
+
+```java
+Sources.filesBuilder(directory)
+        .glob(".json")
+        .build(JsonUtil.asMultilineJson(type));
+```
+
 ### JSON File Sink
+
+We've used `FileSinkBuilder` to create a JSON file sink. The sink
+builder expects a `toStringFn` which converts each item to a string and
+writes it to as a new line:
+
+```java
+public static <T> Sink<T> json(@Nonnull String directoryName) {
+    return Sinks.<T>filesBuilder(directoryName).toStringFn(JsonUtil::toJson).build();
+}
+```
 
 ### IMap Sink with JSON value
 
