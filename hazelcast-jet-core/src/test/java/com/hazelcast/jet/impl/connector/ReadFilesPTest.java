@@ -122,10 +122,10 @@ public class ReadFilesPTest extends SimpleTestInClusterSupport {
     public void testJsonFiles_when_asObject_thenObjects() throws IOException {
         Pipeline p = pipelineJson();
 
-        File file1 = new File(directory, randomName());
+        File file1 = new File(directory, randomName() + ".json");
         appendToFile(file1, "{\"name\": \"hello world\", \"age\": 5, \"status\": true}",
                 "{\"name\": \"hello world\", \"age\": 5, \"status\": true}");
-        File file2 = new File(directory, randomName());
+        File file2 = new File(directory, randomName() + ".json");
         appendToFile(file2, "{\"name\": \"hello jupiter\", \"age\": 8, \"status\": false}",
                 "{\"name\": \"hello jupiter\", \"age\": 8, \"status\": false}");
 
