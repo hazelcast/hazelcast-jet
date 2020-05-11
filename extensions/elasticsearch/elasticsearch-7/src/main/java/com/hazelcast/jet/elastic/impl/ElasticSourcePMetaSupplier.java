@@ -66,21 +66,21 @@ public class ElasticSourcePMetaSupplier<T> implements ProcessorMetaSupplier {
 
     @Override
     public void init(@Nonnull Context context) throws Exception {
-        ElasticCatClient catClient = new ElasticCatClient(configuration.clientFn().get().getLowLevelClient());
-        List<Shard> shards = catClient.shards(configuration.searchRequestFn().get().indices());
+        try (ElasticCatClient catClient = new ElasticCatClient(configuration.clientFn().get().getLowLevelClient())) {
+            List<Shard> shards = catClient.shards(configuration.searchRequestFn().get().indices());
 
-        if (configuration.isCoLocatedReadingEnabled()) {
-            Set<String> addresses = context
-                    .jetInstance().getCluster().getMembers().stream()
-                    .map(m -> uncheckCall((() -> m.getAddress().getInetAddress().getHostAddress())))
-                    .collect(toSet());
-            assignedShards = assignShards(shards, addresses);
-        } else {
-            ownerAddress = context.jetInstance().getHazelcastInstance().getPartitionService()
-                                  .getPartition(context.jobId()).getOwner().getAddress();
-            assignedShards = emptyMap();
+            if (configuration.isCoLocatedReadingEnabled()) {
+                Set<String> addresses = context
+                        .jetInstance().getCluster().getMembers().stream()
+                        .map(m -> uncheckCall((() -> m.getAddress().getInetAddress().getHostAddress())))
+                        .collect(toSet());
+                assignedShards = assignShards(shards, addresses);
+            } else {
+                ownerAddress = context.jetInstance().getHazelcastInstance().getPartitionService()
+                                      .getPartition(context.jobId()).getOwner().getAddress();
+                assignedShards = emptyMap();
+            }
         }
-
     }
 
     static Map<String, List<Shard>> assignShards(Collection<Shard> shards, Collection<String> addresses) {

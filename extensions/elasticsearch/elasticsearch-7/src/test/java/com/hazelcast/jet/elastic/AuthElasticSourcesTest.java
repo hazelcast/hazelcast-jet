@@ -25,7 +25,7 @@ import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import org.elasticsearch.client.ResponseException;
-import org.elasticsearch.client.RestHighLevelClient;
+import org.elasticsearch.client.RestClientBuilder;
 import org.junit.After;
 import org.junit.Test;
 import org.testcontainers.elasticsearch.ElasticsearchContainer;
@@ -61,7 +61,7 @@ public class AuthElasticSourcesTest extends BaseElasticTest {
     }
 
     @Override
-    protected SupplierEx<RestHighLevelClient> elasticClientSupplier() {
+    protected SupplierEx<RestClientBuilder> elasticClientSupplier() {
         ElasticsearchContainer container = elastic.get();
         String containerIp = container.getContainerIpAddress();
         Integer port = container.getMappedPort(PORT);

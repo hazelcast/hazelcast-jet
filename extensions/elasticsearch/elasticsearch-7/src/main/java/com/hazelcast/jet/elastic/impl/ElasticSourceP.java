@@ -16,7 +16,6 @@
 
 package com.hazelcast.jet.elastic.impl;
 
-import com.hazelcast.function.ConsumerEx;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.Traverser;
@@ -140,7 +139,6 @@ final class ElasticSourceP<T> extends AbstractProcessor {
         private final RestHighLevelClient client;
         private final FunctionEx<? super ActionRequest, RequestOptions> optionsFn;
         private final String scrollKeepAlive;
-        private final ConsumerEx<? super RestHighLevelClient> destroyFn;
 
         private SearchHits hits;
         private int nextHit;
@@ -150,7 +148,6 @@ final class ElasticSourceP<T> extends AbstractProcessor {
                                ILogger logger) {
             this.client = client;
             this.optionsFn = configuration.optionsFn();
-            this.destroyFn = configuration.destroyFn();
             this.scrollKeepAlive = configuration.scrollKeepAlive();
             this.logger = logger;
 
@@ -203,7 +200,7 @@ final class ElasticSourceP<T> extends AbstractProcessor {
             }
 
             try {
-                destroyFn.accept(client);
+                client.close();
             } catch (Exception e) { // IOException on client.close()
                 logger.fine("Could not close client", e);
             }

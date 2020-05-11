@@ -20,6 +20,7 @@ import com.hazelcast.function.FunctionEx;
 import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.pipeline.BatchSource;
 import org.elasticsearch.action.search.SearchRequest;
+import org.elasticsearch.client.RestClientBuilder;
 import org.elasticsearch.client.RestHighLevelClient;
 import org.elasticsearch.search.SearchHit;
 
@@ -53,7 +54,7 @@ public final class ElasticSources {
      * Uses {@link SearchHit#getSourceAsString()} as mapping function
      */
     @Nonnull
-    public static BatchSource<String> elastic(@Nonnull SupplierEx<RestHighLevelClient> clientFn) {
+    public static BatchSource<String> elastic(@Nonnull SupplierEx<RestClientBuilder> clientFn) {
         return elastic(clientFn, SearchHit::getSourceAsString);
     }
 
@@ -77,7 +78,7 @@ public final class ElasticSources {
      */
     @Nonnull
     public static <T> BatchSource<T> elastic(
-            @Nonnull SupplierEx<RestHighLevelClient> clientFn,
+            @Nonnull SupplierEx<RestClientBuilder> clientFn,
             @Nonnull FunctionEx<? super SearchHit, T> mapToItemFn) {
         return elastic(clientFn, SearchRequest::new, mapToItemFn);
     }
@@ -92,7 +93,7 @@ public final class ElasticSources {
      */
     @Nonnull
     public static <T> BatchSource<T> elastic(
-            @Nonnull SupplierEx<RestHighLevelClient> clientFn,
+            @Nonnull SupplierEx<RestClientBuilder> clientFn,
             @Nonnull SupplierEx<SearchRequest> searchRequestFn,
             @Nonnull FunctionEx<? super SearchHit, T> mapToItemFn
     ) {

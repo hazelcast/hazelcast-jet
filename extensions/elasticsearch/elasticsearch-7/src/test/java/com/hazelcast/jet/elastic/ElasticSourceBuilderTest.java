@@ -21,7 +21,6 @@ import com.hazelcast.jet.pipeline.BatchSource;
 import org.apache.http.HttpHost;
 import org.elasticsearch.action.search.SearchRequest;
 import org.elasticsearch.client.RestClient;
-import org.elasticsearch.client.RestHighLevelClient;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Test;
 
@@ -40,7 +39,7 @@ public class ElasticSourceBuilderTest {
     @NotNull
     private ElasticSourceBuilder<Object> builderWithRequiredParams() {
         return new ElasticSourceBuilder<>()
-                .clientFn(() -> new RestHighLevelClient(RestClient.builder(new HttpHost("localhost"))))
+                .clientFn(() -> RestClient.builder(new HttpHost("localhost")))
                 .searchRequestFn(SearchRequest::new)
                 .mapToItemFn(FunctionEx.identity());
     }
@@ -51,25 +50,25 @@ public class ElasticSourceBuilderTest {
                 .searchRequestFn(SearchRequest::new)
                 .mapToItemFn(FunctionEx.identity())
                 .build())
-                .hasMessage("clientSupplier must be set");
+                .hasMessage("clientFn must be set");
     }
 
     @Test
     public void when_createElasticSourceWithoutSearchRequestSupplier_then_throwException() {
         assertThatThrownBy(() -> new ElasticSourceBuilder<>()
-                .clientFn(() -> new RestHighLevelClient(RestClient.builder(new HttpHost("localhost"))))
+                .clientFn(() -> RestClient.builder(new HttpHost("localhost")))
                 .mapToItemFn(FunctionEx.identity())
                 .build())
-                .hasMessage("searchRequestSupplier must be set");
+                .hasMessage("searchRequestFn must be set");
     }
 
     @Test
     public void when_createElasticSourceWithoutMapHitFnSupplier_then_throwException() {
         assertThatThrownBy(() -> new ElasticSourceBuilder<>()
-                .clientFn(() -> new RestHighLevelClient(RestClient.builder(new HttpHost("localhost"))))
+                .clientFn(() -> RestClient.builder(new HttpHost("localhost")))
                 .searchRequestFn(SearchRequest::new)
                 .build())
-                .hasMessage("mapHitFn must be set");
+                .hasMessage("mapToItemFn must be set");
     }
 
 }

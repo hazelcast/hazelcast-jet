@@ -102,7 +102,6 @@ public class ElasticSourcePTest {
         RestHighLevelClient client = mockClient;
         ElasticSourceConfiguration<String> configuration = new ElasticSourceConfiguration<String>(
                 () -> client,
-                RestHighLevelClient::close,
                 () -> new SearchRequest("*"),
                 optionsFn,
                 SearchHit::getSourceAsString,

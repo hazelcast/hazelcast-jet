@@ -21,6 +21,7 @@ import org.apache.http.auth.UsernamePasswordCredentials;
 import org.apache.http.client.CredentialsProvider;
 import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.elasticsearch.client.RestClient;
+import org.elasticsearch.client.RestClientBuilder;
 import org.elasticsearch.client.RestHighLevelClient;
 
 import javax.annotation.Nonnull;
@@ -41,7 +42,7 @@ public final class ElasticClients {
      * Create Elastic client for an instance running on localhost on default port (9200)
      */
     @Nonnull
-    public static RestHighLevelClient client() {
+    public static RestClientBuilder client() {
         return client("localhost", DEFAULT_PORT);
     }
 
@@ -49,10 +50,8 @@ public final class ElasticClients {
      * Create Elastic client for an instance running on given host and port
      */
     @Nonnull
-    public static RestHighLevelClient client(@Nonnull String hostname, int port) {
-        return new RestHighLevelClient(
-                RestClient.builder(new HttpHost(hostname, port))
-        );
+    public static RestClientBuilder client(@Nonnull String hostname, int port) {
+        return RestClient.builder(new HttpHost(hostname, port));
     }
 
     /**
@@ -64,7 +63,7 @@ public final class ElasticClients {
      * </pre>
      */
     @Nonnull
-    public static RestHighLevelClient client(
+    public static RestClientBuilder client(
             @Nonnull String username,
             @Nonnull String password,
             @Nonnull String hostname,
@@ -72,10 +71,9 @@ public final class ElasticClients {
     ) {
         CredentialsProvider credentialsProvider = new BasicCredentialsProvider();
         credentialsProvider.setCredentials(ANY, new UsernamePasswordCredentials(username, password));
-        return new RestHighLevelClient(
-                RestClient.builder(new HttpHost(hostname, port))
-                          .setHttpClientConfigCallback(httpClientBuilder ->
-                                  httpClientBuilder.setDefaultCredentialsProvider(credentialsProvider))
-        );
+        return RestClient.builder(new HttpHost(hostname, port))
+                         .setHttpClientConfigCallback(httpClientBuilder ->
+                                 httpClientBuilder.setDefaultCredentialsProvider(credentialsProvider)
+                         );
     }
 }

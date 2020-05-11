@@ -16,7 +16,6 @@
 
 package com.hazelcast.jet.elastic;
 
-import com.hazelcast.function.ConsumerEx;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.function.SupplierEx;
 import org.elasticsearch.action.ActionRequest;
@@ -32,8 +31,7 @@ public class ElasticSourceConfiguration<T> implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
-    private final SupplierEx<? extends RestHighLevelClient> clientFn;
-    private final ConsumerEx<? super RestHighLevelClient> destroyFn;
+    private final SupplierEx<RestHighLevelClient> clientFn;
     private final SupplierEx<SearchRequest> searchRequestFn;
     private final FunctionEx<? super ActionRequest, RequestOptions> optionsFn;
     private final FunctionEx<? super SearchHit, T> mapToItemFn;
@@ -42,13 +40,14 @@ public class ElasticSourceConfiguration<T> implements Serializable {
     private final String scrollKeepAlive;
     private final int preferredLocalParallelism;
 
-    public ElasticSourceConfiguration(SupplierEx<? extends RestHighLevelClient> clientFn, ConsumerEx<?
-            super RestHighLevelClient> destroyFn, SupplierEx<SearchRequest> searchRequestFn, FunctionEx<?
-            super ActionRequest, RequestOptions> optionsFn, FunctionEx<? super SearchHit, T> mapToItemFn,
-                                      boolean slicing, boolean coLocatedReading, String scrollKeepAlive,
-                                      int preferredLocalParallelism) {
+    public ElasticSourceConfiguration(SupplierEx<RestHighLevelClient> clientFn,
+                                      SupplierEx<SearchRequest> searchRequestFn,
+                                      FunctionEx<? super ActionRequest, RequestOptions> optionsFn,
+                                      FunctionEx<? super SearchHit, T> mapToItemFn,
+                                      boolean slicing, boolean coLocatedReading,
+                                      String scrollKeepAlive, int preferredLocalParallelism) {
+
         this.clientFn = clientFn;
-        this.destroyFn = destroyFn;
         this.searchRequestFn = searchRequestFn;
         this.optionsFn = optionsFn;
         this.mapToItemFn = mapToItemFn;
@@ -59,16 +58,9 @@ public class ElasticSourceConfiguration<T> implements Serializable {
     }
 
     @Nonnull
-    public SupplierEx<? extends RestHighLevelClient> clientFn() {
+    public SupplierEx<RestHighLevelClient> clientFn() {
         return clientFn;
     }
-
-
-    @Nonnull
-    public ConsumerEx<? super RestHighLevelClient> destroyFn() {
-        return destroyFn;
-    }
-
 
     @Nonnull
     public SupplierEx<SearchRequest> searchRequestFn() {

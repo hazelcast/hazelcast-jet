@@ -16,16 +16,15 @@
 
 package com.hazelcast.jet.elastic;
 
-import com.hazelcast.function.ConsumerEx;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.elastic.impl.ElasticSourcePMetaSupplier;
 import com.hazelcast.jet.pipeline.BatchSource;
-import com.hazelcast.jet.pipeline.SinkBuilder;
 import com.hazelcast.jet.pipeline.Sources;
 import org.elasticsearch.action.ActionRequest;
 import org.elasticsearch.action.search.SearchRequest;
 import org.elasticsearch.client.RequestOptions;
+import org.elasticsearch.client.RestClientBuilder;
 import org.elasticsearch.client.RestHighLevelClient;
 import org.elasticsearch.search.SearchHit;
 
@@ -57,8 +56,7 @@ public class ElasticSourceBuilder<T> {
 
     private static final String DEFAULT_NAME = "elastic";
 
-    private SupplierEx<? extends RestHighLevelClient> clientFn;
-    private ConsumerEx<? super RestHighLevelClient> destroyFn = RestHighLevelClient::close;
+    private SupplierEx<RestClientBuilder> clientFn;
     private SupplierEx<SearchRequest> searchRequestFn;
     private FunctionEx<? super ActionRequest, RequestOptions> optionsFn = request -> RequestOptions.DEFAULT;
     private FunctionEx<? super SearchHit, T> mapToItemFn;
@@ -78,12 +76,18 @@ public class ElasticSourceBuilder<T> {
         requireNonNull(searchRequestFn, "searchRequestFn must be set");
         requireNonNull(mapToItemFn, "mapToItemFn must be set");
 
-        ElasticSourceConfiguration<T> configuration = new ElasticSourceConfiguration<T>(
-                clientFn, destroyFn, searchRequestFn, optionsFn, mapToItemFn, slicing, coLocatedReading,
+        ElasticSourceConfiguration<T> configuration = new ElasticSourceConfiguration<>(
+                restHighLevelClientFn(clientFn),
+                searchRequestFn, optionsFn, mapToItemFn, slicing, coLocatedReading,
                 scrollKeepAlive, preferredLocalParallelism
         );
         ElasticSourcePMetaSupplier<T> metaSupplier = new ElasticSourcePMetaSupplier<T>(configuration);
         return Sources.batchFromProcessor(DEFAULT_NAME, metaSupplier);
+    }
+
+    // Don't inline - it would capture this.clientFn and would need to serialize whole builder instance
+    private SupplierEx<RestHighLevelClient> restHighLevelClientFn(SupplierEx<RestClientBuilder> clientFn) {
+        return () -> new RestHighLevelClient(clientFn.get());
     }
 
     /**
@@ -100,19 +104,8 @@ public class ElasticSourceBuilder<T> {
      * @param clientFn supplier function returning configured Elasticsearch REST client
      */
     @Nonnull
-    public ElasticSourceBuilder<T> clientFn(@Nonnull SupplierEx<? extends RestHighLevelClient> clientFn) {
+    public ElasticSourceBuilder<T> clientFn(@Nonnull SupplierEx<RestClientBuilder> clientFn) {
         this.clientFn = checkNonNullAndSerializable(clientFn, "clientFn");
-        return this;
-    }
-
-    /**
-     * Set the destroy function called on completion, defaults to {@link RestHighLevelClient#close()}
-     *
-     * @param destroyFn destroy function
-     */
-    @Nonnull
-    public ElasticSourceBuilder<T> destroyFn(@Nonnull ConsumerEx<? super RestHighLevelClient> destroyFn) {
-        this.destroyFn = checkNonNullAndSerializable(destroyFn, "destroyFn");
         return this;
     }
 
@@ -165,10 +158,11 @@ public class ElasticSourceBuilder<T> {
      * }</pre>
      *
      * @param optionsFn function that provides {@link RequestOptions}
-     * @see
-     * <a href="https://www.elastic.co/guide/en/elasticsearch/client/java-rest/current/java-rest-low-usage-requests.html#java-rest-low-usage-request-options">
+     * @see <a
+     * href="https://www.elastic.co/guide/en/elasticsearch/client/java-rest/current/java-rest-low-usage-requests.html">
      * RequestOptions</a> in Elastic documentation
-     */    @Nonnull
+     */
+    @Nonnull
     public ElasticSourceBuilder<T> optionsFn(@Nonnull FunctionEx<? super ActionRequest, RequestOptions> optionsFn) {
         this.optionsFn = checkSerializable(optionsFn, "optionsFn");
         return this;

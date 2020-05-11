@@ -30,6 +30,7 @@ import org.elasticsearch.client.Response;
 import org.elasticsearch.client.RestClient;
 
 import javax.annotation.Nonnull;
+import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
@@ -46,7 +47,7 @@ import static java.util.stream.Collectors.toMap;
 /**
  * Wrapper around {@link RestClient} access for /_cat/* endpoints
  */
-public class ElasticCatClient {
+public class ElasticCatClient implements Closeable {
 
     private static final ILogger LOG = Logger.getLogger(ElasticCatClient.class);
 
@@ -167,6 +168,11 @@ public class ElasticCatClient {
         } else {
             return empty();
         }
+    }
+
+    @Override
+    public void close() throws IOException {
+        client.close();
     }
 
     public static class Master {

@@ -16,7 +16,6 @@
 
 package com.hazelcast.jet.elastic;
 
-import com.hazelcast.function.ConsumerEx;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.pipeline.Sink;
@@ -28,6 +27,7 @@ import org.elasticsearch.action.DocWriteRequest;
 import org.elasticsearch.action.bulk.BulkRequest;
 import org.elasticsearch.action.bulk.BulkResponse;
 import org.elasticsearch.client.RequestOptions;
+import org.elasticsearch.client.RestClientBuilder;
 import org.elasticsearch.client.RestHighLevelClient;
 
 import javax.annotation.Nonnull;
@@ -64,8 +64,7 @@ public class ElasticSinkBuilder<T> implements Serializable {
 
     private static final String DEFAULT_NAME = "elastic";
 
-    private SupplierEx<? extends RestHighLevelClient> clientFn;
-    private ConsumerEx<? super RestHighLevelClient> destroyFn = RestHighLevelClient::close;
+    private SupplierEx<RestClientBuilder> clientFn;
     private SupplierEx<BulkRequest> bulkRequestFn = BulkRequest::new;
     private FunctionEx<? super T, ? extends DocWriteRequest<?>> mapToRequestFn;
     private FunctionEx<? super ActionRequest, RequestOptions> optionsFn = (request) -> RequestOptions.DEFAULT;
@@ -85,19 +84,8 @@ public class ElasticSinkBuilder<T> implements Serializable {
      * @param clientFn supplier function returning configured Elasticsearch REST client
      */
     @Nonnull
-    public ElasticSinkBuilder<T> clientFn(@Nonnull SupplierEx<? extends RestHighLevelClient> clientFn) {
+    public ElasticSinkBuilder<T> clientFn(@Nonnull SupplierEx<RestClientBuilder> clientFn) {
         this.clientFn = checkNonNullAndSerializable(clientFn, "clientFn");
-        return this;
-    }
-
-    /**
-     * Set the destroy function called on completion, defaults to {@link RestHighLevelClient#close()}
-     *
-     * @param destroyFn destroy function
-     */
-    @Nonnull
-    public ElasticSinkBuilder<T> destroyFn(@Nonnull ConsumerEx<? super RestHighLevelClient> destroyFn) {
-        this.destroyFn = checkNonNullAndSerializable(destroyFn, "destroyFn");
         return this;
     }
 
@@ -135,7 +123,9 @@ public class ElasticSinkBuilder<T> implements Serializable {
      *                       {@link org.elasticsearch.action.delete.DeleteRequest}
      */
     @Nonnull
-    public ElasticSinkBuilder<T> mapToRequestFn(@Nonnull FunctionEx<? super T, ? extends DocWriteRequest<?>> mapToRequestFn) {
+    public ElasticSinkBuilder<T> mapToRequestFn(
+            @Nonnull FunctionEx<? super T, ? extends DocWriteRequest<?>> mapToRequestFn
+    ) {
         this.mapToRequestFn = checkNonNullAndSerializable(mapToRequestFn, "mapToRequestFn");
         return this;
     }
@@ -155,8 +145,8 @@ public class ElasticSinkBuilder<T> implements Serializable {
      * }</pre>
      *
      * @param optionsFn function that provides {@link RequestOptions}
-     * @see
-     * <a href="https://www.elastic.co/guide/en/elasticsearch/client/java-rest/current/java-rest-low-usage-requests.html#java-rest-low-usage-request-options">
+     * @see <a
+     * href="https://www.elastic.co/guide/en/elasticsearch/client/java-rest/current/java-rest-low-usage-requests.html">
      * RequestOptions</a> in Elastic documentation
      */
     @Nonnull
@@ -184,8 +174,8 @@ public class ElasticSinkBuilder<T> implements Serializable {
 
         return SinkBuilder
                 .sinkBuilder(DEFAULT_NAME, ctx ->
-                        new BulkContext(clientFn.get(), bulkRequestFn,
-                                optionsFn, destroyFn, ctx.logger()))
+                        new BulkContext(new RestHighLevelClient(clientFn.get()), bulkRequestFn,
+                                optionsFn, ctx.logger()))
                 .<T>receiveFn((bulkContext, item) -> bulkContext.add(mapToRequestFn.apply(item)))
                 .flushFn(BulkContext::flush)
                 .destroyFn(BulkContext::close)
@@ -198,18 +188,15 @@ public class ElasticSinkBuilder<T> implements Serializable {
         private final RestHighLevelClient client;
         private final SupplierEx<BulkRequest> bulkRequestSupplier;
         private final FunctionEx<? super ActionRequest, RequestOptions> optionsFn;
-        private final ConsumerEx<? super RestHighLevelClient> destroyFn;
 
         private BulkRequest bulkRequest;
         private final ILogger logger;
 
         BulkContext(RestHighLevelClient client, SupplierEx<BulkRequest> bulkRequestSupplier,
-                    FunctionEx<? super ActionRequest, RequestOptions> optionsFn,
-                    ConsumerEx<? super RestHighLevelClient> destroyFn, ILogger logger) {
+                    FunctionEx<? super ActionRequest, RequestOptions> optionsFn, ILogger logger) {
             this.client = client;
             this.bulkRequestSupplier = bulkRequestSupplier;
             this.optionsFn = optionsFn;
-            this.destroyFn = destroyFn;
 
             this.bulkRequest = bulkRequestSupplier.get();
             this.logger = logger;
@@ -235,7 +222,7 @@ public class ElasticSinkBuilder<T> implements Serializable {
         void close() throws IOException {
             logger.fine("Closing BulkContext");
             flush();
-            destroyFn.accept(client);
+            client.close();
         }
     }
 

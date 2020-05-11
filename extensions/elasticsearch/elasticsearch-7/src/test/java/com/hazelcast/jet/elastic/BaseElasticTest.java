@@ -30,6 +30,7 @@ import org.elasticsearch.action.bulk.BulkResponse;
 import org.elasticsearch.action.index.IndexRequest;
 import org.elasticsearch.action.support.WriteRequest.RefreshPolicy;
 import org.elasticsearch.client.RequestOptions;
+import org.elasticsearch.client.RestClientBuilder;
 import org.elasticsearch.client.RestHighLevelClient;
 import org.elasticsearch.client.indices.CreateIndexRequest;
 import org.elasticsearch.common.settings.Settings;
@@ -69,7 +70,7 @@ public abstract class BaseElasticTest {
     @Before
     public void setUpBase() {
         if (elasticClient == null) {
-            elasticClient = elasticClientSupplier().get();
+            elasticClient = new RestHighLevelClient(elasticClientSupplier().get());
         }
         cleanElasticData();
 
@@ -85,7 +86,7 @@ public abstract class BaseElasticTest {
      * - create a client before each test for use by all methods from this class interacting with elastic
      * - may be used as as a parameter of {@link ElasticSourceBuilder#clientFn(SupplierEx)}
      */
-    protected SupplierEx<RestHighLevelClient> elasticClientSupplier() {
+    protected SupplierEx<RestClientBuilder> elasticClientSupplier() {
         return ElasticSupport.elasticClientSupplier();
     };
 

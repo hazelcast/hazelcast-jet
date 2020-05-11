@@ -26,7 +26,6 @@ import org.elasticsearch.action.index.IndexRequest;
 import org.elasticsearch.action.search.SearchRequest;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.support.WriteRequest.RefreshPolicy;
-import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.search.SearchHit;
 import org.junit.Test;
 
@@ -47,11 +46,6 @@ public abstract class CommonElasticSinksTest extends BaseElasticTest {
                 .clientFn(elasticClientSupplier())
                 .bulkRequestFn(() -> new BulkRequest().setRefreshPolicy(RefreshPolicy.IMMEDIATE))
                 .mapToRequestFn(item -> new IndexRequest("my-index").source(item.asMap()))
-                .optionsFn(() -> {
-                    RequestOptions.Builder builder = RequestOptions.DEFAULT.toBuilder();
-                    builder.addHeader("Authorization", "Bearer " + TOKEN);
-                    return builder.build();
-                })
                 .build();
 
         Pipeline p = Pipeline.create();

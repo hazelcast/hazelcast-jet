@@ -20,7 +20,7 @@ import com.hazelcast.function.FunctionEx;
 import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.pipeline.Sink;
 import org.elasticsearch.action.DocWriteRequest;
-import org.elasticsearch.client.RestHighLevelClient;
+import org.elasticsearch.client.RestClientBuilder;
 
 import javax.annotation.Nonnull;
 
@@ -54,7 +54,7 @@ public final class ElasticSinks {
      */
     @Nonnull
     public static <T> Sink<T> elastic(
-            @Nonnull SupplierEx<RestHighLevelClient> clientFn,
+            @Nonnull SupplierEx<RestClientBuilder> clientFn,
             @Nonnull FunctionEx<? super T, ? extends DocWriteRequest<?>> mapToRequestFn
     ) {
         return new ElasticSinkBuilder<T>()
