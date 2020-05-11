@@ -1001,7 +1001,7 @@ public final class Sources {
      * not be emitted or part of a line can be emitted. If files are modified
      * in more complex ways, the behavior is undefined.
      * <p>
-     * If file contains multi-line JSON string, you can use
+     * If file contains a multi-line JSON string, you can use
      * {@link #filesBuilder(String)} along with
      * {@link JsonUtil#asMultilineJson(Class)}.
      *
@@ -1011,8 +1011,10 @@ public final class Sources {
      * @since 4.2
      */
     @Nonnull
-    public static <T> BatchSource<T> json(@Nonnull String directory, Class<T> type) {
-        return filesBuilder(directory).build(JsonUtil.asJson(type));
+    public static <T> BatchSource<T> json(@Nonnull String directory, @Nonnull Class<T> type) {
+        return filesBuilder(directory)
+                .glob("*.json")
+                .build(JsonUtil.asJson(type));
     }
 
 
@@ -1069,8 +1071,11 @@ public final class Sources {
      *
      * @since 4.2
      */
-    public static <T> StreamSource<T> jsonWatcher(@Nonnull String watchedDirectory, Class<T> type) {
-        return filesBuilder(watchedDirectory).buildWatcher(JsonUtil.asJson(type));
+    @Nonnull
+    public static <T> StreamSource<T> jsonWatcher(@Nonnull String watchedDirectory, @Nonnull Class<T> type) {
+        return filesBuilder(watchedDirectory)
+                .glob("*.json")
+                .buildWatcher(JsonUtil.asJson(type));
     }
 
     /**

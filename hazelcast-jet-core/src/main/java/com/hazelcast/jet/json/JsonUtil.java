@@ -82,7 +82,7 @@ public final class JsonUtil {
      * Converts a JSON string to a object of given type.
      */
     @Nonnull
-    public static <T> T parse(@Nonnull Class<T> type, @Nonnull String jsonString) throws IOException {
+    public static <T> T mapFrom(@Nonnull Class<T> type, @Nonnull String jsonString) throws IOException {
         return JSON_JR.beanFrom(type, jsonString);
     }
 
@@ -90,7 +90,7 @@ public final class JsonUtil {
      * Converts a JSON string to a {@link Map}.
      */
     @Nonnull
-    public static Map<String, Object> parse(@Nonnull String jsonString) throws IOException {
+    public static Map<String, Object> mapFrom(@Nonnull String jsonString) throws IOException {
         return JSON_JR.mapFrom(jsonString);
     }
 
@@ -98,7 +98,7 @@ public final class JsonUtil {
      * Converts a JSON string to a {@link List} of given type.
      */
     @Nonnull
-    public static <T> List<T> parseList(@Nonnull Class<T> type, @Nonnull String jsonString) throws IOException {
+    public static <T> List<T> listFrom(@Nonnull Class<T> type, @Nonnull String jsonString) throws IOException {
         return JSON_JR.listOfFrom(type, jsonString);
     }
 
@@ -106,7 +106,7 @@ public final class JsonUtil {
      * Converts a JSON string to a {@link List}.
      */
     @Nonnull
-    public static List<Object> parseList(@Nonnull String jsonString) throws IOException {
+    public static List<Object> listFrom(@Nonnull String jsonString) throws IOException {
         return JSON_JR.listFrom(jsonString);
     }
 
@@ -115,14 +115,14 @@ public final class JsonUtil {
      * according to the content of the string:
      * <ul>
      *     <li>content is a JSON object, returns a {@link Map}. See
-     *     {@link #parse(String)}.</li>
+     *     {@link #mapFrom(String)}.</li>
      *     <li>content is a JSON array, returns a {@link List}. See
-     *     {@link #parseList(String)}.</li>
+     *     {@link #listFrom(String)}.</li>
      *     <li>content is a String, null or primitive, returns String, null or
      *     primitive.</li>
      * </ul>
      */
-    public static Object parseAny(@Nonnull String jsonString) throws IOException {
+    public static Object anyFrom(@Nonnull String jsonString) throws IOException {
         return JSON_JR.anyFrom(jsonString);
     }
 
@@ -131,7 +131,7 @@ public final class JsonUtil {
      * from given JSON string.
      */
     @Nonnull
-    public static <T> Iterator<T> parseSequence(@Nonnull Class<T> type, @Nonnull String jsonString)
+    public static <T> Iterator<T> sequenceFrom(@Nonnull Class<T> type, @Nonnull String jsonString)
             throws IOException {
         return JSON_JR.beanSequenceFrom(type, jsonString);
     }
@@ -141,7 +141,7 @@ public final class JsonUtil {
      * from given {@code reader}.
      */
     @Nonnull
-    public static <T> Iterator<T> parseSequence(@Nonnull Class<T> type, @Nonnull Reader reader)
+    public static <T> Iterator<T> sequenceFrom(@Nonnull Class<T> type, @Nonnull Reader reader)
             throws IOException {
         return JSON_JR.beanSequenceFrom(type, reader);
     }
@@ -155,10 +155,13 @@ public final class JsonUtil {
      * <p>
      * See {@link Sources#json(String, Class)}.
      */
-    public static <T> FunctionEx<? super Path, ? extends Stream<T>> asMultilineJson(Class<T> type) {
+    @Nonnull
+    public static <T> FunctionEx<? super Path, ? extends Stream<T>> asMultilineJson(
+            @Nonnull Class<T> type
+    ) {
         return path -> {
             InputStreamReader reader = new InputStreamReader(new FileInputStream(path.toFile()), UTF_8);
-            Spliterator<T> spliterator = Spliterators.spliteratorUnknownSize(JsonUtil.parseSequence(type, reader),
+            Spliterator<T> spliterator = Spliterators.spliteratorUnknownSize(JsonUtil.sequenceFrom(type, reader),
                     Spliterator.ORDERED | Spliterator.NONNULL);
             return StreamSupport.stream(spliterator, false);
         };
@@ -174,15 +177,16 @@ public final class JsonUtil {
      * See {@link Sources#json(String, Class)} and
      * {@link Sources#jsonWatcher(String, Class)}.
      */
-    public static <T> BiFunctionEx<String, String, ? extends T> asJson(Class<T> type) {
-        return (fileName, line) -> JsonUtil.parse(type, line);
+    @Nonnull
+    public static <T> BiFunctionEx<String, String, ? extends T> asJson(@Nonnull Class<T> type) {
+        return (fileName, line) -> JsonUtil.mapFrom(type, line);
     }
 
     /**
      * Creates a JSON string for the given object.
      */
     @Nonnull
-    public static String asJson(@Nonnull Object object) throws IOException {
+    public static String toJson(@Nonnull Object object) throws IOException {
         return JSON_JR.asString(object);
     }
 

@@ -955,7 +955,7 @@ public final class Sinks {
      */
     @Nonnull
     public static <T> Sink<T> json(@Nonnull String directoryName) {
-        return Sinks.<T>filesBuilder(directoryName).toStringFn(JsonUtil::asJson).build();
+        return Sinks.<T>filesBuilder(directoryName).toStringFn(JsonUtil::toJson).build();
     }
 
     /**

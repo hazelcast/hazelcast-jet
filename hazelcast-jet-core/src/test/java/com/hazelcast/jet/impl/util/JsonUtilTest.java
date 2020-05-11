@@ -62,67 +62,67 @@ public class JsonUtilTest extends JetTestSupport {
 
     @Test
     public void when_inputString_then_parseToObject() throws IOException {
-        TestJsonObject jsonObject = JsonUtil.parse(TestJsonObject.class, jsonString);
+        TestJsonObject jsonObject = JsonUtil.mapFrom(TestJsonObject.class, jsonString);
         assertEquals(testJsonObject, jsonObject);
     }
 
     @Test
     public void when_inputString_then_parseToMap() throws IOException {
-        Map<String, Object> map = JsonUtil.parse(jsonString);
+        Map<String, Object> map = JsonUtil.mapFrom(jsonString);
         assertTestObjectAsMap(map, testJsonObject);
     }
 
     @Test
     public void when_inputString_then_parseToListOfObject() throws IOException {
-        List<TestJsonObject> list = JsonUtil.parseList(TestJsonObject.class, jsonStringList);
+        List<TestJsonObject> list = JsonUtil.listFrom(TestJsonObject.class, jsonStringList);
         assertListOfObjects(list);
     }
 
     @Test
     public void when_inputString_then_parseToList() throws IOException {
-        List<Object> list = JsonUtil.parseList(jsonStringList);
+        List<Object> list = JsonUtil.listFrom(jsonStringList);
         assertListOfMap(list);
     }
 
     @Test
     public void when_inputString_and_contentObject_then_parseAny() throws IOException {
-        Object o = JsonUtil.parseAny(jsonString);
+        Object o = JsonUtil.anyFrom(jsonString);
         assertTestObjectAsMap((Map) o, testJsonObject);
     }
 
     @Test
     public void when_inputString_and_contentList_then_parseAny() throws IOException {
-        Object o = JsonUtil.parseAny(jsonStringList);
+        Object o = JsonUtil.anyFrom(jsonStringList);
         assertListOfMap((List) o);
     }
 
     @Test
     public void when_inputString_and_contentString_then_parseAny() throws IOException {
-        Object o = JsonUtil.parseAny("\"abc\"");
+        Object o = JsonUtil.anyFrom("\"abc\"");
         assertEquals("abc", o);
     }
 
     @Test
     public void when_inputString_and_contentInt_then_parseAny() throws IOException {
-        Object o = JsonUtil.parseAny("10");
+        Object o = JsonUtil.anyFrom("10");
         assertEquals(10, (int) o);
     }
 
     @Test
     public void when_inputString_and_contentDouble_then_parseAny() throws IOException {
-        Object o = JsonUtil.parseAny("10.5");
+        Object o = JsonUtil.anyFrom("10.5");
         assertEquals(10.5, (double) o, 0.0);
     }
 
     @Test
     public void when_inputString_and_contentBool_then_parseAny() throws IOException {
-        Object o = JsonUtil.parseAny("true");
+        Object o = JsonUtil.anyFrom("true");
         assertTrue((boolean) o);
     }
 
     @Test
     public void when_inputString_and_contentNull_then_parseAny() throws IOException {
-        Object o = JsonUtil.parseAny("null");
+        Object o = JsonUtil.anyFrom("null");
         assertNull(o);
     }
 
@@ -132,7 +132,7 @@ public class JsonUtilTest extends JetTestSupport {
         for (int i = 0; i < 10; i++) {
             sb.append(jsonString);
         }
-        Iterator<TestJsonObject> iterator = JsonUtil.parseSequence(TestJsonObject.class, sb.toString());
+        Iterator<TestJsonObject> iterator = JsonUtil.sequenceFrom(TestJsonObject.class, sb.toString());
 
         assertIteratorObject(iterator, 10);
     }
@@ -144,7 +144,7 @@ public class JsonUtilTest extends JetTestSupport {
             sb.append(jsonString);
         }
 
-        Iterator<TestJsonObject> iterator = JsonUtil.parseSequence(TestJsonObject.class, new StringReader(sb.toString()));
+        Iterator<TestJsonObject> iterator = JsonUtil.sequenceFrom(TestJsonObject.class, new StringReader(sb.toString()));
 
         assertIteratorObject(iterator, 20);
     }
@@ -161,7 +161,7 @@ public class JsonUtilTest extends JetTestSupport {
 
     @Test
     public void testConvertToJsonString() throws IOException {
-        assertEquals(jsonString, JsonUtil.asJson(testJsonObject));
+        assertEquals(jsonString, JsonUtil.toJson(testJsonObject));
     }
 
     private void assertListOfObjects(List<TestJsonObject> list) {
