@@ -949,7 +949,7 @@ tests](https://github.com/hazelcast/hazelcast-jet-contrib/tree/master/xa-test)
 to get more information. This only applies to the JDBC sink, the source
 doesn't use XA transactions.
 
-### CDC
+### Change Data Capture (CDC)
 
 Change Data Capture (CDC) refers to the process of observing changes
 made to a database and extracting them in a form usable by other
