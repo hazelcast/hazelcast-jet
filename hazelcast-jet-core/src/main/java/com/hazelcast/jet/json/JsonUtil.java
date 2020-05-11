@@ -184,6 +184,21 @@ public final class JsonUtil {
     }
 
     /**
+     * Returns a bi-function which takes the fileName and line as input, parses
+     * the line to the {@link Map} representation of the JSON string and
+     * returns it. The function is designed to be used with
+     * {@link FileSourceBuilder#build(BiFunctionEx)} and
+     * {@link FileSourceBuilder#buildWatcher(BiFunctionEx)}.
+     * <p>
+     * See {@link Sources#json(String)} and
+     * {@link Sources#jsonWatcher(String)}.
+     */
+    @Nonnull
+    public static BiFunctionEx<String, String, Map<String, Object>> asJson() {
+        return (fileName, line) -> JsonUtil.mapFrom(line);
+    }
+
+    /**
      * Creates a JSON string for the given object.
      */
     @Nonnull

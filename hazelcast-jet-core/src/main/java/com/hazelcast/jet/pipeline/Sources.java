@@ -50,6 +50,7 @@ import javax.jms.Message;
 import java.nio.charset.Charset;
 import java.sql.Connection;
 import java.sql.ResultSet;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.function.Function;
 
@@ -1017,6 +1018,17 @@ public final class Sources {
                 .build(JsonUtil.asJson(type));
     }
 
+    /**
+     * Convenience for {@link #json(String, Class)} which converts each
+     * line to the {@link Map} representation of the JSON string.
+     */
+    @Nonnull
+    public static BatchSource<Map<String, Object>> json(@Nonnull String directory) {
+        return filesBuilder(directory)
+                .glob("*.json")
+                .build(JsonUtil.asJson());
+    }
+
 
     /**
      * A source to stream lines added to files in a directory. This is a
@@ -1076,6 +1088,17 @@ public final class Sources {
         return filesBuilder(watchedDirectory)
                 .glob("*.json")
                 .buildWatcher(JsonUtil.asJson(type));
+    }
+
+    /**
+     * Convenience for {@link #jsonWatcher(String, Class)} which converts each
+     * line appended to the {@link Map} representation of the JSON string.
+     */
+    @Nonnull
+    public static StreamSource<Map<String, Object>> jsonWatcher(@Nonnull String watchedDirectory) {
+        return filesBuilder(watchedDirectory)
+                .glob("*.json")
+                .buildWatcher(JsonUtil.asJson());
     }
 
     /**
