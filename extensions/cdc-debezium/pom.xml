@@ -101,18 +101,6 @@
             <version>${debezium.version}</version>
         </dependency>
 
-        <dependency>
-            <groupId>com.fasterxml.jackson.jr</groupId>
-            <artifactId>jackson-jr-objects</artifactId>
-            <version>${jackson.jr.version}</version>
-        </dependency>
-
-        <dependency>
-            <groupId>com.fasterxml.jackson.jr</groupId>
-            <artifactId>jackson-jr-annotation-support</artifactId>
-            <version>${jackson.jr.version}</version>
-        </dependency>
-
         <!-- TEST -->
         <dependency>
             <groupId>io.debezium</groupId>
