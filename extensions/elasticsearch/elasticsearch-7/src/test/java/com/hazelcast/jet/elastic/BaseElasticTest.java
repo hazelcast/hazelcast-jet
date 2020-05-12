@@ -28,6 +28,8 @@ import org.elasticsearch.action.bulk.BulkItemResponse;
 import org.elasticsearch.action.bulk.BulkRequest;
 import org.elasticsearch.action.bulk.BulkResponse;
 import org.elasticsearch.action.index.IndexRequest;
+import org.elasticsearch.action.search.SearchRequest;
+import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.support.WriteRequest.RefreshPolicy;
 import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.client.RestClientBuilder;
@@ -35,6 +37,7 @@ import org.elasticsearch.client.RestHighLevelClient;
 import org.elasticsearch.client.indices.CreateIndexRequest;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.index.reindex.DeleteByQueryRequest;
+import org.elasticsearch.search.SearchHit;
 import org.junit.Before;
 import org.junit.runner.RunWith;
 
@@ -46,6 +49,8 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import static com.google.common.collect.ImmutableMap.of;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.entry;
 import static org.assertj.core.util.Lists.newArrayList;
 import static org.elasticsearch.client.RequestOptions.DEFAULT;
 import static org.elasticsearch.index.query.QueryBuilders.matchAllQuery;
@@ -183,6 +188,27 @@ public abstract class BaseElasticTest {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    protected void assertSingleDocument() throws IOException {
+        assertSingleDocument("id", "Frantisek");
+    }
+
+    protected void assertSingleDocument(String id, String name) throws IOException {
+        SearchResponse response = elasticClient.search(new SearchRequest("my-index"), DEFAULT);
+        SearchHit[] hits = response.getHits().getHits();
+        assertThat(hits).hasSize(1);
+        Map<String, Object> document = hits[0].getSourceAsMap();
+        assertThat(document).contains(
+                entry("id", id),
+                entry("name", name)
+        );
+    }
+
+    protected void assertNoDocuments(String index) throws IOException {
+        SearchResponse response = elasticClient.search(new SearchRequest(index), DEFAULT);
+        SearchHit[] hits = response.getHits().getHits();
+        assertThat(hits).hasSize(0);
     }
 
     /**
