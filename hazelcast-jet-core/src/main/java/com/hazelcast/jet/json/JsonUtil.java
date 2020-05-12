@@ -24,6 +24,7 @@ import com.hazelcast.jet.pipeline.FileSourceBuilder;
 import com.hazelcast.jet.pipeline.Sources;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -122,7 +123,7 @@ public final class JsonUtil {
      *     primitive.</li>
      * </ul>
      */
-    @Nonnull
+    @Nullable
     public static Object anyFrom(@Nonnull String jsonString) throws IOException {
         return JSON_JR.anyFrom(jsonString);
     }
