@@ -20,7 +20,6 @@ import com.hazelcast.jet.cdc.ChangeRecord;
 import com.hazelcast.jet.pipeline.SourceBuilder;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
-import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 import io.debezium.document.Document;
 import io.debezium.document.DocumentReader;
 import io.debezium.document.DocumentWriter;
@@ -203,7 +202,7 @@ public class CdcSource {
         }
     }
 
-    public static final class State implements IdentifiedDataSerializable {
+    public static final class State {
 
         /**
          * Key represents the partition which the record originated from. Value
@@ -234,26 +233,16 @@ public class CdcSource {
             partitionsToOffset.put(partition, offset);
         }
 
-        @Override
-        public int getFactoryId() {
-            return CdcJsonDataSerializerHook.FACTORY_ID;
-        }
-
-        @Override
-        public int getClassId() {
-            return CdcJsonDataSerializerHook.SOURCE_STATE;
-        }
-
-        @Override
-        public void writeData(ObjectDataOutput out) throws IOException {
+        void writeData(ObjectDataOutput out) throws IOException {
             out.writeObject(partitionsToOffset);
             out.writeObject(historyRecords);
         }
 
-        @Override
-        public void readData(ObjectDataInput in) throws IOException {
-            partitionsToOffset.putAll(in.readObject());
-            historyRecords.addAll(in.readObject());
+        static State readData(ObjectDataInput in) throws IOException {
+            State state = new State();
+            state.partitionsToOffset.putAll(in.readObject());
+            state.historyRecords.addAll(in.readObject());
+            return state;
         }
     }
 

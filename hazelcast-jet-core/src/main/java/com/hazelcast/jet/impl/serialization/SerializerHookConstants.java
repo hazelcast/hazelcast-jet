@@ -55,6 +55,10 @@ public final class SerializerHookConstants {
     public static final int TIMESTAMPED_ITEM = -325;
     public static final int QUERY_ENTRY = -326;
 
+    public static final int CDC_RECORD = -340;
+    public static final int CDC_RECORD_PART = -341;
+    public static final int CDC_SOURCE_STATE = -342;
+
 
     // reserved for hadoop module: -380 to -390
 

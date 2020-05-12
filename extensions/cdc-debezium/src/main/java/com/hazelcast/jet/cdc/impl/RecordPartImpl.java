@@ -18,26 +18,22 @@ package com.hazelcast.jet.cdc.impl;
 
 import com.fasterxml.jackson.jr.annotationsupport.JacksonAnnotationExtension;
 import com.fasterxml.jackson.jr.ob.JSON;
-import com.hazelcast.jet.cdc.RecordPart;
 import com.hazelcast.jet.cdc.ParsingException;
+import com.hazelcast.jet.cdc.RecordPart;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
-import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 
 import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.util.Map;
 import java.util.Objects;
 
-class RecordPartImpl implements RecordPart, IdentifiedDataSerializable {
+class RecordPartImpl implements RecordPart {
 
     private static final JSON J = JSON.builder().register(JacksonAnnotationExtension.std).build();
 
     private String json;
     private Map<String, Object> content;
-
-    RecordPartImpl() { //needed for deserialization
-    }
 
     RecordPartImpl(@Nonnull String json) {
         this.json = Objects.requireNonNull(json);
@@ -55,6 +51,7 @@ class RecordPartImpl implements RecordPart, IdentifiedDataSerializable {
     }
 
     @Override
+    @Nonnull
     public Map<String, Object> toMap() throws ParsingException {
         if (content == null) {
             try {
@@ -77,23 +74,13 @@ class RecordPartImpl implements RecordPart, IdentifiedDataSerializable {
         return toJson();
     }
 
-    @Override
-    public int getFactoryId() {
-        return CdcJsonDataSerializerHook.FACTORY_ID;
-    }
-
-    @Override
-    public int getClassId() {
-        return CdcJsonDataSerializerHook.RECORD_PART;
-    }
-
-    @Override
-    public void writeData(ObjectDataOutput out) throws IOException {
+    void writeData(ObjectDataOutput out) throws IOException {
         out.writeUTF(json);
     }
 
-    @Override
-    public void readData(ObjectDataInput in) throws IOException {
-        json = in.readUTF();
+    static RecordPartImpl readData(ObjectDataInput in) throws IOException {
+        String json = in.readUTF();
+        return new RecordPartImpl(json);
     }
+
 }

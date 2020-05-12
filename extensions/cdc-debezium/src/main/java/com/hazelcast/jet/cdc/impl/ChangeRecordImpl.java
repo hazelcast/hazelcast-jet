@@ -17,19 +17,18 @@
 package com.hazelcast.jet.cdc.impl;
 
 import com.hazelcast.jet.cdc.ChangeRecord;
-import com.hazelcast.jet.cdc.RecordPart;
 import com.hazelcast.jet.cdc.Operation;
 import com.hazelcast.jet.cdc.ParsingException;
+import com.hazelcast.jet.cdc.RecordPart;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
-import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 
 import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.util.Map;
 import java.util.Objects;
 
-public class ChangeRecordImpl implements ChangeRecord, IdentifiedDataSerializable {
+public class ChangeRecordImpl implements ChangeRecord {
 
     private String keyJson;
     private String valueJson;
@@ -39,9 +38,6 @@ public class ChangeRecordImpl implements ChangeRecord, IdentifiedDataSerializabl
     private Operation operation;
     private RecordPart key;
     private RecordPart value;
-
-    ChangeRecordImpl() { //needed for deserialization
-    }
 
     public ChangeRecordImpl(@Nonnull String keyJson, @Nonnull String valueJson) {
         this.keyJson = Objects.requireNonNull(keyJson, "keyJson");
@@ -102,26 +98,15 @@ public class ChangeRecordImpl implements ChangeRecord, IdentifiedDataSerializabl
         return toJson();
     }
 
-    @Override
-    public int getFactoryId() {
-        return CdcJsonDataSerializerHook.FACTORY_ID;
-    }
-
-    @Override
-    public int getClassId() {
-        return CdcJsonDataSerializerHook.CHANGE_RECORD;
-    }
-
-    @Override
-    public void writeData(ObjectDataOutput out) throws IOException {
+    void writeData(ObjectDataOutput out) throws IOException {
         out.writeUTF(keyJson);
         out.writeUTF(valueJson);
     }
 
-    @Override
-    public void readData(ObjectDataInput in) throws IOException {
-        keyJson = in.readUTF();
-        valueJson = in.readUTF();
+    static ChangeRecordImpl readData(ObjectDataInput in) throws IOException {
+        String keyJson = in.readUTF();
+        String valueJson = in.readUTF();
+        return new ChangeRecordImpl(keyJson, valueJson);
     }
 
     private static <T> T get(Map<String, Object> map, String key, Class<T> clazz) {
