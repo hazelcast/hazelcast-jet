@@ -1,0 +1,20 @@
+[
+  {
+    "id": "jSBsjjhBQkWT77xqLzl5Lw",
+    "index": "my-index",
+    "shard": "0",
+    "prirep": "p",
+    "docs": "0",
+    "state": "STARTED",
+    "node": "ryzen"
+  },
+  {
+    "id": "dZuXLgLFTdWBbDoyPGqObA",
+    "index": "my-index",
+    "shard": "0",
+    "prirep": "r",
+    "docs": "0",
+    "state": "STARTED",
+    "node": "ryzen"
+  }
+]

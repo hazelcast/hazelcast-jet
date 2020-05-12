@@ -88,7 +88,8 @@ public class ElasticCatClient implements Closeable {
         try {
             Request r = new Request("GET", "/_cat/nodes");
             r.addParameter("format", "json");
-            r.addParameter("h", "ip,name,http_address,master");
+            r.addParameter("full_id", "true");
+            r.addParameter("h", "id,ip,name,http_address,master");
             Response res = client.performRequest(r);
 
             try (InputStreamReader reader = new InputStreamReader(res.getEntity().getContent(), UTF_8)) {
@@ -110,6 +111,7 @@ public class ElasticCatClient implements Closeable {
     private Optional<Node> convertToNode(JsonValue value) {
         JsonObject object = value.asObject();
         return of(new Node(
+                object.get("id").asString(),
                 object.get("ip").asString(),
                 object.get("name").asString(),
                 object.get("http_address").asString(),
@@ -126,18 +128,19 @@ public class ElasticCatClient implements Closeable {
      */
     @SuppressFBWarnings("RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE")
     public List<Shard> shards(String... indices) {
-        Map<String, String> ipToAddress = nodes().stream().collect(toMap(Node::getIp, Node::getHttpAddress));
+        Map<String, String> idToAddress = nodes().stream().collect(toMap(Node::getId, Node::getHttpAddress));
 
         try {
             Request r = new Request("GET", "/_cat/shards/" + String.join(",", indices));
             r.addParameter("format", "json");
+            r.addParameter("h", "id,index,shard,prirep,docs,state,node");
             Response res = client.performRequest(r);
 
             try (InputStreamReader reader = new InputStreamReader(res.getEntity().getContent(), UTF_8)) {
                 JsonArray array = Json.parse(reader).asArray();
                 List<Shard> shards = new ArrayList<>(array.size());
                 for (JsonValue value : array) {
-                    Optional<Shard> shard = convertToShard(value, ipToAddress);
+                    Optional<Shard> shard = convertToShard(value, idToAddress);
                     shard.ifPresent(shards::add);
                 }
 
@@ -149,19 +152,19 @@ public class ElasticCatClient implements Closeable {
         }
     }
 
-    private Optional<Shard> convertToShard(JsonValue value, Map<String, String> ipToAddress) {
+    private Optional<Shard> convertToShard(JsonValue value, Map<String, String> idToAddress) {
         JsonObject object = value.asObject();
         // TODO IndexShardState.STARTED but this is deeply inside elastic, should we mirror the enum?
         if ("STARTED".equals(object.get("state").asString())) {
-            String ip = object.get("ip").asString();
+            String id = object.get("id").asString();
             Shard shard = new Shard(
                     object.get("index").asString(),
                     Integer.parseInt(object.get("shard").asString()),
                     Prirep.valueOf(object.get("prirep").asString()),
                     Integer.parseInt(object.get("docs").asString()),
                     object.get("state").asString(),
-                    ip,
-                    ipToAddress.get(ip),
+                    id,
+                    idToAddress.get(id),
                     object.get("node").asString()
             );
             return of(shard);
@@ -219,16 +222,24 @@ public class ElasticCatClient implements Closeable {
 
     public static class Node {
 
+        private final String id;
         private final String ip;
         private final String name;
         private final String httpAddress;
         private final String master;
 
-        public Node(@Nonnull String ip, @Nonnull String name, @Nonnull String httpAddress, @Nonnull String master) {
+        public Node(@Nonnull String id, @Nonnull String ip, @Nonnull String name,
+                    @Nonnull String httpAddress, @Nonnull String master) {
+
+            this.id = id;
             this.ip = ip;
             this.name = name;
             this.httpAddress = httpAddress;
             this.master = master;
+        }
+
+        public String getId() {
+            return id;
         }
 
         public String getIp() {
