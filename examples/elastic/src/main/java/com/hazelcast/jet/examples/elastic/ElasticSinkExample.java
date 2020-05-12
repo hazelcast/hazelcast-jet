@@ -16,11 +16,11 @@
 
 package com.hazelcast.jet.examples.elastic;
 
-import com.fasterxml.jackson.jr.ob.JSON;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.core.processor.SourceProcessors;
 import com.hazelcast.jet.elastic.ElasticSinks;
+import com.hazelcast.jet.json.JsonUtil;
 import com.hazelcast.jet.pipeline.BatchSource;
 import com.hazelcast.jet.pipeline.Pipeline;
 import org.elasticsearch.action.index.IndexRequest;
@@ -39,7 +39,7 @@ public class ElasticSinkExample {
         try {
             Pipeline p = create();
             p.readFrom(files("src/main/resources/documents"))
-             .map(JSON.std::mapFrom)
+             .map(JsonUtil::parse)
              .writeTo(ElasticSinks.elastic(map ->
                      new IndexRequest("my-index")
                              .source(map)
