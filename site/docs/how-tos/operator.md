@@ -33,11 +33,15 @@ services) running across your clusters.
 
 You need to install the OLM to your cluster if it's not yet installed.
 
-To install the OLM run the commands below:
+Check out the [latest releases on GitHub](https://github.com/operator-framework/operator-lifecycle-manager/releases)
+for release-specific install instructions for OLM.
+
+To install the OLM, Download the `install.sh` script from the Github
+Releases page and execute it with the latest OLM version like below:
 
 ```bash
-kubectl apply --validate=false -f https://github.com/operator-framework/operator-lifecycle-manager/releases/download/0.14.1/crds.yaml
-kubectl apply --validate=false -f https://github.com/operator-framework/operator-lifecycle-manager/releases/download/0.14.1/olm.yaml
+chmod +x install.sh
+./install.sh <olm-version>
 ```
 
 Then you can verify that the OLM is installed and running on your cluster
