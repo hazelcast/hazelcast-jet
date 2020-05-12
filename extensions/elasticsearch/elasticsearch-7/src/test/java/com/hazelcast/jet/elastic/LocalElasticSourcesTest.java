@@ -54,7 +54,7 @@ public class LocalElasticSourcesTest extends CommonElasticSourcesTest {
 
         Pipeline p = Pipeline.create();
 
-        BatchSource<String> source = new ElasticSourceBuilder<String>()
+        BatchSource<String> source = new ElasticSourceBuilder<>()
                 .clientFn(elasticClientSupplier())
                 .searchRequestFn(() -> new SearchRequest("my-index"))
                 .mapToItemFn(hit -> (String) hit.getSourceAsMap().get("name"))

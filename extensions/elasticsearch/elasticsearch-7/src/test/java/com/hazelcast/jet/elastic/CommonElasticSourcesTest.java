@@ -47,16 +47,18 @@ public abstract class CommonElasticSourcesTest extends BaseElasticTest {
 
     @Test
     public void given_emptyIndex_when_readFromElasticSource_then_finishWithNoResults() throws IOException {
-        // elasticClient.indices().create(new CreateIndexRequest("my-index"), DEFAULT);
-
         // Ideally we would just create the index but it gives "field _id not found" when there are no documents
         // in the index, not sure if it is an Elastic bug or wrong setup
+        //
+        // elasticClient.indices().create(new CreateIndexRequest("my-index"), DEFAULT);
+
+        // Instead we index a document and delete it, ending up with index with correct settings applied
         indexDocument("my-index", of("name", "Frantisek"));
         deleteDocuments();
 
         Pipeline p = Pipeline.create();
 
-        BatchSource<String> source = new ElasticSourceBuilder<String>()
+        BatchSource<String> source = new ElasticSourceBuilder<>()
                 .clientFn(elasticClientSupplier())
                 .searchRequestFn(() -> new SearchRequest("my-index"))
                 .mapToItemFn(SearchHit::getSourceAsString)
@@ -76,7 +78,7 @@ public abstract class CommonElasticSourcesTest extends BaseElasticTest {
 
         Pipeline p = Pipeline.create();
 
-        BatchSource<String> source = new ElasticSourceBuilder<String>()
+        BatchSource<String> source = new ElasticSourceBuilder<>()
                 .clientFn(elasticClientSupplier())
                 .searchRequestFn(() -> new SearchRequest("my-index"))
                 .mapToItemFn(hit -> (String) hit.getSourceAsMap().get("name"))
@@ -135,7 +137,7 @@ public abstract class CommonElasticSourcesTest extends BaseElasticTest {
 
         Pipeline p = Pipeline.create();
 
-        BatchSource<String> source = new ElasticSourceBuilder<String>()
+        BatchSource<String> source = new ElasticSourceBuilder<>()
                 .clientFn(elasticClientSupplier())
                 .searchRequestFn(() -> {
                     SearchRequest sr = new SearchRequest("my-index");
@@ -161,7 +163,7 @@ public abstract class CommonElasticSourcesTest extends BaseElasticTest {
 
         Pipeline p = Pipeline.create();
 
-        BatchSource<String> source = new ElasticSourceBuilder<String>()
+        BatchSource<String> source = new ElasticSourceBuilder<>()
                 .clientFn(elasticClientSupplier())
                 .searchRequestFn(() -> new SearchRequest("my-index-*"))
                 .mapToItemFn(hit -> (String) hit.getSourceAsMap().get("name"))
@@ -181,7 +183,7 @@ public abstract class CommonElasticSourcesTest extends BaseElasticTest {
 
         Pipeline p = Pipeline.create();
 
-        BatchSource<String> source = new ElasticSourceBuilder<String>()
+        BatchSource<String> source = new ElasticSourceBuilder<>()
                 .clientFn(elasticClientSupplier())
                 .searchRequestFn(() -> new SearchRequest("my-index-1"))
                 .mapToItemFn(hit -> (String) hit.getSourceAsMap().get("name"))
@@ -201,7 +203,7 @@ public abstract class CommonElasticSourcesTest extends BaseElasticTest {
 
         Pipeline p = Pipeline.create();
 
-        BatchSource<String> source = new ElasticSourceBuilder<String>()
+        BatchSource<String> source = new ElasticSourceBuilder<>()
                 .clientFn(elasticClientSupplier())
                 .searchRequestFn(() -> new SearchRequest("my-index")
                         .source(new SearchSourceBuilder().query(QueryBuilders.matchQuery("name", "Frantisek"))))
@@ -221,7 +223,7 @@ public abstract class CommonElasticSourcesTest extends BaseElasticTest {
 
         Pipeline p = Pipeline.create();
 
-        BatchSource<String> source = new ElasticSourceBuilder<String>()
+        BatchSource<String> source = new ElasticSourceBuilder<>()
                 .clientFn(elasticClientSupplier())
                 .searchRequestFn(() -> new SearchRequest("my-index"))
                 .mapToItemFn(SearchHit::getSourceAsString)
@@ -244,7 +246,7 @@ public abstract class CommonElasticSourcesTest extends BaseElasticTest {
 
         Pipeline p = Pipeline.create();
 
-        BatchSource<String> source = new ElasticSourceBuilder<String>()
+        BatchSource<String> source = new ElasticSourceBuilder<>()
                 .clientFn(elasticClientSupplier())
                 .searchRequestFn(() -> new SearchRequest("my-index-*"))
                 .mapToItemFn(SearchHit::getSourceAsString)

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.elastic;
+package com.hazelcast.jet.elastic.impl;
 
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.function.SupplierEx;
@@ -27,6 +27,12 @@ import org.elasticsearch.search.SearchHit;
 import javax.annotation.Nonnull;
 import java.io.Serializable;
 
+/**
+ * Configuration for the Elastic source which is Serializable
+ *
+ * Avoids passing multiple parameters via constructors
+ * Builder -> ElasticSourcePMetaSupplier -> ElasticSourcePSupplier -> ElasticSourceP -> ElasticScrollTraverser
+ */
 public class ElasticSourceConfiguration<T> implements Serializable {
 
     private static final long serialVersionUID = 1L;
@@ -67,12 +73,10 @@ public class ElasticSourceConfiguration<T> implements Serializable {
         return searchRequestFn;
     }
 
-
     @Nonnull
     public FunctionEx<? super SearchHit, T> mapToItemFn() {
         return mapToItemFn;
     }
-
 
     public FunctionEx<? super ActionRequest, RequestOptions> optionsFn() {
         return optionsFn;

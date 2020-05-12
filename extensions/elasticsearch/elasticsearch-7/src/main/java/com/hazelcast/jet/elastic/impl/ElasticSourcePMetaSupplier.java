@@ -21,7 +21,6 @@ import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.processor.Processors;
-import com.hazelcast.jet.elastic.ElasticSourceConfiguration;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;

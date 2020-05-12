@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-
 package com.hazelcast.jet.examples.elastic;
 
 import com.hazelcast.jet.Jet;
@@ -25,6 +24,7 @@ import com.hazelcast.jet.elastic.ElasticSources;
 import com.hazelcast.jet.pipeline.BatchSource;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
+import org.elasticsearch.action.search.SearchRequest;
 
 import java.util.List;
 import java.util.Map;
@@ -33,6 +33,7 @@ import java.util.Map.Entry;
 import static com.hazelcast.jet.aggregate.AggregateOperations.mapping;
 import static com.hazelcast.jet.aggregate.AggregateOperations.toList;
 import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
+import static com.hazelcast.jet.elastic.ElasticClients.client;
 import static com.hazelcast.jet.pipeline.Pipeline.create;
 
 public class ElasticSourceExample {
@@ -43,6 +44,8 @@ public class ElasticSourceExample {
         try {
             Pipeline p = create();
             BatchSource<Tuple2<String, String>> elasticsearch = ElasticSources.elastic(
+                    () -> client("localhost", 9200),
+                    SearchRequest::new,
                     hit -> {
                         Map<String, Object> map = hit.getSourceAsMap();
                         return tuple2((String) map.get("role"), (String) map.get("name"));

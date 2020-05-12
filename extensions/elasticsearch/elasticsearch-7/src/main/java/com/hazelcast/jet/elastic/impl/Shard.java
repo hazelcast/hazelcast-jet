@@ -25,6 +25,7 @@ class Shard implements Serializable {
 
     private final String index;
     private final int shard;
+    // Primary/replica
     private final Prirep prirep;
     private final int docs;
     private final String state;
@@ -83,7 +84,15 @@ class Shard implements Serializable {
     }
 
     public enum Prirep {
-        p, r;
+        /**
+         * Primary
+         */
+        p,
+
+        /**
+         * Replica
+         */
+        r;
     }
 
     @Override

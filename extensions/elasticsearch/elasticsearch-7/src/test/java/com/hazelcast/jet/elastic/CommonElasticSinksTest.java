@@ -43,10 +43,10 @@ public abstract class CommonElasticSinksTest extends BaseElasticTest {
 
     @Test
     public void given_singleDocument_whenWriteToElasticSink_then_singleDocumentInIndex() throws Exception {
-        Sink<TestItem> elasticSink = new ElasticSinkBuilder<TestItem>()
+        Sink<TestItem> elasticSink = new ElasticSinkBuilder<>()
                 .clientFn(elasticClientSupplier())
                 .bulkRequestFn(() -> new BulkRequest().setRefreshPolicy(RefreshPolicy.IMMEDIATE))
-                .mapToRequestFn(item -> new IndexRequest("my-index").source(item.asMap()))
+                .mapToRequestFn((TestItem item) -> new IndexRequest("my-index").source(item.asMap()))
                 .build();
 
         Pipeline p = Pipeline.create();
@@ -60,9 +60,9 @@ public abstract class CommonElasticSinksTest extends BaseElasticTest {
 
     @Test
     public void given_batchOfDocuments_whenWriteToElasticSink_then_batchOfDocumentsInIndex() throws IOException {
-        Sink<TestItem> elasticSink = new ElasticSinkBuilder<TestItem>()
+        Sink<TestItem> elasticSink = new ElasticSinkBuilder<>()
                 .clientFn(elasticClientSupplier())
-                .mapToRequestFn(item -> new IndexRequest("my-index").source(item.asMap()))
+                .mapToRequestFn((TestItem item) -> new IndexRequest("my-index").source(item.asMap()))
                 .build();
 
         int batchSize = 10_000;
@@ -124,7 +124,7 @@ public abstract class CommonElasticSinksTest extends BaseElasticTest {
 
         Sink<TestItem> elasticSink = ElasticSinks.elastic(
                 elasticClientSupplier(),
-                item -> new DeleteRequest("my-index", item.id)
+                (item) -> new DeleteRequest("my-index", item.id)
         );
 
         Pipeline p = Pipeline.create();

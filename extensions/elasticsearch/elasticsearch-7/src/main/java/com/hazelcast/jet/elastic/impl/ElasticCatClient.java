@@ -269,11 +269,3 @@ public class ElasticCatClient implements Closeable {
     }
 
 }
-
-
-
-
-
-
-
-

@@ -18,6 +18,7 @@ package com.hazelcast.jet.elastic;
 
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.function.SupplierEx;
+import com.hazelcast.jet.elastic.impl.ElasticSourceConfiguration;
 import com.hazelcast.jet.elastic.impl.ElasticSourcePMetaSupplier;
 import com.hazelcast.jet.pipeline.BatchSource;
 import com.hazelcast.jet.pipeline.Sources;
@@ -49,12 +50,14 @@ import static java.util.Objects.requireNonNull;
  * BatchStage<String> stage = p.readFrom(source);
  * }</pre>
  *
+ * Requires {@link #clientFn(SupplierEx)}, {@link #searchRequestFn(SupplierEx)} and {@link #mapToItemFn(FunctionEx)}.
+ *
  * @param <T> type of the output of the mapping function from {@link SearchHit} -> T
  * @since 4.2
  */
 public class ElasticSourceBuilder<T> {
 
-    private static final String DEFAULT_NAME = "elastic";
+    private static final String DEFAULT_NAME = "elasticSource";
 
     private SupplierEx<RestClientBuilder> clientFn;
     private SupplierEx<SearchRequest> searchRequestFn;
@@ -101,6 +104,8 @@ public class ElasticSourceBuilder<T> {
      * builder.clientFn(() -> client(host, port, username, password))
      * }</pre>
      *
+     * This parameter is required.
+     *
      * @param clientFn supplier function returning configured Elasticsearch REST client
      */
     @Nonnull
@@ -119,6 +124,8 @@ public class ElasticSourceBuilder<T> {
      * builder.searchRequestFn(() -> new SearchRequest("logs"))
      * }</pre>
      *
+     * This parameter is required.
+     *
      * @param searchRequestFn search request supplier function
      */
     @Nonnull
@@ -135,12 +142,16 @@ public class ElasticSourceBuilder<T> {
      * builder.mapToItemFn(hit -> (String) hit.getSourceAsMap().get("productId"))
      * }</pre>
      *
+     * This parameter is required.
+     *
      * @param mapToItemFn maps search hits to output items
      */
     @Nonnull
-    public ElasticSourceBuilder<T> mapToItemFn(@Nonnull FunctionEx<? super SearchHit, T> mapToItemFn) {
-        this.mapToItemFn = checkSerializable(mapToItemFn, "mapToItemFn");
-        return this;
+    @SuppressWarnings("unchecked")
+    public <T_NEW> ElasticSourceBuilder<T_NEW> mapToItemFn(@Nonnull FunctionEx<? super SearchHit, T_NEW> mapToItemFn) {
+        ElasticSourceBuilder<T_NEW> newThis = (ElasticSourceBuilder<T_NEW>) this;
+        newThis.mapToItemFn = checkSerializable(mapToItemFn, "mapToItemFn");
+        return newThis;
     }
 
     /**

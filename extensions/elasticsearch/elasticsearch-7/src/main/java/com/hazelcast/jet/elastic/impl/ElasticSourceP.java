@@ -21,7 +21,6 @@ import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.Traversers;
 import com.hazelcast.jet.core.AbstractProcessor;
-import com.hazelcast.jet.elastic.ElasticSourceConfiguration;
 import com.hazelcast.logging.ILogger;
 import org.apache.http.HttpHost;
 import org.apache.lucene.search.TotalHits;

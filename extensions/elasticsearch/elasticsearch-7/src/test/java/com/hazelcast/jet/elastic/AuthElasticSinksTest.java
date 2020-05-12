@@ -81,10 +81,10 @@ public class AuthElasticSinksTest extends BaseElasticTest {
 
     @Test
     public void given_authenticatedClient_whenWriteToElasticSink_thenFinishSuccessfully() throws IOException {
-        Sink<TestItem> elasticSink = new ElasticSinkBuilder<TestItem>()
+        Sink<TestItem> elasticSink = new ElasticSinkBuilder<>()
                 .clientFn(elasticClientSupplier())
                 .bulkRequestFn(() -> new BulkRequest().setRefreshPolicy(RefreshPolicy.IMMEDIATE))
-                .mapToRequestFn(item -> new IndexRequest("my-index").source(item.asMap()))
+                .mapToRequestFn((TestItem item) -> new IndexRequest("my-index").source(item.asMap()))
                 .build();
 
         Pipeline p = Pipeline.create();
@@ -102,24 +102,40 @@ public class AuthElasticSinksTest extends BaseElasticTest {
         String containerIp = container.getContainerIpAddress();
         Integer port = container.getMappedPort(PORT);
 
-        Sink<TestItem> elasticSink = new ElasticSinkBuilder<TestItem>()
+        Sink<TestItem> elasticSink = new ElasticSinkBuilder<>()
                 .clientFn(() -> client("elastic", "WrongPassword", containerIp, port))
                 .bulkRequestFn(() -> new BulkRequest().setRefreshPolicy(RefreshPolicy.IMMEDIATE))
-                .mapToRequestFn(item -> new IndexRequest("my-index").source(item.asMap()))
+                .mapToRequestFn((TestItem item) -> new IndexRequest("my-index").source(item.asMap()))
                 .build();
 
         Pipeline p = Pipeline.create();
         p.readFrom(TestSources.items(new TestItem("id", "Frantisek")))
          .writeTo(elasticSink);
 
-        try {
-            submitJob(p);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
         assertThatThrownBy(() -> submitJob(p))
                 .hasRootCauseInstanceOf(ElasticsearchStatusException.class)
                 .hasStackTraceContaining("failed to authenticate user [elastic]");
+    }
+
+    @Test
+    public void given_clientWithoutAuthentication_whenReadFromElasticSource_thenFailWithAuthenticationException() {
+        ElasticsearchContainer container = elastic.get();
+        String containerIp = container.getContainerIpAddress();
+        Integer port = container.getMappedPort(PORT);
+
+        Sink<TestItem> elasticSink = new ElasticSinkBuilder<>()
+                .clientFn(() -> client(containerIp, port))
+                .bulkRequestFn(() -> new BulkRequest().setRefreshPolicy(RefreshPolicy.IMMEDIATE))
+                .mapToRequestFn((TestItem item) -> new IndexRequest("my-index").source(item.asMap()))
+                .build();
+
+        Pipeline p = Pipeline.create();
+        p.readFrom(TestSources.items(new TestItem("id", "Frantisek")))
+         .writeTo(elasticSink);
+
+        assertThatThrownBy(() -> submitJob(p))
+                .hasRootCauseInstanceOf(ElasticsearchStatusException.class)
+                .hasStackTraceContaining("missing authentication credentials");
     }
 
 }

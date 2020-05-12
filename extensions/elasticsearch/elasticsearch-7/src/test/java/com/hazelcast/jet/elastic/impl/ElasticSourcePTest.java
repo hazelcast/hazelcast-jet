@@ -19,7 +19,6 @@ package com.hazelcast.jet.elastic.impl;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.core.test.TestOutbox;
 import com.hazelcast.jet.core.test.TestSupport;
-import com.hazelcast.jet.elastic.ElasticSourceConfiguration;
 import com.hazelcast.jet.elastic.impl.Shard.Prirep;
 import org.apache.lucene.search.TotalHits;
 import org.elasticsearch.action.ActionRequest;
@@ -318,7 +317,7 @@ public class ElasticSourcePTest {
 
     /*
      * Need to pass a Serializable Supplier into
-     * ElasticsearchSourceBuilder.clientSupplier(...)
+     * ElasticSourceBuilder.clientFn(...)
      * which returns a mock, so the mock itself must be serializable.
      *
      * Can't use Mockito's withSettings().serializable() because some of the setup (SearchResponse) is not Serializable

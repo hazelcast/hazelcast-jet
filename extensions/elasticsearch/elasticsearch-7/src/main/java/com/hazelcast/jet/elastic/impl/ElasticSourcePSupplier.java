@@ -18,7 +18,6 @@ package com.hazelcast.jet.elastic.impl;
 
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorSupplier;
-import com.hazelcast.jet.elastic.ElasticSourceConfiguration;
 import com.hazelcast.jet.impl.util.Util;
 
 import javax.annotation.Nonnull;

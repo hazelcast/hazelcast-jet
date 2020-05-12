@@ -959,15 +959,15 @@ use it both as a source and a sink.
 The Elasticsearch connector source provides a builder and several
 convenience factory methods. Most commonly one needs to provide:
 
-* A client supplier, which returns a configured instance of
- RestHighLevelClient (see [Elasticsearch documentation](https://www.elastic.co/guide/en/elasticsearch/client/java-rest/current/java-rest-high.html)),
+* A client supplier function, which returns a configured instance of
+ RestClientBuilder (see [Elasticsearch documentation](https://www.elastic.co/guide/en/elasticsearch/client/java-rest/current/java-rest-low-usage-initialization.html#java-rest-low-usage-initialization)),
 * A search request supplier specifying a query to Elasticsearch,
 * A mapping function from `SearchHit` to a desired type.
 
 Example using a factory method:
 
 ```java
-BatchSource<String> source = ElasticsearchSources.elasticsearch(
+BatchSource<String> elasticSource = ElasticSources.elasticsearch(
     () -> client("user", "password", "host", 9200),
     () -> new SearchRequest("my-index"),
     hit -> (String) hit.getSourceAsMap().get("name")
@@ -977,15 +977,14 @@ BatchSource<String> source = ElasticsearchSources.elasticsearch(
 For all configuration options use the builder:
 
 ```java
-BatchSource<String> elasticsearch = new ElasticsearchSourceBuilder<String>()
+BatchSource<String> elasticSource = new ElasticSourceBuilder<String>()
         .name("elastic-source")
-        .clientSupplier(() -> new RestHighLevelClient(RestClient.builder(new HttpHost(
+        .clientFn(() -> RestClient.builder(new HttpHost(
                 "localhost", 9200
-        ))))
-        .destroyFn(RestHighLevelClient::close)
-        .searchRequestSupplier(() -> new SearchRequest("my-index"))
+        )))
+        .searchRequestFn(() -> new SearchRequest("my-index"))
         .optionsFn(request -> RequestOptions.DEFAULT)
-        .mapHitFn(hit -> hit.getSourceAsString())
+        .mapToItemFn(hit -> hit.getSourceAsString())
         .slicing(true)
         .build();
 ```
@@ -1006,18 +1005,18 @@ overhead of physical network.
 The Elasticsearch connector sink provides a builder and several
 convenience factory methods. Most commonly you need to provide:
 
-A client supplier, which returns a configured instance of
-RestHighLevelClient (see
-[Elasticsearch documentation](https://www.elastic.co/guide/en/elasticsearch/client/java-rest/current/java-rest-high.html)),
+* A client supplier, which returns a configured instance of
+ RestHighLevelClient (see
+ [Elasticsearch documentation](https://www.elastic.co/guide/en/elasticsearch/client/java-rest/current/java-rest-low-usage-initialization.html#java-rest-low-usage-initialization)),
 
-A mapping function to map items from the pipeline to an instance of
-one of `IndexRequest`, `UpdateRequest` or `DeleteRequest`.
+* A mapping function to map items from the pipeline to an instance of
+ one of `IndexRequest`, `UpdateRequest` or `DeleteRequest`.
 
-Suppose type of the items in the pipeline is `Map<String, Object>`, the
-sink can be created using
+* Suppose type of the items in the pipeline is `Map<String, Object>`, the
+ sink can be created using
 
 ```java
-Sink<Map<String, Object>> sink = ElasticsearchSinks.elasticsearch(
+Sink<Map<String, Object>> elasticSink = ElasticSinks.elasticsearch(
     () -> client("user", "password", "host", 9200),
     item -> new IndexRequest("my-index").source(item)
 );
@@ -1026,20 +1025,19 @@ Sink<Map<String, Object>> sink = ElasticsearchSinks.elasticsearch(
 For all configuration options use the builder:
 
 ```java
-Sink<Map<String, Object>> build = new ElasticsearchSinkBuilder<Map<String, Object>>()
+Sink<Map<String, Object>> elasticSink = new ElasticSinkBuilder<Map<String, Object>>()
     .name("elastic-sink")
-    .clientSupplier(() -> new RestHighLevelClient(RestClient.builder(new HttpHost(
+    .clientFn(() -> RestClient.builder(new HttpHost(
             "localhost", 9200
-    ))))
+    )))
     .bulkRequestSupplier(BulkRequest::new)
-    .mapItemFn((map) -> new IndexRequest("my-index").source(map))
+    .mapToRequestFn((map) -> new IndexRequest("my-index").source(map))
     .optionsFn(request -> RequestOptions.DEFAULT)
-    .destroyFn(RestHighLevelClient::close)
     .build();
 ```
 
 The Elasticsearch sink doesn't implement co-located writing. To achieve
-maximum write throughput provide all nodes to the `RestHighLevelClient`
+maximum write throughput provide all nodes to the `RestClient`
 and configure parallelism.
 
 ### MongoDB

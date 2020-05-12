@@ -62,7 +62,7 @@ import static java.util.Objects.requireNonNull;
  */
 public class ElasticSinkBuilder<T> implements Serializable {
 
-    private static final String DEFAULT_NAME = "elastic";
+    private static final String DEFAULT_NAME = "elasticSink";
 
     private SupplierEx<RestClientBuilder> clientFn;
     private SupplierEx<BulkRequest> bulkRequestFn = BulkRequest::new;
@@ -80,6 +80,8 @@ public class ElasticSinkBuilder<T> implements Serializable {
      * <pre>{@code
      * builder.clientFn(() -> client(host, port, username, password))
      * }</pre>
+     *
+     * This parameter is required.
      *
      * @param clientFn supplier function returning configured Elasticsearch REST client
      */
@@ -118,16 +120,21 @@ public class ElasticSinkBuilder<T> implements Serializable {
      *                              .version((Long) map.get("version"))
      * }</pre>
      *
+     * This parameter is required.
+     *
      * @param mapToRequestFn maps an item from the stream to an {@link org.elasticsearch.action.index.IndexRequest},
      *                       {@link org.elasticsearch.action.update.UpdateRequest} or
      *                       {@link org.elasticsearch.action.delete.DeleteRequest}
+     * @param <T_NEW> type of the items from the pipeline
      */
     @Nonnull
-    public ElasticSinkBuilder<T> mapToRequestFn(
-            @Nonnull FunctionEx<? super T, ? extends DocWriteRequest<?>> mapToRequestFn
+    @SuppressWarnings("unchecked")
+    public <T_NEW> ElasticSinkBuilder<T_NEW> mapToRequestFn(
+            @Nonnull FunctionEx<? super T_NEW, ? extends DocWriteRequest<?>> mapToRequestFn
     ) {
-        this.mapToRequestFn = checkNonNullAndSerializable(mapToRequestFn, "mapToRequestFn");
-        return this;
+        ElasticSinkBuilder<T_NEW> newThis = (ElasticSinkBuilder<T_NEW>) this;
+        newThis.mapToRequestFn = checkNonNullAndSerializable(mapToRequestFn, "mapToRequestFn");
+        return newThis;
     }
 
     /**

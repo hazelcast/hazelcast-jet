@@ -19,6 +19,7 @@ package com.hazelcast.jet.examples.elastic;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.core.processor.SourceProcessors;
+import com.hazelcast.jet.elastic.ElasticClients;
 import com.hazelcast.jet.elastic.ElasticSinks;
 import com.hazelcast.jet.json.JsonUtil;
 import com.hazelcast.jet.pipeline.BatchSource;
@@ -40,10 +41,9 @@ public class ElasticSinkExample {
             Pipeline p = create();
             p.readFrom(files("src/main/resources/documents"))
              .map(JsonUtil::parse)
-             .writeTo(ElasticSinks.elastic(map ->
-                     new IndexRequest("my-index")
-                             .source(map)
-                             .version((Long) map.get("version"))
+             .writeTo(ElasticSinks.elastic(
+                     () -> ElasticClients.client("localhost", 9200),
+                     map -> new IndexRequest("my-index").source(map)
              ));
 
             JetInstance jet = Jet.newJetInstance();

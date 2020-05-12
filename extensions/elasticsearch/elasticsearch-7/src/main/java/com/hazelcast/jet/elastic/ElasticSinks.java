@@ -38,18 +38,20 @@ public final class ElasticSinks {
     /**
      * Creates an Elasticsearch sink, uses a local instance of Elasticsearch
      *
-     * @param mapToRequestFn function that maps items from a stream to an indexing request
+     * @param mapToRequestFn function that maps an item from a pipeline to an indexing request
      */
     @Nonnull
-    public static <T> Sink<T> elastic(@Nonnull FunctionEx<? super T, ? extends DocWriteRequest<?>> mapToRequestFn) {
+    public static <T> Sink<? super T> elastic(
+            @Nonnull FunctionEx<? super T, ? extends DocWriteRequest<?>> mapToRequestFn
+    ) {
         return elastic(ElasticClients::client, mapToRequestFn);
     }
 
     /**
-     * Creates an Elasticsearch sink, uses provided clientFn and mapToRequestFn
+     * Creates an Elasticsearch sink, uses a client obtained from clientFn and maps items using given mapToRequestFn
      *
-     * @param clientFn client supplier
-     * @param mapToRequestFn      function that maps items from a stream to an indexing request
+     * @param clientFn       supplier function returning configured RestClientBuilder
+     * @param mapToRequestFn function that maps an item from a pipeline to an indexing request
      * @param <T>            type of incoming items
      */
     @Nonnull
@@ -57,20 +59,19 @@ public final class ElasticSinks {
             @Nonnull SupplierEx<RestClientBuilder> clientFn,
             @Nonnull FunctionEx<? super T, ? extends DocWriteRequest<?>> mapToRequestFn
     ) {
-        return new ElasticSinkBuilder<T>()
+        // Avoid ElasticSinkBuilder<? super T> inferred from mapToRequestFn
+        ElasticSinkBuilder<T> builder = new ElasticSinkBuilder<>()
                 .clientFn(clientFn)
-                .mapToRequestFn(mapToRequestFn)
-                .build();
+                .mapToRequestFn(mapToRequestFn);
+        return builder.build();
     }
 
     /**
-     * Returns {@link ElasticSinkBuilder}
-     *
-     * @param <T> type of the items in the pipeline
+     * Returns new instance of {@link ElasticSinkBuilder}
      */
     @Nonnull
-    public static <T> ElasticSinkBuilder<T> builder() {
-        return new ElasticSinkBuilder<T>();
+    public static ElasticSinkBuilder<Void> builder() {
+        return new ElasticSinkBuilder<>();
     }
 
 }

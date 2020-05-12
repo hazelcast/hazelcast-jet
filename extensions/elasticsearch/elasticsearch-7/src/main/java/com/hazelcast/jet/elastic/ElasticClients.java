@@ -16,20 +16,26 @@
 
 package com.hazelcast.jet.elastic;
 
+import com.hazelcast.function.SupplierEx;
 import org.apache.http.HttpHost;
 import org.apache.http.auth.UsernamePasswordCredentials;
 import org.apache.http.client.CredentialsProvider;
 import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.elasticsearch.client.RestClient;
 import org.elasticsearch.client.RestClientBuilder;
-import org.elasticsearch.client.RestHighLevelClient;
 
 import javax.annotation.Nonnull;
 
 import static org.apache.http.auth.AuthScope.ANY;
 
 /**
- * Collection of convenience factory methods for Elastic's {@link RestHighLevelClient}
+ * Collection of convenience factory methods for Elastic's {@link RestClientBuilder}
+ * <p>
+ * Supposed to be used as a parameter to {@link ElasticSourceBuilder#clientFn(SupplierEx)} and
+ * {@link ElasticSinkBuilder#clientFn(SupplierEx)}, for example:
+ * <pre>{@code
+ * builder.clientFn(() -> client());
+ * }</pre>
  */
 public final class ElasticClients {
 
@@ -47,7 +53,7 @@ public final class ElasticClients {
     }
 
     /**
-     * Create Elastic client for an instance running on given host and port
+     * Convenience method to create {@link RestClientBuilder} with given hostname and port
      */
     @Nonnull
     public static RestClientBuilder client(@Nonnull String hostname, int port) {
@@ -55,12 +61,12 @@ public final class ElasticClients {
     }
 
     /**
-     * Convenience method to create {@link RestHighLevelClient} with basic authentication and given hostname and port
+     * Convenience method to create {@link RestClientBuilder} with basic authentication and given hostname and port
      * <p>
      * Usage:
-     * <pre>
-     *   BatchSource<SearchHit> source = elasticsearch(() -> client("user", "password", "host", 9200));
-     * </pre>
+     * <pre>{@code
+     * BatchSource<SearchHit> source = elastic(() -> client("user", "password", "host", 9200));
+     * }</pre>
      */
     @Nonnull
     public static RestClientBuilder client(

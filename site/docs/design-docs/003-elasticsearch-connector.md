@@ -33,7 +33,7 @@ Pros:
 - Provides users with API they already know and use, e.g.
 
 ```java
-p.readFrom(ElasticsearchSources.elasticsearch("users", () -> createClient(containerAddress),
+p.readFrom(ElasticSources.elasticsearch("users", () -> createClient(containerAddress),
   () -> {
       SearchRequest searchRequest = new SearchRequest("users");
       SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
@@ -95,13 +95,12 @@ experience.
 Full example:
 
 ```java
-BatchSource<String> source = new ElasticsearchSourceBuilder<String>()
+BatchSource<String> elasticSource = new ElasticSourceBuilder<String>()
   .name("my-elastic-source")
-  .clientSupplier(elasticClientSupplier())
-  .destroyFn(RestHighLevelClient::close)
-  .searchRequestSupplier(() -> new SearchRequest("my-index-*"))
+  .clientFn(elasticClientSupplier())
+  .searchRequestFn(() -> new SearchRequest("my-index-*"))
   .optionsFn(request -> RequestOptions.DEFAULT)
-  .mapHitFn(SearchHit::getSourceAsString)
+  .mapToItemFn(SearchHit::getSourceAsString)
   .slicing(true)
   .build();
 ```
@@ -109,10 +108,10 @@ BatchSource<String> source = new ElasticsearchSourceBuilder<String>()
 Minimal example:
 
 ```java
-BatchSource<String> source = new ElasticsearchSourceBuilder<String>()
-  .clientSupplier(() -> client("elastic", "password", "localhost", 9200))
-  .searchRequestSupplier(SearchRequest::new)
-  .mapHitFn(SearchHit::getSourceAsString)
+BatchSource<String> elasticSource = new ElasticSourceBuilder<String>()
+  .clientFn(() -> client("elastic", "password", "localhost", 9200))
+  .searchRequestFn(SearchRequest::new)
+  .mapToItemFn(SearchHit::getSourceAsString)
   .build();
 ```
 
@@ -205,7 +204,7 @@ Following test hierarchy is used:
 - abstract `BaseElasticsearchTest` - base class for all tests of Jet
   and Elasticsearch together,
   no actual tests, only setup / teardown code
-- `CommonElasticsearchSourcesTest` - tests that are to be executed on
+- `CommonElasticSourcesTest` - tests that are to be executed on
   all environment configurations
-- subclasses of `CommonElasticsearchSourcesTest` which define specific
+- subclasses of `CommonElasticSourcesTest` which define specific
   environment (single Jet instance, Jet cluster ..)

@@ -42,6 +42,11 @@ public final class ElasticSources {
      * <p>
      * Useful for quick prototyping. See other methods {@link #elastic(SupplierEx, SupplierEx, FunctionEx)}
      * and {@link #builder()}
+     * <p>
+     * For example:
+     * <pre>{@code
+     * pipeline.readFrom(ElasticSources.elastic());
+     * }</pre>
      */
     @Nonnull
     public static BatchSource<String> elastic() {
@@ -49,9 +54,19 @@ public final class ElasticSources {
     }
 
     /**
-     * Creates a source which queries Elasticsearch using client obtained from {@link RestHighLevelClient} supplier.
+     * Creates a source which queries Elasticsearch using client obtained from {@link RestClientBuilder} supplier
+     * function.
      * Queries all indexes for all documents.
      * Uses {@link SearchHit#getSourceAsString()} as mapping function
+     * <p>
+     * For example:
+     * <pre>{@code
+     * pipeline.readFrom(ElasticSources.elastic(
+     *   () -> ElasticClients.client("localhost", 9200),
+     * ));
+     * }</pre>
+     *
+     * @param clientFn supplier function returning configured RestClientBuilder
      */
     @Nonnull
     public static BatchSource<String> elastic(@Nonnull SupplierEx<RestClientBuilder> clientFn) {
@@ -61,6 +76,16 @@ public final class ElasticSources {
     /**
      * Creates a source which queries local instance of Elasticsearch for all documents
      * Uses {@link SearchHit#getSourceAsString()} as mapping function
+     * <p>
+     * For example:
+     * <pre>{@code
+     * pipeline.readFrom(ElasticSources.elastic(
+     *   SearchHit::getSourceAsMap
+     * ));
+     * }</pre>
+     *
+     * @param mapToItemFn function mapping the result from a SearchHit to a result type
+     * @param <T>         result type returned by the map function
      */
     @Nonnull
     public static <T> BatchSource<T> elastic(@Nonnull FunctionEx<? super SearchHit, T> mapToItemFn) {
@@ -68,12 +93,19 @@ public final class ElasticSources {
     }
 
     /**
-     * Creates a source which queries Elasticsearch using client obtained from {@link RestHighLevelClient} supplier.
-     * Uses provided mapToItemFn to map results.
-     * Queries all indexes for all documents.
+     * Creates a source which queries Elasticsearch using client obtained from {@link RestClientBuilder} supplier
+     * function. Uses provided mapToItemFn to map results. Queries all indexes for all documents.
+     * <p>
+     * For example:
+     * <pre>{@code
+     * pipeline.readFrom(ElasticSources.elastic(
+     *   () -> ElasticClients.client("localhost", 9200),
+     *   SearchHit::getSourceAsMap
+     * ));
+     * }</pre>
      *
-     * @param clientFn    RestHighLevelClient supplier
-     * @param mapToItemFn supplier of a function mapping the result from SearchHit to a result type
+     * @param clientFn    supplier function returning configured RestClientBuilder
+     * @param mapToItemFn function mapping the result from a SearchHit to a result type
      * @param <T>         result type returned by the map function
      */
     @Nonnull
@@ -85,10 +117,19 @@ public final class ElasticSources {
 
     /**
      * Creates a source which queries Elasticsearch using client obtained from {@link RestHighLevelClient} supplier.
+     * <p>
+     * For example:
+     * <pre>{@code
+     * pipeline.readFrom(ElasticSources.elastic(
+     *   () -> ElasticClients.client("localhost", 9200),
+     *   () -> new SearchRequest("my-index"),
+     *   SearchHit::getSourceAsMap
+     * ));
+     * }</pre>
      *
-     * @param clientFn        RestHighLevelClient supplier
+     * @param clientFn        supplier function returning configured RestClientBuilder
      * @param searchRequestFn supplier function of a SearchRequest used to query for documents
-     * @param mapToItemFn     supplier of a function mapping the result from SearchHit to a target type
+     * @param mapToItemFn     function mapping the result from a SearchHit to a result type
      * @param <T>             result type returned by the map function
      */
     @Nonnull
@@ -97,7 +138,7 @@ public final class ElasticSources {
             @Nonnull SupplierEx<SearchRequest> searchRequestFn,
             @Nonnull FunctionEx<? super SearchHit, T> mapToItemFn
     ) {
-        return ElasticSources.<T>builder()
+        return ElasticSources.builder()
                 .clientFn(clientFn)
                 .searchRequestFn(searchRequestFn)
                 .mapToItemFn(mapToItemFn)
@@ -105,12 +146,10 @@ public final class ElasticSources {
     }
 
     /**
-     * Returns {@link ElasticSourceBuilder}
-     *
-     * @param <T> result type returned by the map function
+     * Returns new instance of {@link ElasticSourceBuilder}
      */
     @Nonnull
-    public static <T> ElasticSourceBuilder<T> builder() {
+    public static ElasticSourceBuilder<Void> builder() {
         return new ElasticSourceBuilder<>();
     }
 

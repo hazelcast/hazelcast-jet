@@ -124,8 +124,7 @@ public abstract class BaseElasticTest {
      */
     protected void cleanElasticData() {
         try {
-//            deleteDocuments();
-
+            // All documents are deleted when an index is deleted
             elasticClient.indices().delete(new DeleteIndexRequest("*"), DEFAULT);
         } catch (IOException e) {
             throw new RuntimeException(e);

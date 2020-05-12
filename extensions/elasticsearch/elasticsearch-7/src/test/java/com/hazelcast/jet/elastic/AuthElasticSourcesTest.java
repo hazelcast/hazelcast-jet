@@ -100,4 +100,18 @@ public class AuthElasticSourcesTest extends BaseElasticTest {
                 .hasStackTraceContaining("failed to authenticate user [elastic]");
     }
 
+    @Test
+    public void given_clientWithoutAuthentication_whenReadFromElasticSource_then_failWithAuthenticationException() {
+        ElasticsearchContainer container = elastic.get();
+        String containerIp = container.getContainerIpAddress();
+        Integer port = container.getMappedPort(PORT);
+
+        Pipeline p = Pipeline.create();
+        p.readFrom(ElasticSources.elastic(() -> client(containerIp, port)))
+         .writeTo(Sinks.list(results));
+
+        assertThatThrownBy(() -> submitJob(p))
+                .hasRootCauseInstanceOf(ResponseException.class)
+                .hasStackTraceContaining("missing authentication credentials");
+    }
 }
