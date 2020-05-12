@@ -16,10 +16,9 @@
 
 package com.hazelcast.jet.cdc.impl;
 
-import com.fasterxml.jackson.jr.annotationsupport.JacksonAnnotationExtension;
-import com.fasterxml.jackson.jr.ob.JSON;
 import com.hazelcast.jet.cdc.ParsingException;
 import com.hazelcast.jet.cdc.RecordPart;
+import com.hazelcast.jet.json.JsonUtil;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 
@@ -29,8 +28,6 @@ import java.util.Map;
 import java.util.Objects;
 
 class RecordPartImpl implements RecordPart {
-
-    private static final JSON J = JSON.builder().register(JacksonAnnotationExtension.std).build();
 
     private String json;
     private Map<String, Object> content;
@@ -44,8 +41,8 @@ class RecordPartImpl implements RecordPart {
     public <T> T toObject(@Nonnull Class<T> clazz) throws ParsingException {
         Objects.requireNonNull(clazz, "class");
         try {
-            return J.beanFrom(clazz, json);
-        } catch (IOException e) {
+            return JsonUtil.parse(clazz, json);
+        } catch (Throwable e) {
             throw new ParsingException(e.getMessage(), e);
         }
     }
@@ -55,8 +52,8 @@ class RecordPartImpl implements RecordPart {
     public Map<String, Object> toMap() throws ParsingException {
         if (content == null) {
             try {
-                content = J.mapFrom(json);
-            } catch (IOException e) {
+                content = JsonUtil.parse(json);
+            } catch (Throwable e) {
                 throw new ParsingException(e.getMessage(), e);
             }
         }
