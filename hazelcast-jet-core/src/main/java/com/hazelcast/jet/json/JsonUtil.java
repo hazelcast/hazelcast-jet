@@ -82,7 +82,7 @@ public final class JsonUtil {
     /**
      * Converts a JSON string to a object of given type.
      */
-    @Nonnull
+    @Nullable
     public static <T> T mapFrom(@Nonnull Class<T> type, @Nonnull String jsonString) throws IOException {
         return JSON_JR.beanFrom(type, jsonString);
     }
@@ -90,7 +90,7 @@ public final class JsonUtil {
     /**
      * Converts a JSON string to a {@link Map}.
      */
-    @Nonnull
+    @Nullable
     public static Map<String, Object> mapFrom(@Nonnull String jsonString) throws IOException {
         return JSON_JR.mapFrom(jsonString);
     }
@@ -98,7 +98,7 @@ public final class JsonUtil {
     /**
      * Converts a JSON string to a {@link List} of given type.
      */
-    @Nonnull
+    @Nullable
     public static <T> List<T> listFrom(@Nonnull Class<T> type, @Nonnull String jsonString) throws IOException {
         return JSON_JR.listOfFrom(type, jsonString);
     }
@@ -106,7 +106,7 @@ public final class JsonUtil {
     /**
      * Converts a JSON string to a {@link List}.
      */
-    @Nonnull
+    @Nullable
     public static List<Object> listFrom(@Nonnull String jsonString) throws IOException {
         return JSON_JR.listFrom(jsonString);
     }
