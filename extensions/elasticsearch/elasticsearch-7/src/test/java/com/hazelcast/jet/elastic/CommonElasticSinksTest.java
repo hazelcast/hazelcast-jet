@@ -22,10 +22,12 @@ import com.hazelcast.jet.pipeline.test.TestSources;
 import org.apache.lucene.search.TotalHits;
 import org.elasticsearch.action.admin.indices.refresh.RefreshRequest;
 import org.elasticsearch.action.bulk.BulkRequest;
+import org.elasticsearch.action.delete.DeleteRequest;
 import org.elasticsearch.action.index.IndexRequest;
 import org.elasticsearch.action.search.SearchRequest;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.support.WriteRequest.RefreshPolicy;
+import org.elasticsearch.action.update.UpdateRequest;
 import org.elasticsearch.search.SearchHit;
 import org.junit.Test;
 
@@ -37,6 +39,7 @@ import java.util.Map;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.entry;
 import static org.elasticsearch.client.RequestOptions.DEFAULT;
+import static org.testcontainers.shaded.com.google.common.collect.ImmutableMap.of;
 
 public abstract class CommonElasticSinksTest extends BaseElasticTest {
 
@@ -82,7 +85,7 @@ public abstract class CommonElasticSinksTest extends BaseElasticTest {
     }
 
     @Test
-    public void given_winkCreatedByFactoryMethod_whenWriteToElasticSink_thenDocumentInIndex() throws Exception {
+    public void given_sinkCreatedByFactoryMethod_whenWriteToElasticSink_thenDocumentInIndex() throws Exception {
         Sink<TestItem> elasticSink = ElasticSinks.elastic(
                 elasticClientSupplier(),
                 item -> new IndexRequest("my-index").source(item.asMap())
@@ -98,20 +101,68 @@ public abstract class CommonElasticSinksTest extends BaseElasticTest {
         assertSingleDocument();
     }
 
+    @Test
+    public void given_documentInIndex_whenWriteToElasticSinkUpdateRequest_then_documentsInIndexUpdated() throws Exception {
+        String id = indexDocument("my-index", of("name", "Fra"));
+
+        Sink<TestItem> elasticSink = ElasticSinks.elastic(
+                elasticClientSupplier(),
+                item -> new UpdateRequest("my-index", item.id).doc(item.asMap())
+        );
+
+        Pipeline p = Pipeline.create();
+        p.readFrom(TestSources.items(new TestItem(id, "Frantisek")))
+         .writeTo(elasticSink);
+
+        submitJob(p);
+        refreshIndex();
+
+        assertSingleDocument(id, "Frantisek");
+    }
+
+    @Test
+    public void given_documentInIndex_whenWriteToElasticSinkDeleteRequest_then_documentIsDeleted() throws Exception {
+        String id = indexDocument("my-index", of("name", "Fra"));
+
+        Sink<TestItem> elasticSink = ElasticSinks.elastic(
+                elasticClientSupplier(),
+                item -> new DeleteRequest("my-index", item.id)
+        );
+
+        Pipeline p = Pipeline.create();
+        p.readFrom(TestSources.items(new TestItem(id, "Frantisek")))
+         .writeTo(elasticSink);
+
+        submitJob(p);
+        refreshIndex();
+
+        assertNoDocuments("my-index");
+    }
+
     private void refreshIndex() throws IOException {
         // Need to refresh index because the default bulk request doesn't do it and we may not see the result
         elasticClient.indices().refresh(new RefreshRequest("my-index"), DEFAULT);
     }
 
     private void assertSingleDocument() throws IOException {
+        assertSingleDocument("id", "Frantisek");
+    }
+
+    private void assertSingleDocument(String id, String name) throws IOException {
         SearchResponse response = elasticClient.search(new SearchRequest("my-index"), DEFAULT);
         SearchHit[] hits = response.getHits().getHits();
         assertThat(hits).hasSize(1);
         Map<String, Object> document = hits[0].getSourceAsMap();
         assertThat(document).contains(
-                entry("id", "id"),
-                entry("name", "Frantisek")
+                entry("id", id),
+                entry("name", name)
         );
+    }
+
+    private void assertNoDocuments(String index) throws IOException {
+        SearchResponse response = elasticClient.search(new SearchRequest(index), DEFAULT);
+        SearchHit[] hits = response.getHits().getHits();
+        assertThat(hits).hasSize(0);
     }
 
     static class TestItem implements Serializable {

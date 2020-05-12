@@ -140,19 +140,19 @@ public abstract class BaseElasticTest {
     /**
      * Indexes a batch of documents to an index with given name
      */
-    protected void indexBatchOfDocuments(String index) {
-        indexBatchOfDocuments(index, CommonElasticSourcesTest.BATCH_SIZE);
+    protected List<String> indexBatchOfDocuments(String index) {
+        return indexBatchOfDocuments(index, CommonElasticSourcesTest.BATCH_SIZE);
     }
 
     /**
      * Indexes a batch of documents to an index with given name
      */
-    protected void indexBatchOfDocuments(String index, int batchSize) {
+    protected List<String> indexBatchOfDocuments(String index, int batchSize) {
         List<Map<String, Object>> docs = new ArrayList<>();
         for (int i = 0; i < batchSize; i++) {
             docs.add(of("title", "document " + i));
         }
-        indexDocuments(index, docs);
+        return indexDocuments(index, docs);
     }
 
     /**
