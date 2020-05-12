@@ -14,7 +14,7 @@ Amazon S3 or Hadoop. Most file sources and sinks are batch oriented, but
 the sinks that support _rolling_ capability can also be used as sinks in
 streaming jobs.
 
-### Local Disk
+### Local Disk
 
 The simplest file source is designed to work with both local and network
 file systems. This source is text-oriented and reads the files line by
@@ -28,34 +28,65 @@ p.readFrom(Sources.files("/home/data/web-logs"))
  .writeTo(Sinks.logger());
 ```
 
+#### JSON Files
+
 For JSON files, the source expects each line contains a valid JSON
 string and converts it to the given object type or to a `Map` if no
 type is specified:
 
 ```java
 Pipeline p = Pipeline.create();
-p.readFrom(Sources.json("/home/data/web-logs", SimpleLog.class))
- .filter(log -> log.level().equals("ERROR"))
+p.readFrom(Sources.json("/home/data/people", Person.class))
+ .filter(person -> person.location().equals("NYC"))
  .writeTo(Sinks.logger());
 ```
 
-If your JSON files contain JSON strings that each one spanning multiple
+If your JSON files contain JSON strings that span multiple
 lines, you can use `filesBuilder` source:
 
 ```java
 Pipeline p = Pipeline.create();
 p.readFrom(Sources.filesBuilder(sourceDir)
-    .build(JsonUtil.asMultilineJson(SimpleLog.class)))
- .filter(log -> log.level().equals("ERROR"))
+    .build(JsonUtil.asMultilineJson(Person.class)))
+ .filter(person -> person.location().equals("NYC"))
  .writeTo(Sinks.logger());
 ```
 
-We use the lightweight JSON library `jackson-jr` to parse the given
+Jet uses the lightweight JSON library `jackson-jr` to parse the given
 input or to convert the given objects to JSON string. You can use
 [Jackson Annotations](https://github.com/FasterXML/jackson-annotations/wiki/Jackson-Annotations)
-by adding `jackson-annotations` library to the classpath.
+by adding `jackson-annotations` library to the classpath, for example:
 
-For CSV files it is also possible to use the `filesBuilder` source:
+```java
+public class Person {
+
+    private long personId;
+    private String name;
+
+    @JsonGetter("id")
+    public long getPersonId() {
+      return this.personId;
+    }
+
+    @JsonSetter("id")
+    public void setPersonId(long personId) {
+      this.personId = personId;
+    }
+
+    public String getName() {
+       return name;
+    }
+
+    public void setName(String name) {
+      this.name = name;
+    }
+}
+```
+
+#### CSV
+
+For CSV files or for parsing files in other custom formats it's possible
+to use the `filesBuilder` source:
 
 ```java
 Pipeline p = Pipeline.create();
@@ -64,11 +95,14 @@ p.readFrom(Sources.filesBuilder(sourceDir).glob("*.csv").build(path ->
 ).writeTo(Sinks.logger());
 ```
 
+#### Data Locality for Files
+
 For a local file system, the sources expect to see on each node just the
 files that node should read. You can achieve the effect of a distributed
 source if you manually prepare a different set of files on each node.
 For shared file system, the sources can split the work so that each node
-will read a part of the files.
+will read a part of the files by configuring the option
+`FilesBuilder.sharedFileSystem()`.
 
 #### File Sink
 

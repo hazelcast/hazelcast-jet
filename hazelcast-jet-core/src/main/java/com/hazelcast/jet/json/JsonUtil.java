@@ -122,6 +122,7 @@ public final class JsonUtil {
      *     primitive.</li>
      * </ul>
      */
+    @Nonnull
     public static Object anyFrom(@Nonnull String jsonString) throws IOException {
         return JSON_JR.anyFrom(jsonString);
     }

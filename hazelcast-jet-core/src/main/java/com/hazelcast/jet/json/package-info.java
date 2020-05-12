@@ -15,7 +15,7 @@
  */
 
 /**
- * Utility classes for JSON.
+ * Utility classes for JSON parsing and serialization.
  *
  * @since 4.2
  */
