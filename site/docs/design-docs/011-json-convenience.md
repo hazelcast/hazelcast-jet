@@ -3,6 +3,8 @@ title: 010 - JSON Convenience
 description: Add tooling to work with JSON formatted data.
 ---
 
+*Target Release*: 4.2
+
 ## Summary
 
 JSON is very frequent data exchange format. As of now, there is no

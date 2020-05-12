@@ -1230,6 +1230,8 @@ restarted in face of an intermittent failure.
 |`Sources.cacheJournal`|`hazelcast-jet`|stream|exactly-once|
 |`Sources.files`|`hazelcast-jet`|batch|N/A|
 |`Sources.fileWatcher`|`hazelcast-jet`|stream|none|
+|`Sources.json`|`hazelcast-jet`|batch|N/A|
+|`Sources.jsonWatcher`|`hazelcast-jet`|stream|none|
 |`Sources.jdbc`|`hazelcast-jet`|batch|N/A|
 |`Sources.jmsQueue`|`hazelcast-jet`|stream|exactly-once|
 |`Sources.list`|`hazelcast-jet`|batch|N/A|
@@ -1257,6 +1259,7 @@ processing even with at-least-once sinks.
 |`S3Sinks.s3`|`hazelcast-jet-s3`|no|N/A|
 |`Sinks.cache`|`hazelcast-jet`|yes|at-least-once|
 |`Sinks.files`|`hazelcast-jet`|yes|exactly-once|
+|`Sinks.json`|`hazelcast-jet`|yes|exactly-once|
 |`Sinks.jdbc`|`hazelcast-jet`|yes|exactly-once|
 |`Sinks.jmsQueue`|`hazelcast-jet`|yes|exactly-once|
 |`Sinks.list`|`hazelcast-jet`|no|N/A|
