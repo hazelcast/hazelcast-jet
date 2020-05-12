@@ -133,7 +133,7 @@ public class ElasticCatClient implements Closeable {
         try {
             Request r = new Request("GET", "/_cat/shards/" + String.join(",", indices));
             r.addParameter("format", "json");
-            r.addParameter("h", "id,index,shard,prirep,docs,state,node");
+            r.addParameter("h", "id,index,shard,prirep,docs,state,ip,node");
             Response res = client.performRequest(r);
 
             try (InputStreamReader reader = new InputStreamReader(res.getEntity().getContent(), UTF_8)) {
@@ -163,7 +163,7 @@ public class ElasticCatClient implements Closeable {
                     Prirep.valueOf(object.get("prirep").asString()),
                     Integer.parseInt(object.get("docs").asString()),
                     object.get("state").asString(),
-                    id,
+                    object.get("ip").asString(),
                     idToAddress.get(id),
                     object.get("node").asString()
             );

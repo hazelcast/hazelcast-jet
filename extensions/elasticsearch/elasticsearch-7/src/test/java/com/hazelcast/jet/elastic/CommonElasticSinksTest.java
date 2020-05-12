@@ -37,7 +37,6 @@ import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.elasticsearch.client.RequestOptions.DEFAULT;
-import static org.testcontainers.shaded.com.google.common.collect.ImmutableMap.of;
 
 public abstract class CommonElasticSinksTest extends BaseElasticTest {
 
@@ -101,7 +100,9 @@ public abstract class CommonElasticSinksTest extends BaseElasticTest {
 
     @Test
     public void given_documentInIndex_whenWriteToElasticSinkUpdateRequest_then_documentsInIndexUpdated() throws Exception {
-        String id = indexDocument("my-index", of("name", "Fra"));
+        Map<String, Object> doc = new HashMap<>();
+        doc.put("name", "Fra");
+        String id = indexDocument("my-index", doc);
 
         Sink<TestItem> elasticSink = ElasticSinks.elastic(
                 elasticClientSupplier(),
@@ -120,7 +121,9 @@ public abstract class CommonElasticSinksTest extends BaseElasticTest {
 
     @Test
     public void given_documentInIndex_whenWriteToElasticSinkDeleteRequest_then_documentIsDeleted() throws Exception {
-        String id = indexDocument("my-index", of("name", "Fra"));
+        Map<String, Object> doc = new HashMap<>();
+        doc.put("name", "Fra");
+        String id = indexDocument("my-index", doc);
 
         Sink<TestItem> elasticSink = ElasticSinks.elastic(
                 elasticClientSupplier(),
