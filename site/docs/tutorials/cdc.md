@@ -204,22 +204,12 @@ repositories.mavenCentral()
 
 dependencies {
     compile 'com.hazelcast.jet:hazelcast-jet:{jet-version}'
+    compile 'com.hazelcast.jet:hazelcast-jet-cdc-debezium:{jet-version}'
     compile 'com.hazelcast.jet:hazelcast-jet-cdc-mysql:{jet-version}'
-    compile 'com.fasterxml.jackson.jr:jackson-jr-objects:2.11.0'
-    compile 'com.fasterxml.jackson.jr:jackson-jr-annotation-support:2.11.0'
+    compile 'com.fasterxml.jackson.core:jackson-annotations:2.11.0'
 }
 
-jar {
-    enabled = false
-    dependsOn(shadowJar { classifier = null })
-    manifest.attributes 'Main-Class': 'org.example.JetJob'
-}
-
-shadowJar {
-    dependencies {
-        exclude(dependency('com.hazelcast.jet:hazelcast-jet:{jet-version}'))
-    }
-}
+jar.manifest.attributes 'Main-Class': 'org.example.JetJob'
 ```
 
 <!--Maven-->
@@ -247,17 +237,17 @@ shadowJar {
        </dependency>
        <dependency>
            <groupId>com.hazelcast.jet</groupId>
+           <artifactId>hazelcast-jet-cdc-debezium</artifactId>
+           <version>{jet-version}</version>
+       </dependency>
+       <dependency>
+           <groupId>com.hazelcast.jet</groupId>
            <artifactId>hazelcast-jet-cdc-mysql</artifactId>
            <version>{jet-version}</version>
        </dependency>
        <dependency>
-           <groupId>com.fasterxml.jackson.jr</groupId>
-           <artifactId>jackson-jr-objects</artifactId>
-           <version>2.11.0</version>
-       </dependency>
-       <dependency>
-           <groupId>com.fasterxml.jackson.jr</groupId>
-           <artifactId>jackson-jr-annotation-support</artifactId>
+           <groupId>com.fasterxml.jackson.core</groupId>
+           <artifactId>jackson-annotations</artifactId>
            <version>2.11.0</version>
        </dependency>
    </dependencies>
@@ -274,26 +264,6 @@ shadowJar {
                         </manifest>
                     </archive>
                 </configuration>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-shade-plugin</artifactId>
-                <version>3.2.2</version>
-                <executions>
-                    <execution>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>shade</goal>
-                        </goals>
-                        <configuration>
-                            <artifactSet>
-                                <excludes>
-                                    <exclude>com.hazelcast.jet:hazelcast-jet</exclude>
-                                </excludes>
-                            </artifactSet>
-                        </configuration>
-                    </execution>
-                </executions>
             </plugin>
         </plugins>
     </build>
