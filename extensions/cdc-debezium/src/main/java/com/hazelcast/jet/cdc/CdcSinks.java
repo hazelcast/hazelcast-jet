@@ -127,7 +127,7 @@ public final class CdcSinks {
 
     @Nonnull
     private static <V> BiFunctionEx<V, ChangeRecord, V> updateFn(@Nonnull FunctionEx<ChangeRecord, V> valueFn) {
-        return (BiFunctionEx<V, ChangeRecord, V>) (oldValue, record) -> {
+        return (oldValue, record) -> {
             if (DELETE.equals(record.operation())) {
                 return null;
             }
