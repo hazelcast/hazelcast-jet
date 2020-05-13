@@ -228,8 +228,11 @@ public class ElasticSinkBuilder<T> implements Serializable {
 
         void close() throws IOException {
             logger.fine("Closing BulkContext");
-            flush();
-            client.close();
+            try {
+                flush();
+            } finally {
+                client.close();
+            }
         }
     }
 

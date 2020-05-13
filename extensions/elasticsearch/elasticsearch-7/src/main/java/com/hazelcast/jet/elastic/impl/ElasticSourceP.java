@@ -48,9 +48,14 @@ import static java.util.stream.Collectors.toList;
 
 final class ElasticSourceP<T> extends AbstractProcessor {
 
-    private ElasticSourceConfiguration<T> configuration;
+    private final ElasticSourceConfiguration<T> configuration;
     private final List<Shard> shards;
+    private RestHighLevelClient client;
+    private ILogger logger;
     private Traverser<T> traverser;
+
+    // need to keep ElasticScrollTraverser to be able to close the scroll when needed
+    private ElasticScrollTraverser scrollTraverser;
 
     ElasticSourceP(ElasticSourceConfiguration<T> configuration, List<Shard> shards) {
         this.configuration = configuration;
@@ -61,10 +66,10 @@ final class ElasticSourceP<T> extends AbstractProcessor {
     protected void init(@Nonnull Context context) throws Exception {
         super.init(context);
 
-        ILogger logger = context.logger();
+        logger = context.logger();
         logger.fine("init");
 
-        RestHighLevelClient client = configuration.clientFn().get();
+        client = configuration.clientFn().get();
         SearchRequest sr = configuration.searchRequestFn().get();
         sr.scroll(configuration.scrollKeepAlive());
 
@@ -101,7 +106,8 @@ final class ElasticSourceP<T> extends AbstractProcessor {
             sr.preference(preference);
         }
 
-        traverser = new ElasticScrollTraverser(configuration, client, sr, logger).map(configuration.mapToItemFn());
+        scrollTraverser = new ElasticScrollTraverser(configuration, client, sr, logger);
+        traverser = scrollTraverser.map(configuration.mapToItemFn());
     }
 
     private Node createLocalElasticNode() {
@@ -125,9 +131,12 @@ final class ElasticSourceP<T> extends AbstractProcessor {
 
     @Override
     public void close() throws Exception {
-        if (traverser instanceof ElasticSourceP.ElasticScrollTraverser) {
-            ElasticScrollTraverser scrollTraverser = (ElasticScrollTraverser) traverser;
-            scrollTraverser.close();
+        scrollTraverser.close();
+
+        try {
+            client.close();
+        } catch (Exception e) { // IOException on client.close()
+            logger.fine("Could not close client", e);
         }
     }
 
@@ -196,12 +205,6 @@ final class ElasticSourceP<T> extends AbstractProcessor {
             if (scrollId != null) {
                 clearScroll(scrollId);
                 scrollId = null;
-            }
-
-            try {
-                client.close();
-            } catch (Exception e) { // IOException on client.close()
-                logger.fine("Could not close client", e);
             }
         }
 

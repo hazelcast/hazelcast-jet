@@ -23,12 +23,24 @@ import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.pipeline.BatchSource;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
+import org.apache.http.HttpHost;
 import org.elasticsearch.action.search.SearchRequest;
+import org.elasticsearch.client.RestClient;
+import org.elasticsearch.client.RestClientBuilder;
 import org.junit.After;
 import org.junit.Test;
 
+import java.io.IOException;
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.List;
+
 import static com.google.common.collect.ImmutableMap.of;
+import static java.util.Collections.synchronizedList;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 /**
  * Test running single Jet member locally and Elastic in docker
@@ -67,5 +79,40 @@ public class LocalElasticSourcesTest extends CommonElasticSourcesTest {
         assertThatThrownBy(() -> super.jet.newJob(p).join())
                 .hasCauseInstanceOf(JetException.class)
                 .hasMessageContaining("Shard locations are not equal to Jet nodes locations");
+    }
+
+    @Test
+    public void when_readFromElasticSource_then_shouldCloseAllCreatedClients() throws IOException {
+        indexDocument("my-index", of("name", "Frantisek"));
+
+        Pipeline p = Pipeline.create();
+
+        BatchSource<String> source = new ElasticSourceBuilder<>()
+                .clientFn(() -> {
+                    RestClientBuilder builder = spy(ElasticSupport.elasticClientSupplier().get());
+                    when(builder.build()).thenAnswer(invocation -> {
+                        Object result = invocation.callRealMethod();
+                        RestClient elasticClient = (RestClient) spy(result);
+                        ClientHolder.elasticClients.add(elasticClient);
+                        return elasticClient;
+                    });
+                    return builder;
+                })
+                .searchRequestFn(() -> new SearchRequest("my-index"))
+                .mapToItemFn(hit -> (String) hit.getSourceAsMap().get("name"))
+                .build();
+
+        p.readFrom(source)
+         .writeTo(Sinks.logger());
+
+        submitJob(p);
+
+        for (RestClient elasticClient : ClientHolder.elasticClients) {
+            verify(elasticClient).close();
+        }
+    }
+
+    static class ClientHolder implements Serializable {
+        static List<RestClient> elasticClients = synchronizedList(new ArrayList<>());
     }
 }
