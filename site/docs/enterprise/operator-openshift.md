@@ -16,7 +16,7 @@ Ready Software.
 
 ## Prerequisites
 
-- A running Openshift cluster either on-prem or hosted by RedHat.
+- A running OpenShift cluster with administration rights.
 
 ## How to install Operator from Developer Catalog
 
