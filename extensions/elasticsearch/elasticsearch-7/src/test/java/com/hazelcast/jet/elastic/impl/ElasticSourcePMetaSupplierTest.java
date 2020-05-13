@@ -53,6 +53,23 @@ public class ElasticSourcePMetaSupplierTest {
     }
 
     @Test
+    public void given_elasticClusterSubsetOfJetCluster_when_assignShards_then_shouldAssignAllShards() {
+        List<Shard> shards = newArrayList(
+                new Shard("elastic-index", 0, Prirep.p, 10, "STARTED", "10.0.0.1", "10.0.0.1:9200", "node1"),
+                new Shard("elastic-index", 1, Prirep.p, 10, "STARTED", "10.0.0.2", "10.0.0.2:9200", "node2"),
+                new Shard("elastic-index", 2, Prirep.p, 10, "STARTED", "10.0.0.1", "10.0.0.1:9200", "node3")
+        );
+
+        List<Address> addresses = addresses("10.0.0.1", "10.0.0.2", "10.0.0.3");
+        Map<Address, List<Shard>> assignment = ElasticSourcePMetaSupplier.assignShards(shards, addresses);
+
+        assertThat(assignment).contains(
+                entry(address("10.0.0.1"), newArrayList(shards.get(0), shards.get(2))),
+                entry(address("10.0.0.2"), newArrayList(shards.get(1)))
+        );
+    }
+
+    @Test
     public void given_multipleNodeAddresses_when_assignShards_then_shouldAssignSingleShardToEachAddress() {
         List<Shard> shards = newArrayList(
                 new Shard("elastic-index", 0, Prirep.p, 10, "STARTED", "10.0.0.1", "10.0.0.1:9200", "node1"),
@@ -67,6 +84,29 @@ public class ElasticSourcePMetaSupplierTest {
                 entry(address("10.0.0.1"), newArrayList(shards.get(0))),
                 entry(address("10.0.0.2"), newArrayList(shards.get(1))),
                 entry(address("10.0.0.3"), newArrayList(shards.get(2)))
+        );
+    }
+
+    @Test
+    public void given_multipleNodeAddressesOnLocal_when_assignShards_then_shouldAssignSingleShardToEachAddress()
+            throws UnknownHostException {
+        List<Shard> shards = newArrayList(
+                new Shard("elastic-index", 0, Prirep.p, 10, "STARTED", "127.0.0.1", "127.0.0.1:9200", "node1"),
+                new Shard("elastic-index", 1, Prirep.p, 10, "STARTED", "127.0.0.1", "127.0.0.1:9201", "node2"),
+                new Shard("elastic-index", 2, Prirep.p, 10, "STARTED", "127.0.0.1", "127.0.0.1:9202", "node3")
+        );
+
+        List<Address> addresses = newArrayList(
+                new Address("127.0.0.1", 5701),
+                new Address("127.0.0.1", 5702),
+                new Address("127.0.0.1", 5703)
+        );
+        Map<Address, List<Shard>> assignment = ElasticSourcePMetaSupplier.assignShards(shards, addresses);
+
+        assertThat(assignment).contains(
+                entry(addresses.get(0), newArrayList(shards.get(0))),
+                entry(addresses.get(1), newArrayList(shards.get(1))),
+                entry(addresses.get(2), newArrayList(shards.get(2)))
         );
     }
 

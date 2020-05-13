@@ -96,7 +96,8 @@ public class ElasticSourcePMetaSupplier<T> implements ProcessorMetaSupplier {
         int uniqueShards = (int) shards.stream().map(Shard::indexShard).distinct().count();
         Set<String> assignedShards = new HashSet<>();
 
-        int iterations = (uniqueShards + addresses.size() - 1) / addresses.size(); // Same as Math.ceil for float div
+        int candidatesSize = nodeCandidates.keySet().size();
+        int iterations = (uniqueShards + candidatesSize - 1) / candidatesSize; // Same as Math.ceil for float div
         for (int i = 0; i < iterations; i++) {
             for (Address address : addresses) {
                 String host = address.getHost();
