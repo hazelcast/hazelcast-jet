@@ -84,7 +84,7 @@ public class ElasticSourceBuilder<T> {
                 searchRequestFn, optionsFn, mapToItemFn, slicing, coLocatedReading,
                 scrollKeepAlive, preferredLocalParallelism
         );
-        ElasticSourcePMetaSupplier<T> metaSupplier = new ElasticSourcePMetaSupplier<T>(configuration);
+        ElasticSourcePMetaSupplier<T> metaSupplier = new ElasticSourcePMetaSupplier<>(configuration);
         return Sources.batchFromProcessor(DEFAULT_NAME, metaSupplier);
     }
 
@@ -171,7 +171,7 @@ public class ElasticSourceBuilder<T> {
      * @param optionsFn function that provides {@link RequestOptions}
      * @see <a
      * href="https://www.elastic.co/guide/en/elasticsearch/client/java-rest/current/java-rest-low-usage-requests.html">
-     * RequestOptions</a> in Elastic documentation
+     * RequestOptions in Elastic documentation</a>
      */
     @Nonnull
     public ElasticSourceBuilder<T> optionsFn(@Nonnull FunctionEx<? super ActionRequest, RequestOptions> optionsFn) {

@@ -101,7 +101,7 @@ public class ElasticSinkBuilder<T> implements Serializable {
      *
      * @param bulkRequestFn supplier function for the bulk request
      * @see <a href="https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-update-settings.html#bulk">
-     * Bulk indexing usage</a> in Elastic documentation
+     * Bulk indexing usage in Elastic documentation</a>
      */
     @Nonnull
     public ElasticSinkBuilder<T> bulkRequestFn(@Nonnull SupplierEx<BulkRequest> bulkRequestFn) {
@@ -154,7 +154,7 @@ public class ElasticSinkBuilder<T> implements Serializable {
      * @param optionsFn function that provides {@link RequestOptions}
      * @see <a
      * href="https://www.elastic.co/guide/en/elasticsearch/client/java-rest/current/java-rest-low-usage-requests.html">
-     * RequestOptions</a> in Elastic documentation
+     * RequestOptions in Elastic documentation</a>
      */
     @Nonnull
     public ElasticSinkBuilder<T> optionsFn(@Nonnull FunctionEx<? super ActionRequest, RequestOptions> optionsFn) {
