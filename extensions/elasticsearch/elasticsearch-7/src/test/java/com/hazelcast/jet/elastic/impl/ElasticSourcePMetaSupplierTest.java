@@ -16,10 +16,13 @@
 
 package com.hazelcast.jet.elastic.impl;
 
+import com.hazelcast.cluster.Address;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.elastic.impl.Shard.Prirep;
 import org.junit.Test;
 
+import java.net.UnknownHostException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -34,36 +37,36 @@ import static org.assertj.core.util.Lists.newArrayList;
 public class ElasticSourcePMetaSupplierTest {
 
     @Test
-    public void given_singleNodeAdress_when_assignShards_then_shouldAssignAllShardsToSingleAddress() {
+    public void given_singleNodeAddress_when_assignShards_then_shouldAssignAllShardsToSingleAddress() {
         List<Shard> shards = newArrayList(
                 new Shard("elastic-index", 0, Prirep.p, 10, "STARTED", "10.0.0.1", "10.0.0.1:9200", "node1"),
                 new Shard("elastic-index", 1, Prirep.p, 10, "STARTED", "10.0.0.1", "10.0.0.1:9200", "node2"),
                 new Shard("elastic-index", 2, Prirep.p, 10, "STARTED", "10.0.0.1", "10.0.0.1:9200", "node3")
         );
 
-        List<String> addresses = newArrayList("10.0.0.1");
-        Map<String, List<Shard>> assignment = ElasticSourcePMetaSupplier.assignShards(shards, addresses);
+        List<Address> addresses = addresses("10.0.0.1");
+        Map<Address, List<Shard>> assignment = ElasticSourcePMetaSupplier.assignShards(shards, addresses);
 
         assertThat(assignment).contains(
-                entry("10.0.0.1", shards)
+                entry(address("10.0.0.1"), shards)
         );
     }
 
     @Test
-    public void given_multipleNodeAdresses_when_assignShards_then_shouldAssignSingleShardToEachAddress() {
+    public void given_multipleNodeAddresses_when_assignShards_then_shouldAssignSingleShardToEachAddress() {
         List<Shard> shards = newArrayList(
                 new Shard("elastic-index", 0, Prirep.p, 10, "STARTED", "10.0.0.1", "10.0.0.1:9200", "node1"),
                 new Shard("elastic-index", 1, Prirep.p, 10, "STARTED", "10.0.0.2", "10.0.0.1:9200", "node2"),
                 new Shard("elastic-index", 2, Prirep.p, 10, "STARTED", "10.0.0.3", "10.0.0.1:9200", "node3")
         );
 
-        List<String> addresses = newArrayList("10.0.0.1", "10.0.0.2", "10.0.0.3");
-        Map<String, List<Shard>> assignment = ElasticSourcePMetaSupplier.assignShards(shards, addresses);
+        List<Address> addresses = addresses("10.0.0.1", "10.0.0.2", "10.0.0.3");
+        Map<Address, List<Shard>> assignment = ElasticSourcePMetaSupplier.assignShards(shards, addresses);
 
         assertThat(assignment).contains(
-                entry("10.0.0.1", newArrayList(shards.get(0))),
-                entry("10.0.0.2", newArrayList(shards.get(1))),
-                entry("10.0.0.3", newArrayList(shards.get(2)))
+                entry(address("10.0.0.1"), newArrayList(shards.get(0))),
+                entry(address("10.0.0.2"), newArrayList(shards.get(1))),
+                entry(address("10.0.0.3"), newArrayList(shards.get(2)))
         );
     }
 
@@ -85,18 +88,18 @@ public class ElasticSourcePMetaSupplierTest {
 
         Collections.shuffle(shards, new Random(1L)); // random but stable shuffle
 
-        List<String> addresses = newArrayList("10.0.0.1", "10.0.0.2", "10.0.0.3");
-        Map<String, List<Shard>> assignment = ElasticSourcePMetaSupplier.assignShards(shards, addresses);
+        List<Address> addresses = addresses("10.0.0.1", "10.0.0.2", "10.0.0.3");
+        Map<Address, List<Shard>> assignment = ElasticSourcePMetaSupplier.assignShards(shards, addresses);
 
-        assertThat(assignment).containsKeys("10.0.0.1", "10.0.0.2", "10.0.0.3");
+        assertThat(assignment).containsKeys(address("10.0.0.1"), address("10.0.0.2"), address("10.0.0.3"));
 
-        assertThat(assignment.get("10.0.0.1")).hasSize(1);
-        assertThat(assignment.get("10.0.0.2")).hasSize(1);
-        assertThat(assignment.get("10.0.0.3")).hasSize(1);
+        assertThat(assignment.get(address("10.0.0.1"))).hasSize(1);
+        assertThat(assignment.get(address("10.0.0.2"))).hasSize(1);
+        assertThat(assignment.get(address("10.0.0.3"))).hasSize(1);
 
-        assertThat(assignment.get("10.0.0.1").get(0).getIp()).isEqualTo("10.0.0.1");
-        assertThat(assignment.get("10.0.0.2").get(0).getIp()).isEqualTo("10.0.0.2");
-        assertThat(assignment.get("10.0.0.3").get(0).getIp()).isEqualTo("10.0.0.3");
+        assertThat(assignment.get(address("10.0.0.1")).get(0).getIp()).isEqualTo("10.0.0.1");
+        assertThat(assignment.get(address("10.0.0.2")).get(0).getIp()).isEqualTo("10.0.0.2");
+        assertThat(assignment.get(address("10.0.0.3")).get(0).getIp()).isEqualTo("10.0.0.3");
 
         List<String> indexShards = assignment.values()
                                              .stream()
@@ -114,22 +117,38 @@ public class ElasticSourcePMetaSupplierTest {
                 new Shard("elastic-index", 1, Prirep.p, 10, "STARTED", "10.0.0.2", "10.0.0.1:9200", "node2")
         );
 
-        List<String> addresses = newArrayList("10.0.0.1", "10.0.0.2", "10.0.0.3");
-        Map<String, List<Shard>> assignment = ElasticSourcePMetaSupplier.assignShards(shards, addresses);
+        List<Address> addresses = addresses("10.0.0.1", "10.0.0.2", "10.0.0.3");
+        Map<Address, List<Shard>> assignment = ElasticSourcePMetaSupplier.assignShards(shards, addresses);
 
         assertThat(assignment).contains(
-                entry("10.0.0.1", newArrayList(shards.get(0))),
-                entry("10.0.0.2", newArrayList(shards.get(1)))
+                entry(address("10.0.0.1"), newArrayList(shards.get(0))),
+                entry(address("10.0.0.2"), newArrayList(shards.get(1)))
         );
     }
 
     @Test(expected = JetException.class)
-    public void given_noMatchingNode_when_assigneShards_thenThrowException() {
+    public void given_noMatchingNode_when_assignShards_thenThrowException() {
         List<Shard> shards = newArrayList(
                 new Shard("elastic-index", 0, Prirep.p, 10, "STARTED", "10.0.0.1", "10.0.0.1:9200", "node1")
         );
-        List<String> addresses = newArrayList("10.0.0.2");
+        List<Address> addresses = addresses("10.0.0.2");
 
         ElasticSourcePMetaSupplier.assignShards(shards, addresses);
+    }
+
+    private List<Address> addresses(String... addresses) {
+        ArrayList<Address> result = new ArrayList<>(addresses.length);
+        for (String address : addresses) {
+            result.add(address(address));
+        }
+        return result;
+    }
+
+    private Address address(String address) {
+        try {
+            return new Address(address, 5701);
+        } catch (UnknownHostException e) {
+            throw new RuntimeException();
+        }
     }
 }

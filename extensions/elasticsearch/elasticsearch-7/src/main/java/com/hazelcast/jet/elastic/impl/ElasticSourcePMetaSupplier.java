@@ -46,7 +46,7 @@ public class ElasticSourcePMetaSupplier<T> implements ProcessorMetaSupplier {
     @Nonnull
     private final ElasticSourceConfiguration<T> configuration;
 
-    private Map<String, List<Shard>> assignedShards;
+    private transient Map<Address, List<Shard>> assignedShards;
     private transient Address ownerAddress;
 
     public ElasticSourcePMetaSupplier(@Nonnull ElasticSourceConfiguration<T> configuration) {
@@ -69,9 +69,9 @@ public class ElasticSourcePMetaSupplier<T> implements ProcessorMetaSupplier {
             List<Shard> shards = catClient.shards(configuration.searchRequestFn().get().indices());
 
             if (configuration.isCoLocatedReadingEnabled()) {
-                Set<String> addresses = context
+                Set<Address> addresses = context
                         .jetInstance().getCluster().getMembers().stream()
-                        .map(m -> uncheckCall((() -> m.getAddress().getInetAddress().getHostAddress())))
+                        .map(m -> uncheckCall((m::getAddress)))
                         .collect(toSet());
                 assignedShards = assignShards(shards, addresses);
             } else {
@@ -82,12 +82,13 @@ public class ElasticSourcePMetaSupplier<T> implements ProcessorMetaSupplier {
         }
     }
 
-    static Map<String, List<Shard>> assignShards(Collection<Shard> shards, Collection<String> addresses) {
+    static Map<Address, List<Shard>> assignShards(Collection<Shard> shards, Collection<Address> addresses) {
         Map<String, List<Shard>> nodeCandidates = shards.stream()
                                                         .collect(groupingBy(Shard::getIp));
-        Map<String, List<Shard>> nodeAssigned = new HashMap<>();
+        Map<Address, List<Shard>> nodeAssigned = new HashMap<>();
 
-        if (!addresses.containsAll(nodeCandidates.keySet())) {
+        if (!addresses.stream().map(Address::getHost).collect(toSet())
+                      .containsAll(nodeCandidates.keySet())) {
             throw new JetException("Shard locations are not equal to Jet nodes locations, " +
                     "shards=" + nodeCandidates.keySet() + ", Jet nodes=" + addresses);
         }
@@ -97,8 +98,9 @@ public class ElasticSourcePMetaSupplier<T> implements ProcessorMetaSupplier {
 
         int iterations = (uniqueShards + addresses.size() - 1) / addresses.size(); // Same as Math.ceil for float div
         for (int i = 0; i < iterations; i++) {
-            for (String address : addresses) {
-                List<Shard> thisNodeCandidates = nodeCandidates.getOrDefault(address, emptyList());
+            for (Address address : addresses) {
+                String host = address.getHost();
+                List<Shard> thisNodeCandidates = nodeCandidates.getOrDefault(host, emptyList());
                 if (thisNodeCandidates.isEmpty()) {
                     continue;
                 }
@@ -124,8 +126,7 @@ public class ElasticSourcePMetaSupplier<T> implements ProcessorMetaSupplier {
     public Function<? super Address, ? extends ProcessorSupplier> get(@Nonnull List<Address> addresses) {
         if (configuration.isSlicingEnabled() || configuration.isCoLocatedReadingEnabled()) {
             return address -> {
-                String ipAddress = uncheckCall(() -> address.getInetAddress().getHostAddress());
-                List<Shard> shards = assignedShards.getOrDefault(ipAddress, emptyList());
+                List<Shard> shards = assignedShards.getOrDefault(address, emptyList());
                 return new ElasticSourcePSupplier<>(configuration, shards);
             };
         } else {
