@@ -22,11 +22,11 @@ class Demos extends React.Component {
                     <p>{props.children}</p>
                     { props.videoId && 
                       <p>
-                        <iframe width="400" height="300" src={`https://www.youtube.com/embed/${props.videoId}`} frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                        <iframe width="100%" height="300" src={`https://www.youtube.com/embed/${props.videoId}`} frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
                       </p>
                     }
                     { props.image && 
-                      <img width="400" src={props.image}></img>
+                      <img width="100%" src={props.image}></img>
                     }
                     <Button href={props.link}>Learn More</Button>
                 </div>
