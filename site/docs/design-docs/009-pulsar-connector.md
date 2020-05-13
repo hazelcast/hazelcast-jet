@@ -138,8 +138,8 @@ The design choices regarding the usage of Consumer API are listed below:
 
 1. Shared subscription mode is preferred.
 2. Receive messages in a synchronous batch manner.
-3. Immediately send an acknowledgment to a Pulsar broker after consuming
-   a message.
+3. Immediately send acknowledgments to a Pulsar broker after consuming
+   a batch of messages.
 
 ### The Source using Reader API
 
@@ -202,16 +202,23 @@ mechanism.
 For more information about Pulsar producers
 [look](https://pulsar.apache.org/docs/en/concepts-messaging/#producers).
 
-## Common Properties of Source and Sinks
+## Common Properties of Sources and Sinks
 
+Both the source and sink creation APIs of the Pulsar connector implement
+the builder pattern. We get the required parameters in the constructor
+and other parameters in the setters. Configuration values are set to
+default values and these default values can be changed using setters. We
+have shown basic usage in all of the usage examples we provided, if you
+want to change the values of optional parameters, you can use the setter
+methods of the builder.
 Both creating sources or sink of the Pulsar requires some kind of
-projection functions from the user. These functions are used to
-transform the data format with respect to the data transfer direction.
-In the case of the source, we need to convert the received Pulsar
-message to a Jet-compatible serializable data, that is, emitting items.
-The Jet sources use `Event Time` of the Pulsar message object as a
-timestamp, if it exists. Otherwise, its `Publish Time` is used as a
-timestamp which always presents.
+projection functions from the user as a required parameter. These
+functions are used to transform the data format with respect to the data
+transfer direction. In the case of the source, we need to convert the
+received Pulsar message to a Jet-compatible serializable data, that is,
+emitting items. The Jet sources use `Event Time` of the Pulsar message
+object as a timestamp, if it exists. Otherwise, its `Publish Time` is
+used as a timestamp which always presents.
 
 In turn, converting the processed items to the Pulsar message form is
 required at the sink.
