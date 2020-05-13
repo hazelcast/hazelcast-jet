@@ -147,23 +147,23 @@ should be created.
 
 ```bash
 $ kubectl get all
-NAME                                                       READY   STATUS    RESTARTS   AGE
+NAME                                                               READY   STATUS    RESTARTS   AGE
 pod/jet-cluster-hazelcast-jet-0                                    1/1     Running   0          6m28s
 pod/jet-cluster-hazelcast-jet-1                                    1/1     Running   0          5m54s
 pod/jet-cluster-hazelcast-jet-management-center-85bbf6948b-p5n5h   1/1     Running   0          6m30s
 
-NAME                                          TYPE           CLUSTER-IP     EXTERNAL-IP     PORT(S)                        AGE
+NAME                                                  TYPE           CLUSTER-IP     EXTERNAL-IP     PORT(S)                        AGE
 service/jet-cluster-hazelcast-jet                     ClusterIP      None           <none>          5701/TCP                       6m32s
 service/jet-cluster-hazelcast-jet-management-center   LoadBalancer   10.47.244.94   34.72.142.219   8081:32476/TCP,443:32535/TCP   6m32s
-service/kubernetes                            ClusterIP      10.47.240.1    <none>          443/TCP                        2d22h
+service/kubernetes                                    ClusterIP      10.47.240.1    <none>          443/TCP                        2d22h
 
-NAME                                                  READY   UP-TO-DATE   AVAILABLE   AGE
+NAME                                                          READY   UP-TO-DATE   AVAILABLE   AGE
 deployment.apps/jet-cluster-hazelcast-jet-management-center   1/1     1            1           6m32s
 
-NAME                                                             DESIRED   CURRENT   READY   AGE
+NAME                                                                     DESIRED   CURRENT   READY   AGE
 replicaset.apps/jet-cluster-hazelcast-jet-management-center-85bbf6948b   1         1         1       6m32s
 
-NAME                                 READY   AGE
+NAME                                         READY   AGE
 statefulset.apps/jet-cluster-hazelcast-jet   2/2     6m33s
 ```
 
@@ -262,10 +262,10 @@ details:
 
 ```bash
 $ kubectl get svc
-NAME                                  TYPE           CLUSTER-IP     EXTERNAL-IP     PORT(S)                        AGE
+NAME                                          TYPE           CLUSTER-IP     EXTERNAL-IP     PORT(S)                        AGE
 jet-cluster-hazelcast-jet                     ClusterIP      None           <none>          5701/TCP                       54m
 jet-cluster-hazelcast-jet-management-center   LoadBalancer   10.47.244.94   34.72.142.219   8081:32476/TCP,443:32535/TCP   54m
-kubernetes                            ClusterIP      10.47.240.1    <none>          443/TCP                        2d23h
+kubernetes                                    ClusterIP      10.47.240.1    <none>          443/TCP                        2d23h
 ```
 
 To connect to Hazelcast Jet Management Center, you can use `EXTERNAL-IP`
