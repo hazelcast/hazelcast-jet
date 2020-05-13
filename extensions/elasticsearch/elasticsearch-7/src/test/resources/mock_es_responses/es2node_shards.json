@@ -6,6 +6,7 @@
     "prirep": "p",
     "docs": "0",
     "state": "STARTED",
+    "ip": "127.0.0.1",
     "node": "ryzen"
   },
   {
@@ -15,6 +16,7 @@
     "prirep": "r",
     "docs": "0",
     "state": "STARTED",
+    "ip": "127.0.0.1",
     "node": "ryzen"
   }
 ]

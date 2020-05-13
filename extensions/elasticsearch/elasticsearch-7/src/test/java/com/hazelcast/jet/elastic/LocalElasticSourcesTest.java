@@ -23,7 +23,6 @@ import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.pipeline.BatchSource;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
-import org.apache.http.HttpHost;
 import org.elasticsearch.action.search.SearchRequest;
 import org.elasticsearch.client.RestClient;
 import org.elasticsearch.client.RestClientBuilder;
