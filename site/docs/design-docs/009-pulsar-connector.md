@@ -294,22 +294,11 @@ public class PulsarConsumerDemo {
 
     public static void main(String[] args) {
         JetInstance jet = Jet.bootstrappedInstance();
-        Map<String, Object> consumerConfig = new HashMap<>();
-        consumerConfig.put("consumerName", "hazelcast-jet-consumer");
-        consumerConfig.put("subscriptionName", "hazelcast-jet-subscription");
-
-        final StreamSource<Integer> pulsarConsumerSource = PulsarSources.pulsarConsumer(
-                Collections.singletonList("hazelcast-demo-topic"),
-                2,
-                consumerConfig,
+        final StreamSource<Integer> pulsarConsumerSource = PulsarSources.pulsarConsumerBuilder(
+                "hazelcast-demo-topic",
                 () -> PulsarClient.builder().serviceUrl("pulsar://localhost:6650").build(),
                 () -> Schema.INT32,
-                () -> BatchReceivePolicy.builder()
-                                        .maxNumMessages(512)
-                                        .timeout(1000, TimeUnit.MILLISECONDS)
-                                        .build(),
-                Message::getValue);
-
+                Message::getValue).build();
         Pipeline pipeline = Pipeline.create();
         pipeline.readFrom(pulsarConsumerSource)
                 .withoutTimestamps()
@@ -318,6 +307,9 @@ public class PulsarConsumerDemo {
     }
 }
 ```
+
+The created source above uses default client configurations, you can
+change them by using builder methods.
 
 ### Pulsar Sink
 
@@ -348,10 +340,8 @@ public class PulsarProducerDemo {
     public static void main(String[] args) {
         JetInstance jet = Jet.bootstrappedInstance();
         Pipeline p = Pipeline.create();
-        Map<String, Object> producerConfig = new HashMap<>();
-
-        Sink<Integer> pulsarSink = PulsarSinks.builder("hazelcast-demo-topic",
-                producerConfig,
+        Sink<Integer> pulsarSink = PulsarSinks.builder(
+                "hazelcast-demo-topic",
                 () -> PulsarClient.builder()
                                   .serviceUrl("pulsar://localhost:6650")
                                   .build(),
