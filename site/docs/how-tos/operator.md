@@ -1,6 +1,6 @@
 ---
-title: How to install Hazelcast Jet Operator 
-description: Step-by-step guide on how to install Hazelcast Jet Operator on your Kubernetes Cluster.
+title: Install Hazelcast Jet Kubernetes Operator 
+description: Step-by-step guide on how to install Hazelcast Jet Kubernetes Operator on your Kubernetes Cluster.
 ---
 
 The [Operator Framework](https://github.com/operator-framework) is an
@@ -69,6 +69,7 @@ Hazelcast Jet Operator will be installed in the `operators` namespace
 and will be usable from all namespaces in the cluster.
 
 After install, watch your operator come up using the following command.
+It might take around a minute for installation to be succeed.
 
 ```bash
 $ kubectl get csv -n operators
@@ -88,7 +89,7 @@ After successfully installing the Hazelcast Jet Operator to your cluster
 we can now create Hazelcast Jet clusters with the `HazelcastJet` custom
 resource.
 
-Create a file name `hazelcast-jet-.yaml` with the contents below:
+Create a file name `hazelcast-jet.yaml` with the contents below:
 
 ```yaml
 apiVersion: hazelcast.com/v1alpha1
@@ -147,30 +148,30 @@ should be created.
 ```bash
 $ kubectl get all
 NAME                                                       READY   STATUS    RESTARTS   AGE
-pod/jet-hazelcast-jet-0                                    1/1     Running   0          6m28s
-pod/jet-hazelcast-jet-1                                    1/1     Running   0          5m54s
-pod/jet-hazelcast-jet-management-center-85bbf6948b-p5n5h   1/1     Running   0          6m30s
+pod/jet-cluster-hazelcast-jet-0                                    1/1     Running   0          6m28s
+pod/jet-cluster-hazelcast-jet-1                                    1/1     Running   0          5m54s
+pod/jet-cluster-hazelcast-jet-management-center-85bbf6948b-p5n5h   1/1     Running   0          6m30s
 
 NAME                                          TYPE           CLUSTER-IP     EXTERNAL-IP     PORT(S)                        AGE
-service/jet-hazelcast-jet                     ClusterIP      None           <none>          5701/TCP                       6m32s
-service/jet-hazelcast-jet-management-center   LoadBalancer   10.47.244.94   34.72.142.219   8081:32476/TCP,443:32535/TCP   6m32s
+service/jet-cluster-hazelcast-jet                     ClusterIP      None           <none>          5701/TCP                       6m32s
+service/jet-cluster-hazelcast-jet-management-center   LoadBalancer   10.47.244.94   34.72.142.219   8081:32476/TCP,443:32535/TCP   6m32s
 service/kubernetes                            ClusterIP      10.47.240.1    <none>          443/TCP                        2d22h
 
 NAME                                                  READY   UP-TO-DATE   AVAILABLE   AGE
-deployment.apps/jet-hazelcast-jet-management-center   1/1     1            1           6m32s
+deployment.apps/jet-cluster-hazelcast-jet-management-center   1/1     1            1           6m32s
 
 NAME                                                             DESIRED   CURRENT   READY   AGE
-replicaset.apps/jet-hazelcast-jet-management-center-85bbf6948b   1         1         1       6m32s
+replicaset.apps/jet-cluster-hazelcast-jet-management-center-85bbf6948b   1         1         1       6m32s
 
 NAME                                 READY   AGE
-statefulset.apps/jet-hazelcast-jet   2/2     6m33s
+statefulset.apps/jet-cluster-hazelcast-jet   2/2     6m33s
 ```
 
 Check the logs of the Hazelcast Jet nodes to verify cluster formation
 with the command below:
 
 ```bash
-$ kubectl logs pod/jet-hazelcast-jet-1
+$ kubectl logs pod/jet-cluster-hazelcast-jet-1
 ...
 ...
 2020-05-11 07:42:50,785 [ INFO] [hz.naughty_mendel.generic-operation.thread-0] [c.h.i.c.ClusterService]:
@@ -190,17 +191,17 @@ cluster formed successfully.
 ## Submitting the Sample Job
 
 To access this cluster inside Kubernetes environment from outside, we
-need do port forwarding. Port forwarding makes a port of a pod in the
+need to do port forwarding. Port forwarding makes a port of a pod in the
 remote Kubernetes cluster available to the local environment.
 
-To submit a job, we'll make port forwarding from a Hazelcast Jet
+To submit a job, we'll do port forwarding from a Hazelcast Jet
 pod on port 5701 to local port 5701. The command requires to
 use a pod name to be forwarded.
 
-Run the command below with to make port forwarding happen:
+Run the command below with to do port forwarding happen:
 
 ```bash
-$ kubectl port-forward pod/jet-hazelcast-jet-1 5701:5701
+$ kubectl port-forward pod/jet-cluster-hazelcast-jet-1 5701:5701
 Forwarding from 127.0.0.1:5701 -> 5701
 Forwarding from [::1]:5701 -> 5701
 ...
@@ -262,8 +263,8 @@ details:
 ```bash
 $ kubectl get svc
 NAME                                  TYPE           CLUSTER-IP     EXTERNAL-IP     PORT(S)                        AGE
-jet-hazelcast-jet                     ClusterIP      None           <none>          5701/TCP                       54m
-jet-hazelcast-jet-management-center   LoadBalancer   10.47.244.94   34.72.142.219   8081:32476/TCP,443:32535/TCP   54m
+jet-cluster-hazelcast-jet                     ClusterIP      None           <none>          5701/TCP                       54m
+jet-cluster-hazelcast-jet-management-center   LoadBalancer   10.47.244.94   34.72.142.219   8081:32476/TCP,443:32535/TCP   54m
 kubernetes                            ClusterIP      10.47.240.1    <none>          443/TCP                        2d23h
 ```
 
