@@ -48,15 +48,14 @@
                     </execution>
                 </executions>
                 <configuration>
-                    <organizeLicensesByDependencies>false</organizeLicensesByDependencies>
                     <acceptPomPackaging>true</acceptPomPackaging>
                     <outputDirectory>src/root</outputDirectory>
-                    <failOnBlacklist>true</failOnBlacklist>
-                    <failOnMissing>true</failOnMissing>
                     <fileTemplate>${project.basedir}/src/NOTICE.ftl</fileTemplate>
                     <thirdPartyFilename>NOTICE</thirdPartyFilename>
                     <excludedGroups>com.hazelcast</excludedGroups>
                     <excludedScopes>test,provided</excludedScopes>
+                    <failOnBlacklist>true</failOnBlacklist>
+                    <failOnMissing>true</failOnMissing>
                     <includedLicenses>
                         CC0|
                         Apache License, Version 2.0|
