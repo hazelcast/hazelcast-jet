@@ -208,8 +208,6 @@ dependencies {
     compile 'com.hazelcast.jet:hazelcast-jet-cdc-mysql:{jet-version}'
     compile 'com.fasterxml.jackson.core:jackson-annotations:2.11.0'
 }
-
-jar.manifest.attributes 'Main-Class': 'org.example.JetJob'
 ```
 
 <!--Maven-->
@@ -251,22 +249,6 @@ jar.manifest.attributes 'Main-Class': 'org.example.JetJob'
            <version>2.11.0</version>
        </dependency>
    </dependencies>
-
-    <build>
-        <plugins>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-jar-plugin</artifactId>
-                <configuration>
-                    <archive>
-                        <manifest>
-                            <mainClass>org.example.JetJob</mainClass>
-                        </manifest>
-                    </archive>
-                </configuration>
-            </plugin>
-        </plugins>
-    </build>
 </project>
 ```
 
@@ -289,15 +271,14 @@ This is how the code doing this looks like:
 package org.example;
 
 import com.hazelcast.jet.Jet;
-import com.hazelcast.jet.Util;
+import com.hazelcast.jet.cdc.CdcSinks;
 import com.hazelcast.jet.cdc.ChangeRecord;
 import com.hazelcast.jet.cdc.MySqlCdcSources;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.pipeline.Pipeline;
-import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.StreamSource;
 
-public class JetJob {
+public class CdcMonitor {
 
     public static void main(String[] args) {
         StreamSource<ChangeRecord> source = MySqlCdcSources.mysql("source")
@@ -313,20 +294,19 @@ public class JetJob {
         Pipeline pipeline = Pipeline.create();
         pipeline.readFrom(source)
                 .withoutTimestamps()
-                .map(record -> record.value().toObject(Customer.class))
-                .map(customer -> Util.entry(customer.id, customer))
                 .peek()
-                .writeTo(Sinks.map("customers"));
+                .writeTo(CdcSinks.map("customers",
+                        r -> r.key().toMap().get("id"),
+                        r -> r.value().toObject(Customer.class).toString()));
 
-        JobConfig cfg = new JobConfig().setName("mysql-monitor");
+        JobConfig cfg = new JobConfig().setName("cdc-monitor");
         Jet.bootstrappedInstance().newJob(pipeline, cfg);
     }
 
 }
 ```
 
-The `Customer` class we use for deserializing change events is quite
-simple too:
+The `Customer` class we map change events to is quite simple too:
 
 ```java
 package org.example;
@@ -397,17 +377,23 @@ IDE and will print the current content of the cache.
 package org.example;
 
 import com.hazelcast.jet.Jet;
-import com.hazelcast.jet.JetInstance;
+import com.hazelcast.jet.config.JobConfig;
+import com.hazelcast.jet.pipeline.Pipeline;
+import com.hazelcast.jet.pipeline.Sinks;
+import com.hazelcast.jet.pipeline.Sources;
+
+import java.util.Map;
 
 public class CacheRead {
 
     public static void main(String[] args) {
-        JetInstance instance = Jet.newJetClient();
+        Pipeline pipeline = Pipeline.create();
+        pipeline.readFrom(Sources.map("customers"))
+                .map(Map.Entry::getValue)
+                .writeTo(Sinks.logger());
 
-        System.out.println("Currently there are following customers in the cache:");
-        instance.getMap("customers").values().forEach(c -> System.out.println("\t" + c));
-
-        instance.shutdown();
+        JobConfig cfg = new JobConfig().setName("cache-read");
+        Jet.bootstrappedInstance().newJob(pipeline, cfg);
     }
 
 }
@@ -455,13 +441,15 @@ issue is following command:
 <!--Gradle-->
 
 ```bash
-<path_to_jet>/bin/jet submit build/libs/cdc-tutorial-1.0-SNAPSHOT-all.jar
+<path_to_jet>/bin/jet submit -c org.example.CdcMonitor \
+    build/libs/cdc-tutorial-1.0-SNAPSHOT.jar
 ```
 
 <!--Maven-->
 
 ```bash
-<path_to_jet>/bin/jet submit target/cdc-tutorial-1.0-SNAPSHOT.jar
+<path_to_jet>/bin/jet submit -c org.example.CdcMonitor \
+    target/cdc-tutorial-1.0-SNAPSHOT.jar
 ```
 
 <!--END_DOCUSAURUS_CODE_TABS-->
@@ -472,25 +460,43 @@ we inserted):
 
 ```text
 ... Completed snapshot in 00:00:01.519
+... Output to ordinal 0: key:{{"id":1001}}, value:{{"id":1001,"first_name":"Sally","last_name":"Thomas",...
+... Output to ordinal 0: key:{{"id":1002}}, value:{{"id":1002,"first_name":"George","last_name":"Bailey",...
+... Output to ordinal 0: key:{{"id":1003}}, value:{{"id":1003,"first_name":"Edward","last_name":"Walker",...
+... Output to ordinal 0: key:{{"id":1004}}, value:{{"id":1004,"first_name":"Anne","last_name":"Kretchmar",...
 ... Transitioning from the snapshot reader to the binlog reader
-... 1001=Customer {id=1001, firstName=Sally, lastName=Thomas, email=sally.thomas@acme.com}
-... 1002=Customer {id=1002, firstName=George, lastName=Bailey, email=gbailey@foobar.com}
-... 1003=Customer {id=1003, firstName=Edward, lastName=Walker, email=ed@walker.com}
-... 1004=Customer {id=1004, firstName=Anne, lastName=Kretchmar, email=annek@noanswer.org}
-... Connected to MySQL binlog at 127.0.0.1:3306, starting at binlog file 'mysql-bin.000003', pos=876, skipping 0 events plus 0 rows
 ```
 
 ## 9. Track Updates
 
-Let's see how our cache looks like at this time. If we execute the
- `CacheRead` code [defined above](#6-define-jet-job), we'll get:
+Let's see how our cache looks like at this time. Let's submit the
+ `CacheRead` code [defined above](#6-define-jet-job):
+
+<!--DOCUSAURUS_CODE_TABS-->
+
+<!--Gradle-->
+
+```bash
+<path_to_jet>/bin/jet submit -c org.example.CacheRead \
+    build/libs/cdc-tutorial-1.0-SNAPSHOT.jar
+```
+
+<!--Maven-->
+
+```bash
+<path_to_jet>/bin/jet submit -c org.example.CacheRead \
+    target/cdc-tutorial-1.0-SNAPSHOT.jar
+```
+
+<!--END_DOCUSAURUS_CODE_TABS-->
+
+The output we get should look like this:
 
 ```text
-Currently there are following customers in the cache:
-    Customer {id=1002, firstName=George, lastName=Bailey, email=gbailey@foobar.com}
-    Customer {id=1003, firstName=Edward, lastName=Walker, email=ed@walker.com}
-    Customer {id=1004, firstName=Anne, lastName=Kretchmar, email=annek@noanswer.org}
-    Customer {id=1001, firstName=Sally, lastName=Thomas, email=sally.thomas@acme.com}
+... Customer {id=1002, firstName=George, lastName=Bailey, email=gbailey@foobar.com}
+... Customer {id=1003, firstName=Edward, lastName=Walker, email=ed@walker.com}
+... Customer {id=1004, firstName=Anne, lastName=Kretchmar, email=annek@noanswer.org}
+... Customer {id=1001, firstName=Sally, lastName=Thomas, email=sally.thomas@acme.com}
 ```
 
 Let's do some updates in our database. Go to the MySQL CLI
@@ -498,7 +504,7 @@ Let's do some updates in our database. Go to the MySQL CLI
 following update statement:
 
 ```text
-mysql> UPDATE customers SET first_name='Anne Marie' WHERE id=1004;
+mysql> UPDATE customers SET email='Anne Marie' WHERE id=1004;
 Query OK, 1 row affected (0.00 sec)
 Rows matched: 1  Changed: 1  Warnings: 0
 ```
@@ -506,17 +512,16 @@ Rows matched: 1  Changed: 1  Warnings: 0
 In the log of the Jet member we should immediately see the effect:
 
 ```text
-... 1004=Customer {id=1004, firstName=Anne Marie, lastName=Kretchmar, email=annek@noanswer.org}
+... Output to ordinal 0: key:{{"id":1004}}, value:{{"id":1004,"first_name":"Anne Marie","last_name":"Kretchmar",...
 ```
 
 If we check the cache with `CacheRead` we get:
 
 ```text
-Currently there are following customers in the cache:
-    Customer {id=1002, firstName=George, lastName=Bailey, email=gbailey@foobar.com}
-    Customer {id=1003, firstName=Edward, lastName=Walker, email=ed@walker.com}
-    Customer {id=1004, firstName=Anne Marie, lastName=Kretchmar, email=annek@noanswer.org}
-    Customer {id=1001, firstName=Sally, lastName=Thomas, email=sally.thomas@acme.com}
+... Customer {id=1002, firstName=George, lastName=Bailey, email=gbailey@foobar.com}
+... Customer {id=1003, firstName=Edward, lastName=Walker, email=ed@walker.com}
+... Customer {id=1004, firstName=Anne Marie, lastName=Kretchmar, email=annek@noanswer.org}
+... Customer {id=1001, firstName=Sally, lastName=Thomas, email=sally.thomas@acme.com}
 ```
 
 One more:
@@ -527,28 +532,20 @@ Query OK, 1 row affected (0.00 sec)
 Rows matched: 1  Changed: 1  Warnings: 0
 ```
 
-We see it in the Jet log:
-
 ```text
-... 1003=Customer {id=1003, firstName=Edward, lastName=Walker, email=edward.walker@walker.com}
-```
-
-`CacheRead` also reflects the latest values:
-
-```text
-Currently there are following customers in the cache:
-    Customer {id=1002, firstName=George, lastName=Bailey, email=gbailey@foobar.com}
-    Customer {id=1003, firstName=Edward, lastName=Walker, email=edward.walker@walker.com}
-    Customer {id=1004, firstName=Anne Marie, lastName=Kretchmar, email=annek@noanswer.org}
-    Customer {id=1001, firstName=Sally, lastName=Thomas, email=sally.thomas@acme.com}
+... Customer {id=1002, firstName=George, lastName=Bailey, email=gbailey@foobar.com}
+... Customer {id=1003, firstName=Edward, lastName=Walker, email=edward.walker@walker.com}
+... Customer {id=1004, firstName=Anne Marie, lastName=Kretchmar, email=annek@noanswer.org}
+... Customer {id=1001, firstName=Sally, lastName=Thomas, email=sally.thomas@acme.com}
 ```
 
 ## 10. Clean up
 
-Let's clean-up after ourselves. First we cancel our Jet Job:
+Let's clean-up after ourselves. First we cancel our Jet job (only the
+streaming one, reading the cache is a batch job which stop by itself):
 
 ```bash
-<path_to_jet>/bin/jet cancel mysql-monitor
+<path_to_jet>/bin/jet cancel cdc-monitor
 ```
 
 Then we shut down our Jet member/cluster:
