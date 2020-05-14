@@ -100,6 +100,12 @@
             <version>${debezium.version}</version>
         </dependency>
 
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-annotations</artifactId>
+            <version>${jackson.jr.version}</version>
+        </dependency>
+
         <!-- TEST -->
         <dependency>
             <groupId>io.debezium</groupId>
@@ -112,13 +118,6 @@
             <groupId>org.testcontainers</groupId>
             <artifactId>mysql</artifactId>
             <version>${testcontainers.version}</version>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-annotations</artifactId>
-            <version>${jackson.jr.version}</version>
             <scope>test</scope>
         </dependency>
 
