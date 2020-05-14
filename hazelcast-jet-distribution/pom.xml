@@ -335,7 +335,7 @@
             <version>${project.version}</version>
         </dependency>
 
-        <!-- optional deps are required for license generation -->
+        <!-- optional deps are required to be listed one by one for  correct NOTICE generation -->
         <dependency>
             <groupId>info.picocli</groupId>
             <artifactId>picocli</artifactId>
@@ -360,10 +360,17 @@
             <version>${jackson.jr.version}</version>
             <optional>true</optional>
         </dependency>
+        <!-- shaded in hazelcast.jar, still needs to mentioned -->
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-core</artifactId>
             <version>${jackson.jr.version}</version>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>org.snakeyaml</groupId>
+            <artifactId>snakeyaml-engine</artifactId>
+            <version>${snakeyaml.engine.version}</version>
             <optional>true</optional>
         </dependency>
     </dependencies>
