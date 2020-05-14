@@ -17,10 +17,9 @@
 package com.hazelcast.jet.cdc;
 
 import com.hazelcast.client.config.ClientConfig;
-import com.hazelcast.function.BiFunctionEx;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
-import com.hazelcast.jet.impl.connector.HazelcastWriters;
+import com.hazelcast.jet.impl.connector.UpdateMapWithMaterializedValuesP;
 import com.hazelcast.jet.pipeline.Sink;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.map.IMap;
@@ -29,6 +28,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import static com.hazelcast.jet.cdc.Operation.DELETE;
+import static com.hazelcast.jet.impl.util.ImdgUtil.asXmlString;
 
 /**
  * Contains factory methods for change data capture specific pipeline
@@ -126,8 +126,18 @@ public final class CdcSinks {
     }
 
     @Nonnull
-    private static <V> BiFunctionEx<V, ChangeRecord, V> updateFn(@Nonnull FunctionEx<ChangeRecord, V> valueFn) {
-        return (oldValue, record) -> {
+    private static <K, V> ProcessorMetaSupplier metaSupplier(
+            @Nonnull String map,
+            @Nullable ClientConfig clientConfig,
+            @Nonnull FunctionEx<ChangeRecord, K> keyFn,
+            @Nonnull FunctionEx<ChangeRecord, V> valueFn) {
+        return ProcessorMetaSupplier.of(PREFERRED_LOCAL_PARALLELISM,
+                new UpdateMapWithMaterializedValuesP.Supplier<>(asXmlString(clientConfig), map, keyFn, extend(valueFn)));
+    }
+
+    @Nonnull
+    private static <V> FunctionEx<ChangeRecord, V> extend(@Nonnull FunctionEx<ChangeRecord, V> valueFn) {
+        return (record) -> {
             if (DELETE.equals(record.operation())) {
                 return null;
             }
@@ -135,14 +145,5 @@ public final class CdcSinks {
         };
     }
 
-    @Nonnull
-    private static <K, V> ProcessorMetaSupplier metaSupplier(
-            @Nonnull String map,
-            @Nullable ClientConfig clientConfig,
-            @Nonnull FunctionEx<ChangeRecord, K> keyFn,
-            @Nonnull FunctionEx<ChangeRecord, V> valueFn) {
-        return HazelcastWriters.updateMapSupplier(
-                map, clientConfig, keyFn, updateFn(valueFn), PREFERRED_LOCAL_PARALLELISM);
-    }
 
 }
