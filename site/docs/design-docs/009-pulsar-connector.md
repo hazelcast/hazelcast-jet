@@ -121,6 +121,14 @@ messages would be stored permanently unless any eviction mechanism
 exists. For the continuous processes, this may cause excessive storage
 usage.
 
+Note that: The Pulsar consumer source does not fail fast in the scenario
+that when the job reading Pulsar topic using the Pulsar consumer source
+is running and Pulsar broker is closed, the job doesn't fail, it just
+prints log at warn level. The reason for this is that the Pulsar Client
+tries to reconnect to the broker with exponential backoff in this case,
+and while doing this, we cannot notice the connection issue because it
+only prints logs without throwing an exception.
+
 #### The decision on Acknowledgement Design on Jet Connector
 
 It should be determined when the messages are acknowledged or whether
@@ -167,6 +175,14 @@ latest snapshot and reads from the stored `MessageId`.
 For further information about Reader API visit its
 [documentation](https://pulsar.apache.org/docs/en/concepts-clients/#reader-interface).
 
+Note that: The Pulsar reader source does not fail fast in the scenario
+that when the job reading Pulsar topic using the Pulsar reader source is
+running and Pulsar broker is closed, the job doesn't fail, it just
+prints logs at warn level. The reason for this is that the Pulsar Client
+tries to reconnect to the broker with exponential backoff in this case,
+and while doing this, we cannot notice the connection issue because it
+only prints logs without throwing an exception.
+
 ## The Sink
 
 Pulsar has Producer API to publish messages to the topics.
@@ -202,7 +218,7 @@ mechanism.
 For more information about Pulsar producers
 [look](https://pulsar.apache.org/docs/en/concepts-messaging/#producers).
 
-## Common Properties of Sources and Sinks
+## Common Properties of Sources and Sink
 
 Both the source and sink creation APIs of the Pulsar connector implement
 the builder pattern. We get the required parameters in the constructor
@@ -244,7 +260,7 @@ that reads from that topic. As the last step of the job,  we collect the
 items and check whether all of the messages are read. To test the Pulsar
 sink, we perform the steps above in reverse order.
 
-To check fault tolerance support of PulsarConsumer source, distributed
+To check fault tolerance support of PulsarReader source, distributed
 node failure recovery is simulated. Two Jet instances are created and
 the job is submitted to them. Once we make sure at least one snapshot is
 created for the job, we enforce the job to restart by killing one of the

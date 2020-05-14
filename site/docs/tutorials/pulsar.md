@@ -317,7 +317,7 @@ public class JetJob {
     public static void main(String[] args) {
         String topicName = "hz-jet-topic";
 
-        StreamSource<Event> source = PulsarSources.readerSrcBuilder(
+        StreamSource<Event> source = PulsarSources.pulsarReaderBuilder(
                 topicName,
                 () -> PulsarClient.builder().serviceUrl("pulsar://localhost:6650").build(),
                 () -> Schema.JSON(Event.class),
