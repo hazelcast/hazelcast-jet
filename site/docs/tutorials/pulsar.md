@@ -133,7 +133,7 @@ shadowJar {
         <dependency>
             <groupId>com.hazelcast.jet.contrib</groupId>
             <artifactId>pulsar</artifactId>
-            <version>0.2-SNAPSHOT</version>
+            <version>0.1-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>org.apache.pulsar</groupId>
