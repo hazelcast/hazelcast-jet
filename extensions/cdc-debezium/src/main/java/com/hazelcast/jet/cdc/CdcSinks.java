@@ -50,13 +50,13 @@ public final class CdcSinks {
     /**
      * Returns a sink which maintains an up-to-date image of a change
      * data capture stream in the form of an {@code IMap}. By image we
-     * mean that the map should always escribe the end result of merging
+     * mean that the map should always describe the end result of merging
      * all the change events seen so far.
      * <p>
      * For each item the sink receives it uses the {@code keyFn} to
      * determine which map key the change event applies to. Then, based
-     * on the {@code ChangeRecord}'s {@code Operation} it determines
-     * eiher to:
+     * on the {@code ChangeRecord}'s {@code Operation} it decides to
+     * either:
      * <ul>
      *   <li>delete the key from the map
      *          ({@link Operation#DELETE})</li>
