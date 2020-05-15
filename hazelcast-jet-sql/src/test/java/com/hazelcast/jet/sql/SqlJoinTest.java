@@ -39,6 +39,7 @@ import static com.hazelcast.jet.sql.impl.schema.JetSchema.IMAP_LOCAL_SERVER;
 import static com.hazelcast.jet.sql.impl.schema.JetSchema.OPTION_CLASS_NAME;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
+import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.toSet;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.Assert.assertEquals;
@@ -133,7 +134,7 @@ public class SqlJoinTest extends SimpleTestInClusterSupport {
 
         assertRowsEventuallyAnyOrder(
                 format("SELECT k.__key, m.this FROM %s k JOIN %s m ON k.__key = m.__key WHERE k.__key > 1 AND m.__key < 3", topicName, mapName),
-                asList(
+                singletonList(
                         new Row(2, "map-value-2")
                 ));
     }
