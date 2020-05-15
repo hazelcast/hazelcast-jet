@@ -77,7 +77,8 @@ public class CreateDagVisitor {
                 },
                 ConsumerEx.noop(),
                 1,
-                true));
+                true)
+        );
 
         push(vertex);
     }
@@ -106,11 +107,11 @@ public class CreateDagVisitor {
 
         JetTable table = rightRel.getTableUnwrapped();
 
-        Tuple2<Vertex, Vertex> vertex = table.getSqlConnector()
+        Tuple2<Vertex, Vertex> vertices = table.getSqlConnector()
                                              .nestedLoopReader(dag, table, rel.condition(), rightRel.projection());
-        assert vertex != null;
-        push(vertex.f1());
-        push(vertex.f0());
+        assert vertices != null;
+        push(vertices.f1());
+        push(vertices.f0());
     }
 
     public void onProject(ProjectPhysicalRel rel) {
