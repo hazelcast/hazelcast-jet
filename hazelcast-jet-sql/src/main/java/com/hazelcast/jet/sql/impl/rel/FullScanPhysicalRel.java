@@ -21,6 +21,7 @@ import com.hazelcast.jet.sql.impl.PhysicalRel;
 import com.hazelcast.jet.sql.impl.cost.CostUtils;
 import com.hazelcast.sql.impl.expression.Expression;
 import com.hazelcast.sql.impl.plan.node.PlanNodeSchema;
+import com.hazelcast.sql.impl.type.QueryDataType;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptCost;
 import org.apache.calcite.plan.RelOptPlanner;
@@ -31,6 +32,8 @@ import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rex.RexNode;
 
 import java.util.List;
+
+import static java.util.stream.Collectors.toList;
 
 /**
  * Physical full scan over a source connector.
@@ -59,8 +62,10 @@ public class FullScanPhysicalRel extends AbstractFullScanRel implements Physical
 
     @Override
     public PlanNodeSchema schema() {
-        PlanNodeSchema schema = new PlanNodeSchema(getTableUnwrapped().getFieldTypes());
-        return projectSchema(schema, getProjection());
+        List<QueryDataType> projectedTypes = projection().stream()
+                                                         .map(Expression::getType)
+                                                         .collect(toList());
+        return new PlanNodeSchema(projectedTypes);
     }
 
     @Override
