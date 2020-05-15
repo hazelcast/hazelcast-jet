@@ -121,6 +121,24 @@ public class SqlJoinTest extends SimpleTestInClusterSupport {
     }
 
     @Test
+    public void enrichment_join_with_filter() {
+        kafkaTestSupport.produce(topicName, 0, "kafka-value-0");
+        kafkaTestSupport.produce(topicName, 1, "kafka-value-1");
+        kafkaTestSupport.produce(topicName, 2, "kafka-value-2");
+        kafkaTestSupport.produce(topicName, 3, "kafka-value-3");
+
+        instance().getMap(mapName).put(1, "map-value-1");
+        instance().getMap(mapName).put(2, "map-value-2");
+        instance().getMap(mapName).put(3, "map-value-3");
+
+        assertRowsEventuallyAnyOrder(
+                format("SELECT k.__key, m.this FROM %s k JOIN %s m ON k.__key = m.__key WHERE k.__key > 1 AND m.__key < 3", topicName, mapName),
+                asList(
+                        new Row(2, "map-value-2")
+                ));
+    }
+
+    @Test
     public void enrichment_join_with_project() {
         kafkaTestSupport.produce(topicName, 1, "kafka-value-1");
         kafkaTestSupport.produce(topicName, 2, "kafka-value-2");

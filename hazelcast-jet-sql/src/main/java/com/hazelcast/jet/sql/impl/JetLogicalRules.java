@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.sql.impl;
 
+import com.hazelcast.jet.sql.impl.rule.FilterIntoJoinLogicalRule;
 import com.hazelcast.jet.sql.impl.rule.FilterIntoScanLogicalRule;
 import com.hazelcast.jet.sql.impl.rule.FilterLogicalRule;
 import com.hazelcast.jet.sql.impl.rule.FullScanLogicalRule;
@@ -55,6 +56,7 @@ public final class JetLogicalRules {
                 // TODO [viliam] IMap-specific rules, move into SqlConnector
                 ProjectIntoScanLogicalRule.INSTANCE,
                 FilterIntoScanLogicalRule.INSTANCE,
+                FilterIntoJoinLogicalRule.INSTANCE,
                 ValuesReduceRule.FILTER_INSTANCE,
                 ValuesReduceRule.PROJECT_FILTER_INSTANCE,
                 ValuesReduceRule.PROJECT_INSTANCE,

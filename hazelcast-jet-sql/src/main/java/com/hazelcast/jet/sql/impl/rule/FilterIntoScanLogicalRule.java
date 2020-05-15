@@ -17,7 +17,6 @@
 package com.hazelcast.jet.sql.impl.rule;
 
 import com.hazelcast.jet.sql.impl.OptUtils;
-import com.hazelcast.jet.sql.impl.connector.imap.IMapTable;
 import com.hazelcast.jet.sql.impl.rel.FullScanLogicalRel;
 import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelOptRuleCall;
@@ -53,8 +52,7 @@ public final class FilterIntoScanLogicalRule extends RelOptRule {
 
     private FilterIntoScanLogicalRule() {
         super(
-                operand(Filter.class,
-                        operandJ(TableScan.class, null, scan -> scan.getTable().unwrap(IMapTable.class) != null, none())),
+                operand(Filter.class, operand(TableScan.class, any())),
                 RelFactories.LOGICAL_BUILDER,
                 FilterIntoScanLogicalRule.class.getSimpleName()
         );

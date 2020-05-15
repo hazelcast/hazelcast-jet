@@ -265,7 +265,7 @@ public class JetSqlService {
     }
 
     private void dropServer(JetSqlDropServer drop) {
-        schema.removeServer(drop.name(),drop.ifExists(), drop.cascade());
+        schema.removeServer(drop.name(), drop.ifExists(), drop.cascade());
     }
 
     private void dropTable(JetSqlDropTable drop) {
