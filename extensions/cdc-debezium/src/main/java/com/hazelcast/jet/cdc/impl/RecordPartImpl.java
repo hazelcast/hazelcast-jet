@@ -29,7 +29,8 @@ import java.util.Objects;
 
 class RecordPartImpl implements RecordPart {
 
-    private String json;
+    private final String json;
+
     private Map<String, Object> content;
 
     RecordPartImpl(@Nonnull String json) {
@@ -41,8 +42,12 @@ class RecordPartImpl implements RecordPart {
     public <T> T toObject(@Nonnull Class<T> clazz) throws ParsingException {
         Objects.requireNonNull(clazz, "class");
         try {
-            return JsonUtil.parse(clazz, json);
-        } catch (Throwable e) {
+            T t = JsonUtil.mapFrom(clazz, json);
+            if (t == null) {
+                throw new ParsingException(String.format("Mapping %s as %s didn't yield a result", json, clazz.getName()));
+            }
+            return t;
+        } catch (IOException e) {
             throw new ParsingException(e.getMessage(), e);
         }
     }
@@ -52,8 +57,11 @@ class RecordPartImpl implements RecordPart {
     public Map<String, Object> toMap() throws ParsingException {
         if (content == null) {
             try {
-                content = JsonUtil.parse(json);
-            } catch (Throwable e) {
+                content = JsonUtil.mapFrom(json);
+                if (content == null) {
+                    throw new ParsingException(String.format("Parsing %s didn't yield a result", json));
+                }
+            } catch (IOException e) {
                 throw new ParsingException(e.getMessage(), e);
             }
         }
