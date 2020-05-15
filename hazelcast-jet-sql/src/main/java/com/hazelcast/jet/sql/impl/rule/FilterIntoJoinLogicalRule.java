@@ -28,6 +28,7 @@ import org.apache.calcite.rex.RexNode;
 import static java.util.Arrays.asList;
 import static org.apache.calcite.rex.RexUtil.composeConjunction;
 
+// TODO: consider pushing filters past joins into scans for better performance
 public final class FilterIntoJoinLogicalRule extends RelOptRule {
 
     public static final FilterIntoJoinLogicalRule INSTANCE = new FilterIntoJoinLogicalRule();
