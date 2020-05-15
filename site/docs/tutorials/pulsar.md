@@ -196,7 +196,7 @@ shadowJar {
 ## 4. Publish messages to a Pulsar topic
 
 The program below connects the previously started pulsar cluster located
-at "pulsar://localhost:6650". And then, it iteratively picks a user
+at `pulsar://localhost:6650`. And then, it iteratively picks a user
 uniformly at random, then creates event on behalf of this user, and
 sends this event as a message to the Pulsar topic named `hz-jet-topic`.
 
