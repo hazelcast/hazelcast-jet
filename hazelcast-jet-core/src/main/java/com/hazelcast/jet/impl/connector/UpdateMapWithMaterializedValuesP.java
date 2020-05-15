@@ -16,12 +16,8 @@
 
 package com.hazelcast.jet.impl.connector;
 
-import com.hazelcast.client.impl.clientside.HazelcastClientProxy;
-import com.hazelcast.client.impl.spi.ClientPartitionService;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.function.FunctionEx;
-import com.hazelcast.instance.impl.HazelcastInstanceImpl;
-import com.hazelcast.internal.partition.IPartitionService;
 import com.hazelcast.internal.serialization.SerializationService;
 import com.hazelcast.jet.core.Inbox;
 import com.hazelcast.jet.core.JetDataSerializerHook;
@@ -48,7 +44,7 @@ public class UpdateMapWithMaterializedValuesP<T, K, V> extends AsyncHazelcastWri
     private final FunctionEx<? super T, ? extends K> keyFn;
     private final FunctionEx<? super T, ? extends V> valueFn;
 
-    private PartitionService partitionService;
+    private PartitionInfo partitionInfo;
     private IMap<K, V> map;
 
     // one map per partition to store the updates
@@ -73,9 +69,9 @@ public class UpdateMapWithMaterializedValuesP<T, K, V> extends AsyncHazelcastWri
     @Override
     public void init(@Nonnull Outbox outbox, @Nonnull Context context) {
         map = instance().getMap(mapName);
-        partitionService = new PartitionService();
+        partitionInfo = new PartitionInfo(instance());
 
-        int partitionCount = partitionService.getPartitionCount();
+        int partitionCount = partitionInfo.getPartitionCount();
         tmpMaps = new Map[partitionCount];
         tmpCounts = new int[partitionCount];
         for (int i = 0; i < partitionCount; i++) {
@@ -128,7 +124,7 @@ public class UpdateMapWithMaterializedValuesP<T, K, V> extends AsyncHazelcastWri
         K key = keyFn.apply(item);
         V value = valueFn.apply(item);
 
-        int partitionId = partitionService.getPartitionId(key);
+        int partitionId = partitionInfo.getPartitionId(key);
 
         Map<K, V> tmpMap = tmpMaps[partitionId];
         if (!tmpMap.containsKey(key)) {
@@ -136,34 +132,6 @@ public class UpdateMapWithMaterializedValuesP<T, K, V> extends AsyncHazelcastWri
             pendingItemCount++;
         }
         tmpMap.put(key, value);
-    }
-
-    private class PartitionService {
-
-        private final IPartitionService memberPartitionService;
-        private final ClientPartitionService clientPartitionService;
-
-        PartitionService() {
-            if (isLocal()) {
-                HazelcastInstanceImpl castInstance = (HazelcastInstanceImpl) instance();
-                clientPartitionService = null;
-                memberPartitionService = castInstance.node.nodeEngine.getPartitionService();
-            } else {
-                HazelcastClientProxy clientProxy = (HazelcastClientProxy) instance();
-                clientPartitionService = clientProxy.client.getClientPartitionService();
-                memberPartitionService = null;
-            }
-        }
-
-        int getPartitionCount() {
-            return isLocal() ? memberPartitionService.getPartitionCount() :
-                    clientPartitionService.getPartitionCount();
-        }
-
-        public int getPartitionId(Object key) {
-            return isLocal() ? memberPartitionService.getPartitionId(key) :
-                    clientPartitionService.getPartitionId(key);
-        }
     }
 
     /**
@@ -181,9 +149,10 @@ public class UpdateMapWithMaterializedValuesP<T, K, V> extends AsyncHazelcastWri
     public static class Supplier<T, K, V> extends AbstractHazelcastConnectorSupplier {
 
         static final long serialVersionUID = 1L;
+
+        private String name;
         private final FunctionEx<? super T, ? extends K> toKeyFn;
         private final FunctionEx<? super T, ? extends V> valueFn;
-        private String name;
 
         public Supplier(
                 @Nullable String clientXml,

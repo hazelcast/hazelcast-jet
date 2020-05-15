@@ -17,13 +17,11 @@
 package com.hazelcast.jet.impl.connector;
 
 import com.hazelcast.client.impl.clientside.HazelcastClientProxy;
-import com.hazelcast.client.impl.spi.ClientPartitionService;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.function.BiFunctionEx;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.instance.impl.HazelcastInstanceImpl;
 import com.hazelcast.internal.nio.IOUtil;
-import com.hazelcast.internal.partition.IPartitionService;
 import com.hazelcast.internal.serialization.Data;
 import com.hazelcast.internal.serialization.SerializationService;
 import com.hazelcast.internal.serialization.SerializationServiceAware;
@@ -65,8 +63,7 @@ public final class UpdateMapP<T, K, V, R> extends AsyncHazelcastWriterP {
     private final BiFunction<Object, Object, Object> remappingFunction =
             (o, n) -> ApplyFnEntryProcessor.append(o, (Data) n);
 
-    private IPartitionService memberPartitionService;
-    private ClientPartitionService clientPartitionService;
+    private PartitionInfo partitionInfo;
     private SerializationService serializationService;
     private IMap<Data, V> map;
 
@@ -92,20 +89,15 @@ public final class UpdateMapP<T, K, V, R> extends AsyncHazelcastWriterP {
     @Override
     public void init(@Nonnull Outbox outbox, @Nonnull Context context) {
         map = instance().getMap(mapName);
-        int partitionCount;
+        partitionInfo = new PartitionInfo(instance());
         if (isLocal()) {
             HazelcastInstanceImpl castInstance = (HazelcastInstanceImpl) instance();
-            clientPartitionService = null;
-            memberPartitionService = castInstance.node.nodeEngine.getPartitionService();
             serializationService = castInstance.getSerializationService();
-            partitionCount = memberPartitionService.getPartitionCount();
         } else {
             HazelcastClientProxy clientProxy = (HazelcastClientProxy) instance();
-            clientPartitionService = clientProxy.client.getClientPartitionService();
-            memberPartitionService = null;
             serializationService = clientProxy.getSerializationService();
-            partitionCount = clientPartitionService.getPartitionCount();
         }
+        int partitionCount = partitionInfo.getPartitionCount();
         tmpMaps = new Map[partitionCount];
         tmpCounts = new int[partitionCount];
         for (int i = 0; i < partitionCount; i++) {
@@ -156,21 +148,19 @@ public final class UpdateMapP<T, K, V, R> extends AsyncHazelcastWriterP {
 
     private void addToBuffer(T item) {
         K key = toKeyFn.apply(item);
-        int partitionId;
         Data keyData;
         if (isLocal()) {
             // We pre-serialize the key and value to avoid double serialization when partitionId
             // is calculated and when the value for backup operation is re-serialized
             keyData = serializationService.toData(key, ((MapProxyImpl) map).getPartitionStrategy());
-            partitionId = memberPartitionService.getPartitionId(keyData);
         } else {
             // We ignore partition strategy for remote connection, the client doesn't know it.
             // TODO we might be able to fix this after https://github.com/hazelcast/hazelcast/issues/13950 is fixed
             // The functionality should work, but will be ineffective: the submitOnKey calls will have wrongly
             // partitioned data.
             keyData = serializationService.toData(key);
-            partitionId = clientPartitionService.getPartitionId(keyData);
         }
+        int partitionId = partitionInfo.getPartitionId(keyData);
         Data itemData = serializationService.toData(item);
         tmpMaps[partitionId].merge(keyData, itemData, remappingFunction);
         tmpCounts[partitionId]++;
