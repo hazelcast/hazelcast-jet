@@ -48,8 +48,8 @@ public class SqlJoinTest extends SimpleTestInClusterSupport {
     private static final String KAFKA_CONNECTOR_NAME = "kafka";
     private static final int INITIAL_PARTITION_COUNT = 4;
 
-    private static JetSqlService sqlService;
     private static KafkaTestSupport kafkaTestSupport;
+    private static JetSqlService sqlService;
 
     private String topicName;
     private String mapName;
@@ -157,7 +157,7 @@ public class SqlJoinTest extends SimpleTestInClusterSupport {
     }
 
     @Test
-    public void enrichment_join_with_non_equi_join() {
+    public void enrichment_join_with_non_equi_condition() {
         kafkaTestSupport.produce(topicName, 1, "kafka-value-1");
         kafkaTestSupport.produce(topicName, 2, "kafka-value-2");
         kafkaTestSupport.produce(topicName, 3, "kafka-value-3");
