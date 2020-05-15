@@ -1098,6 +1098,37 @@ CDC source has to replay data for a long period of inactivity, then
 there can be loss. With careful management though we can say that
 at-least once guaranties can practially be provided.
 
+#### CDC Sinks
+
+By definition change data capture is a source-side functionality in Jet,
+but we do offer some specialized sinks to be used in conjunction with
+CDC data processing.
+
+They are very similar to [IMap sinks](#map-sink), their role is to
+maintain summary map views of streams of CDC data. They take
+`ChangeRecord` objects as their input and are defined by two functions
+describing how to extact a map key and value from said records.
+
+For example a sink mapping CDC data to a `Customer` class and
+maintaining a map view of latest known email addresses per customer
+(identified by ID) would look like this:
+
+```java
+Pipeline p = Pipeline.create();
+p.readFrom(source)
+ .withoutTimestamps()
+ .writeTo(CdcSinks.map("customers",
+    r -> r.key().toMap().get("id"),
+    r -> r.value().toObject(Customer.class).email));
+```
+
+> NOTE: The key and value functions have certain limitations. They can
+> be used to map only to objects which the IMDG backend can deserialize,
+> which unfortunately doesn't include user code submitted together with
+> the Jet job. So in the above example it's ok to have `String` email
+> values, but we wouldn't be able to use `Customer` directly. Hopefully
+> future Jet versions will address this problem.
+
 ### MongoDB
 
 >This connector is currently under incubation. For more
@@ -1353,6 +1384,7 @@ processing even with at-least-once sinks.
 |sink|module|streaming support|guarantee|
 |:---|:-----|:--------------|:-------------------|
 |`AvroSinks.files`|`hazelcast-jet-avro`|no|N/A|
+|`CdcSinks.map`|`hazelcast-jet-cdc-debezium`|yes|at-least-once|
 |`HadoopSinks.outputFormat`|`hazelcast-jet-hadoop`|no|N/A|
 |`KafkaSinks.kafka`|`hazelcast-jet-kafka`|yes|exactly-once|
 |`S3Sinks.s3`|`hazelcast-jet-s3`|no|N/A|
