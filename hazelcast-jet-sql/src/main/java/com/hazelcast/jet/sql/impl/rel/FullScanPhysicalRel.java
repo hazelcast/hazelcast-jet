@@ -19,6 +19,8 @@ package com.hazelcast.jet.sql.impl.rel;
 import com.hazelcast.jet.sql.impl.CreateDagVisitor;
 import com.hazelcast.jet.sql.impl.PhysicalRel;
 import com.hazelcast.jet.sql.impl.cost.CostUtils;
+import com.hazelcast.sql.impl.expression.Expression;
+import com.hazelcast.sql.impl.plan.node.PlanNodeSchema;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptCost;
 import org.apache.calcite.plan.RelOptPlanner;
@@ -45,9 +47,25 @@ public class FullScanPhysicalRel extends AbstractFullScanRel implements Physical
         super(cluster, traitSet, table, projection, filter);
     }
 
+    public Expression<Boolean> filter() {
+        PlanNodeSchema schema = new PlanNodeSchema(getTableUnwrapped().getFieldTypes());
+        return filter(schema, getFilter());
+    }
+
+    public List<Expression<?>> projection() {
+        PlanNodeSchema schema = new PlanNodeSchema(getTableUnwrapped().getFieldTypes());
+        return project(schema, getProjection());
+    }
+
     @Override
-    public final RelNode copy(RelTraitSet traitSet, List<RelNode> inputs) {
-        return new FullScanPhysicalRel(getCluster(), traitSet, getTable(), getProjection(), getFilter());
+    public PlanNodeSchema schema() {
+        PlanNodeSchema schema = new PlanNodeSchema(getTableUnwrapped().getFieldTypes());
+        return projectSchema(schema, getProjection());
+    }
+
+    @Override
+    public void visit(CreateDagVisitor visitor) {
+        visitor.onConnectorFullScan(this);
     }
 
     // TODO: Dedup with logical scan
@@ -77,7 +95,7 @@ public class FullScanPhysicalRel extends AbstractFullScanRel implements Physical
     }
 
     @Override
-    public void visit(CreateDagVisitor visitor) {
-        visitor.onConnectorFullScan(this);
+    public final RelNode copy(RelTraitSet traitSet, List<RelNode> inputs) {
+        return new FullScanPhysicalRel(getCluster(), traitSet, getTable(), getProjection(), getFilter());
     }
 }

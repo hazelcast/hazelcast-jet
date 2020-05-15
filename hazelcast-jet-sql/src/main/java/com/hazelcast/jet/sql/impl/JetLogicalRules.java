@@ -18,9 +18,10 @@ package com.hazelcast.jet.sql.impl;
 
 import com.hazelcast.jet.sql.impl.rule.FilterIntoScanLogicalRule;
 import com.hazelcast.jet.sql.impl.rule.FilterLogicalRule;
+import com.hazelcast.jet.sql.impl.rule.FullScanLogicalRule;
+import com.hazelcast.jet.sql.impl.rule.JoinLogicalRule;
 import com.hazelcast.jet.sql.impl.rule.ProjectIntoScanLogicalRule;
 import com.hazelcast.jet.sql.impl.rule.ProjectLogicalRule;
-import com.hazelcast.jet.sql.impl.rule.FullScanLogicalRule;
 import org.apache.calcite.rel.rules.FilterMergeRule;
 import org.apache.calcite.rel.rules.FilterProjectTransposeRule;
 import org.apache.calcite.rel.rules.ProjectFilterTransposeRule;
@@ -39,9 +40,9 @@ public final class JetLogicalRules {
         // TODO: Use HEP instead?
         return RuleSets.ofList(
                 // Join optimization rules.
-//                new FilterJoinRule.FilterIntoJoinRule(true, RelFactories.LOGICAL_BUILDER, FilterPredicate.INSTANCE),
-//                new FilterJoinRule.JoinConditionPushRule(RelFactories.LOGICAL_BUILDER, FilterPredicate.INSTANCE),
-//                JoinPushExpressionsRule.INSTANCE,
+                // new FilterJoinRule.FilterIntoJoinRule(true, RelFactories.LOGICAL_BUILDER, FilterPredicate.INSTANCE),
+                // new FilterJoinRule.JoinConditionPushRule(RelFactories.LOGICAL_BUILDER, FilterPredicate.INSTANCE),
+                // JoinPushExpressionsRule.INSTANCE,
 
                 // Filter and project rules.
                 FilterMergeRule.INSTANCE,
@@ -49,7 +50,7 @@ public final class JetLogicalRules {
                 FilterProjectTransposeRule.INSTANCE,
                 // TODO: ProjectMergeRule: https://jira.apache.org/jira/browse/CALCITE-2223
                 ProjectFilterTransposeRule.INSTANCE,
-//                ProjectJoinTransposeRule.INSTANCE,
+                // ProjectJoinTransposeRule.INSTANCE,
                 ProjectRemoveRule.INSTANCE,
                 // TODO [viliam] IMap-specific rules, move into SqlConnector
                 ProjectIntoScanLogicalRule.INSTANCE,
@@ -60,8 +61,8 @@ public final class JetLogicalRules {
 
                 // TODO: Aggregate rules
 
-//                SemiJoinRule.PROJECT,
-//                SemiJoinRule.JOIN,
+                // SemiJoinRule.PROJECT,
+                // SemiJoinRule.JOIN,
 
                 // Convert Calcite node into Hazelcast nodes.
                 // TODO: Should we extend converter here instead (see Flink)?
@@ -69,10 +70,11 @@ public final class JetLogicalRules {
                 JetValuesLogicalRule.INSTANCE,
                 FullScanLogicalRule.INSTANCE,
                 FilterLogicalRule.INSTANCE,
-                ProjectLogicalRule.INSTANCE
-//                AggregateLogicalRule.INSTANCE,
-//                SortLogicalRule.INSTANCE,
-//                JoinLogicalRule.INSTANCE
+                ProjectLogicalRule.INSTANCE,
+
+                // AggregateLogicalRule.INSTANCE,
+                // SortLogicalRule.INSTANCE,
+                JoinLogicalRule.INSTANCE
 
                 // TODO: Transitive closures: (a.a=b.b) AND (a=1) -> (a.a=b.b) AND (a=1) AND (b=1) -> pushdown to two tables, not one
         );

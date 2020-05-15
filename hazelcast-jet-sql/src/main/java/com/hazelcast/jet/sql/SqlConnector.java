@@ -96,16 +96,16 @@ public interface SqlConnector {
      * It's expected to return null if {@link #isStream()} returns {@code
      * true}.
      *
-     * @param predicateWithParams A predicate with positional parameters which
-     *                            will be provided at runtime as the input to
-     *                            the returned function.
-     * @param projection          list of field names to return
+     * @param predicate  A predicate with positional parameters which
+     *                   will be provided at runtime as the input to
+     *                   the returned function.
+     * @param projection list of field names to return
      */
     @Nullable
     default Tuple2<Vertex, Vertex> nestedLoopReader(
             @Nonnull DAG dag,
             @Nonnull JetTable jetTable,
-            @Nonnull Expression<Boolean> predicateWithParams,
+            @Nonnull Expression<Boolean> predicate,
             @Nonnull List<Expression<?>> projection) {
         assert !supportsNestedLoopReader();
         throw new UnsupportedOperationException("Nested loop reader not supported for " + getClass().getName());

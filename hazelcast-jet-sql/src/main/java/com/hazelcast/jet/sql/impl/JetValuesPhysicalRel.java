@@ -17,6 +17,7 @@
 package com.hazelcast.jet.sql.impl;
 
 import com.google.common.collect.ImmutableList;
+import com.hazelcast.sql.impl.plan.node.PlanNodeSchema;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.RelNode;
@@ -28,19 +29,26 @@ import java.util.List;
 
 public class JetValuesPhysicalRel extends Values implements PhysicalRel {
 
-    JetValuesPhysicalRel(RelOptCluster cluster, RelDataType rowType,
-                         ImmutableList<ImmutableList<RexLiteral>> tuples, RelTraitSet traitSet) {
+    JetValuesPhysicalRel(RelOptCluster cluster,
+                         RelDataType rowType,
+                         ImmutableList<ImmutableList<RexLiteral>> tuples,
+                         RelTraitSet traitSet) {
         super(cluster, rowType, tuples, traitSet);
+    }
+
+    @Override
+    public PlanNodeSchema schema() {
+        throw new UnsupportedOperationException(); // TODO: implement or extract specific interface
+    }
+
+    @Override
+    public void visit(CreateDagVisitor visitor) {
+        visitor.onValues(this);
     }
 
     @Override
     public RelNode copy(RelTraitSet traitSet, List<RelNode> inputs) {
         assert inputs.isEmpty();
         return new JetValuesPhysicalRel(getCluster(), rowType, tuples, traitSet);
-    }
-
-    @Override
-    public void visit(CreateDagVisitor visitor) {
-        visitor.onValues(this);
     }
 }

@@ -17,16 +17,16 @@
 package com.hazelcast.jet.sql.impl;
 
 import com.hazelcast.function.ConsumerEx;
+import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Vertex;
-import com.hazelcast.jet.sql.impl.expression.RexToExpressionVisitor;
+import com.hazelcast.jet.datamodel.Tuple2;
+import com.hazelcast.jet.sql.impl.expression.ExpressionUtil;
 import com.hazelcast.jet.sql.impl.rel.FullScanPhysicalRel;
+import com.hazelcast.jet.sql.impl.rel.NestedLoopJoinPhysicalRel;
+import com.hazelcast.jet.sql.impl.rel.ProjectPhysicalRel;
 import com.hazelcast.jet.sql.impl.schema.JetTable;
-import com.hazelcast.sql.impl.expression.Expression;
-import com.hazelcast.sql.impl.plan.node.PlanNodeFieldTypeProvider;
-import com.hazelcast.sql.impl.plan.node.PlanNodeSchema;
-import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.util.ConversionUtil;
 import org.apache.calcite.util.NlsString;
 
@@ -37,9 +37,9 @@ import java.util.Deque;
 import java.util.List;
 
 import static com.hazelcast.jet.core.Edge.between;
+import static com.hazelcast.jet.core.processor.Processors.mapP;
 import static com.hazelcast.jet.core.processor.SourceProcessors.convenientSourceP;
 import static com.hazelcast.jet.impl.util.Util.toList;
-import static java.util.stream.Collectors.toList;
 
 public class CreateDagVisitor {
 
@@ -55,58 +55,18 @@ public class CreateDagVisitor {
         }
     }
 
-    public void onConnectorFullScan(FullScanPhysicalRel rel) {
-        JetTable table = rel.getTableUnwrapped();
-        PlanNodeSchema schema = new PlanNodeSchema(table.getFieldTypes());
-        Expression<Boolean> predicate = convertFilter(schema, rel.getFilter());
-        List<Expression<?>> projection = rel.getProjection().stream()
-                                            .map(projectNode -> convertExpression(schema, projectNode, rel.getProjection().size()))
-                                            .collect(toList());
-        Vertex vertex = table.getSqlConnector().fullScanReader(dag, table, null, predicate, projection);
-        assert vertex != null : "null subDag"; // we check for this earlier TODO check for it earlier :)
-        VertexAndOrdinal targetVertex = vertexStack.peek();
-        assert targetVertex != null : "targetVertex=null";
-        dag.edge(between(vertex, targetVertex.vertex));
-        targetVertex.ordinal++;
-    }
-
-    @SuppressWarnings("unchecked")
-    private Expression<Boolean> convertFilter(PlanNodeSchema schema, RexNode expression) {
-        if (expression == null) {
-            return null;
-        }
-        return (Expression<Boolean>) convertExpression(schema, expression, 0);
-    }
-
-    private Expression<?> convertExpression(PlanNodeFieldTypeProvider fieldTypeProvider, RexNode expression, int parameterCount) {
-        if (expression == null) {
-            return null;
-        }
-        RexToExpressionVisitor converter = new RexToExpressionVisitor(fieldTypeProvider, parameterCount);
-        return expression.accept(converter);
-    }
-
-    public void onTableInsert(JetTableInsertPhysicalRel rel) {
-        final JetTable jetTable = rel.getTable().unwrap(JetTable.class);
-        Vertex vertex = jetTable.getSqlConnector().sink(dag, jetTable);
-        if (vertex == null) {
-            throw new JetException("This connector doesn't support writing");
-        }
-        vertexStack.push(new VertexAndOrdinal(vertex));
-    }
-
     public void onValues(JetValuesPhysicalRel rel) {
         List<Object[]> items = toList(rel.getTuples(), tuple -> tuple.stream().map(rexLiteral -> {
-            Comparable<?> v = rexLiteral.getValue();
-            if (v instanceof NlsString) {
-                NlsString nlsString = (NlsString) v;
+            Comparable<?> value = rexLiteral.getValue();
+            if (value instanceof NlsString) {
+                NlsString nlsString = (NlsString) value;
                 assert nlsString.getCharset().name().equals(ConversionUtil.NATIVE_UTF16_CHARSET_NAME);
                 return nlsString.getValue();
             }
-            return v;
+            return value;
         }).toArray());
 
-        Vertex v = dag.newVertex("values-src", convenientSourceP(
+        Vertex vertex = dag.newVertex("values-src", convenientSourceP(
                 pCtx -> null,
                 (ignored, buf) -> {
                     items.forEach(buf::add);
@@ -119,10 +79,55 @@ public class CreateDagVisitor {
                 1,
                 true));
 
+        push(vertex);
+    }
+
+    public void onTableInsert(JetTableInsertPhysicalRel rel) {
+        JetTable table = rel.getTable().unwrap(JetTable.class);
+
+        Vertex vertex = table.getSqlConnector().sink(dag, table);
+        if (vertex == null) {
+            throw new JetException("This connector doesn't support writing");
+        }
+
+        vertexStack.push(new VertexAndOrdinal(vertex)); // TODO: unify, use push() ?
+    }
+
+    public void onConnectorFullScan(FullScanPhysicalRel rel) {
+        JetTable table = rel.getTableUnwrapped();
+
+        Vertex vertex = table.getSqlConnector()
+                             .fullScanReader(dag, table, null, rel.filter(), rel.projection());
+        push(vertex);
+    }
+
+    public void onNestedLoopRead(NestedLoopJoinPhysicalRel rel) {
+        FullScanPhysicalRel rightRel = (FullScanPhysicalRel) rel.getRight();
+
+        JetTable table = rightRel.getTableUnwrapped();
+
+        Tuple2<Vertex, Vertex> vertex = table.getSqlConnector()
+                                             .nestedLoopReader(dag, table, rel.condition(), rightRel.projection());
+        assert vertex != null;
+        push(vertex.f1());
+        push(vertex.f0());
+    }
+
+    public void onProject(ProjectPhysicalRel rel) {
+        FunctionEx<Object[], Object[]> projection = ExpressionUtil.projectionFn(rel.projection());
+        Vertex vertex = dag.newVertex("project", mapP(projection::apply));
+
+        push(vertex);
+    }
+
+    private void push(Vertex vertex) {
+        assert vertex != null : "null subDag"; // we check for this earlier TODO check for it earlier :)
+
         VertexAndOrdinal targetVertex = vertexStack.peek();
         assert targetVertex != null : "targetVertex=null";
-        dag.edge(between(v, targetVertex.vertex));
+        dag.edge(between(vertex, targetVertex.vertex));
         targetVertex.ordinal++;
+        vertexStack.push(new VertexAndOrdinal(vertex));
     }
 
     private static final class VertexAndOrdinal {

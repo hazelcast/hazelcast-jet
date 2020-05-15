@@ -46,6 +46,8 @@ import com.hazelcast.jet.sql.impl.parser.JetSqlDropTable;
 import com.hazelcast.jet.sql.impl.parser.JetSqlParser;
 import com.hazelcast.jet.sql.impl.parser.SqlOption;
 import com.hazelcast.jet.sql.impl.rule.FullScanPhysicalRule;
+import com.hazelcast.jet.sql.impl.rule.JoinPhysicalRule;
+import com.hazelcast.jet.sql.impl.rule.ProjectPhysicalRule;
 import com.hazelcast.jet.sql.impl.schema.JetSchema;
 import com.hazelcast.sql.impl.type.QueryDataType;
 import org.apache.calcite.adapter.java.JavaTypeFactory;
@@ -429,8 +431,9 @@ public class JetSqlService {
                 // RootPhysicalRule.INSTANCE,
                 // FilterPhysicalRule.INSTANCE,
                 FullScanPhysicalRule.INSTANCE,
+                ProjectPhysicalRule.INSTANCE,
                 // AggregatePhysicalRule.INSTANCE,
-                // JoinPhysicalRule.INSTANCE,
+                JoinPhysicalRule.INSTANCE,
                 new AbstractConverter.ExpandConversionRule(RelFactories.LOGICAL_BUILDER)
         );
 

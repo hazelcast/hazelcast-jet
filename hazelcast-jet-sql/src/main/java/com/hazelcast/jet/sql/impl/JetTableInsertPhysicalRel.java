@@ -17,6 +17,7 @@
 package com.hazelcast.jet.sql.impl;
 
 import com.hazelcast.jet.sql.impl.schema.JetTable;
+import com.hazelcast.sql.impl.plan.node.PlanNodeSchema;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptCost;
 import org.apache.calcite.plan.RelOptPlanner;
@@ -59,6 +60,17 @@ public class JetTableInsertPhysicalRel extends TableModify implements PhysicalRe
     }
 
     @Override
+    public PlanNodeSchema schema() {
+        throw new UnsupportedOperationException(); // TODO: implement or extract specific interface
+    }
+
+    @Override
+    public void visit(CreateDagVisitor visitor) {
+        visitor.onTableInsert(this);
+        ((PhysicalRel) input).visit(visitor);
+    }
+
+    @Override
     public RelOptCost computeSelfCost(RelOptPlanner planner, RelMetadataQuery mq) {
         return super.computeSelfCost(planner, mq).multiplyBy(.1);
     }
@@ -69,11 +81,5 @@ public class JetTableInsertPhysicalRel extends TableModify implements PhysicalRe
                 getCluster(), traitSet, getTable(), getCatalogReader(),
                 sole(inputs), getOperation(), getUpdateColumnList(),
                 getSourceExpressionList(), isFlattened());
-    }
-
-    @Override
-    public void visit(CreateDagVisitor visitor) {
-        visitor.onTableInsert(this);
-        ((PhysicalRel) input).visit(visitor);
     }
 }

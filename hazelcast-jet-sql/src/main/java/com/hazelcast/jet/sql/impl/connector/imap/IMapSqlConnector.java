@@ -18,6 +18,8 @@ package com.hazelcast.jet.sql.impl.connector.imap;
 
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.JetInstance;
+import com.hazelcast.jet.Traverser;
+import com.hazelcast.jet.Traversers;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.core.processor.Processors;
@@ -28,21 +30,30 @@ import com.hazelcast.jet.sql.SqlConnector;
 import com.hazelcast.jet.sql.impl.connector.SqlWriters.EntryWriter;
 import com.hazelcast.jet.sql.impl.expression.ExpressionUtil;
 import com.hazelcast.jet.sql.impl.schema.JetTable;
+import com.hazelcast.map.IMap;
 import com.hazelcast.query.Predicates;
 import com.hazelcast.sql.impl.expression.Expression;
+import com.hazelcast.sql.impl.row.HeapRow;
 import com.hazelcast.sql.impl.type.QueryDataType;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
 import static com.hazelcast.jet.core.Edge.between;
+import static com.hazelcast.jet.core.processor.Processors.flatMapP;
 import static com.hazelcast.jet.core.processor.Processors.mapP;
 import static com.hazelcast.jet.core.processor.SourceProcessors.readMapP;
 import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
 import static com.hazelcast.jet.sql.impl.connector.SqlWriters.entryWriter;
+import static com.hazelcast.jet.sql.impl.expression.ExpressionUtil.ZERO_ARGUMENTS_CONTEXT;
+import static java.util.UUID.randomUUID;
 
 public class IMapSqlConnector implements SqlConnector {
 
@@ -124,25 +135,49 @@ public class IMapSqlConnector implements SqlConnector {
     public Tuple2<Vertex, Vertex> nestedLoopReader(
             @Nonnull DAG dag,
             @Nonnull JetTable jetTable,
-            @Nonnull Expression<Boolean> predicateWithParams,
-            @Nonnull List<Expression<?>> projection
+            @Nonnull Expression<Boolean> predicate,
+            @Nonnull List<Expression<?>> projections
     ) {
         IMapTable table = (IMapTable) jetTable;
-        String mapName = table.getMapName();
 
-        Vertex v = dag.newVertex("enrich", Processors.mapUsingServiceAsyncP(
+        FunctionEx<Entry<Object, Object>, Object[]> mapProjection =
+                ExpressionUtil.projectionFn(table, null, projections);
+
+        String mapName = table.getMapName();
+        Vertex v1 = dag.newVertex("map-enrich-" + randomUUID(), Processors.mapUsingServiceAsyncP( // TODO: is it the right way?
                 ServiceFactories.iMapService(mapName),
                 1024,
                 true,
                 t -> {
                     throw new RuntimeException();
                 }, // not needed for ordered
-                (map, item) -> {
-                    // TODO query the map based on the predicate&projection
-                    return null;
+                (IMap<Object, Object> map, Object[] left) -> {
+                    List<Object[]> result = new ArrayList<>();
+                    for (Entry<Object, Object> entry : map.entrySet()) {
+                        Object[] right = mapProjection.apply(entry);
+                        Object[] projected = Arrays.copyOf(left, left.length + right.length);
+                        System.arraycopy(right, 0, projected, left.length, right.length);
+
+                        if (predicate.eval(new HeapRow(projected), ZERO_ARGUMENTS_CONTEXT)) {
+                            result.add(projected);
+                        }
+                    }
+
+                    // TODO: support LEFT OUTER JOIN ??? but connector should not be aware of that ???
+                    if (result.size() == 0) {
+                        return CompletableFuture.completedFuture(null);
+                    } else {
+                        return CompletableFuture.completedFuture(result);
+                    }
                 }
         ));
-        return tuple2(v, v);
+
+        // TODO: ultimate hacking...
+        Vertex v2 = dag.newVertex("flatten-" + randomUUID(), flatMapP( // TODO: is it the right way?
+                (FunctionEx<List<Object[]>, Traverser<Object[]>>) Traversers::traverseIterable)
+        );
+
+        return tuple2(v1, v2);
     }
 
     @Nullable @Override

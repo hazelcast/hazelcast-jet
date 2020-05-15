@@ -21,6 +21,7 @@ import com.hazelcast.jet.sql.impl.schema.JetTable;
 import com.hazelcast.sql.impl.expression.ConstantExpression;
 import com.hazelcast.sql.impl.expression.Expression;
 import com.hazelcast.sql.impl.expression.ExpressionEvalContext;
+import com.hazelcast.sql.impl.row.HeapRow;
 import com.hazelcast.sql.impl.row.Row;
 import com.hazelcast.sql.impl.type.QueryDataType;
 import org.apache.commons.beanutils.PropertyUtils;
@@ -38,11 +39,25 @@ import static com.hazelcast.query.QueryConstants.THIS_ATTRIBUTE_NAME;
 
 public final class ExpressionUtil {
 
-    private static final ExpressionEvalContext ZERO_ARGUMENTS_CONTEXT = index -> {
+    public static final ExpressionEvalContext ZERO_ARGUMENTS_CONTEXT = index -> {
         throw new IndexOutOfBoundsException("" + index);
     };
 
-    private ExpressionUtil() { }
+    private ExpressionUtil() {
+    }
+
+    public static FunctionEx<Object[], Object[]> projectionFn(
+            @Nonnull List<Expression<?>> projections
+    ) {
+        return values -> {
+            Row row = new HeapRow(values);
+            Object[] result = new Object[projections.size()];
+            for (int i = 0; i < projections.size(); i++) {
+                result[i] = projections.get(i).eval(row, ZERO_ARGUMENTS_CONTEXT);
+            }
+            return result;
+        };
+    }
 
     /**
      * Creates a function to project {@code Entry<Object, Object>} from the
@@ -82,7 +97,7 @@ public final class ExpressionUtil {
                 : (Expression<Boolean>) ConstantExpression.create(QueryDataType.BOOLEAN, true);
 
         return entry -> {
-            EntryRow row = new EntryRow(fieldNames0, entry);
+            Row row = new EntryRow(fieldNames0, entry);
             if (!Boolean.TRUE.equals(predicate0.eval(row, ZERO_ARGUMENTS_CONTEXT))) {
                 return null;
             }
