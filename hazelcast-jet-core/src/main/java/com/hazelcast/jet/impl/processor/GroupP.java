@@ -17,6 +17,7 @@
 package com.hazelcast.jet.impl.processor;
 
 import com.hazelcast.function.FunctionEx;
+import com.hazelcast.internal.serialization.impl.SerializationServiceV1;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
@@ -28,6 +29,7 @@ import com.hazelcast.jet.core.AbstractProcessor;
 import javax.annotation.Nonnull;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -45,8 +47,8 @@ public class GroupP<K, A, R, OUT> extends AbstractProcessor {
     @Nonnull private final List<FunctionEx<?, ? extends K>> groupKeyFns;
     @Nonnull private final AggregateOperation<A, R> aggrOp;
 
-    private RocksDBStateBackend<K, A> store = new RocksDBFactory<K, A>().getKeyValueStore();
-    private RocksMap<K, A> keyToAcc = store.getMap();
+    private RocksDBStateBackend store = new RocksDBFactory().getKeyValueStore();
+    private RocksMap keyToAcc;
     private Traverser<OUT> resultTraverser;
     private final BiFunction<? super K, ? super R, OUT> mapToOutputFn;
 
@@ -75,8 +77,9 @@ public class GroupP<K, A, R, OUT> extends AbstractProcessor {
     protected boolean tryProcess(int ordinal, @Nonnull Object item) {
         Function<Object, ? extends K> keyFn = (Function<Object, ? extends K>) groupKeyFns.get(ordinal);
         K key = keyFn.apply(item);
-        // A acc = keyToAcc.computeIfAbsent(key, k -> aggrOp.createFn().get());
         A acc = aggrOp.createFn().get();
+        keyToAcc = store.getMap(key.getClass(),acc.getClass());
+        // A acc = keyToAcc.computeIfAbsent(key, k -> acc);
         keyToAcc.put(key, acc);
         aggrOp.accumulateFn(ordinal).accept(acc, item);
         return true;
@@ -94,7 +97,7 @@ public class GroupP<K, A, R, OUT> extends AbstractProcessor {
     }
 
     private class ResultTraverser implements Traverser<Entry<K, A>> {
-        private final Iterator<Entry<K, A>> iter = keyToAcc.all();
+        private final Iterator iter = keyToAcc.all();
         //keyToAcc.entrySet().iterator();
 
         @Override
@@ -103,7 +106,8 @@ public class GroupP<K, A, R, OUT> extends AbstractProcessor {
                 return null;
             }
             try {
-                return iter.next();
+             //   return iter.next();
+                return null;
             } finally {
                 iter.remove();
             }

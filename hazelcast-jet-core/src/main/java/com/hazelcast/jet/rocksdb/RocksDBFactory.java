@@ -17,12 +17,9 @@ package com.hazelcast.jet.rocksdb;
 
 /**
  * A factory class used to instantiate a RocksDBStateBackend.
- * @param <K> the type of key
- * @param <V> the type of value
- *
  */
-public class RocksDBFactory<K, V> {
-    public RocksDBStateBackend<K, V> getKeyValueStore() {
-        return new RocksDBStateBackend<K, V>(new RocksDBOptions().getOptions(), "path/to/db");
+public class RocksDBFactory {
+    public RocksDBStateBackend getKeyValueStore() {
+        return new RocksDBStateBackend(new RocksDBOptions().getOptions(), "path/to/db");
     }
 }

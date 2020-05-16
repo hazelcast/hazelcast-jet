@@ -32,12 +32,9 @@ import java.util.ArrayList;
  * Each RocksMap is instantiated with a ColumnFamilyHandler.
  * Once the task has finished (complete() is invoked),
  * the task asks it to delete the whole data-store.
- *
- * @param <K> the type of key
- * @param <V> the type of value
  */
 
-public class RocksDBStateBackend<K, V> {
+public class RocksDBStateBackend {
     private RocksDB db;
     private ArrayList<ColumnFamilyHandle> cfhs = new ArrayList<>();
 
@@ -50,7 +47,7 @@ public class RocksDBStateBackend<K, V> {
         }
     }
 
-    public RocksMap<K, V> getMap() {
+    public <K,V> RocksMap getMap(Class<K> k ,Class<V> v) {
         ColumnFamilyHandle cfh = null;
         try {
             cfh = db.createColumnFamily(new ColumnFamilyDescriptor("RocksMap1".getBytes()));
@@ -58,7 +55,7 @@ public class RocksDBStateBackend<K, V> {
             e.printStackTrace();
         }
         cfhs.add(cfh);
-        return new RocksMap<K, V>(db, cfh);
+        return new RocksMap<K,V>(db, cfh);
     }
 
     public void deleteDataStore() {

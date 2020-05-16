@@ -140,7 +140,5 @@ public interface ProcessorSupplier extends Serializable {
          */
         @Nonnull
         ManagedContext managedContext();
-
-        RocksDBStateBackend getStateStore();
     }
 }
