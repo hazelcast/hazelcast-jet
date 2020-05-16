@@ -35,7 +35,6 @@ public class RocksMap<K,V> {
     }
 
     public V get(K key) {
-
         return null;
     }
 
@@ -55,10 +54,4 @@ public class RocksMap<K,V> {
     public Iterator<Map.Entry<K, V>> all() {
         return null;
     }
-    //used by processor to register job-level serializer
-    public void registerSerializers(Map<Class,Class> classToSerializer) {
-    }
-
-
-
 }
