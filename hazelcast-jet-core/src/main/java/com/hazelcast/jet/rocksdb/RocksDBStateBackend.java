@@ -55,7 +55,7 @@ public class RocksDBStateBackend {
             e.printStackTrace();
         }
         cfhs.add(cfh);
-        return new RocksMap<K,V>(db, cfh);
+        return new RocksMap<K,V>(db, cfh,k,v);
     }
 
     public void deleteDataStore() {
