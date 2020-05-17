@@ -13,82 +13,66 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package com.hazelcast.jet.rocksdb;
 
-import com.hazelcast.internal.serialization.impl.SerializationServiceV1;
-import com.hazelcast.internal.serialization.impl.SerializerAdapter;
-import com.hazelcast.jet.impl.serialization.DelegatingSerializationService;
-import com.hazelcast.nio.ObjectDataInput;
-import com.hazelcast.nio.ObjectDataOutput;
-import org.rocksdb.RocksDB;
 import org.rocksdb.ColumnFamilyHandle;
+import org.rocksdb.RocksDB;
 import org.rocksdb.RocksDBException;
 
-import java.io.IOException;
 import java.util.Iterator;
 import java.util.Map;
-
-import static java.util.Collections.emptyMap;
-
+import java.util.Map.Entry;
 
 /**
  * RocksMap is RocksDB-backed HashMap.
  * Responsible for providing the interface of HashMap to processors.
-*/
-public class RocksMap<K,V> {
+ */
+public class RocksMap {
     private final RocksDB db;
     private final ColumnFamilyHandle cfh;
-    private final DelegatingSerializationService serializationService;
-    private SerializerAdapter keySerializer;
-    private SerializerAdapter valueSerializer;
 
-    RocksMap(RocksDB db, ColumnFamilyHandle cfh,Class<K> kClass,Class<V> vClass){
-        this.db= db;
-        this.cfh=cfh;
-        serializationService = new DelegatingSerializationService(emptyMap(),SerializationServiceV1.builder().build());
-        keySerializer = serializationService.serializerFor(kClass);
-        valueSerializer = serializationService.serializerFor(vClass);
+    RocksMap(RocksDB db, ColumnFamilyHandle cfh) {
+        this.db = db;
+        this.cfh = cfh;
     }
 
-    public V get(K key) {
-       ObjectDataOutput out = serializationService.createObjectDataOutput();
+    public byte[] get(byte[] key) {
         try {
-            keySerializer.write(out,key);
-            byte[] keyBytes = out.toByteArray();
-            byte[] valueBytes = db.get(cfh,keyBytes);
-            ObjectDataInput in = serializationService.createObjectDataInput(valueBytes);
-            return (V) valueSerializer.read(in);
-        } catch (IOException | RocksDBException e) {
+            return db.get(cfh, key);
+        } catch (RocksDBException e) {
             e.printStackTrace();
         }
         return null;
     }
 
-    public void put(K key, V value) {
-        ObjectDataOutput outK = serializationService.createObjectDataOutput();
-        ObjectDataOutput outV = serializationService.createObjectDataOutput();
+    public void put(byte[] key, byte[] value) {
         try {
-            keySerializer.write(outK,key);
-            valueSerializer.write(outV,value);
-            byte[] keyBytes = outK.toByteArray();
-            byte[] valueBytes = outV.toByteArray();
-            db.put(cfh,keyBytes,valueBytes);
-        } catch (IOException | RocksDBException e) {
+            db.put(cfh, key, value);
+        } catch (RocksDBException e) {
             e.printStackTrace();
         }
     }
 
-    public Map<K, V> getAll() {
+    public void delete(byte[] key) {
+        try {
+            db.delete(key);
+        } catch (RocksDBException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void putAll(Map<byte[], byte[]> map) {
+        for (Entry<byte[], byte[]> e : map.entrySet()) {
+            put(e.getKey(), e.getValue());
+        }
+    }
+
+    public Map<byte[], byte[]> getAll() {
         return null;
     }
 
-    public void putAll(Map<K,V> entries) {
-    }
-
-    public void delete(K key) {
-    }
-
-    public Iterator<Map.Entry<K, V>> all() {
+    public Iterator<Entry<byte[], byte[]>> all() {
         return null;
     }
 }

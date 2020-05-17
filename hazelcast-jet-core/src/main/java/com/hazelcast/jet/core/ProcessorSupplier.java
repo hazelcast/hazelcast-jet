@@ -19,7 +19,6 @@ package com.hazelcast.jet.core;
 import com.hazelcast.core.ManagedContext;
 import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.config.JobConfig;
-import com.hazelcast.jet.rocksdb.RocksDBStateBackend;
 import com.hazelcast.logging.ILogger;
 
 import javax.annotation.Nonnull;
@@ -39,6 +38,15 @@ import static java.util.stream.Collectors.toList;
  */
 @FunctionalInterface
 public interface ProcessorSupplier extends Serializable {
+
+    /**
+     * Returns a {@code ProcessorSupplier} which will delegate to the given
+     * {@code Supplier<Processor>} to create all {@code Processor} instances.
+     */
+    @Nonnull
+    static ProcessorSupplier of(@Nonnull SupplierEx<? extends Processor> processorSupplier) {
+        return count -> Stream.generate(processorSupplier).limit(count).collect(toList());
+    }
 
     /**
      * Called on each cluster member after deserialization.
@@ -79,15 +87,6 @@ public interface ProcessorSupplier extends Serializable {
      *              {@code null} in the case of successful job completion
      */
     default void close(@Nullable Throwable error) throws Exception {
-    }
-
-    /**
-     * Returns a {@code ProcessorSupplier} which will delegate to the given
-     * {@code Supplier<Processor>} to create all {@code Processor} instances.
-     */
-    @Nonnull
-    static ProcessorSupplier of(@Nonnull SupplierEx<? extends Processor> processorSupplier) {
-        return count -> Stream.generate(processorSupplier).limit(count).collect(toList());
     }
 
     /**

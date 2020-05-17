@@ -18,10 +18,6 @@ package com.hazelcast.jet.impl.processor;
 
 import com.hazelcast.function.BiFunctionEx;
 import com.hazelcast.jet.Traverser;
-import com.hazelcast.jet.config.JobConfig;
-import com.hazelcast.jet.rocksdb.RocksDBFactory;
-import com.hazelcast.jet.rocksdb.RocksDBStateBackend;
-import com.hazelcast.jet.rocksdb.RocksMap;
 import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.datamodel.ItemsByTag;
 import com.hazelcast.jet.datamodel.Tag;
@@ -29,7 +25,10 @@ import com.hazelcast.jet.function.TriFunction;
 import com.hazelcast.jet.impl.pipeline.transform.HashJoinTransform;
 import com.hazelcast.jet.impl.processor.HashJoinCollectP.HashJoinArrayList;
 import com.hazelcast.jet.pipeline.BatchStage;
-import com.hazelcast.internal.serialization.impl.SerializationServiceV1;
+import com.hazelcast.jet.rocksdb.RocksDBFactory;
+import com.hazelcast.jet.rocksdb.RocksDBStateBackend;
+import com.hazelcast.jet.rocksdb.RocksMap;
+import com.hazelcast.jet.rocksdb.Serializer;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 import javax.annotation.Nonnull;
@@ -39,7 +38,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.HashMap;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
@@ -75,13 +73,11 @@ import static java.util.Objects.requireNonNull;
 public class HashJoinP<E0> extends AbstractProcessor {
 
     private final List<Function<E0, Object>> keyFns;
-   // private final List<Map<Object, Object>> lookupTables;
-    private RocksDBStateBackend store = new RocksDBFactory().getKeyValueStore();
-    private List<RocksMap<Object,Object>> lookupTables;
+    private final List<RocksMap> lookupTables;
     private final FlatMapper<E0, Object> flatMapper;
-
+    private final Serializer<Object> serializer = new Serializer<>();
     private boolean ordinal0Consumed;
-    private final SerializationServiceV1 serializer;
+    private RocksDBStateBackend store = new RocksDBFactory().getKeyValueStore();
 
     @SuppressFBWarnings(value = "NP_PARAMETER_MUST_BE_NONNULL_BUT_MARKED_AS_NULLABLE",
             justification = "https://github.com/spotbugs/spotbugs/issues/844")
@@ -118,22 +114,18 @@ public class HashJoinP<E0> extends AbstractProcessor {
 
         CombinationsTraverser traverser = new CombinationsTraverser(keyFns.size(), mapTupleToOutputFn);
         flatMapper = flatMapper(traverser::accept);
-        serializer = SerializationServiceV1.builder().build();
     }
 
     @Override
     protected void init(@Nonnull Context context) throws Exception {
-
-        //store = context.getStateStore();
-        //context.jobConfig().getSerializerConfigs();
     }
 
     @Override
     protected boolean tryProcess(int ordinal, @Nonnull Object item) {
         assert !ordinal0Consumed : "Edge 0 must have a lower priority than all other edges";
 
-        // lookupTables.set(ordinal - 1, (Map) item);
-        RocksMap<Object,Object> map = store.getMap(Object.class,Object.class);
+        RocksMap map = store.getMap();
+        //TODO: Serialize item entries before passing it.
         map.putAll(((Map) item));
         lookupTables.set(ordinal - 1, map);
         return true;
@@ -147,10 +139,9 @@ public class HashJoinP<E0> extends AbstractProcessor {
 
     @Nonnull
     private Object lookUpJoined(int index, E0 item) {
-        //Map<Object, Object> lookupTableForOrdinal = lookupTables.get(index);
-        RocksMap<Object, Object> lookupTableForOrdinal = lookupTables.get(index);
+        RocksMap lookupTableForOrdinal = lookupTables.get(index);
         Object key = keyFns.get(index).apply(item);
-        return lookupTableForOrdinal.get(key);
+        return lookupTableForOrdinal.get(serializer.serialize(key));
     }
 
     private class CombinationsTraverser<OUT> implements Traverser<OUT> {

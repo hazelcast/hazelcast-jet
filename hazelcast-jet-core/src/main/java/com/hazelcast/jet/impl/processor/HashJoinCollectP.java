@@ -16,16 +16,17 @@
 
 package com.hazelcast.jet.impl.processor;
 
-import com.hazelcast.internal.serialization.impl.SerializationServiceV1;
+import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.rocksdb.RocksDBFactory;
 import com.hazelcast.jet.rocksdb.RocksDBStateBackend;
 import com.hazelcast.jet.rocksdb.RocksMap;
-import com.hazelcast.jet.core.AbstractProcessor;
+import com.hazelcast.jet.rocksdb.Serializer;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+
 
 /**
  * Implements the "collector" stage in a hash join transformation. This
@@ -52,15 +53,16 @@ public class HashJoinCollectP<K, T, V> extends AbstractProcessor {
     @Nonnull private final Function<T, K> keyFn;
     @Nonnull private final Function<T, V> projectFn;
 
-    //  private final Map<K, Object> lookupTable = new HashMap<>();
-    private RocksDBStateBackend store = new RocksDBFactory().getKeyValueStore();
-    private RocksMap lookupTable;
+    private final RocksDBStateBackend store = new RocksDBFactory().getKeyValueStore();
+    private final RocksMap lookupTable = store.getMap();
+    private final Serializer<K> keySerializer = new Serializer<>();
+    private final Serializer<V> valueSerializer = new Serializer<>();
+    private final Serializer<HashJoinArrayList> listSerializer = new Serializer<>();
 
     public HashJoinCollectP(@Nonnull Function<T, K> keyFn, @Nonnull Function<T, V> projectFn) {
         this.keyFn = keyFn;
         this.projectFn = projectFn;
     }
-
 
     @Override
     @SuppressWarnings("unchecked")
@@ -68,14 +70,17 @@ public class HashJoinCollectP<K, T, V> extends AbstractProcessor {
         T t = (T) item;
         K key = keyFn.apply(t);
         V value = projectFn.apply(t);
-        lookupTable = store.getMap(key.getClass(), Object.class);
-       // lookupTable.merge(key, value, MERGE_FN);
+        byte[] keyBytes = keySerializer.serialize(key);
+        byte[] valueBytes = valueSerializer.serialize(value);
+        //lookupTable.merge(key, value, MERGE_FN);
+        //TODO: implement merge
         return true;
     }
 
     @Override
     public boolean complete() {
         store.deleteDataStore();
+        //TODO: deserialize Rocksmap entries returned from getAll
         return tryEmit(lookupTable.getAll());
     }
 

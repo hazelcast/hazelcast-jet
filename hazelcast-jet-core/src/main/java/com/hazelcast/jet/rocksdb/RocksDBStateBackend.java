@@ -13,15 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package com.hazelcast.jet.rocksdb;
 
-import org.rocksdb.RocksDB;
-import org.rocksdb.Options;
-import org.rocksdb.ColumnFamilyHandle;
 import org.rocksdb.ColumnFamilyDescriptor;
+import org.rocksdb.ColumnFamilyHandle;
+import org.rocksdb.Options;
+import org.rocksdb.RocksDB;
 import org.rocksdb.RocksDBException;
 
 import java.util.ArrayList;
+
 
 /**
  * Responsible for managing one RocksDB instance,
@@ -47,7 +49,7 @@ public class RocksDBStateBackend {
         }
     }
 
-    public <K,V> RocksMap getMap(Class<K> k ,Class<V> v) {
+    public RocksMap getMap() {
         ColumnFamilyHandle cfh = null;
         try {
             cfh = db.createColumnFamily(new ColumnFamilyDescriptor("RocksMap1".getBytes()));
@@ -55,12 +57,13 @@ public class RocksDBStateBackend {
             e.printStackTrace();
         }
         cfhs.add(cfh);
-        return new RocksMap<K,V>(db, cfh,k,v);
+        return new RocksMap(db, cfh);
     }
 
     public void deleteDataStore() {
         for (final ColumnFamilyHandle cfh : cfhs) {
             cfh.close();
         }
+        db.close();
     }
 }
