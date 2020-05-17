@@ -30,10 +30,10 @@ import java.util.ArrayList;
  * opening and Closing the connection and deleting the database.
  * Processors acquire an instance of this class on initialization.
  * Processors use this class to acquire any number of RocksMaps they require.
- * The datastore is logically partitioned using column families.
+ * The database is logically partitioned using column families.
  * Each RocksMap is instantiated with a ColumnFamilyHandler.
  * Once the task has finished (complete() is invoked),
- * the task asks it to delete the whole data-store.
+ * the task asks it to delete the whole database.
  */
 
 public class RocksDBStateBackend {

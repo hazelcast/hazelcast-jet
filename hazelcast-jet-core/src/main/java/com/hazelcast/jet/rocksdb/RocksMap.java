@@ -16,10 +16,12 @@
 
 package com.hazelcast.jet.rocksdb;
 
+import com.hazelcast.jet.JetException;
 import org.rocksdb.ColumnFamilyHandle;
 import org.rocksdb.RocksDB;
 import org.rocksdb.RocksDBException;
 
+import javax.annotation.Nonnull;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -37,32 +39,31 @@ public class RocksMap {
         this.cfh = cfh;
     }
 
-    public byte[] get(byte[] key) {
+    public byte[] get(byte[] key) throws JetException {
         try {
             return db.get(cfh, key);
         } catch (RocksDBException e) {
-            e.printStackTrace();
+            throw new JetException(e.getMessage(), e.getCause());
         }
-        return null;
     }
 
-    public void put(byte[] key, byte[] value) {
+    public void put(byte[] key, byte[] value) throws JetException {
         try {
             db.put(cfh, key, value);
         } catch (RocksDBException e) {
-            e.printStackTrace();
+            throw new JetException(e.getMessage(), e.getCause());
         }
     }
 
-    public void delete(byte[] key) {
+    public void delete(byte[] key) throws JetException {
         try {
             db.delete(key);
         } catch (RocksDBException e) {
-            e.printStackTrace();
+            throw new JetException(e.getMessage(), e.getCause());
         }
     }
 
-    public void putAll(Map<byte[], byte[]> map) {
+    public void putAll(@Nonnull Map<byte[], byte[]> map) throws JetException {
         for (Entry<byte[], byte[]> e : map.entrySet()) {
             put(e.getKey(), e.getValue());
         }

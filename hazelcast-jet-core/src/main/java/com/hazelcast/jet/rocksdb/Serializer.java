@@ -19,6 +19,7 @@ package com.hazelcast.jet.rocksdb;
 import com.hazelcast.internal.serialization.impl.AbstractSerializationService;
 import com.hazelcast.internal.serialization.impl.SerializationServiceV1;
 import com.hazelcast.internal.serialization.impl.SerializerAdapter;
+import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.impl.serialization.DelegatingSerializationService;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
@@ -29,16 +30,15 @@ import static java.util.Collections.emptyMap;
 
 public class Serializer<T> {
 
-    private final AbstractSerializationService delegate;
     private final DelegatingSerializationService serializationService;
     private SerializerAdapter serializer;
 
     public Serializer() {
-        delegate = SerializationServiceV1.builder().build();
+        AbstractSerializationService delegate = SerializationServiceV1.builder().build();
         serializationService = new DelegatingSerializationService(emptyMap(), delegate);
     }
 
-    public byte[] serialize(T item) {
+    public byte[] serialize(T item) throws JetException {
         if (serializer == null) {
             serializer = serializationService.serializerFor(item);
         }
@@ -47,18 +47,17 @@ public class Serializer<T> {
             serializer.write(out, item);
             return out.toByteArray();
         } catch (IOException e) {
-            e.printStackTrace();
+            throw new JetException(e.getMessage(), e.getCause());
         }
-        return null;
     }
 
-    public T deserialize(byte[] item) {
+    @SuppressWarnings("unchecked")
+    public T deserialize(byte[] item) throws JetException {
         try {
             ObjectDataInput in = serializationService.createObjectDataInput(item);
             return (T) serializer.read(in);
         } catch (IOException e) {
-            e.printStackTrace();
+            throw new JetException(e.getMessage(), e.getCause());
         }
-        return null;
     }
 }
