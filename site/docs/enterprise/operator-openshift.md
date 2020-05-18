@@ -196,6 +196,14 @@ use a pod name to be forwarded. We will retrieve the pod name from the
 set, a new panel will be shown on the right side. You can use any pods
 listed in the `Pods` section.
 
+>If you've installed operator into a specific namespace, switch to that
+>namespace first with the following:
+>
+>```bash
+>$ oc project my-namespace
+>Now using project "my-namespace" on server "XXXXXX"
+>```
+
 Run the command below with to make port forwarding happen:
 
 ```bash
@@ -295,3 +303,25 @@ You can also see information regarding Hazelcast Jet Enterprise Cluster
 on the `Cluster` link in the side menu.
 
 ![Hazelcast Jet Management Center Cluster View](assets/mc-cluster.png)
+
+## Stopping the Job
+
+You can stop the job when you are done with it.
+
+To stop the job we need to know it's name or id. List the jobs running
+in the cluster with the command below:
+
+```bash
+$ bin/jet list-jobs
+ID                  STATUS             SUBMISSION TIME         NAME
+045e-25d1-b680-0001 RUNNING            2020-05-18T14:47:04.595 hello-world
+```
+
+Then you can cancel it using either name or id of the job like
+following:
+
+```bash
+$ bin/jet cancel hello-world
+Cancelling job id=045e-25d1-b680-0001, name=hello-world, submissionTime=2020-05-18T14:47:04.595
+Job cancelled.
+```

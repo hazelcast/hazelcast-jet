@@ -308,3 +308,25 @@ Click to running job named `hello-world`, which we've submitted earlier,
 in the `Active Jobs` section to see the details of it.
 
 ![Hazelcast Jet Management Center Job Details](assets/mc-job.png)
+
+## Stopping the Job
+
+You can stop the job when you are done with it.
+
+To stop the job we need to know its name or id. List the jobs running
+in the cluster with the command below:
+
+```bash
+$ bin/jet list-jobs
+ID                  STATUS             SUBMISSION TIME         NAME
+045e-25d1-b680-0001 RUNNING            2020-05-18T14:47:04.595 hello-world
+```
+
+Then you can cancel it using either name or id of the job like
+following:
+
+```bash
+$ bin/jet cancel hello-world
+Cancelling job id=045e-25d1-b680-0001, name=hello-world, submissionTime=2020-05-18T14:47:04.595
+Job cancelled.
+```
