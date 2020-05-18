@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.sql.impl.expression;
 
+import com.hazelcast.function.BiFunctionEx;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.sql.impl.schema.JetTable;
 import com.hazelcast.sql.impl.expression.ConstantExpression;
@@ -29,6 +30,7 @@ import org.apache.commons.beanutils.PropertyUtils;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.lang.reflect.InvocationTargetException;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map.Entry;
 
@@ -106,6 +108,30 @@ public final class ExpressionUtil {
                 result[i] = projections.get(i).eval(row, ZERO_ARGUMENTS_CONTEXT);
             }
             return result;
+        };
+    }
+
+    public static BiFunctionEx<Object[], Object[], Object[]> joinFn(
+            @Nullable Expression<Boolean> predicate
+    ) {
+        @SuppressWarnings("unchecked")
+        Expression<Boolean> predicate0 = predicate != null ? predicate
+                : (Expression<Boolean>) ConstantExpression.create(QueryDataType.BOOLEAN, true);
+
+        return (left, right) -> {
+            if (right == null) {
+                return null;
+            }
+
+            Object[] joined = Arrays.copyOf(left, left.length + right.length);
+            System.arraycopy(right, 0, joined, left.length, right.length);
+
+            Row row = new HeapRow(joined);
+            if (Boolean.TRUE.equals(predicate0.eval(row, ZERO_ARGUMENTS_CONTEXT))) {
+                return joined;
+            } else {
+                return null;
+            }
         };
     }
 
