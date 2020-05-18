@@ -17,14 +17,22 @@
 package com.hazelcast.jet.rocksdb;
 
 import com.hazelcast.jet.JetException;
+import com.hazelcast.jet.datamodel.Tuple2;
 import org.rocksdb.ColumnFamilyHandle;
+import org.rocksdb.ReadOptions;
 import org.rocksdb.RocksDB;
 import org.rocksdb.RocksDBException;
+import org.rocksdb.RocksIterator;
+import org.rocksdb.WriteBatch;
+import org.rocksdb.WriteOptions;
 
 import javax.annotation.Nonnull;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
+
+import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
 
 /**
  * RocksMap is RocksDB-backed HashMap.
@@ -33,15 +41,19 @@ import java.util.Map.Entry;
 public class RocksMap {
     private final RocksDB db;
     private final ColumnFamilyHandle cfh;
+    private final ReadOptions readOptions;
+    private final WriteOptions writeOptions;
 
-    RocksMap(RocksDB db, ColumnFamilyHandle cfh) {
+    RocksMap(RocksDB db, ColumnFamilyHandle cfh, ReadOptions readOptions, WriteOptions writeOptions) {
         this.db = db;
         this.cfh = cfh;
+        this.readOptions = readOptions;
+        this.writeOptions = writeOptions;
     }
 
     public byte[] get(byte[] key) throws JetException {
         try {
-            return db.get(cfh, key);
+            return db.get(cfh, readOptions, key);
         } catch (RocksDBException e) {
             throw new JetException(e.getMessage(), e.getCause());
         }
@@ -49,7 +61,7 @@ public class RocksMap {
 
     public void put(byte[] key, byte[] value) throws JetException {
         try {
-            db.put(cfh, key, value);
+            db.put(cfh, writeOptions, key, value);
         } catch (RocksDBException e) {
             throw new JetException(e.getMessage(), e.getCause());
         }
@@ -57,23 +69,53 @@ public class RocksMap {
 
     public void delete(byte[] key) throws JetException {
         try {
-            db.delete(key);
+            db.delete(writeOptions, key);
         } catch (RocksDBException e) {
             throw new JetException(e.getMessage(), e.getCause());
         }
     }
 
     public void putAll(@Nonnull Map<byte[], byte[]> map) throws JetException {
+        WriteBatch batch = new WriteBatch();
         for (Entry<byte[], byte[]> e : map.entrySet()) {
-            put(e.getKey(), e.getValue());
+            batch.put(e.getKey(), e.getValue());
+        }
+        try {
+            db.write(writeOptions, batch);
+        } catch (RocksDBException e) {
+            throw new JetException(e.getMessage(), e.getCause());
         }
     }
 
     public Map<byte[], byte[]> getAll() {
-        return null;
+        RocksIterator iterator = db.newIterator(cfh, readOptions);
+        iterator.seekToFirst();
+        Map<byte[], byte[]> map = new HashMap<>();
+        while (iterator.isValid()) {
+            map.put(iterator.key(), iterator.value());
+            iterator.next();
+        }
+        return map;
     }
 
     public Iterator<Entry<byte[], byte[]>> all() {
-        return null;
+        RocksIterator iterator = db.newIterator(cfh, readOptions);
+        iterator.seekToFirst();
+        return new Iterator<Entry<byte[], byte[]>>() {
+
+            @Override
+            public boolean hasNext() {
+                return iterator.isValid();
+            }
+
+            //next returns RocksIterator's current key-value entry
+            //RocksIterators.next() only forwards the iterator
+            @Override
+            public Entry<byte[], byte[]> next() {
+                Tuple2<byte[], byte[]> tuple = tuple2(iterator.key(), iterator.value());
+                iterator.next();
+                return tuple;
+            }
+        };
     }
 }

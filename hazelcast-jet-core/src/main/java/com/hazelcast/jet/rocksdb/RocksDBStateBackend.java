@@ -16,13 +16,18 @@
 
 package com.hazelcast.jet.rocksdb;
 
+import com.hazelcast.jet.JetException;
 import org.rocksdb.ColumnFamilyDescriptor;
 import org.rocksdb.ColumnFamilyHandle;
 import org.rocksdb.Options;
+import org.rocksdb.ReadOptions;
 import org.rocksdb.RocksDB;
 import org.rocksdb.RocksDBException;
+import org.rocksdb.WriteOptions;
 
+import javax.annotation.Nonnull;
 import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicInteger;
 
 
 /**
@@ -37,27 +42,48 @@ import java.util.ArrayList;
  */
 
 public class RocksDBStateBackend {
+    private final Options options;
+    private final ReadOptions readOptions;
+    private final WriteOptions writeOptions;
+    private final String directory;
     private RocksDB db;
     private ArrayList<ColumnFamilyHandle> cfhs = new ArrayList<>();
 
-    RocksDBStateBackend(Options opt, String directory) {
+    private AtomicInteger counter = new AtomicInteger(0);
+
+    RocksDBStateBackend(RocksDBOptions rocksDBOptions, String directory) throws JetException {
+        this.options = rocksDBOptions.getOptions();
+        this.readOptions = rocksDBOptions.getReadOptions();
+        this.writeOptions = rocksDBOptions.getWriteOptions();
+        this.directory = directory;
+        init();
+    }
+
+    private void init() throws JetException {
         RocksDB.loadLibrary();
         try {
-            db = RocksDB.open(opt, directory);
+            db = RocksDB.open(options, directory);
         } catch (RocksDBException e) {
-            e.printStackTrace();
+            throw new JetException(e.getMessage(), e.getCause());
         }
     }
 
-    public RocksMap getMap() {
-        ColumnFamilyHandle cfh = null;
+    public RocksMap getMap() throws JetException {
+        ColumnFamilyHandle cfh;
         try {
-            cfh = db.createColumnFamily(new ColumnFamilyDescriptor("RocksMap1".getBytes()));
+            cfh = db.createColumnFamily(new ColumnFamilyDescriptor(getNextName().getBytes()));
+            cfhs.add(cfh);
+            return new RocksMap(db, cfh, readOptions, writeOptions);
         } catch (RocksDBException e) {
-            e.printStackTrace();
+            throw new JetException(e.getMessage(), e.getCause());
         }
-        cfhs.add(cfh);
-        return new RocksMap(db, cfh);
+    }
+
+    // since the database is shared among all processors of a job on the same cluster member,
+    // we may end up with a race condition when two processor are asking for a RocksMap at the same time
+    @Nonnull
+    private String getNextName() {
+        return "RocksMap".concat(String.valueOf(counter.getAndIncrement()));
     }
 
     public void deleteDataStore() {

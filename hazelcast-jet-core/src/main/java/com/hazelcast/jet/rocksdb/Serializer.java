@@ -53,6 +53,9 @@ public class Serializer<T> {
 
     @SuppressWarnings("unchecked")
     public T deserialize(byte[] item) throws JetException {
+        // deserialize() can only be called after serialize() has initialised serializer field
+        assert serializer != null;
+
         try {
             ObjectDataInput in = serializationService.createObjectDataInput(item);
             return (T) serializer.read(in);

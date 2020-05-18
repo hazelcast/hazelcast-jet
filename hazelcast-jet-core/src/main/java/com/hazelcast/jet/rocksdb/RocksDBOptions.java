@@ -13,9 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package com.hazelcast.jet.rocksdb;
 
 import org.rocksdb.Options;
+import org.rocksdb.ReadOptions;
+import org.rocksdb.WriteOptions;
 
 /**
  * A configuration class where the RocksDB default options should be placed.
@@ -26,5 +29,13 @@ import org.rocksdb.Options;
 class RocksDBOptions {
     Options getOptions() {
         return new Options();
+    }
+
+    ReadOptions getReadOptions() {
+        return new ReadOptions();
+    }
+
+    WriteOptions getWriteOptions() {
+        return new WriteOptions();
     }
 }

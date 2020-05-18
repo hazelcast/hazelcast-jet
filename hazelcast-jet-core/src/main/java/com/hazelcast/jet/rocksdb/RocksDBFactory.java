@@ -13,13 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package com.hazelcast.jet.rocksdb;
+
 
 /**
  * A factory class used to instantiate a RocksDBStateBackend.
  */
 public class RocksDBFactory {
     public RocksDBStateBackend getKeyValueStore() {
-        return new RocksDBStateBackend(new RocksDBOptions().getOptions(), "path/to/db");
+        return new RocksDBStateBackend(new RocksDBOptions(), "path/to/db");
     }
 }
