@@ -281,6 +281,13 @@
             <artifactId>hazelcast-jet-cdc-mysql</artifactId>
             <version>${project.version}</version>
             <classifier>jar-with-dependencies</classifier>
+            <exclusions>
+                <!-- Excluded due to license -->
+                <exclusion>
+                    <groupId>mysql</groupId>
+                    <artifactId>mysql-connector-java</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <dependency>
