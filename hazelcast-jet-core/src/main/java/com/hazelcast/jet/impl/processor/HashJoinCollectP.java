@@ -72,9 +72,14 @@ public class HashJoinCollectP<K, T, V> extends AbstractProcessor {
         V value = projectFn.apply(t);
         byte[] keyBytes = keySerializer.serialize(key);
         byte[] valueBytes = valueSerializer.serialize(value);
-        //lookupTable.merge(key, value, MERGE_FN);
-        //TODO: implement merge
+        byte[] oldValue = lookupTable.get(keyBytes);
+        lookupTable.put(keyBytes, merge(oldValue, valueBytes));
         return true;
+    }
+
+    //TODO: implement merge
+    private byte[] merge(byte[] oldValue, byte[] newValue) {
+        return oldValue;
     }
 
     @Override

@@ -46,9 +46,9 @@ public class RocksDBStateBackend {
     private final ReadOptions readOptions;
     private final WriteOptions writeOptions;
     private final String directory;
+    private final Serializer<String> serializer = new Serializer<>();
     private RocksDB db;
     private ArrayList<ColumnFamilyHandle> cfhs = new ArrayList<>();
-
     private AtomicInteger counter = new AtomicInteger(0);
 
     RocksDBStateBackend(RocksDBOptions rocksDBOptions, String directory) throws JetException {
@@ -71,7 +71,8 @@ public class RocksDBStateBackend {
     public RocksMap getMap() throws JetException {
         ColumnFamilyHandle cfh;
         try {
-            cfh = db.createColumnFamily(new ColumnFamilyDescriptor(getNextName().getBytes()));
+
+            cfh = db.createColumnFamily(new ColumnFamilyDescriptor(serializer.serialize(getNextName())));
             cfhs.add(cfh);
             return new RocksMap(db, cfh, readOptions, writeOptions);
         } catch (RocksDBException e) {
