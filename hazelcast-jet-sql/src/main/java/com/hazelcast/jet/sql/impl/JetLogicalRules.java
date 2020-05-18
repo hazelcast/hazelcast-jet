@@ -17,7 +17,6 @@
 package com.hazelcast.jet.sql.impl;
 
 import com.hazelcast.jet.sql.impl.rule.FilterIntoScanLogicalRule;
-import com.hazelcast.jet.sql.impl.rule.FilterLogicalRule;
 import com.hazelcast.jet.sql.impl.rule.FullScanLogicalRule;
 import com.hazelcast.jet.sql.impl.rule.JoinLogicalRule;
 import com.hazelcast.jet.sql.impl.rule.ProjectIntoScanLogicalRule;
@@ -71,7 +70,7 @@ public final class JetLogicalRules {
                 JetTableInsertLogicalRule.INSTANCE,
                 JetValuesLogicalRule.INSTANCE,
                 FullScanLogicalRule.INSTANCE,
-                FilterLogicalRule.INSTANCE,
+                // FilterLogicalRule.INSTANCE,
                 ProjectLogicalRule.INSTANCE,
 
                 // AggregateLogicalRule.INSTANCE,

@@ -19,7 +19,6 @@ package com.hazelcast.jet.sql;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Vertex;
-import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.sql.impl.schema.JetTable;
 import com.hazelcast.sql.impl.expression.Expression;
 import com.hazelcast.sql.impl.type.QueryDataType;
@@ -103,7 +102,7 @@ public interface SqlConnector {
      *                      the returned function.
      */
     @Nullable
-    default Tuple2<Vertex, Vertex> nestedLoopReader(
+    default Vertex nestedLoopReader(
             @Nonnull DAG dag,
             @Nonnull JetTable jetTable,
             @Nullable Expression<Boolean> predicate,

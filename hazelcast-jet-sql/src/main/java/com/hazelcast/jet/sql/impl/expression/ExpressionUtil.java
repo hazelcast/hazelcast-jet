@@ -119,10 +119,6 @@ public final class ExpressionUtil {
                 : (Expression<Boolean>) ConstantExpression.create(QueryDataType.BOOLEAN, true);
 
         return (left, right) -> {
-            if (right == null) {
-                return null;
-            }
-
             Object[] joined = Arrays.copyOf(left, left.length + right.length);
             System.arraycopy(right, 0, joined, left.length, right.length);
 

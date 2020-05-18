@@ -21,7 +21,6 @@ import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Vertex;
-import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.sql.impl.expression.ExpressionUtil;
 import com.hazelcast.jet.sql.impl.rel.FullScanPhysicalRel;
 import com.hazelcast.jet.sql.impl.rel.NestedLoopJoinPhysicalRel;
@@ -107,11 +106,9 @@ public class CreateDagVisitor {
 
         JetTable table = rightRel.getTableUnwrapped();
 
-        Tuple2<Vertex, Vertex> vertices = table.getSqlConnector()
-                                             .nestedLoopReader(dag, table, rightRel.filter(), rightRel.projection(), rel.condition());
-        assert vertices != null;
-        push(vertices.f1());
-        push(vertices.f0());
+        Vertex vertex = table.getSqlConnector()
+                             .nestedLoopReader(dag, table, rightRel.filter(), rightRel.projection(), rel.condition());
+        push(vertex);
     }
 
     public void onProject(ProjectPhysicalRel rel) {

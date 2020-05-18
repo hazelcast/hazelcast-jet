@@ -19,13 +19,10 @@ package com.hazelcast.jet.sql.impl.connector.imap;
 import com.hazelcast.function.BiFunctionEx;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.Traverser;
-import com.hazelcast.jet.Traversers;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.core.processor.SinkProcessors;
-import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.pipeline.ServiceFactories;
 import com.hazelcast.jet.sql.SqlConnector;
 import com.hazelcast.jet.sql.impl.connector.SqlWriters.EntryWriter;
@@ -42,13 +39,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.concurrent.CompletableFuture;
 
+import static com.hazelcast.jet.Traversers.traverseIterable;
 import static com.hazelcast.jet.core.Edge.between;
-import static com.hazelcast.jet.core.processor.Processors.flatMapP;
 import static com.hazelcast.jet.core.processor.Processors.mapP;
 import static com.hazelcast.jet.core.processor.SourceProcessors.readMapP;
-import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
 import static com.hazelcast.jet.sql.impl.connector.SqlWriters.entryWriter;
 import static java.util.UUID.randomUUID;
 
@@ -129,7 +124,7 @@ public class IMapSqlConnector implements SqlConnector {
     }
 
     @Nullable @Override
-    public Tuple2<Vertex, Vertex> nestedLoopReader(
+    public Vertex nestedLoopReader(
             @Nonnull DAG dag,
             @Nonnull JetTable jetTable,
             @Nullable Expression<Boolean> predicate,
@@ -143,38 +138,23 @@ public class IMapSqlConnector implements SqlConnector {
         BiFunctionEx<Object[], Object[], Object[]> join = ExpressionUtil.joinFn(joinPredicate);
 
         String mapName = table.getMapName();
-        Vertex v1 = dag.newVertex("map-enrich-" + randomUUID(), Processors.mapUsingServiceAsyncP( // TODO: is it the right way?
+        return dag.newVertex("map-enrich-" + randomUUID(), Processors.flatMapUsingServiceP( // TODO: is it the right way?
                 ServiceFactories.iMapService(mapName),
-                1024,
-                true,
-                t -> {
-                    throw new RuntimeException();
-                }, // not needed for ordered
                 (IMap<Object, Object> map, Object[] left) -> {
                     List<Object[]> result = new ArrayList<>();
                     for (Entry<Object, Object> entry : map.entrySet()) {
                         Object[] right = mapProjection.apply(entry);
-                        Object[] joined = join.apply(left, right);
-                        if (joined != null) {
-                            result.add(joined);
+                        // TODO: support LEFT OUTER JOIN ??? connector should not be aware of type of the join though ???
+                        if (right != null) {
+                            Object[] joined = join.apply(left, right);
+                            if (joined != null) {
+                                result.add(joined);
+                            }
                         }
                     }
-
-                    // TODO: support LEFT OUTER JOIN ??? but connector should not be aware of that ???
-                    if (result.size() == 0) {
-                        return CompletableFuture.completedFuture(null);
-                    } else {
-                        return CompletableFuture.completedFuture(result);
-                    }
+                    return traverseIterable(result);
                 }
         ));
-
-        // TODO: ultimate hacking...
-        Vertex v2 = dag.newVertex("flatten-" + randomUUID(), flatMapP( // TODO: is it the right way?
-                (FunctionEx<List<Object[]>, Traverser<Object[]>>) Traversers::traverseIterable)
-        );
-
-        return tuple2(v1, v2);
     }
 
     @Nullable @Override
