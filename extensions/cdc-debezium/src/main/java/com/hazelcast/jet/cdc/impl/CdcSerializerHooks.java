@@ -24,6 +24,8 @@ import com.hazelcast.nio.serialization.SerializerHook;
 import com.hazelcast.nio.serialization.StreamSerializer;
 
 import java.io.IOException;
+import java.util.Map;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * Hazelcast serializer hooks for data objects involved in processing
@@ -48,12 +50,15 @@ public class CdcSerializerHooks {
 
                 @Override
                 public void write(ObjectDataOutput out, ChangeRecordImpl record) throws IOException {
-                    record.writeData(out);
+                    out.writeUTF(record.getKeyJson());
+                    out.writeUTF(record.getValueJson());
                 }
 
                 @Override
                 public ChangeRecordImpl read(ObjectDataInput in) throws IOException {
-                    return ChangeRecordImpl.readData(in);
+                    String keyJson = in.readUTF();
+                    String valueJson = in.readUTF();
+                    return new ChangeRecordImpl(keyJson, valueJson);
                 }
             };
         }
@@ -80,12 +85,13 @@ public class CdcSerializerHooks {
 
                 @Override
                 public void write(ObjectDataOutput out, RecordPartImpl part) throws IOException {
-                    part.writeData(out);
+                    out.writeUTF(part.toJson());
                 }
 
                 @Override
                 public RecordPartImpl read(ObjectDataInput in) throws IOException {
-                    return RecordPartImpl.readData(in);
+                    String json = in.readUTF();
+                    return new RecordPartImpl(json);
                 }
             };
         }
@@ -112,12 +118,15 @@ public class CdcSerializerHooks {
 
                 @Override
                 public void write(ObjectDataOutput out, CdcSource.State state) throws IOException {
-                    state.writeData(out);
+                    out.writeObject(state.getPartitionsToOffset());
+                    out.writeObject(state.getHistoryRecords());
                 }
 
                 @Override
                 public CdcSource.State read(ObjectDataInput in) throws IOException {
-                    return CdcSource.State.readData(in);
+                    Map<Map<String, ?>, Map<String, ?>> partitionsToOffset = in.readObject();
+                    CopyOnWriteArrayList<byte[]> historyRecords = in.readObject();
+                    return new CdcSource.State(partitionsToOffset, historyRecords);
                 }
             };
         }

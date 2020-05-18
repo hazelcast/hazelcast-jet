@@ -19,8 +19,6 @@ package com.hazelcast.jet.cdc.impl;
 import com.hazelcast.jet.cdc.ParsingException;
 import com.hazelcast.jet.cdc.RecordPart;
 import com.hazelcast.jet.json.JsonUtil;
-import com.hazelcast.nio.ObjectDataInput;
-import com.hazelcast.nio.ObjectDataOutput;
 
 import javax.annotation.Nonnull;
 import java.io.IOException;
@@ -77,15 +75,6 @@ class RecordPartImpl implements RecordPart {
     @Override
     public String toString() {
         return toJson();
-    }
-
-    void writeData(ObjectDataOutput out) throws IOException {
-        out.writeUTF(json);
-    }
-
-    static RecordPartImpl readData(ObjectDataInput in) throws IOException {
-        String json = in.readUTF();
-        return new RecordPartImpl(json);
     }
 
 }

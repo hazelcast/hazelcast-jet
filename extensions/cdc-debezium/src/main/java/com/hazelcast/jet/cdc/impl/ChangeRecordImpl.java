@@ -20,18 +20,15 @@ import com.hazelcast.jet.cdc.ChangeRecord;
 import com.hazelcast.jet.cdc.Operation;
 import com.hazelcast.jet.cdc.ParsingException;
 import com.hazelcast.jet.cdc.RecordPart;
-import com.hazelcast.nio.ObjectDataInput;
-import com.hazelcast.nio.ObjectDataOutput;
 
 import javax.annotation.Nonnull;
-import java.io.IOException;
 import java.util.Map;
 import java.util.Objects;
 
 public class ChangeRecordImpl implements ChangeRecord {
 
-    private String keyJson;
-    private String valueJson;
+    private final String keyJson;
+    private final String valueJson;
 
     private String json;
     private Long timestamp;
@@ -93,20 +90,17 @@ public class ChangeRecordImpl implements ChangeRecord {
         return json;
     }
 
+    public String getKeyJson() {
+        return keyJson;
+    }
+
+    public String getValueJson() {
+        return valueJson;
+    }
+
     @Override
     public String toString() {
         return toJson();
-    }
-
-    void writeData(ObjectDataOutput out) throws IOException {
-        out.writeUTF(keyJson);
-        out.writeUTF(valueJson);
-    }
-
-    static ChangeRecordImpl readData(ObjectDataInput in) throws IOException {
-        String keyJson = in.readUTF();
-        String valueJson = in.readUTF();
-        return new ChangeRecordImpl(keyJson, valueJson);
     }
 
     private static <T> T get(Map<String, Object> map, String key, Class<T> clazz) {

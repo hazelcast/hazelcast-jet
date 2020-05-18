@@ -18,8 +18,6 @@ package com.hazelcast.jet.cdc.impl;
 
 import com.hazelcast.jet.cdc.ChangeRecord;
 import com.hazelcast.jet.pipeline.SourceBuilder;
-import com.hazelcast.nio.ObjectDataInput;
-import com.hazelcast.nio.ObjectDataOutput;
 import io.debezium.document.Document;
 import io.debezium.document.DocumentReader;
 import io.debezium.document.DocumentWriter;
@@ -211,7 +209,7 @@ public class CdcSource {
          * stored as map.
          * See {@link SourceRecord} for more information regarding the format.
          */
-        private final Map<Map<String, ?>, Map<String, ?>> partitionsToOffset = new HashMap<>();
+        private final Map<Map<String, ?>, Map<String, ?>> partitionsToOffset;
 
         /**
          * We use a copy-on-write-list because it will be written on a
@@ -223,7 +221,16 @@ public class CdcSource {
          * since this list will be written rarely after the initial snapshot,
          * only on table schema changes.
          */
-        private final List<byte[]> historyRecords = new CopyOnWriteArrayList<>();
+        private final List<byte[]> historyRecords;
+
+        State() {
+            this(new HashMap<>(), new CopyOnWriteArrayList<>());
+        }
+
+        State(Map<Map<String, ?>, Map<String, ?>> partitionsToOffset, CopyOnWriteArrayList<byte[]> historyRecords) {
+            this.partitionsToOffset = partitionsToOffset;
+            this.historyRecords = historyRecords;
+        }
 
         public Map<String, ?> getOffset(Map<String, ?> partition) {
             return partitionsToOffset.get(partition);
@@ -233,16 +240,12 @@ public class CdcSource {
             partitionsToOffset.put(partition, offset);
         }
 
-        void writeData(ObjectDataOutput out) throws IOException {
-            out.writeObject(partitionsToOffset);
-            out.writeObject(historyRecords);
+        Map<Map<String, ?>, Map<String, ?>> getPartitionsToOffset() {
+            return partitionsToOffset;
         }
 
-        static State readData(ObjectDataInput in) throws IOException {
-            State state = new State();
-            state.partitionsToOffset.putAll(in.readObject());
-            state.historyRecords.addAll(in.readObject());
-            return state;
+        List<byte[]> getHistoryRecords() {
+            return historyRecords;
         }
     }
 
