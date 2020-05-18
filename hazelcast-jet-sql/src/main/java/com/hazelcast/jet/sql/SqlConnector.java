@@ -82,7 +82,7 @@ public interface SqlConnector {
             @Nonnull DAG dag,
             @Nonnull JetTable jetTable,
             @Nullable String timestampField,
-            @Nonnull Expression<Boolean> predicate,
+            @Nullable Expression<Boolean> predicate,
             @Nonnull List<Expression<?>> projection) {
         assert !supportsFullScanReader();
         throw new UnsupportedOperationException("Full scan reader not supported for " + getClass().getName());
@@ -96,17 +96,19 @@ public interface SqlConnector {
      * It's expected to return null if {@link #isStream()} returns {@code
      * true}.
      *
-     * @param predicate  A predicate with positional parameters which
-     *                   will be provided at runtime as the input to
-     *                   the returned function.
-     * @param projection list of field names to return
+     * @param predicate     SQL expression to filter the rows
+     * @param projection    list of field names to return
+     * @param joinPredicate A joinPredicate with positional parameters which
+     *                      will be provided at runtime as the input to
+     *                      the returned function.
      */
     @Nullable
     default Tuple2<Vertex, Vertex> nestedLoopReader(
             @Nonnull DAG dag,
             @Nonnull JetTable jetTable,
-            @Nonnull Expression<Boolean> predicate,
-            @Nonnull List<Expression<?>> projection) {
+            @Nullable Expression<Boolean> predicate,
+            @Nonnull List<Expression<?>> projection,
+            @Nonnull Expression<Boolean> joinPredicate) {
         assert !supportsNestedLoopReader();
         throw new UnsupportedOperationException("Nested loop reader not supported for " + getClass().getName());
     }

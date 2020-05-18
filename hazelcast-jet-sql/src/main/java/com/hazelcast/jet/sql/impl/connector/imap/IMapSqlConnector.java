@@ -134,13 +134,14 @@ public class IMapSqlConnector implements SqlConnector {
     public Tuple2<Vertex, Vertex> nestedLoopReader(
             @Nonnull DAG dag,
             @Nonnull JetTable jetTable,
-            @Nonnull Expression<Boolean> predicate,
-            @Nonnull List<Expression<?>> projections
+            @Nullable Expression<Boolean> predicate,
+            @Nonnull List<Expression<?>> projections,
+            @Nonnull Expression<Boolean> joinPredicate
     ) {
         IMapTable table = (IMapTable) jetTable;
 
         FunctionEx<Entry<Object, Object>, Object[]> mapProjection =
-                ExpressionUtil.projectionFn(table, null, projections);
+                ExpressionUtil.projectionFn(table, predicate, projections);
 
         String mapName = table.getMapName();
         Vertex v1 = dag.newVertex("map-enrich-" + randomUUID(), Processors.mapUsingServiceAsyncP( // TODO: is it the right way?
@@ -154,10 +155,14 @@ public class IMapSqlConnector implements SqlConnector {
                     List<Object[]> result = new ArrayList<>();
                     for (Entry<Object, Object> entry : map.entrySet()) {
                         Object[] right = mapProjection.apply(entry);
+                        if (right == null) {
+                            continue;
+                        }
+
                         Object[] projected = Arrays.copyOf(left, left.length + right.length);
                         System.arraycopy(right, 0, projected, left.length, right.length);
 
-                        if (predicate.eval(new HeapRow(projected), ZERO_ARGUMENTS_CONTEXT)) {
+                        if (joinPredicate.eval(new HeapRow(projected), ZERO_ARGUMENTS_CONTEXT)) {
                             result.add(projected);
                         }
                     }

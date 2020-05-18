@@ -108,7 +108,7 @@ public class CreateDagVisitor {
         JetTable table = rightRel.getTableUnwrapped();
 
         Tuple2<Vertex, Vertex> vertices = table.getSqlConnector()
-                                             .nestedLoopReader(dag, table, rel.condition(), rightRel.projection());
+                                             .nestedLoopReader(dag, table, rightRel.filter(), rightRel.projection(), rel.condition());
         assert vertices != null;
         push(vertices.f1());
         push(vertices.f0());
