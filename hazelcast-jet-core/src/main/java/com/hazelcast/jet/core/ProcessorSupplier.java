@@ -40,19 +40,9 @@ import static java.util.stream.Collectors.toList;
 public interface ProcessorSupplier extends Serializable {
 
     /**
-     * Returns a {@code ProcessorSupplier} which will delegate to the given
-     * {@code Supplier<Processor>} to create all {@code Processor} instances.
-     */
-    @Nonnull
-    static ProcessorSupplier of(@Nonnull SupplierEx<? extends Processor> processorSupplier) {
-        return count -> Stream.generate(processorSupplier).limit(count).collect(toList());
-    }
-
-    /**
      * Called on each cluster member after deserialization.
      */
     default void init(@Nonnull Context context) throws Exception {
-
     }
 
     /**
@@ -87,6 +77,15 @@ public interface ProcessorSupplier extends Serializable {
      *              {@code null} in the case of successful job completion
      */
     default void close(@Nullable Throwable error) throws Exception {
+    }
+
+    /**
+     * Returns a {@code ProcessorSupplier} which will delegate to the given
+     * {@code Supplier<Processor>} to create all {@code Processor} instances.
+     */
+    @Nonnull
+    static ProcessorSupplier of(@Nonnull SupplierEx<? extends Processor> processorSupplier) {
+        return count -> Stream.generate(processorSupplier).limit(count).collect(toList());
     }
 
     /**
