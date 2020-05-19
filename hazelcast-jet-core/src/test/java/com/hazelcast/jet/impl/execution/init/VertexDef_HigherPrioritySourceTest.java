@@ -29,6 +29,7 @@ import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.impl.MasterJobContext;
 import com.hazelcast.jet.impl.execution.SnapshotContext;
+import com.hazelcast.jet.rocksdb.RocksDBFactory;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.spi.impl.NodeEngineImpl;
 import org.junit.BeforeClass;
@@ -122,13 +123,15 @@ public class VertexDef_HigherPrioritySourceTest extends SimpleTestInClusterSuppo
         field.set(edge, MasterJobContext.SNAPSHOT_RESTORE_EDGE_PRIORITY);
     }
 
+    //TODO: make sure test doesn't break after adding the store to context
     private void assertHigherPriorityVertices(Vertex... vertices) {
         Map<MemberInfo, ExecutionPlan> executionPlans =
                 createExecutionPlans(nodeEngineImpl, membersView, dag, 0, 0, new JobConfig(), 0);
         ExecutionPlan plan = executionPlans.values().iterator().next();
         SnapshotContext ssContext = new SnapshotContext(mock(ILogger.class), "job", 0, EXACTLY_ONCE);
         plan.initialize(nodeEngineImpl, 0, 0, ssContext, null,
-                (InternalSerializationService) nodeEngineImpl.getSerializationService());
+                (InternalSerializationService) nodeEngineImpl.getSerializationService(),
+                new RocksDBFactory().getKeyValueStore());
         Set<Integer> higherPriorityVertices = VertexDef.getHigherPriorityVertices(plan.getVertices());
         String actualHigherPriorityVertices = plan.getVertices().stream()
                 .filter(v -> higherPriorityVertices.contains(v.vertexId()))

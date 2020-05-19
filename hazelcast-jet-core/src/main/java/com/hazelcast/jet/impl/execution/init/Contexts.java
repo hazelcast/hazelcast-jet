@@ -29,6 +29,7 @@ import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.impl.deployment.IMapInputStream;
 import com.hazelcast.jet.impl.util.ExceptionUtil;
+import com.hazelcast.jet.rocksdb.RocksDBStateBackend;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.map.IMap;
 
@@ -147,6 +148,7 @@ public final class Contexts {
         private final int memberIndex;
         private final ConcurrentHashMap<String, File> tempDirectories;
         private final InternalSerializationService serializationService;
+        private final RocksDBStateBackend rocksDBStateBackend;
 
         @SuppressWarnings("checkstyle:ParameterNumber")
         ProcSupplierCtx(
@@ -162,13 +164,15 @@ public final class Contexts {
                 int memberCount,
                 ProcessingGuarantee processingGuarantee,
                 ConcurrentHashMap<String, File> tempDirectories,
-                InternalSerializationService serializationService
+                InternalSerializationService serializationService,
+                RocksDBStateBackend rocksDBStateBackend
         ) {
             super(jetInstance, jobId, executionId, jobConfig, logger, vertexName, localParallelism, totalParallelism,
                     memberCount, processingGuarantee);
             this.memberIndex = memberIndex;
             this.tempDirectories = tempDirectories;
             this.serializationService = serializationService;
+            this.rocksDBStateBackend = rocksDBStateBackend;
         }
 
         @Override
@@ -240,6 +244,11 @@ public final class Contexts {
         public InternalSerializationService serializationService() {
             return serializationService;
         }
+
+        @Nonnull
+        public RocksDBStateBackend rocksDBStateBackend() {
+            return rocksDBStateBackend;
+        }
     }
 
     public static class ProcCtx extends ProcSupplierCtx implements Processor.Context {
@@ -261,10 +270,11 @@ public final class Contexts {
                        int memberIndex,
                        int memberCount,
                        ConcurrentHashMap<String, File> tempDirectories,
-                       InternalSerializationService serializationService) {
+                       InternalSerializationService serializationService,
+                       RocksDBStateBackend rocksDBStateBackend) {
             super(instance, jobId, executionId, jobConfig, logger, vertexName, localParallelism,
                     memberCount * localParallelism, memberIndex, memberCount, processingGuarantee,
-                    tempDirectories, serializationService);
+                    tempDirectories, serializationService, rocksDBStateBackend);
             this.localProcessorIndex = localProcessorIndex;
             this.globalProcessorIndex = globalProcessorIndex;
         }
