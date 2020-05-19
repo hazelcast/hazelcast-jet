@@ -131,7 +131,10 @@ final class ElasticSourceP<T> extends AbstractProcessor {
 
     @Override
     public void close() throws Exception {
-        scrollTraverser.close();
+        // scrollTraverser is null when scroll init failed
+        if (scrollTraverser != null) {
+            scrollTraverser.close();
+        }
 
         try {
             client.close();
