@@ -40,7 +40,7 @@ public class ElasticSinkExample {
         try {
             Pipeline p = create();
             p.readFrom(files("src/main/resources/documents"))
-             .map(JsonUtil::parse)
+             .map(JsonUtil::mapFrom)
              .writeTo(ElasticSinks.elastic(
                      () -> ElasticClients.client("localhost", 9200),
                      map -> new IndexRequest("my-index").source(map)
