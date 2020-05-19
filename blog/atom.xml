@@ -2,12 +2,24 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
     <id>https://jet-start.sh/blog</id>
     <title>Hazelcast Jet Blog</title>
-    <updated>2020-04-29T06:00:00.000Z</updated>
+    <updated>2020-05-18T06:00:00.000Z</updated>
     <generator>https://github.com/jpmonette/feed</generator>
     <link rel="alternate" href="https://jet-start.sh/blog"/>
     <subtitle>The best place to stay up-to-date with the latest Hazelcast Jet news and events.</subtitle>
     <logo>https://jet-start.sh/img/logo-dark.svg</logo>
     <rights>Copyright © 2020 Hazelcast Inc.</rights>
+    <entry>
+        <title type="html"><![CDATA[How Hazelcast Jet Compares to Apache Spark]]></title>
+        <id>https://jet-start.sh/blog/2020/05/18/spark-jet.html</id>
+        <link href="https://jet-start.sh/blog/2020/05/18/spark-jet.html"/>
+        <updated>2020-05-18T06:00:00.000Z</updated>
+        <summary type="html"><![CDATA[<p>“How Jet compares to Spark” and “why should I choose Jet over Spark” are arguably the most frequent questions I’ve been asked during the talks and workshops. While it is hard to assess the product fit without focusing on a concrete use-case, I’d stil...</p>]]></summary>
+        <author>
+            <name>Vladimir Schreiner</name>
+            <email/>
+            <uri>https://twitter.com/voloda</uri>
+        </author>
+    </entry>
     <entry>
         <title type="html"><![CDATA[Jet 4.1 is Released]]></title>
         <id>https://jet-start.sh/blog/2020/04/29/jet-41-is-released.html</id>
