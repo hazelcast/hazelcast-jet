@@ -17,7 +17,7 @@
 package com.hazelcast.jet.impl.processor;
 
 import com.hazelcast.jet.core.AbstractProcessor;
-import com.hazelcast.jet.rocksdb.RocksDBFactory;
+import com.hazelcast.jet.impl.execution.init.Contexts.ProcCtx;
 import com.hazelcast.jet.rocksdb.RocksDBStateBackend;
 import com.hazelcast.jet.rocksdb.RocksMap;
 import com.hazelcast.jet.rocksdb.Serializer;
@@ -53,8 +53,7 @@ public class HashJoinCollectP<K, T, V> extends AbstractProcessor {
     @Nonnull private final Function<T, K> keyFn;
     @Nonnull private final Function<T, V> projectFn;
 
-    private final RocksDBStateBackend store = new RocksDBFactory().getKeyValueStore();
-    private final RocksMap lookupTable = store.getMap();
+    private RocksMap lookupTable;
     private final Serializer<K> keySerializer = new Serializer<>();
     private final Serializer<V> valueSerializer = new Serializer<>();
     private final Serializer<HashJoinArrayList> listSerializer = new Serializer<>();
@@ -62,6 +61,14 @@ public class HashJoinCollectP<K, T, V> extends AbstractProcessor {
     public HashJoinCollectP(@Nonnull Function<T, K> keyFn, @Nonnull Function<T, V> projectFn) {
         this.keyFn = keyFn;
         this.projectFn = projectFn;
+    }
+
+    @Override
+    protected void init(@Nonnull Context context) throws Exception {
+        if (context instanceof ProcCtx) {
+            RocksDBStateBackend store = ((ProcCtx) context).rocksDBStateBackend();
+            lookupTable = store.getMap();
+        }
     }
 
     @Override
@@ -84,7 +91,6 @@ public class HashJoinCollectP<K, T, V> extends AbstractProcessor {
 
     @Override
     public boolean complete() {
-        store.deleteDataStore();
         //TODO: deserialize Rocksmap entries returned from getAll
         return tryEmit(lookupTable.getAll());
     }

@@ -149,7 +149,7 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
                            RocksDBStateBackend rocksDBStateBackend) {
         this.nodeEngine = (NodeEngineImpl) nodeEngine;
         this.executionId = executionId;
-        initProcSuppliers(jobId, executionId, tempDirectories, jobSerializationService,rocksDBStateBackend);
+        initProcSuppliers(jobId, executionId, tempDirectories, jobSerializationService, rocksDBStateBackend);
         initDag(jobSerializationService);
 
         this.ptionArrgmt = new PartitionArrangement(partitionOwners, nodeEngine.getThisAddress());

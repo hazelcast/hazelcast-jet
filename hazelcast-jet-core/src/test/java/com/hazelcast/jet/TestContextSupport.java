@@ -30,6 +30,7 @@ import com.hazelcast.jet.core.test.TestProcessorContext;
 import com.hazelcast.jet.core.test.TestProcessorSupplierContext;
 import com.hazelcast.jet.impl.execution.init.Contexts.ProcCtx;
 import com.hazelcast.jet.impl.execution.init.Contexts.ProcSupplierCtx;
+import com.hazelcast.jet.rocksdb.RocksDBFactory;
 import com.hazelcast.spi.impl.NodeEngine;
 
 import javax.annotation.Nonnull;
@@ -89,6 +90,7 @@ public final class TestContextSupport {
             return delegate.get(count).stream().map(TestProcessorAdapter::new).collect(toList());
         }
 
+        //TODO: make sure test doesn't break after adding the store to context
         @Override
         public void init(@Nonnull Context context) throws Exception {
             if (context instanceof TestProcessorSupplierContext) {
@@ -97,7 +99,8 @@ public final class TestContextSupport {
                 context = new ProcCtx(c.jetInstance(), c.jobId(), c.executionId(), c.jobConfig(),
                         c.logger(), c.vertexName(), 1, 1, c.processingGuarantee(),
                         c.localParallelism(), 1, c.memberCount(), new ConcurrentHashMap<>(),
-                        (InternalSerializationService) nodeEngine.getSerializationService());
+                        (InternalSerializationService) nodeEngine.getSerializationService(),
+                        new RocksDBFactory().getKeyValueStore());
             }
             delegate.init(context);
         }
@@ -111,6 +114,7 @@ public final class TestContextSupport {
             this.delegate = delegate;
         }
 
+        //TODO: make sure test doesn't break after adding the store to context
         @Override
         public void init(@Nonnull Outbox outbox, @Nonnull Context context) throws Exception {
             if (context instanceof TestProcessorContext) {
@@ -119,7 +123,8 @@ public final class TestContextSupport {
                 context = new ProcCtx(c.jetInstance(), c.jobId(), c.executionId(), c.jobConfig(),
                         c.logger(), c.vertexName(), c.localProcessorIndex(), c.globalProcessorIndex(),
                         c.processingGuarantee(), c.localParallelism(), c.memberIndex(), c.memberCount(),
-                        new ConcurrentHashMap<>(), (InternalSerializationService) nodeEngine.getSerializationService());
+                        new ConcurrentHashMap<>(), (InternalSerializationService) nodeEngine.getSerializationService(),
+                        new RocksDBFactory().getKeyValueStore());
             }
             delegate.init(outbox, context);
         }

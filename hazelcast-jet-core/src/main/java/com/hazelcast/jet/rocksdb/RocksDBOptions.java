@@ -32,10 +32,10 @@ class RocksDBOptions {
     }
 
     ReadOptions getReadOptions() {
-        return new ReadOptions();
+        return new ReadOptions().setTailing(true);
     }
 
     WriteOptions getWriteOptions() {
-        return new WriteOptions();
+        return new WriteOptions().setDisableWAL(true);
     }
 }

@@ -139,7 +139,8 @@ public class ExecutionContext implements DynamicMetricsProvider {
         serializationService = jetService.createSerializationService(jobConfig.getSerializerConfigs());
 
         metricsEnabled = jobConfig.isMetricsEnabled() && nodeEngine.getConfig().getMetricsConfig().isEnabled();
-        plan.initialize(nodeEngine, jobId, executionId, snapshotContext, tempDirectories, serializationService, rocksDBStateBackend);
+        plan.initialize(nodeEngine, jobId, executionId, snapshotContext,
+                tempDirectories, serializationService, rocksDBStateBackend);
         snapshotContext.initTaskletCount(plan.getProcessorTaskletCount(), plan.getStoreSnapshotTaskletCount(),
                 plan.getHigherPriorityVertexCount());
         receiverMap = unmodifiableMap(plan.getReceiverMap());
@@ -222,7 +223,7 @@ public class ExecutionContext implements DynamicMetricsProvider {
             serializationService.dispose();
         }
 
-        rocksDBStateBackend.deleteDataStore();
+        rocksDBStateBackend.deleteKeyValueStore();
     }
 
     /**

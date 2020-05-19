@@ -22,7 +22,7 @@ import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.datamodel.Tuple2;
-import com.hazelcast.jet.rocksdb.RocksDBFactory;
+import com.hazelcast.jet.impl.execution.init.Contexts.ProcCtx;
 import com.hazelcast.jet.rocksdb.RocksDBStateBackend;
 import com.hazelcast.jet.rocksdb.RocksMap;
 import com.hazelcast.jet.rocksdb.Serializer;
@@ -50,8 +50,7 @@ public class GroupP<K, A, R, OUT> extends AbstractProcessor {
     private final Serializer<K> keySerializer = new Serializer<>();
     private final Serializer<A> accSerializer = new Serializer<>();
     private Traverser<OUT> resultTraverser;
-    private RocksDBStateBackend store = new RocksDBFactory().getKeyValueStore();
-    private RocksMap keyToAcc = store.getMap();
+    private RocksMap keyToAcc;
 
     public GroupP(
             @Nonnull List<FunctionEx<?, ? extends K>> groupKeyFns,
@@ -71,6 +70,14 @@ public class GroupP<K, A, R, OUT> extends AbstractProcessor {
             @Nonnull BiFunction<? super K, ? super R, OUT> mapToOutputFn
     ) {
         this(singletonList(groupKeyFn), aggrOp, mapToOutputFn);
+    }
+
+    @Override
+    protected void init(@Nonnull Context context) throws Exception {
+        if (context instanceof ProcCtx) {
+            RocksDBStateBackend store = ((ProcCtx) context).rocksDBStateBackend();
+            keyToAcc = store.getMap();
+        }
     }
 
     @Override
@@ -98,7 +105,6 @@ public class GroupP<K, A, R, OUT> extends AbstractProcessor {
                     // reuse null filtering done by map()
                     .map(e -> mapToOutputFn.apply(e.getKey(), aggrOp.finishFn().apply(e.getValue())));
         }
-        store.deleteDataStore();
         return emitFromTraverser(resultTraverser);
     }
 

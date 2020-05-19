@@ -51,7 +51,7 @@ public class RocksDBStateBackend {
     private ArrayList<ColumnFamilyHandle> cfhs = new ArrayList<>();
     private AtomicInteger counter = new AtomicInteger(0);
 
-    RocksDBStateBackend(RocksDBOptions rocksDBOptions, String directory) throws JetException {
+    RocksDBStateBackend(@Nonnull RocksDBOptions rocksDBOptions, String directory) throws JetException {
         this.options = rocksDBOptions.getOptions();
         this.readOptions = rocksDBOptions.getReadOptions();
         this.writeOptions = rocksDBOptions.getWriteOptions();
@@ -87,7 +87,7 @@ public class RocksDBStateBackend {
         return "RocksMap".concat(String.valueOf(counter.getAndIncrement()));
     }
 
-    public void deleteDataStore() {
+    public void deleteKeyValueStore() {
         for (final ColumnFamilyHandle cfh : cfhs) {
             cfh.close();
         }
