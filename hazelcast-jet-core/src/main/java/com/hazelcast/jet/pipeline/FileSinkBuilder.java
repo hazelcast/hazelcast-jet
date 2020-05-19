@@ -32,7 +32,6 @@ import static com.hazelcast.jet.core.processor.SinkProcessors.writeFileP;
  * See {@link Sinks#filesBuilder}.
  *
  * @param <T> type of the items the sink accepts
- *
  * @since 3.0
  */
 public final class FileSinkBuilder<T> {
@@ -135,11 +134,10 @@ public final class FileSinkBuilder<T> {
      * <p>
      * The default value is true.
      *
-     * @param enable If true, sink's guarantee will match the job
-     *      guarantee. If false, sink's guarantee will be at-least-once
-     *      even if job's is exactly-once
+     * @param enable If true, sink's guarantee will match the job guarantee.
+     *               If false, sink's guarantee will be at-least-once even if
+     *               job's is exactly-once
      * @return this instance for fluent API
-     *
      * @since 4.0
      */
     @Nonnull

@@ -9,7 +9,7 @@ class Demos extends React.Component {
         const {config: siteConfig} = this.props;
         const Button = props => (
             <div className="pluginWrapper buttonWrapper">
-                <a className="button" href={props.href} target={props.target}>
+                <a className="button" href={props.href} target="_blank">
                     {props.children}
                 </a>
             </div>
@@ -20,6 +20,16 @@ class Demos extends React.Component {
                 <div className="card">
                     <header>{props.title}</header>
                     <p>{props.children}</p>
+                    { props.videoId && 
+                      <p>
+                        <iframe width="100%" height="300" src={`https://www.youtube.com/embed/${props.videoId}`} 
+                        frameBorder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowFullScreen>
+                        </iframe>
+                      </p>
+                    }
+                    { props.image && 
+                      <img width="100%" src={props.image}></img>
+                    }
                     <Button href={props.link}>Learn More</Button>
                 </div>
             );
@@ -35,30 +45,28 @@ class Demos extends React.Component {
                         The following are demo applications built using Hazelcast Jet. Each demo app 
                         is self-contained and showcase the data processing capabilities of Hazelcast Jet.
                     </MarkdownBlock>
-                    <Card title="Real-Time Flight Telemetry"
+                    <Card title="Real-Time Flight Telemetry"  videoId="WZ5cuZZX0TE"
                                 link="https://github.com/hazelcast/hazelcast-jet-demos/tree/master/flight-telemetry">
-                        An application to analyze the real-time telemetry data of commercial aircraft currently
-                        airbone. It computes noise levels and estimated CO<sub>2</sub> emissions around
-                        major airports and urban areas. The results are then written to Graphite and
+                        An application to analyze the real-time telemetry of commercial aircraft currently
+                        airbone using data from ADS-B transpoders. It computes noise levels and estimated CO<sub>2</sub> emissions around
+                        major airports and urban areas as well as detecting aircraft taking off and landing through 
+                        using a simple linear regression model. The results are then written to Graphite and
                         rendered in a dashboard in Grafana.
                     </Card>
-                    <Card title="Markov Chain Generator"
-                                link="https://github.com/hazelcast/hazelcast-jet-demos/tree/master/markov-chain-generator">
-                        A Markov Chain generator with probabilities based on supplied classical
-                        books. Markov Chain is a stochastic model describing a sequence of possible events in which
-                        the probability of each event depends only on the state attained in the previous event.
+                    <Card title="Twitter Cryptocurrency Sentiment Analysis" videoId="GU6VZlfpcIU"
+                                link="https://github.com/hazelcast/hazelcast-jet-demos/tree/master/cryptocurrency-sentiment-analysis">
+                        An application to analyze tweet sentiments in real-time to compute cryptocurrency popularity trends.
+                        Tweets are streamed from Twitter and categorized by coin type(BTC, ETC, XRP, etc) and
+                        natural-language processing(NLP) sentiment analysis is applied to each Tweet to calculate
+                        the sentiment score. Jet aggregates scores from the last 30 seconds, last minute and last 5
+                        minutes and prints resulting ranking table.
                     </Card>
-                    <Card title="Real-Time Image Recognition"
-                                link="https://github.com/hazelcast/hazelcast-jet-demos/tree/master/realtime-image-recognition">
-                        Uses the webcam video stream of a laptop computer as a source
-                        and recognizes the objects using image recognition. The image classification is performed
-                        using a convolutional neural network pre-trained using a CIFAR-10 dataset.
-                    </Card>
-                    <Card title="Real-Time Road Traffic Analysis and Prediction"
-                                link="https://github.com/hazelcast/hazelcast-jet-demos/tree/master/road-traffic-predictor">
-                        Shows how to use Jet for online machine learning use-cases. It combines
-                        real-time model training and prediction into one Jet pipeline to predict traffic
-                        patterns.
+                    <Card title="Train Collision Prevention" videoId="2RlmCZhhjMY" 
+                                link="https://github.com/vladoschreiner/transport-tycoon-demo">
+                        Extracts real-time vehicle data from the train simulation game (Open Transport
+                        Tycoon Deluxe) and analyses it using Hazelcast Jet. The analytical
+                        job predicts train collisions in real-time based on telemetry data supplied from the game.
+                        The prediction is pushed back to the running OpenTTD game to stop the affected trains.
                     </Card>
                     <Card title="TensorFlow"
                                 link="https://github.com/hazelcast/hazelcast-jet-demos/tree/master/tensorflow">
@@ -67,27 +75,30 @@ class Demos extends React.Component {
                         This example uses the Large Movie Reviews Dataset as provided by the TensorFlow Keras
                         Datasets and builds a model to predict whether a movie review is positive or negative.
                     </Card>
-                    <Card title="Train Collision Prevention"
-                                link="https://github.com/vladoschreiner/transport-tycoon-demo">
-                        Extracts real-time vehicle data from the train simulation game (Open Transport
-                        Tycoon Deluxe) and analyses it using Hazelcast Jet. The analytical
-                        job predicts train collisions in real-time based on telemetry data supplied from the game.
-                        The predicteion is pushed back to the running OpenTTD game to stop the affected trains.
+                    <Card title="Real-Time Image Recognition"
+                                link="https://github.com/hazelcast/hazelcast-jet-demos/tree/master/realtime-image-recognition">
+                        Uses the webcam video stream of a laptop computer as a source
+                        and recognizes the objects using image recognition. The image classification is performed
+                        using a convolutional neural network pre-trained using a CIFAR-10 dataset.
                     </Card>
-                    <Card title="Train Tracking"
+                    <Card title="Markov Chain Generator"
+                                link="https://github.com/hazelcast/hazelcast-jet-demos/tree/master/markov-chain-generator">
+                        A Markov Chain generator with probabilities based on supplied classical
+                        books. Markov Chain is a stochastic model describing a sequence of possible events in which
+                        the probability of each event depends only on the state attained in the previous event.
+                    </Card>
+                    <Card title="Real-Time Road Traffic Analysis and Prediction"
+                                link="https://github.com/hazelcast/hazelcast-jet-demos/tree/master/road-traffic-predictor">
+                        Shows how to use Jet for online machine learning use-cases. It combines
+                        real-time model training and prediction into one Jet pipeline to predict traffic
+                        patterns.
+                    </Card>
+                    <Card title="Train Tracking" image="https://github.com/hazelcast/hazelcast-jet-demos/raw/master/train-track/src/site/markdown/images/Screenshot1.png"
                                 link="https://github.com/hazelcast/hazelcast-jet-demos/tree/master/train-track">
                         An application to track and visualize trains in real-time using Jet's Apache Beam Runner. 
                         The application receives a GPS point feed, enriches the stream with static data and 
                         then applies windowing to drop some out of sequence points. The resulting output is 
                         plotted dynamically on a map using JavaScript and WebSockets.
-                    </Card>
-                    <Card title="Twitter Cryptocurrency Sentiment Analysis"
-                                link="https://github.com/hazelcast/hazelcast-jet-demos/tree/master/cryptocurrency-sentiment-analysis">
-                        An application to analyze tweet sentiments in real-time to compute cryptocurrency popularity trends.
-                        Tweets are streamed from Twitter and categorized by coin type(BTC, ETC, XRP, etc) and
-                        natural-language processing(NLP) sentiment analysis is applied to each Tweet to calculate
-                        the sentiment score. Jet aggregates scores from the last 30 seconds, last minute and last 5
-                        minutes and prints resulting ranking table.
                     </Card>
                     <Card title="Bitcoin Death Cross"
                                 link="https://github.com/hazelcast/hazelcast-jet-demos/tree/master/bitcoin-death-cross">

@@ -123,7 +123,7 @@ public final class FileSourceBuilder {
      *
      * @param mapOutputFn the function which creates output object from each
      *                    line. Gets the filename and line as parameters
-     * @param <T> the type of the items the source emits
+     * @param <T>         the type of the items the source emits
      */
     @Nonnull
     public <T> BatchSource<T> build(@Nonnull BiFunctionEx<String, String, ? extends T> mapOutputFn) {
@@ -152,8 +152,9 @@ public final class FileSourceBuilder {
      * CPU is available).
      *
      * @param readFileFn the function to read objects from a file. Gets file
-     *      {@code Path} as parameter and returns a {@code Stream} of items.
-     * @param <T> the type of items returned from file reading
+     *                   {@code Path} as parameter and returns a {@code Stream}
+     *                   of items.
+     * @param <T>        the type of items returned from file reading
      */
     @Nonnull
     public <T> BatchSource<T> build(@Nonnull FunctionEx<? super Path, ? extends Stream<T>> readFileFn) {
@@ -218,7 +219,7 @@ public final class FileSourceBuilder {
      *
      * @param mapOutputFn the function which creates output object from each
      *                    line. Gets the filename and line as parameters
-     * @param <T> the type of the items the source emits
+     * @param <T>         the type of the items the source emits
      */
     @Nonnull
     public <T> StreamSource<T> buildWatcher(@Nonnull BiFunctionEx<String, String, ? extends T> mapOutputFn) {
