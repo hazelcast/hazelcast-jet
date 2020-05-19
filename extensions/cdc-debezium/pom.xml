@@ -39,7 +39,7 @@
         <log4j2.slf4j.binding.version>2.13.2</log4j2.slf4j.binding.version>
 
         <!-- needed for CheckStyle -->
-        <checkstyle.headerLocation>${maven.multiModuleProjectDirectory}/checkstyle/ClassHeader.txt</checkstyle.headerLocation>
+        <checkstyle.headerLocation>${maven.multiModuleProjectDirectory}/checkstyle/ClassHeaderApache.txt</checkstyle.headerLocation>
     </properties>
 
     <licenses>
