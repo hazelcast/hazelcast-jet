@@ -124,9 +124,9 @@ documentation:
 * [Db2](https://debezium.io/documentation/reference/1.1/connectors/db2.html#setting-up-Db2)
 * [Cassandra](https://debezium.io/documentation/reference/1.1/connectors/cassandra.html#setting-up-cassandra)
 
-## Connector Deployment
+### Connector Deployment
 
-### CDC from replica
+#### CDC from replica
 
 Enabling the features needed for the MySQL CDC connector (in particular
 the binlog) has a performance impact on the database. From our
@@ -145,7 +145,7 @@ starts can take a significant amount of time and will put heavy load on
 the database during that period. This might affect the performance of
 other transactions.
 
-### GTID in multi-member clusters
+#### GTID in multi-member clusters
 
 When using a replica for the CDC source and in general when the MySQL
 server cluster has multiple member it's a good idea to give yourself the
