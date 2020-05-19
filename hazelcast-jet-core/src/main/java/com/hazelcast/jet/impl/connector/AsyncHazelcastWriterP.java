@@ -16,8 +16,12 @@
 
 package com.hazelcast.jet.impl.connector;
 
+import com.hazelcast.client.impl.clientside.HazelcastClientProxy;
+import com.hazelcast.client.impl.spi.ClientPartitionService;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.HazelcastInstanceNotActiveException;
+import com.hazelcast.instance.impl.HazelcastInstanceImpl;
+import com.hazelcast.internal.partition.IPartitionService;
 import com.hazelcast.jet.core.Inbox;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.Watermark;
@@ -31,6 +35,8 @@ import java.util.concurrent.CompletionStage;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
+import java.util.function.IntSupplier;
+import java.util.function.ToIntFunction;
 
 import static com.hazelcast.jet.impl.connector.HazelcastWriters.handleInstanceNotActive;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
@@ -157,5 +163,33 @@ public abstract class AsyncHazelcastWriterP implements Processor {
         boolean allWritten = numConcurrentOps.get() == 0;
         checkError();
         return allWritten;
+    }
+
+    static class PartitionInfo {
+
+        private final IntSupplier count;
+        private final ToIntFunction<Object> ids;
+
+        PartitionInfo(HazelcastInstance instance) {
+            if (ImdgUtil.isMemberInstance(instance)) {
+                HazelcastInstanceImpl castInstance = (HazelcastInstanceImpl) instance;
+                IPartitionService memberPartitionService = castInstance.node.nodeEngine.getPartitionService();
+                count = memberPartitionService::getPartitionCount;
+                ids = memberPartitionService::getPartitionId;
+            } else {
+                HazelcastClientProxy clientProxy = (HazelcastClientProxy) instance;
+                ClientPartitionService clientPartitionService = clientProxy.client.getClientPartitionService();
+                count = clientPartitionService::getPartitionCount;
+                ids = clientPartitionService::getPartitionId;
+            }
+        }
+
+        int getPartitionCount() {
+            return count.getAsInt();
+        }
+
+        int getPartitionId(Object key) {
+            return ids.applyAsInt(key);
+        }
     }
 }

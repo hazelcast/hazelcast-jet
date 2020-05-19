@@ -17,32 +17,28 @@
 package com.hazelcast.jet.cdc;
 
 import com.hazelcast.client.config.ClientConfig;
-import com.hazelcast.function.BiFunctionEx;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
-import com.hazelcast.jet.impl.connector.HazelcastWriters;
+import com.hazelcast.jet.core.ProcessorSupplier;
+import com.hazelcast.jet.impl.connector.UpdateMapWithMaterializedValuesP;
+import com.hazelcast.jet.impl.pipeline.SinkImpl;
 import com.hazelcast.jet.pipeline.Sink;
-import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.map.IMap;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import static com.hazelcast.jet.cdc.Operation.DELETE;
+import static com.hazelcast.jet.impl.util.ImdgUtil.asXmlString;
 
 /**
  * Contains factory methods for change data capture specific pipeline
  * sinks. As a consequence these sinks take {@link ChangeRecord} items
  * as their input.
- * <p>
- * The local parallelism for these sinks in this class is typically 1,
- * check the documentation of individual methods.
  *
  * @since 4.2
  */
 public final class CdcSinks {
-
-    private static final int PREFERRED_LOCAL_PARALLELISM = 1;
 
     private CdcSinks() {
     }
@@ -50,13 +46,13 @@ public final class CdcSinks {
     /**
      * Returns a sink which maintains an up-to-date image of a change
      * data capture stream in the form of an {@code IMap}. By image we
-     * mean that the map should always escribe the end result of merging
+     * mean that the map should always describe the end result of merging
      * all the change events seen so far.
      * <p>
      * For each item the sink receives it uses the {@code keyFn} to
      * determine which map key the change event applies to. Then, based
-     * on the {@code ChangeRecord}'s {@code Operation} it determines
-     * eiher to:
+     * on the {@code ChangeRecord}'s {@code Operation} it decides to
+     * either:
      * <ul>
      *   <li>delete the key from the map
      *          ({@link Operation#DELETE})</li>
@@ -73,9 +69,8 @@ public final class CdcSinks {
      * and insert records).
      * <p>
      * For the functionality of this sink it is vital that the order of
-     * the input items is preserved so the sink is non-distributed and
-     * its local parallelism is forced to 1. This way only a single
-     * instance will be created for each pipeline.
+     * the input items is preserved so we'll always create a single
+     * instance of it in each pipeline.
      *
      * @since 4.2
      */
@@ -85,8 +80,8 @@ public final class CdcSinks {
             @Nonnull FunctionEx<ChangeRecord, K> keyFn,
             @Nonnull FunctionEx<ChangeRecord, V> valueFn
     ) {
-        return Sinks.fromProcessor("localMapCdcSink(" + map + ')',
-                metaSupplier(map, null, keyFn, valueFn));
+        String name = "localMapCdcSink(" + map + ')';
+        return sink(name, map, null, keyFn, valueFn);
     }
 
     /**
@@ -121,13 +116,26 @@ public final class CdcSinks {
             @Nonnull FunctionEx<ChangeRecord, K> keyFn,
             @Nonnull FunctionEx<ChangeRecord, V> valueFn
     ) {
-        return Sinks.fromProcessor("remoteMapCdcSink(" + map + ')',
-                metaSupplier(map, clientConfig, keyFn, valueFn));
+        String name = "remoteMapCdcSink(" + map + ')';
+        return sink(name, map, clientConfig, keyFn, valueFn);
     }
 
     @Nonnull
-    private static <V> BiFunctionEx<V, ChangeRecord, V> updateFn(@Nonnull FunctionEx<ChangeRecord, V> valueFn) {
-        return (BiFunctionEx<V, ChangeRecord, V>) (oldValue, record) -> {
+    private static <K, V> Sink<ChangeRecord> sink(
+            @Nonnull String name,
+            @Nonnull String map,
+            @Nullable ClientConfig clientConfig,
+            @Nonnull FunctionEx<ChangeRecord, K> keyFn,
+            @Nonnull FunctionEx<ChangeRecord, V> valueFn) {
+        ProcessorSupplier supplier = new UpdateMapWithMaterializedValuesP.Supplier<>(
+                asXmlString(clientConfig), map, keyFn, extend(valueFn));
+        ProcessorMetaSupplier metaSupplier = ProcessorMetaSupplier.forceTotalParallelismOne(supplier, name);
+        return new SinkImpl<>(name, metaSupplier, true, null);
+    }
+
+    @Nonnull
+    private static <V> FunctionEx<ChangeRecord, V> extend(@Nonnull FunctionEx<ChangeRecord, V> valueFn) {
+        return (record) -> {
             if (DELETE.equals(record.operation())) {
                 return null;
             }
@@ -135,14 +143,5 @@ public final class CdcSinks {
         };
     }
 
-    @Nonnull
-    private static <K, V> ProcessorMetaSupplier metaSupplier(
-            @Nonnull String map,
-            @Nullable ClientConfig clientConfig,
-            @Nonnull FunctionEx<ChangeRecord, K> keyFn,
-            @Nonnull FunctionEx<ChangeRecord, V> valueFn) {
-        return HazelcastWriters.updateMapSupplier(
-                map, clientConfig, keyFn, updateFn(valueFn), PREFERRED_LOCAL_PARALLELISM);
-    }
 
 }
