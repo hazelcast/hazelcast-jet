@@ -111,21 +111,6 @@ public final class HazelcastWriters {
     }
 
     @Nonnull
-    public static <T, K, V> ProcessorMetaSupplier updateMapWithMaterializedValuesSupplier(
-            @Nonnull String mapName,
-            @Nullable ClientConfig clientConfig,
-            @Nonnull FunctionEx<? super T, ? extends K> toKeyFn,
-            @Nonnull FunctionEx<? super T, ? extends V> toValueFn
-    ) {
-        checkSerializable(toKeyFn, "toKeyFn");
-        checkSerializable(toValueFn, "toValueFn");
-
-        return ProcessorMetaSupplier.of(new UpdateMapWithMaterializedValuesP.Supplier<>(
-                asXmlString(clientConfig), mapName, toKeyFn, toValueFn
-        ));
-    }
-
-    @Nonnull
     public static <T, K, V, R> ProcessorMetaSupplier updateMapSupplier(
             @Nonnull String name,
             @Nullable ClientConfig clientConfig,
