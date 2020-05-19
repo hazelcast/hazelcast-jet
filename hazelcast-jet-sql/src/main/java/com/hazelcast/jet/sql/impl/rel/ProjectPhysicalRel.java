@@ -47,14 +47,14 @@ public class ProjectPhysicalRel extends Project implements PhysicalRel {
 
     @Override
     public PlanNodeSchema schema() {
-        return ((PhysicalRel) input).schema();
+        return ((PhysicalRel) getInput()).schema();
     }
 
     @Override
     public void visit(CreateDagVisitor visitor) {
         visitor.onProject(this);
 
-        ((PhysicalRel) input).visit(visitor);
+        ((PhysicalRel) getInput()).visit(visitor);
     }
 
     @Override

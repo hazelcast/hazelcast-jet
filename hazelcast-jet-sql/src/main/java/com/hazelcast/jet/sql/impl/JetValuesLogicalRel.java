@@ -20,22 +20,21 @@ import com.google.common.collect.ImmutableList;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.RelNode;
-import org.apache.calcite.rel.core.Values;
+import org.apache.calcite.rel.logical.LogicalValues;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexLiteral;
 
 import java.util.List;
 
-public class JetValuesLogicalRel extends Values implements LogicalRel {
+public class JetValuesLogicalRel extends LogicalValues implements LogicalRel {
 
     JetValuesLogicalRel(RelOptCluster cluster, RelDataType rowType,
                         ImmutableList<ImmutableList<RexLiteral>> tuples, RelTraitSet traitSet) {
-        super(cluster, rowType, tuples, traitSet);
+        super(cluster, traitSet, rowType, tuples);
     }
 
     @Override
     public RelNode copy(RelTraitSet traitSet, List<RelNode> inputs) {
-        assert inputs.isEmpty();
         return new JetValuesLogicalRel(getCluster(), rowType, tuples, traitSet);
     }
 }

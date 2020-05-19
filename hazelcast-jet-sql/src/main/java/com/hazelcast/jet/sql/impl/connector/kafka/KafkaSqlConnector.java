@@ -151,7 +151,7 @@ public class KafkaSqlConnector implements SqlConnector {
         KafkaTable table = (KafkaTable) jetTable;
 
         EntryWriter writer = table.getWriter();
-        Vertex vStart = dag.newVertex("project", mapP(writer));
+        Vertex vStart = dag.newVertex("kafka-project", mapP(writer));
 
         String topicName = table.getTopicName();
         Vertex vEnd = dag.newVertex("kafka(" + topicName + ')',

@@ -46,7 +46,7 @@ public class SqlInsertTest extends SimpleTestInClusterSupport {
         initialize(1, null);
         sqlService = new JetSqlService(instance());
 
-        sqlService.execute(format("CREATE FOREIGN TABLE %s (birthday DATE) SERVER %s OPTIONS (%s '%s', %s '%s')",
+        sqlService.execute(format("CREATE FOREIGN TABLE %s (id INT, birthday DATE) SERVER %s OPTIONS (%s '%s', %s '%s')",
                 PERSON_MAP_SINK, IMAP_LOCAL_SERVER, TO_KEY_CLASS, Person.class.getName(), TO_VALUE_CLASS, Person.class.getName()));
 
         sqlService.execute(format("CREATE FOREIGN TABLE %s (nonExistingProperty INT) SERVER %s OPTIONS (%s '%s', %s '%s')",
@@ -93,7 +93,7 @@ public class SqlInsertTest extends SimpleTestInClusterSupport {
     @Test
     public void insert_null() {
         assertMap(
-                PERSON_MAP_SINK, "INSERT OVERWRITE " + PERSON_MAP_SINK + "(birthday) VALUES (null)",
+                PERSON_MAP_SINK, "INSERT OVERWRITE " + PERSON_MAP_SINK + " VALUES (null, null)",
                 createMap(new Person(), new Person()));
     }
 
@@ -107,8 +107,15 @@ public class SqlInsertTest extends SimpleTestInClusterSupport {
     @Test
     public void insert_valueShadowsKey() {
         assertMap(
-                PERSON_MAP_SINK, "INSERT OVERWRITE " + PERSON_MAP_SINK + "(birthday) VALUES ('2020-01-01')",
-                createMap(new Person(), new Person(LocalDate.of(2020, 1, 1))));
+                PERSON_MAP_SINK, "INSERT OVERWRITE " + PERSON_MAP_SINK + "(id, birthday) VALUES (1, '2020-01-01')",
+                createMap(new Person(), new Person(1, LocalDate.of(2020, 1, 1))));
+    }
+
+    @Test
+    public void insert_withProject() {
+        assertMap(
+                PERSON_MAP_SINK, "INSERT OVERWRITE " + PERSON_MAP_SINK + "(id, birthday) VALUES (0 + 1, '2020-01-01')",
+                createMap(new Person(), new Person(1, LocalDate.of(2020, 1, 1))));
     }
 
     @Test
@@ -262,13 +269,23 @@ public class SqlInsertTest extends SimpleTestInClusterSupport {
     @SuppressWarnings("unused")
     public static class Person implements Serializable {
 
+        private int id;
         private LocalDate birthday;
 
         public Person() {
         }
 
-        private Person(LocalDate birthday) {
+        private Person(int id, LocalDate birthday) {
+            this.id = id;
             this.birthday = birthday;
+        }
+
+        public int getId() {
+            return id;
+        }
+
+        public void setId(int id) {
+            this.id = id;
         }
 
         public LocalDate getBirthday() {
@@ -282,7 +299,8 @@ public class SqlInsertTest extends SimpleTestInClusterSupport {
         @Override
         public String toString() {
             return "Person{" +
-                    "birthday=" + birthday +
+                    "id=" + id +
+                    ", birthday=" + birthday +
                     '}';
         }
 
@@ -295,12 +313,13 @@ public class SqlInsertTest extends SimpleTestInClusterSupport {
                 return false;
             }
             Person person = (Person) o;
-            return Objects.equals(birthday, person.birthday);
+            return id == person.id &&
+                    Objects.equals(birthday, person.birthday);
         }
 
         @Override
         public int hashCode() {
-            return Objects.hash(birthday);
+            return Objects.hash(id, birthday);
         }
     }
 

@@ -70,7 +70,6 @@ public final class JetLogicalRules {
                 JetTableInsertLogicalRule.INSTANCE,
                 JetValuesLogicalRule.INSTANCE,
                 FullScanLogicalRule.INSTANCE,
-                // FilterLogicalRule.INSTANCE,
                 ProjectLogicalRule.INSTANCE,
 
                 // AggregateLogicalRule.INSTANCE,

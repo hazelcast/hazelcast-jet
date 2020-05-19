@@ -19,14 +19,13 @@ package com.hazelcast.jet.sql.impl.connector.imap;
 import com.hazelcast.function.BiFunctionEx;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.JetInstance;
+import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Vertex;
-import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.core.processor.SinkProcessors;
 import com.hazelcast.jet.pipeline.ServiceFactories;
 import com.hazelcast.jet.sql.SqlConnector;
 import com.hazelcast.jet.sql.impl.connector.SqlWriters.EntryWriter;
-import com.hazelcast.jet.sql.impl.expression.ExpressionUtil;
 import com.hazelcast.jet.sql.impl.schema.JetTable;
 import com.hazelcast.map.IMap;
 import com.hazelcast.query.Predicates;
@@ -42,9 +41,12 @@ import java.util.Map.Entry;
 
 import static com.hazelcast.jet.Traversers.traverseIterable;
 import static com.hazelcast.jet.core.Edge.between;
+import static com.hazelcast.jet.core.processor.Processors.flatMapUsingServiceP;
 import static com.hazelcast.jet.core.processor.Processors.mapP;
 import static com.hazelcast.jet.core.processor.SourceProcessors.readMapP;
 import static com.hazelcast.jet.sql.impl.connector.SqlWriters.entryWriter;
+import static com.hazelcast.jet.sql.impl.expression.ExpressionUtil.joinFn;
+import static com.hazelcast.jet.sql.impl.expression.ExpressionUtil.projectionFn;
 import static java.util.UUID.randomUUID;
 
 public class IMapSqlConnector implements SqlConnector {
@@ -100,8 +102,9 @@ public class IMapSqlConnector implements SqlConnector {
         // if (!serverOptions.isEmpty()) {
         //     throw new JetException("Only local maps are supported for now");
         // }
-        String mapName = tableOptions.getOrDefault(TO_MAP_NAME, tableName);
         EntryWriter writer = entryWriter(fields, tableOptions.get(TO_KEY_CLASS), tableOptions.get(TO_VALUE_CLASS));
+
+        String mapName = tableOptions.getOrDefault(TO_MAP_NAME, tableName);
         return new IMapTable(this, mapName, fields, writer);
     }
 
@@ -115,12 +118,11 @@ public class IMapSqlConnector implements SqlConnector {
     ) {
         IMapTable table = (IMapTable) jetTable;
 
-        FunctionEx<Entry<Object, Object>, Object[]> mapProjection =
-                ExpressionUtil.projectionFn(jetTable, predicate, projections);
+        FunctionEx<Entry<Object, Object>, Object[]> mapFn = projectionFn(jetTable, predicate, projections);
 
         String mapName = table.getMapName();
         return dag.newVertex("map(" + mapName + ")",
-                readMapP(mapName, Predicates.alwaysTrue(), mapProjection::apply));
+                readMapP(mapName, Predicates.alwaysTrue(), mapFn::apply));
     }
 
     @Nullable @Override
@@ -133,28 +135,27 @@ public class IMapSqlConnector implements SqlConnector {
     ) {
         IMapTable table = (IMapTable) jetTable;
 
-        FunctionEx<Entry<Object, Object>, Object[]> mapProjection =
-                ExpressionUtil.projectionFn(table, predicate, projections);
-        BiFunctionEx<Object[], Object[], Object[]> join = ExpressionUtil.joinFn(joinPredicate);
-
-        String mapName = table.getMapName();
-        return dag.newVertex("map-enrich-" + randomUUID(), Processors.flatMapUsingServiceP( // TODO: is it the right way?
-                ServiceFactories.iMapService(mapName),
+        FunctionEx<Entry<Object, Object>, Object[]> mapFn = projectionFn(table, predicate, projections);
+        BiFunctionEx<Object[], Object[], Object[]> joinFn = joinFn(joinPredicate);
+        BiFunctionEx<IMap<Object, Object>, Object[], Traverser<Object[]>> flatMapFn =
                 (IMap<Object, Object> map, Object[] left) -> {
                     List<Object[]> result = new ArrayList<>();
                     for (Entry<Object, Object> entry : map.entrySet()) {
-                        Object[] right = mapProjection.apply(entry);
+                        Object[] right = mapFn.apply(entry);
                         // TODO: support LEFT OUTER JOIN ??? connector should not be aware of type of the join though ???
                         if (right != null) {
-                            Object[] joined = join.apply(left, right);
+                            Object[] joined = joinFn.apply(left, right);
                             if (joined != null) {
                                 result.add(joined);
                             }
                         }
                     }
                     return traverseIterable(result);
-                }
-        ));
+                };
+
+        String mapName = table.getMapName();
+        return dag.newVertex("map-enrich-" + randomUUID(),
+                flatMapUsingServiceP(ServiceFactories.iMapService(mapName), flatMapFn));
     }
 
     @Nullable @Override
@@ -165,10 +166,10 @@ public class IMapSqlConnector implements SqlConnector {
         IMapTable table = (IMapTable) jetTable;
 
         EntryWriter writer = table.getWriter();
-        Vertex vStart = dag.newVertex("project", mapP(writer));
+        Vertex vStart = dag.newVertex("map-project", mapP(writer));
 
         String mapName = table.getMapName();
-        Vertex vEnd = dag.newVertex("mapSink", SinkProcessors.writeMapP(mapName));
+        Vertex vEnd = dag.newVertex("map(" + mapName + ")", SinkProcessors.writeMapP(mapName));
 
         dag.edge(between(vStart, vEnd));
         return vStart;

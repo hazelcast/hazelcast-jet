@@ -33,9 +33,6 @@ import java.util.List;
 
 import static com.hazelcast.jet.sql.impl.OptUtils.CONVENTION_PHYSICAL;
 
-/**
- * Logical scan.
- */
 public class JetTableInsertPhysicalRel extends TableModify implements PhysicalRel {
 
     public JetTableInsertPhysicalRel(
@@ -53,21 +50,19 @@ public class JetTableInsertPhysicalRel extends TableModify implements PhysicalRe
                 updateColumnList, sourceExpressionList, flattened);
         assert input.getConvention() == CONVENTION_PHYSICAL;
         assert getConvention() == CONVENTION_PHYSICAL;
-        final JetTable jetTable = table.unwrap(JetTable.class);
-        if (jetTable == null) {
-            throw new AssertionError(); // TODO: user error in validator
-        }
+        assert table.unwrap(JetTable.class) != null; // TODO: user error in validator
     }
 
     @Override
     public PlanNodeSchema schema() {
-        throw new UnsupportedOperationException(); // TODO: implement or extract specific interface
+        return new PlanNodeSchema(table.unwrap(JetTable.class).getFieldTypes());
     }
 
     @Override
     public void visit(CreateDagVisitor visitor) {
         visitor.onTableInsert(this);
-        ((PhysicalRel) input).visit(visitor);
+
+        ((PhysicalRel) getInput()).visit(visitor);
     }
 
     @Override
@@ -78,8 +73,15 @@ public class JetTableInsertPhysicalRel extends TableModify implements PhysicalRe
     @Override
     public RelNode copy(RelTraitSet traitSet, List<RelNode> inputs) {
         return new JetTableInsertPhysicalRel(
-                getCluster(), traitSet, getTable(), getCatalogReader(),
-                sole(inputs), getOperation(), getUpdateColumnList(),
-                getSourceExpressionList(), isFlattened());
+                getCluster(),
+                traitSet,
+                getTable(),
+                getCatalogReader(),
+                sole(inputs),
+                getOperation(),
+                getUpdateColumnList(),
+                getSourceExpressionList(),
+                isFlattened()
+        );
     }
 }
