@@ -17,11 +17,18 @@
 package com.hazelcast.jet.rocksdb;
 
 
+import com.hazelcast.internal.serialization.InternalSerializationService;
+
 /**
  * A factory class used to instantiate a RocksDBStateBackend.
  */
 public class RocksDBFactory {
+    private InternalSerializationService serializationService;
+
+    public RocksDBFactory(InternalSerializationService serializationService) {
+        this.serializationService = serializationService;
+    }
     public RocksDBStateBackend getKeyValueStore() {
-        return new RocksDBStateBackend(new RocksDBOptions(), "path/to/db");
+        return new RocksDBStateBackend(new RocksDBOptions(), "path/to/db", serializationService);
     }
 }

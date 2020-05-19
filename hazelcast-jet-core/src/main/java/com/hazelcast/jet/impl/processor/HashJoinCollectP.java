@@ -20,7 +20,6 @@ import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.impl.execution.init.Contexts.ProcCtx;
 import com.hazelcast.jet.rocksdb.RocksDBStateBackend;
 import com.hazelcast.jet.rocksdb.RocksMap;
-import com.hazelcast.jet.rocksdb.Serializer;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
@@ -53,10 +52,7 @@ public class HashJoinCollectP<K, T, V> extends AbstractProcessor {
     @Nonnull private final Function<T, K> keyFn;
     @Nonnull private final Function<T, V> projectFn;
 
-    private RocksMap lookupTable;
-    private final Serializer<K> keySerializer = new Serializer<>();
-    private final Serializer<V> valueSerializer = new Serializer<>();
-    private final Serializer<HashJoinArrayList> listSerializer = new Serializer<>();
+    private RocksMap<K, V> lookupTable;
 
     public HashJoinCollectP(@Nonnull Function<T, K> keyFn, @Nonnull Function<T, V> projectFn) {
         this.keyFn = keyFn;
@@ -77,15 +73,13 @@ public class HashJoinCollectP<K, T, V> extends AbstractProcessor {
         T t = (T) item;
         K key = keyFn.apply(t);
         V value = projectFn.apply(t);
-        byte[] keyBytes = keySerializer.serialize(key);
-        byte[] valueBytes = valueSerializer.serialize(value);
-        byte[] oldValue = lookupTable.get(keyBytes);
-        lookupTable.put(keyBytes, merge(oldValue, valueBytes));
+        V oldValue = lookupTable.get(key);
+        lookupTable.put(key, merge(oldValue, value));
         return true;
     }
 
     //TODO: implement merge
-    private byte[] merge(byte[] oldValue, byte[] newValue) {
+    private V merge(V oldValue, V newValue) {
         return oldValue;
     }
 

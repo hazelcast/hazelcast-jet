@@ -109,7 +109,7 @@ public class ExecutionContext implements DynamicMetricsProvider {
 
     private InternalSerializationService serializationService;
 
-    private RocksDBStateBackend rocksDBStateBackend = new RocksDBFactory().getKeyValueStore();
+    private RocksDBStateBackend rocksDBStateBackend;
 
     public ExecutionContext(NodeEngine nodeEngine, TaskletExecutionService taskletExecService,
                             long jobId, long executionId, Address coordinator, Set<Address> participants) {
@@ -137,7 +137,7 @@ public class ExecutionContext implements DynamicMetricsProvider {
 
         JetService jetService = nodeEngine.getService(JetService.SERVICE_NAME);
         serializationService = jetService.createSerializationService(jobConfig.getSerializerConfigs());
-
+        rocksDBStateBackend = new RocksDBFactory(serializationService).getKeyValueStore();
         metricsEnabled = jobConfig.isMetricsEnabled() && nodeEngine.getConfig().getMetricsConfig().isEnabled();
         plan.initialize(nodeEngine, jobId, executionId, snapshotContext,
                 tempDirectories, serializationService, rocksDBStateBackend);

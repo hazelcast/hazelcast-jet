@@ -99,8 +99,9 @@ public final class TestContextSupport {
                 context = new ProcCtx(c.jetInstance(), c.jobId(), c.executionId(), c.jobConfig(),
                         c.logger(), c.vertexName(), 1, 1, c.processingGuarantee(),
                         c.localParallelism(), 1, c.memberCount(), new ConcurrentHashMap<>(),
-                        (InternalSerializationService) nodeEngine.getSerializationService(),
-                        new RocksDBFactory().getKeyValueStore());
+                        (InternalSerializationService) nodeEngine.getSerializationService()
+                        , new RocksDBFactory((InternalSerializationService) nodeEngine
+                        .getSerializationService()).getKeyValueStore());
             }
             delegate.init(context);
         }
@@ -124,7 +125,8 @@ public final class TestContextSupport {
                         c.logger(), c.vertexName(), c.localProcessorIndex(), c.globalProcessorIndex(),
                         c.processingGuarantee(), c.localParallelism(), c.memberIndex(), c.memberCount(),
                         new ConcurrentHashMap<>(), (InternalSerializationService) nodeEngine.getSerializationService(),
-                        new RocksDBFactory().getKeyValueStore());
+                        new RocksDBFactory((InternalSerializationService) nodeEngine
+                                .getSerializationService()).getKeyValueStore());
             }
             delegate.init(outbox, context);
         }

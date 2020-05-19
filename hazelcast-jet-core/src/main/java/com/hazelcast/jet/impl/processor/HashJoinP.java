@@ -28,7 +28,6 @@ import com.hazelcast.jet.impl.processor.HashJoinCollectP.HashJoinArrayList;
 import com.hazelcast.jet.pipeline.BatchStage;
 import com.hazelcast.jet.rocksdb.RocksDBStateBackend;
 import com.hazelcast.jet.rocksdb.RocksMap;
-import com.hazelcast.jet.rocksdb.Serializer;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 import javax.annotation.Nonnull;
@@ -75,7 +74,6 @@ public class HashJoinP<E0> extends AbstractProcessor {
     private final List<Function<E0, Object>> keyFns;
     private final List<RocksMap> lookupTables;
     private final FlatMapper<E0, Object> flatMapper;
-    private final Serializer<Object> serializer = new Serializer<>();
     private boolean ordinal0Consumed;
     private RocksDBStateBackend store;
 
@@ -127,7 +125,7 @@ public class HashJoinP<E0> extends AbstractProcessor {
     protected boolean tryProcess(int ordinal, @Nonnull Object item) {
         assert !ordinal0Consumed : "Edge 0 must have a lower priority than all other edges";
 
-        RocksMap map = store.getMap();
+        RocksMap<Object, Object> map = store.getMap();
         //TODO: Serialize item entries before passing it.
         map.putAll(((Map) item));
         lookupTables.set(ordinal - 1, map);
@@ -142,9 +140,9 @@ public class HashJoinP<E0> extends AbstractProcessor {
 
     @Nonnull
     private Object lookUpJoined(int index, E0 item) {
-        RocksMap lookupTableForOrdinal = lookupTables.get(index);
+        RocksMap<Object, Object> lookupTableForOrdinal = lookupTables.get(index);
         Object key = keyFns.get(index).apply(item);
-        return lookupTableForOrdinal.get(serializer.serialize(key));
+        return lookupTableForOrdinal.get(key);
     }
 
     private class CombinationsTraverser<OUT> implements Traverser<OUT> {

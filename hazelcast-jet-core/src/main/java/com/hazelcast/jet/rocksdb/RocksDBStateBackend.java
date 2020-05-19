@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.rocksdb;
 
+import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.jet.JetException;
 import org.rocksdb.ColumnFamilyDescriptor;
 import org.rocksdb.ColumnFamilyHandle;
@@ -46,16 +47,22 @@ public class RocksDBStateBackend {
     private final ReadOptions readOptions;
     private final WriteOptions writeOptions;
     private final String directory;
-    private final Serializer<String> serializer = new Serializer<>();
+    private final Serializer<String> nameSerializer;
+    private InternalSerializationService serializationService;
     private RocksDB db;
     private ArrayList<ColumnFamilyHandle> cfhs = new ArrayList<>();
     private AtomicInteger counter = new AtomicInteger(0);
 
-    RocksDBStateBackend(@Nonnull RocksDBOptions rocksDBOptions, String directory) throws JetException {
+
+    RocksDBStateBackend(@Nonnull RocksDBOptions rocksDBOptions, String directory,
+                        InternalSerializationService serializationService) {
         this.options = rocksDBOptions.getOptions();
         this.readOptions = rocksDBOptions.getReadOptions();
         this.writeOptions = rocksDBOptions.getWriteOptions();
         this.directory = directory;
+        this.serializationService = serializationService;
+        nameSerializer = new Serializer<>(serializationService);
+
         init();
     }
 
@@ -68,13 +75,14 @@ public class RocksDBStateBackend {
         }
     }
 
-    public RocksMap getMap() throws JetException {
+    public <K, V> RocksMap<K, V> getMap() throws JetException {
         ColumnFamilyHandle cfh;
         try {
-
-            cfh = db.createColumnFamily(new ColumnFamilyDescriptor(serializer.serialize(getNextName())));
+            cfh = db.createColumnFamily(new ColumnFamilyDescriptor(nameSerializer.serialize(getNextName())));
             cfhs.add(cfh);
-            return new RocksMap(db, cfh, readOptions, writeOptions);
+            Serializer<K> keySerializer = new Serializer<>(serializationService);
+            Serializer<V> valueSerializer = new Serializer<>(serializationService);
+            return new RocksMap<>(db, cfh, readOptions, writeOptions, keySerializer, valueSerializer);
         } catch (RocksDBException e) {
             throw new JetException(e.getMessage(), e.getCause());
         }

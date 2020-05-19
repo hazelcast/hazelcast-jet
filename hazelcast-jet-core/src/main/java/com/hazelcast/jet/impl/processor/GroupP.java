@@ -25,7 +25,6 @@ import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.impl.execution.init.Contexts.ProcCtx;
 import com.hazelcast.jet.rocksdb.RocksDBStateBackend;
 import com.hazelcast.jet.rocksdb.RocksMap;
-import com.hazelcast.jet.rocksdb.Serializer;
 
 import javax.annotation.Nonnull;
 import java.util.Iterator;
@@ -47,10 +46,8 @@ public class GroupP<K, A, R, OUT> extends AbstractProcessor {
     @Nonnull private final List<FunctionEx<?, ? extends K>> groupKeyFns;
     @Nonnull private final AggregateOperation<A, R> aggrOp;
     private final BiFunction<? super K, ? super R, OUT> mapToOutputFn;
-    private final Serializer<K> keySerializer = new Serializer<>();
-    private final Serializer<A> accSerializer = new Serializer<>();
     private Traverser<OUT> resultTraverser;
-    private RocksMap keyToAcc;
+    private RocksMap<K, A> keyToAcc;
 
     public GroupP(
             @Nonnull List<FunctionEx<?, ? extends K>> groupKeyFns,
@@ -89,10 +86,8 @@ public class GroupP<K, A, R, OUT> extends AbstractProcessor {
         // A acc = keyToAcc.computeIfAbsent(key, k -> acc);
         //TODO: implement computeIfAbsent in RocksMap instead of get and put
 
-        byte[] keyBytes = keySerializer.serialize(key);
-        if (keyToAcc.get(keyBytes) == null) {
-            byte[] accBytes = accSerializer.serialize(acc);
-            keyToAcc.put(keyBytes, accBytes);
+        if (keyToAcc.get(key) == null) {
+            keyToAcc.put(key, acc);
         }
         aggrOp.accumulateFn(ordinal).accept(acc, item);
         return true;
@@ -109,7 +104,7 @@ public class GroupP<K, A, R, OUT> extends AbstractProcessor {
     }
 
     private class ResultTraverser implements Traverser<Entry<K, A>> {
-        private final Iterator<Entry<byte[], byte[]>> iter = keyToAcc.iterator();
+        private final Iterator<Entry<K, A>> iter = keyToAcc.iterator();
 
         @Override
         public Entry<K, A> next() {
@@ -117,10 +112,8 @@ public class GroupP<K, A, R, OUT> extends AbstractProcessor {
                 return null;
             }
             try {
-                Entry<byte[], byte[]> e = iter.next();
-                K key = keySerializer.deserialize(e.getKey());
-                A acc = accSerializer.deserialize(e.getValue());
-                return Tuple2.tuple2(key, acc);
+                Entry<K, A> e = iter.next();
+                return Tuple2.tuple2(e.getKey(), e.getValue());
             } finally {
                 iter.remove();
             }

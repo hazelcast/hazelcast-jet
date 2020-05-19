@@ -37,48 +37,63 @@ import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
 /**
  * RocksMap is RocksDB-backed HashMap.
  * Responsible for providing the interface of HashMap to processors.
+ * @param <K> the type of key
+ * @param <V> the type of value
  */
-public class RocksMap implements Iterable<Entry<byte[], byte[]>> {
+public class RocksMap<K, V> implements Iterable<Entry<K, V>> {
     private final RocksDB db;
     private final ColumnFamilyHandle cfh;
     private final ReadOptions readOptions;
     private final WriteOptions writeOptions;
+    private final Serializer<K> keySerializer;
+    private final Serializer<V> valueSerializer;
 
-    RocksMap(RocksDB db, ColumnFamilyHandle cfh, ReadOptions readOptions, WriteOptions writeOptions) {
+    RocksMap(RocksDB db, ColumnFamilyHandle cfh,
+             ReadOptions readOptions, WriteOptions writeOptions,
+             Serializer<K> keySerializer, Serializer<V> valueSerializer) {
         this.db = db;
         this.cfh = cfh;
         this.readOptions = readOptions;
         this.writeOptions = writeOptions;
+        this.keySerializer = keySerializer;
+        this.valueSerializer = valueSerializer;
     }
 
-    public byte[] get(byte[] key) throws JetException {
+    public V get(K key) throws JetException {
         try {
-            return db.get(cfh, readOptions, key);
+            byte[] keyBytes = keySerializer.serialize(key);
+            byte[] valueBytes = db.get(cfh, readOptions, keyBytes);
+            return valueSerializer.deserialize(valueBytes);
         } catch (RocksDBException e) {
             throw new JetException(e.getMessage(), e.getCause());
         }
     }
 
-    public void put(byte[] key, byte[] value) throws JetException {
+    public void put(K key, V value) throws JetException {
         try {
-            db.put(cfh, writeOptions, key, value);
+            byte[] keyBytes = keySerializer.serialize(key);
+            byte[] valueBytes = valueSerializer.serialize(value);
+            db.put(cfh, writeOptions, keyBytes, valueBytes);
         } catch (RocksDBException e) {
             throw new JetException(e.getMessage(), e.getCause());
         }
     }
 
-    public void delete(byte[] key) throws JetException {
+    public void delete(K key) throws JetException {
         try {
-            db.delete(writeOptions, key);
+            byte[] keyBytes = keySerializer.serialize(key);
+            db.delete(writeOptions, keyBytes);
         } catch (RocksDBException e) {
             throw new JetException(e.getMessage(), e.getCause());
         }
     }
 
-    public void putAll(@Nonnull Map<byte[], byte[]> map) throws JetException {
+    public void putAll(@Nonnull Map<K, V> map) throws JetException {
         WriteBatch batch = new WriteBatch();
-        for (Entry<byte[], byte[]> e : map.entrySet()) {
-            batch.put(e.getKey(), e.getValue());
+        for (Entry<K, V> e : map.entrySet()) {
+            byte[] keyBytes = keySerializer.serialize(e.getKey());
+            byte[] valueBytes = valueSerializer.serialize(e.getValue());
+            batch.put(keyBytes, valueBytes);
         }
         try {
             db.write(writeOptions, batch);
@@ -87,21 +102,21 @@ public class RocksMap implements Iterable<Entry<byte[], byte[]>> {
         }
     }
 
-    public Map<byte[], byte[]> getAll() {
-        Map<byte[], byte[]> map = new HashMap<>();
-        for (Entry<byte[], byte[]> kv : this) {
-            map.put(kv.getKey(), kv.getValue());
+    public Map<K, V> getAll() {
+        Map<K, V> map = new HashMap<>();
+        for (Entry<K, V> entry : this) {
+            map.put(entry.getKey(), entry.getValue());
         }
         return map;
     }
 
     @Nonnull
     @Override
-    public Iterator<Entry<byte[], byte[]>> iterator() {
+    public Iterator<Entry<K, V>> iterator() {
         return new RocksMapIterator();
     }
 
-    private class RocksMapIterator implements Iterator<Entry<byte[], byte[]>> {
+    private class RocksMapIterator implements Iterator<Entry<K, V>> {
         RocksIterator iterator = db.newIterator(cfh, readOptions);
 
         RocksMapIterator() {
@@ -114,8 +129,10 @@ public class RocksMap implements Iterable<Entry<byte[], byte[]>> {
         }
 
         @Override
-        public Entry<byte[], byte[]> next() {
-            Tuple2<byte[], byte[]> tuple = tuple2(iterator.key(), iterator.value());
+        public Entry<K, V> next() {
+            K key = keySerializer.deserialize(iterator.key());
+            V value = valueSerializer.deserialize(iterator.value());
+            Tuple2<K, V> tuple = tuple2(key, value);
             iterator.next();
             return tuple;
         }

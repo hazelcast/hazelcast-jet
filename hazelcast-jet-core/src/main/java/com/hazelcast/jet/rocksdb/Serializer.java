@@ -16,51 +16,26 @@
 
 package com.hazelcast.jet.rocksdb;
 
-import com.hazelcast.internal.serialization.impl.AbstractSerializationService;
-import com.hazelcast.internal.serialization.impl.SerializationServiceV1;
-import com.hazelcast.internal.serialization.impl.SerializerAdapter;
-import com.hazelcast.jet.JetException;
-import com.hazelcast.jet.impl.serialization.DelegatingSerializationService;
+import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 
-import java.io.IOException;
-
-import static java.util.Collections.emptyMap;
-
 public class Serializer<T> {
 
-    private final DelegatingSerializationService serializationService;
-    private SerializerAdapter serializer;
+    private final InternalSerializationService serializationService;
 
-    public Serializer() {
-        AbstractSerializationService delegate = SerializationServiceV1.builder().build();
-        serializationService = new DelegatingSerializationService(emptyMap(), delegate);
+    public Serializer(InternalSerializationService serializationService) {
+        this.serializationService = serializationService;
     }
 
-    public byte[] serialize(T item) throws JetException {
-        if (serializer == null) {
-            serializer = serializationService.serializerFor(item);
-        }
+    public byte[] serialize(T item) {
         ObjectDataOutput out = serializationService.createObjectDataOutput();
-        try {
-            serializer.write(out, item);
-            return out.toByteArray();
-        } catch (IOException e) {
-            throw new JetException(e.getMessage(), e.getCause());
-        }
+        serializationService.writeObject(out, item);
+        return out.toByteArray();
     }
 
-    @SuppressWarnings("unchecked")
-    public T deserialize(byte[] item) throws JetException {
-        // deserialize() can only be called after serialize() has initialised serializer field
-        assert serializer != null;
-
-        try {
-            ObjectDataInput in = serializationService.createObjectDataInput(item);
-            return (T) serializer.read(in);
-        } catch (IOException e) {
-            throw new JetException(e.getMessage(), e.getCause());
-        }
+    public T deserialize(byte[] item) {
+        ObjectDataInput in = serializationService.createObjectDataInput(item);
+        return serializationService.readObject(in);
     }
 }
