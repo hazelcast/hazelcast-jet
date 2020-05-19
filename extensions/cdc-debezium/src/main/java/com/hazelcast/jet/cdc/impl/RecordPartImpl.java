@@ -40,7 +40,7 @@ class RecordPartImpl implements RecordPart {
     public <T> T toObject(@Nonnull Class<T> clazz) throws ParsingException {
         Objects.requireNonNull(clazz, "class");
         try {
-            T t = JsonUtil.mapFrom(clazz, json);
+            T t = JsonUtil.beanFrom(clazz, json);
             if (t == null) {
                 throw new ParsingException(String.format("Mapping %s as %s didn't yield a result", json, clazz.getName()));
             }
