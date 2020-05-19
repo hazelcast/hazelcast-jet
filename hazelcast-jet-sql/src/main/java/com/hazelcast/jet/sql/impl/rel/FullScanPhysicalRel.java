@@ -62,10 +62,10 @@ public class FullScanPhysicalRel extends AbstractFullScanRel implements Physical
 
     @Override
     public PlanNodeSchema schema() {
-        List<QueryDataType> projectedTypes = projection().stream()
-                                                         .map(Expression::getType)
-                                                         .collect(toList());
-        return new PlanNodeSchema(projectedTypes);
+        List<QueryDataType> fieldTypes = projection().stream()
+                                                     .map(Expression::getType)
+                                                     .collect(toList());
+        return new PlanNodeSchema(fieldTypes);
     }
 
     @Override

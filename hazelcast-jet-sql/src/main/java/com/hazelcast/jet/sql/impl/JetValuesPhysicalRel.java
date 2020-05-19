@@ -25,11 +25,11 @@ import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.Values;
 import org.apache.calcite.rel.type.RelDataType;
-import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.rex.RexLiteral;
 
-import java.util.ArrayList;
 import java.util.List;
+
+import static java.util.stream.Collectors.toList;
 
 public class JetValuesPhysicalRel extends Values implements PhysicalRel {
 
@@ -42,10 +42,9 @@ public class JetValuesPhysicalRel extends Values implements PhysicalRel {
 
     @Override
     public PlanNodeSchema schema() {
-        List<QueryDataType> fieldTypes = new ArrayList<>();
-        for (RelDataTypeField field : getRowType().getFieldList()) {
-            fieldTypes.add(SqlToQueryType.map(field.getType().getSqlTypeName()));
-        }
+        List<QueryDataType> fieldTypes = getRowType().getFieldList().stream()
+                                                     .map(field -> SqlToQueryType.map(field.getType().getSqlTypeName()))
+                                                     .collect(toList());
         return new PlanNodeSchema(fieldTypes);
     }
 
