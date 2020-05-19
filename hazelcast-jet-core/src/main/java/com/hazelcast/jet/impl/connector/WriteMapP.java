@@ -66,8 +66,6 @@ public final class WriteMapP<T, K, V> extends AsyncHazelcastWriterP {
 
     @Override
     public void init(@Nonnull Outbox outbox, @Nonnull Context context) {
-        super.init(outbox, context);
-
         map = instance().getMap(mapName);
 
         if (map instanceof MapProxyImpl) {

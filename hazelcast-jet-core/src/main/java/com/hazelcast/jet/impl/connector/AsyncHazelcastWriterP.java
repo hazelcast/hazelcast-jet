@@ -16,14 +16,9 @@
 
 package com.hazelcast.jet.impl.connector;
 
-import com.hazelcast.client.impl.clientside.HazelcastClientProxy;
-import com.hazelcast.client.impl.spi.ClientPartitionService;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.HazelcastInstanceNotActiveException;
-import com.hazelcast.instance.impl.HazelcastInstanceImpl;
-import com.hazelcast.internal.partition.IPartitionService;
 import com.hazelcast.jet.core.Inbox;
-import com.hazelcast.jet.core.Outbox;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.Watermark;
 import com.hazelcast.jet.impl.util.ImdgUtil;
@@ -32,12 +27,11 @@ import com.hazelcast.logging.Logger;
 
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
+import java.util.Objects;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
-import java.util.function.IntSupplier;
-import java.util.function.ToIntFunction;
 
 import static com.hazelcast.jet.impl.connector.HazelcastWriters.handleInstanceNotActive;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
@@ -62,17 +56,10 @@ public abstract class AsyncHazelcastWriterP implements Processor {
         }
     });
 
-    private PartitionService partitionService;
-
-    AsyncHazelcastWriterP(HazelcastInstance instance, int maxParallelAsyncOps) {
-        this.instance = instance;
+    AsyncHazelcastWriterP(@Nonnull HazelcastInstance instance, int maxParallelAsyncOps) {
+        this.instance = Objects.requireNonNull(instance, "instance");
         this.maxParallelAsyncOps = maxParallelAsyncOps;
         this.isLocal = ImdgUtil.isMemberInstance(instance);
-    }
-
-    @Override
-    public void init(@Nonnull Outbox outbox, @Nonnull Context context) {
-        partitionService = new PartitionService(instance());
     }
 
     @Override
@@ -131,14 +118,6 @@ public abstract class AsyncHazelcastWriterP implements Processor {
         return tryIncrement(numConcurrentOps, 1, maxParallelAsyncOps);
     }
 
-    protected final int getPartitionCount() {
-        return partitionService.getPartitionCount();
-    }
-
-    protected final int getPartitionId(Object key) {
-        return partitionService.getPartitionId(key);
-    }
-
     /**
      * Acquires as many permits as we are able to immediately, up to
      * desiredNumber. Returns the number of actually acquired permits. Can
@@ -179,33 +158,5 @@ public abstract class AsyncHazelcastWriterP implements Processor {
         boolean allWritten = numConcurrentOps.get() == 0;
         checkError();
         return allWritten;
-    }
-
-    static class PartitionService {
-
-        private final IntSupplier count;
-        private final ToIntFunction<Object> ids;
-
-        PartitionService(HazelcastInstance instance) {
-            if (ImdgUtil.isMemberInstance(instance)) {
-                HazelcastInstanceImpl castInstance = (HazelcastInstanceImpl) instance;
-                IPartitionService memberPartitionService = castInstance.node.nodeEngine.getPartitionService();
-                count = memberPartitionService::getPartitionCount;
-                ids = memberPartitionService::getPartitionId;
-            } else {
-                HazelcastClientProxy clientProxy = (HazelcastClientProxy) instance;
-                ClientPartitionService clientPartitionService = clientProxy.client.getClientPartitionService();
-                count = clientPartitionService::getPartitionCount;
-                ids = clientPartitionService::getPartitionId;
-            }
-        }
-
-        int getPartitionCount() {
-            return count.getAsInt();
-        }
-
-        int getPartitionId(Object key) {
-            return ids.applyAsInt(key);
-        }
     }
 }

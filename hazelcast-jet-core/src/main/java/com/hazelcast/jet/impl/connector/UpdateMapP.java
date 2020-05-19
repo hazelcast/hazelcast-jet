@@ -16,193 +16,64 @@
 
 package com.hazelcast.jet.impl.connector;
 
-import com.hazelcast.client.impl.clientside.HazelcastClientProxy;
+
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.function.BiFunctionEx;
 import com.hazelcast.function.FunctionEx;
-import com.hazelcast.instance.impl.HazelcastInstanceImpl;
 import com.hazelcast.internal.nio.IOUtil;
 import com.hazelcast.internal.serialization.Data;
 import com.hazelcast.internal.serialization.SerializationService;
 import com.hazelcast.internal.serialization.SerializationServiceAware;
 import com.hazelcast.jet.JetException;
-import com.hazelcast.jet.core.Inbox;
 import com.hazelcast.jet.core.JetDataSerializerHook;
-import com.hazelcast.jet.core.Outbox;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.map.EntryProcessor;
-import com.hazelcast.map.IMap;
-import com.hazelcast.map.impl.proxy.MapProxyImpl;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
-import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.function.BiFunction;
-import java.util.function.Consumer;
 
 import static com.hazelcast.internal.util.MapUtil.createHashMap;
 
-public final class UpdateMapP<T, K, V, R> extends AsyncHazelcastWriterP {
+public final class UpdateMapP<T, K, V, R> extends AbstractUpdateMapP<T, Data, V, Object> {
 
-    private static final int PENDING_ITEM_COUNT_LIMIT = 1024;
-
-    private final String mapName;
-    private final FunctionEx<? super T, ? extends K> toKeyFn;
+    private final FunctionEx<? super T, ? extends K> keyFn;
     private final BiFunctionEx<? super V, ? super T, ? extends V> updateFn;
-    private final Consumer<T> addToBuffer = this::addToBuffer;
     private final BiFunction<Object, Object, Object> remappingFunction =
             (o, n) -> ApplyFnEntryProcessor.append(o, (Data) n);
-
-    private SerializationService serializationService;
-    private IMap<Data, V> map;
-
-    // one map per partition to store the temporary values
-    private Map<Data, Object>[] tmpMaps;
-    // count how many pending actual items are in each map
-    private int[] tmpCounts;
-
-    private int pendingItemCount;
-    private int currentPartitionId;
 
     UpdateMapP(HazelcastInstance instance,
                int maxParallelAsyncOps,
                String mapName,
-               @Nonnull FunctionEx<? super T, ? extends K> toKeyFn,
+               @Nonnull FunctionEx<? super T, ? extends K> keyFn,
                @Nonnull BiFunctionEx<? super V, ? super T, ? extends V> updateFn) {
-        super(instance, maxParallelAsyncOps);
-        this.mapName = mapName;
-        this.toKeyFn = toKeyFn;
+        super(instance, maxParallelAsyncOps, mapName);
+        this.keyFn = keyFn;
         this.updateFn = updateFn;
     }
 
     @Override
-    public void init(@Nonnull Outbox outbox, @Nonnull Context context) {
-        super.init(outbox, context);
-
-        map = instance().getMap(mapName);
-        if (isLocal()) {
-            HazelcastInstanceImpl castInstance = (HazelcastInstanceImpl) instance();
-            serializationService = castInstance.getSerializationService();
-        } else {
-            HazelcastClientProxy clientProxy = (HazelcastClientProxy) instance();
-            serializationService = clientProxy.getSerializationService();
-        }
-        int partitionCount = getPartitionCount();
-        tmpMaps = new Map[partitionCount];
-        tmpCounts = new int[partitionCount];
-        for (int i = 0; i < partitionCount; i++) {
-            tmpMaps[i] = new HashMap<>();
-        }
+    protected EntryProcessor<Data, V, Object> entryProcessor(Map<Data, Object> buffer) {
+        return new ApplyFnEntryProcessor<>(buffer, updateFn);
     }
 
     @Override
-    protected void processInternal(Inbox inbox) {
-        if (pendingItemCount < PENDING_ITEM_COUNT_LIMIT) {
-            pendingItemCount += inbox.size();
-            inbox.drain(addToBuffer);
-        }
-        submitPending();
-    }
-
-    @Override
-    protected boolean flushInternal() {
-        return submitPending();
-    }
-
-    // returns if we were able to submit all pending items
-    private boolean submitPending() {
-        if (pendingItemCount == 0) {
-            return true;
-        }
-        for (int i = 0; i < tmpMaps.length; i++, currentPartitionId = incrCircular(currentPartitionId, tmpMaps.length)) {
-            if (tmpMaps[currentPartitionId].isEmpty()) {
-                continue;
-            }
-            if (!tryAcquirePermit()) {
-                return false;
-            }
-
-            Map<Data, Object> buffer = tmpMaps[currentPartitionId];
-            ApplyFnEntryProcessor<Data, V, T, R> entryProcessor = new ApplyFnEntryProcessor<>(buffer, updateFn);
-            setCallback(map.submitToKeys(buffer.keySet(), entryProcessor));
-            pendingItemCount -= tmpCounts[currentPartitionId];
-            tmpCounts[currentPartitionId] = 0;
-            tmpMaps[currentPartitionId] = new HashMap<>();
-        }
-        if (currentPartitionId == tmpMaps.length) {
-            currentPartitionId = 0;
-        }
-        assert pendingItemCount == 0 : "pending item count should be 0, but was " + pendingItemCount;
-        return true;
-    }
-
-    private void addToBuffer(T item) {
-        K key = toKeyFn.apply(item);
-        Data keyData;
-        if (isLocal()) {
-            // We pre-serialize the key and value to avoid double serialization when partitionId
-            // is calculated and when the value for backup operation is re-serialized
-            keyData = serializationService.toData(key, ((MapProxyImpl) map).getPartitionStrategy());
-        } else {
-            // We ignore partition strategy for remote connection, the client doesn't know it.
-            // TODO we might be able to fix this after https://github.com/hazelcast/hazelcast/issues/13950 is fixed
-            // The functionality should work, but will be ineffective: the submitOnKey calls will have wrongly
-            // partitioned data.
-            keyData = serializationService.toData(key);
-        }
-        int partitionId = getPartitionId(keyData);
-        Data itemData = serializationService.toData(item);
-        tmpMaps[partitionId].merge(keyData, itemData, remappingFunction);
-        tmpCounts[partitionId]++;
-    }
-
-    /**
-     * Returns {@code v+1} or 0, if {@code v+1 == limit}.
-     */
-    @CheckReturnValue
-    private static int incrCircular(int v, int limit) {
-        v++;
-        if (v == limit) {
-            v = 0;
-        }
-        return v;
-    }
-
-    static class Supplier<T, K, V> extends AbstractHazelcastConnectorSupplier {
-
-        static final long serialVersionUID = 1L;
-
-        private String name;
-        private final FunctionEx<? super T, ? extends K> toKeyFn;
-        private final BiFunctionEx<? super V, ? super T, ? extends V> updateFn;
-
-        Supplier(@Nullable String clientXml,
-                 @Nonnull String name,
-                 @Nonnull FunctionEx<? super T, ? extends K> toKeyFn,
-                 @Nonnull BiFunctionEx<? super V, ? super T, ? extends V> updateFn
-        ) {
-            super(clientXml);
-            this.name = name;
-            this.toKeyFn = toKeyFn;
-            this.updateFn = updateFn;
-        }
-
-        @Override
-        protected Processor createProcessor(HazelcastInstance instance, SerializationService serializationService) {
-            return new UpdateMapP<>(
-                instance, MAX_PARALLEL_ASYNC_OPS_DEFAULT, name, toKeyFn, updateFn
-            );
-        }
+    protected void addToBuffer(T item) {
+        K key = keyFn.apply(item);
+        Data keyData = env.serializeKey(key);
+        int partitionId = env.getPartitionId(keyData);
+        Data itemData = env.serializeItem(item);
+        partitionBuffers[partitionId].merge(keyData, itemData, remappingFunction);
+        pendingInPartition[partitionId]++;
     }
 
     @SuppressFBWarnings(value = {"SE_BAD_FIELD", "SE_NO_SERIALVERSIONID"},
@@ -328,6 +199,33 @@ public final class UpdateMapP<T, K, V, R> extends AsyncHazelcastWriterP {
             }
             list.add(item);
             return list;
+        }
+    }
+
+    static class Supplier<T, K, V> extends AbstractHazelcastConnectorSupplier {
+
+        static final long serialVersionUID = 1L;
+
+        private final String name;
+        private final FunctionEx<? super T, ? extends K> toKeyFn;
+        private final BiFunctionEx<? super V, ? super T, ? extends V> updateFn;
+
+        Supplier(@Nullable String clientXml,
+                 @Nonnull String name,
+                 @Nonnull FunctionEx<? super T, ? extends K> toKeyFn,
+                 @Nonnull BiFunctionEx<? super V, ? super T, ? extends V> updateFn
+        ) {
+            super(clientXml);
+            this.name = name;
+            this.toKeyFn = toKeyFn;
+            this.updateFn = updateFn;
+        }
+
+        @Override
+        protected Processor createProcessor(HazelcastInstance instance, SerializationService serializationService) {
+            return new UpdateMapP<>(
+                    instance, MAX_PARALLEL_ASYNC_OPS_DEFAULT, name, toKeyFn, updateFn
+            );
         }
     }
 }
