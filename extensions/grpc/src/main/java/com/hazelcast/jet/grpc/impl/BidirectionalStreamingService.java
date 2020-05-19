@@ -19,6 +19,7 @@ package com.hazelcast.jet.grpc.impl;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.core.Processor.Context;
+import com.hazelcast.jet.grpc.GrpcProperties;
 import com.hazelcast.jet.grpc.GrpcService;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.spi.properties.HazelcastProperties;

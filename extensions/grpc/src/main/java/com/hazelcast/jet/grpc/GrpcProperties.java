@@ -14,8 +14,9 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.grpc.impl;
+package com.hazelcast.jet.grpc;
 
+import com.hazelcast.jet.grpc.impl.BidirectionalStreamingService;
 import com.hazelcast.spi.properties.HazelcastProperty;
 import io.grpc.stub.StreamObserver;
 
@@ -23,6 +24,8 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 
 /**
  * Properties of the grpc module
+ *
+ * @since 4.2
  */
 public final class GrpcProperties {
 
@@ -32,21 +35,17 @@ public final class GrpcProperties {
      * You may want to increase this value when your gRPC calls take longer than 1 s to cleanly shutdown the service.
      * <p>
      * The default value is 1 s
-     *
-     * @since 4.2
      */
     public static final HazelcastProperty DESTROY_TIMEOUT
-            = new HazelcastProperty("jet.grpc.destroy.timeout", 1, SECONDS);
+            = new HazelcastProperty("jet.grpc.destroy.timeout.seconds", 1, SECONDS);
 
     /**
      * Time to wait for clean shutdown of a {@link io.grpc.ManagedChannel}
      * <p>
      * The default value is 1 s
-     *
-     * @since 4.2
      */
     public static final HazelcastProperty SHUTDOWN_TIMEOUT
-            = new HazelcastProperty("jet.grpc.shutdown.timeout", 1, SECONDS);
+            = new HazelcastProperty("jet.grpc.shutdown.timeout.seconds", 1, SECONDS);
 
     private GrpcProperties() {
     }
