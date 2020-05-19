@@ -53,6 +53,8 @@ public final class WriteObservableP<T> extends AsyncHazelcastWriterP {
 
     @Override
     public void init(@Nonnull Outbox outbox, @Nonnull Context context) {
+        super.init(outbox, context);
+
         // we want to potentially create the Ringbuffer as lately as possible to
         // maximize the window when its properties (like capacity) can still be
         // configured

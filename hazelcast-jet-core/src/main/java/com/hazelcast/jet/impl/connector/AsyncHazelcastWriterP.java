@@ -23,6 +23,7 @@ import com.hazelcast.core.HazelcastInstanceNotActiveException;
 import com.hazelcast.instance.impl.HazelcastInstanceImpl;
 import com.hazelcast.internal.partition.IPartitionService;
 import com.hazelcast.jet.core.Inbox;
+import com.hazelcast.jet.core.Outbox;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.Watermark;
 import com.hazelcast.jet.impl.util.ImdgUtil;
@@ -61,10 +62,17 @@ public abstract class AsyncHazelcastWriterP implements Processor {
         }
     });
 
+    private PartitionService partitionService;
+
     AsyncHazelcastWriterP(HazelcastInstance instance, int maxParallelAsyncOps) {
         this.instance = instance;
         this.maxParallelAsyncOps = maxParallelAsyncOps;
         this.isLocal = ImdgUtil.isMemberInstance(instance);
+    }
+
+    @Override
+    public void init(@Nonnull Outbox outbox, @Nonnull Context context) {
+        partitionService = new PartitionService(instance());
     }
 
     @Override
@@ -123,6 +131,14 @@ public abstract class AsyncHazelcastWriterP implements Processor {
         return tryIncrement(numConcurrentOps, 1, maxParallelAsyncOps);
     }
 
+    protected final int getPartitionCount() {
+        return partitionService.getPartitionCount();
+    }
+
+    protected final int getPartitionId(Object key) {
+        return partitionService.getPartitionId(key);
+    }
+
     /**
      * Acquires as many permits as we are able to immediately, up to
      * desiredNumber. Returns the number of actually acquired permits. Can
@@ -165,12 +181,12 @@ public abstract class AsyncHazelcastWriterP implements Processor {
         return allWritten;
     }
 
-    static class PartitionInfo {
+    static class PartitionService {
 
         private final IntSupplier count;
         private final ToIntFunction<Object> ids;
 
-        PartitionInfo(HazelcastInstance instance) {
+        PartitionService(HazelcastInstance instance) {
             if (ImdgUtil.isMemberInstance(instance)) {
                 HazelcastInstanceImpl castInstance = (HazelcastInstanceImpl) instance;
                 IPartitionService memberPartitionService = castInstance.node.nodeEngine.getPartitionService();

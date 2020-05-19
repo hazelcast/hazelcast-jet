@@ -44,7 +44,6 @@ public class UpdateMapWithMaterializedValuesP<T, K, V> extends AsyncHazelcastWri
     private final FunctionEx<? super T, ? extends K> keyFn;
     private final FunctionEx<? super T, ? extends V> valueFn;
 
-    private PartitionInfo partitionInfo;
     private IMap<K, V> map;
 
     // one map per partition to store the updates
@@ -68,10 +67,11 @@ public class UpdateMapWithMaterializedValuesP<T, K, V> extends AsyncHazelcastWri
 
     @Override
     public void init(@Nonnull Outbox outbox, @Nonnull Context context) {
-        map = instance().getMap(mapName);
-        partitionInfo = new PartitionInfo(instance());
+        super.init(outbox, context);
 
-        int partitionCount = partitionInfo.getPartitionCount();
+        map = instance().getMap(mapName);
+
+        int partitionCount = getPartitionCount();
         tmpMaps = new Map[partitionCount];
         tmpCounts = new int[partitionCount];
         for (int i = 0; i < partitionCount; i++) {
@@ -124,7 +124,7 @@ public class UpdateMapWithMaterializedValuesP<T, K, V> extends AsyncHazelcastWri
         K key = keyFn.apply(item);
         V value = valueFn.apply(item);
 
-        int partitionId = partitionInfo.getPartitionId(key);
+        int partitionId = getPartitionId(key);
 
         Map<K, V> tmpMap = tmpMaps[partitionId];
         if (!tmpMap.containsKey(key)) {

@@ -63,7 +63,6 @@ public final class UpdateMapP<T, K, V, R> extends AsyncHazelcastWriterP {
     private final BiFunction<Object, Object, Object> remappingFunction =
             (o, n) -> ApplyFnEntryProcessor.append(o, (Data) n);
 
-    private PartitionInfo partitionInfo;
     private SerializationService serializationService;
     private IMap<Data, V> map;
 
@@ -88,8 +87,9 @@ public final class UpdateMapP<T, K, V, R> extends AsyncHazelcastWriterP {
 
     @Override
     public void init(@Nonnull Outbox outbox, @Nonnull Context context) {
+        super.init(outbox, context);
+
         map = instance().getMap(mapName);
-        partitionInfo = new PartitionInfo(instance());
         if (isLocal()) {
             HazelcastInstanceImpl castInstance = (HazelcastInstanceImpl) instance();
             serializationService = castInstance.getSerializationService();
@@ -97,7 +97,7 @@ public final class UpdateMapP<T, K, V, R> extends AsyncHazelcastWriterP {
             HazelcastClientProxy clientProxy = (HazelcastClientProxy) instance();
             serializationService = clientProxy.getSerializationService();
         }
-        int partitionCount = partitionInfo.getPartitionCount();
+        int partitionCount = getPartitionCount();
         tmpMaps = new Map[partitionCount];
         tmpCounts = new int[partitionCount];
         for (int i = 0; i < partitionCount; i++) {
@@ -160,7 +160,7 @@ public final class UpdateMapP<T, K, V, R> extends AsyncHazelcastWriterP {
             // partitioned data.
             keyData = serializationService.toData(key);
         }
-        int partitionId = partitionInfo.getPartitionId(keyData);
+        int partitionId = getPartitionId(keyData);
         Data itemData = serializationService.toData(item);
         tmpMaps[partitionId].merge(keyData, itemData, remappingFunction);
         tmpCounts[partitionId]++;
