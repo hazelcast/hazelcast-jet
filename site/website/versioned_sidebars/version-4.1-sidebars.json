@@ -48,7 +48,8 @@
       "version-4.1-operations/job-management",
       "version-4.1-operations/kubernetes",
       "version-4.1-operations/monitoring",
-      "version-4.1-operations/version-compatibility"
+      "version-4.1-operations/version-compatibility",
+      "version-4.1-operations/docker"
     ],
     "Architecture": [
       "version-4.1-architecture/distributed-computing",

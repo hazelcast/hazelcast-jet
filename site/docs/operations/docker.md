@@ -1,0 +1,283 @@
+---
+title: Hazelcast Jet with Docker
+description: How to use Jet in a Docker environment
+---
+
+# Hazelcast Jet with Docker
+
+This section provides comprehensive coverage of usage of Hazelcast Jet
+inside a Docker environment. While it gives an explanation of all
+options and parameters used in the examples it is recommended to be
+familiar with Docker, visit e.g. the [official
+documentation](https://docs.docker.com/get-started/) for a beginner
+focused tutorial.
+
+# Start Hazelcast Jet node
+
+Let's begin with starting an instance of Hazelcast Jet using the
+official Docker image. To start the instance simply execute the
+following command in your terminal:
+
+```bash
+docker run hazelcast/hazelcast-jet
+```
+
+If you previously haven't run Hazelcast Jet Docker image, it will
+download the latest version of the image from [Docker
+hub](https://hub.docker.com/r/hazelcast/hazelcast-jet/). You can check
+the version of Jet in the logs, look for a line similar to this one:
+
+```text
+2020-05-18 19:34:43,872 [ INFO] [main] [c.h.system]: Hazelcast Jet 4.1 (20200429 - e6c60a1) starting at [172.17.0.2]:5701
+```
+
+You can also verify the version of Hazelcast Jet by running a following
+command without starting a full instance:
+
+```bash
+docker run hazelcast/hazelcast-jet jet --version
+```
+
+If your `hazelcast/hazelcast-jet` latest image points to an older
+version you can update it by running the following command:
+
+```bash
+docker pull hazelcast/hazelcast-jet
+```
+
+You should get output similar to:
+
+```text
+$ docker run hazelcast/hazelcast-jet jet --version
+Hazelcast Jet 4.1
+Revision e6c60a1
+Build 20200429
+```
+
+You can also specify particular version of the image to run when
+starting the container, e.g. when you need to run older version of Jet:
+
+```bash
+docker run hazelcast/hazelcast-jet:4.0
+```
+
+## Submit job to Hazelcast Jet
+
+Download the jet distribution from
+[here](https://github.com/hazelcast/hazelcast-jet/releases/download/v4.1/hazelcast-jet-4.1.tar.gz)
+
+Also note the address of your Hazelcast Jet instance from the log:
+
+```text
+Members {size:1, ver:1} [
+    Member [172.17.0.2]:5701 - c54413e4-2cd2-4c07-91ec-d5992b18f9b0 this
+]
+```
+
+Run the following command to submit a hello world job to your Hazelcast
+Jet instance:
+
+```bash
+docker run -it -v "$(pwd)"/examples:/examples hazelcast/hazelcast-jet jet -a 172.17.0.2 submit /examples/hello-world.jar
+```
+
+The parameters are as follows:
+
+* -it allocates interactive terminal, allowing you to cancel the submit
+  command by pressing Ctrl+C
+* -v "$(pwd)"/examples:/examples mounts folder `examples` from your
+  current directory to `/examples` directory inside the container
+* -a 172.17.0.2 - shortcut for `--addresses`, specifies an address of
+  running Hazelcast Jet instance, needs to be specified because the
+  instance is not running on localhost:5701
+* `submit` command to submit a job
+* `/examples/hello-world.jar` path to a jar with a job inside the
+  container
+
+You can list the running jobs inside the cluster by running the
+follwing command:
+
+```bash
+docker run hazelcast/hazelcast-jet jet -a 172.17.0.2 list-jobs
+```
+
+which gives an output similar to:
+
+```text
+$ docker run hazelcast/hazelcast-jet jet -a 172.17.0.2 list-jobs
+ID                  STATUS             SUBMISSION TIME         NAME
+045e-987c-1940-0001 RUNNING            2020-05-18T20:08:03.020 hello-world
+```
+
+You can cancel a running job by running the following command:
+
+```bash
+docker run hazelcast/hazelcast-jet jet -a 172.17.0.2 cancel 045e-987c-1940-0001
+```
+
+### Using local distribution
+
+Alternatively you can use the downloaded distribution to submit a job to
+a cluster directly:
+
+```bash
+bin/jet -a 172.17.0.2 submit examples/hellow-world.jar
+```
+
+In some environments (e.g. on Windows or macOS) the container may not be
+directly accessible via network from your host machine. In that case you
+may expose a particular port of the container on your local machine.
+
+Stop the Jet instance and run:
+
+```bash
+docker run -p 5701:5701 hazelcast/hazelcast-jet
+```
+
+Then you don't need to specify an address for the submit command:
+
+```bash
+bin/jet submit examples/hellow-world.jar
+```
+
+## Start Jet cluster
+
+While running a cluster locally will not give you any computational
+advantage, it will allow you to test your pipelines in a distributed
+environment.
+
+The simplest way to start a cluster is to start multiple docker
+instances. Just run the `docker run` command from multiple terminals:
+
+```bash
+docker run hazelcast/hazelcast-jet
+```
+
+Eventually, the instances should discover each other and you should
+see output similar to:
+
+```text
+Members {size:2, ver:2} [
+    Member [172.17.0.2]:5701 - df428435-8cbd-464d-8671-afe396f5eef6
+    Member [172.17.0.3]:5701 - 011a9dd4-936f-4170-a7c6-622b7430b789 this
+]
+```  
+
+You can use any instance ip to submit jobs to the cluster. Jet will
+take care of distributing it across all instances.
+
+## Docker compose example
+
+When the configuration is more involved, including networks, volumes
+etc. it is usually easier to create a `docker-compose.yml` file. It
+ also provides an advantage that you can easily scale the Jet cluster:
+
+Create a file called `docker-compose.yml`:
+
+```yaml
+version: '3'
+
+services:
+  jet:
+    image: hazelcast/hazelcast-jet
+```
+
+And then start 3 node cluster by running the following command:
+
+```bash
+docker-compose up --scale jet=3
+```
+
+You should eventually see a 3 node cluster formed, note that you will
+see the output multiple times, prefixed by the container name:
+
+```text
+jet_3  | Members {size:3, ver:3} [
+jet_3  |    Member [172.21.0.3]:5701 - 99d3de67-8c5d-452b-8165 -085a4cd1fcda
+jet_3  |    Member [172.21.0.2]:5701 - 64f5b01b-847e-49e0-87f2 -db2a6f7750b7
+jet_3  |    Member [172.21.0.4]:5701 - ffa362f9-617d-42bc-a74c -05ce857e8e48 this
+jet_3  | ]
+```
+
+### Configuration
+
+You can provide custom `hazelcast.yaml` or `hazelcast-jet.yaml`
+configuration files by using a volume:
+
+```yaml
+version: '3'
+
+services:
+
+  jet:
+    image: hazelcast/hazelcast-jet
+    volumes:
+      - ./hazelcast.yaml:/opt/hazelcast-jet/config/hazelcast.yaml
+```
+
+To see the default content of the files run the following command:
+
+```bash
+docker run hazelcast/hazelcast-jet cat /opt/hazelcast-jet/config/hazelcast-jet.yaml
+```
+
+## Package job as a docker image
+
+When your architecture is Docker focused it might be easier to have
+also your job packaged as a Docker image. We will use Hazelcast Jet
+image as base image and create an image with hello world job. You can
+use the same approach to package any job.
+
+Create a file called `Dockerfile` in the <jet home> directory.
+
+```text
+FROM hazelcast/hazelcast-jet
+
+ADD examples/hello-world.jar /examples/
+
+ENV ADDRESSES 172.17.0.2
+
+CMD ["sh", "-c", "jet -a $ADDRESSES submit /examples/hello-world.jar"]
+```
+
+The first line specifies `hazelcast/hazelcast-jet` image as base image.
+The `ADD` command copies the `hello-world.jar` to the `/examples`
+directory inside the container image. `ENV` command defines an
+environment variable `ADDRESSES` with default value of `172.17.0.2`.
+This can be overriden via `-e` parameter of the `docker run`
+command. The `CMD` command specifies what command to run.
+
+Then create the image by running the following command:
+
+```bash
+docker build . -t hazelcast-jet-hello-world
+```
+
+You should see output similar to this:
+
+```text
+Sending build context to Docker daemon  77.35MB
+Step 1/4 : FROM hazelcast/hazelcast-jet:4.1
+ ---> c126c24c3d0b
+Step 2/4 : ADD examples/hello-world.jar /examples/
+ ---> Using cache
+ ---> 2e3fa98d0c7e
+Step 3/4 : ENV ADDRESSES 172.17.0.2
+ ---> Using cache
+ ---> f96d01158d6e
+Step 4/4 : CMD ["sh", "-c", "jet -a $ADDRESSES submit /examples/hello-world.jar"]
+ ---> Using cache
+ ---> 6bc0f527b69c
+Successfully built 6bc0f527b69c
+Successfully tagged hazelcast-jet-hello-world:latest
+```
+
+Now you can submit the job by creating a container from the newly built
+image:
+
+```bash
+docker run -it hazelcast-jet-hello-world
+```
+
+> You don't need the `-it` parameters if your job class exits after
+> the jobs is submitted
