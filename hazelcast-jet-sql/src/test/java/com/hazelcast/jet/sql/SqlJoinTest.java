@@ -19,6 +19,10 @@ package com.hazelcast.jet.sql;
 import com.hazelcast.jet.SimpleTestInClusterSupport;
 import com.hazelcast.jet.kafka.impl.KafkaTestSupport;
 import com.hazelcast.jet.sql.impl.connector.kafka.KafkaSqlConnector;
+import com.hazelcast.sql.SqlCursor;
+import com.hazelcast.sql.SqlRow;
+import com.hazelcast.sql.SqlService;
+import com.hazelcast.sql.impl.connector.LocalPartitionedMapConnector;
 import org.apache.kafka.common.serialization.IntegerDeserializer;
 import org.apache.kafka.common.serialization.IntegerSerializer;
 import org.apache.kafka.common.serialization.StringDeserializer;
@@ -32,25 +36,23 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
+import java.util.Iterator;
+import java.util.Set;
 
-import static com.hazelcast.jet.sql.impl.schema.JetSchema.IMAP_LOCAL_SERVER;
-import static com.hazelcast.jet.sql.impl.schema.JetSchema.OPTION_CLASS_NAME;
+import static com.hazelcast.jet.sql.impl.connector.kafka.KafkaSqlConnector.TO_KEY_CLASS;
+import static com.hazelcast.sql.impl.connector.SqlKeyValueConnector.TO_VALUE_CLASS;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
-import static java.util.stream.Collectors.toSet;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.Assert.assertEquals;
 
 public class SqlJoinTest extends SimpleTestInClusterSupport {
 
-    private static final String KAFKA_CONNECTOR_NAME = "kafka";
     private static final int INITIAL_PARTITION_COUNT = 4;
 
     private static KafkaTestSupport kafkaTestSupport;
-    private static JetSqlService sqlService;
+    private static SqlService sqlService;
 
     private String topicName;
     private String mapName;
@@ -61,11 +63,15 @@ public class SqlJoinTest extends SimpleTestInClusterSupport {
         kafkaTestSupport.createKafkaCluster();
         initialize(1, null);
 
-        sqlService = new JetSqlService(instance());
+        sqlService = instance().getHazelcastInstance().getSqlService();
+    }
 
-        sqlService.execute(format("CREATE FOREIGN DATA WRAPPER %s OPTIONS (%s '%s')",
-                KAFKA_CONNECTOR_NAME, OPTION_CLASS_NAME, KafkaSqlConnector.class.getName()));
-        sqlService.execute(format("CREATE SERVER %s FOREIGN DATA WRAPPER %s OPTIONS (" +
+    @Before
+    public void before() {
+        topicName = "k_" + randomString().replace('-', '_');
+        kafkaTestSupport.createTopic(topicName, INITIAL_PARTITION_COUNT);
+        sqlService.query(format("CREATE EXTERNAL TABLE %s (__key INT, this VARCHAR) TYPE \"%s\" " +
+                        "OPTIONS (" +
                         "%s '%s', " +
                         "%s '%s', " +
                         "%s '%s', " +
@@ -73,26 +79,19 @@ public class SqlJoinTest extends SimpleTestInClusterSupport {
                         "%s '%s', " +
                         "%s '%s'" +
                         ")",
-                "kafka_test_server", KAFKA_CONNECTOR_NAME,
+                topicName, KafkaSqlConnector.TYPE_NAME,
                 "\"bootstrap.servers\"", kafkaTestSupport.getBrokerConnectionString(),
                 "\"key.serializer\"", IntegerSerializer.class.getCanonicalName(),
                 "\"key.deserializer\"", IntegerDeserializer.class.getCanonicalName(),
                 "\"value.serializer\"", StringSerializer.class.getCanonicalName(),
                 "\"value.deserializer\"", StringDeserializer.class.getCanonicalName(),
-                "\"auto.offset.reset\"", "earliest")
-        );
-    }
-
-    @Before
-    public void before() {
-        topicName = "k_" + randomString().replace('-', '_');
-        kafkaTestSupport.createTopic(topicName, INITIAL_PARTITION_COUNT);
-        sqlService.execute(format("CREATE FOREIGN TABLE %s (__key INT, this VARCHAR) SERVER %s",
-                topicName, "kafka_test_server"));
+                "\"auto.offset.reset\"", "earliest"));
 
         mapName = "m_" + randomString().replace('-', '_');
-        sqlService.execute(format("CREATE FOREIGN TABLE %s (__key INT, this VARCHAR) SERVER %s",
-                mapName, IMAP_LOCAL_SERVER));
+        sqlService.query(format("CREATE EXTERNAL TABLE %s (__key INT, this VARCHAR) TYPE \"%s\" "
+                        + "OPTIONS (\"" + TO_KEY_CLASS + "\" 'java.lang.Integer',"
+                        + "\"" + TO_VALUE_CLASS + "\" 'java.lang.String')",
+                mapName, LocalPartitionedMapConnector.TYPE_NAME));
     }
 
     @AfterClass
@@ -217,22 +216,34 @@ public class SqlJoinTest extends SimpleTestInClusterSupport {
 
     @Test
     public void enrichment_join_fails_for_not_supported_connector() {
-        assertThatThrownBy(() -> sqlService.executeQuery(
+        assertThatThrownBy(() -> sqlService.query(
                 format("SELECT 1 FROM %s k JOIN %s m ON m.__key = k.__key", mapName, topicName)
-        )).isInstanceOf(UnsupportedOperationException.class);
+        )).hasCauseInstanceOf(UnsupportedOperationException.class)
+        .hasMessageContaining("Nested loop reader not supported for " + KafkaSqlConnector.class.getName());
     }
 
     private void assertRowsEventuallyAnyOrder(String sql, Collection<Row> expectedRows) {
-        BlockingQueue<Object[]> rows = new LinkedBlockingQueue<>();
-        sqlService.executeQuery(sql).addObserver(rows::add);
+        SqlCursor cursor = sqlService.query(sql);
 
-        assertTrueEventually(() -> assertEquals(expectedRows.size(), rows.size()), 5);
-        assertEquals(new HashSet<>(expectedRows), rows.stream().map(Row::new).collect(toSet()));
+        Iterator<SqlRow> iterator = cursor.iterator();
+        Set<Row> actualRows = new HashSet<>(expectedRows.size());
+        for (int i = 0; i < expectedRows.size(); i++) {
+            actualRows.add(new Row(cursor.getColumnCount(), iterator.next()));
+        }
+
+        assertEquals(new HashSet<>(expectedRows), actualRows);
     }
 
     private static final class Row {
 
-        Object[] values;
+        private Object[] values;
+
+        Row(int columnCount, SqlRow row) {
+            values = new Object[columnCount];
+            for (int i = 0; i < columnCount; i++) {
+                values[i] = row.getObject(i);
+            }
+        }
 
         Row(Object... values) {
             this.values = values;

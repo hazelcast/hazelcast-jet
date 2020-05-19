@@ -16,9 +16,13 @@
 
 package com.hazelcast.jet.sql;
 
-import com.hazelcast.jet.Observable;
 import com.hazelcast.jet.SimpleTestInClusterSupport;
 import com.hazelcast.map.IMap;
+import com.hazelcast.sql.SqlCursor;
+import com.hazelcast.sql.SqlRow;
+import com.hazelcast.sql.SqlService;
+import com.hazelcast.sql.impl.SqlRowImpl;
+import com.hazelcast.sql.impl.connector.LocalPartitionedMapConnector;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -29,17 +33,16 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
+import java.util.stream.StreamSupport;
 
 import static com.hazelcast.jet.core.TestUtil.createMap;
 import static com.hazelcast.jet.sql.impl.connector.imap.IMapSqlConnector.TO_VALUE_CLASS;
-import static com.hazelcast.jet.sql.impl.schema.JetSchema.IMAP_LOCAL_SERVER;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
-import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
 import static org.junit.Assert.assertEquals;
 
@@ -57,25 +60,26 @@ public class SqlTest extends SimpleTestInClusterSupport {
     private static final Person PERSON_BOB = new Person("Bob", 40);
     private static final Person PERSON_CECILE = new Person("Cecile", 50);
 
-    private static JetSqlService sqlService;
+    private static SqlService sqlService;
 
     @BeforeClass
     public static void beforeClass() {
         initialize(1, null);
-        sqlService = new JetSqlService(instance());
 
-        sqlService.execute(format("CREATE FOREIGN TABLE %s (__key INT, this VARCHAR) SERVER %s",
-                INT_TO_STRING_MAP_SRC, IMAP_LOCAL_SERVER));
-        sqlService.execute(format("CREATE FOREIGN TABLE %s (__key INT, this VARCHAR) SERVER %s",
-                INT_TO_STRING_MAP_SINK, IMAP_LOCAL_SERVER));
+        sqlService = instance().getHazelcastInstance().getSqlService();
 
-        sqlService.execute(format("CREATE FOREIGN TABLE %s (__key INT, name VARCHAR, age INT) SERVER %s OPTIONS (%s '%s')",
-                PERSON_MAP_SRC, IMAP_LOCAL_SERVER, TO_VALUE_CLASS, Person.class.getName()));
-        sqlService.execute(format("CREATE FOREIGN TABLE %s (__key INT, name VARCHAR, age INT) SERVER %s OPTIONS (%s '%s')",
-                PERSON_MAP_SINK, IMAP_LOCAL_SERVER, TO_VALUE_CLASS, Person.class.getName()));
+        sqlService.query(format("CREATE EXTERNAL TABLE %s (__key INT, this VARCHAR) TYPE \"%s\"",
+                INT_TO_STRING_MAP_SRC, LocalPartitionedMapConnector.TYPE_NAME));
+        sqlService.query(format("CREATE EXTERNAL TABLE %s (__key INT, this VARCHAR) TYPE \"%s\"",
+                INT_TO_STRING_MAP_SINK, LocalPartitionedMapConnector.TYPE_NAME));
 
-        sqlService.execute(format("CREATE FOREIGN TABLE %s (__key DECIMAL(10, 0), this CHAR) SERVER %s",
-                BIG_INTEGER_TO_CHAR_MAP, IMAP_LOCAL_SERVER));
+        sqlService.query(format("CREATE EXTERNAL TABLE %s (__key INT, name VARCHAR, age INT) TYPE \"%s\" OPTIONS (%s '%s')",
+                PERSON_MAP_SRC, LocalPartitionedMapConnector.TYPE_NAME, TO_VALUE_CLASS, Person.class.getName()));
+        sqlService.query(format("CREATE EXTERNAL TABLE %s (__key INT, name VARCHAR, age INT) TYPE \"%s\" OPTIONS (%s '%s')",
+                PERSON_MAP_SINK, LocalPartitionedMapConnector.TYPE_NAME, TO_VALUE_CLASS, Person.class.getName()));
+
+        sqlService.query(format("CREATE EXTERNAL TABLE %s (__key DECIMAL(10, 0), this CHAR) TYPE \"%s\"",
+                BIG_INTEGER_TO_CHAR_MAP, LocalPartitionedMapConnector.TYPE_NAME));
     }
 
     @Before
@@ -92,7 +96,7 @@ public class SqlTest extends SimpleTestInClusterSupport {
     }
 
     @Test
-    public void fullScan() throws Exception {
+    public void fullScan() {
         assertRowsAnyOrder(
                 "SELECT this, __key FROM " + INT_TO_STRING_MAP_SRC,
                 asList(
@@ -102,7 +106,7 @@ public class SqlTest extends SimpleTestInClusterSupport {
     }
 
     @Test
-    public void fullScan_person() throws Exception {
+    public void fullScan_person() {
         assertRowsAnyOrder(
                 "SELECT __key, name, age FROM " + PERSON_MAP_SRC + " p",
                 asList(
@@ -112,7 +116,7 @@ public class SqlTest extends SimpleTestInClusterSupport {
     }
 
     @Test
-    public void fullScan_star() throws Exception {
+    public void fullScan_star() {
         assertRowsAnyOrder(
                 "SELECT * FROM " + INT_TO_STRING_MAP_SRC,
                 asList(
@@ -122,50 +126,51 @@ public class SqlTest extends SimpleTestInClusterSupport {
     }
 
     @Test
-    public void fullScan_filter() throws Exception {
+    public void fullScan_filter() {
         assertRowsAnyOrder(
                 "SELECT this FROM " + INT_TO_STRING_MAP_SRC + " WHERE __key=1 or this='value-0'",
                 asList(new Row("value-1"), new Row("value-0")));
     }
 
     @Test
-    public void fullScan_projection() throws Exception {
+    public void fullScan_projection() {
         assertRowsAnyOrder(
                 "SELECT upper(this) FROM " + INT_TO_STRING_MAP_SRC + " WHERE this='value-1'",
                 singletonList(new Row("VALUE-1")));
     }
 
     @Test
-    public void fullScan_projection2() throws Exception {
+    public void fullScan_projection2() {
         assertRowsAnyOrder(
                 "SELECT this FROM " + INT_TO_STRING_MAP_SRC + " WHERE upper(this)='VALUE-1'",
                 singletonList(new Row("value-1")));
     }
 
     @Test
-    public void fullScan_projection3() throws Exception {
+    public void fullScan_projection3() {
         assertRowsAnyOrder(
                 "SELECT this FROM (SELECT upper(this) this FROM " + INT_TO_STRING_MAP_SRC + ") WHERE this='VALUE-1'",
                 singletonList(new Row("VALUE-1")));
     }
 
     @Test
-    public void fullScan_projection4() throws Exception {
+    public void fullScan_projection4() {
         assertRowsAnyOrder(
                 "SELECT upper(this) FROM " + INT_TO_STRING_MAP_SRC + " WHERE upper(this)='VALUE-1'",
                 singletonList(new Row("VALUE-1")));
     }
 
     @Test
-    public void selectWithoutFrom_unicode() throws Exception {
+    public void selectWithoutFrom_unicode() {
         assertRowsAnyOrder(
                 "SELECT '喷气式飞机'",
                 singletonList(new Row("喷气式飞机")));
     }
 
     @Test
-    public void selectWithConversion() throws Exception {
-        sqlService.execute("INSERT OVERWRITE " + BIG_INTEGER_TO_CHAR_MAP + " VALUES (12, 'a')").join();
+    public void selectWithConversion() {
+        SqlCursor cursor = sqlService.query("INSERT OVERWRITE " + BIG_INTEGER_TO_CHAR_MAP + " VALUES (12, 'a')");
+        cursor.iterator().forEachRemaining(o -> { });
 
         assertRowsAnyOrder(
                 "SELECT __key + 1, this FROM " + BIG_INTEGER_TO_CHAR_MAP,
@@ -198,20 +203,28 @@ public class SqlTest extends SimpleTestInClusterSupport {
     }
 
     private <K, V> void assertMap(String mapName, String sql, Map<K, V> expected) {
-        sqlService.execute(sql).join();
+        SqlCursor cursor = sqlService.query(sql);
+        cursor.iterator().forEachRemaining(o -> { });
         assertEquals(expected, new HashMap<>(instance().getMap(mapName)));
     }
 
-    private void assertRowsAnyOrder(String sql, Collection<Row> expectedRows) throws Exception {
-        Observable<Object[]> observable = sqlService.executeQuery(sql);
+    private void assertRowsAnyOrder(String sql, Collection<Row> expectedRows) {
+        SqlCursor cursor = sqlService.query(sql);
 
-        List<Object[]> result = observable.toFuture(str -> str.collect(toList())).get();
-        assertEquals(new HashSet<>(expectedRows), result.stream().map(Row::new).collect(toSet()));
+        Set<Row> result = StreamSupport.stream(cursor.spliterator(), false).map(Row::new).collect(toSet());
+        assertEquals(new HashSet<>(expectedRows), result);
     }
 
     private static final class Row {
 
         Object[] values;
+
+        Row(SqlRow sqlRow) {
+            values = new Object[((SqlRowImpl) sqlRow).getDelegate().getColumnCount()];
+            for (int i = 0; i < values.length; i++) {
+                values[i] = sqlRow.getObject(i);
+            }
+        }
 
         Row(Object... values) {
             this.values = values;

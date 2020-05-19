@@ -18,9 +18,9 @@ package com.hazelcast.jet.sql.impl.connector;
 
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.sql.impl.connector.SqlWriters.EntryWriter;
+import com.hazelcast.sql.impl.schema.ExternalTable.ExternalField;
 import org.junit.Test;
 
-import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.sql.impl.connector.SqlWriters.entryWriter;
 import static com.hazelcast.query.QueryConstants.KEY_ATTRIBUTE_NAME;
 import static com.hazelcast.query.QueryConstants.THIS_ATTRIBUTE_NAME;
@@ -51,7 +51,7 @@ public class SqlWritersTest {
         // When
         // Then
         assertThatThrownBy(() -> entryWriter(
-                singletonList(entry(KEY_ATTRIBUTE_NAME.value(), OBJECT)),
+                singletonList(new ExternalField(KEY_ATTRIBUTE_NAME.value(), OBJECT)),
                 AnObject.class.getName(),
                 AnObject.class.getName()
         )).isInstanceOf(JetException.class);
@@ -73,7 +73,7 @@ public class SqlWritersTest {
         // When
         // Then
         assertThatThrownBy(() -> entryWriter(
-                singletonList(entry(THIS_ATTRIBUTE_NAME.value(), OBJECT)),
+                singletonList(new ExternalField(THIS_ATTRIBUTE_NAME.value(), OBJECT)),
                 AnObject.class.getName(),
                 AnObject.class.getName()
         )).isInstanceOf(JetException.class);
@@ -83,7 +83,9 @@ public class SqlWritersTest {
     public void when_createsEntryWriterWithScalarKeyAndValue_then_succeeds() {
         // When
         EntryWriter writer = entryWriter(
-                asList(entry(KEY_ATTRIBUTE_NAME.value(), INT), entry(THIS_ATTRIBUTE_NAME.value(), BIGINT)),
+                asList(
+                        new ExternalField(KEY_ATTRIBUTE_NAME.value(), INT),
+                        new ExternalField(THIS_ATTRIBUTE_NAME.value(), BIGINT)),
                 null,
                 null
         );

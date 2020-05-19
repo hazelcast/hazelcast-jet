@@ -16,56 +16,35 @@
 
 package com.hazelcast.jet.sql.impl.schema;
 
-import com.hazelcast.jet.sql.SqlConnector;
-import com.hazelcast.sql.impl.type.QueryDataType;
-import org.apache.calcite.rel.type.RelDataType;
-import org.apache.calcite.rel.type.RelDataTypeFactory;
-import org.apache.calcite.schema.impl.AbstractTable;
-import org.apache.calcite.sql.type.SqlTypeName;
+import com.hazelcast.jet.sql.JetSqlConnector;
+import com.hazelcast.sql.impl.schema.Table;
+import com.hazelcast.sql.impl.schema.TableField;
+import com.hazelcast.sql.impl.schema.TableStatistics;
 
+import javax.annotation.Nonnull;
 import java.util.List;
-import java.util.Map.Entry;
+import java.util.Map;
 
-import static com.hazelcast.jet.impl.util.Util.toList;
+public abstract class JetTable extends Table {
 
-public abstract class JetTable extends AbstractTable {
+    private final JetSqlConnector sqlConnector;
 
-    private final SqlConnector sqlConnector;
-    private final List<Entry<String, QueryDataType>> fields;
-    private final List<String> fieldNames;
-    private final List<QueryDataType> fieldTypes;
-
-    protected JetTable(SqlConnector sqlConnector, List<Entry<String, QueryDataType>> fields) {
+    protected JetTable(
+            @Nonnull JetSqlConnector sqlConnector,
+            @Nonnull List<TableField> fields,
+            @Nonnull String schemaName,
+            @Nonnull String name,
+            @Nonnull TableStatistics statistics,
+            @Nonnull Map<String, String> ddlOptions
+    ) {
+        super(schemaName, name, fields, statistics, ddlOptions);
         this.sqlConnector = sqlConnector;
-
-        this.fields = fields;
-        this.fieldNames = toList(fields, Entry::getKey);
-        this.fieldTypes = toList(fields, Entry::getValue);
     }
 
     public abstract boolean isStream();
 
-    public SqlConnector getSqlConnector() {
+    @Nonnull
+    public JetSqlConnector getSqlConnector() {
         return sqlConnector;
-    }
-
-    public List<QueryDataType> getFieldTypes() {
-        return fieldTypes;
-    }
-
-    public List<String> getFieldNames() {
-        return fieldNames;
-    }
-
-    @Override
-    public RelDataType getRowType(RelDataTypeFactory typeFactory) {
-        RelDataTypeFactory.Builder builder = typeFactory.builder();
-        for (Entry<String, QueryDataType> field : fields) {
-            RelDataType type = typeFactory.createSqlType(SqlTypeName.ANY);
-
-            builder.add(field.getKey(), type)
-                   .nullable(true);
-        }
-        return builder.build();
     }
 }

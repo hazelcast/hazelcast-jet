@@ -2,6 +2,9 @@ package com.hazelcast.jet.sql;
 
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.SimpleTestInClusterSupport;
+import com.hazelcast.sql.SqlCursor;
+import com.hazelcast.sql.SqlService;
+import com.hazelcast.sql.impl.connector.LocalPartitionedMapConnector;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -26,7 +29,6 @@ import java.util.TimeZone;
 import static com.hazelcast.jet.core.TestUtil.createMap;
 import static com.hazelcast.jet.sql.impl.connector.imap.IMapSqlConnector.TO_KEY_CLASS;
 import static com.hazelcast.jet.sql.impl.connector.imap.IMapSqlConnector.TO_VALUE_CLASS;
-import static com.hazelcast.jet.sql.impl.schema.JetSchema.IMAP_LOCAL_SERVER;
 import static java.lang.String.format;
 import static java.time.ZoneOffset.UTC;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -39,21 +41,21 @@ public class SqlInsertTest extends SimpleTestInClusterSupport {
 
     private static final String ALL_TYPES_MAP = "all_types_map";
 
-    private static JetSqlService sqlService;
+    private static SqlService sqlService;
 
     @BeforeClass
     public static void beforeClass() {
         initialize(1, null);
-        sqlService = new JetSqlService(instance());
+        sqlService = instance().getHazelcastInstance().getSqlService();
 
-        sqlService.execute(format("CREATE FOREIGN TABLE %s (id INT, birthday DATE) SERVER %s OPTIONS (%s '%s', %s '%s')",
-                PERSON_MAP_SINK, IMAP_LOCAL_SERVER, TO_KEY_CLASS, Person.class.getName(), TO_VALUE_CLASS, Person.class.getName()));
+        sqlService.query(format("CREATE EXTERNAL TABLE %s (id INT, birthday DATE) TYPE \"%s\" OPTIONS (%s '%s', %s '%s')",
+                PERSON_MAP_SINK, LocalPartitionedMapConnector.TYPE_NAME, TO_KEY_CLASS, Person.class.getName(), TO_VALUE_CLASS, Person.class.getName()));
 
-        sqlService.execute(format("CREATE FOREIGN TABLE %s (nonExistingProperty INT) SERVER %s OPTIONS (%s '%s', %s '%s')",
-                OBJECT_MAP_SINK, IMAP_LOCAL_SERVER, TO_KEY_CLASS, SerializableObject.class.getName(), TO_VALUE_CLASS, SerializableObject.class.getName()));
+        sqlService.query(format("CREATE EXTERNAL TABLE %s (nonExistingProperty INT) TYPE \"%s\" OPTIONS (%s '%s', %s '%s')",
+                OBJECT_MAP_SINK, LocalPartitionedMapConnector.TYPE_NAME, TO_KEY_CLASS, SerializableObject.class.getName(), TO_VALUE_CLASS, SerializableObject.class.getName()));
 
         // an IMap with a field of every type
-        sqlService.execute(format("CREATE FOREIGN TABLE %s (" +
+        sqlService.query(format("CREATE EXTERNAL TABLE %s (" +
                         "__key DECIMAL(10, 0), " +
                         "string VARCHAR," +
                         "character0 CHAR, " +
@@ -84,8 +86,8 @@ public class SqlInsertTest extends SimpleTestInClusterSupport {
                         "offsetDateTime TIMESTAMP WITH TIME ZONE " +
                         /*"yearMonthInterval INTERVAL_YEAR_MONTH, " +
                         "offsetDateTime INTERVAL_DAY_SECOND, " +*/
-                        ") SERVER %s OPTIONS (%s '%s')",
-                ALL_TYPES_MAP, IMAP_LOCAL_SERVER,
+                        ") TYPE \"%s\" OPTIONS (\"%s\" '%s')",
+                ALL_TYPES_MAP, LocalPartitionedMapConnector.TYPE_NAME,
                 TO_VALUE_CLASS, AllTypesValue.class.getName()
         ));
     }
@@ -257,12 +259,14 @@ public class SqlInsertTest extends SimpleTestInClusterSupport {
 
     @Test
     public void insert_intoMapFails() {
-        assertThatThrownBy(() -> sqlService.execute("INSERT INTO " + PERSON_MAP_SINK + "(birthday) VALUES ('2020-01-01')").join())
-                .isInstanceOf(JetException.class);
+        assertThatThrownBy(() -> sqlService.query("INSERT INTO " + PERSON_MAP_SINK + "(birthday) VALUES ('2020-01-01')"))
+                .isInstanceOf(JetException.class)
+                .hasMessage("IMapSqlConnector does not support plain INSERT INTO statement.");
     }
 
     private <K, V> void assertMap(String name, String sql, Map<K, V> expected) {
-        sqlService.execute(sql).join();
+        SqlCursor cursor = sqlService.query(sql);
+        cursor.iterator().forEachRemaining(o -> { });
         assertEquals(expected, new HashMap<>(instance().getMap(name)));
     }
 

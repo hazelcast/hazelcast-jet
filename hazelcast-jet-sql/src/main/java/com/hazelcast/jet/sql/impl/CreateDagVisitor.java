@@ -21,11 +21,23 @@ import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Vertex;
+import com.hazelcast.jet.sql.JetSqlConnector;
+import com.hazelcast.jet.sql.impl.connector.imap.IMapSqlConnector;
 import com.hazelcast.jet.sql.impl.expression.ExpressionUtil;
+import com.hazelcast.jet.sql.impl.expression.RexToExpressionVisitor;
 import com.hazelcast.jet.sql.impl.rel.FullScanPhysicalRel;
 import com.hazelcast.jet.sql.impl.rel.NestedLoopJoinPhysicalRel;
 import com.hazelcast.jet.sql.impl.rel.ProjectPhysicalRel;
 import com.hazelcast.jet.sql.impl.schema.JetTable;
+import com.hazelcast.sql.impl.calcite.schema.HazelcastTable;
+import com.hazelcast.sql.impl.expression.Expression;
+import com.hazelcast.sql.impl.plan.node.PlanNodeFieldTypeProvider;
+import com.hazelcast.sql.impl.plan.node.PlanNodeSchema;
+import com.hazelcast.sql.impl.schema.Table;
+import com.hazelcast.sql.impl.schema.TableField;
+import com.hazelcast.sql.impl.schema.map.PartitionedMapTable;
+import com.hazelcast.sql.impl.schema.map.ReplicatedMapTable;
+import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.util.ConversionUtil;
 import org.apache.calcite.util.NlsString;
 
@@ -34,6 +46,7 @@ import javax.annotation.Nullable;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.processor.Processors.mapP;
@@ -52,6 +65,63 @@ public class CreateDagVisitor {
         if (sink != null) {
             vertexStack.push(new VertexAndOrdinal(sink));
         }
+    }
+
+    public void onConnectorFullScan(FullScanPhysicalRel rel) {
+        Table table = rel.getTableUnwrapped();
+        PlanNodeSchema schema = new PlanNodeSchema(toList(table.getFields(), TableField::getType));
+        Expression<Boolean> predicate = convertFilter(schema, rel.getFilter());
+        List<Expression<?>> projection = rel.getProjection().stream()
+                                            .map(projectNode -> convertExpression(schema, projectNode, rel.getProjection().size()))
+                                            .collect(Collectors.toList());
+        Vertex vertex = getJetSqlConnector(table)
+                .fullScanReader(dag, table, null, predicate, projection);
+        assert vertex != null : "null subDag"; // we check for this earlier TODO check for it earlier :)
+        VertexAndOrdinal targetVertex = vertexStack.peek();
+        assert targetVertex != null : "targetVertex=null";
+        dag.edge(between(vertex, targetVertex.vertex));
+        targetVertex.ordinal++;
+    }
+
+    @SuppressWarnings("unchecked")
+    private Expression<Boolean> convertFilter(PlanNodeSchema schema, RexNode expression) {
+        if (expression == null) {
+            return null;
+        }
+        return (Expression<Boolean>) convertExpression(schema, expression, 0);
+    }
+
+    private Expression<?> convertExpression(PlanNodeFieldTypeProvider fieldTypeProvider, RexNode expression, int parameterCount) {
+        if (expression == null) {
+            return null;
+        }
+        RexToExpressionVisitor converter = new RexToExpressionVisitor(fieldTypeProvider, parameterCount);
+        return expression.accept(converter);
+    }
+
+    public void onTableInsert(JetTableInsertPhysicalRel rel) {
+        final HazelcastTable hzTable = rel.getTable().unwrap(HazelcastTable.class);
+        Table table = hzTable.getTarget();
+        JetSqlConnector connector = getJetSqlConnector(table);
+        Vertex vertex = connector.sink(dag, table);
+        if (vertex == null) {
+            throw new JetException("This connector doesn't support writing");
+        }
+        vertexStack.push(new VertexAndOrdinal(vertex));
+    }
+
+    private JetSqlConnector getJetSqlConnector(Table table) {
+        JetSqlConnector connector;
+        if (table instanceof JetTable) {
+            connector = ((JetTable) table).getSqlConnector();
+        } else if (table instanceof PartitionedMapTable) {
+            connector = new IMapSqlConnector();
+        } else if (table instanceof ReplicatedMapTable) {
+            throw new UnsupportedOperationException("Jet doesn't yet support writing to a ReplicatedMap");
+        } else {
+            throw new JetException("Unknown table type: " + table.getClass());
+        }
+        return connector;
     }
 
     public void onValues(JetValuesPhysicalRel rel) {
@@ -82,31 +152,12 @@ public class CreateDagVisitor {
         push(vertex);
     }
 
-    public void onTableInsert(JetTableInsertPhysicalRel rel) {
-        JetTable table = rel.getTable().unwrap(JetTable.class);
-
-        Vertex vertex = table.getSqlConnector().sink(dag, table);
-        if (vertex == null) {
-            throw new JetException("This connector doesn't support writing");
-        }
-
-        vertexStack.push(new VertexAndOrdinal(vertex)); // TODO: unify, use push() ?
-    }
-
-    public void onConnectorFullScan(FullScanPhysicalRel rel) {
-        JetTable table = rel.getTableUnwrapped();
-
-        Vertex vertex = table.getSqlConnector()
-                             .fullScanReader(dag, table, null, rel.filter(), rel.projection());
-        push(vertex);
-    }
-
     public void onNestedLoopRead(NestedLoopJoinPhysicalRel rel) {
         FullScanPhysicalRel rightRel = (FullScanPhysicalRel) rel.getRight();
 
-        JetTable table = rightRel.getTableUnwrapped();
+        Table table = rightRel.getTableUnwrapped();
 
-        Vertex vertex = table.getSqlConnector()
+        Vertex vertex = getJetSqlConnector(table)
                              .nestedLoopReader(dag, table, rightRel.filter(), rightRel.projection(), rel.condition());
         push(vertex);
     }

@@ -16,7 +16,7 @@
 
 package com.hazelcast.jet.sql.impl;
 
-import com.hazelcast.jet.sql.impl.schema.JetTable;
+import com.hazelcast.sql.impl.calcite.schema.HazelcastTable;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptCost;
 import org.apache.calcite.plan.RelOptPlanner;
@@ -52,8 +52,8 @@ public class JetTableInsertLogicalRel extends TableModify implements LogicalRel 
                 updateColumnList, sourceExpressionList, flattened);
         assert input.getConvention() == CONVENTION_LOGICAL : "input.convention=" + input.getConvention();
         assert getConvention() == CONVENTION_LOGICAL;
-        final JetTable jetTable = table.unwrap(JetTable.class);
-        if (jetTable == null) {
+        final HazelcastTable hzTable = table.unwrap(HazelcastTable.class);
+        if (hzTable == null) {
             throw new AssertionError(); // TODO: user error in validator
         }
     }

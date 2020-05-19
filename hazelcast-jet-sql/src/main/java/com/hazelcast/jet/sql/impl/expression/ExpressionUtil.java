@@ -18,12 +18,12 @@ package com.hazelcast.jet.sql.impl.expression;
 
 import com.hazelcast.function.BiFunctionEx;
 import com.hazelcast.function.FunctionEx;
-import com.hazelcast.jet.sql.impl.schema.JetTable;
 import com.hazelcast.sql.impl.expression.ConstantExpression;
 import com.hazelcast.sql.impl.expression.Expression;
 import com.hazelcast.sql.impl.expression.ExpressionEvalContext;
 import com.hazelcast.sql.impl.row.HeapRow;
 import com.hazelcast.sql.impl.row.Row;
+import com.hazelcast.sql.impl.schema.Table;
 import com.hazelcast.sql.impl.type.QueryDataType;
 import org.apache.commons.beanutils.PropertyUtils;
 
@@ -68,12 +68,12 @@ public final class ExpressionUtil {
      * all the projections
      */
     public static FunctionEx<Entry<Object, Object>, Object[]> projectionFn(
-            @Nonnull JetTable jetTable,
+            @Nonnull Table jetTable,
             @Nullable Expression<Boolean> predicate,
             @Nonnull List<Expression<?>> projections
     ) {
         // convert the projection
-        List<String> fieldNames0 = toList(jetTable.getFieldNames(), fieldName -> {
+        List<String> fieldNames0 = toList(jetTable.getFields(), field -> {
             // convert field name, the property path must start with "key" or "value", we're getting
             // it from a java.util.Map.Entry. Examples:
             //     "__key" -> "key"
@@ -81,6 +81,7 @@ public final class ExpressionUtil {
             //     "fieldB" -> "value.fieldB"
             //     "this" -> "value"
             //     "this.fieldB" -> "value.fieldB"
+            String fieldName = field.getName();
             if (fieldName.equals(KEY_ATTRIBUTE_NAME.value())) {
                 return "key";
             } else if (fieldName.startsWith(KEY_ATTRIBUTE_NAME.value())) {

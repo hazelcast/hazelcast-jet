@@ -16,15 +16,16 @@
 
 package com.hazelcast.jet.sql.impl.connector.kafka;
 
-import com.hazelcast.jet.sql.SqlConnector;
+import com.hazelcast.jet.sql.JetSqlConnector;
 import com.hazelcast.jet.sql.impl.connector.SqlWriters.EntryWriter;
 import com.hazelcast.jet.sql.impl.schema.JetTable;
-import com.hazelcast.sql.impl.type.QueryDataType;
+import com.hazelcast.sql.impl.schema.TableField;
+import com.hazelcast.sql.impl.schema.TableStatistics;
 import org.apache.calcite.schema.Table;
 
 import javax.annotation.Nonnull;
 import java.util.List;
-import java.util.Map.Entry;
+import java.util.Map;
 import java.util.Properties;
 
 /**
@@ -37,13 +38,17 @@ public class KafkaTable extends JetTable {
     private final Properties kafkaProperties;
 
     public KafkaTable(
-            @Nonnull SqlConnector sqlConnector,
+            @Nonnull JetSqlConnector sqlConnector,
+            @Nonnull String schemaName,
+            @Nonnull String name,
+            @Nonnull TableStatistics statistics,
             @Nonnull String topicName,
-            @Nonnull List<Entry<String, QueryDataType>> fields,
+            @Nonnull List<TableField> fields,
             @Nonnull EntryWriter writer,
-            @Nonnull Properties kafkaProperties
+            @Nonnull Properties kafkaProperties,
+            @Nonnull Map<String, String> ddlOptions
     ) {
-        super(sqlConnector, fields);
+        super(sqlConnector, fields, schemaName, name, statistics, ddlOptions);
         this.topicName = topicName;
         this.writer = writer;
         this.kafkaProperties = kafkaProperties;

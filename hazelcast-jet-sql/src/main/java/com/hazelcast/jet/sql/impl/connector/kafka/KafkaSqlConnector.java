@@ -17,16 +17,18 @@
 package com.hazelcast.jet.sql.impl.connector.kafka;
 
 import com.hazelcast.function.FunctionEx;
-import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.kafka.KafkaProcessors;
-import com.hazelcast.jet.sql.SqlConnector;
+import com.hazelcast.jet.sql.JetSqlConnector;
 import com.hazelcast.jet.sql.impl.connector.SqlWriters.EntryWriter;
-import com.hazelcast.jet.sql.impl.schema.JetTable;
+import com.hazelcast.spi.impl.NodeEngine;
+import com.hazelcast.sql.impl.connector.SqlKeyValueConnector;
 import com.hazelcast.sql.impl.expression.Expression;
-import com.hazelcast.sql.impl.expression.ExpressionEvalContext;
-import com.hazelcast.sql.impl.type.QueryDataType;
+import com.hazelcast.sql.impl.schema.ConstantTableStatistics;
+import com.hazelcast.sql.impl.schema.ExternalTable.ExternalField;
+import com.hazelcast.sql.impl.schema.Table;
+import com.hazelcast.sql.impl.schema.TableField;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 
 import javax.annotation.Nonnull;
@@ -40,10 +42,13 @@ import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.EventTimePolicy.noEventTime;
 import static com.hazelcast.jet.core.processor.Processors.mapP;
+import static com.hazelcast.jet.impl.util.Util.toList;
 import static com.hazelcast.jet.sql.impl.connector.SqlWriters.entryWriter;
 import static com.hazelcast.jet.sql.impl.expression.ExpressionUtil.projectionFn;
 
-public class KafkaSqlConnector implements SqlConnector {
+public class KafkaSqlConnector extends SqlKeyValueConnector implements JetSqlConnector {
+
+    public static final String TYPE_NAME = "com.hazelcast.Kafka";
 
     /**
      * A key in the table options (TO).
@@ -53,62 +58,37 @@ public class KafkaSqlConnector implements SqlConnector {
      */
     public static final String TO_TOPIC_NAME = "mapName";
 
-    /**
-     * A key in the table options (TO).
-     * <p>
-     * Specifies the key class in the IMap entry. Can be omitted if "__key" is
-     * one of the columns.
-     */
-    public static final String TO_KEY_CLASS = "keyClass";
-
-    /**
-     * A key in the table options (TO).
-     * <p>
-     * Specifies the value class in the IMap entry. Can be omitted if "this" is
-     * one of the columns.
-     */
-    public static final String TO_VALUE_CLASS = "valueClass";
-
-    private static final ExpressionEvalContext ZERO_ARGUMENTS_CONTEXT = index -> {
-        throw new IndexOutOfBoundsException("" + index);
-    };
+    @Override
+    public String typeName() {
+        return TYPE_NAME;
+    }
 
     @Override
     public boolean isStream() {
         return false;
     }
 
-    @Nullable @Override
-    public JetTable createTable(
-            @Nonnull JetInstance jetInstance,
+    @Nonnull @Override
+    public Table createTable(
+            @Nonnull NodeEngine nodeEngine,
+            @Nonnull String schemaName,
             @Nonnull String tableName,
-            @Nonnull Map<String, String> serverOptions,
-            @Nonnull Map<String, String> tableOptions
-    ) {
-        throw new UnsupportedOperationException("TODO field examination");
-    }
-
-    @Nullable @Override
-    public JetTable createTable(
-            @Nonnull JetInstance jetInstance,
-            @Nonnull String tableName,
-            @Nonnull Map<String, String> serverOptions,
-            @Nonnull Map<String, String> tableOptions,
-            @Nonnull List<Entry<String, QueryDataType>> fields
+            @Nonnull List<ExternalField> externalFields,
+            @Nonnull Map<String, String> options
     ) {
         // TODO validate options
 //        if (!serverOptions.isEmpty()) {
 //            throw new JetException("Only local maps are supported for now");
 //        }
-        String topicName = tableOptions.getOrDefault(TO_TOPIC_NAME, tableName);
+        String topicName = options.getOrDefault(TO_TOPIC_NAME, tableName);
         Properties kafkaProperties = new Properties();
-        kafkaProperties.putAll(serverOptions);
-        kafkaProperties.putAll(tableOptions);
+        kafkaProperties.putAll(options);
         kafkaProperties.remove(TO_TOPIC_NAME);
         kafkaProperties.remove(TO_KEY_CLASS);
         kafkaProperties.remove(TO_VALUE_CLASS);
-        EntryWriter writer = entryWriter(fields, tableOptions.get(TO_KEY_CLASS), tableOptions.get(TO_VALUE_CLASS));
-        return new KafkaTable(this, topicName, fields, writer, kafkaProperties);
+        EntryWriter writer = entryWriter(externalFields, options.get(TO_KEY_CLASS), options.get(TO_VALUE_CLASS));
+        return new KafkaTable(this, schemaName, tableName, new ConstantTableStatistics(0), topicName,
+                toList(externalFields, TableField::new), writer, kafkaProperties, options);
     }
 
     @Override
@@ -119,18 +99,18 @@ public class KafkaSqlConnector implements SqlConnector {
     @Nullable @Override
     public Vertex fullScanReader(
             @Nonnull DAG dag,
-            @Nonnull JetTable jetTable,
+            @Nonnull Table table0,
             @Nullable String timestampField,
             @Nullable Expression<Boolean> predicate,
             @Nonnull List<Expression<?>> projections
     ) {
-        KafkaTable table = (KafkaTable) jetTable;
+        KafkaTable table = (KafkaTable) table0;
 
         String topicName = table.getTopicName();
         Vertex sourceVertex = dag.newVertex("kafka(" + topicName + ")",
                 KafkaProcessors.streamKafkaP(table.getKafkaProperties(), FunctionEx.identity(), noEventTime(), topicName));
 
-        FunctionEx<Entry<Object, Object>, Object[]> mapFn = projectionFn(jetTable, predicate, projections);
+        FunctionEx<Entry<Object, Object>, Object[]> mapFn = projectionFn(table, predicate, projections);
         FunctionEx<ConsumerRecord<Object, Object>, Object[]> mapFn1 = record -> mapFn.apply(entry(record.key(), record.value()));
         Vertex filterVertex = dag.newVertex("kafka-project-filter", mapP(mapFn1));
 
@@ -146,7 +126,7 @@ public class KafkaSqlConnector implements SqlConnector {
     @Nullable @Override
     public Vertex sink(
             @Nonnull DAG dag,
-            @Nonnull JetTable jetTable
+            @Nonnull Table jetTable
     ) {
         KafkaTable table = (KafkaTable) jetTable;
 

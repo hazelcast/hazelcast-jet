@@ -53,6 +53,8 @@ public final class FilterIntoScanLogicalRule extends RelOptRule {
     private FilterIntoScanLogicalRule() {
         super(
                 operand(Filter.class, operand(TableScan.class, any())),
+//                operand(Filter.class,
+//                        operandJ(TableScan.class, null, scan -> scan.getTable().unwrap(AbstractMapTable.class) != null, none())),
                 RelFactories.LOGICAL_BUILDER,
                 FilterIntoScanLogicalRule.class.getSimpleName()
         );

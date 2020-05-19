@@ -32,6 +32,8 @@ public final class ProjectIntoScanLogicalRule extends RelOptRule {
     private ProjectIntoScanLogicalRule() {
         super(
                 operand(Project.class, operand(TableScan.class, any())),
+//                operand(Project.class,
+//                        operandJ(TableScan.class, null, scan -> scan.getTable().unwrap(AbstractMapTable.class) != null, none())),
                 RelFactories.LOGICAL_BUILDER,
                 ProjectIntoScanLogicalRule.class.getSimpleName()
         );

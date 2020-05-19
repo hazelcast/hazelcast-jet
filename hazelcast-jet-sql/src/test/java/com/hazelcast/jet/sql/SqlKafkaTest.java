@@ -16,10 +16,11 @@
 
 package com.hazelcast.jet.sql;
 
-import com.hazelcast.jet.Observable;
 import com.hazelcast.jet.SimpleTestInClusterSupport;
 import com.hazelcast.jet.kafka.impl.KafkaTestSupport;
-import com.hazelcast.jet.sql.impl.connector.kafka.KafkaSqlConnector;
+import com.hazelcast.sql.SqlCursor;
+import com.hazelcast.sql.SqlRow;
+import com.hazelcast.sql.SqlService;
 import org.apache.kafka.common.serialization.IntegerDeserializer;
 import org.apache.kafka.common.serialization.IntegerSerializer;
 import org.apache.kafka.common.serialization.StringDeserializer;
@@ -33,23 +34,19 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Map;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
+import java.util.Set;
 
 import static com.hazelcast.jet.core.TestUtil.createMap;
-import static com.hazelcast.jet.sql.impl.schema.JetSchema.OPTION_CLASS_NAME;
-import static java.lang.String.format;
 import static java.util.Arrays.asList;
-import static java.util.stream.Collectors.toSet;
 import static org.junit.Assert.assertEquals;
 
 public class SqlKafkaTest extends SimpleTestInClusterSupport {
 
-    private static final String KAFKA_CONNECTOR_NAME = "kafka";
     private static final int INITIAL_PARTITION_COUNT = 4;
 
-    private static JetSqlService sqlService;
+    private static SqlService sqlService;
     private static KafkaTestSupport kafkaTestSupport;
 
     private String topicName;
@@ -60,26 +57,7 @@ public class SqlKafkaTest extends SimpleTestInClusterSupport {
         kafkaTestSupport.createKafkaCluster();
         initialize(1, null);
 
-        sqlService = new JetSqlService(instance());
-
-        sqlService.execute(format("CREATE FOREIGN DATA WRAPPER %s OPTIONS (%s '%s')",
-                KAFKA_CONNECTOR_NAME, OPTION_CLASS_NAME, KafkaSqlConnector.class.getName()));
-        sqlService.execute(format("CREATE SERVER %s FOREIGN DATA WRAPPER %s OPTIONS (" +
-                        "%s '%s', " +
-                        "%s '%s', " +
-                        "%s '%s', " +
-                        "%s '%s', " +
-                        "%s '%s', " +
-                        "%s '%s'" +
-                        ")",
-                "kafka_test_server", KAFKA_CONNECTOR_NAME,
-                "\"bootstrap.servers\"", kafkaTestSupport.getBrokerConnectionString(),
-                "\"key.serializer\"", IntegerSerializer.class.getCanonicalName(),
-                "\"key.deserializer\"", IntegerDeserializer.class.getCanonicalName(),
-                "\"value.serializer\"", StringSerializer.class.getCanonicalName(),
-                "\"value.deserializer\"", StringDeserializer.class.getCanonicalName(),
-                "\"auto.offset.reset\"", "earliest")
-        );
+        sqlService = instance().getHazelcastInstance().getSqlService();
     }
 
     @Before
@@ -87,8 +65,16 @@ public class SqlKafkaTest extends SimpleTestInClusterSupport {
         topicName = "t_" + randomString().replace('-', '_');
         kafkaTestSupport.createTopic(topicName, INITIAL_PARTITION_COUNT);
 
-        sqlService.execute(format("CREATE FOREIGN TABLE %s (__key INT, this VARCHAR) SERVER %s",
-                topicName, "kafka_test_server"));
+        sqlService.query("CREATE EXTERNAL TABLE " + topicName + " (__key INT, this VARCHAR) " +
+                "TYPE \"com.hazelcast.Kafka\" " + // TODO extract to constant
+                "OPTIONS (" +
+                "  \"bootstrap.servers\" '" + kafkaTestSupport.getBrokerConnectionString() + "', " +
+                "  \"key.serializer\" '" + IntegerSerializer.class.getCanonicalName() + "', " +
+                "  \"key.deserializer\" '" + IntegerDeserializer.class.getCanonicalName() + "', " +
+                "  \"value.serializer\" '" + StringSerializer.class.getCanonicalName() + "', " +
+                "  \"value.deserializer\" '" + StringDeserializer.class.getCanonicalName() + "', " +
+                "  \"auto.offset.reset\" 'earliest'" +
+                ")");
     }
 
     @AfterClass
@@ -126,23 +112,33 @@ public class SqlKafkaTest extends SimpleTestInClusterSupport {
     }
 
     private void assertTopic(String sql, Map<Integer, String> expected) {
-        sqlService.execute(sql).join();
+        SqlCursor cursor = sqlService.query(sql);
+        cursor.iterator().forEachRemaining(o -> { });
         kafkaTestSupport.assertTopicContentsEventually(topicName, expected, false);
     }
 
     private void assertRowsEventuallyAnyOrder(String sql, Collection<Row> expectedRows) {
-        Observable<Object[]> observable = sqlService.executeQuery(sql);
-        BlockingQueue<Object[]> rows = new LinkedBlockingQueue<>();
-        observable.addObserver(rows::add);
+        SqlCursor cursor = sqlService.query(sql);
 
-        assertTrueEventually(() -> assertEquals(expectedRows.size(), rows.size()));
+        Iterator<SqlRow> iterator = cursor.iterator();
+        Set<Row> actualRows = new HashSet<>(expectedRows.size());
+        for (int i = 0; i < expectedRows.size(); i++) {
+            actualRows.add(new Row(cursor.getColumnCount(), iterator.next()));
+        }
 
-        assertEquals(new HashSet<>(expectedRows), rows.stream().map(Row::new).collect(toSet()));
+        assertEquals(new HashSet<>(expectedRows), actualRows);
     }
 
     private static final class Row {
 
         Object[] values;
+
+        Row(int columnCount, SqlRow row) {
+            values = new Object[columnCount];
+            for (int i = 0; i < columnCount; i++) {
+                values[i] = row.getObject(i);
+            }
+        }
 
         Row(Object... values) {
             this.values = values;

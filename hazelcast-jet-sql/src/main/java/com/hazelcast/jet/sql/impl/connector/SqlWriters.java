@@ -18,8 +18,7 @@ package com.hazelcast.jet.sql.impl.connector;
 
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.JetException;
-import com.hazelcast.sql.impl.type.QueryDataType;
-import org.apache.calcite.util.Pair;
+import com.hazelcast.sql.impl.schema.ExternalTable.ExternalField;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -32,6 +31,7 @@ import java.util.Set;
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.impl.util.ReflectionUtils.loadClass;
 import static com.hazelcast.jet.impl.util.ReflectionUtils.newInstance;
+import static com.hazelcast.jet.impl.util.Util.toList;
 import static com.hazelcast.jet.sql.impl.connector.imap.IMapSqlConnector.TO_KEY_CLASS;
 import static com.hazelcast.jet.sql.impl.connector.imap.IMapSqlConnector.TO_VALUE_CLASS;
 import static com.hazelcast.jet.sql.impl.type.converter.ToConverters.getToConverter;
@@ -45,17 +45,21 @@ import static org.apache.commons.beanutils.PropertyUtils.setProperty;
 
 public class SqlWriters {
 
-    public static EntryWriter entryWriter(@Nonnull List<Entry<String, QueryDataType>> fields,
-                                          @Nullable String keyClassName,
-                                          @Nullable String valueClassName) {
+    public static EntryWriter entryWriter(
+            @Nonnull List<ExternalField> fields,
+            @Nullable String keyClassName,
+            @Nullable String valueClassName
+    ) {
         validateEntrySchema(fields, keyClassName, valueClassName);
         return createEntryWriter(fields, keyClassName, valueClassName);
     }
 
-    private static void validateEntrySchema(List<Entry<String, QueryDataType>> fields,
-                                            String keyClassName,
-                                            String valueClassName) {
-        List<String> fieldNames = Pair.left(fields);
+    private static void validateEntrySchema(
+            @Nonnull List<ExternalField> fields,
+            @Nullable String keyClassName,
+            @Nullable String valueClassName
+    ) {
+        List<String> fieldNames = toList(fields, ExternalField::name);
         int keyIndex = fieldNames.indexOf(KEY_ATTRIBUTE_NAME.value());
         int valueIndex = fieldNames.indexOf(THIS_ATTRIBUTE_NAME.value());
 
@@ -69,10 +73,10 @@ public class SqlWriters {
         }
     }
 
-    private static EntryWriter createEntryWriter(List<Entry<String, QueryDataType>> fields,
+    private static EntryWriter createEntryWriter(List<ExternalField> fields,
                                                  String keyClassName,
                                                  String valueClassName) {
-        List<String> fieldNames = Pair.left(fields);
+        List<String> fieldNames = toList(fields, ExternalField::name);
         int keyIndex = fieldNames.indexOf(KEY_ATTRIBUTE_NAME.value());
         int valueIndex = fieldNames.indexOf(THIS_ATTRIBUTE_NAME.value());
 
@@ -81,7 +85,7 @@ public class SqlWriters {
         BitSet keyIndices = new BitSet(fields.size());
         for (int index = 0; index < fields.size(); index++) {
             if (index != keyIndex && index != valueIndex) {
-                String fieldName = fields.get(index).getKey();
+                String fieldName = fieldNames.get(index);
                 if (!valueProperties.contains(fieldName) && keyProperties.contains(fieldName)) {
                     keyIndices.set(index);
                 }
@@ -106,11 +110,11 @@ public class SqlWriters {
         private final String valueClassName;
 
         private final BitSet keyIndices;
-        private final List<Entry<String, QueryDataType>> fields;
+        private final List<ExternalField> fields;
 
         public EntryWriter(int wholeKeyIndex, String keyClassName,
                            int wholeValueIndex, String valueClassName,
-                           BitSet keyIndices, List<Entry<String, QueryDataType>> fields) {
+                           BitSet keyIndices, List<ExternalField> fields) {
             this.wholeKeyIndex = wholeKeyIndex;
             this.keyClassName = keyClassName;
 
@@ -126,18 +130,18 @@ public class SqlWriters {
             assert row.length == fields.size();
 
             Object key = wholeKeyIndex >= 0 ?
-                    getToConverter(fields.get(wholeKeyIndex).getValue()).convert(row[wholeKeyIndex]) :
+                    getToConverter(fields.get(wholeKeyIndex).type()).convert(row[wholeKeyIndex]) :
                     newInstance(keyClassName);
             Object value = wholeValueIndex >= 0 ?
-                    getToConverter(fields.get(wholeValueIndex).getValue()).convert(row[wholeValueIndex]) :
+                    getToConverter(fields.get(wholeValueIndex).type()).convert(row[wholeValueIndex]) :
                     newInstance(valueClassName);
 
             for (int index = 0; index < row.length; index++) {
                 Object rowValue = row[index];
                 if (index != wholeKeyIndex && index != wholeValueIndex && rowValue != null) {
                     Object target = keyIndices.get(index) ? key : value;
-                    Object converted = getToConverter(fields.get(index).getValue()).convert(rowValue);
-                    setProperty(target, fields.get(index).getKey(), converted);
+                    Object converted = getToConverter(fields.get(index).type()).convert(rowValue);
+                    setProperty(target, fields.get(index).name(), converted);
                 }
             }
             return entry(key, value);

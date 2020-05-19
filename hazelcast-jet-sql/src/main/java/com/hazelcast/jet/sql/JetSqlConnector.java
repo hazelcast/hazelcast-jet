@@ -16,40 +16,19 @@
 
 package com.hazelcast.jet.sql;
 
-import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Vertex;
-import com.hazelcast.jet.sql.impl.schema.JetTable;
+import com.hazelcast.sql.impl.connector.SqlConnector;
 import com.hazelcast.sql.impl.expression.Expression;
-import com.hazelcast.sql.impl.type.QueryDataType;
+import com.hazelcast.sql.impl.schema.Table;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
 
-public interface SqlConnector {
+public interface JetSqlConnector extends SqlConnector {
 
     boolean isStream();
-
-    @Nullable
-    default JetTable createTable(
-            @Nonnull JetInstance jetInstance,
-            @Nonnull String tableName,
-            @Nonnull Map<String, String> serverOptions,
-            @Nonnull Map<String, String> tableOptions
-    ) {
-        throw new UnsupportedOperationException("Field examination not supported for " + getClass().getName());
-    }
-
-    @Nullable
-    JetTable createTable(
-            @Nonnull JetInstance jetInstance,
-            @Nonnull String tableName,
-            @Nonnull Map<String, String> serverOptions,
-            @Nonnull Map<String, String> tableOptions,
-            @Nonnull List<Entry<String, QueryDataType>> fields);
 
     /**
      * Returns a supplier for a source vertex reading the input according to
@@ -73,15 +52,17 @@ public interface SqlConnector {
      * Then the projection will be {@code {1}} and the predicate will be {@code
      * {2}=10}.
      *
+     * @param table
      * @param predicate  SQL expression to filter the rows
      * @param projection list of field names to return
      */
     @Nullable
     default Vertex fullScanReader(
             @Nonnull DAG dag,
-            @Nonnull JetTable jetTable,
+            // TODO convert back to JetTable after we can read maps using IMDG code
+            @Nonnull Table table,
             @Nullable String timestampField,
-            @Nullable Expression<Boolean> predicate,
+            @Nonnull Expression<Boolean> predicate,
             @Nonnull List<Expression<?>> projection) {
         assert !supportsFullScanReader();
         throw new UnsupportedOperationException("Full scan reader not supported for " + getClass().getName());
@@ -104,7 +85,7 @@ public interface SqlConnector {
     @Nullable
     default Vertex nestedLoopReader(
             @Nonnull DAG dag,
-            @Nonnull JetTable jetTable,
+            @Nonnull Table table,
             @Nullable Expression<Boolean> predicate,
             @Nonnull List<Expression<?>> projection,
             @Nonnull Expression<Boolean> joinPredicate) {
@@ -118,7 +99,7 @@ public interface SqlConnector {
     @Nullable
     default Vertex sink(
             @Nonnull DAG dag,
-            @Nonnull JetTable jetTable) {
+            @Nonnull Table table) {
         assert !supportsSink();
         throw new UnsupportedOperationException("Sink not supported for " + getClass().getName());
     }

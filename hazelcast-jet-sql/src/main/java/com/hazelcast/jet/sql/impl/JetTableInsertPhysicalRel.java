@@ -17,7 +17,9 @@
 package com.hazelcast.jet.sql.impl;
 
 import com.hazelcast.jet.sql.impl.schema.JetTable;
+import com.hazelcast.sql.impl.calcite.schema.HazelcastTable;
 import com.hazelcast.sql.impl.plan.node.PlanNodeSchema;
+import com.hazelcast.sql.impl.schema.TableField;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptCost;
 import org.apache.calcite.plan.RelOptPlanner;
@@ -31,6 +33,7 @@ import org.apache.calcite.rex.RexNode;
 
 import java.util.List;
 
+import static com.hazelcast.jet.impl.util.Util.toList;
 import static com.hazelcast.jet.sql.impl.OptUtils.CONVENTION_PHYSICAL;
 
 public class JetTableInsertPhysicalRel extends TableModify implements PhysicalRel {
@@ -50,12 +53,16 @@ public class JetTableInsertPhysicalRel extends TableModify implements PhysicalRe
                 updateColumnList, sourceExpressionList, flattened);
         assert input.getConvention() == CONVENTION_PHYSICAL;
         assert getConvention() == CONVENTION_PHYSICAL;
-        assert table.unwrap(JetTable.class) != null; // TODO: user error in validator
+        final HazelcastTable hzTable = table.unwrap(HazelcastTable.class);
+        if (hzTable == null) {
+            throw new RuntimeException("null hzTable"); // TODO: user error in validator
+        }
     }
 
     @Override
     public PlanNodeSchema schema() {
-        return new PlanNodeSchema(table.unwrap(JetTable.class).getFieldTypes());
+        JetTable jetTable = table.unwrap(HazelcastTable.class).getTarget();
+        return new PlanNodeSchema(toList(jetTable.getFields(), TableField::getType));
     }
 
     @Override
