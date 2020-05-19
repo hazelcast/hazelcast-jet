@@ -30,7 +30,7 @@ import com.hazelcast.jet.core.test.TestProcessorContext;
 import com.hazelcast.jet.core.test.TestProcessorSupplierContext;
 import com.hazelcast.jet.impl.execution.init.Contexts.ProcCtx;
 import com.hazelcast.jet.impl.execution.init.Contexts.ProcSupplierCtx;
-import com.hazelcast.jet.rocksdb.RocksDBFactory;
+import com.hazelcast.jet.rocksdb.RocksDBStateBackend;
 import com.hazelcast.spi.impl.NodeEngine;
 
 import javax.annotation.Nonnull;
@@ -100,8 +100,8 @@ public final class TestContextSupport {
                         c.logger(), c.vertexName(), 1, 1, c.processingGuarantee(),
                         c.localParallelism(), 1, c.memberCount(), new ConcurrentHashMap<>(),
                         (InternalSerializationService) nodeEngine.getSerializationService()
-                        , new RocksDBFactory((InternalSerializationService) nodeEngine
-                        .getSerializationService()).getKeyValueStore());
+                        , new RocksDBStateBackend((InternalSerializationService) nodeEngine
+                        .getSerializationService()));
             }
             delegate.init(context);
         }
@@ -125,8 +125,8 @@ public final class TestContextSupport {
                         c.logger(), c.vertexName(), c.localProcessorIndex(), c.globalProcessorIndex(),
                         c.processingGuarantee(), c.localParallelism(), c.memberIndex(), c.memberCount(),
                         new ConcurrentHashMap<>(), (InternalSerializationService) nodeEngine.getSerializationService(),
-                        new RocksDBFactory((InternalSerializationService) nodeEngine
-                                .getSerializationService()).getKeyValueStore());
+                        new RocksDBStateBackend((InternalSerializationService) nodeEngine
+                                .getSerializationService()));
             }
             delegate.init(outbox, context);
         }

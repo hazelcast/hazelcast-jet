@@ -38,7 +38,6 @@ import com.hazelcast.jet.impl.metrics.RawJobMetrics;
 import com.hazelcast.jet.impl.operation.SnapshotPhase1Operation.SnapshotPhase1Result;
 import com.hazelcast.jet.impl.util.LoggingUtil;
 import com.hazelcast.jet.impl.util.Util;
-import com.hazelcast.jet.rocksdb.RocksDBFactory;
 import com.hazelcast.jet.rocksdb.RocksDBStateBackend;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.spi.impl.NodeEngine;
@@ -137,7 +136,7 @@ public class ExecutionContext implements DynamicMetricsProvider {
 
         JetService jetService = nodeEngine.getService(JetService.SERVICE_NAME);
         serializationService = jetService.createSerializationService(jobConfig.getSerializerConfigs());
-        rocksDBStateBackend = new RocksDBFactory(serializationService).getKeyValueStore();
+        rocksDBStateBackend = new RocksDBStateBackend(serializationService);
         metricsEnabled = jobConfig.isMetricsEnabled() && nodeEngine.getConfig().getMetricsConfig().isEnabled();
         plan.initialize(nodeEngine, jobId, executionId, snapshotContext,
                 tempDirectories, serializationService, rocksDBStateBackend);

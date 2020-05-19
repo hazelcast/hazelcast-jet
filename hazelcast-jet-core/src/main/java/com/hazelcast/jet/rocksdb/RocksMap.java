@@ -16,8 +16,11 @@
 
 package com.hazelcast.jet.rocksdb;
 
+import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.datamodel.Tuple2;
+import com.hazelcast.nio.ObjectDataInput;
+import com.hazelcast.nio.ObjectDataOutput;
 import org.rocksdb.ColumnFamilyHandle;
 import org.rocksdb.ReadOptions;
 import org.rocksdb.RocksDB;
@@ -45,60 +48,55 @@ public class RocksMap<K, V> implements Iterable<Entry<K, V>> {
     private final ColumnFamilyHandle cfh;
     private final ReadOptions readOptions;
     private final WriteOptions writeOptions;
-    private final Serializer<K> keySerializer;
-    private final Serializer<V> valueSerializer;
+    private final InternalSerializationService serializationService;
 
     RocksMap(RocksDB db, ColumnFamilyHandle cfh,
              ReadOptions readOptions, WriteOptions writeOptions,
-             Serializer<K> keySerializer, Serializer<V> valueSerializer) {
+             InternalSerializationService serializationService) {
         this.db = db;
         this.cfh = cfh;
         this.readOptions = readOptions;
         this.writeOptions = writeOptions;
-        this.keySerializer = keySerializer;
-        this.valueSerializer = valueSerializer;
+        this.serializationService = serializationService;
+
     }
 
     public V get(K key) throws JetException {
         try {
-            byte[] keyBytes = keySerializer.serialize(key);
-            byte[] valueBytes = db.get(cfh, readOptions, keyBytes);
-            return valueSerializer.deserialize(valueBytes);
+            byte[] valueBytes = db.get(cfh, readOptions, serialize(key));
+            return deserialize(valueBytes);
         } catch (RocksDBException e) {
-            throw new JetException(e.getMessage(), e.getCause());
+            throw new JetException("Operation Failed: Get", e);
         }
     }
 
     public void put(K key, V value) throws JetException {
         try {
-            byte[] keyBytes = keySerializer.serialize(key);
-            byte[] valueBytes = valueSerializer.serialize(value);
-            db.put(cfh, writeOptions, keyBytes, valueBytes);
+            db.put(cfh, writeOptions, serialize(key), serialize(value));
         } catch (RocksDBException e) {
-            throw new JetException(e.getMessage(), e.getCause());
+            throw new JetException("Operation Failed: Put", e);
         }
     }
 
     public void delete(K key) throws JetException {
         try {
-            byte[] keyBytes = keySerializer.serialize(key);
-            db.delete(writeOptions, keyBytes);
+            db.delete(writeOptions, serialize(key));
         } catch (RocksDBException e) {
-            throw new JetException(e.getMessage(), e.getCause());
+            throw new JetException("Operation Failed: Delete", e);
         }
     }
 
     public void putAll(@Nonnull Map<K, V> map) throws JetException {
         WriteBatch batch = new WriteBatch();
         for (Entry<K, V> e : map.entrySet()) {
-            byte[] keyBytes = keySerializer.serialize(e.getKey());
-            byte[] valueBytes = valueSerializer.serialize(e.getValue());
+            byte[] keyBytes = serialize(e.getKey());
+            byte[] valueBytes = serialize(e.getValue());
             batch.put(keyBytes, valueBytes);
         }
         try {
             db.write(writeOptions, batch);
         } catch (RocksDBException e) {
-            throw new JetException(e.getMessage(), e.getCause());
+            throw new JetException("Operation Failed: PutAll", e);
         }
     }
 
@@ -108,6 +106,17 @@ public class RocksMap<K, V> implements Iterable<Entry<K, V>> {
             map.put(entry.getKey(), entry.getValue());
         }
         return map;
+    }
+
+    private <T> byte[] serialize(T item) {
+        ObjectDataOutput out = serializationService.createObjectDataOutput();
+        serializationService.writeObject(out, item);
+        return out.toByteArray();
+    }
+
+    private <T> T deserialize(byte[] item) {
+        ObjectDataInput in = serializationService.createObjectDataInput(item);
+        return serializationService.readObject(in);
     }
 
     @Nonnull
@@ -130,8 +139,8 @@ public class RocksMap<K, V> implements Iterable<Entry<K, V>> {
 
         @Override
         public Entry<K, V> next() {
-            K key = keySerializer.deserialize(iterator.key());
-            V value = valueSerializer.deserialize(iterator.value());
+            K key = deserialize(iterator.key());
+            V value = deserialize(iterator.value());
             Tuple2<K, V> tuple = tuple2(key, value);
             iterator.next();
             return tuple;

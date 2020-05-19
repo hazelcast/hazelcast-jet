@@ -18,13 +18,11 @@ package com.hazelcast.jet.rocksdb;
 
 import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.jet.JetException;
+import com.hazelcast.nio.ObjectDataOutput;
 import org.rocksdb.ColumnFamilyDescriptor;
 import org.rocksdb.ColumnFamilyHandle;
-import org.rocksdb.Options;
-import org.rocksdb.ReadOptions;
 import org.rocksdb.RocksDB;
 import org.rocksdb.RocksDBException;
-import org.rocksdb.WriteOptions;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
@@ -43,48 +41,37 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 
 public class RocksDBStateBackend {
-    private final Options options;
-    private final ReadOptions readOptions;
-    private final WriteOptions writeOptions;
-    private final String directory;
-    private final Serializer<String> nameSerializer;
+    //TODO: set RocksDB instance path
+    private static final String DIRECTORY = "path/to/db";
     private InternalSerializationService serializationService;
     private RocksDB db;
     private ArrayList<ColumnFamilyHandle> cfhs = new ArrayList<>();
     private AtomicInteger counter = new AtomicInteger(0);
+    private final RocksDBOptions rocksDBOptions = new RocksDBOptions();
 
-
-    RocksDBStateBackend(@Nonnull RocksDBOptions rocksDBOptions, String directory,
-                        InternalSerializationService serializationService) {
-        this.options = rocksDBOptions.getOptions();
-        this.readOptions = rocksDBOptions.getReadOptions();
-        this.writeOptions = rocksDBOptions.getWriteOptions();
-        this.directory = directory;
+    public RocksDBStateBackend(InternalSerializationService serializationService) {
         this.serializationService = serializationService;
-        nameSerializer = new Serializer<>(serializationService);
-
         init();
     }
 
     private void init() throws JetException {
-        RocksDB.loadLibrary();
         try {
-            db = RocksDB.open(options, directory);
-        } catch (RocksDBException e) {
-            throw new JetException(e.getMessage(), e.getCause());
+            RocksDB.loadLibrary();
+            db = RocksDB.open(rocksDBOptions.getOptions(), DIRECTORY);
+        } catch (Exception e) {
+            throw new JetException("Failed to create a RocksDB instance", e);
         }
     }
 
     public <K, V> RocksMap<K, V> getMap() throws JetException {
         ColumnFamilyHandle cfh;
         try {
-            cfh = db.createColumnFamily(new ColumnFamilyDescriptor(nameSerializer.serialize(getNextName())));
+            cfh = db.createColumnFamily(new ColumnFamilyDescriptor(serialize(getNextName())));
             cfhs.add(cfh);
-            Serializer<K> keySerializer = new Serializer<>(serializationService);
-            Serializer<V> valueSerializer = new Serializer<>(serializationService);
-            return new RocksMap<>(db, cfh, readOptions, writeOptions, keySerializer, valueSerializer);
+            return new RocksMap<>(db, cfh, rocksDBOptions.getReadOptions(),
+                    rocksDBOptions.getWriteOptions(), serializationService);
         } catch (RocksDBException e) {
-            throw new JetException(e.getMessage(), e.getCause());
+            throw new JetException("Failed to create RocksMap", e);
         }
     }
 
@@ -92,7 +79,7 @@ public class RocksDBStateBackend {
     // we may end up with a race condition when two processor are asking for a RocksMap at the same time
     @Nonnull
     private String getNextName() {
-        return "RocksMap".concat(String.valueOf(counter.getAndIncrement()));
+        return "RocksMap" + counter.getAndIncrement();
     }
 
     public void deleteKeyValueStore() {
@@ -100,5 +87,11 @@ public class RocksDBStateBackend {
             cfh.close();
         }
         db.close();
+    }
+
+    private <T> byte[] serialize(T item) {
+        ObjectDataOutput out = serializationService.createObjectDataOutput();
+        serializationService.writeObject(out, item);
+        return out.toByteArray();
     }
 }
