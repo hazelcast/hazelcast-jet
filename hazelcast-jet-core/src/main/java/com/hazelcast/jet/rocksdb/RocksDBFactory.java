@@ -23,12 +23,14 @@ import com.hazelcast.internal.serialization.InternalSerializationService;
  * A factory class used to instantiate a RocksDBStateBackend.
  */
 public class RocksDBFactory {
-    private InternalSerializationService serializationService;
-
+    //TODO: set RocksDB instance path
+    private final static String DIRECTORY = "path/to/db";
+    private final InternalSerializationService serializationService;
     public RocksDBFactory(InternalSerializationService serializationService) {
         this.serializationService = serializationService;
     }
+
     public RocksDBStateBackend getKeyValueStore() {
-        return new RocksDBStateBackend(new RocksDBOptions(), "path/to/db", serializationService);
+        return new RocksDBStateBackend(new RocksDBOptions(), DIRECTORY, serializationService);
     }
 }

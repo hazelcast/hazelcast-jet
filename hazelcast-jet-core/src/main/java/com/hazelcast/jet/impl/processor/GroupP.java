@@ -83,11 +83,10 @@ public class GroupP<K, A, R, OUT> extends AbstractProcessor {
         Function<Object, ? extends K> keyFn = (Function<Object, ? extends K>) groupKeyFns.get(ordinal);
         K key = keyFn.apply(item);
         A acc = aggrOp.createFn().get();
-        // A acc = keyToAcc.computeIfAbsent(key, k -> acc);
-        //TODO: implement computeIfAbsent in RocksMap instead of get and put
-
         if (keyToAcc.get(key) == null) {
-            keyToAcc.put(key, acc);
+            if (acc != null) {
+                keyToAcc.put(key, acc);
+            }
         }
         aggrOp.accumulateFn(ordinal).accept(acc, item);
         return true;

@@ -126,7 +126,6 @@ public class HashJoinP<E0> extends AbstractProcessor {
         assert !ordinal0Consumed : "Edge 0 must have a lower priority than all other edges";
 
         RocksMap<Object, Object> map = store.getMap();
-        //TODO: Serialize item entries before passing it.
         map.putAll(((Map) item));
         lookupTables.set(ordinal - 1, map);
         return true;
