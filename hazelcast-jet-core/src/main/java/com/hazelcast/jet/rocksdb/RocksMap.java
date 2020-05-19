@@ -38,7 +38,7 @@ import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
  * RocksMap is RocksDB-backed HashMap.
  * Responsible for providing the interface of HashMap to processors.
  */
-public class RocksMap {
+public class RocksMap implements Iterable<Entry<byte[], byte[]>> {
     private final RocksDB db;
     private final ColumnFamilyHandle cfh;
     private final ReadOptions readOptions;
@@ -88,34 +88,36 @@ public class RocksMap {
     }
 
     public Map<byte[], byte[]> getAll() {
-        RocksIterator iterator = db.newIterator(cfh, readOptions);
-        iterator.seekToFirst();
         Map<byte[], byte[]> map = new HashMap<>();
-        while (iterator.isValid()) {
-            map.put(iterator.key(), iterator.value());
-            iterator.next();
+        for (Entry<byte[], byte[]> kv : this) {
+            map.put(kv.getKey(), kv.getValue());
         }
         return map;
     }
 
-    public Iterator<Entry<byte[], byte[]>> all() {
+    @Nonnull
+    @Override
+    public Iterator<Entry<byte[], byte[]>> iterator() {
+        return new RocksMapIterator();
+    }
+
+    private class RocksMapIterator implements Iterator<Entry<byte[], byte[]>> {
         RocksIterator iterator = db.newIterator(cfh, readOptions);
-        iterator.seekToFirst();
-        return new Iterator<Entry<byte[], byte[]>>() {
 
-            @Override
-            public boolean hasNext() {
-                return iterator.isValid();
-            }
+        RocksMapIterator() {
+            iterator.seekToFirst();
+        }
 
-            //next returns RocksIterator's current key-value entry
-            //RocksIterators.next() only forwards the iterator
-            @Override
-            public Entry<byte[], byte[]> next() {
-                Tuple2<byte[], byte[]> tuple = tuple2(iterator.key(), iterator.value());
-                iterator.next();
-                return tuple;
-            }
-        };
+        @Override
+        public boolean hasNext() {
+            return iterator.isValid();
+        }
+
+        @Override
+        public Entry<byte[], byte[]> next() {
+            Tuple2<byte[], byte[]> tuple = tuple2(iterator.key(), iterator.value());
+            iterator.next();
+            return tuple;
+        }
     }
 }

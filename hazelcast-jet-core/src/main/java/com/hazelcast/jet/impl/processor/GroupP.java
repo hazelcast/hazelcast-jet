@@ -103,7 +103,7 @@ public class GroupP<K, A, R, OUT> extends AbstractProcessor {
     }
 
     private class ResultTraverser implements Traverser<Entry<K, A>> {
-        private final Iterator<Entry<byte[], byte[]>> iter = keyToAcc.all();
+        private final Iterator<Entry<byte[], byte[]>> iter = keyToAcc.iterator();
 
         @Override
         public Entry<K, A> next() {
