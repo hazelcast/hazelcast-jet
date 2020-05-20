@@ -130,11 +130,11 @@ Wikipedia defines Change Data Capture (or CDC) as:
 > [...] a set of software design patterns used to determine and track
 > the data that has changed so that action can be taken using the
 > changed data.
-> >
+>
 > CDC is an approach to data integration that is based on the
 > identification, capture and delivery of the changes made to enterprise
 > data sources.
->
+
 In practice, CDC is a tool that allows to transform standard write
 queries into events.
 It implements it by "turning the database inside-out" (quote from Martin
@@ -264,45 +264,23 @@ the cache when data is updated
 The pipeline definition is quite straightforward:
 
 ```java
-pipeline.readFrom(DebeziumSources.cdc(configuration))           // 1
+pipeline.readFrom(DebeziumSources.cdc(configuration))            // 1
   .withoutTimestamps()
-  .map(r -> Values.convertToString(r.valueSchema(), r.value())) // 2
-  .apply(new JsonToPerson())                                    // 3
-  .writeTo(
-    SinkBuilder.sinkBuilder(                                    // 4
-      "id",
-      new CreateClientConfig(
-        env.getOrDefault("CACHE_HOST", "localhost"))            // 5
-      ).receiveFn(new UpdateCacheBiConsumer())                  // 6
-       .build()
-  );
+  .map(r -> Values.convertToString(r.valueSchema(), r.value()))  // 2
+  .apply(new JsonToPerson())                                     // 3
+  .writeTo(Sinks.remoteMap(                                      // 4
+    "entities",                                                  // 5
+    new CustomClientConfig(env.get("CACHE_HOST"))                // 6
+  ));
 ```
 
 1. Get a stream of Kafka `StageRecord`
 2. Convert `StageRecord` to plain `String` that is formatted as JSON
 3. Custom code converts the `String` to a regular `Person` POJO
-4. Create the sink to write to
-5. Custom code configures the client configuration so it can connect to
-the right host, cluster and instance
-6. Custom code writes to the cache
-
-The `UpdateCacheBiConsumer` class is a no-brainer.
-It just creates (or gets en existing) client from the client
-configuration, get the cache map, and does a put:
-
-```java
-public class UpdateCacheBiConsumer implements BiConsumerEx<ClientConfig,
-Map.Entry<Long, Person>> {
-  @Override
-  public void acceptEx(ClientConfig cfg, Map.Entry<Long, Person> entry)
-{
-    HazelcastInstance hazelcastInstance =
-HazelcastClient.getOrCreateHazelcastClient(cfg);
-    hazelcastInstance.getMap("entities").put(entry.getKey(),
-entry.getValue());
-  }
-}
-```
+4. Create the sink to write to, a remote map
+5. Name of the remote map
+6. Client configuration so it can connect to the right host, cluster
+and instance
 
 To try the demo, Docker is required.
 
