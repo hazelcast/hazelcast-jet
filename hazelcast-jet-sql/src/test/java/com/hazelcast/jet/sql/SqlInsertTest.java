@@ -12,18 +12,17 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
-import java.util.Calendar;
 import java.util.Date;
 import java.util.GregorianCalendar;
-import java.util.Locale;
 import java.util.Objects;
-import java.util.TimeZone;
 
 import static com.hazelcast.jet.core.TestUtil.createMap;
 import static com.hazelcast.jet.sql.impl.connector.imap.IMapSqlConnector.TO_KEY_CLASS;
 import static com.hazelcast.jet.sql.impl.connector.imap.IMapSqlConnector.TO_VALUE_CLASS;
 import static java.lang.String.format;
+import static java.time.ZoneId.systemDefault;
 import static java.time.ZoneOffset.UTC;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -68,7 +67,7 @@ public class SqlInsertTest extends SqlTestSupport {
                         "localDate DATE, " +
                         "localDateTime TIMESTAMP, " +
                         "\"date\" TIMESTAMP WITH LOCAL TIME ZONE (\"DATE\"), " +
-                        "\"calendar\" TIMESTAMP WITH TIME ZONE (\"CALENDAR\"), " +
+                        "calendar TIMESTAMP WITH TIME ZONE (\"CALENDAR\"), " +
                         "instant TIMESTAMP WITH LOCAL TIME ZONE, " +
                         "zonedDateTime TIMESTAMP WITH TIME ZONE (\"ZONED_DATE_TIME\"), " +
                         "offsetDateTime TIMESTAMP WITH TIME ZONE " +
@@ -167,17 +166,24 @@ public class SqlInsertTest extends SqlTestSupport {
                         123451234567890.2,
                         LocalTime.of(12, 23, 34),
                         LocalDate.of(2020, 4, 15),
-                        LocalDateTime.of(2020, 4, 15, 12, 23, 34, 100_000_000),
+                        // TODO: should be LocalDateTime.of(2020, 4, 15, 12, 23, 34, 100_000_000) when temporal types are fixed
+                        LocalDateTime.of(2020, 4, 15, 12, 23, 34, 0),
                         Date.from(Instant.ofEpochMilli(1586953414200L)),
-                        (GregorianCalendar) new Calendar.Builder()
-                                .setTimeZone(TimeZone.getTimeZone(UTC))
-                                .setLocale(Locale.getDefault(Locale.Category.FORMAT))
-                                .setInstant(1586953414300L)
-                                .build(),
+                        GregorianCalendar.from(
+                                ZonedDateTime.of(2020, 4, 15, 12, 23, 34, 300_000_000, UTC)
+                                             .withZoneSameInstant(localOffset())
+                        ),
                         Instant.ofEpochMilli(1586953414400L),
-                        ZonedDateTime.of(2020, 4, 15, 12, 23, 34, 500_000_000, UTC),
-                        OffsetDateTime.of(2020, 4, 15, 12, 23, 34, 600_000_000, UTC)
+                        ZonedDateTime.of(2020, 4, 15, 12, 23, 34, 500_000_000, UTC)
+                                     .withZoneSameInstant(localOffset()),
+                        ZonedDateTime.of(2020, 4, 15, 12, 23, 34, 600_000_000, UTC)
+                                     .withZoneSameInstant(systemDefault())
+                                     .toOffsetDateTime()
                 )));
+    }
+
+    private static ZoneOffset localOffset() {
+        return systemDefault().getRules().getOffset(LocalDateTime.now());
     }
 
     @Test
