@@ -20,6 +20,7 @@ import com.hazelcast.client.config.ClientConfig;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
+import com.hazelcast.jet.impl.connector.AbstractHazelcastConnectorSupplier;
 import com.hazelcast.jet.impl.connector.UpdateMapWithMaterializedValuesP;
 import com.hazelcast.jet.impl.pipeline.SinkImpl;
 import com.hazelcast.jet.pipeline.Sink;
@@ -127,8 +128,8 @@ public final class CdcSinks {
             @Nullable ClientConfig clientConfig,
             @Nonnull FunctionEx<ChangeRecord, K> keyFn,
             @Nonnull FunctionEx<ChangeRecord, V> valueFn) {
-        ProcessorSupplier supplier = new UpdateMapWithMaterializedValuesP.Supplier<>(
-                asXmlString(clientConfig), map, keyFn, extend(valueFn));
+        ProcessorSupplier supplier = AbstractHazelcastConnectorSupplier.of(asXmlString(clientConfig),
+                instance -> new UpdateMapWithMaterializedValuesP<>(instance, map, keyFn, extend(valueFn)));
         ProcessorMetaSupplier metaSupplier = ProcessorMetaSupplier.forceTotalParallelismOne(supplier, name);
         return new SinkImpl<>(name, metaSupplier, true, null);
     }

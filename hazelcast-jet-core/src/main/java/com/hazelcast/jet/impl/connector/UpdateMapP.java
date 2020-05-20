@@ -26,7 +26,6 @@ import com.hazelcast.internal.serialization.SerializationService;
 import com.hazelcast.internal.serialization.SerializationServiceAware;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.core.JetDataSerializerHook;
-import com.hazelcast.jet.core.Processor;
 import com.hazelcast.map.EntryProcessor;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
@@ -34,7 +33,6 @@ import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -44,12 +42,19 @@ import java.util.function.BiFunction;
 
 import static com.hazelcast.internal.util.MapUtil.createHashMap;
 
-public final class UpdateMapP<T, K, V, R> extends AbstractUpdateMapP<T, Data, V, Object> {
+public final class UpdateMapP<T, K, V> extends AbstractUpdateMapP<T, Data, V, Object> {
 
     private final FunctionEx<? super T, ? extends K> keyFn;
     private final BiFunctionEx<? super V, ? super T, ? extends V> updateFn;
     private final BiFunction<Object, Object, Object> remappingFunction =
             (o, n) -> ApplyFnEntryProcessor.append(o, (Data) n);
+
+    UpdateMapP(HazelcastInstance instance,
+               String mapName,
+               @Nonnull FunctionEx<? super T, ? extends K> keyFn,
+               @Nonnull BiFunctionEx<? super V, ? super T, ? extends V> updateFn) {
+        this(instance, MAX_PARALLEL_ASYNC_OPS_DEFAULT, mapName, keyFn, updateFn);
+    }
 
     UpdateMapP(HazelcastInstance instance,
                int maxParallelAsyncOps,
@@ -202,30 +207,4 @@ public final class UpdateMapP<T, K, V, R> extends AbstractUpdateMapP<T, Data, V,
         }
     }
 
-    static class Supplier<T, K, V> extends AbstractHazelcastConnectorSupplier {
-
-        static final long serialVersionUID = 1L;
-
-        private final String name;
-        private final FunctionEx<? super T, ? extends K> toKeyFn;
-        private final BiFunctionEx<? super V, ? super T, ? extends V> updateFn;
-
-        Supplier(@Nullable String clientXml,
-                 @Nonnull String name,
-                 @Nonnull FunctionEx<? super T, ? extends K> toKeyFn,
-                 @Nonnull BiFunctionEx<? super V, ? super T, ? extends V> updateFn
-        ) {
-            super(clientXml);
-            this.name = name;
-            this.toKeyFn = toKeyFn;
-            this.updateFn = updateFn;
-        }
-
-        @Override
-        protected Processor createProcessor(HazelcastInstance instance, SerializationService serializationService) {
-            return new UpdateMapP<>(
-                    instance, MAX_PARALLEL_ASYNC_OPS_DEFAULT, name, toKeyFn, updateFn
-            );
-        }
-    }
 }
