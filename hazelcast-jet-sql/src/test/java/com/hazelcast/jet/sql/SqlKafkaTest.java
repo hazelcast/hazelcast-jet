@@ -16,11 +16,8 @@
 
 package com.hazelcast.jet.sql;
 
-import com.hazelcast.jet.SimpleTestInClusterSupport;
 import com.hazelcast.jet.kafka.impl.KafkaTestSupport;
 import com.hazelcast.sql.SqlCursor;
-import com.hazelcast.sql.SqlRow;
-import com.hazelcast.sql.SqlService;
 import org.apache.kafka.common.serialization.IntegerDeserializer;
 import org.apache.kafka.common.serialization.IntegerSerializer;
 import org.apache.kafka.common.serialization.StringDeserializer;
@@ -31,22 +28,15 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.Iterator;
 import java.util.Map;
-import java.util.Set;
 
 import static com.hazelcast.jet.core.TestUtil.createMap;
 import static java.util.Arrays.asList;
-import static org.junit.Assert.assertEquals;
 
-public class SqlKafkaTest extends SimpleTestInClusterSupport {
+public class SqlKafkaTest extends SqlTestSupport {
 
     private static final int INITIAL_PARTITION_COUNT = 4;
 
-    private static SqlService sqlService;
     private static KafkaTestSupport kafkaTestSupport;
 
     private String topicName;
@@ -55,9 +45,6 @@ public class SqlKafkaTest extends SimpleTestInClusterSupport {
     public static void beforeClass() throws IOException {
         kafkaTestSupport = new KafkaTestSupport();
         kafkaTestSupport.createKafkaCluster();
-        initialize(1, null);
-
-        sqlService = instance().getHazelcastInstance().getSqlService();
     }
 
     @Before
@@ -101,69 +88,21 @@ public class SqlKafkaTest extends SimpleTestInClusterSupport {
 
     @Test
     public void write_kafka() {
-        assertTopic("INSERT INTO " + topicName + " VALUES(1, 'value-1')",
+        assertTopic(topicName, "INSERT INTO " + topicName + " VALUES(1, 'value-1')",
                 createMap(1, "value-1"));
     }
 
     @Test
     public void write_kafkaWithOverwrite() {
-        assertTopic("INSERT OVERWRITE " + topicName + " VALUES(1, 'value-1')",
+        assertTopic(topicName, "INSERT OVERWRITE " + topicName + " VALUES(1, 'value-1')",
                 createMap(1, "value-1"));
     }
 
-    private void assertTopic(String sql, Map<Integer, String> expected) {
+    private void assertTopic(String name, String sql, Map<Integer, String> expected) {
         SqlCursor cursor = sqlService.query(sql);
+
         cursor.iterator().forEachRemaining(o -> { });
-        kafkaTestSupport.assertTopicContentsEventually(topicName, expected, false);
-    }
 
-    private void assertRowsEventuallyAnyOrder(String sql, Collection<Row> expectedRows) {
-        SqlCursor cursor = sqlService.query(sql);
-
-        Iterator<SqlRow> iterator = cursor.iterator();
-        Set<Row> actualRows = new HashSet<>(expectedRows.size());
-        for (int i = 0; i < expectedRows.size(); i++) {
-            actualRows.add(new Row(cursor.getColumnCount(), iterator.next()));
-        }
-
-        assertEquals(new HashSet<>(expectedRows), actualRows);
-    }
-
-    private static final class Row {
-
-        Object[] values;
-
-        Row(int columnCount, SqlRow row) {
-            values = new Object[columnCount];
-            for (int i = 0; i < columnCount; i++) {
-                values[i] = row.getObject(i);
-            }
-        }
-
-        Row(Object... values) {
-            this.values = values;
-        }
-
-        @Override
-        public String toString() {
-            return "Row{" + Arrays.toString(values) + '}';
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) {
-                return true;
-            }
-            if (o == null || getClass() != o.getClass()) {
-                return false;
-            }
-            Row row = (Row) o;
-            return Arrays.equals(values, row.values);
-        }
-
-        @Override
-        public int hashCode() {
-            return Arrays.hashCode(values);
-        }
+        kafkaTestSupport.assertTopicContentsEventually(name, expected, false);
     }
 }

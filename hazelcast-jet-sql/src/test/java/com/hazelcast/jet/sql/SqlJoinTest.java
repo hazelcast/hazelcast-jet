@@ -16,12 +16,8 @@
 
 package com.hazelcast.jet.sql;
 
-import com.hazelcast.jet.SimpleTestInClusterSupport;
 import com.hazelcast.jet.kafka.impl.KafkaTestSupport;
 import com.hazelcast.jet.sql.impl.connector.kafka.KafkaSqlConnector;
-import com.hazelcast.sql.SqlCursor;
-import com.hazelcast.sql.SqlRow;
-import com.hazelcast.sql.SqlService;
 import com.hazelcast.sql.impl.connector.LocalPartitionedMapConnector;
 import org.apache.kafka.common.serialization.IntegerDeserializer;
 import org.apache.kafka.common.serialization.IntegerSerializer;
@@ -33,11 +29,6 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.Set;
 
 import static com.hazelcast.jet.sql.impl.connector.kafka.KafkaSqlConnector.TO_KEY_CLASS;
 import static com.hazelcast.sql.impl.connector.SqlKeyValueConnector.TO_VALUE_CLASS;
@@ -45,14 +36,12 @@ import static java.lang.String.format;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.junit.Assert.assertEquals;
 
-public class SqlJoinTest extends SimpleTestInClusterSupport {
+public class SqlJoinTest extends SqlTestSupport {
 
     private static final int INITIAL_PARTITION_COUNT = 4;
 
     private static KafkaTestSupport kafkaTestSupport;
-    private static SqlService sqlService;
 
     private String topicName;
     private String mapName;
@@ -61,9 +50,6 @@ public class SqlJoinTest extends SimpleTestInClusterSupport {
     public static void beforeClass() throws IOException {
         kafkaTestSupport = new KafkaTestSupport();
         kafkaTestSupport.createKafkaCluster();
-        initialize(1, null);
-
-        sqlService = instance().getHazelcastInstance().getSqlService();
     }
 
     @Before
@@ -113,7 +99,11 @@ public class SqlJoinTest extends SimpleTestInClusterSupport {
         instance().getMap(mapName).put(3, "map-value-3");
 
         assertRowsEventuallyAnyOrder(
-                format("SELECT k.__key, k.this, m.__key, m.this FROM %s k JOIN %s m ON k.__key = m.__key", topicName, mapName),
+                format("SELECT k.__key, k.this, m.__key, m.this " +
+                                "FROM %s k " +
+                                "JOIN %s m ON k.__key = m.__key",
+                        topicName, mapName
+                ),
                 asList(
                         new Row(1, "kafka-value-1", 1, "map-value-1"),
                         new Row(2, "kafka-value-2", 2, "map-value-2")
@@ -132,7 +122,12 @@ public class SqlJoinTest extends SimpleTestInClusterSupport {
         instance().getMap(mapName).put(3, "map-value-3");
 
         assertRowsEventuallyAnyOrder(
-                format("SELECT k.__key, m.this FROM %s k JOIN %s m ON k.__key = m.__key WHERE k.__key > 1 AND m.__key < 3", topicName, mapName),
+                format("SELECT k.__key, m.this " +
+                                "FROM %s k " +
+                                "JOIN %s m ON k.__key = m.__key " +
+                                "WHERE k.__key > 1 AND m.__key < 3",
+                        topicName, mapName
+                ),
                 singletonList(
                         new Row(2, "map-value-2")
                 ));
@@ -149,7 +144,11 @@ public class SqlJoinTest extends SimpleTestInClusterSupport {
         instance().getMap(mapName).put(2, "map-value-2");
 
         assertRowsEventuallyAnyOrder(
-                format("SELECT k.__key + m.__key, UPPER(k.this) FROM %s k JOIN %s m ON k.__key = m.__key", topicName, mapName),
+                format("SELECT k.__key + m.__key, UPPER(k.this) " +
+                                "FROM %s k " +
+                                "JOIN %s m ON k.__key = m.__key",
+                        topicName, mapName
+                ),
                 asList(
                         new Row(2L, "KAFKA-VALUE-1"),
                         new Row(4L, "KAFKA-VALUE-2")
@@ -167,7 +166,11 @@ public class SqlJoinTest extends SimpleTestInClusterSupport {
         instance().getMap(mapName).put(5, "value-3");
 
         assertRowsEventuallyAnyOrder(
-                format("SELECT k.__key, k.this, m.__key, m.this FROM %s k JOIN %s m ON k.this = m.this", topicName, mapName),
+                format("SELECT k.__key, k.this, m.__key, m.this " +
+                                "FROM %s k " +
+                                "JOIN %s m ON k.this = m.this",
+                        topicName, mapName
+                ),
                 asList(
                         new Row(1, "value-1", 3, "value-1"),
                         new Row(2, "value-2", 4, "value-2")
@@ -185,7 +188,11 @@ public class SqlJoinTest extends SimpleTestInClusterSupport {
         instance().getMap(mapName).put(2, "map-value-2");
 
         assertRowsEventuallyAnyOrder(
-                format("SELECT k.__key, m.__key FROM %s k JOIN %s m ON k.__key > m.__key", topicName, mapName),
+                format("SELECT k.__key, m.__key " +
+                                "FROM %s k " +
+                                "JOIN %s m ON k.__key > m.__key",
+                        topicName, mapName
+                ),
                 asList(
                         new Row(1, 0),
                         new Row(2, 0),
@@ -207,7 +214,12 @@ public class SqlJoinTest extends SimpleTestInClusterSupport {
         instance().getMap(mapName).put(2, "map-value-2");
 
         assertRowsEventuallyAnyOrder(
-                format("SELECT k.__key, m1.this, m2.this FROM %s k JOIN %s m1 ON k.__key = m1.__key JOIN %s m2 ON k.__key = m2.__key", topicName, mapName, mapName),
+                format("SELECT k.__key, m1.this, m2.this " +
+                                "FROM %s k " +
+                                "JOIN %s m1 ON k.__key = m1.__key " +
+                                "JOIN %s m2 ON k.__key = m2.__key",
+                        topicName, mapName, mapName
+                ),
                 asList(
                         new Row(1, "map-value-1", "map-value-1"),
                         new Row(2, "map-value-2", "map-value-2")
@@ -219,56 +231,6 @@ public class SqlJoinTest extends SimpleTestInClusterSupport {
         assertThatThrownBy(() -> sqlService.query(
                 format("SELECT 1 FROM %s k JOIN %s m ON m.__key = k.__key", mapName, topicName)
         )).hasCauseInstanceOf(UnsupportedOperationException.class)
-        .hasMessageContaining("Nested loop reader not supported for " + KafkaSqlConnector.class.getName());
-    }
-
-    private void assertRowsEventuallyAnyOrder(String sql, Collection<Row> expectedRows) {
-        SqlCursor cursor = sqlService.query(sql);
-
-        Iterator<SqlRow> iterator = cursor.iterator();
-        Set<Row> actualRows = new HashSet<>(expectedRows.size());
-        for (int i = 0; i < expectedRows.size(); i++) {
-            actualRows.add(new Row(cursor.getColumnCount(), iterator.next()));
-        }
-
-        assertEquals(new HashSet<>(expectedRows), actualRows);
-    }
-
-    private static final class Row {
-
-        private Object[] values;
-
-        Row(int columnCount, SqlRow row) {
-            values = new Object[columnCount];
-            for (int i = 0; i < columnCount; i++) {
-                values[i] = row.getObject(i);
-            }
-        }
-
-        Row(Object... values) {
-            this.values = values;
-        }
-
-        @Override
-        public String toString() {
-            return "Row{" + Arrays.toString(values) + '}';
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) {
-                return true;
-            }
-            if (o == null || getClass() != o.getClass()) {
-                return false;
-            }
-            Row row = (Row) o;
-            return Arrays.equals(values, row.values);
-        }
-
-        @Override
-        public int hashCode() {
-            return Arrays.hashCode(values);
-        }
+          .hasMessageContaining("Nested loop reader not supported for " + KafkaSqlConnector.class.getName());
     }
 }

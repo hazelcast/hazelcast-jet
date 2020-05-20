@@ -1,8 +1,5 @@
 package com.hazelcast.jet.sql;
 
-import com.hazelcast.jet.SimpleTestInClusterSupport;
-import com.hazelcast.sql.SqlCursor;
-import com.hazelcast.sql.SqlService;
 import com.hazelcast.sql.impl.connector.LocalPartitionedMapConnector;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -19,9 +16,7 @@ import java.time.ZonedDateTime;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.GregorianCalendar;
-import java.util.HashMap;
 import java.util.Locale;
-import java.util.Map;
 import java.util.Objects;
 import java.util.TimeZone;
 
@@ -31,22 +26,16 @@ import static com.hazelcast.jet.sql.impl.connector.imap.IMapSqlConnector.TO_VALU
 import static java.lang.String.format;
 import static java.time.ZoneOffset.UTC;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.junit.Assert.assertEquals;
 
-public class SqlInsertTest extends SimpleTestInClusterSupport {
+public class SqlInsertTest extends SqlTestSupport {
 
     private static final String PERSON_MAP_SINK = "person_map_sink";
     private static final String OBJECT_MAP_SINK = "object_map_sink";
 
     private static final String ALL_TYPES_MAP = "all_types_map";
 
-    private static SqlService sqlService;
-
     @BeforeClass
     public static void beforeClass() {
-        initialize(1, null);
-        sqlService = instance().getHazelcastInstance().getSqlService();
-
         sqlService.query(format("CREATE EXTERNAL TABLE %s (id INT, birthday DATE) TYPE \"%s\" OPTIONS (%s '%s', %s '%s')",
                 PERSON_MAP_SINK, LocalPartitionedMapConnector.TYPE_NAME, TO_KEY_CLASS, Person.class.getName(), TO_VALUE_CLASS, Person.class.getName()));
 
@@ -260,12 +249,6 @@ public class SqlInsertTest extends SimpleTestInClusterSupport {
     public void insert_intoMapFails() {
         assertThatThrownBy(() -> sqlService.query("INSERT INTO " + PERSON_MAP_SINK + "(birthday) VALUES ('2020-01-01')"))
                 .hasMessageContaining("Only INSERT OVERWRITE clause is supported for IMapSqlConnector");
-    }
-
-    private <K, V> void assertMap(String name, String sql, Map<K, V> expected) {
-        SqlCursor cursor = sqlService.query(sql);
-        cursor.iterator().forEachRemaining(o -> { });
-        assertEquals(expected, new HashMap<>(instance().getMap(name)));
     }
 
     @SuppressWarnings("unused")

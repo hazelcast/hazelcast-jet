@@ -16,12 +16,8 @@
 
 package com.hazelcast.jet.sql;
 
-import com.hazelcast.jet.SimpleTestInClusterSupport;
 import com.hazelcast.map.IMap;
 import com.hazelcast.sql.SqlCursor;
-import com.hazelcast.sql.SqlRow;
-import com.hazelcast.sql.SqlService;
-import com.hazelcast.sql.impl.SqlRowImpl;
 import com.hazelcast.sql.impl.connector.LocalPartitionedMapConnector;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -29,24 +25,15 @@ import org.junit.Test;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
-import java.util.stream.StreamSupport;
 
 import static com.hazelcast.jet.core.TestUtil.createMap;
 import static com.hazelcast.jet.sql.impl.connector.imap.IMapSqlConnector.TO_VALUE_CLASS;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
-import static java.util.stream.Collectors.toSet;
-import static org.junit.Assert.assertEquals;
 
-public class SqlTest extends SimpleTestInClusterSupport {
+public class SqlTest extends SqlTestSupport {
 
     private static final String INT_TO_STRING_MAP_SRC = "int_to_string_map_src";
     private static final String INT_TO_STRING_MAP_SINK = "int_to_string_map_sink";
@@ -60,14 +47,8 @@ public class SqlTest extends SimpleTestInClusterSupport {
     private static final Person PERSON_BOB = new Person("Bob", 40);
     private static final Person PERSON_CECILE = new Person("Cecile", 50);
 
-    private static SqlService sqlService;
-
     @BeforeClass
     public static void beforeClass() {
-        initialize(1, null);
-
-        sqlService = instance().getHazelcastInstance().getSqlService();
-
         sqlService.query(format("CREATE EXTERNAL TABLE %s (__key INT, this VARCHAR) TYPE \"%s\"",
                 INT_TO_STRING_MAP_SRC, LocalPartitionedMapConnector.TYPE_NAME));
         sqlService.query(format("CREATE EXTERNAL TABLE %s (__key INT, this VARCHAR) TYPE \"%s\"",
@@ -170,6 +151,7 @@ public class SqlTest extends SimpleTestInClusterSupport {
     @Test
     public void selectWithConversion() {
         SqlCursor cursor = sqlService.query("INSERT OVERWRITE " + BIG_INTEGER_TO_CHAR_MAP + " VALUES (12, 'a')");
+
         cursor.iterator().forEachRemaining(o -> { });
 
         assertRowsAnyOrder(
@@ -200,57 +182,6 @@ public class SqlTest extends SimpleTestInClusterSupport {
                 PERSON_MAP_SINK, "INSERT OVERWRITE " + PERSON_MAP_SINK + " VALUES (1, 'Foo', 25)",
                 createMap(
                         1, new Person("Foo", 25)));
-    }
-
-    private <K, V> void assertMap(String mapName, String sql, Map<K, V> expected) {
-        SqlCursor cursor = sqlService.query(sql);
-        cursor.iterator().forEachRemaining(o -> { });
-        assertEquals(expected, new HashMap<>(instance().getMap(mapName)));
-    }
-
-    private void assertRowsAnyOrder(String sql, Collection<Row> expectedRows) {
-        SqlCursor cursor = sqlService.query(sql);
-
-        Set<Row> result = StreamSupport.stream(cursor.spliterator(), false).map(Row::new).collect(toSet());
-        assertEquals(new HashSet<>(expectedRows), result);
-    }
-
-    private static final class Row {
-
-        Object[] values;
-
-        Row(SqlRow sqlRow) {
-            values = new Object[((SqlRowImpl) sqlRow).getDelegate().getColumnCount()];
-            for (int i = 0; i < values.length; i++) {
-                values[i] = sqlRow.getObject(i);
-            }
-        }
-
-        Row(Object... values) {
-            this.values = values;
-        }
-
-        @Override
-        public String toString() {
-            return "Row{" + Arrays.toString(values) + '}';
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) {
-                return true;
-            }
-            if (o == null || getClass() != o.getClass()) {
-                return false;
-            }
-            Row row = (Row) o;
-            return Arrays.equals(values, row.values);
-        }
-
-        @Override
-        public int hashCode() {
-            return Arrays.hashCode(values);
-        }
     }
 
     @SuppressWarnings("unused")
