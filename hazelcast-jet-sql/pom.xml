@@ -40,6 +40,12 @@
         </dependency>
 
         <dependency>
+            <groupId>com.hazelcast</groupId>
+            <artifactId>hazelcast-sql</artifactId>
+            <version>${hazelcast.version}</version>
+        </dependency>
+
+        <dependency>
             <groupId>com.hazelcast.jet</groupId>
             <artifactId>hazelcast-jet-kafka</artifactId>
             <version>${project.parent.version}</version>
@@ -50,19 +56,6 @@
             <artifactId>kafka-clients</artifactId>
             <version>${kafka.version}</version>
             <optional>true</optional>
-        </dependency>
-
-        <dependency>
-            <groupId>com.hazelcast</groupId>
-            <artifactId>hazelcast-sql</artifactId>
-            <version>${hazelcast.version}</version>
-        </dependency>
-
-        <!-- updating calcite might require updating src/main/codegen/config.fmpp as well-->
-        <dependency>
-            <groupId>org.apache.calcite</groupId>
-            <artifactId>calcite-core</artifactId>
-            <version>1.22.0</version>
         </dependency>
 
         <dependency>

@@ -16,8 +16,10 @@
 
 package com.hazelcast.jet.sql.impl.expression;
 
-import com.hazelcast.sql.HazelcastSqlException;
 import com.hazelcast.sql.impl.QueryException;
+import com.hazelcast.sql.impl.calcite.opt.physical.visitor.SqlToQueryType;
+import com.hazelcast.sql.impl.calcite.validate.HazelcastSqlOperatorTable;
+import com.hazelcast.sql.impl.expression.CastExpression;
 import com.hazelcast.sql.impl.expression.ConstantExpression;
 import com.hazelcast.sql.impl.expression.Expression;
 import com.hazelcast.sql.impl.expression.datetime.CurrentDateFunction;
@@ -96,7 +98,7 @@ public final class RexToExpression {
      *
      * @param call the call to convert.
      * @return the resulting expression.
-     * @throws HazelcastSqlException if the given {@link RexCall} can't be
+     * @throws QueryException if the given {@link RexCall} can't be
      *                               converted.
      */
     @SuppressWarnings({"checkstyle:CyclomaticComplexity", "checkstyle:MethodLength", "checkstyle:ReturnCount",
@@ -202,6 +204,9 @@ public final class RexToExpression {
                 Expression<?> escape = operands.length == 2 ? null : operands[2];
                 return LikeFunction.create(operands[0], operands[1], escape);
 
+            case CAST:
+                return CastExpression.create(operands[0], returnType);
+
             case OTHER_FUNCTION:
                 SqlFunction function = (SqlFunction) operator;
 
@@ -246,9 +251,9 @@ public final class RexToExpression {
                 } else if (function == SqlStdOperatorTable.RADIANS) {
                     return DoubleFunction.create(operands[0], DoubleFunctionType.RADIANS);
                 } else if (function == SqlStdOperatorTable.ROUND) {
-                    return RoundTruncateFunction.create(operands[0], operands.length == 1 ? null : operands[0], false);
+                    return RoundTruncateFunction.create(operands[0], operands.length == 1 ? null : operands[1], false);
                 } else if (function == SqlStdOperatorTable.TRUNCATE) {
-                    return RoundTruncateFunction.create(operands[0], operands.length == 1 ? null : operands[0], true);
+                    return RoundTruncateFunction.create(operands[0], operands.length == 1 ? null : operands[1], true);
                 }
 
                 // Strings.
@@ -392,7 +397,7 @@ public final class RexToExpression {
                 throw new IllegalArgumentException("Unsupported literal type: " + type);
         }
 
-        return ConstantExpression.create(SqlToQueryType.map(type), value);
+        return ConstantExpression.create(com.hazelcast.sql.impl.calcite.opt.physical.visitor.SqlToQueryType.map(type), value);
     }
 
     private static Expression<?> convertStringLiteral(RexLiteral literal, SqlTypeName type) {
@@ -407,7 +412,7 @@ public final class RexToExpression {
                 throw new IllegalArgumentException("Unsupported literal type: " + type);
         }
 
-        return ConstantExpression.create(SqlToQueryType.map(type), value);
+        return ConstantExpression.create(com.hazelcast.sql.impl.calcite.opt.physical.visitor.SqlToQueryType.map(type), value);
     }
 
     private static Expression<?> convertTemporalLiteral(RexLiteral literal, SqlTypeName type) {
@@ -437,12 +442,12 @@ public final class RexToExpression {
                 throw new IllegalArgumentException("Unsupported literal type: " + type);
         }
 
-        return ConstantExpression.create(SqlToQueryType.map(type), value);
+        return ConstantExpression.create(com.hazelcast.sql.impl.calcite.opt.physical.visitor.SqlToQueryType.map(type), value);
     }
 
     private static Expression<?> convertIntervalYearMonthLiteral(RexLiteral literal, SqlTypeName type) {
         int months = literal.getValueAs(Integer.class);
-        return ConstantExpression.create(SqlToQueryType.map(type), new SqlYearMonthInterval(months));
+        return ConstantExpression.create(com.hazelcast.sql.impl.calcite.opt.physical.visitor.SqlToQueryType.map(type), new SqlYearMonthInterval(months));
     }
 
     private static Expression<?> convertDaySecondLiteral(RexLiteral literal, SqlTypeName type) {
