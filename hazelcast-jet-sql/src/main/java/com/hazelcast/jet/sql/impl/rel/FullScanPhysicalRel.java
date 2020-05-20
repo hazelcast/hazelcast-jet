@@ -19,7 +19,7 @@ package com.hazelcast.jet.sql.impl.rel;
 import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.jet.sql.impl.CreateDagVisitor;
 import com.hazelcast.jet.sql.impl.PhysicalRel;
-import com.hazelcast.jet.sql.impl.cost.CostUtils;
+import com.hazelcast.sql.impl.calcite.opt.cost.CostUtils;
 import com.hazelcast.sql.impl.expression.Expression;
 import com.hazelcast.sql.impl.plan.node.PlanNodeSchema;
 import com.hazelcast.sql.impl.schema.TableField;

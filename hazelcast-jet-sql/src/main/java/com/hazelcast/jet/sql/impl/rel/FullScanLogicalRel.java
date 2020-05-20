@@ -17,7 +17,7 @@
 package com.hazelcast.jet.sql.impl.rel;
 
 import com.hazelcast.jet.sql.impl.LogicalRel;
-import com.hazelcast.jet.sql.impl.cost.CostUtils;
+import com.hazelcast.sql.impl.calcite.opt.cost.CostUtils;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptCost;
 import org.apache.calcite.plan.RelOptPlanner;
