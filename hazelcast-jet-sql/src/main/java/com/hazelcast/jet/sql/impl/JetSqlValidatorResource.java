@@ -14,15 +14,15 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.sql.impl.parser;
+package com.hazelcast.jet.sql.impl;
 
-import org.apache.calcite.sql.SqlLiteral;
-import org.apache.calcite.sql.parser.SqlParserPos;
+import org.apache.calcite.runtime.Resources;
+import org.apache.calcite.sql.validate.SqlValidatorException;
 
-public enum JetSqlInsertKeyword {
-    OVERWRITE;
-
-    public SqlLiteral symbol(SqlParserPos pos) {
-        return SqlLiteral.createSymbol(this, pos);
-    }
+/**
+ * Error message resources.
+ */
+public interface JetSqlValidatorResource {
+    @Resources.BaseMessage("Only INSERT OVERWRITE clause is supported for {0}")
+    Resources.ExInst<SqlValidatorException> plainInsertNotSupported(String connectorName);
 }

@@ -22,21 +22,17 @@ import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.sql.JetSqlConnector;
-import com.hazelcast.jet.sql.impl.connector.imap.IMapSqlConnector;
 import com.hazelcast.jet.sql.impl.expression.ExpressionUtil;
 import com.hazelcast.jet.sql.impl.expression.RexToExpressionVisitor;
 import com.hazelcast.jet.sql.impl.rel.FullScanPhysicalRel;
 import com.hazelcast.jet.sql.impl.rel.NestedLoopJoinPhysicalRel;
 import com.hazelcast.jet.sql.impl.rel.ProjectPhysicalRel;
-import com.hazelcast.jet.sql.impl.schema.JetTable;
 import com.hazelcast.sql.impl.calcite.schema.HazelcastTable;
 import com.hazelcast.sql.impl.expression.Expression;
 import com.hazelcast.sql.impl.plan.node.PlanNodeFieldTypeProvider;
 import com.hazelcast.sql.impl.plan.node.PlanNodeSchema;
 import com.hazelcast.sql.impl.schema.Table;
 import com.hazelcast.sql.impl.schema.TableField;
-import com.hazelcast.sql.impl.schema.map.PartitionedMapTable;
-import com.hazelcast.sql.impl.schema.map.ReplicatedMapTable;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.util.ConversionUtil;
 import org.apache.calcite.util.NlsString;
@@ -52,6 +48,7 @@ import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.processor.Processors.mapP;
 import static com.hazelcast.jet.core.processor.SourceProcessors.convenientSourceP;
 import static com.hazelcast.jet.impl.util.Util.toList;
+import static com.hazelcast.jet.sql.impl.JetSqlConnectorUtil.getJetSqlConnector;
 
 public class CreateDagVisitor {
 
@@ -108,20 +105,6 @@ public class CreateDagVisitor {
             throw new JetException("This connector doesn't support writing");
         }
         vertexStack.push(new VertexAndOrdinal(vertex));
-    }
-
-    private JetSqlConnector getJetSqlConnector(Table table) {
-        JetSqlConnector connector;
-        if (table instanceof JetTable) {
-            connector = ((JetTable) table).getSqlConnector();
-        } else if (table instanceof PartitionedMapTable) {
-            connector = new IMapSqlConnector();
-        } else if (table instanceof ReplicatedMapTable) {
-            throw new UnsupportedOperationException("Jet doesn't yet support writing to a ReplicatedMap");
-        } else {
-            throw new JetException("Unknown table type: " + table.getClass());
-        }
-        return connector;
     }
 
     public void onValues(JetValuesPhysicalRel rel) {

@@ -16,19 +16,22 @@
 
 package com.hazelcast.jet.sql.impl;
 
-import com.hazelcast.jet.JetException;
-import com.hazelcast.jet.sql.impl.schema.JetTable;
-import com.hazelcast.jet.sql.impl.parser.JetSqlInsert;
+import com.hazelcast.jet.sql.JetSqlConnector;
+import com.hazelcast.sql.impl.calcite.parse.SqlExtendedInsert;
+import com.hazelcast.sql.impl.calcite.schema.HazelcastTable;
+import com.hazelcast.sql.impl.calcite.validate.HazelcastSqlValidator;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
+import org.apache.calcite.runtime.Resources;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlOperatorTable;
 import org.apache.calcite.sql.validate.SqlConformance;
 import org.apache.calcite.sql.validate.SqlValidatorCatalogReader;
-import org.apache.calcite.sql.validate.SqlValidatorImpl;
 
-public class JetSqlValidator extends SqlValidatorImpl {
+import static com.hazelcast.jet.sql.impl.JetSqlConnectorUtil.getJetSqlConnector;
 
-    private final SqlValidatorCatalogReader catalog;
+public class JetSqlValidator extends HazelcastSqlValidator {
+
+    private static final JetSqlValidatorResource RESOURCES = Resources.create(JetSqlValidatorResource.class);
 
     public JetSqlValidator(
             SqlOperatorTable opTab,
@@ -37,19 +40,19 @@ public class JetSqlValidator extends SqlValidatorImpl {
             SqlConformance conformance
     ) {
         super(opTab, catalogReader, typeFactory, conformance);
-        this.catalog = catalogReader;
     }
 
     @Override
     public SqlNode validate(SqlNode topNode) {
         SqlNode validated = super.validate(topNode);
-        // TODO: not sure if this is the right place for it...
-        if (validated instanceof JetSqlInsert) {
-            JetSqlInsert insert = ((JetSqlInsert) validated);
-            JetTable table = (JetTable) catalog.getRootSchema().getTable(insert.tableName(), true).getTable();
-            if (!insert.isOverwrite() && !table.getSqlConnector().supportsPlainInserts()) {
-                throw new JetException(table.getSqlConnector().getClass().getSimpleName() +
-                        " does not support plain INSERT INTO statement."); // TODO: wording
+
+        if (validated instanceof SqlExtendedInsert) {
+            SqlExtendedInsert insert = ((SqlExtendedInsert) validated);
+            HazelcastTable table = getCatalogReader().getTable(insert.tableNames()).unwrap(HazelcastTable.class);
+            JetSqlConnector connector = getJetSqlConnector(table.getTarget());
+            if (!insert.isOverwrite() && !connector.supportsPlainInserts()) {
+                throw newValidationError(insert,
+                        RESOURCES.plainInsertNotSupported(connector.getClass().getSimpleName()));
             }
         }
         return validated;

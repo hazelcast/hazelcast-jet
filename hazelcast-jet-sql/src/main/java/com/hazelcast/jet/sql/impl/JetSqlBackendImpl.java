@@ -41,6 +41,10 @@ import org.apache.calcite.rel.RelVisitor;
 import org.apache.calcite.rel.core.RelFactories;
 import org.apache.calcite.rel.core.TableModify;
 import org.apache.calcite.rel.core.TableScan;
+import org.apache.calcite.rel.type.RelDataTypeFactory;
+import org.apache.calcite.sql.SqlOperatorTable;
+import org.apache.calcite.sql.validate.SqlConformance;
+import org.apache.calcite.sql.validate.SqlValidatorCatalogReader;
 import org.apache.calcite.tools.RuleSet;
 import org.apache.calcite.tools.RuleSets;
 
@@ -58,6 +62,12 @@ public class JetSqlBackendImpl implements JetSqlBackend, ManagedService {
     public void initJetInstance(@Nonnull JetInstance jetInstance) {
         assert this.jetInstance == null;
         this.jetInstance = jetInstance;
+    }
+
+    @Override
+    public JetSqlValidator createValidator(Object opTab, Object catalogReader, Object typeFactory, Object conformance) {
+        return new JetSqlValidator((SqlOperatorTable) opTab, (SqlValidatorCatalogReader) catalogReader,
+                (RelDataTypeFactory) typeFactory, (SqlConformance) conformance);
     }
 
     @Override
