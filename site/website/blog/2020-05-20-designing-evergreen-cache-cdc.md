@@ -282,9 +282,16 @@ pipeline.readFrom(DebeziumSources.cdc(configuration))            // 1
 6. Client configuration so it can connect to the right host, cluster
 and instance
 
-To try the demo, Docker is required.
+To try the demo, a local Docker _daemon_ must be running.
 
-1. At the root of the repo, run the compose file.
+1. To create the necessary Docker images, at the root of the project,
+run the build:
+
+    ```bash
+    mvn compile
+    ```
+
+2. At the root of the repo, run the compose file.
 This will start a MySQL instance, the app, the Jet pipeline job, as well
 as Hazelcast Management Center to get additional insight into the
 cluster state
@@ -293,10 +300,10 @@ cluster state
     docker-compose up
     ```
 
-2. Open a browser at <http://localhost:8080/>
-3. Refresh the browser, and check the logs:
+3. Open a browser at <http://localhost:8080/>
+4. Refresh the browser, and check the logs:
 there should be not interaction with the database, only with the cache
-4. In the `update` module, execute the Maven Spring Boot plugin
+5. In the `update` module, execute the Maven Spring Boot plugin
 
     ```bash
     mvn spring-boot:run
@@ -312,7 +319,7 @@ entity with PK `1` with value `"Foo"`
     update 1 Foo
     ```
 
-5. Refresh the browser again.
+6. Refresh the browser again.
 The cache has been updated, the application doesn’t access the database,
 and still the value `Foo` should be shown for entity with PK `1`
 
