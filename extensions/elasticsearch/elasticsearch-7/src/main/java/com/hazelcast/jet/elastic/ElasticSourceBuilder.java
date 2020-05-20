@@ -50,12 +50,13 @@ import static java.util.Objects.requireNonNull;
  * BatchStage<String> stage = p.readFrom(source);
  * }</pre>
  *
- * Requires {@link #clientFn(SupplierEx)}, {@link #searchRequestFn(SupplierEx)} and {@link #mapToItemFn(FunctionEx)}.
+ * Requires {@link #clientFn(SupplierEx)},
+ * {@link #searchRequestFn(SupplierEx)} and {@link #mapToItemFn(FunctionEx)}.
  *
  * @param <T> type of the output of the mapping function from {@link SearchHit} -> T
  * @since 4.2
  */
-public class ElasticSourceBuilder<T> {
+public final class ElasticSourceBuilder<T> {
 
     private static final String DEFAULT_NAME = "elasticSource";
 
@@ -96,7 +97,8 @@ public class ElasticSourceBuilder<T> {
     /**
      * Set the client supplier function
      * <p>
-     * The connector uses the returned instance to access Elasticsearch. Also see {@link ElasticClients} for convenience
+     * The connector uses the returned instance to access Elasticsearch.
+     * Also see {@link ElasticClients} for convenience
      * factory methods.
      * <p>
      * For example, to provide an authenticated client:

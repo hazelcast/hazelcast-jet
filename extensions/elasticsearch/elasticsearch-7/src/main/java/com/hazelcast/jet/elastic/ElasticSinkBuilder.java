@@ -60,7 +60,7 @@ import static java.util.Objects.requireNonNull;
  * @param <T>
  * @since 4.2
  */
-public class ElasticSinkBuilder<T> implements Serializable {
+public final class ElasticSinkBuilder<T> implements Serializable {
 
     private static final String DEFAULT_NAME = "elasticSink";
 

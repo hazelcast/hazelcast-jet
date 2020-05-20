@@ -16,5 +16,7 @@
 
 /**
  * Contains sources and sinks for Elasticsearch 7
+ *
+ * @since 4.2
  */
 package com.hazelcast.jet.elastic;
