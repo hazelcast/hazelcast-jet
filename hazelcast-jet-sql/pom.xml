@@ -43,6 +43,7 @@
             <groupId>com.hazelcast</groupId>
             <artifactId>hazelcast-sql</artifactId>
             <version>${hazelcast.version}</version>
+            <classifier>jar-with-dependencies</classifier>
         </dependency>
 
         <dependency>
@@ -62,12 +63,6 @@
             <groupId>commons-beanutils</groupId>
             <artifactId>commons-beanutils-core</artifactId>
             <version>1.8.3</version>
-        </dependency>
-        <dependency>
-            <groupId>com.google.guava</groupId>
-            <artifactId>guava</artifactId>
-            <version>29.0-jre</version>
-            <scope>compile</scope>
         </dependency>
 
         <!-- tests -->
