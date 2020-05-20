@@ -1,15 +1,15 @@
 /*
- * Copyright 2020 Hazelcast Inc.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
- * Licensed under the Hazelcast Community License (the "License");
+ * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- * http://hazelcast.com/hazelcast-community-license
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OF ANY KIND, either express or implied.
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
@@ -22,6 +22,7 @@ import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.cdc.impl.ChangeRecordImpl;
+import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.jet.pipeline.BatchSource;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.PipelineTestSupport;
@@ -47,16 +48,16 @@ public class CdcSinksTest extends PipelineTestSupport {
     private static final String ID = "id";
     private static final String EMAIL = "email";
 
-    private static final ChangeRecord SYNC1 = new ChangeRecordImpl("{\"" + ID + "\":1001}",
+    private static final ChangeRecord SYNC1 = new ChangeRecordImpl(0, 0, "{\"" + ID + "\":1001}",
             "{\"" + ID + "\":1001,\"first_name\":\"Sally\",\"last_name\":\"Thomas\",\"" + EMAIL + "\":" +
                     "\"sally.thomas@acme.com\",\"__op\":\"r\",\"__ts_ms\":1588927306264,\"__deleted\":\"false\"}");
-    private static final ChangeRecord INSERT2 = new ChangeRecordImpl("{\"" + ID + "\":1002}",
+    private static final ChangeRecord INSERT2 = new ChangeRecordImpl(0, 1, "{\"" + ID + "\":1002}",
             "{\"" + ID + "\":1002,\"first_name\":\"George\",\"last_name\":\"Bailey\",\"" + EMAIL + "\":" +
                     "\"gbailey@foobar.com\",\"__op\":\"c\",\"__ts_ms\":1588927306269,\"__deleted\":\"false\"}");
-    private static final ChangeRecord UPDATE1 = new ChangeRecordImpl("{\"" + ID + "\":1001}",
+    private static final ChangeRecord UPDATE1 = new ChangeRecordImpl(0, 2, "{\"" + ID + "\":1001}",
             "{\"" + ID + "\":1001,\"first_name\":\"Sally\",\"last_name\":\"Thomas\",\"" + EMAIL + "\":" +
                     "\"sthomas@acme.com\",\"__op\":\"u\",\"__ts_ms\":1588927306264,\"__deleted\":\"false\"}");
-    private static final ChangeRecord DELETE2 = new ChangeRecordImpl("{\"" + ID + "\":1002}",
+    private static final ChangeRecord DELETE2 = new ChangeRecordImpl(0, 3, "{\"" + ID + "\":1002}",
             "{\"" + ID + "\":1002,\"first_name\":\"George\",\"last_name\":\"Bailey\",\"" + EMAIL + "\":" +
                     "\"gbailey@foobar.com\",\"__op\":\"d\",\"__ts_ms\":1588927306269,\"__deleted\":\"true\"}");
 
@@ -180,6 +181,32 @@ public class CdcSinksTest extends PipelineTestSupport {
         remoteHz.shutdown();
     }
 
+    @Test
+    public void reordering() {
+        SupplierEx<Iterator<? extends ChangeRecord>> supplier = () -> Arrays.asList(
+                SYNC1,
+                UPDATE1,
+                new ChangeRecordImpl(0, 10, UPDATE1.key().toJson(),
+                        UPDATE1.value().toJson().replace("sthomas@acme.com", "sthomas2@acme.com")),
+                new ChangeRecordImpl(0, 11, UPDATE1.key().toJson(),
+                        UPDATE1.value().toJson().replace("sthomas@acme.com", "sthomas3@acme.com")),
+                new ChangeRecordImpl(0, 12, UPDATE1.key().toJson(),
+                        UPDATE1.value().toJson().replace("sthomas@acme.com", "sthomas4@acme.com")),
+                new ChangeRecordImpl(0, 13, UPDATE1.key().toJson(),
+                        UPDATE1.value().toJson().replace("sthomas@acme.com", "sthomas5@acme.com"))
+        ).iterator();
+        Util.checkSerializable(supplier, "kaka");
+        p.readFrom(items(supplier))
+                .rebalance()
+                .map(r -> r)
+                .writeTo(localSync());
+        execute().join();
+
+        assertMap(jet(), "sthomas5@acme.com", null);
+
+        jet().getMap(MAP).destroy();
+    }
+
     private void assertMap(JetInstance jetInstance, String email1, String email2) {
         assertMap(jetInstance.getHazelcastInstance(), email1, email2);
     }
@@ -225,6 +252,6 @@ public class CdcSinksTest extends PipelineTestSupport {
                     }
                     buf.close();
                 }).build();
-    } //todo: TestSources.items(..) doesn't work with items that don't extend Serializable
+    }
 
 }

@@ -17,6 +17,8 @@
 package com.hazelcast.jet.cdc;
 
 import com.hazelcast.jet.annotation.EvolvingApi;
+import com.hazelcast.jet.cdc.imp.MySqlSequenceExtractor;
+import com.hazelcast.jet.cdc.impl.CdcSource;
 import com.hazelcast.jet.cdc.impl.DebeziumConfig;
 import com.hazelcast.jet.cdc.impl.PropertyRules;
 import com.hazelcast.jet.pipeline.StreamSource;
@@ -72,6 +74,7 @@ public final class MySqlCdcSources {
          */
         private Builder(String name) {
             config = new DebeziumConfig(name, "io.debezium.connector.mysql.MySqlConnector");
+            config.setProperty(CdcSource.SEQUENCE_EXTRACTOR_CLASS_PROPERTY, MySqlSequenceExtractor.class.getName());
             config.setProperty("include.schema.changes", "false");
         }
 

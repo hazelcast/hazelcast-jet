@@ -17,13 +17,22 @@
 package com.hazelcast.jet.cdc;
 
 import com.hazelcast.jet.annotation.EvolvingApi;
+import com.hazelcast.jet.cdc.impl.CdcSource;
+import com.hazelcast.jet.cdc.impl.ConstantSequenceExtractor;
 import com.hazelcast.jet.cdc.impl.DebeziumConfig;
 import com.hazelcast.jet.pipeline.StreamSource;
 
 import javax.annotation.Nonnull;
 
 /**
- * Contains factory methods for creating change data capture sources
+ * Contains factory methods for creating change data capture sources.
+ * <p>
+ * Note: It is better to use first class CDC sources than this generic
+ * one, because it doesn't benefit from as much functionality. For
+ * example these sources don't set useful sequence numbers into the
+ * {@code ChangeRecord} instances they produce, so functionality based on
+ * that (like reordering protection in {@link CdcSinks}) is disabled for
+ * them.
  *
  * @since 4.2
  */
@@ -64,6 +73,7 @@ public final class DebeziumCdcSources {
          */
         private Builder(String name, String connectorClass) {
             config = new DebeziumConfig(name, connectorClass);
+            config.setProperty(CdcSource.SEQUENCE_EXTRACTOR_CLASS_PROPERTY, ConstantSequenceExtractor.class.getName());
         }
 
         /**

@@ -28,16 +28,18 @@ import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.util.Map;
 
-public final class UpdateMapWithMaterializedValuesP<T, K, V> extends AbstractUpdateMapP<T, K, V, V> {
+public class UpdateMapWithMaterializedValuesP<T, K, V> extends AbstractUpdateMapP<T, K, V, V> {
 
     private final FunctionEx<? super T, ? extends K> keyFn;
     private final FunctionEx<? super T, ? extends V> valueFn;
 
-    public UpdateMapWithMaterializedValuesP(HazelcastInstance instance,
-                                     String mapName,
-                                     @Nonnull FunctionEx<? super T, ? extends K> keyFn,
-                                     @Nonnull FunctionEx<? super T, ? extends V> valueFn) {
-        super(instance, MAX_PARALLEL_ASYNC_OPS_DEFAULT, mapName);
+    public UpdateMapWithMaterializedValuesP(
+            @Nonnull HazelcastInstance instance,
+            @Nonnull String map,
+            @Nonnull FunctionEx<? super T, ? extends K> keyFn,
+            @Nonnull FunctionEx<? super T, ? extends V> valueFn
+    ) {
+        super(instance, MAX_PARALLEL_ASYNC_OPS_DEFAULT, map);
         this.keyFn = keyFn;
         this.valueFn = valueFn;
     }
@@ -50,7 +52,12 @@ public final class UpdateMapWithMaterializedValuesP<T, K, V> extends AbstractUpd
     @Override
     protected void addToBuffer(T item) {
         K key = keyFn.apply(item);
-        V value = valueFn.apply(item);
+
+        boolean shouldBeDropped = shouldBeDropped(key, item);
+        if (shouldBeDropped) {
+            pendingItemCount--;
+            return;
+        }
 
         int partitionId = env.getPartitionId(key);
 
@@ -60,7 +67,11 @@ public final class UpdateMapWithMaterializedValuesP<T, K, V> extends AbstractUpd
         } else {
             pendingInPartition[partitionId]++;
         }
-        buffer.put(key, value);
+        buffer.put(key, valueFn.apply(item));
+    }
+
+    protected boolean shouldBeDropped(K key, T item) {
+        return false;
     }
 
     public static class ApplyMaterializedValuesEntryProcessor<K, V>
