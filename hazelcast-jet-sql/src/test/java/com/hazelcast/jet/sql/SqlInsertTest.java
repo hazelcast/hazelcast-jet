@@ -259,7 +259,7 @@ public class SqlInsertTest extends SimpleTestInClusterSupport {
     @Test
     public void insert_intoMapFails() {
         assertThatThrownBy(() -> sqlService.query("INSERT INTO " + PERSON_MAP_SINK + "(birthday) VALUES ('2020-01-01')"))
-                .hasMessage("Only INSERT OVERWRITE clause is supported for IMapSqlConnector");
+                .hasMessageContaining("Only INSERT OVERWRITE clause is supported for IMapSqlConnector");
     }
 
     private <K, V> void assertMap(String name, String sql, Map<K, V> expected) {
