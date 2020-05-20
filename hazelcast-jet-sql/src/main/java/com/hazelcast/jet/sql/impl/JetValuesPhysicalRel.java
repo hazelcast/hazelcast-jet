@@ -17,7 +17,7 @@
 package com.hazelcast.jet.sql.impl;
 
 import com.google.common.collect.ImmutableList;
-import com.hazelcast.jet.sql.impl.expression.SqlToQueryType;
+import com.hazelcast.sql.impl.calcite.opt.physical.visitor.SqlToQueryType;
 import com.hazelcast.sql.impl.plan.node.PlanNodeSchema;
 import com.hazelcast.sql.impl.type.QueryDataType;
 import org.apache.calcite.plan.RelOptCluster;
