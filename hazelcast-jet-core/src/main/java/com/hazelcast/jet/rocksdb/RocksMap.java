@@ -61,6 +61,10 @@ public class RocksMap<K, V> implements Iterable<Entry<K, V>> {
 
     }
 
+    ColumnFamilyHandle getColumnFamilyHandle() {
+        return cfh;
+    }
+
     public V get(K key) throws JetException {
         try {
             byte[] valueBytes = db.get(cfh, readOptions, serialize(key));
@@ -91,12 +95,11 @@ public class RocksMap<K, V> implements Iterable<Entry<K, V>> {
         for (Entry<K, V> e : map.entrySet()) {
             byte[] keyBytes = serialize(e.getKey());
             byte[] valueBytes = serialize(e.getValue());
-            batch.put(keyBytes, valueBytes);
-        }
-        try {
-            db.write(writeOptions, batch);
-        } catch (RocksDBException e) {
-            throw new JetException("Operation Failed: PutAll", e);
+            try {
+                db.put(cfh, writeOptions, keyBytes, valueBytes);
+            } catch (RocksDBException ex) {
+                throw new JetException("Operation Failed: PutAll", ex);
+            }
         }
     }
 
@@ -109,12 +112,18 @@ public class RocksMap<K, V> implements Iterable<Entry<K, V>> {
     }
 
     private <T> byte[] serialize(T item) {
+        if (item == null) {
+            return null;
+        }
         ObjectDataOutput out = serializationService.createObjectDataOutput();
         serializationService.writeObject(out, item);
         return out.toByteArray();
     }
 
     private <T> T deserialize(byte[] item) {
+        if (item == null) {
+            return null;
+        }
         ObjectDataInput in = serializationService.createObjectDataInput(item);
         return serializationService.readObject(in);
     }

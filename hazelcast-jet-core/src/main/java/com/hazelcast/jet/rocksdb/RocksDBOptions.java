@@ -28,7 +28,7 @@ import org.rocksdb.WriteOptions;
  */
 class RocksDBOptions {
     Options getOptions() {
-        return new Options();
+        return new Options().setCreateIfMissing(true);
     }
 
     ReadOptions getReadOptions() {

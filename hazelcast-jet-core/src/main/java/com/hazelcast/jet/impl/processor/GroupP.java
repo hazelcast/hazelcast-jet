@@ -22,7 +22,6 @@ import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.datamodel.Tuple2;
-import com.hazelcast.jet.impl.execution.init.Contexts.ProcCtx;
 import com.hazelcast.jet.rocksdb.RocksDBStateBackend;
 import com.hazelcast.jet.rocksdb.RocksMap;
 
@@ -47,7 +46,9 @@ public class GroupP<K, A, R, OUT> extends AbstractProcessor {
     @Nonnull private final AggregateOperation<A, R> aggrOp;
     private final BiFunction<? super K, ? super R, OUT> mapToOutputFn;
     private Traverser<OUT> resultTraverser;
+    private RocksDBStateBackend store;
     private RocksMap<K, A> keyToAcc;
+
 
     public GroupP(
             @Nonnull List<FunctionEx<?, ? extends K>> groupKeyFns,
@@ -71,10 +72,8 @@ public class GroupP<K, A, R, OUT> extends AbstractProcessor {
 
     @Override
     protected void init(@Nonnull Context context) throws Exception {
-        if (context instanceof ProcCtx) {
-            RocksDBStateBackend store = ((ProcCtx) context).rocksDBStateBackend();
-            keyToAcc = store.getMap();
-        }
+        store = context.rocksDBStateBackend();
+        keyToAcc = store.getMap();
     }
 
     @Override
@@ -100,6 +99,11 @@ public class GroupP<K, A, R, OUT> extends AbstractProcessor {
                     .map(e -> mapToOutputFn.apply(e.getKey(), aggrOp.finishFn().apply(e.getValue())));
         }
         return emitFromTraverser(resultTraverser);
+    }
+
+    @Override
+    public void close() {
+        store.releaseMap(keyToAcc);
     }
 
     private class ResultTraverser implements Traverser<Entry<K, A>> {

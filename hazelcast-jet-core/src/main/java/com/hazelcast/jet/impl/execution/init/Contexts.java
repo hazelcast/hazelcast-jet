@@ -148,7 +148,6 @@ public final class Contexts {
         private final int memberIndex;
         private final ConcurrentHashMap<String, File> tempDirectories;
         private final InternalSerializationService serializationService;
-        private final RocksDBStateBackend rocksDBStateBackend;
 
         @SuppressWarnings("checkstyle:ParameterNumber")
         ProcSupplierCtx(
@@ -164,15 +163,13 @@ public final class Contexts {
                 int memberCount,
                 ProcessingGuarantee processingGuarantee,
                 ConcurrentHashMap<String, File> tempDirectories,
-                InternalSerializationService serializationService,
-                RocksDBStateBackend rocksDBStateBackend
+                InternalSerializationService serializationService
         ) {
             super(jetInstance, jobId, executionId, jobConfig, logger, vertexName, localParallelism, totalParallelism,
                     memberCount, processingGuarantee);
             this.memberIndex = memberIndex;
             this.tempDirectories = tempDirectories;
             this.serializationService = serializationService;
-            this.rocksDBStateBackend = rocksDBStateBackend;
         }
 
         @Override
@@ -245,16 +242,13 @@ public final class Contexts {
             return serializationService;
         }
 
-        @Nonnull
-        public RocksDBStateBackend rocksDBStateBackend() {
-            return rocksDBStateBackend;
-        }
     }
 
     public static class ProcCtx extends ProcSupplierCtx implements Processor.Context {
 
         private final int localProcessorIndex;
         private final int globalProcessorIndex;
+        private final RocksDBStateBackend rocksDBStateBackend;
 
         @SuppressWarnings("checkstyle:ParameterNumber")
         public ProcCtx(JetInstance instance,
@@ -274,9 +268,10 @@ public final class Contexts {
                        RocksDBStateBackend rocksDBStateBackend) {
             super(instance, jobId, executionId, jobConfig, logger, vertexName, localParallelism,
                     memberCount * localParallelism, memberIndex, memberCount, processingGuarantee,
-                    tempDirectories, serializationService, rocksDBStateBackend);
+                    tempDirectories, serializationService);
             this.localProcessorIndex = localProcessorIndex;
             this.globalProcessorIndex = globalProcessorIndex;
+            this.rocksDBStateBackend = rocksDBStateBackend;
         }
 
         @Override
@@ -287,6 +282,11 @@ public final class Contexts {
         @Override
         public int globalProcessorIndex() {
             return globalProcessorIndex;
+        }
+
+        @Override
+        public RocksDBStateBackend rocksDBStateBackend() {
+            return rocksDBStateBackend;
         }
     }
 }

@@ -120,6 +120,7 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
     private NodeEngineImpl nodeEngine;
     private long executionId;
     private long lastSnapshotId;
+    private RocksDBStateBackend rocksDBStateBackend;
 
     // list of unique remote members
     private final Supplier<Set<Address>> remoteMembers = memoize(() ->
@@ -145,10 +146,10 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
                            long executionId,
                            SnapshotContext snapshotContext,
                            ConcurrentHashMap<String, File> tempDirectories,
-                           InternalSerializationService jobSerializationService,
-                           RocksDBStateBackend rocksDBStateBackend) {
+                           InternalSerializationService jobSerializationService) {
         this.nodeEngine = (NodeEngineImpl) nodeEngine;
         this.executionId = executionId;
+        rocksDBStateBackend = new RocksDBStateBackend(jobSerializationService);
         initProcSuppliers(jobId, executionId, tempDirectories, jobSerializationService, rocksDBStateBackend);
         initDag(jobSerializationService);
 
@@ -328,8 +329,7 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
                         memberCount,
                         jobConfig.getProcessingGuarantee(),
                         tempDirectories,
-                        jobSerializationService,
-                        rocksDBStateBackend
+                        jobSerializationService
                 ));
             } catch (Exception e) {
                 throw sneakyThrow(e);

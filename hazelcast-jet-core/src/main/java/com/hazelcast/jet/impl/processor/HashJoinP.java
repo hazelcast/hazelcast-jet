@@ -22,7 +22,6 @@ import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.datamodel.ItemsByTag;
 import com.hazelcast.jet.datamodel.Tag;
 import com.hazelcast.jet.function.TriFunction;
-import com.hazelcast.jet.impl.execution.init.Contexts.ProcCtx;
 import com.hazelcast.jet.impl.pipeline.transform.HashJoinTransform;
 import com.hazelcast.jet.impl.processor.HashJoinCollectP.HashJoinArrayList;
 import com.hazelcast.jet.pipeline.BatchStage;
@@ -76,6 +75,7 @@ public class HashJoinP<E0> extends AbstractProcessor {
     private final FlatMapper<E0, Object> flatMapper;
     private boolean ordinal0Consumed;
     private RocksDBStateBackend store;
+    private List<RocksMap> rocksMapList = new ArrayList<>();
 
     @SuppressFBWarnings(value = "NP_PARAMETER_MUST_BE_NONNULL_BUT_MARKED_AS_NULLABLE",
             justification = "https://github.com/spotbugs/spotbugs/issues/844")
@@ -116,9 +116,7 @@ public class HashJoinP<E0> extends AbstractProcessor {
 
     @Override
     protected void init(@Nonnull Context context) throws Exception {
-        if (context instanceof ProcCtx) {
-            store = ((ProcCtx) context).rocksDBStateBackend();
-        }
+        store = context.rocksDBStateBackend();
     }
 
     @Override
@@ -126,6 +124,7 @@ public class HashJoinP<E0> extends AbstractProcessor {
         assert !ordinal0Consumed : "Edge 0 must have a lower priority than all other edges";
 
         RocksMap<Object, Object> map = store.getMap();
+        rocksMapList.add(map);
         map.putAll(((Map) item));
         lookupTables.set(ordinal - 1, map);
         return true;
@@ -142,6 +141,13 @@ public class HashJoinP<E0> extends AbstractProcessor {
         RocksMap<Object, Object> lookupTableForOrdinal = lookupTables.get(index);
         Object key = keyFns.get(index).apply(item);
         return lookupTableForOrdinal.get(key);
+    }
+
+    @Override
+    public void close() {
+        for (RocksMap map : rocksMapList) {
+            store.releaseMap(map);
+        }
     }
 
     private class CombinationsTraverser<OUT> implements Traverser<OUT> {

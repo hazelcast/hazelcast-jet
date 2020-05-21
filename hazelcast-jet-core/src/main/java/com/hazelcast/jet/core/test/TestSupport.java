@@ -20,6 +20,7 @@ import com.hazelcast.cluster.Address;
 import com.hazelcast.config.NetworkConfig;
 import com.hazelcast.function.SupplierEx;
 import com.hazelcast.instance.BuildInfoProvider;
+import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.internal.serialization.SerializationService;
 import com.hazelcast.internal.serialization.SerializationServiceAware;
 import com.hazelcast.internal.serialization.impl.DefaultSerializationServiceBuilder;
@@ -32,6 +33,7 @@ import com.hazelcast.jet.core.Processor.Context;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.Watermark;
+import com.hazelcast.jet.rocksdb.RocksDBStateBackend;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.logging.impl.LoggingServiceImpl;
 import com.hazelcast.spi.impl.SerializationServiceSupport;
@@ -222,6 +224,8 @@ public final class TestSupport {
     private BiConsumer<TestMode, List<List<Object>>> assertOutputFn;
 
     private BiPredicate<? super List<?>, ? super List<?>> outputChecker = Objects::equals;
+
+    private InternalSerializationService serializationService;
 
     private TestSupport(@Nonnull ProcessorMetaSupplier metaSupplier) {
         this.metaSupplier = metaSupplier;
@@ -804,6 +808,8 @@ public final class TestSupport {
         TestProcessorContext context = new TestProcessorContext()
                 .setLogger(getLogger(processor.getClass().getName()))
                 .setManagedContext(serializationService.getManagedContext());
+        context.setRocksDBStateBackend(new RocksDBStateBackend((InternalSerializationService) serializationService));
+
         if (jetInstance != null) {
             context.setJetInstance(jetInstance);
         }

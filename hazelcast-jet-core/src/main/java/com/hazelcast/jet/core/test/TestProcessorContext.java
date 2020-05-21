@@ -20,6 +20,7 @@ import com.hazelcast.core.ManagedContext;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.core.Processor;
+import com.hazelcast.jet.rocksdb.RocksDBStateBackend;
 import com.hazelcast.logging.ILogger;
 
 import javax.annotation.Nonnull;
@@ -33,6 +34,7 @@ public class TestProcessorContext extends TestProcessorSupplierContext implement
 
     private int localProcessorIndex;
     private int globalProcessorIndex;
+    private RocksDBStateBackend rocksDBStateBackend;
 
     /**
      * Constructor with default values.
@@ -54,6 +56,15 @@ public class TestProcessorContext extends TestProcessorSupplierContext implement
         assert globalProcessorIndex >= 0 && globalProcessorIndex < totalParallelism()
                 : "globalProcessorIndex should be in range 0.." + (totalParallelism() - 1);
         return globalProcessorIndex;
+    }
+
+    @Override
+    public RocksDBStateBackend rocksDBStateBackend() {
+        return rocksDBStateBackend;
+    }
+
+    void setRocksDBStateBackend(RocksDBStateBackend rocksDBStateBackend) {
+        this.rocksDBStateBackend = rocksDBStateBackend;
     }
 
     /**

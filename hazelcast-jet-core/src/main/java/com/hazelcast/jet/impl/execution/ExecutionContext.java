@@ -38,7 +38,6 @@ import com.hazelcast.jet.impl.metrics.RawJobMetrics;
 import com.hazelcast.jet.impl.operation.SnapshotPhase1Operation.SnapshotPhase1Result;
 import com.hazelcast.jet.impl.util.LoggingUtil;
 import com.hazelcast.jet.impl.util.Util;
-import com.hazelcast.jet.rocksdb.RocksDBStateBackend;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.spi.impl.NodeEngine;
 
@@ -64,6 +63,7 @@ import static java.util.Collections.unmodifiableMap;
  * instance per job execution; if the job is restarted, another instance will
  * be used.
  */
+//TODO: create one per member not per cluster!!
 public class ExecutionContext implements DynamicMetricsProvider {
 
     private final long jobId;
@@ -108,7 +108,6 @@ public class ExecutionContext implements DynamicMetricsProvider {
 
     private InternalSerializationService serializationService;
 
-    private RocksDBStateBackend rocksDBStateBackend;
 
     public ExecutionContext(NodeEngine nodeEngine, TaskletExecutionService taskletExecService,
                             long jobId, long executionId, Address coordinator, Set<Address> participants) {
@@ -136,10 +135,9 @@ public class ExecutionContext implements DynamicMetricsProvider {
 
         JetService jetService = nodeEngine.getService(JetService.SERVICE_NAME);
         serializationService = jetService.createSerializationService(jobConfig.getSerializerConfigs());
-        rocksDBStateBackend = new RocksDBStateBackend(serializationService);
         metricsEnabled = jobConfig.isMetricsEnabled() && nodeEngine.getConfig().getMetricsConfig().isEnabled();
         plan.initialize(nodeEngine, jobId, executionId, snapshotContext,
-                tempDirectories, serializationService, rocksDBStateBackend);
+                tempDirectories, serializationService);
         snapshotContext.initTaskletCount(plan.getProcessorTaskletCount(), plan.getStoreSnapshotTaskletCount(),
                 plan.getHigherPriorityVertexCount());
         receiverMap = unmodifiableMap(plan.getReceiverMap());
@@ -221,8 +219,6 @@ public class ExecutionContext implements DynamicMetricsProvider {
         if (serializationService != null) {
             serializationService.dispose();
         }
-
-        rocksDBStateBackend.deleteKeyValueStore();
     }
 
     /**

@@ -17,7 +17,6 @@
 package com.hazelcast.jet.impl.processor;
 
 import com.hazelcast.jet.core.AbstractProcessor;
-import com.hazelcast.jet.impl.execution.init.Contexts.ProcCtx;
 import com.hazelcast.jet.rocksdb.RocksDBStateBackend;
 import com.hazelcast.jet.rocksdb.RocksMap;
 
@@ -38,7 +37,7 @@ public class HashJoinCollectP<K, T, V> extends AbstractProcessor {
 
     @Nonnull private final Function<T, K> keyFn;
     @Nonnull private final Function<T, V> projectFn;
-
+    private RocksDBStateBackend store;
     private RocksMap<K, Object> lookupTable;
 
     public HashJoinCollectP(@Nonnull Function<T, K> keyFn, @Nonnull Function<T, V> projectFn) {
@@ -48,10 +47,8 @@ public class HashJoinCollectP<K, T, V> extends AbstractProcessor {
 
     @Override
     protected void init(@Nonnull Context context) throws Exception {
-        if (context instanceof ProcCtx) {
-            RocksDBStateBackend store = ((ProcCtx) context).rocksDBStateBackend();
+        store = context.rocksDBStateBackend();
             lookupTable = store.getMap();
-        }
     }
 
     @Override
@@ -80,6 +77,11 @@ public class HashJoinCollectP<K, T, V> extends AbstractProcessor {
     @Override
     public boolean complete() {
         return tryEmit(lookupTable.getAll());
+    }
+
+    @Override
+    public void close() {
+        store.releaseMap(lookupTable);
     }
 
     // We need a custom ArrayList subclass because the user's V type could be
