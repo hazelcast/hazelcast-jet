@@ -21,6 +21,8 @@ import com.hazelcast.internal.util.HashUtil;
 import java.util.Map;
 import java.util.Objects;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
+
 public class MySqlSequenceExtractor implements SequenceExtractor {
 
     private static final String SERVER = "server";
@@ -68,7 +70,7 @@ public class MySqlSequenceExtractor implements SequenceExtractor {
     }
 
     private static long computePartition(String server, String binlog) {
-        byte[] bytes = (server + binlog).getBytes();
+        byte[] bytes = (server + binlog).getBytes(UTF_8);
         return HashUtil.MurmurHash3_x64_64(bytes, 0, bytes.length);
     }
 }
