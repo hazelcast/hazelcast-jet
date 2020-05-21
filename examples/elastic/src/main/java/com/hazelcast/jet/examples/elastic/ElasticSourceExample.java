@@ -36,6 +36,17 @@ import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
 import static com.hazelcast.jet.elastic.ElasticClients.client;
 import static com.hazelcast.jet.pipeline.Pipeline.create;
 
+/**
+ * Example for the Elastic Source
+ *
+ * The pipeline in the example:
+ * - reads all documents from Elastic running on localhost:9200
+ * - maps role and name fields
+ * - aggregates all names by role name
+ * - writes aggregated result to an observable
+ *
+ * The results are then printed to the standard output of the submitting client.
+ */
 public class ElasticSourceExample {
 
     private static final String ROLES_OBSERVABLE = "roles";
@@ -57,7 +68,7 @@ public class ElasticSourceExample {
              .aggregate(mapping(Tuple2::getValue, toList()))
              .writeTo(Sinks.observable(ROLES_OBSERVABLE));
 
-            JetInstance jet = Jet.newJetInstance();
+            JetInstance jet = Jet.bootstrappedInstance();
 
             Observable<Entry<String, List<String>>> roles = jet.getObservable(ROLES_OBSERVABLE);
             roles.addObserver(System.out::println);

@@ -18,22 +18,26 @@ package com.hazelcast.jet.examples.elastic;
 
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.core.processor.SourceProcessors;
 import com.hazelcast.jet.elastic.ElasticClients;
 import com.hazelcast.jet.elastic.ElasticSinks;
 import com.hazelcast.jet.json.JsonUtil;
 import com.hazelcast.jet.pipeline.BatchSource;
 import com.hazelcast.jet.pipeline.Pipeline;
+import com.hazelcast.jet.pipeline.Sources;
 import org.elasticsearch.action.index.IndexRequest;
 
-import java.io.File;
 import java.nio.file.Files;
 import java.util.stream.Stream;
 
 import static com.hazelcast.jet.pipeline.Pipeline.create;
-import static com.hazelcast.jet.pipeline.Sources.batchFromProcessor;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
+/**
+ * Example for Elastic Sink
+ *
+ * Reads files from `src/main/resources/documents` folder and indexes them as documents into Elastic running on
+ * localhost:9200
+ */
 public class ElasticSinkExample {
 
     public static void main(String[] args) {
@@ -46,7 +50,7 @@ public class ElasticSinkExample {
                      map -> new IndexRequest("my-index").source(map)
              ));
 
-            JetInstance jet = Jet.newJetInstance();
+            JetInstance jet = Jet.bootstrappedInstance();
             jet.newJob(p).join();
         } catch (Exception e) {
             Jet.shutdownAll();
@@ -54,9 +58,8 @@ public class ElasticSinkExample {
     }
 
     public static BatchSource<String> files(String directory) {
-        return batchFromProcessor("filesSource(" + new File(directory) + ')',
-                SourceProcessors.readFilesP(directory, "*", false,
-                        path -> Stream.of(new String(Files.readAllBytes(path), UTF_8))));
+        return Sources.filesBuilder(directory)
+                      .build(path -> Stream.of(new String(Files.readAllBytes(path), UTF_8)));
     }
 
 }

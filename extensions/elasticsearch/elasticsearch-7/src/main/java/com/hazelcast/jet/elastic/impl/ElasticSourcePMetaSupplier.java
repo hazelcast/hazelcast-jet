@@ -17,6 +17,7 @@
 package com.hazelcast.jet.elastic.impl;
 
 import com.hazelcast.cluster.Address;
+import com.hazelcast.cluster.Member;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
@@ -32,7 +33,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 
-import static com.hazelcast.jet.impl.util.Util.uncheckCall;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.emptyMap;
 import static java.util.Collections.nCopies;
@@ -71,7 +71,7 @@ public class ElasticSourcePMetaSupplier<T> implements ProcessorMetaSupplier {
             if (configuration.isCoLocatedReadingEnabled()) {
                 Set<Address> addresses = context
                         .jetInstance().getCluster().getMembers().stream()
-                        .map(m -> uncheckCall((m::getAddress)))
+                        .map(Member::getAddress)
                         .collect(toSet());
                 assignedShards = assignShards(shards, addresses);
             } else {
@@ -96,7 +96,7 @@ public class ElasticSourcePMetaSupplier<T> implements ProcessorMetaSupplier {
         int uniqueShards = (int) shards.stream().map(Shard::indexShard).distinct().count();
         Set<String> assignedShards = new HashSet<>();
 
-        int candidatesSize = nodeCandidates.keySet().size();
+        int candidatesSize = nodeCandidates.size();
         int iterations = (uniqueShards + candidatesSize - 1) / candidatesSize; // Same as Math.ceil for float div
         for (int i = 0; i < iterations; i++) {
             for (Address address : addresses) {
