@@ -52,6 +52,11 @@ public final class Person implements Serializable {
     }
 
     @Override
+    public String toString() {
+        return "Person{name='" + name + '\'' + ", age=" + age + '}';
+    }
+
+    @Override
     public boolean equals(Object o) {
         if (this == o) {
             return true;
@@ -65,7 +70,7 @@ public final class Person implements Serializable {
     }
 
     @Override
-    public String toString() {
-        return "Person{name='" + name + '\'' + ", age=" + age + '}';
+    public int hashCode() {
+        return Objects.hash(name, age);
     }
 }

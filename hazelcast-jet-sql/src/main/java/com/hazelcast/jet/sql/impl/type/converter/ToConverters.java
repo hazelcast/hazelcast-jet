@@ -1,3 +1,19 @@
+/*
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.hazelcast.jet.sql.impl.type.converter;
 
 import com.hazelcast.sql.impl.type.QueryDataType;
@@ -44,8 +60,10 @@ public final class ToConverters {
         converters.put(QueryDataType.TIME, new ToCanonicalConverter(QueryDataType.TIME));
         converters.put(QueryDataType.DATE, new ToCanonicalConverter(QueryDataType.DATE));
         converters.put(QueryDataType.TIMESTAMP, new ToCanonicalConverter(QueryDataType.TIMESTAMP));
-        converters.put(QueryDataType.TIMESTAMP_WITH_TZ_ZONED_DATE_TIME, ToTimestampWithTzZonedDateTimeConverter.INSTANCE);
-        converters.put(QueryDataType.TIMESTAMP_WITH_TZ_OFFSET_DATE_TIME, new ToCanonicalConverter(QueryDataType.TIMESTAMP_WITH_TZ_OFFSET_DATE_TIME));
+        converters.put(QueryDataType.TIMESTAMP_WITH_TZ_ZONED_DATE_TIME,
+                ToTimestampWithTzZonedDateTimeConverter.INSTANCE);
+        converters.put(QueryDataType.TIMESTAMP_WITH_TZ_OFFSET_DATE_TIME,
+                new ToCanonicalConverter(QueryDataType.TIMESTAMP_WITH_TZ_OFFSET_DATE_TIME));
         converters.put(QueryDataType.TIMESTAMP_WITH_TZ_DATE, ToTimestampWithTzDateConverter.INSTANCE);
         converters.put(QueryDataType.TIMESTAMP_WITH_TZ_INSTANT, ToTimestampWithTzInstantConverter.INSTANCE);
         converters.put(QueryDataType.TIMESTAMP_WITH_TZ_CALENDAR, ToTimestampWithTzCalendarConverter.INSTANCE);
@@ -62,7 +80,7 @@ public final class ToConverters {
      * Returns a {@code ToConverter} that converts to the canonical class of
      * the given {@code QueryDataType}.
      */
-    private static class ToCanonicalConverter extends ToConverter {
+    private static final class ToCanonicalConverter extends ToConverter {
 
         private ToCanonicalConverter(QueryDataType type) {
             super(type);
@@ -74,7 +92,7 @@ public final class ToConverters {
         }
     }
 
-    private static class ToVarcharCharacterConverter extends ToConverter {
+    private static final class ToVarcharCharacterConverter extends ToConverter {
 
         private static final ToVarcharCharacterConverter INSTANCE = new ToVarcharCharacterConverter();
 
@@ -88,7 +106,7 @@ public final class ToConverters {
         }
     }
 
-    private static class ToDecimalBigIntegerConverter extends ToConverter {
+    private static final class ToDecimalBigIntegerConverter extends ToConverter {
 
         private static final ToDecimalBigIntegerConverter INSTANCE = new ToDecimalBigIntegerConverter();
 
@@ -102,7 +120,7 @@ public final class ToConverters {
         }
     }
 
-    private static class ToTimestampWithTzDateConverter extends ToConverter {
+    private static final class ToTimestampWithTzDateConverter extends ToConverter {
 
         private static final ToTimestampWithTzDateConverter INSTANCE = new ToTimestampWithTzDateConverter();
 
@@ -117,7 +135,7 @@ public final class ToConverters {
         }
     }
 
-    private static class ToTimestampWithTzCalendarConverter extends ToConverter {
+    private static final class ToTimestampWithTzCalendarConverter extends ToConverter {
 
         private static final ToTimestampWithTzCalendarConverter INSTANCE = new ToTimestampWithTzCalendarConverter();
 
@@ -132,7 +150,7 @@ public final class ToConverters {
         }
     }
 
-    private static class ToTimestampWithTzInstantConverter extends ToConverter {
+    private static final class ToTimestampWithTzInstantConverter extends ToConverter {
 
         private static final ToTimestampWithTzInstantConverter INSTANCE = new ToTimestampWithTzInstantConverter();
 
@@ -146,9 +164,10 @@ public final class ToConverters {
         }
     }
 
-    private static class ToTimestampWithTzZonedDateTimeConverter extends ToConverter {
+    private static final class ToTimestampWithTzZonedDateTimeConverter extends ToConverter {
 
-        private static final ToTimestampWithTzZonedDateTimeConverter INSTANCE = new ToTimestampWithTzZonedDateTimeConverter();
+        private static final ToTimestampWithTzZonedDateTimeConverter INSTANCE =
+                new ToTimestampWithTzZonedDateTimeConverter();
 
         private ToTimestampWithTzZonedDateTimeConverter() {
             super(QueryDataType.TIMESTAMP_WITH_TZ_ZONED_DATE_TIME);

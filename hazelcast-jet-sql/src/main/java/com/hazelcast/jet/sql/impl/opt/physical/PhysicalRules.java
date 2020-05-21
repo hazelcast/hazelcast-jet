@@ -21,7 +21,7 @@ import org.apache.calcite.rel.core.RelFactories;
 import org.apache.calcite.tools.RuleSet;
 import org.apache.calcite.tools.RuleSets;
 
-public class PhysicalRules {
+public final class PhysicalRules {
 
     private PhysicalRules() {
     }

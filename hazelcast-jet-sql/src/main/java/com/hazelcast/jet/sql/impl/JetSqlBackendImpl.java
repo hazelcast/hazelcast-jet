@@ -17,6 +17,7 @@
 package com.hazelcast.jet.sql.impl;
 
 import com.hazelcast.internal.services.ManagedService;
+import com.hazelcast.internal.util.UuidUtil;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
@@ -51,7 +52,6 @@ import org.apache.calcite.sql.validate.SqlValidatorCatalogReader;
 import javax.annotation.Nonnull;
 import java.util.List;
 import java.util.Properties;
-import java.util.UUID;
 
 @SuppressWarnings("unused") // used through reflection
 public class JetSqlBackendImpl implements JetSqlBackend, ManagedService {
@@ -103,7 +103,7 @@ public class JetSqlBackendImpl implements JetSqlBackend, ManagedService {
         if (isDml) {
             dag = createDag(physicalRel, null);
         } else {
-            observableName = "sql-sink-" + UUID.randomUUID().toString();
+            observableName = "sql-sink-" + UuidUtil.newUnsecureUuidString();
             dag = createDag(physicalRel, SinkProcessors.writeObservableP(observableName));
             cursorColumnCount = physicalRel.getRowType().getFieldCount();
         }
@@ -134,7 +134,8 @@ public class JetSqlBackendImpl implements JetSqlBackend, ManagedService {
             }
         } else {
             // TODO will not run on a client
-            return new SqlCursorFromObservable(plan.getCursorColumnCount(), jetInstance.getObservable(plan.getObservableName()));
+            return new SqlCursorFromObservable(plan.getCursorColumnCount(),
+                    jetInstance.getObservable(plan.getObservableName()));
         }
     }
 
@@ -150,7 +151,8 @@ public class JetSqlBackendImpl implements JetSqlBackend, ManagedService {
     }
 
     /**
-     * Perform physical optimization. This is where proper access methods and algorithms for joins and aggregations are chosen.
+     * Perform physical optimization.
+     * This is where proper access methods and algorithms for joins and aggregations are chosen.
      *
      * @param rel Optimized logical tree.
      * @return Optimized physical tree.

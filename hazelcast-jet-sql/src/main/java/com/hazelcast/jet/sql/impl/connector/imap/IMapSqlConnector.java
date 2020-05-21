@@ -18,6 +18,7 @@ package com.hazelcast.jet.sql.impl.connector.imap;
 
 import com.hazelcast.function.BiFunctionEx;
 import com.hazelcast.function.FunctionEx;
+import com.hazelcast.internal.util.UuidUtil;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Vertex;
@@ -52,7 +53,6 @@ import static com.hazelcast.jet.impl.util.Util.toList;
 import static com.hazelcast.jet.sql.impl.connector.SqlWriters.entryWriter;
 import static com.hazelcast.jet.sql.impl.expression.ExpressionUtil.joinFn;
 import static com.hazelcast.jet.sql.impl.expression.ExpressionUtil.projectionFn;
-import static java.util.UUID.randomUUID;
 
 // TODO remove this class in favor of imdg implementation
 public class IMapSqlConnector extends SqlKeyValueConnector implements JetSqlConnector {
@@ -134,7 +134,7 @@ public class IMapSqlConnector extends SqlKeyValueConnector implements JetSqlConn
                 };
 
         String mapName = table.getName();
-        return dag.newVertex("map-enrich-" + randomUUID(),
+        return dag.newVertex("map-enrich-" + UuidUtil.newUnsecureUuidString(),
                 flatMapUsingServiceP(ServiceFactories.iMapService(mapName), flatMapFn));
     }
 

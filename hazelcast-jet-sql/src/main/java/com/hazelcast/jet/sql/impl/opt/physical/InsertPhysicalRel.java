@@ -39,6 +39,8 @@ import static com.hazelcast.jet.sql.impl.opt.OptUtils.CONVENTION_PHYSICAL;
 
 public class InsertPhysicalRel extends TableModify implements PhysicalRel {
 
+    private static final double COST_FACTOR = .1;
+
     public InsertPhysicalRel(
             RelOptCluster cluster,
             RelTraitSet traitSet,
@@ -54,10 +56,7 @@ public class InsertPhysicalRel extends TableModify implements PhysicalRel {
                 updateColumnList, sourceExpressionList, flattened);
         assert input.getConvention() == CONVENTION_PHYSICAL;
         assert getConvention() == CONVENTION_PHYSICAL;
-        final HazelcastTable hzTable = table.unwrap(HazelcastTable.class);
-        if (hzTable == null) {
-            throw new RuntimeException("null hzTable"); // TODO: user error in validator
-        }
+        assert table.unwrap(HazelcastTable.class) != null; // TODO: user error in validator
     }
 
     @Override
@@ -75,7 +74,7 @@ public class InsertPhysicalRel extends TableModify implements PhysicalRel {
 
     @Override
     public RelOptCost computeSelfCost(RelOptPlanner planner, RelMetadataQuery mq) {
-        return super.computeSelfCost(planner, mq).multiplyBy(.1);
+        return super.computeSelfCost(planner, mq).multiplyBy(COST_FACTOR);
     }
 
     @Override

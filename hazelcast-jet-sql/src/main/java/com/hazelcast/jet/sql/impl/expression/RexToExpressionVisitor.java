@@ -16,7 +16,6 @@
 
 package com.hazelcast.jet.sql.impl.expression;
 
-import com.hazelcast.sql.HazelcastSqlException;
 import com.hazelcast.sql.impl.QueryException;
 import com.hazelcast.sql.impl.expression.ColumnExpression;
 import com.hazelcast.sql.impl.expression.Expression;

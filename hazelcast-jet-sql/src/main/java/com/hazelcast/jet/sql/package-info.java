@@ -14,25 +14,7 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.sql.impl.connector.kafka.model;
-
-import org.apache.kafka.common.serialization.Deserializer;
-
-import java.math.BigInteger;
-import java.util.Map;
-
-public class BigIntegerDeserializer implements Deserializer<BigInteger> {
-
-    @Override
-    public void configure(Map<String, ?> configs, boolean isKey) {
-    }
-
-    @Override
-    public BigInteger deserialize(String topic, byte[] bytes) {
-        return new BigInteger(bytes);
-    }
-
-    @Override
-    public void close() {
-    }
-}
+/**
+ *
+ */
+package com.hazelcast.jet.sql;

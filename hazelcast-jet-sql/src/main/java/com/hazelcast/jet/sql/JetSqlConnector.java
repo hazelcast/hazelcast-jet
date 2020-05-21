@@ -26,8 +26,14 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.List;
 
+/**
+ *
+ */
 public interface JetSqlConnector extends SqlConnector {
 
+    /**
+     * @return
+     */
     boolean isStream();
 
     /**
@@ -104,18 +110,30 @@ public interface JetSqlConnector extends SqlConnector {
         throw new UnsupportedOperationException("Sink not supported for " + getClass().getName());
     }
 
+    /**
+     * @return
+     */
     default boolean supportsFullScanReader() {
         return false;
     }
 
+    /**
+     * @return
+     */
     default boolean supportsNestedLoopReader() {
         return false;
     }
 
+    /**
+     * @return
+     */
     default boolean supportsSink() {
         return false;
     }
 
+    /**
+     * @return
+     */
     // TODO: naming ...
     default boolean supportsPlainInserts() {
         return true;

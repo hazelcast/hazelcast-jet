@@ -73,7 +73,8 @@ public final class FilterIntoScanLogicalRule extends RelOptRule {
             oldFilter = null;
         }
 
-        //Mapping mapping = Mappings.target(scan.identity(), scan.getTable().getRowType().getFieldCount()); // TODO: Old mode
+        // TODO: Old mode
+        //Mapping mapping = Mappings.target(scan.identity(), scan.getTable().getRowType().getFieldCount());
         RexNode newFilter = projection == null ? filter.getCondition()
                 : RexUtil.apply(new SubstituteInputRefVisitor(projection), new RexNode[]{filter.getCondition()})[0];
         if (oldFilter != null) {

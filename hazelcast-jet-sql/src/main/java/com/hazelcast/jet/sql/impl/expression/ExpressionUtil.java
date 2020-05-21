@@ -137,7 +137,7 @@ public final class ExpressionUtil {
         private final List<String> fieldNames;
         private final Entry<Object, Object> entry;
 
-        public EntryRow(List<String> fieldNames, Entry<Object, Object> entry) {
+        EntryRow(List<String> fieldNames, Entry<Object, Object> entry) {
             this.fieldNames = fieldNames;
             this.entry = entry;
         }

@@ -43,7 +43,10 @@ import static java.util.stream.Collectors.toSet;
 import static org.apache.commons.beanutils.PropertyUtils.getPropertyDescriptors;
 import static org.apache.commons.beanutils.PropertyUtils.setProperty;
 
-public class SqlWriters {
+public final class SqlWriters {
+
+    private SqlWriters() {
+    }
 
     public static EntryWriter entryWriter(
             @Nonnull List<ExternalField> fields,

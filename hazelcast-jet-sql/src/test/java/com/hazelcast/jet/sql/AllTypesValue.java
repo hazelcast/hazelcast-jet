@@ -68,6 +68,7 @@ public final class AllTypesValue implements Serializable {
     public AllTypesValue() {
     }
 
+    @SuppressWarnings({"checkstyle:ParameterNumber", "checkstyle:ExecutableStatementCount"})
     public AllTypesValue(String string, char character0, Character character1, boolean boolean0, Boolean boolean1,
                          byte byte0, Byte byte1, short short0, Short short1, int int0, Integer int1, long long0,
                          Long long1, BigDecimal bigDecimal, BigInteger bigInteger, float float0, Float float1,
@@ -411,5 +412,37 @@ public final class AllTypesValue implements Serializable {
                 Objects.equals(offsetDateTime, that.offsetDateTime) /*&&
                 Objects.equals(yearMonthInterval, that.yearMonthInterval) &&
                 Objects.equals(daySecondInterval, that.daySecondInterval)*/;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(string,
+                character0,
+                character1,
+                boolean0,
+                boolean1,
+                byte0,
+                byte1,
+                short0,
+                short1,
+                int0,
+                int1,
+                long0,
+                long1,
+                bigDecimal,
+                bigInteger,
+                float0,
+                float1,
+                double0,
+                double1,
+                localTime,
+                localDate,
+                localDateTime,
+                date,
+                calendar,
+                instant,
+                zonedDateTime,
+                offsetDateTime
+        );
     }
 }

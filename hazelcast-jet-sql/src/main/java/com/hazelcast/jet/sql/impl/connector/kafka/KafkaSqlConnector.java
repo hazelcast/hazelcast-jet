@@ -111,7 +111,8 @@ public class KafkaSqlConnector extends SqlKeyValueConnector implements JetSqlCon
                 KafkaProcessors.streamKafkaP(table.getKafkaProperties(), FunctionEx.identity(), noEventTime(), topicName));
 
         FunctionEx<Entry<Object, Object>, Object[]> mapFn = projectionFn(table, predicate, projections);
-        FunctionEx<ConsumerRecord<Object, Object>, Object[]> mapFn1 = record -> mapFn.apply(entry(record.key(), record.value()));
+        FunctionEx<ConsumerRecord<Object, Object>, Object[]> mapFn1 = record ->
+                mapFn.apply(entry(record.key(), record.value()));
         Vertex filterVertex = dag.newVertex("kafka-project-filter", mapP(mapFn1));
 
         dag.edge(between(sourceVertex, filterVertex).isolated());
