@@ -47,22 +47,26 @@ import static com.hazelcast.jet.impl.util.ImdgUtil.asXmlString;
  * {@code ChangeRecord} items they ingest. This functionality is
  * optional, but enabled by default (see {@code ignoreReordering} param).
  * It's based on implementation specific sequence numbers provided by
- * CDC event sources. When enabled it will selectively drop input items
- * as follows:
+ * CDC event sources. When enabled the sink will selectively drop input
+ * items like this:
  * <ol>
- *  <li>the {@code keyFn} is applied on the input item to extract its key</li>
- *  <li>the input item's sequence number is extracted</li>
- *  <li>the extracted sequence number if compared against the previously
+ *  <li>applies the {@code keyFn} on the input item to extract its key</li>
+ *  <li>extracts the input item's sequence number</li>
+ *  <li>compares the extracted sequence number against the previously
  *          seen sequence number for the same key, if any</li>
  *  <li>if there is a previously seen sequence number and is more recent
- *          than the one observed in the input item, then the input item
- *          is dropped (ignored)</li>
+ *          than the one observed in the input item, then drops (ignores)
+ *          the input item</li>
  * </ol>
  *
  * @since 4.2
  */
 public final class CdcSinks {
 
+    /**
+     * Default value for {@code ignoreReordering} parameter. Reordering
+     * will <b>NOT</b> be ignored by default.
+     */
     public static final boolean IGNORE_REORDERING_DEFAULT_VALUE = false;
 
     private CdcSinks() {

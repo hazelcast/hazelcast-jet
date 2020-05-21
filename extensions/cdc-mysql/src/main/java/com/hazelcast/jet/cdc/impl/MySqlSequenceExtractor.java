@@ -14,10 +14,9 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.cdc.imp;
+package com.hazelcast.jet.cdc.impl;
 
 import com.hazelcast.internal.util.HashUtil;
-import com.hazelcast.jet.cdc.impl.SequenceExtractor;
 
 import java.util.Map;
 import java.util.Objects;

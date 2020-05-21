@@ -17,7 +17,7 @@
 package com.hazelcast.jet.cdc;
 
 import com.hazelcast.jet.annotation.EvolvingApi;
-import com.hazelcast.jet.cdc.imp.MySqlSequenceExtractor;
+import com.hazelcast.jet.cdc.impl.MySqlSequenceExtractor;
 import com.hazelcast.jet.cdc.impl.CdcSource;
 import com.hazelcast.jet.cdc.impl.DebeziumConfig;
 import com.hazelcast.jet.cdc.impl.PropertyRules;
