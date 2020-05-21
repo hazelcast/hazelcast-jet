@@ -50,13 +50,7 @@ public class KafkaSqlConnector extends SqlKeyValueConnector implements JetSqlCon
 
     public static final String TYPE_NAME = "com.hazelcast.Kafka";
 
-    /**
-     * A key in the table options (TO).
-     * <p>
-     * Specifies the map name. If missing, the IMap name is assumed to be equal
-     * to the table name.
-     */
-    public static final String TO_TOPIC_NAME = "mapName";
+    public static final String TO_TOPIC_NAME = "topicName";
 
     @Override
     public String typeName() {

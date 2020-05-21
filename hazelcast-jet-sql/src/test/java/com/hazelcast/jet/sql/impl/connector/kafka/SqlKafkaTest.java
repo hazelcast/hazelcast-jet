@@ -44,7 +44,6 @@ import static java.util.Collections.singletonList;
 
 public class SqlKafkaTest extends SqlTestSupport {
 
-    private static final String CONNECTOR_TYPE = "com.hazelcast.Kafka";
     private static final int INITIAL_PARTITION_COUNT = 4;
 
     private static KafkaTestSupport kafkaTestSupport;
@@ -70,7 +69,7 @@ public class SqlKafkaTest extends SqlTestSupport {
                         "  \"value.deserializer\" '%s', " +
                         "  \"auto.offset.reset\" 'earliest'" +
                         ")",
-                topicName, CONNECTOR_TYPE, kafkaTestSupport.getBrokerConnectionString(),
+                topicName, KafkaSqlConnector.TYPE_NAME, kafkaTestSupport.getBrokerConnectionString(),
                 IntegerSerializer.class.getCanonicalName(), IntegerDeserializer.class.getCanonicalName(),
                 StringSerializer.class.getCanonicalName(), StringDeserializer.class.getCanonicalName()
         ));
@@ -109,7 +108,7 @@ public class SqlKafkaTest extends SqlTestSupport {
                         "  \"value.deserializer\" '%s', " +
                         "  \"auto.offset.reset\" 'earliest'" +
                         ")",
-                topicName, CONNECTOR_TYPE, kafkaTestSupport.getBrokerConnectionString(),
+                topicName, KafkaSqlConnector.TYPE_NAME, kafkaTestSupport.getBrokerConnectionString(),
                 BigIntegerSerializer.class.getCanonicalName(), BigIntegerDeserializer.class.getCanonicalName(),
                 StringSerializer.class.getCanonicalName(), StringDeserializer.class.getCanonicalName()
         ));
@@ -138,7 +137,7 @@ public class SqlKafkaTest extends SqlTestSupport {
                         "  \"auto.offset.reset\" 'earliest', " +
                         "  \"%s\" '%s'" +
                         ")",
-                topicName, CONNECTOR_TYPE, kafkaTestSupport.getBrokerConnectionString(),
+                topicName, KafkaSqlConnector.TYPE_NAME, kafkaTestSupport.getBrokerConnectionString(),
                 IntegerSerializer.class.getCanonicalName(), IntegerDeserializer.class.getCanonicalName(),
                 PersonSerializer.class.getCanonicalName(), PersonDeserializer.class.getCanonicalName(),
                 TO_VALUE_CLASS, Person.class.getName()

@@ -58,13 +58,13 @@ import static com.hazelcast.jet.sql.impl.expression.ExpressionUtil.projectionFn;
 public class IMapSqlConnector extends SqlKeyValueConnector implements JetSqlConnector {
 
     @Override
-    public boolean isStream() {
-        return false;
+    public String typeName() {
+        return "imap-tmp";
     }
 
     @Override
-    public String typeName() {
-        return "imap-tmp";
+    public boolean isStream() {
+        return false;
     }
 
     @Nonnull @Override
@@ -87,6 +87,11 @@ public class IMapSqlConnector extends SqlKeyValueConnector implements JetSqlConn
 //                schemaName, tableName, new ConstantTableStatistics(0), writer);
     }
 
+    @Override
+    public boolean supportsFullScanReader() {
+        return true;
+    }
+
     @Nullable @Override
     public Vertex fullScanReader(
             @Nonnull DAG dag,
@@ -103,6 +108,11 @@ public class IMapSqlConnector extends SqlKeyValueConnector implements JetSqlConn
         String mapName = table.getName();
         return dag.newVertex("map(" + mapName + ")",
                 readMapP(mapName, Predicates.alwaysTrue(), mapProjection::apply));
+    }
+
+    @Override
+    public boolean supportsNestedLoopReader() {
+        return true;
     }
 
     @Nullable @Override
@@ -138,6 +148,11 @@ public class IMapSqlConnector extends SqlKeyValueConnector implements JetSqlConn
                 flatMapUsingServiceP(ServiceFactories.iMapService(mapName), flatMapFn));
     }
 
+    @Override
+    public boolean supportsSink() {
+        return true;
+    }
+
     @Nullable @Override
     public Vertex sink(
             @Nonnull DAG dag,
@@ -161,21 +176,6 @@ public class IMapSqlConnector extends SqlKeyValueConnector implements JetSqlConn
 
     private ExternalField toExternalField(TableField t) {
         return new ExternalField(t.getName(), t.getType());
-    }
-
-    @Override
-    public boolean supportsFullScanReader() {
-        return true;
-    }
-
-    @Override
-    public boolean supportsNestedLoopReader() {
-        return true;
-    }
-
-    @Override
-    public boolean supportsSink() {
-        return true;
     }
 
     @Override

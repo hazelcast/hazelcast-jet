@@ -21,16 +21,12 @@ import com.hazelcast.jet.sql.impl.connector.SqlWriters.EntryWriter;
 import com.hazelcast.jet.sql.impl.schema.JetTable;
 import com.hazelcast.sql.impl.schema.TableField;
 import com.hazelcast.sql.impl.schema.TableStatistics;
-import org.apache.calcite.schema.Table;
 
 import javax.annotation.Nonnull;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
-/**
- * {@link Table} implementation for IMap.
- */
 public class KafkaTable extends JetTable {
 
     private final String topicName;
@@ -54,25 +50,25 @@ public class KafkaTable extends JetTable {
         this.kafkaProperties = kafkaProperties;
     }
 
-    @Override
-    public boolean isStream() {
-        return true;
-    }
-
     public String getTopicName() {
         return topicName;
     }
 
-    @Override
-    public String toString() {
-        return getClass().getSimpleName() + "{mapName=" + topicName + '}';
+    public EntryWriter getWriter() {
+        return writer;
     }
 
     public Properties getKafkaProperties() {
         return kafkaProperties;
     }
 
-    public EntryWriter getWriter() {
-        return writer;
+    @Override
+    public boolean isStream() {
+        return true;
+    }
+
+    @Override
+    public String toString() {
+        return getClass().getSimpleName() + "{topicName=" + topicName + '}';
     }
 }
