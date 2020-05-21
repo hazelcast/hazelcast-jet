@@ -67,4 +67,18 @@ public class RocksMapTest extends JetTestSupport {
         assert rocksMap.get("non") == null;
     }
 
+    @Test
+    public void test_putAll_and_getAll() {
+        RocksMap<String, Integer> rocksMap = rocksDBStateBackend.getMap();
+        Map<String, Integer> map = new HashMap<>();
+        map.put("hello", 1);
+        map.put("bye", 2);
+        rocksMap.putAll(map);
+        map.clear();
+        map.putAll(rocksMap.getAll());
+        assert map.get("bye") == 2;
+        assert map.get("non") == null;
+    }
+
+    //TODO test exception handling
 }

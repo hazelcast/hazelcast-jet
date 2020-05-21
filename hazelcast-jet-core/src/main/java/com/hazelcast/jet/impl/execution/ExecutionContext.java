@@ -63,7 +63,6 @@ import static java.util.Collections.unmodifiableMap;
  * instance per job execution; if the job is restarted, another instance will
  * be used.
  */
-//TODO: create one per member not per cluster!!
 public class ExecutionContext implements DynamicMetricsProvider {
 
     private final long jobId;

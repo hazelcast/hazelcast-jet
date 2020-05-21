@@ -90,7 +90,6 @@ public final class TestContextSupport {
             return delegate.get(count).stream().map(TestProcessorAdapter::new).collect(toList());
         }
 
-        //TODO: make sure test doesn't break after adding the store to context
         @Override
         public void init(@Nonnull Context context) throws Exception {
             if (context instanceof TestProcessorSupplierContext) {
@@ -115,7 +114,6 @@ public final class TestContextSupport {
             this.delegate = delegate;
         }
 
-        //TODO: make sure test doesn't break after adding the store to context
         @Override
         public void init(@Nonnull Outbox outbox, @Nonnull Context context) throws Exception {
             if (context instanceof TestProcessorContext) {

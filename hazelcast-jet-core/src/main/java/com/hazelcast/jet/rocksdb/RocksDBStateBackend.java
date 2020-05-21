@@ -41,23 +41,30 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 
 public class RocksDBStateBackend {
-    //TODO: set RocksDB instance path
-    private static final String DIRECTORY = "src/main/resources/database";
+    private static final String TEST_DIRECTORY = "src/main/resources/database";
+    private String directory;
     private InternalSerializationService serializationService;
     private RocksDB db;
     private ArrayList<ColumnFamilyHandle> cfhs = new ArrayList<>();
     private AtomicInteger counter = new AtomicInteger(0);
     private final RocksDBOptions rocksDBOptions = new RocksDBOptions();
 
+    public RocksDBStateBackend(InternalSerializationService serializationService, String directory) {
+        this.serializationService = serializationService;
+        this.directory = directory;
+        init();
+    }
+
     public RocksDBStateBackend(InternalSerializationService serializationService) {
         this.serializationService = serializationService;
         init();
     }
 
-    private void init() throws JetException {
+    public void init() throws JetException {
         try {
             RocksDB.loadLibrary();
-            db = RocksDB.open(rocksDBOptions.getOptions(), DIRECTORY);
+            directory = directory == null ? TEST_DIRECTORY : directory;
+            db = RocksDB.open(rocksDBOptions.getOptions(), directory);
         } catch (Exception e) {
             throw new JetException("Failed to create a RocksDB instance", e);
         }
@@ -66,7 +73,6 @@ public class RocksDBStateBackend {
     public <K, V> RocksMap<K, V> getMap() throws JetException {
         ColumnFamilyHandle cfh;
         try {
-            //TODO: serialize(getNextName) doesn't work since inputOutputFacory isn't  initialized
             cfh = db.createColumnFamily(new ColumnFamilyDescriptor((serialize(getNextName()))));
             cfhs.add(cfh);
             return new RocksMap<>(db, cfh, rocksDBOptions.getReadOptions(),
@@ -85,7 +91,9 @@ public class RocksDBStateBackend {
 
     public void releaseMap(RocksMap map) throws JetException {
         try {
-            db.dropColumnFamily(map.getColumnFamilyHandle());
+            ColumnFamilyHandle cfh = map.getColumnFamilyHandle();
+            db.dropColumnFamily(cfh);
+            cfhs.remove(cfh);
         } catch (RocksDBException e) {
             throw new JetException(e);
         }
@@ -94,11 +102,13 @@ public class RocksDBStateBackend {
     public void deleteKeyValueStore() {
         for (final ColumnFamilyHandle cfh : cfhs) {
             try {
+                cfh.close();
                 db.dropColumnFamily(cfh);
             } catch (RocksDBException e) {
                 throw new JetException("Failed to Delete Column Family", e);
             }
         }
+        db.close();
     }
 
     private <T> byte[] serialize(T item) {
