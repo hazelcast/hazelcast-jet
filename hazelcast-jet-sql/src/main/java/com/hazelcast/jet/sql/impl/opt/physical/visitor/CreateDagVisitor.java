@@ -42,7 +42,7 @@ import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.processor.Processors.mapP;
 import static com.hazelcast.jet.core.processor.SourceProcessors.convenientSourceP;
 import static com.hazelcast.jet.impl.util.Util.toList;
-import static com.hazelcast.jet.sql.impl.connector.JetSqlConnectorUtil.getJetSqlConnector;
+import static com.hazelcast.jet.sql.impl.connector.SqlConnectorUtil.getJetSqlConnector;
 
 public class CreateDagVisitor {
 

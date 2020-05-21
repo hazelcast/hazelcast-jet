@@ -26,13 +26,11 @@ import org.apache.calcite.rex.RexNode;
 
 public final class ProjectIntoScanLogicalRule extends RelOptRule {
 
-    public static final ProjectIntoScanLogicalRule INSTANCE = new ProjectIntoScanLogicalRule();
+    public static final RelOptRule INSTANCE = new ProjectIntoScanLogicalRule();
 
     private ProjectIntoScanLogicalRule() {
         super(
                 operand(Project.class, operand(TableScan.class, any())),
-//                operand(Project.class,
-//                        operandJ(TableScan.class, null, scan -> scan.getTable().unwrap(AbstractMapTable.class) != null, none())),
                 RelFactories.LOGICAL_BUILDER,
                 ProjectIntoScanLogicalRule.class.getSimpleName()
         );

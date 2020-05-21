@@ -32,6 +32,7 @@ import static java.lang.String.format;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 
+// TODO: move it ot IMDG ?
 public class SqlSelectTest extends SqlTestSupport {
 
     private static final String INT_TO_STRING_MAP_SRC = "int_to_string_map_src";
@@ -144,8 +145,11 @@ public class SqlSelectTest extends SqlTestSupport {
     @Test
     public void selectWithoutFrom_unicode() {
         assertRowsAnyOrder(
-                "SELECT '喷气式飞机'",
-                singletonList(new Row("喷气式飞机")));
+                "SELECT '喷气式飞机' FROM " + INT_TO_STRING_MAP_SRC,
+                asList(
+                        new Row("喷气式飞机"),
+                        new Row("喷气式飞机"),
+                        new Row("喷气式飞机")));
     }
 
     @Test

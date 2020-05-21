@@ -27,7 +27,7 @@ import org.apache.calcite.sql.SqlOperatorTable;
 import org.apache.calcite.sql.validate.SqlConformance;
 import org.apache.calcite.sql.validate.SqlValidatorCatalogReader;
 
-import static com.hazelcast.jet.sql.impl.connector.JetSqlConnectorUtil.getJetSqlConnector;
+import static com.hazelcast.jet.sql.impl.connector.SqlConnectorUtil.getJetSqlConnector;
 
 public class JetSqlValidator extends HazelcastSqlValidator {
 

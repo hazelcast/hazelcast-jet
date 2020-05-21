@@ -47,13 +47,11 @@ import static java.util.Arrays.asList;
 
 public final class FilterIntoScanLogicalRule extends RelOptRule {
 
-    public static final FilterIntoScanLogicalRule INSTANCE = new FilterIntoScanLogicalRule();
+    public static final RelOptRule INSTANCE = new FilterIntoScanLogicalRule();
 
     private FilterIntoScanLogicalRule() {
         super(
                 operand(Filter.class, operand(TableScan.class, any())),
-//                operand(Filter.class,
-//                        operandJ(TableScan.class, null, scan -> scan.getTable().unwrap(AbstractMapTable.class) != null, none())),
                 RelFactories.LOGICAL_BUILDER,
                 FilterIntoScanLogicalRule.class.getSimpleName()
         );

@@ -24,9 +24,9 @@ import com.hazelcast.sql.impl.schema.Table;
 import com.hazelcast.sql.impl.schema.map.PartitionedMapTable;
 import com.hazelcast.sql.impl.schema.map.ReplicatedMapTable;
 
-public final class JetSqlConnectorUtil {
+public final class SqlConnectorUtil {
 
-    private JetSqlConnectorUtil() { }
+    private SqlConnectorUtil() { }
 
     public static JetSqlConnector getJetSqlConnector(Table table) {
         JetSqlConnector connector;

@@ -24,18 +24,18 @@ import com.hazelcast.sql.SqlService;
 import com.hazelcast.sql.impl.SqlRowImpl;
 import org.junit.BeforeClass;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
-import static java.util.stream.Collectors.toSet;
+import static java.util.stream.Collectors.toList;
 import static java.util.stream.StreamSupport.stream;
-import static org.junit.Assert.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
 
 public abstract class SqlTestSupport extends SimpleTestInClusterSupport {
 
@@ -51,7 +51,7 @@ public abstract class SqlTestSupport extends SimpleTestInClusterSupport {
         try (SqlCursor cursor = toCursor(sql)) {
             cursor.iterator().forEachRemaining(o -> { });
 
-            assertEquals(expected, new HashMap<>(instance().getMap(name)));
+            assertThat(new HashMap<>(instance().getMap(name))).containsExactlyInAnyOrderEntriesOf(expected);
         } catch (Exception e) {
             throw sneakyThrow(e);
         }
@@ -59,9 +59,9 @@ public abstract class SqlTestSupport extends SimpleTestInClusterSupport {
 
     protected static void assertRowsAnyOrder(String sql, Collection<Row> expectedRows) {
         try (SqlCursor cursor = toCursor(sql)) {
-            Set<Row> actualRows = stream(cursor.spliterator(), false).map(Row::new).collect(toSet());
+            List<Row> actualRows = stream(cursor.spliterator(), false).map(Row::new).collect(toList());
 
-            assertEquals(new HashSet<>(expectedRows), actualRows);
+            assertThat(actualRows).containsExactlyInAnyOrderElementsOf(expectedRows);
         } catch (Exception e) {
             throw sneakyThrow(e);
         }
@@ -70,12 +70,12 @@ public abstract class SqlTestSupport extends SimpleTestInClusterSupport {
     protected static void assertRowsEventuallyAnyOrder(String sql, Collection<Row> expectedRows) {
         try (SqlCursor cursor = toCursor(sql)) {
             Iterator<SqlRow> iterator = cursor.iterator();
-            Set<Row> actualRows = new HashSet<>(expectedRows.size());
+            List<Row> actualRows = new ArrayList<>(expectedRows.size());
             for (int i = 0; i < expectedRows.size(); i++) {
                 actualRows.add(new Row(cursor.getColumnCount(), iterator.next()));
             }
 
-            assertEquals(new HashSet<>(expectedRows), actualRows);
+            assertThat(actualRows).containsExactlyInAnyOrderElementsOf(expectedRows);
         } catch (Exception e) {
             throw sneakyThrow(e);
         }
