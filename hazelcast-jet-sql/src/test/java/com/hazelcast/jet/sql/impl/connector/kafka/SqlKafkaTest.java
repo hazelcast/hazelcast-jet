@@ -1,0 +1,252 @@
+/*
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.hazelcast.jet.sql.impl.connector.kafka;
+
+import com.hazelcast.jet.kafka.impl.KafkaTestSupport;
+import com.hazelcast.jet.sql.SqlTestSupport;
+import com.hazelcast.jet.sql.impl.connector.kafka.model.BigIntegerDeserializer;
+import com.hazelcast.jet.sql.impl.connector.kafka.model.BigIntegerSerializer;
+import com.hazelcast.jet.sql.impl.connector.kafka.model.Person;
+import com.hazelcast.jet.sql.impl.connector.kafka.model.PersonDeserializer;
+import com.hazelcast.jet.sql.impl.connector.kafka.model.PersonSerializer;
+import org.apache.kafka.common.serialization.IntegerDeserializer;
+import org.apache.kafka.common.serialization.IntegerSerializer;
+import org.apache.kafka.common.serialization.StringDeserializer;
+import org.apache.kafka.common.serialization.StringSerializer;
+import org.junit.AfterClass;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Test;
+
+import java.io.IOException;
+import java.math.BigDecimal;
+import java.util.Map;
+
+import static com.hazelcast.jet.core.TestUtil.createMap;
+import static com.hazelcast.sql.impl.connector.SqlKeyValueConnector.TO_VALUE_CLASS;
+import static java.lang.String.format;
+import static java.util.Arrays.asList;
+import static java.util.Collections.singletonList;
+
+public class SqlKafkaTest extends SqlTestSupport {
+
+    private static final String CONNECTOR_TYPE = "com.hazelcast.Kafka";
+    private static final int INITIAL_PARTITION_COUNT = 4;
+
+    private static KafkaTestSupport kafkaTestSupport;
+
+    private String topicName;
+
+    @BeforeClass
+    public static void beforeClass() throws IOException {
+        kafkaTestSupport = new KafkaTestSupport();
+        kafkaTestSupport.createKafkaCluster();
+    }
+
+    @Before
+    public void before() {
+        topicName = createRandomTopic();
+        sqlService.query(format("CREATE EXTERNAL TABLE %s (__key INT, this VARCHAR) " +
+                        "TYPE \"%s\" " +
+                        "OPTIONS (" +
+                        "  \"bootstrap.servers\" '%s', " +
+                        "  \"key.serializer\" '%s', " +
+                        "  \"key.deserializer\" '%s', " +
+                        "  \"value.serializer\" '%s', " +
+                        "  \"value.deserializer\" '%s', " +
+                        "  \"auto.offset.reset\" 'earliest'" +
+                        ")",
+                topicName, CONNECTOR_TYPE, kafkaTestSupport.getBrokerConnectionString(),
+                IntegerSerializer.class.getCanonicalName(), IntegerDeserializer.class.getCanonicalName(),
+                StringSerializer.class.getCanonicalName(), StringDeserializer.class.getCanonicalName()
+        ));
+    }
+
+    @AfterClass
+    public static void afterClass() {
+        if (kafkaTestSupport != null) {
+            kafkaTestSupport.shutdownKafkaCluster();
+            kafkaTestSupport = null;
+        }
+    }
+
+    @Test
+    public void insert() {
+        assertTopic(topicName, format("INSERT INTO %s VALUES(1, 'value-1')", topicName),
+                createMap(1, "value-1"));
+    }
+
+    @Test
+    public void insert_overwrite() {
+        assertTopic(topicName, format("INSERT OVERWRITE %s (this, __key) VALUES('value-1', 1)", topicName),
+                createMap(1, "value-1"));
+    }
+
+    @Test
+    public void select_convert() {
+        String topicName = createRandomTopic();
+        sqlService.query(format("CREATE EXTERNAL TABLE %s (__key DECIMAL(10, 0), this VARCHAR) " +
+                        "TYPE \"%s\" " +
+                        "OPTIONS (" +
+                        "  \"bootstrap.servers\" '%s', " +
+                        "  \"key.serializer\" '%s', " +
+                        "  \"key.deserializer\" '%s', " +
+                        "  \"value.serializer\" '%s', " +
+                        "  \"value.deserializer\" '%s', " +
+                        "  \"auto.offset.reset\" 'earliest'" +
+                        ")",
+                topicName, CONNECTOR_TYPE, kafkaTestSupport.getBrokerConnectionString(),
+                BigIntegerSerializer.class.getCanonicalName(), BigIntegerDeserializer.class.getCanonicalName(),
+                StringSerializer.class.getCanonicalName(), StringDeserializer.class.getCanonicalName()
+        ));
+
+        executeSql(format("INSERT INTO %s VALUES (12, 'a')", topicName));
+
+        assertRowsEventuallyAnyOrder(
+                format("SELECT __key + 1, this FROM %s", topicName),
+                singletonList(new Row(BigDecimal.valueOf(13), "a")));
+    }
+
+    @Test
+    public void select_complexObject() {
+        Person alice = new Person("Alice", 30);
+        Person bob = new Person("Bob", 40);
+
+        String topicName = createRandomTopic();
+        sqlService.query(format("CREATE EXTERNAL TABLE %s (__key INT, name VARCHAR, age INT) " +
+                        "TYPE \"%s\" " +
+                        "OPTIONS (" +
+                        "  \"bootstrap.servers\" '%s', " +
+                        "  \"key.serializer\" '%s', " +
+                        "  \"key.deserializer\" '%s', " +
+                        "  \"value.serializer\" '%s', " +
+                        "  \"value.deserializer\" '%s', " +
+                        "  \"auto.offset.reset\" 'earliest', " +
+                        "  \"%s\" '%s'" +
+                        ")",
+                topicName, CONNECTOR_TYPE, kafkaTestSupport.getBrokerConnectionString(),
+                IntegerSerializer.class.getCanonicalName(), IntegerDeserializer.class.getCanonicalName(),
+                PersonSerializer.class.getCanonicalName(), PersonDeserializer.class.getCanonicalName(),
+                TO_VALUE_CLASS, Person.class.getName()
+        ));
+
+        executeSql(format("INSERT INTO %s VALUES (0, 'Alice', 30)", topicName));
+        executeSql(format("INSERT INTO %s VALUES (1, 'Bob', 40)", topicName));
+
+        assertRowsEventuallyAnyOrder(
+                format("SELECT __key, name, age FROM %s", topicName),
+                asList(
+                        new Row(0, alice.getName(), alice.getAge()),
+                        new Row(1, bob.getName(), bob.getAge())));
+    }
+
+    @Test
+    public void select_unicodeConstant() {
+        kafkaTestSupport.produce(topicName, 0, "value-" + 0);
+
+        assertRowsEventuallyAnyOrder(
+                format("SELECT '喷气式飞机' FROM %s", topicName),
+                singletonList(new Row("喷气式飞机")));
+    }
+
+    @Test
+    public void fullScan() {
+        kafkaTestSupport.produce(topicName, 0, "value-" + 0);
+        kafkaTestSupport.produce(topicName, 1, "value-" + 1);
+
+        assertRowsEventuallyAnyOrder(
+                format("SELECT __key, this FROM %s", topicName),
+                asList(
+                        new Row(0, "value-0"),
+                        new Row(1, "value-1")));
+    }
+
+    @Test
+    public void fullScan_star() {
+        kafkaTestSupport.produce(topicName, 0, "value-" + 0);
+        kafkaTestSupport.produce(topicName, 1, "value-" + 1);
+
+        assertRowsEventuallyAnyOrder(
+                format("SELECT * FROM %s", topicName),
+                asList(
+                        new Row(0, "value-0"),
+                        new Row(1, "value-1")));
+    }
+
+    @Test
+    public void fullScan_filter() {
+        kafkaTestSupport.produce(topicName, 0, "value-" + 0);
+        kafkaTestSupport.produce(topicName, 1, "value-" + 1);
+        kafkaTestSupport.produce(topicName, 2, "value-" + 2);
+
+        assertRowsEventuallyAnyOrder(
+                format("SELECT this FROM %s WHERE __key=1 or this='value-0'", topicName),
+                asList(new Row("value-0"), new Row("value-1")));
+    }
+
+    @Test
+    public void fullScan_projection1() {
+        kafkaTestSupport.produce(topicName, 0, "value-" + 0);
+        kafkaTestSupport.produce(topicName, 1, "value-" + 1);
+
+        assertRowsEventuallyAnyOrder(
+                format("SELECT upper(this) FROM %s WHERE this='value-1'", topicName),
+                singletonList(new Row("VALUE-1")));
+    }
+
+    @Test
+    public void fullScan_projection2() {
+        kafkaTestSupport.produce(topicName, 0, "value-" + 0);
+        kafkaTestSupport.produce(topicName, 1, "value-" + 1);
+
+        assertRowsEventuallyAnyOrder(
+                format("SELECT this FROM %s WHERE upper(this)='VALUE-1'", topicName),
+                singletonList(new Row("value-1")));
+    }
+
+    @Test
+    public void fullScan_projection3() {
+        kafkaTestSupport.produce(topicName, 0, "value-" + 0);
+        kafkaTestSupport.produce(topicName, 1, "value-" + 1);
+
+        assertRowsEventuallyAnyOrder(
+                format("SELECT this FROM (SELECT upper(this) this FROM %s) WHERE this='VALUE-1'", topicName),
+                singletonList(new Row("VALUE-1")));
+    }
+
+    @Test
+    public void fullScan_projection4() {
+        kafkaTestSupport.produce(topicName, 0, "value-" + 0);
+        kafkaTestSupport.produce(topicName, 1, "value-" + 1);
+
+        assertRowsEventuallyAnyOrder(
+                format("SELECT upper(this) FROM %s WHERE upper(this)='VALUE-1'", topicName),
+                singletonList(new Row("VALUE-1")));
+    }
+
+    private static String createRandomTopic() {
+        String topicName = "t_" + randomString().replace('-', '_');
+        kafkaTestSupport.createTopic(topicName, INITIAL_PARTITION_COUNT);
+        return topicName;
+    }
+
+    private static void assertTopic(String name, String sql, Map<Integer, String> expected) {
+        executeSql(sql);
+
+        kafkaTestSupport.assertTopicContentsEventually(name, expected, false);
+    }
+}

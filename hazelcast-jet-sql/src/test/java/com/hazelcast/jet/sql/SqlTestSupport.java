@@ -17,7 +17,7 @@
 package com.hazelcast.jet.sql;
 
 import com.hazelcast.jet.SimpleTestInClusterSupport;
-import com.hazelcast.jet.sql.impl.connector.SqlKafkaTest;
+import com.hazelcast.jet.sql.impl.connector.kafka.SqlKafkaTest;
 import com.hazelcast.sql.SqlCursor;
 import com.hazelcast.sql.SqlRow;
 import com.hazelcast.sql.SqlService;
@@ -33,6 +33,7 @@ import java.util.List;
 import java.util.Map;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
+import static java.lang.String.format;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.StreamSupport.stream;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -45,6 +46,11 @@ public abstract class SqlTestSupport extends SimpleTestInClusterSupport {
     public static void setUpClass() {
         initialize(1, null);
         sqlService = instance().getHazelcastInstance().getSqlService();
+    }
+
+    protected static void executeSql(String sql) {
+        SqlCursor cursor = sqlService.query(sql);
+        cursor.iterator().forEachRemaining(o -> { });
     }
 
     protected static <K, V> void assertMap(String name, String sql, Map<K, V> expected) {

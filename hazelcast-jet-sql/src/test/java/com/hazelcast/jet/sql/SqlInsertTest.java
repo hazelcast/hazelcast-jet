@@ -27,7 +27,7 @@ import static java.time.ZoneId.systemDefault;
 import static java.time.ZoneOffset.UTC;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-// TODO: move it to IMDG when INSERTs are supported ?
+// TODO: move it to IMDG when INSERTs are supported, or at least move to kafka test ?
 public class SqlInsertTest extends SqlTestSupport {
 
     private static final String INT_TO_STRING_MAP_SRC = "int_to_string_map_src";
