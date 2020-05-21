@@ -217,6 +217,7 @@ public final class CdcSinks {
     @Nonnull
     private static <V> FunctionEx<ChangeRecord, V> extend(@Nonnull FunctionEx<ChangeRecord, V> valueFn) {
         return (record) -> {
+            System.err.println("record = " + record); //todo: remove
             if (DELETE.equals(record.operation())) {
                 return null;
             }
@@ -262,7 +263,7 @@ public final class CdcSinks {
         public boolean update(K key, long partition, long value) {
             Sequence prevSequence = sequences.get(key);
             if (prevSequence == null) { //first observed sequence for key
-                sequences.put(key, new Sequence(partition, partition));
+                sequences.put(key, new Sequence(partition, value));
                 return true;
             } else {
                 if (prevSequence.partition != partition) { //sequence partition changed for key
