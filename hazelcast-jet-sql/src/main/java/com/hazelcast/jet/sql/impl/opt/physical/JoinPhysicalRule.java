@@ -22,7 +22,7 @@ import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelOptRuleCall;
 import org.apache.calcite.rel.RelNode;
 
-import static com.hazelcast.jet.sql.impl.opt.OptUtils.CONVENTION_LOGICAL;
+import static com.hazelcast.jet.sql.impl.opt.JetConventions.LOGICAL;
 
 public final class JoinPhysicalRule extends RelOptRule {
 
@@ -30,7 +30,7 @@ public final class JoinPhysicalRule extends RelOptRule {
 
     private JoinPhysicalRule() {
         super(
-                OptUtils.parentChildChild(JoinLogicalRel.class, RelNode.class, RelNode.class, CONVENTION_LOGICAL),
+                OptUtils.parentChildChild(JoinLogicalRel.class, RelNode.class, RelNode.class, LOGICAL),
                 JoinPhysicalRule.class.getSimpleName()
         );
     }

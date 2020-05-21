@@ -60,7 +60,7 @@ public class SqlKafkaTest extends SqlTestSupport {
     @Before
     public void before() {
         topicName = createRandomTopic();
-        sqlService.query(format("CREATE EXTERNAL TABLE %s (__key INT, this VARCHAR) " +
+        executeSql(format("CREATE EXTERNAL TABLE %s (__key INT, this VARCHAR) " +
                         "TYPE \"%s\" " +
                         "OPTIONS (" +
                         "  \"bootstrap.servers\" '%s', " +
@@ -99,7 +99,7 @@ public class SqlKafkaTest extends SqlTestSupport {
     @Test
     public void select_convert() {
         String topicName = createRandomTopic();
-        sqlService.query(format("CREATE EXTERNAL TABLE %s (__key DECIMAL(10, 0), this VARCHAR) " +
+        executeSql(format("CREATE EXTERNAL TABLE %s (__key DECIMAL(10, 0), this VARCHAR) " +
                         "TYPE \"%s\" " +
                         "OPTIONS (" +
                         "  \"bootstrap.servers\" '%s', " +
@@ -127,7 +127,7 @@ public class SqlKafkaTest extends SqlTestSupport {
         Person bob = new Person("Bob", 40);
 
         String topicName = createRandomTopic();
-        sqlService.query(format("CREATE EXTERNAL TABLE %s (__key INT, name VARCHAR, age INT) " +
+        executeSql(format("CREATE EXTERNAL TABLE %s (__key INT, name VARCHAR, age INT) " +
                         "TYPE \"%s\" " +
                         "OPTIONS (" +
                         "  \"bootstrap.servers\" '%s', " +
@@ -157,10 +157,13 @@ public class SqlKafkaTest extends SqlTestSupport {
     @Test
     public void select_unicodeConstant() {
         kafkaTestSupport.produce(topicName, 0, "value-" + 0);
+        kafkaTestSupport.produce(topicName, 1, "value-" + 1);
 
         assertRowsEventuallyAnyOrder(
                 format("SELECT '喷气式飞机' FROM %s", topicName),
-                singletonList(new Row("喷气式飞机")));
+                asList(
+                        new Row("喷气式飞机"),
+                        new Row("喷气式飞机")));
     }
 
     @Test

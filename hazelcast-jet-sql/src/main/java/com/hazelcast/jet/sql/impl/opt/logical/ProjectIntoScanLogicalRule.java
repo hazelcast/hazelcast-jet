@@ -30,8 +30,7 @@ public final class ProjectIntoScanLogicalRule extends RelOptRule {
 
     private ProjectIntoScanLogicalRule() {
         super(
-                operand(Project.class, operand(TableScan.class, any())),
-                RelFactories.LOGICAL_BUILDER,
+                operand(Project.class, operand(TableScan.class, any())), RelFactories.LOGICAL_BUILDER,
                 ProjectIntoScanLogicalRule.class.getSimpleName()
         );
     }

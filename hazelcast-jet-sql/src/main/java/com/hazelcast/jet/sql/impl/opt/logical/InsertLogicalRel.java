@@ -16,7 +16,6 @@
 
 package com.hazelcast.jet.sql.impl.opt.logical;
 
-import com.hazelcast.sql.impl.calcite.schema.HazelcastTable;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptCost;
 import org.apache.calcite.plan.RelOptPlanner;
@@ -29,8 +28,6 @@ import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rex.RexNode;
 
 import java.util.List;
-
-import static com.hazelcast.jet.sql.impl.opt.OptUtils.CONVENTION_LOGICAL;
 
 public class InsertLogicalRel extends TableModify implements LogicalRel {
 
@@ -49,9 +46,6 @@ public class InsertLogicalRel extends TableModify implements LogicalRel {
     ) {
         super(cluster, traitSet, table, catalogReader, input, operation,
                 updateColumnList, sourceExpressionList, flattened);
-        assert input.getConvention() == CONVENTION_LOGICAL : "input.convention=" + input.getConvention();
-        assert getConvention() == CONVENTION_LOGICAL;
-        assert table.unwrap(HazelcastTable.class) != null; // TODO: user error in validator
     }
 
     @Override

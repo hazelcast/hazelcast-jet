@@ -22,15 +22,18 @@ import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.convert.ConverterRule;
 
-import static com.hazelcast.jet.sql.impl.opt.OptUtils.CONVENTION_LOGICAL;
-import static com.hazelcast.jet.sql.impl.opt.OptUtils.CONVENTION_PHYSICAL;
+import static com.hazelcast.jet.sql.impl.opt.JetConventions.LOGICAL;
+import static com.hazelcast.jet.sql.impl.opt.JetConventions.PHYSICAL;
 
 public final class InsertPhysicalRule extends ConverterRule {
 
     public static final RelOptRule INSTANCE = new InsertPhysicalRule();
 
     private InsertPhysicalRule() {
-        super(InsertLogicalRel.class, CONVENTION_LOGICAL, CONVENTION_PHYSICAL, InsertPhysicalRule.class.getSimpleName());
+        super(
+                InsertLogicalRel.class, LOGICAL, PHYSICAL,
+                InsertPhysicalRule.class.getSimpleName()
+        );
     }
 
     @Override

@@ -21,7 +21,7 @@ import com.hazelcast.jet.sql.impl.opt.logical.FullScanLogicalRel;
 import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelOptRuleCall;
 
-import static com.hazelcast.jet.sql.impl.opt.OptUtils.CONVENTION_LOGICAL;
+import static com.hazelcast.jet.sql.impl.opt.JetConventions.LOGICAL;
 
 /**
  * Convert logical full scan to physical full scan.
@@ -31,8 +31,10 @@ public final class FullScanPhysicalRule extends RelOptRule {
     public static final RelOptRule INSTANCE = new FullScanPhysicalRule();
 
     private FullScanPhysicalRule() {
-        super(OptUtils.single(FullScanLogicalRel.class, CONVENTION_LOGICAL),
-                FullScanPhysicalRule.class.getSimpleName());
+        super(
+                OptUtils.single(FullScanLogicalRel.class, LOGICAL),
+                FullScanPhysicalRule.class.getSimpleName()
+        );
     }
 
     @Override

@@ -56,23 +56,23 @@ public class SqlInsertTest extends SqlTestSupport {
 
     @BeforeClass
     public static void beforeClass() {
-        sqlService.query(
+        executeSql(
                 format("CREATE EXTERNAL TABLE %s (__key INT, this VARCHAR) TYPE \"%s\"",
                 INT_TO_STRING_MAP_SRC, LocalPartitionedMapConnector.TYPE_NAME)
         );
-        sqlService.query(
+        executeSql(
                 format("CREATE EXTERNAL TABLE %s (__key INT, this VARCHAR) TYPE \"%s\"",
                 INT_TO_STRING_MAP_SINK, LocalPartitionedMapConnector.TYPE_NAME)
         );
 
-        sqlService.query(
+        executeSql(
                 format("CREATE EXTERNAL TABLE %s (id INT, birthday DATE) TYPE \"%s\" OPTIONS (%s '%s', %s '%s')",
                 PERSON_MAP_SINK, LocalPartitionedMapConnector.TYPE_NAME,
                 TO_KEY_CLASS, Person.class.getName(),
                 TO_VALUE_CLASS, Person.class.getName())
         );
 
-        sqlService.query(
+        executeSql(
                 format("CREATE EXTERNAL TABLE %s (nonExistingProperty INT) TYPE \"%s\" OPTIONS (%s '%s', %s '%s')",
                 OBJECT_MAP_SINK, LocalPartitionedMapConnector.TYPE_NAME,
                 TO_KEY_CLASS, SerializableObject.class.getName(),
@@ -80,7 +80,7 @@ public class SqlInsertTest extends SqlTestSupport {
         );
 
         // an IMap with a field of every type
-        sqlService.query(format("CREATE EXTERNAL TABLE %s (" +
+        executeSql(format("CREATE EXTERNAL TABLE %s (" +
                         "__key DECIMAL(10, 0), " +
                         "string VARCHAR," +
                         "character0 CHAR, " +
@@ -310,7 +310,7 @@ public class SqlInsertTest extends SqlTestSupport {
 
     @Test
     public void insert_intoMapFails() {
-        assertThatThrownBy(() -> sqlService.query("INSERT INTO " + PERSON_MAP_SINK + "(birthday) VALUES ('2020-01-01')"))
+        assertThatThrownBy(() -> executeSql("INSERT INTO " + PERSON_MAP_SINK + "(birthday) VALUES ('2020-01-01')"))
                 .hasMessageContaining("Only INSERT OVERWRITE clause is supported for IMapSqlConnector");
     }
 

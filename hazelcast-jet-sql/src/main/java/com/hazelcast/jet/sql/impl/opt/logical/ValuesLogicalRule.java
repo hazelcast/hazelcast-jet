@@ -24,14 +24,17 @@ import org.apache.calcite.rel.convert.ConverterRule;
 import org.apache.calcite.rel.core.Values;
 import org.apache.calcite.rel.logical.LogicalValues;
 
-import static com.hazelcast.jet.sql.impl.opt.OptUtils.CONVENTION_LOGICAL;
+import static com.hazelcast.jet.sql.impl.opt.JetConventions.LOGICAL;
 
 public final class ValuesLogicalRule extends ConverterRule {
 
     public static final RelOptRule INSTANCE = new ValuesLogicalRule();
 
     private ValuesLogicalRule() {
-        super(LogicalValues.class, Convention.NONE, CONVENTION_LOGICAL, ValuesLogicalRule.class.getSimpleName());
+        super(
+                LogicalValues.class, Convention.NONE, LOGICAL,
+                ValuesLogicalRule.class.getSimpleName()
+        );
     }
 
     @Override

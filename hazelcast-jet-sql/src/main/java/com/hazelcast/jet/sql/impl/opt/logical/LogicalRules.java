@@ -62,8 +62,8 @@ public final class LogicalRules {
 
                 // Convert Calcite node into Hazelcast nodes.
                 // TODO: Should we extend converter here instead (see Flink)?
-                InsertLogicalRule.INSTANCE,
                 ValuesLogicalRule.INSTANCE,
+                InsertLogicalRule.INSTANCE,
                 FullScanLogicalRule.INSTANCE,
                 ProjectLogicalRule.INSTANCE,
 

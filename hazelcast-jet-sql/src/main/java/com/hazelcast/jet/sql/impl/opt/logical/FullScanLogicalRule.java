@@ -23,14 +23,17 @@ import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.convert.ConverterRule;
 import org.apache.calcite.rel.logical.LogicalTableScan;
 
-import static com.hazelcast.jet.sql.impl.opt.OptUtils.CONVENTION_LOGICAL;
+import static com.hazelcast.jet.sql.impl.opt.JetConventions.LOGICAL;
 
 public final class FullScanLogicalRule extends ConverterRule {
 
     public static final RelOptRule INSTANCE = new FullScanLogicalRule();
 
     private FullScanLogicalRule() {
-        super(LogicalTableScan.class, Convention.NONE, CONVENTION_LOGICAL, FullScanLogicalRule.class.getSimpleName());
+        super(
+                LogicalTableScan.class, Convention.NONE, LOGICAL,
+                FullScanLogicalRule.class.getSimpleName()
+        );
     }
 
     @Override

@@ -56,7 +56,7 @@ public class SqlJoinTest extends SqlTestSupport {
     public void before() {
         topicName = "k_" + randomString().replace('-', '_');
         kafkaTestSupport.createTopic(topicName, INITIAL_PARTITION_COUNT);
-        sqlService.query(format("CREATE EXTERNAL TABLE %s (__key INT, this VARCHAR) TYPE \"%s\" " +
+        executeSql(format("CREATE EXTERNAL TABLE %s (__key INT, this VARCHAR) TYPE \"%s\" " +
                         "OPTIONS (" +
                         "%s '%s', " +
                         "%s '%s', " +
@@ -75,7 +75,7 @@ public class SqlJoinTest extends SqlTestSupport {
         );
 
         mapName = "m_" + randomString().replace('-', '_');
-        sqlService.query(format("CREATE EXTERNAL TABLE %s (__key INT, this VARCHAR) TYPE \"%s\" "
+        executeSql(format("CREATE EXTERNAL TABLE %s (__key INT, this VARCHAR) TYPE \"%s\" "
                         + "OPTIONS (\"" + TO_KEY_CLASS + "\" 'java.lang.Integer',"
                         + "\"" + TO_VALUE_CLASS + "\" 'java.lang.String')",
                 mapName, LocalPartitionedMapConnector.TYPE_NAME)
@@ -230,7 +230,7 @@ public class SqlJoinTest extends SqlTestSupport {
 
     @Test
     public void enrichment_join_fails_for_not_supported_connector() {
-        assertThatThrownBy(() -> sqlService.query(
+        assertThatThrownBy(() -> executeSql(
                 format("SELECT 1 FROM %s k JOIN %s m ON m.__key = k.__key", mapName, topicName)
         )).hasCauseInstanceOf(UnsupportedOperationException.class)
           .hasMessageContaining("Nested loop reader not supported for " + KafkaSqlConnector.class.getName());

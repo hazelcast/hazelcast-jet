@@ -35,7 +35,6 @@ import org.apache.calcite.rex.RexNode;
 import java.util.List;
 
 import static com.hazelcast.jet.impl.util.Util.toList;
-import static com.hazelcast.jet.sql.impl.opt.OptUtils.CONVENTION_PHYSICAL;
 
 public class InsertPhysicalRel extends TableModify implements PhysicalRel {
 
@@ -54,9 +53,6 @@ public class InsertPhysicalRel extends TableModify implements PhysicalRel {
     ) {
         super(cluster, traitSet, table, catalogReader, input, operation,
                 updateColumnList, sourceExpressionList, flattened);
-        assert input.getConvention() == CONVENTION_PHYSICAL;
-        assert getConvention() == CONVENTION_PHYSICAL;
-        assert table.unwrap(HazelcastTable.class) != null; // TODO: user error in validator
     }
 
     @Override

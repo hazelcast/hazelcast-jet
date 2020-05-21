@@ -33,13 +33,11 @@ import java.util.List;
 import java.util.Map;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
-import static java.util.stream.Collectors.toList;
-import static java.util.stream.StreamSupport.stream;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public abstract class SqlTestSupport extends SimpleTestInClusterSupport {
 
-    protected static SqlService sqlService;
+    private static SqlService sqlService;
 
     @BeforeClass
     public static void setUpClass() {
@@ -47,29 +45,10 @@ public abstract class SqlTestSupport extends SimpleTestInClusterSupport {
         sqlService = instance().getHazelcastInstance().getSqlService();
     }
 
-    protected static void executeSql(String sql) {
-        SqlCursor cursor = sqlService.query(sql);
-        cursor.iterator().forEachRemaining(o -> { });
-    }
-
     protected static <K, V> void assertMap(String name, String sql, Map<K, V> expected) {
-        try (SqlCursor cursor = toCursor(sql)) {
-            cursor.iterator().forEachRemaining(o -> { });
+        executeSql(sql);
 
-            assertThat(new HashMap<>(instance().getMap(name))).containsExactlyInAnyOrderEntriesOf(expected);
-        } catch (Exception e) {
-            throw sneakyThrow(e);
-        }
-    }
-
-    protected static void assertRowsAnyOrder(String sql, Collection<Row> expectedRows) {
-        try (SqlCursor cursor = toCursor(sql)) {
-            List<Row> actualRows = stream(cursor.spliterator(), false).map(Row::new).collect(toList());
-
-            assertThat(actualRows).containsExactlyInAnyOrderElementsOf(expectedRows);
-        } catch (Exception e) {
-            throw sneakyThrow(e);
-        }
+        assertThat(new HashMap<>(instance().getMap(name))).containsExactlyInAnyOrderEntriesOf(expected);
     }
 
     protected static void assertRowsEventuallyAnyOrder(String sql, Collection<Row> expectedRows) {
@@ -81,6 +60,14 @@ public abstract class SqlTestSupport extends SimpleTestInClusterSupport {
             }
 
             assertThat(actualRows).containsExactlyInAnyOrderElementsOf(expectedRows);
+        } catch (Exception e) {
+            throw sneakyThrow(e);
+        }
+    }
+
+    protected static void executeSql(String sql) {
+        try (SqlCursor cursor = toCursor(sql)) {
+            cursor.iterator().forEachRemaining(o -> { });
         } catch (Exception e) {
             throw sneakyThrow(e);
         }

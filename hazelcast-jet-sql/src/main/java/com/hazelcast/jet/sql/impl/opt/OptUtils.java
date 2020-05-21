@@ -16,27 +16,15 @@
 
 package com.hazelcast.jet.sql.impl.opt;
 
-import com.hazelcast.jet.sql.impl.opt.logical.LogicalRel;
-import com.hazelcast.jet.sql.impl.opt.physical.PhysicalRel;
 import org.apache.calcite.plan.Convention;
-import org.apache.calcite.plan.ConventionTraitDef;
-import org.apache.calcite.plan.RelOptCluster;
-import org.apache.calcite.plan.RelOptCost;
 import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelOptRuleOperand;
 import org.apache.calcite.plan.RelTrait;
 import org.apache.calcite.plan.RelTraitSet;
-import org.apache.calcite.plan.volcano.RelSubset;
-import org.apache.calcite.rel.RelCollation;
-import org.apache.calcite.rel.RelCollationTraitDef;
 import org.apache.calcite.rel.RelNode;
 
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.IdentityHashMap;
-import java.util.Set;
-
+import static com.hazelcast.jet.sql.impl.opt.JetConventions.LOGICAL;
+import static com.hazelcast.jet.sql.impl.opt.JetConventions.PHYSICAL;
 import static org.apache.calcite.plan.RelOptRule.convert;
 
 /**
@@ -44,21 +32,7 @@ import static org.apache.calcite.plan.RelOptRule.convert;
  */
 public final class OptUtils {
 
-    public static final Convention CONVENTION_LOGICAL = new Convention.Impl("LOGICAL", LogicalRel.class);
-    public static final Convention CONVENTION_PHYSICAL = new Convention.Impl("PHYSICAL", PhysicalRel.class) {
-        @Override
-        public boolean canConvertConvention(Convention toConvention) {
-            return true;
-        }
-
-        @Override
-        public boolean useAbstractConvertersForConversion(RelTraitSet fromTraits, RelTraitSet toTraits) {
-            return !fromTraits.satisfies(toTraits);
-        }
-    };
-
     private OptUtils() {
-        // No-op.
     }
 
     /**
@@ -101,7 +75,7 @@ public final class OptUtils {
     public static <R1 extends RelNode, R2 extends RelNode, R3 extends RelNode> RelOptRuleOperand parentChildChild(
             Class<R1> cls,
             Class<R2> childCls1,
-            Class<R2> childCls2,
+            Class<R3> childCls2,
             Convention convention
     ) {
         RelOptRuleOperand childOperand1 = RelOptRule.operand(childCls1, RelOptRule.any());
@@ -122,38 +96,13 @@ public final class OptUtils {
     }
 
     /**
-     * Add two traits to the trait set.
-     *
-     * @param traitSet Original trait set.
-     * @param trait1   Trait to add.
-     * @param trait2   Trait to add.
-     * @return Resulting trait set.
-     */
-    public static RelTraitSet traitPlus(RelTraitSet traitSet, RelTrait trait1, RelTrait trait2) {
-        return traitSet.plus(trait1).plus(trait2).simplify();
-    }
-
-    /**
-     * Add three traits to the trait set.
-     *
-     * @param traitSet Original trait set.
-     * @param trait1   Trait to add.
-     * @param trait2   Trait to add.
-     * @param trait3   Trait to add.
-     * @return Resulting trait set.
-     */
-    public static RelTraitSet traitPlus(RelTraitSet traitSet, RelTrait trait1, RelTrait trait2, RelTrait trait3) {
-        return traitSet.plus(trait1).plus(trait2).plus(trait3).simplify();
-    }
-
-    /**
      * Convert the given trait set to logical convention.
      *
      * @param traitSet Original trait set.
      * @return New trait set with logical convention.
      */
     public static RelTraitSet toLogicalConvention(RelTraitSet traitSet) {
-        return traitPlus(traitSet, CONVENTION_LOGICAL);
+        return traitPlus(traitSet, LOGICAL);
     }
 
     /**
@@ -173,24 +122,8 @@ public final class OptUtils {
      * @return New trait set with physical convention and provided distribution.
      */
     public static RelTraitSet toPhysicalConvention(RelTraitSet traitSet) {
-        return traitPlus(traitSet, CONVENTION_PHYSICAL);
+        return traitPlus(traitSet, PHYSICAL);
     }
-
-//    /**
-//     * Convert the given trait set to physical convention.
-//     *
-//     * @param traitSet Original trait set.
-//     * @param distribution Distribution.
-//     * @return New trait set with physical convention and provided distribution.
-//     */
-//    public static RelTraitSet toPhysicalConvention(RelTraitSet traitSet, DistributionTrait distribution) {
-//        return traitPlus(traitSet, CONVENTION_PHYSICAL, distribution);
-//    }
-
-//    public static RelTraitSet toPhysicalConvention(RelTraitSet traitSet, DistributionTrait distribution,
-//        RelCollation collation) {
-//        return traitPlus(traitSet, CONVENTION_PHYSICAL, distribution, collation);
-//    }
 
     /**
      * Convert the given input into physical input.
@@ -200,110 +133,5 @@ public final class OptUtils {
      */
     public static RelNode toPhysicalInput(RelNode input) {
         return convert(input, toPhysicalConvention(input.getTraitSet()));
-    }
-
-//    /**
-//     * Convert the given input into physical input.
-//     *
-//     * @param input Original input.
-//     * @param distribution Distribution.
-//     * @return Logical input.
-//     */
-//    public static RelNode toPhysicalInput(RelNode input, DistributionTrait distribution) {
-//        return convert(input, toPhysicalConvention(input.getTraitSet(), distribution));
-//    }
-
-    /**
-     * @param rel Node.
-     * @return {@code True} if the given node is physical node.
-     */
-    public static boolean isPhysical(RelNode rel) {
-        return rel.getTraitSet().getTrait(ConventionTraitDef.INSTANCE).equals(CONVENTION_PHYSICAL);
-    }
-
-    /**
-     * Get possible physical rels from the given subset. Every returned input is guaranteed to have a unique trait set.
-     *
-     * @param subset Subset.
-     * @return Physical rels.
-     */
-    public static Collection<RelNode> getPhysicalRelsFromSubset(RelNode subset) {
-        if (subset instanceof RelSubset) {
-            RelSubset subset0 = (RelSubset) subset;
-
-            Set<RelTraitSet> traitSets = new HashSet<>();
-
-            Set<RelNode> res = Collections.newSetFromMap(new IdentityHashMap<>());
-
-            for (RelNode rel : subset0.getRelList()) {
-                if (!isPhysical(rel)) {
-                    continue;
-                }
-
-                if (traitSets.add(rel.getTraitSet())) {
-                    res.add(convert(subset, rel.getTraitSet()));
-                }
-            }
-
-            return res;
-        } else {
-            return Collections.emptyList();
-        }
-    }
-
-    /**
-     * Get combinations of trait sets of physical relations of the given subset.
-     *
-     * @param subset Subset.
-     * @return Trait sets.
-     */
-    public static Set<RelTraitSet> getPhysicalTraitSets(RelSubset subset) {
-        Set<RelTraitSet> traitSets = new HashSet<>();
-
-        for (RelNode rel : subset.getRelList()) {
-            if (!isPhysical(rel)) {
-                continue;
-            }
-
-            traitSets.add(rel.getTraitSet());
-        }
-
-        return traitSets;
-    }
-
-//    /**
-//     * Get physical distribution of the given node.
-//     *
-//     * @param rel Rel node.
-//     * @return Physical distribution.
-//     */
-//    public static DistributionTrait getDistribution(RelNode rel) {
-//        return getDistribution(rel.getTraitSet());
-//    }
-
-//    public static DistributionTrait getDistribution(RelTraitSet traitSet) {
-//        return traitSet.getTrait(DistributionTraitDef.INSTANCE);
-//    }
-
-    /**
-     * Get collation of the given node.
-     *
-     * @param rel Rel node.
-     * @return Physical distribution.
-     */
-    public static RelCollation getCollation(RelNode rel) {
-        return rel.getTraitSet().getTrait(RelCollationTraitDef.INSTANCE);
-    }
-
-    /**
-     * Convenient method to get cost of a relation.
-     *
-     * @param rel Relation.
-     * @return Cost.
-     */
-    public static RelOptCost getCost(RelNode rel) {
-        RelOptCluster cluster = rel.getCluster();
-
-        return cluster.getPlanner().getCost(rel, cluster.getMetadataQuery());
     }
 }
