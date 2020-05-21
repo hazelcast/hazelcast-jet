@@ -27,16 +27,14 @@ import java.io.Serializable;
 import java.math.BigDecimal;
 import java.util.Objects;
 
-import static com.hazelcast.jet.core.TestUtil.createMap;
 import static com.hazelcast.jet.sql.impl.connector.imap.IMapSqlConnector.TO_VALUE_CLASS;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 
-public class SqlTest extends SqlTestSupport {
+public class SqlSelectTest extends SqlTestSupport {
 
     private static final String INT_TO_STRING_MAP_SRC = "int_to_string_map_src";
-    private static final String INT_TO_STRING_MAP_SINK = "int_to_string_map_sink";
 
     private static final String PERSON_MAP_SRC = "person_map_src";
     private static final String PERSON_MAP_SINK = "person_map_sink";
@@ -50,17 +48,19 @@ public class SqlTest extends SqlTestSupport {
     @BeforeClass
     public static void beforeClass() {
         sqlService.query(format("CREATE EXTERNAL TABLE %s (__key INT, this VARCHAR) TYPE \"%s\"",
-                INT_TO_STRING_MAP_SRC, LocalPartitionedMapConnector.TYPE_NAME));
-        sqlService.query(format("CREATE EXTERNAL TABLE %s (__key INT, this VARCHAR) TYPE \"%s\"",
-                INT_TO_STRING_MAP_SINK, LocalPartitionedMapConnector.TYPE_NAME));
+                INT_TO_STRING_MAP_SRC, LocalPartitionedMapConnector.TYPE_NAME)
+        );
 
         sqlService.query(format("CREATE EXTERNAL TABLE %s (__key INT, name VARCHAR, age INT) TYPE \"%s\" OPTIONS (%s '%s')",
-                PERSON_MAP_SRC, LocalPartitionedMapConnector.TYPE_NAME, TO_VALUE_CLASS, Person.class.getName()));
+                PERSON_MAP_SRC, LocalPartitionedMapConnector.TYPE_NAME, TO_VALUE_CLASS, Person.class.getName())
+        );
         sqlService.query(format("CREATE EXTERNAL TABLE %s (__key INT, name VARCHAR, age INT) TYPE \"%s\" OPTIONS (%s '%s')",
-                PERSON_MAP_SINK, LocalPartitionedMapConnector.TYPE_NAME, TO_VALUE_CLASS, Person.class.getName()));
+                PERSON_MAP_SINK, LocalPartitionedMapConnector.TYPE_NAME, TO_VALUE_CLASS, Person.class.getName())
+        );
 
         sqlService.query(format("CREATE EXTERNAL TABLE %s (__key DECIMAL(10, 0), this CHAR) TYPE \"%s\"",
-                BIG_INTEGER_TO_CHAR_MAP, LocalPartitionedMapConnector.TYPE_NAME));
+                BIG_INTEGER_TO_CHAR_MAP, LocalPartitionedMapConnector.TYPE_NAME)
+        );
     }
 
     @Before
@@ -157,31 +157,6 @@ public class SqlTest extends SqlTestSupport {
         assertRowsAnyOrder(
                 "SELECT __key + 1, this FROM " + BIG_INTEGER_TO_CHAR_MAP,
                 singletonList(new Row(BigDecimal.valueOf(13), 'a')));
-    }
-
-    @Test
-    public void insert() {
-        assertMap(
-                INT_TO_STRING_MAP_SINK, "INSERT OVERWRITE " + INT_TO_STRING_MAP_SINK + " SELECT * FROM " + INT_TO_STRING_MAP_SRC,
-                createMap(
-                        0, "value-0",
-                        1, "value-1",
-                        2, "value-2"));
-    }
-
-    @Test
-    public void insert_values() {
-        assertMap(
-                INT_TO_STRING_MAP_SINK, "INSERT OVERWRITE " + INT_TO_STRING_MAP_SINK + "(this, __key) values (2, 1)",
-                createMap(1, "2"));
-    }
-
-    @Test
-    public void insert_person() {
-        assertMap(
-                PERSON_MAP_SINK, "INSERT OVERWRITE " + PERSON_MAP_SINK + " VALUES (1, 'Foo', 25)",
-                createMap(
-                        1, new Person("Foo", 25)));
     }
 
     @SuppressWarnings("unused")

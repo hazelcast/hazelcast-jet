@@ -28,12 +28,15 @@ import javax.annotation.Nonnull;
 import java.util.Iterator;
 
 public class SqlCursorFromObservable implements SqlCursor {
-    private Iterator<SqlRow> iterator;
+
     private final Observable<Object[]> observable;
     private final int columnCount;
+    private Iterator<SqlRow> iterator;
 
     public SqlCursorFromObservable(int columnCount, Observable<Object[]> observable) {
         this.columnCount = columnCount;
+        this.observable = observable;
+
         Iterator<Object[]> observableIt = observable.iterator();
         iterator = new Iterator<SqlRow>() {
             @Override
@@ -46,8 +49,6 @@ public class SqlCursorFromObservable implements SqlCursor {
                 return new SqlRowImpl(new HeapRow(observableIt.next()));
             }
         };
-
-        this.observable = observable;
     }
 
     @Override
@@ -60,11 +61,6 @@ public class SqlCursorFromObservable implements SqlCursor {
         return null;
     }
 
-    @Override
-    public void close() {
-        observable.destroy();
-    }
-
     @Nonnull @Override
     public Iterator<SqlRow> iterator() {
         if (iterator == null) {
@@ -75,5 +71,10 @@ public class SqlCursorFromObservable implements SqlCursor {
         } finally {
             iterator = null;
         }
+    }
+
+    @Override
+    public void close() {
+        observable.destroy();
     }
 }

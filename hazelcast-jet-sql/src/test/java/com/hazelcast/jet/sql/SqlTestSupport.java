@@ -17,6 +17,7 @@
 package com.hazelcast.jet.sql;
 
 import com.hazelcast.jet.SimpleTestInClusterSupport;
+import com.hazelcast.jet.sql.impl.connector.SqlKafkaTest;
 import com.hazelcast.sql.SqlCursor;
 import com.hazelcast.sql.SqlRow;
 import com.hazelcast.sql.SqlService;
@@ -30,7 +31,6 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.StreamSupport;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 import static java.util.stream.Collectors.toSet;
@@ -87,23 +87,23 @@ public abstract class SqlTestSupport extends SimpleTestInClusterSupport {
 
     protected static final class Row {
 
-        Object[] values;
+        private final Object[] values;
 
-        Row(int columnCount, SqlRow row) {
+        public Row(int columnCount, SqlRow row) {
             values = new Object[columnCount];
             for (int i = 0; i < columnCount; i++) {
                 values[i] = row.getObject(i);
             }
         }
 
-        Row(SqlRow sqlRow) {
+        public Row(SqlRow sqlRow) {
             values = new Object[((SqlRowImpl) sqlRow).getDelegate().getColumnCount()];
             for (int i = 0; i < values.length; i++) {
                 values[i] = sqlRow.getObject(i);
             }
         }
 
-        Row(Object... values) {
+        public Row(Object... values) {
             this.values = values;
         }
 

@@ -1,5 +1,6 @@
 package com.hazelcast.jet.sql;
 
+import com.hazelcast.map.IMap;
 import com.hazelcast.sql.impl.connector.LocalPartitionedMapConnector;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -28,6 +29,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public class SqlInsertTest extends SqlTestSupport {
 
+    private static final String INT_TO_STRING_MAP_SRC = "int_to_string_map_src";
+    private static final String INT_TO_STRING_MAP_SINK = "int_to_string_map_sink";
+
     private static final String PERSON_MAP_SINK = "person_map_sink";
     private static final String OBJECT_MAP_SINK = "object_map_sink";
 
@@ -35,11 +39,24 @@ public class SqlInsertTest extends SqlTestSupport {
 
     @BeforeClass
     public static void beforeClass() {
+        sqlService.query(format("CREATE EXTERNAL TABLE %s (__key INT, this VARCHAR) TYPE \"%s\"",
+                INT_TO_STRING_MAP_SRC, LocalPartitionedMapConnector.TYPE_NAME)
+        );
+        sqlService.query(format("CREATE EXTERNAL TABLE %s (__key INT, this VARCHAR) TYPE \"%s\"",
+                INT_TO_STRING_MAP_SINK, LocalPartitionedMapConnector.TYPE_NAME)
+        );
+
         sqlService.query(format("CREATE EXTERNAL TABLE %s (id INT, birthday DATE) TYPE \"%s\" OPTIONS (%s '%s', %s '%s')",
-                PERSON_MAP_SINK, LocalPartitionedMapConnector.TYPE_NAME, TO_KEY_CLASS, Person.class.getName(), TO_VALUE_CLASS, Person.class.getName()));
+                PERSON_MAP_SINK, LocalPartitionedMapConnector.TYPE_NAME,
+                TO_KEY_CLASS, Person.class.getName(),
+                TO_VALUE_CLASS, Person.class.getName())
+        );
 
         sqlService.query(format("CREATE EXTERNAL TABLE %s (nonExistingProperty INT) TYPE \"%s\" OPTIONS (%s '%s', %s '%s')",
-                OBJECT_MAP_SINK, LocalPartitionedMapConnector.TYPE_NAME, TO_KEY_CLASS, SerializableObject.class.getName(), TO_VALUE_CLASS, SerializableObject.class.getName()));
+                OBJECT_MAP_SINK, LocalPartitionedMapConnector.TYPE_NAME,
+                TO_KEY_CLASS, SerializableObject.class.getName(),
+                TO_VALUE_CLASS, SerializableObject.class.getName())
+        );
 
         // an IMap with a field of every type
         sqlService.query(format("CREATE EXTERNAL TABLE %s (" +
@@ -87,7 +104,7 @@ public class SqlInsertTest extends SqlTestSupport {
     }
 
     @Test
-    public void insert_toleratesNullNonExistingProperties() {
+    public void insert_toleratesNullForNonExistingProperties() {
         assertMap(
                 OBJECT_MAP_SINK, "INSERT OVERWRITE " + OBJECT_MAP_SINK + "(nonExistingProperty) VALUES (null)",
                 createMap(new SerializableObject(), new SerializableObject()));
@@ -101,9 +118,27 @@ public class SqlInsertTest extends SqlTestSupport {
     }
 
     @Test
+    public void insert_select() {
+        IMap<Integer, String> intToStringMap = instance().getMap(INT_TO_STRING_MAP_SRC);
+        intToStringMap.put(0, "value-0");
+        intToStringMap.put(1, "value-1");
+
+        assertMap(
+                INT_TO_STRING_MAP_SINK, "INSERT OVERWRITE " + INT_TO_STRING_MAP_SINK + " SELECT * FROM " + INT_TO_STRING_MAP_SRC,
+                createMap(0, "value-0", 1, "value-1"));
+    }
+
+    @Test
+    public void insert_values() {
+        assertMap(
+                INT_TO_STRING_MAP_SINK, "INSERT OVERWRITE " + INT_TO_STRING_MAP_SINK + "(this, __key) values (2, 1)",
+                createMap(1, "2"));
+    }
+
+    @Test
     public void insert_withProject() {
         assertMap(
-                PERSON_MAP_SINK, "INSERT OVERWRITE " + PERSON_MAP_SINK + "(id, birthday) VALUES (0 + 1, '2020-01-01')",
+                PERSON_MAP_SINK, "INSERT OVERWRITE " + PERSON_MAP_SINK + "(birthday, id) VALUES ('2020-01-01', 0 + 1)",
                 createMap(new Person(), new Person(1, LocalDate.of(2020, 1, 1))));
     }
 
@@ -169,16 +204,15 @@ public class SqlInsertTest extends SqlTestSupport {
                         // TODO: should be LocalDateTime.of(2020, 4, 15, 12, 23, 34, 100_000_000) when temporal types are fixed
                         LocalDateTime.of(2020, 4, 15, 12, 23, 34, 0),
                         Date.from(Instant.ofEpochMilli(1586953414200L)),
-                        GregorianCalendar.from(
-                                ZonedDateTime.of(2020, 4, 15, 12, 23, 34, 300_000_000, UTC)
-                                             .withZoneSameInstant(localOffset())
+                        GregorianCalendar.from(ZonedDateTime.of(2020, 4, 15, 12, 23, 34, 300_000_000, UTC)
+                                .withZoneSameInstant(localOffset())
                         ),
                         Instant.ofEpochMilli(1586953414400L),
                         ZonedDateTime.of(2020, 4, 15, 12, 23, 34, 500_000_000, UTC)
-                                     .withZoneSameInstant(localOffset()),
+                                .withZoneSameInstant(localOffset()),
                         ZonedDateTime.of(2020, 4, 15, 12, 23, 34, 600_000_000, UTC)
-                                     .withZoneSameInstant(systemDefault())
-                                     .toOffsetDateTime()
+                                .withZoneSameInstant(systemDefault())
+                                .toOffsetDateTime()
                 )));
     }
 

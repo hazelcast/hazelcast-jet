@@ -14,9 +14,10 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.sql;
+package com.hazelcast.jet.sql.impl.connector;
 
 import com.hazelcast.jet.kafka.impl.KafkaTestSupport;
+import com.hazelcast.jet.sql.SqlTestSupport;
 import com.hazelcast.sql.SqlCursor;
 import org.apache.kafka.common.serialization.IntegerDeserializer;
 import org.apache.kafka.common.serialization.IntegerSerializer;
@@ -61,7 +62,8 @@ public class SqlKafkaTest extends SqlTestSupport {
                 "  \"value.serializer\" '" + StringSerializer.class.getCanonicalName() + "', " +
                 "  \"value.deserializer\" '" + StringDeserializer.class.getCanonicalName() + "', " +
                 "  \"auto.offset.reset\" 'earliest'" +
-                ")");
+                ")"
+        );
     }
 
     @AfterClass

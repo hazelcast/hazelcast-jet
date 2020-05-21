@@ -71,13 +71,15 @@ public class SqlJoinTest extends SqlTestSupport {
                 "\"key.deserializer\"", IntegerDeserializer.class.getCanonicalName(),
                 "\"value.serializer\"", StringSerializer.class.getCanonicalName(),
                 "\"value.deserializer\"", StringDeserializer.class.getCanonicalName(),
-                "\"auto.offset.reset\"", "earliest"));
+                "\"auto.offset.reset\"", "earliest")
+        );
 
         mapName = "m_" + randomString().replace('-', '_');
         sqlService.query(format("CREATE EXTERNAL TABLE %s (__key INT, this VARCHAR) TYPE \"%s\" "
                         + "OPTIONS (\"" + TO_KEY_CLASS + "\" 'java.lang.Integer',"
                         + "\"" + TO_VALUE_CLASS + "\" 'java.lang.String')",
-                mapName, LocalPartitionedMapConnector.TYPE_NAME));
+                mapName, LocalPartitionedMapConnector.TYPE_NAME)
+        );
     }
 
     @AfterClass

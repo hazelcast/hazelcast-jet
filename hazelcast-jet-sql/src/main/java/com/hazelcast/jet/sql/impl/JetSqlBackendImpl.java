@@ -25,14 +25,10 @@ import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.core.processor.SinkProcessors;
 import com.hazelcast.jet.sql.impl.opt.OptUtils;
-import com.hazelcast.jet.sql.impl.opt.logical.LogicalRules;
 import com.hazelcast.jet.sql.impl.opt.logical.LogicalRel;
-import com.hazelcast.jet.sql.impl.opt.physical.FullScanPhysicalRule;
-import com.hazelcast.jet.sql.impl.opt.physical.InsertPhysicalRule;
+import com.hazelcast.jet.sql.impl.opt.logical.LogicalRules;
 import com.hazelcast.jet.sql.impl.opt.physical.PhysicalRel;
-import com.hazelcast.jet.sql.impl.opt.physical.ValuesPhysicalRule;
-import com.hazelcast.jet.sql.impl.opt.physical.JoinPhysicalRule;
-import com.hazelcast.jet.sql.impl.opt.physical.ProjectPhysicalRule;
+import com.hazelcast.jet.sql.impl.opt.physical.PhysicalRules;
 import com.hazelcast.jet.sql.impl.opt.physical.visitor.CreateDagVisitor;
 import com.hazelcast.jet.sql.impl.schema.JetTable;
 import com.hazelcast.jet.sql.impl.validate.JetSqlValidator;
@@ -43,18 +39,14 @@ import com.hazelcast.sql.impl.SingleValueCursor;
 import com.hazelcast.sql.impl.calcite.OptimizerContext;
 import com.hazelcast.sql.impl.optimizer.SqlPlan;
 import org.apache.calcite.plan.RelOptUtil;
-import org.apache.calcite.plan.volcano.AbstractConverter;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelVisitor;
-import org.apache.calcite.rel.core.RelFactories;
 import org.apache.calcite.rel.core.TableModify;
 import org.apache.calcite.rel.core.TableScan;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.sql.SqlOperatorTable;
 import org.apache.calcite.sql.validate.SqlConformance;
 import org.apache.calcite.sql.validate.SqlValidatorCatalogReader;
-import org.apache.calcite.tools.RuleSet;
-import org.apache.calcite.tools.RuleSets;
 
 import javax.annotation.Nonnull;
 import java.util.List;
@@ -164,20 +156,8 @@ public class JetSqlBackendImpl implements JetSqlBackend, ManagedService {
      * @return Optimized physical tree.
      */
     private PhysicalRel optimizePhysical(OptimizerContext context, RelNode rel) {
-        RuleSet rules = RuleSets.ofList(
-                InsertPhysicalRule.INSTANCE,
-                ValuesPhysicalRule.INSTANCE,
-                // SortPhysicalRule.INSTANCE,
-                // RootPhysicalRule.INSTANCE,
-                // FilterPhysicalRule.INSTANCE,
-                FullScanPhysicalRule.INSTANCE,
-                ProjectPhysicalRule.INSTANCE,
-                // AggregatePhysicalRule.INSTANCE,
-                 JoinPhysicalRule.INSTANCE,
-                new AbstractConverter.ExpandConversionRule(RelFactories.LOGICAL_BUILDER)
-        );
-
-        return (PhysicalRel) context.optimize(rel, rules, OptUtils.toPhysicalConvention(rel.getTraitSet()));
+        return (PhysicalRel) context.optimize(rel, PhysicalRules.getRuleSet(),
+                OptUtils.toPhysicalConvention(rel.getTraitSet()));
     }
 
     private DAG createDag(PhysicalRel physicalRel, ProcessorMetaSupplier sinkSupplier) {
