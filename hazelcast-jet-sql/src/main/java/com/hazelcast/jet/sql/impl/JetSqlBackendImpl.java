@@ -24,10 +24,18 @@ import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.core.processor.SinkProcessors;
-import com.hazelcast.jet.sql.impl.rule.FullScanPhysicalRule;
-import com.hazelcast.jet.sql.impl.rule.JoinPhysicalRule;
-import com.hazelcast.jet.sql.impl.rule.ProjectPhysicalRule;
+import com.hazelcast.jet.sql.impl.opt.OptUtils;
+import com.hazelcast.jet.sql.impl.opt.logical.LogicalRules;
+import com.hazelcast.jet.sql.impl.opt.logical.LogicalRel;
+import com.hazelcast.jet.sql.impl.opt.physical.FullScanPhysicalRule;
+import com.hazelcast.jet.sql.impl.opt.physical.InsertPhysicalRule;
+import com.hazelcast.jet.sql.impl.opt.physical.PhysicalRel;
+import com.hazelcast.jet.sql.impl.opt.physical.ValuesPhysicalRule;
+import com.hazelcast.jet.sql.impl.opt.physical.JoinPhysicalRule;
+import com.hazelcast.jet.sql.impl.opt.physical.ProjectPhysicalRule;
+import com.hazelcast.jet.sql.impl.opt.physical.visitor.CreateDagVisitor;
 import com.hazelcast.jet.sql.impl.schema.JetTable;
+import com.hazelcast.jet.sql.impl.validate.JetSqlValidator;
 import com.hazelcast.spi.impl.NodeEngine;
 import com.hazelcast.sql.SqlCursor;
 import com.hazelcast.sql.impl.JetSqlBackend;
@@ -145,7 +153,7 @@ public class JetSqlBackendImpl implements JetSqlBackend, ManagedService {
      * @return Optimized logical tree.
      */
     private LogicalRel optimizeLogical(OptimizerContext context, RelNode rel) {
-        return (LogicalRel) context.optimize(rel, JetLogicalRules.getRuleSet(),
+        return (LogicalRel) context.optimize(rel, LogicalRules.getRuleSet(),
                 OptUtils.toLogicalConvention(rel.getTraitSet()));
     }
 
@@ -157,8 +165,8 @@ public class JetSqlBackendImpl implements JetSqlBackend, ManagedService {
      */
     private PhysicalRel optimizePhysical(OptimizerContext context, RelNode rel) {
         RuleSet rules = RuleSets.ofList(
-                JetTableInsertPhysicalRule.INSTANCE,
-                JetValuesPhysicalRule.INSTANCE,
+                InsertPhysicalRule.INSTANCE,
+                ValuesPhysicalRule.INSTANCE,
                 // SortPhysicalRule.INSTANCE,
                 // RootPhysicalRule.INSTANCE,
                 // FilterPhysicalRule.INSTANCE,

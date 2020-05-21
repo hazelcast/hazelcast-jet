@@ -32,7 +32,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.StreamSupport;
 
+import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 import static java.util.stream.Collectors.toSet;
+import static java.util.stream.StreamSupport.stream;
 import static org.junit.Assert.assertEquals;
 
 public abstract class SqlTestSupport extends SimpleTestInClusterSupport {
@@ -46,31 +48,41 @@ public abstract class SqlTestSupport extends SimpleTestInClusterSupport {
     }
 
     protected static <K, V> void assertMap(String name, String sql, Map<K, V> expected) {
-        SqlCursor cursor = sqlService.query(sql);
+        try (SqlCursor cursor = toCursor(sql)) {
+            cursor.iterator().forEachRemaining(o -> { });
 
-        cursor.iterator().forEachRemaining(o -> { });
-
-        assertEquals(expected, new HashMap<>(instance().getMap(name)));
+            assertEquals(expected, new HashMap<>(instance().getMap(name)));
+        } catch (Exception e) {
+            throw sneakyThrow(e);
+        }
     }
 
     protected static void assertRowsAnyOrder(String sql, Collection<Row> expectedRows) {
-        SqlCursor cursor = sqlService.query(sql);
+        try (SqlCursor cursor = toCursor(sql)) {
+            Set<Row> actualRows = stream(cursor.spliterator(), false).map(Row::new).collect(toSet());
 
-        Set<Row> actualRows = StreamSupport.stream(cursor.spliterator(), false).map(Row::new).collect(toSet());
-
-        assertEquals(new HashSet<>(expectedRows), actualRows);
+            assertEquals(new HashSet<>(expectedRows), actualRows);
+        } catch (Exception e) {
+            throw sneakyThrow(e);
+        }
     }
 
     protected static void assertRowsEventuallyAnyOrder(String sql, Collection<Row> expectedRows) {
-        SqlCursor cursor = sqlService.query(sql);
+        try (SqlCursor cursor = toCursor(sql)) {
+            Iterator<SqlRow> iterator = cursor.iterator();
+            Set<Row> actualRows = new HashSet<>(expectedRows.size());
+            for (int i = 0; i < expectedRows.size(); i++) {
+                actualRows.add(new Row(cursor.getColumnCount(), iterator.next()));
+            }
 
-        Iterator<SqlRow> iterator = cursor.iterator();
-        Set<Row> actualRows = new HashSet<>(expectedRows.size());
-        for (int i = 0; i < expectedRows.size(); i++) {
-            actualRows.add(new Row(cursor.getColumnCount(), iterator.next()));
+            assertEquals(new HashSet<>(expectedRows), actualRows);
+        } catch (Exception e) {
+            throw sneakyThrow(e);
         }
+    }
 
-        assertEquals(new HashSet<>(expectedRows), actualRows);
+    private static SqlCursor toCursor(String sql) {
+        return sqlService.query(sql);
     }
 
     protected static final class Row {
