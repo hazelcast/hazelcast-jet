@@ -102,13 +102,12 @@ public class RocksDBStateBackend {
     public void deleteKeyValueStore() {
         for (final ColumnFamilyHandle cfh : cfhs) {
             try {
-                cfh.close();
                 db.dropColumnFamily(cfh);
             } catch (RocksDBException e) {
                 throw new JetException("Failed to Delete Column Family", e);
             }
+            db.close();
         }
-        db.close();
     }
 
     private <T> byte[] serialize(T item) {
