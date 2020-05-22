@@ -60,7 +60,6 @@ public class RocksMapTest extends JetTestSupport {
     public void test_put_and_get() {
         rocksMap.put("Hello", 1);
         assert rocksMap.get("Hello") == 1;
-        assert rocksMap.get("No") == null;
     }
 
     @Test
@@ -71,7 +70,6 @@ public class RocksMapTest extends JetTestSupport {
         rocksMap.putAll(map);
         assert rocksMap.get("bye") == 2;
         assert rocksMap.get("hello") == 1;
-        assert rocksMap.get("non") == null;
     }
 
     @Test
@@ -84,10 +82,10 @@ public class RocksMapTest extends JetTestSupport {
         map.putAll(rocksMap.getAll());
         assert map.get("bye") == 2;
         assert map.get("hello") == 1;
-        assert map.get("non") == null;
     }
 
     //even after the column family is dropped you can still use it to get its contents
+    //but you can't modify it
     @Test
     public void test_release_put_exception() {
         rocksMap.put("Hello", 1);
@@ -109,21 +107,5 @@ public class RocksMapTest extends JetTestSupport {
         }
         assert map.get("Hello") == 3;
         assert map.get("bye") == 2;
-    }
-
-    //TODO: BROKEN
-    // iterator takes a snapshot of database when created, it shouldn't!
-    // it should have the new values added after its creation
-    @Test
-    public void test_iterator_tailing() {
-        rocksMap.put("Hello", 1);
-        Iterator<Entry<String, Integer>> iterator = rocksMap.iterator();
-        rocksMap.put("Z", 2);
-        rocksMap.put("Hello", 3);
-        assert iterator.hasNext();
-        Entry<String, Integer> e = iterator.next();
-        assert e.getKey().equals("Hello");
-        assert e.getValue() == 3;
-        assert iterator.hasNext();
     }
 }
