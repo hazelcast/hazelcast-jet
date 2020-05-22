@@ -225,7 +225,7 @@ public final class TestSupport {
 
     private BiPredicate<? super List<?>, ? super List<?>> outputChecker = Objects::equals;
 
-    private InternalSerializationService serializationService;
+    private RocksDBStateBackend rocksDBStateBackend;
 
     private TestSupport(@Nonnull ProcessorMetaSupplier metaSupplier) {
         this.metaSupplier = metaSupplier;
@@ -804,11 +804,14 @@ public final class TestSupport {
                     .setManagedContext(e -> e)
                     .build();
         }
-
         TestProcessorContext context = new TestProcessorContext()
                 .setLogger(getLogger(processor.getClass().getName()))
                 .setManagedContext(serializationService.getManagedContext());
-        context.setRocksDBStateBackend(new RocksDBStateBackend((InternalSerializationService) serializationService));
+        if (rocksDBStateBackend == null) {
+            rocksDBStateBackend = new RocksDBStateBackend(
+                    (InternalSerializationService) serializationService);
+        }
+        context.setRocksDBStateBackend(rocksDBStateBackend);
 
         if (jetInstance != null) {
             context.setJetInstance(jetInstance);

@@ -96,11 +96,26 @@ public class RocksMapTest extends JetTestSupport {
         assertThrows(JetException.class, () -> rocksMap.put("bye", 2));
     }
 
-    //TODO:
+    @Test
+    public void test_iterator() {
+        rocksMap.put("Hello", 1);
+        rocksMap.put("bye", 2);
+        rocksMap.put("Hello", 3);
+        Iterator<Entry<String, Integer>> iterator = rocksMap.iterator();
+        Map<String, Integer> map = new HashMap<>();
+        while (iterator.hasNext()) {
+            Entry<String, Integer> e = iterator.next();
+            map.put(e.getKey(), e.getValue());
+        }
+        assert map.get("Hello") == 3;
+        assert map.get("bye") == 2;
+    }
+
+    //TODO: BROKEN
     // iterator takes a snapshot of database when created, it shouldn't!
     // it should have the new values added after its creation
     @Test
-    public void test_iterator_next() {
+    public void test_iterator_tailing() {
         rocksMap.put("Hello", 1);
         Iterator<Entry<String, Integer>> iterator = rocksMap.iterator();
         rocksMap.put("Z", 2);

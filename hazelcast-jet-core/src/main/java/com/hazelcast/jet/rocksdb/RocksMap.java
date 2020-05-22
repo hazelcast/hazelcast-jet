@@ -94,10 +94,9 @@ public class RocksMap<K, V> implements Iterable<Entry<K, V>> {
     public void putAll(@Nonnull Map<K, V> map) throws JetException {
         WriteBatch batch = new WriteBatch();
         for (Entry<K, V> e : map.entrySet()) {
-            byte[] keyBytes = serialize(e.getKey());
-            byte[] valueBytes = serialize(e.getValue());
             try {
-                db.put(cfh, writeOptions, keyBytes, valueBytes);
+                batch.put(cfh, serialize(e.getKey()), serialize(e.getValue()));
+                db.write(writeOptions, batch);
             } catch (RocksDBException ex) {
                 throw new JetException("Operation Failed: PutAll", ex);
             }
