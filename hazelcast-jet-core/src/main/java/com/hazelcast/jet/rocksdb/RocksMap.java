@@ -49,6 +49,7 @@ public class RocksMap<K, V> implements Iterable<Entry<K, V>> {
     private final ReadOptions readOptions;
     private final WriteOptions writeOptions;
     private final InternalSerializationService serializationService;
+    private RocksMapIterator iterator;
 
     RocksMap(RocksDB db, ColumnFamilyHandle cfh,
              ReadOptions readOptions, WriteOptions writeOptions,
@@ -131,7 +132,10 @@ public class RocksMap<K, V> implements Iterable<Entry<K, V>> {
     @Nonnull
     @Override
     public Iterator<Entry<K, V>> iterator() {
-        return new RocksMapIterator();
+        if (iterator == null) {
+            iterator = new RocksMapIterator();
+        }
+        return iterator;
     }
 
     private class RocksMapIterator implements Iterator<Entry<K, V>> {
