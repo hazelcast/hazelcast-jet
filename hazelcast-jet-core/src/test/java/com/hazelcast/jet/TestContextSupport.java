@@ -119,12 +119,12 @@ public final class TestContextSupport {
             if (context instanceof TestProcessorContext) {
                 TestProcessorContext c = (TestProcessorContext) context;
                 NodeEngine nodeEngine = ((HazelcastInstanceImpl) c.jetInstance().getHazelcastInstance()).node.nodeEngine;
-                InternalSerializationService serialization;
-                serialization = (InternalSerializationService) nodeEngine.getSerializationService();
+                InternalSerializationService serializationService;
+                serializationService = (InternalSerializationService) nodeEngine.getSerializationService();
                 context = new ProcCtx(c.jetInstance(), c.jobId(), c.executionId(), c.jobConfig(),
                         c.logger(), c.vertexName(), c.localProcessorIndex(), c.globalProcessorIndex(),
                         c.processingGuarantee(), c.localParallelism(), c.memberIndex(), c.memberCount(),
-                        new ConcurrentHashMap<>(), serialization, new RocksDBStateBackend(serialization));
+                        new ConcurrentHashMap<>(), serializationService, new RocksDBStateBackend(serializationService));
             }
             delegate.init(outbox, context);
         }
