@@ -75,7 +75,6 @@ public class HashJoinP<E0> extends AbstractProcessor {
     private final FlatMapper<E0, Object> flatMapper;
     private boolean ordinal0Consumed;
     private RocksDBStateBackend store;
-    private List<RocksMap> rocksMapList = new ArrayList<>();
 
     @SuppressFBWarnings(value = "NP_PARAMETER_MUST_BE_NONNULL_BUT_MARKED_AS_NULLABLE",
             justification = "https://github.com/spotbugs/spotbugs/issues/844")
@@ -124,7 +123,6 @@ public class HashJoinP<E0> extends AbstractProcessor {
         assert !ordinal0Consumed : "Edge 0 must have a lower priority than all other edges";
 
         RocksMap<Object, Object> map = store.getMap();
-        rocksMapList.add(map);
         map.putAll(((Map) item));
         lookupTables.set(ordinal - 1, map);
         return true;
@@ -145,7 +143,7 @@ public class HashJoinP<E0> extends AbstractProcessor {
 
     @Override
     public void close() {
-        for (RocksMap map : rocksMapList) {
+        for (RocksMap map : lookupTables) {
             store.releaseMap(map);
         }
     }

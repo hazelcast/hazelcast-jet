@@ -48,7 +48,7 @@ public class HashJoinCollectP<K, T, V> extends AbstractProcessor {
     @Override
     protected void init(@Nonnull Context context) throws Exception {
         store = context.rocksDBStateBackend();
-            lookupTable = store.getMap();
+        lookupTable = store.getMap();
     }
 
     @Override
@@ -62,14 +62,18 @@ public class HashJoinCollectP<K, T, V> extends AbstractProcessor {
         return true;
     }
 
-    private Object merge(Object o, Object n) {
-        if (o instanceof HashJoinArrayList) {
-            ((HashJoinArrayList) o).add(n);
-            return o;
+    private Object merge(Object oldValue, Object newValue) {
+        if (oldValue == null) {
+            return newValue;
+        }
+
+        if (oldValue instanceof HashJoinArrayList) {
+            ((HashJoinArrayList) oldValue).add(newValue);
+            return oldValue;
         } else {
             HashJoinArrayList res = new HashJoinArrayList();
-            res.add(o);
-            res.add(n);
+            res.add(oldValue);
+            res.add(newValue);
             return res;
         }
     }
