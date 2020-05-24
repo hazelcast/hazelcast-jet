@@ -31,6 +31,7 @@ import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
 import com.hazelcast.map.IMap;
 import com.hazelcast.test.HazelcastParallelClassRunner;
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -55,6 +56,7 @@ import static com.hazelcast.jet.server.JetCommandLine.runCommandLine;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
 @RunWith(HazelcastParallelClassRunner.class)
@@ -481,6 +483,26 @@ public class JetCommandLineTest extends JetTestSupport {
         // this list is created by the job in testjob.jar
         IList<String> args = jet.getList("args");
         assertTrueEventually(() -> assertContains(captureOut(), " with arguments [--jobOption, fooValue]"));
+    }
+
+    @Test
+    public void test_submit_withTargets() {
+        AtomicReference<ClientConfig> atomicConfig = new AtomicReference<>();
+        Function<ClientConfig, JetInstance> fnRunCommand = (config) -> {
+            atomicConfig.set(config);
+            return null;
+        };
+
+        try {
+            run(fnRunCommand, "submit", "--targets", "foobar@127.0.0.1:5701,127.0.0.1:5702", testJobJarFile.toString());
+        } catch (Exception ignore) {
+            // ignore
+        }
+
+        ClientConfig config = atomicConfig.get();
+
+        assertEquals("foobar", config.getClusterName());
+        assertEquals("[127.0.0.1:5701,127.0.0.1:5702]", config.getNetworkConfig().getAddresses().toString());
     }
 
     @Test

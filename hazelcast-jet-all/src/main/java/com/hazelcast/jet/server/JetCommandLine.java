@@ -38,6 +38,7 @@ import com.hazelcast.jet.impl.JetClientInstanceImpl;
 import com.hazelcast.jet.impl.JobSummary;
 import com.hazelcast.jet.impl.config.ConfigProvider;
 import com.hazelcast.jet.server.JetCommandLine.JetVersionProvider;
+import java.util.Arrays;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.DefaultExceptionHandler;
@@ -170,6 +171,7 @@ public class JetCommandLine implements Runnable {
     @Command(description = "Submits a job to the cluster")
     public void submit(
             @Mixin(name = "verbosity") Verbosity verbosity,
+            @Option(names = {"-t", "--targets"}) String targets,
             @Option(names = {"-s", "--snapshot"},
                     paramLabel = "<snapshot name>",
                     description = "Name of the initial snapshot to start the job from"
@@ -206,6 +208,9 @@ public class JetCommandLine implements Runnable {
         if (snapshotName != null) {
             printf("Will restore the job from the snapshot with name '%s'", snapshotName);
         }
+        String[] t = targets.split("@");
+        clusterName = t[0];
+        addresses = Arrays.asList(t[1]);
         JetBootstrap.executeJar(this::getJetClient, file.getAbsolutePath(), snapshotName, name, mainClass, params);
     }
 
