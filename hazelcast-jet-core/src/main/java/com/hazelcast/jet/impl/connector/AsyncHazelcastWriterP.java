@@ -84,7 +84,7 @@ public abstract class AsyncHazelcastWriterP implements Processor {
     }
 
     @Override
-    public final boolean saveToSnapshot() {
+    public boolean saveToSnapshot() {
         return flush() && asyncCallsDone();
     }
 

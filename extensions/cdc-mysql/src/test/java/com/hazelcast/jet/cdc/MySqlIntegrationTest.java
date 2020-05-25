@@ -34,6 +34,7 @@ import org.testcontainers.containers.MySQLContainer;
 import javax.annotation.Nonnull;
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
@@ -224,12 +225,24 @@ public class MySqlIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
-    public void cdcMapSink() throws Exception {
+    public void cdcMapSink_withReorderingCheck() throws Exception {
+        cdcMapSink(false);
+    }
+
+    @Test
+    public void cdcMapSink_withoutReorderingCheck() throws Exception {
+        cdcMapSink(true);
+    }
+
+    private void cdcMapSink(boolean ignoreReordering) throws SQLException {
         // given
         Pipeline pipeline = Pipeline.create();
         pipeline.readFrom(source("customers"))
                 .withNativeTimestamps(0)
-                .writeTo(CdcSinks.map("cache", r -> r.key().toMap().get("id"), r -> r.value().toObject(Customer.class).toString()));
+                .writeTo(CdcSinks.map("cache",
+                        r -> r.key().toMap().get("id"),
+                        r -> r.value().toObject(Customer.class).toString(),
+                        ignoreReordering));
 
 
         // when
@@ -248,8 +261,13 @@ public class MySqlIntegrationTest extends AbstractIntegrationTest {
         );
 
         //when
+        job.restart();
+        JetTestSupport.assertJobStatusEventually(job, JobStatus.RUNNING);
         try (Connection connection = DriverManager.getConnection(mysql.withDatabaseName("inventory").getJdbcUrl(),
                 mysql.getUsername(), mysql.getPassword())) {
+            connection
+                    .prepareStatement("UPDATE customers SET first_name='Anne Marie' WHERE id=1004")
+                    .executeUpdate();
             connection
                     .prepareStatement("INSERT INTO customers VALUES (1005, 'Jason', 'Bourne', 'jason@bourne.org')")
                     .executeUpdate();
@@ -260,7 +278,7 @@ public class MySqlIntegrationTest extends AbstractIntegrationTest {
                         "1001:Customer {id=1001, firstName=Sally, lastName=Thomas, email=sally.thomas@acme.com}",
                         "1002:Customer {id=1002, firstName=George, lastName=Bailey, email=gbailey@foobar.com}",
                         "1003:Customer {id=1003, firstName=Edward, lastName=Walker, email=ed@walker.com}",
-                        "1004:Customer {id=1004, firstName=Anne, lastName=Kretchmar, email=annek@noanswer.org}",
+                        "1004:Customer {id=1004, firstName=Anne Marie, lastName=Kretchmar, email=annek@noanswer.org}",
                         "1005:Customer {id=1005, firstName=Jason, lastName=Bourne, email=jason@bourne.org}"
                 )
         );
@@ -278,7 +296,7 @@ public class MySqlIntegrationTest extends AbstractIntegrationTest {
                         "1001:Customer {id=1001, firstName=Sally, lastName=Thomas, email=sally.thomas@acme.com}",
                         "1002:Customer {id=1002, firstName=George, lastName=Bailey, email=gbailey@foobar.com}",
                         "1003:Customer {id=1003, firstName=Edward, lastName=Walker, email=ed@walker.com}",
-                        "1004:Customer {id=1004, firstName=Anne, lastName=Kretchmar, email=annek@noanswer.org}"
+                        "1004:Customer {id=1004, firstName=Anne Marie, lastName=Kretchmar, email=annek@noanswer.org}"
                 )
         );
     }

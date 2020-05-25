@@ -19,18 +19,25 @@ package com.hazelcast.jet.cdc;
 import com.hazelcast.client.config.ClientConfig;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.function.FunctionEx;
+import com.hazelcast.jet.Traverser;
+import com.hazelcast.jet.Traversers;
+import com.hazelcast.jet.accumulator.LongAccumulator;
 import com.hazelcast.jet.cdc.impl.ChangeRecordImpl;
+import com.hazelcast.jet.core.BroadcastKey;
+import com.hazelcast.jet.core.Inbox;
+import com.hazelcast.jet.core.Outbox;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
+import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.impl.connector.AbstractHazelcastConnectorSupplier;
 import com.hazelcast.jet.impl.connector.UpdateMapWithMaterializedValuesP;
+import com.hazelcast.jet.impl.execution.BroadcastEntry;
 import com.hazelcast.jet.impl.pipeline.SinkImpl;
 import com.hazelcast.jet.pipeline.Sink;
 import com.hazelcast.map.IMap;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-
 import java.util.HashMap;
 import java.util.Map;
 
@@ -209,7 +216,7 @@ public final class CdcSinks {
             boolean ignoreReordering
     ) {
         ProcessorSupplier supplier = AbstractHazelcastConnectorSupplier.of(asXmlString(clientConfig),
-                instance -> new CdcSinkProcessor<>(instance, map, keyFn, extend(valueFn), ignoreReordering));
+                instance -> new CdcSinkProcessor<>(name, instance, map, keyFn, extend(valueFn), ignoreReordering));
         ProcessorMetaSupplier metaSupplier = ProcessorMetaSupplier.forceTotalParallelismOne(supplier, name);
         return new SinkImpl<>(name, metaSupplier, true, null);
     }
@@ -217,7 +224,6 @@ public final class CdcSinks {
     @Nonnull
     private static <V> FunctionEx<ChangeRecord, V> extend(@Nonnull FunctionEx<ChangeRecord, V> valueFn) {
         return (record) -> {
-            System.err.println("record = " + record); //todo: remove
             if (DELETE.equals(record.operation())) {
                 return null;
             }
@@ -227,9 +233,15 @@ public final class CdcSinks {
 
     private static class CdcSinkProcessor<K, V> extends UpdateMapWithMaterializedValuesP<ChangeRecord, K, V> {
 
-        private final Sequences<K> sequences;
+        private final String name;
+        private Sequences<K> sequences;
+
+        private Outbox outbox;
+        private Traverser<Map<K, Tuple2<LongAccumulator, LongAccumulator>>> snapshotTraverser;
+        private Map<K, Tuple2<LongAccumulator, LongAccumulator>> pendingSnapshotItem;
 
         CdcSinkProcessor(
+                @Nonnull String name,
                 @Nonnull HazelcastInstance instance,
                 @Nonnull String map,
                 @Nonnull FunctionEx<? super ChangeRecord, ? extends K> keyFn,
@@ -237,7 +249,14 @@ public final class CdcSinks {
                 boolean ignoreReordering
         ) {
             super(instance, map, keyFn, valueFn);
-            sequences = ignoreReordering ? null : new Sequences<>();
+            this.name = name;
+            this.sequences = ignoreReordering ? null : new Sequences<>();
+        }
+
+        @Override
+        public void init(@Nonnull Outbox outbox, @Nonnull Context context) {
+            super.init(outbox, context);
+            this.outbox = outbox;
         }
 
         @Override
@@ -254,25 +273,72 @@ public final class CdcSinks {
             return !isNew;
         }
 
+        @Override
+        public boolean saveToSnapshot() {
+            if (!super.saveToSnapshot()) {
+                return false;
+            }
+            if (sequences == null) {
+                return true;
+            }
+            if (snapshotTraverser == null) {
+                snapshotTraverser = sequences.toTraverser()
+                        .onFirstNull(() -> snapshotTraverser = null);
+            }
+            return emitFromTraverserToSnapshot(snapshotTraverser);
+        }
+
+        private boolean emitFromTraverserToSnapshot(@Nonnull Traverser<Map<K, Tuple2<LongAccumulator, LongAccumulator>>> traverser) {
+            Map<K, Tuple2<LongAccumulator, LongAccumulator>> item;
+            if (pendingSnapshotItem != null) {
+                item = pendingSnapshotItem;
+                pendingSnapshotItem = null;
+            } else {
+                item = traverser.next();
+            }
+            for (; item != null; item = traverser.next()) {
+                if (!outbox.offerToSnapshot(BroadcastKey.broadcastKey(name), item)) {
+                    pendingSnapshotItem = item;
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        @Override
+        public void restoreFromSnapshot(@Nonnull Inbox inbox) {
+            BroadcastEntry<String, Map<K, Tuple2<LongAccumulator, LongAccumulator>>> broadcastItem =
+                    (BroadcastEntry<String, Map<K, Tuple2<LongAccumulator, LongAccumulator>>>) inbox.poll();
+            sequences = broadcastItem == null ? null : new Sequences<>(broadcastItem.getValue());
+        }
     }
 
     private static final class Sequences<K> {
 
-        private final Map<K, Sequence> sequences = new HashMap<>();
+        private final Map<K, Tuple2<LongAccumulator, LongAccumulator>> sequences;
 
-        public boolean update(K key, long partition, long value) {
-            Sequence prevSequence = sequences.get(key);
+        Sequences() {
+            this(new HashMap<>());
+        }
+
+        Sequences(Map<K, Tuple2<LongAccumulator, LongAccumulator>> sequences) {
+            this.sequences = sequences;
+        }
+
+        boolean update(K key, long partition, long value) {
+            Tuple2<LongAccumulator, LongAccumulator> prevSequence = sequences.get(key);
+            System.err.println("Sequences.update:" + "key = [" + key + "], partition = [" + partition + "], value = [" + value + "], prevSequence = " + prevSequence); //todo: remove
             if (prevSequence == null) { //first observed sequence for key
-                sequences.put(key, new Sequence(partition, value));
+                sequences.put(key, Tuple2.tuple2(new LongAccumulator(partition), new LongAccumulator(value)));
                 return true;
             } else {
-                if (prevSequence.partition != partition) { //sequence partition changed for key
-                    prevSequence.partition = partition;
-                    prevSequence.value = value;
+                if (prevSequence.f0().get() != partition) { //sequence partition changed for key
+                    prevSequence.f0().set(partition);
+                    prevSequence.f1().set(value);
                     return true;
                 } else {
-                    if (prevSequence.value < value) { //sequence is newer than previous for key
-                        prevSequence.value = value;
+                    if (prevSequence.f1().get() < value) { //sequence is newer than previous for key
+                        prevSequence.f1().set(value);
                         return true;
                     } else {
                         return false;
@@ -280,16 +346,9 @@ public final class CdcSinks {
                 }
             }
         }
-    }
 
-    private static final class Sequence {
-
-        private long partition;
-        private long value;
-
-        Sequence(long partition, long value) {
-            this.partition = partition;
-            this.value = value;
+        Traverser<Map<K, Tuple2<LongAccumulator, LongAccumulator>>> toTraverser() {
+            return Traversers.singleton(sequences);
         }
     }
 }
