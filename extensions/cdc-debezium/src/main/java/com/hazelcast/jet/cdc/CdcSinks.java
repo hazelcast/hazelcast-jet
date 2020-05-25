@@ -49,13 +49,13 @@ import static com.hazelcast.jet.impl.util.ImdgUtil.asXmlString;
  * sinks. As a consequence these sinks take {@link ChangeRecord} items
  * as their input.
  * <p>
- * All the sink types contained in here are capable to detect any
- * <i>reordering</i> that might have happened in the stream of
- * {@code ChangeRecord} items they ingest. This functionality is
- * optional, but enabled by default (see {@code ignoreReordering} param).
- * It's based on implementation specific sequence numbers provided by
- * CDC event sources. When enabled the sink will selectively drop input
- * items like this:
+ * These sinks can detect any <i>reordering</i> that might have happened
+ * in the stream of {@code ChangeRecord} items they ingest (Jet pipelines
+ * benefit from massively parallel execution, so item reordering can and
+ * does happen). The reordering is based on implementation specific
+ * sequence numbers provided by CDC event sources. The sink reacts to
+ * reordering by dropping obsolete input items. The exact behaviour
+ * looks like this. For each input item the sink:
  * <ol>
  *  <li>applies the {@code keyFn} on the input item to extract its key</li>
  *  <li>extracts the input item's sequence number</li>
@@ -69,12 +69,6 @@ import static com.hazelcast.jet.impl.util.ImdgUtil.asXmlString;
  * @since 4.2
  */
 public final class CdcSinks {
-
-    /**
-     * Default value for {@code ignoreReordering} parameter. Reordering
-     * will <b>NOT</b> be ignored by default.
-     */
-    public static final boolean IGNORE_REORDERING_DEFAULT_VALUE = false;
 
     private CdcSinks() {
     }
@@ -114,49 +108,16 @@ public final class CdcSinks {
     public static <K, V> Sink<ChangeRecord> map(
             @Nonnull String map,
             @Nonnull FunctionEx<ChangeRecord, K> keyFn,
-            @Nonnull FunctionEx<ChangeRecord, V> valueFn,
-            boolean ignoreReordering
-    ) {
-        String name = "localMapCdcSink(" + map + ')';
-        return sink(name, map, null, keyFn, valueFn, ignoreReordering);
-    }
-
-    /**
-     * Convenience for {@link #map(String, FunctionEx, FunctionEx, boolean)},
-     * reordering detection enabled.
-     *
-     * @since 4.2
-     */
-    @Nonnull
-    public static <K, V> Sink<ChangeRecord> map(
-            @Nonnull String map,
-            @Nonnull FunctionEx<ChangeRecord, K> keyFn,
             @Nonnull FunctionEx<ChangeRecord, V> valueFn
     ) {
-        return map(map, keyFn, valueFn, IGNORE_REORDERING_DEFAULT_VALUE);
-    }
-
-    /**
-     * Convenience for {@link #map(String, FunctionEx, FunctionEx, boolean)}
-     * with actual {@code IMap} instance being passed in, instead of just
-     * name.
-     *
-     * @since 4.2
-     */
-    @Nonnull
-    public static <K, V> Sink<ChangeRecord> map(
-            @Nonnull IMap<? super K, V> map,
-            @Nonnull FunctionEx<ChangeRecord, K> keyFn,
-            @Nonnull FunctionEx<ChangeRecord, V> valueFn,
-            boolean ignoreReordering
-    ) {
-        return map(map.getName(), keyFn, valueFn, ignoreReordering);
+        String name = "localMapCdcSink(" + map + ')';
+        return sink(name, map, null, keyFn, valueFn);
     }
 
     /**
      * Convenience for {@link #map(String, FunctionEx, FunctionEx)} with
      * actual {@code IMap} instance being passed in, instead of just
-     * name, reordering detection enabled.
+     * name.
      *
      * @since 4.2
      */
@@ -183,27 +144,10 @@ public final class CdcSinks {
             @Nonnull String map,
             @Nonnull ClientConfig clientConfig,
             @Nonnull FunctionEx<ChangeRecord, K> keyFn,
-            @Nonnull FunctionEx<ChangeRecord, V> valueFn,
-            boolean ignoreReordering
-    ) {
-        String name = "remoteMapCdcSink(" + map + ')';
-        return sink(name, map, clientConfig, keyFn, valueFn, ignoreReordering);
-    }
-
-    /**
-     * Convenience for {@link #remoteMap(String, ClientConfig, FunctionEx, FunctionEx, boolean)},
-     * reordering detection enabled.
-     *
-     * @since 4.2
-     */
-    @Nonnull
-    public static <K, V> Sink<ChangeRecord> remoteMap(
-            @Nonnull String map,
-            @Nonnull ClientConfig clientConfig,
-            @Nonnull FunctionEx<ChangeRecord, K> keyFn,
             @Nonnull FunctionEx<ChangeRecord, V> valueFn
     ) {
-        return remoteMap(map, clientConfig, keyFn, valueFn, IGNORE_REORDERING_DEFAULT_VALUE);
+        String name = "remoteMapCdcSink(" + map + ')';
+        return sink(name, map, clientConfig, keyFn, valueFn);
     }
 
     @Nonnull
@@ -212,11 +156,10 @@ public final class CdcSinks {
             @Nonnull String map,
             @Nullable ClientConfig clientConfig,
             @Nonnull FunctionEx<ChangeRecord, K> keyFn,
-            @Nonnull FunctionEx<ChangeRecord, V> valueFn,
-            boolean ignoreReordering
+            @Nonnull FunctionEx<ChangeRecord, V> valueFn
     ) {
         ProcessorSupplier supplier = AbstractHazelcastConnectorSupplier.of(asXmlString(clientConfig),
-                instance -> new CdcSinkProcessor<>(name, instance, map, keyFn, extend(valueFn), ignoreReordering));
+                instance -> new CdcSinkProcessor<>(name, instance, map, keyFn, extend(valueFn)));
         ProcessorMetaSupplier metaSupplier = ProcessorMetaSupplier.forceTotalParallelismOne(supplier, name);
         return new SinkImpl<>(name, metaSupplier, true, null);
     }
@@ -234,7 +177,7 @@ public final class CdcSinks {
     private static class CdcSinkProcessor<K, V> extends UpdateMapWithMaterializedValuesP<ChangeRecord, K, V> {
 
         private final String name;
-        private Sequences<K> sequences;
+        private final Sequences<K> sequences;
 
         private Outbox outbox;
         private Traverser<Map<K, Tuple2<LongAccumulator, LongAccumulator>>> snapshotTraverser;
@@ -245,12 +188,11 @@ public final class CdcSinks {
                 @Nonnull HazelcastInstance instance,
                 @Nonnull String map,
                 @Nonnull FunctionEx<? super ChangeRecord, ? extends K> keyFn,
-                @Nonnull FunctionEx<? super ChangeRecord, ? extends V> valueFn,
-                boolean ignoreReordering
+                @Nonnull FunctionEx<? super ChangeRecord, ? extends V> valueFn
         ) {
             super(instance, map, keyFn, valueFn);
             this.name = name;
-            this.sequences = ignoreReordering ? null : new Sequences<>();
+            this.sequences = new Sequences<>();
         }
 
         @Override
@@ -261,10 +203,6 @@ public final class CdcSinks {
 
         @Override
         protected boolean shouldBeDropped(K key, ChangeRecord item) {
-            if (sequences == null) {
-                return false;
-            }
-
             ChangeRecordImpl recordImpl = (ChangeRecordImpl) item;
             long sequencePartition = recordImpl.getSequencePartition();
             long sequenceValue = recordImpl.getSequenceValue();
@@ -277,9 +215,6 @@ public final class CdcSinks {
         public boolean saveToSnapshot() {
             if (!super.saveToSnapshot()) {
                 return false;
-            }
-            if (sequences == null) {
-                return true;
             }
             if (snapshotTraverser == null) {
                 snapshotTraverser = sequences.toTraverser()
@@ -310,20 +245,23 @@ public final class CdcSinks {
         public void restoreFromSnapshot(@Nonnull Inbox inbox) {
             BroadcastEntry<String, Map<K, Tuple2<LongAccumulator, LongAccumulator>>> broadcastItem =
                     (BroadcastEntry<String, Map<K, Tuple2<LongAccumulator, LongAccumulator>>>) inbox.poll();
-            sequences = broadcastItem == null ? null : new Sequences<>(broadcastItem.getValue());
+            sequences.clear();
+            if (broadcastItem != null) {
+                sequences.addAll(broadcastItem.getValue());
+            }
         }
     }
 
     private static final class Sequences<K> {
 
-        private final Map<K, Tuple2<LongAccumulator, LongAccumulator>> sequences;
+        private final Map<K, Tuple2<LongAccumulator, LongAccumulator>> sequences = new HashMap<>();
 
-        Sequences() {
-            this(new HashMap<>());
+        void clear() {
+            sequences.clear();
         }
 
-        Sequences(Map<K, Tuple2<LongAccumulator, LongAccumulator>> sequences) {
-            this.sequences = sequences;
+        void addAll(Map<K, Tuple2<LongAccumulator, LongAccumulator>> sequences) {
+            this.sequences.putAll(sequences);
         }
 
         boolean update(K key, long partition, long value) {

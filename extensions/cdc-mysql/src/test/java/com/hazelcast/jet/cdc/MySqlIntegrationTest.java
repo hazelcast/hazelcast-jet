@@ -34,7 +34,6 @@ import org.testcontainers.containers.MySQLContainer;
 import javax.annotation.Nonnull;
 import java.sql.Connection;
 import java.sql.DriverManager;
-import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
@@ -225,24 +224,14 @@ public class MySqlIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
-    public void cdcMapSink_withReorderingCheck() throws Exception {
-        cdcMapSink(false);
-    }
-
-    @Test
-    public void cdcMapSink_withoutReorderingCheck() throws Exception {
-        cdcMapSink(true);
-    }
-
-    private void cdcMapSink(boolean ignoreReordering) throws SQLException {
+    public void cdcMapSink() throws Exception {
         // given
         Pipeline pipeline = Pipeline.create();
         pipeline.readFrom(source("customers"))
                 .withNativeTimestamps(0)
                 .writeTo(CdcSinks.map("cache",
                         r -> r.key().toMap().get("id"),
-                        r -> r.value().toObject(Customer.class).toString(),
-                        ignoreReordering));
+                        r -> r.value().toObject(Customer.class).toString()));
 
 
         // when
