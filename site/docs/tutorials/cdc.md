@@ -3,9 +3,6 @@ title: Change Data Capture from MySQL
 description: How to monitor Change Data Capture data from a MySQL database in Jet.
 ---
 
-> NOTE: This feature is currently in incubating state, i.e. API,
-> configuration etc. might still change in future revisions.
-
 As we've seen in the [CDC section of our Sources and Sinks
  guide](../api/sources-sinks.md#cdc) of our, change data capture is
  especially important to Jet, because it allows for the **integration
@@ -150,31 +147,30 @@ mysql> SELECT * FROM customers;
 
 ## 4. Start Hazelcast Jet
 
-1. [Download](https://github.com/hazelcast/hazelcast-jet/releases/download/v{jet-version}/hazelcast-jet-{jet-version}.tar.gz)
-  Hazelcast Jet
-
-2. Unzip it:
+1. Download Hazelcast Jet
 
 ```bash
-cd <where_you_downloaded_it>
-tar zxvf hazelcast-jet-{jet-version}.tar.gz
-cd hazelcast-jet-{jet-version}
+wget https://github.com/hazelcast/hazelcast-jet/releases/download/v{jet-version}/hazelcast-jet-{jet-version}.tar.gz
+tar zxvf hazelcast-jet-{jet-version}.tar.gz && cd hazelcast-jet-{jet-version}
 ```
 
-3. Activate the MySQL CDC plugin:
+If you already have Jet and you skipped the above steps, make sure to
+follow from here on.
+
+2. Activate the MySQL CDC plugin:
 
 ```bash
 mv opt/hazelcast-jet-cdc-debezium-{jet-version}.jar lib; \
 mv opt/hazelcast-jet-cdc-mysql-{jet-version}.jar lib
 ```
 
-4. Start Jet:
+3. Start Jet:
 
 ```bash
 bin/jet-start
 ```
 
-5. When you see output like this, Hazelcast Jet is up:
+4. When you see output like this, Hazelcast Jet is up:
 
 ```text
 Members {size:1, ver:1} [
@@ -204,22 +200,12 @@ repositories.mavenCentral()
 
 dependencies {
     compile 'com.hazelcast.jet:hazelcast-jet:{jet-version}'
+    compile 'com.hazelcast.jet:hazelcast-jet-cdc-debezium:{jet-version}'
     compile 'com.hazelcast.jet:hazelcast-jet-cdc-mysql:{jet-version}'
-    compile 'com.fasterxml.jackson.jr:jackson-jr-objects:2.11.0'
-    compile 'com.fasterxml.jackson.jr:jackson-jr-annotation-support:2.11.0'
+    compile 'com.fasterxml.jackson.core:jackson-annotations:2.11.0'
 }
 
-jar {
-    enabled = false
-    dependsOn(shadowJar { classifier = null })
-    manifest.attributes 'Main-Class': 'org.example.JetJob'
-}
-
-shadowJar {
-    dependencies {
-        exclude(dependency('com.hazelcast.jet:hazelcast-jet:{jet-version}'))
-    }
-}
+jar.manifest.attributes 'Main-Class': 'org.example.JetJob'
 ```
 
 <!--Maven-->
@@ -247,17 +233,17 @@ shadowJar {
        </dependency>
        <dependency>
            <groupId>com.hazelcast.jet</groupId>
+           <artifactId>hazelcast-jet-cdc-debezium</artifactId>
+           <version>{jet-version}</version>
+       </dependency>
+       <dependency>
+           <groupId>com.hazelcast.jet</groupId>
            <artifactId>hazelcast-jet-cdc-mysql</artifactId>
            <version>{jet-version}</version>
        </dependency>
        <dependency>
-           <groupId>com.fasterxml.jackson.jr</groupId>
-           <artifactId>jackson-jr-objects</artifactId>
-           <version>2.11.0</version>
-       </dependency>
-       <dependency>
-           <groupId>com.fasterxml.jackson.jr</groupId>
-           <artifactId>jackson-jr-annotation-support</artifactId>
+           <groupId>com.fasterxml.jackson.core</groupId>
+           <artifactId>jackson-annotations</artifactId>
            <version>2.11.0</version>
        </dependency>
    </dependencies>
@@ -274,26 +260,6 @@ shadowJar {
                         </manifest>
                     </archive>
                 </configuration>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-shade-plugin</artifactId>
-                <version>3.2.2</version>
-                <executions>
-                    <execution>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>shade</goal>
-                        </goals>
-                        <configuration>
-                            <artifactSet>
-                                <excludes>
-                                    <exclude>com.hazelcast.jet:hazelcast-jet</exclude>
-                                </excludes>
-                            </artifactSet>
-                        </configuration>
-                    </execution>
-                </executions>
             </plugin>
         </plugins>
     </build>
@@ -355,8 +321,7 @@ public class JetJob {
 }
 ```
 
-The `Customer` class we use for deserializing change events is quite
-simple too:
+The `Customer` class we map change events to is quite simple too:
 
 ```java
 package org.example;
@@ -485,7 +450,7 @@ issue is following command:
 <!--Gradle-->
 
 ```bash
-<path_to_jet>/bin/jet submit build/libs/cdc-tutorial-1.0-SNAPSHOT-all.jar
+<path_to_jet>/bin/jet submit build/libs/cdc-tutorial-1.0-SNAPSHOT.jar
 ```
 
 <!--Maven-->
@@ -502,12 +467,11 @@ we inserted):
 
 ```text
 ... Completed snapshot in 00:00:01.519
+... Output to ordinal 0: key:{{"id":1001}}, value:{{"id":1001,"first_name":"Sally","last_name":"Thomas",...
+... Output to ordinal 0: key:{{"id":1002}}, value:{{"id":1002,"first_name":"George","last_name":"Bailey",...
+... Output to ordinal 0: key:{{"id":1003}}, value:{{"id":1003,"first_name":"Edward","last_name":"Walker",...
+... Output to ordinal 0: key:{{"id":1004}}, value:{{"id":1004,"first_name":"Anne","last_name":"Kretchmar",...
 ... Transitioning from the snapshot reader to the binlog reader
-... 1001=Customer {id=1001, firstName=Sally, lastName=Thomas, email=sally.thomas@acme.com}
-... 1002=Customer {id=1002, firstName=George, lastName=Bailey, email=gbailey@foobar.com}
-... 1003=Customer {id=1003, firstName=Edward, lastName=Walker, email=ed@walker.com}
-... 1004=Customer {id=1004, firstName=Anne, lastName=Kretchmar, email=annek@noanswer.org}
-... Connected to MySQL binlog at 127.0.0.1:3306, starting at binlog file 'mysql-bin.000003', pos=876, skipping 0 events plus 0 rows
 ```
 
 ## 9. Track Updates
@@ -536,7 +500,7 @@ Rows matched: 1  Changed: 1  Warnings: 0
 In the log of the Jet member we should immediately see the effect:
 
 ```text
-... 1004=Customer {id=1004, firstName=Anne Marie, lastName=Kretchmar, email=annek@noanswer.org}
+... Output to ordinal 0: key:{{"id":1004}}, value:{{"id":1004,"first_name":"Anne Marie","last_name":"Kretchmar",...
 ```
 
 If we check the cache with `CacheRead` we get:
@@ -557,14 +521,6 @@ Query OK, 1 row affected (0.00 sec)
 Rows matched: 1  Changed: 1  Warnings: 0
 ```
 
-We see it in the Jet log:
-
-```text
-... 1003=Customer {id=1003, firstName=Edward, lastName=Walker, email=edward.walker@walker.com}
-```
-
-`CacheRead` also reflects the latest values:
-
 ```text
 Currently there are following customers in the cache:
     Customer {id=1002, firstName=George, lastName=Bailey, email=gbailey@foobar.com}
@@ -575,7 +531,7 @@ Currently there are following customers in the cache:
 
 ## 10. Clean up
 
-Let's clean-up after ourselves. First we cancel our Jet Job:
+Let's clean-up after ourselves. First we cancel our Jet job:
 
 ```bash
 <path_to_jet>/bin/jet cancel mysql-monitor
