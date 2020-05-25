@@ -288,7 +288,8 @@ public final class CdcSinks {
             return emitFromTraverserToSnapshot(snapshotTraverser);
         }
 
-        private boolean emitFromTraverserToSnapshot(@Nonnull Traverser<Map<K, Tuple2<LongAccumulator, LongAccumulator>>> traverser) {
+        private boolean emitFromTraverserToSnapshot(
+                @Nonnull Traverser<Map<K, Tuple2<LongAccumulator, LongAccumulator>>> traverser) {
             Map<K, Tuple2<LongAccumulator, LongAccumulator>> item;
             if (pendingSnapshotItem != null) {
                 item = pendingSnapshotItem;
@@ -327,7 +328,6 @@ public final class CdcSinks {
 
         boolean update(K key, long partition, long value) {
             Tuple2<LongAccumulator, LongAccumulator> prevSequence = sequences.get(key);
-            System.err.println("Sequences.update:" + "key = [" + key + "], partition = [" + partition + "], value = [" + value + "], prevSequence = " + prevSequence); //todo: remove
             if (prevSequence == null) { //first observed sequence for key
                 sequences.put(key, Tuple2.tuple2(new LongAccumulator(partition), new LongAccumulator(value)));
                 return true;
