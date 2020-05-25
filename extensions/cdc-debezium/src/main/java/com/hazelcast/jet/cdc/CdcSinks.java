@@ -19,19 +19,13 @@ package com.hazelcast.jet.cdc;
 import com.hazelcast.client.config.ClientConfig;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.function.FunctionEx;
-import com.hazelcast.jet.Traverser;
-import com.hazelcast.jet.Traversers;
 import com.hazelcast.jet.accumulator.LongAccumulator;
 import com.hazelcast.jet.cdc.impl.ChangeRecordImpl;
-import com.hazelcast.jet.core.BroadcastKey;
-import com.hazelcast.jet.core.Inbox;
-import com.hazelcast.jet.core.Outbox;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.impl.connector.AbstractHazelcastConnectorSupplier;
 import com.hazelcast.jet.impl.connector.UpdateMapWithMaterializedValuesP;
-import com.hazelcast.jet.impl.execution.BroadcastEntry;
 import com.hazelcast.jet.impl.pipeline.SinkImpl;
 import com.hazelcast.jet.pipeline.Sink;
 import com.hazelcast.map.IMap;
@@ -179,10 +173,6 @@ public final class CdcSinks {
         private final String name;
         private final Sequences<K> sequences;
 
-        private Outbox outbox;
-        private Traverser<Map<K, Tuple2<LongAccumulator, LongAccumulator>>> snapshotTraverser;
-        private Map<K, Tuple2<LongAccumulator, LongAccumulator>> pendingSnapshotItem;
-
         CdcSinkProcessor(
                 @Nonnull String name,
                 @Nonnull HazelcastInstance instance,
@@ -196,12 +186,6 @@ public final class CdcSinks {
         }
 
         @Override
-        public void init(@Nonnull Outbox outbox, @Nonnull Context context) {
-            super.init(outbox, context);
-            this.outbox = outbox;
-        }
-
-        @Override
         protected boolean shouldBeDropped(K key, ChangeRecord item) {
             ChangeRecordImpl recordImpl = (ChangeRecordImpl) item;
             long sequencePartition = recordImpl.getSequencePartition();
@@ -209,46 +193,6 @@ public final class CdcSinks {
 
             boolean isNew = sequences.update(key, sequencePartition, sequenceValue);
             return !isNew;
-        }
-
-        @Override
-        public boolean saveToSnapshot() {
-            if (!super.saveToSnapshot()) {
-                return false;
-            }
-            if (snapshotTraverser == null) {
-                snapshotTraverser = sequences.toTraverser()
-                        .onFirstNull(() -> snapshotTraverser = null);
-            }
-            return emitFromTraverserToSnapshot(snapshotTraverser);
-        }
-
-        private boolean emitFromTraverserToSnapshot(
-                @Nonnull Traverser<Map<K, Tuple2<LongAccumulator, LongAccumulator>>> traverser) {
-            Map<K, Tuple2<LongAccumulator, LongAccumulator>> item;
-            if (pendingSnapshotItem != null) {
-                item = pendingSnapshotItem;
-                pendingSnapshotItem = null;
-            } else {
-                item = traverser.next();
-            }
-            for (; item != null; item = traverser.next()) {
-                if (!outbox.offerToSnapshot(BroadcastKey.broadcastKey(name), item)) {
-                    pendingSnapshotItem = item;
-                    return false;
-                }
-            }
-            return true;
-        }
-
-        @Override
-        public void restoreFromSnapshot(@Nonnull Inbox inbox) {
-            BroadcastEntry<String, Map<K, Tuple2<LongAccumulator, LongAccumulator>>> broadcastItem =
-                    (BroadcastEntry<String, Map<K, Tuple2<LongAccumulator, LongAccumulator>>>) inbox.poll();
-            sequences.clear();
-            if (broadcastItem != null) {
-                sequences.addAll(broadcastItem.getValue());
-            }
         }
     }
 
@@ -283,10 +227,6 @@ public final class CdcSinks {
                     }
                 }
             }
-        }
-
-        Traverser<Map<K, Tuple2<LongAccumulator, LongAccumulator>>> toTraverser() {
-            return Traversers.singleton(sequences);
         }
     }
 }
