@@ -153,7 +153,7 @@ public final class CdcSinks {
             @Nonnull FunctionEx<ChangeRecord, V> valueFn
     ) {
         ProcessorSupplier supplier = AbstractHazelcastConnectorSupplier.of(asXmlString(clientConfig),
-                instance -> new CdcSinkProcessor<>(name, instance, map, keyFn, extend(valueFn)));
+                instance -> new CdcSinkProcessor<>(instance, map, keyFn, extend(valueFn)));
         ProcessorMetaSupplier metaSupplier = ProcessorMetaSupplier.forceTotalParallelismOne(supplier, name);
         return new SinkImpl<>(name, metaSupplier, true, null);
     }
@@ -170,18 +170,15 @@ public final class CdcSinks {
 
     private static class CdcSinkProcessor<K, V> extends UpdateMapWithMaterializedValuesP<ChangeRecord, K, V> {
 
-        private final String name;
         private final Sequences<K> sequences;
 
         CdcSinkProcessor(
-                @Nonnull String name,
                 @Nonnull HazelcastInstance instance,
                 @Nonnull String map,
                 @Nonnull FunctionEx<? super ChangeRecord, ? extends K> keyFn,
                 @Nonnull FunctionEx<? super ChangeRecord, ? extends V> valueFn
         ) {
             super(instance, map, keyFn, valueFn);
-            this.name = name;
             this.sequences = new Sequences<>();
         }
 
@@ -199,14 +196,6 @@ public final class CdcSinks {
     private static final class Sequences<K> {
 
         private final Map<K, Tuple2<LongAccumulator, LongAccumulator>> sequences = new HashMap<>();
-
-        void clear() {
-            sequences.clear();
-        }
-
-        void addAll(Map<K, Tuple2<LongAccumulator, LongAccumulator>> sequences) {
-            this.sequences.putAll(sequences);
-        }
 
         boolean update(K key, long partition, long value) {
             Tuple2<LongAccumulator, LongAccumulator> prevSequence = sequences.get(key);
