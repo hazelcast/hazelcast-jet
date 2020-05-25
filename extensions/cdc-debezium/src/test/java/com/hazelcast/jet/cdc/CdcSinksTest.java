@@ -207,6 +207,17 @@ public class CdcSinksTest extends PipelineTestSupport {
         jet().getMap(MAP).destroy();
     }
 
+    @Test
+    public void deleteWithoutInsertNorUpdate() {
+        p.readFrom(items(() -> Arrays.asList(SYNC1, DELETE2).iterator()))
+                .writeTo(localSync());
+        execute().join();
+
+        assertMap(jet(), "sally.thomas@acme.com", null);
+
+        jet().getMap(MAP).destroy();
+    }
+
     private void assertMap(JetInstance jetInstance, String email1, String email2) {
         assertMap(jetInstance.getHazelcastInstance(), email1, email2);
     }
