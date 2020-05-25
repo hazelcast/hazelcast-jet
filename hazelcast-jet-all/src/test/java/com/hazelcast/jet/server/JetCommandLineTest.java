@@ -56,7 +56,6 @@ import static com.hazelcast.jet.server.JetCommandLine.runCommandLine;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
 @RunWith(HazelcastParallelClassRunner.class)
@@ -486,23 +485,54 @@ public class JetCommandLineTest extends JetTestSupport {
     }
 
     @Test
-    public void test_submit_withTargets() {
+    public void testTargetsMixin() {
+        String target = "foobar@127.0.0.1:5701,127.0.0.1:5702";
+
+        testTargetsCommand("cancel", "-t", target, "jobName");
+        testTargetsCommand("-t", target, "cancel", "jobName");
+
+        testTargetsCommand("cluster", "-t", target);
+        testTargetsCommand("-t", target, "cluster");
+
+        testTargetsCommand("delete-snapshot", "snapshotName", "-t", target);
+        testTargetsCommand("-t", target, "delete-snapshot", "snapshotName");
+
+        testTargetsCommand("list-jobs", "-t", target);
+        testTargetsCommand("-t", target, "list-jobs");
+
+        testTargetsCommand("list-snapshots", "-t", target);
+        testTargetsCommand("-t", target, "list-snapshots");
+
+        testTargetsCommand("restart", "jobName", "-t", target);
+        testTargetsCommand("-t", target, "restart", "jobName");
+
+        testTargetsCommand("resume", "jobName", "-t", target);
+        testTargetsCommand("-t", target, "resume", "jobName");
+
+        testTargetsCommand("save-snapshot", "jobName", "snapshotName", "-t", target);
+        testTargetsCommand("-t", target, "save-snapshot", "jobName", "snapshotName");
+
+        testTargetsCommand("submit", "-t", target, testJobJarFile.toString());
+        testTargetsCommand("-t", target, "submit", testJobJarFile.toString());
+
+        testTargetsCommand("suspend", "jobName", "-t", target);
+        testTargetsCommand("-t", target, "suspend", "jobName");
+    }
+
+    public void testTargetsCommand(String... args) {
         AtomicReference<ClientConfig> atomicConfig = new AtomicReference<>();
         Function<ClientConfig, JetInstance> fnRunCommand = (config) -> {
             atomicConfig.set(config);
-            return null;
+            return this.client;
         };
 
         try {
-            run(fnRunCommand, "submit", "--targets", "foobar@127.0.0.1:5701,127.0.0.1:5702", testJobJarFile.toString());
-        } catch (Exception ignore) {
-            // ignore
-        }
+            run(fnRunCommand, args);
+        } catch (Exception ignore) {}
 
         ClientConfig config = atomicConfig.get();
-
         assertEquals("foobar", config.getClusterName());
-        assertEquals("[127.0.0.1:5701,127.0.0.1:5702]", config.getNetworkConfig().getAddresses().toString());
+        assertEquals("[127.0.0.1:5701, 127.0.0.1:5702]", config.getNetworkConfig().getAddresses().toString());
     }
 
     @Test
