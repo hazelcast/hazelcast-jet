@@ -19,24 +19,26 @@ package com.hazelcast.jet.cdc;
 import com.hazelcast.client.config.ClientConfig;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.function.FunctionEx;
-import com.hazelcast.jet.accumulator.LongAccumulator;
 import com.hazelcast.jet.cdc.impl.ChangeRecordImpl;
+import com.hazelcast.jet.core.Outbox;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
-import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.impl.connector.AbstractHazelcastConnectorSupplier;
 import com.hazelcast.jet.impl.connector.UpdateMapWithMaterializedValuesP;
 import com.hazelcast.jet.impl.pipeline.SinkImpl;
 import com.hazelcast.jet.pipeline.Sink;
 import com.hazelcast.map.IMap;
+import com.hazelcast.spi.properties.HazelcastProperties;
+import com.hazelcast.spi.properties.HazelcastProperty;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 import static com.hazelcast.jet.cdc.Operation.DELETE;
 import static com.hazelcast.jet.impl.util.ImdgUtil.asXmlString;
+import static java.util.concurrent.TimeUnit.SECONDS;
 
 /**
  * Contains factory methods for change data capture specific pipeline
@@ -63,6 +65,19 @@ import static com.hazelcast.jet.impl.util.ImdgUtil.asXmlString;
  * @since 4.2
  */
 public final class CdcSinks {
+
+    /**
+     * Number of seconds for which the last seen sequence number for any
+     * input key will be guarantied to be remembered (used for
+     * reordering detection). After this time, the last seen sequence
+     * number values will eventually be evicted, in order to save space.
+     * <p>
+     * Default value is 10 seconds.
+     *
+     * @since 3.2
+     */
+    public static final HazelcastProperty SEQUENCE_CACHE_EXPIRATION_SECONDS
+            = new HazelcastProperty("jet.cdc.sink.sequence.cache.expiration.seconds", 10, SECONDS);
 
     private CdcSinks() {
     }
@@ -170,7 +185,7 @@ public final class CdcSinks {
 
     private static class CdcSinkProcessor<K, V> extends UpdateMapWithMaterializedValuesP<ChangeRecord, K, V> {
 
-        private final Sequences<K> sequences;
+        private Sequences<K> sequences;
 
         CdcSinkProcessor(
                 @Nonnull HazelcastInstance instance,
@@ -179,37 +194,71 @@ public final class CdcSinks {
                 @Nonnull FunctionEx<? super ChangeRecord, ? extends V> valueFn
         ) {
             super(instance, map, keyFn, valueFn);
-            this.sequences = new Sequences<>();
+        }
+
+        @Override
+        public void init(@Nonnull Outbox outbox, @Nonnull Context context) {
+            super.init(outbox, context);
+
+            HazelcastProperties properties = new HazelcastProperties(context.jetInstance().getConfig().getProperties());
+            int expiration = properties.getSeconds(SEQUENCE_CACHE_EXPIRATION_SECONDS);
+            this.sequences = new Sequences<>(expiration);
         }
 
         @Override
         protected boolean shouldBeDropped(K key, ChangeRecord item) {
+            long timestamp = getTimestamp(item);
+
             ChangeRecordImpl recordImpl = (ChangeRecordImpl) item;
             long sequencePartition = recordImpl.getSequencePartition();
             long sequenceValue = recordImpl.getSequenceValue();
 
-            boolean isNew = sequences.update(key, sequencePartition, sequenceValue);
+            boolean isNew = sequences.update(key, timestamp, sequencePartition, sequenceValue);
             return !isNew;
         }
+
+        private static long getTimestamp(ChangeRecord item) {
+            try {
+                return item.timestamp();
+            } catch (ParsingException e) {
+                //use current time, should be good enough for cache expiration purposes
+                return System.currentTimeMillis();
+            }
+        }
+
     }
 
     private static final class Sequences<K> {
 
-        private final Map<K, Tuple2<LongAccumulator, LongAccumulator>> sequences = new HashMap<>();
+        private static final int INITIAL_CAPACITY = 64 * 1024;
+        private static final float LOAD_FACTOR = 0.75f;
 
-        boolean update(K key, long partition, long value) {
-            Tuple2<LongAccumulator, LongAccumulator> prevSequence = sequences.get(key);
+        private final LinkedHashMap<K, long[]> sequences;
+
+        public Sequences(int expiration) {
+            sequences = new LinkedHashMap<K, long[]>(INITIAL_CAPACITY, LOAD_FACTOR, true) {
+                @Override
+                protected boolean removeEldestEntry(Map.Entry<K, long[]> eldest) {
+                    long age = eldest.getValue()[2];
+                    return System.currentTimeMillis() - age > expiration;
+                }
+            };
+        }
+
+        boolean update(K key, long timestamp, long partition, long value) {
+            long[] prevSequence = sequences.get(key);
             if (prevSequence == null) { //first observed sequence for key
-                sequences.put(key, Tuple2.tuple2(new LongAccumulator(partition), new LongAccumulator(value)));
+                sequences.put(key, new long[] {partition, value, timestamp});
                 return true;
             } else {
-                if (prevSequence.f0().get() != partition) { //sequence partition changed for key
-                    prevSequence.f0().set(partition);
-                    prevSequence.f1().set(value);
+                prevSequence[2] = timestamp;
+                if (prevSequence[0] != partition) { //sequence partition changed for key
+                    prevSequence[0] = partition;
+                    prevSequence[1] = value;
                     return true;
                 } else {
-                    if (prevSequence.f1().get() < value) { //sequence is newer than previous for key
-                        prevSequence.f1().set(value);
+                    if (prevSequence[1] < value) { //sequence is newer than previous for key
+                        prevSequence[1] = value;
                         return true;
                     } else {
                         return false;
