@@ -37,6 +37,13 @@ public interface JetSqlConnector extends SqlConnector {
     boolean isStream();
 
     /**
+     * @return
+     */
+    default boolean supportsFullScanReader() {
+        return false;
+    }
+
+    /**
      * Returns a supplier for a source vertex reading the input according to
      * the projection/predicate. The output type of the source is Object[]. If
      * timestampField is not null, the source should generate watermarks
@@ -68,11 +75,19 @@ public interface JetSqlConnector extends SqlConnector {
             // TODO convert back to JetTable after we can read maps using IMDG code
             @Nonnull Table table,
             @Nullable String timestampField,
+            // TODO: do we want to expose Expression to the user ?
             @Nonnull Expression<Boolean> predicate,
             @Nonnull List<Expression<?>> projection) {
         assert !supportsFullScanReader();
         throw new UnsupportedOperationException("Full scan reader not supported for " + getClass().getName());
 
+    }
+
+    /**
+     * @return
+     */
+    default boolean supportsNestedLoopReader() {
+        return false;
     }
 
     /**
@@ -100,31 +115,6 @@ public interface JetSqlConnector extends SqlConnector {
     }
 
     /**
-     * Returns the supplier for the sink processor.
-     */
-    @Nullable
-    default Vertex sink(
-            @Nonnull DAG dag,
-            @Nonnull Table table) {
-        assert !supportsSink();
-        throw new UnsupportedOperationException("Sink not supported for " + getClass().getName());
-    }
-
-    /**
-     * @return
-     */
-    default boolean supportsFullScanReader() {
-        return false;
-    }
-
-    /**
-     * @return
-     */
-    default boolean supportsNestedLoopReader() {
-        return false;
-    }
-
-    /**
      * @return
      */
     default boolean supportsSink() {
@@ -136,6 +126,17 @@ public interface JetSqlConnector extends SqlConnector {
      */
     // TODO: naming ...
     default boolean supportsPlainInserts() {
-        return true;
+        return supportsSink();
+    }
+
+    /**
+     * Returns the supplier for the sink processor.
+     */
+    @Nullable
+    default Vertex sink(
+            @Nonnull DAG dag,
+            @Nonnull Table table) {
+        assert !supportsSink();
+        throw new UnsupportedOperationException("Sink not supported for " + getClass().getName());
     }
 }

@@ -59,7 +59,7 @@ public class CdcSource {
     private State state = new State();
     private boolean taskInit;
 
-    CdcSource(Properties properties) {
+    public CdcSource(Properties properties) { // TODO: is it ok to make it public?
         try {
             String connectorClazz = properties.getProperty("connector.class");
             Class<?> connectorClass = Thread.currentThread().getContextClassLoader().loadClass(connectorClazz);

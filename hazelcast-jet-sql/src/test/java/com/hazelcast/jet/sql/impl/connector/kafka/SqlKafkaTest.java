@@ -122,9 +122,6 @@ public class SqlKafkaTest extends SqlTestSupport {
 
     @Test
     public void select_complexObject() {
-        Person alice = new Person("Alice", 30);
-        Person bob = new Person("Bob", 40);
-
         String topicName = createRandomTopic();
         executeSql(format("CREATE EXTERNAL TABLE %s (__key INT, name VARCHAR, age INT) " +
                         "TYPE \"%s\" " +
@@ -149,8 +146,8 @@ public class SqlKafkaTest extends SqlTestSupport {
         assertRowsEventuallyAnyOrder(
                 format("SELECT __key, name, age FROM %s", topicName),
                 asList(
-                        new Row(0, alice.getName(), alice.getAge()),
-                        new Row(1, bob.getName(), bob.getAge())));
+                        new Row(0, "Alice", 30),
+                        new Row(1, "Bob", 40)));
     }
 
     @Test
@@ -171,10 +168,10 @@ public class SqlKafkaTest extends SqlTestSupport {
         kafkaTestSupport.produce(topicName, 1, "value-" + 1);
 
         assertRowsEventuallyAnyOrder(
-                format("SELECT __key, this FROM %s", topicName),
+                format("SELECT this, __key FROM %s", topicName),
                 asList(
-                        new Row(0, "value-0"),
-                        new Row(1, "value-1")));
+                        new Row("value-0", 0),
+                        new Row("value-1", 1)));
     }
 
     @Test
@@ -197,7 +194,9 @@ public class SqlKafkaTest extends SqlTestSupport {
 
         assertRowsEventuallyAnyOrder(
                 format("SELECT this FROM %s WHERE __key=1 or this='value-0'", topicName),
-                asList(new Row("value-0"), new Row("value-1")));
+                asList(
+                        new Row("value-0"),
+                        new Row("value-1")));
     }
 
     @Test
