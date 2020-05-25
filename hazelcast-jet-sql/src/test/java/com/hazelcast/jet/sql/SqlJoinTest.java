@@ -74,12 +74,7 @@ public class SqlJoinTest extends SqlTestSupport {
                 "\"auto.offset.reset\"", "earliest")
         );
 
-        mapName = "m_" + randomString().replace('-', '_');
-        executeSql(format("CREATE EXTERNAL TABLE %s (__key INT, this VARCHAR) TYPE \"%s\" "
-                        + "OPTIONS (\"" + TO_KEY_CLASS + "\" 'java.lang.Integer',"
-                        + "\"" + TO_VALUE_CLASS + "\" 'java.lang.String')",
-                mapName, LocalPartitionedMapConnector.TYPE_NAME)
-        );
+        mapName = createRandomMap();
     }
 
     @AfterClass
@@ -211,20 +206,28 @@ public class SqlJoinTest extends SqlTestSupport {
         kafkaTestSupport.produce(topicName, 2, "kafka-value-2");
         kafkaTestSupport.produce(topicName, 3, "kafka-value-3");
 
-        instance().getMap(mapName).put(0, "map-value-0");
-        instance().getMap(mapName).put(1, "map-value-1");
-        instance().getMap(mapName).put(2, "map-value-2");
+        instance().getMap(mapName).put(0, "map1-value-0");
+        instance().getMap(mapName).put(1, "map1-value-1");
+        instance().getMap(mapName).put(2, "map1-value-2");
+
+        String anotherMapName = createRandomMap();
+        instance().getMap(anotherMapName).put(0, "map2-value-0");
+        instance().getMap(anotherMapName).put(1, "map2-value-1");
+        instance().getMap(anotherMapName).put(2, "map2-value-2");
 
         assertRowsEventuallyAnyOrder(
                 format("SELECT k.__key, m1.this, m2.this " +
                                 "FROM %s k " +
                                 "JOIN %s m1 ON k.__key = m1.__key " +
-                                "JOIN %s m2 ON k.__key = m2.__key",
-                        topicName, mapName, mapName
+                                "JOIN %s m2 ON k.__key + m1.__key > m2.__key",
+                        topicName, mapName, anotherMapName
                 ),
                 asList(
-                        new Row(1, "map-value-1", "map-value-1"),
-                        new Row(2, "map-value-2", "map-value-2")
+                        new Row(1, "map1-value-1", "map2-value-0"),
+                        new Row(1, "map1-value-1", "map2-value-1"),
+                        new Row(2, "map1-value-2", "map2-value-0"),
+                        new Row(2, "map1-value-2", "map2-value-1"),
+                        new Row(2, "map1-value-2", "map2-value-2")
                 ));
     }
 
@@ -234,5 +237,15 @@ public class SqlJoinTest extends SqlTestSupport {
                 format("SELECT 1 FROM %s k JOIN %s m ON m.__key = k.__key", mapName, topicName)
         )).hasCauseInstanceOf(UnsupportedOperationException.class)
           .hasMessageContaining("Nested loop reader not supported for " + KafkaSqlConnector.class.getName());
+    }
+
+    private static String createRandomMap() {
+        String mapName = "m_" + randomString().replace('-', '_');
+        executeSql(format("CREATE EXTERNAL TABLE %s (__key INT, this VARCHAR) TYPE \"%s\" "
+                        + "OPTIONS (\"" + TO_KEY_CLASS + "\" 'java.lang.Integer',"
+                        + "\"" + TO_VALUE_CLASS + "\" 'java.lang.String')",
+                mapName, LocalPartitionedMapConnector.TYPE_NAME)
+        );
+        return mapName;
     }
 }

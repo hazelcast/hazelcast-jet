@@ -59,7 +59,7 @@ public class KafkaSqlConnector extends SqlKeyValueConnector implements JetSqlCon
 
     @Override
     public boolean isStream() {
-        return false;
+        return true;
     }
 
     @Nonnull @Override
@@ -71,9 +71,6 @@ public class KafkaSqlConnector extends SqlKeyValueConnector implements JetSqlCon
             @Nonnull Map<String, String> options
     ) {
         // TODO validate options
-//        if (!serverOptions.isEmpty()) {
-//            throw new JetException("Only local maps are supported for now");
-//        }
         String topicName = options.getOrDefault(TO_TOPIC_NAME, tableName);
         Properties kafkaProperties = new Properties();
         kafkaProperties.putAll(options);
