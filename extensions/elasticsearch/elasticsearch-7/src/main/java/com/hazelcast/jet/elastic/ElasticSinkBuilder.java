@@ -18,6 +18,7 @@ package com.hazelcast.jet.elastic;
 
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.function.SupplierEx;
+import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.pipeline.Sink;
 import com.hazelcast.jet.pipeline.SinkBuilder;
 import com.hazelcast.logging.ILogger;
@@ -63,12 +64,12 @@ import static java.util.Objects.requireNonNull;
 public final class ElasticSinkBuilder<T> implements Serializable {
 
     private static final String DEFAULT_NAME = "elasticSink";
+    private static final int DEFAULT_LOCAL_PARALLELISM = 2;
 
     private SupplierEx<RestClientBuilder> clientFn;
     private SupplierEx<BulkRequest> bulkRequestFn = BulkRequest::new;
     private FunctionEx<? super T, ? extends DocWriteRequest<?>> mapToRequestFn;
     private FunctionEx<? super ActionRequest, RequestOptions> optionsFn = (request) -> RequestOptions.DEFAULT;
-    private int preferredLocalParallelism = 2;
 
     /**
      * Set the client supplier function
@@ -163,15 +164,6 @@ public final class ElasticSinkBuilder<T> implements Serializable {
     }
 
     /**
-     * Set the local parallelism of this sink. See {@link SinkBuilder#preferredLocalParallelism(int)}.
-     */
-    @Nonnull
-    public ElasticSinkBuilder<T> preferredLocalParallelism(int preferredLocalParallelism) {
-        this.preferredLocalParallelism = preferredLocalParallelism;
-        return this;
-    }
-
-    /**
      * Create a sink that writes data into Elasticsearch based on this builder configuration
      */
     @Nonnull
@@ -186,7 +178,7 @@ public final class ElasticSinkBuilder<T> implements Serializable {
                 .<T>receiveFn((bulkContext, item) -> bulkContext.add(mapToRequestFn.apply(item)))
                 .flushFn(BulkContext::flush)
                 .destroyFn(BulkContext::close)
-                .preferredLocalParallelism(preferredLocalParallelism)
+                .preferredLocalParallelism(Vertex.LOCAL_PARALLELISM_USE_DEFAULT)
                 .build();
     }
 

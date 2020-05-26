@@ -67,7 +67,6 @@ public final class ElasticSourceBuilder<T> {
     private boolean slicing;
     private boolean coLocatedReading;
     private String scrollKeepAlive = "1m"; // Using String because it needs to be Serializable
-    private int preferredLocalParallelism = 2;
 
     /**
      * Build Elasticsearch {@link BatchSource} with supplied parameters
@@ -83,7 +82,7 @@ public final class ElasticSourceBuilder<T> {
         ElasticSourceConfiguration<T> configuration = new ElasticSourceConfiguration<>(
                 restHighLevelClientFn(clientFn),
                 searchRequestFn, optionsFn, mapToItemFn, slicing, coLocatedReading,
-                scrollKeepAlive, preferredLocalParallelism
+                scrollKeepAlive
         );
         ElasticSourcePMetaSupplier<T> metaSupplier = new ElasticSourcePMetaSupplier<>(configuration);
         return Sources.batchFromProcessor(DEFAULT_NAME, metaSupplier);
@@ -220,18 +219,6 @@ public final class ElasticSourceBuilder<T> {
     @Nonnull
     public ElasticSourceBuilder<T> scrollKeepAlive(@Nonnull String scrollKeepAlive) {
         this.scrollKeepAlive = requireNonNull(scrollKeepAlive, scrollKeepAlive);
-        return this;
-    }
-
-    /**
-     * Set the local parallelism of this source.
-     *
-     * Note this has an effect only when {@link #enableCoLocatedReading()} or {@link #enableSlicing()} is enabled,
-     * otherwise the data is read only from 1 processor in whole Jet cluster.
-     */
-    @Nonnull
-    public ElasticSourceBuilder<T> preferredLocalParallelism(int preferredLocalParallelism) {
-        this.preferredLocalParallelism = preferredLocalParallelism;
         return this;
     }
 

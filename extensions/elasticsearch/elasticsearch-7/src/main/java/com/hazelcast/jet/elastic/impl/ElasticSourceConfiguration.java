@@ -45,14 +45,13 @@ public class ElasticSourceConfiguration<T> implements Serializable {
     private final boolean slicing;
     private final boolean coLocatedReading;
     private final String scrollKeepAlive;
-    private final int preferredLocalParallelism;
 
     public ElasticSourceConfiguration(SupplierEx<RestHighLevelClient> clientFn,
                                       SupplierEx<SearchRequest> searchRequestFn,
                                       FunctionEx<? super ActionRequest, RequestOptions> optionsFn,
                                       FunctionEx<? super SearchHit, T> mapToItemFn,
                                       boolean slicing, boolean coLocatedReading,
-                                      String scrollKeepAlive, int preferredLocalParallelism) {
+                                      String scrollKeepAlive) {
 
         this.clientFn = clientFn;
         this.searchRequestFn = searchRequestFn;
@@ -61,7 +60,6 @@ public class ElasticSourceConfiguration<T> implements Serializable {
         this.slicing = slicing;
         this.coLocatedReading = coLocatedReading;
         this.scrollKeepAlive = scrollKeepAlive;
-        this.preferredLocalParallelism = preferredLocalParallelism;
     }
 
     @Nonnull
@@ -93,10 +91,6 @@ public class ElasticSourceConfiguration<T> implements Serializable {
 
     public String scrollKeepAlive() {
         return scrollKeepAlive;
-    }
-
-    public int preferredLocalParallelism() {
-        return preferredLocalParallelism;
     }
 
 }
