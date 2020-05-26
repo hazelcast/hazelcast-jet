@@ -27,7 +27,7 @@ import java.util.function.Supplier;
 
 public final class ElasticSupport {
 
-    public static final String ELASTICSEARCH_IMAGE = "elasticsearch:7.6.1";
+    public static final String ELASTICSEARCH_IMAGE = "elasticsearch:7.7.0";
 
     // Elastic container takes long time to start up, reusing the container for speedup
     public static final Supplier<ElasticsearchContainer> elastic = Util.memoize(() -> {
