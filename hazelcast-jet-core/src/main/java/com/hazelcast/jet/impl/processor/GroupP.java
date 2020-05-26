@@ -49,7 +49,6 @@ public class GroupP<K, A, R, OUT> extends AbstractProcessor {
     private RocksDBStateBackend store;
     private RocksMap<K, A> keyToAcc;
 
-
     public GroupP(
             @Nonnull List<FunctionEx<?, ? extends K>> groupKeyFns,
             @Nonnull AggregateOperation<A, R> aggrOp,
@@ -81,13 +80,15 @@ public class GroupP<K, A, R, OUT> extends AbstractProcessor {
     protected boolean tryProcess(int ordinal, @Nonnull Object item) {
         Function<Object, ? extends K> keyFn = (Function<Object, ? extends K>) groupKeyFns.get(ordinal);
         K key = keyFn.apply(item);
-        A acc = aggrOp.createFn().get();
-        if (keyToAcc.get(key) == null) {
+        A acc;
+        if ((acc = keyToAcc.get(key)) == null) {
+            acc = aggrOp.createFn().get();
             if (acc != null) {
                 keyToAcc.put(key, acc);
             }
         }
         aggrOp.accumulateFn(ordinal).accept(acc, item);
+        keyToAcc.put(key, acc);
         return true;
     }
 

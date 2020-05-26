@@ -30,6 +30,7 @@ import java.util.Map.Entry;
 
 import static java.util.Collections.emptyMap;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -158,6 +159,7 @@ public class RocksMapTest extends JetTestSupport {
         assertTrue((iterator.hasNext()));
         e = iterator.next();
         map.put(e.getKey(), e.getValue());
+        assertFalse(iterator.hasNext());
         assertNotEquals("iterator.next() returns the new value used in rocksMap.put()", value3, map.get(key1));
         assertEquals("iterator.next() doesn't return the value used in rocksMap.put()", value1, map.get(key1));
         assertEquals("iterator.next() doesn't return the value used in rocksMap.put()", value1, map.get(key1));
