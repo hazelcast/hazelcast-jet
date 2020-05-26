@@ -1,13 +1,11 @@
 package com.hazelcast.jet.sql.impl.connector.cdc;
 
 import com.hazelcast.jet.sql.SqlTestSupport;
-import com.hazelcast.jet.sql.impl.connector.cdc.model.Customer;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.testcontainers.containers.MySQLContainer;
 
-import static com.hazelcast.jet.sql.impl.connector.cdc.CdcSqlConnector.TO_RECORD_CLASS;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
@@ -31,7 +29,7 @@ public class SqlCdcTest extends SqlTestSupport {
 
     @BeforeClass
     public static void beforeClass() {
-        executeSql(format("CREATE EXTERNAL TABLE %s (id INT, firstName VARCHAR, lastName VARCHAR, email VARCHAR) " +
+        executeSql(format("CREATE EXTERNAL TABLE %s (id INT, first_name VARCHAR, last_name VARCHAR, email VARCHAR) " +
                         "TYPE \"%s\" " +
                         "OPTIONS (" +
                         "  \"connector.class\" '%s', " +
@@ -42,12 +40,11 @@ public class SqlCdcTest extends SqlTestSupport {
                         "  \"database.server.id\" '1', " +
                         "  \"database.server.name\" '%s', " +
                         "  \"database.whitelist\" '%s', " +
-                        "  \"table.whitelist\" '%s', " +
-                        "  \"%s\" '%s' " +
+                        "  \"table.whitelist\" '%s' " +
                         ")",
                 TABLE_NAME, CdcSqlConnector.TYPE_NAME, MY_SQL_CONNECTOR_CLASS_NAME,
                 mysql.getContainerIpAddress(), mysql.getMappedPort(MYSQL_PORT), USER, PASSWORD, SERVER_NAME,
-                SCHEMA_NAME, SCHEMA_NAME + "." + TABLE_NAME, TO_RECORD_CLASS, Customer.class.getName()
+                SCHEMA_NAME, SCHEMA_NAME + "." + TABLE_NAME
         ));
     }
 
@@ -65,7 +62,7 @@ public class SqlCdcTest extends SqlTestSupport {
     @Test
     public void fullScan() {
         assertRowsEventuallyAnyOrder(
-                format("SELECT id, lastName, firstName, email  FROM %s", TABLE_NAME),
+                format("SELECT id, last_name, first_name, email  FROM %s", TABLE_NAME),
                 asList(
                         new Row(1001, "Thomas", "Sally", "sally.thomas@acme.com"),
                         new Row(1002, "Bailey", "George", "gbailey@foobar.com"),
@@ -87,7 +84,7 @@ public class SqlCdcTest extends SqlTestSupport {
     @Test
     public void fullScan_filter() {
         assertRowsEventuallyAnyOrder(
-                format("SELECT * FROM %s WHERE id=1002 or firstName='Anne'", TABLE_NAME),
+                format("SELECT * FROM %s WHERE id=1002 or first_name='Anne'", TABLE_NAME),
                 asList(
                         new Row(1002, "George", "Bailey", "gbailey@foobar.com"),
                         new Row(1004, "Anne", "Kretchmar", "annek@noanswer.org")));
@@ -96,21 +93,21 @@ public class SqlCdcTest extends SqlTestSupport {
     @Test
     public void fullScan_projection1() {
         assertRowsEventuallyAnyOrder(
-                format("SELECT upper(firstName) FROM %s WHERE id='1001'", TABLE_NAME),
+                format("SELECT upper(first_name) FROM %s WHERE id='1001'", TABLE_NAME),
                 singletonList(new Row("SALLY")));
     }
 
     @Test
     public void fullScan_projection2() {
         assertRowsEventuallyAnyOrder(
-                format("SELECT id FROM %s WHERE upper(lastName)='BAILEY'", TABLE_NAME),
+                format("SELECT id FROM %s WHERE upper(last_name)='BAILEY'", TABLE_NAME),
                 singletonList(new Row(1002)));
     }
 
     @Test
     public void fullScan_projection3() {
         assertRowsEventuallyAnyOrder(
-                format("SELECT lastName FROM (SELECT upper(lastName) lastName FROM %s) WHERE lastName='WALKER'", TABLE_NAME),
+                format("SELECT last_name FROM (SELECT upper(last_name) last_name FROM %s) WHERE last_name='WALKER'", TABLE_NAME),
                 singletonList(new Row("WALKER")));
     }
 

@@ -68,12 +68,12 @@ public final class ExpressionUtil {
      * all the projections
      */
     public static FunctionEx<Entry<Object, Object>, Object[]> projectionFn(
-            @Nonnull Table jetTable,
+            @Nonnull Table table,
             @Nullable Expression<Boolean> predicate,
             @Nonnull List<Expression<?>> projections
     ) {
         // convert the projection
-        List<String> fieldNames0 = toList(jetTable.getFields(), field -> {
+        List<String> fieldNames0 = toList(table.getFields(), field -> {
             // convert field name, the property path must start with "key" or "value", we're getting
             // it from a java.util.Map.Entry. Examples:
             //     "__key" -> "key"

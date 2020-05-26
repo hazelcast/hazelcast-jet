@@ -28,7 +28,6 @@ import java.util.Properties;
 
 public class CdcTable extends JetTable {
 
-    private final String valueClass;
     private final Properties cdcProperties;
 
     public CdcTable(
@@ -37,18 +36,12 @@ public class CdcTable extends JetTable {
             @Nonnull String name,
             @Nonnull TableStatistics statistics,
             @Nonnull List<TableField> fields,
-            @Nonnull String valueClass,
             @Nonnull Properties cdcProperties,
             @Nonnull Map<String, String> ddlOptions
     ) {
         super(sqlConnector, fields, schemaName, name, statistics, ddlOptions);
 
-        this.valueClass = valueClass;
         this.cdcProperties = cdcProperties;
-    }
-
-    public String getValueClass() {
-        return valueClass;
     }
 
     public Properties getCdcProperties() {
