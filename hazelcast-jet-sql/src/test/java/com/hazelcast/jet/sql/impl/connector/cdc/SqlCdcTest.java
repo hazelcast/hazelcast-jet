@@ -78,7 +78,7 @@ public class SqlCdcTest extends SqlTestSupport {
     @Test
     public void fullScan() {
         assertRowsEventuallyAnyOrder(
-                format("SELECT id, last_name, first_name, email  FROM %s", TABLE_NAME),
+                format("SELECT id, last_name, first_name, email FROM %s", TABLE_NAME),
                 asList(
                         new Row(1001, "Thomas", "Sally", "sally.thomas@acme.com"),
                         new Row(1002, "Bailey", "George", "gbailey@foobar.com"),

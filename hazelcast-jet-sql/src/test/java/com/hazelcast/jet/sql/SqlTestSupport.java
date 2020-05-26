@@ -31,25 +31,20 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
-import static java.util.concurrent.CompletableFuture.supplyAsync;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public abstract class SqlTestSupport extends SimpleTestInClusterSupport {
 
     private static SqlService sqlService;
-    private static Executor executor;
 
     @BeforeClass
     public static void setUpClass() {
         initialize(1, null);
         sqlService = instance().getHazelcastInstance().getSqlService();
-        executor = Executors.newSingleThreadExecutor();
     }
 
     protected static <K, V> void assertMap(String name, String sql, Map<K, V> expected) {
@@ -60,7 +55,7 @@ public abstract class SqlTestSupport extends SimpleTestInClusterSupport {
 
     protected static void assertRowsEventuallyAnyOrder(String sql, Collection<Row> expectedRows) {
         try {
-            List<Row> actualRows = supplyAsync(() -> executeSql(sql, expectedRows.size()), executor)
+            List<Row> actualRows = spawn(() -> executeSql(sql, expectedRows.size()))
                     .get(5, TimeUnit.SECONDS);
 
             assertThat(actualRows).containsExactlyInAnyOrderElementsOf(expectedRows);

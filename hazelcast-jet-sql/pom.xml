@@ -63,8 +63,8 @@
             <groupId>com.hazelcast.jet</groupId>
             <artifactId>hazelcast-jet-cdc-debezium</artifactId>
             <version>${project.parent.version}</version>
+            <optional>true</optional>
         </dependency>
-        <!-- TODO: specific drivers should be added separately -->
 
         <dependency>
             <groupId>commons-beanutils</groupId>
