@@ -20,7 +20,6 @@ import com.hazelcast.cluster.Address;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
-import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.core.processor.Processors;
 
 import javax.annotation.Nonnull;
@@ -43,6 +42,7 @@ import static java.util.stream.Collectors.toSet;
 public class ElasticSourcePMetaSupplier<T> implements ProcessorMetaSupplier {
 
     private static final long serialVersionUID = 1L;
+    private static final int DEFAULT_LOCAL_PARALLELISM = 2;
 
     @Nonnull
     private final ElasticSourceConfiguration<T> configuration;
@@ -57,7 +57,7 @@ public class ElasticSourcePMetaSupplier<T> implements ProcessorMetaSupplier {
     @Override
     public int preferredLocalParallelism() {
         if (configuration.isCoLocatedReadingEnabled() || configuration.isSlicingEnabled()) {
-            return Vertex.LOCAL_PARALLELISM_USE_DEFAULT;
+            return DEFAULT_LOCAL_PARALLELISM;
         } else {
             return 1;
         }

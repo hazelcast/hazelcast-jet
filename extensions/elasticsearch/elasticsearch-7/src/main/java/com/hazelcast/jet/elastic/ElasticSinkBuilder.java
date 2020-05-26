@@ -18,7 +18,6 @@ package com.hazelcast.jet.elastic;
 
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.function.SupplierEx;
-import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.pipeline.Sink;
 import com.hazelcast.jet.pipeline.SinkBuilder;
 import com.hazelcast.logging.ILogger;
@@ -178,7 +177,7 @@ public final class ElasticSinkBuilder<T> implements Serializable {
                 .<T>receiveFn((bulkContext, item) -> bulkContext.add(mapToRequestFn.apply(item)))
                 .flushFn(BulkContext::flush)
                 .destroyFn(BulkContext::close)
-                .preferredLocalParallelism(Vertex.LOCAL_PARALLELISM_USE_DEFAULT)
+                .preferredLocalParallelism(DEFAULT_LOCAL_PARALLELISM)
                 .build();
     }
 
