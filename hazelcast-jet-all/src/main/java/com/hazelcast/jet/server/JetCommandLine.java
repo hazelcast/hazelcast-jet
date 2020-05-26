@@ -68,6 +68,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.logging.Level;
 import java.util.logging.LogManager;
+import picocli.CommandLine.TypeConversionException;
 
 import static com.hazelcast.instance.BuildInfoProvider.getBuildInfo;
 import static com.hazelcast.jet.Util.idToString;
@@ -98,7 +99,7 @@ public class JetCommandLine implements Runnable {
     @Option(names = {"-f", "--config"},
             description = "Optional path to a client config XML/YAML file." +
                     " The default is to use config/hazelcast-client.yaml." +
-                    " If you set this option, Jet will ignore the --addresses and --cluster-name options.",
+                    " If you set this option, Jet will ignore the --targets option.",
             order = 0
     )
     private File config;
@@ -568,7 +569,8 @@ public class JetCommandLine implements Runnable {
     public static class TargetsMixin {
 
         @Option(names = {"-t", "--targets"},
-                description = "The cluster name and addresses to use when connection to the cluster ",
+                description = "The cluster name and addresses to use if you want to connect to a "
+                    + "cluster other than the one configured in the configuration file.",
                 paramLabel = "<cluster-name>@<hostname>:<port>[,<hostname>:<port>]",
                 converter = TargetsMixin.Converter.class)
         private Targets targets;
@@ -597,15 +599,17 @@ public class JetCommandLine implements Runnable {
         }
 
         public static class Converter implements ITypeConverter<TargetsMixin.Targets> {
-            public Targets convert(String value) throws Exception {
+            @Override
+            public Targets convert(String value) {
                 Targets targets = new Targets();
-                if (!value.contains("@")) {
+                if (value == null || !value.contains("@")) {
                     return targets;
                 }
 
                 String[] values = value.split("@");
                 if (values.length < 2) {
-                    return targets;
+                    throw new TypeConversionException(
+                        "must be cluster-name@address:port but was '" + value + "'");
                 }
 
                 targets.clusterName = values[0];

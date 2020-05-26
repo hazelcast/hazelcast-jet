@@ -50,6 +50,7 @@ import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.function.Function;
 import java.util.stream.IntStream;
+import picocli.CommandLine.TypeConversionException;
 
 import static com.hazelcast.jet.pipeline.JournalInitialPosition.START_FROM_OLDEST;
 import static com.hazelcast.jet.server.JetCommandLine.runCommandLine;
@@ -523,6 +524,13 @@ public class JetCommandLineTest extends JetTestSupport {
     public void testTargetsPrecedence() {
         String target = "foobar@127.0.0.1:5701,127.0.0.1:5702";
         testTargetsCommand("-t", "ignore@127.0.0.1:1234", "submit", "-t", target, testJobJarFile.toString());
+    }
+
+    @Test
+    public void testTargetsInvalidValue() {
+        run("submit", "-t", "@", testJobJarFile.toString());
+        String actual = captureErr();
+        assertContains(actual, "Invalid value for option '--targets':");
     }
 
     private void testTargetsCommand(String... args) {
