@@ -282,6 +282,16 @@ pipeline.readFrom(DebeziumSources.cdc(configuration))            // 1
 6. Client configuration so it can connect to the right host, cluster
 and instance
 
+```java
+public class CustomClientConfig extends ClientConfig {
+
+  public CustomClientConfig(String cacheHost) {
+    getNetworkConfig()
+      .addAddress(cacheHost != null ? cacheHost : "localhost");
+  }
+}
+```
+
 To try the demo, a local Docker _daemon_ must be running.
 
 1. To create the necessary Docker images, at the root of the project,
