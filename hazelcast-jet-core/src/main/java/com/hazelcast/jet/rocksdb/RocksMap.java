@@ -157,5 +157,11 @@ public class RocksMap<K, V> implements Iterable<Entry<K, V>> {
             iterator.next();
             return tuple;
         }
+
+        @Override
+        public void remove() {
+            //the key won't be removed from the iterator's snapshot but from the database itself
+            delete(deserialize(iterator.key()));
+        }
     }
 }
