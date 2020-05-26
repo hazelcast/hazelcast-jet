@@ -519,7 +519,13 @@ public class JetCommandLineTest extends JetTestSupport {
         testTargetsCommand("-t", target, "suspend", "jobName");
     }
 
-    public void testTargetsCommand(String... args) {
+    @Test
+    public void testTargetsPrecedence() {
+        String target = "foobar@127.0.0.1:5701,127.0.0.1:5702";
+        testTargetsCommand("-t", "ignore@127.0.0.1:1234", "submit", "-t", target, testJobJarFile.toString());
+    }
+
+    private void testTargetsCommand(String... args) {
         AtomicReference<ClientConfig> atomicConfig = new AtomicReference<>();
         Function<ClientConfig, JetInstance> fnRunCommand = (config) -> {
             atomicConfig.set(config);
