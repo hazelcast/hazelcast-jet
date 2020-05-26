@@ -236,19 +236,17 @@ public final class CdcSinks {
             super.init(outbox, context);
 
             HazelcastProperties properties = new HazelcastProperties(context.jetInstance().getConfig().getProperties());
-            int expiration = properties.getSeconds(SEQUENCE_CACHE_EXPIRATION_SECONDS);
-            this.sequences = new Sequences<>(expiration);
+            long expirationMs = properties.getMillis(SEQUENCE_CACHE_EXPIRATION_SECONDS);
+            this.sequences = new Sequences<>(expirationMs);
         }
 
         @Override
         protected boolean shouldBeDropped(K key, ChangeRecord item) {
-            long timestamp = getTimestamp(item);
-
             ChangeRecordImpl recordImpl = (ChangeRecordImpl) item;
             long sequencePartition = recordImpl.getSequencePartition();
             long sequenceValue = recordImpl.getSequenceValue();
 
-            boolean isNew = sequences.update(key, timestamp, sequencePartition, sequenceValue);
+            boolean isNew = sequences.update(key, sequencePartition, sequenceValue);
             return !isNew;
         }
 
@@ -304,31 +302,30 @@ public final class CdcSinks {
          *                     observed for a certain key is guaranteed
          *                     to be tracked; might be evicted afterwards
          */
-        Sequences(int expirationMs) {
+        Sequences(long expirationMs) {
             sequences = new LinkedHashMap<K, long[]>(INITIAL_CAPACITY, LOAD_FACTOR, true) {
                 @Override
                 protected boolean removeEldestEntry(Map.Entry<K, long[]> eldest) {
-                    long age = eldest.getValue()[2];
-                    return System.currentTimeMillis() - age > expirationMs;
+                    long age = System.currentTimeMillis() - eldest.getValue()[2];
+                    return age > expirationMs;
                 }
             };
         }
 
         /**
          * @param key       key of an event that has just been observed
-         * @param timestamp timestamp of the source event
          * @param partition partition of the source event sequence number
          * @param sequence  numeric value of the source event sequence number
          * @return true if the newly observed sequence number if more
          * recent than what we have observed before (if any)
          */
-        boolean update(K key, long timestamp, long partition, long sequence) {
+        boolean update(K key, long partition, long sequence) {
             long[] prevSequence = sequences.get(key);
             if (prevSequence == null) { //first observed sequence for key
-                sequences.put(key, new long[]{partition, sequence, timestamp});
+                sequences.put(key, new long[]{partition, sequence, System.currentTimeMillis()});
                 return true;
             } else {
-                prevSequence[2] = timestamp;
+                prevSequence[2] = System.currentTimeMillis();
                 if (prevSequence[0] != partition) { //sequence partition changed for key
                     prevSequence[0] = partition;
                     prevSequence[1] = sequence;
