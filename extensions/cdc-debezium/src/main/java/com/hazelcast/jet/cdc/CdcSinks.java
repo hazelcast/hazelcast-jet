@@ -250,15 +250,6 @@ public final class CdcSinks {
             return !isNew;
         }
 
-        private static long getTimestamp(ChangeRecord item) {
-            try {
-                return item.timestamp();
-            } catch (ParsingException e) {
-                //use current time, should be good enough for cache expiration purposes
-                return System.currentTimeMillis();
-            }
-        }
-
     }
 
     /**
@@ -269,7 +260,7 @@ public final class CdcSinks {
      * The <i>sequence</i> part is exactly what the name implies: a numeric
      * sequence which we base our ordering on. Implementations needs to ensure
      * that {@code ChangeRecord}s produced by a source contain a monotonic
-     * increasing sequence number, as long as the sequnce number partition
+     * increasing sequence number, as long as the sequence number partition
      * doesn't change.
      * <p>
      * The <i>partition</i> part is a kind of context for the numeric
