@@ -144,7 +144,7 @@ public final class CdcSinks {
      * remote Hazelcast cluster identified by the supplied {@code
      * ClientConfig}.
      * <p>
-     * Due to the used API, the remote cluster must be at least 3.11.
+     * Due to the used API, the remote cluster must be at least version 4.0.
      *
      * @since 4.2
      */
