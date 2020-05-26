@@ -1,5 +1,5 @@
 ---
-title: Choice of JDK and GC
+title: Benchmarking Jet with Different JDKs and GCs
 description: Choosing the right JDK-GC combination is important.
 ---
 
@@ -7,8 +7,8 @@ The Java runtime has been evolving more rapidly in recent years and,
 after two decades, we finally got a new default garbage collector: the
 G1. Two more GCs are on their way to production and are available as
 experimental features: Oracle's Z and OpenJDK's Shenandoah. We at
-Hazelcast thought it was time to put all these new options to test and
-find which choices work well with distributed stream processing in
+Hazelcast thought it was time to put all these new options to the test
+and find which choices work well with distributed stream processing in
 Hazelcast Jet.
 
 Jet is being used for a broad spectrum of use cases, with different
@@ -16,7 +16,7 @@ latency and throughput requirements. Here are three important
 categories:
 
 1. Low-latency unbounded stream processing, with moderate state. Example:
-  detecting trends in 500 Hz sensor data from 100,000 devices, and
+  detecting trends in 500 Hz sensor data from 100,000 devices and
   sending corrective feedback within 10-20 milliseconds.
 2. High-throughput, large-state unbounded stream processing. Example:
   tracking GPS locations of millions of users, inferring their velocity
@@ -29,7 +29,7 @@ categories:
 At the outset, we can observe the following:
 
 - in scenario 1 the latency requirements enter the danger zone of GC
-  pauses: 100 milliseconds, something traditionally considered as an
+  pauses: 100 milliseconds, something traditionally considered an
   excellent result for a worst-case GC pause, may be a showstopper for
   many use cases
 - scenarios 2 and 3 are similar in terms of demands on the garbage
