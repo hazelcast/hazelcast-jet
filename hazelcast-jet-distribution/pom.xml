@@ -286,6 +286,12 @@
         </dependency>
         <dependency>
             <groupId>com.hazelcast.jet</groupId>
+            <artifactId>hazelcast-jet-cdc-postgres</artifactId>
+            <version>${project.version}</version>
+            <classifier>jar-with-dependencies</classifier>
+        </dependency>
+        <dependency>
+            <groupId>com.hazelcast.jet</groupId>
             <artifactId>hazelcast-jet-elasticsearch-7</artifactId>
             <version>4.2-SNAPSHOT</version>
             <classifier>jar-with-dependencies</classifier>

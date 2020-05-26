@@ -76,7 +76,8 @@ Thank you for your valuable contributions!
 1. New Features
 
 2. Enhancements
-[integration] Improve Debezium connector usability and production readiness (generic & MySQL versions) [#2142]
+[integration] Improve Debezium connector usability and production readiness
+    (generic, MySQL & Postgres versions) [#2142]
 
 ** Hazelcast Jet 4.0 **
 
