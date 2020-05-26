@@ -1,3 +1,19 @@
+/*
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.hazelcast.jet.sql.impl.connector.cdc;
 
 import com.hazelcast.jet.sql.SqlTestSupport;
@@ -13,6 +29,11 @@ import static org.testcontainers.containers.MySQLContainer.MYSQL_PORT;
 
 public class SqlCdcTest extends SqlTestSupport {
 
+    @ClassRule
+    public static MySQLContainer<?> mysql = new MySQLContainer<>("debezium/example-mysql:1.2")
+            .withUsername("mysqluser")
+            .withPassword("mysqlpw");
+
     private static final String USER = "debezium";
     private static final String PASSWORD = "dbz";
     private static final String SERVER_NAME = "dbserver1";
@@ -21,11 +42,6 @@ public class SqlCdcTest extends SqlTestSupport {
     private static final String TABLE_NAME = "customers";
 
     private static final String MY_SQL_CONNECTOR_CLASS_NAME = "io.debezium.connector.mysql.MySqlConnector";
-
-    @ClassRule
-    public static MySQLContainer<?> mysql = new MySQLContainer<>("debezium/example-mysql:1.2")
-            .withUsername("mysqluser")
-            .withPassword("mysqlpw");
 
     @BeforeClass
     public static void beforeClass() {
@@ -107,7 +123,8 @@ public class SqlCdcTest extends SqlTestSupport {
     @Test
     public void fullScan_projection3() {
         assertRowsEventuallyAnyOrder(
-                format("SELECT last_name FROM (SELECT upper(last_name) last_name FROM %s) WHERE last_name='WALKER'", TABLE_NAME),
+                format("SELECT last_name FROM (SELECT upper(last_name) last_name FROM %s) WHERE last_name='WALKER'",
+                        TABLE_NAME),
                 singletonList(new Row("WALKER")));
     }
 

@@ -21,7 +21,6 @@ import com.hazelcast.jet.sql.impl.connector.kafka.SqlKafkaTest;
 import com.hazelcast.sql.SqlCursor;
 import com.hazelcast.sql.SqlRow;
 import com.hazelcast.sql.SqlService;
-import com.hazelcast.sql.impl.SqlRowImpl;
 import org.junit.BeforeClass;
 
 import java.util.ArrayList;
@@ -31,18 +30,26 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
+import static java.util.concurrent.CompletableFuture.supplyAsync;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public abstract class SqlTestSupport extends SimpleTestInClusterSupport {
 
     private static SqlService sqlService;
+    private static Executor executor;
 
     @BeforeClass
     public static void setUpClass() {
         initialize(1, null);
         sqlService = instance().getHazelcastInstance().getSqlService();
+        executor = Executors.newSingleThreadExecutor();
     }
 
     protected static <K, V> void assertMap(String name, String sql, Map<K, V> expected) {
@@ -52,15 +59,12 @@ public abstract class SqlTestSupport extends SimpleTestInClusterSupport {
     }
 
     protected static void assertRowsEventuallyAnyOrder(String sql, Collection<Row> expectedRows) {
-        try (SqlCursor cursor = toCursor(sql)) {
-            Iterator<SqlRow> iterator = cursor.iterator();
-            List<Row> actualRows = new ArrayList<>(expectedRows.size());
-            for (int i = 0; i < expectedRows.size(); i++) {
-                actualRows.add(new Row(cursor.getColumnCount(), iterator.next()));
-            }
+        try {
+            List<Row> actualRows = supplyAsync(() -> executeSql(sql, expectedRows.size()), executor)
+                    .get(5, TimeUnit.SECONDS);
 
             assertThat(actualRows).containsExactlyInAnyOrderElementsOf(expectedRows);
-        } catch (Exception e) {
+        } catch (InterruptedException | ExecutionException | TimeoutException e) {
             throw sneakyThrow(e);
         }
     }
@@ -68,6 +72,19 @@ public abstract class SqlTestSupport extends SimpleTestInClusterSupport {
     protected static void executeSql(String sql) {
         try (SqlCursor cursor = toCursor(sql)) {
             cursor.iterator().forEachRemaining(o -> { });
+        } catch (Exception e) {
+            throw sneakyThrow(e);
+        }
+    }
+
+    private static List<Row> executeSql(String sql, int numberOfExpectedRows) {
+        try (SqlCursor cursor = toCursor(sql)) {
+            Iterator<SqlRow> iterator = cursor.iterator();
+            List<Row> rows = new ArrayList<>(numberOfExpectedRows);
+            for (int i = 0; i < numberOfExpectedRows; i++) {
+                rows.add(new Row(cursor.getColumnCount(), iterator.next()));
+            }
+            return rows;
         } catch (Exception e) {
             throw sneakyThrow(e);
         }
@@ -85,13 +102,6 @@ public abstract class SqlTestSupport extends SimpleTestInClusterSupport {
             values = new Object[columnCount];
             for (int i = 0; i < columnCount; i++) {
                 values[i] = row.getObject(i);
-            }
-        }
-
-        public Row(SqlRow sqlRow) {
-            values = new Object[((SqlRowImpl) sqlRow).getDelegate().getColumnCount()];
-            for (int i = 0; i < values.length; i++) {
-                values[i] = sqlRow.getObject(i);
             }
         }
 

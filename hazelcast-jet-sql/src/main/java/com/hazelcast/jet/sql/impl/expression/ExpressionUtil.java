@@ -25,16 +25,13 @@ import com.hazelcast.sql.impl.row.HeapRow;
 import com.hazelcast.sql.impl.row.Row;
 import com.hazelcast.sql.impl.schema.Table;
 import com.hazelcast.sql.impl.type.QueryDataType;
-import org.apache.commons.beanutils.PropertyUtils;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.lang.reflect.InvocationTargetException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map.Entry;
 
-import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 import static com.hazelcast.jet.impl.util.Util.toList;
 import static com.hazelcast.query.QueryConstants.KEY_ATTRIBUTE_NAME;
 import static com.hazelcast.query.QueryConstants.THIS_ATTRIBUTE_NAME;
@@ -130,31 +127,5 @@ public final class ExpressionUtil {
                 return null;
             }
         };
-    }
-
-    private static class EntryRow implements Row {
-
-        private final List<String> fieldNames;
-        private final Entry<Object, Object> entry;
-
-        EntryRow(List<String> fieldNames, Entry<Object, Object> entry) {
-            this.fieldNames = fieldNames;
-            this.entry = entry;
-        }
-
-        @SuppressWarnings("unchecked")
-        @Override
-        public <T> T get(int index) {
-            try {
-                return (T) PropertyUtils.getProperty(entry, fieldNames.get(index));
-            } catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
-                throw sneakyThrow(e);
-            }
-        }
-
-        @Override
-        public int getColumnCount() {
-            return fieldNames.size();
-        }
     }
 }
