@@ -30,6 +30,7 @@ import com.hazelcast.map.EntryProcessor;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
+import com.hazelcast.query.impl.QueryableEntry;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 import javax.annotation.Nonnull;
@@ -42,9 +43,8 @@ import java.util.function.BiFunction;
 
 import static com.hazelcast.internal.util.MapUtil.createHashMap;
 
-public final class UpdateMapP<T, K, V> extends AbstractUpdateMapP<T, Data, V, Object> {
+public final class UpdateMapP<T, K, V> extends AbstractUpdateMapP<T, K, V> {
 
-    private final FunctionEx<? super T, ? extends K> keyFn;
     private final BiFunctionEx<? super V, ? super T, ? extends V> updateFn;
     private final BiFunction<Object, Object, Object> remappingFunction =
             (o, n) -> ApplyFnEntryProcessor.append(o, (Data) n);
@@ -61,30 +61,29 @@ public final class UpdateMapP<T, K, V> extends AbstractUpdateMapP<T, Data, V, Ob
                String mapName,
                @Nonnull FunctionEx<? super T, ? extends K> keyFn,
                @Nonnull BiFunctionEx<? super V, ? super T, ? extends V> updateFn) {
-        super(instance, maxParallelAsyncOps, mapName);
-        this.keyFn = keyFn;
+        super(instance, maxParallelAsyncOps, mapName, keyFn);
         this.updateFn = updateFn;
     }
 
     @Override
-    protected EntryProcessor<Data, V, Object> entryProcessor(Map<Data, Object> buffer) {
+    protected EntryProcessor<K, V, Void> entryProcessor(Map<Data, Object> buffer) {
         return new ApplyFnEntryProcessor<>(buffer, updateFn);
     }
 
     @Override
     protected void addToBuffer(T item) {
         K key = keyFn.apply(item);
-        Data keyData = partitionContext.serializeKey(key);
-        int partitionId = partitionContext.getPartitionId(keyData);
-        Data itemData = partitionContext.serializeItem(item);
+        Data keyData = serializationContext.toKeyData(key);
+        int partitionId = serializationContext.partitionId(keyData);
+        Data itemData = serializationContext.toData(item);
         partitionBuffers[partitionId].merge(keyData, itemData, remappingFunction);
         pendingInPartition[partitionId]++;
     }
 
     @SuppressFBWarnings(value = {"SE_BAD_FIELD", "SE_NO_SERIALVERSIONID"},
         justification = "the class is never java-serialized")
-    public static class ApplyFnEntryProcessor<K, V, T, R>
-            implements EntryProcessor<K, V, R>, IdentifiedDataSerializable,
+    public static class ApplyFnEntryProcessor<K, V, T>
+            implements EntryProcessor<K, V, Void>, IdentifiedDataSerializable,
             SerializationServiceAware {
         private Map<Data, Object> keysToUpdate;
         private BiFunctionEx<? super V, ? super T, ? extends V> updateFn;
@@ -102,16 +101,16 @@ public final class UpdateMapP<T, K, V> extends AbstractUpdateMapP<T, Data, V, Ob
         }
 
         @Override
-        public R process(Entry<K, V> entry) {
+        public Void process(Entry<K, V> entry) {
             // it should not matter that we don't take the PartitionStrategy here into account
-            Data keyData = serializationService.toData(entry.getKey());
+            Data keyData = ((QueryableEntry<K, V>) entry).getKeyData();
             Object item = keysToUpdate.get(keyData);
             if (item == null && !keysToUpdate.containsKey(keyData)) {
                 // Implementing equals/hashCode is not required for IMap keys since serialized version is used
                 // instead. After serializing/deserializing the keys they will have different identity. And since they
                 // don't implement the methods, they key can't be found in the map.
                 throw new JetException("A key not found in the map - is equals/hashCode " +
-                    "correctly implemented for the key? Key type: " + entry.getKey().getClass().getName());
+                        "correctly implemented for the key? Key type: " + entry.getKey().getClass().getName());
             }
             if (item instanceof List) {
                 @SuppressWarnings("unchecked")

@@ -19,7 +19,7 @@ package com.hazelcast.jet.core;
 import com.hazelcast.internal.serialization.DataSerializerHook;
 import com.hazelcast.internal.serialization.impl.FactoryIdHelper;
 import com.hazelcast.jet.impl.connector.UpdateMapP.ApplyFnEntryProcessor;
-import com.hazelcast.jet.impl.connector.UpdateMapWithMaterializedValuesP.ApplyMaterializedValuesEntryProcessor;
+import com.hazelcast.jet.impl.connector.UpdateMapWithMaterializedValuesP.ApplyValuesEntryProcessor;
 import com.hazelcast.nio.serialization.DataSerializableFactory;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 import com.hazelcast.spi.annotation.PrivateApi;
@@ -51,7 +51,7 @@ public final class JetDataSerializerHook implements DataSerializerHook {
      */
     public static final int APPLY_FN_ENTRY_PROCESSOR = 3;
     /**
-     * Serialization ID of the {@link ApplyMaterializedValuesEntryProcessor} class.
+     * Serialization ID of the {@link ApplyValuesEntryProcessor} class.
      */
     public static final int APPLY_MATERIALIZED_VALUE_ENTRY_PROCESSOR = 4;
 
@@ -80,7 +80,7 @@ public final class JetDataSerializerHook implements DataSerializerHook {
                 case APPLY_FN_ENTRY_PROCESSOR:
                     return new ApplyFnEntryProcessor();
                 case APPLY_MATERIALIZED_VALUE_ENTRY_PROCESSOR:
-                    return new ApplyMaterializedValuesEntryProcessor();
+                    return new ApplyValuesEntryProcessor();
                 default:
                     throw new IllegalArgumentException("Unknown type id " + typeId);
             }

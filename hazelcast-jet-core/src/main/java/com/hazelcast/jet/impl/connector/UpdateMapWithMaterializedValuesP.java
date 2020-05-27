@@ -18,19 +18,20 @@ package com.hazelcast.jet.impl.connector;
 
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.function.FunctionEx;
+import com.hazelcast.internal.serialization.Data;
 import com.hazelcast.jet.core.JetDataSerializerHook;
 import com.hazelcast.map.EntryProcessor;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
+import com.hazelcast.query.impl.QueryableEntry;
 
 import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.util.Map;
 
-public class UpdateMapWithMaterializedValuesP<T, K, V> extends AbstractUpdateMapP<T, K, V, V> {
+public class UpdateMapWithMaterializedValuesP<T, K, V> extends AbstractUpdateMapP<T, K, V> {
 
-    private final FunctionEx<? super T, ? extends K> keyFn;
     private final FunctionEx<? super T, ? extends V> valueFn;
 
     public UpdateMapWithMaterializedValuesP(
@@ -39,69 +40,69 @@ public class UpdateMapWithMaterializedValuesP<T, K, V> extends AbstractUpdateMap
             @Nonnull FunctionEx<? super T, ? extends K> keyFn,
             @Nonnull FunctionEx<? super T, ? extends V> valueFn
     ) {
-        super(instance, MAX_PARALLEL_ASYNC_OPS_DEFAULT, map);
-        this.keyFn = keyFn;
+        super(instance, MAX_PARALLEL_ASYNC_OPS_DEFAULT, map, keyFn);
         this.valueFn = valueFn;
     }
 
+
     @Override
-    protected EntryProcessor<K, V, Object> entryProcessor(Map<K, V> buffer) {
-        return new ApplyMaterializedValuesEntryProcessor<>(buffer);
+    protected EntryProcessor<K, V, Void> entryProcessor(Map<Data, Object> buffer) {
+        return new ApplyValuesEntryProcessor<>(buffer);
     }
 
     @Override
     protected void addToBuffer(T item) {
         K key = keyFn.apply(item);
-
         boolean shouldBeDropped = shouldBeDropped(key, item);
         if (shouldBeDropped) {
             pendingItemCount--;
             return;
         }
 
-        int partitionId = partitionContext.getPartitionId(key);
+        Data keyData = serializationContext.toKeyData(key);
+        int partitionId = serializationContext.partitionId(keyData);
 
-        Map<K, V> buffer = partitionBuffers[partitionId];
-        if (buffer.containsKey(key)) { //pending items will merge
-            pendingItemCount--;
-        } else {
+        Map<Data, Object> buffer = partitionBuffers[partitionId];
+        Data value = serializationContext.toData(valueFn.apply(item));
+        if (buffer.put(keyData, value) == null) {
             pendingInPartition[partitionId]++;
+        } else { // item already exists, it will be coalesced
+            pendingItemCount--;
         }
-        buffer.put(key, valueFn.apply(item));
     }
 
     protected boolean shouldBeDropped(K key, T item) {
         return false;
     }
 
-    public static class ApplyMaterializedValuesEntryProcessor<K, V>
-            implements EntryProcessor<K, V, Object>, IdentifiedDataSerializable {
+    public static class ApplyValuesEntryProcessor<K, V>
+            implements EntryProcessor<K, V, Void>, IdentifiedDataSerializable {
 
-        private Map<K, V> updates;
+        private Map<Data, Object> keysToUpdate;
 
-        public ApplyMaterializedValuesEntryProcessor() { //needed for (de)serialization
+        public ApplyValuesEntryProcessor() { //needed for (de)serialization
         }
 
-        public ApplyMaterializedValuesEntryProcessor(Map<K, V> updates) {
-            this.updates = updates;
+        public ApplyValuesEntryProcessor(Map<Data, Object> keysToUpdate) {
+            this.keysToUpdate = keysToUpdate;
         }
 
         @Override
-        public Object process(Map.Entry<K, V> entry) {
-            K key = entry.getKey();
-            V newValue = updates.get(key);
-            entry.setValue(newValue);
+        public Void process(Map.Entry<K, V> entry) {
+            // avoid re-serialization
+            QueryableEntry<Data, Object> e = ((QueryableEntry<Data, Object>) entry);
+            e.setValue(keysToUpdate.get(e.getKeyData()));
             return null;
         }
 
         @Override
         public void writeData(ObjectDataOutput out) throws IOException {
-            out.writeObject(updates);
+            out.writeObject(keysToUpdate);
         }
 
         @Override
         public void readData(ObjectDataInput in) throws IOException {
-            updates = in.readObject();
+            keysToUpdate = in.readObject();
         }
 
         @Override
@@ -113,5 +114,6 @@ public class UpdateMapWithMaterializedValuesP<T, K, V> extends AbstractUpdateMap
         public int getClassId() {
             return JetDataSerializerHook.APPLY_MATERIALIZED_VALUE_ENTRY_PROCESSOR;
         }
+
     }
 }

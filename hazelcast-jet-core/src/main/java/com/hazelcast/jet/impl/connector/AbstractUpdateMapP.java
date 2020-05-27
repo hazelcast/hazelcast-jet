@@ -19,6 +19,7 @@ package com.hazelcast.jet.impl.connector;
 import com.hazelcast.client.impl.clientside.HazelcastClientProxy;
 import com.hazelcast.client.impl.spi.ClientPartitionService;
 import com.hazelcast.core.HazelcastInstance;
+import com.hazelcast.function.FunctionEx;
 import com.hazelcast.instance.impl.HazelcastInstanceImpl;
 import com.hazelcast.internal.partition.IPartitionService;
 import com.hazelcast.internal.serialization.Data;
@@ -30,30 +31,31 @@ import com.hazelcast.map.EntryProcessor;
 import com.hazelcast.map.IMap;
 import com.hazelcast.map.impl.proxy.MapProxyImpl;
 import com.hazelcast.partition.PartitioningStrategy;
+import com.hazelcast.spi.impl.NodeEngineImpl;
 
 import javax.annotation.Nonnull;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
-import java.util.function.IntSupplier;
 import java.util.function.ToIntFunction;
 
 /**
  * @param <T> type of input items to this processor
  * @param <K> type of keys of the map being written
  * @param <V> type of values of the map being written
- * @param <BV> type of values in temporary buffers
  */
-abstract class AbstractUpdateMapP<T, K, V, BV> extends AsyncHazelcastWriterP {
+abstract class AbstractUpdateMapP<T, K, V> extends AsyncHazelcastWriterP {
 
     private static final int PENDING_ITEM_COUNT_LIMIT = 1024;
+
+    protected final FunctionEx<? super T, ? extends K> keyFn;
 
     protected final String mapName;
 
     protected IMap<K, V> map;
-    protected PartitionContext partitionContext;
+    protected SerializationContext<K> serializationContext;
 
-    protected Map<K, BV>[] partitionBuffers;
+    protected Map<Data, Object>[] partitionBuffers;
     protected int[] pendingInPartition;
 
     protected int pendingItemCount;
@@ -62,18 +64,20 @@ abstract class AbstractUpdateMapP<T, K, V, BV> extends AsyncHazelcastWriterP {
     AbstractUpdateMapP(
             @Nonnull HazelcastInstance instance,
             int maxParallelAsyncOps,
-            @Nonnull String mapName
+            @Nonnull String mapName,
+            @Nonnull FunctionEx<? super T, ? extends K> keyFn
     ) {
         super(instance, maxParallelAsyncOps);
         this.mapName = Objects.requireNonNull(mapName, "mapName");
+        this.keyFn = keyFn;
     }
 
     @Override
     public void init(@Nonnull Outbox outbox, @Nonnull Context context) {
         map = instance().getMap(mapName);
-        partitionContext = new PartitionContext(instance(), map);
+        serializationContext = new SerializationContext<>(instance(), map);
 
-        int partitionCount = partitionContext.getPartitionCount();
+        int partitionCount = serializationContext.partitionCount();
         partitionBuffers = new Map[partitionCount];
         pendingInPartition = new int[partitionCount];
         for (int i = 0; i < partitionCount; i++) {
@@ -111,8 +115,10 @@ abstract class AbstractUpdateMapP<T, K, V, BV> extends AsyncHazelcastWriterP {
                 return false;
             }
 
-            Map<K, BV> buffer = partitionBuffers[currentPartitionId];
-            EntryProcessor<K, V, Object> entryProcessor = entryProcessor(buffer);
+            Map<Data, Object> buffer = partitionBuffers[currentPartitionId];
+            EntryProcessor<K, V, Void> entryProcessor = entryProcessor(buffer);
+            // submit Set<Data> here
+            IMap map = this.map;
             setCallback(map.submitToKeys(buffer.keySet(), entryProcessor));
             pendingItemCount -= pendingInPartition[currentPartitionId];
             pendingInPartition[currentPartitionId] = 0;
@@ -125,7 +131,7 @@ abstract class AbstractUpdateMapP<T, K, V, BV> extends AsyncHazelcastWriterP {
         return true;
     }
 
-    protected abstract EntryProcessor<K, V, Object> entryProcessor(Map<K, BV> buffer);
+    protected abstract EntryProcessor<K, V, Void> entryProcessor(Map<Data, Object> buffer);
 
     /**
      * Returns {@code v+1} or 0, if {@code v+1 == limit}.
@@ -138,41 +144,41 @@ abstract class AbstractUpdateMapP<T, K, V, BV> extends AsyncHazelcastWriterP {
         return v;
     }
 
-    // TODO: This should be made typesafe, with generics
-    static class PartitionContext {
+    static class SerializationContext<K> {
 
-        private final IntSupplier partitionCount;
-        private final ToIntFunction<Object> partitionIdSupplier;
+        private final int partitionCount;
+
+        private final ToIntFunction<Data> partitionIdFn;
         private final SerializationService serializationService;
-        private final PartitioningStrategy partitioningStrategy;
+        private final PartitioningStrategy<K> partitioningStrategy;
 
-        PartitionContext(HazelcastInstance instance, IMap map) {
+        SerializationContext(HazelcastInstance instance, IMap<K, ?> map) {
             if (ImdgUtil.isMemberInstance(instance)) {
-                HazelcastInstanceImpl castInstance = (HazelcastInstanceImpl) instance;
-                IPartitionService memberPartitionService = castInstance.node.nodeEngine.getPartitionService();
-                partitionCount = memberPartitionService::getPartitionCount;
-                partitionIdSupplier = memberPartitionService::getPartitionId;
-                serializationService = castInstance.getSerializationService();
-                partitioningStrategy = ((MapProxyImpl) map).getPartitionStrategy();
+                NodeEngineImpl nodeEngine = ((HazelcastInstanceImpl) instance).node.nodeEngine;
+                IPartitionService partitionService = nodeEngine.getPartitionService();
+                partitionCount = partitionService.getPartitionCount();
+                partitionIdFn = partitionService::getPartitionId;
+                serializationService = nodeEngine.getSerializationService();
+                partitioningStrategy = ((MapProxyImpl<K, ?>) map).getPartitionStrategy();
             } else {
                 HazelcastClientProxy clientProxy = (HazelcastClientProxy) instance;
                 ClientPartitionService clientPartitionService = clientProxy.client.getClientPartitionService();
-                partitionCount = clientPartitionService::getPartitionCount;
-                partitionIdSupplier = clientPartitionService::getPartitionId;
+                partitionCount = clientPartitionService.getPartitionCount();
+                partitionIdFn = clientPartitionService::getPartitionId;
                 serializationService = clientProxy.getSerializationService();
                 partitioningStrategy = null;
             }
         }
 
-        int getPartitionCount() {
-            return partitionCount.getAsInt();
+        int partitionCount() {
+            return partitionCount;
         }
 
-        int getPartitionId(Object key) {
-            return partitionIdSupplier.applyAsInt(key);
+        int partitionId(Data data) {
+            return partitionIdFn.applyAsInt(data);
         }
 
-        Data serializeKey(Object key) {
+        Data toKeyData(K key) {
             if (partitioningStrategy != null) {
                 // We pre-serialize the key and value to avoid double serialization when partitionId
                 // is calculated and when the value for backup operation is re-serialized
@@ -186,8 +192,8 @@ abstract class AbstractUpdateMapP<T, K, V, BV> extends AsyncHazelcastWriterP {
             }
         }
 
-        Data serializeItem(Object data) {
-            return serializationService.toData(data);
+        Data toData(Object value) {
+            return serializationService.toData(value);
         }
     }
 

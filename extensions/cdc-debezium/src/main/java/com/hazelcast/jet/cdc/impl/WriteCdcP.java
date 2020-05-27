@@ -12,6 +12,7 @@ import javax.annotation.Nonnull;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+//TODO: merge with UpdateMapWithMaterializedValuesP
 public class WriteCdcP<K, V> extends UpdateMapWithMaterializedValuesP<ChangeRecord, K, V> {
 
     private static final int INITIAL_CAPACITY = 4 * 1024;
