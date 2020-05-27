@@ -81,7 +81,7 @@ public final class JsonUtil {
      * Converts a JSON string to a object of given type.
      */
     @Nullable
-    public static <T> T beanFrom(@Nonnull Class<T> type, @Nonnull String jsonString) throws IOException {
+    public static <T> T beanFrom(@Nonnull String jsonString, @Nonnull Class<T> type) throws IOException {
         return JSON_JR.beanFrom(type, jsonString);
     }
 
@@ -97,7 +97,7 @@ public final class JsonUtil {
      * Converts a JSON string to a {@link List} of given type.
      */
     @Nullable
-    public static <T> List<T> listFrom(@Nonnull Class<T> type, @Nonnull String jsonString) throws IOException {
+    public static <T> List<T> listFrom(@Nonnull String jsonString, @Nonnull Class<T> type) throws IOException {
         return JSON_JR.listOfFrom(type, jsonString);
     }
 
@@ -132,7 +132,7 @@ public final class JsonUtil {
      * {@code type}.
      */
     @Nonnull
-    public static <T> Iterator<T> beanSequenceFrom(@Nonnull Class<T> type, @Nonnull Reader reader)
+    public static <T> Iterator<T> beanSequenceFrom(@Nonnull Reader reader, @Nonnull Class<T> type)
             throws IOException {
         return JSON_JR.beanSequenceFrom(type, reader);
     }
@@ -162,7 +162,7 @@ public final class JsonUtil {
     @Nonnull
     public static <T> Stream<T> beanSequenceFrom(Path path, @Nonnull Class<T> type) throws IOException {
         InputStreamReader reader = new InputStreamReader(new FileInputStream(path.toFile()), UTF_8);
-        Spliterator<T> spliterator = Spliterators.spliteratorUnknownSize(JsonUtil.beanSequenceFrom(type, reader),
+        Spliterator<T> spliterator = Spliterators.spliteratorUnknownSize(JsonUtil.beanSequenceFrom(reader, type),
                 Spliterator.ORDERED | Spliterator.NONNULL);
         return StreamSupport.stream(spliterator, false);
     }

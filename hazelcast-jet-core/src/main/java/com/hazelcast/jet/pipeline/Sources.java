@@ -1072,7 +1072,7 @@ public final class Sources {
      *      .charset(UTF_8)
      *      .glob(GLOB_WILDCARD)
      *      .sharedFileSystem(false)
-     *      .buildWatcher((fileName, line) -> JsonUtil.beanFrom(type, line))
+     *      .buildWatcher((fileName, line) -> JsonUtil.beanFrom(line, type))
      * }</pre>
      *
      * <h3>Appending lines using an text editor</h3>
@@ -1090,7 +1090,7 @@ public final class Sources {
     public static <T> StreamSource<T> jsonWatcher(@Nonnull String watchedDirectory, @Nonnull Class<T> type) {
         return filesBuilder(watchedDirectory)
                 .glob("*.json")
-                .buildWatcher((fileName, line) -> JsonUtil.beanFrom(type, line));
+                .buildWatcher((fileName, line) -> JsonUtil.beanFrom(line, type));
     }
 
     /**
