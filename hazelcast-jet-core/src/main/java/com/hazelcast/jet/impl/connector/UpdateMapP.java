@@ -74,9 +74,9 @@ public final class UpdateMapP<T, K, V> extends AbstractUpdateMapP<T, Data, V, Ob
     @Override
     protected void addToBuffer(T item) {
         K key = keyFn.apply(item);
-        Data keyData = env.serializeKey(key);
-        int partitionId = env.getPartitionId(keyData);
-        Data itemData = env.serializeItem(item);
+        Data keyData = partitionContext.serializeKey(key);
+        int partitionId = partitionContext.getPartitionId(keyData);
+        Data itemData = partitionContext.serializeItem(item);
         partitionBuffers[partitionId].merge(keyData, itemData, remappingFunction);
         pendingInPartition[partitionId]++;
     }

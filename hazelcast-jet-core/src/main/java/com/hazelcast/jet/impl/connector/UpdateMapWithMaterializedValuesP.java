@@ -59,7 +59,7 @@ public class UpdateMapWithMaterializedValuesP<T, K, V> extends AbstractUpdateMap
             return;
         }
 
-        int partitionId = env.getPartitionId(key);
+        int partitionId = partitionContext.getPartitionId(key);
 
         Map<K, V> buffer = partitionBuffers[partitionId];
         if (buffer.containsKey(key)) { //pending items will merge

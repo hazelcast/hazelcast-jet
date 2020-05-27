@@ -17,24 +17,18 @@
 package com.hazelcast.jet.cdc;
 
 import com.hazelcast.client.config.ClientConfig;
-import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.function.FunctionEx;
-import com.hazelcast.jet.cdc.impl.ChangeRecordImpl;
-import com.hazelcast.jet.core.Outbox;
+import com.hazelcast.jet.cdc.impl.WriteCdcP;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.impl.connector.AbstractHazelcastConnectorSupplier;
-import com.hazelcast.jet.impl.connector.UpdateMapWithMaterializedValuesP;
 import com.hazelcast.jet.impl.pipeline.SinkImpl;
 import com.hazelcast.jet.pipeline.Sink;
 import com.hazelcast.map.IMap;
-import com.hazelcast.spi.properties.HazelcastProperties;
 import com.hazelcast.spi.properties.HazelcastProperty;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.util.LinkedHashMap;
-import java.util.Map;
 
 import static com.hazelcast.jet.cdc.Operation.DELETE;
 import static com.hazelcast.jet.impl.util.ImdgUtil.asXmlString;
@@ -202,154 +196,13 @@ public final class CdcSinks {
             @Nonnull FunctionEx<? super ChangeRecord, ? extends K> keyFn,
             @Nonnull FunctionEx<? super ChangeRecord, ? extends V> valueFn
     ) {
+        FunctionEx<? super ChangeRecord, ? extends V> toValueFn =
+                record -> DELETE.equals(record.operation()) ? null : valueFn.apply(record);
         ProcessorSupplier supplier = AbstractHazelcastConnectorSupplier.of(asXmlString(clientConfig),
-                instance -> new CdcSinkProcessor<>(instance, map, keyFn, extend(valueFn)));
+                instance -> new WriteCdcP<>(instance, map, keyFn, toValueFn));
+        // TODO - this edge needs to be partitioned and distributed
         ProcessorMetaSupplier metaSupplier = ProcessorMetaSupplier.forceTotalParallelismOne(supplier, name);
         return new SinkImpl<>(name, metaSupplier, true, null);
     }
 
-    @Nonnull
-    private static <V> FunctionEx<? super ChangeRecord, V> extend(
-            @Nonnull FunctionEx<? super ChangeRecord, ? extends V> valueFn) {
-        return (record) -> {
-            if (DELETE.equals(record.operation())) {
-                return null;
-            }
-            return valueFn.apply(record);
-        };
-    }
-
-    private static class CdcSinkProcessor<K, V> extends UpdateMapWithMaterializedValuesP<ChangeRecord, K, V> {
-
-        private Sequences<K> sequences;
-
-        CdcSinkProcessor(
-                @Nonnull HazelcastInstance instance,
-                @Nonnull String map,
-                @Nonnull FunctionEx<? super ChangeRecord, ? extends K> keyFn,
-                @Nonnull FunctionEx<? super ChangeRecord, ? extends V> valueFn
-        ) {
-            super(instance, map, keyFn, valueFn);
-        }
-
-        @Override
-        public void init(@Nonnull Outbox outbox, @Nonnull Context context) {
-            super.init(outbox, context);
-
-            HazelcastProperties properties = new HazelcastProperties(context.jetInstance().getConfig().getProperties());
-            long expirationMs = properties.getMillis(SEQUENCE_CACHE_EXPIRATION_SECONDS);
-            this.sequences = new Sequences<>(expirationMs);
-        }
-
-        @Override
-        protected boolean shouldBeDropped(K key, ChangeRecord item) {
-            ChangeRecordImpl recordImpl = (ChangeRecordImpl) item;
-            long sequencePartition = recordImpl.getSequencePartition();
-            long sequenceValue = recordImpl.getSequenceValue();
-
-            return !sequences.update(key, sequencePartition, sequenceValue);
-        }
-
-    }
-
-    /**
-     * Tracks the last seen sequence for a set of keys.
-     * <p>
-     * Storing the sequences happens in a LRU cache style, keys that
-     * haven't been updated nor read since a certain time (see
-     * {@code expirationMs} parameter) will be evicted. This way
-     * memory consumption is limited and reordering detection can still
-     * be done, since events that have the potential to get their order
-     * broken are spaced close to each other in time.
-     */
-    private static final class Sequences<K> {
-
-        private static final int INITIAL_CAPACITY = 4 * 1024;
-        private static final float LOAD_FACTOR = 0.75f;
-
-        private final LinkedHashMap<K, Sequence> sequences;
-
-        /**
-         * @param expirationMs number of milliseconds for which a sequence
-         *                     observed for a certain key is guaranteed
-         *                     to be tracked; might be evicted afterwards
-         */
-        Sequences(long expirationMs) {
-            sequences = new LinkedHashMap<K, Sequence>(INITIAL_CAPACITY, LOAD_FACTOR, true) {
-                @Override
-                protected boolean removeEldestEntry(Map.Entry<K, Sequence> eldest) {
-                    return eldest.getValue().isOlderThan(expirationMs);
-                }
-            };
-        }
-
-        /**
-         * @param key       key of an event that has just been observed
-         * @param partition partition of the source event sequence number
-         * @param sequence  numeric value of the source event sequence number
-         * @return true if the newly observed sequence number if more
-         * recent than what we have observed before (if any)
-         */
-        boolean update(K key, long partition, long sequence) {
-            Sequence prevSequence = sequences.get(key);
-            if (prevSequence == null) { //first observed sequence for key
-                sequences.put(key, new Sequence(partition, sequence));
-                return true;
-            }
-            return prevSequence.update(partition, sequence);
-        }
-    }
-
-    /**
-     * Tracks a CDC event's sequence number and the moment in time when
-     * it was seen.
-     * <p>
-     * The timestamp is simply the system time taken when a sink
-     * instance sees an event.
-     * <p>
-     * The sequence numbers originate from Debezium event headers and
-     * consist of two parts.
-     * <p>
-     * The <i>sequence</i> part is exactly what the name implies: a
-     * numeric value which we can base ordering on.
-     * <p>
-     * The <i>partition</i> part is a kind of context for the numeric
-     * sequence, the "source" of it if you will. It is necessary for
-     * avoiding the comparison of numeric sequences which come from
-     * different sources.
-     */
-    private static class Sequence {
-
-        private long timestamp;
-        private long partition;
-        private long sequence;
-
-        Sequence(long partition, long sequence) {
-            this.timestamp = System.currentTimeMillis();
-            this.partition = partition;
-            this.sequence = sequence;
-        }
-
-        boolean isOlderThan(long ageLimitMs) {
-            long age = System.currentTimeMillis() - timestamp;
-            return age > ageLimitMs;
-        }
-
-        boolean update(long partition, long sequence) {
-            timestamp = System.currentTimeMillis();
-
-            if (this.partition != partition) { //sequence partition changed for key
-                this.partition = partition;
-                this.sequence = sequence;
-                return true;
-            }
-
-            if (this.sequence < sequence) { //sequence is newer than previous for key
-                this.sequence = sequence;
-                return true;
-            }
-
-            return false;
-        }
-    }
 }

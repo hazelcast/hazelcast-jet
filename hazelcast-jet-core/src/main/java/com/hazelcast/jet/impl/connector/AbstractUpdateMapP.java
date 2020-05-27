@@ -51,7 +51,7 @@ abstract class AbstractUpdateMapP<T, K, V, BV> extends AsyncHazelcastWriterP {
     protected final String mapName;
 
     protected IMap<K, V> map;
-    protected Environment env;
+    protected PartitionContext partitionContext;
 
     protected Map<K, BV>[] partitionBuffers;
     protected int[] pendingInPartition;
@@ -71,9 +71,9 @@ abstract class AbstractUpdateMapP<T, K, V, BV> extends AsyncHazelcastWriterP {
     @Override
     public void init(@Nonnull Outbox outbox, @Nonnull Context context) {
         map = instance().getMap(mapName);
-        env = new Environment(instance(), map);
+        partitionContext = new PartitionContext(instance(), map);
 
-        int partitionCount = env.getPartitionCount();
+        int partitionCount = partitionContext.getPartitionCount();
         partitionBuffers = new Map[partitionCount];
         pendingInPartition = new int[partitionCount];
         for (int i = 0; i < partitionCount; i++) {
@@ -138,14 +138,15 @@ abstract class AbstractUpdateMapP<T, K, V, BV> extends AsyncHazelcastWriterP {
         return v;
     }
 
-    static class Environment {
+    // TODO: This should be made typesafe, with generics
+    static class PartitionContext {
 
         private final IntSupplier partitionCount;
         private final ToIntFunction<Object> partitionIdSupplier;
         private final SerializationService serializationService;
         private final PartitioningStrategy partitioningStrategy;
 
-        Environment(HazelcastInstance instance, IMap map) {
+        PartitionContext(HazelcastInstance instance, IMap map) {
             if (ImdgUtil.isMemberInstance(instance)) {
                 HazelcastInstanceImpl castInstance = (HazelcastInstanceImpl) instance;
                 IPartitionService memberPartitionService = castInstance.node.nodeEngine.getPartitionService();
