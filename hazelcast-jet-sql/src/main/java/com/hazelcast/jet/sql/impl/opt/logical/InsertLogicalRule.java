@@ -21,6 +21,7 @@ import org.apache.calcite.plan.Convention;
 import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.convert.ConverterRule;
+import org.apache.calcite.rel.core.TableModify;
 import org.apache.calcite.rel.logical.LogicalTableModify;
 
 import static com.hazelcast.jet.sql.impl.opt.JetConventions.LOGICAL;
@@ -31,7 +32,7 @@ public final class InsertLogicalRule extends ConverterRule {
 
     private InsertLogicalRule() {
         super(
-                LogicalTableModify.class, Convention.NONE, LOGICAL,
+                LogicalTableModify.class, TableModify::isInsert, Convention.NONE, LOGICAL,
                 InsertLogicalRule.class.getSimpleName()
         );
     }
@@ -39,10 +40,6 @@ public final class InsertLogicalRule extends ConverterRule {
     @Override
     public RelNode convert(RelNode rel) {
         LogicalTableModify tableModify = (LogicalTableModify) rel;
-        if (!tableModify.isInsert()) {
-            // we only support INSERT statements
-            return null;
-        }
 
         return new InsertLogicalRel(
                 tableModify.getCluster(),
