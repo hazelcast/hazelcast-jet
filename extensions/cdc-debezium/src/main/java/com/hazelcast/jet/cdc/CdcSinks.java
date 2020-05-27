@@ -246,47 +246,27 @@ public final class CdcSinks {
             long sequencePartition = recordImpl.getSequencePartition();
             long sequenceValue = recordImpl.getSequenceValue();
 
-            boolean isNew = sequences.update(key, sequencePartition, sequenceValue);
-            return !isNew;
+            return !sequences.update(key, sequencePartition, sequenceValue);
         }
 
     }
 
     /**
-     * Tracks the last seen sequence number for a set of keys. The
-     * sequence numbers originate from Debezium event headers and consist
-     * of two parts.
+     * Tracks the last seen sequence for a set of keys.
      * <p>
-     * The <i>sequence</i> part is exactly what the name implies: a numeric
-     * sequence which we base our ordering on. Implementations needs to ensure
-     * that {@code ChangeRecord}s produced by a source contain a monotonic
-     * increasing sequence number, as long as the sequence number partition
-     * doesn't change.
-     * <p>
-     * The <i>partition</i> part is a kind of context for the numeric
-     * sequence, the "source" of it if you will. It is necessary for avoiding
-     * the comparison of numeric sequences which come from different sources.
-     * For example if the numeric sequence is in fact based on transaction
-     * IDs, then it makes sense to compare them only if they are produced by
-     * the same database instance. Or if the numeric ID is an offset in a
-     * write-ahead log, then it makes sense to compare them only if they are
-     * offsets from the same log file. Implementations need to make sure that
-     * the partition is the same if and only if the source of the numeric
-     * sequence is the same.
-     * <p>
-     * Tracking of the sequence numbers for various keys happens in a
-     * LRU cache style, keys that haven't been updated nor read since a
-     * certain time (see {@code expirationMs} parameter) will be evicted,
-     * to keep the memory consumption limited. This is ok, because
-     * reordering of events happens only in case of events spaced very
-     * close to each other in time.
+     * Storing the sequences happens in a LRU cache style, keys that
+     * haven't been updated nor read since a certain time (see
+     * {@code expirationMs} parameter) will be evicted. This way
+     * memory consumption is limited and reordering detection can still
+     * be done, since events that have the potential to get their order
+     * broken are spaced close to each other in time.
      */
     private static final class Sequences<K> {
 
         private static final int INITIAL_CAPACITY = 4 * 1024;
         private static final float LOAD_FACTOR = 0.75f;
 
-        private final LinkedHashMap<K, long[]> sequences;
+        private final LinkedHashMap<K, Sequence> sequences;
 
         /**
          * @param expirationMs number of milliseconds for which a sequence
@@ -294,11 +274,10 @@ public final class CdcSinks {
          *                     to be tracked; might be evicted afterwards
          */
         Sequences(long expirationMs) {
-            sequences = new LinkedHashMap<K, long[]>(INITIAL_CAPACITY, LOAD_FACTOR, true) {
+            sequences = new LinkedHashMap<K, Sequence>(INITIAL_CAPACITY, LOAD_FACTOR, true) {
                 @Override
-                protected boolean removeEldestEntry(Map.Entry<K, long[]> eldest) {
-                    long age = System.currentTimeMillis() - eldest.getValue()[2];
-                    return age > expirationMs;
+                protected boolean removeEldestEntry(Map.Entry<K, Sequence> eldest) {
+                    return eldest.getValue().isOlderThan(expirationMs);
                 }
             };
         }
@@ -311,25 +290,65 @@ public final class CdcSinks {
          * recent than what we have observed before (if any)
          */
         boolean update(K key, long partition, long sequence) {
-            long[] prevSequence = sequences.get(key);
+            Sequence prevSequence = sequences.get(key);
             if (prevSequence == null) { //first observed sequence for key
-                sequences.put(key, new long[]{partition, sequence, System.currentTimeMillis()});
+                sequences.put(key, new Sequence(partition, sequence));
                 return true;
-            } else {
-                prevSequence[2] = System.currentTimeMillis();
-                if (prevSequence[0] != partition) { //sequence partition changed for key
-                    prevSequence[0] = partition;
-                    prevSequence[1] = sequence;
-                    return true;
-                } else {
-                    if (prevSequence[1] < sequence) { //sequence is newer than previous for key
-                        prevSequence[1] = sequence;
-                        return true;
-                    } else {
-                        return false;
-                    }
-                }
             }
+            return prevSequence.update(partition, sequence);
+        }
+    }
+
+    /**
+     * Tracks a CDC event's sequence number and the moment in time when
+     * it was seen.
+     * <p>
+     * The timestamp is simply the system time taken when a sink
+     * instance sees an event.
+     * <p>
+     * The sequence numbers originate from Debezium event headers and
+     * consist of two parts.
+     * <p>
+     * The <i>sequence</i> part is exactly what the name implies: a
+     * numeric value which we can base ordering on.
+     * <p>
+     * The <i>partition</i> part is a kind of context for the numeric
+     * sequence, the "source" of it if you will. It is necessary for
+     * avoiding the comparison of numeric sequences which come from
+     * different sources.
+     */
+    private static class Sequence {
+
+        private long timestamp;
+        private long partition;
+        private long sequence;
+
+        Sequence(long partition, long sequence) {
+            this.timestamp = System.currentTimeMillis();
+            this.partition = partition;
+            this.sequence = sequence;
+        }
+
+        boolean isOlderThan(long ageLimitMs) {
+            long age = System.currentTimeMillis() - timestamp;
+            return age > ageLimitMs;
+        }
+
+        boolean update(long partition, long sequence) {
+            timestamp = System.currentTimeMillis();
+
+            if (this.partition != partition) { //sequence partition changed for key
+                this.partition = partition;
+                this.sequence = sequence;
+                return true;
+            }
+
+            if (this.sequence < sequence) { //sequence is newer than previous for key
+                this.sequence = sequence;
+                return true;
+            }
+
+            return false;
         }
     }
 }
