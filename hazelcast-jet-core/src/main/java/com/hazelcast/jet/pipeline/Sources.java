@@ -35,6 +35,7 @@ import com.hazelcast.jet.core.processor.SourceProcessors;
 import com.hazelcast.jet.function.ToResultSetFunction;
 import com.hazelcast.jet.impl.pipeline.transform.BatchSourceTransform;
 import com.hazelcast.jet.impl.pipeline.transform.StreamSourceTransform;
+import com.hazelcast.jet.json.JsonUtil;
 import com.hazelcast.map.EventJournalMapEvent;
 import com.hazelcast.map.IMap;
 import com.hazelcast.projection.Projection;
@@ -49,6 +50,8 @@ import javax.jms.Message;
 import java.nio.charset.Charset;
 import java.sql.Connection;
 import java.sql.ResultSet;
+import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.function.Function;
 
@@ -969,8 +972,7 @@ public final class Sources {
      *      .charset(UTF_8)
      *      .glob(GLOB_WILDCARD)
      *      .sharedFileSystem(false)
-     *      .mapToOutputFn((fileName, line) -> line)
-     *      .build()
+     *      .build((fileName, line) -> line)
      * }</pre>
      * <p>
      * If files are appended to while being read, the addition might or might
@@ -985,6 +987,54 @@ public final class Sources {
     }
 
     /**
+     * A source to read all files with a `.json` extension in a directory in a
+     * batch way. The source expects the content of the files as
+     * <a href="https://en.wikipedia.org/wiki/JSON_streaming">streaming JSON</a>
+     * content, where each JSON string is separated by a new-line. The JSON
+     * string itself can span on multiple lines. The source converts each JSON
+     * string to an object of given type.
+     * <p>
+     * This method is a shortcut for: <pre>{@code
+     *   filesBuilder(directory)
+     *      .charset(UTF_8)
+     *      .glob(GLOB_WILDCARD)
+     *      .sharedFileSystem(false)
+     *      .build(path -> JsonUtil.beanSequenceFrom(path, type))
+     * }</pre>
+     * <p>
+     * If files are appended to while being read, the addition might or might
+     * not be emitted or part of a line can be emitted. If files are modified
+     * in more complex ways, the behavior is undefined.
+     * <p>
+     *
+     * See {@link #filesBuilder(String)}, {@link #files(String)}.
+     *
+     * @since 4.2
+     */
+    @Nonnull
+    public static <T> BatchSource<T> json(@Nonnull String directory, @Nonnull Class<T> type) {
+        return filesBuilder(directory)
+                .glob("*.json")
+                .build(path -> JsonUtil.beanSequenceFrom(path, type));
+    }
+
+    /**
+     * Convenience for {@link #json(String, Class)} which converts each
+     * JSON string to a {@link Map}. It will throw {@link ClassCastException}
+     * if JSON string is just primitive ({@link String}, {@link Number},
+     * {@link Boolean}) or JSON array ({@link List}).
+     *
+     * @since 4.2
+     */
+    @Nonnull
+    public static BatchSource<Map<String, Object>> json(@Nonnull String directory) {
+        return filesBuilder(directory)
+                .glob("*.json")
+                .build(path -> JsonUtil.mapSequenceFrom(path));
+    }
+
+
+    /**
      * A source to stream lines added to files in a directory. This is a
      * streaming source, it will watch directory and emit lines as they are
      * appended to files in that directory.
@@ -994,8 +1044,7 @@ public final class Sources {
      *      .charset(UTF_8)
      *      .glob(GLOB_WILDCARD)
      *      .sharedFileSystem(false)
-     *      .mapToOutputFn((fileName, line) -> line)
-     *      .buildWatcher()
+     *      .buildWatcher((fileName, line) -> line)
      * }</pre>
      *
      * <h3>Appending lines using an text editor</h3>
@@ -1010,6 +1059,51 @@ public final class Sources {
     @Nonnull
     public static StreamSource<String> fileWatcher(@Nonnull String watchedDirectory) {
         return filesBuilder(watchedDirectory).buildWatcher();
+    }
+
+    /**
+     * A source to stream lines added to files with a `.json` extension in a
+     * directory. This is a streaming source, it will watch directory and emit
+     * objects of given {@code type} by converting each line as they are
+     * appended to files in that directory.
+     * <p>
+     * This method is a shortcut for: <pre>{@code
+     *   filesBuilder(directory)
+     *      .charset(UTF_8)
+     *      .glob(GLOB_WILDCARD)
+     *      .sharedFileSystem(false)
+     *      .buildWatcher((fileName, line) -> JsonUtil.beanFrom(line, type))
+     * }</pre>
+     *
+     * <h3>Appending lines using an text editor</h3>
+     * If you're testing this source, you might think of using a text editor to
+     * append the lines. However, it might not work as expected because some
+     * editors write to a temp file and then rename it or append extra newline
+     * character at the end which gets overwritten if more text is added in the
+     * editor. The best way to append is to use {@code echo text >> yourFile}.
+     *
+     * See {@link #filesBuilder(String)}, {@link #fileWatcher(String)}.
+     *
+     * @since 4.2
+     */
+    @Nonnull
+    public static <T> StreamSource<T> jsonWatcher(@Nonnull String watchedDirectory, @Nonnull Class<T> type) {
+        return filesBuilder(watchedDirectory)
+                .glob("*.json")
+                .buildWatcher((fileName, line) -> JsonUtil.beanFrom(line, type));
+    }
+
+    /**
+     * Convenience for {@link #jsonWatcher(String, Class)} which converts each
+     * line appended to the {@link Map} representation of the JSON string.
+     *
+     * @since 4.2
+     */
+    @Nonnull
+    public static StreamSource<Map<String, Object>> jsonWatcher(@Nonnull String watchedDirectory) {
+        return filesBuilder(watchedDirectory)
+                .glob("*.json")
+                .buildWatcher((fileName, line) -> JsonUtil.mapFrom(line));
     }
 
     /**

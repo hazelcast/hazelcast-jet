@@ -39,6 +39,7 @@
       "how-tos/custom-batch-source",
       "how-tos/custom-stream-source",
       "how-tos/custom-sink",
+      "how-tos/operator",
       "how-tos/xa",
       "how-tos/grpc"
     ],
@@ -50,7 +51,8 @@
       "operations/job-management",
       "operations/kubernetes",
       "operations/monitoring",
-      "operations/version-compatibility"
+      "operations/version-compatibility",
+      "operations/cdc-deployment"
     ],
     "Architecture": [
       "architecture/distributed-computing",
@@ -63,11 +65,13 @@
     ],
     "Design Documents": [
       "design-docs/index",
+      "design-docs/011-json-convenience",
       "design-docs/010-operator-framework",
       "design-docs/009-pulsar-connector",
       "design-docs/008-stage-rebalance",
       "design-docs/007-grpc-support",
       "design-docs/006-declarative-serialization",
+      "design-docs/005-cdc-sources",
       "design-docs/004-spring-boot-starter",
       "design-docs/002-job-level-serialization",
       "design-docs/001-code-deployment-improvements"
@@ -79,6 +83,7 @@
       "enterprise/installation",
       "enterprise/management-center",
       "enterprise/security",
+      "enterprise/operator-openshift",
       "enterprise/job-update",
       "enterprise/lossless-restart",
       "enterprise/off-heap",

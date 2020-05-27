@@ -3,39 +3,18 @@ title: Change Data Capture from MySQL
 description: How to monitor Change Data Capture data from a MySQL database in Jet.
 ---
 
-> NOTE: This feature is currently in incubating state, i.e. API,
-> configuration etc. most likely will change in future revisions.
-
-**Change data capture** refers to the process of **observing changes
-made to a database** and extracting them in a form usable by other
-systems, for the purposes of replication, analysis and many many more.
-
-Change Data Capture is especially important to Jet, because it allows
-for the **integration with legacy systems**. Database changes form a
-stream of events which can be efficiently processed by Jet.
-
-Implementation of CDC in Jet is based on
-[Debezium](https://debezium.io/), which is an open source distributed
-platform for change data capture. It provides Kafka Connect compatible
-CDC connectors for a
-[variety of popular databases](https://debezium.io/documentation/reference/1.0/connectors/index.html)
-.
-
-The [Kafka Connect API](http://kafka.apache.org/documentation.html#connect)
-is an interface developed for Kafka, that simplifies and automates the
-integration of a new data source (or sink) with your Kafka cluster.
-Since version 4.0 Jet includes a generic Kafka Connect Source,
-thus making the integration of Debezium's connectors easy.
+As we've seen in the [CDC section of our Sources and Sinks
+ guide](../api/sources-sinks.md#cdc) of our, change data capture is
+ especially important to Jet, because it allows for the **integration
+ with legacy systems**.
 
 Let's see an example, how to process change events from a MySQL database
 in Jet.
 
 ## 1. Install Docker
 
-This tutorial uses [Docker](https://www.docker.com/) and a Debezium
-[example Docker image](https://hub.docker.com/r/debezium/example-mysql)
-in order to simplify the setup of a MySQL database you can freely
-experiment on.
+This tutorial uses [Docker](https://www.docker.com/) to simplify the
+setup of a MySQL database, which you can freely experiment on.
 
 1. Follow Docker's [Get Started](https://www.docker.com/get-started)
    instructions and install it on your system.
@@ -54,15 +33,15 @@ inventory database:
 ```bash
 docker run -it --rm --name mysql -p 3306:3306 \
     -e MYSQL_ROOT_PASSWORD=debezium -e MYSQL_USER=mysqluser \
-    -e MYSQL_PASSWORD=mysqlpw debezium/example-mysql:1.0
+    -e MYSQL_PASSWORD=mysqlpw debezium/example-mysql:1.2
 ```
 
-This runs a new container using version `1.0` of the
-`debezium/example-mysql` image, which is based on the
-[mysql:5.7](https://hub.docker.com/_/mysql) image, defines and populates
-a sample "inventory" database, and creates a `debezium` user with
-password `dbz` that has the minimum privileges required by Debezium’s
-MySQL connector.
+This runs a new container using version `1.2` of the
+[debezium/example-mysql](https://hub.docker.com/r/debezium/example-mysql)
+image (based on [mysql:5.7](https://hub.docker.com/_/mysql)). It defines
+and populates a sample "inventory" database and creates a `debezium`
+user with password `dbz` that has the minimum privileges required by
+Debezium’s MySQL connector.
 
 The command assigns the name `mysql` to the container so that it can be
 easily referenced later. The `-it` flag makes the container interactive,
@@ -168,15 +147,21 @@ mysql> SELECT * FROM customers;
 
 ## 4. Start Hazelcast Jet
 
-1. [Download](https://github.com/hazelcast/hazelcast-jet/releases/download/v{jet-version}/hazelcast-jet-{jet-version}.tar.gz)
-  Hazelcast Jet
-
-2. Unzip it:
+1. Download Hazelcast Jet
 
 ```bash
-cd <where_you_downloaded_it>
-tar zxvf hazelcast-jet-{jet-version}.tar.gz
-cd hazelcast-jet-{jet-version}
+wget https://github.com/hazelcast/hazelcast-jet/releases/download/v{jet-version}/hazelcast-jet-{jet-version}.tar.gz
+tar zxvf hazelcast-jet-{jet-version}.tar.gz && cd hazelcast-jet-{jet-version}
+```
+
+If you already have Jet and you skipped the above steps, make sure to
+follow from here on.
+
+2. Activate the MySQL CDC plugin:
+
+```bash
+mv opt/hazelcast-jet-cdc-debezium-{jet-version}.jar lib; \
+mv opt/hazelcast-jet-cdc-mysql-{jet-version}.jar lib
 ```
 
 3. Start Jet:
@@ -215,21 +200,12 @@ repositories.mavenCentral()
 
 dependencies {
     compile 'com.hazelcast.jet:hazelcast-jet:{jet-version}'
-    compile 'com.hazelcast.jet.contrib:debezium:0.1'
-    compile 'io.debezium:debezium-connector-mysql:1.0.0.Final'
+    compile 'com.hazelcast.jet:hazelcast-jet-cdc-debezium:{jet-version}'
+    compile 'com.hazelcast.jet:hazelcast-jet-cdc-mysql:{jet-version}'
+    compile 'com.fasterxml.jackson.core:jackson-annotations:2.11.0'
 }
 
-jar {
-    enabled = false
-    dependsOn(shadowJar { classifier = null })
-    manifest.attributes 'Main-Class': 'org.example.JetJob'
-}
-
-shadowJar {
-    dependencies {
-        exclude(dependency('com.hazelcast.jet:hazelcast-jet:{jet-version}'))
-    }
-}
+jar.manifest.attributes 'Main-Class': 'org.example.JetJob'
 ```
 
 <!--Maven-->
@@ -256,14 +232,19 @@ shadowJar {
            <version>{jet-version}</version>
        </dependency>
        <dependency>
-           <groupId>com.hazelcast.jet.contrib</groupId>
-           <artifactId>debezium</artifactId>
-           <version>0.1</version>
+           <groupId>com.hazelcast.jet</groupId>
+           <artifactId>hazelcast-jet-cdc-debezium</artifactId>
+           <version>{jet-version}</version>
        </dependency>
        <dependency>
-           <groupId>io.debezium</groupId>
-           <artifactId>debezium-connector-mysql</artifactId>
-           <version>1.0.0.Final</version>
+           <groupId>com.hazelcast.jet</groupId>
+           <artifactId>hazelcast-jet-cdc-mysql</artifactId>
+           <version>{jet-version}</version>
+       </dependency>
+       <dependency>
+           <groupId>com.fasterxml.jackson.core</groupId>
+           <artifactId>jackson-annotations</artifactId>
+           <version>2.11.0</version>
        </dependency>
    </dependencies>
 
@@ -279,26 +260,6 @@ shadowJar {
                         </manifest>
                     </archive>
                 </configuration>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-shade-plugin</artifactId>
-                <version>3.2.2</version>
-                <executions>
-                    <execution>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>shade</goal>
-                        </goals>
-                        <configuration>
-                            <artifactSet>
-                                <excludes>
-                                    <exclude>com.hazelcast.jet:hazelcast-jet</exclude>
-                                </excludes>
-                            </artifactSet>
-                        </configuration>
-                    </execution>
-                </executions>
             </plugin>
         </plugins>
     </build>
@@ -325,57 +286,31 @@ package org.example;
 
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.Util;
+import com.hazelcast.jet.cdc.ChangeRecord;
+import com.hazelcast.jet.cdc.MySqlCdcSources;
 import com.hazelcast.jet.config.JobConfig;
-import com.hazelcast.jet.contrib.debezium.DebeziumSources;
 import com.hazelcast.jet.pipeline.Pipeline;
-import com.hazelcast.jet.pipeline.ServiceFactories;
-import com.hazelcast.jet.pipeline.ServiceFactory;
 import com.hazelcast.jet.pipeline.Sinks;
-import io.debezium.config.Configuration;
-import io.debezium.serde.DebeziumSerdes;
-import org.apache.kafka.common.serialization.Serde;
-import org.apache.kafka.connect.data.Values;
-
-import java.util.Collections;
+import com.hazelcast.jet.pipeline.StreamSource;
 
 public class JetJob {
 
     public static void main(String[] args) {
-        Configuration configuration = Configuration
-                .create()
-                .with("name", "mysql-inventory-connector")
-                .with("connector.class", "io.debezium.connector.mysql.MySqlConnector")
-                .with("database.hostname", "127.0.0.1")
-                .with("database.port", 3306)
-                .with("database.user", "debezium")
-                .with("database.password", "dbz")
-                .with("database.server.id", "184054")
-                .with("database.server.name", "dbserver1")
-                .with("database.whitelist", "inventory")
-                .with("table.whitelist", "inventory.customers")
-                .with("include.schema.changes", "false")
-                .with("database.history.hazelcast.list.name", "test")
+        StreamSource<ChangeRecord> source = MySqlCdcSources.mysql("source")
+                .setDatabaseAddress("127.0.0.1")
+                .setDatabasePort(3306)
+                .setDatabaseUser("debezium")
+                .setDatabasePassword("dbz")
+                .setClusterName("dbserver1")
+                .setDatabaseWhitelist("inventory")
+                .setTableWhitelist("inventory.customers")
                 .build();
 
-        ServiceFactory<?, Serde<Customer>> serdeFactory =
-            ServiceFactories.nonSharedService(cntx -> {
-                Serde<Customer> serde = DebeziumSerdes.payloadJson(Customer.class);
-                serde.configure(Collections.singletonMap("from.field", "after"), false);
-                return serde;
-            });
-
         Pipeline pipeline = Pipeline.create();
-        pipeline.readFrom(DebeziumSources.cdc(configuration))
+        pipeline.readFrom(source)
                 .withoutTimestamps()
-                .filter(r -> r.topic().equals("dbserver1.inventory.customers"))
-                .map(record -> Values.convertToString(record.valueSchema(), record.value()))
-                .mapUsingService(
-                        serdeFactory,
-                        (serde, json) -> {
-                            Customer customer = serde.deserializer()
-                                    .deserialize("topic", json.getBytes());
-                            return Util.entry(customer.id, customer);
-                        })
+                .map(record -> record.value().toObject(Customer.class))
+                .map(customer -> Util.entry(customer.id, customer))
                 .peek()
                 .writeTo(Sinks.map("customers"));
 
@@ -386,8 +321,7 @@ public class JetJob {
 }
 ```
 
-The `Customer` class we use for deserializing change events is quite
-simple too:
+The `Customer` class we map change events to is quite simple too:
 
 ```java
 package org.example;
@@ -398,6 +332,8 @@ import java.io.Serializable;
 import java.util.Objects;
 
 public class Customer implements Serializable {
+
+    @JsonProperty("id")
     public int id;
 
     @JsonProperty("first_name")
@@ -406,6 +342,7 @@ public class Customer implements Serializable {
     @JsonProperty("last_name")
     public String lastName;
 
+    @JsonProperty("email")
     public String email;
 
     public Customer() {
@@ -513,7 +450,7 @@ issue is following command:
 <!--Gradle-->
 
 ```bash
-<path_to_jet>/bin/jet submit build/libs/cdc-tutorial-1.0-SNAPSHOT-all.jar
+<path_to_jet>/bin/jet submit build/libs/cdc-tutorial-1.0-SNAPSHOT.jar
 ```
 
 <!--Maven-->
@@ -530,12 +467,11 @@ we inserted):
 
 ```text
 ... Completed snapshot in 00:00:01.519
+... Output to ordinal 0: key:{{"id":1001}}, value:{{"id":1001,"first_name":"Sally","last_name":"Thomas",...
+... Output to ordinal 0: key:{{"id":1002}}, value:{{"id":1002,"first_name":"George","last_name":"Bailey",...
+... Output to ordinal 0: key:{{"id":1003}}, value:{{"id":1003,"first_name":"Edward","last_name":"Walker",...
+... Output to ordinal 0: key:{{"id":1004}}, value:{{"id":1004,"first_name":"Anne","last_name":"Kretchmar",...
 ... Transitioning from the snapshot reader to the binlog reader
-... 1001=Customer {id=1001, firstName=Sally, lastName=Thomas, email=sally.thomas@acme.com}
-... 1002=Customer {id=1002, firstName=George, lastName=Bailey, email=gbailey@foobar.com}
-... 1003=Customer {id=1003, firstName=Edward, lastName=Walker, email=ed@walker.com}
-... 1004=Customer {id=1004, firstName=Anne, lastName=Kretchmar, email=annek@noanswer.org}
-... Connected to MySQL binlog at 127.0.0.1:3306, starting at binlog file 'mysql-bin.000003', pos=876, skipping 0 events plus 0 rows
 ```
 
 ## 9. Track Updates
@@ -564,7 +500,7 @@ Rows matched: 1  Changed: 1  Warnings: 0
 In the log of the Jet member we should immediately see the effect:
 
 ```text
-... 1004=Customer {id=1004, firstName=Anne Marie, lastName=Kretchmar, email=annek@noanswer.org}
+... Output to ordinal 0: key:{{"id":1004}}, value:{{"id":1004,"first_name":"Anne Marie","last_name":"Kretchmar",...
 ```
 
 If we check the cache with `CacheRead` we get:
@@ -585,14 +521,6 @@ Query OK, 1 row affected (0.00 sec)
 Rows matched: 1  Changed: 1  Warnings: 0
 ```
 
-We see it in the Jet log:
-
-```text
-... 1003=Customer {id=1003, firstName=Edward, lastName=Walker, email=edward.walker@walker.com}
-```
-
-`CacheRead` also reflects the latest values:
-
 ```text
 Currently there are following customers in the cache:
     Customer {id=1002, firstName=George, lastName=Bailey, email=gbailey@foobar.com}
@@ -603,7 +531,7 @@ Currently there are following customers in the cache:
 
 ## 10. Clean up
 
-Let's clean-up after ourselves. First we cancel our Jet Job:
+Let's clean-up after ourselves. First we cancel our Jet job:
 
 ```bash
 <path_to_jet>/bin/jet cancel mysql-monitor

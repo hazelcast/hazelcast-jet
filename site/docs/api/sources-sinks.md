@@ -14,7 +14,7 @@ Amazon S3 or Hadoop. Most file sources and sinks are batch oriented, but
 the sinks that support _rolling_ capability can also be used as sinks in
 streaming jobs.
 
-### Local Disk
+### Local Disk
 
 The simplest file source is designed to work with both local and network
 file systems. This source is text-oriented and reads the files line by
@@ -28,7 +28,65 @@ p.readFrom(Sources.files("/home/data/web-logs"))
  .writeTo(Sinks.logger());
 ```
 
-For CSV or JSON files it's possible to use the `filesBuilder` source:
+#### JSON Files
+
+For JSON files, the source expects each line contains a valid JSON
+string and converts it to the given object type or to a `Map` if no
+type is specified:
+
+```java
+Pipeline p = Pipeline.create();
+p.readFrom(Sources.json("/home/data/people", Person.class))
+ .filter(person -> person.location().equals("NYC"))
+ .writeTo(Sinks.logger());
+```
+
+If your JSON files contain JSON strings that span multiple
+lines, you can use `filesBuilder` source:
+
+```java
+Pipeline p = Pipeline.create();
+p.readFrom(Sources.filesBuilder(sourceDir)
+    .build(JsonUtil.asMultilineJson(Person.class)))
+ .filter(person -> person.location().equals("NYC"))
+ .writeTo(Sinks.logger());
+```
+
+Jet uses the lightweight JSON library `jackson-jr` to parse the given
+input or to convert the given objects to JSON string. You can use
+[Jackson Annotations](https://github.com/FasterXML/jackson-annotations/wiki/Jackson-Annotations)
+by adding `jackson-annotations` library to the classpath, for example:
+
+```java
+public class Person {
+
+    private long personId;
+    private String name;
+
+    @JsonGetter("id")
+    public long getPersonId() {
+      return this.personId;
+    }
+
+    @JsonSetter("id")
+    public void setPersonId(long personId) {
+      this.personId = personId;
+    }
+
+    public String getName() {
+       return name;
+    }
+
+    public void setName(String name) {
+      this.name = name;
+    }
+}
+```
+
+#### CSV
+
+For CSV files or for parsing files in other custom formats it's possible
+to use the `filesBuilder` source:
 
 ```java
 Pipeline p = Pipeline.create();
@@ -37,11 +95,14 @@ p.readFrom(Sources.filesBuilder(sourceDir).glob("*.csv").build(path ->
 ).writeTo(Sinks.logger());
 ```
 
+#### Data Locality for Files
+
 For a local file system, the sources expect to see on each node just the
 files that node should read. You can achieve the effect of a distributed
 source if you manually prepare a different set of files on each node.
 For shared file system, the sources can split the work so that each node
-will read a part of the files.
+will read a part of the files by configuring the option
+`FilesBuilder.sharedFileSystem()`.
 
 #### File Sink
 
@@ -57,6 +118,17 @@ p.readFrom(TestSources.itemStream(100))
  .writeTo(Sinks.filesBuilder("out")
  .rollByDate("YYYY-MM-dd.HH")
  .build());
+```
+
+To write JSON files, you can use `Sinks.json` or `Sinks.filesBuilder`
+with `JsonUtil.toJson` as `toStringFn`. Sink converts each item to JSON
+string and writes it as a new line to the file:
+
+```java
+Pipeline p = Pipeline.create();
+p.readFrom(TestSources.itemStream(100))
+ .withoutTimestamps()
+ .writeTo(Sinks.json("out"));
 ```
 
 Each node will write to a unique file with a numerical index. You can
@@ -75,6 +147,15 @@ ways, the behavior is undefined.
 ```java
 Pipeline p = Pipeline.create();
 p.readFrom(Sources.fileWatcher("/home/data"))
+ .withoutTimestamps()
+ .writeTo(Sinks.logger());
+```
+
+You can create streaming file source for JSON files too:
+
+```java
+Pipeline p = Pipeline.create();
+p.readFrom(Sources.jsonWatcher("/home/data", Person.class))
  .withoutTimestamps()
  .writeTo(Sinks.logger());
 ```
@@ -604,7 +685,8 @@ for details.
 
 ### Apache Pulsar
 
->This connector is under incubation.
+>This connector is currently under incubation. For more
+>information and examples, please visit the [GitHub repository](https://github.com/hazelcast/hazelcast-jet-contrib/tree/master/pulsar).
 
 ## In-memory Data Structures
 
@@ -949,6 +1031,74 @@ tests](https://github.com/hazelcast/hazelcast-jet-contrib/tree/master/xa-test)
 to get more information. This only applies to the JDBC sink, the source
 doesn't use XA transactions.
 
+### Change Data Capture (CDC)
+
+Change Data Capture (CDC) refers to the process of observing changes
+made to a database and extracting them in a form usable by other
+systems, for the purposes of replication, analysis and many many more.
+
+Change Data Capture is especially important to Jet, because it allows
+for the _integration with legacy systems_. Database changes form a
+stream of events which can be efficiently processed by Jet.
+
+Implementation of CDC in Jet is based on
+[Debezium](https://debezium.io/). Jet offers a generic Debezium source
+which can handle CDC events from [any database supported by
+Debezium](https://debezium.io/documentation/reference/1.1/connectors/index.html),
+but we're also striving to make CDC sources first class citizens in Jet.
+The one for MySQL is already one (since Jet version 4.2).
+
+Setting up a streaming source of CDC data is just the matter of pointing
+it at the right database via configuration:
+
+```java
+Pipeline pipeline = Pipeline.create();
+pipeline.readFrom(
+    MySqlCdcSources.mysql("customers")
+            .setDatabaseAddress("127.0.0.1")
+            .setDatabasePort(3306)
+            .setDatabaseUser("debezium")
+            .setDatabasePassword("dbz")
+            .setClusterName("dbserver1")
+            .setDatabaseWhitelist("inventory")
+            .setTableWhitelist("inventory.customers")
+            .build())
+    .withNativeTimestamps(0)
+    .writeTo(Sinks.logger());
+```
+
+(For an example of how to actually make use of CDC data see [our
+tutorial](../tutorials/cdc)).
+
+In order to make it work though, the databases need to be properly
+configured too, have features essential for CDC enabled. For details see
+the [CDC Deployment Guide](../operations/cdc-deployment.md).
+
+#### CDC Connectors
+
+As of Jet version 4.2 we have following types of CDC sources:
+
+* [DebeziumCdcSources](/javadoc/{jet-version}/com/hazelcast/jet/cdc/DebeziumCdcSources.html):
+  generic source for all databases supported by Debezium
+* [MySqlCdcSources](/javadoc/{jet-version}/com/hazelcast/jet/cdc/MySqlCdcSources.html):
+  specific, first class Jet CDC source for MySQL databases (also based
+  on Debezium, but benefiting the full range of convenience Jet can
+  additionally provide)
+
+#### CDC Fault Tolerance
+
+CDC sources offer at least-once processing guaranties. The source
+periodically saves the database write ahead log offset for which it had
+dispatched events and in case of a failure/restart it will replay all
+events since the last successfully saved offset.
+
+Unfortunately however there are no guaranties that the last saved offset
+is still in the database changelog. Such logs are always finite and
+depending on the DB configuration can be relatively short, so if the
+CDC source has to replay data for a long period of inactivity, then
+there can be loss. With careful management though we can say that
+at-least once guaranties can practially be provided.
+
 ### MongoDB
 
 >This connector is currently under incubation. For more
@@ -963,11 +1113,6 @@ doesn't use XA transactions.
 
 >This connector is currently under incubation. For more
 >information and examples, please visit the [GitHub repository](https://github.com/hazelcast/hazelcast-jet-contrib/tree/master/elasticsearch).
-
-### Debezium
-
->This connector is currently under incubation. For more
->information and examples, please visit the [GitHub repository](https://github.com/hazelcast/hazelcast-jet-contrib/tree/master/debezium).
 
 ### Redis
 
@@ -1176,13 +1321,19 @@ restarted in face of an intermittent failure.
 |source|module|batch/stream|guarantee|
 |:-----|:---- |:-----------|:--------|
 |`AvroSources.files`|`hazelcast-jet-avro`|batch|N/A|
+|`DebeziumCdcSources.debezium`|`hazelcast-jet-cdc-debezium`|stream|at-least-once|
+|`MySqlCdcSources.mysql`|`hazelcast-jet-cdc-mysql`|stream|at-least-once|
 |`HadoopSources.inputFormat`|`hazelcast-jet-hadoop`|batch|N/A|
 |`KafkaSources.kafka`|`hazelcast-jet-kafka`|stream|exactly-once|
+|`PulsarSources.pulsarConsumer`|`hazelcast-jet-contrib-pulsar`|stream|N/A|
+|`PulsarSources.pulsarReader`|`hazelcast-jet-contrib-pulsar`|stream|exactly-once|
 |`S3Sources.s3`|`hazelcast-jet-s3`|batch|N/A|
 |`Sources.cache`|`hazelcast-jet`|batch|N/A|
 |`Sources.cacheJournal`|`hazelcast-jet`|stream|exactly-once|
 |`Sources.files`|`hazelcast-jet`|batch|N/A|
 |`Sources.fileWatcher`|`hazelcast-jet`|stream|none|
+|`Sources.json`|`hazelcast-jet`|batch|N/A|
+|`Sources.jsonWatcher`|`hazelcast-jet`|stream|none|
 |`Sources.jdbc`|`hazelcast-jet`|batch|N/A|
 |`Sources.jmsQueue`|`hazelcast-jet`|stream|exactly-once|
 |`Sources.list`|`hazelcast-jet`|batch|N/A|
@@ -1207,9 +1358,11 @@ processing even with at-least-once sinks.
 |`AvroSinks.files`|`hazelcast-jet-avro`|no|N/A|
 |`HadoopSinks.outputFormat`|`hazelcast-jet-hadoop`|no|N/A|
 |`KafkaSinks.kafka`|`hazelcast-jet-kafka`|yes|exactly-once|
+|`PulsarSources.pulsarSink`|`hazelcast-jet-contrib-pulsar`|yes|at-least-once|
 |`S3Sinks.s3`|`hazelcast-jet-s3`|no|N/A|
 |`Sinks.cache`|`hazelcast-jet`|yes|at-least-once|
 |`Sinks.files`|`hazelcast-jet`|yes|exactly-once|
+|`Sinks.json`|`hazelcast-jet`|yes|exactly-once|
 |`Sinks.jdbc`|`hazelcast-jet`|yes|exactly-once|
 |`Sinks.jmsQueue`|`hazelcast-jet`|yes|exactly-once|
 |`Sinks.list`|`hazelcast-jet`|no|N/A|
