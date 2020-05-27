@@ -119,12 +119,12 @@ public final class CdcSinks {
      */
     @Nonnull
     public static <K, V> Sink<ChangeRecord> map(
-            @Nonnull String map,
+            @Nonnull String mapName,
             @Nonnull FunctionEx<? super ChangeRecord, ? extends K> keyFn,
             @Nonnull FunctionEx<? super ChangeRecord, ? extends V> valueFn
     ) {
-        String name = "localMapCdcSink(" + map + ')';
-        return sink(name, map, null, keyFn, valueFn);
+        String name = "mapCdcSink(" + mapName + ')';
+        return sink(name, mapName, null, keyFn, valueFn);
     }
 
     /**
@@ -185,13 +185,13 @@ public final class CdcSinks {
      */
     @Nonnull
     public static <K, V> Sink<ChangeRecord> remoteMap(
-            @Nonnull String map,
+            @Nonnull String mapName,
             @Nonnull ClientConfig clientConfig,
             @Nonnull FunctionEx<? super ChangeRecord, ? extends K> keyFn,
             @Nonnull FunctionEx<? super ChangeRecord, ? extends V> valueFn
     ) {
-        String name = "remoteMapCdcSink(" + map + ')';
-        return sink(name, map, clientConfig, keyFn, valueFn);
+        String name = "remoteMapCdcSink(" + mapName + ')';
+        return sink(name, mapName, clientConfig, keyFn, valueFn);
     }
 
     @Nonnull
