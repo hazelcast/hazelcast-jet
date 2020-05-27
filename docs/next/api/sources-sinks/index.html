@@ -535,7 +535,8 @@ to enable auto-reconnection, refer to the specific client documentation
 for details.</p>
 <h3><a class="anchor" aria-hidden="true" id="apache-pulsar"></a><a href="#apache-pulsar" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Apache Pulsar</h3>
 <blockquote>
-<p>This connector is under incubation.</p>
+<p>This connector is currently under incubation. For more
+information and examples, please visit the <a href="https://github.com/hazelcast/hazelcast-jet-contrib/tree/master/pulsar">GitHub repository</a>.</p>
 </blockquote>
 <h2><a class="anchor" aria-hidden="true" id="in-memory-data-structures"></a><a href="#in-memory-data-structures" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>In-memory Data Structures</h2>
 <p>Jet comes out of the box with some <a href="data-structures">in-memory distributed data
@@ -1045,6 +1046,8 @@ restarted in face of an intermittent failure.</p>
 <tr><td style="text-align:left"><code>MySqlCdcSources.mysql</code></td><td style="text-align:left"><code>hazelcast-jet-cdc-mysql</code></td><td style="text-align:left">stream</td><td style="text-align:left">at-least-once</td></tr>
 <tr><td style="text-align:left"><code>HadoopSources.inputFormat</code></td><td style="text-align:left"><code>hazelcast-jet-hadoop</code></td><td style="text-align:left">batch</td><td style="text-align:left">N/A</td></tr>
 <tr><td style="text-align:left"><code>KafkaSources.kafka</code></td><td style="text-align:left"><code>hazelcast-jet-kafka</code></td><td style="text-align:left">stream</td><td style="text-align:left">exactly-once</td></tr>
+<tr><td style="text-align:left"><code>PulsarSources.pulsarConsumer</code></td><td style="text-align:left"><code>hazelcast-jet-contrib-pulsar</code></td><td style="text-align:left">stream</td><td style="text-align:left">N/A</td></tr>
+<tr><td style="text-align:left"><code>PulsarSources.pulsarReader</code></td><td style="text-align:left"><code>hazelcast-jet-contrib-pulsar</code></td><td style="text-align:left">stream</td><td style="text-align:left">exactly-once</td></tr>
 <tr><td style="text-align:left"><code>S3Sources.s3</code></td><td style="text-align:left"><code>hazelcast-jet-s3</code></td><td style="text-align:left">batch</td><td style="text-align:left">N/A</td></tr>
 <tr><td style="text-align:left"><code>Sources.cache</code></td><td style="text-align:left"><code>hazelcast-jet</code></td><td style="text-align:left">batch</td><td style="text-align:left">N/A</td></tr>
 <tr><td style="text-align:left"><code>Sources.cacheJournal</code></td><td style="text-align:left"><code>hazelcast-jet</code></td><td style="text-align:left">stream</td><td style="text-align:left">exactly-once</td></tr>
@@ -1078,6 +1081,7 @@ processing even with at-least-once sinks.</p>
 <tr><td style="text-align:left"><code>AvroSinks.files</code></td><td style="text-align:left"><code>hazelcast-jet-avro</code></td><td style="text-align:left">no</td><td style="text-align:left">N/A</td></tr>
 <tr><td style="text-align:left"><code>HadoopSinks.outputFormat</code></td><td style="text-align:left"><code>hazelcast-jet-hadoop</code></td><td style="text-align:left">no</td><td style="text-align:left">N/A</td></tr>
 <tr><td style="text-align:left"><code>KafkaSinks.kafka</code></td><td style="text-align:left"><code>hazelcast-jet-kafka</code></td><td style="text-align:left">yes</td><td style="text-align:left">exactly-once</td></tr>
+<tr><td style="text-align:left"><code>PulsarSources.pulsarSink</code></td><td style="text-align:left"><code>hazelcast-jet-contrib-pulsar</code></td><td style="text-align:left">yes</td><td style="text-align:left">at-least-once</td></tr>
 <tr><td style="text-align:left"><code>S3Sinks.s3</code></td><td style="text-align:left"><code>hazelcast-jet-s3</code></td><td style="text-align:left">no</td><td style="text-align:left">N/A</td></tr>
 <tr><td style="text-align:left"><code>Sinks.cache</code></td><td style="text-align:left"><code>hazelcast-jet</code></td><td style="text-align:left">yes</td><td style="text-align:left">at-least-once</td></tr>
 <tr><td style="text-align:left"><code>Sinks.files</code></td><td style="text-align:left"><code>hazelcast-jet</code></td><td style="text-align:left">yes</td><td style="text-align:left">exactly-once</td></tr>

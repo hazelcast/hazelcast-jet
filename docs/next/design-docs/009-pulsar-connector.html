@@ -127,13 +127,14 @@ require extra care when async policies were chosen. Therefore, handling
 the result of the async calls should not be performed by creating new
 threads. This requirement conflicts with the usual practice of async
 processing. That is why I did not prefer async policies.</p>
-<p>I preferred to use batch receive assuming that it is better in
+<p>We prefer to use batch receive assuming that it is better in
 performance. The batch receiving of Pulsar consumer assures that “the
 batch receive will be completed as long as anyone of the conditions(has
 enough number of messages, has enough of the size of messages in terms
-of bytes and number, wait for a timeout) is met”.  To create a Pulsar
-consumer source, users should supply a specific <code>BatchReceivePolicy</code>.</p>
-<p>The design of the receiving policy should be revisited.</p>
+of bytes and number, wait for a timeout) is met”. As the default batch
+receive policy, we set timeout to 1000 ms and max number of messages to
+512 messages. Since the batch receive policy of the consumer is more
+likely to change, a separate builder setter is created for it.</p>
 <h4><a class="anchor" aria-hidden="true" id="consumer-apis-acknowledgment-mechanism"></a><a href="#consumer-apis-acknowledgment-mechanism" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Consumer API’s acknowledgment mechanism</h4>
 <p>As a default, Pulsar Broker deletes a message from the topic provided
 that all subscriptions for this topic acknowledge this message. By
