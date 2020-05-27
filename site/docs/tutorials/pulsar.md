@@ -90,7 +90,7 @@ repositories {
 
 dependencies {
     compile 'com.hazelcast.jet:hazelcast-jet:{jet-version}'
-    compile 'com.hazelcast.jet-contrib:pulsar:0.1-SNAPSHOT'
+    compile 'com.hazelcast.jet-contrib:pulsar:0.1'
     compile 'org.apache.pulsar:pulsar-client:2.5.0'
 }
 
@@ -133,7 +133,7 @@ shadowJar {
         <dependency>
             <groupId>com.hazelcast.jet.contrib</groupId>
             <artifactId>pulsar</artifactId>
-            <version>0.1-SNAPSHOT</version>
+            <version>0.1</version>
         </dependency>
         <dependency>
             <groupId>org.apache.pulsar</groupId>
