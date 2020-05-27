@@ -120,8 +120,8 @@ public final class CdcSinks {
     @Nonnull
     public static <K, V> Sink<ChangeRecord> map(
             @Nonnull String map,
-            @Nonnull FunctionEx<ChangeRecord, K> keyFn,
-            @Nonnull FunctionEx<ChangeRecord, V> valueFn
+            @Nonnull FunctionEx<? super ChangeRecord, ? extends K> keyFn,
+            @Nonnull FunctionEx<? super ChangeRecord, ? extends V> valueFn
     ) {
         String name = "localMapCdcSink(" + map + ')';
         return sink(name, map, null, keyFn, valueFn);
@@ -164,9 +164,9 @@ public final class CdcSinks {
      */
     @Nonnull
     public static <K, V> Sink<ChangeRecord> map(
-            @Nonnull IMap<? super K, V> map,
-            @Nonnull FunctionEx<ChangeRecord, K> keyFn,
-            @Nonnull FunctionEx<ChangeRecord, V> valueFn
+            @Nonnull IMap<? super K, ? super V> map,
+            @Nonnull FunctionEx<? super ChangeRecord, ? extends K> keyFn,
+            @Nonnull FunctionEx<? super ChangeRecord, ? extends V> valueFn
     ) {
         return map(map.getName(), keyFn, valueFn);
     }
@@ -187,8 +187,8 @@ public final class CdcSinks {
     public static <K, V> Sink<ChangeRecord> remoteMap(
             @Nonnull String map,
             @Nonnull ClientConfig clientConfig,
-            @Nonnull FunctionEx<ChangeRecord, K> keyFn,
-            @Nonnull FunctionEx<ChangeRecord, V> valueFn
+            @Nonnull FunctionEx<? super ChangeRecord, ? extends K> keyFn,
+            @Nonnull FunctionEx<? super ChangeRecord, ? extends V> valueFn
     ) {
         String name = "remoteMapCdcSink(" + map + ')';
         return sink(name, map, clientConfig, keyFn, valueFn);
@@ -199,8 +199,8 @@ public final class CdcSinks {
             @Nonnull String name,
             @Nonnull String map,
             @Nullable ClientConfig clientConfig,
-            @Nonnull FunctionEx<ChangeRecord, K> keyFn,
-            @Nonnull FunctionEx<ChangeRecord, V> valueFn
+            @Nonnull FunctionEx<? super ChangeRecord, ? extends K> keyFn,
+            @Nonnull FunctionEx<? super ChangeRecord, ? extends V> valueFn
     ) {
         ProcessorSupplier supplier = AbstractHazelcastConnectorSupplier.of(asXmlString(clientConfig),
                 instance -> new CdcSinkProcessor<>(instance, map, keyFn, extend(valueFn)));
@@ -209,7 +209,8 @@ public final class CdcSinks {
     }
 
     @Nonnull
-    private static <V> FunctionEx<ChangeRecord, V> extend(@Nonnull FunctionEx<ChangeRecord, V> valueFn) {
+    private static <V> FunctionEx<? super ChangeRecord, V> extend(
+            @Nonnull FunctionEx<? super ChangeRecord, ? extends V> valueFn) {
         return (record) -> {
             if (DELETE.equals(record.operation())) {
                 return null;
