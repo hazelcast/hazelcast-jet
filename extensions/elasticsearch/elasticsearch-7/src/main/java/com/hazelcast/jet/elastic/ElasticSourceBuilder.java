@@ -183,9 +183,12 @@ public final class ElasticSourceBuilder<T> {
     /**
      * Enable slicing
      * <p>
-     * Number of slices is equal to globalParallelism (localParallelism * numberOfNodes)
+     * Number of slices is equal to globalParallelism (localParallelism * numberOfNodes) when only slicing is enabled.
+     * When co-located reading is enabled as well then number of slices for particular node is equal to
+     * localParallelism.
      * <p>
-     * Use this option to read from multiple shards in parallel.
+     * Use this option to read from multiple shards in parallel. It can also be used on single shard, but it may
+     * increase initial latency. See Elastic documentation for sliced scroll for details.
      *
      * @see
      * <a href="https://www.elastic.co/guide/en/elasticsearch/reference/current/search-request-body.html#sliced-scroll">
