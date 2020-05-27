@@ -50,7 +50,6 @@ import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.function.Function;
 import java.util.stream.IntStream;
-import picocli.CommandLine.TypeConversionException;
 
 import static com.hazelcast.jet.pipeline.JournalInitialPosition.START_FROM_OLDEST;
 import static com.hazelcast.jet.server.JetCommandLine.runCommandLine;
@@ -542,7 +541,9 @@ public class JetCommandLineTest extends JetTestSupport {
 
         try {
             run(fnRunCommand, args);
-        } catch (Exception ignore) {}
+        } catch (Exception ignore) {
+            // ignore
+        }
 
         ClientConfig config = atomicConfig.get();
         assertEquals("foobar", config.getClusterName());
