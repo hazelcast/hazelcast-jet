@@ -1030,7 +1030,7 @@ public final class Sources {
     public static BatchSource<Map<String, Object>> json(@Nonnull String directory) {
         return filesBuilder(directory)
                 .glob("*.json")
-                .build(JsonUtil::mapSequenceFrom);
+                .build(path -> JsonUtil.mapSequenceFrom(path));
     }
 
 

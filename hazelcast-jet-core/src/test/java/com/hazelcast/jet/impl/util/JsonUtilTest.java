@@ -62,7 +62,7 @@ public class JsonUtilTest extends JetTestSupport {
 
     @Test
     public void when_inputString_then_parseToObject() throws IOException {
-        TestJsonObject jsonObject = JsonUtil.beanFrom(TestJsonObject.class, jsonString);
+        TestJsonObject jsonObject = JsonUtil.beanFrom(jsonString, TestJsonObject.class);
         assertEquals(testJsonObject, jsonObject);
     }
 
@@ -74,7 +74,7 @@ public class JsonUtilTest extends JetTestSupport {
 
     @Test
     public void when_inputString_then_parseToListOfObject() throws IOException {
-        List<TestJsonObject> list = JsonUtil.listFrom(TestJsonObject.class, jsonStringList);
+        List<TestJsonObject> list = JsonUtil.listFrom(jsonStringList, TestJsonObject.class);
         assertListOfObjects(list);
     }
 
@@ -133,7 +133,8 @@ public class JsonUtilTest extends JetTestSupport {
             sb.append(jsonString);
         }
 
-        Iterator<TestJsonObject> iterator = JsonUtil.beanSequenceFrom(TestJsonObject.class, new StringReader(sb.toString()));
+        Iterator<TestJsonObject> iterator = JsonUtil.beanSequenceFrom(
+                new StringReader(sb.toString()), TestJsonObject.class);
 
         assertIteratorObject(iterator, 20);
     }
