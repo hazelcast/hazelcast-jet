@@ -44,6 +44,8 @@ public class JsonUtilTest extends JetTestSupport {
 
     static String jsonString;
     static String jsonStringList;
+    static String jsonStringPrettyPrinted;
+    static String jsonStringListPrettyPrinted;
     static TestJsonObject testJsonObject;
 
     @BeforeClass
@@ -57,6 +59,16 @@ public class JsonUtilTest extends JetTestSupport {
         jsonStringList = Files.lines(fileList)
                               .collect(StringBuilder::new, StringBuilder::append, StringBuilder::append)
                               .toString();
+
+        Path filePrettyPrinted = Paths.get(JsonUtilTest.class.getResource("file_pretty_printed.json").toURI());
+        jsonStringPrettyPrinted = Files.lines(filePrettyPrinted)
+                                       .collect(StringBuilder::new, StringBuilder::append, StringBuilder::append)
+                                       .toString();
+
+        Path fileListPrettyPrinted = Paths.get(JsonUtilTest.class.getResource("file_list_pretty_printed.json").toURI());
+        jsonStringListPrettyPrinted = Files.lines(fileListPrettyPrinted)
+                                           .collect(StringBuilder::new, StringBuilder::append, StringBuilder::append)
+                                           .toString();
         testJsonObject = TestJsonObject.withDefaults();
     }
 
@@ -67,8 +79,20 @@ public class JsonUtilTest extends JetTestSupport {
     }
 
     @Test
+    public void when_inputStringPrettyPrint_then_parseToObject() throws IOException {
+        TestJsonObject jsonObject = JsonUtil.beanFrom(jsonStringPrettyPrinted, TestJsonObject.class);
+        assertEquals(testJsonObject, jsonObject);
+    }
+
+    @Test
     public void when_inputString_then_parseToMap() throws IOException {
         Map<String, Object> map = JsonUtil.mapFrom(jsonString);
+        assertTestObjectAsMap(map, testJsonObject);
+    }
+
+    @Test
+    public void when_inputStringPrettyPrint_then_parseToMap() throws IOException {
+        Map<String, Object> map = JsonUtil.mapFrom(jsonStringPrettyPrinted);
         assertTestObjectAsMap(map, testJsonObject);
     }
 
@@ -79,8 +103,20 @@ public class JsonUtilTest extends JetTestSupport {
     }
 
     @Test
+    public void when_inputStringPrettyPrint_then_parseToListOfObject() throws IOException {
+        List<TestJsonObject> list = JsonUtil.listFrom(jsonStringListPrettyPrinted, TestJsonObject.class);
+        assertListOfObjects(list);
+    }
+
+    @Test
     public void when_inputString_then_parseToList() throws IOException {
         List<Object> list = JsonUtil.listFrom(jsonStringList);
+        assertListOfMap(list);
+    }
+
+    @Test
+    public void when_inputStringPrettyPrint_then_parseToList() throws IOException {
+        List<Object> list = JsonUtil.listFrom(jsonStringListPrettyPrinted);
         assertListOfMap(list);
     }
 
@@ -91,8 +127,20 @@ public class JsonUtilTest extends JetTestSupport {
     }
 
     @Test
+    public void when_inputStringPrettyPrint_and_contentObject_then_parseAny() throws IOException {
+        Object o = JsonUtil.anyFrom(jsonStringPrettyPrinted);
+        assertTestObjectAsMap((Map) o, testJsonObject);
+    }
+
+    @Test
     public void when_inputString_and_contentList_then_parseAny() throws IOException {
         Object o = JsonUtil.anyFrom(jsonStringList);
+        assertListOfMap((List) o);
+    }
+
+    @Test
+    public void when_inputStringPrettyPrint_and_contentList_then_parseAny() throws IOException {
+        Object o = JsonUtil.anyFrom(jsonStringListPrettyPrinted);
         assertListOfMap((List) o);
     }
 
