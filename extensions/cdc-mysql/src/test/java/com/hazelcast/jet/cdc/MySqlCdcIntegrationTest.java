@@ -27,8 +27,10 @@ import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.StreamSource;
+import com.hazelcast.test.annotation.NightlyTest;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 import org.testcontainers.containers.MySQLContainer;
 
 import javax.annotation.Nonnull;
@@ -62,6 +64,7 @@ public class MySqlCdcIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
+    //category intentionally left out, we want this one test to run in standard test suits
     public void customers() throws Exception {
         // given
         List<String> expectedRecords = Arrays.asList(
@@ -122,6 +125,7 @@ public class MySqlCdcIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
+    @Category(NightlyTest.class)
     public void orders() {
         // given
         List<String> expectedRecords = Arrays.asList(
@@ -165,6 +169,7 @@ public class MySqlCdcIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
+    @Category(NightlyTest.class)
     public void restart() throws Exception {
         // given
         List<String> expectedRecords = Arrays.asList(

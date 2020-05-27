@@ -23,7 +23,9 @@ import com.hazelcast.jet.accumulator.LongAccumulator;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.StreamSource;
+import com.hazelcast.test.annotation.NightlyTest;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 import org.testcontainers.containers.MySQLContainer;
 
 import java.sql.Connection;
@@ -35,6 +37,7 @@ import java.util.Objects;
 import static com.hazelcast.jet.Util.entry;
 import static org.testcontainers.containers.MySQLContainer.MYSQL_PORT;
 
+@Category(NightlyTest.class)
 public class DebeziumIntegrationTest extends AbstractIntegrationTest {
 
     @Test
