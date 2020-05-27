@@ -9,12 +9,13 @@ In May 2020 we did extensive testing of Hazelcast Jet with several
 combinations of JDK and garbage collector. We tried the following JDK/GC
 combinations:
 
-1. JDK 8 with the default Parallel collector and the optional G1
+1. JDK 8 with the default Parallel collector and the optional
+   ConcurrentMarkSweep and G1
 2. JDK 11 with the default G1 collector
 3. JDK 14 with the default G1 as well as the experimental Z and
   Shenandoah
 
-These are the main takeaways:
+These are our key findings:
 
 1. Due to the large improvements in the later versions, JDK version 8
    should not be used anymore whenever performance is critical.
@@ -22,7 +23,9 @@ These are the main takeaways:
    than modern versions, and even for the sizes it can handle without an
    outright OOME, the throughput at which it starts exhibiting
    catastrophically long GC pauses is much less. This remains true even
-   if you configure it to use its version of the G1 collector.
+   if you configure it to use its version of the G1 collector. The
+   ConcurrentMarkSweep collector is strictly worse than G1 in all
+   scenarios, and its failure mode are multi-minute Full GC pauses.
 2. JDK 11 is the current Long-Term Support (LTS) version by Oracle and
    it is the lowest version of JDK we recommend. We found that its
    version of the G1, without any fine-tuning, already delivers
@@ -82,11 +85,11 @@ risk exposure of a given portfolio.
 
 The relevant measure is time to complete, which implies a high
 throughput demand, but since the data is being processed offline, there
-is no latency requirement. The best option is the same as in the
-previous scenario: a modern JDK with G1. The default maximum GC pause of
-200 ms is a good setting and allowing larger pauses may only marginally
-help increase the throughput. We found that G1 can perform well even
-at close to 90% heap usage.
+is no additional latency requirement. The best option is the same as in
+the previous scenario: a modern JDK with G1. The default maximum GC
+pause of 200 ms is a good setting and allowing larger pauses may only
+marginally help increase the throughput. We found that G1 can perform
+well even at close to 90% heap usage.
 
 ### Garbage-Free Aggregation
 
