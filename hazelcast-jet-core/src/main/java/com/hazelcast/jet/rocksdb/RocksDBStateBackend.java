@@ -138,8 +138,8 @@ public class RocksDBStateBackend {
             } catch (RocksDBException e) {
                 throw new JetException("Failed to Delete Column Family", e);
             }
-            db.close();
         }
+        db.close();
     }
 
     private <T> byte[] serialize(T item) {
