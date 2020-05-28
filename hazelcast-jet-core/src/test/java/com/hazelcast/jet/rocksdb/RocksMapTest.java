@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.rocksdb;
 
+import com.hazelcast.internal.nio.IOUtil;
 import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.core.JetTestSupport;
@@ -50,6 +51,7 @@ public class RocksMapTest extends JetTestSupport {
     @After
     public void cleanup() {
         rocksDBStateBackend.deleteKeyValueStore();
+        IOUtil.delete(rocksDBStateBackend.getDirectory());
         serializationService.dispose();
     }
 
