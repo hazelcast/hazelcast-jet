@@ -32,7 +32,7 @@ public class MySqlSequenceExtractor implements SequenceExtractor {
 
     private String server;
     private String binlog;
-    private long partition;
+    private long source;
 
     @Override
     public long sequence(Map<String, ?> debeziumOffset) {
@@ -40,37 +40,37 @@ public class MySqlSequenceExtractor implements SequenceExtractor {
     }
 
     @Override
-    public long partition(Map<String, ?> debeziumPartition, Map<String, ?> debeziumOffset) {
+    public long source(Map<String, ?> debeziumPartition, Map<String, ?> debeziumOffset) {
         String server = (String) debeziumPartition.get(SERVER);
         String binlog = (String) debeziumOffset.get(BINLOG_FILE);
-        if (isPartitionNew(server, binlog)) {
-            long partition = computePartition(server, binlog);
-            this.partition = adjustForCollision(partition);
+        if (isSourceNew(server, binlog)) {
+            long source = computeSource(server, binlog);
+            this.source = adjustForCollision(source);
             this.server = server;
             this.binlog = binlog;
         }
-        return this.partition;
+        return this.source;
     }
 
-    private boolean isPartitionNew(String server, String binlog) {
+    private boolean isSourceNew(String server, String binlog) {
         return !Objects.equals(this.server, server) || !Objects.equals(this.binlog, binlog);
     }
 
-    private long adjustForCollision(long partition) {
-        if (this.partition == partition) {
-            //partition value should have changed, but hashing unfortunately
+    private long adjustForCollision(long source) {
+        if (this.source == source) {
+            //source value should have changed, but hashing unfortunately
             //produced the same result; we need to adjust it
-            if (partition == Long.MAX_VALUE) {
+            if (source == Long.MAX_VALUE) {
                 return Long.MIN_VALUE;
             } else {
                 return Long.MAX_VALUE;
             }
         } else {
-            return partition;
+            return source;
         }
     }
 
-    private static long computePartition(String server, String binlog) {
+    private static long computeSource(String server, String binlog) {
         byte[] bytes = (server + binlog).getBytes(UTF_8);
         return HashUtil.MurmurHash3_x64_64(bytes, 0, bytes.length);
     }

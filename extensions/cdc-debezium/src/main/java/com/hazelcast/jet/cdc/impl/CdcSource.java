@@ -141,11 +141,11 @@ public class CdcSource {
     }
 
     private ChangeRecord toChangeRecord(SourceRecord record) {
-        long sequencePartition = sequenceExtractor.partition(record.sourcePartition(), record.sourceOffset());
+        long sequenceSource = sequenceExtractor.source(record.sourcePartition(), record.sourceOffset());
         long sequenceValue = sequenceExtractor.sequence(record.sourceOffset());
         String keyJson = Values.convertToString(record.keySchema(), record.key());
         String valueJson = Values.convertToString(record.valueSchema(), record.value());
-        return new ChangeRecordImpl(sequencePartition, sequenceValue, keyJson, valueJson);
+        return new ChangeRecordImpl(sequenceSource, sequenceValue, keyJson, valueJson);
     }
 
     private static ExtractNewRecordState<SourceRecord> initTransform() {

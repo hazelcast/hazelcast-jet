@@ -27,7 +27,7 @@ import java.util.Objects;
 
 public class ChangeRecordImpl implements ChangeRecord {
 
-    private final long sequencePartition;
+    private final long sequenceSource;
     private final long sequenceValue;
     private final String keyJson;
     private final String valueJson;
@@ -39,12 +39,12 @@ public class ChangeRecordImpl implements ChangeRecord {
     private RecordPart value;
 
     public ChangeRecordImpl(
-            long sequencePartition,
+            long sequenceSource,
             long sequenceValue,
             @Nonnull String keyJson,
             @Nonnull String valueJson
     ) {
-        this.sequencePartition = sequencePartition;
+        this.sequenceSource = sequenceSource;
         this.sequenceValue = sequenceValue;
         this.keyJson = Objects.requireNonNull(keyJson, "keyJson");
         this.valueJson = Objects.requireNonNull(valueJson, "valueJson");
@@ -99,8 +99,8 @@ public class ChangeRecordImpl implements ChangeRecord {
         return json;
     }
 
-    public long getSequencePartition() {
-        return sequencePartition;
+    public long getSequenceSource() {
+        return sequenceSource;
     }
 
     public long getSequenceValue() {

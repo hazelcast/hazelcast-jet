@@ -25,23 +25,23 @@ import java.util.Map;
  * The <i>sequence</i> part is exactly what the name implies: a numeric
  * sequence which we base our ordering on. Implementations needs to ensure
  * that {@code ChangeRecord}s produced by a source contain a monotonic
- * increasing sequence number, as long as the sequnce number partition
+ * increasing sequence number, as long as the sequence number source
  * doesn't change.
  * <p>
- * The <i>partition</i> part is a kind of context for the numeric
- * sequence, the "source" of it if you will. It is necessary for avoiding
- * the comparison of numeric sequences which come from different sources.
- * For example if the numeric sequence is in fact based on transaction
- * IDs, then it makes sense to compare them only if they are produced by
- * the same database instance. Or if the numeric ID is an offset in a
- * write-ahead log, then it makes sense to compare them only if they are
- * offsets from the same log file. Implementations need to make sure that
- * the partition is the same if and only if the source of the numeric
- * sequence is the same.
+ * The <i>source</i> part is a kind of context for the numeric
+ * sequence. It is necessary for avoiding the comparison of numeric
+ * sequences that come from different sources. For example if the
+ * numeric sequence is in fact based on transaction IDs, then it makes
+ * sense to compare them only if they are produced by the same database
+ * instance. Or if the numeric ID is an offset in a write-ahead log,
+ * then it makes sense to compare them only if they are offsets from the
+ * same log file. Implementations need to make sure that the source is
+ * the same if and only if the source of the numeric sequence is the
+ * same.
  */
 public interface SequenceExtractor {
 
-    long partition(Map<String, ?> debeziumPartition, Map<String, ?> debeziumOffset);
+    long source(Map<String, ?> debeziumPartition, Map<String, ?> debeziumOffset);
 
     long sequence(Map<String, ?> debeziumOffset);
 

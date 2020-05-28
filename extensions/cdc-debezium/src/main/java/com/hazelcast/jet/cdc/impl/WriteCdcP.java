@@ -76,18 +76,18 @@ public class WriteCdcP<K, V> extends AbstractUpdateMapP<ChangeRecord, K, V> {
 
     /**
      * @param key       key of an event that has just been observed
-     * @param partition partition of the source event sequence number
-     * @param sequence  numeric value of the source event sequence number
+     * @param source    source of the event sequence number
+     * @param sequence  numeric value of the event sequence number
      * @return true if the newly observed sequence number if more
      * recent than what we have observed before (if any)
      */
-    boolean updateSequence(K key, long partition, long sequence) {
+    boolean updateSequence(K key, long source, long sequence) {
         Sequence prevSequence = sequences.get(key);
         if (prevSequence == null) { // first observed sequence for key
-            sequences.put(key, new Sequence(partition, sequence));
+            sequences.put(key, new Sequence(source, sequence));
             return true;
         }
-        return prevSequence.update(partition, sequence);
+        return prevSequence.update(source, sequence);
     }
 
     @Override
@@ -113,10 +113,10 @@ public class WriteCdcP<K, V> extends AbstractUpdateMapP<ChangeRecord, K, V> {
 
     private boolean shouldBeDropped(K key, ChangeRecord item) {
         ChangeRecordImpl recordImpl = (ChangeRecordImpl) item;
-        long sequencePartition = recordImpl.getSequencePartition();
+        long sequenceSource = recordImpl.getSequenceSource();
         long sequenceValue = recordImpl.getSequenceValue();
 
-        return !updateSequence(key, sequencePartition, sequenceValue);
+        return !updateSequence(key, sequenceSource, sequenceValue);
     }
 
     @Override
@@ -137,20 +137,19 @@ public class WriteCdcP<K, V> extends AbstractUpdateMapP<ChangeRecord, K, V> {
      * The <i>sequence</i> part is exactly what the name implies: a
      * numeric value which we can base ordering on.
      * <p>
-     * The <i>partition</i> part is a kind of context for the numeric
-     * sequence, the "source" of it if you will. It is necessary for
-     * avoiding the comparison of numeric sequences which come from
-     * different sources.
+     * The <i>source</i> part is a kind of context for the numeric
+     * sequence. It is necessary for avoiding the comparison of numeric
+     * sequences which come from different sources.
      */
     private static class Sequence {
 
         private long timestamp;
-        private long partition;
+        private long source;
         private long sequence;
 
-        Sequence(long partition, long sequence) {
+        Sequence(long source, long sequence) {
             this.timestamp = System.currentTimeMillis();
-            this.partition = partition;
+            this.source = source;
             this.sequence = sequence;
         }
 
@@ -159,11 +158,11 @@ public class WriteCdcP<K, V> extends AbstractUpdateMapP<ChangeRecord, K, V> {
             return age > ageLimitMs;
         }
 
-        boolean update(long partition, long sequence) {
+        boolean update(long source, long sequence) {
             timestamp = System.currentTimeMillis();
 
-            if (this.partition != partition) { //sequence partition changed for key
-                this.partition = partition;
+            if (this.source != source) { //sequence source changed for key
+                this.source = source;
                 this.sequence = sequence;
                 return true;
             }
