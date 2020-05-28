@@ -287,7 +287,7 @@ package org.example;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.cdc.CdcSinks;
 import com.hazelcast.jet.cdc.ChangeRecord;
-import com.hazelcast.jet.cdc.MySqlCdcSources;
+import com.hazelcast.jet.cdc.mysql.MySqlCdcSources;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.StreamSource;

@@ -14,10 +14,11 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.cdc;
+package com.hazelcast.jet.cdc.mysql;
 
 import com.hazelcast.jet.annotation.EvolvingApi;
-import com.hazelcast.jet.cdc.impl.MySqlSequenceExtractor;
+import com.hazelcast.jet.cdc.ChangeRecord;
+import com.hazelcast.jet.cdc.mysql.impl.MySqlSequenceExtractor;
 import com.hazelcast.jet.cdc.impl.CdcSource;
 import com.hazelcast.jet.cdc.impl.DebeziumConfig;
 import com.hazelcast.jet.cdc.impl.PropertyRules;
