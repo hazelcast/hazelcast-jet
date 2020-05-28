@@ -25,6 +25,9 @@ import org.rocksdb.RocksDB;
 import org.rocksdb.RocksDBException;
 
 import javax.annotation.Nonnull;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -41,26 +44,13 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 
 public class RocksDBStateBackend {
-    private static final String TEST_DIRECTORY = "C:\\Users\\Mohamed Mandouh\\database";
-    private String directory;
-    private InternalSerializationService serializationService;
-    private RocksDB db;
-    private ArrayList<ColumnFamilyHandle> cfhs = new ArrayList<>();
-    private AtomicInteger counter = new AtomicInteger(0);
     private final RocksDBOptions rocksDBOptions = new RocksDBOptions();
+    private final InternalSerializationService serializationService;
+    private final ArrayList<ColumnFamilyHandle> cfhs = new ArrayList<>();
+    private final Path directory;
+    private RocksDB db;
+    private AtomicInteger counter = new AtomicInteger(0);
 
-    /**
-     * Returns a new state backend instance
-     *
-     * @param serializationService the serialization service associated with the current job
-     * @param directory the local directory where the database will operate
-     *                  a directory will be created on each cluster member
-     */
-    public RocksDBStateBackend(InternalSerializationService serializationService, String directory) {
-        this.serializationService = serializationService;
-        this.directory = directory;
-        init();
-    }
     /**
      * Returns a new state backend instance.
      * This constructor is for testing purposes only.
@@ -69,17 +59,29 @@ public class RocksDBStateBackend {
      */
     public RocksDBStateBackend(InternalSerializationService serializationService) {
         this.serializationService = serializationService;
+        try {
+            directory = Files.createTempDirectory("rocksdb-temp");
+        } catch (IOException e) {
+            throw new JetException("failed to create RocksDB temp dierectoy", e);
+        }
         init();
     }
+
 
     private void init() throws JetException {
         try {
             RocksDB.loadLibrary();
-            directory = directory == null ? TEST_DIRECTORY : directory;
-            db = RocksDB.open(rocksDBOptions.getOptions(), directory);
+            db = RocksDB.open(rocksDBOptions.getOptions(), directory.toString());
         } catch (Exception e) {
             throw new JetException("Failed to create a RocksDB instance", e);
         }
+    }
+
+    /**
+     * Returns the directory where RocksDB will be operating.
+     */
+    public Path getDirectory() {
+        return directory;
     }
 
     /**
@@ -88,7 +90,6 @@ public class RocksDBStateBackend {
      * @return a new empty RocksMap
      * @throws JetException if the database is closed
      */
-
     public <K, V> RocksMap<K, V> getMap() throws JetException {
         ColumnFamilyHandle cfh;
         try {

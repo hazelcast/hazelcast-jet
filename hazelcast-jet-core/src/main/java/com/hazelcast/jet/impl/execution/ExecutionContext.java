@@ -224,6 +224,7 @@ public class ExecutionContext implements DynamicMetricsProvider {
         }
 
         rocksDBStateBackend.deleteKeyValueStore();
+        IOUtil.delete(rocksDBStateBackend.getDirectory());
     }
 
     /**
