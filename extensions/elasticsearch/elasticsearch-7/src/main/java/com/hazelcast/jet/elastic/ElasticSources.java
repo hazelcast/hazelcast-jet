@@ -54,7 +54,8 @@ public final class ElasticSources {
     }
 
     /**
-     * Creates a source which queries Elasticsearch using client obtained from {@link RestClientBuilder} supplier
+     * Creates a source which queries Elasticsearch using client
+     * obtained from {@link RestClientBuilder} supplier
      * function.
      * Queries all indexes for all documents.
      * Uses {@link SearchHit#getSourceAsString()} as mapping function
@@ -74,8 +75,9 @@ public final class ElasticSources {
     }
 
     /**
-     * Creates a source which queries local instance of Elasticsearch for all documents
-     * Uses {@link SearchHit#getSourceAsString()} as mapping function
+     * Creates a source which queries local instance of Elasticsearch
+     * for all documents. Uses {@link SearchHit#getSourceAsString()}
+     * as mapping function
      * <p>
      * For example:
      * <pre>{@code
@@ -93,8 +95,9 @@ public final class ElasticSources {
     }
 
     /**
-     * Creates a source which queries Elasticsearch using client obtained from {@link RestClientBuilder} supplier
-     * function. Uses provided mapToItemFn to map results. Queries all indexes for all documents.
+     * Creates a source which queries Elasticsearch using client obtained
+     * from {@link RestClientBuilder} supplier function. Uses provided
+     * {@code mapToItemFn} to map results. Queries all indexes for all documents.
      * <p>
      * For example:
      * <pre>{@code
@@ -116,7 +119,8 @@ public final class ElasticSources {
     }
 
     /**
-     * Creates a source which queries Elasticsearch using client obtained from {@link RestHighLevelClient} supplier.
+     * Creates a source which queries Elasticsearch using client obtained
+     * from {@link RestHighLevelClient} supplier.
      * <p>
      * For example:
      * <pre>{@code

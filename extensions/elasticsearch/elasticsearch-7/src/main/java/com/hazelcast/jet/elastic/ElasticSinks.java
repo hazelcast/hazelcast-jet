@@ -38,7 +38,8 @@ public final class ElasticSinks {
     /**
      * Creates an Elasticsearch sink, uses a local instance of Elasticsearch
      *
-     * @param mapToRequestFn function that maps an item from a pipeline to an indexing request
+     * @param mapToRequestFn function that maps an item from a pipeline
+     *                       to an indexing request
      */
     @Nonnull
     public static <T> Sink<? super T> elastic(
@@ -48,7 +49,8 @@ public final class ElasticSinks {
     }
 
     /**
-     * Creates an Elasticsearch sink, uses a client obtained from clientFn and maps items using given mapToRequestFn
+     * Creates an Elasticsearch sink, uses a client obtained from
+     * clientFn and maps items using given mapToRequestFn
      *
      * @param clientFn       supplier function returning configured RestClientBuilder
      * @param mapToRequestFn function that maps an item from a pipeline to an indexing request

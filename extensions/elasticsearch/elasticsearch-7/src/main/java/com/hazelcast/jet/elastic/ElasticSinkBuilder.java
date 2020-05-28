@@ -73,7 +73,8 @@ public final class ElasticSinkBuilder<T> implements Serializable {
     /**
      * Set the client supplier function
      * <p>
-     * The connector uses the returned instance to access Elasticsearch. Also see {@link ElasticClients} for convenience
+     * The connector uses the returned instance to access Elasticsearch.
+     * Also see {@link ElasticClients} for convenience
      * factory methods.
      * <p>
      * For example, to provide an authenticated client:

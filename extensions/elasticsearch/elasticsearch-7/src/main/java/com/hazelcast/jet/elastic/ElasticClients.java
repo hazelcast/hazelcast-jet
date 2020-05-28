@@ -31,8 +31,8 @@ import static org.apache.http.auth.AuthScope.ANY;
 /**
  * Collection of convenience factory methods for Elastic's {@link RestClientBuilder}
  * <p>
- * Supposed to be used as a parameter to {@link ElasticSourceBuilder#clientFn(SupplierEx)} and
- * {@link ElasticSinkBuilder#clientFn(SupplierEx)}, for example:
+ * Supposed to be used as a parameter to {@link ElasticSourceBuilder#clientFn(SupplierEx)}
+ * and {@link ElasticSinkBuilder#clientFn(SupplierEx)}, for example:
  * <pre>{@code
  * builder.clientFn(() -> client());
  * }</pre>
@@ -45,7 +45,8 @@ public final class ElasticClients {
     }
 
     /**
-     * Create Elastic client for an instance running on localhost on default port (9200)
+     * Create Elastic client for an instance running on localhost
+     * on default port (9200)
      */
     @Nonnull
     public static RestClientBuilder client() {
@@ -53,7 +54,8 @@ public final class ElasticClients {
     }
 
     /**
-     * Convenience method to create {@link RestClientBuilder} with given hostname and port
+     * Convenience method to create {@link RestClientBuilder} with given
+     * hostname and port
      */
     @Nonnull
     public static RestClientBuilder client(@Nonnull String hostname, int port) {
@@ -61,7 +63,8 @@ public final class ElasticClients {
     }
 
     /**
-     * Convenience method to create {@link RestClientBuilder} with basic authentication and given hostname and port
+     * Convenience method to create {@link RestClientBuilder} with basic authentication
+     * and given hostname and port
      * <p>
      * Usage:
      * <pre>{@code
