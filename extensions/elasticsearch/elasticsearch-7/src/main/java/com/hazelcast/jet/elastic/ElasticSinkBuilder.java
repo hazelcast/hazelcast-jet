@@ -84,7 +84,8 @@ public final class ElasticSinkBuilder<T> implements Serializable {
      *
      * This parameter is required.
      *
-     * @param clientFn supplier function returning configured Elasticsearch REST client
+     * @param clientFn supplier function returning configured Elasticsearch
+     *                 REST client
      */
     @Nonnull
     public ElasticSinkBuilder<T> clientFn(@Nonnull SupplierEx<RestClientBuilder> clientFn) {
@@ -111,7 +112,8 @@ public final class ElasticSinkBuilder<T> implements Serializable {
     }
 
     /**
-     * Set the function mapping the item from a pipeline item to an index request
+     * Set the function mapping the item from a pipeline item to an index
+     * request
      * <p>
      * For example, to create an IndexRequest for a versioned document:
      * <pre>{@code
@@ -123,9 +125,10 @@ public final class ElasticSinkBuilder<T> implements Serializable {
      *
      * This parameter is required.
      *
-     * @param mapToRequestFn maps an item from the stream to an {@link org.elasticsearch.action.index.IndexRequest},
-     *                       {@link org.elasticsearch.action.update.UpdateRequest} or
-     *                       {@link org.elasticsearch.action.delete.DeleteRequest}
+     * @param mapToRequestFn maps an item from the stream to an
+     *                       {@link org.elasticsearch.action.index.IndexRequest},
+     *                       {@link org.elasticsearch.action.update.UpdateRequest}
+     *                       or {@link org.elasticsearch.action.delete.DeleteRequest}
      * @param <T_NEW> type of the items from the pipeline
      */
     @Nonnull

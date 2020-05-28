@@ -35,8 +35,8 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 /**
  * Example for Elastic Sink
  *
- * Reads files from `src/main/resources/documents` folder and indexes them as documents into Elastic running on
- * localhost:9200
+ * Reads files from `src/main/resources/documents` folder and indexes them as
+ * documents into Elastic running on localhost:9200
  */
 public class ElasticSinkExample {
 

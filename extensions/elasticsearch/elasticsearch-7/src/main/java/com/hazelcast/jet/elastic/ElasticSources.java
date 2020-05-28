@@ -38,10 +38,12 @@ public final class ElasticSources {
     }
 
     /**
-     * Creates a source which queries local instance of Elasticsearch for all documents
+     * Creates a source which queries local instance of Elasticsearch for all
+     * documents
      * <p>
-     * Useful for quick prototyping. See other methods {@link #elastic(SupplierEx, SupplierEx, FunctionEx)}
-     * and {@link #builder()}
+     * Useful for quick prototyping. See other methods
+     * {@link #elastic(SupplierEx, SupplierEx, FunctionEx)} and
+     * {@link #builder()}
      * <p>
      * For example:
      * <pre>{@code
@@ -54,11 +56,10 @@ public final class ElasticSources {
     }
 
     /**
-     * Creates a source which queries Elasticsearch using client
-     * obtained from {@link RestClientBuilder} supplier
-     * function.
-     * Queries all indexes for all documents.
-     * Uses {@link SearchHit#getSourceAsString()} as mapping function
+     * Creates a source which queries Elasticsearch using client obtained from
+     * {@link RestClientBuilder} supplier function. Queries all indexes for all
+     * documents. Uses {@link SearchHit#getSourceAsString()} as mapping
+     * function
      * <p>
      * For example:
      * <pre>{@code
@@ -75,9 +76,9 @@ public final class ElasticSources {
     }
 
     /**
-     * Creates a source which queries local instance of Elasticsearch
-     * for all documents. Uses {@link SearchHit#getSourceAsString()}
-     * as mapping function
+     * Creates a source which queries local instance of Elasticsearch for all
+     * documents. Uses {@link SearchHit#getSourceAsString()} as mapping
+     * function
      * <p>
      * For example:
      * <pre>{@code
@@ -86,7 +87,8 @@ public final class ElasticSources {
      * ));
      * }</pre>
      *
-     * @param mapToItemFn function mapping the result from a SearchHit to a result type
+     * @param mapToItemFn function mapping the result from a SearchHit to a
+     *                    result type
      * @param <T>         result type returned by the map function
      */
     @Nonnull
@@ -95,9 +97,10 @@ public final class ElasticSources {
     }
 
     /**
-     * Creates a source which queries Elasticsearch using client obtained
-     * from {@link RestClientBuilder} supplier function. Uses provided
-     * {@code mapToItemFn} to map results. Queries all indexes for all documents.
+     * Creates a source which queries Elasticsearch using client obtained from
+     * {@link RestClientBuilder} supplier function. Uses provided
+     * {@code mapToItemFn} to map results. Queries all indexes for all
+     * documents.
      * <p>
      * For example:
      * <pre>{@code
@@ -107,8 +110,10 @@ public final class ElasticSources {
      * ));
      * }</pre>
      *
-     * @param clientFn    supplier function returning configured RestClientBuilder
-     * @param mapToItemFn function mapping the result from a SearchHit to a result type
+     * @param clientFn    supplier function returning configured
+     *                    RestClientBuilder
+     * @param mapToItemFn function mapping the result from a SearchHit to a
+     *                    result type
      * @param <T>         result type returned by the map function
      */
     @Nonnull
@@ -119,8 +124,8 @@ public final class ElasticSources {
     }
 
     /**
-     * Creates a source which queries Elasticsearch using client obtained
-     * from {@link RestHighLevelClient} supplier.
+     * Creates a source which queries Elasticsearch using client obtained from
+     * {@link RestHighLevelClient} supplier.
      * <p>
      * For example:
      * <pre>{@code
@@ -131,9 +136,12 @@ public final class ElasticSources {
      * ));
      * }</pre>
      *
-     * @param clientFn        supplier function returning configured RestClientBuilder
-     * @param searchRequestFn supplier function of a SearchRequest used to query for documents
-     * @param mapToItemFn     function mapping the result from a SearchHit to a result type
+     * @param clientFn        supplier function returning configured
+     *                        RestClientBuilder
+     * @param searchRequestFn supplier function of a SearchRequest used to
+     *                        query for documents
+     * @param mapToItemFn     function mapping the result from a SearchHit to a
+     *                        result type
      * @param <T>             result type returned by the map function
      */
     @Nonnull

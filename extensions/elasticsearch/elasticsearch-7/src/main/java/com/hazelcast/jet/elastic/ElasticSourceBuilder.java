@@ -107,7 +107,8 @@ public final class ElasticSourceBuilder<T> {
      *
      * This parameter is required.
      *
-     * @param clientFn supplier function returning configured Elasticsearch REST client
+     * @param clientFn supplier function returning configured Elasticsearch
+     *                 REST client
      */
     @Nonnull
     public ElasticSourceBuilder<T> clientFn(@Nonnull SupplierEx<RestClientBuilder> clientFn) {
@@ -184,10 +185,10 @@ public final class ElasticSourceBuilder<T> {
     /**
      * Enable slicing
      * <p>
-     * Number of slices is equal to {@code globalParallelism (localParallelism * numberOfNodes)}
-     * when only slicing is enabled. When co-located reading is enabled as
-     * well then number of slices for particular node is equal to
-     * {@code localParallelism}.
+     * Number of slices is equal to {@code globalParallelism
+     * (localParallelism * numberOfNodes)} when only slicing is enabled. When
+     * co-located reading is enabled as well then number of slices for
+     * particular node is equal to {@code localParallelism}.
      * <p>
      * Use this option to read from multiple shards in parallel. It can
      * also be used on single shard, but it may increase initial latency.
@@ -218,8 +219,9 @@ public final class ElasticSourceBuilder<T> {
      * The value must be in Elastic time unit format, e.g. 500ms for 500 milliseconds, 30s for 30 seconds,
      * 5m for 5 minutes. See {@link SearchRequest#scroll(String)}.
      *
-     * @param scrollKeepAlive keepAlive value, this must be high enough to process all
-     *                       results from a single scroll, default value 1m
+     * @param scrollKeepAlive keepAlive value, this must be high enough to
+     *                        process all results from a single scroll, default
+     *                        value 1m
      */
     @Nonnull
     public ElasticSourceBuilder<T> scrollKeepAlive(@Nonnull String scrollKeepAlive) {
