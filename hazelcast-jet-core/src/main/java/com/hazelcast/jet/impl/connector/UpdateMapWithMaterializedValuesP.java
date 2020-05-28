@@ -125,7 +125,7 @@ public class UpdateMapWithMaterializedValuesP<T, K, V> extends AbstractUpdateMap
 
         @Override
         public int getClassId() {
-            return JetDataSerializerHook.APPLY_MATERIALIZED_VALUE_ENTRY_PROCESSOR;
+            return JetDataSerializerHook.APPLY_VALUE_ENTRY_PROCESSOR;
         }
 
     }
