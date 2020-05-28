@@ -21,7 +21,6 @@ import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.JetTestInstanceFactory;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.elastic.CommonElasticSinksTest.TestItem;
-import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sink;
 import com.hazelcast.jet.pipeline.test.TestSources;
@@ -35,28 +34,12 @@ import org.junit.Test;
 import org.testcontainers.elasticsearch.ElasticsearchContainer;
 
 import java.io.IOException;
-import java.util.function.Supplier;
 
 import static com.hazelcast.jet.elastic.ElasticClients.client;
-import static com.hazelcast.jet.elastic.ElasticSupport.ELASTICSEARCH_IMAGE;
+import static com.hazelcast.jet.elastic.ElasticSupport.PORT;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public class AuthElasticSinksTest extends BaseElasticTest {
-
-    /**
-     * Using elastic container configured with security enabled
-     */
-    public static Supplier<ElasticsearchContainer> elastic = Util.memoize(() -> {
-        ElasticsearchContainer elastic = new ElasticsearchContainer(ELASTICSEARCH_IMAGE)
-                .withEnv("ELASTIC_USERNAME", "elastic")
-                .withEnv("ELASTIC_PASSWORD", "SuperSecret")
-                .withEnv("xpack.security.enabled", "true");
-
-        elastic.start();
-        Runtime.getRuntime().addShutdownHook(new Thread(elastic::stop));
-        return elastic;
-    });
-    public static final int PORT = 9200;
 
     private final JetTestInstanceFactory factory = new JetTestInstanceFactory();
 
@@ -67,11 +50,7 @@ public class AuthElasticSinksTest extends BaseElasticTest {
 
     @Override
     protected SupplierEx<RestClientBuilder> elasticClientSupplier() {
-        ElasticsearchContainer container = elastic.get();
-        String containerIp = container.getContainerIpAddress();
-        Integer port = container.getMappedPort(PORT);
-
-        return () -> client("elastic", "SuperSecret", containerIp, port);
+        return ElasticSupport.secureElasticClientSupplier();
     }
 
     @Override
@@ -98,7 +77,7 @@ public class AuthElasticSinksTest extends BaseElasticTest {
 
     @Test
     public void given_clientWithWrongPassword_whenReadFromElasticSource_thenFailWithAuthenticationException() {
-        ElasticsearchContainer container = elastic.get();
+        ElasticsearchContainer container = ElasticSupport.secureElastic.get();
         String containerIp = container.getContainerIpAddress();
         Integer port = container.getMappedPort(PORT);
 
@@ -119,7 +98,7 @@ public class AuthElasticSinksTest extends BaseElasticTest {
 
     @Test
     public void given_clientWithoutAuthentication_whenReadFromElasticSource_thenFailWithAuthenticationException() {
-        ElasticsearchContainer container = elastic.get();
+        ElasticsearchContainer container = ElasticSupport.secureElastic.get();
         String containerIp = container.getContainerIpAddress();
         Integer port = container.getMappedPort(PORT);
 

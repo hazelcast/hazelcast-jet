@@ -25,13 +25,30 @@ import org.testcontainers.elasticsearch.ElasticsearchContainer;
 
 import java.util.function.Supplier;
 
+import static com.hazelcast.jet.elastic.ElasticClients.client;
+
 public final class ElasticSupport {
 
     public static final String ELASTICSEARCH_IMAGE = "elasticsearch:7.7.0";
+    public static final int PORT = 9200;
 
     // Elastic container takes long time to start up, reusing the container for speedup
     public static final Supplier<ElasticsearchContainer> elastic = Util.memoize(() -> {
         ElasticsearchContainer elastic = new ElasticsearchContainer(ELASTICSEARCH_IMAGE);
+        elastic.start();
+        Runtime.getRuntime().addShutdownHook(new Thread(elastic::stop));
+        return elastic;
+    });
+
+    /**
+     * Using elastic container configured with security enabled
+     */
+    public static Supplier<ElasticsearchContainer> secureElastic = Util.memoize(() -> {
+        ElasticsearchContainer elastic = new ElasticsearchContainer(ELASTICSEARCH_IMAGE)
+                .withEnv("ELASTIC_USERNAME", "elastic")
+                .withEnv("ELASTIC_PASSWORD", "SuperSecret")
+                .withEnv("xpack.security.enabled", "true");
+
         elastic.start();
         Runtime.getRuntime().addShutdownHook(new Thread(elastic::stop));
         return elastic;
@@ -44,4 +61,13 @@ public final class ElasticSupport {
         String address = elastic.get().getHttpHostAddress();
         return () -> RestClient.builder(HttpHost.create(address));
     }
+
+    public static SupplierEx<RestClientBuilder> secureElasticClientSupplier() {
+        ElasticsearchContainer container = elastic.get();
+        String containerIp = container.getContainerIpAddress();
+        Integer port = container.getMappedPort(PORT);
+
+        return () -> client("elastic", "SuperSecret", containerIp, port);
+    }
+
 }
