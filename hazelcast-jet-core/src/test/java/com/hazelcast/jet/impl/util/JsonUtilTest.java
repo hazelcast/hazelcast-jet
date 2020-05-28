@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.impl.util;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.hazelcast.jet.core.JetTestSupport;
 import com.hazelcast.jet.json.JsonUtil;
 import com.hazelcast.test.HazelcastSerialClassRunner;
@@ -82,6 +83,19 @@ public class JsonUtilTest extends JetTestSupport {
     public void when_inputStringPrettyPrint_then_parseToObject() throws IOException {
         TestJsonObject jsonObject = JsonUtil.beanFrom(jsonStringPrettyPrinted, TestJsonObject.class);
         assertEquals(testJsonObject, jsonObject);
+    }
+
+    @Test
+    public void when_inputString_then_parseToObjectWithAnnotation() throws IOException {
+        TestJsonObjectWithAnnotations jsonObject = JsonUtil.beanFrom(jsonString, TestJsonObjectWithAnnotations.class);
+        assertEquals(TestJsonObjectWithAnnotations.withDefaults(), jsonObject);
+    }
+
+    @Test
+    public void when_inputStringPrettyPrint_then_parseToObjectWithAnnotation() throws IOException {
+        TestJsonObjectWithAnnotations jsonObject
+                = JsonUtil.beanFrom(jsonStringPrettyPrinted, TestJsonObjectWithAnnotations.class);
+        assertEquals(TestJsonObjectWithAnnotations.withDefaults(), jsonObject);
     }
 
     @Test
@@ -314,6 +328,42 @@ public class JsonUtilTest extends JetTestSupport {
         public int hashCode() {
             return Objects.hash(val);
         }
+    }
+
+    public static class TestJsonObjectWithAnnotations {
+
+        @JsonProperty(value = "name")
+        public String username;
+        @JsonProperty(value = "age")
+        public int userage = 1;
+
+        public TestJsonObjectWithAnnotations() {
+        }
+
+        public static TestJsonObjectWithAnnotations withDefaults() {
+            TestJsonObjectWithAnnotations jsonObject = new TestJsonObjectWithAnnotations();
+            jsonObject.username = "foo";
+            jsonObject.userage = 1;
+            return jsonObject;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (!(o instanceof TestJsonObjectWithAnnotations)) {
+                return false;
+            }
+            TestJsonObjectWithAnnotations that = (TestJsonObjectWithAnnotations) o;
+            return userage == that.userage && Objects.equals(username, that.username);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(username, userage);
+        }
+
     }
 
 }
