@@ -184,25 +184,111 @@ or fail. In the end we found two parameters that determine this:
 1. number of entries stored in the aggregation state
 2. demand on the catching-up throughput
 
-The first one is easier to explain. Jet stores the sliding window state
-in a set of _frames_, each corresponding to the interval between one
-position of the sliding window and the next one (i.e., an interval the
-size of the sliding step). Every such frame has its local key-value
-storage. To see how many entries are stored, we multiply the typical
-number of keys seen within the sliding step and multiply this by the
-number of sliding steps within the length of the window. For example,
-with a 10-second window sliding by 1 second, we have 10 frames. If each
-frame has a million keys, that amounts to 10 million stored key-value
-pairs. There is also storage for the complete sliding window, containing
-as many entries as there are distinct keys within the whole window.
-Usually there will be some repetition of the keys, so this number should
-be lower than 10 million.
+The first one corresponds to the number of objects in the tenured
+generation. Sliding window aggregation retains objects for a significant
+time (the length of the window) and then releases them. This goes
+directly against the Generational Garbage Hypothesis, which states that
+objects will either die young or live forever. This regime puts the
+strongest pressure on the GC, making this parameter highly relevant.
 
-To explain the second parameter, let's use some diagrams. A pipeline
+The second parameter relates to how much GC overhead the application can
+tolerate. To explain it better, let's use some diagrams. A pipeline
 performing windowed aggregation goes through three distinct steps:
 
 1. processing events in real time, as they arrive
 2. emitting the sliding window results
 3. catching up with the events received while in step 2
 
+The three phases can be visualized as follows:
+
 ![Phases of the sliding window computation](assets/2020-06-01-sliding-window-1.png)
+
+If emitting the window result takes longer, we get a situation like this:
+
+![Phases of the sliding window computation](assets/2020-06-01-sliding-window-2.png)
+
+Now the headroom has shrunk to almost nothing, the pipeline is barely
+keeping up, and any temporary hiccups like an occasional GC pause will
+cause latency to grow and recover at a very slow pace.
+
+If we change this picture and present just the average event ingestion
+rate after window emission, we get this:
+
+![Phases of the sliding window computation](assets/2020-06-01-sliding-window-3.png)
+
+We call the height of the yellow rectangle "catchup demand": it is the
+demand on the throughput of the source. If it exceeds the actual maximum
+throughput, the pipeline fails.
+
+This is how it would look if window emission took way too long:
+
+![Phases of the sliding window computation](assets/2020-06-01-sliding-window-4.png)
+
+The area of the red and the yellow rectangles is fixed, it corresponds
+to the amount of data that must flow through the pipeline. Basically,
+the red rectangle "squeezes out" the yellow one. But the yellow
+rectangle's height is actually limited, in our case to 2.2 million
+events per second. So whenever it would be taller than the limit, we'd
+have a failing pipeline whose latency grows without bounds.
+
+We worked out the formulas that predict the sizes of the rectangles for
+a given combination of event rate, window size, sliding step and keyset
+size, so that we could determine the catchup demand for each case.
+
+Now we that we have two more-or-less independent parameters derived from
+many more parameters describing each individual setup, we can create a
+2D-chart where each benchmark run has a point on it. We assigned a color
+to each point, telling us whether the given combination worked or
+failed. For example, for JDK 14 with G1 on a developer's laptop, we got
+this picture:
+
+![Viable combinations of catchup demand and storage, JDK 14 and G1](assets/2020-06-01-viable-combinations-jdk14.png)
+
+We made the distinction between "yes", "no" and "gc", meaning the pipeline
+keeps up, doesn't keep up due to lack of throughput, or doesn't keep up
+due to frequent long GC pauses. Note that the lack of throughput can
+also be caused by concurrent GC activity and frequent short GC pauses.
+In the end, the distinction doesn't matter a lot.
+
+You can make out a contour that separates the lower-left area where
+things work out from the rest of the space, where they fail. We made
+the same kind of chart for other combinations of JDK and GC, extracted
+the contours, and came up with this summary chart:
+
+![Viable combinations of catchup demand and storage, JDK 14 and G1](assets/2020-06-01-viable-combinations.png)
+
+For reference, the hardware we used is a MacBook Pro 2018 with a 6-core
+Intel Core i7 and 16 GB DDR4 RAM, configuring `-Xmx10g` for the JVM.
+However, we do expect the overall relationship among the combinations to
+remain the same on a broad range of hardware parameters. The chart
+visualizes the superiority of the G1 over others, the weakness of the G1
+on JDK 8, and the weakness of the experimental low-latency collectors
+for this kind of workload. On JDK 8, Parallel GC seems to perform better
+at high catchup demands than G1. We deemed any run where the latency
+stays bounded as a "yes", but for Parallel these bounds were
+impractically high, dozens of seconds.
+
+The base latency, the time it takes to emit the window results, was in
+the ballpark of 500 milliseconds, but latency would often take hikes due
+to occasional Major GC's (which are not unreasonably long with the G1),
+up to 10 seconds in the borderline cases (where the pipeline barely
+keeps up), and still recover back to a second or two. We also noticed
+the effects of JIT compilation in the borderline cases: the pipeline
+would start out with a constantly increasing latency, but then after
+around two minutes, its performance would improve and the latency would
+make a full recovery.
+
+## Batch Pipeline Benchmark
+
+For the batch benchmark we used this very simple pipeline:
+
+```java
+p.readFrom(longSource)
+ .groupingKey(n -> n % NUM_KEYS)
+ .aggregate(summingLong(n -> n))
+ .writeTo(Sinks.logger())
+```
+
+The source is again a self-contained mock source that just emits a
+sequence of `long` numbers. The only relevant metric is the time for
+the job to complete.

@@ -46,8 +46,9 @@ These are our key findings:
    some cases we were able to improve the throughput by using
    `-XX:ConcGCThreads`.
 
-We tested the above JDK/GC combinations in the three usage scenarios we
-present below.
+We tested the above JDK/GC combinations in three different usage
+scenarios, deriving some conclusions and recommendations we present
+below.
 
 ### Low-Latency Unbounded Stream Processing, Moderate State
 
