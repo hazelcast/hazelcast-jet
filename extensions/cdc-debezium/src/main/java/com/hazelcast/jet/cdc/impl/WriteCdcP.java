@@ -88,7 +88,7 @@ public class WriteCdcP<K, V> extends UpdateMapWithMaterializedValuesP<ChangeReco
      */
     boolean updateSequence(K key, long partition, long sequence) {
         Sequence prevSequence = sequences.get(key);
-        if (prevSequence == null) { //first observed sequence for key
+        if (prevSequence == null) { // first observed sequence for key
             sequences.put(key, new Sequence(partition, sequence));
             return true;
         }

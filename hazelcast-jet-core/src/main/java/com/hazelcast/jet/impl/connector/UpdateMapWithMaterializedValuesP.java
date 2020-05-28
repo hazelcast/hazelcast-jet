@@ -18,6 +18,7 @@ package com.hazelcast.jet.impl.connector;
 
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.function.FunctionEx;
+import com.hazelcast.internal.nio.IOUtil;
 import com.hazelcast.internal.serialization.Data;
 import com.hazelcast.jet.core.JetDataSerializerHook;
 import com.hazelcast.map.EntryProcessor;
@@ -28,7 +29,9 @@ import com.hazelcast.query.impl.QueryableEntry;
 
 import javax.annotation.Nonnull;
 import java.io.IOException;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Map.Entry;
 
 public class UpdateMapWithMaterializedValuesP<T, K, V> extends AbstractUpdateMapP<T, K, V> {
 
@@ -97,12 +100,22 @@ public class UpdateMapWithMaterializedValuesP<T, K, V> extends AbstractUpdateMap
 
         @Override
         public void writeData(ObjectDataOutput out) throws IOException {
-            out.writeObject(keysToUpdate);
+            out.writeInt(keysToUpdate.size());
+            for (Entry<Data, Object> e : keysToUpdate.entrySet()) {
+                IOUtil.writeData(out, e.getKey());
+                IOUtil.writeData(out, (Data) e.getValue());
+            }
         }
 
         @Override
         public void readData(ObjectDataInput in) throws IOException {
-            keysToUpdate = in.readObject();
+            int size = in.readInt();
+            keysToUpdate = new LinkedHashMap<>(size);
+            for (int i = 0; i < size; i++) {
+                Data key = IOUtil.readData(in);
+                Data value = IOUtil.readData(in);
+                keysToUpdate.put(key, value);
+            }
         }
 
         @Override
