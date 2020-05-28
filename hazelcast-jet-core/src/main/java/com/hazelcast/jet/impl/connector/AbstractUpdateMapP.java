@@ -21,20 +21,28 @@ import com.hazelcast.client.impl.spi.ClientPartitionService;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.instance.impl.HazelcastInstanceImpl;
+import com.hazelcast.internal.nio.IOUtil;
 import com.hazelcast.internal.partition.IPartitionService;
 import com.hazelcast.internal.serialization.Data;
 import com.hazelcast.internal.serialization.SerializationService;
 import com.hazelcast.jet.core.Inbox;
+import com.hazelcast.jet.core.JetDataSerializerHook;
 import com.hazelcast.jet.core.Outbox;
 import com.hazelcast.jet.impl.util.ImdgUtil;
 import com.hazelcast.map.EntryProcessor;
 import com.hazelcast.map.IMap;
 import com.hazelcast.map.impl.proxy.MapProxyImpl;
+import com.hazelcast.nio.ObjectDataInput;
+import com.hazelcast.nio.ObjectDataOutput;
+import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 import com.hazelcast.partition.PartitioningStrategy;
+import com.hazelcast.query.impl.QueryableEntry;
 import com.hazelcast.spi.impl.NodeEngineImpl;
 
 import javax.annotation.Nonnull;
+import java.io.IOException;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.ToIntFunction;
@@ -44,7 +52,7 @@ import java.util.function.ToIntFunction;
  * @param <K> type of keys of the map being written
  * @param <V> type of values of the map being written
  */
-abstract class AbstractUpdateMapP<T, K, V> extends AsyncHazelcastWriterP {
+public abstract class AbstractUpdateMapP<T, K, V> extends AsyncHazelcastWriterP {
 
     private static final int PENDING_ITEM_COUNT_LIMIT = 1024;
 
@@ -61,7 +69,7 @@ abstract class AbstractUpdateMapP<T, K, V> extends AsyncHazelcastWriterP {
     protected int pendingItemCount;
     protected int currentPartitionId;
 
-    AbstractUpdateMapP(
+    public AbstractUpdateMapP(
             @Nonnull HazelcastInstance instance,
             int maxParallelAsyncOps,
             @Nonnull String mapName,
@@ -144,7 +152,7 @@ abstract class AbstractUpdateMapP<T, K, V> extends AsyncHazelcastWriterP {
         return v;
     }
 
-    static class SerializationContext<K> {
+    public static class SerializationContext<K> {
 
         private final int partitionCount;
 
@@ -170,15 +178,15 @@ abstract class AbstractUpdateMapP<T, K, V> extends AsyncHazelcastWriterP {
             }
         }
 
-        int partitionCount() {
+        public int partitionCount() {
             return partitionCount;
         }
 
-        int partitionId(Data data) {
+        public int partitionId(Data data) {
             return partitionIdFn.applyAsInt(data);
         }
 
-        Data toKeyData(K key) {
+        public Data toKeyData(K key) {
             if (partitioningStrategy != null) {
                 // We pre-serialize the key and value to avoid double serialization when partitionId
                 // is calculated and when the value for backup operation is re-serialized
@@ -192,9 +200,61 @@ abstract class AbstractUpdateMapP<T, K, V> extends AsyncHazelcastWriterP {
             }
         }
 
-        Data toData(Object value) {
+        public Data toData(Object value) {
             return serializationService.toData(value);
         }
+    }
+
+    public static class ApplyValuesEntryProcessor<K, V>
+            implements EntryProcessor<K, V, Void>, IdentifiedDataSerializable {
+
+        private Map<Data, Object> keysToUpdate;
+
+        public ApplyValuesEntryProcessor() { //needed for (de)serialization
+        }
+
+        public ApplyValuesEntryProcessor(Map<Data, Object> keysToUpdate) {
+            this.keysToUpdate = keysToUpdate;
+        }
+
+        @Override
+        public Void process(Map.Entry<K, V> entry) {
+            // avoid re-serialization
+            QueryableEntry<Data, Object> e = ((QueryableEntry<Data, Object>) entry);
+            e.setValue(keysToUpdate.get(e.getKeyData()));
+            return null;
+        }
+
+        @Override
+        public void writeData(ObjectDataOutput out) throws IOException {
+            out.writeInt(keysToUpdate.size());
+            for (Map.Entry<Data, Object> e : keysToUpdate.entrySet()) {
+                IOUtil.writeData(out, e.getKey());
+                IOUtil.writeData(out, (Data) e.getValue());
+            }
+        }
+
+        @Override
+        public void readData(ObjectDataInput in) throws IOException {
+            int size = in.readInt();
+            keysToUpdate = new LinkedHashMap<>(size);
+            for (int i = 0; i < size; i++) {
+                Data key = IOUtil.readData(in);
+                Data value = IOUtil.readData(in);
+                keysToUpdate.put(key, value);
+            }
+        }
+
+        @Override
+        public int getFactoryId() {
+            return JetDataSerializerHook.FACTORY_ID;
+        }
+
+        @Override
+        public int getClassId() {
+            return JetDataSerializerHook.APPLY_VALUE_ENTRY_PROCESSOR;
+        }
+
     }
 
 }

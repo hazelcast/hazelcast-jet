@@ -18,21 +18,24 @@ package com.hazelcast.jet.cdc.impl;
 
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.function.FunctionEx;
+import com.hazelcast.internal.serialization.Data;
 import com.hazelcast.jet.cdc.CdcSinks;
 import com.hazelcast.jet.cdc.ChangeRecord;
 import com.hazelcast.jet.core.Outbox;
-import com.hazelcast.jet.impl.connector.UpdateMapWithMaterializedValuesP;
+import com.hazelcast.jet.impl.connector.AbstractUpdateMapP;
+import com.hazelcast.map.EntryProcessor;
 import com.hazelcast.spi.properties.HazelcastProperties;
 
 import javax.annotation.Nonnull;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-//TODO: merge with UpdateMapWithMaterializedValuesP
-public class WriteCdcP<K, V> extends UpdateMapWithMaterializedValuesP<ChangeRecord, K, V> {
+public class WriteCdcP<K, V> extends AbstractUpdateMapP<ChangeRecord, K, V> {
 
     private static final int INITIAL_CAPACITY = 4 * 1024;
     private static final float LOAD_FACTOR = 0.75f;
+
+    private final FunctionEx<? super ChangeRecord, ? extends V> valueFn;
 
     /**
      * Tracks the last seen sequence for a set of keys.
@@ -52,7 +55,8 @@ public class WriteCdcP<K, V> extends UpdateMapWithMaterializedValuesP<ChangeReco
             @Nonnull FunctionEx<? super ChangeRecord, ? extends K> keyFn,
             @Nonnull FunctionEx<? super ChangeRecord, ? extends V> valueFn
     ) {
-        super(instance, map, keyFn, valueFn);
+        super(instance, MAX_PARALLEL_ASYNC_OPS_DEFAULT, map, keyFn);
+        this.valueFn = valueFn;
 
     }
 
@@ -70,15 +74,6 @@ public class WriteCdcP<K, V> extends UpdateMapWithMaterializedValuesP<ChangeReco
         };
     }
 
-    @Override
-    protected boolean shouldBeDropped(K key, ChangeRecord item) {
-        ChangeRecordImpl recordImpl = (ChangeRecordImpl) item;
-        long sequencePartition = recordImpl.getSequencePartition();
-        long sequenceValue = recordImpl.getSequenceValue();
-
-        return !updateSequence(key, sequencePartition, sequenceValue);
-    }
-
     /**
      * @param key       key of an event that has just been observed
      * @param partition partition of the source event sequence number
@@ -93,6 +88,40 @@ public class WriteCdcP<K, V> extends UpdateMapWithMaterializedValuesP<ChangeReco
             return true;
         }
         return prevSequence.update(partition, sequence);
+    }
+
+    @Override
+    protected void addToBuffer(com.hazelcast.jet.cdc.ChangeRecord item) {
+        K key = keyFn.apply(item);
+        boolean shouldBeDropped = shouldBeDropped(key, item);
+        if (shouldBeDropped) {
+            pendingItemCount--;
+            return;
+        }
+
+        Data keyData = serializationContext.toKeyData(key);
+        int partitionId = serializationContext.partitionId(keyData);
+
+        Map<Data, Object> buffer = partitionBuffers[partitionId];
+        Data value = serializationContext.toData(valueFn.apply(item));
+        if (buffer.put(keyData, value) == null) {
+            pendingInPartition[partitionId]++;
+        } else { // item already exists, it will be coalesced
+            pendingItemCount--;
+        }
+    }
+
+    private boolean shouldBeDropped(K key, ChangeRecord item) {
+        ChangeRecordImpl recordImpl = (ChangeRecordImpl) item;
+        long sequencePartition = recordImpl.getSequencePartition();
+        long sequenceValue = recordImpl.getSequenceValue();
+
+        return !updateSequence(key, sequencePartition, sequenceValue);
+    }
+
+    @Override
+    protected EntryProcessor<K, V, Void> entryProcessor(Map<Data, Object> buffer) {
+        return new ApplyValuesEntryProcessor<>(buffer);
     }
 
     /**

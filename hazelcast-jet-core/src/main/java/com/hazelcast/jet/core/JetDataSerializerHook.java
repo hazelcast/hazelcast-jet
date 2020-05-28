@@ -18,8 +18,8 @@ package com.hazelcast.jet.core;
 
 import com.hazelcast.internal.serialization.DataSerializerHook;
 import com.hazelcast.internal.serialization.impl.FactoryIdHelper;
+import com.hazelcast.jet.impl.connector.AbstractUpdateMapP.ApplyValuesEntryProcessor;
 import com.hazelcast.jet.impl.connector.UpdateMapP.ApplyFnEntryProcessor;
-import com.hazelcast.jet.impl.connector.UpdateMapWithMaterializedValuesP.ApplyValuesEntryProcessor;
 import com.hazelcast.nio.serialization.DataSerializableFactory;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 import com.hazelcast.spi.annotation.PrivateApi;
