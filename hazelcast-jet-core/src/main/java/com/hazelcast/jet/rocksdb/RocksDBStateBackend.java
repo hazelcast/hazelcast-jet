@@ -31,17 +31,17 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Responsible for managing one RocksDB instance,
- * opening and Closing the connection and deleting the database.
+ * opening, closing the connection and deleting the database.
  * Processors acquire an instance of this class on initialization.
  * Processors use this class to acquire any number of RocksMaps they require.
  * The database is logically partitioned using column families.
  * Each RocksMap is instantiated with a ColumnFamilyHandler.
- * Once the task has finished (complete() is invoked),
- * the task asks it to delete the whole database.
+ * Once the processor has finished execution,
+ * the processor should invoke releaseMap() on each acquired map.
  */
 
 public class RocksDBStateBackend {
-    private static final String TEST_DIRECTORY = "src/main/resources/database";
+    private static final String TEST_DIRECTORY = "C:\\Users\\Mohamed Mandouh\\database";
     private String directory;
     private InternalSerializationService serializationService;
     private RocksDB db;
@@ -49,18 +49,30 @@ public class RocksDBStateBackend {
     private AtomicInteger counter = new AtomicInteger(0);
     private final RocksDBOptions rocksDBOptions = new RocksDBOptions();
 
+    /**
+     * Returns a new state backend instance
+     *
+     * @param serializationService the serialization service associated with the current job
+     * @param directory the local directory where the database will operate
+     *                  a directory will be created on each cluster member
+     */
     public RocksDBStateBackend(InternalSerializationService serializationService, String directory) {
         this.serializationService = serializationService;
         this.directory = directory;
         init();
     }
-
+    /**
+     * Returns a new state backend instance.
+     * This constructor is for testing purposes only.
+     *
+     * @param serializationService the serialization service associated with the current job
+     */
     public RocksDBStateBackend(InternalSerializationService serializationService) {
         this.serializationService = serializationService;
         init();
     }
 
-    public void init() throws JetException {
+    private void init() throws JetException {
         try {
             RocksDB.loadLibrary();
             directory = directory == null ? TEST_DIRECTORY : directory;
@@ -69,6 +81,13 @@ public class RocksDBStateBackend {
             throw new JetException("Failed to create a RocksDB instance", e);
         }
     }
+
+    /**
+     * Returns a new RocksMap instance
+     *
+     * @return a new empty RocksMap
+     * @throws JetException if the database is closed
+     */
 
     public <K, V> RocksMap<K, V> getMap() throws JetException {
         ColumnFamilyHandle cfh;
@@ -89,6 +108,12 @@ public class RocksDBStateBackend {
         return "RocksMap" + counter.getAndIncrement();
     }
 
+    /**
+     * Deletes the supplied RocksMap
+     *
+     * @param map the RocksMap to be deleted
+     * @throws JetException if the database is closed
+     */
     public void releaseMap(RocksMap map) throws JetException {
         try {
             ColumnFamilyHandle cfh = map.getColumnFamilyHandle();
@@ -99,7 +124,13 @@ public class RocksDBStateBackend {
         }
     }
 
-    public void deleteKeyValueStore() {
+    /**
+     * Deletes the whole database instance.
+     * Should be invoked when the job finishes execution (whether successfully or with an error)
+     *
+     * @throws JetException if the database is closed
+     */
+    public void deleteKeyValueStore() throws JetException {
         for (final ColumnFamilyHandle cfh : cfhs) {
             try {
                 db.dropColumnFamily(cfh);

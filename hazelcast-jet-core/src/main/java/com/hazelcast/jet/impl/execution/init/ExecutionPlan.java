@@ -146,10 +146,11 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
                            long executionId,
                            SnapshotContext snapshotContext,
                            ConcurrentHashMap<String, File> tempDirectories,
-                           InternalSerializationService jobSerializationService) {
+                           InternalSerializationService jobSerializationService,
+                           RocksDBStateBackend rocksDBStateBackend) {
         this.nodeEngine = (NodeEngineImpl) nodeEngine;
         this.executionId = executionId;
-        rocksDBStateBackend = new RocksDBStateBackend(jobSerializationService);
+        this.rocksDBStateBackend = rocksDBStateBackend;
         initProcSuppliers(jobId, executionId, tempDirectories, jobSerializationService, rocksDBStateBackend);
         initDag(jobSerializationService);
 

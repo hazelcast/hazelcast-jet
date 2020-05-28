@@ -38,6 +38,7 @@ import com.hazelcast.jet.impl.metrics.RawJobMetrics;
 import com.hazelcast.jet.impl.operation.SnapshotPhase1Operation.SnapshotPhase1Result;
 import com.hazelcast.jet.impl.util.LoggingUtil;
 import com.hazelcast.jet.impl.util.Util;
+import com.hazelcast.jet.rocksdb.RocksDBStateBackend;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.spi.impl.NodeEngine;
 
@@ -107,6 +108,8 @@ public class ExecutionContext implements DynamicMetricsProvider {
 
     private InternalSerializationService serializationService;
 
+    private RocksDBStateBackend rocksDBStateBackend;
+
 
     public ExecutionContext(NodeEngine nodeEngine, TaskletExecutionService taskletExecService,
                             long jobId, long executionId, Address coordinator, Set<Address> participants) {
@@ -135,8 +138,9 @@ public class ExecutionContext implements DynamicMetricsProvider {
         JetService jetService = nodeEngine.getService(JetService.SERVICE_NAME);
         serializationService = jetService.createSerializationService(jobConfig.getSerializerConfigs());
         metricsEnabled = jobConfig.isMetricsEnabled() && nodeEngine.getConfig().getMetricsConfig().isEnabled();
+        rocksDBStateBackend = new RocksDBStateBackend(serializationService);
         plan.initialize(nodeEngine, jobId, executionId, snapshotContext,
-                tempDirectories, serializationService);
+                tempDirectories, serializationService, rocksDBStateBackend);
         snapshotContext.initTaskletCount(plan.getProcessorTaskletCount(), plan.getStoreSnapshotTaskletCount(),
                 plan.getHigherPriorityVertexCount());
         receiverMap = unmodifiableMap(plan.getReceiverMap());
@@ -218,6 +222,8 @@ public class ExecutionContext implements DynamicMetricsProvider {
         if (serializationService != null) {
             serializationService.dispose();
         }
+
+        rocksDBStateBackend.deleteKeyValueStore();
     }
 
     /**

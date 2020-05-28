@@ -40,6 +40,7 @@ import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
 /**
  * RocksMap is RocksDB-backed HashMap.
  * Responsible for providing the interface of HashMap to processors.
+ *
  * @param <K> the type of key
  * @param <V> the type of value
  */
@@ -66,6 +67,14 @@ public class RocksMap<K, V> implements Iterable<Entry<K, V>> {
         return cfh;
     }
 
+    /**
+     * Returns the value mapped to a given key.
+     *
+     * @param key the key whose value is to be returned
+     * @return the value associated with key or null if the key doesn't exist
+     * @throws JetException if the database is closed
+     */
+
     public V get(K key) throws JetException {
         try {
             byte[] valueBytes = db.get(cfh, readOptions, serialize(key));
@@ -75,6 +84,13 @@ public class RocksMap<K, V> implements Iterable<Entry<K, V>> {
         }
     }
 
+    /**
+     * Maps a key to a value.
+     * If the key is already present, it updates the current value.
+     *
+     * @param key the key whose value is to be updated
+     * @throws JetException if the database is closed
+     */
     public void put(K key, V value) throws JetException {
         try {
             db.put(cfh, writeOptions, serialize(key), serialize(value));
@@ -83,6 +99,12 @@ public class RocksMap<K, V> implements Iterable<Entry<K, V>> {
         }
     }
 
+    /**
+     * Deletes the mapping between key and value.
+     *
+     * @param key the key whose value is to be removed
+     * @throws JetException if the database is closed
+     */
     public void delete(K key) throws JetException {
         try {
             db.delete(writeOptions, serialize(key));
@@ -91,6 +113,12 @@ public class RocksMap<K, V> implements Iterable<Entry<K, V>> {
         }
     }
 
+    /**
+     * Copies all key-value mappings from the supplied map to this map.
+     *
+     * @param map the map containing key-value pairs to be inserted
+     * @throws JetException if the database is closed
+     */
     public void putAll(@Nonnull Map<K, V> map) throws JetException {
         WriteBatch batch = new WriteBatch();
         for (Entry<K, V> e : map.entrySet()) {
@@ -103,6 +131,12 @@ public class RocksMap<K, V> implements Iterable<Entry<K, V>> {
         }
     }
 
+    /**
+     * Returns all key-value mappings in the this map as in a HashMap
+     *
+     * @return a HashMap containing all key-value pairs
+     * @throws JetException if the database is closed
+     */
     public Map<K, V> getAll() {
         Map<K, V> map = new HashMap<>();
         for (Entry<K, V> entry : this) {
