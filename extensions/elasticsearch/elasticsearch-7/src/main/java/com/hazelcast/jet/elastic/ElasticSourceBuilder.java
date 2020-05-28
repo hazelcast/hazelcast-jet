@@ -192,8 +192,8 @@ public final class ElasticSourceBuilder<T> {
      * Use this option to read from multiple shards in parallel. It can
      * also be used on single shard, but it may increase initial latency.
      * See Elastic documentation for
-     * <a href="https://www.elastic.co/guide/en/elasticsearch/reference/current/search-request-body.html#sliced-scroll">Sliced Scroll</a>
-     * for details.
+     * <a href="https://www.elastic.co/guide/en/elasticsearch/reference/current/search-request-body.html#sliced-scroll">
+     *     Sliced Scroll</a> for details.
      */
     @Nonnull
     public ElasticSourceBuilder<T> enableSlicing() {
@@ -215,7 +215,8 @@ public final class ElasticSourceBuilder<T> {
     /**
      * Set the keepAlive for Elastic search scroll
      * <p>
-     * See {@link SearchRequest#scroll(String)}
+     * The value must be in Elastic time unit format, e.g. 500ms for 500 milliseconds, 30s for 30 seconds,
+     * 5m for 5 minutes. See {@link SearchRequest#scroll(String)}.
      *
      * @param scrollKeepAlive keepAlive value, this must be high enough to process all
      *                       results from a single scroll, default value 1m

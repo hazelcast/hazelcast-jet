@@ -1408,6 +1408,7 @@ restarted in face of an intermittent failure.
 |:-----|:---- |:-----------|:--------|
 |`AvroSources.files`|`hazelcast-jet-avro`|batch|N/A|
 |`DebeziumCdcSources.debezium`|`hazelcast-jet-cdc-debezium`|stream|at-least-once|
+|`ElasticSources.elastic`|`hazelcast-jet-elasticsearch-7`|batch|N/A|
 |`MySqlCdcSources.mysql`|`hazelcast-jet-cdc-mysql`|stream|at-least-once|
 |`HadoopSources.inputFormat`|`hazelcast-jet-hadoop`|batch|N/A|
 |`KafkaSources.kafka`|`hazelcast-jet-kafka`|stream|exactly-once|
@@ -1442,6 +1443,7 @@ processing even with at-least-once sinks.
 |sink|module|streaming support|guarantee|
 |:---|:-----|:--------------|:-------------------|
 |`AvroSinks.files`|`hazelcast-jet-avro`|no|N/A|
+|`ElasticSinks.elastic`|`hazelcast-jet-elasticsearch-7`|no|N/A|
 |`HadoopSinks.outputFormat`|`hazelcast-jet-hadoop`|no|N/A|
 |`KafkaSinks.kafka`|`hazelcast-jet-kafka`|yes|exactly-once|
 |`PulsarSources.pulsarSink`|`hazelcast-jet-contrib-pulsar`|yes|at-least-once|
