@@ -31,6 +31,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import static com.hazelcast.jet.cdc.Operation.DELETE;
+import static com.hazelcast.jet.impl.pipeline.SinkImpl.Type.DISTRIBUTED_PARTITIONED;
 import static com.hazelcast.jet.impl.util.ImdgUtil.asXmlString;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
@@ -104,10 +105,6 @@ public final class CdcSinks {
      * {@code valueFn} returns {@code null}, then the key will be
      * deleted from the map no matter the operation (ie. even for update
      * and insert records).
-     * <p>
-     * For the functionality of this sink it is vital that the order of
-     * the input items is preserved so we'll always create a single
-     * instance of it in each pipeline.
      *
      * @since 4.2
      */
@@ -149,10 +146,6 @@ public final class CdcSinks {
      * {@code valueFn} returns {@code null}, then the key will be
      * deleted from the map no matter the operation (ie. even for update
      * and insert records).
-     * <p>
-     * For the functionality of this sink it is vital that the order of
-     * the input items is preserved so we'll always create a single
-     * instance of it in each pipeline.
      *
      * @since 4.2
      */
@@ -200,9 +193,8 @@ public final class CdcSinks {
                 record -> DELETE.equals(record.operation()) ? null : valueFn.apply(record);
         ProcessorSupplier supplier = AbstractHazelcastConnectorSupplier.of(asXmlString(clientConfig),
                 instance -> new WriteCdcP<>(instance, map, keyFn, toValueFn));
-        // TODO - this edge needs to be partitioned and distributed
-        ProcessorMetaSupplier metaSupplier = ProcessorMetaSupplier.forceTotalParallelismOne(supplier, name);
-        return new SinkImpl<>(name, metaSupplier, true, null);
+        ProcessorMetaSupplier metaSupplier = ProcessorMetaSupplier.of(supplier);
+        return new SinkImpl<>(name, metaSupplier, DISTRIBUTED_PARTITIONED, keyFn);
     }
 
 }
