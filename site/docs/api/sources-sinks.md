@@ -1352,9 +1352,9 @@ restarted in face of an intermittent failure.
 |:-----|:---- |:-----------|:--------|
 |`AvroSources.files`|`hazelcast-jet-avro`|batch|N/A|
 |`DebeziumCdcSources.debezium`|`hazelcast-jet-cdc-debezium`|stream|at-least-once|
-|`MySqlCdcSources.mysql`|`hazelcast-jet-cdc-mysql`|stream|at-least-once|
 |`HadoopSources.inputFormat`|`hazelcast-jet-hadoop`|batch|N/A|
 |`KafkaSources.kafka`|`hazelcast-jet-kafka`|stream|exactly-once|
+|`MySqlCdcSources.mysql`|`hazelcast-jet-cdc-mysql`|stream|at-least-once|
 |`S3Sources.s3`|`hazelcast-jet-s3`|batch|N/A|
 |`Sources.cache`|`hazelcast-jet`|batch|N/A|
 |`Sources.cacheJournal`|`hazelcast-jet`|stream|exactly-once|
