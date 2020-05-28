@@ -5,23 +5,21 @@ id: version-4.1-docker
 original_id: docker
 ---
 
-# Hazelcast Jet with Docker
-
 This section provides comprehensive coverage of usage of Hazelcast Jet
 inside a Docker environment. While it gives an explanation of all
-options and parameters used in the examples it is recomended to be
-familiar with Docker, visit e.g. the [official
-documentation](https://docs.docker.com/get-started/) for a begginner
+options and parameters used in the examples it is recommended to be
+familiar with Docker, visit e.g.  the [official
+documentation](https://docs.docker.com/get-started/) for a beginner
 focused tutorial.
 
-# Start Hazelcast Jet node
+## Start Hazelcast Jet node
 
 Let's begin with starting an instance of Hazelcast Jet using the
 official Docker image. To start the instance simply execute the
 following command in your terminal:
 
 ```bash
-docker run hazelcast/hazelcast-jet
+docker run -p 5701:5701 hazelcast/hazelcast-jet
 ```
 
 If you previously haven't run Hazelcast Jet Docker image, it will
@@ -56,28 +54,37 @@ Revision e6c60a1
 Build 20200429
 ```
 
-You can also specify particular version of the image to run when
-starting the container, e.g. when you need to run older version of Jet:
+If your `hazelcast/hazelcast-jet` latest image points to an older
+version you can update it by running the following command:
+
+```bash
+docker pull hazelcast/hazelcast-jet
+```
+
+You can also specify a particular version of the image to run when
+starting the container, e.g. when you need to run an older version of
+Jet:
 
 ```bash
 docker run hazelcast/hazelcast-jet:4.0
 ```
 
-
 ## Submit job to Hazelcast Jet
 
-Download the jet distribution from
-[here](https://github.com/hazelcast/hazelcast-jet/releases/download/v4.1/hazelcast-jet-4.1.tar.gz)
+We will submit a hello world job, which is available in the Hazelcast
+Jet distribution. Download the Jet distribution from
+[here](https://github.com/hazelcast/hazelcast-jet/releases/download/v{jet-version}/hazelcast-jet-{jet-version}.tar.gz)
+. From now and on we will refer to the extracted location as `<jet home>`.
 
-Also note the address of your Hazelcast Jet instance from the log:
+Also, note the address of your Hazelcast Jet instance from the log:
 
 ```text
 Members {size:1, ver:1} [
-	Member [172.17.0.2]:5701 - c54413e4-2cd2-4c07-91ec-d5992b18f9b0 this
+    Member [172.17.0.2]:5701 - c54413e4-2cd2-4c07-91ec-d5992b18f9b0 this
 ]
 ```
 
-Run the following command to submit a hello world job to your Hazelcast
+Run the following command to submit the hello world job to your Hazelcast
 Jet instance:
 
 ```bash
@@ -98,7 +105,7 @@ The parameters are as follows:
   container
 
 You can list the running jobs inside the cluster by running the
-follwing command:
+following command:
 
 ```bash
 docker run hazelcast/hazelcast-jet jet -a 172.17.0.2 list-jobs
@@ -113,32 +120,79 @@ ID                  STATUS             SUBMISSION TIME         NAME
 ```
 
 You can cancel a running job by running the following command:
+
 ```bash
-docker run hazelcast/hazelcast-jet jet -a 172.17.0.2 cancel 045e-987c-1940-0001
+docker run hazelcast/hazelcast-jet jet -a 172.17.0.2 cancel hello-world
 ```
+
 ### Using local distribution
 
 Alternatively you can use the downloaded distribution to submit a job to
-a cluster directly:
+a cluster directly, from `<jet home>` run:
 
 ```bash
-bin/jet -a 172.17.0.2 submit examples/hellow-world.jar
+bin/jet submit examples/hello-world.jar
 ```
 
-In some environments (e.g. on Windows or macOS) the container may not be
-directly accessible via network from your host machine. In that case you
-may expose a particular port of the container on your local machine.
+In some environments (e.g. on Windows or macOS) the container is not
+directly accessible via network from your host machine. When starting
+the container we have used the `-p 5701:5701` option to expose the
+container port 5701 on localhost. The command above uses that by
+default.
 
-Stop the Jet instance and run 
+On Linux it is enough to start the container with
 
 ```bash
-docker run -p 5701:5701 hazelcast/hazelcast-jet
+docker run hazelcast/hazelcast-jet
 ```
 
-Then you don't need to specify an address for the submit command:
+And submit the job, specifying the cluster address:
 
 ```bash
-bin/jet submit examples/hellow-world.jar
+bin/jet -a 172.17.0.2 submit examples/hello-world.jar
+```
+
+## Configure Hazelcast Jet
+
+### JAVA_OPTS
+
+As shown below, you can use `JAVA_OPTS` environment variable if you need
+to pass multiple VM arguments to your Hazelcast Jet member.
+
+```bash
+docker run -e JAVA_OPTS="-Xms512M -Xmx1024M" -p 5701:5701 hazelcast/hazelcast-jet
+```
+
+### Custom Hazelcast Jet Configuration File
+
+If you need to configure Hazelcast Jet with your own hazelcast-jet.yaml,
+or hazelcast.yaml, you just need to mount the file to configuration file
+location in the container. The configuration files are stored in the
+`/opt/hazelcast-jet/config` directory.
+
+For example to change the cluster name create a file `hazelcast.yaml`
+with following content:
+
+```yaml
+hazelcast:
+  # The name of the cluster. All members of a single cluster must have the
+  # same cluster name configured and a client connecting to this cluster
+  # must use it as well.
+  cluster-name: jet-1
+```
+
+Then use it when starting the Jet instance by running the following
+command (it expects the file in current directory):
+
+```bash
+docker run -v "$(pwd)"/hazelcast.yaml:/opt/hazelcast-jet/config/hazelcast.yaml hazelcast/hazelcast-jet
+```
+
+Submit a job to the cluster, specifying cluster name in the jet command
+using `-n jet-1` option (shortcut for `--cluster-name`):
+
+```bash
+docker run -it -v "$(pwd)"/examples:/examples hazelcast/hazelcast-jet jet -a 172.17.0.2 -n jet-1 submit /examples/hello-world.jar
 ```
 
 ## Start Jet cluster
@@ -148,10 +202,13 @@ advantage, it will allow you to test your pipelines in a distributed
 environment.
 
 The simplest way to start a cluster is to start multiple docker
-instances. Just run the `docker run` command from multiple terminals:
+instances. Just run the `docker run` command from multiple terminals,
+remember to use different port each time:
 
 ```bash
-docker run hazelcast/hazelcast-jet
+docker run -p 5701:5701 hazelcast/hazelcast-jet
+...
+docker run -p 5702:5701 hazelcast/hazelcast-jet
 ```
 
 Eventually, the instances should discover each other and you should
@@ -159,19 +216,19 @@ see output similar to:
 
 ```text
 Members {size:2, ver:2} [
-	Member [172.17.0.2]:5701 - df428435-8cbd-464d-8671-afe396f5eef6
-	Member [172.17.0.3]:5701 - 011a9dd4-936f-4170-a7c6-622b7430b789 this
+    Member [172.17.0.2]:5701 - df428435-8cbd-464d-8671-afe396f5eef6
+    Member [172.17.0.3]:5701 - 011a9dd4-936f-4170-a7c6-622b7430b789 this
 ]
 ```  
 
-You can use any instance ip to submit jobs to the cluster. Jet will
+You can use any instance to submit jobs to the cluster. Jet will
 take care of distributing it across all instances.
 
 ## Docker compose example
 
 When the configuration is more involved, including networks, volumes
-etc. it is usually easier to create a `docker-compose.yml` file. It
- also provides an advantage that you can easily scale the Jet cluster:
+etc. it is usually easier to create a `docker-compose.yml` file. It also
+provides an advantage that you can easily scale the Jet cluster:
 
 Create a file called `docker-compose.yml`:
 
@@ -181,6 +238,8 @@ version: '3'
 services:
   jet:
     image: hazelcast/hazelcast-jet
+    ports:
+      - "5701-5703:5701"
 ```
 
 And then start 3 node cluster by running the following command:
@@ -194,24 +253,30 @@ see the output multiple times, prefixed by the container name:
 
 ```text
 jet_3  | Members {size:3, ver:3} [
-jet_3  | 	Member [172.21.0.3]:5701 - 99d3de67-8c5d-452b-8165-085a4cd1fcda
-jet_3  | 	Member [172.21.0.2]:5701 - 64f5b01b-847e-49e0-87f2-db2a6f7750b7
-jet_3  | 	Member [172.21.0.4]:5701 - ffa362f9-617d-42bc-a74c-05ce857e8e48 this
+jet_3  |    Member [172.21.0.3]:5701 - 99d3de67-8c5d-452b-8165 -085a4cd1fcda
+jet_3  |    Member [172.21.0.2]:5701 - 64f5b01b-847e-49e0-87f2 -db2a6f7750b7
+jet_3  |    Member [172.21.0.4]:5701 - ffa362f9-617d-42bc-a74c -05ce857e8e48 this
 jet_3  | ]
 ```
+
+The `ports` section says that port 5701 from each container should be
+mapped to a port from randge 5701-5703. Increase the range if you would
+like to start more than 3 instances.
 
 ### Configuration
 
 You can provide custom `hazelcast.yaml` or `hazelcast-jet.yaml`
-configuration files by using a volume: 
+configuration files by using a volume:
 
-```
+```yaml
 version: '3'
 
 services:
 
   jet:
     image: hazelcast/hazelcast-jet
+    ports:
+      - "5701-5703:5701"
     volumes:
       - ./hazelcast.yaml:/opt/hazelcast-jet/config/hazelcast.yaml
 ```
@@ -228,7 +293,7 @@ When your architecture is Docker focused it might be easier to have
 also your job packaged as a Docker image. We will use Hazelcast Jet
 image as base image and create an image with hello world job. You can
 use the same approach to package any job.
- 
+
 Create a file called `Dockerfile` in the <jet home> directory.
 
 ```text
@@ -244,9 +309,9 @@ CMD ["sh", "-c", "jet -a $ADDRESSES submit /examples/hello-world.jar"]
 The first line specifies `hazelcast/hazelcast-jet` image as base image.
 The `ADD` command copies the `hello-world.jar` to the `/examples`
 directory inside the container image. `ENV` command defines an
- environment variable `ADDRESSES` with default value of `172.17.0.2
- `. This can be overriden via `-e` parameter of the `docker run
- ` command. The `CMD` command specifies what command to run.
+environment variable `ADDRESSES` with default value of `172.17.0.2`.
+This can be overriden via `-e` parameter of the `docker run`
+command. The `CMD` command specifies what command to run.
 
 Then create the image by running the following command:
 
@@ -282,7 +347,3 @@ docker run -it hazelcast-jet-hello-world
 
 > You don't need the `-it` parameters if your job class exits after
 > the jobs is submitted
-
-## TODO add link from downloads, getting started
-
-
