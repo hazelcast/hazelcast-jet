@@ -43,20 +43,15 @@ public class ProjectLogicalRel extends Project implements LogicalRel {
     }
 
     @Override
-    public final Project copy(RelTraitSet traitSet, RelNode input, List<RexNode> projects, RelDataType rowType) {
-        return new ProjectLogicalRel(getCluster(), traitSet, input, getProjects(), rowType);
-    }
-
-    @Override
-    public final RelWriter explainTerms(RelWriter pw) {
-        return super.explainTerms(pw);
-    }
-
-    @Override
     public RelOptCost computeSelfCost(RelOptPlanner planner, RelMetadataQuery mq) {
         double rowCount = mq.getRowCount(getInput());
         double cpu = CostUtils.adjustProjectCpu(rowCount * exps.size(), false);
 
         return planner.getCostFactory().makeCost(rowCount, cpu, 0);
+    }
+
+    @Override
+    public final Project copy(RelTraitSet traitSet, RelNode input, List<RexNode> projects, RelDataType rowType) {
+        return new ProjectLogicalRel(getCluster(), traitSet, input, getProjects(), rowType);
     }
 }

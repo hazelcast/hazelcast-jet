@@ -40,6 +40,7 @@ public final class ValuesLogicalRule extends ConverterRule {
     @Override
     public RelNode convert(RelNode rel) {
         Values values = (Values) rel;
+
         return new ValuesLogicalRel(
                 values.getCluster(),
                 values.getRowType(),

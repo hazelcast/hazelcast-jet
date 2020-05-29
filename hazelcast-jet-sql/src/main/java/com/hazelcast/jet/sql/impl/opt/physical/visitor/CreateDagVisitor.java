@@ -18,15 +18,14 @@ package com.hazelcast.jet.sql.impl.opt.physical.visitor;
 
 import com.hazelcast.function.ConsumerEx;
 import com.hazelcast.function.FunctionEx;
-import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.sql.impl.expression.ExpressionUtil;
 import com.hazelcast.jet.sql.impl.opt.physical.FullScanPhysicalRel;
 import com.hazelcast.jet.sql.impl.opt.physical.InsertPhysicalRel;
-import com.hazelcast.jet.sql.impl.opt.physical.ValuesPhysicalRel;
 import com.hazelcast.jet.sql.impl.opt.physical.NestedLoopJoinPhysicalRel;
 import com.hazelcast.jet.sql.impl.opt.physical.ProjectPhysicalRel;
+import com.hazelcast.jet.sql.impl.opt.physical.ValuesPhysicalRel;
 import com.hazelcast.sql.impl.calcite.schema.HazelcastTable;
 import com.hazelcast.sql.impl.schema.Table;
 import org.apache.calcite.util.ConversionUtil;
@@ -58,17 +57,6 @@ public class CreateDagVisitor {
         }
     }
 
-    public void onTableInsert(InsertPhysicalRel rel) {
-        Table table = rel.getTable().unwrap(HazelcastTable.class).getTarget();
-
-        Vertex vertex = getJetSqlConnector(table).sink(dag, table);
-        if (vertex == null) {
-            throw new JetException("This connector doesn't support writing");
-        }
-
-        vertexStack.push(new VertexAndOrdinal(vertex));
-    }
-
     public void onValues(ValuesPhysicalRel rel) {
         List<Object[]> items = toList(rel.getTuples(), tuple -> tuple.stream().map(rexLiteral -> {
             Comparable<?> value = rexLiteral.getValue();
@@ -97,7 +85,14 @@ public class CreateDagVisitor {
         push(vertex);
     }
 
-    public void onConnectorFullScan(FullScanPhysicalRel rel) {
+    public void onInsert(InsertPhysicalRel rel) {
+        Table table = rel.getTable().unwrap(HazelcastTable.class).getTarget();
+
+        Vertex vertex = getJetSqlConnector(table).sink(dag, table);
+        vertexStack.push(new VertexAndOrdinal(vertex));
+    }
+
+    public void onFullScan(FullScanPhysicalRel rel) {
         Table table = rel.getTableUnwrapped();
 
         Vertex vertex = getJetSqlConnector(table)
@@ -117,8 +112,8 @@ public class CreateDagVisitor {
 
     public void onProject(ProjectPhysicalRel rel) {
         FunctionEx<Object[], Object[]> projection = ExpressionUtil.projectionFn(rel.projection());
-        Vertex vertex = dag.newVertex("project", mapP(projection::apply));
 
+        Vertex vertex = dag.newVertex("project", mapP(projection::apply));
         push(vertex);
     }
 

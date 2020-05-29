@@ -47,10 +47,14 @@ public abstract class SqlTestSupport extends SimpleTestInClusterSupport {
         sqlService = instance().getHazelcastInstance().getSqlService();
     }
 
-    protected static <K, V> void assertMap(String name, String sql, Map<K, V> expected) {
+    protected static <K, V> void assertMapEventually(String name, String sql, Map<K, V> expected) {
         executeSql(sql);
 
-        assertThat(new HashMap<>(instance().getMap(name))).containsExactlyInAnyOrderEntriesOf(expected);
+        assertTrueEventually(
+                null,
+                () -> assertThat(new HashMap<>(instance().getMap(name))).containsExactlyEntriesOf(expected),
+                5
+        );
     }
 
     protected static void assertRowsEventuallyAnyOrder(String sql, Collection<Row> expectedRows) {

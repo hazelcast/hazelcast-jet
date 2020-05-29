@@ -28,13 +28,18 @@ import java.util.List;
 
 public class ValuesLogicalRel extends LogicalValues implements LogicalRel {
 
-    ValuesLogicalRel(RelOptCluster cluster, RelDataType rowType,
-                     ImmutableList<ImmutableList<RexLiteral>> tuples, RelTraitSet traitSet) {
+    ValuesLogicalRel(
+            RelOptCluster cluster,
+            RelDataType rowType,
+            ImmutableList<ImmutableList<RexLiteral>> tuples,
+            RelTraitSet traitSet
+    ) {
         super(cluster, traitSet, rowType, tuples);
     }
 
     @Override
     public RelNode copy(RelTraitSet traitSet, List<RelNode> inputs) {
+        assert inputs.isEmpty();
         return new ValuesLogicalRel(getCluster(), rowType, tuples, traitSet);
     }
 }

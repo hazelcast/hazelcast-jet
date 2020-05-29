@@ -45,10 +45,12 @@ import static com.hazelcast.jet.core.processor.Processors.mapP;
 import static com.hazelcast.jet.core.processor.SourceProcessors.convenientTimestampedSourceP;
 import static com.hazelcast.jet.impl.util.Util.toList;
 import static com.hazelcast.jet.sql.impl.expression.ExpressionUtil.ZERO_ARGUMENTS_CONTEXT;
+import static com.hazelcast.sql.impl.type.QueryDataType.VARCHAR_CHARACTER;
 
 public class CdcSqlConnector implements JetSqlConnector {
 
     public static final String TYPE_NAME = "com.hazelcast.Cdc";
+    public static final String OPERATION = "operation";
 
     private static final String NAME = "name";
     private static final String INCLUDE_SCHEMA_CHANGES = "include.schema.changes";
@@ -73,12 +75,25 @@ public class CdcSqlConnector implements JetSqlConnector {
                              @Nonnull List<ExternalField> externalFields,
                              @Nonnull Map<String, String> options) {
         // TODO validate options
+
+        // TODO: column property instead of predefined name?
+        ExternalField operationTypeField = externalFields.stream()
+                                                         .filter(field -> OPERATION.equalsIgnoreCase(field.name()))
+                                                         .findFirst()
+                                                         .orElse(null);
+        if (operationTypeField == null) {
+            throw new IllegalStateException(OPERATION + " column is required");
+        } else if (!VARCHAR_CHARACTER.equals(operationTypeField.type())) {
+            throw new IllegalArgumentException(OPERATION + " column must be of " + VARCHAR_CHARACTER + " type");
+        }
+
         Properties cdcProperties = new Properties();
         cdcProperties.putAll(options);
         cdcProperties.put(NAME, tableName);
         cdcProperties.put(INCLUDE_SCHEMA_CHANGES, false);
         cdcProperties.put(TOMBSTONES_ON_DELETE, false);
         cdcProperties.put(DATABASE_HISTORY, CdcSource.DatabaseHistoryImpl.class.getName());
+
         // TODO: "database.whitelist" & "table.whitelist" in theory could be inferred <- schemaName & tableName
         return new CdcTable(this, schemaName, tableName, new ConstantTableStatistics(0),
                 toList(externalFields, TableField::new), cdcProperties, options);
@@ -131,8 +146,9 @@ public class CdcSqlConnector implements JetSqlConnector {
                 : (Expression<Boolean>) ConstantExpression.create(QueryDataType.BOOLEAN, true);
 
         return record -> {
-            // Operation operation = record.operation(); // TODO: filter out certain operations? expose them to the user?
             Map<String, Object> values = record.value().toMap();
+            values.put(OPERATION, record.operation().getId());
+
             Row row = new MapRow(fieldNames, values);
             if (!Boolean.TRUE.equals(predicate0.eval(row, ZERO_ARGUMENTS_CONTEXT))) {
                 return null;

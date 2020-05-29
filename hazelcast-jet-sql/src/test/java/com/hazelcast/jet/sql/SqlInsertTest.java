@@ -119,21 +119,21 @@ public class SqlInsertTest extends SqlTestSupport {
 
     @Test
     public void insert_null() {
-        assertMap(
+        assertMapEventually(
                 PERSON_MAP_SINK, "INSERT OVERWRITE " + PERSON_MAP_SINK + " VALUES (null, null)",
                 createMap(new Person(), new Person()));
     }
 
     @Test
     public void insert_toleratesNullForNonExistingProperties() {
-        assertMap(
+        assertMapEventually(
                 OBJECT_MAP_SINK, "INSERT OVERWRITE " + OBJECT_MAP_SINK + "(nonExistingProperty) VALUES (null)",
                 createMap(new SerializableObject(), new SerializableObject()));
     }
 
     @Test
     public void insert_valueShadowsKey() {
-        assertMap(
+        assertMapEventually(
                 PERSON_MAP_SINK, "INSERT OVERWRITE " + PERSON_MAP_SINK + "(id, birthday) VALUES (1, '2020-01-01')",
                 createMap(new Person(), new Person(1, LocalDate.of(2020, 1, 1))));
     }
@@ -144,7 +144,7 @@ public class SqlInsertTest extends SqlTestSupport {
         intToStringMap.put(0, "value-0");
         intToStringMap.put(1, "value-1");
 
-        assertMap(
+        assertMapEventually(
                 INT_TO_STRING_MAP_SINK,
                 "INSERT OVERWRITE " + INT_TO_STRING_MAP_SINK + " SELECT * FROM " + INT_TO_STRING_MAP_SRC,
                 createMap(0, "value-0", 1, "value-1"));
@@ -152,21 +152,21 @@ public class SqlInsertTest extends SqlTestSupport {
 
     @Test
     public void insert_values() {
-        assertMap(
+        assertMapEventually(
                 INT_TO_STRING_MAP_SINK, "INSERT OVERWRITE " + INT_TO_STRING_MAP_SINK + "(this, __key) values (2, 1)",
                 createMap(1, "2"));
     }
 
     @Test
     public void insert_withProject() {
-        assertMap(
+        assertMapEventually(
                 PERSON_MAP_SINK, "INSERT OVERWRITE " + PERSON_MAP_SINK + "(birthday, id) VALUES ('2020-01-01', 0 + 1)",
                 createMap(new Person(), new Person(1, LocalDate.of(2020, 1, 1))));
     }
 
     @Test
     public void insert_allTypes() {
-        assertMap(ALL_TYPES_MAP, "INSERT OVERWRITE " + ALL_TYPES_MAP + " VALUES (" +
+        assertMapEventually(ALL_TYPES_MAP, "INSERT OVERWRITE " + ALL_TYPES_MAP + " VALUES (" +
                         "1, --key\n" +
                         "'string', --varchar\n" +
                         "'a', --character\n" +
@@ -245,7 +245,7 @@ public class SqlInsertTest extends SqlTestSupport {
 
     @Test
     public void insert_allTypesAsStrings() {
-        assertMap(ALL_TYPES_MAP, "INSERT OVERWRITE " + ALL_TYPES_MAP + " VALUES (" +
+        assertMapEventually(ALL_TYPES_MAP, "INSERT OVERWRITE " + ALL_TYPES_MAP + " VALUES (" +
                         "'1', --key\n" +
                         "'string', --varchar\n" +
                         "'a', --character\n" +

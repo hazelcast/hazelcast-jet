@@ -34,10 +34,12 @@ import static java.util.stream.Collectors.toList;
 
 public class ValuesPhysicalRel extends Values implements PhysicalRel {
 
-    ValuesPhysicalRel(RelOptCluster cluster,
-                      RelDataType rowType,
-                      ImmutableList<ImmutableList<RexLiteral>> tuples,
-                      RelTraitSet traitSet) {
+    ValuesPhysicalRel(
+            RelOptCluster cluster,
+            RelDataType rowType,
+            ImmutableList<ImmutableList<RexLiteral>> tuples,
+            RelTraitSet traitSet
+    ) {
         super(cluster, rowType, tuples, traitSet);
     }
 

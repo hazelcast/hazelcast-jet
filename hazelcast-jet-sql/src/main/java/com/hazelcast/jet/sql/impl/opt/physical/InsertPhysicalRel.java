@@ -63,7 +63,7 @@ public class InsertPhysicalRel extends TableModify implements PhysicalRel {
 
     @Override
     public void visit(CreateDagVisitor visitor) {
-        visitor.onTableInsert(this);
+        visitor.onInsert(this);
 
         ((PhysicalRel) getInput()).visit(visitor);
     }

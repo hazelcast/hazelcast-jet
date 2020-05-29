@@ -68,7 +68,7 @@ public class FullScanPhysicalRel extends AbstractFullScanRel implements Physical
 
     @Override
     public void visit(CreateDagVisitor visitor) {
-        visitor.onConnectorFullScan(this);
+        visitor.onFullScan(this);
     }
 
     @Override

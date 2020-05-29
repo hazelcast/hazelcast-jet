@@ -40,10 +40,12 @@ public final class ValuesPhysicalRule extends ConverterRule {
     @Override
     public RelNode convert(RelNode rel) {
         Values values = (Values) rel;
+
         return new ValuesPhysicalRel(
                 values.getCluster(),
                 values.getRowType(),
                 values.getTuples(),
-                OptUtils.toPhysicalConvention(values.getTraitSet()));
+                OptUtils.toPhysicalConvention(values.getTraitSet())
+        );
     }
 }

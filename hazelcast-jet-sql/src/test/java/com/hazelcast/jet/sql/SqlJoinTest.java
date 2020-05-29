@@ -30,8 +30,6 @@ import org.junit.Test;
 
 import java.io.IOException;
 
-import static com.hazelcast.jet.sql.impl.connector.kafka.KafkaSqlConnector.TO_KEY_CLASS;
-import static com.hazelcast.sql.impl.connector.SqlKeyValueConnector.TO_VALUE_CLASS;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
@@ -241,10 +239,10 @@ public class SqlJoinTest extends SqlTestSupport {
 
     private static String createRandomMap() {
         String mapName = "m_" + randomString().replace('-', '_');
-        executeSql(format("CREATE EXTERNAL TABLE %s (__key INT, this VARCHAR) TYPE \"%s\" "
-                        + "OPTIONS (\"" + TO_KEY_CLASS + "\" 'java.lang.Integer',"
-                        + "\"" + TO_VALUE_CLASS + "\" 'java.lang.String')",
-                mapName, LocalPartitionedMapConnector.TYPE_NAME)
+        executeSql(
+                format("CREATE EXTERNAL TABLE %s (__key INT, this VARCHAR) TYPE \"%s\"",
+                        mapName, LocalPartitionedMapConnector.TYPE_NAME
+                )
         );
         return mapName;
     }

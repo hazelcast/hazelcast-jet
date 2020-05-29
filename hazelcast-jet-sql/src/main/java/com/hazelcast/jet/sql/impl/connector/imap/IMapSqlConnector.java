@@ -153,6 +153,11 @@ public class IMapSqlConnector extends SqlKeyValueConnector implements JetSqlConn
         return true;
     }
 
+    @Override
+    public boolean supportsPlainInserts() {
+        return false;
+    }
+
     @Nullable @Override
     public Vertex sink(
             @Nonnull DAG dag,
@@ -176,10 +181,5 @@ public class IMapSqlConnector extends SqlKeyValueConnector implements JetSqlConn
 
     private ExternalField toExternalField(TableField t) {
         return new ExternalField(t.getName(), t.getType());
-    }
-
-    @Override
-    public boolean supportsPlainInserts() {
-        return false;
     }
 }
