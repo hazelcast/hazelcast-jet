@@ -40,12 +40,12 @@ public class WriteCdcP<K, V> extends AbstractUpdateMapP<ChangeRecord, K, V> {
     /**
      * Tracks the last seen sequence for a set of keys.
      * <p>
-     * Storing the sequences happens in a LRU cache style, keys that
-     * haven't been updated nor read since a certain time (see
-     * {@code expirationMs} parameter) will be evicted. This way
-     * memory consumption is limited and reordering detection can still
-     * be done, since events that have the potential to get their order
-     * broken are spaced close to each other in time.
+     * It behaves as a LRU cache, which means it evicts the entries that
+     * haven't been accessed for the configured time (see the {@code
+     * expirationMs} parameter). This limits memory consumption without
+     * affecting the detection of reordering because the events are ordered at
+     * the source and the Jet pipeline introduces a bounded amount of
+     * reordering.
      */
     private LinkedHashMap<K, Sequence> sequences;
 
@@ -78,8 +78,8 @@ public class WriteCdcP<K, V> extends AbstractUpdateMapP<ChangeRecord, K, V> {
      * @param key       key of an event that has just been observed
      * @param source    source of the event sequence number
      * @param sequence  numeric value of the event sequence number
-     * @return true if the newly observed sequence number if more
-     * recent than what we have observed before (if any)
+     * @return true if the newly observed sequence number is more recent than any
+     *         previously observed one
      */
     boolean updateSequence(K key, long source, long sequence) {
         Sequence prevSequence = sequences.get(key);
@@ -91,10 +91,9 @@ public class WriteCdcP<K, V> extends AbstractUpdateMapP<ChangeRecord, K, V> {
     }
 
     @Override
-    protected void addToBuffer(com.hazelcast.jet.cdc.ChangeRecord item) {
+    protected void addToBuffer(ChangeRecord item) {
         K key = keyFn.apply(item);
-        boolean shouldBeDropped = shouldBeDropped(key, item);
-        if (shouldBeDropped) {
+        if (shouldBeDropped(key, item)) {
             pendingItemCount--;
             return;
         }
@@ -125,21 +124,17 @@ public class WriteCdcP<K, V> extends AbstractUpdateMapP<ChangeRecord, K, V> {
     }
 
     /**
-     * Tracks a CDC event's sequence number and the moment in time when
-     * it was seen.
+     * Tracks a CDC event's sequence number and the moment when it was seen.
      * <p>
-     * The timestamp is simply the system time taken when a sink
-     * instance sees an event.
+     * The timestamp is the system time taken when a sink instance sees an
+     * event.
      * <p>
-     * The sequence numbers originate from Debezium event headers and
-     * consist of two parts.
+     * The <em>sequence</em> part is a monotonically increasing numeric
+     * sequence which we base our ordering on.
      * <p>
-     * The <i>sequence</i> part is exactly what the name implies: a
-     * numeric value which we can base ordering on.
-     * <p>
-     * The <i>source</i> part is a kind of context for the numeric
-     * sequence. It is necessary for avoiding the comparison of numeric
-     * sequences which come from different sources.
+     * The <em>source</em> part provides the scope of validity of the sequence
+     * part. This is needed because many CDC sources don't provide a globally
+     * valid sequence.
      */
     private static class Sequence {
 

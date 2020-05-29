@@ -40,34 +40,35 @@ import static java.util.concurrent.TimeUnit.SECONDS;
  * sinks. As a consequence these sinks take {@link ChangeRecord} items
  * as their input.
  * <p>
- * These sinks can detect any <i>reordering</i> that might have happened
- * in the stream of {@code ChangeRecord} items they ingest (Jet pipelines
- * benefit from massively parallel execution, so item reordering can and
- * does happen). The reordering is based on implementation specific
- * sequence numbers provided by CDC event sources. The sink reacts to
- * reordering by dropping obsolete input items. The exact behaviour
- * looks like this. For each input item the sink:
- * <ol>
- *  <li>applies the {@code keyFn} on the input item to extract its key</li>
- *  <li>extracts the input item's sequence number</li>
- *  <li>compares the extracted sequence number against the previously
- *          seen sequence number for the same key, if any</li>
- *  <li>if there is a previously seen sequence number and is more recent
- *          than the one observed in the input item, then drops (ignores)
- *          the input item</li>
- * </ol>
+ * These sinks can detect any <em>reordering</em> that might happen in the
+ * {@code ChangeRecord} stream (Jet pipelines use parallel execution, so
+ * item reordering can and does happen). Reordering detection is based on
+ * implementation-specific sequence numbers provided by CDC event sources.
+ * The sink reacts to reordering by dropping obsolete input items. The
+ * exact behavior is as follows. For each input item, the sink:
+ * <ol><li>
+ *     applies the {@code keyFn} to the input item to extract its key
+ * </li><li>
+ *     extracts the item's sequence number
+ * </li><li>
+ *     compares the sequence number with the previously seen sequence number
+ *     for the same key, if any
+ * </li><li>
+ *     if the previous sequence number is more recent than the one observed in
+ *     the input item, it drops (ignores) the input item
+ * </li></ol>
  *
  * @since 4.2
  */
 public final class CdcSinks {
 
     /**
-     * Number of seconds for which the last seen sequence number for any
-     * input key will be guarantied to be remembered (used for
-     * reordering detection). After this time, the last seen sequence
-     * number values will eventually be evicted, in order to save space.
+     * Number of seconds for which the sink will remember the last seen
+     * sequence number for an input key (used to detect reordering). After
+     * this time the last-seen sequence number values will eventually be
+     * evicted, in order to save space.
      * <p>
-     * Default value is 10 seconds.
+     * The default value is 10 seconds.
      *
      * @since 4.2
      */
@@ -78,33 +79,34 @@ public final class CdcSinks {
     }
 
     /**
-     * Returns a sink which maintains an up-to-date mirror of a change
-     * data capture stream in the form of an {@code IMap}. By mirror we
-     * mean that the map should always describe the end result of merging
-     * all the change events seen so far.
+     * Returns a sink that applies the changes described by a Change Data
+     * Capture (CDC) stream to an {@code IMap}. The main usage is to have
+     * the {@code IMap} mirror the contents of the data table that is the
+     * source of the CDC stream, but since it accepts arbitrary key and
+     * value functions, other behaviors are possible as well.
      * <p>
-     * <b>NOTE</b>: in order for the sink behaviour to be predictable
-     * the map should be non-existent or empty by the time the sink starts
+     * <strong>NOTE</strong>: in order for the sink behavior to be predictable,
+     * the map should be non-existent or empty at the time the sink starts
      * using it.
      * <p>
-     * For each item the sink receives it uses the {@code keyFn} to
+     * For each item the sink receives, it uses the {@code keyFn} to
      * determine which map key the change event applies to. Then, based
      * on the {@code ChangeRecord}'s {@code Operation} it decides to
      * either:
-     * <ul>
-     *   <li>delete the key from the map
-     *          ({@link Operation#DELETE})</li>
-     *   <li>insert a new value for the key
-     *          ({@link Operation#SYNC} & {@link Operation#INSERT})</li>
-     *   <li>update the current value for the key
-     *          ({@link Operation#UPDATE})</li>
-     * </ul>
-     * For insert and update operations the new value to use is
-     * determined from the input record by using the provided
-     * {@code valueFn}. <strong>IMPORTANT</strong> to note that if the
-     * {@code valueFn} returns {@code null}, then the key will be
-     * deleted from the map no matter the operation (ie. even for update
-     * and insert records).
+     * <ul><li>
+     *     delete the key from the map ({@link Operation#DELETE})
+     * </li><li>
+     *     insert a new value for the key
+     *          ({@link Operation#SYNC} & {@link Operation#INSERT})
+     * </li><li>
+     *     update the current value for the key ({@link Operation#UPDATE})
+     * </li></ul>
+     * For insert and update operations, the sink determines the new value
+     * by applying the provided {@code valueFn} to the change record.
+     * <p>
+     * <strong>NOTE:</strong> if {@code valueFn} returns {@code null},
+     * then the key will be deleted no matter the operation (ie. even for
+     * update and insert records).
      *
      * @since 4.2
      */
@@ -119,33 +121,34 @@ public final class CdcSinks {
     }
 
     /**
-     * Returns a sink which maintains an up-to-date mirror of a change
-     * data capture stream in the form of an {@code IMap}. By mirror we
-     * mean that the map should always describe the end result of merging
-     * all the change events seen so far.
+     * Returns a sink that applies the changes described by a Change Data
+     * Capture (CDC) stream to an {@code IMap}. The main usage is to have
+     * the {@code IMap} mirror the contents of the data table that is the
+     * source of the CDC stream, but since it accepts arbitrary key and
+     * value functions, other behaviors are possible as well.
      * <p>
-     * <b>NOTE</b>: in order for the sink behaviour to be predictable
-     * the map should be non-existent or empty by the time the sink starts
+     * <strong>NOTE</strong>: in order for the sink behavior to be predictable,
+     * the map should be non-existent or empty at the time the sink starts
      * using it.
      * <p>
      * For each item the sink receives it uses the {@code keyFn} to
      * determine which map key the change event applies to. Then, based
      * on the {@code ChangeRecord}'s {@code Operation} it decides to
      * either:
-     * <ul>
-     *   <li>delete the key from the map
-     *          ({@link Operation#DELETE})</li>
-     *   <li>insert a new value for the key
-     *          ({@link Operation#SYNC} & {@link Operation#INSERT})</li>
-     *   <li>update the current value for the key
-     *          ({@link Operation#UPDATE})</li>
-     * </ul>
-     * For insert and update operations the new value to use is
-     * determined from the input record by using the provided
-     * {@code valueFn}. <strong>IMPORTANT</strong> to note that if the
-     * {@code valueFn} returns {@code null}, then the key will be
-     * deleted from the map no matter the operation (ie. even for update
-     * and insert records).
+     * <ul><li>
+     *     delete the key from the map ({@link Operation#DELETE})
+     * </li><li>
+     *     insert a new value for the key
+     *          ({@link Operation#SYNC} & {@link Operation#INSERT})
+     * </li><li>
+     *     update the current value for the key ({@link Operation#UPDATE})
+     * </li></ul>
+     * For insert and update operations, the sink determines the new value
+     * by applying the provided {@code valueFn} to the change record.
+     * <p>
+     * <strong>NOTE:</strong> if {@code valueFn} returns {@code null},
+     * then the key will be deleted no matter the operation (ie. even for
+     * update and insert records).
      *
      * @since 4.2
      */
@@ -159,12 +162,17 @@ public final class CdcSinks {
     }
 
     /**
-     * Returns a sink equivalent to {@link #map}, but for a map in a
-     * remote Hazelcast cluster identified by the supplied {@code
-     * ClientConfig}.
+     * Returns a sink equivalent to {@link #map}, but for a map in a remote
+     * Hazelcast cluster identified by the supplied {@code ClientConfig}.
      * <p>
-     * <b>NOTE</b>: same limitation as for {@link #map}, the map should
-     * be non-existent or empty by the time the sink starts using it.
+     * <strong>NOTE 1</strong>: in order for the sink behavior to be
+     * predictable, the map should be non-existent or empty at the time the
+     * sink starts
+     * using it.
+     * <p>
+     * <strong>NOTE 2:</strong> if {@code valueFn} returns {@code null},
+     * then the key will be deleted no matter the operation (ie. even for
+     * update and insert records).
      * <p>
      * Due to the used API, the remote cluster must be at least version 4.0.
      *
@@ -196,5 +204,4 @@ public final class CdcSinks {
         ProcessorMetaSupplier metaSupplier = ProcessorMetaSupplier.of(supplier);
         return new SinkImpl<>(name, metaSupplier, DISTRIBUTED_PARTITIONED, keyFn);
     }
-
 }

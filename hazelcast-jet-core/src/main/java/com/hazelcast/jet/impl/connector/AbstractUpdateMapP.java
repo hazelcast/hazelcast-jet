@@ -81,6 +81,7 @@ public abstract class AbstractUpdateMapP<T, K, V> extends AsyncHazelcastWriterP 
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public void init(@Nonnull Outbox outbox, @Nonnull Context context) {
         map = instance().getMap(mapName);
         serializationContext = new SerializationContext<>(instance(), map);
@@ -109,7 +110,8 @@ public abstract class AbstractUpdateMapP<T, K, V> extends AsyncHazelcastWriterP 
         return submitPending();
     }
 
-    // returns if we were able to submit all pending items
+    // returns true if we were able to submit all pending items
+    @SuppressWarnings({"rawtypes", "unchecked"})
     private boolean submitPending() {
         if (pendingItemCount == 0) {
             return true;
@@ -160,6 +162,7 @@ public abstract class AbstractUpdateMapP<T, K, V> extends AsyncHazelcastWriterP 
         private final SerializationService serializationService;
         private final PartitioningStrategy<K> partitioningStrategy;
 
+        @SuppressWarnings("unchecked")
         SerializationContext(HazelcastInstance instance, IMap<K, ?> map) {
             if (ImdgUtil.isMemberInstance(instance)) {
                 NodeEngineImpl nodeEngine = ((HazelcastInstanceImpl) instance).node.nodeEngine;

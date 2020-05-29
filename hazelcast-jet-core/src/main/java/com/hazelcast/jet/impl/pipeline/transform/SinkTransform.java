@@ -49,13 +49,14 @@ public class SinkTransform<T> extends AbstractTransform {
     }
 
     @Override
+    @SuppressWarnings({"rawtypes", "unchecked"})
     public void addToDag(Planner p) {
         PlannerVertex pv = p.addVertex(this, name(), localParallelism(),
                 adaptingMetaSupplier(sink.metaSupplier(), ordinalsToAdapt));
         p.addEdges(this, pv.v, (e, ord) -> {
             // note: have to use an all-to-one edge for the assertion sink.
             // all the items will be routed to the member with the partition key
-            if (TOTAL_PARALLELISM_ONE.equals(sink.getType())) {
+            if (sink.getType() == TOTAL_PARALLELISM_ONE) {
                 e.allToOne(sink.name()).distributed();
             } else {
                 if (sink.getType().isPartitioned()) {

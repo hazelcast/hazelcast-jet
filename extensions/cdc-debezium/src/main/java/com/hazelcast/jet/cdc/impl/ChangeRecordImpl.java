@@ -120,9 +120,10 @@ public class ChangeRecordImpl implements ChangeRecord {
         return toJson();
     }
 
+    @SuppressWarnings("unchecked")
     private static <T> T get(Map<String, Object> map, String key, Class<T> clazz) {
         Object obj = map.get(key);
-        if (obj != null && clazz.isInstance(obj)) {
+        if (clazz.isInstance(obj)) {
             return (T) obj;
         }
         return null;

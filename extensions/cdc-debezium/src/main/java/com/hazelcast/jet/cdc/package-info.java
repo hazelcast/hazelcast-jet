@@ -15,8 +15,8 @@
  */
 
 /**
- * Contains classes for facilitating the processing of change data
- * capture events from various databases, alongside a generic CDC
- * source for Debizium sources.
+ * Contains source/sink connectors that deal with Change Data Capture (CDC)
+ * events from various databases as well as a generic connector for Debezium
+ * CDC sources.
  */
 package com.hazelcast.jet.cdc;

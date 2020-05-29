@@ -19,25 +19,20 @@ package com.hazelcast.jet.cdc.impl;
 import java.util.Map;
 
 /**
- * Utility that ingests Debezium event headers and computes a sequence
+ * Utility that takes Debezium event headers and computes a sequence
  * number we can use to ensure the ordering of {@code ChangeRecord} items.
  * <p>
- * The <i>sequence</i> part is exactly what the name implies: a numeric
- * sequence which we base our ordering on. Implementations needs to ensure
- * that {@code ChangeRecord}s produced by a source contain a monotonic
- * increasing sequence number, as long as the sequence number source
- * doesn't change.
+ * The <em>sequence</em> part is a monotonically increasing numeric
+ * sequence which we base our ordering on.
  * <p>
- * The <i>source</i> part is a kind of context for the numeric
- * sequence. It is necessary for avoiding the comparison of numeric
- * sequences that come from different sources. For example if the
- * numeric sequence is in fact based on transaction IDs, then it makes
- * sense to compare them only if they are produced by the same database
- * instance. Or if the numeric ID is an offset in a write-ahead log,
- * then it makes sense to compare them only if they are offsets from the
- * same log file. Implementations need to make sure that the source is
- * the same if and only if the source of the numeric sequence is the
- * same.
+ * The <em>source</em> part provides the scope of validity of the sequence
+ * part. This is needed because many CDC sources don't provide a globally
+ * valid sequence. For example, the sequence may be based on transaction
+ * IDs, so it makes sense to compare them only if they are produced by the
+ * same database instance. Another example is the offset in a write-ahead
+ * log, then it makes sense to compare them only if they come from the same
+ * log file. Implementations must make sure the sequence is monotonically
+ * increasing only across the events with the same source.
  */
 public interface SequenceExtractor {
 
