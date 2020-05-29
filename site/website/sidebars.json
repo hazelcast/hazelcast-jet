@@ -49,11 +49,11 @@
       "operations/discovery",
       "operations/cluster-sizing",
       "operations/job-management",
+      "operations/docker",
       "operations/kubernetes",
       "operations/monitoring",
       "operations/version-compatibility",
-      "operations/cdc-deployment",
-      "operations/docker"
+      "operations/cdc-deployment"
     ],
     "Architecture": [
       "architecture/distributed-computing",
