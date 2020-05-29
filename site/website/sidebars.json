@@ -49,6 +49,7 @@
       "operations/discovery",
       "operations/cluster-sizing",
       "operations/job-management",
+      "operations/docker",
       "operations/kubernetes",
       "operations/monitoring",
       "operations/version-compatibility",
@@ -73,6 +74,7 @@
       "design-docs/006-declarative-serialization",
       "design-docs/005-cdc-sources",
       "design-docs/004-spring-boot-starter",
+      "design-docs/003-elasticsearch-connector",
       "design-docs/002-job-level-serialization",
       "design-docs/001-code-deployment-improvements"
     ]
