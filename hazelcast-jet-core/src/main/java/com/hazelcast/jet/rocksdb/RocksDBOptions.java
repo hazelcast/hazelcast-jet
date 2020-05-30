@@ -16,6 +16,8 @@
 
 package com.hazelcast.jet.rocksdb;
 
+import org.rocksdb.BlockBasedTableConfig;
+import org.rocksdb.BloomFilter;
 import org.rocksdb.Options;
 import org.rocksdb.ReadOptions;
 import org.rocksdb.WriteOptions;
@@ -28,14 +30,33 @@ import org.rocksdb.WriteOptions;
  */
 class RocksDBOptions {
     Options getOptions() {
-        return new Options().setCreateIfMissing(true);
+        return new Options()
+                // we're opening a new RocksDB instance
+                .setCreateIfMissing(true)
+                // sets up RocksDB block cache with default configs
+                .setTableFormatConfig(new BlockBasedTableConfig()
+                        // speedup Get() by maintaining a bloom filter for each on-disk sst file
+                        // this should cause significant gain since our use case is large state that doesn't fit in memory
+                        .setFilter(new BloomFilter()))
+                // bypass OS page-cache
+                // avoids copying data twice from storage to page-cache and then to RocksDB block-cache
+                // RocksDB is likely to have more knowledge about its access pattern than OS
+                // this also enables read-ahead optimization for iterators for full range scans.
+                .setUseDirectReads(true)
+                .setUseDirectIoForFlushAndCompaction(true);
     }
 
     ReadOptions getReadOptions() {
-        return new ReadOptions();
+        return new ReadOptions()
+                //iterator is used for the scan at the end, no need to keep its data
+                .setPinData(false);
     }
 
     WriteOptions getWriteOptions() {
-        return new WriteOptions().setDisableWAL(true);
+        return new WriteOptions()
+                //bypass RocksDB write-ahead-log since the state backend is considered volatile
+                .setDisableWAL(true)
+                //ignore any write that occurred after the ColumnFamily is closed
+                .setIgnoreMissingColumnFamilies(true);
     }
 }

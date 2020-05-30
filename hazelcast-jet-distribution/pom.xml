@@ -263,7 +263,7 @@
         <dependency>
             <groupId>org.rocksdb</groupId>
             <artifactId>rocksdbjni</artifactId>
-            <version>5.3.6</version>
+            <version>5.18.4</version>
         </dependency>
         <dependency>
             <groupId>com.hazelcast.jet</groupId>

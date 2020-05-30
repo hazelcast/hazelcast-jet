@@ -60,7 +60,6 @@ public class RocksMap<K, V> implements Iterable<Entry<K, V>> {
         this.readOptions = readOptions;
         this.writeOptions = writeOptions;
         this.serializationService = serializationService;
-
     }
 
     ColumnFamilyHandle getColumnFamilyHandle() {

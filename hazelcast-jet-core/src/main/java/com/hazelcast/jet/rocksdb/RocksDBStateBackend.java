@@ -48,12 +48,11 @@ public class RocksDBStateBackend {
     private final InternalSerializationService serializationService;
     private final ArrayList<ColumnFamilyHandle> cfhs = new ArrayList<>();
     private final Path directory;
+    private final AtomicInteger counter = new AtomicInteger(0);
     private RocksDB db;
-    private AtomicInteger counter = new AtomicInteger(0);
 
     /**
-     * Returns a new state backend instance.
-     * This constructor is for testing purposes only.
+     * Constructs the state backend instance using the supplied job-level serialization service.
      *
      * @param serializationService the serialization service associated with the current job
      */
@@ -66,7 +65,6 @@ public class RocksDBStateBackend {
         }
         init();
     }
-
 
     private void init() throws JetException {
         try {
@@ -115,7 +113,7 @@ public class RocksDBStateBackend {
      * @param map the RocksMap to be deleted
      * @throws JetException if the database is closed
      */
-    public void releaseMap(RocksMap map) throws JetException {
+    public void releaseMap(@Nonnull RocksMap map) throws JetException {
         try {
             ColumnFamilyHandle cfh = map.getColumnFamilyHandle();
             db.dropColumnFamily(cfh);

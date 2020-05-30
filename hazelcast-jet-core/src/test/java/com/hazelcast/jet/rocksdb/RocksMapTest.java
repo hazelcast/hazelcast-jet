@@ -122,7 +122,7 @@ public class RocksMapTest extends JetTestSupport {
     //even after the column family is dropped you can still use it to get its contents
     //but you can't modify it
     @Test
-    public void when_releaseRocksMap_then_putKeyValueThrowsException() {
+    public void when_releaseRocksMap_then_putKeyValueIsIgnored() {
         //Given
         String key = "key1";
         Integer value1 = 1;
@@ -134,7 +134,8 @@ public class RocksMapTest extends JetTestSupport {
 
         //Then
         rocksMap.get(key);
-        assertThrows(JetException.class, () -> rocksMap.put(key, value2));
+        rocksMap.put(key, value2);
+        assertEquals("rocksMap.get() returns the updated value after ColumnFamily is closed ",  rocksMap.get(key), value1);
     }
 
     @Test
