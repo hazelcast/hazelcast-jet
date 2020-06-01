@@ -43,36 +43,54 @@ import java.util.concurrent.atomic.AtomicInteger;
  * the processor should invoke releaseMap() on each acquired map.
  */
 
-public class RocksDBStateBackend {
+public final class RocksDBStateBackend {
+    private static RocksDBStateBackend rocksDBStateBackend;
     private final RocksDBOptions rocksDBOptions = new RocksDBOptions();
     private final InternalSerializationService serializationService;
     private final ArrayList<ColumnFamilyHandle> cfhs = new ArrayList<>();
     private final Path directory;
     private final AtomicInteger counter = new AtomicInteger(0);
-    private RocksDB db;
+    private final RocksDB db;
 
-    /**
-     * Constructs the state backend instance using the supplied job-level serialization service.
-     *
-     * @param serializationService the serialization service associated with the current job
-     */
-    public RocksDBStateBackend(InternalSerializationService serializationService) {
+    private RocksDBStateBackend(InternalSerializationService serializationService) {
         this.serializationService = serializationService;
+
         try {
             directory = Files.createTempDirectory("rocksdb-temp");
         } catch (IOException e) {
             throw new JetException("failed to create RocksDB temp dierectoy", e);
         }
-        init();
-    }
 
-    private void init() throws JetException {
         try {
             RocksDB.loadLibrary();
             db = RocksDB.open(rocksDBOptions.getOptions(), directory.toString());
         } catch (Exception e) {
             throw new JetException("Failed to create a RocksDB instance", e);
         }
+    }
+
+    /**
+     * Returns the singleton state backend instance.
+     * This instance is lazily created when a processor needs to acquire it.
+     */
+    public static RocksDBStateBackend getInstance(InternalSerializationService serializationService) {
+        if (rocksDBStateBackend == null) {
+            synchronized (RocksDBStateBackend.class) {
+                if (rocksDBStateBackend == null) {
+                    rocksDBStateBackend = new RocksDBStateBackend(serializationService);
+                }
+            }
+        }
+        return rocksDBStateBackend;
+    }
+
+    /**
+     * Returns whether the state backend have been created.
+     * This should be used to check whether it is required to clear the state backend
+     * using deleteKeyValueStore().
+     */
+    public static synchronized boolean exists() {
+        return rocksDBStateBackend != null;
     }
 
     /**
@@ -138,6 +156,7 @@ public class RocksDBStateBackend {
             }
         }
         db.close();
+        rocksDBStateBackend = null;
     }
 
     private <T> byte[] serialize(T item) {

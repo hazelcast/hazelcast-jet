@@ -248,7 +248,6 @@ public final class Contexts {
 
         private final int localProcessorIndex;
         private final int globalProcessorIndex;
-        private final RocksDBStateBackend rocksDBStateBackend;
 
         @SuppressWarnings("checkstyle:ParameterNumber")
         public ProcCtx(JetInstance instance,
@@ -264,14 +263,12 @@ public final class Contexts {
                        int memberIndex,
                        int memberCount,
                        ConcurrentHashMap<String, File> tempDirectories,
-                       InternalSerializationService serializationService,
-                       RocksDBStateBackend rocksDBStateBackend) {
+                       InternalSerializationService serializationService) {
             super(instance, jobId, executionId, jobConfig, logger, vertexName, localParallelism,
                     memberCount * localParallelism, memberIndex, memberCount, processingGuarantee,
                     tempDirectories, serializationService);
             this.localProcessorIndex = localProcessorIndex;
             this.globalProcessorIndex = globalProcessorIndex;
-            this.rocksDBStateBackend = rocksDBStateBackend;
         }
 
         @Override
@@ -286,7 +283,7 @@ public final class Contexts {
 
         @Override
         public RocksDBStateBackend rocksDBStateBackend() {
-            return rocksDBStateBackend;
+            return RocksDBStateBackend.getInstance(serializationService());
         }
     }
 }

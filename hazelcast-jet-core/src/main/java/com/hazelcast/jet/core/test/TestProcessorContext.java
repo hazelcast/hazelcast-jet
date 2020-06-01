@@ -17,6 +17,7 @@
 package com.hazelcast.jet.core.test;
 
 import com.hazelcast.core.ManagedContext;
+import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.core.Processor;
@@ -34,7 +35,7 @@ public class TestProcessorContext extends TestProcessorSupplierContext implement
 
     private int localProcessorIndex;
     private int globalProcessorIndex;
-    private RocksDBStateBackend rocksDBStateBackend;
+    private InternalSerializationService serializationService;
 
     /**
      * Constructor with default values.
@@ -60,11 +61,14 @@ public class TestProcessorContext extends TestProcessorSupplierContext implement
 
     @Override
     public RocksDBStateBackend rocksDBStateBackend() {
-        return rocksDBStateBackend;
+        assert serializationService != null
+                : "serialization service should be initialized before creating the state backend";
+        return RocksDBStateBackend.getInstance(serializationService);
     }
 
-    void setRocksDBStateBackend(RocksDBStateBackend rocksDBStateBackend) {
-        this.rocksDBStateBackend = rocksDBStateBackend;
+    TestProcessorContext setSerializationService(InternalSerializationService serializationService) {
+        this.serializationService = serializationService;
+        return this;
     }
 
     /**

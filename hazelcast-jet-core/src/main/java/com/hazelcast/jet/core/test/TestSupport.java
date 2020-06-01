@@ -33,7 +33,6 @@ import com.hazelcast.jet.core.Processor.Context;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.Watermark;
-import com.hazelcast.jet.rocksdb.RocksDBStateBackend;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.logging.impl.LoggingServiceImpl;
 import com.hazelcast.spi.impl.SerializationServiceSupport;
@@ -225,7 +224,6 @@ public final class TestSupport {
 
     private BiPredicate<? super List<?>, ? super List<?>> outputChecker = Objects::equals;
 
-    private RocksDBStateBackend rocksDBStateBackend;
 
     private TestSupport(@Nonnull ProcessorMetaSupplier metaSupplier) {
         this.metaSupplier = metaSupplier;
@@ -806,12 +804,8 @@ public final class TestSupport {
         }
         TestProcessorContext context = new TestProcessorContext()
                 .setLogger(getLogger(processor.getClass().getName()))
-                .setManagedContext(serializationService.getManagedContext());
-        if (rocksDBStateBackend == null) {
-            rocksDBStateBackend = new RocksDBStateBackend(
-                    (InternalSerializationService) serializationService);
-        }
-        context.setRocksDBStateBackend(rocksDBStateBackend);
+                .setManagedContext(serializationService.getManagedContext())
+                .setSerializationService((InternalSerializationService) serializationService);
 
         if (jetInstance != null) {
             context.setJetInstance(jetInstance);

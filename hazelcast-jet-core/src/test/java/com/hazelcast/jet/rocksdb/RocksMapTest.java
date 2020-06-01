@@ -18,7 +18,6 @@ package com.hazelcast.jet.rocksdb;
 
 import com.hazelcast.internal.nio.IOUtil;
 import com.hazelcast.internal.serialization.InternalSerializationService;
-import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.core.JetTestSupport;
 import org.junit.After;
 import org.junit.Before;
@@ -44,7 +43,7 @@ public class RocksMapTest extends JetTestSupport {
     public void init() {
         serializationService = getJetService(createJetMember())
                 .createSerializationService(emptyMap());
-        rocksDBStateBackend = new RocksDBStateBackend(serializationService);
+        rocksDBStateBackend = RocksDBStateBackend.getInstance(serializationService);
         rocksMap = rocksDBStateBackend.getMap();
     }
 

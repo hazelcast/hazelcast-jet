@@ -47,7 +47,6 @@ import com.hazelcast.jet.impl.execution.Tasklet;
 import com.hazelcast.jet.impl.execution.init.Contexts.ProcCtx;
 import com.hazelcast.jet.impl.execution.init.Contexts.ProcSupplierCtx;
 import com.hazelcast.jet.impl.util.AsyncSnapshotWriterImpl;
-import com.hazelcast.jet.rocksdb.RocksDBStateBackend;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
@@ -120,7 +119,6 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
     private NodeEngineImpl nodeEngine;
     private long executionId;
     private long lastSnapshotId;
-    private RocksDBStateBackend rocksDBStateBackend;
 
     // list of unique remote members
     private final Supplier<Set<Address>> remoteMembers = memoize(() ->
@@ -146,12 +144,10 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
                            long executionId,
                            SnapshotContext snapshotContext,
                            ConcurrentHashMap<String, File> tempDirectories,
-                           InternalSerializationService jobSerializationService,
-                           RocksDBStateBackend rocksDBStateBackend) {
+                           InternalSerializationService jobSerializationService) {
         this.nodeEngine = (NodeEngineImpl) nodeEngine;
         this.executionId = executionId;
-        this.rocksDBStateBackend = rocksDBStateBackend;
-        initProcSuppliers(jobId, executionId, tempDirectories, jobSerializationService, rocksDBStateBackend);
+        initProcSuppliers(jobId, executionId, tempDirectories, jobSerializationService);
         initDag(jobSerializationService);
 
         this.ptionArrgmt = new PartitionArrangement(partitionOwners, nodeEngine.getThisAddress());
@@ -197,8 +193,7 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
                         memberIndex,
                         memberCount,
                         tempDirectories,
-                        jobSerializationService,
-                        rocksDBStateBackend
+                        jobSerializationService
                 );
 
                 // createOutboundEdgeStreams() populates localConveyorMap and edgeSenderConveyorMap.
@@ -308,8 +303,7 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
     private void initProcSuppliers(long jobId,
                                    long executionId,
                                    ConcurrentHashMap<String, File> tempDirectories,
-                                   InternalSerializationService jobSerializationService,
-                                   RocksDBStateBackend rocksDBStateBackend) {
+                                   InternalSerializationService jobSerializationService) {
         JetService service = nodeEngine.getService(JetService.SERVICE_NAME);
 
         for (VertexDef vertex : vertices) {
