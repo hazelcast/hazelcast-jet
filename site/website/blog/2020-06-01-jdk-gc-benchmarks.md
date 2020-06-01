@@ -40,7 +40,7 @@ At the outset, we can observe the following:
 
 We tried the following combinations:
 
-1. JDK 8 with the default Parallel collector and the optional
+1. JDK 8 with the default ParallelOld collector and the optional
    ConcurrentMarkSweep and G1
 2. JDK 11 with the default G1 collector
 3. JDK 14 with the default G1 as well as the experimental Z and
@@ -48,7 +48,7 @@ We tried the following combinations:
 
 And here are our overall conclusions:
 
-1. JDK 8 is an antiquated runtime. The Parallel collector enters huge
+1. JDK 8 is an antiquated runtime. The ParallelOld collector enters huge
    Major GC pauses and the G1, although better than that, is stuck in an
    old version that uses just one thread when falling back to Full GC,
    again entering very long pauses. Even on a moderate heap of 12 GB,
@@ -263,9 +263,9 @@ However, we do expect the overall relationship among the combinations to
 remain the same on a broad range of hardware parameters. The chart
 visualizes the superiority of the G1 over others, the weakness of the G1
 on JDK 8, and the weakness of the experimental low-latency collectors
-for this kind of workload. On JDK 8, Parallel GC seems to perform better
+for this kind of workload. On JDK 8, ParallelOld GC seems to perform better
 at high catchup demands than G1. We deemed any run where the latency
-stays bounded as a "yes", but for Parallel these bounds were
+stays bounded as a "yes", but for ParallelOld these bounds were
 impractically high, dozens of seconds.
 
 The base latency, the time it takes to emit the window results, was in
@@ -284,11 +284,39 @@ For the batch benchmark we used this very simple pipeline:
 
 ```java
 p.readFrom(longSource)
- .groupingKey(n -> n % NUM_KEYS)
+ .groupingKey(n -> n / (RANGE / NUM_KEYS))
  .aggregate(summingLong(n -> n))
  .writeTo(Sinks.logger())
 ```
 
 The source is again a self-contained mock source that just emits a
-sequence of `long` numbers. The only relevant metric is the time for
-the job to complete.
+sequence of `long` numbers and the key function is defined so that
+the grouping key gradually changes: 0, 0, 0, 0, 1, 1, 1, 1, 2,... This
+means that the number of retained objects gradually grows over the
+course of computation. The only relevant metric in this batch pipeline
+benchmark is the time for the job to complete.
+
+For the batch pipeline we didn't focus on the low-latency collectors
+since they have nothing to offer in this case. Also, because we saw
+earlier that JDK 14 performs much the same as JDK 11, we just ran one
+test to confirm it, but otherwise focused on JDK 8 vs. JDK 11 and
+compared the JDK 8 default ParallelOld collector with G1. We ran the
+benchmark on a laptop with 16 GB RAM and a 6-core Intel Core i7. We
+tried setting the heap size (`-Xmx`) to 10, 12 and 14 GB. Here are the
+results:
+
+![Batch pipeline benchmark](assets/2020-06-01-batch-1.png)
+
+You can see a big advantage of the G1 with smaller heap sizes. At
+maximum heap size of 10 GB, the heap is almost full (about 8.7 GB usage
+after full GC). The G1 excels at managing the heap with very little
+headroom left, as opposed to ParallelOld. This test confirmed once again
+that the G1 works much better on JDK 11 than 8, but in this case the
+difference isn't as pronounced as before, where we were pushing the GCs
+into the "concurrent mode failure" regime. On the other hand, note that
+ParrallelOld, given enough heap headroom, confirms its status as the
+"throughput collector" &mdash; it clocked the overall best time with 14
+GB heap available, although with a minuscule advantage of a single
+second in a 150-second run. This once again confirsm G1 as the clear
+winner.
+
