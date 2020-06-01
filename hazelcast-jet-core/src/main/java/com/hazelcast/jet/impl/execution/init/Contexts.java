@@ -269,7 +269,9 @@ public final class Contexts {
                     tempDirectories, serializationService);
             this.localProcessorIndex = localProcessorIndex;
             this.globalProcessorIndex = globalProcessorIndex;
+
             RocksDBStateBackend.setSerializationService(serializationService);
+            RocksDBStateBackend.setDirectory(attachedDirectory("rocksdb").toPath());
         }
 
         @Override

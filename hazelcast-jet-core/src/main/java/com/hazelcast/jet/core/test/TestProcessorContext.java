@@ -63,9 +63,9 @@ public class TestProcessorContext extends TestProcessorSupplierContext implement
         return RocksDBStateBackend.getKeyValueStore();
     }
 
-    TestProcessorContext setSerializationService(InternalSerializationService serializationService) {
+    public void initializeRocksDBStateBackend(InternalSerializationService serializationService) {
         RocksDBStateBackend.setSerializationService(serializationService);
-        return this;
+        RocksDBStateBackend.setDirectory(attachedDirectory("rocksdb").toPath());
     }
 
     /**
