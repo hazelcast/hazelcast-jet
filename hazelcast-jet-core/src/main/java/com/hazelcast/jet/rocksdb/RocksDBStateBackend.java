@@ -17,7 +17,6 @@
 package com.hazelcast.jet.rocksdb;
 
 import com.hazelcast.internal.serialization.InternalSerializationService;
-import com.hazelcast.internal.nio.IOUtil;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.nio.ObjectDataOutput;
 import org.rocksdb.ColumnFamilyDescriptor;
@@ -26,8 +25,6 @@ import org.rocksdb.RocksDB;
 import org.rocksdb.RocksDBException;
 
 import javax.annotation.Nonnull;
-import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -54,12 +51,6 @@ public final class RocksDBStateBackend {
 
     private RocksDBStateBackend() {
         try {
-            directory = Files.createTempDirectory("rocksdb-temp");
-        } catch (IOException e) {
-            throw new JetException("failed to create RocksDB temp dierectoy", e);
-        }
-
-        try {
             RocksDB.loadLibrary();
             db = RocksDB.open(rocksDBOptions.getOptions(), directory.toString());
         } catch (Exception e) {
@@ -73,7 +64,9 @@ public final class RocksDBStateBackend {
      */
     public static RocksDBStateBackend getKeyValueStore() {
         assert serializationService != null
-                : "serialization service should be initialized before creating the state backend";
+                : "serialization service must be initialized before creating the state backend";
+        assert directory != null :
+                "RocksDB directory must be initialized before creating the state backend";
 
         return LazyHolder.INSTANCE;
     }
@@ -85,7 +78,15 @@ public final class RocksDBStateBackend {
      */
 
     public static void setSerializationService(InternalSerializationService serializationService) {
-        RocksDBStateBackend.serializationService = serializationService;
+        if (RocksDBStateBackend.serializationService == null) {
+            RocksDBStateBackend.serializationService = serializationService;
+        }
+    }
+
+    public static void setDirectory(Path directory) {
+        if (RocksDBStateBackend.directory == null) {
+            RocksDBStateBackend.directory = directory;
+        }
     }
 
     /**
@@ -95,16 +96,15 @@ public final class RocksDBStateBackend {
      * @throws JetException if the database is closed
      */
     public static synchronized void deleteKeyValueStore() throws JetException {
-        if(db != null) {
-        for (final ColumnFamilyHandle cfh : cfhs) {
-            try {
-                db.dropColumnFamily(cfh);
-            } catch (RocksDBException e) {
-                throw new JetException("Failed to delete column family", e);
+        if (db != null) {
+            for (final ColumnFamilyHandle cfh : cfhs) {
+                try {
+                    db.dropColumnFamily(cfh);
+                } catch (RocksDBException e) {
+                    throw new JetException("Failed to delete column family", e);
+                }
             }
-        }
-        db.close();
-        IOUtil.delete(directory);
+            db.close();
         }
     }
 

@@ -38,7 +38,10 @@ import com.hazelcast.logging.impl.LoggingServiceImpl;
 import com.hazelcast.spi.impl.SerializationServiceSupport;
 
 import javax.annotation.Nonnull;
+import java.io.IOException;
 import java.net.UnknownHostException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -802,10 +805,20 @@ public final class TestSupport {
                     .setManagedContext(e -> e)
                     .build();
         }
+
         TestProcessorContext context = new TestProcessorContext()
                 .setLogger(getLogger(processor.getClass().getName()))
                 .setManagedContext(serializationService.getManagedContext())
                 .setSerializationService((InternalSerializationService) serializationService);
+
+        Path directory;
+        try {
+            directory = Files.createTempDirectory("rocksdb-temp");
+        } catch (IOException e) {
+            throw sneakyThrow(e);
+        }
+
+        context.addFile("rocksdb", directory.toFile());
 
         if (jetInstance != null) {
             context.setJetInstance(jetInstance);

@@ -35,6 +35,7 @@ public class TestProcessorContext extends TestProcessorSupplierContext implement
 
     private int localProcessorIndex;
     private int globalProcessorIndex;
+    private InternalSerializationService serializationService;
 
     /**
      * Constructor with default values.
@@ -60,11 +61,13 @@ public class TestProcessorContext extends TestProcessorSupplierContext implement
 
     @Override
     public RocksDBStateBackend rocksDBStateBackend() {
+        RocksDBStateBackend.setSerializationService(serializationService);
+        RocksDBStateBackend.setDirectory(attachedDirectory("rocksdb").toPath());
         return RocksDBStateBackend.getKeyValueStore();
     }
 
-    TestProcessorContext setSerializationService(InternalSerializationService serializationService) {
-        RocksDBStateBackend.setSerializationService(serializationService);
+    public TestProcessorContext setSerializationService(InternalSerializationService serializationService) {
+        this.serializationService = serializationService;
         return this;
     }
 

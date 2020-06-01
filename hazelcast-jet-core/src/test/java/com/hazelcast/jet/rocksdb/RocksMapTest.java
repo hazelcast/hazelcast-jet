@@ -18,13 +18,18 @@ package com.hazelcast.jet.rocksdb;
 
 import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.jet.Jet;
+import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.core.JetTestSupport;
+import com.hazelcast.internal.nio.IOUtil;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -40,10 +45,12 @@ public class RocksMapTest extends JetTestSupport {
     private static RocksDBStateBackend rocksDBStateBackend;
     private static InternalSerializationService serializationService;
     private RocksMap<String, Integer> rocksMap;
+    private static Path directory;
 
     @AfterAll
     static void cleanup() {
         RocksDBStateBackend.deleteKeyValueStore();
+        IOUtil.delete(directory);
         serializationService.dispose();
     }
 
@@ -52,6 +59,12 @@ public class RocksMapTest extends JetTestSupport {
         serializationService = JetTestSupport.getJetService(Jet.bootstrappedInstance())
                                              .createSerializationService(emptyMap());
         RocksDBStateBackend.setSerializationService(serializationService);
+        try {
+            directory = Files.createTempDirectory("rocksdb-temp");
+            RocksDBStateBackend.setDirectory(directory);
+        } catch (IOException e) {
+            throw new JetException("Failed to create RocksDB directory", e);
+        }
         rocksDBStateBackend = RocksDBStateBackend.getKeyValueStore();
     }
 

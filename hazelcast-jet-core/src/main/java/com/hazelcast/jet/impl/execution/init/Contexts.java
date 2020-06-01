@@ -284,6 +284,7 @@ public final class Contexts {
 
         @Override
         public RocksDBStateBackend rocksDBStateBackend() {
+            RocksDBStateBackend.setDirectory(attachedDirectory("rocksdb").toPath());
             return RocksDBStateBackend.getKeyValueStore();
         }
     }
