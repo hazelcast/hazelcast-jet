@@ -16,12 +16,14 @@
 
 package com.hazelcast.jet.rocksdb;
 
-import com.hazelcast.internal.nio.IOUtil;
 import com.hazelcast.internal.serialization.InternalSerializationService;
+import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.core.JetTestSupport;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
 import java.util.Iterator;
@@ -35,23 +37,32 @@ import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 
 public class RocksMapTest extends JetTestSupport {
-    private RocksDBStateBackend rocksDBStateBackend;
-    private InternalSerializationService serializationService;
+    private static RocksDBStateBackend rocksDBStateBackend;
+    private static InternalSerializationService serializationService;
     private RocksMap<String, Integer> rocksMap;
 
-    @Before
-    public void init() {
-        serializationService = getJetService(createJetMember())
-                .createSerializationService(emptyMap());
-        rocksDBStateBackend = RocksDBStateBackend.getInstance(serializationService);
+    @AfterAll
+    static void cleanup() {
+        RocksDBStateBackend.deleteKeyValueStore();
+        serializationService.dispose();
+    }
+
+    @BeforeAll
+    public static void init() {
+        serializationService = JetTestSupport.getJetService(Jet.bootstrappedInstance())
+                                             .createSerializationService(emptyMap());
+        RocksDBStateBackend.setSerializationService(serializationService);
+        rocksDBStateBackend = RocksDBStateBackend.getKeyValueStore();
+    }
+
+    @BeforeEach
+    public void initTest() {
         rocksMap = rocksDBStateBackend.getMap();
     }
 
-    @After
-    public void cleanup() {
-        rocksDBStateBackend.deleteKeyValueStore();
-        IOUtil.delete(rocksDBStateBackend.getDirectory());
-        serializationService.dispose();
+    @AfterEach
+    public void cleanupTest() {
+        rocksDBStateBackend.releaseMap(rocksMap);
     }
 
     @Test

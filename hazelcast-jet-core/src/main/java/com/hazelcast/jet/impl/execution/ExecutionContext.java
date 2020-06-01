@@ -135,6 +135,7 @@ public class ExecutionContext implements DynamicMetricsProvider {
 
         JetService jetService = nodeEngine.getService(JetService.SERVICE_NAME);
         serializationService = jetService.createSerializationService(jobConfig.getSerializerConfigs());
+        RocksDBStateBackend.setSerializationService(serializationService);
         metricsEnabled = jobConfig.isMetricsEnabled() && nodeEngine.getConfig().getMetricsConfig().isEnabled();
         plan.initialize(nodeEngine, jobId, executionId, snapshotContext,
                 tempDirectories, serializationService);
@@ -220,11 +221,7 @@ public class ExecutionContext implements DynamicMetricsProvider {
             serializationService.dispose();
         }
 
-        if (RocksDBStateBackend.exists()) {
-            RocksDBStateBackend rocksDBStateBackend = RocksDBStateBackend.getInstance(serializationService);
-            rocksDBStateBackend.deleteKeyValueStore();
-            IOUtil.delete(rocksDBStateBackend.getDirectory());
-        }
+        RocksDBStateBackend.deleteKeyValueStore();
     }
 
     /**

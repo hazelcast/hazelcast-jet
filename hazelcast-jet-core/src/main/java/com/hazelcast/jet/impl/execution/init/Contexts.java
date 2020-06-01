@@ -269,6 +269,7 @@ public final class Contexts {
                     tempDirectories, serializationService);
             this.localProcessorIndex = localProcessorIndex;
             this.globalProcessorIndex = globalProcessorIndex;
+            RocksDBStateBackend.setSerializationService(serializationService);
         }
 
         @Override
@@ -283,7 +284,7 @@ public final class Contexts {
 
         @Override
         public RocksDBStateBackend rocksDBStateBackend() {
-            return RocksDBStateBackend.getInstance(serializationService());
+            return RocksDBStateBackend.getKeyValueStore();
         }
     }
 }

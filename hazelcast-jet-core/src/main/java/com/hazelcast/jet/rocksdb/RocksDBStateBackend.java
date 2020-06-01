@@ -17,6 +17,7 @@
 package com.hazelcast.jet.rocksdb;
 
 import com.hazelcast.internal.serialization.InternalSerializationService;
+import com.hazelcast.internal.nio.IOUtil;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.nio.ObjectDataOutput;
 import org.rocksdb.ColumnFamilyDescriptor;
@@ -44,17 +45,14 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 
 public final class RocksDBStateBackend {
-    private static RocksDBStateBackend rocksDBStateBackend;
+    private static final ArrayList<ColumnFamilyHandle> cfhs = new ArrayList<>();
+    private static InternalSerializationService serializationService;
+    private static RocksDB db;
     private final RocksDBOptions rocksDBOptions = new RocksDBOptions();
-    private final InternalSerializationService serializationService;
-    private final ArrayList<ColumnFamilyHandle> cfhs = new ArrayList<>();
-    private final Path directory;
+    private static Path directory;
     private final AtomicInteger counter = new AtomicInteger(0);
-    private final RocksDB db;
 
-    private RocksDBStateBackend(InternalSerializationService serializationService) {
-        this.serializationService = serializationService;
-
+    private RocksDBStateBackend() {
         try {
             directory = Files.createTempDirectory("rocksdb-temp");
         } catch (IOException e) {
@@ -73,31 +71,41 @@ public final class RocksDBStateBackend {
      * Returns the singleton state backend instance.
      * This instance is lazily created when a processor needs to acquire it.
      */
-    public static RocksDBStateBackend getInstance(InternalSerializationService serializationService) {
-        if (rocksDBStateBackend == null) {
-            synchronized (RocksDBStateBackend.class) {
-                if (rocksDBStateBackend == null) {
-                    rocksDBStateBackend = new RocksDBStateBackend(serializationService);
-                }
+    public static RocksDBStateBackend getKeyValueStore() {
+        assert serializationService != null
+                : "serialization service should be initialized before creating the state backend";
+
+        return LazyHolder.INSTANCE;
+    }
+
+    /**
+     * Initializes the serialization service.
+     *
+     * @param serializationService the job-level serialization service.
+     */
+
+    public static void setSerializationService(InternalSerializationService serializationService) {
+        RocksDBStateBackend.serializationService = serializationService;
+    }
+
+    /**
+     * Deletes the whole database instance.
+     * Should be invoked when the job finishes execution (whether successfully or with an error)
+     *
+     * @throws JetException if the database is closed
+     */
+    public static synchronized void deleteKeyValueStore() throws JetException {
+        if(db != null) {
+        for (final ColumnFamilyHandle cfh : cfhs) {
+            try {
+                db.dropColumnFamily(cfh);
+            } catch (RocksDBException e) {
+                throw new JetException("Failed to delete column family", e);
             }
         }
-        return rocksDBStateBackend;
-    }
-
-    /**
-     * Returns whether the state backend have been created.
-     * This should be used to check whether it is required to clear the state backend
-     * using deleteKeyValueStore().
-     */
-    public static synchronized boolean exists() {
-        return rocksDBStateBackend != null;
-    }
-
-    /**
-     * Returns the directory where RocksDB will be operating.
-     */
-    public Path getDirectory() {
-        return directory;
+        db.close();
+        IOUtil.delete(directory);
+        }
     }
 
     /**
@@ -134,29 +142,17 @@ public final class RocksDBStateBackend {
     public void releaseMap(@Nonnull RocksMap map) throws JetException {
         try {
             ColumnFamilyHandle cfh = map.getColumnFamilyHandle();
-            db.dropColumnFamily(cfh);
-            cfhs.remove(cfh);
+            if (cfhs.contains(cfh)) {
+                db.dropColumnFamily(cfh);
+                cfhs.remove(cfh);
+            }
         } catch (RocksDBException e) {
             throw new JetException(e);
         }
     }
 
-    /**
-     * Deletes the whole database instance.
-     * Should be invoked when the job finishes execution (whether successfully or with an error)
-     *
-     * @throws JetException if the database is closed
-     */
-    public void deleteKeyValueStore() throws JetException {
-        for (final ColumnFamilyHandle cfh : cfhs) {
-            try {
-                db.dropColumnFamily(cfh);
-            } catch (RocksDBException e) {
-                throw new JetException("Failed to Delete Column Family", e);
-            }
-        }
-        db.close();
-        rocksDBStateBackend = null;
+    private static class LazyHolder {
+        static final RocksDBStateBackend INSTANCE = new RocksDBStateBackend();
     }
 
     private <T> byte[] serialize(T item) {
