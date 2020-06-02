@@ -808,8 +808,17 @@ public final class TestSupport {
 
         TestProcessorContext context = new TestProcessorContext()
                 .setLogger(getLogger(processor.getClass().getName()))
-                .setManagedContext(serializationService.getManagedContext())
-                .setSerializationService((InternalSerializationService) serializationService);
+                .setManagedContext(serializationService.getManagedContext());
+
+        Path directory;
+        try {
+            directory = Files.createTempDirectory("rocksdb-temp");
+        } catch (IOException e) {
+            throw sneakyThrow(e);
+        }
+
+        context.addFile("rocksdb", directory.toFile());
+        context.initializeRocksDBStateBackend((InternalSerializationService) serializationService);
 
         Path directory;
         try {
