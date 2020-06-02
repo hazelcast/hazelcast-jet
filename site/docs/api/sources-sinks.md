@@ -1035,11 +1035,12 @@ doesn't use XA transactions.
 
 Change Data Capture (CDC) refers to the process of observing changes
 made to a database and extracting them in a form usable by other
-systems, for the purposes of replication, analysis and many many more.
+systems, for the purposes of replication, analysis and many more.
 
 Change Data Capture is especially important to Jet, because it allows
-for the _integration with legacy systems_. Database changes form a
-stream of events which can be efficiently processed by Jet.
+for the _streaming of changes from databases_, which can be efficiently
+processed by Jet. One consequence of this is also simplified integration
+with legacy systems.
 
 Implementation of CDC in Jet is based on
 [Debezium](https://debezium.io/). Jet offers a generic Debezium source
