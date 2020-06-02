@@ -42,11 +42,11 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 
 public final class RocksDBStateBackend {
-    private static final ArrayList<ColumnFamilyHandle> cfhs = new ArrayList<>();
+    private static final ArrayList<ColumnFamilyHandle> COLUMN_FAMILY_HANDLES = new ArrayList<>();
     private static InternalSerializationService serializationService;
     private static RocksDB db;
-    private final RocksDBOptions rocksDBOptions = new RocksDBOptions();
     private static Path directory;
+    private final RocksDBOptions rocksDBOptions = new RocksDBOptions();
     private final AtomicInteger counter = new AtomicInteger(0);
 
     private RocksDBStateBackend() {
@@ -83,6 +83,9 @@ public final class RocksDBStateBackend {
         }
     }
 
+    /**
+     * Sets the directory where the state backend will be operating
+     */
     public static void setDirectory(Path directory) {
         if (RocksDBStateBackend.directory == null) {
             RocksDBStateBackend.directory = directory;
@@ -97,7 +100,7 @@ public final class RocksDBStateBackend {
      */
     public static synchronized void deleteKeyValueStore() throws JetException {
         if (db != null) {
-            for (final ColumnFamilyHandle cfh : cfhs) {
+            for (final ColumnFamilyHandle cfh : COLUMN_FAMILY_HANDLES) {
                 try {
                     db.dropColumnFamily(cfh);
                 } catch (RocksDBException e) {
@@ -118,7 +121,7 @@ public final class RocksDBStateBackend {
         ColumnFamilyHandle cfh;
         try {
             cfh = db.createColumnFamily(new ColumnFamilyDescriptor((serialize(getNextName()))));
-            cfhs.add(cfh);
+            COLUMN_FAMILY_HANDLES.add(cfh);
             return new RocksMap<>(db, cfh, rocksDBOptions.getReadOptions(),
                     rocksDBOptions.getWriteOptions(), serializationService);
         } catch (RocksDBException e) {
@@ -142,9 +145,9 @@ public final class RocksDBStateBackend {
     public void releaseMap(@Nonnull RocksMap map) throws JetException {
         try {
             ColumnFamilyHandle cfh = map.getColumnFamilyHandle();
-            if (cfhs.contains(cfh)) {
+            if (COLUMN_FAMILY_HANDLES.contains(cfh)) {
                 db.dropColumnFamily(cfh);
-                cfhs.remove(cfh);
+                COLUMN_FAMILY_HANDLES.remove(cfh);
             }
         } catch (RocksDBException e) {
             throw new JetException(e);

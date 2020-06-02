@@ -44,8 +44,8 @@ import static org.junit.Assert.assertTrue;
 public class RocksMapTest extends JetTestSupport {
     private static RocksDBStateBackend rocksDBStateBackend;
     private static InternalSerializationService serializationService;
-    private RocksMap<String, Integer> rocksMap;
     private static Path directory;
+    private RocksMap<String, Integer> rocksMap;
 
     @AfterAll
     static void cleanup() {
