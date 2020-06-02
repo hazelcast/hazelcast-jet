@@ -62,10 +62,6 @@ public enum Operation {
         this.id = id;
     }
 
-    public Character getId() { // TODO:
-        return id;
-    }
-
     /**
      * Parses the string constants used in CDC messages for describing
      * operations into enum instances.

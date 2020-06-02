@@ -50,7 +50,7 @@ import static com.hazelcast.sql.impl.type.QueryDataType.VARCHAR_CHARACTER;
 public class CdcSqlConnector implements JetSqlConnector {
 
     public static final String TYPE_NAME = "com.hazelcast.Cdc";
-    public static final String OPERATION = "operation";
+    public static final String OPERATION = "__operation";
 
     private static final String NAME = "name";
     private static final String INCLUDE_SCHEMA_CHANGES = "include.schema.changes";
@@ -146,8 +146,27 @@ public class CdcSqlConnector implements JetSqlConnector {
                 : (Expression<Boolean>) ConstantExpression.create(QueryDataType.BOOLEAN, true);
 
         return record -> {
+            char operation;
+            switch (record.operation()) {
+                case SYNC:
+                    operation = 's';
+                    break;
+                case INSERT:
+                    operation = 'c';
+                    break;
+                case UPDATE:
+                    operation = 'u';
+                    break;
+                case DELETE:
+                    operation = 'd';
+                    break;
+                case UNSPECIFIED:
+                default:
+                    return null;
+            }
+
             Map<String, Object> values = record.value().toMap();
-            values.put(OPERATION, record.operation().getId());
+            values.put(OPERATION, operation);
 
             Row row = new MapRow(fieldNames, values);
             if (!Boolean.TRUE.equals(predicate0.eval(row, ZERO_ARGUMENTS_CONTEXT))) {

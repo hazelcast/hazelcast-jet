@@ -46,8 +46,12 @@ public class SqlCdcTest extends SqlTestSupport {
 
     @BeforeClass
     public static void beforeClass() {
-        executeSql(format("CREATE EXTERNAL TABLE %s (%s CHAR, id INT, first_name VARCHAR, last_name VARCHAR, email VARCHAR) " +
-                        "TYPE \"%s\" " +
+        executeSql(format("CREATE EXTERNAL TABLE %s (" +
+                        "   %s CHAR, id INT, " +
+                        "   first_name VARCHAR, " +
+                        "   last_name VARCHAR, " +
+                        "   email VARCHAR" +
+                        ") TYPE \"%s\" " +
                         "OPTIONS (" +
                         "  \"connector.class\" '%s', " +
                         "  \"database.hostname\" '%s', " +
