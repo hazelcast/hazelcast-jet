@@ -808,7 +808,8 @@ public final class TestSupport {
 
         TestProcessorContext context = new TestProcessorContext()
                 .setLogger(getLogger(processor.getClass().getName()))
-                .setManagedContext(serializationService.getManagedContext());
+                .setManagedContext(serializationService.getManagedContext())
+                .setSerializationService((InternalSerializationService) serializationService);
 
         Path directory;
         try {
