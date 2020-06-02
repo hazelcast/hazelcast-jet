@@ -45,6 +45,7 @@ import picocli.CommandLine.Command;
 import picocli.CommandLine.DefaultExceptionHandler;
 import picocli.CommandLine.ExecutionException;
 import picocli.CommandLine.Help.Ansi;
+import picocli.CommandLine.Help.Visibility;
 import picocli.CommandLine.HelpCommand;
 import picocli.CommandLine.ITypeConverter;
 import picocli.CommandLine.IVersionProvider;
@@ -104,6 +105,25 @@ public class JetCommandLine implements Runnable {
     )
     private File config;
 
+    @Option(names = {"-a", "--addresses"},
+            split = ",",
+            arity = "1..*",
+            paramLabel = "<hostname>:<port>",
+            description = "[DEPRECATED] Optional comma-separated list of Jet node addresses in the format" +
+                    " <hostname>:<port>, if you want to connect to a cluster other than the" +
+                    " one configured in the configuration file",
+            order = 1
+    )
+    private List<String> addresses;
+
+    @Option(names = {"-n", "--cluster-name"},
+        description = "[DEPRECATED] The cluster name to use when connecting to the cluster " +
+            "specified by the <addresses> parameter. ",
+        defaultValue = "jet",
+        showDefaultValue = Visibility.ALWAYS,
+        order = 2
+    )
+    private String clusterName;
 
     @Mixin(name = "targets")
     private TargetsMixin targetsMixin;
@@ -195,9 +215,7 @@ public class JetCommandLine implements Runnable {
             printf("Will restore the job from the snapshot with name '%s'", snapshotName);
         }
 
-        if (targets.getTargets() != null) {
-            this.targetsMixin = targets;
-        }
+        targetsMixin.replace(targets);
 
         JetBootstrap.executeJar(this::getJetClient, file.getAbsolutePath(), snapshotName, name, mainClass, params);
     }
@@ -453,6 +471,12 @@ public class JetCommandLine implements Runnable {
         }
         if (isConfigNotNull()) {
             return new XmlClientConfigBuilder(config).build();
+        }
+        if (addresses != null) {
+            ClientConfig config = new ClientConfig();
+            config.getNetworkConfig().addAddress(addresses.toArray(new String[0]));
+            config.setClusterName(clusterName);
+            return config;
         }
         if (targetsMixin.getTargets() != null) {
             ClientConfig config = new ClientConfig();
