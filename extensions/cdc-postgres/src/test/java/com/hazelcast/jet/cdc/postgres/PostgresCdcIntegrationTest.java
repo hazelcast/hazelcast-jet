@@ -14,12 +14,18 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.cdc;
+package com.hazelcast.jet.cdc.postgres;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.accumulator.LongAccumulator;
+import com.hazelcast.jet.cdc.AbstractIntegrationTest;
+import com.hazelcast.jet.cdc.CdcSinks;
+import com.hazelcast.jet.cdc.ChangeRecord;
+import com.hazelcast.jet.cdc.Operation;
+import com.hazelcast.jet.cdc.ParsingException;
+import com.hazelcast.jet.cdc.RecordPart;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.core.JetTestSupport;
@@ -37,8 +43,11 @@ import javax.annotation.Nonnull;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 
 import static com.hazelcast.jet.Util.entry;
 import static org.testcontainers.containers.PostgreSQLContainer.POSTGRESQL_PORT;
@@ -104,6 +113,51 @@ public class PostgresCdcIntegrationTest extends AbstractIntegrationTest {
                     .prepareStatement("DELETE FROM customers WHERE id=1005")
                     .executeUpdate();
         }
+
+        //then
+        try {
+            assertEqualsEventually(() -> mapResultsToSortedList(jet.getMap("results")), expectedRecords);
+        } finally {
+            job.cancel();
+        }
+    }
+
+    @Test
+    @Category(NightlyTest.class)
+    public void orders() {
+        // given
+        List<String> expectedRecords = Arrays.asList(
+                "10001/0:SYNC:Order {orderNumber=10001, orderDate=" + new Date(1452902400000L) +
+                        ", quantity=1, productId=102}",
+                "10002/0:SYNC:Order {orderNumber=10002, orderDate=" + new Date(1452988800000L) +
+                        ", quantity=2, productId=105}",
+                "10003/0:SYNC:Order {orderNumber=10003, orderDate=" + new Date(1455840000000L) +
+                        ", quantity=2, productId=106}",
+                "10004/0:SYNC:Order {orderNumber=10004, orderDate=" + new Date(1456012800000L) +
+                        ", quantity=1, productId=107}"
+        );
+
+        Pipeline pipeline = Pipeline.create();
+        pipeline.readFrom(source("orders"))
+                .withoutTimestamps()
+                .groupingKey(PostgresCdcIntegrationTest::getOrderNumber)
+                .mapStateful(
+                        LongAccumulator::new,
+                        (accumulator, orderId, record) -> {
+                            long count = accumulator.get();
+                            accumulator.add(1);
+                            Operation operation = record.operation();
+                            RecordPart value = record.value();
+                            Order order = value.toObject(Order.class);
+                            return entry(orderId + "/" + count, operation + ":" + order);
+                        })
+                .peek()
+                .setLocalParallelism(1)
+                .writeTo(Sinks.map("results"));
+
+        // when
+        JetInstance jet = createJetMembers(2)[0];
+        Job job = jet.newJob(pipeline);
 
         //then
         try {
@@ -184,6 +238,76 @@ public class PostgresCdcIntegrationTest extends AbstractIntegrationTest {
         }
     }
 
+    @Test
+    @Category(NightlyTest.class)
+    public void cdcMapSink() throws Exception {
+        // given
+        Pipeline pipeline = Pipeline.create();
+        pipeline.readFrom(source("customers"))
+                .withNativeTimestamps(0)
+                .writeTo(CdcSinks.map("cache",
+                        r -> r.key().toMap().get("id"),
+                        r -> r.value().toObject(Customer.class).toString()));
+
+
+        // when
+        JetInstance jet = createJetMembers(2)[0];
+        JobConfig jobConfig = new JobConfig().setProcessingGuarantee(ProcessingGuarantee.AT_LEAST_ONCE);
+        Job job = jet.newJob(pipeline, jobConfig);
+        JetTestSupport.assertJobStatusEventually(job, JobStatus.RUNNING);
+        //then
+        assertEqualsEventually(() -> mapResultsToSortedList(jet.getMap("cache")),
+                Arrays.asList(
+                        "1001:Customer {id=1001, firstName=Sally, lastName=Thomas, email=sally.thomas@acme.com}",
+                        "1002:Customer {id=1002, firstName=George, lastName=Bailey, email=gbailey@foobar.com}",
+                        "1003:Customer {id=1003, firstName=Edward, lastName=Walker, email=ed@walker.com}",
+                        "1004:Customer {id=1004, firstName=Anne, lastName=Kretchmar, email=annek@noanswer.org}"
+                )
+        );
+
+        //when
+        job.restart();
+        JetTestSupport.assertJobStatusEventually(job, JobStatus.RUNNING);
+        try (Connection connection = DriverManager.getConnection(postgres.getJdbcUrl(), postgres.getUsername(),
+                postgres.getPassword())) {
+            connection.setSchema("inventory");
+            connection
+                    .prepareStatement("UPDATE customers SET first_name='Anne Marie' WHERE id=1004")
+                    .executeUpdate();
+            connection
+                    .prepareStatement("INSERT INTO customers VALUES (1005, 'Jason', 'Bourne', 'jason@bourne.org')")
+                    .executeUpdate();
+        }
+        //then
+        assertEqualsEventually(() -> mapResultsToSortedList(jet.getMap("cache")),
+                Arrays.asList(
+                        "1001:Customer {id=1001, firstName=Sally, lastName=Thomas, email=sally.thomas@acme.com}",
+                        "1002:Customer {id=1002, firstName=George, lastName=Bailey, email=gbailey@foobar.com}",
+                        "1003:Customer {id=1003, firstName=Edward, lastName=Walker, email=ed@walker.com}",
+                        "1004:Customer {id=1004, firstName=Anne Marie, lastName=Kretchmar, email=annek@noanswer.org}",
+                        "1005:Customer {id=1005, firstName=Jason, lastName=Bourne, email=jason@bourne.org}"
+                )
+        );
+
+        //when
+        try (Connection connection = DriverManager.getConnection(postgres.getJdbcUrl(), postgres.getUsername(),
+                postgres.getPassword())) {
+            connection.setSchema("inventory");
+            connection
+                    .prepareStatement("DELETE FROM customers WHERE id=1005")
+                    .executeUpdate();
+        }
+        //then
+        assertEqualsEventually(() -> mapResultsToSortedList(jet.getMap("cache")),
+                Arrays.asList(
+                        "1001:Customer {id=1001, firstName=Sally, lastName=Thomas, email=sally.thomas@acme.com}",
+                        "1002:Customer {id=1002, firstName=George, lastName=Bailey, email=gbailey@foobar.com}",
+                        "1003:Customer {id=1003, firstName=Edward, lastName=Walker, email=ed@walker.com}",
+                        "1004:Customer {id=1004, firstName=Anne Marie, lastName=Kretchmar, email=annek@noanswer.org}"
+                )
+        );
+    }
+
     @Nonnull
     private StreamSource<ChangeRecord> source(String tableName) {
         return PostgresCdcSources.postgres(tableName)
@@ -195,6 +319,16 @@ public class PostgresCdcIntegrationTest extends AbstractIntegrationTest {
                 .setClusterName("dbserver1")
                 .setTableWhitelist("inventory." + tableName)
                 .build();
+    }
+
+    private static int getOrderNumber(ChangeRecord record) throws ParsingException {
+        //pick random method for extracting ID in order to test all code paths
+        boolean primitive = ThreadLocalRandom.current().nextBoolean();
+        if (primitive) {
+            return (Integer) record.key().toMap().get("id");
+        } else {
+            return record.key().toObject(OrderPrimaryKey.class).id;
+        }
     }
 
     private static class Customer {
@@ -237,6 +371,84 @@ public class PostgresCdcIntegrationTest extends AbstractIntegrationTest {
         @Override
         public String toString() {
             return "Customer {id=" + id + ", firstName=" + firstName + ", lastName=" + lastName + ", email=" + email + '}';
+        }
+    }
+
+    private static class Order {
+
+        @JsonProperty("id")
+        public int orderNumber;
+
+        @JsonProperty("order_date")
+        public Date orderDate;
+
+        @JsonProperty("quantity")
+        public int quantity;
+
+        @JsonProperty("product_id")
+        public int productId;
+
+        Order() {
+        }
+
+        public void setOrderDate(Date orderDate) {
+            long days = orderDate.getTime(); //database provides no of days for some reason, fixing it here
+            this.orderDate = new Date(TimeUnit.DAYS.toMillis(days));
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(orderNumber, orderDate, quantity, productId);
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (this == obj) {
+                return true;
+            }
+            if (obj == null || getClass() != obj.getClass()) {
+                return false;
+            }
+            Order other = (Order) obj;
+            return orderNumber == other.orderNumber
+                    && Objects.equals(orderDate, other.orderDate)
+                    && Objects.equals(quantity, other.quantity)
+                    && Objects.equals(productId, other.productId);
+        }
+
+        @Override
+        public String toString() {
+            return "Order {orderNumber=" + orderNumber + ", orderDate=" + orderDate + ", quantity=" + quantity +
+                    ", productId=" + productId + '}';
+        }
+
+    }
+
+    private static class OrderPrimaryKey {
+
+        @JsonProperty("id")
+        public int id;
+
+        @Override
+        public int hashCode() {
+            return id;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (this == obj) {
+                return true;
+            }
+            if (obj == null || getClass() != obj.getClass()) {
+                return false;
+            }
+            OrderPrimaryKey other = (OrderPrimaryKey) obj;
+            return id == other.id;
+        }
+
+        @Override
+        public String toString() {
+            return "OrderPrimaryKey {id=" + id + '}';
         }
     }
 }

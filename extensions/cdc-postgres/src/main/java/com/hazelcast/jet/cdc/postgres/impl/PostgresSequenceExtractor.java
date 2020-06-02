@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.cdc.mysql.impl;
+package com.hazelcast.jet.cdc.postgres.impl;
 
 import com.hazelcast.internal.util.HashUtil;
 import com.hazelcast.jet.cdc.impl.SequenceExtractor;
@@ -24,40 +24,36 @@ import java.util.Objects;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
-public class MySqlSequenceExtractor implements SequenceExtractor {
+public class PostgresSequenceExtractor implements SequenceExtractor {
 
     private static final String SERVER = "server";
-    private static final String BINLOG_FILE = "file";
-    private static final String BINLOG_POSITION = "pos";
+    private static final String LAST_WAL_SEQUENCE_NUMBER = "lsn";
 
     private String server;
-    private String binlog;
     private long source;
 
     @Override
     public long sequence(Map<String, ?> debeziumOffset) {
-        return (Long) debeziumOffset.get(BINLOG_POSITION);
+        return (Long) debeziumOffset.get(LAST_WAL_SEQUENCE_NUMBER);
     }
 
     @Override
     public long source(Map<String, ?> debeziumPartition, Map<String, ?> debeziumOffset) {
         String server = (String) debeziumPartition.get(SERVER);
-        String binlog = (String) debeziumOffset.get(BINLOG_FILE);
-        if (isSourceNew(server, binlog)) {
-            long source = computeSource(server, binlog);
+        if (isSourceNew(server)) {
+            long source = computeSource(server);
             this.source = adjustForCollision(source);
             this.server = server;
-            this.binlog = binlog;
         }
         return this.source;
     }
 
-    private boolean isSourceNew(String server, String binlog) {
-        return !Objects.equals(this.server, server) || !Objects.equals(this.binlog, binlog);
+    private boolean isSourceNew(String server) {
+        return !Objects.equals(this.server, server);
     }
 
-    private static long computeSource(String server, String binlog) {
-        byte[] bytes = (server + binlog).getBytes(UTF_8);
+    private static long computeSource(String server) {
+        byte[] bytes = server.getBytes(UTF_8);
         return HashUtil.MurmurHash3_x64_64(bytes, 0, bytes.length);
     }
 

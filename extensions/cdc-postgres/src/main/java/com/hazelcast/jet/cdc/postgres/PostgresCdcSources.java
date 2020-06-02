@@ -14,11 +14,14 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.cdc;
+package com.hazelcast.jet.cdc.postgres;
 
 import com.hazelcast.jet.annotation.EvolvingApi;
+import com.hazelcast.jet.cdc.ChangeRecord;
+import com.hazelcast.jet.cdc.impl.CdcSource;
 import com.hazelcast.jet.cdc.impl.DebeziumConfig;
 import com.hazelcast.jet.cdc.impl.PropertyRules;
+import com.hazelcast.jet.cdc.postgres.impl.PostgresSequenceExtractor;
 import com.hazelcast.jet.pipeline.StreamSource;
 
 import javax.annotation.Nonnull;
@@ -76,6 +79,7 @@ public final class PostgresCdcSources {
             Objects.requireNonNull(name, "name");
 
             config = new DebeziumConfig(name, "io.debezium.connector.postgresql.PostgresConnector");
+            config.setProperty(CdcSource.SEQUENCE_EXTRACTOR_CLASS_PROPERTY, PostgresSequenceExtractor.class.getName());
         }
 
         /**
