@@ -89,10 +89,6 @@ public final class RocksDBStateBackend {
         }
     }
 
-    public static void setDirectory(Path directory) {
-        RocksDBStateBackend.directory = directory;
-    }
-
     /**
      * Deletes the whole database instance.
      * Should be invoked when the job finishes execution (whether successfully or with an error)

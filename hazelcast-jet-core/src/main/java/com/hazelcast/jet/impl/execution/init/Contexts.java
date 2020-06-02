@@ -271,7 +271,6 @@ public final class Contexts {
             this.globalProcessorIndex = globalProcessorIndex;
 
             RocksDBStateBackend.setSerializationService(serializationService);
-            RocksDBStateBackend.setDirectory(attachedDirectory("rocksdb").toPath());
         }
 
         @Override
