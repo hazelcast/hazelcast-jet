@@ -2,6 +2,8 @@
 
 ![GitHub release](https://img.shields.io/github/release/hazelcast/hazelcast-jet.svg)
 [![Join the chat at https://gitter.im/hazelcast/hazelcast-jet](https://badges.gitter.im/hazelcast/hazelcast-jet.svg)](https://gitter.im/hazelcast/hazelcast-jet?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+[![Code Quality: Java](https://img.shields.io/lgtm/grade/java/g/hazelcast/hazelcast.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/hazelcast/hazelcast/context:java)
+[![Docker pulls](https://img.shields.io/docker/pulls/hazelcast/hazelcast-jet)](https://img.shields.io/docker/pulls/hazelcast/hazelcast-jet)
 
 <img src="https://github.com/hazelcast/hazelcast-jet/raw/master/logo/hazelcast-jet.png" width="100">
 
@@ -153,9 +155,9 @@ You can see a full list of connectors at the [Sources and Sink](https://jet-star
 | [Apache Avro](https://github.com/hazelcast/hazelcast-jet/tree/master/extensions/avro)   | Source and sink connector for Avro files.                                                     |
 | [Apache Hadoop](https://github.com/hazelcast/hazelcast-jet/tree/master/extensions/hadoop/src/main/java/com/hazelcast/jet/hadoop) | A connector that allows Apache Hadoop read/write support for Hazelcast Jet. |
 | [Apache Kafka](https://github.com/hazelcast/hazelcast-jet/tree/master/extensions/kafka) | A connector that allows consuming/producing events from/to Apache Kafka. |
-| [CDC Debezium](https://github.com/hazelcast/hazelcast-jet/tree/cdc/extensions/cdc-debezium) | A Hazelcast Jet connector for Debezium which enables Hazelcast Jet pipelines to consume CDC events from various databases. |
-| [CDC MySQL](https://github.com/hazelcast/hazelcast-jet/tree/cdc/extensions/cdc-mysql) | A Hazelcast Jet connector for CDC data coming from MySQL databases (based on Debizium wrapped with a proprietary API). |
-| [Elasticsearch](https://github.com/hazelcast/hazelcast-jet-contrib/tree/master/elasticsearch) | A Hazelcast Jet connector for Elasticsearch for querying/indexing objects from/to Elasticsearch. |
+| [CDC Debezium](https://github.com/hazelcast/hazelcast-jet/tree/master/extensions/cdc-debezium) | A Hazelcast Jet connector for Debezium which enables Hazelcast Jet pipelines to consume CDC events from various databases. |
+| [CDC MySQL](https://github.com/hazelcast/hazelcast-jet/tree/master/extensions/cdc-mysql) | A Hazelcast Jet connector for CDC data coming from MySQL databases (based on Debizium wrapped with a proprietary API). |
+| [Elasticsearch](https://github.com/hazelcast/hazelcast-jet/tree/master/extensions/elasticsearch) | A Hazelcast Jet connector for Elasticsearch for querying/indexing objects from/to Elasticsearch. |
 | [Files](https://github.com/hazelcast/hazelcast-jet/blob/master/hazelcast-jet-core/src/main/java/com/hazelcast/jet/pipeline/Sources.java)            | Connector for local filesystem.                                               |
 | [Hazelcast Cache Journal](https://github.com/hazelcast/hazelcast-jet/blob/master/hazelcast-jet-core/src/main/java/com/hazelcast/jet/pipeline/Sources.java) | Connector for change events on caches in local and remote Hazelcast clusters. |
 | [Hazelcast Cache](https://github.com/hazelcast/hazelcast-jet/blob/master/hazelcast-jet-core/src/main/java/com/hazelcast/jet/pipeline/Sources.java)         | Connector for caches in local and remote Hazelcast clusters.                  |
