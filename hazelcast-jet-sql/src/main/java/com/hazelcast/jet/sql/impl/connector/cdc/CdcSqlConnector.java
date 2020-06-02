@@ -96,7 +96,7 @@ public class CdcSqlConnector implements JetSqlConnector {
 
         // TODO: "database.whitelist" & "table.whitelist" in theory could be inferred <- schemaName & tableName
         return new CdcTable(this, schemaName, tableName, new ConstantTableStatistics(0),
-                toList(externalFields, TableField::new), cdcProperties, options);
+                toList(externalFields, ef -> new TableField(ef.name(), ef.type(), false)), cdcProperties, options);
     }
 
     @Override

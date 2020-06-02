@@ -22,7 +22,6 @@ import org.apache.calcite.plan.RelOptCost;
 import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.RelNode;
-import org.apache.calcite.rel.RelWriter;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rel.type.RelDataType;
@@ -45,7 +44,7 @@ public class ProjectLogicalRel extends Project implements LogicalRel {
     @Override
     public RelOptCost computeSelfCost(RelOptPlanner planner, RelMetadataQuery mq) {
         double rowCount = mq.getRowCount(getInput());
-        double cpu = CostUtils.adjustProjectCpu(rowCount * exps.size(), false);
+        double cpu = CostUtils.getProjectCpu(rowCount, exps.size());
 
         return planner.getCostFactory().makeCost(rowCount, cpu, 0);
     }

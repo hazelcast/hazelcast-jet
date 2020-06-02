@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.sql.impl.opt;
 
+import com.hazelcast.sql.impl.calcite.opt.cost.Cost;
 import com.hazelcast.sql.impl.calcite.opt.cost.CostUtils;
 import com.hazelcast.sql.impl.calcite.schema.HazelcastTable;
 import com.hazelcast.sql.impl.schema.Table;
@@ -41,14 +42,7 @@ import static java.util.stream.Collectors.toList;
  */
 public abstract class AbstractFullScanRel extends TableScan {
 
-    /**
-     * Projection.
-     */
     private final List<RexNode> projection;
-
-    /**
-     * Filter.
-     */
     private final RexNode filter;
 
     protected AbstractFullScanRel(
@@ -113,10 +107,10 @@ public abstract class AbstractFullScanRel extends TableScan {
     @Override
     public RelOptCost computeSelfCost(RelOptPlanner planner, RelMetadataQuery mq) {
         // 1. Get cost of the scan itself. For replicated map cost is multiplied by the number of nodes.
-        RelOptCost scanCost = super.computeSelfCost(planner, mq);
+        Cost scanCost = (Cost) super.computeSelfCost(planner, mq);
 
         // 2. Get cost of the project taking in count filter and number of expressions. Project never produces IO.
-        double filterRowCount = scanCost.getRows();
+        double filterRowCount = scanCost.getRowsInternal();
 
         RexNode filter = getFilter();
         if (filter != null) {
@@ -125,13 +119,13 @@ public abstract class AbstractFullScanRel extends TableScan {
         }
 
         int expressionCount = getProjection().size();
-        double projectCpu = CostUtils.adjustProjectCpu(filterRowCount * expressionCount, true);
+        double projectCpu = CostUtils.adjustCpuForConstrainedScan(filterRowCount * expressionCount);
 
         // 3. Finally, return sum of both scan and project.
         return planner.getCostFactory().makeCost(
                 filterRowCount,
-                scanCost.getCpu() + projectCpu,
-                scanCost.getIo()
+                scanCost.getCpuInternal() + projectCpu,
+                scanCost.getNetworkInternal()
         );
     }
 }

@@ -79,7 +79,7 @@ public class KafkaSqlConnector extends SqlKeyValueConnector implements JetSqlCon
         kafkaProperties.remove(TO_VALUE_CLASS);
         EntryWriter writer = entryWriter(externalFields, options.get(TO_KEY_CLASS), options.get(TO_VALUE_CLASS));
         return new KafkaTable(this, schemaName, tableName, new ConstantTableStatistics(0), topicName,
-                toList(externalFields, TableField::new), writer, kafkaProperties, options);
+                toList(externalFields, ef -> new TableField(ef.name(), ef.type(), false)), writer, kafkaProperties, options);
     }
 
     @Override
