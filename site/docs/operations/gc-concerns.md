@@ -1,5 +1,5 @@
 ---
-title: Concerns Related to Garbage Collection
+title: Concerns Related to GC
 description: Choosing the right JDK-GC combination is important.
 ---
 
