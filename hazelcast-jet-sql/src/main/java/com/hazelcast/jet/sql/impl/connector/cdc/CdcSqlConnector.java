@@ -19,6 +19,7 @@ package com.hazelcast.jet.sql.impl.connector.cdc;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.cdc.ChangeRecord;
 import com.hazelcast.jet.cdc.impl.CdcSource;
+import com.hazelcast.jet.cdc.impl.ConstantSequenceExtractor;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.sql.JetSqlConnector;
@@ -39,6 +40,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
+import static com.hazelcast.jet.cdc.impl.CdcSource.SEQUENCE_EXTRACTOR_CLASS_PROPERTY;
 import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.EventTimePolicy.noEventTime;
 import static com.hazelcast.jet.core.processor.Processors.mapP;
@@ -93,6 +95,7 @@ public class CdcSqlConnector implements JetSqlConnector {
         cdcProperties.put(INCLUDE_SCHEMA_CHANGES, false);
         cdcProperties.put(TOMBSTONES_ON_DELETE, false);
         cdcProperties.put(DATABASE_HISTORY, CdcSource.DatabaseHistoryImpl.class.getName());
+        cdcProperties.put(SEQUENCE_EXTRACTOR_CLASS_PROPERTY, ConstantSequenceExtractor.class.getName());
 
         // TODO: "database.whitelist" & "table.whitelist" in theory could be inferred <- schemaName & tableName
         return new CdcTable(this, schemaName, tableName, new ConstantTableStatistics(0),
