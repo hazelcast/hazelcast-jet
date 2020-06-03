@@ -299,11 +299,6 @@
         </dependency>
         <dependency>
             <groupId>com.hazelcast.jet</groupId>
-            <artifactId>hazelcast-jet-cdc-postgres</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.hazelcast.jet</groupId>
             <artifactId>hazelcast-jet-protobuf</artifactId>
             <version>${project.version}</version>
             <classifier>jar-with-dependencies</classifier>
