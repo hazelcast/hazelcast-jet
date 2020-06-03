@@ -68,10 +68,10 @@ configuration etc. most likely will change in future revisions.</p>
 </blockquote>
 <p><strong>Change data capture</strong> refers to the process of <strong>observing changes
 made to a database</strong> and extracting them in a form usable by other
-systems, for the purposes of replication, analysis and many many more.</p>
+systems, for the purposes of replication, analysis and many more.</p>
 <p>Change Data Capture is especially important to Jet, because it allows
-for the <strong>integration with legacy systems</strong>. Database changes form a
-stream of events which can be efficiently processed by Jet.</p>
+for the <strong>streaming of changes from databases</strong>, which can be
+efficiently processed by Jet.</p>
 <p>Implementation of CDC in Jet is based on
 <a href="https://debezium.io/">Debezium</a>, which is an open source distributed
 platform for change data capture. It provides Kafka Connect compatible
