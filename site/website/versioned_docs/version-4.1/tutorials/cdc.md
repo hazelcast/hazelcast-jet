@@ -14,8 +14,7 @@ systems, for the purposes of replication, analysis and many more.
 
 Change Data Capture is especially important to Jet, because it allows
 for the **streaming of changes from databases**, which can be
-efficiently processed by Jet. One consequence of this is also simplified
-integration with legacy systems.
+efficiently processed by Jet.
 
 Implementation of CDC in Jet is based on
 [Debezium](https://debezium.io/), which is an open source distributed

@@ -1039,8 +1039,7 @@ systems, for the purposes of replication, analysis and many more.
 
 Change Data Capture is especially important to Jet, because it allows
 for the _streaming of changes from databases_, which can be efficiently
-processed by Jet. One consequence of this is also simplified integration
-with legacy systems.
+processed by Jet.
 
 Implementation of CDC in Jet is based on
 [Debezium](https://debezium.io/). Jet offers a generic Debezium source
@@ -1073,7 +1072,7 @@ tutorial](../tutorials/cdc)).
 
 In order to make it work though, the databases need to be properly
 configured too, have features essential for CDC enabled. For details see
-the [CDC Deployment Guide](../operations/cdc-deployment.md).
+the [CDC Deployment Guide](../operations/cdc.md).
 
 #### CDC Connectors
 
