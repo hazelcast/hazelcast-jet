@@ -23,6 +23,11 @@ To expand an issue number into a full GitHub link, use this template:
 
 https://github.com/hazelcast/hazelcast-jet/issues/<issue number>
 
+** Hazelcast Jet 4.1.1 **
+
+1. Fixes
+
+[core] JmsSink should not throw when it receives a Watermark
 
 ** Hazelcast Jet 4.1 **
 
