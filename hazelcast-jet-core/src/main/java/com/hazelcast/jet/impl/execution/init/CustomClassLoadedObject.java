@@ -16,12 +16,13 @@
 
 package com.hazelcast.jet.impl.execution.init;
 
+import com.hazelcast.internal.serialization.Data;
 import com.hazelcast.internal.serialization.SerializationService;
 import com.hazelcast.jet.impl.serialization.SerializerHookConstants;
 import com.hazelcast.jet.impl.util.ExceptionUtil;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
-import com.hazelcast.internal.serialization.Data;
+import com.hazelcast.nio.serialization.DataSerializable;
 import com.hazelcast.nio.serialization.HazelcastSerializationException;
 import com.hazelcast.nio.serialization.SerializerHook;
 import com.hazelcast.nio.serialization.StreamSerializer;
@@ -41,9 +42,9 @@ import static com.hazelcast.internal.nio.IOUtil.newObjectInputStream;
  */
 public final class CustomClassLoadedObject {
 
-    protected final Serializable object;
+    protected final Object object;
 
-    private CustomClassLoadedObject(Serializable object) {
+    private CustomClassLoadedObject(Object object) {
         this.object = object;
     }
 
@@ -94,10 +95,16 @@ public final class CustomClassLoadedObject {
         // explicit cast to OutputStream and intentionally omitting to close ObjectOutputStream
         @SuppressFBWarnings({"BC_UNCONFIRMED_CAST", "OS_OPEN_STREAM"})
         public void write(ObjectDataOutput out, CustomClassLoadedObject object) throws IOException {
-            final ObjectOutputStream objectOutputStream = new ObjectOutputStream((OutputStream) out);
-            objectOutputStream.writeObject(object.object);
-            // Force flush if not yet written due to internal behavior if pos < 1024
-            objectOutputStream.flush();
+            if (object.object instanceof DataSerializable) {
+                out.writeBoolean(false);
+                out.writeObject(object.object);
+            } else {
+                out.writeBoolean(true);
+                final ObjectOutputStream objectOutputStream = new ObjectOutputStream((OutputStream) out);
+                objectOutputStream.writeObject(object.object);
+                // Force flush if not yet written due to internal behavior if pos < 1024
+                objectOutputStream.flush();
+            }
         }
 
         @Override
@@ -105,12 +112,19 @@ public final class CustomClassLoadedObject {
         @SuppressFBWarnings({ "BC_UNCONFIRMED_CAST", "OS_OPEN_STREAM"})
         public CustomClassLoadedObject read(ObjectDataInput in) throws IOException {
             ClassLoader cl = Thread.currentThread().getContextClassLoader();
-            ObjectInputStream objectInputStream = newObjectInputStream(cl, null, (InputStream) in);
-            try {
-                return new CustomClassLoadedObject((Serializable) objectInputStream.readObject());
-            } catch (ClassNotFoundException e) {
-                throw new HazelcastSerializationException(e);
+            boolean isJavaSerialized = in.readBoolean();
+            Object object;
+            if (isJavaSerialized) {
+                ObjectInputStream objectInputStream = newObjectInputStream(cl, null, (InputStream) in);
+                try {
+                    object = objectInputStream.readObject();
+                } catch (ClassNotFoundException e) {
+                    throw new HazelcastSerializationException(e);
+                }
+            } else {
+                object = in.readObject();
             }
+            return new CustomClassLoadedObject(object);
         }
 
         @Override
