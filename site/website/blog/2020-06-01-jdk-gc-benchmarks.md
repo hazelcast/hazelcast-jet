@@ -40,7 +40,7 @@ At the outset, we can observe the following:
 
 We tried the following combinations:
 
-1. JDK 8 with the default ParallelOld collector and the optional
+1. JDK 8 with the default Parallel collector and the optional
    ConcurrentMarkSweep and G1
 2. JDK 11 with the default G1 collector
 3. JDK 14 with the default G1 as well as the experimental Z and
@@ -48,13 +48,14 @@ We tried the following combinations:
 
 And here are our overall conclusions:
 
-1. JDK 8 is an antiquated runtime. The ParallelOld collector enters huge
+1. JDK 8 is an antiquated runtime. The Parallel collector enters huge
    Major GC pauses and the G1, although better than that, is stuck in an
    old version that uses just one thread when falling back to Full GC,
    again entering very long pauses. Even on a moderate heap of 12 GB,
-   the pauses were exceeding 20 seconds. The ConcurrentMarkSweep
-   collector is strictly worse than G1 in all scenarios, and its failure
-   mode are multi-minute Full GC pauses.
+   the pauses were exceeding 20 seconds for Parallel and a full minute
+   for G1. The ConcurrentMarkSweep collector is strictly worse than G1
+   in all scenarios, and its failure mode are multi-minute Full GC
+   pauses.
 2. On more modern JDK versions, the G1 is one monster of a collector. It
    handles heaps of dozens of GB with ease, keeping maximum GC pauses
    within 200 ms. Under extreme pressure it doesn't show brittleness
@@ -263,10 +264,7 @@ However, we do expect the overall relationship among the combinations to
 remain the same on a broad range of hardware parameters. The chart
 visualizes the superiority of the G1 over others, the weakness of the G1
 on JDK 8, and the weakness of the experimental low-latency collectors
-for this kind of workload. On JDK 8, ParallelOld GC seems to perform better
-at high catchup demands than G1. We deemed any run where the latency
-stays bounded as a "yes", but for ParallelOld these bounds were
-impractically high, dozens of seconds.
+for this kind of workload.
 
 The base latency, the time it takes to emit the window results, was in
 the ballpark of 500 milliseconds, but latency would often take hikes due
@@ -280,43 +278,84 @@ make a full recovery.
 
 ## Batch Pipeline Benchmark
 
-For the batch benchmark we used this very simple pipeline:
+For the batch benchmark we used this simple pipeline:
 
 ```java
 p.readFrom(longSource)
- .groupingKey(n -> n / (RANGE / NUM_KEYS))
+ .groupingKey(n -> n / % NUM_KEYS)
  .aggregate(summingLong(n -> n))
  .writeTo(Sinks.logger())
 ```
 
 The source is again a self-contained mock source that just emits a
-sequence of `long` numbers and the key function is defined so that
-the grouping key gradually changes: 0, 0, 0, 0, 1, 1, 1, 1, 2,... This
-means that the number of retained objects gradually grows over the
-course of computation. The only relevant metric in this batch pipeline
-benchmark is the time for the job to complete.
+sequence of `long` numbers and the key function is defined so that the
+grouping key cycles through the key space: 0, 1, 2, ..., 0, 1, 2, ...
+This means that, over the first cycle, the pipeline observes all the
+keys and builds up a fixed data structure to hold the aggregation
+results. Over the following cycles it just updates the existing data.
+This aligns perfectly with the Generational Garbage Hypothesis: the
+objects either last through the entire computation or are short-lived
+temporary objects that become garbage very soon after creation.
+
+We tested another variant, where the aggregate operation uses a boxed
+`Long` instance as state, producing garbage every time the running score
+is updated. In this case the garbage isn't strictly generational because
+the objects die after having spent substantial time ind the old
+generation. Below we present two charts: the first one for the
+garbage-free aggregation and the second one for the garbage-producing
+aggregation.
 
 For the batch pipeline we didn't focus on the low-latency collectors
 since they have nothing to offer in this case. Also, because we saw
 earlier that JDK 14 performs much the same as JDK 11, we just ran one
 test to confirm it, but otherwise focused on JDK 8 vs. JDK 11 and
-compared the JDK 8 default ParallelOld collector with G1. We ran the
+compared the JDK 8 default Parallel collector with G1. We ran the
 benchmark on a laptop with 16 GB RAM and a 6-core Intel Core i7. We
-tried setting the heap size (`-Xmx`) to 10, 12 and 14 GB. Here are the
-results:
+tested with three heap sizes (`-Xmx`): 10, 12 and 14 GB.
 
-![Batch pipeline benchmark](assets/2020-06-01-batch-1.png)
+Initially we got very bad performance out of the Parallel collector and
+had to resort to GC tuning. For this purpose we highly recommend using
+VisualVM and its Visual GC plugin. When you set the frame rate to the
+highest setting (10 FPS), you can enjoy a very fine-grained visual
+insight into how the interplay between your application's allocation and
+the GC works out. By watching these live animations for a while, we
+realized that the main issue was a too large slice of RAM given to the
+new generation. By default the ratio between Old and New generations is
+just 2:1, and it is not dynamically adaptable at runtime. Based on this
+we decided to try with `-XX:NewRatio=8` and it completely changed the
+picture. Now Parallel was turning in the best times overall. We also
+used `-XX:MaxTenuringThreshold=2` to reduce the copying of data between
+the Survivor spaces, since in the pipeline the temporary objects die
+pretty soon.
 
-You can see a big advantage of the G1 with smaller heap sizes. At
-maximum heap size of 10 GB, the heap is almost full (about 8.7 GB usage
-after full GC). The G1 excels at managing the heap with very little
-headroom left, as opposed to ParallelOld. This test confirmed once again
-that the G1 works much better on JDK 11 than 8, but in this case the
-difference isn't as pronounced as before, where we were pushing the GCs
-into the "concurrent mode failure" regime. On the other hand, note that
-ParrallelOld, given enough heap headroom, confirms its status as the
-"throughput collector" &mdash; it clocked the overall best time with 14
-GB heap available, although with a minuscule advantage of a single
-second in a 150-second run. This once again confirsm G1 as the clear
-winner.
+Now we are ready to present the benchmark results. The only relevant
+metric in this batch pipeline benchmark is the time for the job to
+complete. To visualize the results we took the reciprocal of that, so
+the charts show throughput in items per second. Here are the results:
 
+![Batch pipeline with garbage-free aggregation](assets/2020-06-01-batch-mutable.png)
+
+![Batch pipeline with garbage-producing aggregation](assets/2020-06-01-batch-boxed.png)
+
+Comparing the two charts we can see that garbage-free aggregation gives
+a throughput boost of around 30-35%. The only anomaly is the G1 with
+garbage-free aggregationd on larger heap sizes. Its performance dropped
+with more heap, we couldn't find an explanation for this. G1 on JDK 8
+was consistently the worst performer, while the other combinations,
+Parallel on either JDK and G1 on JDK 11, performed similarly. Note that
+we didn't have to touch anything in the configuration of G1, which is
+an important fact. GC tuning is highly case-specific, the results may
+dramatically change with e.g., more data, and it must be applied to the
+Jet cluster globally, making it specifically tuned for one kind of
+workload.
+
+Here's the performance of the default Parallel GC compared to the tuned
+version we used for testing:
+
+![Throughput of the Parallel Collector with and without tuning](assets/2020-06-01-batch-parallel.png)
+
+With 10 GB of heap it failed completely, stuck in back-to-back Full GC
+operations each taking about 7 seconds. With more heap it managed to
+make some progress, but was still hampered with very frequent Full GCs.
+Note that we got the above results for the most favorable case, with
+garbage-free aggregation.
