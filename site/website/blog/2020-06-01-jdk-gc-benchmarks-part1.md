@@ -1,5 +1,5 @@
 ---
-title: Benchmarking Jet with Different JDKs and GCs
+title: Benchmarking Jet with Different JDKs and GCs, Part 1
 description: Choosing the right JDK-GC combination is important.
 ---
 
@@ -79,23 +79,19 @@ with some minor variations between the tests. Here is the main part, the
 Jet pipeline:
 
 ```java
-private static Pipeline buildPipeline() {
-    Pipeline p = Pipeline.create();
-    StreamStage<Long> source = p.readFrom(longSource(ITEMS_PER_SECOND))
-                                .withNativeTimestamps(0)
-                                .rebalance(); // Upcoming feature in Jet 4.2
-    source.groupingKey(n -> n % NUM_KEYS)
-          .window(sliding(SECONDS.toMillis(WIN_SIZE_SECONDS), SLIDING_STEP_MILLIS))
-          .aggregate(counting())
-          .filter(kwr -> kwr.getKey() % DIAGNOSTIC_KEYSET_DOWNSAMPLING_FACTOR == 0)
-          .window(tumbling(SLIDING_STEP_MILLIS))
-          .aggregate(counting())
-          .writeTo(Sinks.logger(wr -> String.format("time %,d: latency %,d ms, cca. %,d keys",
-                  simpleTime(wr.end()),
-                  NANOSECONDS.toMillis(System.nanoTime()) - wr.end(),
-                  wr.result() * DIAGNOSTIC_KEYSET_DOWNSAMPLING_FACTOR)));
-    return p;
-}
+StreamStage<Long> source = p.readFrom(longSource(ITEMS_PER_SECOND))
+                            .withNativeTimestamps(0)
+                            .rebalance(); // Upcoming feature in Jet 4.2
+source.groupingKey(n -> n % NUM_KEYS)
+      .window(sliding(SECONDS.toMillis(WIN_SIZE_SECONDS), SLIDING_STEP_MILLIS))
+      .aggregate(counting())
+      .filter(kwr -> kwr.getKey() % DIAGNOSTIC_KEYSET_DOWNSAMPLING_FACTOR == 0)
+      .window(tumbling(SLIDING_STEP_MILLIS))
+      .aggregate(counting())
+      .writeTo(Sinks.logger(wr -> String.format("time %,d: latency %,d ms, cca. %,d keys",
+              simpleTime(wr.end()),
+              NANOSECONDS.toMillis(System.nanoTime()) - wr.end(),
+              wr.result() * DIAGNOSTIC_KEYSET_DOWNSAMPLING_FACTOR)));
 ```
 
 Some notes:
@@ -275,87 +271,3 @@ the effects of JIT compilation in the borderline cases: the pipeline
 would start out with a constantly increasing latency, but then after
 around two minutes, its performance would improve and the latency would
 make a full recovery.
-
-## Batch Pipeline Benchmark
-
-For the batch benchmark we used this simple pipeline:
-
-```java
-p.readFrom(longSource)
- .groupingKey(n -> n / % NUM_KEYS)
- .aggregate(summingLong(n -> n))
- .writeTo(Sinks.logger())
-```
-
-The source is again a self-contained mock source that just emits a
-sequence of `long` numbers and the key function is defined so that the
-grouping key cycles through the key space: 0, 1, 2, ..., 0, 1, 2, ...
-This means that, over the first cycle, the pipeline observes all the
-keys and builds up a fixed data structure to hold the aggregation
-results. Over the following cycles it just updates the existing data.
-This aligns perfectly with the Generational Garbage Hypothesis: the
-objects either last through the entire computation or are short-lived
-temporary objects that become garbage very soon after creation.
-
-We tested another variant, where the aggregate operation uses a boxed
-`Long` instance as state, producing garbage every time the running score
-is updated. In this case the garbage isn't strictly generational because
-the objects die after having spent substantial time ind the old
-generation. Below we present two charts: the first one for the
-garbage-free aggregation and the second one for the garbage-producing
-aggregation.
-
-For the batch pipeline we didn't focus on the low-latency collectors
-since they have nothing to offer in this case. Also, because we saw
-earlier that JDK 14 performs much the same as JDK 11, we just ran one
-test to confirm it, but otherwise focused on JDK 8 vs. JDK 11 and
-compared the JDK 8 default Parallel collector with G1. We ran the
-benchmark on a laptop with 16 GB RAM and a 6-core Intel Core i7. We
-tested with three heap sizes (`-Xmx`): 10, 12 and 14 GB.
-
-Initially we got very bad performance out of the Parallel collector and
-had to resort to GC tuning. For this purpose we highly recommend using
-VisualVM and its Visual GC plugin. When you set the frame rate to the
-highest setting (10 FPS), you can enjoy a very fine-grained visual
-insight into how the interplay between your application's allocation and
-the GC works out. By watching these live animations for a while, we
-realized that the main issue was a too large slice of RAM given to the
-new generation. By default the ratio between Old and New generations is
-just 2:1, and it is not dynamically adaptable at runtime. Based on this
-we decided to try with `-XX:NewRatio=8` and it completely changed the
-picture. Now Parallel was turning in the best times overall. We also
-used `-XX:MaxTenuringThreshold=2` to reduce the copying of data between
-the Survivor spaces, since in the pipeline the temporary objects die
-pretty soon.
-
-Now we are ready to present the benchmark results. The only relevant
-metric in this batch pipeline benchmark is the time for the job to
-complete. To visualize the results we took the reciprocal of that, so
-the charts show throughput in items per second. Here are the results:
-
-![Batch pipeline with garbage-free aggregation](assets/2020-06-01-batch-mutable.png)
-
-![Batch pipeline with garbage-producing aggregation](assets/2020-06-01-batch-boxed.png)
-
-Comparing the two charts we can see that garbage-free aggregation gives
-a throughput boost of around 30-35%. The only anomaly is the G1 with
-garbage-free aggregationd on larger heap sizes. Its performance dropped
-with more heap, we couldn't find an explanation for this. G1 on JDK 8
-was consistently the worst performer, while the other combinations,
-Parallel on either JDK and G1 on JDK 11, performed similarly. Note that
-we didn't have to touch anything in the configuration of G1, which is
-an important fact. GC tuning is highly case-specific, the results may
-dramatically change with e.g., more data, and it must be applied to the
-Jet cluster globally, making it specifically tuned for one kind of
-workload.
-
-Here's the performance of the default Parallel GC compared to the tuned
-version we used for testing:
-
-![Throughput of the Parallel Collector with and without tuning](assets/2020-06-01-batch-parallel.png)
-
-With 10 GB of heap it failed completely, stuck in back-to-back Full GC
-operations each taking about 7 seconds. With more heap it managed to
-make some progress, but was still hampered with very frequent Full GCs.
-Note that we got the above results for the most favorable case, with
-garbage-free aggregation.

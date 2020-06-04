@@ -11,38 +11,25 @@ combinations:
 
 1. JDK 8 with the default Parallel collector and the optional
    ConcurrentMarkSweep and G1
-2. JDK 11 with the default G1 collector
+2. JDK 11 with the default G1 collector and the optional Parallel
+   collector
 3. JDK 14 with the default G1 as well as the experimental Z and
   Shenandoah
 
 These are our key findings:
 
-1. For streaming applications, JDK version 8 should not be used anymore.
-   Its default collector, Parallel, is optimized for throughput and not
-   short GC pauses. In our tests on heaps of 10-14 GB, it had regular
-   Minor GC pauses close to a full second, and an occasional Full GC may
-   take 20 seconds or more. You can configure JDK 8 to use G1, but it's
-   missing important features and enters GC pauses longer than a minute.
-   The ConcurrentMarkSweep collector is strictly worse than G1 in all
-   scenarios, and its failure mode are multi-minute Full GC pauses.
+1. As far as Hazelcast Jet is concerned, JDK version 8 is an antiquated
+   runtime and shouldn't be used. None of its garbage collectors have
+   satisfactory performance and their long GC pauses even result in
+   nodes being kicked out of the cluster.
 2. JDK 11 is the current Long-Term Support (LTS) version by Oracle and
    it is the lowest version of JDK we recommend. We found that its
    version of the G1, without any fine-tuning, already delivers
    next-generation GC performance. The default maximum GC pause target
    is 200 ms, which it meets in a very broad range of scenarios. By
-   configuring a single JVM option (`-XX:MaxGCPauseMillis`), the maximum
-   GC pause can be confined to 20-25 ms, which it can maintain at lower
-   GC pressure levels.
-3. For batch workloads, the Parallel collector is still a viable choice,
-   but only with some GC tuning applied. With the default settings it
-   performs very poorly even in the best scenario where objects either
-   die young or live fovever. We found the main problem to be that
-   Parallel cannot dynamically change the ratio of RAM available to the
-   new and old generations, and the default ratio gives too much RAM to
-   the new generation. When we applied `-XX:NewRatio=8
-   -XX:MaxTenuringThreshold=2`, Parallel was much better than G1 on JDK
-   8 and even on JDK 11 it was marginally better (but only for batch
-   workloads).
+   configuring a single JVM option (`-XX:MaxGCPauseMillis`), you can
+   confine the maximum GC pause to 20-25 ms, which it can maintain at
+   lower GC pressure levels.
 4. There are two more GCs that are relevant, but as of this writing are
    in the experimental phase. They are the low-latency collectors:
    Oracle's Z and OpenJDK's Shenandoah. Testing on JDK 14, we found Z to
@@ -55,7 +42,7 @@ These are our key findings:
    some cases we were able to improve the throughput by using
    `-XX:ConcGCThreads`.
 
-We tested the above JDK/GC combinations in three different usage
+We tested the mentioned JDK/GC combinations in three different usage
 scenarios, deriving some conclusions and recommendations we present
 below.
 
@@ -99,10 +86,7 @@ is no additional latency requirement. The best option is the same as in
 the previous scenario: a modern JDK with G1. The default maximum GC
 pause of 200 ms is a good setting and allowing larger pauses may only
 marginally help increase the throughput. We found that G1 can perform
-well even at close to 90% heap usage. You may experiment with the
-Parallel collector using the GC tuning options `-XX:NewRatio=8
--XX:MaxTenuringThreshold=2` as a start, but we found the potential
-gain to be pretty low.
+well even at close to 90% heap usage.
 
 ### Garbage-Free Aggregation
 
