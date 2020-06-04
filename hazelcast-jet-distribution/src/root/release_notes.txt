@@ -25,9 +25,14 @@ https://github.com/hazelcast/hazelcast-jet/issues/<issue number>
 
 ** Hazelcast Jet 4.1.1 **
 
-1. Fixes
+1. Enhancements 
+
+[docker] Update Java version to 11 in Docker image
+
+2. Fixes
 
 [core] JmsSink should not throw when it receives a Watermark
+
 
 ** Hazelcast Jet 4.1 **
 
