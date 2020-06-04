@@ -1,0 +1,26 @@
+---
+ssl: false
+#lowercaseOutputName: false
+#lowercaseOutputLabelNames: false
+whitelistObjectNames: ["com.hazelcast:*","com.hazelcast.jet:*"]
+rules:
+# HELP com_hazelcast_hzInstance_1_dev_clusterTime Cluster-wide Time (com.hazelcast<instance=_hzInstance_1_dev, name=_hzInstance_1_dev, type=HazelcastInstance><>clusterTime)
+  #com.hazelcast:instance=_hzInstance_1_dev,name=_hzInstance_1_dev,type=HazelcastInstance.PartitionServiceMBean
+- pattern: '<instance=(\w+), name=(\w+), type=(.*)><>(.*):'
+  name: hazelcast_$3_$4
+  #value: $4
+  #valueFactor: 0.001
+  labels:
+    instance: $1
+    name: $2
+    type: $3
+  help: "Hazelcast metric instance=$1 name=$2 type=$3 attribute=$4"
+  attrNameSnakeCase: false
+- pattern: '<name=(\w+), instance=(\w+), type=(\w+.*)'
+  name: hazelcast_$1_$3
+  labels:
+    instance: $2
+    name: $1
+    type: $3
+  help: "Hazelcast metric instance=$1 name=$2 type=$3"
+  attrNameSnakeCase: false
