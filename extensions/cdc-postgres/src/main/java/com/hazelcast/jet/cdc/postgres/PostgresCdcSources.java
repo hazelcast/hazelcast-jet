@@ -212,6 +212,90 @@ public final class PostgresCdcSources {
         }
 
         /**
+         * The name of the @see <a href="https://www.postgresql.org/docs/10/logicaldecoding.html">Postgres logical decoding plug-in</a>
+         * installed on the server. Supported values are <i>decoderbufs</i>,
+         * <i>wal2json</i>, <i>wal2json_rds</i>, <i>wal2json_streaming</i>,
+         * <i>wal2json_rds_streaming</i> and <i>pgoutput</i>.
+         * <p>
+         * If not explicitly set, the property defaults to <i>decoderbufs</i>.
+         * <p>
+         * When the processed transactions are very large it is possible
+         * that the JSON batch event with all changes in the transaction
+         * will not fit into the hard-coded memory buffer of size 1 GB.
+         * In such cases it is possible to switch to so-called streaming
+         * mode when every change in transactions is sent as a separate
+         * message from PostgreSQL.
+         */
+        @Nonnull
+        public Builder setLogicalDecodingPlugIn(@Nonnull String pluginName) {
+            config.setProperty("plugin.name", pluginName);
+            return this;
+        }
+
+        /**
+         * The name of the @see <a href="https://www.postgresql.org/docs/10/logicaldecoding-explanation.html#LOGICALDECODING-REPLICATION-SLOTS">Postgres logical decoding slot</a>
+         * (also called "replication slot") created for streaming changes
+         * from a plug-in and database instance.
+         * <p>
+         * Values must conform to Postgres replication slot naming rules
+         * which state: "Each replication slot has a name, which can
+         * contain lower-case letters, numbers, and the underscore
+         * character."
+         * <p>
+         * Replication slots have to have an identifier that is unique
+         * across all databases in a PostgreSQL cluster.
+         * <p>
+         * If not explicitly set, the property defaults to <i>debezium</i>.
+         */
+        @Nonnull
+        public Builder setReplicationSlotName(@Nonnull String slotName) {
+            config.setProperty("slot.name", slotName);
+            return this;
+        }
+
+        /**
+         * Whether or not to drop the logical replication slot when the
+         * connector disconnects cleanly.
+         * <p>
+         * Defaults to <i>false</i>
+         * <p>
+         * Should only be set to <i>true</i> in testing or development
+         * environments. Dropping the slot allows WAL segments to be
+         * discarded by the database, so it may happen that after a
+         * restart the connector cannot resume from the WAL position
+         * where it left off before.
+         */
+        @Nonnull
+        public Builder setReplicationSlotDropOnStop(boolean dropOnStop) {
+            config.setProperty("slot.drop.on.stop", dropOnStop);
+            return this;
+        }
+
+        /**
+         * The name of the <a href="https://www.postgresql.org/docs/10/logical-replication-publication.html">Postgres publication</a>
+         * that will be used for CDC purposes.
+         * <p>
+         * If the publication does not exist when this source starts up,
+         * then the source will create it (note: the database user of the
+         * source must have superuser permissions to be able to do so).
+         * If created this way the publication will include all tables
+         * and the source itself must filter the data based on its
+         * white-/blacklist configs. This is not efficient because the
+         * database will still send all data to the connector, before
+         * filtering is applied.
+         * <p>
+         * It's best to use a pre-defined publication (via the <code>CREATE
+         * PUBLICATION</code> SQL command, specified via its name.
+         * <p>
+         * If not explicitly set, the property defaults to <i>dbz_publication</i>.
+         */
+        @Nonnull
+        public Builder setPublicationName(@Nonnull String publicationName) {
+            config.setProperty("publication.name", publicationName);
+            return this;
+        }
+
+        /**
          * Can be used to set any property not explicitly covered by
          * other methods or to override properties we have hidden.
          */
