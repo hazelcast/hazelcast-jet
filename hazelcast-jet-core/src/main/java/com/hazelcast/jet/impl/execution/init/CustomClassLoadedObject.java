@@ -95,15 +95,15 @@ public final class CustomClassLoadedObject {
         // explicit cast to OutputStream and intentionally omitting to close ObjectOutputStream
         @SuppressFBWarnings({"BC_UNCONFIRMED_CAST", "OS_OPEN_STREAM"})
         public void write(ObjectDataOutput out, CustomClassLoadedObject object) throws IOException {
-            if (object.object instanceof DataSerializable) {
-                out.writeBoolean(false);
-                out.writeObject(object.object);
-            } else {
-                out.writeBoolean(true);
+            boolean isJavaSerialized = !(object.object instanceof DataSerializable);
+            out.writeBoolean(isJavaSerialized);
+            if (isJavaSerialized) {
                 final ObjectOutputStream objectOutputStream = new ObjectOutputStream((OutputStream) out);
                 objectOutputStream.writeObject(object.object);
                 // Force flush if not yet written due to internal behavior if pos < 1024
                 objectOutputStream.flush();
+            } else {
+                out.writeObject(object.object);
             }
         }
 
