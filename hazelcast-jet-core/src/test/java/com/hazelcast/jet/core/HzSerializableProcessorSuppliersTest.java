@@ -32,7 +32,7 @@ public class HzSerializableProcessorSuppliersTest extends SimpleTestInClusterSup
 
     private final DAG dag = new DAG();
     private final URL url = requireNonNull(
-            getClass().getClassLoader().getResource("deployment/DataSerializableSuppliers.jar"));
+            getClass().getResource("DataSerializableSuppliers.jar"));
     private final ClassLoader cl = new URLClassLoader(new URL[] {url});
 
     @BeforeClass
