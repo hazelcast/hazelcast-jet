@@ -1,6 +1,6 @@
 ---
 title: Install Hazelcast Jet Kubernetes Operator 
-description: Step-by-step guide on how to install Hazelcast Jet Kubernetes Operator on your Kubernetes Cluster.
+description: A step-by-step guide on how to install Hazelcast Jet Kubernetes Operator on your Kubernetes Cluster.
 ---
 
 The [Operator Framework](https://github.com/operator-framework) is an
