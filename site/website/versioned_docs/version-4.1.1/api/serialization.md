@@ -217,7 +217,7 @@ not to mention very wasteful with memory.
 
 For the best performance and simplest implementation we recommend using
 the Hazelcast
-[StreamSerializer](/javadoc/4.1/com/hazelcast/nio/serialization/StreamSerializer.html)
+[StreamSerializer](/javadoc/4.1.1/com/hazelcast/nio/serialization/StreamSerializer.html)
 mechanism. Here is a sample implementation for a `Person` class:
 
 ```java

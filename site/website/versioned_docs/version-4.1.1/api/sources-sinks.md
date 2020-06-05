@@ -1224,9 +1224,9 @@ processing even with at-least-once sinks.
 
 If Jet doesn’t natively support the data source/sink you need, you can
 build a connector for it yourself by using the
-[SourceBuilder](/javadoc/4.1/com/hazelcast/jet/pipeline/SourceBuilder.html)
+[SourceBuilder](/javadoc/4.1.1/com/hazelcast/jet/pipeline/SourceBuilder.html)
 and
-[SinkBuilder](/javadoc/4.1/com/hazelcast/jet/pipeline/SinkBuilder.html).
+[SinkBuilder](/javadoc/4.1.1/com/hazelcast/jet/pipeline/SinkBuilder.html).
 
 ### SourceBuilder
 
