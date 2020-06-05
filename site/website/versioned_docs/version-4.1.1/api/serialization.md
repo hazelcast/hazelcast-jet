@@ -159,8 +159,8 @@ types:
 
 - [java.io.Serializable](https://docs.oracle.com/javase/8/docs/api/java/io/Serializable.html)
 - [java.io.Externalizable](https://docs.oracle.com/javase/8/docs/api/java/io/Externalizable.html)
-- [com.hazelcast.nio.serialization.Portable](/javadoc/4.1/com/hazelcast/nio/serialization/Portable.html)
-- [com.hazelcast.nio.serialization.StreamSerializer](/javadoc/4.1/com/hazelcast/nio/serialization/StreamSerializer.html)
+- [com.hazelcast.nio.serialization.Portable](/javadoc/4.1.1/com/hazelcast/nio/serialization/Portable.html)
+- [com.hazelcast.nio.serialization.StreamSerializer](/javadoc/4.1.1/com/hazelcast/nio/serialization/StreamSerializer.html)
 
 The following table provides a comparison between them to help you in
 deciding which interface to use in your applications.
