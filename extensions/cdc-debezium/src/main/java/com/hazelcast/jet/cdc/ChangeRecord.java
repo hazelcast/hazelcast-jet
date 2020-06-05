@@ -77,6 +77,15 @@ public interface ChangeRecord {
     Operation operation() throws ParsingException;
 
     /**
+     * Returns the name of the table this record is part of.
+     *
+     * @return name of the source table for the current record
+     * @throws ParsingException if the table name field isn't present or is unparsable
+     */
+    @Nonnull
+    String table() throws ParsingException;
+
+    /**
      * Returns the key part of the CDC event. It identifies the affected record.
      */
     @Nonnull

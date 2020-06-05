@@ -35,6 +35,7 @@ public class ChangeRecordImpl implements ChangeRecord {
     private String json;
     private Long timestamp;
     private Operation operation;
+    private String table;
     private RecordPart key;
     private RecordPart value;
 
@@ -70,6 +71,18 @@ public class ChangeRecordImpl implements ChangeRecord {
             operation = Operation.get(opAlias);
         }
         return operation;
+    }
+
+    @Nonnull
+    @Override
+    public String table() throws ParsingException {
+        if (table == null) {
+            table = get(value().toMap(), "__table", String.class);
+            if (table == null) {
+                throw new ParsingException("No parsable table name field found");
+            }
+        }
+        return table;
     }
 
     @Override
