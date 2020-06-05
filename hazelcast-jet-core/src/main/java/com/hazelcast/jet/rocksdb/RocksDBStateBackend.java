@@ -163,7 +163,7 @@ public final class RocksDBStateBackend {
                 COLUMN_FAMILY_HANDLES.remove(cfh);
             }
         } catch (RocksDBException e) {
-            throw new JetException(e);
+            throw new JetException("Failed to release RocksMap ",e);
         }
     }
 

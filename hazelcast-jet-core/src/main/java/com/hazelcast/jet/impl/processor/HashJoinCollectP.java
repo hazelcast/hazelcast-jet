@@ -37,7 +37,6 @@ public class HashJoinCollectP<K, T, V> extends AbstractProcessor {
 
     @Nonnull private final Function<T, K> keyFn;
     @Nonnull private final Function<T, V> projectFn;
-    private RocksDBStateBackend store;
     private RocksMap<K, Object> lookupTable;
 
     public HashJoinCollectP(@Nonnull Function<T, K> keyFn, @Nonnull Function<T, V> projectFn) {
@@ -47,7 +46,7 @@ public class HashJoinCollectP<K, T, V> extends AbstractProcessor {
 
     @Override
     protected void init(@Nonnull Context context) throws Exception {
-        store = context.rocksDBStateBackend();
+        RocksDBStateBackend store = context.rocksDBStateBackend();
         lookupTable = store.getMap();
     }
 

@@ -144,6 +144,7 @@ public class ExecutionContext implements DynamicMetricsProvider {
             //TODO : fixed directory
             Path directory = Files.createTempDirectory(Path.of("/~/data/rocksdb"), "rocksdb-temp");
             RocksDBStateBackend.setDirectory(directory);
+            tempDirectories.put("rocksdb" , directory.toFile());
         } catch (IOException e) {
             throw new JetException("Failed to create RocksDB directory", e);
         }
@@ -220,6 +221,8 @@ public class ExecutionContext implements DynamicMetricsProvider {
             }
         }
 
+        RocksDBStateBackend.deleteKeyValueStore();
+
         tempDirectories.forEach((k, dir) -> {
             try {
                 IOUtil.delete(dir);
@@ -232,7 +235,6 @@ public class ExecutionContext implements DynamicMetricsProvider {
             serializationService.dispose();
         }
 
-        RocksDBStateBackend.deleteKeyValueStore();
     }
 
     /**
