@@ -1,6 +1,6 @@
 ---
-title: Benchmarking Jet with Different JDKs and GCs, Part 1
-description: Choosing the right JDK-GC combination is important.
+title: Performance of Modern Java on Data-Heavy Workloads, Part 1
+description: Results of extensive testing of Hazelcast Jet with various combinations of JDK version and GC
 ---
 
 The Java runtime has been evolving more rapidly in recent years and,
@@ -8,8 +8,8 @@ after 15 years, we finally got a new default garbage collector: the
 G1. Two more GCs are on their way to production and are available as
 experimental features: Oracle's Z and OpenJDK's Shenandoah. We at
 Hazelcast thought it was time to put all these new options to the test
-and find which choices work well with distributed stream processing in
-Hazelcast Jet.
+and find which choices work well with workloads typical for our
+distributed stream processing engine, Hazelcast Jet.
 
 Jet is being used for a broad spectrum of use cases, with different
 latency and throughput requirements. Here are three important
@@ -48,20 +48,21 @@ We tried the following combinations:
 
 And here are our overall conclusions:
 
-1. JDK 8 is an antiquated runtime. The Parallel collector enters huge
-   Full GC pauses and the G1, although better than that, is stuck in an
-   old version that uses just one thread when falling back to Full GC,
-   again entering very long pauses. Even on a moderate heap of 12 GB,
-   the pauses were exceeding 20 seconds for Parallel and a full minute
-   for G1. The ConcurrentMarkSweep collector is strictly worse than G1
-   in all scenarios, and its failure mode are multi-minute Full GC
-   pauses.
-2. On more modern JDK versions, the G1 is one monster of a collector. It
+1. On modern JDK versions, the G1 is one monster of a collector. It
    handles heaps of dozens of GB with ease, keeping maximum GC pauses
    within 200 ms. Under extreme pressure it doesn't show brittleness
    with catastrophic failure modes. Instead the Full GC pauses rise into
    the low seconds range. Its Achilles' heel is the upper bound on the
-   GC pause in favorable low-pressure conditions, about 20-25 ms.
+   GC pause in favorable low-pressure conditions, which we couldn't
+   push lower than 20-25 ms.
+2. JDK 8 is an antiquated runtime. The default Parallel collector enters
+   huge Full GC pauses and the G1, although having less frequent Full
+   GCs, is stuck in an old version that uses just one thread to perform
+   it, resulting in even longer pauses. Even on a moderate heap of 12
+   GB, the pauses were exceeding 20 seconds for Parallel and a full
+   minute for G1. The ConcurrentMarkSweep collector is strictly worse
+   than G1 in all scenarios, and its failure mode are multi-minute Full
+   GC pauses.
 3. The Z, while allowing substantially less throughput than G1, is very
    good in that one weak area of G1, offering worst-case pauses up to 10
    ms.
@@ -86,7 +87,7 @@ Jet pipeline:
 ```java
 StreamStage<Long> source = p.readFrom(longSource(ITEMS_PER_SECOND))
                             .withNativeTimestamps(0)
-                            .rebalance(); // Upcoming feature in Jet 4.2
+                            .rebalance(); // Introduced in Jet 4.2
 source.groupingKey(n -> n % NUM_KEYS)
       .window(sliding(SECONDS.toMillis(WIN_SIZE_SECONDS), SLIDING_STEP_MILLIS))
       .aggregate(counting())
@@ -98,6 +99,19 @@ source.groupingKey(n -> n % NUM_KEYS)
               NANOSECONDS.toMillis(System.nanoTime()) - wr.end(),
               wr.result() * DIAGNOSTIC_KEYSET_DOWNSAMPLING_FACTOR)));
 ```
+
+This pipeline represents use cases with an unbounded event stream where
+the engine is asked to perform sliding window aggregation. You need this
+kind of aggregation, for example, to the first derivative of a changing
+quantity, remove high-frequency noise from the data (smoothing) or
+measure the intensity of the occurrence of some event (events per
+second). The engine can first split the stream into substreams for each
+category (for example, each distinct IoT device or smartphone) and then
+independently track the aggregated value of each of them. In Hazelcast
+Jet the sliding window moves in fixed-size steps that you configure.
+For example, with a sliding step of 1 second you get a complete set of
+results every second, and if the window size is 1 minute, the results
+pertain to the events that occurred within the last minute.
 
 Some notes:
 
@@ -119,7 +133,7 @@ The pipeline measures its own latency by comparing the timestamp of an
 emitted sliding window result with the actual wall-clock time. In more
 detail, there are two aggregation stages with filtering between them. A
 single sliding window result consists of many items, each for one
-grouping key, and we're interested in the latency of the last-emitted
+substream, and we're interested in the latency of the last-emitted
 item. For this reason we first filter out most of the output, keeping
 every 10,000th entry, and then direct the thinned-out stream to the
 second, non-keyed tumbling window stage that notes the result size and
@@ -128,18 +142,26 @@ get a single point of measurement. The filtering stage is parallel and
 data-local so the impact of the additional aggregation step is very
 small (well below 1 ms).
 
-We used a trivial aggregate function: counting. It has minimal state (a
-single `long` number) and produces no garbage. For any given heap usage
-in gigabytes, such a small state per key implies the worst case for the
+We used a trivial aggregate function: counting, in effect obtaining the
+events/second metric of the stream. It has minimal state (a single
+`long` number) and produces no garbage. For any given heap usage in
+gigabytes, such a small state per key implies the worst case for the
 garbage collector: a very large number of objects. GC overheads scale
 not with heap size, but object count. We also tested a variant that
-computes the same aggregate function, but uses a custom
-garbage-producing aggregate operation.
+computes the same aggregate function, but with a different
+implementation that produces garbage.
 
-We performed most of the testing on a single node since our focus was
-the effect of memory management on pipeline performance and network
-latency just adds noise into the picture. We did validate our key
-results on a three-node Amazon EC2 cluster.
+We performed most of the streaming benchmarks on a single node since our
+focus was the effect of memory management on pipeline performance and
+network latency just adds noise into the picture. We repeated some key
+tests on a three-node Amazon EC2 cluster to validate our prediction that
+cluster performance won't affect our conclusions. You can find a more
+detailed justification for this towards the end of [Part
+2](/blog/2020/06/01/jdk-gc-benchmarks-part2).
+
+We excluded the Parallel collector from the results for streaming
+workloads because the latency spikes it introduces would be unacceptable
+in pretty much any real-life scenario.
 
 ### Scenario 1: Low Latency, Moderate State
 
@@ -248,11 +270,11 @@ this picture:
 
 ![Viable combinations of catchup demand and storage, JDK 14 and G1](assets/2020-06-01-viable-combinations-jdk14.png)
 
-We made the distinction between "yes", "no" and "gc", meaning the pipeline
-keeps up, doesn't keep up due to lack of throughput, or doesn't keep up
-due to frequent long GC pauses. Note that the lack of throughput can
-also be caused by concurrent GC activity and frequent short GC pauses.
-In the end, the distinction doesn't matter a lot.
+We made the distinction between "yes", "no" and "gc", meaning the
+pipeline keeps up, doesn't keep up due to lack of throughput, or doesn't
+keep up due to frequent long GC pauses. Note that the lack of throughput
+can also be caused by concurrent GC activity and frequent short GC
+pauses. In the end, the distinction doesn't matter a lot.
 
 You can make out a contour that separates the lower-left area where
 things work out from the rest of the space, where they fail. We made
@@ -279,4 +301,4 @@ would start out with a constantly increasing latency, but then after
 around two minutes, its performance would improve and the latency would
 make a full recovery.
 
-Go to [Part 2](/blog/2020/06/01/jdk-gc-benchmarks-part2).
+Go to [Part 2: the Batch Pipeline Benchmarks](/blog/2020/06/01/jdk-gc-benchmarks-part2).
