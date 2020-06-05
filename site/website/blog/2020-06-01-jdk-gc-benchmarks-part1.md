@@ -42,14 +42,14 @@ We tried the following combinations:
 
 1. JDK 8 with the default Parallel collector and the optional
    ConcurrentMarkSweep and G1
-2. JDK 11 with the default G1 collector
+2. JDK 11 with the default G1 collector and the optional Parallel
 3. JDK 14 with the default G1 as well as the experimental Z and
   Shenandoah
 
 And here are our overall conclusions:
 
 1. JDK 8 is an antiquated runtime. The Parallel collector enters huge
-   Major GC pauses and the G1, although better than that, is stuck in an
+   Full GC pauses and the G1, although better than that, is stuck in an
    old version that uses just one thread when falling back to Full GC,
    again entering very long pauses. Even on a moderate heap of 12 GB,
    the pauses were exceeding 20 seconds for Parallel and a full minute
@@ -71,10 +71,15 @@ And here are our overall conclusions:
    exhibited brittleness, with the low-latency regime suddenly giving
    way to very long pauses and even OOMEs.
 
+This post is Part 1 of a two-part series and presents our findings for
+the two streaming scenarios. In [Part
+2](/blog/2020/06/01/jdk-gc-benchmarks-part2) we'll present the results
+for batch processing.
+
 ## Streaming Pipeline Benchmark
 
-For the streaming benchmarks, we used the code available on
-[GitHub](https://github.com/mtopolnik/jet-gc-benchmark/blob/master/src/main/java/org/example/StreamingBenchmark.java),
+For the streaming benchmarks, we used the code available
+[here](https://github.com/mtopolnik/jet-gc-benchmark/blob/master/src/main/java/org/example/StreamingBenchmark.java),
 with some minor variations between the tests. Here is the main part, the
 Jet pipeline:
 
@@ -106,9 +111,9 @@ as fast as possible.
 If the pipeline falls behind, events will be "buffered" but without any
 storage. After falling behind, the pipeline must catch up by ingesting
 data as fast as it can. Since our source is non-parallel, the limit on
-its throughput was about 2.2 million events per second. We typically
-used 1 million simulated events per second, leaving a catching-up
-headroom of 1.2 million per second.
+its throughput was about 2.2 million events per second. We used 1
+million simulated events per second, leaving a catching-up headroom of
+1.2 million per second.
 
 The pipeline measures its own latency by comparing the timestamp of an
 emitted sliding window result with the actual wall-clock time. In more
@@ -160,7 +165,7 @@ default GC, G1, is pretty good on its own, but if you need even better
 latency, you can use the experimental Z collector. Reducing the GC
 pauses below 10 milliseconds still seems to be out of reach for Java
 runtimes. Shenandoah came out as a big loser in our test, pauses
-occasionally exceeding even the G1's default of 200 ms.
+regularly exceeding even the G1's default of 200 ms.
 
 ### Scenario 2: Large State, Less Strict Latency
 
@@ -176,7 +181,7 @@ data over many cluster nodes.
 
 We performed many tests with different combinations to find out how the
 interplay between various factors causes the runtime to either keep up
-or fail. In the end we found two parameters that determine this:
+or fall behind. In the end we found two parameters that determine this:
 
 1. number of entries stored in the aggregation state
 2. demand on the catching-up throughput
@@ -186,7 +191,9 @@ generation. Sliding window aggregation retains objects for a significant
 time (the length of the window) and then releases them. This goes
 directly against the Generational Garbage Hypothesis, which states that
 objects will either die young or live forever. This regime puts the
-strongest pressure on the GC, making this parameter highly relevant.
+strongest pressure on the GC, and since the GC effort scales with the
+number of live objects, performance is highly sensitive to this
+parameter.
 
 The second parameter relates to how much GC overhead the application can
 tolerate. To explain it better, let's use some diagrams. A pipeline
@@ -271,3 +278,5 @@ the effects of JIT compilation in the borderline cases: the pipeline
 would start out with a constantly increasing latency, but then after
 around two minutes, its performance would improve and the latency would
 make a full recovery.
+
+Go to [Part 2](/blog/2020/06/01/jdk-gc-benchmarks-part2).

@@ -3,20 +3,11 @@ title: Concerns Related to GC
 description: Choosing the right JDK-GC combination is important.
 ---
 
-## Choice of JDK and GC
-
-In May 2020 we did extensive testing of Hazelcast Jet with several
-combinations of JDK and garbage collector. We tried the following JDK/GC
-combinations:
-
-1. JDK 8 with the default Parallel collector and the optional
-   ConcurrentMarkSweep and G1
-2. JDK 11 with the default G1 collector and the optional Parallel
-   collector
-3. JDK 14 with the default G1 as well as the experimental Z and
-  Shenandoah
-
-These are our key findings:
+With the introduction of the modern, fast-paced JDK release schedule the
+JVM landscape has undergone a phase change. In May 2020 we did an
+extensive test with various combinations of old and new JDK/GC
+combinations and we bring you the most important conclusions that should
+impact your Hazelcast Jet setup:
 
 1. As far as Hazelcast Jet is concerned, JDK version 8 is an antiquated
    runtime and shouldn't be used. None of its garbage collectors have
@@ -39,14 +30,13 @@ These are our key findings:
    Z is available in OpenJDK as well, we recommend it for scenarios
    where G1's GC pauses are too long. The version of Z in JDK 14 has
    crude ergonomics to decide on a good background GC thread count, in
-   some cases we were able to improve the throughput by using
+   some cases you can improve the throughput by using
    `-XX:ConcGCThreads`.
 
-We tested the mentioned JDK/GC combinations in three different usage
-scenarios, deriving some conclusions and recommendations we present
-below.
+Here are some more details, organized by the type of workload you are
+using Jet for.
 
-### Low-Latency Unbounded Stream Processing, Moderate State
+## Moderate State, Low-Latency Stream Processing
 
 Example: detecting trends in 500 Hz sensor data from 100,000 devices and
 sending corrective feedback within 10-20 milliseconds.
@@ -57,25 +47,25 @@ within the very strict latency limits. This is a use case where we
 recommend the Z with the latest available JDK (version 14 as of this
 writing).
 
-### High-Throughput, Large-State Unbounded Stream Processing
+## Large-State, High-Throughput Stream Processing
 
 Example: tracking GPS locations of millions of users, inferring their
 velocity vectors.
 
 In this scenario the state is large enough that just emitting the
-results of aggregation may take several hundred milliseconds. This gives
-us a ballpark for GC pause requirements as well. Hardware can be
-provisioned so that the runtime is at high load, with both high heap
-usage and high allocation rate. This kind of regime can push the GC to
-its limits and beyond. The G1 collector on a modern JDK is the best
-option here because the experimental low-latency GCs support much less
-throughput. GC pauses will remain under 200 ms unless the GC is
-overloaded, and the runtime will be able to sustain shorter bursts of
-excessive throughput, gracefully increasing latency into the seconds
-range. If the throughput demand allows it, you can reduce the GC pause
-target below 100 ms.
+results of aggregation takes several hundred milliseconds, putting a
+lower bound on latency. This gives us a ballpark for GC pause
+requirements as well. Hardware can be provisioned so that the runtime is
+at high load, with both high heap usage and high allocation rate. This
+kind of regime can push the GC to its limits and beyond. The G1
+collector on a modern JDK is the best option here because the
+experimental low-latency GCs support much less throughput. GC pauses
+will remain under 200 ms unless the GC is overloaded, and the runtime
+will be able to sustain shorter bursts of excessive throughput,
+gracefully increasing latency into the seconds range. If the throughput
+demand allows it, you can reduce the GC pause target below 100 ms.
 
-### Batch Processing of Big Data Volumes
+## Big-Data Batch Processing
 
 Example: analyzing a day's worth of stock trading data to update the
 risk exposure of a given portfolio.
@@ -87,6 +77,13 @@ the previous scenario: a modern JDK with G1. The default maximum GC
 pause of 200 ms is a good setting and allowing larger pauses may only
 marginally help increase the throughput. We found that G1 can perform
 well even at close to 90% heap usage.
+
+Even though, on a single node, the Parallel collector often provides the
+best throughput (but only after some GC fine-tuning), a long GC pause on
+any node causes the whole cluster to stall. The more members in a cluster,
+the more time spent in stop-the-world GC, and the throughput advantage
+is lost. G1's pauses are sufficiently short and infrequent that they
+don't affect the whole cluster.
 
 ### Garbage-Free Aggregation
 

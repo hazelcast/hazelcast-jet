@@ -136,10 +136,10 @@ aggregation](/docs/concepts/dag#group-and-aggregate-transform-needs-data-partiti
 It exhibited more predictable behavior in our benchmark. After the
 aggregation stage we first reduce the output to every millionth
 key-value pair and then send it to the logger. We used one billion data
-items and used a keyset of half a billion.
+items and a keyset of half a billion.
 
 Same as on single-node, we tested both this pipeline, with a garbage-free
-aggregation, and one with garbage producing aggregation.
+aggregation, and a modified one with garbage-producing aggregation.
 
 ### Three-Node Cluster Benchmark: The Results
 
@@ -153,17 +153,19 @@ network is 10 Gbit/s. Here are the results:
 
 To begin with, we can note the overall increase in throughput compared
 to single-node benchmarks, about three times. That's the advantage of
-distributed processing. The most obvious thing to note is the almost
-nonexistent bar for G1 on JDK 8, however there's a deeper story here
-that affects other measurements as well, for example the apparent
-advantage of Parallel GC on JDK 8 vs. JDK 11. It has to do with the
-effect we noted at the outset: a GC pause on any one member halts the
-processing on the entire cluster. G1 on JDK 8 enters very long GC
-pauses, more than a minute. This is enough to trigger the cluster's
-failure detector and consider the node dead. The job fails, the cluster
-reshapes itself, and then the job restarts on just two nodes. This,
-naturally, fails even sooner because there's more data on each member.
-So we end up in an endless loop of job restarts.
+distributed processing. G1 on JDK 11 is the clear winner in both tests.
+The next thing to note is the almost nonexistent bar for G1 on JDK 8,
+however there's a deeper story here that affects other measurements as
+well, for example the apparent advantage of Parallel GC on JDK 8 vs.
+JDK 11. It has to do with the effect we noted at the outset: a GC pause
+on any one member halts the processing on the entire cluster. G1 on JDK
+8 enters very long GC pauses, more than a minute. This is enough to
+trigger the cluster's failure detector and consider the node dead. The
+job fails, the cluster reshapes itself, and then the job restarts on
+just two nodes. This, naturally, fails even sooner because there's more
+data on each member. In the meantime the kicked-out node has rejoined,
+so the job restarts on two nodes again, but different ones. We end up in
+an endless loop of job restarts.
 
 The good result for the Parallel on JDK 8 is due to a very lucky
 coincidence that the Full GC pauses got synchronized on all nodes,
