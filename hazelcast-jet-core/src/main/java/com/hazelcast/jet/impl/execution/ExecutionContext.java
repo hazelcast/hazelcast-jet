@@ -141,7 +141,8 @@ public class ExecutionContext implements DynamicMetricsProvider {
         serializationService = jetService.createSerializationService(jobConfig.getSerializerConfigs());
         RocksDBStateBackend.setSerializationService(serializationService);
         try {
-            Path directory = Files.createTempDirectory(Path.of("~/data/rocksdb"), "rocksdb-temp");
+            //TODO : fixed directory
+            Path directory = Files.createTempDirectory(Path.of("/~/data/rocksdb"), "rocksdb-temp");
             RocksDBStateBackend.setDirectory(directory);
         } catch (IOException e) {
             throw new JetException("Failed to create RocksDB directory", e);

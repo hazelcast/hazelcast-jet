@@ -35,7 +35,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
@@ -122,9 +121,7 @@ public class HashJoinP<E0> extends AbstractProcessor {
     protected boolean tryProcess(int ordinal, @Nonnull Object item) {
         assert !ordinal0Consumed : "Edge 0 must have a lower priority than all other edges";
 
-        RocksMap<Object, Object> map = store.getMap();
-        map.putAll(((Map) item));
-        lookupTables.set(ordinal - 1, map);
+        lookupTables.set(ordinal - 1, (RocksMap) item);
         return true;
     }
 

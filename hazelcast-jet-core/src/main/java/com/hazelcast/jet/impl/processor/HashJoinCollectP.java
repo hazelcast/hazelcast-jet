@@ -80,12 +80,7 @@ public class HashJoinCollectP<K, T, V> extends AbstractProcessor {
 
     @Override
     public boolean complete() {
-        return tryEmit(lookupTable.getAll());
-    }
-
-    @Override
-    public void close() {
-        store.releaseMap(lookupTable);
+        return tryEmit(lookupTable);
     }
 
     // We need a custom ArrayList subclass because the user's V type could be

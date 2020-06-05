@@ -175,7 +175,7 @@ public class RocksMapTest extends JetTestSupport {
         //When
         rocksMap.put(key1, value1);
         rocksMap.put(key2, value2);
-        Iterator<Entry<String, Integer>> iterator = rocksMap.iterator();
+        Iterator<Entry<String, Integer>> iterator = rocksMap.entrySet().iterator();
         rocksMap.put(key1, value3);
 
         //Then

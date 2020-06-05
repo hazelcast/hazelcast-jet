@@ -30,10 +30,12 @@ import org.rocksdb.WriteBatch;
 import org.rocksdb.WriteOptions;
 
 import javax.annotation.Nonnull;
+import java.util.AbstractMap;
+import java.util.AbstractSet;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.Map.Entry;
+import java.util.Set;
 
 import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
 
@@ -44,7 +46,7 @@ import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
  * @param <K> the type of key
  * @param <V> the type of value
  */
-public class RocksMap<K, V> implements Iterable<Entry<K, V>> {
+public class RocksMap<K, V> extends AbstractMap<K, V> {
     private final RocksDB db;
     private final ColumnFamilyHandle cfh;
     private final ReadOptions readOptions;
@@ -62,6 +64,7 @@ public class RocksMap<K, V> implements Iterable<Entry<K, V>> {
         this.serializationService = serializationService;
     }
 
+
     ColumnFamilyHandle getColumnFamilyHandle() {
         return cfh;
     }
@@ -74,7 +77,7 @@ public class RocksMap<K, V> implements Iterable<Entry<K, V>> {
      * @throws JetException if the database is closed
      */
 
-    public V get(K key) throws JetException {
+    public V get(Object key) throws JetException {
         try {
             byte[] valueBytes = db.get(cfh, readOptions, serialize(key));
             return deserialize(valueBytes);
@@ -88,13 +91,40 @@ public class RocksMap<K, V> implements Iterable<Entry<K, V>> {
      * If the key is already present, it updates the current value.
      *
      * @param key the key whose value is to be updated
+     * @return the old value mapped to the key or null
      * @throws JetException if the database is closed
      */
-    public void put(K key, V value) throws JetException {
+    //TODO: return the previous value instead of null
+    public V put(K key, V value) throws JetException {
         try {
             db.put(cfh, writeOptions, serialize(key), serialize(value));
+            return null;
         } catch (RocksDBException e) {
             throw new JetException("Operation Failed: Put", e);
+        }
+    }
+
+    /**
+     * Copies all key-value mappings from the supplied map to this map.
+     * makes use of RocksDB batch write feature.
+     *
+     * @param map the map containing key-value pairs to be inserted
+     * @throws JetException if the database is closed
+     */
+    @Override
+    public void putAll(@Nonnull Map<? extends K, ? extends V> map) throws JetException {
+        WriteBatch batch = new WriteBatch();
+        for (Entry<? extends K, ? extends V> e : map.entrySet()) {
+            try {
+                batch.put(cfh, serialize(e.getKey()), serialize(e.getValue()));
+            } catch (RocksDBException ex) {
+                throw new JetException("Operation Failed: PutAll", ex);
+            }
+        }
+        try {
+            db.write(writeOptions, batch);
+        } catch (RocksDBException e) {
+            throw new JetException("Operation Failed: PutAll", e);
         }
     }
 
@@ -104,29 +134,14 @@ public class RocksMap<K, V> implements Iterable<Entry<K, V>> {
      * @param key the key whose value is to be removed
      * @throws JetException if the database is closed
      */
-    public void delete(K key) throws JetException {
+    //TODO: return the previous value instead of null
+    @Override
+    public V remove(Object key) throws JetException {
         try {
             db.delete(writeOptions, serialize(key));
+            return null;
         } catch (RocksDBException e) {
             throw new JetException("Operation Failed: Delete", e);
-        }
-    }
-
-    /**
-     * Copies all key-value mappings from the supplied map to this map.
-     *
-     * @param map the map containing key-value pairs to be inserted
-     * @throws JetException if the database is closed
-     */
-    public void putAll(@Nonnull Map<K, V> map) throws JetException {
-        WriteBatch batch = new WriteBatch();
-        for (Entry<K, V> e : map.entrySet()) {
-            try {
-                batch.put(cfh, serialize(e.getKey()), serialize(e.getValue()));
-                db.write(writeOptions, batch);
-            } catch (RocksDBException ex) {
-                throw new JetException("Operation Failed: PutAll", ex);
-            }
         }
     }
 
@@ -138,10 +153,16 @@ public class RocksMap<K, V> implements Iterable<Entry<K, V>> {
      */
     public Map<K, V> getAll() {
         Map<K, V> map = new HashMap<>();
-        for (Entry<K, V> entry : this) {
+        for (Entry<K, V> entry : entrySet()) {
             map.put(entry.getKey(), entry.getValue());
         }
         return map;
+    }
+
+    @Nonnull
+    @Override
+    public Set<Entry<K, V>> entrySet() {
+        return new RocksMapSet();
     }
 
     private <T> byte[] serialize(T item) {
@@ -161,15 +182,9 @@ public class RocksMap<K, V> implements Iterable<Entry<K, V>> {
         return serializationService.readObject(in);
     }
 
-    @Nonnull
-    @Override
-    public Iterator<Entry<K, V>> iterator() {
-        if (iterator == null) {
-            iterator = new RocksMapIterator();
-        }
-        return iterator;
-    }
-
+    //TODO: (optional) implement remove
+    // RocksIterator creates a snapshot of the database
+    // but it's now used as an iterator over entry set which doesn't take a snapshot
     private class RocksMapIterator implements Iterator<Entry<K, V>> {
         RocksIterator iterator = db.newIterator(cfh, readOptions);
 
@@ -193,8 +208,26 @@ public class RocksMap<K, V> implements Iterable<Entry<K, V>> {
 
         @Override
         public void remove() {
-            //the key won't be removed from the iterator's snapshot but from the database itself
-            delete(deserialize(iterator.key()));
+        }
+    }
+
+
+    private class RocksMapSet extends AbstractSet<Entry<K, V>> {
+        @Nonnull
+        @Override
+        public Iterator<Entry<K, V>> iterator() {
+            if (iterator == null) {
+                iterator = new RocksMapIterator();
+            }
+            return iterator;
+        }
+
+        //TODO: we need to keep the size of the entry set
+        // put and delete doesn't necessarily change size
+        // for example, updating a key or deleting a key that doesn't exists
+        @Override
+        public int size() {
+            return 0;
         }
     }
 }
