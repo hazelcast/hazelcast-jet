@@ -343,7 +343,7 @@ dependency to your Jet job's project:
 <!--Gradle-->
 
 ```groovy
-compile "com.hazelcast.jet:hazelcast-jet-protobuf:4.1"
+compile "com.hazelcast.jet:hazelcast-jet-protobuf:4.1.1"
 ```
 
 <!--Maven-->

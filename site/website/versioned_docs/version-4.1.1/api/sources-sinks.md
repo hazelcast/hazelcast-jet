@@ -97,7 +97,7 @@ dependency to your application:
 <!--Gradle-->
 
 ```groovy
-compile 'com.hazelcast.jet:hazelcast-jet-avro:4.1'
+compile 'com.hazelcast.jet:hazelcast-jet-avro:4.1.1'
 ```
 
 <!--Maven-->
@@ -204,7 +204,7 @@ dependency to your application:
 <!--Gradle-->
 
 ```groovy
-compile 'com.hazelcast.jet:hazelcast-jet-hadoop:4.1'
+compile 'com.hazelcast.jet:hazelcast-jet-hadoop:4.1.1'
 ```
 
 <!--Maven-->
@@ -281,7 +281,7 @@ application:
 <!--Gradle-->
 
 ```groovy
-compile 'com.hazelcast.jet:hazelcast-jet-s3:4.1'
+compile 'com.hazelcast.jet:hazelcast-jet-s3:4.1.1'
 ```
 
 <!--Maven-->
@@ -355,7 +355,7 @@ dependency to your application:
 
 ```groovy
 
-compile 'com.hazelcast.jet:hazelcast-jet-kafka:4.1'
+compile 'com.hazelcast.jet:hazelcast-jet-kafka:4.1.1'
 ```
 
 <!--Maven-->
