@@ -212,9 +212,10 @@ public final class PostgresCdcSources {
         }
 
         /**
-         * The name of the @see <a href="https://www.postgresql.org/docs/10/logicaldecoding.html">Postgres logical decoding plug-in</a>
-         * installed on the server. Supported values are <i>decoderbufs</i>,
-         * <i>wal2json</i>, <i>wal2json_rds</i>, <i>wal2json_streaming</i>,
+         * The name of the @see <a href="https://www.postgresql.org/docs/10/logicaldecoding.html">
+         * Postgres logical decoding plug-in</a> installed on the server.
+         * Supported values are <i>decoderbufs</i>, <i>wal2json</i>,
+         * <i>wal2json_rds</i>, <i>wal2json_streaming</i>,
          * <i>wal2json_rds_streaming</i> and <i>pgoutput</i>.
          * <p>
          * If not explicitly set, the property defaults to <i>decoderbufs</i>.
@@ -233,9 +234,10 @@ public final class PostgresCdcSources {
         }
 
         /**
-         * The name of the @see <a href="https://www.postgresql.org/docs/10/logicaldecoding-explanation.html#LOGICALDECODING-REPLICATION-SLOTS">Postgres logical decoding slot</a>
-         * (also called "replication slot") created for streaming changes
-         * from a plug-in and database instance.
+         * The name of the @see <a href="https://www.postgresql.org/docs/10/logicaldecoding-explanation.html">
+         * Postgres logical decoding slot</a> (also called "replication
+         * slot") created for streaming changes from a plug-in and
+         * database instance.
          * <p>
          * Values must conform to Postgres replication slot naming rules
          * which state: "Each replication slot has a name, which can
@@ -272,8 +274,8 @@ public final class PostgresCdcSources {
         }
 
         /**
-         * The name of the <a href="https://www.postgresql.org/docs/10/logical-replication-publication.html">Postgres publication</a>
-         * that will be used for CDC purposes.
+         * The name of the <a href="https://www.postgresql.org/docs/10/logical-replication-publication.html">
+         * Postgres publication</a> that will be used for CDC purposes.
          * <p>
          * If the publication does not exist when this source starts up,
          * then the source will create it (note: the database user of the
