@@ -392,7 +392,7 @@ public class PostgresCdcIntegrationTest extends AbstractIntegrationTest {
         }
 
         public void setOrderDate(Date orderDate) {
-            long days = orderDate.getTime(); //database provides no of days for some reason, fixing it here
+            long days = orderDate.getTime();
             this.orderDate = new Date(TimeUnit.DAYS.toMillis(days));
         }
 
