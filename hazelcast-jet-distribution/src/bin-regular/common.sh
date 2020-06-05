@@ -27,4 +27,4 @@ if [ "$JAVA_VERSION" -ge "9" ]; then
     "
 fi
 
-CLASSPATH="$JET_HOME/lib/*:$CLASSPATH"
+CLASSPATH="$JET_HOME/lib:$JET_HOME/lib/*:$CLASSPATH"
