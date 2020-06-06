@@ -102,11 +102,6 @@ public class GroupP<K, A, R, OUT> extends AbstractProcessor {
         return emitFromTraverser(resultTraverser);
     }
 
-    @Override
-    public void close() {
-        store.releaseMap(keyToAcc);
-    }
-
     private class ResultTraverser implements Traverser<Entry<K, A>> {
         private final Iterator<Entry<K, A>> iter = keyToAcc.entrySet().iterator();
 

@@ -29,6 +29,7 @@ import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.impl.deployment.IMapInputStream;
 import com.hazelcast.jet.impl.util.ExceptionUtil;
+import com.hazelcast.jet.rocksdb.RocksDBRegistry;
 import com.hazelcast.jet.rocksdb.RocksDBStateBackend;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.map.IMap;
@@ -283,7 +284,7 @@ public final class Contexts {
 
         @Override
         public RocksDBStateBackend rocksDBStateBackend() {
-            return RocksDBStateBackend.getKeyValueStore();
+            return RocksDBRegistry.getInstance(jobId()).create();
         }
     }
 }

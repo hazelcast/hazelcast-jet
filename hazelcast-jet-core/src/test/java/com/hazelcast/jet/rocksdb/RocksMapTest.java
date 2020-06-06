@@ -16,13 +16,12 @@
 
 package com.hazelcast.jet.rocksdb;
 
+import com.hazelcast.internal.nio.IOUtil;
 import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.core.JetTestSupport;
-import com.hazelcast.internal.nio.IOUtil;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -49,7 +48,7 @@ public class RocksMapTest extends JetTestSupport {
 
     @AfterAll
     static void cleanup() {
-        RocksDBStateBackend.deleteKeyValueStore();
+        rocksDBStateBackend.close();
         IOUtil.delete(directory);
         serializationService.dispose();
     }
@@ -58,24 +57,17 @@ public class RocksMapTest extends JetTestSupport {
     public static void init() {
         serializationService = JetTestSupport.getJetService(Jet.bootstrappedInstance())
                                              .createSerializationService(emptyMap());
-        RocksDBStateBackend.setSerializationService(serializationService);
         try {
             directory = Files.createTempDirectory("rocksdb-temp");
-            RocksDBStateBackend.setDirectory(directory);
         } catch (IOException e) {
             throw new JetException("Failed to create RocksDB directory", e);
         }
-        rocksDBStateBackend = RocksDBStateBackend.getKeyValueStore();
+        rocksDBStateBackend = new RocksDBStateBackend().initialize(serializationService, directory).create();
     }
 
     @BeforeEach
     public void initTest() {
         rocksMap = rocksDBStateBackend.getMap();
-    }
-
-    @AfterEach
-    public void cleanupTest() {
-        rocksDBStateBackend.releaseMap(rocksMap);
     }
 
     @Test
@@ -140,25 +132,6 @@ public class RocksMapTest extends JetTestSupport {
 
         assertEquals("rocksMap.getAll() doesn't return the value used in rocksMap.putAll()", value1, map.get(key1));
         assertEquals("rocksMap.getAll() doesn't return the value used in rocksMap.putAll()", value2, map.get(key2));
-    }
-
-    //even after the column family is dropped you can still use it to get its contents
-    //but you can't modify it
-    @Test
-    public void when_releaseRocksMap_then_putKeyValueIsIgnored() {
-        //Given
-        String key = "key1";
-        Integer value1 = 1;
-        Integer value2 = 2;
-
-        //When
-        rocksMap.put(key, value1);
-        rocksDBStateBackend.releaseMap(rocksMap);
-
-        //Then
-        rocksMap.get(key);
-        rocksMap.put(key, value2);
-        assertEquals("rocksMap.get() returns the updated value after ColumnFamily is closed ",  rocksMap.get(key), value1);
     }
 
     @Test

@@ -39,7 +39,7 @@ import com.hazelcast.jet.impl.metrics.RawJobMetrics;
 import com.hazelcast.jet.impl.operation.SnapshotPhase1Operation.SnapshotPhase1Result;
 import com.hazelcast.jet.impl.util.LoggingUtil;
 import com.hazelcast.jet.impl.util.Util;
-import com.hazelcast.jet.rocksdb.RocksDBStateBackend;
+import com.hazelcast.jet.rocksdb.RocksDBRegistry;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.spi.impl.NodeEngine;
 
@@ -139,14 +139,14 @@ public class ExecutionContext implements DynamicMetricsProvider {
 
         JetService jetService = nodeEngine.getService(JetService.SERVICE_NAME);
         serializationService = jetService.createSerializationService(jobConfig.getSerializerConfigs());
-        RocksDBStateBackend.setSerializationService(serializationService);
+        //TODO: make directory configurable
+        String testPath = "C:\\Users\\Mohamed Mandouh\\hazelcast-jet\\hazelcast-jet-core\\src\\main\\resources\\database";
         try {
-            //TODO : fixed directory
-            Path directory = Files.createTempDirectory(Path.of("/~/data/rocksdb"), "rocksdb-temp");
-            RocksDBStateBackend.setDirectory(directory);
-            tempDirectories.put("rocksdb" , directory.toFile());
+            Path directory = Files.createTempDirectory(Path.of(testPath), "rocksdb-temp");
+            tempDirectories.put("rocksdb", directory.toFile());
+            RocksDBRegistry.getInstance(jobId).initialize(serializationService, directory);
         } catch (IOException e) {
-            throw new JetException("Failed to create RocksDB directory", e);
+            throw new JetException("Failed to create RocksDB directory" , e);
         }
         metricsEnabled = jobConfig.isMetricsEnabled() && nodeEngine.getConfig().getMetricsConfig().isEnabled();
         plan.initialize(nodeEngine, jobId, executionId, snapshotContext,
@@ -221,8 +221,7 @@ public class ExecutionContext implements DynamicMetricsProvider {
             }
         }
 
-        RocksDBStateBackend.deleteKeyValueStore();
-
+        RocksDBRegistry.getInstance(jobId).close();
         tempDirectories.forEach((k, dir) -> {
             try {
                 IOUtil.delete(dir);

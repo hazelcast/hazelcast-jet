@@ -32,65 +32,55 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 
 /**
- * Responsible for managing one RocksDB instance,
- * opening, closing the connection and deleting the database.
- * Processors acquire an instance of this class on initialization.
- * Processors use this class to acquire any number of RocksMaps they require.
- * The database is logically partitioned using column families.
- * Each RocksMap is instantiated with a ColumnFamilyHandler.
- * Once the processor has finished execution,
- * the processor should invoke releaseMap() on each acquired map.
+ * Responsible for managing one RocksDB instance, opening, closing and deleting the database.
+ * Processors use this class to acquire any number of RocksMaps they require using getMap()
+ * Each RocksMap is associated with only one ColumnFamily.
+ * There is only one instance of this class associated with each job.
+ * The lifecycle for this class :
+ * (1) ExecutionContext retrieves an instance of this class from RocksDBRegistry.
+ * (2) ExecutionContext invokes initialize() with the directory and serialization service used for this job.
+ * (3) Processors acquire the initialized instance from Processor.Context.rocksDBStateBackend()
+ * (4) After job execution is completed, ExecutionContext invokes close() to delete the RocksDB instance.
  */
 
 public final class RocksDBStateBackend {
-    private static final ArrayList<ColumnFamilyHandle> COLUMN_FAMILY_HANDLES = new ArrayList<>();
-    private static InternalSerializationService serializationService;
-    private static RocksDB db;
+
     private static Path directory;
+    private static InternalSerializationService serializationService;
+    private final ArrayList<ColumnFamilyHandle> COLUMN_FAMILY_HANDLES = new ArrayList<>();
     private final RocksDBOptions rocksDBOptions = new RocksDBOptions();
     private final AtomicInteger counter = new AtomicInteger(0);
-
-    private RocksDBStateBackend() {
-        try {
-            RocksDB.loadLibrary();
-            db = RocksDB.open(rocksDBOptions.getOptions(), directory.toString());
-        } catch (Exception e) {
-            throw new JetException("Failed to create a RocksDB instance", e);
-        }
-    }
+    private volatile RocksDB db;
 
     /**
-     * Returns the singleton state backend instance.
-     * This instance is lazily created when a processor needs to acquire it.
-     */
-    public static RocksDBStateBackend getKeyValueStore() {
-        assert serializationService != null
-                : "serialization service must be initialized before creating the state backend";
-        assert directory != null :
-                "RocksDB directory must be initialized before creating the state backend";
-
-        return LazyHolder.INSTANCE;
-    }
-
-    /**
-     * Initializes the serialization service.
+     * Initialize the State Backend with job-level information.
      *
-     * @param serializationService the job-level serialization service.
-     */
-
-    public static void setSerializationService(InternalSerializationService serializationService) {
-        if (RocksDBStateBackend.serializationService == null) {
-            RocksDBStateBackend.serializationService = serializationService;
-        }
+     * @param serializationService the serialization serivice configured for this job.
+     * @param directory            the directory where the associated RocksDB instance will operate.
+     **/
+    public RocksDBStateBackend initialize(InternalSerializationService serializationService, Path directory) {
+        RocksDBStateBackend.serializationService = serializationService;
+        RocksDBStateBackend.directory = directory;
+        return this;
     }
 
     /**
-     * Sets the directory where the state backend will be operating
+     * Creates the associated RocksDB instance after the state backend is initialized.
      */
-    public static void setDirectory(Path directory) {
-        if (RocksDBStateBackend.directory == null) {
-            RocksDBStateBackend.directory = directory;
+    public RocksDBStateBackend create() {
+        if (db == null) {
+            synchronized (this) {
+                if (db == null) {
+                    try {
+                        RocksDB.loadLibrary();
+                        db = RocksDB.open(rocksDBOptions.getOptions(), directory.toString());
+                    } catch (Exception e) {
+                        throw new JetException("Failed to create a RocksDB instance", e);
+                    }
+                }
+            }
         }
+        return this;
     }
 
     /**
@@ -99,7 +89,7 @@ public final class RocksDBStateBackend {
      *
      * @throws JetException if the database is closed
      */
-    public static synchronized void deleteKeyValueStore() throws JetException {
+    public void close() throws JetException {
         if (db != null) {
             for (final ColumnFamilyHandle cfh : COLUMN_FAMILY_HANDLES) {
                 try {
@@ -147,28 +137,6 @@ public final class RocksDBStateBackend {
     @Nonnull
     private String getNextName() {
         return "RocksMap" + counter.getAndIncrement();
-    }
-
-    /**
-     * Deletes the supplied RocksMap
-     *
-     * @param map the RocksMap to be deleted
-     * @throws JetException if the database is closed
-     */
-    public void releaseMap(@Nonnull RocksMap map) throws JetException {
-        try {
-            ColumnFamilyHandle cfh = map.getColumnFamilyHandle();
-            if (COLUMN_FAMILY_HANDLES.contains(cfh)) {
-                db.dropColumnFamily(cfh);
-                COLUMN_FAMILY_HANDLES.remove(cfh);
-            }
-        } catch (RocksDBException e) {
-            throw new JetException("Failed to release RocksMap ",e);
-        }
-    }
-
-    private static class LazyHolder {
-        static final RocksDBStateBackend INSTANCE = new RocksDBStateBackend();
     }
 
     private <T> byte[] serialize(T item) {

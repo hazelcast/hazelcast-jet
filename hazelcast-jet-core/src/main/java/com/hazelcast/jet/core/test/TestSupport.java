@@ -811,14 +811,6 @@ public final class TestSupport {
                 .setManagedContext(serializationService.getManagedContext())
                 .setSerializationService((InternalSerializationService) serializationService);
 
-        Path directory;
-        try {
-            directory = Files.createTempDirectory("rocksdb-temp");
-        } catch (IOException e) {
-            throw sneakyThrow(e);
-        }
-
-        context.addFile("rocksdb", directory.toFile());
 
         if (jetInstance != null) {
             context.setJetInstance(jetInstance);
