@@ -19,15 +19,12 @@ package com.hazelcast.jet.rocksdb;
 import com.hazelcast.internal.nio.IOUtil;
 import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.jet.Jet;
-import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.core.JetTestSupport;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -57,12 +54,7 @@ public class RocksMapTest extends JetTestSupport {
     public static void init() {
         serializationService = JetTestSupport.getJetService(Jet.bootstrappedInstance())
                                              .createSerializationService(emptyMap());
-        try {
-            directory = Files.createTempDirectory("rocksdb-temp");
-        } catch (IOException e) {
-            throw new JetException("Failed to create RocksDB directory", e);
-        }
-        rocksDBStateBackend = new RocksDBStateBackend().initialize(serializationService, directory).create();
+        rocksDBStateBackend = new RocksDBStateBackend().initialize(serializationService).create();
     }
 
     @BeforeEach

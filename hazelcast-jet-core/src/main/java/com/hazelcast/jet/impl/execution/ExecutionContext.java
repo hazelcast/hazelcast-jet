@@ -26,7 +26,6 @@ import com.hazelcast.internal.nio.IOUtil;
 import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.internal.util.counters.Counter;
 import com.hazelcast.internal.util.counters.MwCounter;
-import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.metrics.MetricTags;
@@ -45,9 +44,6 @@ import com.hazelcast.spi.impl.NodeEngine;
 
 import javax.annotation.Nullable;
 import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -139,15 +135,7 @@ public class ExecutionContext implements DynamicMetricsProvider {
 
         JetService jetService = nodeEngine.getService(JetService.SERVICE_NAME);
         serializationService = jetService.createSerializationService(jobConfig.getSerializerConfigs());
-        //TODO: make directory configurable
-        String testPath = "C:\\Users\\Mohamed Mandouh\\hazelcast-jet\\hazelcast-jet-core\\src\\main\\resources\\database";
-        try {
-            Path directory = Files.createTempDirectory(Path.of(testPath), "rocksdb-temp");
-            tempDirectories.put("rocksdb", directory.toFile());
-            RocksDBRegistry.getInstance(jobId).initialize(serializationService, directory);
-        } catch (IOException e) {
-            throw new JetException("Failed to create RocksDB directory" , e);
-        }
+        RocksDBRegistry.getInstance(jobId).initialize(serializationService);
         metricsEnabled = jobConfig.isMetricsEnabled() && nodeEngine.getConfig().getMetricsConfig().isEnabled();
         plan.initialize(nodeEngine, jobId, executionId, snapshotContext,
                 tempDirectories, serializationService);
