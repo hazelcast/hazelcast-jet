@@ -68,3 +68,13 @@ out-of-the-box processor offered through the Pipeline API can. If you
 get involved with this transform, make sure you are familiar with the
 internals of Hazelcast Jet, as exposed through the Core
 [DAG](/docs/architecture/distributed-computing) API.
+
+## JSON
+
+JSON is very frequent data exchange format. To transform the data
+from/to JSON format you can use `JsonUtil` utility class without adding
+an extra dependency to the classpath. The utility class uses the
+lightweight `jackson-jr` JSON library under the hood. You can also use
+[Jackson Annotations](https://github.com/FasterXML/jackson-annotations/wiki/Jackson-Annotations)
+in your transforms by adding `jackson-annotations` library to the
+classpath.
