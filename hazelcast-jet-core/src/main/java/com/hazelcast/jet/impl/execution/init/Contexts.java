@@ -29,7 +29,6 @@ import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.impl.deployment.IMapInputStream;
 import com.hazelcast.jet.impl.util.ExceptionUtil;
-import com.hazelcast.jet.rocksdb.RocksDBRegistry;
 import com.hazelcast.jet.rocksdb.RocksDBStateBackend;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.map.IMap;
@@ -249,6 +248,7 @@ public final class Contexts {
 
         private final int localProcessorIndex;
         private final int globalProcessorIndex;
+        private final RocksDBStateBackend rocksDBStateBackend;
 
         @SuppressWarnings("checkstyle:ParameterNumber")
         public ProcCtx(JetInstance instance,
@@ -264,12 +264,14 @@ public final class Contexts {
                        int memberIndex,
                        int memberCount,
                        ConcurrentHashMap<String, File> tempDirectories,
-                       InternalSerializationService serializationService) {
+                       InternalSerializationService serializationService,
+                       RocksDBStateBackend rocksDBStateBackend) {
             super(instance, jobId, executionId, jobConfig, logger, vertexName, localParallelism,
                     memberCount * localParallelism, memberIndex, memberCount, processingGuarantee,
                     tempDirectories, serializationService);
             this.localProcessorIndex = localProcessorIndex;
             this.globalProcessorIndex = globalProcessorIndex;
+            this.rocksDBStateBackend = rocksDBStateBackend;
         }
 
         @Override
@@ -284,7 +286,7 @@ public final class Contexts {
 
         @Override
         public RocksDBStateBackend rocksDBStateBackend() {
-            return RocksDBRegistry.getInstance(jobId()).open();
+            return rocksDBStateBackend.open();
         }
     }
 }

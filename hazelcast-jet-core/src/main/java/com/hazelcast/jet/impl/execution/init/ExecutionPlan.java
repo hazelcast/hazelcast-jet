@@ -47,6 +47,7 @@ import com.hazelcast.jet.impl.execution.Tasklet;
 import com.hazelcast.jet.impl.execution.init.Contexts.ProcCtx;
 import com.hazelcast.jet.impl.execution.init.Contexts.ProcSupplierCtx;
 import com.hazelcast.jet.impl.util.AsyncSnapshotWriterImpl;
+import com.hazelcast.jet.rocksdb.RocksDBStateBackend;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
@@ -144,7 +145,8 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
                            long executionId,
                            SnapshotContext snapshotContext,
                            ConcurrentHashMap<String, File> tempDirectories,
-                           InternalSerializationService jobSerializationService) {
+                           InternalSerializationService jobSerializationService,
+                           RocksDBStateBackend rocksDBStateBackend) {
         this.nodeEngine = (NodeEngineImpl) nodeEngine;
         this.executionId = executionId;
         initProcSuppliers(jobId, executionId, tempDirectories, jobSerializationService);
@@ -193,7 +195,8 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
                         memberIndex,
                         memberCount,
                         tempDirectories,
-                        jobSerializationService
+                        jobSerializationService,
+                        rocksDBStateBackend
                 );
 
                 // createOutboundEdgeStreams() populates localConveyorMap and edgeSenderConveyorMap.

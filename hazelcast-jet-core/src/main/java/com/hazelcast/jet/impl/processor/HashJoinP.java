@@ -25,7 +25,6 @@ import com.hazelcast.jet.function.TriFunction;
 import com.hazelcast.jet.impl.pipeline.transform.HashJoinTransform;
 import com.hazelcast.jet.impl.processor.HashJoinCollectP.HashJoinArrayList;
 import com.hazelcast.jet.pipeline.BatchStage;
-import com.hazelcast.jet.rocksdb.RocksDBStateBackend;
 import com.hazelcast.jet.rocksdb.RocksMap;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
@@ -73,7 +72,6 @@ public class HashJoinP<E0> extends AbstractProcessor {
     private final List<RocksMap> lookupTables;
     private final FlatMapper<E0, Object> flatMapper;
     private boolean ordinal0Consumed;
-    private RocksDBStateBackend store;
 
     @SuppressFBWarnings(value = "NP_PARAMETER_MUST_BE_NONNULL_BUT_MARKED_AS_NULLABLE",
             justification = "https://github.com/spotbugs/spotbugs/issues/844")
@@ -110,11 +108,6 @@ public class HashJoinP<E0> extends AbstractProcessor {
 
         CombinationsTraverser traverser = new CombinationsTraverser(keyFns.size(), mapTupleToOutputFn);
         flatMapper = flatMapper(traverser::accept);
-    }
-
-    @Override
-    protected void init(@Nonnull Context context) throws Exception {
-        store = context.rocksDBStateBackend();
     }
 
     @Override

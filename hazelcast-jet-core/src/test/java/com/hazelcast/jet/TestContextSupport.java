@@ -30,6 +30,7 @@ import com.hazelcast.jet.core.test.TestProcessorContext;
 import com.hazelcast.jet.core.test.TestProcessorSupplierContext;
 import com.hazelcast.jet.impl.execution.init.Contexts.ProcCtx;
 import com.hazelcast.jet.impl.execution.init.Contexts.ProcSupplierCtx;
+import com.hazelcast.jet.rocksdb.RocksDBStateBackend;
 import com.hazelcast.spi.impl.NodeEngine;
 
 import javax.annotation.Nonnull;
@@ -94,10 +95,11 @@ public final class TestContextSupport {
             if (context instanceof TestProcessorSupplierContext) {
                 TestProcessorSupplierContext c = (TestProcessorSupplierContext) context;
                 NodeEngine nodeEngine = ((HazelcastInstanceImpl) c.jetInstance().getHazelcastInstance()).node.nodeEngine;
+                InternalSerializationService service = (InternalSerializationService) nodeEngine.getSerializationService();
                 context = new ProcCtx(c.jetInstance(), c.jobId(), c.executionId(), c.jobConfig(),
                         c.logger(), c.vertexName(), 1, 1, c.processingGuarantee(),
-                        c.localParallelism(), 1, c.memberCount(), new ConcurrentHashMap<>(),
-                        (InternalSerializationService) nodeEngine.getSerializationService());
+                        c.localParallelism(), 1, c.memberCount(), new ConcurrentHashMap<>(), service,
+                        new RocksDBStateBackend().initialize(service));
             }
             delegate.init(context);
         }
@@ -121,7 +123,8 @@ public final class TestContextSupport {
                 context = new ProcCtx(c.jetInstance(), c.jobId(), c.executionId(), c.jobConfig(),
                         c.logger(), c.vertexName(), c.localProcessorIndex(), c.globalProcessorIndex(),
                         c.processingGuarantee(), c.localParallelism(), c.memberIndex(), c.memberCount(),
-                        new ConcurrentHashMap<>(), serializationService);
+                        new ConcurrentHashMap<>(), serializationService,
+                        new RocksDBStateBackend().initialize(serializationService));
             }
             delegate.init(outbox, context);
         }
