@@ -16,7 +16,6 @@
 
 package com.hazelcast.jet.rocksdb;
 
-import com.hazelcast.internal.nio.IOUtil;
 import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.core.JetTestSupport;
@@ -25,7 +24,6 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -40,13 +38,11 @@ import static org.junit.Assert.assertTrue;
 public class RocksMapTest extends JetTestSupport {
     private static RocksDBStateBackend rocksDBStateBackend;
     private static InternalSerializationService serializationService;
-    private static Path directory;
     private RocksMap<String, Integer> rocksMap;
 
     @AfterAll
     static void cleanup() {
         rocksDBStateBackend.close();
-        IOUtil.delete(directory);
         serializationService.dispose();
     }
 
@@ -54,7 +50,7 @@ public class RocksMapTest extends JetTestSupport {
     public static void init() {
         serializationService = JetTestSupport.getJetService(Jet.bootstrappedInstance())
                                              .createSerializationService(emptyMap());
-        rocksDBStateBackend = new RocksDBStateBackend().initialize(serializationService).create();
+        rocksDBStateBackend = new RocksDBStateBackend().initialize(serializationService).open();
     }
 
     @BeforeEach

@@ -61,7 +61,7 @@ public class TestProcessorContext extends TestProcessorSupplierContext implement
 
     @Override
     public RocksDBStateBackend rocksDBStateBackend() {
-        return new RocksDBStateBackend().initialize(serializationService).create();
+        return new RocksDBStateBackend().initialize(serializationService).open();
     }
     /**
      * Set the job-level serialization service

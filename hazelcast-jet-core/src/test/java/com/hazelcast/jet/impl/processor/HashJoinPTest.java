@@ -368,6 +368,7 @@ public class HashJoinPTest extends JetTestSupport {
         return tuple2(key, args[0]);
     }
 
+    //TODO: return a RocksMap instead of a HashMap
     @SafeVarargs
     private static <K, V> Map<K, Object> toMap(Tuple2<K, Object>... entries) {
         return Stream.of(entries).collect(Collectors.toMap(Tuple2::f0, Tuple2::f1));

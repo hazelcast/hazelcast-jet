@@ -284,7 +284,7 @@ public final class Contexts {
 
         @Override
         public RocksDBStateBackend rocksDBStateBackend() {
-            return RocksDBRegistry.getInstance(jobId()).create();
+            return RocksDBRegistry.getInstance(jobId()).open();
         }
     }
 }

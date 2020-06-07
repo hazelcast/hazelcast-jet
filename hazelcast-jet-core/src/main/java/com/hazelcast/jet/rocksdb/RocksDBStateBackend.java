@@ -42,13 +42,13 @@ import java.util.concurrent.atomic.AtomicInteger;
  * (1) ExecutionContext retrieves an instance of this class from RocksDBRegistry.
  * (2) ExecutionContext invokes initialize() with the directory and serialization service used for this job.
  * (3) Processors acquire the initialized instance from Processor.Context.rocksDBStateBackend() which calls
- * create() to open a new RocksDB instance if it wasn't already created.
+ * open() to open a new RocksDB instance if it wasn't already created.
  * (4) After job execution is completed, ExecutionContext invokes close() to delete the RocksDB instance.
  */
 
 public final class RocksDBStateBackend {
 
-    private final ArrayList<ColumnFamilyHandle> COLUMN_FAMILY_HANDLES = new ArrayList<>();
+    private final ArrayList<ColumnFamilyHandle> columnFamilyHandles = new ArrayList<>();
     private final RocksDBOptions rocksDBOptions = new RocksDBOptions();
     private final AtomicInteger counter = new AtomicInteger(0);
     private volatile RocksDB db;
@@ -58,10 +58,10 @@ public final class RocksDBStateBackend {
     /**
      * Initialize the State Backend with job-level information.
      *
-     * @param serializationService the serialization serivice configured for this job.
+     * @param service the serialization service configured for this job.
      * @param directory            the directory where the associated RocksDB instance will operate.
      **/
-    public RocksDBStateBackend initialize(InternalSerializationService serializationService, Path directory) throws JetException {
+    public RocksDBStateBackend initialize(InternalSerializationService service, Path directory) throws JetException {
         this.serializationService = serializationService;
         this.directory = directory;
         return this;
@@ -76,7 +76,9 @@ public final class RocksDBStateBackend {
     public RocksDBStateBackend initialize(InternalSerializationService serializationService) throws JetException {
         this.serializationService = serializationService;
         try {
-            String testPath = "C:\\Users\\Mohamed Mandouh\\hazelcast-jet\\hazelcast-jet-core\\src\\main\\resources\\database";
+            //TODO: add a test directory
+            String testPath = "C:\\Users\\Mohamed Mandouh\\hazelcast-jet" +
+                    "\\hazelcast-jet-core\\src\\main\\resources\\database";
             this.directory = Files.createTempDirectory(Path.of(testPath), "rocksdb-temp");
         } catch (IOException e) {
             throw new JetException("Failed to create RocksDB directory", e);
@@ -87,7 +89,7 @@ public final class RocksDBStateBackend {
     /**
      * Creates the associated RocksDB instance after the state backend is initialized.
      */
-    public RocksDBStateBackend create() {
+    public RocksDBStateBackend open() {
         if (db == null) {
             synchronized (this) {
                 if (db == null) {
@@ -111,7 +113,7 @@ public final class RocksDBStateBackend {
      */
     public void close() throws JetException {
         if (db != null) {
-            for (final ColumnFamilyHandle cfh : COLUMN_FAMILY_HANDLES) {
+            for (final ColumnFamilyHandle cfh : columnFamilyHandles) {
                 try {
                     db.dropColumnFamily(cfh);
                 } catch (RocksDBException e) {
@@ -132,7 +134,7 @@ public final class RocksDBStateBackend {
         ColumnFamilyHandle cfh;
         try {
             cfh = db.createColumnFamily(new ColumnFamilyDescriptor((serialize(getNextName()))));
-            COLUMN_FAMILY_HANDLES.add(cfh);
+            columnFamilyHandles.add(cfh);
             return new RocksMap<>(db, cfh, rocksDBOptions.getReadOptions(),
                     rocksDBOptions.getWriteOptions(), serializationService);
         } catch (RocksDBException e) {
