@@ -40,7 +40,7 @@ using Jet for.
 
 ## Moderate State, Low-Latency Stream Processing
 
-Example: detecting trends in 500 Hz sensor data from 100,000 devices and
+Example: detecting trends in 100 Hz sensor data from 10,000 devices and
 sending corrective feedback within 10-20 milliseconds.
 
 In this scenario the hardware must be provisioned to such a level that

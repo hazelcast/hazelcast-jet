@@ -15,9 +15,9 @@ Jet is being used for a broad spectrum of use cases, with different
 latency and throughput requirements. Here are three important
 categories:
 
-1. Low-latency unbounded stream processing, with moderate state. Example:
-  detecting trends in 500 Hz sensor data from 100,000 devices and
-  sending corrective feedback within 10-20 milliseconds.
+1. Low-latency unbounded stream processing, with moderate state.
+   Example: detecting trends in 100 Hz sensor data from 10,000 devices
+   and sending corrective feedback within 10-20 milliseconds.
 2. High-throughput, large-state unbounded stream processing. Example:
   tracking GPS locations of millions of users, inferring their velocity
   vectors.
