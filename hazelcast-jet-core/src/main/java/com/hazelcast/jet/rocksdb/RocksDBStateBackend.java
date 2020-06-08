@@ -62,7 +62,7 @@ public final class RocksDBStateBackend {
      * @param directory            the directory where the associated RocksDB instance will operate.
      **/
     public RocksDBStateBackend initialize(InternalSerializationService service, Path directory) throws JetException {
-        this.serializationService = serializationService;
+        this.serializationService = service;
         this.directory = directory;
         return this;
     }
@@ -76,9 +76,7 @@ public final class RocksDBStateBackend {
     public RocksDBStateBackend initialize(InternalSerializationService serializationService) throws JetException {
         this.serializationService = serializationService;
         try {
-            //TODO: add a test directory
-            String testPath = "C:\\Users\\Mohamed Mandouh\\hazelcast-jet" +
-                    "\\hazelcast-jet-core\\src\\main\\resources\\database";
+            String testPath = "/home/mmandouh/data";
             this.directory = Files.createTempDirectory(Path.of(testPath), "rocksdb-temp");
         } catch (IOException e) {
             throw new JetException("Failed to create RocksDB directory", e);
