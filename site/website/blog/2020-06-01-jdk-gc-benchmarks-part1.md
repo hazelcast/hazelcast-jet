@@ -49,12 +49,12 @@ We tried the following combinations:
 And here are our overall conclusions:
 
 1. On modern JDK versions, the G1 is one monster of a collector. It
-   handles heaps of dozens of GB with ease, keeping maximum GC pauses
-   within 200 ms. Under extreme pressure it doesn't show brittleness
-   with catastrophic failure modes. Instead the Full GC pauses rise into
-   the low seconds range. Its Achilles' heel is the upper bound on the
-   GC pause in favorable low-pressure conditions, which we couldn't
-   push lower than 20-25 ms.
+   handles heaps of dozens of GB with ease (we tried 60 GB), keeping
+   maximum GC pauses within 200 ms. Under extreme pressure it doesn't
+   show brittleness with catastrophic failure modes. Instead the Full GC
+   pauses rise into the low seconds range. Its Achilles' heel is the
+   upper bound on the GC pause in favorable low-pressure conditions,
+   which we couldn't push lower than 20-25 ms.
 2. JDK 8 is an antiquated runtime. The default Parallel collector enters
    huge Full GC pauses and the G1, although having less frequent Full
    GCs, is stuck in an old version that uses just one thread to perform
@@ -65,7 +65,7 @@ And here are our overall conclusions:
    GC pauses.
 3. The Z, while allowing substantially less throughput than G1, is very
    good in that one weak area of G1, offering worst-case pauses up to 10
-   ms.
+   ms under light load.
 4. Shenandoah was a disappointment with occasional, but nevertheless
    regular, latency spikes up to 220 ms in the low-pressure regime.
 5. Neither Z nor Shenandoah showed as smooth failure modes as G1. They
@@ -102,16 +102,17 @@ source.groupingKey(n -> n % NUM_KEYS)
 
 This pipeline represents use cases with an unbounded event stream where
 the engine is asked to perform sliding window aggregation. You need this
-kind of aggregation, for example, to the first derivative of a changing
-quantity, remove high-frequency noise from the data (smoothing) or
-measure the intensity of the occurrence of some event (events per
-second). The engine can first split the stream into substreams for each
-category (for example, each distinct IoT device or smartphone) and then
-independently track the aggregated value of each of them. In Hazelcast
-Jet the sliding window moves in fixed-size steps that you configure.
-For example, with a sliding step of 1 second you get a complete set of
-results every second, and if the window size is 1 minute, the results
-pertain to the events that occurred within the last minute.
+kind of aggregation, for example, to obtain the time derivative of a
+changing quantity, remove high-frequency noise from the data (smoothing)
+or measure the intensity of the occurrence of some event (events per
+second). The engine can first split the stream by some category (for
+example, each distinct IoT device or smartphone) into substreams and
+then independently track the aggregated value in each of them. In
+Hazelcast Jet the sliding window moves in fixed-size steps that you
+configure. For example, with a sliding step of 1 second you get a
+complete set of results every second, and if the window size is 1
+minute, the results reflect the events that occurred within the last
+minute.
 
 Some notes:
 
@@ -183,9 +184,9 @@ with the three garbage collectors we tested:
 
 Note that these numbers include a fixed time of about 3 milliseconds to
 emit the window results. The chart is pretty self-explanatory: the
-default GC, G1, is pretty good on its own, but if you need even better
-latency, you can use the experimental Z collector. Reducing the GC
-pauses below 10 milliseconds still seems to be out of reach for Java
+default collector, G1, is pretty good on its own, but if you need even
+better latency, you can use the experimental Z collector. Reducing the
+GC pauses below 10 milliseconds still seems to be out of reach for Java
 runtimes. Shenandoah came out as a big loser in our test, pauses
 regularly exceeding even the G1's default of 200 ms.
 

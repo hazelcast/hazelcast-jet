@@ -5,7 +5,7 @@ description: Results of extensive testing of Hazelcast Jet with various combinat
 
 ## Batch Pipeline Benchmark
 
-A batch pipeline processos a finite amount of stored data. There are no
+A batch pipeline processes a finite amount of stored data. There are no
 running results, we need the output of the aggregate function applied to
 the entire dataset. This changes our performance requirements: the key
 factor in streaming, latency, doesn't exist here since we are not
@@ -62,10 +62,9 @@ benchmark.
 
 We also tested a variant where the aggregate operation uses a boxed
 `Long` instance as state, producing garbage every time the running score
-is updated. In this case the garbage isn't strictly generational because
-the objects die after having spent substantial time in the old
-generation. For this variant we had to reduce the number of keys to 70
-million, with 100 million the GC pressure was too high.
+is updated. In this case many objects die after having spent substantial
+time in the old generation. For this variant we had to reduce the number
+of keys to 70 million, with 100 million the GC pressure was too high.
 
 For the batch pipeline we didn't focus on the low-latency collectors
 since they have nothing to offer in this case. Also, because we saw
@@ -169,7 +168,7 @@ network is 10 Gbit/s. Here are the results:
 In passing, let's note the overall increase in throughput compared to
 single-node benchmarks, about three times. That's the advantage of
 distributed processing. As for collectors, G1 on JDK 11 is the clear
-winner in both tests. Another strking result is the almost nonexistent
+winner in both tests. Another striking result is the almost nonexistent
 bar for G1 on JDK 8, however there's a deeper story here that affects
 other measurements as well, for example the apparent advantage of
 Parallel GC on JDK 8 vs. JDK 11. It has to do with the effect we noted
@@ -182,11 +181,10 @@ sooner because there's more data on each member. In the meantime the
 kicked-out node has rejoined, so the job restarts on two nodes again,
 but different ones. We end up in an endless loop of job restarts.
 
-As we noted before, the G1 on JDK 8 has very bad Full GC pauses, that's
-why it fared the worst in the cluster test. The Parallel collector
-didn't bring down the cluster, but it fared significantly worse than in
-single-node tests. Here it was 30% behind the G1 on JDK 11. With a
-bigger cluster this would get even worse.
+The Parallel collector's GC pauses stopped short of bringing down the
+cluster, but it fared significantly worse than in single-node tests.
+Here it was 30% behind the G1 on JDK 11. With a bigger cluster this
+would get even worse.
 
 Compared to all other tests, it is surprising to see Parallel on JDK 8
 win over JDK 11, however this is due to a very lucky coincidence that,
@@ -195,14 +193,14 @@ all nodes, parallelizing the effort of the GC. Clearly, this is not a
 reliable effect.
 
 Even though in the particular benchmark setup which we report here, we
-didn't observe the catastrophic consequence of long GC pauses while
-using the Parallel collector, it is more of a chance outcome. In other
-tests, where we used a larger heap and more data, or the same heap but
-with less headroom left, the Parallel collector did cause the same
-damage. However, even when it doesn't cause outright failure, the charts
-show the advantage it had on a single node has disappeared. You can
-expect the results to get worse with each further node you add to the
-cluster.
+didn't observe the catastrophic consequence of long GC pauses on cluster
+stability while using the Parallel collector, it is more of a chance
+outcome. In other tests, where we used a larger heap and more data, or
+the same heap but with less headroom left, the Parallel collector did
+cause the same damage. However, even when it doesn't cause outright
+failure, the charts show the advantage it had on a single node has
+disappeared. You can expect the results to get worse with each further
+node you add to the cluster.
 
 The JDK 11 G1 collector, on the other hand, was producing GC pauses of a
 sufficiently short duration that the rest of the pipeline didn't get
