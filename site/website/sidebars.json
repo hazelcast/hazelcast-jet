@@ -48,7 +48,6 @@
       "operations/configuration",
       "operations/discovery",
       "operations/cluster-sizing",
-      "operations/gc-concerns",
       "operations/job-management",
       "operations/kubernetes",
       "operations/monitoring",
