@@ -44,6 +44,7 @@ public final class ProjectIntoScanLogicalRule extends RelOptRule {
                 scan.getCluster(),
                 OptUtils.toLogicalConvention(scan.getTraitSet()),
                 scan.getTable(),
+                // TODO this is wrong, we must merge the projections and not assume it's an identity projection
                 project.getProjects(),
                 getScanFilter(scan)
         );
