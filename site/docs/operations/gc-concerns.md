@@ -6,8 +6,8 @@ description: Choosing the right JDK-GC combination is important.
 With the introduction of the modern, fast-paced JDK release schedule the
 JVM landscape has undergone a phase change. After fifteen years, the
 default GC changed from Parallel to G1, and there are even newer,
-low-latency collectors. In May 2020 we did an [extensive
-test](/blog/2020/06/01/jdk-gc-benchmarks-part2) with various
+low-latency collectors. In June 2020 we did an [extensive
+test](/blog/2020/06/09/jdk-gc-benchmarks-part2) with various
 combinations of old and new JDK/GC combinations and we bring you the
 most important conclusions that should impact your Hazelcast Jet setup:
 

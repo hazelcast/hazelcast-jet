@@ -74,7 +74,7 @@ And here are our overall conclusions:
 
 This post is Part 1 of a two-part series and presents our findings for
 the two streaming scenarios. In [Part
-2](/blog/2020/06/01/jdk-gc-benchmarks-part2) we'll present the results
+2](/blog/2020/06/09/jdk-gc-benchmarks-part2) we'll present the results
 for batch processing.
 
 ## Streaming Pipeline Benchmark
@@ -158,7 +158,7 @@ network latency just adds noise into the picture. We repeated some key
 tests on a three-node Amazon EC2 cluster to validate our prediction that
 cluster performance won't affect our conclusions. You can find a more
 detailed justification for this towards the end of [Part
-2](/blog/2020/06/01/jdk-gc-benchmarks-part2).
+2](/blog/2020/06/09/jdk-gc-benchmarks-part2).
 
 We excluded the Parallel collector from the results for streaming
 workloads because the latency spikes it introduces would be unacceptable
@@ -302,4 +302,4 @@ would start out with a constantly increasing latency, but then after
 around two minutes, its performance would improve and the latency would
 make a full recovery.
 
-Go to [Part 2: the Batch Pipeline Benchmarks](/blog/2020/06/01/jdk-gc-benchmarks-part2).
+Go to [Part 2: the Batch Pipeline Benchmarks](/blog/2020/06/09/jdk-gc-benchmarks-part2).
