@@ -188,10 +188,12 @@ with the three garbage collectors we tested:
 Note that these numbers include a fixed time of about 3 milliseconds to
 emit the window results. The chart is pretty self-explanatory: the
 default collector, G1, is pretty good on its own, but if you need even
-better latency, you can use the experimental ZGC collector. Reducing the
-GC pauses below 10 milliseconds still seems to be out of reach for Java
-runtimes. Shenandoah came out as a big loser in our test, pauses
-regularly exceeding even the G1's default of 200 ms.
+better latency, you can use the experimental ZGC collector. We couldn't
+reduce the latency spikes below 10 milliseconds, however we did note
+they weren't necessarily due to outright GC pauses but rather short
+periods of increased background GC work. Shenandoah came out as a big
+loser in our test, concurrent GC work occasionally raising latency above
+200 ms.
 
 ### Scenario 2: Large State, Less Strict Latency
 
