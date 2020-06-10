@@ -233,7 +233,7 @@ ms), the effect of GC stays local.</p>
 </span></div></article></div><div class="post"><header class="postHeader"><h1 class="postHeaderTitle"><a href="/blog/2020/06/09/jdk-gc-benchmarks-part1">Performance of Modern Java on Data-Heavy Workloads, Part 1</a></h1><p class="post-meta">June 9, 2020</p><div class="authorBlock"><p class="post-authorName"><a href="https://stackoverflow.com/users/1103872/marko-topolnik" target="_blank" rel="noreferrer noopener">Marko Topolnik</a></p><div class="authorPhoto"><a href="https://stackoverflow.com/users/1103872/marko-topolnik" target="_blank" rel="noreferrer noopener"><img src="https://i.imgur.com/xuavzce.jpg" alt="Marko Topolnik"/></a></div></div></header><article class="post-content"><div><span><p>The Java runtime has been evolving more rapidly in recent years and,
 after 15 years, we finally got a new default garbage collector: the
 G1. Two more GCs are on their way to production and are available as
-experimental features: Oracle's Z and OpenJDK's Shenandoah. We at
+experimental features: Oracle's ZGC and OpenJDK's Shenandoah. We at
 Hazelcast thought it was time to put all these new options to the test
 and find which choices work well with workloads typical for our
 distributed stream processing engine, <a href="https://jet-start.sh">Hazelcast Jet</a>.</p>
@@ -269,7 +269,7 @@ scenario 1, is still relevant</li>
 <li>JDK 8 with the default Parallel collector and the optional
 ConcurrentMarkSweep and G1</li>
 <li>JDK 11 with the default G1 collector and the optional Parallel</li>
-<li>JDK 14 with the default G1 as well as the experimental Z and
+<li>JDK 14 with the default G1 as well as the experimental ZGC and
 Shenandoah</li>
 </ol>
 <p>And here are our overall conclusions:</p>
@@ -289,12 +289,12 @@ GB, the pauses were exceeding 20 seconds for Parallel and a full
 minute for G1. The ConcurrentMarkSweep collector is strictly worse
 than G1 in all scenarios, and its failure mode are multi-minute Full
 GC pauses.</li>
-<li>The Z, while allowing substantially less throughput than G1, is very
-good in that one weak area of G1, offering worst-case pauses up to 10
-ms under light load.</li>
+<li>The ZGC, while allowing substantially less throughput than G1, is
+very good in that one weak area of G1, offering worst-case pauses up
+to 10 ms under light load.</li>
 <li>Shenandoah was a disappointment with occasional, but nevertheless
 regular, latency spikes up to 220 ms in the low-pressure regime.</li>
-<li>Neither Z nor Shenandoah showed as smooth failure modes as G1. They
+<li>Neither ZGC nor Shenandoah showed as smooth failure modes as G1. They
 exhibited brittleness, with the low-latency regime suddenly giving
 way to very long pauses and even OOMEs.</li>
 </ol>
@@ -395,10 +395,12 @@ with the three garbage collectors we tested:</p>
 <p>Note that these numbers include a fixed time of about 3 milliseconds to
 emit the window results. The chart is pretty self-explanatory: the
 default collector, G1, is pretty good on its own, but if you need even
-better latency, you can use the experimental Z collector. Reducing the
-GC pauses below 10 milliseconds still seems to be out of reach for Java
-runtimes. Shenandoah came out as a big loser in our test, pauses
-regularly exceeding even the G1's default of 200 ms.</p>
+better latency, you can use the experimental ZGC collector. We couldn't
+reduce the latency spikes below 10 milliseconds, however we did note
+they weren't necessarily due to outright GC pauses but rather short
+periods of increased background GC work. Shenandoah came out as a big
+loser in our test, concurrent GC work occasionally raising latency above
+200 ms.</p>
 <h3><a class="anchor" aria-hidden="true" id="scenario-2-large-state-less-strict-latency"></a><a href="#scenario-2-large-state-less-strict-latency" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Scenario 2: Large State, Less Strict Latency</h3>
 <p>In scenario 2 we assume that, for various reasons outside our control,
 (e.g., mobile network), the latency can grow into low seconds, which

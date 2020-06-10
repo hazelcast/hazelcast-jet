@@ -25,7 +25,7 @@
             <link>https://jet-start.sh/blog/2020/06/09/jdk-gc-benchmarks-part1.html</link>
             <guid>https://jet-start.sh/blog/2020/06/09/jdk-gc-benchmarks-part1.html</guid>
             <pubDate>Tue, 09 Jun 2020 06:00:00 GMT</pubDate>
-            <description><![CDATA[<p>The Java runtime has been evolving more rapidly in recent years and, after 15 years, we finally got a new default garbage collector: the G1. Two more GCs are on their way to production and are available as experimental features: Oracle's Z and OpenJD...</p>]]></description>
+            <description><![CDATA[<p>The Java runtime has been evolving more rapidly in recent years and, after 15 years, we finally got a new default garbage collector: the G1. Two more GCs are on their way to production and are available as experimental features: Oracle's ZGC and Open...</p>]]></description>
         </item>
         <item>
             <title><![CDATA[Processing 10M queries / second on a single node using Jet and gRPC]]></title>
