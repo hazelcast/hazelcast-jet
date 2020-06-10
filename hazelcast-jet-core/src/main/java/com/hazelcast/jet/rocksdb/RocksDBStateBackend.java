@@ -21,6 +21,7 @@ import com.hazelcast.jet.JetException;
 import com.hazelcast.nio.ObjectDataOutput;
 import org.rocksdb.ColumnFamilyDescriptor;
 import org.rocksdb.ColumnFamilyHandle;
+import org.rocksdb.FlushOptions;
 import org.rocksdb.RocksDB;
 import org.rocksdb.RocksDBException;
 
@@ -28,7 +29,6 @@ import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -48,7 +48,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public final class RocksDBStateBackend {
 
-    private final ArrayList<ColumnFamilyHandle> columnFamilyHandles = new ArrayList<>();
     private final RocksDBOptions rocksDBOptions = new RocksDBOptions();
     private final AtomicInteger counter = new AtomicInteger(0);
     private volatile RocksDB db;
@@ -58,8 +57,8 @@ public final class RocksDBStateBackend {
     /**
      * Initialize the State Backend with job-level information.
      *
-     * @param service the serialization service configured for this job.
-     * @param directory            the directory where the associated RocksDB instance will operate.
+     * @param service   the serialization service configured for this job.
+     * @param directory the directory where the associated RocksDB instance will operate.
      **/
     public RocksDBStateBackend initialize(InternalSerializationService service, Path directory) throws JetException {
         this.serializationService = service;
@@ -111,13 +110,6 @@ public final class RocksDBStateBackend {
      */
     public void close() throws JetException {
         if (db != null) {
-            for (final ColumnFamilyHandle cfh : columnFamilyHandles) {
-                try {
-                    db.dropColumnFamily(cfh);
-                } catch (RocksDBException e) {
-                    throw new JetException("Failed to delete column family", e);
-                }
-            }
             db.close();
         }
     }
@@ -132,11 +124,23 @@ public final class RocksDBStateBackend {
         ColumnFamilyHandle cfh;
         try {
             cfh = db.createColumnFamily(new ColumnFamilyDescriptor((serialize(getNextName()))));
-            columnFamilyHandles.add(cfh);
             return new RocksMap<>(db, cfh, rocksDBOptions.getReadOptions(),
                     rocksDBOptions.getWriteOptions(), serializationService);
         } catch (RocksDBException e) {
             throw new JetException("Failed to create RocksMap", e);
+        }
+    }
+
+    /**
+     * for testing only
+     */
+    public void flush() throws JetException {
+        if (db != null) {
+            try {
+                db.flush(new FlushOptions().setWaitForFlush(true));
+            } catch (RocksDBException e) {
+                throw new JetException("Failed to flush rocksdb", e);
+            }
         }
     }
 

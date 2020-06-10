@@ -25,10 +25,13 @@ import org.rocksdb.WriteOptions;
 /**
  * A configuration class where the RocksDB default options should be placed.
  * Used by RocksDBFactory to Create RocksDBStateBackend.
- * Note : RocksDB.Options extends DBOptions and ColumnFamilyOptions
- * it can be used to configure database-wide and column family options
  */
 class RocksDBOptions {
+    private static final Integer FLUSHES = 2;
+    private static final Integer COMPACTIONS = 4;
+    private static final Integer SYNC_BYTES = 1048576;
+    private static final Integer CACHE_SIZE = 16 * 1024;
+
     Options getOptions() {
         //recommended options for general workload
         // see: https://github.com/facebook/rocksdb/wiki/Setup-Options-and-Basic-Tuning#other-general-options
@@ -36,12 +39,12 @@ class RocksDBOptions {
                 .setCreateIfMissing(true)
                 .setUseFsync(false)
                 .setLevelCompactionDynamicLevelBytes(true)
-                .setMaxBackgroundCompactions(4)
-                .setMaxBackgroundFlushes(2)
-                .setBytesPerSync(1048576)
+                .setMaxBackgroundCompactions(COMPACTIONS)
+                .setMaxBackgroundFlushes(FLUSHES)
+                .setBytesPerSync(SYNC_BYTES)
                 .setTableFormatConfig(new BlockBasedTableConfig()
                         .setFilter(new BloomFilter())
-                        .setBlockCacheSize(16*1024)
+                        .setBlockCacheSize(CACHE_SIZE)
                         .setCacheIndexAndFilterBlocks(true)
                         .setPinL0FilterAndIndexBlocksInCache(true));
     }
