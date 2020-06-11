@@ -187,6 +187,8 @@ public class RocksMap<K, V> extends AbstractMap<K, V> {
                 byte[] bytes = inputStream.readNBytes(12);
                 if (Arrays.equals(bytes, prefixBytes)) {
                     values.add(deserialize(iterator.value()));
+                } else {
+                    break;
                 }
             } catch (IOException e) {
                 throw new JetException("Operation Failed : perfixRead", e);
