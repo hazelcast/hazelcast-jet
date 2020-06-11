@@ -38,7 +38,6 @@ public class HashJoinCollectP<K, T, V> extends AbstractProcessor {
     @Nonnull private final Function<T, K> keyFn;
     @Nonnull private final Function<T, V> projectFn;
     private RocksMap<K, Object> lookupTable;
-    private RocksDBStateBackend store;
 
     public HashJoinCollectP(@Nonnull Function<T, K> keyFn, @Nonnull Function<T, V> projectFn) {
         this.keyFn = keyFn;
@@ -47,7 +46,7 @@ public class HashJoinCollectP<K, T, V> extends AbstractProcessor {
 
     @Override
     protected void init(@Nonnull Context context) throws Exception {
-        store = context.rocksDBStateBackend();
+        RocksDBStateBackend store = context.rocksDBStateBackend();
         lookupTable = store.getMap();
     }
 
@@ -57,30 +56,13 @@ public class HashJoinCollectP<K, T, V> extends AbstractProcessor {
         T t = (T) item;
         K key = keyFn.apply(t);
         V value = projectFn.apply(t);
-        Object oldValue = lookupTable.get(key);
-        lookupTable.put(key, merge(oldValue, value));
+        lookupTable.prefixWrite(key, value , value);
         return true;
-    }
-
-    private Object merge(Object oldValue, Object newValue) {
-        if (oldValue == null) {
-            return newValue;
-        }
-
-        if (oldValue instanceof HashJoinArrayList) {
-            ((HashJoinArrayList) oldValue).add(newValue);
-            return oldValue;
-        } else {
-            HashJoinArrayList res = new HashJoinArrayList();
-            res.add(oldValue);
-            res.add(newValue);
-            return res;
-        }
     }
 
     @Override
     public boolean complete() {
-        store.flush();
+        lookupTable.compact();
         return tryEmit(lookupTable);
     }
 

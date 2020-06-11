@@ -18,6 +18,7 @@ package com.hazelcast.jet.rocksdb;
 
 import org.rocksdb.BlockBasedTableConfig;
 import org.rocksdb.BloomFilter;
+import org.rocksdb.IndexType;
 import org.rocksdb.Options;
 import org.rocksdb.ReadOptions;
 import org.rocksdb.WriteOptions;
@@ -28,25 +29,21 @@ import org.rocksdb.WriteOptions;
  */
 class RocksDBOptions {
     private static final Integer FLUSHES = 2;
-    private static final Integer COMPACTIONS = 4;
-    private static final Integer SYNC_BYTES = 1048576;
     private static final Integer CACHE_SIZE = 16 * 1024;
+    //TODO: set the byte size for each type.
+    private static final Integer LONG_BYTES = 8;
 
     Options getOptions() {
         //recommended options for general workload
         // see: https://github.com/facebook/rocksdb/wiki/Setup-Options-and-Basic-Tuning#other-general-options
         return new Options()
                 .setCreateIfMissing(true)
-                .setUseFsync(false)
-                .setLevelCompactionDynamicLevelBytes(true)
-                .setMaxBackgroundCompactions(COMPACTIONS)
+                .prepareForBulkLoad()
                 .setMaxBackgroundFlushes(FLUSHES)
-                .setBytesPerSync(SYNC_BYTES)
+                .useFixedLengthPrefixExtractor(LONG_BYTES)
                 .setTableFormatConfig(new BlockBasedTableConfig()
                         .setFilter(new BloomFilter())
-                        .setBlockCacheSize(CACHE_SIZE)
-                        .setCacheIndexAndFilterBlocks(true)
-                        .setPinL0FilterAndIndexBlocksInCache(true));
+                        .setBlockCacheSize(CACHE_SIZE));
     }
 
     ReadOptions getReadOptions() {

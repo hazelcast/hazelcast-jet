@@ -132,14 +132,16 @@ public final class RocksDBStateBackend {
     }
 
     /**
-     * for testing only
+     * Compacts the whole RocksDB instance from level 0 to level 1.
+     * This should be invoked to prepare the database for reads after bulk loading.
      */
-    public void flush() throws JetException {
+    public void compact() throws JetException {
         if (db != null) {
             try {
-                db.flush(new FlushOptions().setWaitForFlush(true));
+                db.flush(new FlushOptions());
+                db.compactRange();
             } catch (RocksDBException e) {
-                throw new JetException("Failed to flush rocksdb", e);
+                throw new JetException("Failed to Compact RocksDB", e);
             }
         }
     }

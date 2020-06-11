@@ -23,7 +23,6 @@ import com.hazelcast.jet.datamodel.ItemsByTag;
 import com.hazelcast.jet.datamodel.Tag;
 import com.hazelcast.jet.function.TriFunction;
 import com.hazelcast.jet.impl.pipeline.transform.HashJoinTransform;
-import com.hazelcast.jet.impl.processor.HashJoinCollectP.HashJoinArrayList;
 import com.hazelcast.jet.pipeline.BatchStage;
 import com.hazelcast.jet.rocksdb.RocksMap;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
@@ -128,7 +127,7 @@ public class HashJoinP<E0> extends AbstractProcessor {
     private Object lookUpJoined(int index, E0 item) {
         RocksMap<Object, Object> lookupTableForOrdinal = lookupTables.get(index);
         Object key = keyFns.get(index).apply(item);
-        return lookupTableForOrdinal.get(key);
+        return lookupTableForOrdinal.prefixRead(key);
     }
 
 
@@ -158,8 +157,8 @@ public class HashJoinP<E0> extends AbstractProcessor {
             // look up matching values for each joined table
             for (int i = 0; i < lookedUpValues.length; i++) {
                 lookedUpValues[i] = lookUpJoined(i, item);
-                sizes[i] = lookedUpValues[i] instanceof HashJoinArrayList
-                        ? ((HashJoinArrayList) lookedUpValues[i]).size() : 1;
+                sizes[i] = lookedUpValues[i] instanceof ArrayList
+                        ? ((ArrayList) lookedUpValues[i]).size() : 1;
             }
             Arrays.fill(indices, 0);
             currentItem = item;
@@ -172,7 +171,7 @@ public class HashJoinP<E0> extends AbstractProcessor {
                 // populate the tuple and create the result object
                 for (int j = 0; j < lookedUpValues.length; j++) {
                     tuple[j] = sizes[j] == 1 ? lookedUpValues[j]
-                            : ((HashJoinArrayList) lookedUpValues[j]).get(indices[j]);
+                            : ((ArrayList) lookedUpValues[j]).get(indices[j]);
                 }
                 OUT result = mapTupleToOutputFn.apply(currentItem, tuple);
 

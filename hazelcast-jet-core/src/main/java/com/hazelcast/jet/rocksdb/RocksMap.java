@@ -22,6 +22,7 @@ import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import org.rocksdb.ColumnFamilyHandle;
+import org.rocksdb.FlushOptions;
 import org.rocksdb.ReadOptions;
 import org.rocksdb.RocksDB;
 import org.rocksdb.RocksDBException;
@@ -30,8 +31,13 @@ import org.rocksdb.WriteBatch;
 import org.rocksdb.WriteOptions;
 
 import javax.annotation.Nonnull;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.util.AbstractMap;
 import java.util.AbstractSet;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -157,6 +163,55 @@ public class RocksMap<K, V> extends AbstractMap<K, V> {
             map.put(entry.getKey(), entry.getValue());
         }
         return map;
+    }
+
+    public void prefixWrite(K prefix, V key, V value) {
+        ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+        try {
+            bytes.write(serialize(prefix));
+            bytes.write(serialize(key));
+            db.put(cfh, writeOptions, bytes.toByteArray(), serialize(value));
+        } catch (Exception e) {
+            throw new JetException("Operation Failed: prefixWrite", e);
+        }
+    }
+
+    public Object prefixRead(K prefix) {
+        ArrayList<V> values = new ArrayList<>();
+        byte[] prefixBytes = serialize(prefix);
+        RocksIterator iterator = db.newIterator(cfh, readOptions);
+        for (iterator.seek(prefixBytes); iterator.isValid(); iterator.next()) {
+            ByteArrayInputStream inputStream = new ByteArrayInputStream(iterator.key());
+            try {
+                //TODO: get the byte size of each type
+                byte[] bytes = inputStream.readNBytes(12);
+                if (Arrays.equals(bytes, prefixBytes)) {
+                    values.add(deserialize(iterator.value()));
+                }
+            } catch (IOException e) {
+                throw new JetException("Operation Failed : perfixRead", e);
+            }
+        }
+        if (values.isEmpty()) {
+            return null;
+        }
+        if (values.size() == 1) {
+            return values.get(0);
+        }
+        return values;
+    }
+
+    /**
+     * Compacts RocksMap's ColumnFamily from level 0 to level 1.
+     * This should be invoked to prepare RocksMap for reads after bulk loading.
+     */
+    public void compact() throws JetException {
+            try {
+                db.flush(new FlushOptions() , cfh);
+                db.compactRange(cfh);
+            } catch (RocksDBException e) {
+                throw new JetException("Failed to Compact RocksDB", e);
+            }
     }
 
     @Nonnull
