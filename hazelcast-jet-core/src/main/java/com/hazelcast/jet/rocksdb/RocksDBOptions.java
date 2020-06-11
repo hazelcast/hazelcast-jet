@@ -31,7 +31,7 @@ class RocksDBOptions {
     private static final Integer FLUSHES = 2;
     private static final Integer CACHE_SIZE = 16 * 1024;
     //TODO: set the byte size for each type.
-    private static final Integer LONG_BYTES = 8;
+    private static final Integer LONG_BYTES = 12;
 
     Options getOptions() {
         //recommended options for general workload
@@ -42,7 +42,9 @@ class RocksDBOptions {
                 .setMaxBackgroundFlushes(FLUSHES)
                 .useFixedLengthPrefixExtractor(LONG_BYTES)
                 .setTableFormatConfig(new BlockBasedTableConfig()
-                        .setFilter(new BloomFilter())
+                        .setIndexType(IndexType.kHashSearch)
+                        .setFilter(new BloomFilter(10, false))
+                        .setWholeKeyFiltering(false)
                         .setBlockCacheSize(CACHE_SIZE));
     }
 

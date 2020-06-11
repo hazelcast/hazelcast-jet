@@ -198,6 +198,7 @@ public class RocksMap<K, V> extends AbstractMap<K, V> {
         if (values.size() == 1) {
             return values.get(0);
         }
+        iterator.close();
         return values;
     }
 

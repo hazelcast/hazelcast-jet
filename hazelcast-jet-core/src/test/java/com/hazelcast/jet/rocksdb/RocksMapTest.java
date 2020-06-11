@@ -159,9 +159,8 @@ public class RocksMapTest extends JetTestSupport {
         RocksMap<Long, Long> map = rocksDBStateBackend.getMap();
 
         //When
-        map.prefixWrite(10L, 5L, 6L);
-        map.prefixWrite(10L, 7L, 8L);
-
+        map.prefixWrite(10L, 6L, 6L);
+        map.prefixWrite(10L, 8L, 8L);
         //Then
         ArrayList<Long> list = (ArrayList<Long>) map.prefixRead(10L);
         assertEquals(list.size(), 2);
