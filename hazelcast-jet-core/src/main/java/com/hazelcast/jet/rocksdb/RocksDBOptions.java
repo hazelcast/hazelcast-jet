@@ -35,14 +35,11 @@ class RocksDBOptions {
     private static final Integer LONG_BYTES = 12;
 
     Options getOptions() {
-        //recommended options for general workload
-        // see: https://github.com/facebook/rocksdb/wiki/Setup-Options-and-Basic-Tuning#other-general-options
         return new Options()
                 .setCreateIfMissing(true)
                 .prepareForBulkLoad()
                 .setMaxBackgroundFlushes(FLUSHES)
                 .useFixedLengthPrefixExtractor(LONG_BYTES)
-                .setMaxWriteBufferNumber(4)
                 .setMemTableConfig(new VectorMemTableConfig())
                 .setAllowConcurrentMemtableWrite(false)
                 .setTableFormatConfig(new BlockBasedTableConfig()
