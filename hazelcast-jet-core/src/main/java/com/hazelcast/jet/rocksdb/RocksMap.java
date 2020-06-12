@@ -59,6 +59,7 @@ public class RocksMap<K, V> extends AbstractMap<K, V> {
     private final WriteOptions writeOptions;
     private final InternalSerializationService serializationService;
     private RocksMapIterator iterator;
+    private RocksIterator prefixIterator;
 
     RocksMap(RocksDB db, ColumnFamilyHandle cfh,
              ReadOptions readOptions, WriteOptions writeOptions,
@@ -68,11 +69,6 @@ public class RocksMap<K, V> extends AbstractMap<K, V> {
         this.readOptions = readOptions;
         this.writeOptions = writeOptions;
         this.serializationService = serializationService;
-    }
-
-
-    ColumnFamilyHandle getColumnFamilyHandle() {
-        return cfh;
     }
 
     /**
@@ -165,33 +161,36 @@ public class RocksMap<K, V> extends AbstractMap<K, V> {
         return map;
     }
 
-    public void prefixWrite(K prefix, V key, V value) {
+    public void prefixWrite(K prefix, V value) {
         ByteArrayOutputStream bytes = new ByteArrayOutputStream();
         try {
             bytes.write(serialize(prefix));
-            bytes.write(serialize(key));
+            //TODO : pack with a uuid
+            bytes.write(serialize(value));
             db.put(cfh, writeOptions, bytes.toByteArray(), serialize(value));
         } catch (Exception e) {
             throw new JetException("Operation Failed: prefixWrite", e);
         }
     }
 
-    public Object prefixRead(K prefix) {
+    public RocksIterator createIterator() {
+        return db.newIterator(cfh, readOptions);
+    }
+
+    public Object lookupValues(RocksIterator iterator, K prefix) {
         ArrayList<V> values = new ArrayList<>();
         byte[] prefixBytes = serialize(prefix);
-        RocksIterator iterator = db.newIterator(cfh, readOptions);
         for (iterator.seek(prefixBytes); iterator.isValid(); iterator.next()) {
             ByteArrayInputStream inputStream = new ByteArrayInputStream(iterator.key());
             try {
-                //TODO: get the byte size of each type
-                byte[] bytes = inputStream.readNBytes(12);
+                byte[] bytes = inputStream.readNBytes(prefixBytes.length);
                 if (Arrays.equals(bytes, prefixBytes)) {
                     values.add(deserialize(iterator.value()));
                 } else {
                     break;
                 }
             } catch (IOException e) {
-                throw new JetException("Operation Failed : perfixRead", e);
+                throw new JetException("Operation Failed : lookUp", e);
             }
         }
         if (values.isEmpty()) {
@@ -200,7 +199,6 @@ public class RocksMap<K, V> extends AbstractMap<K, V> {
         if (values.size() == 1) {
             return values.get(0);
         }
-        iterator.close();
         return values;
     }
 
@@ -209,12 +207,12 @@ public class RocksMap<K, V> extends AbstractMap<K, V> {
      * This should be invoked to prepare RocksMap for reads after bulk loading.
      */
     public void compact() throws JetException {
-            try {
-                db.flush(new FlushOptions() , cfh);
-                db.compactRange(cfh);
-            } catch (RocksDBException e) {
-                throw new JetException("Failed to Compact RocksDB", e);
-            }
+        try {
+            db.flush(new FlushOptions(), cfh);
+            db.compactRange(cfh);
+        } catch (RocksDBException e) {
+            throw new JetException("Failed to Compact RocksDB", e);
+        }
     }
 
     @Nonnull

@@ -23,8 +23,8 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.rocksdb.RocksIterator;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -152,18 +152,4 @@ public class RocksMapTest extends JetTestSupport {
         assertEquals("iterator.next() doesn't return the value used in rocksMap.put()", value1, map.get(key1));
         assertEquals("iterator.next() doesn't return the value used in rocksMap.put()", value1, map.get(key1));
     }
-
-    @Test
-    public void when_prefixWrite_then_prefixReadReturnsAllValues() {
-        //Given
-        RocksMap<Long, Long> map = rocksDBStateBackend.getMap();
-
-        //When
-        map.prefixWrite(10L, 6L, 6L);
-        map.prefixWrite(10L, 8L, 8L);
-        //Then
-        ArrayList<Long> list = (ArrayList<Long>) map.prefixRead(10L);
-        assertEquals(list.size(), 2);
-    }
-
 }

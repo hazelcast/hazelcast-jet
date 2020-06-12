@@ -56,7 +56,7 @@ public class HashJoinCollectP<K, T, V> extends AbstractProcessor {
         T t = (T) item;
         K key = keyFn.apply(t);
         V value = projectFn.apply(t);
-        lookupTable.prefixWrite(key, value , value);
+        lookupTable.prefixWrite(key, value);
         return true;
     }
 

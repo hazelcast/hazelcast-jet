@@ -26,6 +26,7 @@ import com.hazelcast.jet.impl.pipeline.transform.HashJoinTransform;
 import com.hazelcast.jet.pipeline.BatchStage;
 import com.hazelcast.jet.rocksdb.RocksMap;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import org.rocksdb.RocksIterator;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -71,6 +72,7 @@ public class HashJoinP<E0> extends AbstractProcessor {
     private final List<RocksMap> lookupTables;
     private final FlatMapper<E0, Object> flatMapper;
     private boolean ordinal0Consumed;
+    private final List<RocksIterator> iterators;
 
     @SuppressFBWarnings(value = "NP_PARAMETER_MUST_BE_NONNULL_BUT_MARKED_AS_NULLABLE",
             justification = "https://github.com/spotbugs/spotbugs/issues/844")
@@ -83,6 +85,7 @@ public class HashJoinP<E0> extends AbstractProcessor {
     ) {
         this.keyFns = keyFns;
         this.lookupTables = new ArrayList<>(Collections.nCopies(keyFns.size(), null));
+        this.iterators = new ArrayList<>(Collections.nCopies(keyFns.size(), null));
         BiFunction<E0, Object[], Object> mapTupleToOutputFn;
         checkTrue(mapToOutputBiFn != null ^ mapToOutputTriFn != null,
                 "Exactly one of mapToOutputBiFn and mapToOutputTriFn must be non-null");
@@ -114,6 +117,7 @@ public class HashJoinP<E0> extends AbstractProcessor {
         assert !ordinal0Consumed : "Edge 0 must have a lower priority than all other edges";
 
         lookupTables.set(ordinal - 1, (RocksMap) item);
+        iterators.set(ordinal-1, ((RocksMap) item).createIterator());
         return true;
     }
 
@@ -127,7 +131,7 @@ public class HashJoinP<E0> extends AbstractProcessor {
     private Object lookUpJoined(int index, E0 item) {
         RocksMap<Object, Object> lookupTableForOrdinal = lookupTables.get(index);
         Object key = keyFns.get(index).apply(item);
-        return lookupTableForOrdinal.prefixRead(key);
+        return lookupTableForOrdinal.lookupValues(iterators.get(index), key);
     }
 
 
