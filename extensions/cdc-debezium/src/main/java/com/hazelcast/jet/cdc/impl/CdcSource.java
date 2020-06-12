@@ -35,13 +35,16 @@ import org.apache.kafka.connect.source.SourceTaskContext;
 import org.apache.kafka.connect.storage.OffsetStorageReader;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Properties;
+import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
 
@@ -51,6 +54,7 @@ public class CdcSource {
 
     public static final String CONNECTOR_CLASS_PROPERTY = "connector.class";
     public static final String SEQUENCE_EXTRACTOR_CLASS_PROPERTY = "sequence.extractor.class";
+    public static final String DB_SPECIFIC_EXTRA_FIELDS_PROPERTY = "db.specific.extra.fields";
 
     private static final ThreadLocal<List<byte[]>> THREAD_LOCAL_HISTORY = new ThreadLocal<>();
 
@@ -71,7 +75,7 @@ public class CdcSource {
 
             sequenceExtractor = newInstance(properties, SEQUENCE_EXTRACTOR_CLASS_PROPERTY);
 
-            transform = initTransform();
+            transform = initTransform(properties.getProperty(DB_SPECIFIC_EXTRA_FIELDS_PROPERTY));
 
             taskConfig = connector.taskConfigs(1).get(0);
             task = (SourceTask) connector.taskClass().getConstructor().newInstance();
@@ -148,15 +152,23 @@ public class CdcSource {
         return new ChangeRecordImpl(sequenceSource, sequenceValue, keyJson, valueJson);
     }
 
-    private static ExtractNewRecordState<SourceRecord> initTransform() {
+    private static ExtractNewRecordState<SourceRecord> initTransform(String dbSpecificExtraFields) {
         ExtractNewRecordState<SourceRecord> transform = new ExtractNewRecordState<>();
 
         Map<String, String> config = new HashMap<>();
-        config.put("add.fields", "table, op, ts_ms");
+        config.put("add.fields", String.join(",", extraFields(dbSpecificExtraFields)));
         config.put("delete.handling.mode", "rewrite");
         transform.configure(config);
 
         return transform;
+    }
+
+    private static Collection<String> extraFields(String dbSpecificExtraFields) {
+        Set<String> extraFields = new HashSet<>(Arrays.asList("db", "table", "op", "ts_ms"));
+        if (dbSpecificExtraFields != null) {
+            extraFields.addAll(Arrays.asList(dbSpecificExtraFields.split(",")));
+        }
+        return extraFields;
     }
 
     private static long extractTimestamp(SourceRecord record) {

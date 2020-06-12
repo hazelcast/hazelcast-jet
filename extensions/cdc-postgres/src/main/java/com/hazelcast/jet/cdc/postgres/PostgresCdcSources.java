@@ -80,6 +80,7 @@ public final class PostgresCdcSources {
 
             config = new DebeziumConfig(name, "io.debezium.connector.postgresql.PostgresConnector");
             config.setProperty(CdcSource.SEQUENCE_EXTRACTOR_CLASS_PROPERTY, PostgresSequenceExtractor.class.getName());
+            config.setProperty(CdcSource.DB_SPECIFIC_EXTRA_FIELDS_PROPERTY, "schema");
         }
 
         /**
