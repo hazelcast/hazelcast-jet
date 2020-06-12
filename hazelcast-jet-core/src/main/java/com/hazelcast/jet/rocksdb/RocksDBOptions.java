@@ -21,6 +21,7 @@ import org.rocksdb.BloomFilter;
 import org.rocksdb.IndexType;
 import org.rocksdb.Options;
 import org.rocksdb.ReadOptions;
+import org.rocksdb.VectorMemTableConfig;
 import org.rocksdb.WriteOptions;
 
 /**
@@ -41,6 +42,9 @@ class RocksDBOptions {
                 .prepareForBulkLoad()
                 .setMaxBackgroundFlushes(FLUSHES)
                 .useFixedLengthPrefixExtractor(LONG_BYTES)
+                .setMaxWriteBufferNumber(4)
+                .setMemTableConfig(new VectorMemTableConfig())
+                .setAllowConcurrentMemtableWrite(false)
                 .setTableFormatConfig(new BlockBasedTableConfig()
                         .setIndexType(IndexType.kHashSearch)
                         .setFilter(new BloomFilter(10, false))
