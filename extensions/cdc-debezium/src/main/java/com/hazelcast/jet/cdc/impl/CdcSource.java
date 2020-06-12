@@ -67,7 +67,7 @@ public class CdcSource {
     private State state = new State();
     private boolean taskInit;
 
-    public CdcSource(Properties properties) {
+    CdcSource(Properties properties) {
         try {
             connector = newInstance(properties, CONNECTOR_CLASS_PROPERTY);
             connector.initialize(new JetConnectorContext());
@@ -144,16 +144,12 @@ public class CdcSource {
         this.state = snapshots.get(0);
     }
 
-    protected ChangeRecordImpl changeRecord(long sequenceSource, long sequenceValue, String keyJson, String valueJson) {
-        return new ChangeRecordImpl(sequenceSource, sequenceValue, keyJson, valueJson);
-    }
-
     private ChangeRecord toChangeRecord(SourceRecord record) {
         long sequenceSource = sequenceExtractor.source(record.sourcePartition(), record.sourceOffset());
         long sequenceValue = sequenceExtractor.sequence(record.sourceOffset());
         String keyJson = Values.convertToString(record.keySchema(), record.key());
         String valueJson = Values.convertToString(record.valueSchema(), record.value());
-        return changeRecord(sequenceSource, sequenceValue, keyJson, valueJson);
+        return new ChangeRecordImpl(sequenceSource, sequenceValue, keyJson, valueJson);
     }
 
     private static ExtractNewRecordState<SourceRecord> initTransform(String dbSpecificExtraFields) {

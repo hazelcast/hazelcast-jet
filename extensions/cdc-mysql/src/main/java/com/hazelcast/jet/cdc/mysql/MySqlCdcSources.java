@@ -232,7 +232,7 @@ public final class MySqlCdcSources {
         @Nonnull
         public StreamSource<ChangeRecord> build() {
             config.check(RULES);
-            return config.createSource((ctx, properties) -> new CdcSource(properties));
+            return config.createSource();
         }
 
     }

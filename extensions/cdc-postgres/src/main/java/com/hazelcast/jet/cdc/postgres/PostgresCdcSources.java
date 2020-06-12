@@ -21,7 +21,6 @@ import com.hazelcast.jet.cdc.ChangeRecord;
 import com.hazelcast.jet.cdc.impl.CdcSource;
 import com.hazelcast.jet.cdc.impl.DebeziumConfig;
 import com.hazelcast.jet.cdc.impl.PropertyRules;
-import com.hazelcast.jet.cdc.postgres.impl.PostgresCdcSource;
 import com.hazelcast.jet.cdc.postgres.impl.PostgresSequenceExtractor;
 import com.hazelcast.jet.pipeline.StreamSource;
 
@@ -315,7 +314,7 @@ public final class PostgresCdcSources {
         @Nonnull
         public StreamSource<ChangeRecord> build() {
             config.check(RULES);
-            return config.createSource((ctx, properties) -> new PostgresCdcSource(properties));
+            return config.createSource();
         }
 
     }

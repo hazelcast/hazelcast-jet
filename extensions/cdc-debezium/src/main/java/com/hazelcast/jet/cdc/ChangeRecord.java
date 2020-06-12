@@ -78,7 +78,7 @@ public interface ChangeRecord {
     Operation operation() throws ParsingException;
 
     /**
-     * Returns the name of the database this record comes from.
+     * Returns the name of the database containing the record's table.
      *
      * @return name of the source database for the current record
      * @throws ParsingException if the database name field isn't present
@@ -86,6 +86,18 @@ public interface ChangeRecord {
      */
     @Nonnull
     String database() throws ParsingException;
+
+    /**
+     * Returns the name of the schema containing the record's table.
+     * Note: not all databases have the concept of a schema (for example
+     * MySQL).
+     *
+     * @return name of the source schema for the current record
+     * @throws ParsingException if the schema name field isn't present
+     *                          or is unparsable
+     */
+    @Nonnull
+    String schema() throws ParsingException, UnsupportedOperationException;
 
     /**
      * Returns the name of the table this record is part of.
