@@ -16,7 +16,9 @@
 
 package com.hazelcast.jet.cdc.impl;
 
+import com.hazelcast.function.BiFunctionEx;
 import com.hazelcast.jet.cdc.ChangeRecord;
+import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.pipeline.SourceBuilder;
 import com.hazelcast.jet.pipeline.StreamSource;
 
@@ -64,13 +66,16 @@ public class DebeziumConfig {
         rules.check(properties);
     }
 
-    public StreamSource<ChangeRecord> createSource() {
-        return createSource(properties);
+    public StreamSource<ChangeRecord> createSource(BiFunctionEx<Processor.Context, Properties, CdcSource> createFn) {
+        return createSource(properties, createFn);
     }
 
-    private static StreamSource<ChangeRecord> createSource(Properties properties) {
+    private static StreamSource<ChangeRecord> createSource(
+            Properties properties,
+            BiFunctionEx<Processor.Context, Properties, CdcSource> createFn
+    ) {
         String name = properties.getProperty("name");
-        return SourceBuilder.timestampedStream(name, ctx -> new CdcSource(properties))
+        return SourceBuilder.timestampedStream(name, ctx -> createFn.apply(ctx, properties))
                 .fillBufferFn(CdcSource::fillBuffer)
                 .createSnapshotFn(CdcSource::createSnapshot)
                 .restoreSnapshotFn(CdcSource::restoreSnapshot)

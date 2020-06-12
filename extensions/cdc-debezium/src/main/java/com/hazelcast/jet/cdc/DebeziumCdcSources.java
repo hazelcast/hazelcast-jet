@@ -85,7 +85,7 @@ public final class DebeziumCdcSources {
          */
         @Nonnull
         public StreamSource<ChangeRecord> build() {
-            return config.createSource();
+            return config.createSource((ctx, properties) -> new CdcSource(properties));
         }
     }
 

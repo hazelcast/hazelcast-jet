@@ -35,6 +35,7 @@ public class ChangeRecordImpl implements ChangeRecord {
     private String json;
     private Long timestamp;
     private Operation operation;
+    private String database;
     private String table;
     private RecordPart key;
     private RecordPart value;
@@ -71,6 +72,18 @@ public class ChangeRecordImpl implements ChangeRecord {
             operation = Operation.get(opAlias);
         }
         return operation;
+    }
+
+    @Nonnull
+    @Override
+    public String database() throws ParsingException {
+        if (database == null) {
+            database = get(value().toMap(), "__db", String.class);
+            if (database == null) {
+                throw new ParsingException("No parsable database name field found");
+            }
+        }
+        return database;
     }
 
     @Nonnull
@@ -134,7 +147,7 @@ public class ChangeRecordImpl implements ChangeRecord {
     }
 
     @SuppressWarnings("unchecked")
-    private static <T> T get(Map<String, Object> map, String key, Class<T> clazz) {
+    protected static <T> T get(Map<String, Object> map, String key, Class<T> clazz) {
         Object obj = map.get(key);
         if (clazz.isInstance(obj)) {
             return (T) obj;
@@ -142,4 +155,27 @@ public class ChangeRecordImpl implements ChangeRecord {
         return null;
     }
 
+    @Override
+    public int hashCode() {
+        int hash = (int) sequenceSource;
+        hash = 31 * hash + (int) sequenceValue;
+        hash = 31 * hash + keyJson.hashCode();
+        hash = 31 * hash + valueJson.hashCode();
+        return hash;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) {
+            return true;
+        }
+        if (obj == null || getClass() != obj.getClass()) {
+            return false;
+        }
+        ChangeRecordImpl that = (ChangeRecordImpl) obj;
+        return this.sequenceSource == that.sequenceSource &&
+                this.sequenceValue == that.sequenceValue &&
+                this.keyJson.equals(that.keyJson) &&
+                this.valueJson.equals(that.valueJson);
+    }
 }
