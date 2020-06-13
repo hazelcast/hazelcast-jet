@@ -21,7 +21,6 @@ import com.hazelcast.jet.JetException;
 import com.hazelcast.nio.ObjectDataOutput;
 import org.rocksdb.ColumnFamilyDescriptor;
 import org.rocksdb.ColumnFamilyHandle;
-import org.rocksdb.FlushOptions;
 import org.rocksdb.RocksDB;
 import org.rocksdb.RocksDBException;
 
@@ -132,19 +131,24 @@ public final class RocksDBStateBackend {
     }
 
     /**
-     * Compacts the whole RocksDB instance from level 0 to level 1.
-     * This should be invoked to prepare the database for reads after bulk loading.
+     * Returns a new RocksMap instance suitable for prefix iteration.
+     *
+     * @throws JetException if the database is closed
      */
-    public void compact() throws JetException {
-        if (db != null) {
-            try {
-                db.flush(new FlushOptions());
-                db.compactRange();
-            } catch (RocksDBException e) {
-                throw new JetException("Failed to Compact RocksDB", e);
-            }
+    public <K, V> RocksMap<K, V> getMap(K prefix) throws JetException {
+        ColumnFamilyHandle cfh;
+        byte[] nameBytes = serialize(getNextName());
+        int prefixLength = serialize(prefix).length;
+        try {
+            cfh = db.createColumnFamily(new ColumnFamilyDescriptor(nameBytes, rocksDBOptions
+                    .setPrefix(prefixLength).getCFOptions()));
+            return new RocksMap<>(db, cfh, rocksDBOptions.getReadOptions(),
+                    rocksDBOptions.getWriteOptions(), serializationService);
+        } catch (RocksDBException e) {
+            throw new JetException("Failed to create RocksMap", e);
         }
     }
+
 
     /**
      * Returns a new RocksMap instance with its elements copied from the supplied Map

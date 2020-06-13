@@ -18,6 +18,7 @@ package com.hazelcast.jet.rocksdb;
 
 import org.rocksdb.BlockBasedTableConfig;
 import org.rocksdb.BloomFilter;
+import org.rocksdb.ColumnFamilyOptions;
 import org.rocksdb.IndexType;
 import org.rocksdb.Options;
 import org.rocksdb.ReadOptions;
@@ -29,24 +30,31 @@ import org.rocksdb.WriteOptions;
  * Used by RocksDBFactory to Create RocksDBStateBackend.
  */
 class RocksDBOptions {
-    private static final Integer FLUSHES = 2;
-    private static final Integer CACHE_SIZE = 16 * 1024;
-    //TODO: set the byte size for each type.
-    private static final Integer LONG_BYTES = 12;
+    private static final int FLUSHES = 2;
+    private Integer prefixLength;
 
     Options getOptions() {
         return new Options()
                 .setCreateIfMissing(true)
                 .prepareForBulkLoad()
                 .setMaxBackgroundFlushes(FLUSHES)
-                .useFixedLengthPrefixExtractor(LONG_BYTES)
+                .setAllowConcurrentMemtableWrite(false);
+    }
+
+    public ColumnFamilyOptions getCFOptions() {
+        assert prefixLength != null : "prefix not set";
+        return new ColumnFamilyOptions()
                 .setMemTableConfig(new VectorMemTableConfig())
-                .setAllowConcurrentMemtableWrite(false)
+                .useFixedLengthPrefixExtractor(prefixLength)
                 .setTableFormatConfig(new BlockBasedTableConfig()
                         .setIndexType(IndexType.kHashSearch)
                         .setFilter(new BloomFilter(10, false))
-                        .setWholeKeyFiltering(false)
-                        .setBlockCacheSize(CACHE_SIZE));
+                        .setWholeKeyFiltering(false));
+    }
+
+    RocksDBOptions setPrefix(int prefix) {
+        prefixLength = prefix;
+        return this;
     }
 
     ReadOptions getReadOptions() {
@@ -54,8 +62,6 @@ class RocksDBOptions {
     }
 
     WriteOptions getWriteOptions() {
-        return new WriteOptions()
-                //bypass RocksDB write-ahead-log since the state backend is considered volatile
-                .setDisableWAL(true);
+        return new WriteOptions().setDisableWAL(true);
     }
 }

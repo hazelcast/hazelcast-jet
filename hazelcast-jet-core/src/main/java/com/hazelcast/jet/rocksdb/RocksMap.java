@@ -31,6 +31,7 @@ import org.rocksdb.WriteBatch;
 import org.rocksdb.WriteOptions;
 
 import javax.annotation.Nonnull;
+import java.util.UUID;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -59,7 +60,6 @@ public class RocksMap<K, V> extends AbstractMap<K, V> {
     private final WriteOptions writeOptions;
     private final InternalSerializationService serializationService;
     private RocksMapIterator iterator;
-    private RocksIterator prefixIterator;
 
     RocksMap(RocksDB db, ColumnFamilyHandle cfh,
              ReadOptions readOptions, WriteOptions writeOptions,
@@ -165,8 +165,7 @@ public class RocksMap<K, V> extends AbstractMap<K, V> {
         ByteArrayOutputStream bytes = new ByteArrayOutputStream();
         try {
             bytes.write(serialize(prefix));
-            //TODO : pack with a uuid
-            bytes.write(serialize(value));
+            bytes.write(serialize(UUID.randomUUID()));
             db.put(cfh, writeOptions, bytes.toByteArray(), serialize(value));
         } catch (Exception e) {
             throw new JetException("Operation Failed: prefixWrite", e);
