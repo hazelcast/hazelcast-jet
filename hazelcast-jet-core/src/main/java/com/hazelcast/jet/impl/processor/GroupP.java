@@ -22,10 +22,11 @@ import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.datamodel.Tuple2;
+import com.hazelcast.jet.rocksdb.PrefixRocksMap;
 import com.hazelcast.jet.rocksdb.RocksDBStateBackend;
-import com.hazelcast.jet.rocksdb.RocksMap;
 
 import javax.annotation.Nonnull;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
@@ -46,7 +47,7 @@ public class GroupP<K, A, R, OUT> extends AbstractProcessor {
     @Nonnull private final AggregateOperation<A, R> aggrOp;
     private final BiFunction<? super K, ? super R, OUT> mapToOutputFn;
     private Traverser<OUT> resultTraverser;
-    private RocksMap<K, Entry<Integer, Object>> keyToValues;
+    private PrefixRocksMap<K, Entry<Integer, Object>> keyToValues;
 
     public GroupP(
             @Nonnull List<FunctionEx<?, ? extends K>> groupKeyFns,
@@ -71,7 +72,7 @@ public class GroupP<K, A, R, OUT> extends AbstractProcessor {
     @Override
     protected void init(@Nonnull Context context) throws Exception {
         RocksDBStateBackend store = context.rocksDBStateBackend();
-        keyToValues = store.getMap();
+        keyToValues = store.getPrefixMap();
     }
 
     @Override
@@ -79,7 +80,7 @@ public class GroupP<K, A, R, OUT> extends AbstractProcessor {
     protected boolean tryProcess(int ordinal, @Nonnull Object item) {
         Function<Object, ? extends K> keyFn = (Function<Object, ? extends K>) groupKeyFns.get(ordinal);
         K key = keyFn.apply(item);
-        keyToValues.prefixWrite(key, Tuple2.tuple2(ordinal, item));
+        keyToValues.add(key, Tuple2.tuple2(ordinal, item));
         return true;
     }
 
@@ -94,7 +95,7 @@ public class GroupP<K, A, R, OUT> extends AbstractProcessor {
     }
 
     private class ResultTraverser implements Traverser<Entry<K, A>> {
-        Iterator<Entry<K, Entry<Integer, Object>>> iterator = keyToValues.iterator();
+        Iterator<Entry<K, ArrayList<Entry<Integer, Object>>>> iterator = keyToValues.iterator();
 
         ResultTraverser() {
             keyToValues.compact();
@@ -105,15 +106,15 @@ public class GroupP<K, A, R, OUT> extends AbstractProcessor {
             if (!iterator.hasNext()) {
                 return null;
             }
-            K key = iterator.next().getKey();
+            Entry<K, ArrayList<Entry<Integer, Object>>> e = iterator.next();
+            K key = e.getKey();
             A acc = aggrOp.createFn().get();
-            Iterator<Entry<Integer, Object>> result = keyToValues.prefixRead(key);
-            long counter = 0L;
-            while (result.hasNext()) {
-                Entry<Integer, Object> e = result.next();
-                aggrOp.accumulateFn(e.getKey()).accept(acc, e.getValue());
-                counter++;
-                if(counter >1) iterator.next();
+
+            for (Entry<Integer, Object> pair : e.getValue()) {
+                aggrOp.accumulateFn(pair.getKey()).accept(acc, pair.getValue());
+            }
+            for(long i=1; i< e.getValue().size();i++) { //skip over current prefix
+                iterator.next();
             }
             return Tuple2.tuple2(key, acc);
         }

@@ -68,8 +68,7 @@ public final class RocksDBStateBackend {
     public RocksDBStateBackend initialize(InternalSerializationService serializationService) throws JetException {
         this.serializationService = serializationService;
         try {
-            String testPath = "C:\\Users\\Mohamed Mandouh\\hazelcast-jet\\" +
-                    "hazelcast-jet-core\\src\\main\\resources\\database";
+            String testPath = "/home/mmandouh/data";
             this.directory = Files.createTempDirectory(Path.of(testPath), "rocksdb-temp");
         } catch (IOException e) {
             throw new JetException("Failed to create RocksDB directory", e);
@@ -106,6 +105,18 @@ public final class RocksDBStateBackend {
     public <K, V> RocksMap<K, V> getMap() throws JetException {
         return new RocksMap<>(db, getNextName(), rocksDBOptions, serializationService);
     }
+
+    /**
+     * Returns a new PrefixRocksMap instance
+     *
+     * @return a new empty PrefixRocksMap
+     * @throws JetException if the database is closed
+     */
+    @Nonnull
+    public <K, V> PrefixRocksMap<K, V> getPrefixMap() throws JetException {
+        return new PrefixRocksMap<>(db, getNextName(), rocksDBOptions, serializationService);
+    }
+
 
     /**
      * Deletes the associated RocksDB instance.

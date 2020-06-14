@@ -19,12 +19,10 @@ package com.hazelcast.jet.rocksdb;
 import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.core.JetTestSupport;
-import com.hazelcast.jet.datamodel.Tuple2;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.rocksdb.RocksIterator;
 
 import java.util.HashMap;
 import java.util.Iterator;

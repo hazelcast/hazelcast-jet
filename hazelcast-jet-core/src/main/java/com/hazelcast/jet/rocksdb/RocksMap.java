@@ -1,19 +1,3 @@
-/*
- * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 package com.hazelcast.jet.rocksdb;
 
 import com.hazelcast.internal.serialization.InternalSerializationService;
@@ -24,7 +8,6 @@ import com.hazelcast.nio.ObjectDataOutput;
 import org.rocksdb.ColumnFamilyDescriptor;
 import org.rocksdb.ColumnFamilyHandle;
 import org.rocksdb.ColumnFamilyOptions;
-import org.rocksdb.FlushOptions;
 import org.rocksdb.ReadOptions;
 import org.rocksdb.RocksDB;
 import org.rocksdb.RocksDBException;
@@ -32,14 +15,10 @@ import org.rocksdb.RocksIterator;
 import org.rocksdb.WriteOptions;
 
 import javax.annotation.Nonnull;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.UUID;
 
 import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
 
@@ -63,14 +42,8 @@ public class RocksMap<K, V> implements Iterable<Entry<K, V>> {
         this.name = name;
         this.options = options;
         this.serializationService = serializationService;
-    }
-
-    //lazily creates the column family since the prefix is only specified once the map is actually used
-    //only prefix operations will work for now.
-    private void open(K prefix) throws JetException {
         try {
-            cfh = db.createColumnFamily(new ColumnFamilyDescriptor(serialize(name),
-                    columnFamilyOptions().useFixedLengthPrefixExtractor(serialize(prefix).length)));
+            cfh = db.createColumnFamily(new ColumnFamilyDescriptor(serialize(name), columnFamilyOptions()));
         } catch (RocksDBException e) {
             throw new JetException("Failed to create RocksMap", e);
         }
@@ -149,63 +122,10 @@ public class RocksMap<K, V> implements Iterable<Entry<K, V>> {
         return map;
     }
 
-    public void prefixWrite(K prefix, V value) {
-        if (cfh == null) {
-            open(prefix);
-        }
-        try {
-
-            db.put(cfh, writeOptions(), pack(prefix), serialize(value));
-        } catch (Exception e) {
-            throw new JetException("Operation Failed: prefixWrite", e);
-        }
-    }
-
-    //this is used to reserve an iterator for the joiner processor.
-    public RocksIterator prefixRocksIterator() {
-        return db.newIterator(cfh, readOptions().setPrefixSameAsStart(true));
-    }
-
-    /**
-     * Retrieves all values associated with a given prefix.
-     *
-     * @param iterator the result of createPrefixIterator()
-     */
-    public Object prefixRead(RocksIterator iterator, K prefix) {
-        if (cfh == null) {
-            open(prefix);
-        }
-        ArrayList<V> values = new ArrayList<>();
-        for (iterator.seek(serialize(prefix)); iterator.isValid(); iterator.next()) {
-            values.add(deserialize(iterator.value()));
-        }
-        if (values.isEmpty()) {
-            return null;
-        }
-        if (values.size() == 1) {
-            return values.get(0);
-        }
-        return values;
-    }
-
-    public Iterator<V> prefixRead(K prefix) {
-        if (cfh == null) {
-            open(prefix);
-        }
-        return new PrefixIterator(prefix);
-    }
-
-    /**
-     * Compacts RocksMap's ColumnFamily from level 0 to level 1.
-     * This should be invoked to prepare RocksMap for reads after bulk loading.
-     */
-    public void compact() throws JetException {
-        try {
-            db.flush(new FlushOptions(), cfh);
-            db.compactRange(cfh);
-        } catch (RocksDBException e) {
-            throw new JetException("Failed to Compact RocksDB", e);
-        }
+    @Nonnull
+    @Override
+    public Iterator<Entry<K, V>> iterator() {
+        return new RocksMapIterator();
     }
 
     private <T> byte[] serialize(T item) {
@@ -223,44 +143,6 @@ public class RocksMap<K, V> implements Iterable<Entry<K, V>> {
         }
         ObjectDataInput in = serializationService.createObjectDataInput(item);
         return serializationService.readObject(in);
-    }
-
-    private <T> byte[] pack(T item) {
-        try {
-            ByteArrayOutputStream bytes = new ByteArrayOutputStream();
-            bytes.write(serialize(item));
-            bytes.write(serialize(UUID.randomUUID()));
-            return bytes.toByteArray();
-        } catch (IOException e) {
-            throw new JetException();
-        }
-    }
-
-    private class PrefixIterator implements Iterator<V> {
-        private final RocksIterator iterator;
-
-        PrefixIterator(K prefix) {
-            iterator = db.newIterator(cfh, readOptions().setPrefixSameAsStart(true));
-            iterator.seek(serialize(prefix));
-        }
-
-        @Override
-        public boolean hasNext() {
-            return iterator.isValid();
-        }
-
-        @Override
-        public V next() {
-            V result = deserialize(iterator.value());
-            iterator.next();
-            return result;
-        }
-    }
-
-    @Nonnull
-    @Override
-    public Iterator<Entry<K, V>> iterator() {
-        return new RocksMapIterator();
     }
 
     private class RocksMapIterator implements Iterator<Entry<K, V>> {

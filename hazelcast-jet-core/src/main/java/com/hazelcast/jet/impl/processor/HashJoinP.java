@@ -24,7 +24,7 @@ import com.hazelcast.jet.datamodel.Tag;
 import com.hazelcast.jet.function.TriFunction;
 import com.hazelcast.jet.impl.pipeline.transform.HashJoinTransform;
 import com.hazelcast.jet.pipeline.BatchStage;
-import com.hazelcast.jet.rocksdb.RocksMap;
+import com.hazelcast.jet.rocksdb.PrefixRocksMap;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.rocksdb.RocksIterator;
 
@@ -69,7 +69,7 @@ import static java.util.Objects.requireNonNull;
 public class HashJoinP<E0> extends AbstractProcessor {
 
     private final List<Function<E0, Object>> keyFns;
-    private final List<RocksMap> lookupTables;
+    private final List<PrefixRocksMap> lookupTables;
     private final FlatMapper<E0, Object> flatMapper;
     private boolean ordinal0Consumed;
     private final List<RocksIterator> iterators;
@@ -116,8 +116,8 @@ public class HashJoinP<E0> extends AbstractProcessor {
     protected boolean tryProcess(int ordinal, @Nonnull Object item) {
         assert !ordinal0Consumed : "Edge 0 must have a lower priority than all other edges";
 
-        lookupTables.set(ordinal - 1, (RocksMap) item);
-        iterators.set(ordinal-1, ((RocksMap) item).prefixRocksIterator());
+        lookupTables.set(ordinal - 1, (PrefixRocksMap) item);
+        iterators.set(ordinal-1, ((PrefixRocksMap) item).prefixRocksIterator());
         return true;
     }
 
@@ -129,12 +129,14 @@ public class HashJoinP<E0> extends AbstractProcessor {
 
     @Nonnull
     private Object lookUpJoined(int index, E0 item) {
-        RocksMap<Object, Object> lookupTableForOrdinal = lookupTables.get(index);
+        PrefixRocksMap<Object, Object> lookupTableForOrdinal = lookupTables.get(index);
         Object key = keyFns.get(index).apply(item);
-        return lookupTableForOrdinal.prefixRead(iterators.get(index), key);
+        ArrayList result = lookupTableForOrdinal.get(iterators.get(index), key);
+        if(result.size() == 1) return result.get(0);
+        return result;
     }
 
-
+    //TODO: fix the case with HashJoinArrayList code
     private class CombinationsTraverser<OUT> implements Traverser<OUT> {
         private final BiFunction<E0, Object[], OUT> mapTupleToOutputFn;
         private final Object[] lookedUpValues;
