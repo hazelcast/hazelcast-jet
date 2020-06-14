@@ -21,28 +21,25 @@ import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
+import org.rocksdb.ColumnFamilyDescriptor;
 import org.rocksdb.ColumnFamilyHandle;
+import org.rocksdb.ColumnFamilyOptions;
 import org.rocksdb.FlushOptions;
 import org.rocksdb.ReadOptions;
 import org.rocksdb.RocksDB;
 import org.rocksdb.RocksDBException;
 import org.rocksdb.RocksIterator;
-import org.rocksdb.WriteBatch;
 import org.rocksdb.WriteOptions;
 
 import javax.annotation.Nonnull;
-import java.util.UUID;
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.util.AbstractMap;
-import java.util.AbstractSet;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.Set;
+import java.util.Map.Entry;
+import java.util.UUID;
 
 import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
 
@@ -53,23 +50,44 @@ import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
  * @param <K> the type of key
  * @param <V> the type of value
  */
-public class RocksMap<K, V> extends AbstractMap<K, V> {
+public class RocksMap<K, V> implements Iterable<Entry<K, V>> {
     private final RocksDB db;
-    private final ColumnFamilyHandle cfh;
-    private final ReadOptions readOptions;
-    private final WriteOptions writeOptions;
+    private final String name;
     private final InternalSerializationService serializationService;
-    private RocksMapIterator iterator;
+    private final RocksDBOptions options;
+    private ColumnFamilyHandle cfh;
 
-    RocksMap(RocksDB db, ColumnFamilyHandle cfh,
-             ReadOptions readOptions, WriteOptions writeOptions,
+    RocksMap(RocksDB db, String name, RocksDBOptions options,
              InternalSerializationService serializationService) {
         this.db = db;
-        this.cfh = cfh;
-        this.readOptions = readOptions;
-        this.writeOptions = writeOptions;
+        this.name = name;
+        this.options = options;
         this.serializationService = serializationService;
     }
+
+    //lazily creates the column family since the prefix is only specified once the map is actually used
+    //only prefix operations will work for now.
+    private void open(K prefix) throws JetException {
+        try {
+            cfh = db.createColumnFamily(new ColumnFamilyDescriptor(serialize(name),
+                    columnFamilyOptions().useFixedLengthPrefixExtractor(serialize(prefix).length)));
+        } catch (RocksDBException e) {
+            throw new JetException("Failed to create RocksMap", e);
+        }
+    }
+
+    private WriteOptions writeOptions() {
+        return options.writeOptions();
+    }
+
+    private ReadOptions readOptions() {
+        return options.readOptions();
+    }
+
+    private ColumnFamilyOptions columnFamilyOptions() {
+        return options.columnFamilyOptions();
+    }
+
 
     /**
      * Returns the value mapped to a given key.
@@ -81,7 +99,7 @@ public class RocksMap<K, V> extends AbstractMap<K, V> {
 
     public V get(Object key) throws JetException {
         try {
-            byte[] valueBytes = db.get(cfh, readOptions, serialize(key));
+            byte[] valueBytes = db.get(cfh, readOptions(), serialize(key));
             return deserialize(valueBytes);
         } catch (RocksDBException e) {
             throw new JetException("Operation Failed: Get", e);
@@ -93,40 +111,13 @@ public class RocksMap<K, V> extends AbstractMap<K, V> {
      * If the key is already present, it updates the current value.
      *
      * @param key the key whose value is to be updated
-     * @return the old value mapped to the key or null
      * @throws JetException if the database is closed
      */
-    //TODO: return the previous value instead of null
-    public V put(K key, V value) throws JetException {
+    public void put(K key, V value) throws JetException {
         try {
-            db.put(cfh, writeOptions, serialize(key), serialize(value));
-            return null;
+            db.put(cfh, writeOptions(), serialize(key), serialize(value));
         } catch (RocksDBException e) {
             throw new JetException("Operation Failed: Put", e);
-        }
-    }
-
-    /**
-     * Copies all key-value mappings from the supplied map to this map.
-     * makes use of RocksDB batch write feature.
-     *
-     * @param map the map containing key-value pairs to be inserted
-     * @throws JetException if the database is closed
-     */
-    @Override
-    public void putAll(@Nonnull Map<? extends K, ? extends V> map) throws JetException {
-        WriteBatch batch = new WriteBatch();
-        for (Entry<? extends K, ? extends V> e : map.entrySet()) {
-            try {
-                batch.put(cfh, serialize(e.getKey()), serialize(e.getValue()));
-            } catch (RocksDBException ex) {
-                throw new JetException("Operation Failed: PutAll", ex);
-            }
-        }
-        try {
-            db.write(writeOptions, batch);
-        } catch (RocksDBException e) {
-            throw new JetException("Operation Failed: PutAll", e);
         }
     }
 
@@ -136,68 +127,59 @@ public class RocksMap<K, V> extends AbstractMap<K, V> {
      * @param key the key whose value is to be removed
      * @throws JetException if the database is closed
      */
-    //TODO: return the previous value instead of null
-    @Override
-    public V remove(Object key) throws JetException {
+    public void remove(K key) throws JetException {
         try {
-            db.delete(writeOptions, serialize(key));
-            return null;
+            db.delete(cfh, writeOptions(), serialize(key));
         } catch (RocksDBException e) {
             throw new JetException("Operation Failed: Delete", e);
         }
     }
 
     /**
-     * Returns all key-value mappings in the this map as in a HashMap
+     * Returns all key-value mappings in this map.
      *
      * @return a HashMap containing all key-value pairs
      * @throws JetException if the database is closed
      */
     public Map<K, V> getAll() {
         Map<K, V> map = new HashMap<>();
-        for (Entry<K, V> entry : entrySet()) {
+        for (Entry<K, V> entry : this) {
             map.put(entry.getKey(), entry.getValue());
         }
         return map;
     }
 
     public void prefixWrite(K prefix, V value) {
-        ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+        if (cfh == null) {
+            open(prefix);
+        }
         try {
-            bytes.write(serialize(prefix));
-            bytes.write(serialize(UUID.randomUUID()));
-            db.put(cfh, writeOptions, bytes.toByteArray(), serialize(value));
+
+            db.put(cfh, writeOptions(), pack(prefix), serialize(value));
         } catch (Exception e) {
             throw new JetException("Operation Failed: prefixWrite", e);
         }
     }
 
-    public RocksIterator createIterator() {
-        return db.newIterator(cfh, readOptions);
+    public RocksIterator prefixIterator() {
+        return db.newIterator(cfh, readOptions().setPrefixSameAsStart(true));
     }
 
-    public Object lookupValues(RocksIterator iterator, K prefix) {
+    /**
+     * Retrieves all values associated with a given prefix.
+     *
+     * @param iterator the result of createPrefixIterator()
+     */
+    public Object prefixRead(RocksIterator iterator, K prefix) {
+        if (cfh == null) {
+            open(prefix);
+        }
         ArrayList<V> values = new ArrayList<>();
-        byte[] prefixBytes = serialize(prefix);
-        for (iterator.seek(prefixBytes); iterator.isValid(); iterator.next()) {
-            ByteArrayInputStream inputStream = new ByteArrayInputStream(iterator.key());
-            try {
-                byte[] bytes = inputStream.readNBytes(prefixBytes.length);
-                if (Arrays.equals(bytes, prefixBytes)) {
-                    values.add(deserialize(iterator.value()));
-                } else {
-                    break;
-                }
-            } catch (IOException e) {
-                throw new JetException("Operation Failed : lookUp", e);
-            }
+        for (iterator.seek(serialize(prefix)); iterator.isValid(); iterator.next()) {
+            values.add(deserialize(iterator.value()));
         }
-        if (values.isEmpty()) {
-            return null;
-        }
-        if (values.size() == 1) {
-            return values.get(0);
-        }
+        if(values.isEmpty()) return null;
+        if(values.size() == 1) return values.get(0);
         return values;
     }
 
@@ -212,12 +194,6 @@ public class RocksMap<K, V> extends AbstractMap<K, V> {
         } catch (RocksDBException e) {
             throw new JetException("Failed to Compact RocksDB", e);
         }
-    }
-
-    @Nonnull
-    @Override
-    public Set<Entry<K, V>> entrySet() {
-        return new RocksMapSet();
     }
 
     private <T> byte[] serialize(T item) {
@@ -237,13 +213,28 @@ public class RocksMap<K, V> extends AbstractMap<K, V> {
         return serializationService.readObject(in);
     }
 
-    //TODO: (optional) implement remove
-    // RocksIterator creates a snapshot of the database
-    // but it's now used as an iterator over entry set which doesn't take a snapshot
+    private <T> byte[] pack(T item) {
+        try {
+            ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+            bytes.write(serialize(item));
+            bytes.write(serialize(UUID.randomUUID()));
+            return bytes.toByteArray();
+        } catch (IOException e) {
+            throw new JetException();
+        }
+    }
+
+    @Nonnull
+    @Override
+    public Iterator<Entry<K, V>> iterator() {
+        return new RocksMapIterator();
+    }
+
     private class RocksMapIterator implements Iterator<Entry<K, V>> {
-        RocksIterator iterator = db.newIterator(cfh, readOptions);
+        private final RocksIterator iterator;
 
         RocksMapIterator() {
+            iterator = db.newIterator(cfh, readOptions().setTotalOrderSeek(true));
             iterator.seekToFirst();
         }
 
@@ -254,35 +245,13 @@ public class RocksMap<K, V> extends AbstractMap<K, V> {
 
         @Override
         public Entry<K, V> next() {
-            K key = deserialize(iterator.key());
-            V value = deserialize(iterator.value());
-            Tuple2<K, V> tuple = tuple2(key, value);
+            Tuple2<K, V> tuple = tuple2(deserialize(iterator.key()), deserialize(iterator.value()));
             iterator.next();
             return tuple;
         }
 
         @Override
         public void remove() {
-        }
-    }
-
-
-    private class RocksMapSet extends AbstractSet<Entry<K, V>> {
-        @Nonnull
-        @Override
-        public Iterator<Entry<K, V>> iterator() {
-            if (iterator == null) {
-                iterator = new RocksMapIterator();
-            }
-            return iterator;
-        }
-
-        //TODO: we need to keep the size of the entry set
-        // put and delete doesn't necessarily change size
-        // for example, updating a key or deleting a key that doesn't exists
-        @Override
-        public int size() {
-            return 0;
         }
     }
 }

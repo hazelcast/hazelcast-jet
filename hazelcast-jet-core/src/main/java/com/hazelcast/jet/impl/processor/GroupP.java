@@ -26,6 +26,7 @@ import com.hazelcast.jet.rocksdb.RocksDBStateBackend;
 import com.hazelcast.jet.rocksdb.RocksMap;
 
 import javax.annotation.Nonnull;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
@@ -47,6 +48,7 @@ public class GroupP<K, A, R, OUT> extends AbstractProcessor {
     private final BiFunction<? super K, ? super R, OUT> mapToOutputFn;
     private Traverser<OUT> resultTraverser;
     private RocksMap<K, A> keyToAcc;
+    private RocksMap<K, Entry<Integer, Object>> keyToValues;
 
     public GroupP(
             @Nonnull List<FunctionEx<?, ? extends K>> groupKeyFns,
@@ -72,6 +74,7 @@ public class GroupP<K, A, R, OUT> extends AbstractProcessor {
     protected void init(@Nonnull Context context) throws Exception {
         RocksDBStateBackend store = context.rocksDBStateBackend();
         keyToAcc = store.getMap();
+        keyToValues = store.getMap();
     }
 
     @Override
@@ -79,15 +82,7 @@ public class GroupP<K, A, R, OUT> extends AbstractProcessor {
     protected boolean tryProcess(int ordinal, @Nonnull Object item) {
         Function<Object, ? extends K> keyFn = (Function<Object, ? extends K>) groupKeyFns.get(ordinal);
         K key = keyFn.apply(item);
-        A acc;
-        if ((acc = keyToAcc.get(key)) == null) {
-            acc = aggrOp.createFn().get();
-            if (acc != null) {
-                keyToAcc.put(key, acc);
-            }
-        }
-        aggrOp.accumulateFn(ordinal).accept(acc, item);
-        keyToAcc.put(key, acc);
+        keyToValues.prefixWrite(key, Tuple2.tuple2(ordinal, item));
         return true;
     }
 
@@ -102,19 +97,34 @@ public class GroupP<K, A, R, OUT> extends AbstractProcessor {
     }
 
     private class ResultTraverser implements Traverser<Entry<K, A>> {
-        private final Iterator<Entry<K, A>> iter = keyToAcc.entrySet().iterator();
+        Iterator<Entry<K, Entry<Integer, Object>>> iterator = keyToValues.iterator();
+
+        ResultTraverser() {
+            keyToValues.compact();
+        }
 
         @Override
         public Entry<K, A> next() {
-            if (!iter.hasNext()) {
+            if (!iterator.hasNext()) {
                 return null;
             }
-            try {
-                Entry<K, A> e = iter.next();
-                return Tuple2.tuple2(e.getKey(), e.getValue());
-            } finally {
-                iter.remove();
-            }
+            K key = iterator.next().getKey();
+            A acc = aggrOp.createFn().get();
+            Object result = keyToValues.prefixRead(keyToValues.prefixIterator(), key);
+            if (result instanceof ArrayList) {
+                ArrayList<Entry<Integer, Object>> values = (ArrayList<Entry<Integer, Object>>) result;
+                for (Entry<Integer, Object> e : values) {
+                    aggrOp.accumulateFn(e.getKey()).accept(acc, e.getValue());
+                }
+                //skip over current prefix
+                for (int i = 0; i < values.size() - 1; i++) {
+                    iterator.next();
+                }
+            } else {
+            Entry<Integer, Object> value = (Entry<Integer, Object>) result;
+            aggrOp.accumulateFn(value.getKey()).accept(acc, value.getValue());
         }
+            return Tuple2.tuple2(key, acc);
+    }
     }
 }

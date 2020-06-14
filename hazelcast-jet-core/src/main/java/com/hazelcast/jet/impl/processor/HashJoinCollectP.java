@@ -17,7 +17,6 @@
 package com.hazelcast.jet.impl.processor;
 
 import com.hazelcast.jet.core.AbstractProcessor;
-import com.hazelcast.jet.rocksdb.RocksDBStateBackend;
 import com.hazelcast.jet.rocksdb.RocksMap;
 
 import javax.annotation.Nonnull;
@@ -38,7 +37,6 @@ public class HashJoinCollectP<K, T, V> extends AbstractProcessor {
     @Nonnull private final Function<T, K> keyFn;
     @Nonnull private final Function<T, V> projectFn;
     private RocksMap<K, Object> lookupTable;
-    RocksDBStateBackend store;
 
 
     public HashJoinCollectP(@Nonnull Function<T, K> keyFn, @Nonnull Function<T, V> projectFn) {
@@ -48,7 +46,7 @@ public class HashJoinCollectP<K, T, V> extends AbstractProcessor {
 
     @Override
     protected void init(@Nonnull Context context) throws Exception {
-        store = context.rocksDBStateBackend();
+        lookupTable = context.rocksDBStateBackend().getMap();
     }
 
     @Override
@@ -57,7 +55,6 @@ public class HashJoinCollectP<K, T, V> extends AbstractProcessor {
         T t = (T) item;
         K key = keyFn.apply(t);
         V value = projectFn.apply(t);
-        if(lookupTable == null) lookupTable = store.getMap(key);
         lookupTable.prefixWrite(key, value);
         return true;
     }

@@ -26,14 +26,12 @@ import org.rocksdb.VectorMemTableConfig;
 import org.rocksdb.WriteOptions;
 
 /**
- * A configuration class where the RocksDB default options should be placed.
- * Used by RocksDBFactory to Create RocksDBStateBackend.
+ * Contains default configurations for RocksDB.
  */
-class RocksDBOptions {
+public class RocksDBOptions {
     private static final int FLUSHES = 2;
-    private Integer prefixLength;
 
-    Options getOptions() {
+    Options options() {
         return new Options()
                 .setCreateIfMissing(true)
                 .prepareForBulkLoad()
@@ -41,27 +39,20 @@ class RocksDBOptions {
                 .setAllowConcurrentMemtableWrite(false);
     }
 
-    public ColumnFamilyOptions getCFOptions() {
-        assert prefixLength != null : "prefix not set";
+    public ColumnFamilyOptions columnFamilyOptions() {
         return new ColumnFamilyOptions()
                 .setMemTableConfig(new VectorMemTableConfig())
-                .useFixedLengthPrefixExtractor(prefixLength)
                 .setTableFormatConfig(new BlockBasedTableConfig()
                         .setIndexType(IndexType.kHashSearch)
                         .setFilter(new BloomFilter(10, false))
                         .setWholeKeyFiltering(false));
     }
 
-    RocksDBOptions setPrefix(int prefix) {
-        prefixLength = prefix;
-        return this;
-    }
-
-    ReadOptions getReadOptions() {
+    ReadOptions readOptions() {
         return new ReadOptions();
     }
 
-    WriteOptions getWriteOptions() {
+    WriteOptions writeOptions() {
         return new WriteOptions().setDisableWAL(true);
     }
 }

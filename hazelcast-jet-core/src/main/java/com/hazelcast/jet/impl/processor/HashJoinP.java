@@ -117,7 +117,7 @@ public class HashJoinP<E0> extends AbstractProcessor {
         assert !ordinal0Consumed : "Edge 0 must have a lower priority than all other edges";
 
         lookupTables.set(ordinal - 1, (RocksMap) item);
-        iterators.set(ordinal-1, ((RocksMap) item).createIterator());
+        iterators.set(ordinal-1, ((RocksMap) item).prefixIterator());
         return true;
     }
 
@@ -131,7 +131,7 @@ public class HashJoinP<E0> extends AbstractProcessor {
     private Object lookUpJoined(int index, E0 item) {
         RocksMap<Object, Object> lookupTableForOrdinal = lookupTables.get(index);
         Object key = keyFns.get(index).apply(item);
-        return lookupTableForOrdinal.lookupValues(iterators.get(index), key);
+        return lookupTableForOrdinal.prefixRead(iterators.get(index), key);
     }
 
 

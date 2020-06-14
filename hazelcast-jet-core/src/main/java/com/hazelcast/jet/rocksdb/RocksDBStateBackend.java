@@ -18,17 +18,12 @@ package com.hazelcast.jet.rocksdb;
 
 import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.jet.JetException;
-import com.hazelcast.nio.ObjectDataOutput;
-import org.rocksdb.ColumnFamilyDescriptor;
-import org.rocksdb.ColumnFamilyHandle;
 import org.rocksdb.RocksDB;
-import org.rocksdb.RocksDBException;
 
 import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 
@@ -46,7 +41,6 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 
 public final class RocksDBStateBackend {
-
     private final RocksDBOptions rocksDBOptions = new RocksDBOptions();
     private final AtomicInteger counter = new AtomicInteger(0);
     private volatile RocksDB db;
@@ -74,7 +68,8 @@ public final class RocksDBStateBackend {
     public RocksDBStateBackend initialize(InternalSerializationService serializationService) throws JetException {
         this.serializationService = serializationService;
         try {
-            String testPath = "/home/mmandouh/data";
+            String testPath = "C:\\Users\\Mohamed Mandouh\\hazelcast-jet\\" +
+                    "hazelcast-jet-core\\src\\main\\resources\\database";
             this.directory = Files.createTempDirectory(Path.of(testPath), "rocksdb-temp");
         } catch (IOException e) {
             throw new JetException("Failed to create RocksDB directory", e);
@@ -91,7 +86,7 @@ public final class RocksDBStateBackend {
                 if (db == null) {
                     try {
                         RocksDB.loadLibrary();
-                        db = RocksDB.open(rocksDBOptions.getOptions(), directory.toString());
+                        db = RocksDB.open(new RocksDBOptions().options(), directory.toString());
                     } catch (Exception e) {
                         throw new JetException("Failed to create a RocksDB instance", e);
                     }
@@ -102,7 +97,18 @@ public final class RocksDBStateBackend {
     }
 
     /**
-     * Deletes the whole database instance.
+     * Returns a new RocksMap instance
+     *
+     * @return a new empty RocksMap
+     * @throws JetException if the database is closed
+     */
+    public <K, V> RocksMap<K, V> getMap() throws JetException {
+        //has to pass a new options instance so the prefix is configured per map.
+        return new RocksMap<>(db, getNextName(), new RocksDBOptions(), serializationService);
+    }
+
+    /**
+     * Deletes the associated database instance.
      * Should be invoked when the job finishes execution (whether successfully or with an error)
      *
      * @throws JetException if the database is closed
@@ -113,65 +119,10 @@ public final class RocksDBStateBackend {
         }
     }
 
-    /**
-     * Returns a new RocksMap instance
-     *
-     * @return a new empty RocksMap
-     * @throws JetException if the database is closed
-     */
-    public <K, V> RocksMap<K, V> getMap() throws JetException {
-        ColumnFamilyHandle cfh;
-        try {
-            cfh = db.createColumnFamily(new ColumnFamilyDescriptor((serialize(getNextName()))));
-            return new RocksMap<>(db, cfh, rocksDBOptions.getReadOptions(),
-                    rocksDBOptions.getWriteOptions(), serializationService);
-        } catch (RocksDBException e) {
-            throw new JetException("Failed to create RocksMap", e);
-        }
-    }
-
-    /**
-     * Returns a new RocksMap instance suitable for prefix iteration.
-     *
-     * @throws JetException if the database is closed
-     */
-    public <K, V> RocksMap<K, V> getMap(K prefix) throws JetException {
-        ColumnFamilyHandle cfh;
-        byte[] nameBytes = serialize(getNextName());
-        int prefixLength = serialize(prefix).length;
-        try {
-            cfh = db.createColumnFamily(new ColumnFamilyDescriptor(nameBytes, rocksDBOptions
-                    .setPrefix(prefixLength).getCFOptions()));
-            return new RocksMap<>(db, cfh, rocksDBOptions.getReadOptions(),
-                    rocksDBOptions.getWriteOptions(), serializationService);
-        } catch (RocksDBException e) {
-            throw new JetException("Failed to create RocksMap", e);
-        }
-    }
 
 
-    /**
-     * Returns a new RocksMap instance with its elements copied from the supplied Map
-     *
-     * @throws JetException if the database is closed
-     */
-    public <K, V> RocksMap<K, V> getMap(Map<K, V> map) throws JetException {
-        RocksMap<K, V> rocksMap = getMap();
-        rocksMap.putAll(map);
-        return rocksMap;
-    }
-
-
-    // since the database is shared among all processors of a job on the same cluster member,
-    // we may end up with a race condition when two processor are asking for a RocksMap at the same time
     @Nonnull
     private String getNextName() {
         return "RocksMap" + counter.getAndIncrement();
-    }
-
-    private <T> byte[] serialize(T item) {
-        ObjectDataOutput out = serializationService.createObjectDataOutput();
-        serializationService.writeObject(out, item);
-        return out.toByteArray();
     }
 }
