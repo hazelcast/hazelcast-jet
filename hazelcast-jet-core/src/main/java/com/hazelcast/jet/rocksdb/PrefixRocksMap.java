@@ -47,7 +47,7 @@ import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
  * @param <K> the type of key
  * @param <V> the type of value
  */
-public class PrefixRocksMap<K, V> implements Iterable<Entry<K, ArrayList<V>>> {
+public class PrefixRocksMap<K, V> implements Iterable<Entry<K, Iterator<V>>> {
     private final RocksDB db;
     private final String name;
     private final InternalSerializationService serializationService;
@@ -100,19 +100,27 @@ public class PrefixRocksMap<K, V> implements Iterable<Entry<K, ArrayList<V>>> {
 
     /**
      * Retrieves all values associated with the given key.
-     * if there's more than value for that key, returns a list of those values.
      * Callers need to first acquire a native RocksDB iterator
      * by calling prefixRocksIterator() and keeping it for later calls.
      */
-    public ArrayList<V> get(RocksIterator iterator, K key) {
+    public Iterator<V> get(RocksIterator iterator, K key) {
         if (cfh == null) {
             open(key);
         }
-        ArrayList<V> values = new ArrayList<>();
-        for (iterator.seek(serialize(key)); iterator.isValid(); iterator.next()) {
-            values.add(deserialize(iterator.value()));
-        }
-        return values;
+        iterator.seek(serialize(key));
+
+        return new Iterator<>() {
+            @Override
+            public boolean hasNext() {
+                return iterator.isValid();
+            }
+
+            @Override
+            public V next() {
+               V value =  deserialize(iterator.value());
+                iterator.next();
+                return value;
+            }};
     }
 
     public void remove(K key) throws JetException {
@@ -144,7 +152,7 @@ public class PrefixRocksMap<K, V> implements Iterable<Entry<K, ArrayList<V>>> {
      */
     @Nonnull
     @Override
-    public Iterator<Entry<K, ArrayList<V>>> iterator() {
+    public Iterator<Entry<K, Iterator<V>>> iterator() {
         return new PrefixRocksMapIterator();
     }
 
@@ -189,7 +197,7 @@ public class PrefixRocksMap<K, V> implements Iterable<Entry<K, ArrayList<V>>> {
         }
     }
 
-    private class PrefixRocksMapIterator implements Iterator<Entry<K, ArrayList<V>>> {
+    private class PrefixRocksMapIterator implements Iterator<Entry<K, Iterator<V>>> {
         private final RocksIterator iterator;
         private final RocksIterator prefixIterator;
 
@@ -205,9 +213,13 @@ public class PrefixRocksMap<K, V> implements Iterable<Entry<K, ArrayList<V>>> {
         }
 
         @Override
-        public Entry<K, ArrayList<V>> next() {
-            Tuple2<K, ArrayList<V>> tuple = tuple2(deserialize(iterator.key()), get(prefixIterator, deserialize(iterator.key())));
-            iterator.next();
+        public Entry<K, Iterator<V>> next() {
+            Tuple2<K, Iterator<V>> tuple = tuple2(deserialize(iterator.key()), get(prefixIterator, deserialize(iterator.key())));
+            //skip over the current prefix
+            K current = deserialize(iterator.key());
+            while(deserialize(iterator.key()).equals(current) && iterator.isValid()) {
+                iterator.next();
+            }
             return tuple;
         }
 

@@ -95,7 +95,7 @@ public class GroupP<K, A, R, OUT> extends AbstractProcessor {
     }
 
     private class ResultTraverser implements Traverser<Entry<K, A>> {
-        Iterator<Entry<K, ArrayList<Entry<Integer, Object>>>> iterator = keyToValues.iterator();
+        Iterator<Entry<K, Iterator<Entry<Integer, Object>>>> iterator = keyToValues.iterator();
 
         ResultTraverser() {
             keyToValues.compact();
@@ -106,15 +106,13 @@ public class GroupP<K, A, R, OUT> extends AbstractProcessor {
             if (!iterator.hasNext()) {
                 return null;
             }
-            Entry<K, ArrayList<Entry<Integer, Object>>> e = iterator.next();
+            Entry<K, Iterator<Entry<Integer, Object>>> e = iterator.next();
             K key = e.getKey();
             A acc = aggrOp.createFn().get();
-
-            for (Entry<Integer, Object> pair : e.getValue()) {
+            Iterator<Entry<Integer, Object>> values = e.getValue();
+            while (values.hasNext()) {
+                Entry<Integer, Object> pair = values.next();
                 aggrOp.accumulateFn(pair.getKey()).accept(acc, pair.getValue());
-            }
-            for(long i=1; i< e.getValue().size();i++) { //skip over current prefix
-                iterator.next();
             }
             return Tuple2.tuple2(key, acc);
         }
