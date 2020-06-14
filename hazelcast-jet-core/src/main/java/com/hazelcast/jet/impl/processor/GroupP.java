@@ -26,7 +26,6 @@ import com.hazelcast.jet.rocksdb.RocksDBStateBackend;
 import com.hazelcast.jet.rocksdb.RocksMap;
 
 import javax.annotation.Nonnull;
-import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
@@ -47,7 +46,6 @@ public class GroupP<K, A, R, OUT> extends AbstractProcessor {
     @Nonnull private final AggregateOperation<A, R> aggrOp;
     private final BiFunction<? super K, ? super R, OUT> mapToOutputFn;
     private Traverser<OUT> resultTraverser;
-    private RocksMap<K, A> keyToAcc;
     private RocksMap<K, Entry<Integer, Object>> keyToValues;
 
     public GroupP(
@@ -73,7 +71,6 @@ public class GroupP<K, A, R, OUT> extends AbstractProcessor {
     @Override
     protected void init(@Nonnull Context context) throws Exception {
         RocksDBStateBackend store = context.rocksDBStateBackend();
-        keyToAcc = store.getMap();
         keyToValues = store.getMap();
     }
 
@@ -110,21 +107,16 @@ public class GroupP<K, A, R, OUT> extends AbstractProcessor {
             }
             K key = iterator.next().getKey();
             A acc = aggrOp.createFn().get();
-            Object result = keyToValues.prefixRead(keyToValues.prefixIterator(), key);
-            if (result instanceof ArrayList) {
-                ArrayList<Entry<Integer, Object>> values = (ArrayList<Entry<Integer, Object>>) result;
-                for (Entry<Integer, Object> e : values) {
-                    aggrOp.accumulateFn(e.getKey()).accept(acc, e.getValue());
-                }
-                //skip over current prefix
-                for (int i = 0; i < values.size() - 1; i++) {
-                    iterator.next();
-                }
-            } else {
-            Entry<Integer, Object> value = (Entry<Integer, Object>) result;
-            aggrOp.accumulateFn(value.getKey()).accept(acc, value.getValue());
-        }
+            Iterator<Entry<Integer, Object>> result = keyToValues.prefixRead(key);
+            long counter = 0L;
+            while (result.hasNext()) {
+                Entry<Integer, Object> e = result.next();
+                aggrOp.accumulateFn(e.getKey()).accept(acc, e.getValue());
+                counter++;
+                if(counter >1) iterator.next();
+            }
             return Tuple2.tuple2(key, acc);
-    }
+        }
     }
 }
+

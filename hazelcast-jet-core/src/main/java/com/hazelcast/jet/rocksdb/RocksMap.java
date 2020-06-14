@@ -161,7 +161,8 @@ public class RocksMap<K, V> implements Iterable<Entry<K, V>> {
         }
     }
 
-    public RocksIterator prefixIterator() {
+    //this is used to reserve an iterator for the joiner processor.
+    public RocksIterator prefixRocksIterator() {
         return db.newIterator(cfh, readOptions().setPrefixSameAsStart(true));
     }
 
@@ -178,9 +179,20 @@ public class RocksMap<K, V> implements Iterable<Entry<K, V>> {
         for (iterator.seek(serialize(prefix)); iterator.isValid(); iterator.next()) {
             values.add(deserialize(iterator.value()));
         }
-        if(values.isEmpty()) return null;
-        if(values.size() == 1) return values.get(0);
+        if (values.isEmpty()) {
+            return null;
+        }
+        if (values.size() == 1) {
+            return values.get(0);
+        }
         return values;
+    }
+
+    public Iterator<V> prefixRead(K prefix) {
+        if (cfh == null) {
+            open(prefix);
+        }
+        return new PrefixIterator(prefix);
     }
 
     /**
@@ -221,6 +233,27 @@ public class RocksMap<K, V> implements Iterable<Entry<K, V>> {
             return bytes.toByteArray();
         } catch (IOException e) {
             throw new JetException();
+        }
+    }
+
+    private class PrefixIterator implements Iterator<V> {
+        private final RocksIterator iterator;
+
+        PrefixIterator(K prefix) {
+            iterator = db.newIterator(cfh, readOptions().setPrefixSameAsStart(true));
+            iterator.seek(serialize(prefix));
+        }
+
+        @Override
+        public boolean hasNext() {
+            return iterator.isValid();
+        }
+
+        @Override
+        public V next() {
+            V result = deserialize(iterator.value());
+            iterator.next();
+            return result;
         }
     }
 

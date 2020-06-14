@@ -117,7 +117,7 @@ public class HashJoinP<E0> extends AbstractProcessor {
         assert !ordinal0Consumed : "Edge 0 must have a lower priority than all other edges";
 
         lookupTables.set(ordinal - 1, (RocksMap) item);
-        iterators.set(ordinal-1, ((RocksMap) item).prefixIterator());
+        iterators.set(ordinal-1, ((RocksMap) item).prefixRocksIterator());
         return true;
     }
 

@@ -37,7 +37,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * (2) ExecutionContext invokes initialize() with the directory and serialization service used for this job.
  * (3) Processors acquire the initialized instance from Processor.Context.rocksDBStateBackend() which calls
  * open() to open a new RocksDB instance if it wasn't already created.
- * (4) After job execution is completed, ExecutionContext invokes close() to delete the RocksDB instance.
+ * (4) After job execution is completed, ExecutionContext invokes close() to free the RocksDB instance.
  */
 
 public final class RocksDBStateBackend {
@@ -60,7 +60,7 @@ public final class RocksDBStateBackend {
     }
 
     /**
-     * Initialize the State Backend with job-level information.
+     * Initialize the state backend with job-level information.
      * This method is only used for testing.
      *
      * @param serializationService the serialization serivice configured for this job.
@@ -86,7 +86,7 @@ public final class RocksDBStateBackend {
                 if (db == null) {
                     try {
                         RocksDB.loadLibrary();
-                        db = RocksDB.open(new RocksDBOptions().options(), directory.toString());
+                        db = RocksDB.open(rocksDBOptions.options(), directory.toString());
                     } catch (Exception e) {
                         throw new JetException("Failed to create a RocksDB instance", e);
                     }
@@ -102,13 +102,13 @@ public final class RocksDBStateBackend {
      * @return a new empty RocksMap
      * @throws JetException if the database is closed
      */
+    @Nonnull
     public <K, V> RocksMap<K, V> getMap() throws JetException {
-        //has to pass a new options instance so the prefix is configured per map.
-        return new RocksMap<>(db, getNextName(), new RocksDBOptions(), serializationService);
+        return new RocksMap<>(db, getNextName(), rocksDBOptions, serializationService);
     }
 
     /**
-     * Deletes the associated database instance.
+     * Deletes the associated RocksDB instance.
      * Should be invoked when the job finishes execution (whether successfully or with an error)
      *
      * @throws JetException if the database is closed
@@ -118,8 +118,6 @@ public final class RocksDBStateBackend {
             db.close();
         }
     }
-
-
 
     @Nonnull
     private String getNextName() {
