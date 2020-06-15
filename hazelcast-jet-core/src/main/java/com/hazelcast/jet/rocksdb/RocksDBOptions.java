@@ -36,6 +36,7 @@ public class RocksDBOptions {
                 .setCreateIfMissing(true)
                 .prepareForBulkLoad()
                 .setMaxBackgroundFlushes(FLUSHES)
+                .setUseFsync(false)
                 .setAllowConcurrentMemtableWrite(false);
     }
 
@@ -53,6 +54,6 @@ public class RocksDBOptions {
     }
 
     WriteOptions writeOptions() {
-        return new WriteOptions().setDisableWAL(true);
+        return new WriteOptions().setDisableWAL(true).setSync(false);
     }
 }

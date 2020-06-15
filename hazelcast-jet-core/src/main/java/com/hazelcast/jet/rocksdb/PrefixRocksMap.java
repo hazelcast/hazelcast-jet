@@ -162,7 +162,7 @@ public class PrefixRocksMap<K, V> implements Iterable<Entry<K, Iterator<V>>> {
      */
     public void compact() throws JetException {
         try {
-            db.flush(new FlushOptions(), cfh);
+            db.flush(new FlushOptions().setWaitForFlush(true), cfh);
             db.compactRange(cfh);
         } catch (RocksDBException e) {
             throw new JetException("Failed to Compact RocksDB", e);
