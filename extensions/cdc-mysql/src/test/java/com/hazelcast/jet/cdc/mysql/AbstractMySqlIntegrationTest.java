@@ -17,14 +17,7 @@
 package com.hazelcast.jet.cdc.mysql;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.hazelcast.jet.accumulator.LongAccumulator;
 import com.hazelcast.jet.cdc.AbstractIntegrationTest;
-import com.hazelcast.jet.cdc.ChangeRecord;
-import com.hazelcast.jet.cdc.Operation;
-import com.hazelcast.jet.cdc.RecordPart;
-import com.hazelcast.jet.pipeline.Pipeline;
-import com.hazelcast.jet.pipeline.Sinks;
-import com.hazelcast.jet.pipeline.StreamSource;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
@@ -32,7 +25,6 @@ import java.util.Objects;
 import org.junit.Rule;
 import org.testcontainers.containers.MySQLContainer;
 
-import static com.hazelcast.jet.Util.entry;
 import static org.testcontainers.containers.MySQLContainer.MYSQL_PORT;
 
 public class AbstractMySqlIntegrationTest extends AbstractIntegrationTest {
@@ -46,36 +38,16 @@ public class AbstractMySqlIntegrationTest extends AbstractIntegrationTest {
             .withPassword("mysqlpw");
 
     protected MySqlCdcSources.Builder initialSourceBuilder() {
-        return MySqlCdcSources.mysql("cdcMysql")
+        return initialSourceBuilder("cdcMysql");
+    }
+
+    protected MySqlCdcSources.Builder initialSourceBuilder(String name) {
+        return MySqlCdcSources.mysql(name)
                 .setDatabaseAddress(mysql.getContainerIpAddress())
                 .setDatabasePort(mysql.getMappedPort(MYSQL_PORT))
                 .setDatabaseUser("debezium")
                 .setDatabasePassword("dbz")
                 .setClusterName("dbserver1");
-    }
-
-    protected Pipeline preparePipeline(StreamSource<ChangeRecord> source) {
-        Pipeline pipeline = Pipeline.create();
-        pipeline.readFrom(source)
-                .withNativeTimestamps(0)
-                .filter(t -> t.database().startsWith(DATABASE))
-                .setLocalParallelism(1)
-                .<ChangeRecord>customTransform("filter_timestamps", filterTimestampsProcessorSupplier())
-                .setLocalParallelism(1)
-                .groupingKey(record -> (Integer) record.key().toMap().get("id"))
-                .mapStateful(
-                        LongAccumulator::new,
-                        (accumulator, customerId, record) -> {
-                            long count = accumulator.get();
-                            accumulator.add(1);
-                            Operation operation = record.operation();
-                            RecordPart value = record.value();
-                            TableRow customer = value.toObject(TableRow.class);
-                            return entry(customerId + "/" + count, operation + ":" + customer);
-                        })
-                .setLocalParallelism(1)
-                .writeTo(Sinks.map(SINK_MAP_NAME));
-        return pipeline;
     }
 
     protected void createDb(String name) throws SQLException {

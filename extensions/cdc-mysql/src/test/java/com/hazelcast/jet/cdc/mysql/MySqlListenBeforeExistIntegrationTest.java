@@ -18,8 +18,12 @@ package com.hazelcast.jet.cdc.mysql;
 
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
+import com.hazelcast.jet.accumulator.LongAccumulator;
 import com.hazelcast.jet.cdc.ChangeRecord;
+import com.hazelcast.jet.cdc.Operation;
+import com.hazelcast.jet.cdc.RecordPart;
 import com.hazelcast.jet.pipeline.Pipeline;
+import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.StreamSource;
 import com.hazelcast.test.annotation.NightlyTest;
 import java.sql.Connection;
@@ -30,10 +34,12 @@ import java.util.List;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
+import static com.hazelcast.jet.Util.entry;
+import static com.hazelcast.jet.cdc.mysql.AbstractMySqlIntegrationTest.DATABASE;
 import static com.hazelcast.jet.core.JobStatus.RUNNING;
 
 @Category(NightlyTest.class)
-public class ListenBeforeExistIntegrationTest extends AbstractMySqlIntegrationTest {
+public class MySqlListenBeforeExistIntegrationTest extends AbstractMySqlIntegrationTest {
 
     @Test
     public void testListenBeforeDatabaseExists() throws Exception {
@@ -132,6 +138,28 @@ public class ListenBeforeExistIntegrationTest extends AbstractMySqlIntegrationTe
         } finally {
             job.cancel();
         }
+    }
+
+    private Pipeline preparePipeline(StreamSource<ChangeRecord> source) {
+        Pipeline pipeline = Pipeline.create();
+        pipeline.readFrom(source)
+                .withNativeTimestamps(0)
+                .<ChangeRecord>customTransform("filter_timestamps", filterTimestampsProcessorSupplier())
+                .setLocalParallelism(1)
+                .groupingKey(record -> (Integer) record.key().toMap().get("id"))
+                .mapStateful(
+                        LongAccumulator::new,
+                        (accumulator, customerId, record) -> {
+                            long count = accumulator.get();
+                            accumulator.add(1);
+                            Operation operation = record.operation();
+                            RecordPart value = record.value();
+                            TableRow customer = value.toObject(TableRow.class);
+                            return entry(customerId + "/" + count, operation + ":" + customer);
+                        })
+                .setLocalParallelism(1)
+                .writeTo(Sinks.map(SINK_MAP_NAME));
+        return pipeline;
     }
 
     private void createTableWithData(String dbName, String tableName) throws SQLException {
