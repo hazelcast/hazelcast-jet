@@ -345,6 +345,14 @@ significant performance impact.
 
 Maximum number of *sustained* change records that could be produced in
 the database (by continuously inserting into and then deleting data
-from) was only around **20,000 rows/second**. This rate is much lower
-than what was possible with MySQL and is currently still under
-investigation.
+from) was only around **20,000 rows/second**.
+
+This rate is much lower than what was possible with MySQL and seems to
+stem from how [logical
+decoding](https://www.postgresql.org/docs/current/logicaldecoding-explanation.html)
+is implemented by PostgreSQL, namely that it seems to be a single
+threaded process which doesn't scale much.
+
+We are not sure if this is a technical limitation or is intentionally
+done so by Postgres to limit the impact of logical replication, since it
+can be enabled only on the primary server of the Postgres cluster.
