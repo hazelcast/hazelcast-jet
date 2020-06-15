@@ -37,11 +37,11 @@ public class AbstractMySqlIntegrationTest extends AbstractIntegrationTest {
             .withUsername("mysqluser")
             .withPassword("mysqlpw");
 
-    protected MySqlCdcSources.Builder initialSourceBuilder() {
-        return initialSourceBuilder("cdcMysql");
+    protected MySqlCdcSources.Builder sourceBuilder() {
+        return sourceBuilder("cdcMysql");
     }
 
-    protected MySqlCdcSources.Builder initialSourceBuilder(String name) {
+    protected MySqlCdcSources.Builder sourceBuilder(String name) {
         return MySqlCdcSources.mysql(name)
                 .setDatabaseAddress(mysql.getContainerIpAddress())
                 .setDatabasePort(mysql.getMappedPort(MYSQL_PORT))

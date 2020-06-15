@@ -52,7 +52,7 @@ public class MySqlListenWhiteBlackListIntegrationTest extends AbstractMySqlInteg
 
     @Test
     public void testWithoutWhiteBlacklist() throws Exception {
-        StreamSource<ChangeRecord> source = initialSourceBuilder()
+        StreamSource<ChangeRecord> source = sourceBuilder()
                 .build();
 
         List<String> expectedRecords = allExpectedOperations();
@@ -62,7 +62,7 @@ public class MySqlListenWhiteBlackListIntegrationTest extends AbstractMySqlInteg
 
     @Test
     public void testListenOnlyWhitelistDatabase() throws Exception {
-        StreamSource<ChangeRecord> source = initialSourceBuilder()
+        StreamSource<ChangeRecord> source = sourceBuilder()
                 .setDatabaseWhitelist(DATABASE + "2")
                 .build();
 
@@ -73,7 +73,7 @@ public class MySqlListenWhiteBlackListIntegrationTest extends AbstractMySqlInteg
 
     @Test
     public void testListenMoreWhitelistDatabase() throws Exception {
-        StreamSource<ChangeRecord> source = initialSourceBuilder()
+        StreamSource<ChangeRecord> source = sourceBuilder()
                 .setDatabaseWhitelist(DATABASE + "1", DATABASE + "3")
                 .build();
 
@@ -86,7 +86,7 @@ public class MySqlListenWhiteBlackListIntegrationTest extends AbstractMySqlInteg
 
     @Test
     public void testNotListenBlacklistDatabase() throws Exception {
-        StreamSource<ChangeRecord> source = initialSourceBuilder()
+        StreamSource<ChangeRecord> source = sourceBuilder()
                 .setDatabaseBlacklist(DATABASE + "2")
                 .build();
 
@@ -99,7 +99,7 @@ public class MySqlListenWhiteBlackListIntegrationTest extends AbstractMySqlInteg
 
     @Test
     public void testNotListenMoreBlacklistDatabase() throws Exception {
-        StreamSource<ChangeRecord> source = initialSourceBuilder()
+        StreamSource<ChangeRecord> source = sourceBuilder()
                 .setDatabaseBlacklist(DATABASE + "1", DATABASE + "3")
                 .build();
 
@@ -110,7 +110,7 @@ public class MySqlListenWhiteBlackListIntegrationTest extends AbstractMySqlInteg
 
     @Test
     public void testListenOnlyWhitelistTable() throws Exception {
-        StreamSource<ChangeRecord> source = initialSourceBuilder()
+        StreamSource<ChangeRecord> source = sourceBuilder()
                 .setTableWhitelist(DATABASE + "1.table0")
                 .build();
 
@@ -122,7 +122,7 @@ public class MySqlListenWhiteBlackListIntegrationTest extends AbstractMySqlInteg
 
     @Test
     public void testListenMoreWhitelistTable_inTheSameDb() throws Exception {
-        StreamSource<ChangeRecord> source = initialSourceBuilder()
+        StreamSource<ChangeRecord> source = sourceBuilder()
                 .setTableWhitelist(DATABASE + "1.table0, " + DATABASE + "1.table2")
                 .build();
 
@@ -135,7 +135,7 @@ public class MySqlListenWhiteBlackListIntegrationTest extends AbstractMySqlInteg
 
     @Test
     public void testListenMoreWhitelistTable_inTheDifferentDb() throws Exception {
-        StreamSource<ChangeRecord> source = initialSourceBuilder()
+        StreamSource<ChangeRecord> source = sourceBuilder()
                 .setTableWhitelist(DATABASE + "1.table0, " + DATABASE + "2.table1")
                 .build();
 
@@ -148,7 +148,7 @@ public class MySqlListenWhiteBlackListIntegrationTest extends AbstractMySqlInteg
 
     @Test
     public void testNotListenBlacklistTable() throws Exception {
-        StreamSource<ChangeRecord> source = initialSourceBuilder()
+        StreamSource<ChangeRecord> source = sourceBuilder()
                 .setTableBlacklist(DATABASE + "1.table0")
                 .build();
 
@@ -163,7 +163,7 @@ public class MySqlListenWhiteBlackListIntegrationTest extends AbstractMySqlInteg
 
     @Test
     public void testNotListenMoreBlacklistTable_inTheSameDb() throws Exception {
-        StreamSource<ChangeRecord> source = initialSourceBuilder()
+        StreamSource<ChangeRecord> source = sourceBuilder()
                 .setTableBlacklist(DATABASE + "1.table0, " + DATABASE + "1.table2")
                 .build();
 
@@ -177,7 +177,7 @@ public class MySqlListenWhiteBlackListIntegrationTest extends AbstractMySqlInteg
 
     @Test
     public void testNotListenMoreBlacklistTable_inTheDifferentDb() throws Exception {
-        StreamSource<ChangeRecord> source = initialSourceBuilder()
+        StreamSource<ChangeRecord> source = sourceBuilder()
                 .setTableBlacklist(DATABASE + "1.table0, " + DATABASE + "2.table1")
                 .build();
 
@@ -193,7 +193,7 @@ public class MySqlListenWhiteBlackListIntegrationTest extends AbstractMySqlInteg
 
     @Test
     public void testNotListenBlacklistTableInWhitelistDb() throws Exception {
-        StreamSource<ChangeRecord> source = initialSourceBuilder()
+        StreamSource<ChangeRecord> source = sourceBuilder()
                 .setDatabaseWhitelist(DATABASE + "1")
                 .setTableBlacklist(DATABASE + "1.table0")
                 .build();
@@ -208,7 +208,7 @@ public class MySqlListenWhiteBlackListIntegrationTest extends AbstractMySqlInteg
 
     @Test
     public void testNotListenBlacklistColumn() throws Exception {
-        StreamSource<ChangeRecord> source = initialSourceBuilder()
+        StreamSource<ChangeRecord> source = sourceBuilder()
                 .setColumnBlacklist(DATABASE + "1.table1.value_2")
                 .build();
 
@@ -226,7 +226,7 @@ public class MySqlListenWhiteBlackListIntegrationTest extends AbstractMySqlInteg
 
     @Test
     public void testNotListenMoreBlacklistColumn_inTheSameTable() throws Exception {
-        StreamSource<ChangeRecord> source = initialSourceBuilder()
+        StreamSource<ChangeRecord> source = sourceBuilder()
                 .setColumnBlacklist(DATABASE + "1.table1.value_1, " + DATABASE + "1.table1.value_2")
                 .build();
 
@@ -245,7 +245,7 @@ public class MySqlListenWhiteBlackListIntegrationTest extends AbstractMySqlInteg
 
     @Test
     public void testNotListenMoreBlacklistColumn_inTheDifferentTable() throws Exception {
-        StreamSource<ChangeRecord> source = initialSourceBuilder()
+        StreamSource<ChangeRecord> source = sourceBuilder()
                 .setColumnBlacklist(DATABASE + "1.table1.value_2, " + DATABASE + "1.table0.value_1")
                 .build();
 
@@ -265,7 +265,7 @@ public class MySqlListenWhiteBlackListIntegrationTest extends AbstractMySqlInteg
 
     @Test
     public void testNotListenBlacklistColumnInWhitelistDb() throws Exception {
-        StreamSource<ChangeRecord> source = initialSourceBuilder()
+        StreamSource<ChangeRecord> source = sourceBuilder()
                 .setDatabaseWhitelist(DATABASE + "1")
                 .setColumnBlacklist(DATABASE + "1.table1.value_2")
                 .build();
@@ -282,7 +282,7 @@ public class MySqlListenWhiteBlackListIntegrationTest extends AbstractMySqlInteg
 
     @Test
     public void testNotListenBlacklistColumnInWhitelistDbAndTable() throws Exception {
-        StreamSource<ChangeRecord> source = initialSourceBuilder()
+        StreamSource<ChangeRecord> source = sourceBuilder()
                 .setDatabaseWhitelist(DATABASE + "1")
                 .setTableWhitelist(DATABASE + "1.table1")
                 .setColumnBlacklist(DATABASE + "1.table1.value_2")
@@ -298,7 +298,7 @@ public class MySqlListenWhiteBlackListIntegrationTest extends AbstractMySqlInteg
 
     private void test(StreamSource<ChangeRecord> source, List<String> expectedRecords, int expectedInitialOps)
             throws SQLException {
-        Pipeline pipeline = preparePipeline(source);
+        Pipeline pipeline = pipeline(source);
 
         // when
         JetInstance jet = createJetMembers(2)[0];
@@ -320,7 +320,7 @@ public class MySqlListenWhiteBlackListIntegrationTest extends AbstractMySqlInteg
         }
     }
 
-    private Pipeline preparePipeline(StreamSource<ChangeRecord> source) {
+    private Pipeline pipeline(StreamSource<ChangeRecord> source) {
         Pipeline pipeline = Pipeline.create();
         pipeline.readFrom(source)
                 .withNativeTimestamps(0)

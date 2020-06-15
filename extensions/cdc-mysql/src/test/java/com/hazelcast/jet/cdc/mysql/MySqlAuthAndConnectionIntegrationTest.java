@@ -53,7 +53,7 @@ public class MySqlAuthAndConnectionIntegrationTest extends JetTestSupport {
                 .setClusterName("dbserver1")
                 .build();
 
-        Pipeline pipeline = preparePipeline(source);
+        Pipeline pipeline = pipeline(source);
 
         JetInstance jet = createJetMembers(2)[0];
 
@@ -75,7 +75,7 @@ public class MySqlAuthAndConnectionIntegrationTest extends JetTestSupport {
                 .setClusterName("dbserver1")
                 .build();
 
-        Pipeline pipeline = preparePipeline(source);
+        Pipeline pipeline = pipeline(source);
 
         JetInstance jet = createJetMembers(2)[0];
 
@@ -102,7 +102,7 @@ public class MySqlAuthAndConnectionIntegrationTest extends JetTestSupport {
                 .setClusterName("dbserver1")
                 .build();
 
-        Pipeline pipeline = preparePipeline(source);
+        Pipeline pipeline = pipeline(source);
 
         JetInstance jet = createJetMembers(2)[0];
 
@@ -123,7 +123,7 @@ public class MySqlAuthAndConnectionIntegrationTest extends JetTestSupport {
                 .setClusterName("dbserver1")
                 .build();
 
-        Pipeline pipeline = preparePipeline(source);
+        Pipeline pipeline = pipeline(source);
 
         JetInstance jet = createJetMembers(2)[0];
 
@@ -133,7 +133,7 @@ public class MySqlAuthAndConnectionIntegrationTest extends JetTestSupport {
         assertEqualsEventually(() -> job.getStatus(), FAILED);
     }
 
-    private Pipeline preparePipeline(StreamSource<ChangeRecord> source) {
+    private Pipeline pipeline(StreamSource<ChangeRecord> source) {
         Pipeline pipeline = Pipeline.create();
         pipeline.readFrom(source)
                 .withoutTimestamps()

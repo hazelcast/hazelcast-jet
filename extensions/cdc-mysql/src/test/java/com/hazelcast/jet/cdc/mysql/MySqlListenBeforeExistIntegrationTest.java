@@ -47,11 +47,11 @@ public class MySqlListenBeforeExistIntegrationTest extends AbstractMySqlIntegrat
                 "1001/0:INSERT:TableRow {id=1001, value1=someValue1, value2=someValue2, value3=null}"
         );
 
-        StreamSource<ChangeRecord> source = initialSourceBuilder()
+        StreamSource<ChangeRecord> source = sourceBuilder()
                 .setDatabaseWhitelist(DATABASE)
                 .build();
 
-        Pipeline pipeline = preparePipeline(source);
+        Pipeline pipeline = pipeline(source);
 
         // when
         JetInstance jet = createJetMembers(2)[0];
@@ -79,12 +79,12 @@ public class MySqlListenBeforeExistIntegrationTest extends AbstractMySqlIntegrat
                 "1001/0:INSERT:TableRow {id=1001, value1=someValue1, value2=someValue2, value3=null}"
         );
 
-        StreamSource<ChangeRecord> source = initialSourceBuilder()
+        StreamSource<ChangeRecord> source = sourceBuilder()
                 .setDatabaseWhitelist(DATABASE)
                 .setTableWhitelist(DATABASE + ".someTable")
                 .build();
 
-        Pipeline pipeline = preparePipeline(source);
+        Pipeline pipeline = pipeline(source);
 
         // when
         JetInstance jet = createJetMembers(2)[0];
@@ -114,12 +114,12 @@ public class MySqlListenBeforeExistIntegrationTest extends AbstractMySqlIntegrat
                 "1002/0:INSERT:TableRow {id=1002, value1=someValue4, value2=someValue5, value3=someValue6}"
         );
 
-        StreamSource<ChangeRecord> source = initialSourceBuilder()
+        StreamSource<ChangeRecord> source = sourceBuilder()
                 .setDatabaseWhitelist(DATABASE)
                 .setTableWhitelist(DATABASE + ".someTable")
                 .build();
 
-        Pipeline pipeline = preparePipeline(source);
+        Pipeline pipeline = pipeline(source);
 
         // when
         JetInstance jet = createJetMembers(2)[0];
@@ -140,7 +140,7 @@ public class MySqlListenBeforeExistIntegrationTest extends AbstractMySqlIntegrat
         }
     }
 
-    private Pipeline preparePipeline(StreamSource<ChangeRecord> source) {
+    private Pipeline pipeline(StreamSource<ChangeRecord> source) {
         Pipeline pipeline = Pipeline.create();
         pipeline.readFrom(source)
                 .withNativeTimestamps(0)

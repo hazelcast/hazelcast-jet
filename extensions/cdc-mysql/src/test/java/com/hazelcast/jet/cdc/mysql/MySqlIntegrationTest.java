@@ -289,7 +289,7 @@ public class MySqlIntegrationTest extends AbstractMySqlIntegrationTest {
 
     @Nonnull
     private StreamSource<ChangeRecord> source(String tableName) {
-        return initialSourceBuilder(tableName)
+        return sourceBuilder(tableName)
                 .setDatabaseWhitelist("inventory")
                 .setTableWhitelist("inventory." + tableName)
                 .build();
