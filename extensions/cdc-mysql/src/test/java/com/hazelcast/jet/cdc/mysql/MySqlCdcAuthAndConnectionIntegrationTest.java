@@ -36,7 +36,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.testcontainers.containers.MySQLContainer.MYSQL_PORT;
 
 @Category(NightlyTest.class)
-public class MySqlAuthAndConnectionIntegrationTest extends JetTestSupport {
+public class MySqlCdcAuthAndConnectionIntegrationTest extends JetTestSupport {
 
     @Rule
     public MySQLContainer<?> mysql = new MySQLContainer<>("debezium/example-mysql:1.2")

@@ -37,11 +37,10 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 import static com.hazelcast.jet.Util.entry;
-import static com.hazelcast.jet.cdc.mysql.AbstractMySqlIntegrationTest.DATABASE;
 import static com.hazelcast.test.HazelcastTestSupport.assertEqualsEventually;
 
 @Category(NightlyTest.class)
-public class MySqlListenWhiteBlackListIntegrationTest extends AbstractMySqlIntegrationTest {
+public class MySqlCdcListenWhiteBlackListIntegrationTest extends AbstractMySqlCdcIntegrationTest {
 
     @Before
     public void before() throws SQLException {

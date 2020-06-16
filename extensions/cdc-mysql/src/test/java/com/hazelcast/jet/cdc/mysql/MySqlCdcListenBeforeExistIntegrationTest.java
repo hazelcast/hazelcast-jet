@@ -35,11 +35,10 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 import static com.hazelcast.jet.Util.entry;
-import static com.hazelcast.jet.cdc.mysql.AbstractMySqlIntegrationTest.DATABASE;
 import static com.hazelcast.jet.core.JobStatus.RUNNING;
 
 @Category(NightlyTest.class)
-public class MySqlListenBeforeExistIntegrationTest extends AbstractMySqlIntegrationTest {
+public class MySqlCdcListenBeforeExistIntegrationTest extends AbstractMySqlCdcIntegrationTest {
 
     @Test
     public void testListenBeforeDatabaseExists() throws Exception {

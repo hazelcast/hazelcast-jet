@@ -48,7 +48,7 @@ import java.util.concurrent.TimeUnit;
 
 import static com.hazelcast.jet.Util.entry;
 
-public class MySqlCdcIntegrationTest extends AbstractMySqlIntegrationTest {
+public class MySqlCdcIntegrationTest extends AbstractMySqlCdcIntegrationTest {
 
     @Test
     //category intentionally left out, we want this one test to run in standard test suits

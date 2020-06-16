@@ -27,7 +27,7 @@ import org.testcontainers.containers.MySQLContainer;
 
 import static org.testcontainers.containers.MySQLContainer.MYSQL_PORT;
 
-public class AbstractMySqlIntegrationTest extends AbstractIntegrationTest {
+public class AbstractMySqlCdcIntegrationTest extends AbstractIntegrationTest {
 
     protected static final String DATABASE = "testDb";
     protected static final String SINK_MAP_NAME = "resultsMap";
