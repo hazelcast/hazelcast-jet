@@ -40,7 +40,7 @@ to decide on a good background GC thread count, in some cases you can
 improve the throughput by using `-XX:ConcGCThreads`.
 
 Our initial test with Shenandoah hit an issue with its pacer heuristics
-that decides how much background GC effort to apply in order to meet, but
+that decide how much background GC effort to apply in order to meet, but
 not overshoot, the application's needs. JDK versions released on July
 14, 2020 or later introduce a fix for that, with which Shenandoah is on
 par with ZGC.
