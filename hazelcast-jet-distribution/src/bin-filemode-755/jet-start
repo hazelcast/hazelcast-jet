@@ -15,7 +15,7 @@ fi
 
 if [ "${PROMETHEUS_PORT}" ]; then
     echo "Prometheus enabled on port ${PROMETHEUS_PORT}"
-    PROMETHEUS="-javaagent:${JET_HOME}/lib/jmx_prometheus_javaagent.jar=${PROMETHEUS_PORT}:${JET_HOME}/config/jmx_agent_config.yaml ${JAVA_OPTS}"
+    PROMETHEUS="-javaagent:${JET_HOME}/lib/jmx_prometheus_javaagent-${prometheus.version}.jar=${PROMETHEUS_PORT}:${JET_HOME}/config/jmx_agent_config.yaml"
 fi
 
 JAVA_OPTS_ARRAY=(\

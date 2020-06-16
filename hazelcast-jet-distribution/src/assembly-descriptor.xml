@@ -38,14 +38,6 @@
         <dependencySet>
             <useProjectArtifact>false</useProjectArtifact>
             <includes>
-                <include>io.prometheus.jmx:jmx_prometheus_javaagent</include>
-            </includes>
-            <outputDirectory>lib</outputDirectory>
-            <outputFileNameMapping>${artifact.artifactId}.${artifact.extension}</outputFileNameMapping>
-        </dependencySet>
-        <dependencySet>
-            <useProjectArtifact>false</useProjectArtifact>
-            <includes>
                 <include>com.hazelcast.jet:hazelcast-jet-avro</include>
                 <include>com.hazelcast.jet:hazelcast-jet-cdc-debezium</include>
                 <include>com.hazelcast.jet:hazelcast-jet-cdc-mysql</include>
