@@ -78,3 +78,16 @@ lightweight `jackson-jr` JSON library under the hood. You can also use
 [Jackson Annotations](https://github.com/FasterXML/jackson-annotations/wiki/Jackson-Annotations)
 in your transforms by adding `jackson-annotations` library to the
 classpath.
+
+For example, you can convert JSON formatted string to a bean:
+
+```java
+BatchStage<Person> persons = stage.map(jsonString -> JsonUtil.beanFrom(jsonString, Person.class));
+```
+
+If you don't have a mapping object class, you can use `mapFrom` to
+convert the JSON formatted string to a `Map`.
+
+```java
+BatchStage<Map<String, Object>> personsAsMap = stage.map(jsonString -> JsonUtil.mapFrom(jsonString));
+```
