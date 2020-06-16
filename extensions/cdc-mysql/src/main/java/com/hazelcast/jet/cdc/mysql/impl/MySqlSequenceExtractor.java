@@ -56,11 +56,6 @@ public class MySqlSequenceExtractor implements SequenceExtractor {
         return !Objects.equals(this.server, server) || !Objects.equals(this.binlog, binlog);
     }
 
-    private static long computeSource(String server, String binlog) {
-        byte[] bytes = (server + binlog).getBytes(UTF_8);
-        return HashUtil.MurmurHash3_x64_64(bytes, 0, bytes.length);
-    }
-
     private long adjustForCollision(long source) {
         if (this.source == source) {
             //source value should have changed, but hashing unfortunately
@@ -73,5 +68,10 @@ public class MySqlSequenceExtractor implements SequenceExtractor {
         } else {
             return source;
         }
+    }
+
+    private static long computeSource(String server, String binlog) {
+        byte[] bytes = (server + binlog).getBytes(UTF_8);
+        return HashUtil.MurmurHash3_x64_64(bytes, 0, bytes.length);
     }
 }

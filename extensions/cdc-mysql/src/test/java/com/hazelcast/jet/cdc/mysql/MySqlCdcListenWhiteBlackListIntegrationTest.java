@@ -26,18 +26,18 @@ import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.StreamSource;
 import com.hazelcast.test.annotation.NightlyTest;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
+
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
 
 import static com.hazelcast.jet.Util.entry;
-import static com.hazelcast.test.HazelcastTestSupport.assertEqualsEventually;
 
 @Category(NightlyTest.class)
 public class MySqlCdcListenWhiteBlackListIntegrationTest extends AbstractMySqlCdcIntegrationTest {
