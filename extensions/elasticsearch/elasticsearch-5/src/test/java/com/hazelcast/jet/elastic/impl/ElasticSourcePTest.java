@@ -165,30 +165,6 @@ public class ElasticSourcePTest {
         assertThat(request.scroll().keepAlive().getStringRep()).isEqualTo(KEEP_ALIVE);
     }
 
-/*
-    @Test
-    public void when_runProcessorWithCoLocation_then_useLocalNodeOnly() throws Exception {
-        RestClient lowClient = mock(RestClient.class);
-        when(mockClient.getLowLevelClient()).thenReturn(lowClient);
-        when(response.getHits()).thenReturn(new SearchHits(new SearchHit[]{}, 0, Float.NaN));
-
-        TestSupport testSupport = runProcessorWithCoLocation(newArrayList(
-                new Shard("my-index", 0, Prirep.p, 42, "STARTED", "10.0.0.1", "10.0.0.1:9200", "es1")
-        ));
-        testSupport.expectOutput(emptyList());
-
-        ArgumentCaptor<Collection<Node>> nodesCaptor = ArgumentCaptor.forClass(Collection.class);
-
-        verify(lowClient).setNodes(nodesCaptor.capture());
-
-        Collection<Node> nodes = nodesCaptor.getValue();
-        assertThat(nodes).hasSize(1);
-
-        Node node = nodes.iterator().next();
-        assertThat(node.getHost().toHostString()).isEqualTo("10.0.0.1:9200");
-    }
-*/
-
     @Test
     public void when_runProcessorWithCoLocation_thenSearchShardsWithPreference() throws Exception {
         when(response.getHits()).thenReturn(new SearchHits(new SearchHit[]{}, 0, Float.NaN));
