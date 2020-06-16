@@ -35,7 +35,6 @@ import org.elasticsearch.search.slice.SliceBuilder;
 
 import javax.annotation.Nonnull;
 import java.io.IOException;
-import java.lang.reflect.Field;
 import java.util.List;
 
 import static java.util.Objects.requireNonNull;
@@ -88,7 +87,7 @@ final class ElasticSourceP<T> extends AbstractProcessor {
             }
         }
 
-        restClient = getRestClient(client);
+        restClient = ElasticCatClient.getRestClient(client);
         if (configuration.isCoLocatedReadingEnabled()) {
             logger.fine("Assigned shards: " + shards);
             if (shards.isEmpty()) {
@@ -106,12 +105,6 @@ final class ElasticSourceP<T> extends AbstractProcessor {
 
         scrollTraverser = new ElasticScrollTraverser(configuration, client, sr, logger);
         traverser = scrollTraverser.map(configuration.mapToItemFn());
-    }
-
-    private RestClient getRestClient(RestHighLevelClient client) throws Exception {
-        Field field = RestHighLevelClient.class.getDeclaredField("client");
-        field.setAccessible(true);
-        return (RestClient) field.get(client);
     }
 
     private HttpHost createLocalElasticNode() {

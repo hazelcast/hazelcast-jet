@@ -27,11 +27,13 @@ import com.hazelcast.logging.Logger;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.elasticsearch.client.Response;
 import org.elasticsearch.client.RestClient;
+import org.elasticsearch.client.RestHighLevelClient;
 
 import javax.annotation.Nonnull;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -266,6 +268,16 @@ public class ElasticCatClient implements Closeable {
                     ", httpAddress='" + httpAddress + '\'' +
                     ", master='" + master + '\'' +
                     '}';
+        }
+    }
+
+    static RestClient getRestClient(RestHighLevelClient client) {
+        try {
+            Field field = RestHighLevelClient.class.getDeclaredField("client");
+            field.setAccessible(true);
+            return (RestClient) field.get(client);
+        } catch (NoSuchFieldException | IllegalAccessException e) {
+            throw new JetException("Could not get RestClient from RestHighLevelClient", e);
         }
     }
 
