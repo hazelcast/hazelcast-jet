@@ -13,7 +13,7 @@ If you are still on JDK 8, seriously consider upgrading. We found that
 none of its garbage collectors are a match for the offerings of JDK 11,
 which is the current version with Oracle's Long-Term Support (LTS).
 
-## The G1 Collector is Great for Most Worlkoads
+## The G1 Collector is Great for Most Workloads
 
 For batch workloads, as well as streaming workloads that can tolerate
 occasional latency spikes of 2-3 seconds, the G1 collector is the best
@@ -40,7 +40,7 @@ to decide on a good background GC thread count, in some cases you can
 improve the throughput by using `-XX:ConcGCThreads`.
 
 Our initial test with Shenandoah hit an issue with its pacer heuristics
-that decide how much background GC effort to apply in order to meet, but
+that decides how much background GC effort to apply in order to meet, but
 not overshoot, the application's needs. JDK versions released on July
 14, 2020 or later introduce a fix for that, with which Shenandoah is on
 par with ZGC.
