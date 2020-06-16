@@ -45,6 +45,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.function.ToIntFunction;
 
 /**
@@ -53,6 +54,15 @@ import java.util.function.ToIntFunction;
  * @param <V> type of values of the map being written
  */
 public abstract class AbstractUpdateMapP<T, K, V> extends AsyncHazelcastWriterP {
+
+    /**
+     * This processor uses {@link IMap#submitToKeys(Set, EntryProcessor)}, which
+     * if used from multiple parallel async operations can end up reordering
+     * the changes done to the map and this in turn can result in unforseen
+     * consequences. For this reason we need to limit ourselves to a single
+     * in-flight operation at a time.
+     */
+    private static final int MAX_PARALLEL_ASYNC_OPS = 1;
 
     private static final int PENDING_ITEM_COUNT_LIMIT = 1024;
 
@@ -71,11 +81,10 @@ public abstract class AbstractUpdateMapP<T, K, V> extends AsyncHazelcastWriterP 
 
     public AbstractUpdateMapP(
             @Nonnull HazelcastInstance instance,
-            int maxParallelAsyncOps,
             @Nonnull String mapName,
             @Nonnull FunctionEx<? super T, ? extends K> keyFn
     ) {
-        super(instance, maxParallelAsyncOps);
+        super(instance, MAX_PARALLEL_ASYNC_OPS);
         this.mapName = Objects.requireNonNull(mapName, "mapName");
         this.keyFn = keyFn;
     }

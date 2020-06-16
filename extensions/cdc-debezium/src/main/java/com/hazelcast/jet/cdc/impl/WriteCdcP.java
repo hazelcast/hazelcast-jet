@@ -55,7 +55,7 @@ public class WriteCdcP<K, V> extends AbstractUpdateMapP<ChangeRecord, K, V> {
             @Nonnull FunctionEx<? super ChangeRecord, ? extends K> keyFn,
             @Nonnull FunctionEx<? super ChangeRecord, ? extends V> valueFn
     ) {
-        super(instance, MAX_PARALLEL_ASYNC_OPS_DEFAULT, map, keyFn);
+        super(instance, map, keyFn);
         this.valueFn = valueFn;
 
     }
