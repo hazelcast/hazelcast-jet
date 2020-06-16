@@ -16,9 +16,11 @@
 
 package com.hazelcast.jet.elastic;
 
+import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sink;
 import com.hazelcast.jet.pipeline.test.TestSources;
+import org.elasticsearch.action.admin.indices.create.CreateIndexRequest;
 import org.elasticsearch.action.admin.indices.refresh.RefreshRequest;
 import org.elasticsearch.action.bulk.BulkRequest;
 import org.elasticsearch.action.delete.DeleteRequest;
@@ -27,6 +29,7 @@ import org.elasticsearch.action.search.SearchRequest;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.support.WriteRequest.RefreshPolicy;
 import org.elasticsearch.action.update.UpdateRequest;
+import org.elasticsearch.client.RequestOptions;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -35,6 +38,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.elasticsearch.client.RequestOptions.DEFAULT;
 
 public abstract class CommonElasticSinksTest extends BaseElasticTest {
@@ -135,6 +139,55 @@ public abstract class CommonElasticSinksTest extends BaseElasticTest {
 
         submitJob(p);
         refreshIndex();
+
+        assertNoDocuments("my-index");
+    }
+
+    /**
+     * Regression test for checking that behavior was not unexpectedly changed.
+     * It is possible that behavior will be changed in any of future version
+     * since failing job based on unsuccessful delete/update leads to problems
+     * when job are restarted.
+     */
+    @Test
+    public void given_documentNotInIndex_whenWriteToElasticSinkUpdateRequest_then_jobShouldFail() throws Exception {
+        elasticClient.indices().create(new CreateIndexRequest("my-index"), RequestOptions.DEFAULT);
+
+        Sink<TestItem> elasticSink = ElasticSinks.elastic(
+                elasticClientSupplier(),
+                item -> new UpdateRequest("my-index", "document", item.id).doc(item.asMap())
+        );
+
+        Pipeline p = Pipeline.create();
+        p.readFrom(TestSources.items(new TestItem("notExist", "Frantisek")))
+         .writeTo(elasticSink);
+
+        assertThatThrownBy(() -> submitJob(p))
+                .hasRootCauseInstanceOf(JetException.class)
+                .hasStackTraceContaining("document missing");
+    }
+
+    @Test
+    public void given_documentInIndex_whenWriteToElasticSinkDeleteRequestTwice_then_jobShouldFinishSuccessfully()
+            throws Exception {
+
+        Map<String, Object> doc = new HashMap<>();
+        doc.put("name", "Frantisek");
+        String id = indexDocument("my-index", doc);
+
+        Sink<String> elasticSink = new ElasticSinkBuilder<>()
+                .clientFn(elasticClientSupplier())
+                .mapToRequestFn((String item) -> new DeleteRequest("my-index", "document", item))
+                .bulkRequestFn(() -> new BulkRequest().setRefreshPolicy(RefreshPolicy.IMMEDIATE))
+                .build();
+
+        Pipeline p = Pipeline.create();
+        p.readFrom(TestSources.items(id))
+         .writeTo(elasticSink);
+
+        // Submit job 2x to delete non-existing document on 2nd run
+        submitJob(p);
+        submitJob(p);
 
         assertNoDocuments("my-index");
     }
