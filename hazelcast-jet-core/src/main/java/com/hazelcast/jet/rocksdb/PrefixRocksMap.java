@@ -34,13 +34,27 @@ import org.rocksdb.WriteOptions;
 import javax.annotation.Nonnull;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Map.Entry;
 
 import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
 
 /**
- * Stores lists of values mapped to keys.
+ * A RocksDB-backed Map that stores lists of values mapped to keys.
+ * This Map makes use of RocksDB bulk-loading and prefix iteration features.
+ * Lifecycle:
+ * (1) A processor acquire an instance of this class using RocksDBStateBackend.getPrefixMap().
+ * (2) The processors issues a series of add() operations to load keys and values
+ * then call compact() to prepare the map for reads.
+ * (3) The processor acquires one or more iterators using prefixRocksIterator().
+ * (4) The processor can issue a series of get() operations
+ * using the iterators it acquired to retrieve the values in the map.
+ * (5) The processor calls close() to release all memory this map owns.
+ * <p>
+ * Notes:
+ * (1) get() operations on this map are thread-safe however add() operations are not.
+ * (2) Not calling close() after execution completes will cause a memory leak.
  *
  * @param <K> the type of key
  * @param <V> the type of value
@@ -49,38 +63,33 @@ public class PrefixRocksMap<K, V> implements Iterable<Entry<K, Iterator<V>>> {
     private final RocksDB db;
     private final String name;
     private final InternalSerializationService serializationService;
-    private final RocksDBOptions options;
+    private final ArrayList<RocksIterator> iterators = new ArrayList<>();
+    private final ColumnFamilyOptions columnFamilyOptions;
+    private final WriteOptions writeOptions;
+    private final ReadOptions prefixIteratorOptions;
+    private final ReadOptions iteratorOptions;
     private ColumnFamilyHandle cfh;
-    private long counter = 0;
+    private long counter = Long.MIN_VALUE;
 
-    PrefixRocksMap(RocksDB db, String name, RocksDBOptions options,
+    PrefixRocksMap(RocksDB db, String name, @Nonnull RocksDBOptions options,
                    InternalSerializationService serializationService) {
         this.db = db;
         this.name = name;
-        this.options = options;
         this.serializationService = serializationService;
+        columnFamilyOptions = options.prefixColumnFamilyOptions();
+        writeOptions = options.writeOptions();
+        prefixIteratorOptions = options.prefixIteratorOptions();
+        iteratorOptions = options.iteratorOptions();
     }
 
     //lazily creates the column family since the prefix is only specified once the map is actually used
     private void open(K prefix) {
         try {
             cfh = db.createColumnFamily(new ColumnFamilyDescriptor(serialize(name),
-                    columnFamilyOptions().useFixedLengthPrefixExtractor(serialize(prefix).length)));
+                    columnFamilyOptions.useFixedLengthPrefixExtractor(serialize(prefix).length)));
         } catch (RocksDBException e) {
             throw new JetException("Failed to create RocksMap", e);
         }
-    }
-
-    private WriteOptions writeOptions() {
-        return options.writeOptions();
-    }
-
-    private ReadOptions readOptions() {
-        return options.readOptions();
-    }
-
-    private ColumnFamilyOptions columnFamilyOptions() {
-        return options.columnFamilyOptions();
     }
 
     /**
@@ -91,7 +100,7 @@ public class PrefixRocksMap<K, V> implements Iterable<Entry<K, Iterator<V>>> {
             open(key);
         }
         try {
-            db.put(cfh, writeOptions(), pack(key), serialize(value));
+            db.put(cfh, writeOptions, pack(key), serialize(value));
         } catch (Exception e) {
             throw new JetException("Operation Failed: add", e);
         }
@@ -101,12 +110,15 @@ public class PrefixRocksMap<K, V> implements Iterable<Entry<K, Iterator<V>>> {
      * Retrieves all values associated with the given key.
      * Callers need to first acquire a native RocksDB iterator
      * by calling prefixRocksIterator() and keeping it for later calls.
+     *
+     * @return an iterator over the values associated with the key.
      */
     public Iterator<V> get(RocksIterator iterator, K key) {
         if (cfh == null) {
             open(key);
         }
         iterator.seek(serialize(key));
+
 
         return new Iterator<>() {
             @Override
@@ -116,21 +128,11 @@ public class PrefixRocksMap<K, V> implements Iterable<Entry<K, Iterator<V>>> {
 
             @Override
             public V next() {
-               V value =  deserialize(iterator.value());
+                V value = deserialize(iterator.value());
                 iterator.next();
                 return value;
-            }};
-    }
-
-    public void remove(K key) throws JetException {
-        if (cfh == null) {
-            open(key);
-        }
-        try {
-            db.delete(cfh, writeOptions(), serialize(key));
-        } catch (RocksDBException e) {
-            throw new JetException("Operation Failed : remove ", e);
-        }
+            }
+        };
     }
 
     /**
@@ -138,11 +140,13 @@ public class PrefixRocksMap<K, V> implements Iterable<Entry<K, Iterator<V>>> {
      * The returned iterator is used by callers to preform prefix reads and iteration.
      * Should be used with caution not to create to many native iterators.
      * Callers need to reuse the returned iterator.
-     * Creating and iterator on each read or iteration will take much memory
-     * and more likely cause the job to fail.
+     * Otherwise, creating and iterator on each read will take too much memory
+     * and cause the job to fail.
      */
     public RocksIterator prefixRocksIterator() {
-        return db.newIterator(cfh, readOptions().setPrefixSameAsStart(true));
+        RocksIterator rocksIterator = db.newIterator(cfh, prefixIteratorOptions);
+        iterators.add(rocksIterator);
+        return rocksIterator;
     }
 
     /**
@@ -157,7 +161,8 @@ public class PrefixRocksMap<K, V> implements Iterable<Entry<K, Iterator<V>>> {
 
     /**
      * Compacts RocksMap's ColumnFamily from level 0 to level 1.
-     * This should be invoked to prepare RocksMap for reads after a series of prefixWrite().
+     * This should be invoked to prepare RocksMap for reads
+     * after bulk-loading with a series of add() calls.
      */
     public void compact() throws JetException {
         try {
@@ -166,6 +171,20 @@ public class PrefixRocksMap<K, V> implements Iterable<Entry<K, Iterator<V>>> {
         } catch (RocksDBException e) {
             throw new JetException("Failed to Compact RocksDB", e);
         }
+    }
+
+    /**
+     * Releases all native handles that this map acquires.
+     */
+    public void close() {
+        columnFamilyOptions.close();
+        writeOptions.close();
+        iteratorOptions.close();
+        prefixIteratorOptions.close();
+        for (RocksIterator rocksIterator : iterators) {
+            rocksIterator.close();
+        }
+        cfh.close();
     }
 
     private <T> byte[] serialize(T item) {
@@ -185,6 +204,7 @@ public class PrefixRocksMap<K, V> implements Iterable<Entry<K, Iterator<V>>> {
         return serializationService.readObject(in);
     }
 
+    @Nonnull
     private <T> byte[] pack(T item) {
         try {
             ByteArrayOutputStream bytes = new ByteArrayOutputStream();
@@ -201,7 +221,7 @@ public class PrefixRocksMap<K, V> implements Iterable<Entry<K, Iterator<V>>> {
         private final RocksIterator prefixIterator;
 
         PrefixRocksMapIterator() {
-            iterator = db.newIterator(cfh, readOptions().setTotalOrderSeek(true));
+            iterator = db.newIterator(cfh, iteratorOptions);
             iterator.seekToFirst();
             prefixIterator = prefixRocksIterator();
         }
@@ -213,10 +233,11 @@ public class PrefixRocksMap<K, V> implements Iterable<Entry<K, Iterator<V>>> {
 
         @Override
         public Entry<K, Iterator<V>> next() {
-            Tuple2<K, Iterator<V>> tuple = tuple2(deserialize(iterator.key()), get(prefixIterator, deserialize(iterator.key())));
+            Tuple2<K, Iterator<V>> tuple = tuple2(deserialize(iterator.key()),
+                    get(prefixIterator, deserialize(iterator.key())));
             //skip over the current prefix
             K current = deserialize(iterator.key());
-            while(deserialize(iterator.key()).equals(current) && iterator.isValid()) {
+            while (deserialize(iterator.key()).equals(current) && iterator.isValid()) {
                 iterator.next();
             }
             return tuple;

@@ -18,12 +18,14 @@ package com.hazelcast.jet.rocksdb;
 
 import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.jet.JetException;
+import org.rocksdb.Options;
 import org.rocksdb.RocksDB;
 
 import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 
 
@@ -42,9 +44,13 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public final class RocksDBStateBackend {
     private final AtomicInteger counter = new AtomicInteger(0);
+    private final ArrayList<PrefixRocksMap> prefixMaps = new ArrayList<>();
+    private final ArrayList<RocksMap> maps = new ArrayList<>();
+    private final Options options = new RocksDBOptions().options();
     private volatile RocksDB db;
     private InternalSerializationService serializationService;
     private Path directory;
+
 
     /**
      * Initialize the State Backend with job-level information.
@@ -63,13 +69,11 @@ public final class RocksDBStateBackend {
      * This method is only used for testing.
      *
      * @param serializationService the serialization serivice configured for this job.
-     **/
+     */
     public RocksDBStateBackend initialize(InternalSerializationService serializationService) throws JetException {
         this.serializationService = serializationService;
         try {
-            String testPath = "C:\\Users\\Mohamed Mandouh\\hazelcast-jet\\" +
-                    "hazelcast-jet-core\\src\\main\\resources\\database";
-//            String testPath = "/home/mmandouh/data";
+            String testPath = "/home/mmandouh/data";
             this.directory = Files.createTempDirectory(Path.of(testPath), "rocksdb-temp");
         } catch (IOException e) {
             throw new JetException("Failed to create RocksDB directory", e);
@@ -86,7 +90,7 @@ public final class RocksDBStateBackend {
                 if (db == null) {
                     try {
                         RocksDB.loadLibrary();
-                        db = RocksDB.open(new RocksDBOptions().options(), directory.toString());
+                        db = RocksDB.open(options, directory.toString());
                     } catch (Exception e) {
                         throw new JetException("Failed to create a RocksDB instance", e);
                     }
@@ -104,7 +108,10 @@ public final class RocksDBStateBackend {
      */
     @Nonnull
     public <K, V> RocksMap<K, V> getMap() throws JetException {
-        return new RocksMap<>(db, getNextName(), new RocksDBOptions(), serializationService);
+        assert db != null : "state backend was not opened";
+        RocksMap<K, V> map = new RocksMap<>(db, getNextName(), new RocksDBOptions(), serializationService);
+        maps.add(map);
+        return map;
     }
 
     /**
@@ -115,7 +122,10 @@ public final class RocksDBStateBackend {
      */
     @Nonnull
     public <K, V> PrefixRocksMap<K, V> getPrefixMap() throws JetException {
-        return new PrefixRocksMap<>(db, getNextName(), new RocksDBOptions(), serializationService);
+        assert db != null : "state backend was not opened";
+        PrefixRocksMap<K, V> map = new PrefixRocksMap<>(db, getNextName(), new RocksDBOptions(), serializationService);
+        prefixMaps.add(map);
+        return map;
     }
 
 
@@ -126,7 +136,10 @@ public final class RocksDBStateBackend {
      * @throws JetException if the database is closed
      */
     public void close() throws JetException {
+        options.close();
         if (db != null) {
+            prefixMaps.forEach(PrefixRocksMap::close);
+            maps.forEach(RocksMap::close);
             db.close();
         }
     }

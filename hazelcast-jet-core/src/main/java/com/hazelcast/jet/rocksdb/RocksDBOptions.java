@@ -25,37 +25,55 @@ import org.rocksdb.ReadOptions;
 import org.rocksdb.VectorMemTableConfig;
 import org.rocksdb.WriteOptions;
 
-/**
- * Contains RocksDB configurations suitable for bulk-loading.
- */
-public class RocksDBOptions {
+class RocksDBOptions {
+    private static final int MEMTABLE_SIZE = 64 * 1024 * 1024;
+    private static final int MEMTABLE_NUMBER = 2;
+    private static final int MEMTABLES_SEALED = 0;
+    private static final int LEVELS = 2;
+    private static final int FLUSHES = 2;
+    private static final int BLOOM_BITS = 10;
+
+    //TODO: make options configurable and separate prefix and regular options
     Options options() {
         return new Options()
                 .setCreateIfMissing(true)
+                .setMaxBackgroundFlushes(FLUSHES)
+                // TODO: can't split into two modes, needs to be set when db is opened
                 .prepareForBulkLoad()
-                .setMaxBackgroundFlushes(2)
                 .setAllowConcurrentMemtableWrite(false)
                 .setDisableAutoCompactions(true);
     }
 
-    public ColumnFamilyOptions columnFamilyOptions() {
+    ColumnFamilyOptions columnFamilyOptions() {
+        return new ColumnFamilyOptions();
+    }
+
+    ColumnFamilyOptions prefixColumnFamilyOptions() {
         return new ColumnFamilyOptions()
-                .setMaxWriteBufferNumber(4)
-                .setMaxWriteBufferNumberToMaintain(0)
-                .setNumLevels(2)
-                .setWriteBufferSize(32 * 1024 * 1024)
+                .setMaxWriteBufferNumber(MEMTABLE_NUMBER)
+                .setMaxWriteBufferNumberToMaintain(MEMTABLES_SEALED)
+                .setNumLevels(LEVELS)
+                .setWriteBufferSize(MEMTABLE_SIZE)
                 .setMemTableConfig(new VectorMemTableConfig())
                 .setTableFormatConfig(new BlockBasedTableConfig()
                         .setIndexType(IndexType.kHashSearch)
-                        .setFilter(new BloomFilter(10, false))
+                        .setFilter(new BloomFilter(BLOOM_BITS, false))
                         .setWholeKeyFiltering(false));
+    }
+
+    WriteOptions writeOptions() {
+        return new WriteOptions().setDisableWAL(true);
     }
 
     ReadOptions readOptions() {
         return new ReadOptions();
     }
 
-    WriteOptions writeOptions() {
-        return new WriteOptions().setDisableWAL(true);
+    public ReadOptions iteratorOptions() {
+        return new ReadOptions().setTotalOrderSeek(true);
+    }
+
+    public ReadOptions prefixIteratorOptions() {
+        return new ReadOptions().setPrefixSameAsStart(true);
     }
 }

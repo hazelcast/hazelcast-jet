@@ -72,9 +72,9 @@ public class HashJoinP<E0> extends AbstractProcessor {
     private final List<Function<E0, Object>> keyFns;
     private final List<PrefixRocksMap> lookupTables;
     private final FlatMapper<E0, Object> flatMapper;
-    private boolean ordinal0Consumed;
     //pool of native iterators, should be made in another way?
     private final List<RocksIterator> iterators;
+    private boolean ordinal0Consumed;
 
     @SuppressFBWarnings(value = "NP_PARAMETER_MUST_BE_NONNULL_BUT_MARKED_AS_NULLABLE",
             justification = "https://github.com/spotbugs/spotbugs/issues/844")
@@ -119,7 +119,7 @@ public class HashJoinP<E0> extends AbstractProcessor {
         assert !ordinal0Consumed : "Edge 0 must have a lower priority than all other edges";
 
         lookupTables.set(ordinal - 1, (PrefixRocksMap) item);
-        iterators.set(ordinal-1, ((PrefixRocksMap) item).prefixRocksIterator());
+        iterators.set(ordinal - 1, ((PrefixRocksMap) item).prefixRocksIterator());
         return true;
     }
 
@@ -136,10 +136,14 @@ public class HashJoinP<E0> extends AbstractProcessor {
         Object key = keyFns.get(index).apply(item);
         Iterator iterator = lookupTableForOrdinal.get(iterators.get(index), key);
         ArrayList result = new ArrayList();
-        while(iterator.hasNext()){
+        while (iterator.hasNext()) {
             result.add(iterator.next());
         }
-        if(result.size() == 1) return result.get(0);
+
+        if (result.size() == 1) {
+            return result.get(0);
+        }
+
         return result;
     }
 

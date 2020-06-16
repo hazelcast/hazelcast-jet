@@ -61,9 +61,7 @@ public class HashJoinCollectP<K, T, V> extends AbstractProcessor {
 
     @Override
     public boolean complete() {
-        getLogger().info("collector completed");
         lookupTable.compact();
-        getLogger().info("compacted");
         return tryEmit(lookupTable);
     }
 

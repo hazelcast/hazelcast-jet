@@ -1,3 +1,19 @@
+/*
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.hazelcast.jet.rocksdb;
 
 import com.hazelcast.internal.serialization.InternalSerializationService;
@@ -15,6 +31,7 @@ import org.rocksdb.RocksIterator;
 import org.rocksdb.WriteOptions;
 
 import javax.annotation.Nonnull;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -31,36 +48,26 @@ import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
  */
 public class RocksMap<K, V> implements Iterable<Entry<K, V>> {
     private final RocksDB db;
-    private final String name;
     private final InternalSerializationService serializationService;
-    private final RocksDBOptions options;
-    private ColumnFamilyHandle cfh;
+    private final ColumnFamilyOptions columnFamilyOptions;
+    private final WriteOptions writeOptions;
+    private final ReadOptions readOptions;
+    private final ColumnFamilyHandle cfh;
+    private final ArrayList<RocksMapIterator> iterators = new ArrayList<>();
 
     RocksMap(RocksDB db, String name, RocksDBOptions options,
              InternalSerializationService serializationService) {
         this.db = db;
-        this.name = name;
-        this.options = options;
         this.serializationService = serializationService;
+        columnFamilyOptions = options.columnFamilyOptions();
+        writeOptions = options.writeOptions();
+        readOptions = options.readOptions();
         try {
-            cfh = db.createColumnFamily(new ColumnFamilyDescriptor(serialize(name), columnFamilyOptions()));
+            cfh = db.createColumnFamily(new ColumnFamilyDescriptor(serialize(name), columnFamilyOptions));
         } catch (RocksDBException e) {
             throw new JetException("Failed to create RocksMap", e);
         }
     }
-
-    private WriteOptions writeOptions() {
-        return options.writeOptions();
-    }
-
-    private ReadOptions readOptions() {
-        return options.readOptions();
-    }
-
-    private ColumnFamilyOptions columnFamilyOptions() {
-        return options.columnFamilyOptions();
-    }
-
 
     /**
      * Returns the value mapped to a given key.
@@ -72,7 +79,7 @@ public class RocksMap<K, V> implements Iterable<Entry<K, V>> {
 
     public V get(Object key) throws JetException {
         try {
-            byte[] valueBytes = db.get(cfh, readOptions(), serialize(key));
+            byte[] valueBytes = db.get(cfh, readOptions, serialize(key));
             return deserialize(valueBytes);
         } catch (RocksDBException e) {
             throw new JetException("Operation Failed: Get", e);
@@ -88,7 +95,7 @@ public class RocksMap<K, V> implements Iterable<Entry<K, V>> {
      */
     public void put(K key, V value) throws JetException {
         try {
-            db.put(cfh, writeOptions(), serialize(key), serialize(value));
+            db.put(cfh, writeOptions, serialize(key), serialize(value));
         } catch (RocksDBException e) {
             throw new JetException("Operation Failed: Put", e);
         }
@@ -102,7 +109,7 @@ public class RocksMap<K, V> implements Iterable<Entry<K, V>> {
      */
     public void remove(K key) throws JetException {
         try {
-            db.delete(cfh, writeOptions(), serialize(key));
+            db.delete(cfh, writeOptions, serialize(key));
         } catch (RocksDBException e) {
             throw new JetException("Operation Failed: Delete", e);
         }
@@ -125,7 +132,20 @@ public class RocksMap<K, V> implements Iterable<Entry<K, V>> {
     @Nonnull
     @Override
     public Iterator<Entry<K, V>> iterator() {
-        return new RocksMapIterator();
+        RocksMapIterator iterator = new RocksMapIterator();
+        iterators.add(iterator);
+        return iterator;
+    }
+
+    /**
+     * Releases all native handles that this map acquires.
+     */
+    public void close() {
+        writeOptions.close();
+        readOptions.close();
+        columnFamilyOptions.close();
+        iterators.forEach(RocksMapIterator::close);
+        cfh.close();
     }
 
     private <T> byte[] serialize(T item) {
@@ -149,7 +169,7 @@ public class RocksMap<K, V> implements Iterable<Entry<K, V>> {
         private final RocksIterator iterator;
 
         RocksMapIterator() {
-            iterator = db.newIterator(cfh, readOptions().setTotalOrderSeek(true));
+            iterator = db.newIterator(cfh, readOptions);
             iterator.seekToFirst();
         }
 
@@ -167,6 +187,10 @@ public class RocksMap<K, V> implements Iterable<Entry<K, V>> {
 
         @Override
         public void remove() {
+        }
+
+        void close() {
+            iterator.close();
         }
     }
 }
