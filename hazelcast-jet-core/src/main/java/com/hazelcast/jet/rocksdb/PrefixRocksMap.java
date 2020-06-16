@@ -34,15 +34,13 @@ import org.rocksdb.WriteOptions;
 import javax.annotation.Nonnull;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Map.Entry;
-import java.util.UUID;
 
 import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
 
 /**
- * Store lists of values under
+ * Stores lists of values mapped to keys.
  *
  * @param <K> the type of key
  * @param <V> the type of value
@@ -53,6 +51,7 @@ public class PrefixRocksMap<K, V> implements Iterable<Entry<K, Iterator<V>>> {
     private final InternalSerializationService serializationService;
     private final RocksDBOptions options;
     private ColumnFamilyHandle cfh;
+    private long counter = 0;
 
     PrefixRocksMap(RocksDB db, String name, RocksDBOptions options,
                    InternalSerializationService serializationService) {
@@ -190,7 +189,7 @@ public class PrefixRocksMap<K, V> implements Iterable<Entry<K, Iterator<V>>> {
         try {
             ByteArrayOutputStream bytes = new ByteArrayOutputStream();
             bytes.write(serialize(item));
-            bytes.write(serialize(UUID.randomUUID()));
+            bytes.write(serialize(counter++));
             return bytes.toByteArray();
         } catch (IOException e) {
             throw new JetException();

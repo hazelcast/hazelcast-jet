@@ -26,22 +26,24 @@ import org.rocksdb.VectorMemTableConfig;
 import org.rocksdb.WriteOptions;
 
 /**
- * Contains default configurations for RocksDB.
+ * Contains RocksDB configurations suitable for bulk-loading.
  */
 public class RocksDBOptions {
-    private static final int FLUSHES = 2;
-
     Options options() {
         return new Options()
                 .setCreateIfMissing(true)
                 .prepareForBulkLoad()
-                .setMaxBackgroundFlushes(FLUSHES)
-                .setUseFsync(false)
-                .setAllowConcurrentMemtableWrite(false);
+                .setMaxBackgroundFlushes(2)
+                .setAllowConcurrentMemtableWrite(false)
+                .setDisableAutoCompactions(true);
     }
 
     public ColumnFamilyOptions columnFamilyOptions() {
         return new ColumnFamilyOptions()
+                .setMaxWriteBufferNumber(4)
+                .setMaxWriteBufferNumberToMaintain(0)
+                .setNumLevels(2)
+                .setWriteBufferSize(32 * 1024 * 1024)
                 .setMemTableConfig(new VectorMemTableConfig())
                 .setTableFormatConfig(new BlockBasedTableConfig()
                         .setIndexType(IndexType.kHashSearch)
@@ -54,6 +56,6 @@ public class RocksDBOptions {
     }
 
     WriteOptions writeOptions() {
-        return new WriteOptions().setDisableWAL(true).setSync(false);
+        return new WriteOptions().setDisableWAL(true);
     }
 }

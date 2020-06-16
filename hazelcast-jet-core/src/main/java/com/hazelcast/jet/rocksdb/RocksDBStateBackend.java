@@ -41,7 +41,6 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 
 public final class RocksDBStateBackend {
-    private final RocksDBOptions rocksDBOptions = new RocksDBOptions();
     private final AtomicInteger counter = new AtomicInteger(0);
     private volatile RocksDB db;
     private InternalSerializationService serializationService;
@@ -68,7 +67,9 @@ public final class RocksDBStateBackend {
     public RocksDBStateBackend initialize(InternalSerializationService serializationService) throws JetException {
         this.serializationService = serializationService;
         try {
-            String testPath = "/home/mmandouh/data";
+            String testPath = "C:\\Users\\Mohamed Mandouh\\hazelcast-jet\\" +
+                    "hazelcast-jet-core\\src\\main\\resources\\database";
+//            String testPath = "/home/mmandouh/data";
             this.directory = Files.createTempDirectory(Path.of(testPath), "rocksdb-temp");
         } catch (IOException e) {
             throw new JetException("Failed to create RocksDB directory", e);
@@ -85,7 +86,7 @@ public final class RocksDBStateBackend {
                 if (db == null) {
                     try {
                         RocksDB.loadLibrary();
-                        db = RocksDB.open(rocksDBOptions.options(), directory.toString());
+                        db = RocksDB.open(new RocksDBOptions().options(), directory.toString());
                     } catch (Exception e) {
                         throw new JetException("Failed to create a RocksDB instance", e);
                     }
@@ -103,7 +104,7 @@ public final class RocksDBStateBackend {
      */
     @Nonnull
     public <K, V> RocksMap<K, V> getMap() throws JetException {
-        return new RocksMap<>(db, getNextName(), rocksDBOptions, serializationService);
+        return new RocksMap<>(db, getNextName(), new RocksDBOptions(), serializationService);
     }
 
     /**
@@ -114,7 +115,7 @@ public final class RocksDBStateBackend {
      */
     @Nonnull
     public <K, V> PrefixRocksMap<K, V> getPrefixMap() throws JetException {
-        return new PrefixRocksMap<>(db, getNextName(), rocksDBOptions, serializationService);
+        return new PrefixRocksMap<>(db, getNextName(), new RocksDBOptions(), serializationService);
     }
 
 
