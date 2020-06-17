@@ -36,7 +36,7 @@ public class HashJoinCollectP<K, T, V> extends AbstractProcessor {
 
     @Nonnull private final Function<T, K> keyFn;
     @Nonnull private final Function<T, V> projectFn;
-    private PrefixRocksMap<K, Object> lookupTable;
+    private PrefixRocksMap<K, V> lookupTable;
 
 
     public HashJoinCollectP(@Nonnull Function<T, K> keyFn, @Nonnull Function<T, V> projectFn) {

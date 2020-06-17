@@ -23,6 +23,7 @@ import com.hazelcast.jet.datamodel.ItemsByTag;
 import com.hazelcast.jet.datamodel.Tag;
 import com.hazelcast.jet.function.TriFunction;
 import com.hazelcast.jet.impl.pipeline.transform.HashJoinTransform;
+import com.hazelcast.jet.impl.processor.HashJoinCollectP.HashJoinArrayList;
 import com.hazelcast.jet.pipeline.BatchStage;
 import com.hazelcast.jet.rocksdb.PrefixRocksMap;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
@@ -117,7 +118,7 @@ public class HashJoinP<E0> extends AbstractProcessor {
     @Override
     protected boolean tryProcess(int ordinal, @Nonnull Object item) {
         assert !ordinal0Consumed : "Edge 0 must have a lower priority than all other edges";
-
+        //for each map we keep one iterator for that map to limit the number of open iterators
         lookupTables.set(ordinal - 1, (PrefixRocksMap) item);
         iterators.set(ordinal - 1, ((PrefixRocksMap) item).prefixRocksIterator());
         return true;
@@ -129,25 +130,44 @@ public class HashJoinP<E0> extends AbstractProcessor {
         return flatMapper.tryProcess((E0) item);
     }
 
-    //TODO: it's wasteful to populate the list, join using the iterator directly
-    @Nonnull
+    //This method can, and actually needs to, return null
+    //because the iterator can have no values under that key.
+    //in which case, the traverser need to skip over the item.
     private Object lookUpJoined(int index, E0 item) {
         PrefixRocksMap<Object, Object> lookupTableForOrdinal = lookupTables.get(index);
+        RocksIterator rocksIterator = iterators.get(index);
         Object key = keyFns.get(index).apply(item);
-        Iterator iterator = lookupTableForOrdinal.get(iterators.get(index), key);
-        ArrayList result = new ArrayList();
-        while (iterator.hasNext()) {
-            result.add(iterator.next());
-        }
-
-        if (result.size() == 1) {
-            return result.get(0);
-        }
-
-        return result;
+        return getValues(lookupTableForOrdinal.get(rocksIterator, key));
     }
 
-    //TODO: fix the case with HashJoinArrayList code
+    //Instead of returning a Arraylist from PrefixRocksMap especially for joiner case,
+    // we return an iterator over those values and let processors deal with this.
+    // A processor may need a different data structure than a list, in that case we need two copies of the same data
+    // one for the map and one for the processor, which is wasteful and in extreme cases causes outOfMemoryError.
+    // Using the iterator, we only hold one block in memory at a time and let the processor either use it directly
+    // or use it to build the data structure it requires.
+    private Object getValues(@Nonnull Iterator iterator) {
+        Object x = null;
+        HashJoinArrayList result = null;
+        while (iterator.hasNext()) {
+            if (x == null) {
+                x = iterator.next();
+            } else if (result == null) {
+                result = new HashJoinArrayList();
+                result.add(x);
+                result.add(iterator.next());
+            } else {
+                result.add(iterator.next());
+            }
+        }
+        //the iterator can have no values under that key, in which case we return null
+        if (result == null) {
+            return x;
+        } else {
+            return result;
+        }
+    }
+
     private class CombinationsTraverser<OUT> implements Traverser<OUT> {
         private final BiFunction<E0, Object[], OUT> mapTupleToOutputFn;
         private final Object[] lookedUpValues;
@@ -174,7 +194,7 @@ public class HashJoinP<E0> extends AbstractProcessor {
             // look up matching values for each joined table
             for (int i = 0; i < lookedUpValues.length; i++) {
                 lookedUpValues[i] = lookUpJoined(i, item);
-                sizes[i] = lookedUpValues[i] instanceof ArrayList
+                sizes[i] = lookedUpValues[i] instanceof HashJoinArrayList
                         ? ((ArrayList) lookedUpValues[i]).size() : 1;
             }
             Arrays.fill(indices, 0);
@@ -188,7 +208,7 @@ public class HashJoinP<E0> extends AbstractProcessor {
                 // populate the tuple and create the result object
                 for (int j = 0; j < lookedUpValues.length; j++) {
                     tuple[j] = sizes[j] == 1 ? lookedUpValues[j]
-                            : ((ArrayList) lookedUpValues[j]).get(indices[j]);
+                            : ((HashJoinArrayList) lookedUpValues[j]).get(indices[j]);
                 }
                 OUT result = mapTupleToOutputFn.apply(currentItem, tuple);
 
