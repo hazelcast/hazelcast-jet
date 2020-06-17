@@ -67,7 +67,7 @@ function Downloads(props) {
          </code></pre>
          <p>For the full list of modules, please see <a href="https://search.maven.org/search?q=g:com.hazelcast.jet">Maven Central</a>.</p>
 
-		 <h3 id="management-center">Management Center</h3>
+         <h3 id="management-center">Management Center</h3>
          <p>
           You can download Hazelcast Jet Management Center <a href={`https://download.hazelcast.com/hazelcast-jet-management-center/hazelcast-jet-management-center-${latest.version}.tar.gz`}>here</a>.
          </p>
