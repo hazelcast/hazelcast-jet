@@ -48,12 +48,13 @@
       "operations/configuration",
       "operations/discovery",
       "operations/cluster-sizing",
+      "operations/gc-concerns",
       "operations/job-management",
       "operations/docker",
       "operations/kubernetes",
       "operations/monitoring",
       "operations/version-compatibility",
-      "operations/cdc-deployment"
+      "operations/cdc"
     ],
     "Architecture": [
       "architecture/distributed-computing",
@@ -63,6 +64,17 @@
       "architecture/sliding-window",
       "architecture/fault-tolerance",
       "architecture/in-memory-storage"
+    ],
+    "Enterprise Edition": [
+      "enterprise/index",
+      "enterprise/installation",
+      "enterprise/management-center",
+      "enterprise/operator-openshift",
+      "enterprise/security",
+      "enterprise/job-update",
+      "enterprise/lossless-restart",
+      "enterprise/off-heap",
+      "enterprise/blue-green"
     ],
     "Design Documents": [
       "design-docs/index",
@@ -77,19 +89,6 @@
       "design-docs/003-elasticsearch-connector",
       "design-docs/002-job-level-serialization",
       "design-docs/001-code-deployment-improvements"
-    ]
-  },
-  "enterprise": {
-    "Enterprise Edition": [
-      "enterprise/index",
-      "enterprise/installation",
-      "enterprise/management-center",
-      "enterprise/security",
-      "enterprise/operator-openshift",
-      "enterprise/job-update",
-      "enterprise/lossless-restart",
-      "enterprise/off-heap",
-      "enterprise/blue-green"
     ]
   }
 }
