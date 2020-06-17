@@ -19,6 +19,7 @@ package com.hazelcast.jet.rocksdb;
 import org.rocksdb.BlockBasedTableConfig;
 import org.rocksdb.BloomFilter;
 import org.rocksdb.ColumnFamilyOptions;
+import org.rocksdb.FlushOptions;
 import org.rocksdb.IndexType;
 import org.rocksdb.Options;
 import org.rocksdb.ReadOptions;
@@ -33,7 +34,6 @@ class RocksDBOptions {
     private static final int FLUSHES = 2;
     private static final int BLOOM_BITS = 10;
 
-    //TODO: make options configurable and separate prefix and regular options
     Options options() {
         return new Options()
                 .setCreateIfMissing(true)
@@ -69,11 +69,15 @@ class RocksDBOptions {
         return new ReadOptions();
     }
 
-    public ReadOptions iteratorOptions() {
+    ReadOptions iteratorOptions() {
         return new ReadOptions().setTotalOrderSeek(true);
     }
 
-    public ReadOptions prefixIteratorOptions() {
+    ReadOptions prefixIteratorOptions() {
         return new ReadOptions().setPrefixSameAsStart(true);
+    }
+
+    FlushOptions flushOptions() {
+        return new FlushOptions().setWaitForFlush(true);
     }
 }

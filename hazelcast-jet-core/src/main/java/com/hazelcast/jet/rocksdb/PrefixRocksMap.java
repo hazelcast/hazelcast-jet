@@ -68,6 +68,7 @@ public class PrefixRocksMap<K, V> implements Iterable<Entry<K, Iterator<V>>> {
     private final WriteOptions writeOptions;
     private final ReadOptions prefixIteratorOptions;
     private final ReadOptions iteratorOptions;
+    private final FlushOptions flushOptions;
     private ColumnFamilyHandle cfh;
     private long counter = Long.MIN_VALUE;
 
@@ -80,6 +81,7 @@ public class PrefixRocksMap<K, V> implements Iterable<Entry<K, Iterator<V>>> {
         writeOptions = options.writeOptions();
         prefixIteratorOptions = options.prefixIteratorOptions();
         iteratorOptions = options.iteratorOptions();
+        flushOptions = options.flushOptions();
     }
 
     //lazily creates the column family since the prefix is only specified once the map is actually used
@@ -156,7 +158,9 @@ public class PrefixRocksMap<K, V> implements Iterable<Entry<K, Iterator<V>>> {
     @Nonnull
     @Override
     public Iterator<Entry<K, Iterator<V>>> iterator() {
-        return new PrefixRocksMapIterator();
+        PrefixRocksMapIterator mapIterator = new PrefixRocksMapIterator();
+        iterators.add(mapIterator.iterator);
+        return mapIterator;
     }
 
     /**
@@ -164,10 +168,11 @@ public class PrefixRocksMap<K, V> implements Iterable<Entry<K, Iterator<V>>> {
      * This should be invoked to prepare RocksMap for reads
      * after bulk-loading with a series of add() calls.
      */
-    public void compact() throws JetException {
+    public PrefixRocksMap<K, V> compact() throws JetException {
         try {
-            db.flush(new FlushOptions().setWaitForFlush(true), cfh);
+            db.flush(flushOptions, cfh);
             db.compactRange(cfh);
+            return this;
         } catch (RocksDBException e) {
             throw new JetException("Failed to Compact RocksDB", e);
         }
@@ -181,6 +186,7 @@ public class PrefixRocksMap<K, V> implements Iterable<Entry<K, Iterator<V>>> {
         writeOptions.close();
         iteratorOptions.close();
         prefixIteratorOptions.close();
+        flushOptions.close();
         for (RocksIterator rocksIterator : iterators) {
             rocksIterator.close();
         }
@@ -217,7 +223,7 @@ public class PrefixRocksMap<K, V> implements Iterable<Entry<K, Iterator<V>>> {
     }
 
     private class PrefixRocksMapIterator implements Iterator<Entry<K, Iterator<V>>> {
-        private final RocksIterator iterator;
+        final RocksIterator iterator;
         private final RocksIterator prefixIterator;
 
         PrefixRocksMapIterator() {

@@ -94,11 +94,7 @@ public class GroupP<K, A, R, OUT> extends AbstractProcessor {
     }
 
     private class ResultTraverser implements Traverser<Entry<K, A>> {
-        Iterator<Entry<K, Iterator<Entry<Integer, Object>>>> iterator = keyToValues.iterator();
-
-        ResultTraverser() {
-            keyToValues.compact();
-        }
+        private final Iterator<Entry<K, Iterator<Entry<Integer, Object>>>> iterator = keyToValues.compact().iterator();
 
         @Override
         public Entry<K, A> next() {
