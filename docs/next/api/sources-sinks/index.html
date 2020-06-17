@@ -893,6 +893,30 @@ future Jet versions will address this problem.</p>
 <h3><a class="anchor" aria-hidden="true" id="elasticsearch"></a><a href="#elasticsearch" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Elasticsearch</h3>
 <p>Elasticsearch is a popular fulltext search engine. Hazelcast Jet can
 use it both as a source and a sink.</p>
+<h4><a class="anchor" aria-hidden="true" id="dependency"></a><a href="#dependency" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Dependency</h4>
+<p>To use the Elasticsearch connector, you need to copy the
+<code>hazelcast-jet-elasticsearch-7</code> module from the <code>opt</code> folder to the
+<code>lib</code> folder and add the following dependency to your application:</p>
+<!--DOCUSAURUS_CODE_TABS-->
+<!--Gradle-->
+<pre><code class="hljs css language-groovy">compile <span class="hljs-string">'com.hazelcast.jet:hazelcast-jet-elasticsearch-7:4.2-SNAPSHOT'</span>
+</code></pre>
+<!--Maven-->
+<pre><code class="hljs css language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">dependency</span>&gt;</span>
+  <span class="hljs-tag">&lt;<span class="hljs-name">groupId</span>&gt;</span>com.hazelcast.jet<span class="hljs-tag">&lt;/<span class="hljs-name">groupId</span>&gt;</span>
+  <span class="hljs-tag">&lt;<span class="hljs-name">artifactId</span>&gt;</span>hazelcast-jet-elasticsearch-7<span class="hljs-tag">&lt;/<span class="hljs-name">artifactId</span>&gt;</span>
+  <span class="hljs-tag">&lt;<span class="hljs-name">version</span>&gt;</span>4.2-SNAPSHOT<span class="hljs-tag">&lt;/<span class="hljs-name">version</span>&gt;</span>
+<span class="hljs-tag">&lt;/<span class="hljs-name">dependency</span>&gt;</span>
+</code></pre>
+<blockquote>
+<p>For Elasticsearch version 6 and 5 there are separate modules
+<code>hazelcast-jet-elasticsearch-6</code> and <code>hazelcast-jet-elasticsearch-5</code>.
+Each module includes Elasticsearch client compatible with given major
+version of Elasticsearch. The connector API is the same between
+different versions, apart from a few minor differences where we
+surface the API of Elasticsearch client. See the JavaDoc for any
+such differences.</p>
+</blockquote>
 <h4><a class="anchor" aria-hidden="true" id="source"></a><a href="#source" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Source</h4>
 <p>The Elasticsearch connector source provides a builder and several
 convenience factory methods. Most commonly one needs to provide:</p>
@@ -1133,6 +1157,7 @@ restarted in face of an intermittent failure.</p>
 <tbody>
 <tr><td style="text-align:left"><code>AvroSources.files</code></td><td style="text-align:left"><code>hazelcast-jet-avro (avro)</code></td><td style="text-align:left">batch</td><td style="text-align:left">N/A</td></tr>
 <tr><td style="text-align:left"><code>DebeziumCdcSources.debezium</code></td><td style="text-align:left"><code>hazelcast-jet-cdc-debezium (cdc-debezium)</code></td><td style="text-align:left">stream</td><td style="text-align:left">at-least-once</td></tr>
+<tr><td style="text-align:left"><code>ElasticSources.elastic</code></td><td style="text-align:left"><code>hazelcast-jet-elasticsearch-6 (elasticsearch-6)</code></td><td style="text-align:left">batch</td><td style="text-align:left">N/A</td></tr>
 <tr><td style="text-align:left"><code>ElasticSources.elastic</code></td><td style="text-align:left"><code>hazelcast-jet-elasticsearch-7 (elasticsearch-7)</code></td><td style="text-align:left">batch</td><td style="text-align:left">N/A</td></tr>
 <tr><td style="text-align:left"><code>HadoopSources.inputFormat</code></td><td style="text-align:left"><code>hazelcast-jet-hadoop (hadoop)</code></td><td style="text-align:left">batch</td><td style="text-align:left">N/A</td></tr>
 <tr><td style="text-align:left"><code>KafkaSources.kafka</code></td><td style="text-align:left"><code>hazelcast-jet-kafka (kafka)</code></td><td style="text-align:left">stream</td><td style="text-align:left">exactly-once</td></tr>
@@ -1171,6 +1196,7 @@ processing even with at-least-once sinks.</p>
 <tbody>
 <tr><td style="text-align:left"><code>AvroSinks.files</code></td><td style="text-align:left"><code>hazelcast-jet-avro (avro)</code></td><td style="text-align:left">no</td><td style="text-align:left">N/A</td></tr>
 <tr><td style="text-align:left"><code>CdcSinks.map</code></td><td style="text-align:left"><code>hazelcast-jet-cdc-debezium (cdc-debezium)</code></td><td style="text-align:left">yes</td><td style="text-align:left">at-least-once</td></tr>
+<tr><td style="text-align:left"><code>ElasticSinks.elastic</code></td><td style="text-align:left"><code>hazelcast-jet-elasticsearch-6 (elasticsearch-6)</code></td><td style="text-align:left">yes</td><td style="text-align:left">at-least-once</td></tr>
 <tr><td style="text-align:left"><code>ElasticSinks.elastic</code></td><td style="text-align:left"><code>hazelcast-jet-elasticsearch-7 (elasticsearch-7)</code></td><td style="text-align:left">yes</td><td style="text-align:left">at-least-once</td></tr>
 <tr><td style="text-align:left"><code>HadoopSinks.outputFormat</code></td><td style="text-align:left"><code>hazelcast-jet-hadoop (hadoop)</code></td><td style="text-align:left">no</td><td style="text-align:left">N/A</td></tr>
 <tr><td style="text-align:left"><code>KafkaSinks.kafka</code></td><td style="text-align:left"><code>hazelcast-jet-kafka (kafka)</code></td><td style="text-align:left">yes</td><td style="text-align:left">exactly-once</td></tr>
