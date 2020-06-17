@@ -147,12 +147,18 @@ public class HashJoinP<E0> extends AbstractProcessor {
     // Using the iterator, we only hold one block in memory at a time and let the processor either use it directly
     // or use it to build the data structure it requires.
     private Object getValues(@Nonnull Iterator iterator) {
-        HashJoinArrayList result = new HashJoinArrayList();
-        while (iterator.hasNext()) {
-            result.add(iterator.next());
-        }
-        if (result.size() == 1) {
-            return result.get(0);
+        HashJoinArrayList result = null;
+        if (iterator.hasNext()) {
+            Object x = iterator.next();
+            if (iterator.hasNext()) {
+                result = new HashJoinArrayList();
+                result.add(x);
+                while (iterator.hasNext()) {
+                    result.add(iterator.next());
+                }
+            } else {
+                return x;
+            }
         }
         return result;
     }

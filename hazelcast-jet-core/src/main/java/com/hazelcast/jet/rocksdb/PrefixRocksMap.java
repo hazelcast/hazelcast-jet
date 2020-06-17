@@ -90,7 +90,16 @@ public class PrefixRocksMap<K, V> implements Iterable<Entry<K, Iterator<V>>> {
             cfh = db.createColumnFamily(new ColumnFamilyDescriptor(serialize(name),
                     columnFamilyOptions.useFixedLengthPrefixExtractor(serialize(prefix).length)));
         } catch (RocksDBException e) {
-            throw new JetException("Failed to create RocksMap", e);
+            throw new JetException("Failed to create PrefixRocksMap", e);
+        }
+    }
+
+    //opens the database in non-prefix mode since no add() or get() were issued
+    private void open() {
+        try {
+            cfh = db.createColumnFamily(new ColumnFamilyDescriptor(serialize(name), columnFamilyOptions));
+        } catch (RocksDBException e) {
+            throw new JetException("Failed to create PrefixRocksMap", e);
         }
     }
 
@@ -158,6 +167,9 @@ public class PrefixRocksMap<K, V> implements Iterable<Entry<K, Iterator<V>>> {
     @Nonnull
     @Override
     public Iterator<Entry<K, Iterator<V>>> iterator() {
+        if (cfh == null) {
+            open();
+        }
         PrefixRocksMapIterator mapIterator = new PrefixRocksMapIterator();
         iterators.add(mapIterator.iterator);
         return mapIterator;
@@ -169,13 +181,15 @@ public class PrefixRocksMap<K, V> implements Iterable<Entry<K, Iterator<V>>> {
      * after bulk-loading with a series of add() calls.
      */
     public PrefixRocksMap<K, V> compact() throws JetException {
-        try {
-            db.flush(flushOptions, cfh);
-            db.compactRange(cfh);
-            return this;
-        } catch (RocksDBException e) {
-            throw new JetException("Failed to Compact RocksDB", e);
+        if (cfh != null) {
+            try {
+                db.flush(flushOptions, cfh);
+                db.compactRange(cfh);
+            } catch (RocksDBException e) {
+                throw new JetException("Failed to Compact RocksDB", e);
+            }
         }
+        return this;
     }
 
     /**
@@ -190,7 +204,7 @@ public class PrefixRocksMap<K, V> implements Iterable<Entry<K, Iterator<V>>> {
         for (RocksIterator rocksIterator : iterators) {
             rocksIterator.close();
         }
-        cfh.close();
+        if(cfh != null) cfh.close();
     }
 
     private <T> byte[] serialize(T item) {
