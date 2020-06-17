@@ -287,7 +287,7 @@
         <dependency>
             <groupId>com.hazelcast.jet</groupId>
             <artifactId>hazelcast-jet-elasticsearch-7</artifactId>
-            <version>4.2-SNAPSHOT</version>
+            <version>${project.version}</version>
             <classifier>jar-with-dependencies</classifier>
         </dependency>
         <dependency>
@@ -335,7 +335,12 @@
             <artifactId>hazelcast-jet-examples-hello-world</artifactId>
             <version>${project.version}</version>
         </dependency>
-
+        <!-- Prometheus to expose JMX metrics as HTTP endpoint -->
+        <dependency>
+            <groupId>io.prometheus.jmx</groupId>
+            <artifactId>jmx_prometheus_javaagent</artifactId>
+            <version>${prometheus.version}</version>
+        </dependency>
         <!-- optional deps are required to be listed one by one for  correct NOTICE generation -->
         <dependency>
             <groupId>info.picocli</groupId>

@@ -1035,11 +1035,11 @@ doesn't use XA transactions.
 
 Change Data Capture (CDC) refers to the process of observing changes
 made to a database and extracting them in a form usable by other
-systems, for the purposes of replication, analysis and many many more.
+systems, for the purposes of replication, analysis and many more.
 
 Change Data Capture is especially important to Jet, because it allows
-for the _integration with legacy systems_. Database changes form a
-stream of events which can be efficiently processed by Jet.
+for the _streaming of changes from databases_, which can be efficiently
+processed by Jet.
 
 Implementation of CDC in Jet is based on
 [Debezium](https://debezium.io/). Jet offers a generic Debezium source
@@ -1072,7 +1072,7 @@ tutorial](../tutorials/cdc)).
 
 In order to make it work though, the databases need to be properly
 configured too, have features essential for CDC enabled. For details see
-the [CDC Deployment Guide](../operations/cdc-deployment.md).
+the [CDC Deployment Guide](../operations/cdc.md).
 
 #### CDC Connectors
 
@@ -1465,18 +1465,18 @@ sources are batch and some are stream oriented. The processing guarantee
 is only relevant for streaming sources, as batch jobs should just be
 restarted in face of an intermittent failure.
 
-|source|module|batch/stream|guarantee|
-|:-----|:---- |:-----------|:--------|
-|`AvroSources.files`|`hazelcast-jet-avro`|batch|N/A|
-|`DebeziumCdcSources.debezium`|`hazelcast-jet-cdc-debezium`|stream|at-least-once|
-|`ElasticSources.elastic`|`hazelcast-jet-elasticsearch-6`|batch|N/A|
-|`ElasticSources.elastic`|`hazelcast-jet-elasticsearch-7`|batch|N/A|
-|`HadoopSources.inputFormat`|`hazelcast-jet-hadoop`|batch|N/A|
-|`KafkaSources.kafka`|`hazelcast-jet-kafka`|stream|exactly-once|
-|`MySqlCdcSources.mysql`|`hazelcast-jet-cdc-mysql`|stream|at-least-once|
+|source|artifactId (module)|batch/stream|guarantee|
+|:-----|:------------------|:-----------|:--------|
+|`AvroSources.files`|`hazelcast-jet-avro (avro)`|batch|N/A|
+|`DebeziumCdcSources.debezium`|`hazelcast-jet-cdc-debezium (cdc-debezium)`|stream|at-least-once|
+|`ElasticSources.elastic`|`hazelcast-jet-elasticsearch-6 (elasticsearch-6)`|batch|N/A|
+|`ElasticSources.elastic`|`hazelcast-jet-elasticsearch-7 (elasticsearch-7)`|batch|N/A|
+|`HadoopSources.inputFormat`|`hazelcast-jet-hadoop (hadoop)`|batch|N/A|
+|`KafkaSources.kafka`|`hazelcast-jet-kafka (kafka)`|stream|exactly-once|
+|`MySqlCdcSources.mysql`|`hazelcast-jet-cdc-mysql (cdc-mysql)`|stream|at-least-once|
 |`PulsarSources.pulsarConsumer`|`hazelcast-jet-contrib-pulsar`|stream|N/A|
 |`PulsarSources.pulsarReader`|`hazelcast-jet-contrib-pulsar`|stream|exactly-once|
-|`S3Sources.s3`|`hazelcast-jet-s3`|batch|N/A|
+|`S3Sources.s3`|`hazelcast-jet-s3 (s3)`|batch|N/A|
 |`Sources.cache`|`hazelcast-jet`|batch|N/A|
 |`Sources.cacheJournal`|`hazelcast-jet`|stream|exactly-once|
 |`Sources.files`|`hazelcast-jet`|batch|N/A|
@@ -1502,16 +1502,16 @@ default support at-least-once guarantee, but only some of them support
 exactly-once. If using idempotent updates, you can ensure exactly-once
 processing even with at-least-once sinks.
 
-|sink|module|streaming support|guarantee|
-|:---|:-----|:--------------|:-------------------|
-|`AvroSinks.files`|`hazelcast-jet-avro`|no|N/A|
-|`CdcSinks.map`|`hazelcast-jet-cdc-debezium`|yes|at-least-once|
-|`ElasticSinks.elastic`|`hazelcast-jet-elasticsearch-6`|yes|at-least-once|
-|`ElasticSinks.elastic`|`hazelcast-jet-elasticsearch-7`|yes|at-least-once|
-|`HadoopSinks.outputFormat`|`hazelcast-jet-hadoop`|no|N/A|
-|`KafkaSinks.kafka`|`hazelcast-jet-kafka`|yes|exactly-once|
+|sink|artifactId (module)|streaming support|guarantee|
+|:---|:------------------|:--------------|:-------------------|
+|`AvroSinks.files`|`hazelcast-jet-avro (avro)`|no|N/A|
+|`CdcSinks.map`|`hazelcast-jet-cdc-debezium (cdc-debezium)`|yes|at-least-once|
+|`ElasticSinks.elastic`|`hazelcast-jet-elasticsearch-6 (elasticsearch-6)`|yes|at-least-once|
+|`ElasticSinks.elastic`|`hazelcast-jet-elasticsearch-7 (elasticsearch-7)`|yes|at-least-once|
+|`HadoopSinks.outputFormat`|`hazelcast-jet-hadoop (hadoop)`|no|N/A|
+|`KafkaSinks.kafka`|`hazelcast-jet-kafka (kafka)`|yes|exactly-once|
 |`PulsarSources.pulsarSink`|`hazelcast-jet-contrib-pulsar`|yes|at-least-once|
-|`S3Sinks.s3`|`hazelcast-jet-s3`|no|N/A|
+|`S3Sinks.s3`|`hazelcast-jet-s3 (s3)`|no|N/A|
 |`Sinks.cache`|`hazelcast-jet`|yes|at-least-once|
 |`Sinks.files`|`hazelcast-jet`|yes|exactly-once|
 |`Sinks.json`|`hazelcast-jet`|yes|exactly-once|

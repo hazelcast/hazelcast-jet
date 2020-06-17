@@ -1,5 +1,5 @@
 ---
-title: Hazelcast Jet with Docker
+title: Running With Docker
 description: How to use Jet in a Docker environment
 ---
 
@@ -276,6 +276,20 @@ To see the default content of the files run the following command:
 
 ```bash
 docker run hazelcast/hazelcast-jet cat /opt/hazelcast-jet/config/hazelcast-jet.yaml
+```
+
+## Use Built-in Modules
+
+The image comes with several officially supported connectors. You can
+find out the module names on the
+[Sources and Sinks](../api/sources-sinks.md#summary) page.
+
+To use one or more modules provide a list of comma separated names in
+`JET_MODULES` environment variable when running the `docker run`
+command:
+
+```bash
+docker run -e JET_MODULES="avro,kafka" -p 5701:5701 hazelcast/hazelcast-jet
 ```
 
 ## Package Job as a Docker Image
