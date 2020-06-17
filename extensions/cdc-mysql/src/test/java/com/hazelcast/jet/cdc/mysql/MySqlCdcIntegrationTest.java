@@ -39,6 +39,7 @@ import org.junit.experimental.categories.Category;
 import javax.annotation.Nonnull;
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.Statement;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
@@ -92,15 +93,11 @@ public class MySqlCdcIntegrationTest extends AbstractMySqlCdcIntegrationTest {
         //when
         try (Connection connection = DriverManager.getConnection(mysql.withDatabaseName("inventory").getJdbcUrl(),
                 mysql.getUsername(), mysql.getPassword())) {
-            connection
-                    .prepareStatement("UPDATE customers SET first_name='Anne Marie' WHERE id=1004")
-                    .executeUpdate();
-            connection
-                    .prepareStatement("INSERT INTO customers VALUES (1005, 'Jason', 'Bourne', 'jason@bourne.org')")
-                    .executeUpdate();
-            connection
-                    .prepareStatement("DELETE FROM customers WHERE id=1005")
-                    .executeUpdate();
+            Statement statement = connection.createStatement();
+            statement.addBatch("UPDATE customers SET first_name='Anne Marie' WHERE id=1004");
+            statement.addBatch("INSERT INTO customers VALUES (1005, 'Jason', 'Bourne', 'jason@bourne.org')");
+            statement.addBatch("DELETE FROM customers WHERE id=1005");
+            statement.executeBatch();
         }
 
         //then
@@ -206,15 +203,11 @@ public class MySqlCdcIntegrationTest extends AbstractMySqlCdcIntegrationTest {
         //then update a record
         try (Connection connection = DriverManager.getConnection(mysql.withDatabaseName("inventory").getJdbcUrl(),
                 mysql.getUsername(), mysql.getPassword())) {
-            connection
-                    .prepareStatement("UPDATE customers SET first_name='Anne Marie' WHERE id=1004")
-                    .executeUpdate();
-            connection
-                    .prepareStatement("INSERT INTO customers VALUES (1005, 'Jason', 'Bourne', 'jason@bourne.org')")
-                    .executeUpdate();
-            connection
-                    .prepareStatement("DELETE FROM customers WHERE id=1005")
-                    .executeUpdate();
+            Statement statement = connection.createStatement();
+            statement.addBatch("UPDATE customers SET first_name='Anne Marie' WHERE id=1004");
+            statement.addBatch("INSERT INTO customers VALUES (1005, 'Jason', 'Bourne', 'jason@bourne.org')");
+            statement.addBatch("DELETE FROM customers WHERE id=1005");
+            statement.executeBatch();
         }
 
         //then
@@ -257,12 +250,10 @@ public class MySqlCdcIntegrationTest extends AbstractMySqlCdcIntegrationTest {
         JetTestSupport.assertJobStatusEventually(job, JobStatus.RUNNING);
         try (Connection connection = DriverManager.getConnection(mysql.withDatabaseName("inventory").getJdbcUrl(),
                 mysql.getUsername(), mysql.getPassword())) {
-            connection
-                    .prepareStatement("UPDATE customers SET first_name='Anne Marie' WHERE id=1004")
-                    .executeUpdate();
-            connection
-                    .prepareStatement("INSERT INTO customers VALUES (1005, 'Jason', 'Bourne', 'jason@bourne.org')")
-                    .executeUpdate();
+            Statement statement = connection.createStatement();
+            statement.addBatch("UPDATE customers SET first_name='Anne Marie' WHERE id=1004");
+            statement.addBatch("INSERT INTO customers VALUES (1005, 'Jason', 'Bourne', 'jason@bourne.org')");
+            statement.executeBatch();
         }
         //then
         assertEqualsEventually(() -> mapResultsToSortedList(jet.getMap("cache")),
@@ -278,9 +269,7 @@ public class MySqlCdcIntegrationTest extends AbstractMySqlCdcIntegrationTest {
         //when
         try (Connection connection = DriverManager.getConnection(mysql.withDatabaseName("inventory").getJdbcUrl(),
                 mysql.getUsername(), mysql.getPassword())) {
-            connection
-                    .prepareStatement("DELETE FROM customers WHERE id=1005")
-                    .executeUpdate();
+            connection.createStatement().execute("DELETE FROM customers WHERE id=1005");
         }
         //then
         assertEqualsEventually(() -> mapResultsToSortedList(jet.getMap("cache")),

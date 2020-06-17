@@ -126,6 +126,10 @@ public final class PostgresCdcSources {
         /**
          * The name of the PostgreSQL database from which to stream the
          * changes. Has to be set.
+         * <p>
+         * Currently this source is not capable of monitoring multiple
+         * databases, only multiple schemas and/or tables. See white-
+         * and black-listing configuration options for those.
          */
         public Builder setDatabaseName(String dbName) {
             config.setProperty("database.dbname", dbName);

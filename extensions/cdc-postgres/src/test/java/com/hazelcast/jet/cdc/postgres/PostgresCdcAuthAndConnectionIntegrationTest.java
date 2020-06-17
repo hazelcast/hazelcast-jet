@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.cdc.mysql;
+package com.hazelcast.jet.cdc.postgres;
 
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
@@ -22,26 +22,24 @@ import com.hazelcast.jet.cdc.ChangeRecord;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.StreamSource;
-import com.hazelcast.test.annotation.NightlyTest;
 import org.junit.Test;
-import org.junit.experimental.categories.Category;
 
 import java.sql.SQLException;
 
 import static com.hazelcast.jet.core.JobStatus.FAILED;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.testcontainers.containers.MySQLContainer.MYSQL_PORT;
+import static org.testcontainers.containers.PostgreSQLContainer.POSTGRESQL_PORT;
 
-@Category(NightlyTest.class)
-public class MySqlCdcAuthAndConnectionIntegrationTest extends AbstractMySqlCdcIntegrationTest {
+public class PostgresCdcAuthAndConnectionIntegrationTest extends AbstractPostgresCdcIntegrationTest {
 
     @Test
     public void wrongPassword() {
-        StreamSource<ChangeRecord> source = MySqlCdcSources.mysql("name")
-                .setDatabaseAddress(mysql.getContainerIpAddress())
-                .setDatabasePort(mysql.getMappedPort(MYSQL_PORT))
-                .setDatabaseUser("debezium")
+        StreamSource<ChangeRecord> source = PostgresCdcSources.postgres("name")
+                .setDatabaseAddress(postgres.getContainerIpAddress())
+                .setDatabasePort(postgres.getMappedPort(POSTGRESQL_PORT))
+                .setDatabaseUser("postgres")
                 .setDatabasePassword("wrongPassword")
+                .setDatabaseName("postgres")
                 .setClusterName("dbserver1")
                 .build();
 
@@ -54,16 +52,17 @@ public class MySqlCdcAuthAndConnectionIntegrationTest extends AbstractMySqlCdcIn
         // then
         assertThatThrownBy(job::join)
                 .hasRootCauseInstanceOf(SQLException.class)
-                .hasStackTraceContaining("Access denied for user");
+                .hasStackTraceContaining("password authentication failed for user \"postgres\"");
     }
 
     @Test
     public void emptyPassword() {
-        StreamSource<ChangeRecord> source = MySqlCdcSources.mysql("name")
-                .setDatabaseAddress(mysql.getContainerIpAddress())
-                .setDatabasePort(mysql.getMappedPort(MYSQL_PORT))
-                .setDatabaseUser("debezium")
+        StreamSource<ChangeRecord> source = PostgresCdcSources.postgres("name")
+                .setDatabaseAddress(postgres.getContainerIpAddress())
+                .setDatabasePort(postgres.getMappedPort(POSTGRESQL_PORT))
+                .setDatabaseUser("postgres")
                 .setDatabasePassword("")
+                .setDatabaseName("postgres")
                 .setClusterName("dbserver1")
                 .build();
 
@@ -76,21 +75,22 @@ public class MySqlCdcAuthAndConnectionIntegrationTest extends AbstractMySqlCdcIn
         // then
         assertThatThrownBy(job::join)
                 .hasRootCauseInstanceOf(SQLException.class)
-                .hasStackTraceContaining("Access denied for user");
+                .hasStackTraceContaining("password authentication failed for user \"postgres\"");
     }
 
     @Test
     public void incorrectAddress() {
-        String containerIpAddress = mysql.getContainerIpAddress();
+        String containerIpAddress = postgres.getContainerIpAddress();
         String wrongContainerIpAddress = "172.17.5.10";
         if (containerIpAddress.equals(wrongContainerIpAddress)) {
             wrongContainerIpAddress = "172.17.5.20";
         }
-        StreamSource<ChangeRecord> source = MySqlCdcSources.mysql("name")
+        StreamSource<ChangeRecord> source = PostgresCdcSources.postgres("name")
                 .setDatabaseAddress(wrongContainerIpAddress)
-                .setDatabasePort(mysql.getMappedPort(MYSQL_PORT))
-                .setDatabaseUser("debezium")
-                .setDatabasePassword("dbz")
+                .setDatabasePort(postgres.getMappedPort(POSTGRESQL_PORT))
+                .setDatabaseUser("postgres")
+                .setDatabasePassword("")
+                .setDatabaseName("postgres")
                 .setClusterName("dbserver1")
                 .build();
 
@@ -106,12 +106,13 @@ public class MySqlCdcAuthAndConnectionIntegrationTest extends AbstractMySqlCdcIn
 
     @Test
     public void incorrectPort() {
-        int wrongPort = mysql.getMappedPort(MYSQL_PORT) + 1;
-        StreamSource<ChangeRecord> source = MySqlCdcSources.mysql("name")
-                .setDatabaseAddress(mysql.getContainerIpAddress())
+        int wrongPort = postgres.getMappedPort(POSTGRESQL_PORT) + 1;
+        StreamSource<ChangeRecord> source = PostgresCdcSources.postgres("name")
+                .setDatabaseAddress(postgres.getContainerIpAddress())
                 .setDatabasePort(wrongPort)
-                .setDatabaseUser("debezium")
-                .setDatabasePassword("dbz")
+                .setDatabaseUser("postgres")
+                .setDatabasePassword("")
+                .setDatabaseName("postgres")
                 .setClusterName("dbserver1")
                 .build();
 
@@ -123,6 +124,29 @@ public class MySqlCdcAuthAndConnectionIntegrationTest extends AbstractMySqlCdcIn
         Job job = jet.newJob(pipeline);
         // then
         assertJobStatusEventually(job, FAILED);
+    }
+
+    @Test
+    public void incorrectDatabaseName() {
+        StreamSource<ChangeRecord> source = PostgresCdcSources.postgres("name")
+                .setDatabaseAddress(postgres.getContainerIpAddress())
+                .setDatabasePort(postgres.getMappedPort(POSTGRESQL_PORT))
+                .setDatabaseUser("postgres")
+                .setDatabasePassword("")
+                .setDatabaseName("wrongDatabaseName")
+                .setClusterName("dbserver1")
+                .build();
+
+        Pipeline pipeline = pipeline(source);
+
+        JetInstance jet = createJetMembers(2)[0];
+
+        // when
+        Job job = jet.newJob(pipeline);
+        // then
+        assertThatThrownBy(job::join)
+                .hasRootCauseInstanceOf(SQLException.class)
+                .hasStackTraceContaining("password authentication failed for user \"postgres\"");
     }
 
     private Pipeline pipeline(StreamSource<ChangeRecord> source) {

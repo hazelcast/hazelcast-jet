@@ -20,7 +20,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.accumulator.LongAccumulator;
-import com.hazelcast.jet.cdc.AbstractIntegrationTest;
 import com.hazelcast.jet.cdc.CdcSinks;
 import com.hazelcast.jet.cdc.ChangeRecord;
 import com.hazelcast.jet.cdc.Operation;
@@ -34,14 +33,13 @@ import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.StreamSource;
 import com.hazelcast.test.annotation.NightlyTest;
-import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.testcontainers.containers.PostgreSQLContainer;
 
 import javax.annotation.Nonnull;
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.Statement;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
@@ -50,15 +48,8 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
 import static com.hazelcast.jet.Util.entry;
-import static org.testcontainers.containers.PostgreSQLContainer.POSTGRESQL_PORT;
 
-public class PostgresCdcIntegrationTest extends AbstractIntegrationTest {
-
-    @Rule
-    public PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("debezium/example-postgres:1.2")
-            .withDatabaseName("postgres")
-            .withUsername("postgres")
-            .withPassword("postgres");
+public class PostgresCdcIntegrationTest extends AbstractPostgresCdcIntegrationTest {
 
     @Test
     //category intentionally left out, we want this one test to run in standard test suits
@@ -103,15 +94,11 @@ public class PostgresCdcIntegrationTest extends AbstractIntegrationTest {
         try (Connection connection = DriverManager.getConnection(postgres.getJdbcUrl(), postgres.getUsername(),
                 postgres.getPassword())) {
             connection.setSchema("inventory");
-            connection
-                    .prepareStatement("UPDATE customers SET first_name='Anne Marie' WHERE id=1004")
-                    .executeUpdate();
-            connection
-                    .prepareStatement("INSERT INTO customers VALUES (1005, 'Jason', 'Bourne', 'jason@bourne.org')")
-                    .executeUpdate();
-            connection
-                    .prepareStatement("DELETE FROM customers WHERE id=1005")
-                    .executeUpdate();
+            Statement statement = connection.createStatement();
+            statement.addBatch("UPDATE customers SET first_name='Anne Marie' WHERE id=1004");
+            statement.addBatch("INSERT INTO customers VALUES (1005, 'Jason', 'Bourne', 'jason@bourne.org')");
+            statement.addBatch("DELETE FROM customers WHERE id=1005");
+            statement.executeBatch();
         }
 
         //then
@@ -151,7 +138,6 @@ public class PostgresCdcIntegrationTest extends AbstractIntegrationTest {
                             Order order = value.toObject(Order.class);
                             return entry(orderId + "/" + count, operation + ":" + order);
                         })
-                .peek()
                 .setLocalParallelism(1)
                 .writeTo(Sinks.map("results"));
 
@@ -219,15 +205,11 @@ public class PostgresCdcIntegrationTest extends AbstractIntegrationTest {
         try (Connection connection = DriverManager.getConnection(postgres.getJdbcUrl(), postgres.getUsername(),
                 postgres.getPassword())) {
             connection.setSchema("inventory");
-            connection
-                    .prepareStatement("UPDATE customers SET first_name='Anne Marie' WHERE id=1004")
-                    .executeUpdate();
-            connection
-                    .prepareStatement("INSERT INTO customers VALUES (1005, 'Jason', 'Bourne', 'jason@bourne.org')")
-                    .executeUpdate();
-            connection
-                    .prepareStatement("DELETE FROM customers WHERE id=1005")
-                    .executeUpdate();
+            Statement statement = connection.createStatement();
+            statement.addBatch("UPDATE customers SET first_name='Anne Marie' WHERE id=1004");
+            statement.addBatch("INSERT INTO customers VALUES (1005, 'Jason', 'Bourne', 'jason@bourne.org')");
+            statement.addBatch("DELETE FROM customers WHERE id=1005");
+            statement.executeBatch();
         }
 
         //then
@@ -271,12 +253,10 @@ public class PostgresCdcIntegrationTest extends AbstractIntegrationTest {
         try (Connection connection = DriverManager.getConnection(postgres.getJdbcUrl(), postgres.getUsername(),
                 postgres.getPassword())) {
             connection.setSchema("inventory");
-            connection
-                    .prepareStatement("UPDATE customers SET first_name='Anne Marie' WHERE id=1004")
-                    .executeUpdate();
-            connection
-                    .prepareStatement("INSERT INTO customers VALUES (1005, 'Jason', 'Bourne', 'jason@bourne.org')")
-                    .executeUpdate();
+            Statement statement = connection.createStatement();
+            statement.addBatch("UPDATE customers SET first_name='Anne Marie' WHERE id=1004");
+            statement.addBatch("INSERT INTO customers VALUES (1005, 'Jason', 'Bourne', 'jason@bourne.org')");
+            statement.executeBatch();
         }
         //then
         assertEqualsEventually(() -> mapResultsToSortedList(jet.getMap("cache")),
@@ -310,13 +290,7 @@ public class PostgresCdcIntegrationTest extends AbstractIntegrationTest {
 
     @Nonnull
     private StreamSource<ChangeRecord> source(String tableName) {
-        return PostgresCdcSources.postgres(tableName)
-                .setDatabaseAddress(postgres.getContainerIpAddress())
-                .setDatabasePort(postgres.getMappedPort(POSTGRESQL_PORT))
-                .setDatabaseUser("postgres")
-                .setDatabasePassword("postgres")
-                .setDatabaseName("postgres")
-                .setClusterName("dbserver1")
+        return sourceBuilder(tableName)
                 .setTableWhitelist("inventory." + tableName)
                 .build();
     }

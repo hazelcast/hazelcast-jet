@@ -38,7 +38,7 @@ import static com.hazelcast.jet.Util.entry;
 import static org.testcontainers.containers.MySQLContainer.MYSQL_PORT;
 
 @Category(NightlyTest.class)
-public class DebeziumCdcIntegrationTest extends AbstractIntegrationTest {
+public class DebeziumCdcIntegrationTest extends AbstractCdcIntegrationTest {
 
     @Test
     public void mysql() throws Exception {

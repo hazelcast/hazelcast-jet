@@ -16,30 +16,23 @@
 
 package com.hazelcast.jet.cdc.mysql;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.hazelcast.jet.cdc.AbstractIntegrationTest;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.SQLException;
-import java.util.Objects;
+import com.hazelcast.jet.cdc.AbstractCdcIntegrationTest;
 import org.junit.Rule;
 import org.testcontainers.containers.MySQLContainer;
 
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
+import java.sql.Statement;
+
 import static org.testcontainers.containers.MySQLContainer.MYSQL_PORT;
 
-public class AbstractMySqlCdcIntegrationTest extends AbstractIntegrationTest {
-
-    protected static final String DATABASE = "testDb";
-    protected static final String SINK_MAP_NAME = "resultsMap";
+public abstract class AbstractMySqlCdcIntegrationTest extends AbstractCdcIntegrationTest {
 
     @Rule
     public MySQLContainer<?> mysql = new MySQLContainer<>("debezium/example-mysql:1.2")
             .withUsername("mysqluser")
             .withPassword("mysqlpw");
-
-    protected MySqlCdcSources.Builder sourceBuilder() {
-        return sourceBuilder("cdcMysql");
-    }
 
     protected MySqlCdcSources.Builder sourceBuilder(String name) {
         return MySqlCdcSources.mysql(name)
@@ -50,58 +43,14 @@ public class AbstractMySqlCdcIntegrationTest extends AbstractIntegrationTest {
                 .setClusterName("dbserver1");
     }
 
-    protected void createDb(String name) throws SQLException {
+    protected void createDb(String database) throws SQLException {
         String jdbcUrl = "jdbc:mysql://" + mysql.getContainerIpAddress() + ":" + mysql.getMappedPort(MYSQL_PORT) + "/";
         try (Connection connection = DriverManager.getConnection(jdbcUrl, "root", "mysqlpw")) {
-            connection
-                    .prepareStatement("CREATE DATABASE " + name)
-                    .executeUpdate();
-            connection
-                    .prepareStatement("GRANT ALL PRIVILEGES ON " + name + ".* TO 'mysqluser'@'%'")
-                    .executeUpdate();
+            Statement statement = connection.createStatement();
+            statement.addBatch("CREATE DATABASE " + database);
+            statement.addBatch("GRANT ALL PRIVILEGES ON " + database + ".* TO 'mysqluser'@'%'");
+            statement.executeBatch();
         }
     }
 
-    protected static class TableRow {
-
-        @JsonProperty("id")
-        public int id;
-
-        @JsonProperty("value_1")
-        public String value1;
-
-        @JsonProperty("value_2")
-        public String value2;
-
-        @JsonProperty("value_3")
-        public String value3;
-
-        TableRow() {
-        }
-
-        @Override
-        public int hashCode() {
-            return Objects.hash(id, value1, value2, value3);
-        }
-
-        @Override
-        public boolean equals(Object obj) {
-            if (this == obj) {
-                return true;
-            }
-            if (obj == null || getClass() != obj.getClass()) {
-                return false;
-            }
-            TableRow other = (TableRow) obj;
-            return id == other.id
-                    && Objects.equals(value1, other.value1)
-                    && Objects.equals(value2, other.value2)
-                    && Objects.equals(value3, other.value3);
-        }
-
-        @Override
-        public String toString() {
-            return "TableRow {id=" + id + ", value1=" + value1 + ", value2=" + value2 + ", value3=" + value3 + '}';
-        }
-    }
 }
