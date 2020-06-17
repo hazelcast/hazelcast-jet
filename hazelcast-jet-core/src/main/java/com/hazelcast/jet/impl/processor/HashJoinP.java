@@ -147,25 +147,14 @@ public class HashJoinP<E0> extends AbstractProcessor {
     // Using the iterator, we only hold one block in memory at a time and let the processor either use it directly
     // or use it to build the data structure it requires.
     private Object getValues(@Nonnull Iterator iterator) {
-        Object x = null;
-        HashJoinArrayList result = null;
+        HashJoinArrayList result = new HashJoinArrayList();
         while (iterator.hasNext()) {
-            if (x == null) {
-                x = iterator.next();
-            } else if (result == null) {
-                result = new HashJoinArrayList();
-                result.add(x);
-                result.add(iterator.next());
-            } else {
-                result.add(iterator.next());
-            }
+            result.add(iterator.next());
         }
-        //the iterator can have no values under that key, in which case we return null
-        if (result == null) {
-            return x;
-        } else {
-            return result;
+        if (result.size() == 1) {
+            return result.get(0);
         }
+        return result;
     }
 
     private class CombinationsTraverser<OUT> implements Traverser<OUT> {
@@ -195,7 +184,7 @@ public class HashJoinP<E0> extends AbstractProcessor {
             for (int i = 0; i < lookedUpValues.length; i++) {
                 lookedUpValues[i] = lookUpJoined(i, item);
                 sizes[i] = lookedUpValues[i] instanceof HashJoinArrayList
-                        ? ((ArrayList) lookedUpValues[i]).size() : 1;
+                        ? ((HashJoinArrayList) lookedUpValues[i]).size() : 1;
             }
             Arrays.fill(indices, 0);
             currentItem = item;
