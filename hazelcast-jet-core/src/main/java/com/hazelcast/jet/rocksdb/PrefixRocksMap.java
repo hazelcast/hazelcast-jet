@@ -44,17 +44,27 @@ import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
  * A RocksDB-backed Map that stores lists of values mapped to keys.
  * This Map makes use of RocksDB bulk-loading and prefix iteration features.
  * Lifecycle:
- * (1) A processor acquire an instance of this class using RocksDBStateBackend.getPrefixMap().
- * (2) The processors issues a series of add() operations to load keys and values
- * then call compact() to prepare the map for reads.
- * (3) The processor acquires one or more iterators using prefixRocksIterator().
- * (4) The processor can issue a series of get() operations
- * using the iterators it acquired to retrieve the values in the map.
- * (5) The processor calls close() to release all memory this map owns.
+ * <ol><li>
+ *     A processor acquire an instance of this class using
+ *     {@link RocksDBStateBackend#getPrefixMap}.
+ * </li><li>
+ *     The processors issues a series of add() operations to load keys and
+ *     values then call compact() to prepare the map for reads.
+ * </li><li>
+ *     The processor acquires one or more iterators using {@link #prefixRocksIterator}.
+ * </li><li>
+ *     The processor can issue a series of get() operations using the iterators
+ *     it acquired to retrieve the values in the map.
+ * </li><li>
+ * The processor calls close() to release all memory this map owns.
+ * </li></ol>
  * <p>
  * Notes:
- * (1) get() operations on this map are thread-safe however add() operations are not.
- * (2) Not calling close() after execution completes will cause a memory leak.
+ * <ol><li>
+ * get() operations on this map are thread-safe however add() operations are not.
+ * </li><li>
+ * Not calling close() after execution completes will cause a memory leak.
+ * </li></ol>
  *
  * @param <K> the type of key
  * @param <V> the type of value
@@ -84,7 +94,8 @@ public class PrefixRocksMap<K, V> implements Iterable<Entry<K, Iterator<V>>> {
         flushOptions = options.flushOptions();
     }
 
-    //lazily creates the column family since the prefix is only specified once the map is actually used
+    // lazily creates the column family since the prefix is only specified once
+    // the map is actually used
     private void open(K prefix) {
         try {
             cfh = db.createColumnFamily(new ColumnFamilyDescriptor(serialize(name),
@@ -94,7 +105,7 @@ public class PrefixRocksMap<K, V> implements Iterable<Entry<K, Iterator<V>>> {
         }
     }
 
-    //opens the database in non-prefix mode since no add() or get() were issued
+    // opens the database in non-prefix mode since no add() or get() were issued
     private void open() {
         try {
             cfh = db.createColumnFamily(new ColumnFamilyDescriptor(serialize(name), columnFamilyOptions));
@@ -118,9 +129,9 @@ public class PrefixRocksMap<K, V> implements Iterable<Entry<K, Iterator<V>>> {
     }
 
     /**
-     * Retrieves all values associated with the given key.
-     * Callers need to first acquire a native RocksDB iterator
-     * by calling prefixRocksIterator() and keeping it for later calls.
+     * Retrieves all values associated with the given key. Callers need to
+     * first acquire a native RocksDB iterator by calling {@link
+     * #prefixRocksIterator} and keeping it for later calls.
      *
      * @return an iterator over the values associated with the key.
      */
@@ -129,7 +140,6 @@ public class PrefixRocksMap<K, V> implements Iterable<Entry<K, Iterator<V>>> {
             open(key);
         }
         iterator.seek(serialize(key));
-
 
         return new Iterator<>() {
             @Override
@@ -147,12 +157,11 @@ public class PrefixRocksMap<K, V> implements Iterable<Entry<K, Iterator<V>>> {
     }
 
     /**
-     * Used to acquire a native RocksDB iterator.
-     * The returned iterator is used by callers to preform prefix reads and iteration.
-     * Should be used with caution not to create to many native iterators.
-     * Callers need to reuse the returned iterator.
-     * Otherwise, creating and iterator on each read will take too much memory
-     * and cause the job to fail.
+     * Used to acquire a native RocksDB iterator. The returned iterator is used
+     * by callers to preform prefix reads and iteration. Should be used with
+     * caution not to create to many native iterators. Callers need to reuse
+     * the returned iterator. Otherwise, creating and iterator on each read
+     * will take too much memory and cause the job to fail.
      */
     public RocksIterator prefixRocksIterator() {
         RocksIterator rocksIterator = db.newIterator(cfh, prefixIteratorOptions);
@@ -161,11 +170,10 @@ public class PrefixRocksMap<K, V> implements Iterable<Entry<K, Iterator<V>>> {
     }
 
     /**
-     * Returns an iterator over the contents of this map.
-     * This iterator is guaranteed to return all keys totally ordered.
+     * Returns an iterator over the contents of this map. This iterator is
+     * guaranteed to return all keys totally ordered.
      */
-    @Nonnull
-    @Override
+    @Nonnull @Override
     public Iterator<Entry<K, Iterator<V>>> iterator() {
         if (cfh == null) {
             open();
@@ -176,9 +184,9 @@ public class PrefixRocksMap<K, V> implements Iterable<Entry<K, Iterator<V>>> {
     }
 
     /**
-     * Compacts RocksMap's ColumnFamily from level 0 to level 1.
-     * This should be invoked to prepare RocksMap for reads
-     * after bulk-loading with a series of add() calls.
+     * Compacts RocksMap's ColumnFamily from level 0 to level 1. This should be
+     * invoked to prepare RocksMap for reads after bulk-loading with a series of
+     * add() calls.
      */
     public PrefixRocksMap<K, V> compact() throws JetException {
         if (cfh != null) {
