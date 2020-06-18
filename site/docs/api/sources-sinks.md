@@ -30,24 +30,15 @@ p.readFrom(Sources.files("/home/data/web-logs"))
 
 #### JSON Files
 
-For JSON files, the source expects each line contains a valid JSON
-string and converts it to the given object type or to a `Map` if no
-type is specified:
+For JSON files, the source expects the content of the files as
+[streaming JSON](https://en.wikipedia.org/wiki/JSON_streaming) content,
+where each JSON string is separated by a new-line. The JSON string
+itself can span on multiple lines. The source converts each JSON string
+to an object of given type or to a `Map` if no type is specified:
 
 ```java
 Pipeline p = Pipeline.create();
 p.readFrom(Sources.json("/home/data/people", Person.class))
- .filter(person -> person.location().equals("NYC"))
- .writeTo(Sinks.logger());
-```
-
-If your JSON files contain JSON strings that span multiple
-lines, you can use `filesBuilder` source:
-
-```java
-Pipeline p = Pipeline.create();
-p.readFrom(Sources.filesBuilder(sourceDir)
-    .build(JsonUtil.asMultilineJson(Person.class)))
  .filter(person -> person.location().equals("NYC"))
  .writeTo(Sinks.logger());
 ```
@@ -1133,6 +1124,38 @@ p.readFrom(source)
 Elasticsearch is a popular fulltext search engine. Hazelcast Jet can
 use it both as a source and a sink.
 
+#### Dependency
+
+To use the Elasticsearch connector, you need to copy the
+`hazelcast-jet-elasticsearch-7` module from the `opt` folder to the
+`lib` folder and add the following dependency to your application:
+
+<!--DOCUSAURUS_CODE_TABS-->
+
+<!--Gradle-->
+
+```groovy
+compile 'com.hazelcast.jet:hazelcast-jet-elasticsearch-7:{jet-version}'
+```
+
+<!--Maven-->
+
+```xml
+<dependency>
+  <groupId>com.hazelcast.jet</groupId>
+  <artifactId>hazelcast-jet-elasticsearch-7</artifactId>
+  <version>{jet-version}</version>
+</dependency>
+```
+
+> For Elasticsearch version 6 and 5 there are separate modules
+> `hazelcast-jet-elasticsearch-6` and `hazelcast-jet-elasticsearch-5`.
+> Each module includes Elasticsearch client compatible with given major
+> version of Elasticsearch. The connector API is the same between
+> different versions, apart from a few minor differences where we
+> surface the API of Elasticsearch client. See the JavaDoc for any
+> such differences.
+
 #### Source
 
 The Elasticsearch connector source provides a builder and several
@@ -1433,17 +1456,19 @@ sources are batch and some are stream oriented. The processing guarantee
 is only relevant for streaming sources, as batch jobs should just be
 restarted in face of an intermittent failure.
 
-|source|module|batch/stream|guarantee|
-|:-----|:---- |:-----------|:--------|
-|`AvroSources.files`|`hazelcast-jet-avro`|batch|N/A|
-|`DebeziumCdcSources.debezium`|`hazelcast-jet-cdc-debezium`|stream|at-least-once|
-|`ElasticSources.elastic`|`hazelcast-jet-elasticsearch-7`|batch|N/A|
-|`HadoopSources.inputFormat`|`hazelcast-jet-hadoop`|batch|N/A|
-|`KafkaSources.kafka`|`hazelcast-jet-kafka`|stream|exactly-once|
-|`MySqlCdcSources.mysql`|`hazelcast-jet-cdc-mysql`|stream|at-least-once|
+|source|artifactId (module)|batch/stream|guarantee|
+|:-----|:------------------|:-----------|:--------|
+|`AvroSources.files`|`hazelcast-jet-avro (avro)`|batch|N/A|
+|`DebeziumCdcSources.debezium`|`hazelcast-jet-cdc-debezium (cdc-debezium)`|stream|at-least-once|
+|`ElasticSources.elastic`|`hazelcast-jet-elasticsearch-5 (elasticsearch-5)`|batch|N/A|
+|`ElasticSources.elastic`|`hazelcast-jet-elasticsearch-6 (elasticsearch-6)`|batch|N/A|
+|`ElasticSources.elastic`|`hazelcast-jet-elasticsearch-7 (elasticsearch-7)`|batch|N/A|
+|`HadoopSources.inputFormat`|`hazelcast-jet-hadoop (hadoop)`|batch|N/A|
+|`KafkaSources.kafka`|`hazelcast-jet-kafka (kafka)`|stream|exactly-once|
+|`MySqlCdcSources.mysql`|`hazelcast-jet-cdc-mysql (cdc-mysql)`|stream|at-least-once|
 |`PulsarSources.pulsarConsumer`|`hazelcast-jet-contrib-pulsar`|stream|N/A|
 |`PulsarSources.pulsarReader`|`hazelcast-jet-contrib-pulsar`|stream|exactly-once|
-|`S3Sources.s3`|`hazelcast-jet-s3`|batch|N/A|
+|`S3Sources.s3`|`hazelcast-jet-s3 (s3)`|batch|N/A|
 |`Sources.cache`|`hazelcast-jet`|batch|N/A|
 |`Sources.cacheJournal`|`hazelcast-jet`|stream|exactly-once|
 |`Sources.files`|`hazelcast-jet`|batch|N/A|
@@ -1469,15 +1494,17 @@ default support at-least-once guarantee, but only some of them support
 exactly-once. If using idempotent updates, you can ensure exactly-once
 processing even with at-least-once sinks.
 
-|sink|module|streaming support|guarantee|
-|:---|:-----|:--------------|:-------------------|
-|`AvroSinks.files`|`hazelcast-jet-avro`|no|N/A|
-|`CdcSinks.map`|`hazelcast-jet-cdc-debezium`|yes|at-least-once|
-|`ElasticSinks.elastic`|`hazelcast-jet-elasticsearch-7`|yes|at-least-once|
-|`HadoopSinks.outputFormat`|`hazelcast-jet-hadoop`|no|N/A|
-|`KafkaSinks.kafka`|`hazelcast-jet-kafka`|yes|exactly-once|
+|sink|artifactId (module)|streaming support|guarantee|
+|:---|:------------------|:--------------|:-------------------|
+|`AvroSinks.files`|`hazelcast-jet-avro (avro)`|no|N/A|
+|`CdcSinks.map`|`hazelcast-jet-cdc-debezium (cdc-debezium)`|yes|at-least-once|
+|`ElasticSinks.elastic`|`hazelcast-jet-elasticsearch-5 (elasticsearch-5)`|yes|at-least-once|
+|`ElasticSinks.elastic`|`hazelcast-jet-elasticsearch-6 (elasticsearch-6)`|yes|at-least-once|
+|`ElasticSinks.elastic`|`hazelcast-jet-elasticsearch-7 (elasticsearch-7)`|yes|at-least-once|
+|`HadoopSinks.outputFormat`|`hazelcast-jet-hadoop (hadoop)`|no|N/A|
+|`KafkaSinks.kafka`|`hazelcast-jet-kafka (kafka)`|yes|exactly-once|
 |`PulsarSources.pulsarSink`|`hazelcast-jet-contrib-pulsar`|yes|at-least-once|
-|`S3Sinks.s3`|`hazelcast-jet-s3`|no|N/A|
+|`S3Sinks.s3`|`hazelcast-jet-s3 (s3)`|no|N/A|
 |`Sinks.cache`|`hazelcast-jet`|yes|at-least-once|
 |`Sinks.files`|`hazelcast-jet`|yes|exactly-once|
 |`Sinks.json`|`hazelcast-jet`|yes|exactly-once|
