@@ -61,7 +61,7 @@ public final class UpdateMapP<T, K, V> extends AbstractUpdateMapP<T, K, V> {
                String mapName,
                @Nonnull FunctionEx<? super T, ? extends K> keyFn,
                @Nonnull BiFunctionEx<? super V, ? super T, ? extends V> updateFn) {
-        super(instance, mapName, keyFn);
+        super(instance, maxParallelAsyncOps, mapName, keyFn);
         this.updateFn = updateFn;
     }
 
