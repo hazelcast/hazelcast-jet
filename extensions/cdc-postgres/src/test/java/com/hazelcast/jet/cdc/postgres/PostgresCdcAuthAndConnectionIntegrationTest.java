@@ -56,29 +56,6 @@ public class PostgresCdcAuthAndConnectionIntegrationTest extends AbstractPostgre
     }
 
     @Test
-    public void emptyPassword() {
-        StreamSource<ChangeRecord> source = PostgresCdcSources.postgres("name")
-                .setDatabaseAddress(postgres.getContainerIpAddress())
-                .setDatabasePort(postgres.getMappedPort(POSTGRESQL_PORT))
-                .setDatabaseUser("postgres")
-                .setDatabasePassword("")
-                .setDatabaseName("postgres")
-                .setClusterName("dbserver1")
-                .build();
-
-        Pipeline pipeline = pipeline(source);
-
-        JetInstance jet = createJetMembers(2)[0];
-
-        // when
-        Job job = jet.newJob(pipeline);
-        // then
-        assertThatThrownBy(job::join)
-                .hasRootCauseInstanceOf(SQLException.class)
-                .hasStackTraceContaining("password authentication failed for user \"postgres\"");
-    }
-
-    @Test
     public void incorrectAddress() {
         String containerIpAddress = postgres.getContainerIpAddress();
         String wrongContainerIpAddress = "172.17.5.10";
@@ -88,28 +65,6 @@ public class PostgresCdcAuthAndConnectionIntegrationTest extends AbstractPostgre
         StreamSource<ChangeRecord> source = PostgresCdcSources.postgres("name")
                 .setDatabaseAddress(wrongContainerIpAddress)
                 .setDatabasePort(postgres.getMappedPort(POSTGRESQL_PORT))
-                .setDatabaseUser("postgres")
-                .setDatabasePassword("")
-                .setDatabaseName("postgres")
-                .setClusterName("dbserver1")
-                .build();
-
-        Pipeline pipeline = pipeline(source);
-
-        JetInstance jet = createJetMembers(2)[0];
-
-        // when
-        Job job = jet.newJob(pipeline);
-        // then
-        assertJobStatusEventually(job, FAILED);
-    }
-
-    @Test
-    public void incorrectPort() {
-        int wrongPort = postgres.getMappedPort(POSTGRESQL_PORT) + 1;
-        StreamSource<ChangeRecord> source = PostgresCdcSources.postgres("name")
-                .setDatabaseAddress(postgres.getContainerIpAddress())
-                .setDatabasePort(wrongPort)
                 .setDatabaseUser("postgres")
                 .setDatabasePassword("")
                 .setDatabaseName("postgres")

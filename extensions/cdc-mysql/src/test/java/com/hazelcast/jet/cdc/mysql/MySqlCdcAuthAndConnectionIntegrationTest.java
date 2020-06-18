@@ -58,28 +58,6 @@ public class MySqlCdcAuthAndConnectionIntegrationTest extends AbstractMySqlCdcIn
     }
 
     @Test
-    public void emptyPassword() {
-        StreamSource<ChangeRecord> source = MySqlCdcSources.mysql("name")
-                .setDatabaseAddress(mysql.getContainerIpAddress())
-                .setDatabasePort(mysql.getMappedPort(MYSQL_PORT))
-                .setDatabaseUser("debezium")
-                .setDatabasePassword("")
-                .setClusterName("dbserver1")
-                .build();
-
-        Pipeline pipeline = pipeline(source);
-
-        JetInstance jet = createJetMembers(2)[0];
-
-        // when
-        Job job = jet.newJob(pipeline);
-        // then
-        assertThatThrownBy(job::join)
-                .hasRootCauseInstanceOf(SQLException.class)
-                .hasStackTraceContaining("Access denied for user");
-    }
-
-    @Test
     public void incorrectAddress() {
         String containerIpAddress = mysql.getContainerIpAddress();
         String wrongContainerIpAddress = "172.17.5.10";
@@ -89,27 +67,6 @@ public class MySqlCdcAuthAndConnectionIntegrationTest extends AbstractMySqlCdcIn
         StreamSource<ChangeRecord> source = MySqlCdcSources.mysql("name")
                 .setDatabaseAddress(wrongContainerIpAddress)
                 .setDatabasePort(mysql.getMappedPort(MYSQL_PORT))
-                .setDatabaseUser("debezium")
-                .setDatabasePassword("dbz")
-                .setClusterName("dbserver1")
-                .build();
-
-        Pipeline pipeline = pipeline(source);
-
-        JetInstance jet = createJetMembers(2)[0];
-
-        // when
-        Job job = jet.newJob(pipeline);
-        // then
-        assertJobStatusEventually(job, FAILED);
-    }
-
-    @Test
-    public void incorrectPort() {
-        int wrongPort = mysql.getMappedPort(MYSQL_PORT) + 1;
-        StreamSource<ChangeRecord> source = MySqlCdcSources.mysql("name")
-                .setDatabaseAddress(mysql.getContainerIpAddress())
-                .setDatabasePort(wrongPort)
                 .setDatabaseUser("debezium")
                 .setDatabasePassword("dbz")
                 .setClusterName("dbserver1")
