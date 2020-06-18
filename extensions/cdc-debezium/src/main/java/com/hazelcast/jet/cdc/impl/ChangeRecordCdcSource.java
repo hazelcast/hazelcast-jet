@@ -20,7 +20,6 @@ import com.hazelcast.jet.cdc.ChangeRecord;
 import com.hazelcast.jet.pipeline.SourceBuilder;
 import com.hazelcast.jet.pipeline.StreamSource;
 import io.debezium.transforms.ExtractNewRecordState;
-import org.apache.kafka.connect.data.Struct;
 import org.apache.kafka.connect.data.Values;
 import org.apache.kafka.connect.source.SourceRecord;
 
