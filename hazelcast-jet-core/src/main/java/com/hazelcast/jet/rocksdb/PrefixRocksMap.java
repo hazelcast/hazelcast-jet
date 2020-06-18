@@ -72,8 +72,8 @@ public class PrefixRocksMap<K, V> implements Iterable<Entry<K, Iterator<V>>> {
     private ColumnFamilyHandle cfh;
     private long counter = Long.MIN_VALUE;
 
-    PrefixRocksMap(RocksDB db, String name, @Nonnull RocksDBOptions options,
-                   InternalSerializationService serializationService) {
+    PrefixRocksMap(@Nonnull RocksDB db, @Nonnull String name, @Nonnull PrefixRocksDBOptions options,
+                   @Nonnull InternalSerializationService serializationService) {
         this.db = db;
         this.name = name;
         this.serializationService = serializationService;

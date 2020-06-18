@@ -55,8 +55,8 @@ public class RocksMap<K, V> implements Iterable<Entry<K, V>> {
     private final ColumnFamilyHandle cfh;
     private final ArrayList<RocksMapIterator> iterators = new ArrayList<>();
 
-    RocksMap(RocksDB db, String name, RocksDBOptions options,
-             InternalSerializationService serializationService) {
+    RocksMap(@Nonnull RocksDB db, @Nonnull String name, @Nonnull RocksDBOptions options,
+             @Nonnull InternalSerializationService serializationService) {
         this.db = db;
         this.serializationService = serializationService;
         columnFamilyOptions = options.columnFamilyOptions();

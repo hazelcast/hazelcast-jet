@@ -119,6 +119,11 @@
             <outputDirectory/>
         </fileSet>
 
+        <fileSet>
+            <directory>src/database</directory>
+            <outputDirectory>rocksdb</outputDirectory>
+        </fileSet>
+
         <!-- Files in these two directories contain property placeholders that the
              Maven Assembly Plugin must expand (that's what "filtered" means). -->
         <fileSet>

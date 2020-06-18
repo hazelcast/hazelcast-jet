@@ -16,49 +16,23 @@
 
 package com.hazelcast.jet.rocksdb;
 
-import org.rocksdb.BlockBasedTableConfig;
-import org.rocksdb.BloomFilter;
 import org.rocksdb.ColumnFamilyOptions;
 import org.rocksdb.FlushOptions;
-import org.rocksdb.IndexType;
 import org.rocksdb.Options;
 import org.rocksdb.ReadOptions;
-import org.rocksdb.VectorMemTableConfig;
 import org.rocksdb.WriteOptions;
 
+/**
+ * General RocksDB Configurations
+ */
 class RocksDBOptions {
-    private static final int MEMTABLE_SIZE = 64 * 1024 * 1024;
-    private static final int MEMTABLE_NUMBER = 2;
-    private static final int MEMTABLES_SEALED = 0;
-    private static final int LEVELS = 2;
-    private static final int FLUSHES = 2;
-    private static final int BLOOM_BITS = 10;
 
     Options options() {
-        return new Options()
-                .setCreateIfMissing(true)
-                .setMaxBackgroundFlushes(FLUSHES)
-                // TODO: can't split into two modes, needs to be set when db is opened
-                .prepareForBulkLoad()
-                .setAllowConcurrentMemtableWrite(false)
-                .setDisableAutoCompactions(true);
+        return new Options().setCreateIfMissing(true);
     }
 
     ColumnFamilyOptions columnFamilyOptions() {
         return new ColumnFamilyOptions();
-    }
-
-    ColumnFamilyOptions prefixColumnFamilyOptions() {
-        return new ColumnFamilyOptions()
-                .setMaxWriteBufferNumber(MEMTABLE_NUMBER)
-                .setMaxWriteBufferNumberToMaintain(MEMTABLES_SEALED)
-                .setNumLevels(LEVELS)
-                .setWriteBufferSize(MEMTABLE_SIZE)
-                .setMemTableConfig(new VectorMemTableConfig())
-                .setTableFormatConfig(new BlockBasedTableConfig()
-                        .setIndexType(IndexType.kHashSearch)
-                        .setFilter(new BloomFilter(BLOOM_BITS, false))
-                        .setWholeKeyFiltering(false));
     }
 
     WriteOptions writeOptions() {
@@ -69,15 +43,7 @@ class RocksDBOptions {
         return new ReadOptions();
     }
 
-    ReadOptions iteratorOptions() {
-        return new ReadOptions().setTotalOrderSeek(true);
-    }
-
-    ReadOptions prefixIteratorOptions() {
-        return new ReadOptions().setPrefixSameAsStart(true);
-    }
-
     FlushOptions flushOptions() {
-        return new FlushOptions().setWaitForFlush(true);
+        return new FlushOptions();
     }
 }
