@@ -17,6 +17,7 @@
 package com.hazelcast.jet.sql.impl;
 
 import com.hazelcast.jet.core.DAG;
+import com.hazelcast.sql.SqlRowMetadata;
 import com.hazelcast.sql.impl.explain.QueryExplain;
 import com.hazelcast.sql.impl.optimizer.SqlPlan;
 import com.hazelcast.sql.impl.optimizer.SqlPlanType;
@@ -27,14 +28,14 @@ public class JetPlan implements SqlPlan {
     private final boolean isStreaming;
     private final boolean isInsert;
     private final String observableName;
-    private final int cursorColumnCount;
+    private final SqlRowMetadata rowMetadata;
 
-    public JetPlan(DAG dag, boolean isStreaming, boolean isInsert, String observableName, int cursorColumnCount) {
+    public JetPlan(DAG dag, boolean isStreaming, boolean isInsert, String observableName, SqlRowMetadata rowMetadata) {
         this.dag = dag;
         this.isStreaming = isStreaming;
         this.isInsert = isInsert;
         this.observableName = observableName;
-        this.cursorColumnCount = cursorColumnCount;
+        this.rowMetadata = rowMetadata;
     }
 
     @Override
@@ -63,7 +64,7 @@ public class JetPlan implements SqlPlan {
         return observableName;
     }
 
-    public int getCursorColumnCount() {
-        return cursorColumnCount;
+    public SqlRowMetadata getRowMetadata() {
+        return rowMetadata;
     }
 }

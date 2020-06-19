@@ -94,7 +94,7 @@ public final class ExpressionUtil {
 
         @SuppressWarnings("unchecked")
         Expression<Boolean> predicate0 = predicate != null ? predicate
-                : (Expression<Boolean>) ConstantExpression.create(QueryDataType.BOOLEAN, true);
+                : (Expression<Boolean>) ConstantExpression.create(true, QueryDataType.BOOLEAN);
 
         return entry -> {
             Row row = new EntryRow(fieldNames0, entry);
@@ -114,7 +114,7 @@ public final class ExpressionUtil {
     ) {
         @SuppressWarnings("unchecked")
         Expression<Boolean> predicate0 = predicate != null ? predicate
-                : (Expression<Boolean>) ConstantExpression.create(QueryDataType.BOOLEAN, true);
+                : (Expression<Boolean>) ConstantExpression.create(true, QueryDataType.BOOLEAN);
 
         return (left, right) -> {
             Object[] joined = Arrays.copyOf(left, left.length + right.length);

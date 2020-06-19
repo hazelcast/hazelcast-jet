@@ -18,7 +18,7 @@ package com.hazelcast.jet.sql;
 
 import com.hazelcast.jet.SimpleTestInClusterSupport;
 import com.hazelcast.jet.sql.impl.connector.kafka.SqlKafkaTest;
-import com.hazelcast.sql.SqlCursor;
+import com.hazelcast.sql.SqlResult;
 import com.hazelcast.sql.SqlRow;
 import com.hazelcast.sql.SqlService;
 import org.junit.BeforeClass;
@@ -69,7 +69,7 @@ public abstract class SqlTestSupport extends SimpleTestInClusterSupport {
     }
 
     protected static void executeSql(String sql) {
-        try (SqlCursor cursor = toCursor(sql)) {
+        try (SqlResult cursor = toCursor(sql)) {
             cursor.iterator().forEachRemaining(o -> { });
         } catch (Exception e) {
             throw sneakyThrow(e);
@@ -77,11 +77,11 @@ public abstract class SqlTestSupport extends SimpleTestInClusterSupport {
     }
 
     private static List<Row> executeSql(String sql, int numberOfExpectedRows) {
-        try (SqlCursor cursor = toCursor(sql)) {
+        try (SqlResult cursor = toCursor(sql)) {
             Iterator<SqlRow> iterator = cursor.iterator();
             List<Row> rows = new ArrayList<>(numberOfExpectedRows);
             for (int i = 0; i < numberOfExpectedRows; i++) {
-                rows.add(new Row(cursor.getColumnCount(), iterator.next()));
+                rows.add(new Row(cursor.getRowMetadata().getColumnCount(), iterator.next()));
             }
             return rows;
         } catch (Exception e) {
@@ -89,7 +89,7 @@ public abstract class SqlTestSupport extends SimpleTestInClusterSupport {
         }
     }
 
-    private static SqlCursor toCursor(String sql) {
+    private static SqlResult toCursor(String sql) {
         return sqlService.query(sql);
     }
 

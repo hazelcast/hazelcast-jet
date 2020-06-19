@@ -146,7 +146,7 @@ public class CdcSqlConnector implements JetSqlConnector {
 
         @SuppressWarnings("unchecked")
         Expression<Boolean> predicate0 = predicate != null ? predicate
-                : (Expression<Boolean>) ConstantExpression.create(QueryDataType.BOOLEAN, true);
+                : (Expression<Boolean>) ConstantExpression.create(true, QueryDataType.BOOLEAN);
 
         return record -> {
             char operation;

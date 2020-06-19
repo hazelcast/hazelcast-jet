@@ -17,9 +17,9 @@
 package com.hazelcast.jet.sql.impl;
 
 import com.hazelcast.jet.Observable;
-import com.hazelcast.sql.SqlColumnMetadata;
-import com.hazelcast.sql.SqlCursor;
+import com.hazelcast.sql.SqlResult;
 import com.hazelcast.sql.SqlRow;
+import com.hazelcast.sql.SqlRowMetadata;
 import com.hazelcast.sql.impl.QueryException;
 import com.hazelcast.sql.impl.SqlRowImpl;
 import com.hazelcast.sql.impl.row.HeapRow;
@@ -27,14 +27,15 @@ import com.hazelcast.sql.impl.row.HeapRow;
 import javax.annotation.Nonnull;
 import java.util.Iterator;
 
-public class SqlCursorFromObservable implements SqlCursor {
+public class SqlResultFromObservable implements SqlResult {
 
+    private final SqlRowMetadata rowMetadata;
     private final Observable<Object[]> observable;
-    private final int columnCount;
+
     private Iterator<SqlRow> iterator;
 
-    public SqlCursorFromObservable(int columnCount, Observable<Object[]> observable) {
-        this.columnCount = columnCount;
+    public SqlResultFromObservable(SqlRowMetadata rowMetadata, Observable<Object[]> observable) {
+        this.rowMetadata = rowMetadata;
         this.observable = observable;
 
         Iterator<Object[]> observableIt = observable.iterator();
@@ -52,13 +53,8 @@ public class SqlCursorFromObservable implements SqlCursor {
     }
 
     @Override
-    public int getColumnCount() {
-        return columnCount;
-    }
-
-    @Override
-    public SqlColumnMetadata getColumnMetadata(int index) {
-        return null;
+    public SqlRowMetadata getRowMetadata() {
+        return rowMetadata;
     }
 
     @Nonnull @Override

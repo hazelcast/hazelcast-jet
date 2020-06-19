@@ -34,22 +34,29 @@ import com.hazelcast.jet.sql.impl.opt.physical.visitor.CreateDagVisitor;
 import com.hazelcast.jet.sql.impl.schema.JetTable;
 import com.hazelcast.jet.sql.impl.validate.JetSqlValidator;
 import com.hazelcast.spi.impl.NodeEngine;
-import com.hazelcast.sql.SqlCursor;
+import com.hazelcast.sql.SqlColumnMetadata;
+import com.hazelcast.sql.SqlResult;
+import com.hazelcast.sql.SqlRowMetadata;
 import com.hazelcast.sql.impl.JetSqlBackend;
-import com.hazelcast.sql.impl.SingleValueCursor;
+import com.hazelcast.sql.impl.QueryUtils;
+import com.hazelcast.sql.impl.SingleValueResult;
 import com.hazelcast.sql.impl.calcite.OptimizerContext;
 import com.hazelcast.sql.impl.optimizer.SqlPlan;
+import com.hazelcast.sql.impl.type.QueryDataType;
 import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelVisitor;
 import org.apache.calcite.rel.core.TableModify;
 import org.apache.calcite.rel.core.TableScan;
+import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
+import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.sql.SqlOperatorTable;
 import org.apache.calcite.sql.validate.SqlConformance;
 import org.apache.calcite.sql.validate.SqlValidatorCatalogReader;
 
 import javax.annotation.Nonnull;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
 
@@ -98,21 +105,30 @@ public class JetSqlBackendImpl implements JetSqlBackend, ManagedService {
 
         DAG dag;
         String observableName = null;
-        int cursorColumnCount = 0;
+        SqlRowMetadata rowMetadata = null;
         boolean isDml = inputRel instanceof TableModify;
         if (isDml) {
             dag = createDag(physicalRel, null);
         } else {
             observableName = "sql-sink-" + UuidUtil.newUnsecureUuidString();
             dag = createDag(physicalRel, SinkProcessors.writeObservableP(observableName));
-            cursorColumnCount = physicalRel.getRowType().getFieldCount();
+
+            RelDataType rootRowType = physicalRel.getRowType();
+            List<SqlColumnMetadata> columns = new ArrayList<>(rootRowType.getFieldCount());
+
+            for (RelDataTypeField field : rootRowType.getFieldList()) {
+                // TODO real type
+                columns.add(QueryUtils.getColumnMetadata(field.getName(), QueryDataType.OBJECT));
+            }
+
+            rowMetadata = new SqlRowMetadata(columns);
         }
 
-        return new JetPlan(dag, isStreamRead[0], isDml, observableName, cursorColumnCount);
+        return new JetPlan(dag, isStreamRead[0], isDml, observableName, rowMetadata);
     }
 
     @Override
-    public SqlCursor execute(SqlPlan plan0, List<Object> params, long timeout, int pageSize) {
+    public SqlResult execute(SqlPlan plan0, List<Object> params, long timeout, int pageSize) {
         if (params != null && !params.isEmpty()) {
             throw new JetException("Query parameters not yet supported");
         }
@@ -126,15 +142,15 @@ public class JetSqlBackendImpl implements JetSqlBackend, ManagedService {
 
         if (plan.isInsert()) {
             if (plan.isStreaming()) {
-                return new SingleValueCursor(job.getId());
+                return new SingleValueResult(job.getId());
             } else {
                 job.join();
                 // TODO return real updated row count
-                return new SingleValueCursor(-1L);
+                return new SingleValueResult(-1L);
             }
         } else {
             // TODO will not run on a client
-            return new SqlCursorFromObservable(plan.getCursorColumnCount(),
+            return new SqlResultFromObservable(plan.getRowMetadata(),
                     jetInstance.getObservable(plan.getObservableName()));
         }
     }
