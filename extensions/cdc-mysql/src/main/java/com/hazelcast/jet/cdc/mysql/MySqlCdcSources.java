@@ -18,14 +18,16 @@ package com.hazelcast.jet.cdc.mysql;
 
 import com.hazelcast.jet.annotation.EvolvingApi;
 import com.hazelcast.jet.cdc.ChangeRecord;
-import com.hazelcast.jet.cdc.mysql.impl.MySqlSequenceExtractor;
 import com.hazelcast.jet.cdc.impl.CdcSource;
+import com.hazelcast.jet.cdc.impl.ChangeRecordCdcSource;
 import com.hazelcast.jet.cdc.impl.DebeziumConfig;
 import com.hazelcast.jet.cdc.impl.PropertyRules;
+import com.hazelcast.jet.cdc.mysql.impl.MySqlSequenceExtractor;
 import com.hazelcast.jet.pipeline.StreamSource;
 
 import javax.annotation.Nonnull;
 import java.util.Objects;
+import java.util.Properties;
 
 /**
  * Contains factory methods for creating change data capture sources
@@ -227,12 +229,13 @@ public final class MySqlCdcSources {
         }
 
         /**
-         * Returns an actual source based on the properties set so far.
+         * Returns the source based on the properties set so far.
          */
         @Nonnull
         public StreamSource<ChangeRecord> build() {
-            config.check(RULES);
-            return config.createSource();
+            Properties properties = config.toProperties();
+            RULES.check(properties);
+            return ChangeRecordCdcSource.fromProperties(properties);
         }
 
     }
