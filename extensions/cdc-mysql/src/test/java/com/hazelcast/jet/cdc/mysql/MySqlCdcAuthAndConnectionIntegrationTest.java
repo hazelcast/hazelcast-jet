@@ -28,8 +28,6 @@ import org.junit.experimental.categories.Category;
 
 import java.sql.SQLException;
 
-import java.sql.SQLException;
-
 import static com.hazelcast.jet.core.JobStatus.FAILED;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.testcontainers.containers.MySQLContainer.MYSQL_PORT;
