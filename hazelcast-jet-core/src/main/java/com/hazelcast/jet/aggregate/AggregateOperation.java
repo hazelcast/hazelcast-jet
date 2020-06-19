@@ -112,6 +112,13 @@ import static com.hazelcast.jet.impl.util.Util.checkSerializable;
 public interface AggregateOperation<A, R> extends Serializable {
 
     /**
+     * Returns whether this operation will have large state.
+     * This property is used to choose whether to open the state backend in
+     * prefix mode or not.
+     */
+    boolean hasUnboundedState();
+
+    /**
      * Returns the number of contributing streams this operation is set up to
      * handle. The index passed to {@link #accumulateFn(int)} must be less than
      * this number.
@@ -270,7 +277,7 @@ public interface AggregateOperation<A, R> extends Serializable {
                 combineFn,
                 deductFn(),
                 exportFn(),
-                finishFn());
+                finishFn(), hasUnboundedState());
     }
 
     /**

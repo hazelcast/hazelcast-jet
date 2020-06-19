@@ -146,7 +146,8 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
                            SnapshotContext snapshotContext,
                            ConcurrentHashMap<String, File> tempDirectories,
                            InternalSerializationService jobSerializationService,
-                           RocksDBStateBackend rocksDBStateBackend) {
+                           RocksDBStateBackend stateBackend,
+                           RocksDBStateBackend prefixStateBackend) {
         this.nodeEngine = (NodeEngineImpl) nodeEngine;
         this.executionId = executionId;
         initProcSuppliers(jobId, executionId, tempDirectories, jobSerializationService);
@@ -196,7 +197,8 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
                         memberCount,
                         tempDirectories,
                         jobSerializationService,
-                        rocksDBStateBackend
+                        stateBackend,
+                        prefixStateBackend
                 );
 
                 // createOutboundEdgeStreams() populates localConveyorMap and edgeSenderConveyorMap.

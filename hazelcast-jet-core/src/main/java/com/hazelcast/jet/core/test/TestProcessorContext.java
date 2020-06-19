@@ -36,7 +36,8 @@ public class TestProcessorContext extends TestProcessorSupplierContext implement
     private int localProcessorIndex;
     private int globalProcessorIndex;
     private InternalSerializationService serializationService;
-    private RocksDBStateBackend rocksDBStateBackend;
+    private RocksDBStateBackend stateBackend;
+    private RocksDBStateBackend prefixStateBackend;
 
     /**
      * Constructor with default values.
@@ -61,11 +62,19 @@ public class TestProcessorContext extends TestProcessorSupplierContext implement
     }
 
     @Override
-    public RocksDBStateBackend rocksDBStateBackend() {
-        if (rocksDBStateBackend == null) {
-            rocksDBStateBackend = new RocksDBStateBackend().initialize(serializationService).open();
+    public RocksDBStateBackend stateBackend() {
+        if (stateBackend == null) {
+            stateBackend = new RocksDBStateBackend().initialize(serializationService).open();
         }
-        return rocksDBStateBackend;
+        return stateBackend;
+    }
+
+    @Override
+    public RocksDBStateBackend prefixStateBackend() {
+        if (prefixStateBackend == null) {
+            prefixStateBackend = new RocksDBStateBackend().initialize(serializationService).usePrefixMode(true).open();
+        }
+        return prefixStateBackend;
     }
     /**
      * Set the job-level serialization service

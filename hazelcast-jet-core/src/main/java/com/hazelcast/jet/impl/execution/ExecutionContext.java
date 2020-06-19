@@ -107,7 +107,8 @@ public class ExecutionContext implements DynamicMetricsProvider {
     private volatile RawJobMetrics jobMetrics = RawJobMetrics.empty();
 
     private InternalSerializationService serializationService;
-    private RocksDBStateBackend rocksDBStateBackend;
+    private RocksDBStateBackend stateBackend;
+    private RocksDBStateBackend prefixStateBackend;
 
 
     public ExecutionContext(NodeEngine nodeEngine, TaskletExecutionService taskletExecService,
@@ -136,10 +137,11 @@ public class ExecutionContext implements DynamicMetricsProvider {
 
         JetService jetService = nodeEngine.getService(JetService.SERVICE_NAME);
         serializationService = jetService.createSerializationService(jobConfig.getSerializerConfigs());
-        rocksDBStateBackend = new RocksDBStateBackend().initialize(serializationService);
+        stateBackend = new RocksDBStateBackend().initialize(serializationService);
+        prefixStateBackend = new RocksDBStateBackend().initialize(serializationService).usePrefixMode(true);
         metricsEnabled = jobConfig.isMetricsEnabled() && nodeEngine.getConfig().getMetricsConfig().isEnabled();
         plan.initialize(nodeEngine, jobId, executionId, snapshotContext,
-                tempDirectories, serializationService, rocksDBStateBackend);
+                tempDirectories, serializationService, stateBackend, prefixStateBackend);
         snapshotContext.initTaskletCount(plan.getProcessorTaskletCount(), plan.getStoreSnapshotTaskletCount(),
                 plan.getHigherPriorityVertexCount());
         receiverMap = unmodifiableMap(plan.getReceiverMap());
@@ -210,7 +212,8 @@ public class ExecutionContext implements DynamicMetricsProvider {
             }
         }
 
-        rocksDBStateBackend.close();
+        stateBackend.close();
+        prefixStateBackend.close();
 
         tempDirectories.forEach((k, dir) -> {
             try {

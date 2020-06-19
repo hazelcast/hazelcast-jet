@@ -43,6 +43,7 @@ import com.hazelcast.jet.function.TriFunction;
 import com.hazelcast.jet.impl.processor.AsyncTransformUsingServiceOrderedP;
 import com.hazelcast.jet.impl.processor.AsyncTransformUsingServiceUnorderedP;
 import com.hazelcast.jet.impl.processor.GroupP;
+import com.hazelcast.jet.impl.processor.GroupP1;
 import com.hazelcast.jet.impl.processor.InsertWatermarksP;
 import com.hazelcast.jet.impl.processor.SessionWindowP;
 import com.hazelcast.jet.impl.processor.SlidingWindowP;
@@ -239,6 +240,15 @@ public final class Processors {
         return () -> new GroupP<>(nCopies(aggrOp.arity(), t -> "ALL"), aggrOp, (k, r) -> r);
     }
 
+    @Nonnull
+    public static <A, R> SupplierEx<Processor> aggregateP1(
+            @Nonnull AggregateOperation<A, R> aggrOp
+    ) {
+        // We should use the same constant key as the input edges do, but since
+        // the processor doesn't save the state, there's no need to.
+        return () -> new GroupP1<>(nCopies(aggrOp.arity(), t -> "ALL"), aggrOp, (k, r) -> r);
+    }
+
     /**
      * Returns a supplier of processors for a vertex that performs the provided
      * aggregate operation on all the items it receives. After exhausting all
@@ -259,6 +269,16 @@ public final class Processors {
     @Nonnull
     public static <A, R> SupplierEx<Processor> accumulateP(@Nonnull AggregateOperation<A, R> aggrOp) {
         return () -> new GroupP<>(
+                // We should use the same constant key as the input edges do, but since
+                // the processor doesn't save the state, there's no need to.
+                nCopies(aggrOp.arity(), t -> "ALL"),
+                aggrOp.withIdentityFinish(),
+                (k, r) -> r);
+    }
+
+    @Nonnull
+    public static <A, R> SupplierEx<Processor> accumulateP1(@Nonnull AggregateOperation<A, R> aggrOp) {
+        return () -> new GroupP1<>(
                 // We should use the same constant key as the input edges do, but since
                 // the processor doesn't save the state, there's no need to.
                 nCopies(aggrOp.arity(), t -> "ALL"),
@@ -295,6 +315,19 @@ public final class Processors {
                 (k, r) -> r);
     }
 
+    @Nonnull
+    public static <A, R> SupplierEx<Processor> combineP1(
+            @Nonnull AggregateOperation<A, R> aggrOp
+    ) {
+        return () -> new GroupP1<>(
+                // We should use the same constant key as the input edges do, but since
+                // the processor doesn't save the state, there's no need to.
+                t -> "ALL",
+                aggrOp.withCombiningAccumulateFn(identity()),
+                (k, r) -> r);
+    }
+
+
     /**
      * Returns a supplier of processors for a vertex that groups items by key
      * and performs the provided aggregate operation on each group. After
@@ -328,6 +361,15 @@ public final class Processors {
         return () -> new GroupP<>(keyFns, aggrOp, mapToOutputFn);
     }
 
+    @Nonnull
+    public static <K, A, R, OUT> SupplierEx<Processor> aggregateByKeyP1(
+            @Nonnull List<FunctionEx<?, ? extends K>> keyFns,
+            @Nonnull AggregateOperation<A, R> aggrOp,
+            @Nonnull BiFunctionEx<? super K, ? super R, OUT> mapToOutputFn
+    ) {
+        return () -> new GroupP1<>(keyFns, aggrOp, mapToOutputFn);
+    }
+
     /**
      * Returns a supplier of processors for the first-stage vertex in a
      * two-stage group-and-aggregate setup. The vertex groups items by the
@@ -355,6 +397,14 @@ public final class Processors {
             @Nonnull AggregateOperation<A, ?> aggrOp
     ) {
         return () -> new GroupP<>(getKeyFns, aggrOp.withIdentityFinish(), Util::entry);
+    }
+
+    @Nonnull
+    public static <K, A> SupplierEx<Processor> accumulateByKeyP1(
+            @Nonnull List<FunctionEx<?, ? extends K>> getKeyFns,
+            @Nonnull AggregateOperation<A, ?> aggrOp
+    ) {
+        return () -> new GroupP1<>(getKeyFns, aggrOp.withIdentityFinish(), Util::entry);
     }
 
     /**
@@ -386,6 +436,17 @@ public final class Processors {
             @Nonnull BiFunctionEx<? super K, ? super R, OUT> mapToOutputFn
     ) {
         return () -> new GroupP<>(
+                Entry::getKey,
+                aggrOp.withCombiningAccumulateFn(Entry<K, A>::getValue),
+                mapToOutputFn);
+    }
+
+    @Nonnull
+    public static <K, A, R, OUT> SupplierEx<Processor> combineByKeyP1(
+            @Nonnull AggregateOperation<A, R> aggrOp,
+            @Nonnull BiFunctionEx<? super K, ? super R, OUT> mapToOutputFn
+    ) {
+        return () -> new GroupP1<>(
                 Entry::getKey,
                 aggrOp.withCombiningAccumulateFn(Entry<K, A>::getValue),
                 mapToOutputFn);

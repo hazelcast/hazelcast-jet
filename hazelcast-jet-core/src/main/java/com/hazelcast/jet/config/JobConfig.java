@@ -16,25 +16,6 @@
 
 package com.hazelcast.jet.config;
 
-import static com.hazelcast.internal.util.Preconditions.checkNotNull;
-import static com.hazelcast.jet.config.ResourceType.CLASS;
-import static java.util.concurrent.TimeUnit.SECONDS;
-
-import java.io.File;
-import java.io.IOException;
-import java.net.MalformedURLException;
-import java.net.URISyntaxException;
-import java.net.URL;
-import java.nio.file.Files;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Objects;
-
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-
 import com.hazelcast.config.MetricsConfig;
 import com.hazelcast.internal.util.Preconditions;
 import com.hazelcast.jet.JetException;
@@ -51,6 +32,24 @@ import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 import com.hazelcast.nio.serialization.StreamSerializer;
 import com.hazelcast.spi.annotation.PrivateApi;
+
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import java.io.File;
+import java.io.IOException;
+import java.net.MalformedURLException;
+import java.net.URISyntaxException;
+import java.net.URL;
+import java.nio.file.Files;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Objects;
+
+import static com.hazelcast.internal.util.Preconditions.checkNotNull;
+import static com.hazelcast.jet.config.ResourceType.CLASS;
+import static java.util.concurrent.TimeUnit.SECONDS;
 
 /**
  * Contains the configuration specific to one Hazelcast Jet job.

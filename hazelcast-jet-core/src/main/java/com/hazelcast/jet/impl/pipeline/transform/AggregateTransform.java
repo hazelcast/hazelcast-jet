@@ -16,7 +16,9 @@
 
 package com.hazelcast.jet.impl.pipeline.transform;
 
+import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.aggregate.AggregateOperation;
+import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.impl.pipeline.Planner;
 import com.hazelcast.jet.impl.pipeline.Planner.PlannerVertex;
@@ -26,8 +28,11 @@ import java.util.List;
 
 import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.processor.Processors.accumulateP;
+import static com.hazelcast.jet.core.processor.Processors.accumulateP1;
 import static com.hazelcast.jet.core.processor.Processors.aggregateP;
+import static com.hazelcast.jet.core.processor.Processors.aggregateP1;
 import static com.hazelcast.jet.core.processor.Processors.combineP;
+import static com.hazelcast.jet.core.processor.Processors.combineP1;
 
 public class AggregateTransform<A, R> extends AbstractTransform {
     public static final String FIRST_STAGE_VERTEX_NAME_SUFFIX = "-prepare";
@@ -71,7 +76,13 @@ public class AggregateTransform<A, R> extends AbstractTransform {
     //                  |   aggregateP   | local parallelism = 1
     //                   ----------------
     private void addToDagSingleStage(Planner p) {
-        PlannerVertex pv = p.addVertex(this, name(), 1, aggregateP(aggrOp));
+        SupplierEx<Processor> agg;
+        if (aggrOp.hasUnboundedState()) {
+            agg = aggregateP(aggrOp);
+        } else {
+            agg = aggregateP1(aggrOp);
+        }
+        PlannerVertex pv = p.addVertex(this, name(), 1, agg);
         p.addEdges(this, pv.v, edge -> edge.distributed().allToOne(name().hashCode()));
     }
 
@@ -94,9 +105,18 @@ public class AggregateTransform<A, R> extends AbstractTransform {
     //                   ----------------
     private void addToDagTwoStage(Planner p) {
         String vertexName = name();
-        Vertex v1 = p.dag.newVertex(vertexName + FIRST_STAGE_VERTEX_NAME_SUFFIX, accumulateP(aggrOp))
+        SupplierEx<Processor> acc;
+        SupplierEx<Processor> comb;
+        if (aggrOp.hasUnboundedState()) {
+            acc = accumulateP(aggrOp);
+            comb = combineP(aggrOp);
+        } else {
+            acc = accumulateP1(aggrOp);
+            comb = combineP1(aggrOp);
+        }
+        Vertex v1 = p.dag.newVertex(vertexName + FIRST_STAGE_VERTEX_NAME_SUFFIX, acc)
                          .localParallelism(localParallelism());
-        PlannerVertex pv2 = p.addVertex(this, vertexName, 1, combineP(aggrOp));
+        PlannerVertex pv2 = p.addVertex(this, vertexName, 1, comb);
         p.addEdges(this, v1);
         p.dag.edge(between(v1, pv2.v).distributed().allToOne(name().hashCode()));
     }

@@ -132,6 +132,7 @@ public final class AggregateOperationBuilder<A> {
         private BiConsumerEx<? super A, ? super A> combineFn;
         private BiConsumerEx<? super A, ? super A> deductFn;
         private FunctionEx<? super A, ? extends R> exportFn;
+        private boolean hasUnboundedState;
 
         Arity1(
                 @Nonnull SupplierEx<A> createFn,
@@ -177,6 +178,11 @@ public final class AggregateOperationBuilder<A> {
             return this;
         }
 
+        public Arity1<T0, A, R> hasUnboundedState(boolean hasUnboundedState) {
+            this.hasUnboundedState = hasUnboundedState;
+            return this;
+        }
+
         /**
          * Registers the {@code export} primitive.
          */
@@ -211,7 +217,7 @@ public final class AggregateOperationBuilder<A> {
             }
             checkSerializable(finishFn, "finishFn");
             return new AggregateOperation1Impl<>(
-                    createFn, accumulateFn0, combineFn, deductFn, exportFn, finishFn);
+                    createFn, accumulateFn0, combineFn, deductFn, exportFn, finishFn, hasUnboundedState);
         }
 
         /**
@@ -232,7 +238,7 @@ public final class AggregateOperationBuilder<A> {
             }
             checkSerializable(exportFinishFn, "exportFinishFn");
             return new AggregateOperation1Impl<>(
-                    createFn, accumulateFn0, combineFn, deductFn, exportFinishFn, exportFinishFn);
+                    createFn, accumulateFn0, combineFn, deductFn, exportFinishFn, exportFinishFn, hasUnboundedState);
         }
     }
 
@@ -256,6 +262,7 @@ public final class AggregateOperationBuilder<A> {
         private BiConsumerEx<? super A, ? super A> combineFn;
         private BiConsumerEx<? super A, ? super A> deductFn;
         private FunctionEx<? super A, ? extends R> exportFn;
+        private boolean hasUnboundedState;
 
         Arity2(@Nonnull Arity1<T0, A, R> step1, @Nonnull BiConsumerEx<? super A, ? super T1> accumulateFn1) {
             this.createFn = step1.createFn;
@@ -299,6 +306,11 @@ public final class AggregateOperationBuilder<A> {
             return this;
         }
 
+        public Arity2<T0, T1, A, R> hasUnboundedState(boolean hasUnboundedState) {
+            this.hasUnboundedState = hasUnboundedState;
+            return this;
+        }
+
         /**
          * Registers the {@code export} primitive.
          */
@@ -333,7 +345,7 @@ public final class AggregateOperationBuilder<A> {
                         " finish primitive");
             }
             return new AggregateOperation2Impl<>(
-                    createFn, accumulateFn0, accumulateFn1, combineFn, deductFn, exportFn, finishFn);
+                    createFn, accumulateFn0, accumulateFn1, combineFn, deductFn, exportFn, finishFn, hasUnboundedState);
         }
 
         /**
@@ -349,7 +361,7 @@ public final class AggregateOperationBuilder<A> {
                 @Nonnull FunctionEx<? super A, ? extends R_NEW> exportFinishFn
         ) {
             return new AggregateOperation2Impl<>(createFn, accumulateFn0, accumulateFn1,
-                    combineFn, deductFn, exportFinishFn, exportFinishFn);
+                    combineFn, deductFn, exportFinishFn, exportFinishFn, hasUnboundedState);
         }
     }
 
@@ -374,6 +386,7 @@ public final class AggregateOperationBuilder<A> {
         private BiConsumerEx<? super A, ? super A> combineFn;
         private BiConsumerEx<? super A, ? super A> deductFn;
         private FunctionEx<? super A, ? extends R> exportFn;
+        private boolean hasUnboundedState;
 
         Arity3(Arity2<T0, T1, A, R> arity2, BiConsumerEx<? super A, ? super T2> accumulateFn2) {
             this.createFn = arity2.createFn;
@@ -399,6 +412,11 @@ public final class AggregateOperationBuilder<A> {
         public Arity3<T0, T1, T2, A, R> andDeduct(@Nullable BiConsumerEx<? super A, ? super A> deductFn) {
             checkSerializable(deductFn, "deductFn");
             this.deductFn = deductFn;
+            return this;
+        }
+
+        public Arity3<T0, T1, T2, A, R> hasUnboundedState(boolean hasUnboundedState) {
+            this.hasUnboundedState = hasUnboundedState;
             return this;
         }
 
@@ -437,7 +455,7 @@ public final class AggregateOperationBuilder<A> {
             checkSerializable(finishFn, "finishFn");
             return new AggregateOperation3Impl<>(createFn,
                     accumulateFn0, accumulateFn1, accumulateFn2,
-                    combineFn, deductFn, exportFn, finishFn);
+                    combineFn, deductFn, exportFn, finishFn, hasUnboundedState);
         }
 
         /**
@@ -454,7 +472,7 @@ public final class AggregateOperationBuilder<A> {
         ) {
             checkSerializable(exportFinishFn, "exportFinishFn");
             return new AggregateOperation3Impl<>(createFn, accumulateFn0, accumulateFn1, accumulateFn2,
-                    combineFn, deductFn, exportFinishFn, exportFinishFn);
+                    combineFn, deductFn, exportFinishFn, exportFinishFn, hasUnboundedState);
         }
     }
 
@@ -474,6 +492,7 @@ public final class AggregateOperationBuilder<A> {
         private BiConsumerEx<? super A, ? super A> combineFn;
         private BiConsumerEx<? super A, ? super A> deductFn;
         private FunctionEx<? super A, ? extends R> exportFn;
+        private boolean hasUnboundedState;
 
         VarArity(@Nonnull SupplierEx<A> createFn) {
             this.createFn = createFn;
@@ -528,6 +547,11 @@ public final class AggregateOperationBuilder<A> {
             return this;
         }
 
+        public VarArity<A, R> hasUnboundedState(boolean hasUnboundedState) {
+            this.hasUnboundedState = hasUnboundedState;
+            return this;
+        }
+
         /**
          * Registers the {@code export} primitive.
          */
@@ -562,7 +586,7 @@ public final class AggregateOperationBuilder<A> {
             }
             checkSerializable(finishFn, "finishFn");
             return new AggregateOperationImpl<>(
-                    createFn, packAccumulateFns(), combineFn, deductFn, exportFn, finishFn);
+                    createFn, packAccumulateFns(), combineFn, deductFn, exportFn, finishFn, hasUnboundedState);
         }
 
         /**
@@ -583,7 +607,7 @@ public final class AggregateOperationBuilder<A> {
             }
             checkSerializable(exportFinishFn, "exportFinishFn");
             return new AggregateOperationImpl<>(
-                    createFn, packAccumulateFns(), combineFn, deductFn, exportFinishFn, exportFinishFn);
+                    createFn, packAccumulateFns(), combineFn, deductFn, exportFinishFn, exportFinishFn, hasUnboundedState);
         }
 
         private BiConsumerEx<? super A, ?>[] packAccumulateFns() {

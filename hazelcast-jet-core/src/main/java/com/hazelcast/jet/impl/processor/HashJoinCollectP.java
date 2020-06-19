@@ -46,7 +46,7 @@ public class HashJoinCollectP<K, T, V> extends AbstractProcessor {
 
     @Override
     protected void init(@Nonnull Context context) throws Exception {
-        lookupTable = context.rocksDBStateBackend().getPrefixMap();
+        lookupTable = context.prefixStateBackend().getPrefixMap();
     }
 
     @Override

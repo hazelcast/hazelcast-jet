@@ -248,7 +248,8 @@ public final class Contexts {
 
         private final int localProcessorIndex;
         private final int globalProcessorIndex;
-        private final RocksDBStateBackend rocksDBStateBackend;
+        private final RocksDBStateBackend stateBackend;
+        private final RocksDBStateBackend prefixStateBackend;
 
         @SuppressWarnings("checkstyle:ParameterNumber")
         public ProcCtx(JetInstance instance,
@@ -265,13 +266,15 @@ public final class Contexts {
                        int memberCount,
                        ConcurrentHashMap<String, File> tempDirectories,
                        InternalSerializationService serializationService,
-                       RocksDBStateBackend rocksDBStateBackend) {
+                       RocksDBStateBackend stateBackend,
+                       RocksDBStateBackend prefixStateBackend) {
             super(instance, jobId, executionId, jobConfig, logger, vertexName, localParallelism,
                     memberCount * localParallelism, memberIndex, memberCount, processingGuarantee,
                     tempDirectories, serializationService);
             this.localProcessorIndex = localProcessorIndex;
             this.globalProcessorIndex = globalProcessorIndex;
-            this.rocksDBStateBackend = rocksDBStateBackend;
+            this.stateBackend = stateBackend;
+            this.prefixStateBackend = prefixStateBackend;
         }
 
         @Override
@@ -285,8 +288,21 @@ public final class Contexts {
         }
 
         @Override
-        public RocksDBStateBackend rocksDBStateBackend() {
-            return rocksDBStateBackend.open();
+        public RocksDBStateBackend stateBackend() {
+            return stateBackend.open();
+        }
+
+        @Override
+        public RocksDBStateBackend prefixStateBackend() {
+            return prefixStateBackend.open();
+        }
+
+        public RocksDBStateBackend getStateBackend() {
+            return stateBackend;
+        }
+
+        public RocksDBStateBackend getPrefixStateBackend() {
+            return prefixStateBackend;
         }
     }
 }

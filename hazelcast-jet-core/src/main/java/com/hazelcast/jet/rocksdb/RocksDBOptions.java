@@ -16,8 +16,9 @@
 
 package com.hazelcast.jet.rocksdb;
 
+import org.rocksdb.BlockBasedTableConfig;
+import org.rocksdb.BloomFilter;
 import org.rocksdb.ColumnFamilyOptions;
-import org.rocksdb.FlushOptions;
 import org.rocksdb.Options;
 import org.rocksdb.ReadOptions;
 import org.rocksdb.WriteOptions;
@@ -26,13 +27,26 @@ import org.rocksdb.WriteOptions;
  * General RocksDB Configurations
  */
 class RocksDBOptions {
+    private static final int MEMTABLE_SIZE = 64 * 1024 * 1024;
+    private static final int MEMTABLE_NUMBER = 2;
+    private static final int FLUSHES = 2;
+    private static final int BLOOM_BITS = 10;
+    private static final int COMPACTIONS = 4;
 
     Options options() {
-        return new Options().setCreateIfMissing(true);
+        return new Options()
+                .setCreateIfMissing(true)
+                .setMaxBackgroundFlushes(FLUSHES)
+                .setMaxBackgroundCompactions(COMPACTIONS);
     }
 
     ColumnFamilyOptions columnFamilyOptions() {
-        return new ColumnFamilyOptions();
+        return new ColumnFamilyOptions()
+                .setMaxWriteBufferNumber(MEMTABLE_NUMBER)
+                .setWriteBufferSize(MEMTABLE_SIZE)
+                .setTableFormatConfig(new BlockBasedTableConfig()
+                        .setFilter(new BloomFilter(BLOOM_BITS))
+                        .setWholeKeyFiltering(true));
     }
 
     WriteOptions writeOptions() {
@@ -41,9 +55,5 @@ class RocksDBOptions {
 
     ReadOptions readOptions() {
         return new ReadOptions();
-    }
-
-    FlushOptions flushOptions() {
-        return new FlushOptions();
     }
 }

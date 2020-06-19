@@ -30,16 +30,16 @@ import static com.hazelcast.jet.impl.util.Util.checkSerializable;
 public class AggregateOperation1Impl<T0, A, R>
         extends AggregateOperationImpl<A, R>
         implements AggregateOperation1<T0, A, R> {
-
     public AggregateOperation1Impl(
             @Nonnull SupplierEx<A> createFn,
             @Nonnull BiConsumerEx<? super A, ? super T0> accumulateFn,
             @Nullable BiConsumerEx<? super A, ? super A> combineFn,
             @Nullable BiConsumerEx<? super A, ? super A> deductFn,
             @Nonnull FunctionEx<? super A, ? extends R> exportFn,
-            @Nonnull FunctionEx<? super A, ? extends R> finishFn
+            @Nonnull FunctionEx<? super A, ? extends R> finishFn,
+            boolean hasUnboundedState
     ) {
-        super(createFn, accumulateFns(accumulateFn), combineFn, deductFn, exportFn, finishFn);
+        super(createFn, accumulateFns(accumulateFn), combineFn, deductFn, exportFn, finishFn, hasUnboundedState);
     }
 
     @Nonnull
@@ -54,7 +54,7 @@ public class AggregateOperation1Impl<T0, A, R>
     ) {
         checkSerializable(accumulateFn, "accumulateFn");
         return new AggregateOperation1Impl<>(
-                createFn(), accumulateFn, combineFn(), deductFn(), exportFn(), finishFn());
+                createFn(), accumulateFn, combineFn(), deductFn(), exportFn(), finishFn(), hasUnboundedState());
     }
 
     @Nonnull @Override
@@ -71,14 +71,14 @@ public class AggregateOperation1Impl<T0, A, R>
     public AggregateOperation1<T0, A, A> withIdentityFinish() {
         return new AggregateOperation1Impl<>(
                 createFn(), accumulateFn(), combineFn(), deductFn(),
-                unsupportedExportFn(), FunctionEx.identity());
+                unsupportedExportFn(), FunctionEx.identity(), hasUnboundedState());
     }
 
     @Nonnull @Override
     public <R_NEW> AggregateOperation1<T0, A, R_NEW> andThen(FunctionEx<? super R, ? extends R_NEW> thenFn) {
         return new AggregateOperation1Impl<>(
                 createFn(), accumulateFn(), combineFn(), deductFn(),
-                exportFn().andThen(thenFn), finishFn().andThen(thenFn)
-        );
+                exportFn().andThen(thenFn), finishFn().andThen(thenFn),
+                hasUnboundedState());
     }
 }

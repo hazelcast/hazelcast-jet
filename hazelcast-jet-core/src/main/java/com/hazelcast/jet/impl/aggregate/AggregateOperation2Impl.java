@@ -38,10 +38,11 @@ public class AggregateOperation2Impl<T0, T1, A, R>
             @Nullable BiConsumerEx<? super A, ? super A> combineFn,
             @Nullable BiConsumerEx<? super A, ? super A> deductFn,
             @Nonnull FunctionEx<? super A, ? extends R> exportFn,
-            @Nonnull FunctionEx<? super A, ? extends R> finishFn
+            @Nonnull FunctionEx<? super A, ? extends R> finishFn,
+            boolean hasUnboundedState
     ) {
         super(createFn, accumulateFns(accumulateFn0, accumulateFn1),
-                combineFn, deductFn, exportFn, finishFn);
+                combineFn, deductFn, exportFn, finishFn, hasUnboundedState);
     }
 
     private AggregateOperation2Impl(
@@ -50,9 +51,10 @@ public class AggregateOperation2Impl<T0, T1, A, R>
             @Nullable BiConsumerEx<? super A, ? super A> combineFn,
             @Nullable BiConsumerEx<? super A, ? super A> deductFn,
             @Nonnull FunctionEx<? super A, ? extends R> exportFn,
-            @Nonnull FunctionEx<? super A, ? extends R> finishFn
+            @Nonnull FunctionEx<? super A, ? extends R> finishFn,
+            boolean hasUnboundedState
     ) {
-        super(createFn, accumulateFns, combineFn, deductFn, exportFn, finishFn);
+        super(createFn, accumulateFns, combineFn, deductFn, exportFn, finishFn,hasUnboundedState);
     }
 
     @Nonnull @Override
@@ -73,7 +75,7 @@ public class AggregateOperation2Impl<T0, T1, A, R>
     ) {
         checkSerializable(accumulateFn0, "accumulateFn0");
         return new AggregateOperation2Impl<>(
-                createFn(), accumulateFn0, accumulateFn1(), combineFn(), deductFn(), exportFn(), finishFn());
+                createFn(), accumulateFn0, accumulateFn1(), combineFn(), deductFn(), exportFn(), finishFn(), hasUnboundedState());
     }
 
     @Nonnull @Override
@@ -82,7 +84,7 @@ public class AggregateOperation2Impl<T0, T1, A, R>
     ) {
         checkSerializable(accumulateFn1, "accumulateFn1");
         return new AggregateOperation2Impl<>(
-                createFn(), accumulateFn0(), accumulateFn1, combineFn(), deductFn(), exportFn(), finishFn());
+                createFn(), accumulateFn0(), accumulateFn1, combineFn(), deductFn(), exportFn(), finishFn(), hasUnboundedState());
     }
 
     @Nonnull @Override
@@ -99,7 +101,7 @@ public class AggregateOperation2Impl<T0, T1, A, R>
     public AggregateOperation2<T0, T1, A, A> withIdentityFinish() {
         return new AggregateOperation2Impl<>(
                 createFn(), accumulateFns, combineFn(), deductFn(),
-                unsupportedExportFn(), FunctionEx.identity());
+                unsupportedExportFn(), FunctionEx.identity(), hasUnboundedState());
     }
 
     @Nonnull @Override
@@ -108,7 +110,7 @@ public class AggregateOperation2Impl<T0, T1, A, R>
     ) {
         return new AggregateOperation2Impl<>(
                 createFn(), accumulateFns, combineFn(), deductFn(),
-                exportFn().andThen(thenFn), finishFn().andThen(thenFn)
-        );
+                exportFn().andThen(thenFn), finishFn().andThen(thenFn),
+                hasUnboundedState());
     }
 }

@@ -702,6 +702,7 @@ public final class AggregateOperations {
                 .withCreate(createCollectionFn)
                 .<T>andAccumulate(Collection::add)
                 .andCombine(Collection::addAll)
+                .hasUnboundedState(true)
                 .andExport(acc -> {
                     C result = createCollectionFn.get();
                     result.addAll(acc);
@@ -898,6 +899,7 @@ public final class AggregateOperations {
                 .withCreate(createMapFn)
                 .andAccumulate(accumulateFn)
                 .andCombine((l, r) -> r.forEach((key, value) -> l.merge(key, value, mergeFn)))
+                .hasUnboundedState(true)
                 .andExport(acc -> {
                     M result = createMapFn.get();
                     result.putAll(acc);

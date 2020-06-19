@@ -34,6 +34,7 @@ public class AggregateOperationImpl<A, R> implements AggregateOperation<A, R> {
     private final BiConsumerEx<? super A, ? super A> deductFn;
     private final FunctionEx<? super A, ? extends R> exportFn;
     private final FunctionEx<? super A, ? extends R> finishFn;
+    private final boolean hasUnboundedState;
 
     public AggregateOperationImpl(
             @Nonnull SupplierEx<A> createFn,
@@ -41,7 +42,8 @@ public class AggregateOperationImpl<A, R> implements AggregateOperation<A, R> {
             @Nullable BiConsumerEx<? super A, ? super A> combineFn,
             @Nullable BiConsumerEx<? super A, ? super A> deductFn,
             @Nonnull FunctionEx<? super A, ? extends R> exportFn,
-            @Nonnull FunctionEx<? super A, ? extends R> finishFn
+            @Nonnull FunctionEx<? super A, ? extends R> finishFn,
+            boolean hasUnboundedState
     ) {
         for (Object f : accumulateFns) {
             checkNotNull(f, "accumulateFns array contains a null slot");
@@ -52,6 +54,11 @@ public class AggregateOperationImpl<A, R> implements AggregateOperation<A, R> {
         this.deductFn = deductFn;
         this.exportFn = exportFn;
         this.finishFn = finishFn;
+        this.hasUnboundedState = hasUnboundedState;
+    }
+
+    public boolean hasUnboundedState() {
+        return hasUnboundedState;
     }
 
     @Override
@@ -98,7 +105,7 @@ public class AggregateOperationImpl<A, R> implements AggregateOperation<A, R> {
     @SuppressWarnings("unchecked")
     public AggregateOperation<A, R> withAccumulateFns(BiConsumerEx... accumulateFns) {
         return new AggregateOperationImpl<>(
-                createFn(), accumulateFns, combineFn(), deductFn(), exportFn(), finishFn());
+                createFn(), accumulateFns, combineFn(), deductFn(), exportFn(), finishFn(), hasUnboundedState());
     }
 
     @Nonnull @Override
@@ -106,7 +113,7 @@ public class AggregateOperationImpl<A, R> implements AggregateOperation<A, R> {
         checkSerializable(finishFn, "finishFn");
         return new AggregateOperationImpl<>(
                 createFn(), accumulateFns, combineFn(), deductFn(),
-                unsupportedExportFn(), FunctionEx.identity());
+                unsupportedExportFn(), FunctionEx.identity(), hasUnboundedState());
     }
 
     @Nonnull
@@ -114,8 +121,8 @@ public class AggregateOperationImpl<A, R> implements AggregateOperation<A, R> {
     public <R_NEW> AggregateOperation<A, R_NEW> andThen(FunctionEx<? super R, ? extends R_NEW> thenFn) {
         return new AggregateOperationImpl<>(
                 createFn(), accumulateFns, combineFn(), deductFn(),
-                exportFn().andThen(thenFn), finishFn().andThen(thenFn)
-        );
+                exportFn().andThen(thenFn), finishFn().andThen(thenFn),
+                hasUnboundedState());
     }
 
     @Nonnull

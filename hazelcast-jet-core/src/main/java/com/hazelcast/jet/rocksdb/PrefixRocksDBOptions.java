@@ -32,7 +32,6 @@ import org.rocksdb.WriteOptions;
 public class PrefixRocksDBOptions {
     private static final int MEMTABLE_SIZE = 64 * 1024 * 1024;
     private static final int MEMTABLE_NUMBER = 2;
-    private static final int MEMTABLES_SEALED = 0;
     private static final int LEVELS = 2;
     private static final int FLUSHES = 2;
     private static final int BLOOM_BITS = 10;
@@ -49,7 +48,6 @@ public class PrefixRocksDBOptions {
     ColumnFamilyOptions prefixColumnFamilyOptions() {
         return new ColumnFamilyOptions()
                 .setMaxWriteBufferNumber(MEMTABLE_NUMBER)
-                .setMaxWriteBufferNumberToMaintain(MEMTABLES_SEALED)
                 .setNumLevels(LEVELS)
                 .setWriteBufferSize(MEMTABLE_SIZE)
                 .setMemTableConfig(new VectorMemTableConfig())
@@ -61,10 +59,6 @@ public class PrefixRocksDBOptions {
 
     WriteOptions writeOptions() {
         return new WriteOptions().setDisableWAL(true);
-    }
-
-    ReadOptions readOptions() {
-        return new ReadOptions();
     }
 
     ReadOptions iteratorOptions() {

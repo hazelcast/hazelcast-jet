@@ -490,6 +490,8 @@ public interface Processor {
          */
         int globalProcessorIndex();
 
-        RocksDBStateBackend rocksDBStateBackend();
+        RocksDBStateBackend stateBackend();
+
+        RocksDBStateBackend prefixStateBackend();
     }
 }
