@@ -22,7 +22,9 @@ import com.hazelcast.jet.cdc.ChangeRecord;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.StreamSource;
+import com.hazelcast.test.annotation.NightlyTest;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 import java.sql.SQLException;
 
@@ -30,6 +32,7 @@ import static com.hazelcast.jet.core.JobStatus.FAILED;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.testcontainers.containers.PostgreSQLContainer.POSTGRESQL_PORT;
 
+@Category(NightlyTest.class)
 public class PostgresCdcAuthAndConnectionIntegrationTest extends AbstractPostgresCdcIntegrationTest {
 
     @Test
@@ -40,7 +43,6 @@ public class PostgresCdcAuthAndConnectionIntegrationTest extends AbstractPostgre
                 .setDatabaseUser("postgres")
                 .setDatabasePassword("wrongPassword")
                 .setDatabaseName("postgres")
-                .setClusterName("dbserver1")
                 .build();
 
         Pipeline pipeline = pipeline(source);
@@ -68,7 +70,6 @@ public class PostgresCdcAuthAndConnectionIntegrationTest extends AbstractPostgre
                 .setDatabaseUser("postgres")
                 .setDatabasePassword("")
                 .setDatabaseName("postgres")
-                .setClusterName("dbserver1")
                 .build();
 
         Pipeline pipeline = pipeline(source);
@@ -89,7 +90,6 @@ public class PostgresCdcAuthAndConnectionIntegrationTest extends AbstractPostgre
                 .setDatabaseUser("postgres")
                 .setDatabasePassword("")
                 .setDatabaseName("wrongDatabaseName")
-                .setClusterName("dbserver1")
                 .build();
 
         Pipeline pipeline = pipeline(source);

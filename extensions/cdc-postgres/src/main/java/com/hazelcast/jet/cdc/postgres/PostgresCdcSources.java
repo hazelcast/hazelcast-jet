@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.cdc.postgres;
 
+import com.hazelcast.internal.util.UuidUtil;
 import com.hazelcast.jet.annotation.EvolvingApi;
 import com.hazelcast.jet.cdc.ChangeRecord;
 import com.hazelcast.jet.cdc.impl.CdcSource;
@@ -64,7 +65,6 @@ public final class PostgresCdcSources {
                 .required("database.user")
                 .required("database.password")
                 .required("database.dbname")
-                .required("database.server.name")
                 .exclusive("schema.whitelist", "schema.blacklist")
                 .exclusive("table.whitelist", "table.blacklist");
 
@@ -81,6 +81,7 @@ public final class PostgresCdcSources {
             config = new DebeziumConfig(name, "io.debezium.connector.postgresql.PostgresConnector");
             config.setProperty(CdcSource.SEQUENCE_EXTRACTOR_CLASS_PROPERTY, PostgresSequenceExtractor.class.getName());
             config.setProperty(CdcSource.DB_SPECIFIC_EXTRA_FIELDS_PROPERTY, "schema");
+            config.setProperty("database.server.name", UuidUtil.newUnsecureUuidString());
         }
 
         /**
@@ -131,21 +132,9 @@ public final class PostgresCdcSources {
          * databases, only multiple schemas and/or tables. See white-
          * and black-listing configuration options for those.
          */
+        @Nonnull
         public Builder setDatabaseName(String dbName) {
             config.setProperty("database.dbname", dbName);
-            return this;
-        }
-
-        /**
-         * Logical name that identifies and provides a namespace for the
-         * particular database server/cluster being monitored. The
-         * logical name should be unique across all other connectors.
-         * Only alphanumeric characters and underscores should be used.
-         * Has to be specified.
-         */
-        @Nonnull
-        public Builder setClusterName(@Nonnull String cluster) {
-            config.setProperty("database.server.name", cluster);
             return this;
         }
 
@@ -157,6 +146,7 @@ public final class PostgresCdcSources {
          * will be monitored. May not be used with
          * {@link #setSchemaBlacklist(String...) schema blacklist}.
          */
+        @Nonnull
         public Builder setSchemaWhitelist(String... schemaNameRegExps) {
             config.setProperty("schema.whitelist", schemaNameRegExps);
             return this;
@@ -170,6 +160,7 @@ public final class PostgresCdcSources {
          * schemas. May not be used with
          * {@link #setSchemaWhitelist(String...) schema whitelist}.
          */
+        @Nonnull
         public Builder setSchemaBlacklist(String... schemaNameRegExps) {
             config.setProperty("schema.blacklist", schemaNameRegExps);
             return this;
@@ -313,7 +304,7 @@ public final class PostgresCdcSources {
         }
 
         /**
-         * Returns an actual source based on the properties set so far.
+         * Returns the source based on the properties set so far.
          */
         @Nonnull
         public StreamSource<ChangeRecord> build() {

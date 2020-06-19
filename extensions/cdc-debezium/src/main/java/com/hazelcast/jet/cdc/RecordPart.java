@@ -43,7 +43,7 @@ public interface RecordPart {
      * <p>
      * Note: there is a bug in jackson-jr's object mapping, where it doesn't
      * handle fields of type {@code Data} properly, if they are nullable.
-     * The null values trigger exceptions and failure in the object mapping code...
+     * The null values trigger exceptions and failure in the object mapping code.
      * <p>
      * This can be overcome via following trick, which in fact could come
      * in handy in many other situations.

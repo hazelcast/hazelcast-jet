@@ -40,8 +40,7 @@ public abstract class AbstractPostgresCdcIntegrationTest extends AbstractCdcInte
                 .setDatabasePort(postgres.getMappedPort(POSTGRESQL_PORT))
                 .setDatabaseUser("postgres")
                 .setDatabasePassword("postgres")
-                .setDatabaseName("postgres")
-                .setClusterName("dbserver1");
+                .setDatabaseName("postgres");
     }
 
     protected void createSchema(String schema) throws SQLException {

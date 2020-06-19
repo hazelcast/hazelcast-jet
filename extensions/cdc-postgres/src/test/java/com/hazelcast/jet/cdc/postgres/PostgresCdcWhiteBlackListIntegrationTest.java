@@ -25,8 +25,10 @@ import com.hazelcast.jet.cdc.RecordPart;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.StreamSource;
+import com.hazelcast.test.annotation.NightlyTest;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -38,6 +40,7 @@ import java.util.List;
 
 import static com.hazelcast.jet.Util.entry;
 
+@Category(NightlyTest.class)
 public class PostgresCdcWhiteBlackListIntegrationTest extends AbstractPostgresCdcIntegrationTest {
 
     private static final String SCHEMA_PREFIX = "schema";
