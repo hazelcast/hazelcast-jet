@@ -3,10 +3,10 @@ title: Build a Custom Aggregate Operation
 description: How to create a custom aggregation operation using Jet
 ---
 
-One of the most important kind of processing Jet does is aggregation. In
+One of the most important kinds of processing Jet does is aggregation. In
 general it is a transformation of a set of input values into a single
 output value. The function that does this transformation is called the
-`aggregate function`. A basic example is `sum` applied to a set of
+_aggregate function_. A basic example is `sum` applied to a set of
 integer numbers, but the result can also be a complex value, for example
 a list of all the input items.
 
@@ -126,7 +126,10 @@ Let's see how this works with our `average` function. Using
 `LongLongAccumulator` we can express our `accumulate` primitive as
 
 ```java
-(acc, n) -> {acc.set1(acc.get1() + n); acc.set2(acc.get2() + 1);
+(acc, n) -> {
+    acc.set1(acc.get1() + n);
+    acc.set2(acc.get2() + 1);
+}
 ```
 
 The `export`/`finish` primitive will be
@@ -142,7 +145,8 @@ update the left-hand accumulator with the contents of the right-hand
 one, so:
 
 ```java
-(left, right) -> {left.set1(left.get1() + right.get1());
+(left, right) -> {
+    left.set1(left.get1() + right.get1());
     left.set2(left.get2() + right.get2());
 }
 ```
@@ -150,7 +154,8 @@ one, so:
 Deducting must undo the effect of a previous `combine`:
 
 ```java
-(left, right) -> {left.set1(left.get1() - right.get1());
+(left, right) -> {
+    left.set1(left.get1() - right.get1());
     left.set2(left.get2() - right.get2());
 }
 ```
@@ -263,8 +268,8 @@ BatchStage<Entry<Integer, long[]>> coGrouped =
 
 Note how we got an `AggregateOperation3` and how it captured each input
 type. When we use it as an argument to a cogroup-and-aggregate
-transform, the compiler will ensure that the `ComputeStage` s we attach
-it to have the correct type and are in the correct order.
+transform, the compiler will ensure that the `ComputeStage`s we attach
+to it have the correct type and are in the correct order.
 
 On the other hand, if you use the co-aggregation
 builder object, you'll construct the aggregate operation by calling

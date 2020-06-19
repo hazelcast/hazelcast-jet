@@ -298,7 +298,8 @@ name the Python module that declares `transform_list`:
 StreamStage<String> sourceStage = sourceStage();
 StreamStage<String> pythonMapped = sourceStage.apply(PythonTransforms.mapUsingPython(
         new PythonServiceConfig().setBaseDir("path/to/python_project")
-                                    .setHandlerModule("jet_handler")));
+                                 .setHandlerModule("jet_handler"))
+);
 ```
 
 Normally your Python code will make use of non-standard libraries. Jet
