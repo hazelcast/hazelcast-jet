@@ -122,7 +122,7 @@ public class DebeziumIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
-    public void raw_mysql() {
+    public void mysql_simpleJson() {
         MySQLContainer<?> container = new MySQLContainer<>("debezium/example-mysql")
                 .withUsername("mysqluser")
                 .withPassword("mysqlpw");
@@ -166,7 +166,7 @@ public class DebeziumIntegrationTest extends AbstractIntegrationTest {
                             "\"op\":\"c\",\"ts_ms\":[0-9]*,\"transaction\":null}"
             );
 
-            StreamSource<Entry<String, String>> source = DebeziumCdcSources.raw("mysql",
+            StreamSource<Entry<String, String>> source = DebeziumCdcSources.debeziumJson("mysql",
                     "io.debezium.connector.mysql.MySqlConnector")
                     .setProperty("include.schema.changes", "false")
                     .setProperty("database.hostname", container.getContainerIpAddress())

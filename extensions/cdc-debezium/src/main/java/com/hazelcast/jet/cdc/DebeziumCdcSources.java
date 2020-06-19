@@ -71,7 +71,7 @@ public final class DebeziumCdcSources {
      * @return a builder you can use to set the source's properties and then construct it
      */
     @Nonnull
-    public static Builder<Entry<String, String>> raw(@Nonnull String name, @Nonnull String connectorClass) {
+    public static Builder<Entry<String, String>> debeziumJson(@Nonnull String name, @Nonnull String connectorClass) {
         return new Builder<>(name, connectorClass, JsonCdcSource::fromProperties);
     }
 
