@@ -47,6 +47,12 @@ from the main jdk tree on top of it. The jdk14u tree is where JDK 14.0.2
 will be released from and the changeset 59746:29b4bb22b5e2 applies the
 patch resolving the mentioned Shenandoah issue.
 
+`-XX:-UseBiasedLocking`
+
+`-XX:+UseNUMA`
+
+## The Data Pipeline
+
 To get a more nuanced insight into the performance, we made some
 improvements to the testing code. Whereas in the first iteration we just
 reported the maximum latency, this time around we wanted to capture the
@@ -105,6 +111,8 @@ latency of _completing_ to emit a result set, but here we measure the
 latency of _starting_ to emit it. This eliminates the fixed cost that is
 an intrinsic part of the application code and focuses strictly on the
 latency caused by GC overheads or other out-of-band disturbances.
+
+## The Measurements
 
 To come up with the charts below, for each data point we let the
 pipeline warm up for 20 seconds and then gathered the latencies for 4
