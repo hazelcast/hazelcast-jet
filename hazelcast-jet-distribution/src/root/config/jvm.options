@@ -1,0 +1,13 @@
+# JVM Configuration
+
+# One option per line
+# Lines starting with # and empty lines are ignored
+
+# Memory configuration
+# -Xms4G
+# -Xmx4G
+
+# Generate heap dump on out-of-memory error
+# Uncomment to enable
+# -XX:+HeapDumpOnOutOfMemoryError
+# -XX:HeapDumpPath=dump

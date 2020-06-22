@@ -18,6 +18,18 @@ if [ "${PROMETHEUS_PORT}" ]; then
     PROMETHEUS="-javaagent:${JET_HOME}/lib/jmx_prometheus_javaagent-${prometheus.version}.jar=${PROMETHEUS_PORT}:${JET_HOME}/config/jmx_agent_config.yaml"
 fi
 
+# Read jvm.options file
+while IFS= read -r line
+do
+  # Ignore lines starting with # (does not support # in the middle of the line)
+  if [[ "$line" =~ ^#.*$ ]]
+  then
+    continue;
+  fi
+
+  JVM_OPTIONS="$JVM_OPTIONS $line"
+done < $JET_HOME/config/jvm.options
+
 JAVA_OPTS_ARRAY=(\
 $JDK_OPTS \
 "-Dhazelcast.logging.type=log4j2" \
@@ -26,6 +38,7 @@ $JDK_OPTS \
 "-Dhazelcast.config=$JET_HOME/config/hazelcast.yaml" \
 "-Dhazelcast.jet.config=$JET_HOME/config/hazelcast-jet.yaml" \
 $PROMETHEUS \
+$JVM_OPTIONS \
 $JAVA_OPTS \
 )
 

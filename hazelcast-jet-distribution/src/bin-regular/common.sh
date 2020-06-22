@@ -29,6 +29,10 @@ fi
 
 IFS=',' read -ra MODULES <<< "$JET_MODULES"
 for module in "${MODULES[@]}"; do
+    # Strip leading/trailing whitespaces, when JET_MODULES contains modules
+    # separated by comma and space, e.g. "avro, kafka"
+    module=$(echo "$module" | sed 's/^[[:blank:]]*//;s/[[:blank:]]*$//')
+
     # ${project.version} interpolated during build by maven assembly plugin
     if [ -z "$CLASSPATH" ]; then
         CLASSPATH="$JET_HOME/opt/hazelcast-jet-${module}-${project.version}.jar"
