@@ -82,27 +82,30 @@ improvements to the testing code. Whereas in the first iteration we just
 reported the maximum latency, this time around we wanted to capture the
 entire latency profile. To this end we had to increase the number of
 reports per second the pipeline outputs. Initially we set it to 10 times
-per second, a number which results in too few data points for the latency
-chart. The pipeline in this round emits 100 reports per second. The
-length of the time window is the same, 10 seconds, which results in
-1,000 hashtables each holding 10,000 keys as the aggregation state. We
-tested across a wide range of keyset sizes, starting from 5,000 up to
-105,000.
+per second, a number which results in too few data points for the
+latency chart. The pipeline in this round emits 100 reports per second.
+The event rate and the length of the time window are the same: 1 million
+events per second and 10 seconds, respectively. This results in 1,000
+hashtables each holding 10,000 keys as the aggregation state. We tested
+across a wide range of keyset sizes, starting from 5,000 up to 105,000.
 
 Note that the size of the keyset, somewhat counterintuitively, does not
 affect the size of the aggregation state. As long as the 10,000 input
-events received during one time slice all use distinct keys, the state
-is fixed as described above. Only in the lowest setting, 5,000, the
-state is half as large since every hastable contains just 5,000 keys.
+events received during one time slice of 10 milliseconds all use
+distinct keys, the state is fixed as described above. Only in the lowest
+setting, 5,000, the state is half as large since every hastable contains
+just 5,000 keys.
 
 What the keyset size does affect is the allocation rate. The pipeline
-emits the full keyset every 10 milliseconds. With 10,000 keys that's
-1,000,000 result items per second. Since allocation rate and not keyset
-size is the relevant factor for GC performance, we use it on the X axis
-of the charts we'll be showing in a minute. More precisely, we use the
-combined input and output throughput as a proxy for allocation rate.
+emits the full keyset every 10 milliseconds. For example, with 50,000
+keys that's 5,000,000 result items per second. Since allocation rate and
+not keyset size is the relevant factor for GC performance, we use it on
+the X axis of the charts we'll be showing in a minute. More precisely,
+we use the combined input and output throughput as a proxy for
+allocation rate.
 
-Here is the basic code of the pipeline:
+Here is the basic code of the pipeline, available on
+[GitHub](https://github.com/mtopolnik/jet-gc-benchmark/tree/round-2):
 
 ```java
 StreamStage<Long> source = p.readFrom(longSource(EVENTS_PER_SECOND))
@@ -126,15 +129,25 @@ latencies
 The main part, sliding window aggregation, remains the same, but the
 following stages that process the results are new. We write the data to
 two files: `laten`, containing all the raw latency data points, and
-`bench`, containing a [HDR
+`bench`, containing an [HDR
 Histogram](https://hdrhistogram.github.io/HdrHistogram/plotFiles.html)
 of the latencies.
 
 Another key difference is that, in the original post, we measured the
 latency of _completing_ to emit a result set, but here we measure the
-latency of _starting_ to emit it. This eliminates the fixed cost that is
-an intrinsic part of the application code and focuses strictly on the
-latency caused by GC overheads or other out-of-band disturbances.
+latency of _starting_ to emit it. Since we are changing the size of the
+output, if we kept measuring the completion latency, we'd be introducing
+a different amount of application-induced latency at each data point.
+
+There's another, relatively minor technical point worth mentioning:
+since we tested on a cloud server instance, we used Jet's client-server
+mode, which means we separately start a Jet node and then deploy the
+pipeline to it using Jet's command `jet submit`. The code available on
+GitHub is the client code and the Jet server code was a build from a
+recent state of the Jet master branch. It uses a pipeline feature that
+will be released with Jet 4.2, which is the reason we couldn't use a
+released Jet version. We expect all the results to be reproducible with
+Jet 4.2 once released.
 
 ## The Measurements
 
@@ -144,22 +157,47 @@ minutes, collecting 24,000 samples. The charts show the 99.99th
 percentile latencies, which basically means that we remove two samples
 with the worst latencies and report the highest latency across the
 remaining 23,998 samples. To paint a more intuitive picture, 99.99%
-latency tells you that once every 100 seconds, the pipeline experiences
-a latency spike at least that large.
+latency tells you that, in any span of 100 seconds you look at, you're
+likely to find a latency spike at least that large.
 
-Here are two results from the lower end of our measurement range, 2 and
-3 million items per second:
+Here is the latency histogram taken at 2 million items per second,
+close to the bottom of our range:
 
-![Latencies on JDK 14.0.2 pre-release](assets/2020-06-25-latencies-2point.png)
+![Latency on JDK 14.0.2 pre-release, 2M items per second](assets/2020-06-25-histo-2m.png)
 
-We can see that, at 2 million (and presumably less) items per second,
-Shenandoah gives about the same results as ZGC, and that the pacer fix
-doesn't have an effect. However, at 3 million per second, Shenandoah
-latency gets much worse. The pacer fix indeed shows up as a major
-improvement, but there is still a lot of latency left. ZGC and G1
-perform equally well at both points.
+Unpatched Shenandoah seems like the winner, except for the single
+worst-case latency. With the patch applied, latency increases sooner but
+more gently and doesn't have a strong peak. ZGC comes somewhere between,
+but overall all three cases show pretty similar behavior. G1 is clearly
+worse and its latency exceeds the 10 ms mark before even reaching the
+99th percentile. Since our pipeline emits a new result set ever 10 ms,
+we shall consider 10 ms as the cutoff point: everything above 10 ms
+should be considered as failure for our use case.
 
-Now we can broaden our view to the full range of throughputs we tested:
+Next, let's take a look at the latencies after increasing the throughput
+a bit, to 3 million items per second:
+
+![Latency on JDK 14.0.2 pre-release, 3M items per second](assets/2020-06-25-histo-3m.png)
+
+Wow, what an unexpected difference! Now we can clearly see the pacer
+patch doing its thing. It lowers the latency about threefold. However,
+even with the improvement, Shenandoah unfortunately crosses the 10 ms
+mark pretty early, below the 99th percentile, and is worse than G1 at
+almost every percentile. ZGC and G1 score basically the same as before.
+
+Note also the very regular shape of the red curve (unpatched
+Shenandoah): this is because a single bad event trickles down into the
+lower latency percentiles. For example, if one result is late by 50 ms,
+that means it has already caused the next four results to have at least
+the latencies of 40, 30, 20, and 10 ms, even if they would be emitted
+instantaneously. We measure the latency as the timestamp at which the
+pipeline emits a given result minus the timestamp the result pertains
+to, giving us end-to-end latency (the only kind the user actually cares
+about).
+
+Next, let's zoom out to an overview of the entire range of throughputs
+we benchmarked, taking the 99.99%ile as the reference point and showing
+its dependence on throughput:
 
 ![Latencies on JDK 14.0.2 pre-release](assets/2020-06-25-latencies-jdk14.png)
 
@@ -169,14 +207,9 @@ Here are some things to note:
    its latency is never under 10 milliseconds, it keeps its level over
    the entire tested range and, judging by our previous results,
    probably a lot more.
-2. Shenandoah has good latency up to 2 M items per second, but above
-   that its latency rises into dozens of milliseconds. The pacer
-   improvement has a pretty strong effect, but it doesn't affect the
-   bottom line because the success criterion is to stay below 10
-   milliseconds.
-3. ZGC stays below 10 ms over a large part of the range, up to 8 M items
+2. ZGC stays below 10 ms over a large part of the range, up to 8 M items
    per second. Beyond that point its latency steeply rises.
-4. At 9.5 M items per second, ZGC shows a remarkable recovery.
+3. At 9.5 M items per second, ZGC shows a remarkable recovery.
    Sandwiched between the latencies of 92 and 209 milliseconds, at this
    exact throughput it achieves 10 ms latency! We of course thought it
    was a measurement error and repeated it for three times, but the
@@ -184,13 +217,19 @@ Here are some things to note:
    engineers.
 
 As a preview into what's coming up in OpenJDK, we also took a look at
-the Early Access release 27 of JDK 15. It lacks the Shenondoah fix, so
-to test the prospects for Shenandoah we built the JDK from the jdk/jdk16
-repository. Here's what we got:
+the [Early Access release 27 of JDK
+15](https://download.java.net/java/early_access/jdk15/28/GPL/openjdk-15-ea+28_linux-x64_bin.tar.gz).
+It lacks the Shenondoah fix, so to test the prospects for Shenandoah we
+used a build available at
+[builds.shipilev.net/openjdk-jdk](https://builds.shipilev.net/openjdk-jdk/),
+specifically a build that reports its version as `build
+16-testing+0-builds.shipilev.net-openjdk-jdk-b1282-20200611`.
+
 
 ![Latencies on upcoming JDK versions](assets/2020-06-25-latencies-latest.png)
 
 We can see a nice incremental improvement for the ZGC, but the other
 two collectors are essentially the same as before. Shenandoah's chart
-looks even a bit worse than above, but with a few repetitions of
-measurement for both chart these differences would probably converge.
+looks even a bit worse than before, but the details of exactly how much
+above 10 ms its 99.99%ile was don't make any difference to the bottom
+line.
