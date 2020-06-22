@@ -43,7 +43,7 @@ enterprise versions also for Hazelcast Jet Management Center.
 
 ### Installing the Chart
 
-Hazelcast Official Chart Repository is hosted at https://github.com/hazelcast/charts
+Hazelcast Official Chart Repository has sources hosted at https://github.com/hazelcast/charts
 
 Following command will add Hazelcast Official Chart Repository to your helm client.
 
