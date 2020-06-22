@@ -28,8 +28,8 @@ the configuration specific to clustering, discovery and so forth.
 file is only used by the `jet` command line client to connect to the cluster,
 but you can use it as a template for your own configuration files.
 
-`jvm.options` may contain any additional options passed to the jvm when
-a member node is started using jet-start command.
+`jvm.options` may contain any additional options passed to the JVM when
+a member node is started using the `jet-start` command.
 
 ## Client Configuration
 
