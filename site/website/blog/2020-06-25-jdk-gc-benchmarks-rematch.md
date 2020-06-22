@@ -47,9 +47,33 @@ from the main jdk tree on top of it. The jdk14u tree is where JDK 14.0.2
 will be released from and the changeset 59746:29b4bb22b5e2 applies the
 patch resolving the mentioned Shenandoah issue.
 
-`-XX:-UseBiasedLocking`
+## The JVM Options
 
-`-XX:+UseNUMA`
+There are two HotSpot JVM options whose default values change
+automatically when you use the ZGC so we had to decide which choice to
+make when testing the other garbage collectors.
+
+- `-XX:-UseBiasedLocking`: biased locking has for a while been under
+  criticism that it causes higher latency spikes due to lock inflation
+  and cleanup that must be done within a GC safepoint. In the upcoming
+  JDK version 15, biased locking will be disabled by default and
+  deprecated. Any low-latency Java application should have this disabled
+  and we disabled it in all our measurements.
+
+- `-XX:+UseNUMA`: Shenandoah and ZGC can query the NUMA layout of the
+  host machine and optimize their memory layout accordingly. The only
+  reason why Shenandoah doesn't do it by default is a precaution against
+  suddenly changing the behavior for upgrading users. It will be enabled
+  by default in upcoming JDK versions, and we saw no harm in enabling it
+  in all cases as well.
+
+For the G1 collector, we also set `-XX:MaxGCPauseMillis=5`, same as in
+the previous testing round, because the default of 200 milliseconds is
+optimized for throughput and the G1 can give you much better latency
+than that.
+
+We performed all our tests on an EC2 c5.4xlarge instance. It has 16
+vCPUs and 32 GB of RAM.
 
 ## The Data Pipeline
 
