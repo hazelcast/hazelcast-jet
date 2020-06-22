@@ -222,9 +222,8 @@ Here are some things to note:
    probably a lot more. Its latency even improves a bit with higher
    loads.
 2. ZGC stays below 10 ms over a large part of the range, up to 8 M items
-   per second. Beyond that point its latency steeply rises. This makes
-   it not just the winner, but the only usable garbage collector in the
-   range from 2 million to 8 million items per second.
+   per second. This makes it not just the winner, but the only choice
+   for the range from 2 million to 8 million items per second.
 3. At 9.5 M items per second, ZGC shows a remarkable recovery.
    Sandwiched between the latencies of 92 and 209 milliseconds, at this
    exact throughput it achieves 10 ms latency! We of course thought it
