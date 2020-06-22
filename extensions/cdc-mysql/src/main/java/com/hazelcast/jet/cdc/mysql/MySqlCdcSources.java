@@ -219,6 +219,88 @@ public final class MySqlCdcSources {
         }
 
         /**
+         * Specifies whether to use an encrypted connection to the
+         * database. The default is <i>disabled</i>, and specifies to
+         * use an unencrypted connection.
+         * <p>
+         * The <i>preferred</i> option establishes an encrypted
+         * connection if the server supports secure connections but
+         * falls back to an unencrypted connection otherwise.
+         * <p>
+         * The <i>required</i> option establishes an encrypted
+         * connection but will fail if one cannot be made for any reason.
+         * <p>
+         * The <i>verify_ca</i> option behaves like <i>required</i> but
+         * additionally it verifies the server TLS certificate against
+         * the configured Certificate Authority (CA) certificates and
+         * will fail if it doesn’t match any valid CA certificates.
+         * <p>
+         * The <i>verify_identity</i> option behaves like
+         * <i>verify_ca</i> but additionally verifies that the server
+         * certificate matches the host of the remote connection.
+         */
+        @Nonnull
+        public Builder setSslMode(@Nonnull String mode) {
+            config.setProperty("database.ssl.mode", mode);
+            return this;
+        }
+
+        /**
+         * Specifies the (path to the) Java keystore file containing the
+         * database client certificate and private key.
+         * <p>
+         * Can be alternatively specified via the 'javax.net.ssl.keyStore'
+         * system or JVM property.
+         */
+        @Nonnull
+        public Builder setSslKeystoreFile(@Nonnull String file) {
+            config.setProperty("database.ssl.keystore", file);
+            return this;
+        }
+
+        /**
+         * Password to access the private key from any specified
+         * keystore files.
+         * <p>
+         * This password is used to unlock the keystore file (store
+         * password), and to decrypt the private key stored in
+         * the keystore (key password)."
+         * <p>
+         * Can be alternatively specified via the 'javax.net.ssl.keyStorePassword'
+         * system or JVM property.
+         */
+        @Nonnull
+        public Builder setSslKeystorePassword(@Nonnull String password) {
+            config.setProperty("database.ssl.keystore.password", password);
+            return this;
+        }
+
+        /**
+         * Specifies the (path to the) Java truststore file containing
+         * the collection of trusted CA certificates.
+         * <p>
+         * Can be alternatively specified via the 'javax.net.ssl.trustStore'
+         * system or JVM property.
+         */
+        @Nonnull
+        public Builder setSslTruststoreFile(@Nonnull String file) {
+            config.setProperty("database.ssl.truststore", file);
+            return this;
+        }
+
+        /**
+         * Password to unlock any specified truststore.
+         * <p>
+         * Can be alternatively specified via the 'javax.net.ssl.trustStorePassword'
+         * system or JVM property.
+         */
+        @Nonnull
+        public Builder setSslTruststorePassword(@Nonnull String password) {
+            config.setProperty("database.ssl.truststore.password", password);
+            return this;
+        }
+
+        /**
          * Can be used to set any property not explicitly covered by
          * other methods or to override properties we have hidden.
          */

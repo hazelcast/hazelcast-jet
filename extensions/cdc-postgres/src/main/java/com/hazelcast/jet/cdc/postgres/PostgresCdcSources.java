@@ -67,6 +67,7 @@ public final class PostgresCdcSources {
                 .required("database.user")
                 .required("database.password")
                 .required("database.dbname")
+                .inclusive("database.sslkey", "database.sslpassword")
                 .exclusive("schema.whitelist", "schema.blacklist")
                 .exclusive("table.whitelist", "table.blacklist");
 
@@ -292,6 +293,71 @@ public final class PostgresCdcSources {
         @Nonnull
         public Builder setPublicationName(@Nonnull String publicationName) {
             config.setProperty("publication.name", publicationName);
+            return this;
+        }
+
+        /**
+         * Specifies whether to use an encrypted connection to the
+         * database. The default is <i>disable</i>, and specifies to
+         * use an unencrypted connection.
+         * <p>
+         * The <i>require</i> option establishes an encrypted
+         * connection but will fail if one cannot be made for any reason.
+         * <p>
+         * The <i>verify_ca</i> option behaves like <i>require</i> but
+         * additionally it verifies the server TLS certificate against
+         * the configured Certificate Authority (CA) certificates and
+         * will fail if it doesn’t match any valid CA certificates.
+         * <p>
+         * The <i>verify-full</i> option behaves like
+         * <i>verify_ca</i> but additionally verifies that the server
+         * certificate matches the host of the remote connection.
+         */
+        @Nonnull
+        public Builder setSslMode(@Nonnull String mode) {
+            config.setProperty("database.sslmode", mode);
+            return this;
+        }
+
+        /**
+         * Specifies the (path to the) file containing the SSL Certificate
+         * for the database client.
+         */
+        @Nonnull
+        public Builder setSslCertificateFile(@Nonnull String file) {
+            config.setProperty("database.sslcert", file);
+            return this;
+        }
+
+        /**
+         * Specifies the (path to the) file containing the SSL private
+         * key of the database client.
+         */
+        @Nonnull
+        public Builder setSslKeyFile(@Nonnull String file) {
+            config.setProperty("database.sslkey", file);
+            return this;
+        }
+
+        /**
+         * Specifies the password to be used to access the SSL key file,
+         * if specified.
+         * <p>
+         * Mandatory if key file specified.
+         */
+        @Nonnull
+        public Builder setSslKeyFilePassword(@Nonnull String password) {
+            config.setProperty("database.sslpassword", password);
+            return this;
+        }
+
+        /**
+         * Specifies the file containing containing SSL certificate
+         * authority (CA) certificate(s).
+         */
+        @Nonnull
+        public Builder setSslRootCertificateFile(@Nonnull String file) {
+            config.setProperty("database.sslrootcert", file);
             return this;
         }
 
