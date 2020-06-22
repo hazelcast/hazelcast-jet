@@ -6,8 +6,11 @@ authorURL: https://stackoverflow.com/users/1103872/marko-topolnik
 authorImageURL: https://i.imgur.com/xuavzce.jpg
 ---
 
-(Go to [Part 1](/blog/2020/06/09/jdk-gc-benchmarks-part1) or [Part
-2](/blog/2020/06/09/jdk-gc-benchmarks-part2))
+This post is a part of a series:
+
+- [Part 1](/blog/2020/06/09/jdk-gc-benchmarks-part1)
+- [Part 2](/blog/2020/06/09/jdk-gc-benchmarks-part2)
+- Part 3 (you are here)
 
 This is a followup on Part 1 of the blog post series we started earlier
 this month, analyzing the performance of modern JVMs on workloads that
@@ -170,7 +173,7 @@ minutes, collecting 24,000 samples.
 Here is the latency histogram taken at 2 million items per second,
 close to the bottom of our range:
 
-![Latency on JDK 14.0.2 pre-release, 2M items per second](assets/2020-06-25-histo-2m.png)
+![Latency on JDK 14.0.2 pre-release, 2M items per second](assets/2020-06-23-histo-2m.png)
 
 Unpatched Shenandoah seems like the winner, except for the single
 worst-case latency. With the patch applied, latency increases sooner but
@@ -184,7 +187,7 @@ should be considered as failure for our use case.
 Next, let's take a look at the latencies after increasing the throughput
 a bit, to 3 million items per second:
 
-![Latency on JDK 14.0.2 pre-release, 3M items per second](assets/2020-06-25-histo-3m.png)
+![Latency on JDK 14.0.2 pre-release, 3M items per second](assets/2020-06-23-histo-3m.png)
 
 Wow, what an unexpected difference! Now we can clearly see the pacer
 improvement doing its thing, lowering the latency about threefold.
@@ -209,7 +212,7 @@ its dependence on throughput. To paint an intuitive picture, 99.99%
 latency tells you that, in any span of 100 seconds you look at, you're
 likely to find a latency spike at least that large. Here's the chart:
 
-![Latencies on JDK 14.0.2 pre-release](assets/2020-06-25-latencies-jdk14.png)
+![Latencies on JDK 14.0.2 pre-release](assets/2020-06-23-latencies-jdk14.png)
 
 Here are some things to note:
 
@@ -239,7 +242,7 @@ specifically one that reports its version as `build
 16-testing+0-builds.shipilev.net-openjdk-jdk-b1282-20200611`.
 
 
-![Latencies on upcoming JDK versions](assets/2020-06-25-latencies-latest.png)
+![Latencies on upcoming JDK versions](assets/2020-06-23-latencies-latest.png)
 
 We can see a nice incremental improvement for the ZGC: less than 5 ms
 latencies at throughputs below 5 M/s, but the other two collectors are

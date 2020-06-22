@@ -6,7 +6,11 @@ authorURL: https://stackoverflow.com/users/1103872/marko-topolnik
 authorImageURL: https://i.imgur.com/xuavzce.jpg
 ---
 
-Go to [Part 1: intro and the Streaming Pipeline Benchmarks](/blog/2020/06/09/jdk-gc-benchmarks-part1).
+This post is a part of a series:
+
+- [Part 1](/blog/2020/06/09/jdk-gc-benchmarks-part1)
+- Part 2 (you are here)
+- [Part 3](/blog/2020-06-23/jdk-gc-benchmarks-rematch)
 
 ## Batch Pipeline Benchmark
 
