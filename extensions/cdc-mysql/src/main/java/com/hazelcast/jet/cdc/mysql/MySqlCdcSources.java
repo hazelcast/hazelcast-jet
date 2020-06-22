@@ -44,6 +44,14 @@ public final class MySqlCdcSources {
     /**
      * Creates a CDC source that streams change data from a MySQL
      * database to Hazelcast Jet.
+     * <p>
+     * If the database is unreachable when this source is started by a
+     * Jet job or if the connection to the database goes down while a
+     * Jet job using such a source is running, the source will throw
+     * an exception and stop. It will also terminate the execution of
+     * the job using it. This behaviour is not ideal, would be much
+     * better to try to reconnect, at least for a certain amount of time.
+     * Future versions will address the problem.
      *
      * @param name name of this source, needs to be unique, will be
      *             passed to the underlying Kafka Connect source
