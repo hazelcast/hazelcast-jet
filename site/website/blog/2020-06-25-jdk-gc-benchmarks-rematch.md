@@ -14,7 +14,7 @@ this month, analyzing the performance of modern JVMs on workloads that
 are relevant to the use case of real-time stream processing.
 
 As a quick recap, in Part 1 we tested the basic functionality of
-Hazelcast Jet, sliding window aggregation, on two types of workload:
+Hazelcast Jet (sliding window aggregation) on two types of workload:
 lightweight with a focus on low latency, and heavyweight with a focus on
 the data pipeline keeping up with high throughput and large aggregation
 state. For the low-latency benchmarks we chose the JDK 14 as the most
@@ -29,9 +29,9 @@ a fix, and committed it to the jdk/jdk16 repository, all in the span of
 a few days. The change pertains to the heuristics that decide how much
 work the GC should do in the background in order to exactly match the
 applications allocation rate. This component is called the _pacer_. It
-was constantly detecting it's falling behind the application and going
-into a brief "panic mode" in order to catch up. The fix fine-tunes the
-pacer's heuristics.
+was constantly detecting it's falling behind the application, triggering
+a brief "panic mode" in order to catch up. The fix fine-tunes the
+pacer's heuristics to make the background GC work more proactive.
 
 Given this quick development, we wanted to test out the effects of the
 fix, but also take the opportunity to zoom in on the low-latency
@@ -57,18 +57,27 @@ automatically when you use the ZGC so we had to decide which choice to
 make when testing the other garbage collectors.
 
 - `-XX:-UseBiasedLocking`: biased locking has for a while been under
-  criticism that it causes higher latency spikes due to lock inflation
-  and cleanup that must be done within a GC safepoint. In the upcoming
-  JDK version 15, biased locking will be disabled by default and
-  deprecated. Any low-latency Java application should have this disabled
-  and we disabled it in all our measurements.
+  criticism that it causes higher latency spikes due to bias revocation
+  that must be done within a GC safepoint. In the upcoming JDK version
+  15, biased locking will be [disabled by default and
+  deprecated](https://openjdk.java.net/jeps/374). Any low-latency Java
+  application should have this disabled and we disabled it in all our
+  measurements.
 
 - `-XX:+UseNUMA`: Shenandoah and ZGC can query the NUMA layout of the
   host machine and optimize their memory layout accordingly. The only
-  reason why Shenandoah doesn't do it by default is a precaution against
-  suddenly changing the behavior for upgrading users. It will be enabled
-  by default in upcoming JDK versions, and we saw no harm in enabling it
-  in all cases as well.
+  reason why Shenandoah doesn't do it by default is a general precaution
+  against suddenly changing the behavior for upgrading users, but the
+  precaution is no longer necessary. It will be [enabled by
+  default](https://openjdk.java.net/jeps/163) in upcoming JDK versions,
+  and we saw no harm in enabling it in all cases as well.
+
+There is also a JVM feature that is simply incompatible with ZGC's
+colored pointers: compressed object pointers. In other words, ZGC
+applies `-XX:-UseCompressedOops` without the option to enable it.
+A compressed pointer is just 32 bits long but handles heaps of up to
+32 GB and it's usually beneficial to both memory usage and performance.
+We left this option enabled for Shenandoah.
 
 For the G1 collector, we also set `-XX:MaxGCPauseMillis=5`, same as in
 the previous testing round, because the default of 200 milliseconds is
@@ -99,13 +108,13 @@ distinct keys, the state is fixed as described above. Only in the lowest
 setting, 5,000, the state is half as large since every hastable contains
 just 5,000 keys.
 
-What the keyset size does affect is the allocation rate. The pipeline
-emits the full keyset every 10 milliseconds. For example, with 50,000
-keys that's 5,000,000 result items per second. Since allocation rate and
-not keyset size is the relevant factor for GC performance, we use it on
-the X axis of the charts we'll be showing in a minute. More precisely,
-we use the combined input and output throughput as a proxy for
-allocation rate.
+What the keyset size does affect is allocation rate. The pipeline emits
+the full keyset every 10 milliseconds. For example, with 50,000 keys
+that's 5,000,000 result items per second. If we add to that the rate of
+the input stream (a fixed million events per second), we get a value
+that is a good proxy for the overall allocation rate. This is why we
+chose combined input+output rate as the x-axis value in the charts that
+we'll be showing below.
 
 Here is the basic code of the pipeline, available on
 [GitHub](https://github.com/mtopolnik/jet-gc-benchmark/blob/round-2/src/main/java/org/example/StreamingRound2.java):
@@ -178,13 +187,13 @@ a bit, to 3 million items per second:
 ![Latency on JDK 14.0.2 pre-release, 3M items per second](assets/2020-06-25-histo-3m.png)
 
 Wow, what an unexpected difference! Now we can clearly see the pacer
-improvement doing its thing, it lowers the latency about threefold.
+improvement doing its thing, lowering the latency about threefold.
 However, even with the improvement, Shenandoah unfortunately crosses the
 10 ms mark pretty early, below the 99th percentile, and is worse than G1
 at almost every percentile. ZGC and G1 score basically the same as
 before.
 
-Note also the very regular shape of the red curve (unpatched
+Note also the very regular shape of the pale blue curve (unpatched
 Shenandoah): this is a symptom of the way a single bad event trickles
 down into the lower latency percentiles. For example, if one result is
 late by 50 ms, that means it has already caused the next four results to
@@ -198,7 +207,7 @@ Next, let's zoom out to an overview of the entire range of throughputs
 we benchmarked, taking the 99.99%ile as the reference point and showing
 its dependence on throughput. To paint an intuitive picture, 99.99%
 latency tells you that, in any span of 100 seconds you look at, you're
-likely to find a latency spike at least that large:
+likely to find a latency spike at least that large. Here's the chart:
 
 ![Latencies on JDK 14.0.2 pre-release](assets/2020-06-25-latencies-jdk14.png)
 
@@ -207,9 +216,12 @@ Here are some things to note:
 1. The G1 collector is unphased by the differences in throughput. While
    its latency is never under 10 milliseconds, it keeps its level over
    the entire tested range and, judging by our previous results,
-   probably a lot more.
+   probably a lot more. Its latency even improves a bit with higher
+   loads.
 2. ZGC stays below 10 ms over a large part of the range, up to 8 M items
-   per second. Beyond that point its latency steeply rises.
+   per second. Beyond that point its latency steeply rises. This makes
+   it not just the winner, but the only usable garbage collector in the
+   range from 2 million to 8 million items per second.
 3. At 9.5 M items per second, ZGC shows a remarkable recovery.
    Sandwiched between the latencies of 92 and 209 milliseconds, at this
    exact throughput it achieves 10 ms latency! We of course thought it
@@ -230,7 +242,7 @@ specifically one that reports its version as `build
 ![Latencies on upcoming JDK versions](assets/2020-06-25-latencies-latest.png)
 
 We can see a nice incremental improvement for the ZGC: less than 5 ms
-latencies at throuhputs below 5 M/s, but the other two collectors are
+latencies at throughputs below 5 M/s, but the other two collectors are
 essentially the same as before. Shenandoah's chart looks even a bit
-worse than before, but the details of exactly how much above 10 ms its
-99.99%ile was don't make any difference to the bottom line.
+worse than before, but exactly how much above 10 milliseconds its
+latency was doesn't make a difference for our bottom line.
