@@ -6,17 +6,20 @@ authorURL: https://stackoverflow.com/users/1103872/marko-topolnik
 authorImageURL: https://i.imgur.com/xuavzce.jpg
 ---
 
-This is a followup to the
-[article](/blog/2020/06/09/jdk-gc-benchmarks-part1) published earlier
+(Go to [Part 1](/blog/2020/06/09/jdk-gc-benchmarks-part1) or [Part
+2](/blog/2020/06/09/jdk-gc-benchmarks-part2))
+
+This is a followup on Part 1 of the blog post series we started earlier
 this month, analyzing the performance of modern JVMs on workloads that
 are relevant to the use case of real-time stream processing.
 
-As a quick recap, we tested the basic functionality of Hazelcast Jet,
-sliding window aggregation, on two types of workload: lightweight with a
-focus on low latency, and heavyweight with a focus on the data pipeline
-keeping up with high throughput and large aggregation state. For the
-low-latency benchmarks we chose the JDK 14 as the most recent stable
-version and three of its garbage collectors: Shenandoah, ZGC, and G1 GC.
+As a quick recap, in Part 1 we tested the basic functionality of
+Hazelcast Jet, sliding window aggregation, on two types of workload:
+lightweight with a focus on low latency, and heavyweight with a focus on
+the data pipeline keeping up with high throughput and large aggregation
+state. For the low-latency benchmarks we chose the JDK 14 as the most
+recent stable version and three of its garbage collectors: Shenandoah,
+ZGC, and G1 GC.
 
 Our finding that Shenandoah apparently fared worse than the other GCs
 attracted some reactions, most notably from the Shenandoah team who
@@ -105,7 +108,7 @@ we use the combined input and output throughput as a proxy for
 allocation rate.
 
 Here is the basic code of the pipeline, available on
-[GitHub](https://github.com/mtopolnik/jet-gc-benchmark/tree/round-2):
+[GitHub](https://github.com/mtopolnik/jet-gc-benchmark/blob/round-2/src/main/java/org/example/StreamingRound2.java):
 
 ```java
 StreamStage<Long> source = p.readFrom(longSource(EVENTS_PER_SECOND))
@@ -153,12 +156,7 @@ Jet 4.2 once released.
 
 To come up with the charts below, for each data point we let the
 pipeline warm up for 20 seconds and then gathered the latencies for 4
-minutes, collecting 24,000 samples. The charts show the 99.99th
-percentile latencies, which basically means that we remove two samples
-with the worst latencies and report the highest latency across the
-remaining 23,998 samples. To paint a more intuitive picture, 99.99%
-latency tells you that, in any span of 100 seconds you look at, you're
-likely to find a latency spike at least that large.
+minutes, collecting 24,000 samples.
 
 Here is the latency histogram taken at 2 million items per second,
 close to the bottom of our range:
@@ -180,24 +178,27 @@ a bit, to 3 million items per second:
 ![Latency on JDK 14.0.2 pre-release, 3M items per second](assets/2020-06-25-histo-3m.png)
 
 Wow, what an unexpected difference! Now we can clearly see the pacer
-patch doing its thing. It lowers the latency about threefold. However,
-even with the improvement, Shenandoah unfortunately crosses the 10 ms
-mark pretty early, below the 99th percentile, and is worse than G1 at
-almost every percentile. ZGC and G1 score basically the same as before.
+improvement doing its thing, it lowers the latency about threefold.
+However, even with the improvement, Shenandoah unfortunately crosses the
+10 ms mark pretty early, below the 99th percentile, and is worse than G1
+at almost every percentile. ZGC and G1 score basically the same as
+before.
 
 Note also the very regular shape of the red curve (unpatched
-Shenandoah): this is because a single bad event trickles down into the
-lower latency percentiles. For example, if one result is late by 50 ms,
-that means it has already caused the next four results to have at least
-the latencies of 40, 30, 20, and 10 ms, even if they would be emitted
-instantaneously. We measure the latency as the timestamp at which the
-pipeline emits a given result minus the timestamp the result pertains
-to, giving us end-to-end latency (the only kind the user actually cares
-about).
+Shenandoah): this is a symptom of the way a single bad event trickles
+down into the lower latency percentiles. For example, if one result is
+late by 50 ms, that means it has already caused the next four results to
+have at least the latencies of 40, 30, 20, and 10 ms, even if they would
+be emitted instantaneously. We measure the latency as the timestamp at
+which the pipeline emits a given result minus the timestamp the result
+pertains to, giving us end-to-end latency (the only kind the user
+actually cares about).
 
 Next, let's zoom out to an overview of the entire range of throughputs
 we benchmarked, taking the 99.99%ile as the reference point and showing
-its dependence on throughput:
+its dependence on throughput. To paint an intuitive picture, 99.99%
+latency tells you that, in any span of 100 seconds you look at, you're
+likely to find a latency spike at least that large:
 
 ![Latencies on JDK 14.0.2 pre-release](assets/2020-06-25-latencies-jdk14.png)
 
@@ -219,17 +220,17 @@ Here are some things to note:
 As a preview into what's coming up in OpenJDK, we also took a look at
 the [Early Access release 27 of JDK
 15](https://download.java.net/java/early_access/jdk15/28/GPL/openjdk-15-ea+28_linux-x64_bin.tar.gz).
-It lacks the Shenondoah fix, so to test the prospects for Shenandoah we
-used a build available at
+It lacks the pacer improvement for Shenondoah, so to properly test its
+prospects we used a build available at
 [builds.shipilev.net/openjdk-jdk](https://builds.shipilev.net/openjdk-jdk/),
-specifically a build that reports its version as `build
+specifically one that reports its version as `build
 16-testing+0-builds.shipilev.net-openjdk-jdk-b1282-20200611`.
 
 
 ![Latencies on upcoming JDK versions](assets/2020-06-25-latencies-latest.png)
 
-We can see a nice incremental improvement for the ZGC, but the other
-two collectors are essentially the same as before. Shenandoah's chart
-looks even a bit worse than before, but the details of exactly how much
-above 10 ms its 99.99%ile was don't make any difference to the bottom
-line.
+We can see a nice incremental improvement for the ZGC: less than 5 ms
+latencies at throuhputs below 5 M/s, but the other two collectors are
+essentially the same as before. Shenandoah's chart looks even a bit
+worse than before, but the details of exactly how much above 10 ms its
+99.99%ile was don't make any difference to the bottom line.
