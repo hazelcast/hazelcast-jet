@@ -17,12 +17,12 @@ this month, analyzing the performance of modern JVMs on workloads that
 are relevant to the use case of real-time stream processing.
 
 As a quick recap, in Part 1 we tested the basic functionality of
-Hazelcast Jet (sliding window aggregation) on two types of workload:
-lightweight with a focus on low latency, and heavyweight with a focus on
-the data pipeline keeping up with high throughput and large aggregation
-state. For the low-latency benchmarks we chose the JDK 14 as the most
-recent stable version and three of its garbage collectors: Shenandoah,
-ZGC, and G1 GC.
+[Hazelcast Jet](https://github.com/hazelcast/hazelcast-jet) (sliding
+window aggregation) on two types of workload: lightweight with a focus
+on low latency, and heavyweight with a focus on the data pipeline
+keeping up with high throughput and large aggregation state. For the
+low-latency benchmarks we chose the JDK 14 as the most recent stable
+version and three of its garbage collectors: Shenandoah, ZGC, and G1 GC.
 
 Our finding that Shenandoah apparently fared worse than the other GCs
 attracted some reactions, most notably from the Shenandoah team who
@@ -39,6 +39,17 @@ pacer's heuristics to make the background GC work more proactive.
 Given this quick development, we wanted to test out the effects of the
 fix, but also take the opportunity to zoom in on the low-latency
 streaming case and make a more detailed analysis.
+
+Here are our main conclusions:
+
+1. ZGC is still the winner and the only GC whose 99.99th percentile
+   latency stayed below 10 ms across almost all of our tested range
+1. Shenandoah's pacer improvement has a very strong effect, reducing the
+   latency by a factor of three, but still staying well above 10 ms
+   except in the very lowest part of our tested range
+3. The slightly different methodology used in this round gives even
+   better latencies for G1, with the 99.99th percentile below 13 ms
+   across a wide range of throughputs
 
 ## The JDK We Tested
 
@@ -108,8 +119,8 @@ Note that the size of the keyset, somewhat counterintuitively, does not
 affect the size of the aggregation state. As long as the 10,000 input
 events received during one time slice of 10 milliseconds all use
 distinct keys, the state is fixed as described above. Only in the lowest
-setting, 5,000, the state is half as large since every hastable contains
-just 5,000 keys.
+setting, 5,000, the state is half as large since every hashtable
+contains just 5,000 keys.
 
 What the keyset size does affect is allocation rate. The pipeline emits
 the full keyset every 10 milliseconds. For example, with 50,000 keys
@@ -182,7 +193,7 @@ but overall all three cases show pretty similar behavior. G1 is clearly
 worse and its latency exceeds the 10 ms mark before even reaching the
 99th percentile. Since our pipeline emits a new result set ever 10 ms,
 we shall consider 10 ms as the cutoff point: everything above 10 ms
-should be considered as failure for our use case.
+should be considered a failure for our use case.
 
 Next, let's take a look at the latencies after increasing the throughput
 a bit, to 3 million items per second:
@@ -216,14 +227,13 @@ likely to find a latency spike at least that large. Here's the chart:
 
 Here are some things to note:
 
-1. The G1 collector is unphased by the differences in throughput. While
-   its latency is never under 10 milliseconds, it keeps its level over
-   the entire tested range and, judging by our previous results,
-   probably a lot more. Its latency even improves a bit with higher
-   loads.
-2. ZGC stays below 10 ms over a large part of the range, up to 8 M items
+1. ZGC stays below 10 ms over a large part of the range, up to 8 M items
    per second. This makes it not just the winner, but the only choice
    for the range from 2 million to 8 million items per second.
+2. The G1 collector is unphased by the differences in throughput. While
+   its latency is never under 10 milliseconds, it keeps its level over
+   the entire tested range and more. Its latency even improves a bit
+   with higher loads.
 3. At 9.5 M items per second, ZGC shows a remarkable recovery.
    Sandwiched between the latencies of 92 and 209 milliseconds, at this
    exact throughput it achieves 10 ms latency! We of course thought it
@@ -231,20 +241,28 @@ Here are some things to note:
    result was consistent. Maybe there's a lesson in there for the ZGC
    engineers.
 
+## A Sneak Peek into Upcoming Versions
+
 As a preview into what's coming up in OpenJDK, we also took a look at
 the [Early Access release 27 of JDK
 15](https://download.java.net/java/early_access/jdk15/28/GPL/openjdk-15-ea+28_linux-x64_bin.tar.gz).
-It lacks the pacer improvement for Shenondoah, so to properly test its
-prospects we used a build available at
+Shenandoah's pacer improvement is not applied in it, so to properly test
+Shenandoah's prospects we used a build available at
 [builds.shipilev.net/openjdk-jdk](https://builds.shipilev.net/openjdk-jdk/),
 specifically one that reports its version as `build
-16-testing+0-builds.shipilev.net-openjdk-jdk-b1282-20200611`.
-
+16-testing+0-builds.shipilev.net-openjdk-jdk-b1282-20200611`. Out of
+interest we also doubled our throughput range to capture more of the
+behavior after the latency exceeds 10 milliseconds. Here's what we got:
 
 ![Latencies on upcoming JDK versions](assets/2020-06-23-latencies-latest.png)
 
 We can see a nice incremental improvement for the ZGC: less than 5 ms
-latencies at throughputs below 5 M/s, but the other two collectors are
-essentially the same as before. Shenandoah's chart looks even a bit
-worse than before, but exactly how much above 10 milliseconds its
-latency was doesn't make a difference for our bottom line.
+latencies at throughputs below 5 M/s. Shenandoah's curve is even a bit
+worse at 2.5-3 M per second, but generally pretty similar. At higher
+loads we can see ZGC's failure mode is quite a bit more severe than
+Shenandoah's, although just how bad the latency gets doesn't affect the
+bottom line of a scenario where everything above 10 ms is already a
+failure.
+
+The wider chart also gives better insight into the stability of G1,
+keeping itself below 20 ms all the way up to 20 M items per second.
