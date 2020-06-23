@@ -4,10 +4,46 @@
 # Lines starting with # and empty lines are ignored
 
 # Memory configuration
-# -Xms4G
-# -Xmx4G
+#-Xms4g
+#-Xmx4g
+#-XX:+AlwaysPreTouch
 
 # Generate heap dump on out-of-memory error
 # Uncomment to enable
-# -XX:+HeapDumpOnOutOfMemoryError
-# -XX:HeapDumpPath=dump
+#-XX:+HeapDumpOnOutOfMemoryError
+#-XX:HeapDumpPath=./
+
+# Enable debugger
+#-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005
+
+# Enable JMX
+#-Dcom.sun.management.jmxremote
+#-Dcom.sun.management.jmxremote.port=9010
+#-Dcom.sun.management.jmxremote.authenticate=false
+#-Dcom.sun.management.jmxremote.ssl=false
+#-Dcom.sun.management.jmxremote.local.only=false
+
+# GC configuration
+
+# G1GC Configuration
+#-XX:+UseG1GC
+#-XX:MaxGCPauseMillis=50
+
+# ZGC
+#-XX:+UseZGC
+
+# Shenandoah
+#-XX:+UseShenandoahGC
+
+## JDK 8 GC logging
+#-XX:+PrintGCDetails
+#-XX:+PrintGCDateStamps
+#-XX:+PrintTenuringDistribution
+#-XX:+PrintGCApplicationStoppedTime
+#-Xloggc:logs/gc.log
+#-XX:+UseGCLogFileRotation
+#-XX:NumberOfGCLogFiles=32
+#-XX:GCLogFileSize=64m
+
+# JDK 9+ GC logging
+#-Xlog:gc*,gc+age=trace,safepoint:file=logs/gc.log:utctime,pid,tags:filecount=32,filesize=64m

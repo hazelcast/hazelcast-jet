@@ -42,3 +42,17 @@ for module in "${MODULES[@]}"; do
 done
 
 CLASSPATH="$JET_HOME/lib:$JET_HOME/lib/*:$CLASSPATH"
+
+function readJvmOptionsFile {
+    # Read jvm.options file
+    while IFS= read -r line
+    do
+      # Ignore lines starting with # (does not support # in the middle of the line)
+      if [[ "$line" =~ ^#.*$ ]]
+      then
+        continue;
+      fi
+
+      JVM_OPTIONS="$JVM_OPTIONS $line"
+    done < $JET_HOME/config/$1
+}
