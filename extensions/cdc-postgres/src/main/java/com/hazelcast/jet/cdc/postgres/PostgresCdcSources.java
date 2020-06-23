@@ -43,21 +43,20 @@ public final class PostgresCdcSources {
     }
 
     /**
-     * Creates a CDC source that streams change data from a PostgreSQL
-     * database to Hazelcast Jet.
+     * Creates a CDC source that streams change data from a PostgreSQL database
+     * to Hazelcast Jet.
      * <p>
-     * If the database is unreachable when this source is started by a
-     * Jet job or if the connection to the database goes down while a
-     * Jet job using such a source is running, the source will throw
-     * an exception and stop. It will also terminate the execution of
-     * the job using it. This behaviour is not ideal, would be much
-     * better to try to reconnect, at least for a certain amount of time.
-     * Future versions will address the problem.
+     * If Jet can't reach the database when it attempts to start the source or
+     * if it looses the connection to the database from an already running
+     * source, it throws an exception and terminate the execution of the job.
+     * This behaviour is not ideal, would be much better to try to reconnect,
+     * at least for a certain amount of time. Future versions will address the
+     * problem.
      *
-     * @param name name of this source, needs to be unique, will be
-     *             passed to the underlying Kafka Connect source
-     * @return builder that can be used to set source properties and also
-     * to construct the source once configuration is done
+     * @param name name of this source, needs to be unique, will be passed to
+     *             the underlying Kafka Connect source
+     * @return builder that can be used to set source properties and also to
+     * construct the source once configuration is done
      */
     @Nonnull
     public static Builder postgres(@Nonnull String name) {
@@ -82,9 +81,8 @@ public final class PostgresCdcSources {
         private final DebeziumConfig config;
 
         /**
-         * @param name name of the source, needs to be unique,
-         *             will be passed to the underlying Kafka
-         *             Connect source
+         * @param name name of the source, needs to be unique, will be passed to
+         *             the underlying Kafka Connect source
          */
         private Builder(String name) {
             Objects.requireNonNull(name, "name");
@@ -96,8 +94,7 @@ public final class PostgresCdcSources {
         }
 
         /**
-         * IP address or hostname of the database server, has to be
-         * specified.
+         * IP address or hostname of the database server, has to be specified.
          */
         @Nonnull
         public Builder setDatabaseAddress(@Nonnull String address) {
@@ -106,8 +103,8 @@ public final class PostgresCdcSources {
         }
 
         /**
-         * Optional port number of the database server, if unspecified
-         * defaults to the database specific default port (5432).
+         * Optional port number of the database server, if unspecified defaults
+         * to the database specific default port (5432).
          */
         @Nonnull
         public Builder setDatabasePort(int port) {
@@ -116,8 +113,8 @@ public final class PostgresCdcSources {
         }
 
         /**
-         * Database user for connecting to the database server. Has to
-         * be specified.
+         * Database user for connecting to the database server. Has to be
+         * specified.
          */
         @Nonnull
         public Builder setDatabaseUser(@Nonnull String user) {
@@ -126,8 +123,8 @@ public final class PostgresCdcSources {
         }
 
         /**
-         * Database user password for connecting to the database server.
-         * Has to be specified.
+         * Database user password for connecting to the database server. Has to
+         * be specified.
          */
         @Nonnull
         public Builder setDatabasePassword(@Nonnull String password) {
@@ -136,12 +133,12 @@ public final class PostgresCdcSources {
         }
 
         /**
-         * The name of the PostgreSQL database from which to stream the
-         * changes. Has to be set.
+         * The name of the PostgreSQL database from which to stream the changes.
+         * Has to be set.
          * <p>
          * Currently this source is not capable of monitoring multiple
-         * databases, only multiple schemas and/or tables. See white-
-         * and black-listing configuration options for those.
+         * databases, only multiple schemas and/or tables. See white- and
+         * black-listing configuration options for those.
          */
         @Nonnull
         public Builder setDatabaseName(String dbName) {
@@ -150,11 +147,11 @@ public final class PostgresCdcSources {
         }
 
         /**
-         * Optional regular expressions that match schema names to be
-         * monitored ("schema" is used here to denote logical groups of
-         * tables). Any schema name not included in the whitelist will
-         * be excluded from monitoring. By default all non-system schemas
-         * will be monitored. May not be used with
+         * Optional regular expressions that match schema names to be monitored
+         * ("schema" is used here to denote logical groups of tables). Any
+         * schema name not included in the whitelist will be excluded from
+         * monitoring. By default all non-system schemas will be monitored. May
+         * not be used with
          * {@link #setSchemaBlacklist(String...) schema blacklist}.
          */
         @Nonnull
@@ -164,11 +161,10 @@ public final class PostgresCdcSources {
         }
 
         /**
-         * Optional regular expressions that match schema names to be
-         * excluded from monitoring ("schema" is used here to denote
-         * logical groups of tables). Any schema name not included in
-         * the blacklist will be monitored, with the exception of system
-         * schemas. May not be used with
+         * Optional regular expressions that match schema names to be excluded
+         * from monitoring ("schema" is used here to denote logical groups of
+         * tables). Any schema name not included in the blacklist will be
+         * monitored, with the exception of system schemas. May not be used with
          * {@link #setSchemaWhitelist(String...) schema whitelist}.
          */
         @Nonnull
@@ -179,12 +175,11 @@ public final class PostgresCdcSources {
 
         /**
          * Optional regular expressions that match fully-qualified table
-         * identifiers for tables to be monitored; any table not
-         * included in the whitelist will be excluded from monitoring.
-         * Each identifier is of the form <i>schemaName.tableName</i>.
-         * By default the connector will monitor every non-system table
-         * in each monitored database. May not be used with
-         * {@link #setTableBlacklist(String...) table blacklist}.
+         * identifiers for tables to be monitored; any table not included in the
+         * whitelist will be excluded from monitoring. Each identifier is of the
+         * form <em>schemaName.tableName</em>. By default the connector will
+         * monitor every non-system table in each monitored database. May not be
+         * used with {@link #setTableBlacklist(String...) table blacklist}.
          */
         @Nonnull
         public Builder setTableWhitelist(@Nonnull String... tableNameRegExps) {
@@ -194,10 +189,9 @@ public final class PostgresCdcSources {
 
         /**
          * Optional regular expressions that match fully-qualified table
-         * identifiers for tables to be excluded from monitoring; any
-         * table not included in the blacklist will be monitored. Each
-         * identifier is of the form <i>schemaName.tableName</i>. May
-         * not be used with
+         * identifiers for tables to be excluded from monitoring; any table not
+         * included in the blacklist will be monitored. Each identifier is of
+         * the form <em>schemaName.tableName</em>. May not be used with
          * {@link #setTableWhitelist(String...) table whitelist}.
          */
         @Nonnull
@@ -207,10 +201,10 @@ public final class PostgresCdcSources {
         }
 
         /**
-         * Optional regular expressions that match the fully-qualified
-         * names of columns that should be excluded from change event
-         * message values. Fully-qualified names for columns are of the
-         * form <i>schemaName.tableName.columnName</i>.
+         * Optional regular expressions that match the fully-qualified names of
+         * columns that should be excluded from change event message values.
+         * Fully-qualified names for columns are of the form
+         * <em>schemaName.tableName.columnName</em>.
          */
         @Nonnull
         public Builder setColumnBlacklist(@Nonnull String... columnNameRegExps) {
@@ -221,18 +215,17 @@ public final class PostgresCdcSources {
         /**
          * The name of the @see <a href="https://www.postgresql.org/docs/10/logicaldecoding.html">
          * Postgres logical decoding plug-in</a> installed on the server.
-         * Supported values are <i>decoderbufs</i>, <i>wal2json</i>,
-         * <i>wal2json_rds</i>, <i>wal2json_streaming</i>,
-         * <i>wal2json_rds_streaming</i> and <i>pgoutput</i>.
+         * Supported values are <em>decoderbufs</em>, <em>wal2json</em>,
+         * <em>wal2json_rds</em>, <em>wal2json_streaming</em>,
+         * <em>wal2json_rds_streaming</em> and <em>pgoutput</em>.
          * <p>
-         * If not explicitly set, the property defaults to <i>decoderbufs</i>.
+         * If not explicitly set, the property defaults to <em>decoderbufs</em>.
          * <p>
-         * When the processed transactions are very large it is possible
-         * that the JSON batch event with all changes in the transaction
-         * will not fit into the hard-coded memory buffer of size 1 GB.
-         * In such cases it is possible to switch to so-called streaming
-         * mode when every change in transactions is sent as a separate
-         * message from PostgreSQL.
+         * When the processed transactions are very large it is possible that
+         * the JSON batch event with all changes in the transaction will not fit
+         * into the hard-coded memory buffer of size 1 GB. In such cases it is
+         * possible to switch to so-called streaming mode when every change in
+         * transactions is sent as a separate message from PostgreSQL.
          */
         @Nonnull
         public Builder setLogicalDecodingPlugIn(@Nonnull String pluginName) {
@@ -242,19 +235,17 @@ public final class PostgresCdcSources {
 
         /**
          * The name of the @see <a href="https://www.postgresql.org/docs/10/logicaldecoding-explanation.html">
-         * Postgres logical decoding slot</a> (also called "replication
-         * slot") created for streaming changes from a plug-in and
-         * database instance.
+         * Postgres logical decoding slot</a> (also called "replication slot")
+         * created for streaming changes from a plug-in and database instance.
          * <p>
-         * Values must conform to Postgres replication slot naming rules
-         * which state: "Each replication slot has a name, which can
-         * contain lower-case letters, numbers, and the underscore
-         * character."
+         * Values must conform to Postgres replication slot naming rules which
+         * state: "Each replication slot has a name, which can contain
+         * lower-case letters, numbers, and the underscore character."
          * <p>
-         * Replication slots have to have an identifier that is unique
-         * across all databases in a PostgreSQL cluster.
+         * Replication slots have to have an identifier that is unique across
+         * all databases in a PostgreSQL cluster.
          * <p>
-         * If not explicitly set, the property defaults to <i>debezium</i>.
+         * If not explicitly set, the property defaults to <em>debezium</em>.
          */
         @Nonnull
         public Builder setReplicationSlotName(@Nonnull String slotName) {
@@ -266,13 +257,12 @@ public final class PostgresCdcSources {
          * Whether or not to drop the logical replication slot when the
          * connector disconnects cleanly.
          * <p>
-         * Defaults to <i>false</i>
+         * Defaults to <em>false</em>
          * <p>
-         * Should only be set to <i>true</i> in testing or development
-         * environments. Dropping the slot allows WAL segments to be
-         * discarded by the database, so it may happen that after a
-         * restart the connector cannot resume from the WAL position
-         * where it left off before.
+         * Should only be set to <em>true</em> in testing or development
+         * environments. Dropping the slot allows WAL segments to be discarded
+         * by the database, so it may happen that after a restart the connector
+         * cannot resume from the WAL position where it left off before.
          */
         @Nonnull
         public Builder setReplicationSlotDropOnStop(boolean dropOnStop) {
@@ -284,19 +274,18 @@ public final class PostgresCdcSources {
          * The name of the <a href="https://www.postgresql.org/docs/10/logical-replication-publication.html">
          * Postgres publication</a> that will be used for CDC purposes.
          * <p>
-         * If the publication does not exist when this source starts up,
-         * then the source will create it (note: the database user of the
-         * source must have superuser permissions to be able to do so).
-         * If created this way the publication will include all tables
-         * and the source itself must filter the data based on its
-         * white-/blacklist configs. This is not efficient because the
-         * database will still send all data to the connector, before
-         * filtering is applied.
+         * If the publication does not exist when this source starts up, then
+         * the source will create it (note: the database user of the source must
+         * have superuser permissions to be able to do so). If created this way
+         * the publication will include all tables and the source itself must
+         * filter the data based on its white-/blacklist configs. This is not
+         * efficient because the database will still send all data to the
+         * connector, before filtering is applied.
          * <p>
-         * It's best to use a pre-defined publication (via the <code>CREATE
-         * PUBLICATION</code> SQL command, specified via its name.
+         * It's best to use a pre-defined publication (via the
+         * <code>CREATE PUBLICATION</code> SQL command, specified via its name.
          * <p>
-         * If not explicitly set, the property defaults to <i>dbz_publication</i>.
+         * If not explicitly set, the property defaults to <em>dbz_publication</em>.
          */
         @Nonnull
         public Builder setPublicationName(@Nonnull String publicationName) {
@@ -305,21 +294,21 @@ public final class PostgresCdcSources {
         }
 
         /**
-         * Specifies whether to use an encrypted connection to the
-         * database. The default is <i>disable</i>, and specifies to
-         * use an unencrypted connection.
+         * Specifies whether to use an encrypted connection to the database. The
+         * default is <em>disable</em>, and specifies to use an unencrypted
+         * connection.
          * <p>
-         * The <i>require</i> option establishes an encrypted
-         * connection but will fail if one cannot be made for any reason.
+         * The <em>require</em> option establishes an encrypted connection but
+         * will fail if one cannot be made for any reason.
          * <p>
-         * The <i>verify_ca</i> option behaves like <i>require</i> but
-         * additionally it verifies the server TLS certificate against
-         * the configured Certificate Authority (CA) certificates and
-         * will fail if it doesn’t match any valid CA certificates.
+         * The <em>verify_ca</em> option behaves like <em>require</em> but
+         * additionally it verifies the server TLS certificate against the
+         * configured Certificate Authority (CA) certificates and will fail if
+         * it doesn’t match any valid CA certificates.
          * <p>
-         * The <i>verify-full</i> option behaves like
-         * <i>verify_ca</i> but additionally verifies that the server
-         * certificate matches the host of the remote connection.
+         * The <em>verify-full</em> option behaves like <em>verify_ca</em> but
+         * additionally verifies that the server certificate matches the host
+         * of the remote connection.
          */
         @Nonnull
         public Builder setSslMode(@Nonnull String mode) {
@@ -328,8 +317,8 @@ public final class PostgresCdcSources {
         }
 
         /**
-         * Specifies the (path to the) file containing the SSL Certificate
-         * for the database client.
+         * Specifies the (path to the) file containing the SSL Certificate for
+         * the database client.
          */
         @Nonnull
         public Builder setSslCertificateFile(@Nonnull String file) {
@@ -338,8 +327,8 @@ public final class PostgresCdcSources {
         }
 
         /**
-         * Specifies the (path to the) file containing the SSL private
-         * key of the database client.
+         * Specifies the (path to the) file containing the SSL private key of
+         * the database client.
          */
         @Nonnull
         public Builder setSslKeyFile(@Nonnull String file) {
@@ -348,8 +337,8 @@ public final class PostgresCdcSources {
         }
 
         /**
-         * Specifies the password to be used to access the SSL key file,
-         * if specified.
+         * Specifies the password to be used to access the SSL key file, if
+         * specified.
          * <p>
          * Mandatory if key file specified.
          */
@@ -360,8 +349,8 @@ public final class PostgresCdcSources {
         }
 
         /**
-         * Specifies the file containing containing SSL certificate
-         * authority (CA) certificate(s).
+         * Specifies the file containing containing SSL certificate authority
+         * (CA) certificate(s).
          */
         @Nonnull
         public Builder setSslRootCertificateFile(@Nonnull String file) {
@@ -370,8 +359,8 @@ public final class PostgresCdcSources {
         }
 
         /**
-         * Can be used to set any property not explicitly covered by
-         * other methods or to override properties we have hidden.
+         * Can be used to set any property not explicitly covered by other
+         * methods or to override properties we have hidden.
          */
         @Nonnull
         public Builder setCustomProperty(@Nonnull String key, @Nonnull String value) {

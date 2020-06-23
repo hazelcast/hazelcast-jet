@@ -202,9 +202,8 @@ replication too.
 #### Client authentication
 
 Replication can only be performed for a configured number of hosts. The
-PostgreSQL server needs to be told to allow access from the host the CDC
-connector is running on. To specify such  [client
-authentication](https://www.postgresql.org/docs/9.6/auth-pg-hba-conf.html)
+PostgreSQL server needs to allow access from the host the CDC connector
+is running on. To specify such  [client authentication](https://www.postgresql.org/docs/9.6/auth-pg-hba-conf.html)
 options add following lines to the end of the `pg_hba.conf` file:
 
 ```text
@@ -299,12 +298,13 @@ shouldn't affect normal operations too severely.
 
 #### Failure tolerance
 
-PostgreSQL failure tolerance associated with replication slot isn't that
-great ... The CDC connector can quite nicely deal with its own restart
-or connection loss to the primary database, but only as long as
-replication slots remain intact.Replication slots are not themselves
-synced to physical replicas so you can’t continue to use a slot after a
-master failure results in promotion of a standby.
+PostgreSQL failure tolerance associated with replication slots is
+somewhat lacking in certain aspects. The CDC connector can quite nicely
+deal with its own restart or connection loss to the primary database,
+but only as long as replication slots remain intact. Replication
+slots are not themselves synced to physical replicas, so you can’t
+continue to use a slot after a master failure results in promotion
+of a standby.
 
 There are discussions in the PostgreSQL community around a feature
 called *failover slots* which would help mitigate this problem, but as
