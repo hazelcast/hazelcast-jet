@@ -909,7 +909,8 @@ Each module includes Elasticsearch client compatible with given major
 version of Elasticsearch. The connector API is the same between
 different versions, apart from a few minor differences where we
 surface the API of Elasticsearch client. See the JavaDoc for any
-such differences.</p>
+such differences. The jars are available as separate downloads on the
+<a href="/download">download page</a> or in Maven Central.</p>
 </blockquote>
 <h4><a class="anchor" aria-hidden="true" id="source"></a><a href="#source" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Source</h4>
 <p>The Elasticsearch connector source provides a builder and several
@@ -947,6 +948,25 @@ shards. Number of slices equals to globalParallelism.</p>
 <p>If Hazelcast Jet nodes and Elasticsearch nodes are located on the same
 machines then the connector will use co-located reading, avoiding the
 overhead of physical network.</p>
+<h5><a class="anchor" aria-hidden="true" id="failure-scenario-considerations"></a><a href="#failure-scenario-considerations" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Failure Scenario Considerations</h5>
+<p>The connector uses retry capability of the underlying Elasticsearch
+client. This allows the connector to handle some transient network
+issues but it doesn't cover all cases.</p>
+<p>The source uses Elasticsearch's <a href="https://www.elastic.co/guide/en/elasticsearch/client/java-rest/current/java-rest-high-search-scroll.html">Scroll API</a>.
+The scroll context is stored on a node with the primary shard. If this
+node crashes, the search context is lost and the job can't reliably read
+all documents, so the job fails.</p>
+<p>If there is a network issue between Jet and Elasticsearch the
+Elasticsearch client retries the request, allowing the job to continue.</p>
+<p>However, there is an edge case where the scroll request is processed by
+the Elasticsearch server, moves the scroll cursor forward, but the
+response is lost. The client then retries and receives the next page,
+effectively skipping the previous page. The recommended way to handle
+this is to check the number of processed documents after the job
+finishes, possibly restart the job when not all documents are read.</p>
+<p>These are known limitations of Elasticsearch Scroll API. There is
+an <a href="https://github.com/elastic/elasticsearch/pull/56480">ongoing work</a>
+on Elasticsearch side to fix these issues.</p>
 <h4><a class="anchor" aria-hidden="true" id="sink"></a><a href="#sink" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Sink</h4>
 <p>The Elasticsearch connector sink provides a builder and several
 convenience factory methods. Most commonly you need to provide:</p>
@@ -978,6 +998,40 @@ sink can be created using</p></li>
 <p>The Elasticsearch sink doesn't implement co-located writing. To achieve
 maximum write throughput provide all nodes to the <code>RestClient</code>
 and configure parallelism.</p>
+<h5><a class="anchor" aria-hidden="true" id="failure-scenario-considerations-1"></a><a href="#failure-scenario-considerations-1" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Failure Scenario Considerations</h5>
+<p>The sink connector is able to handle transient network failures,
+failures of nodes in the cluster and cluster changes, e.g., scaling up.</p>
+<p>Transient network failures between Jet and Elasticsearch cluster are
+handled by retries in the Elasticsearch client.</p>
+<p>The worst case scenario is when a master node containing a primary of a
+shard fails.</p>
+<p>First, you need to set <code>BulkRequest.waitForActiveShards(int)</code> to ensure
+that a document is replicated to at least some replicas. Also, you can't
+use the auto-generated ids and need to set the document id manually to
+avoid duplicate records.</p>
+<p>Second, you need to make sure new master node and primary shard is
+allocated before the client times out. This involves:</p>
+<ul>
+<li><p>configuration of the following properties on the client:</p>
+<pre><code class="hljs css language-text">org.apache.http.client.config.RequestConfig.Builder.setConnectionRequestTimeout
+org.apache.http.client.config.RequestConfig.Builder.setConnectTimeout
+org.apache.http.client.config.RequestConfig.Builder.setSocketTimeout
+</code></pre></li>
+<li><p>and configuration of the following properties in the Elasticsearch
+cluster:</p>
+<pre><code class="hljs css language-text">cluster.election.max_timeout
+cluster.fault_detection.follower_check.timeout
+cluster.fault_detection.follower_check.retry_count
+cluster.fault_detection.leader_check.timeout
+cluster.fault_detection.leader_check.retry_count
+cluster.follower_lag.timeout
+transport.connect_timeout
+transport.ping_schedule
+network.tcp.connect_timeout
+</code></pre></li>
+</ul>
+<p>For details see Elasticsearch documentation section on
+<a href="https://www.elastic.co/guide/en/elasticsearch/reference/current/cluster-fault-detection.html">cluster fault detection</a>.</p>
 <h3><a class="anchor" aria-hidden="true" id="mongodb"></a><a href="#mongodb" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>MongoDB</h3>
 <blockquote>
 <p>This connector is currently under incubation. For more
