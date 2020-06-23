@@ -44,12 +44,11 @@ Here are our main conclusions:
 
 1. ZGC is still the winner and the only GC whose 99.99th percentile
    latency stayed below 10 ms across almost all of our tested range
-1. Shenandoah's pacer improvement has a very strong effect, reducing the
-   latency by a factor of three, but still staying well above 10 ms
+1. Shenandoah's pacer improvement showed a very strong effect, reducing
+   the latency by a factor of three, but still staying well above 10 ms
    except in the very lowest part of our tested range
-3. The slightly different methodology used in this round gives even
-   better latencies for G1, with the 99.99th percentile below 13 ms
-   across a wide range of throughputs
+3. G1 kept its 99.99th percentile latency below 13 ms across a wide
+   range of throughputs
 
 ## The JDK We Tested
 
