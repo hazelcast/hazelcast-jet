@@ -14,7 +14,7 @@
         </image>
         <copyright>Copyright © 2020 Hazelcast Inc.</copyright>
         <item>
-            <title><![CDATA[Performance of Modern Java on Data-Heavy Workloads: Low-Latency Rematch]]></title>
+            <title><![CDATA[The Low-Latency Rematch: Performance of Modern Java on Data-Heavy Workloads]]></title>
             <link>https://jet-start.sh/blog/2020/06/23/jdk-gc-benchmarks-rematch.html</link>
             <guid>https://jet-start.sh/blog/2020/06/23/jdk-gc-benchmarks-rematch.html</guid>
             <pubDate>Tue, 23 Jun 2020 06:00:00 GMT</pubDate>
