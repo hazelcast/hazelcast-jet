@@ -1155,7 +1155,7 @@ compile 'com.hazelcast.jet:hazelcast-jet-elasticsearch-7:{jet-version}'
 > different versions, apart from a few minor differences where we
 > surface the API of Elasticsearch client. See the JavaDoc for any
 > such differences. The jars are available as separate downloads on the
-> [download page](https://jet-start.sh/download) or in Maven Central.
+> [download page](/download) or in Maven Central.
 
 #### Source
 
