@@ -55,4 +55,7 @@ function readJvmOptionsFile {
 
       JVM_OPTIONS="$JVM_OPTIONS $line"
     done < $JET_HOME/config/$1
+
+    # Evaluate variables in the options, allowing to use e.g. JET_HOME variable
+    JVM_OPTIONS=$(eval echo $JVM_OPTIONS)
 }

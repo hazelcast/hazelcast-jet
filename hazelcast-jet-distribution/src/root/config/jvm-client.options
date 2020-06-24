@@ -9,4 +9,4 @@
 # Generate heap dump on out-of-memory error
 # Uncomment to enable
 #-XX:+HeapDumpOnOutOfMemoryError
-#-XX:HeapDumpPath=dump
+#-XX:HeapDumpPath=$JET_HOME
