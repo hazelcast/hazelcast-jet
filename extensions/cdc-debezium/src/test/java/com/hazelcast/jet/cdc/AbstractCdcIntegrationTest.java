@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.cdc;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.core.JetTestSupport;
 import com.hazelcast.jet.core.Processor;
@@ -26,16 +27,30 @@ import com.hazelcast.map.IMap;
 
 import javax.annotation.Nonnull;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-public class AbstractIntegrationTest extends JetTestSupport {
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
+public class AbstractCdcIntegrationTest extends JetTestSupport {
 
     @Nonnull
     protected static List<String> mapResultsToSortedList(IMap<?, ?> map) {
         return map.entrySet().stream()
                 .map(e -> e.getKey() + ":" + e.getValue())
                 .sorted().collect(Collectors.toList());
+    }
+
+    @Nonnull
+    protected static void assertMatch(List<String> expectedPatterns, List<String> actualValues) {
+        assertEquals(expectedPatterns.size(), actualValues.size());
+        for (int i = 0; i < expectedPatterns.size(); i++) {
+            String pattern = expectedPatterns.get(i);
+            String value = actualValues.get(i);
+            assertTrue(value.matches(pattern));
+        }
     }
 
     @SuppressWarnings("unchecked")
@@ -53,6 +68,49 @@ public class AbstractIntegrationTest extends JetTestSupport {
             return diff < TimeUnit.SECONDS.toMillis(3);
         });
         return ProcessorMetaSupplier.preferLocalParallelismOne(supplierEx);
+    }
+
+    protected static class TableRow {
+
+        @JsonProperty("id")
+        public int id;
+
+        @JsonProperty("value_1")
+        public String value1;
+
+        @JsonProperty("value_2")
+        public String value2;
+
+        @JsonProperty("value_3")
+        public String value3;
+
+        TableRow() {
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(id, value1, value2, value3);
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (this == obj) {
+                return true;
+            }
+            if (obj == null || getClass() != obj.getClass()) {
+                return false;
+            }
+            TableRow other = (TableRow) obj;
+            return id == other.id
+                    && Objects.equals(value1, other.value1)
+                    && Objects.equals(value2, other.value2)
+                    && Objects.equals(value3, other.value3);
+        }
+
+        @Override
+        public String toString() {
+            return "TableRow {id=" + id + ", value1=" + value1 + ", value2=" + value2 + ", value3=" + value3 + '}';
+        }
     }
 
 }
