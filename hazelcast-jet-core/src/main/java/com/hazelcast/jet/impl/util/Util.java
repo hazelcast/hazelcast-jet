@@ -40,6 +40,7 @@ import java.io.NotSerializableException;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
 import java.io.Serializable;
+import java.net.URL;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -463,5 +464,23 @@ public final class Util {
     @Nonnull
     public static <T, R> List<R> toList(@Nonnull Collection<T> coll, Function<? super T, ? extends R> mapFn) {
         return coll.stream().map(mapFn).collect(Collectors.toList());
+    }
+
+    /**
+     * Extracts the file name from the URL. File name is the part of {@code
+     * url.getPath()} after the last '/' character. Returns empty string if the
+     * path ends with a '/'.
+     * <p>
+     * Returns null if input is null or if {@code url.getPath()} returns null.
+     */
+    @Nullable
+    public static String fileNameFromUrl(@Nullable URL url) {
+        String fnamePath;
+        if (url == null || (fnamePath = url.getPath()) == null) {
+            return null;
+        }
+        // URLs always use forward slash to separate directories
+        int lastSlash = fnamePath.lastIndexOf('/');
+        return lastSlash < 0 ? fnamePath : fnamePath.substring(lastSlash + 1);
     }
 }
