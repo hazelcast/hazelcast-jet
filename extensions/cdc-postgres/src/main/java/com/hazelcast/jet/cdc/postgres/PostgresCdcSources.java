@@ -141,7 +141,7 @@ public final class PostgresCdcSources {
          * black-listing configuration options for those.
          */
         @Nonnull
-        public Builder setDatabaseName(String dbName) {
+        public Builder setDatabaseName(@Nonnull String dbName) {
             config.setProperty("database.dbname", dbName);
             return this;
         }
@@ -155,7 +155,7 @@ public final class PostgresCdcSources {
          * {@link #setSchemaBlacklist(String...) schema blacklist}.
          */
         @Nonnull
-        public Builder setSchemaWhitelist(String... schemaNameRegExps) {
+        public Builder setSchemaWhitelist(@Nonnull String... schemaNameRegExps) {
             config.setProperty("schema.whitelist", schemaNameRegExps);
             return this;
         }
@@ -168,7 +168,7 @@ public final class PostgresCdcSources {
          * {@link #setSchemaWhitelist(String...) schema whitelist}.
          */
         @Nonnull
-        public Builder setSchemaBlacklist(String... schemaNameRegExps) {
+        public Builder setSchemaBlacklist(@Nonnull String... schemaNameRegExps) {
             config.setProperty("schema.blacklist", schemaNameRegExps);
             return this;
         }
