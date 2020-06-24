@@ -19,6 +19,7 @@ package com.hazelcast.jet.sql.impl.connector.cdc;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.cdc.ChangeRecord;
 import com.hazelcast.jet.cdc.impl.CdcSource;
+import com.hazelcast.jet.cdc.impl.ChangeRecordCdcSource;
 import com.hazelcast.jet.cdc.impl.ConstantSequenceExtractor;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Vertex;
@@ -121,12 +122,12 @@ public class CdcSqlConnector implements JetSqlConnector {
         String tableName = table.getName();
         Properties properties = table.getCdcProperties();
         Vertex sourceVertex = dag.newVertex("cdc(" + tableName + ")",
-                convenientTimestampedSourceP(ctx -> new CdcSource(properties), // TODO: is it ok to use CdcSource?
-                        CdcSource::fillBuffer,
+                convenientTimestampedSourceP(ctx -> new ChangeRecordCdcSource(properties), // TODO: is it ok to use CdcSource?
+                        ChangeRecordCdcSource::fillBuffer,
                         noEventTime(), // TODO: should use timestamps ?
-                        CdcSource::createSnapshot,
-                        CdcSource::restoreSnapshot,
-                        CdcSource::destroy,
+                        ChangeRecordCdcSource::createSnapshot,
+                        ChangeRecordCdcSource::restoreSnapshot,
+                        ChangeRecordCdcSource::destroy,
                         0) // TODO: is it the correct value ?
         );
 
