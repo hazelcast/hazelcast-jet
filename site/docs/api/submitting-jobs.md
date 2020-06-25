@@ -51,7 +51,7 @@ The command also has some additional options:
 The `jet` command also some global options:
 
 * `-t`: name and comma separated addresses for the cluster, which must match
-  what's configured on the cluster
+  what's configured on the cluster, cluster name is optional
 * `-f`: path to a client config file, which can be used instead of
   supplying an address and name.
 

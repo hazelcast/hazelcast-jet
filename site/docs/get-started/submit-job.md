@@ -80,7 +80,7 @@ bin/jet submit <path_to_JAR_file>
 <!--Docker-->
 
 ```bash
-docker run -it -v <path_to_JAR_file>:/jars hazelcast/hazelcast-jet jet -t jet@172.17.0.2 submit /jars/<name_of_the_JAR_file>
+docker run -it -v <path_to_JAR_file>:/jars hazelcast/hazelcast-jet jet -t 172.17.0.2 submit /jars/<name_of_the_JAR_file>
 ```
 
 <!--END_DOCUSAURUS_CODE_TABS-->
