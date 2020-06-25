@@ -596,7 +596,7 @@ public class JetCommandLine implements Runnable {
                 description = "The cluster name and addresses to use if you want to connect to a "
                     + "cluster other than the one configured in the configuration file. " +
                         "At least one address is required. The cluster name is optional.",
-                paramLabel = "[<cluster-name>]@<hostname>:<port>[,<hostname>:<port>]",
+                paramLabel = "[<cluster-name>@]<hostname>:<port>[,<hostname>:<port>]",
                 converter = TargetsMixin.Converter.class)
         private Targets targets;
 
