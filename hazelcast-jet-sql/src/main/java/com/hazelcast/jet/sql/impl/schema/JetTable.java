@@ -23,7 +23,6 @@ import com.hazelcast.sql.impl.schema.TableStatistics;
 
 import javax.annotation.Nonnull;
 import java.util.List;
-import java.util.Map;
 
 public abstract class JetTable extends Table {
 
@@ -34,14 +33,15 @@ public abstract class JetTable extends Table {
             @Nonnull List<TableField> fields,
             @Nonnull String schemaName,
             @Nonnull String name,
-            @Nonnull TableStatistics statistics,
-            @Nonnull Map<String, String> ddlOptions
+            @Nonnull TableStatistics statistics
     ) {
-        super(schemaName, name, fields, statistics, ddlOptions);
+        super(schemaName, name, fields, statistics);
         this.sqlConnector = sqlConnector;
     }
 
-    public abstract boolean isStream();
+    public final boolean isStream() {
+        return sqlConnector.isStream();
+    }
 
     @Nonnull
     public JetSqlConnector getSqlConnector() {

@@ -37,6 +37,8 @@ import java.math.BigDecimal;
 import java.util.Map;
 
 import static com.hazelcast.jet.core.TestUtil.createMap;
+import static com.hazelcast.sql.impl.connector.SqlConnector.POJO_SERIALIZATION_FORMAT;
+import static com.hazelcast.sql.impl.connector.SqlKeyValueConnector.TO_SERIALIZATION_VALUE_FORMAT;
 import static com.hazelcast.sql.impl.connector.SqlKeyValueConnector.TO_VALUE_CLASS;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
@@ -59,17 +61,20 @@ public class SqlKafkaTest extends SqlTestSupport {
     @Before
     public void before() {
         topicName = createRandomTopic();
-        executeSql(format("CREATE EXTERNAL TABLE %s (__key INT, this VARCHAR) " +
-                        "TYPE \"%s\" " +
+        executeSql(format("CREATE EXTERNAL TABLE %s (" +
+                        " __key INT," +
+                        " this VARCHAR" +
+                        ") TYPE \"%s\" " +
                         "OPTIONS (" +
-                        "  \"bootstrap.servers\" '%s', " +
-                        "  \"key.serializer\" '%s', " +
-                        "  \"key.deserializer\" '%s', " +
-                        "  \"value.serializer\" '%s', " +
-                        "  \"value.deserializer\" '%s', " +
-                        "  \"auto.offset.reset\" 'earliest'" +
+                        " \"bootstrap.servers\" '%s'," +
+                        " \"key.serializer\" '%s'," +
+                        " \"key.deserializer\" '%s'," +
+                        " \"value.serializer\" '%s'," +
+                        " \"value.deserializer\" '%s'," +
+                        " \"auto.offset.reset\" 'earliest'" +
                         ")",
-                topicName, KafkaSqlConnector.TYPE_NAME, kafkaTestSupport.getBrokerConnectionString(),
+                topicName, KafkaSqlConnector.TYPE_NAME,
+                kafkaTestSupport.getBrokerConnectionString(),
                 IntegerSerializer.class.getCanonicalName(), IntegerDeserializer.class.getCanonicalName(),
                 StringSerializer.class.getCanonicalName(), StringDeserializer.class.getCanonicalName()
         ));
@@ -85,30 +90,33 @@ public class SqlKafkaTest extends SqlTestSupport {
 
     @Test
     public void insert() {
-        assertTopic(topicName, format("INSERT INTO %s VALUES(1, 'value-1')", topicName),
+        assertTopic(topicName, format("INSERT INTO %s VALUES (1, 'value-1')", topicName),
                 createMap(1, "value-1"));
     }
 
     @Test
     public void insert_overwrite() {
-        assertTopic(topicName, format("INSERT OVERWRITE %s (this, __key) VALUES('value-1', 1)", topicName),
+        assertTopic(topicName, format("INSERT OVERWRITE %s (this, __key) VALUES ('value-1', 1)", topicName),
                 createMap(1, "value-1"));
     }
 
     @Test
     public void select_convert() {
         String topicName = createRandomTopic();
-        executeSql(format("CREATE EXTERNAL TABLE %s (__key DECIMAL(10, 0), this VARCHAR) " +
-                        "TYPE \"%s\" " +
+        executeSql(format("CREATE EXTERNAL TABLE %s (" +
+                        " __key DECIMAL(10, 0)," +
+                        " this VARCHAR" +
+                        ") TYPE \"%s\" " +
                         "OPTIONS (" +
-                        "  \"bootstrap.servers\" '%s', " +
-                        "  \"key.serializer\" '%s', " +
-                        "  \"key.deserializer\" '%s', " +
-                        "  \"value.serializer\" '%s', " +
-                        "  \"value.deserializer\" '%s', " +
-                        "  \"auto.offset.reset\" 'earliest'" +
+                        " \"bootstrap.servers\" '%s'," +
+                        " \"key.serializer\" '%s'," +
+                        " \"key.deserializer\" '%s'," +
+                        " \"value.serializer\" '%s'," +
+                        " \"value.deserializer\" '%s'," +
+                        " \"auto.offset.reset\" 'earliest'" +
                         ")",
-                topicName, KafkaSqlConnector.TYPE_NAME, kafkaTestSupport.getBrokerConnectionString(),
+                topicName, KafkaSqlConnector.TYPE_NAME,
+                kafkaTestSupport.getBrokerConnectionString(),
                 BigIntegerSerializer.class.getCanonicalName(), BigIntegerDeserializer.class.getCanonicalName(),
                 StringSerializer.class.getCanonicalName(), StringDeserializer.class.getCanonicalName()
         ));
@@ -121,27 +129,31 @@ public class SqlKafkaTest extends SqlTestSupport {
     }
 
     @Test
-    public void select_complexObject() {
+    public void select_pojo() {
         String topicName = createRandomTopic();
-        executeSql(format("CREATE EXTERNAL TABLE %s (__key INT, name VARCHAR, age INT) " +
-                        "TYPE \"%s\" " +
+        executeSql(format("CREATE EXTERNAL TABLE %s (" +
+                        "  __key INT" +
+                        ") TYPE \"%s\" " +
                         "OPTIONS (" +
-                        "  \"bootstrap.servers\" '%s', " +
-                        "  \"key.serializer\" '%s', " +
-                        "  \"key.deserializer\" '%s', " +
-                        "  \"value.serializer\" '%s', " +
-                        "  \"value.deserializer\" '%s', " +
-                        "  \"auto.offset.reset\" 'earliest', " +
-                        "  \"%s\" '%s'" +
+                        "  \"%s\" '%s'," +
+                        "  \"%s\" '%s'," +
+                        "  \"bootstrap.servers\" '%s'," +
+                        "  \"key.serializer\" '%s'," +
+                        "  \"key.deserializer\" '%s'," +
+                        "  \"value.serializer\" '%s'," +
+                        "  \"value.deserializer\" '%s'," +
+                        "  \"auto.offset.reset\" 'earliest'" +
                         ")",
-                topicName, KafkaSqlConnector.TYPE_NAME, kafkaTestSupport.getBrokerConnectionString(),
+                topicName, KafkaSqlConnector.TYPE_NAME,
+                TO_SERIALIZATION_VALUE_FORMAT, POJO_SERIALIZATION_FORMAT,
+                TO_VALUE_CLASS, Person.class.getName(),
+                kafkaTestSupport.getBrokerConnectionString(),
                 IntegerSerializer.class.getCanonicalName(), IntegerDeserializer.class.getCanonicalName(),
-                PersonSerializer.class.getCanonicalName(), PersonDeserializer.class.getCanonicalName(),
-                TO_VALUE_CLASS, Person.class.getName()
+                PersonSerializer.class.getCanonicalName(), PersonDeserializer.class.getCanonicalName()
         ));
 
-        executeSql(format("INSERT INTO %s VALUES (0, 'Alice', 30)", topicName));
-        executeSql(format("INSERT INTO %s VALUES (1, 'Bob', 40)", topicName));
+        executeSql(format("INSERT INTO %s (__key, name, age) VALUES (0, 'Alice', 30)", topicName));
+        executeSql(format("INSERT INTO %s (__key, name, age) VALUES (1, 'Bob', 40)", topicName));
 
         assertRowsEventuallyAnyOrder(
                 format("SELECT __key, name, age FROM %s", topicName),

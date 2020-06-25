@@ -17,7 +17,6 @@
 package com.hazelcast.jet.sql;
 
 import com.hazelcast.jet.SimpleTestInClusterSupport;
-import com.hazelcast.jet.sql.impl.connector.kafka.SqlKafkaTest;
 import com.hazelcast.sql.SqlResult;
 import com.hazelcast.sql.SqlRow;
 import com.hazelcast.sql.SqlService;
@@ -97,7 +96,7 @@ public abstract class SqlTestSupport extends SimpleTestInClusterSupport {
 
         private final Object[] values;
 
-        public Row(int columnCount, SqlRow row) {
+        private Row(int columnCount, SqlRow row) {
             values = new Object[columnCount];
             for (int i = 0; i < columnCount; i++) {
                 values[i] = row.getObject(i);
@@ -121,7 +120,7 @@ public abstract class SqlTestSupport extends SimpleTestInClusterSupport {
             if (o == null || getClass() != o.getClass()) {
                 return false;
             }
-            SqlKafkaTest.Row row = (SqlKafkaTest.Row) o;
+            Row row = (Row) o;
             return Arrays.equals(values, row.values);
         }
 

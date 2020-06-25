@@ -54,23 +54,23 @@ public class SqlJoinTest extends SqlTestSupport {
     public void before() {
         topicName = "k_" + randomString().replace('-', '_');
         kafkaTestSupport.createTopic(topicName, INITIAL_PARTITION_COUNT);
-        executeSql(format("CREATE EXTERNAL TABLE %s (__key INT, this VARCHAR) TYPE \"%s\" " +
+        executeSql(format("CREATE EXTERNAL TABLE %s (" +
+                        " __key INT," +
+                        " this VARCHAR" +
+                        ") TYPE \"%s\" " +
                         "OPTIONS (" +
-                        "%s '%s', " +
-                        "%s '%s', " +
-                        "%s '%s', " +
-                        "%s '%s', " +
-                        "%s '%s', " +
-                        "%s '%s'" +
+                        " \"bootstrap.servers\" '%s'," +
+                        " \"key.serializer\" '%s'," +
+                        " \"key.deserializer\" '%s'," +
+                        " \"value.serializer\" '%s'," +
+                        " \"value.deserializer\" '%s'," +
+                        " \"auto.offset.reset\" 'earliest'" +
                         ")",
                 topicName, KafkaSqlConnector.TYPE_NAME,
-                "\"bootstrap.servers\"", kafkaTestSupport.getBrokerConnectionString(),
-                "\"key.serializer\"", IntegerSerializer.class.getCanonicalName(),
-                "\"key.deserializer\"", IntegerDeserializer.class.getCanonicalName(),
-                "\"value.serializer\"", StringSerializer.class.getCanonicalName(),
-                "\"value.deserializer\"", StringDeserializer.class.getCanonicalName(),
-                "\"auto.offset.reset\"", "earliest")
-        );
+                kafkaTestSupport.getBrokerConnectionString(),
+                IntegerSerializer.class.getCanonicalName(), IntegerDeserializer.class.getCanonicalName(),
+                StringSerializer.class.getCanonicalName(), StringDeserializer.class.getCanonicalName()
+        ));
 
         mapName = createRandomMap();
     }
@@ -240,7 +240,10 @@ public class SqlJoinTest extends SqlTestSupport {
     private static String createRandomMap() {
         String mapName = "m_" + randomString().replace('-', '_');
         executeSql(
-                format("CREATE EXTERNAL TABLE %s (__key INT, this VARCHAR) TYPE \"%s\"",
+                format("CREATE EXTERNAL TABLE %s (" +
+                                " __key INT," +
+                                " this VARCHAR" +
+                                ") TYPE \"%s\"",
                         mapName, LocalPartitionedMapConnector.TYPE_NAME
                 )
         );

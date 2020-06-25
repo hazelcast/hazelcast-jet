@@ -100,7 +100,7 @@ public class CdcSqlConnector implements JetSqlConnector {
 
         // TODO: "database.whitelist" & "table.whitelist" in theory could be inferred <- schemaName & tableName
         return new CdcTable(this, schemaName, tableName, new ConstantTableStatistics(0),
-                toList(externalFields, ef -> new TableField(ef.name(), ef.type(), false)), cdcProperties, options);
+                toList(externalFields, ef -> new TableField(ef.name(), ef.type(), false)), cdcProperties);
     }
 
     @Override
@@ -144,6 +144,7 @@ public class CdcSqlConnector implements JetSqlConnector {
             List<Expression<?>> projections
     ) {
         List<String> fieldNames = toList(table.getFields(), TableField::getName);
+        List<QueryDataType> fieldTypes = toList(table.getFields(), TableField::getType);
 
         @SuppressWarnings("unchecked")
         Expression<Boolean> predicate0 = predicate != null ? predicate
@@ -172,7 +173,7 @@ public class CdcSqlConnector implements JetSqlConnector {
             Map<String, Object> values = record.value().toMap();
             values.put(OPERATION, operation);
 
-            Row row = new MapRow(fieldNames, values);
+            Row row = new MapRow(fieldNames, fieldTypes, values);
             if (!Boolean.TRUE.equals(predicate0.eval(row, ZERO_ARGUMENTS_CONTEXT))) {
                 return null;
             }

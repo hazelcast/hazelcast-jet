@@ -17,6 +17,7 @@
 package com.hazelcast.jet.sql.impl.expression;
 
 import com.hazelcast.sql.impl.row.Row;
+import com.hazelcast.sql.impl.type.QueryDataType;
 import org.apache.commons.beanutils.PropertyUtils;
 
 import java.lang.reflect.InvocationTargetException;
@@ -25,13 +26,20 @@ import java.util.Map.Entry;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 
+// TODO: use QueryTargetDescriptors instead ?
 class EntryRow implements Row {
 
     private final List<String> fieldNames;
+    private final List<QueryDataType> fieldTypes;
     private final Entry<Object, Object> entry;
 
-    EntryRow(List<String> fieldNames, Entry<Object, Object> entry) {
+    EntryRow(
+            List<String> fieldNames,
+            List<QueryDataType> fieldTypes,
+            Entry<Object, Object> entry
+    ) {
         this.fieldNames = fieldNames;
+        this.fieldTypes = fieldTypes;
         this.entry = entry;
     }
 
@@ -39,7 +47,8 @@ class EntryRow implements Row {
     @Override
     public <T> T get(int index) {
         try {
-            return (T) PropertyUtils.getProperty(entry, fieldNames.get(index));
+            Object value = PropertyUtils.getProperty(entry, fieldNames.get(index));
+            return (T) fieldTypes.get(index).convert(value); // TODO: deduplicate somehow with other types of rows ???
         } catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
             throw sneakyThrow(e);
         }
@@ -47,6 +56,6 @@ class EntryRow implements Row {
 
     @Override
     public int getColumnCount() {
-        return fieldNames.size();
+        return fieldTypes.size();
     }
 }

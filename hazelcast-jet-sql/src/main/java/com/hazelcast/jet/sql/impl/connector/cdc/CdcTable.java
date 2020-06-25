@@ -23,7 +23,6 @@ import com.hazelcast.sql.impl.schema.TableStatistics;
 
 import javax.annotation.Nonnull;
 import java.util.List;
-import java.util.Map;
 import java.util.Properties;
 
 public class CdcTable extends JetTable {
@@ -36,21 +35,15 @@ public class CdcTable extends JetTable {
             @Nonnull String name,
             @Nonnull TableStatistics statistics,
             @Nonnull List<TableField> fields,
-            @Nonnull Properties cdcProperties,
-            @Nonnull Map<String, String> ddlOptions
+            @Nonnull Properties cdcProperties
     ) {
-        super(sqlConnector, fields, schemaName, name, statistics, ddlOptions);
+        super(sqlConnector, fields, schemaName, name, statistics);
 
         this.cdcProperties = cdcProperties;
     }
 
     public Properties getCdcProperties() {
         return cdcProperties;
-    }
-
-    @Override
-    public boolean isStream() {
-        return true;
     }
 
     @Override

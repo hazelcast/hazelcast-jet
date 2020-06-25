@@ -21,11 +21,11 @@ import com.hazelcast.function.FunctionEx;
 import com.hazelcast.internal.util.UuidUtil;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.core.DAG;
+import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.core.processor.SinkProcessors;
 import com.hazelcast.jet.pipeline.ServiceFactories;
 import com.hazelcast.jet.sql.JetSqlConnector;
-import com.hazelcast.jet.sql.impl.connector.SqlWriters.EntryWriter;
 import com.hazelcast.jet.sql.impl.expression.ExpressionUtil;
 import com.hazelcast.map.IMap;
 import com.hazelcast.query.Predicates;
@@ -34,7 +34,6 @@ import com.hazelcast.sql.impl.connector.SqlKeyValueConnector;
 import com.hazelcast.sql.impl.expression.Expression;
 import com.hazelcast.sql.impl.schema.ExternalTable.ExternalField;
 import com.hazelcast.sql.impl.schema.Table;
-import com.hazelcast.sql.impl.schema.TableField;
 import com.hazelcast.sql.impl.schema.map.PartitionedMapTable;
 
 import javax.annotation.Nonnull;
@@ -47,10 +46,8 @@ import java.util.Map.Entry;
 import static com.hazelcast.jet.Traversers.traverseIterable;
 import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.processor.Processors.flatMapUsingServiceP;
-import static com.hazelcast.jet.core.processor.Processors.mapP;
 import static com.hazelcast.jet.core.processor.SourceProcessors.readMapP;
-import static com.hazelcast.jet.impl.util.Util.toList;
-import static com.hazelcast.jet.sql.impl.connector.SqlWriters.entryWriter;
+import static com.hazelcast.jet.sql.impl.connector.SqlProcessors.projectEntrySupplier;
 import static com.hazelcast.jet.sql.impl.expression.ExpressionUtil.joinFn;
 import static com.hazelcast.jet.sql.impl.expression.ExpressionUtil.projectionFn;
 
@@ -76,15 +73,6 @@ public class IMapSqlConnector extends SqlKeyValueConnector implements JetSqlConn
             @Nonnull Map<String, String> options
     ) {
         throw new RuntimeException("should not be used");
-//        // TODO validate options
-//        // if (!serverOptions.isEmpty()) {
-//        //     throw new JetException("Only local maps are supported for now");
-//        // }
-//        String mapName = options.getOrDefault(TO_MAP_NAME, tableName);
-//        EntryWriter writer = entryWriter(fields, options.get(TO_KEY_CLASS), options.get(TO_VALUE_CLASS));
-//        return new IMapTable(this, mapName,
-//                toList(fields, TableField::new),
-//                schemaName, tableName, new ConstantTableStatistics(0), writer);
     }
 
     @Override
@@ -165,21 +153,14 @@ public class IMapSqlConnector extends SqlKeyValueConnector implements JetSqlConn
     ) {
         PartitionedMapTable table = (PartitionedMapTable) table0;
 
-        String keyClass = table.getDdlOptions().get(TO_KEY_CLASS);
-        String valueClass = table.getDdlOptions().get(TO_VALUE_CLASS);
-
-        EntryWriter writer = entryWriter(toList(table.getFields(), this::toExternalField), keyClass, valueClass);
-
-        Vertex vStart = dag.newVertex("map-project", mapP(writer));
+        ProcessorSupplier projectEntrySupplier =
+                projectEntrySupplier(table.getKeyUpsertDescriptor(), table.getValueUpsertDescriptor(), table.getFields());
+        Vertex vStart = dag.newVertex("map-project", projectEntrySupplier);
 
         String mapName = table.getName();
         Vertex vEnd = dag.newVertex("map(" + mapName + ")", SinkProcessors.writeMapP(mapName));
 
         dag.edge(between(vStart, vEnd));
         return vStart;
-    }
-
-    private ExternalField toExternalField(TableField t) {
-        return new ExternalField(t.getName(), t.getType());
     }
 }

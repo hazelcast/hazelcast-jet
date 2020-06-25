@@ -21,20 +21,20 @@ import com.hazelcast.function.FunctionEx;
 import com.hazelcast.sql.impl.expression.ConstantExpression;
 import com.hazelcast.sql.impl.expression.Expression;
 import com.hazelcast.sql.impl.expression.ExpressionEvalContext;
+import com.hazelcast.sql.impl.extract.QueryPath;
 import com.hazelcast.sql.impl.row.HeapRow;
 import com.hazelcast.sql.impl.row.Row;
 import com.hazelcast.sql.impl.schema.Table;
+import com.hazelcast.sql.impl.schema.TableField;
+import com.hazelcast.sql.impl.schema.map.MapTableField;
 import com.hazelcast.sql.impl.type.QueryDataType;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map.Entry;
+import java.util.stream.Collectors;
 
 import static com.hazelcast.jet.impl.util.Util.toList;
-import static com.hazelcast.query.QueryConstants.KEY_ATTRIBUTE_NAME;
-import static com.hazelcast.query.QueryConstants.THIS_ATTRIBUTE_NAME;
 
 public final class ExpressionUtil {
 
@@ -46,10 +46,31 @@ public final class ExpressionUtil {
     }
 
     public static FunctionEx<Object[], Object[]> projectionFn(
-            @Nonnull List<Expression<?>> projections
+            List<Expression<?>> projections
     ) {
         return values -> {
             Row row = new HeapRow(values);
+            Object[] result = new Object[projections.size()];
+            for (int i = 0; i < projections.size(); i++) {
+                result[i] = projections.get(i).eval(row, ZERO_ARGUMENTS_CONTEXT);
+            }
+            return result;
+        };
+    }
+
+    public static FunctionEx<Object[], Object[]> projectionFn(
+            Expression<Boolean> predicate,
+            List<Expression<?>> projections
+    ) {
+        @SuppressWarnings("unchecked")
+        Expression<Boolean> predicate0 = predicate != null ? predicate
+                : (Expression<Boolean>) ConstantExpression.create(true, QueryDataType.BOOLEAN);
+
+        return record -> {
+            Row row = new HeapRow(record);
+            if (!Boolean.TRUE.equals(predicate0.eval(row, ZERO_ARGUMENTS_CONTEXT))) {
+                return null;
+            }
             Object[] result = new Object[projections.size()];
             for (int i = 0; i < projections.size(); i++) {
                 result[i] = projections.get(i).eval(row, ZERO_ARGUMENTS_CONTEXT);
@@ -65,39 +86,28 @@ public final class ExpressionUtil {
      * all the projections
      */
     public static FunctionEx<Entry<Object, Object>, Object[]> projectionFn(
-            @Nonnull Table table,
-            @Nullable Expression<Boolean> predicate,
-            @Nonnull List<Expression<?>> projections
+            Table table,
+            Expression<Boolean> predicate,
+            List<Expression<?>> projections
     ) {
-        // convert the projection
-        List<String> fieldNames0 = toList(table.getFields(), field -> {
-            // convert field name, the property path must start with "key" or "value", we're getting
-            // it from a java.util.Map.Entry. Examples:
-            //     "__key" -> "key"
-            //     "__key.fieldA" -> "key.fieldA"
-            //     "fieldB" -> "value.fieldB"
-            //     "this" -> "value"
-            //     "this.fieldB" -> "value.fieldB"
-            String fieldName = field.getName();
-            if (fieldName.equals(KEY_ATTRIBUTE_NAME.value())) {
-                return "key";
-            } else if (fieldName.startsWith(KEY_ATTRIBUTE_NAME.value())) {
-                return "key." + fieldName.substring(KEY_ATTRIBUTE_NAME.value().length());
-            } else if (fieldName.equals(THIS_ATTRIBUTE_NAME.value())) {
-                return "value";
-            } else if (fieldName.startsWith(THIS_ATTRIBUTE_NAME.value())) {
-                return "value." + fieldName.substring(THIS_ATTRIBUTE_NAME.value().length());
-            } else {
-                return "value." + fieldName;
-            }
-        });
+        List<String> fieldNames = table.getFields().stream()
+                                       .map(field -> {
+                                           QueryPath path = ((MapTableField) field).getPath(); // TODO: get rid of casting ???
+                                           if (path.isKey()) {
+                                               return path.getPath() == null ? "key" : "key." + path.getPath();
+                                           } else {
+                                               return path.getPath() == null ? "value" : "value." + path.getPath();
+                                           }
+                                       }).collect(Collectors.toList());
+        List<QueryDataType> fieldTypes = toList(table.getFields(), TableField::getType);
 
         @SuppressWarnings("unchecked")
         Expression<Boolean> predicate0 = predicate != null ? predicate
                 : (Expression<Boolean>) ConstantExpression.create(true, QueryDataType.BOOLEAN);
 
         return entry -> {
-            Row row = new EntryRow(fieldNames0, entry);
+            // TODO: use something like MapScanRow ???
+            Row row = new EntryRow(fieldNames, fieldTypes, entry);
             if (!Boolean.TRUE.equals(predicate0.eval(row, ZERO_ARGUMENTS_CONTEXT))) {
                 return null;
             }
@@ -110,7 +120,7 @@ public final class ExpressionUtil {
     }
 
     public static BiFunctionEx<Object[], Object[], Object[]> joinFn(
-            @Nullable Expression<Boolean> predicate
+            Expression<Boolean> predicate
     ) {
         @SuppressWarnings("unchecked")
         Expression<Boolean> predicate0 = predicate != null ? predicate
