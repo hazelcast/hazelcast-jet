@@ -9,8 +9,6 @@
 // site configuration options.
 
 const CWD = process.cwd();
-const versions = require(`${CWD}/all-versions.json`);
-const latestVersion= versions[0].version;
 const isLocalhost = Boolean(
     process.env.NODE_ENV === 'development'
 );
@@ -39,12 +37,11 @@ const siteConfig = {
         {page: 'demos', label: "Demos"},
         // {href: `/javadoc/${latestVersion}`, label: "Javadoc"},
         {href: 'https://github.com/hazelcast/hazelcast-jet', label: "GitHub"},
-        {href: 'https://gitter.im/hazelcast/hazelcast-jet', label: "Contact"},
+        {href: 'https://hz-community-slack.herokuapp.com/', label: "Community"},
         {blog: true, label: 'Blog'},
         {search: true},
     ],
     disableHeaderTitle: true,
-    cleanUrl: true,
     noIndex: false, // do not crawl website
 
     // If you have users set above, you add it here:
@@ -95,7 +92,9 @@ const siteConfig = {
     algolia: {
         apiKey: '79d1e4941621b9fd761d279d4d19ed69',
         indexName: 'hazelcast-jet',
-        algoliaOptions: {} // Optional, if provided by Algolia
+        algoliaOptions: {
+            facetFilters: [ "language:LANGUAGE", "version:VERSION" ]
+        }
     },
 
     // On page navigation for the current documentation page.
@@ -106,8 +105,8 @@ const siteConfig = {
     editUrl: 'https://github.com/hazelcast/hazelcast-jet/edit/master/site/docs/',
 
     // Open Graph and Twitter card images.
-    // ogImage: 'img/undraw_online.svg',
-    // twitterImage: 'img/undraw_tweetstorm.svg',
+    ogImage: 'img/Hazelcast-Jet-Logo-Blue_Dark.jpg',
+    twitterImage: 'img/Hazelcast-Jet-Logo-Blue_Dark.jpg',
 
     // For sites with a sizable amount of content, set collapsible to true.
     // Expand/collapse the links and subcategories under categories.

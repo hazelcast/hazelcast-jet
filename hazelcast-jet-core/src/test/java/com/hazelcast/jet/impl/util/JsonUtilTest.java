@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.impl.util;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.hazelcast.jet.core.JetTestSupport;
 import com.hazelcast.jet.json.JsonUtil;
 import com.hazelcast.test.HazelcastSerialClassRunner;
@@ -44,6 +45,8 @@ public class JsonUtilTest extends JetTestSupport {
 
     static String jsonString;
     static String jsonStringList;
+    static String jsonStringPrettyPrinted;
+    static String jsonStringListPrettyPrinted;
     static TestJsonObject testJsonObject;
 
     @BeforeClass
@@ -57,13 +60,42 @@ public class JsonUtilTest extends JetTestSupport {
         jsonStringList = Files.lines(fileList)
                               .collect(StringBuilder::new, StringBuilder::append, StringBuilder::append)
                               .toString();
+
+        Path filePrettyPrinted = Paths.get(JsonUtilTest.class.getResource("file_pretty_printed.json").toURI());
+        jsonStringPrettyPrinted = Files.lines(filePrettyPrinted)
+                                       .collect(StringBuilder::new, StringBuilder::append, StringBuilder::append)
+                                       .toString();
+
+        Path fileListPrettyPrinted = Paths.get(JsonUtilTest.class.getResource("file_list_pretty_printed.json").toURI());
+        jsonStringListPrettyPrinted = Files.lines(fileListPrettyPrinted)
+                                           .collect(StringBuilder::new, StringBuilder::append, StringBuilder::append)
+                                           .toString();
         testJsonObject = TestJsonObject.withDefaults();
     }
 
     @Test
     public void when_inputString_then_parseToObject() throws IOException {
-        TestJsonObject jsonObject = JsonUtil.beanFrom(TestJsonObject.class, jsonString);
+        TestJsonObject jsonObject = JsonUtil.beanFrom(jsonString, TestJsonObject.class);
         assertEquals(testJsonObject, jsonObject);
+    }
+
+    @Test
+    public void when_inputStringPrettyPrint_then_parseToObject() throws IOException {
+        TestJsonObject jsonObject = JsonUtil.beanFrom(jsonStringPrettyPrinted, TestJsonObject.class);
+        assertEquals(testJsonObject, jsonObject);
+    }
+
+    @Test
+    public void when_inputString_then_parseToObjectWithAnnotation() throws IOException {
+        TestJsonObjectWithAnnotations jsonObject = JsonUtil.beanFrom(jsonString, TestJsonObjectWithAnnotations.class);
+        assertEquals(TestJsonObjectWithAnnotations.withDefaults(), jsonObject);
+    }
+
+    @Test
+    public void when_inputStringPrettyPrint_then_parseToObjectWithAnnotation() throws IOException {
+        TestJsonObjectWithAnnotations jsonObject
+                = JsonUtil.beanFrom(jsonStringPrettyPrinted, TestJsonObjectWithAnnotations.class);
+        assertEquals(TestJsonObjectWithAnnotations.withDefaults(), jsonObject);
     }
 
     @Test
@@ -73,8 +105,20 @@ public class JsonUtilTest extends JetTestSupport {
     }
 
     @Test
+    public void when_inputStringPrettyPrint_then_parseToMap() throws IOException {
+        Map<String, Object> map = JsonUtil.mapFrom(jsonStringPrettyPrinted);
+        assertTestObjectAsMap(map, testJsonObject);
+    }
+
+    @Test
     public void when_inputString_then_parseToListOfObject() throws IOException {
-        List<TestJsonObject> list = JsonUtil.listFrom(TestJsonObject.class, jsonStringList);
+        List<TestJsonObject> list = JsonUtil.listFrom(jsonStringList, TestJsonObject.class);
+        assertListOfObjects(list);
+    }
+
+    @Test
+    public void when_inputStringPrettyPrint_then_parseToListOfObject() throws IOException {
+        List<TestJsonObject> list = JsonUtil.listFrom(jsonStringListPrettyPrinted, TestJsonObject.class);
         assertListOfObjects(list);
     }
 
@@ -85,14 +129,32 @@ public class JsonUtilTest extends JetTestSupport {
     }
 
     @Test
+    public void when_inputStringPrettyPrint_then_parseToList() throws IOException {
+        List<Object> list = JsonUtil.listFrom(jsonStringListPrettyPrinted);
+        assertListOfMap(list);
+    }
+
+    @Test
     public void when_inputString_and_contentObject_then_parseAny() throws IOException {
         Object o = JsonUtil.anyFrom(jsonString);
         assertTestObjectAsMap((Map) o, testJsonObject);
     }
 
     @Test
+    public void when_inputStringPrettyPrint_and_contentObject_then_parseAny() throws IOException {
+        Object o = JsonUtil.anyFrom(jsonStringPrettyPrinted);
+        assertTestObjectAsMap((Map) o, testJsonObject);
+    }
+
+    @Test
     public void when_inputString_and_contentList_then_parseAny() throws IOException {
         Object o = JsonUtil.anyFrom(jsonStringList);
+        assertListOfMap((List) o);
+    }
+
+    @Test
+    public void when_inputStringPrettyPrint_and_contentList_then_parseAny() throws IOException {
+        Object o = JsonUtil.anyFrom(jsonStringListPrettyPrinted);
         assertListOfMap((List) o);
     }
 
@@ -127,24 +189,14 @@ public class JsonUtilTest extends JetTestSupport {
     }
 
     @Test
-    public void when_inputString_then_parseSequenceObject() throws IOException {
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < 10; i++) {
-            sb.append(jsonString);
-        }
-        Iterator<TestJsonObject> iterator = JsonUtil.sequenceFrom(TestJsonObject.class, sb.toString());
-
-        assertIteratorObject(iterator, 10);
-    }
-
-    @Test
     public void when_inputReader_then_parseSequenceObject() throws IOException {
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < 20; i++) {
             sb.append(jsonString);
         }
 
-        Iterator<TestJsonObject> iterator = JsonUtil.sequenceFrom(TestJsonObject.class, new StringReader(sb.toString()));
+        Iterator<TestJsonObject> iterator = JsonUtil.beanSequenceFrom(
+                new StringReader(sb.toString()), TestJsonObject.class);
 
         assertIteratorObject(iterator, 20);
     }
@@ -276,6 +328,42 @@ public class JsonUtilTest extends JetTestSupport {
         public int hashCode() {
             return Objects.hash(val);
         }
+    }
+
+    public static class TestJsonObjectWithAnnotations {
+
+        @JsonProperty(value = "name")
+        public String username;
+        @JsonProperty(value = "age")
+        public int userage = 1;
+
+        public TestJsonObjectWithAnnotations() {
+        }
+
+        public static TestJsonObjectWithAnnotations withDefaults() {
+            TestJsonObjectWithAnnotations jsonObject = new TestJsonObjectWithAnnotations();
+            jsonObject.username = "foo";
+            jsonObject.userage = 1;
+            return jsonObject;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (!(o instanceof TestJsonObjectWithAnnotations)) {
+                return false;
+            }
+            TestJsonObjectWithAnnotations that = (TestJsonObjectWithAnnotations) o;
+            return userage == that.userage && Objects.equals(username, that.username);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(username, userage);
+        }
+
     }
 
 }

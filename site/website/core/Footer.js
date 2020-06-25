@@ -33,8 +33,9 @@ class Footer extends React.Component {
           <div>
             <h5>Docs</h5>
             <a href={this.docUrl('get-started/intro')}>Get Started</a>
-            <a href={this.docUrl('concepts/dag')}>Concepts and Architecture</a>
+            <a href={this.docUrl('concepts/dag')}>Concepts</a>
             <a href={this.docUrl('tutorials/kafka')}>Tutorials</a>
+            <a href={this.docUrl('architecture/distributed-computing')}>Architecture</a>
             <a href={this.docUrl('operations/installation')}>Operations Guide</a>
             <a href={this.docUrl('enterprise')}>Enterprise Edition</a>
           </div>
@@ -53,7 +54,7 @@ class Footer extends React.Component {
               rel="noreferrer noopener">
               Stack Overflow
             </a>
-            <a href="https://gitter.im/hazelcast/hazelcast-jet">Gitter Chat</a>
+            <a href="https://hz-community-slack.herokuapp.com/">Slack</a>
           </div>
           <div>
             <h5>Latest From the Blog</h5>
