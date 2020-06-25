@@ -520,7 +520,7 @@ public class JetCommandLineTest extends JetTestSupport {
     }
 
     @Test
-    public void testTargetsPrecedence() {
+    public void testTargetsAfterCommandTakesPrecedence() {
         String target = "foobar@127.0.0.1:5701,127.0.0.1:5702";
         testTargetsCommand("-t", "ignore@127.0.0.1:1234", "submit", "-t", target, testJobJarFile.toString());
     }
@@ -532,7 +532,19 @@ public class JetCommandLineTest extends JetTestSupport {
         assertContains(actual, "Invalid value for option '--targets':");
     }
 
+    @Test
+    public void testTargetsClusterNameOptional() {
+        String target = "127.0.0.1:5701,127.0.0.1:5702";
+
+        testTargetsCommandCluster("jet", "list-jobs", "-t", target);
+        testTargetsCommandCluster("jet", "-t", target, "list-jobs");
+    }
+
     private void testTargetsCommand(String... args) {
+        testTargetsCommandCluster("foobar", args);
+    }
+
+    private void testTargetsCommandCluster(String expectedClusterName, String... args) {
         AtomicReference<ClientConfig> atomicConfig = new AtomicReference<>();
         Function<ClientConfig, JetInstance> fnRunCommand = (config) -> {
             atomicConfig.set(config);
@@ -546,7 +558,7 @@ public class JetCommandLineTest extends JetTestSupport {
         }
 
         ClientConfig config = atomicConfig.get();
-        assertEquals("foobar", config.getClusterName());
+        assertEquals(expectedClusterName, config.getClusterName());
         assertEquals("[127.0.0.1:5701, 127.0.0.1:5702]", config.getNetworkConfig().getAddresses().toString());
     }
 

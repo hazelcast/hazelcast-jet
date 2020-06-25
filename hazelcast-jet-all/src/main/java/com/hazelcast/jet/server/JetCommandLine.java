@@ -594,8 +594,9 @@ public class JetCommandLine implements Runnable {
 
         @Option(names = {"-t", "--targets"},
                 description = "The cluster name and addresses to use if you want to connect to a "
-                    + "cluster other than the one configured in the configuration file.",
-                paramLabel = "<cluster-name>@<hostname>:<port>[,<hostname>:<port>]",
+                    + "cluster other than the one configured in the configuration file. " +
+                        "At least one address is required. The cluster name is optional.",
+                paramLabel = "[<cluster-name>]@<hostname>:<port>[,<hostname>:<port>]",
                 converter = TargetsMixin.Converter.class)
         private Targets targets;
 
@@ -626,18 +627,19 @@ public class JetCommandLine implements Runnable {
             @Override
             public Targets convert(String value) {
                 Targets targets = new Targets();
-                if (value == null || !value.contains("@")) {
+                if (value == null) {
                     return targets;
                 }
 
-                String[] values = value.split("@");
-                if (values.length < 2) {
-                    throw new TypeConversionException(
-                        "must be cluster-name@address:port but was '" + value + "'");
+                String[] values;
+                if (value.contains("@")) {
+                    values = value.split("@");
+                    targets.clusterName = values[0];
+                    targets.addresses = Arrays.asList(values[1].split(","));
+                } else {
+                    targets.addresses = Arrays.asList(value.split(","));
                 }
 
-                targets.clusterName = values[0];
-                targets.addresses = Arrays.asList(values[1].split(","));
                 return targets;
             }
         }
