@@ -1,88 +1,30 @@
-[   
-    {
-        "name": "Amazon S3 Connector",
-        "link": "https://aws.amazon.com/s3/",
-        "fileName": "hazelcast-jet-s3.tar.gz", 
-        "downloadURL": "https://github.com/hazelcast/hazelcast-jet-contrib/archive/redis-0.2.tar.gz",
-        "size" : 0
-    },
-    {
-        "name": "Avro",
-        "link": "https://avro.apache.org/",
-        "fileName": "hazelcast-jet-avro.tar.gz",
-        "downloadURL": "https://docs.hazelcast.org/docs/jet/3.2.1/manual/manual.html",
-        "size" : 0
-    },
-    {
-        "name": "Debezium Connector",
-        "link": "https://debezium.io/",
-        "fileName": "hazelcast-jet-debezium.tar.gz",
-        "downloadURL": "",
-        "size" : 0
-    },
-    {
-        "name": "GRPC",
-        "link": "https://grpc.io/",
-        "fileName": "hazelcast-jet-grpc.tar.gz",
-        "downloadURL": "",
-        "size" : 0
-    },
+[
     {
         "name": "InfluxDB Connector",
         "link": "https://www.influxdata.com/",
-        "fileName": "hazelcast-jet-contrib-influxdb-0.2.tar.gz", 
-        "downloadURL": "https://github.com/hazelcast/hazelcast-jet-contrib/archive/influxdb-0.2.tar.gz",
-        "size" : 0
+        "fileName": "hazelcast-jet-contrib-influxdb-0.2.tar.gz",
+        "downloadURL": "https://github.com/hazelcast/hazelcast-jet-contrib/releases/download/module-jars/hazelcast-jet-contrib-influxdb-0.2.tar.gz",
+        "size": 0.9
     },
     {
-        "name": "Kafka Connector",
-        "link": "https://kafka.apache.org/",
-        "fileName": "hazelcast-jet-kafka-4.1.1.tar.gz",
-        "downloadURL": "",
-        "size" : 0
-    },
-    {
-        "name": "Hadoop Connector",
-        "link": "https://hadoop.apache.org/",
-        "fileName": "hazelcast-jet-hadoop-4.1.1.tar.gz",
-        "downloadURL": "",
-        "size" : 0
-    },
-    {
-        "name": "Protobuf",
-        "link": "https://developers.google.com/protocol-buffers",
-        "fileName": "hazelcast-jet-protobuf.tar.gz", 
-        "downloadURL": "",
-        "size" : 0
+        "name": "MongoDB Connector",
+        "link": "https://www.mongodb.com/",
+        "fileName": "hazelcast-jet-contrib-mongodb-0.2.tar.gz",
+        "downloadURL": "https://github.com/hazelcast/hazelcast-jet-contrib/releases/download/module-jars/hazelcast-jet-contrib-mongodb-0.2.tar.gz",
+        "size": 1.8
     },
     {
         "name": "Pulsar Connector",
         "link": "https://pulsar.apache.org/",
-        "fileName": "hazelcast-jet-contrib-pulsar-0.1.tar.gz", 
-        "downloadURL": "https://github.com/hazelcast/hazelcast-jet-contrib/archive/pulsar-0.1.tar.gz",
-        "size" : 0
-    },
-    {
-        "name": "Python",
-        "link": "https://docs.python.org/3/",
-        "fileName": "python.tar.gz",
-        "downloadURL": "https://docs.hazelcast.org/docs/jet/3.2.1/manual/manual.html",
-        "size" : 0
-    },
-    {
-        "name": "Redis Connector",
-        "link": "https://redis.io/",
-        "fileName": "hazelcast-jet-contrib-redis-0.2.tar.gz", 
-        "downloadURL": "https://github.com/hazelcast/hazelcast-jet-contrib/archive/redis-0.2.tar.gz",
-        "size" : 0
+        "fileName": "hazelcast-jet-contrib-pulsar-0.1.tar.gz",
+        "downloadURL": "https://github.com/hazelcast/hazelcast-jet-contrib/releases/download/module-jars/hazelcast-jet-contrib-pulsar-0.1.tar.gz",
+        "size": 30.6
     },
     {
         "name": "Twitter Source Connector",
         "link": "https://developer.twitter.com/en/docs",
-        "fileName": "hazelcast-jet-contrib-twitter-0.1.tar.gz", 
-        "downloadURL": "https://github.com/hazelcast/hazelcast-jet-contrib/archive/twitter-0.1.tar.gz",
-        "size" : 0
+        "fileName": "hazelcast-jet-contrib-twitter-0.1.tar.gz",
+        "downloadURL": "https://github.com/hazelcast/hazelcast-jet-contrib/releases/download/module-jars/hazelcast-jet-contrib-twitter-0.1.tar.gz",
+        "size": 3.1
     }
 ]
-   
- 

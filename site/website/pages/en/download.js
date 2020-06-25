@@ -67,8 +67,10 @@ function Downloads(props) {
               version: <span className="hljs-string">{latest.version}</span>
           </code></pre>
 
-          <h3 id="modules">Jet Modules</h3>
-
+          <h3 id="modules">Jet Contrib Modules</h3>
+          <p>In addition to the modules included in the main distribution of Jet, we also have
+          various community-supported and incubating modules listed in the table below:
+             </p>
           <table className="modules">
             <thead>
               <tr>
@@ -98,7 +100,7 @@ function Downloads(props) {
               )}
             </tbody>
           </table>
-
+          <p>You can include them in the classpath by moving the downloaded jars to the lib folder under your Jet Home. </p>
           <p>For the full list of modules, please see <a href="https://search.maven.org/search?q=g:com.hazelcast.jet">Maven Central</a>.</p>
 
         <h3 id="management-center">Management Center</h3>
