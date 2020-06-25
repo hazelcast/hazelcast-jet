@@ -108,7 +108,7 @@ public class SqlJsonTest extends SqlTestSupport {
                 name, LocalPartitionedMapConnector.TYPE_NAME,
                 TO_SERIALIZATION_VALUE_FORMAT, JSON_SERIALIZATION_FORMAT
         ));
-        // insert record against new schema/class definition
+        // insert record against new schema
         executeSql(format("INSERT OVERWRITE %s VALUES (69, 'Bob', 123456789)", name));
 
         // assert both - initial & evolved - records are correctly read

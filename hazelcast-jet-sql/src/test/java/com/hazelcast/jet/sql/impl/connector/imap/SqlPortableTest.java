@@ -276,10 +276,7 @@ public class SqlPortableTest extends SqlTestSupport {
         // TODO: assert temporal types when/if supported
 
         assertRowsEventuallyAnyOrder(
-                format(
-                        "SELECT * FROM %s",
-                        allTypesMapName
-                ),
+                format("SELECT * FROM %s", allTypesMapName),
                 singletonList(new Row(
                         BigDecimal.valueOf(13),
                         "string",
