@@ -38,7 +38,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import static com.hazelcast.jet.elastic.impl.RetryUtils.retry;
+import static com.hazelcast.jet.elastic.impl.RetryUtils.withRetry;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Optional.empty;
 import static java.util.Optional.of;
@@ -67,7 +67,7 @@ public class ElasticCatClient implements Closeable {
         try {
             Request r = new Request("GET", "/_cat/master");
             r.addParameter("format", "json");
-            Response res = retry(() -> client.performRequest(r), retries, IOException.class);
+            Response res = withRetry(() -> client.performRequest(r), retries);
 
             try (InputStreamReader reader = new InputStreamReader(res.getEntity().getContent(), UTF_8)) {
                 JsonArray array = Json.parse(reader).asArray();
@@ -93,7 +93,7 @@ public class ElasticCatClient implements Closeable {
             r.addParameter("format", "json");
             r.addParameter("full_id", "true");
             r.addParameter("h", "id,ip,name,http_address,master");
-            Response res = retry(() -> client.performRequest(r), retries, IOException.class);
+            Response res = withRetry(() -> client.performRequest(r), retries);
 
             try (InputStreamReader reader = new InputStreamReader(res.getEntity().getContent(), UTF_8)) {
                 JsonArray array = Json.parse(reader).asArray();
@@ -137,7 +137,7 @@ public class ElasticCatClient implements Closeable {
             Request r = new Request("GET", "/_cat/shards/" + String.join(",", indices));
             r.addParameter("format", "json");
             r.addParameter("h", "id,index,shard,prirep,docs,state,ip,node");
-            Response res = retry(() -> client.performRequest(r), retries, IOException.class);
+            Response res = withRetry(() -> client.performRequest(r), retries);
 
             try (InputStreamReader reader = new InputStreamReader(res.getEntity().getContent(), UTF_8)) {
                 JsonArray array = Json.parse(reader).asArray();

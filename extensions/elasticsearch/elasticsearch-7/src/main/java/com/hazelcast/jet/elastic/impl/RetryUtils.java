@@ -20,6 +20,7 @@ import com.hazelcast.core.HazelcastException;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.logging.Logger;
 
+import java.io.IOException;
 import java.util.concurrent.Callable;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
@@ -28,12 +29,10 @@ import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
  * Static utility class to retry operations related to connecting to AWS Services.
  */
 public final class RetryUtils {
-    static final long INITIAL_BACKOFF_MS = 2000L;
-    static final long MAX_BACKOFF_MS = 5 * 60 * 1000L;
-    static final double BACKOFF_MULTIPLIER = 2;
 
     private static final ILogger LOGGER = Logger.getLogger(RetryUtils.class);
 
+    private static final long MAX_BACKOFF_MS = 5 * 60 * 1000L;
     private static final long MS_IN_SECOND = 1000L;
 
     private RetryUtils() {
@@ -41,11 +40,17 @@ public final class RetryUtils {
 
     /**
      * Calls {@code callable.call()} until it does not throw an exception (but no more than {@code retries} times).
-     * <p>
-     * If {@code callable} throws an unchecked exception, it is wrapped into {@link HazelcastException}.
+     */
+    public static <T> T withRetry(Callable<T> callable, int retries) {
+        return withRetry(callable, retries, IOException.class);
+    }
+
+    /**
+     * Calls {@code callable.call()} until it does not throw an exception (but no more than {@code retries} times).
+     *
      */
     @SafeVarargs
-    public static <T> T retry(Callable<T> callable, int retries, Class<? extends Exception> ... exceptions) {
+    public static <T> T withRetry(Callable<T> callable, int retries, Class<? extends Exception> ... exceptions) {
         int retryCount = 0;
         while (true) {
             try {
@@ -56,7 +61,7 @@ public final class RetryUtils {
                     if (retryCount > retries) {
                         throw sneakyThrow(e);
                     }
-                    long waitIntervalMs = backoffIntervalForRetry(retryCount);
+                    long waitIntervalMs = Math.min(MAX_BACKOFF_MS, MS_IN_SECOND * (1 << retryCount));
                     LOGGER.fine(String.format("Couldn't connect to Elastic, [%s] retrying in %s seconds...", retryCount,
                             waitIntervalMs / MS_IN_SECOND));
                     sleep(waitIntervalMs);
@@ -74,17 +79,6 @@ public final class RetryUtils {
             }
         }
         return false;
-    }
-
-    private static long backoffIntervalForRetry(int retryCount) {
-        long result = INITIAL_BACKOFF_MS;
-        for (int i = 1; i < retryCount; i++) {
-            result *= BACKOFF_MULTIPLIER;
-            if (result > MAX_BACKOFF_MS) {
-                return MAX_BACKOFF_MS;
-            }
-        }
-        return result;
     }
 
     private static void sleep(long millis) {

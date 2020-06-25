@@ -248,6 +248,9 @@ public final class ElasticSourceBuilder<T> {
      */
     @Nonnull
     public ElasticSourceBuilder<T> retries(int retries) {
+        if (retries < 0) {
+            throw new IllegalArgumentException("retries must be positive");
+        }
         this.retries = retries;
         return this;
     }

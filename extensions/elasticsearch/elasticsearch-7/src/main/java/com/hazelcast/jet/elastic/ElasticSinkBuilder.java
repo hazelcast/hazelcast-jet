@@ -34,7 +34,7 @@ import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.io.Serializable;
 
-import static com.hazelcast.jet.elastic.impl.RetryUtils.retry;
+import static com.hazelcast.jet.elastic.impl.RetryUtils.withRetry;
 import static com.hazelcast.jet.impl.util.Util.checkNonNullAndSerializable;
 import static java.util.Objects.requireNonNull;
 
@@ -170,22 +170,25 @@ public final class ElasticSinkBuilder<T> implements Serializable {
     }
 
     /**
-     * Number of retries the connector will do in addition to Elastic
-     * client retries
+     * Number of retries the connector will do in addition to Elastic client
+     * retries
      *
-     * Elastic client tries to connect to a node only once for each
-     * request. When a request fails the node is marked dead and is
-     * not retried again for the request. This causes problems with
-     * single node clusters or in a situation where whole cluster
-     * becomes unavailable at the same time (e.g. due to a network
-     * issue).
+     * Elastic client tries to connect to a node only once for each request.
+     * When a request fails the node is marked dead and is not retried again
+     * for the request. This causes problems with single node clusters or in a
+     * situation where whole cluster becomes unavailable at the same time (e.g.
+     * due to a network issue).
      *
-     * The initial delay is 2s, increasing by factor of 2 with each retry (4s, 8s, 16s, ..).
+     * The initial delay is 2s, increasing by factor of 2 with each retry (4s,
+     * 8s, 16s, ..).
      *
      * @param retries number of retries, defaults to 5
      */
     @Nonnull
     public ElasticSinkBuilder<T> retries(int retries) {
+        if (retries < 0) {
+            throw new IllegalArgumentException("retries must be positive");
+        }
         this.retries = retries;
         return this;
     }
@@ -238,17 +241,20 @@ public final class ElasticSinkBuilder<T> implements Serializable {
 
         void flush() throws IOException {
             if (!bulkRequest.requests().isEmpty()) {
-                BulkResponse response = retry(
-                        () -> client.bulk(bulkRequest, optionsFn.apply(bulkRequest)),
+                withRetry(
+                        () -> {
+                            BulkResponse response = client.bulk(bulkRequest, optionsFn.apply(bulkRequest));
+                            if (response.hasFailures()) {
+                                throw new JetException(response.buildFailureMessage());
+                            }
+                            if (logger.isFineEnabled()) {
+                                logger.fine("BulkRequest with " + bulkRequest.requests().size() + " requests succeeded");
+                            }
+                            return response;
+                        },
                         retries,
-                        IOException.class
+                        IOException.class, JetException.class
                 );
-                if (response.hasFailures()) {
-                    throw new JetException(response.buildFailureMessage());
-                }
-                if (logger.isFineEnabled()) {
-                    logger.fine("BulkRequest with " + bulkRequest.requests().size() + " requests succeeded");
-                }
                 bulkRequest = bulkRequestSupplier.get();
             }
         }

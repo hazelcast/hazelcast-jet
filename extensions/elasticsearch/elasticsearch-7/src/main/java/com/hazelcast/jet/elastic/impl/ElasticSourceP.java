@@ -38,10 +38,9 @@ import org.elasticsearch.search.SearchHits;
 import org.elasticsearch.search.slice.SliceBuilder;
 
 import javax.annotation.Nonnull;
-import java.io.IOException;
 import java.util.List;
 
-import static com.hazelcast.jet.elastic.impl.RetryUtils.retry;
+import static com.hazelcast.jet.elastic.impl.RetryUtils.withRetry;
 import static java.util.Collections.singleton;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.joining;
@@ -167,7 +166,7 @@ final class ElasticSourceP<T> extends AbstractProcessor {
 
             try {
                 RequestOptions options = optionsFn.apply(sr);
-                SearchResponse response = retry(() -> client.search(sr, options), retries, IOException.class);
+                SearchResponse response = withRetry(() -> client.search(sr, options), retries);
 
                 // These should be always present, even when there are no results
                 hits = requireNonNull(response.getHits(), "null hits in the response");
@@ -197,10 +196,9 @@ final class ElasticSourceP<T> extends AbstractProcessor {
                     SearchScrollRequest ssr = new SearchScrollRequest(scrollId);
                     ssr.scroll(scrollKeepAlive);
 
-                    SearchResponse searchResponse = retry(
+                    SearchResponse searchResponse = withRetry(
                             () -> client.scroll(ssr, optionsFn.apply(ssr)),
-                            retries,
-                            IOException.class
+                            retries
                     );
                     hits = searchResponse.getHits();
                     if (hits.getHits().length == 0) {
@@ -226,10 +224,9 @@ final class ElasticSourceP<T> extends AbstractProcessor {
             ClearScrollRequest clearScrollRequest = new ClearScrollRequest();
             clearScrollRequest.addScrollId(scrollId);
             try {
-                ClearScrollResponse response = retry(
+                ClearScrollResponse response = withRetry(
                         () -> client.clearScroll(clearScrollRequest, optionsFn.apply(clearScrollRequest)),
-                        retries,
-                        IOException.class
+                        retries
                 );
 
                 if (response.isSucceeded()) {
