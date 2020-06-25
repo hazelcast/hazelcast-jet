@@ -75,10 +75,10 @@ import java.util.zip.ZipInputStream;
 
 import static com.hazelcast.jet.Util.idFromString;
 import static com.hazelcast.jet.Util.idToString;
+import static com.hazelcast.jet.impl.util.IOUtil.fileNameFromUrl;
 import static com.hazelcast.jet.impl.util.IOUtil.packDirectoryIntoZip;
 import static com.hazelcast.jet.impl.util.IOUtil.packStreamIntoZip;
 import static com.hazelcast.jet.impl.util.LoggingUtil.logFine;
-import static com.hazelcast.jet.impl.util.Util.fileNameFromUrl;
 import static java.util.Comparator.comparing;
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.HOURS;

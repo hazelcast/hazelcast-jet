@@ -29,7 +29,7 @@ import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.impl.deployment.IMapInputStream;
 import com.hazelcast.jet.impl.util.ExceptionUtil;
-import com.hazelcast.jet.impl.util.Util;
+import com.hazelcast.jet.impl.util.IOUtil;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.map.IMap;
 
@@ -204,7 +204,7 @@ public final class Contexts {
                     "The resource with ID '%s' is not a file, its type is %s", id, resourceConfig.getResourceType()
                 ));
             }
-            String fnamePath = requireNonNull(Util.fileNameFromUrl(resourceConfig.getUrl()));
+            String fnamePath = requireNonNull(IOUtil.fileNameFromUrl(resourceConfig.getUrl()));
             return new File(tempDirectories.computeIfAbsent(id, x -> extractFileToDisk(id)), fnamePath);
         }
 
