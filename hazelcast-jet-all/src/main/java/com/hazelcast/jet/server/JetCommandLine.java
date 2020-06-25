@@ -111,14 +111,14 @@ public class JetCommandLine implements Runnable {
             paramLabel = "<hostname>:<port>",
             description = "[DEPRECATED] Optional comma-separated list of Jet node addresses in the format" +
                     " <hostname>:<port>, if you want to connect to a cluster other than the" +
-                    " one configured in the configuration file",
+                    " one configured in the configuration file. Use --targets instead.",
             order = 1
     )
     private List<String> addresses;
 
     @Option(names = {"-n", "--cluster-name"},
         description = "[DEPRECATED] The cluster name to use when connecting to the cluster " +
-            "specified by the <addresses> parameter. ",
+            "specified by the <addresses> parameter. Use --targets instead.",
         defaultValue = "jet",
         showDefaultValue = Visibility.ALWAYS,
         order = 2
