@@ -58,7 +58,7 @@ public class Testing extends JetTestSupport {
             final int ratePerSecond;
             final TreeMap<Long, Long> counts = new TreeMap<>();
 
-            public Service(int ratePerSecond) {
+            Service(int ratePerSecond) {
                 this.ratePerSecond = ratePerSecond;
             }
         }

@@ -30,6 +30,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.Callable;
@@ -114,7 +115,7 @@ public final class TestUtil {
      */
     @SuppressWarnings("unchecked")
     @Nonnull
-    public static <K, V> HashMap<K, V> createMap(Object... keysAndValues) {
+    public static <K, V> Map<K, V> createMap(Object... keysAndValues) {
         HashMap<K, V> res = new HashMap<>();
         for (int i = 0; i < keysAndValues.length; ) {
             res.put((K) keysAndValues[i++], (V) keysAndValues[i++]);

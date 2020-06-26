@@ -196,7 +196,11 @@ public class KafkaTestSupport {
         return consumer;
     }
 
-    public void assertTopicContentsEventually(String topic, Map<Integer, String> expectedMap, boolean assertPartitionEqualsKey) {
+    public void assertTopicContentsEventually(
+            String topic,
+            Map<Integer, String> expectedMap,
+            boolean assertPartitionEqualsKey
+    ) {
         try (KafkaConsumer<Integer, String> consumer = createConsumer(topic)) {
             long timeLimit = System.nanoTime() + SECONDS.toNanos(10);
             for (int totalRecords = 0; totalRecords < expectedMap.size() && System.nanoTime() < timeLimit; ) {

@@ -121,7 +121,8 @@ public final class ImdgUtil {
     }
 
     public static Connection getMemberConnection(@Nonnull NodeEngine engine, @Nonnull Address memberAddr) {
-        return ((NodeEngineImpl) engine).getNode().getServer().getConnectionManager(EndpointQualifier.MEMBER).get(memberAddr);
+        return ((NodeEngineImpl) engine).getNode().getServer().getConnectionManager(EndpointQualifier.MEMBER)
+                                        .get(memberAddr);
     }
 
     @Nonnull

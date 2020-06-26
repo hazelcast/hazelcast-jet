@@ -65,7 +65,7 @@ public final class SqlProcessors {
         ProjectEntryProcessorSupplier() {
         }
 
-        public ProjectEntryProcessorSupplier(
+        ProjectEntryProcessorSupplier(
                 UpsertTargetDescriptor keyDescriptor,
                 UpsertTargetDescriptor valueDescriptor,
                 List<TableField> fields

@@ -92,7 +92,8 @@ public final class ExpressionUtil {
     ) {
         List<String> fieldNames = table.getFields().stream()
                                        .map(field -> {
-                                           QueryPath path = ((MapTableField) field).getPath(); // TODO: get rid of casting ???
+                                           // TODO: get rid of casting ???
+                                           QueryPath path = ((MapTableField) field).getPath();
                                            if (path.isKey()) {
                                                return path.getPath() == null ? "key" : "key." + path.getPath();
                                            } else {

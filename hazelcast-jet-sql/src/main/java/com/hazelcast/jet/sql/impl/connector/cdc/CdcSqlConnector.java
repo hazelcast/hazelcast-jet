@@ -123,7 +123,8 @@ public class CdcSqlConnector implements JetSqlConnector {
         String tableName = table.getName();
         Properties properties = table.getCdcProperties();
         Vertex sourceVertex = dag.newVertex("cdc(" + tableName + ")",
-                convenientTimestampedSourceP(ctx -> new ChangeRecordCdcSource(properties), // TODO: is it ok to use CdcSource?
+                // TODO: is it ok to use CdcSource?
+                convenientTimestampedSourceP(ctx -> new ChangeRecordCdcSource(properties),
                         ChangeRecordCdcSource::fillBuffer,
                         noEventTime(), // TODO: should use timestamps ?
                         ChangeRecordCdcSource::createSnapshot,
