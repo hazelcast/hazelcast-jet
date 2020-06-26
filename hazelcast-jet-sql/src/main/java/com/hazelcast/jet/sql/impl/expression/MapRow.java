@@ -17,28 +17,33 @@
 package com.hazelcast.jet.sql.impl.expression;
 
 import com.hazelcast.sql.impl.row.Row;
+import com.hazelcast.sql.impl.type.QueryDataType;
 
 import java.util.List;
 import java.util.Map;
 
+// TODO: use QueryTargetDescriptors instead ?
 public class MapRow implements Row {
 
     private final List<String> fieldNames;
+    private final List<QueryDataType> fieldTypes;
     private final Map<String, Object> values;
 
-    public MapRow(List<String> fieldNames, Map<String, Object> values) {
+    public MapRow(List<String> fieldNames, List<QueryDataType> fieldTypes, Map<String, Object> values) {
         this.fieldNames = fieldNames;
+        this.fieldTypes = fieldTypes;
         this.values = values;
     }
 
     @SuppressWarnings("unchecked")
     @Override
     public <T> T get(int index) {
-        return (T) values.get(fieldNames.get(index));
+        Object value = values.get(fieldNames.get(index));
+        return (T) fieldTypes.get(index).convert(value); // TODO: deduplicate somehow with other types of rows ???
     }
 
     @Override
     public int getColumnCount() {
-        return fieldNames.size();
+        return fieldTypes.size();
     }
 }

@@ -18,17 +18,21 @@ package com.hazelcast.jet.sql.impl.connector.kafka;
 
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.core.DAG;
+import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.kafka.KafkaProcessors;
 import com.hazelcast.jet.sql.JetSqlConnector;
-import com.hazelcast.jet.sql.impl.connector.SqlWriters.EntryWriter;
 import com.hazelcast.spi.impl.NodeEngine;
+import com.hazelcast.sql.impl.QueryException;
 import com.hazelcast.sql.impl.connector.SqlKeyValueConnector;
 import com.hazelcast.sql.impl.expression.Expression;
 import com.hazelcast.sql.impl.schema.ConstantTableStatistics;
 import com.hazelcast.sql.impl.schema.ExternalTable.ExternalField;
 import com.hazelcast.sql.impl.schema.Table;
 import com.hazelcast.sql.impl.schema.TableField;
+import com.hazelcast.sql.impl.schema.map.options.MapOptionsMetadata;
+import com.hazelcast.sql.impl.schema.map.options.MapOptionsMetadataResolver;
+import com.hazelcast.sql.impl.schema.map.options.PojoMapOptionsMetadataResolver;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 
 import javax.annotation.Nonnull;
@@ -37,20 +41,28 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Properties;
+import java.util.function.Function;
+import java.util.stream.Stream;
 
+import static com.hazelcast.internal.util.Preconditions.checkNotNull;
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.EventTimePolicy.noEventTime;
 import static com.hazelcast.jet.core.processor.Processors.mapP;
-import static com.hazelcast.jet.impl.util.Util.toList;
-import static com.hazelcast.jet.sql.impl.connector.SqlWriters.entryWriter;
+import static com.hazelcast.jet.sql.impl.connector.SqlProcessors.projectEntrySupplier;
 import static com.hazelcast.jet.sql.impl.expression.ExpressionUtil.projectionFn;
+import static java.lang.String.format;
+import static java.util.stream.Collectors.toMap;
 
 public class KafkaSqlConnector extends SqlKeyValueConnector implements JetSqlConnector {
 
     public static final String TYPE_NAME = "com.hazelcast.Kafka";
 
     public static final String TO_TOPIC_NAME = "topicName";
+
+    private static final Map<String, MapOptionsMetadataResolver> METADATA_RESOLVERS = Stream.of(
+            new PojoMapOptionsMetadataResolver()
+    ).collect(toMap(MapOptionsMetadataResolver::supportedFormat, Function.identity()));
 
     @Override
     public String typeName() {
@@ -77,9 +89,42 @@ public class KafkaSqlConnector extends SqlKeyValueConnector implements JetSqlCon
         kafkaProperties.remove(TO_TOPIC_NAME);
         kafkaProperties.remove(TO_KEY_CLASS);
         kafkaProperties.remove(TO_VALUE_CLASS);
-        EntryWriter writer = entryWriter(externalFields, options.get(TO_KEY_CLASS), options.get(TO_VALUE_CLASS));
-        return new KafkaTable(this, schemaName, tableName, new ConstantTableStatistics(0), topicName,
-                toList(externalFields, ef -> new TableField(ef.name(), ef.type(), false)), writer, kafkaProperties, options);
+
+        MapOptionsMetadata keyMetadata = resolveMetadata(externalFields, options, true);
+        MapOptionsMetadata valueMetadata = resolveMetadata(externalFields, options, false);
+        List<TableField> fields = mergeFields(externalFields, keyMetadata.getFields(), valueMetadata.getFields());
+
+        return new KafkaTable(
+                this,
+                schemaName,
+                tableName,
+                new ConstantTableStatistics(0),
+                topicName,
+                fields,
+                keyMetadata.getUpsertTargetDescriptor(),
+                valueMetadata.getUpsertTargetDescriptor(),
+                kafkaProperties
+        );
+    }
+
+    private static MapOptionsMetadata resolveMetadata(
+            List<ExternalField> externalFields,
+            Map<String, String> options,
+            boolean key
+    ) {
+        String format = options.get(key ? TO_SERIALIZATION_KEY_FORMAT : TO_SERIALIZATION_VALUE_FORMAT);
+        if (format == null) {
+            return MapOptionsMetadataResolver.resolve(externalFields, key);
+        }
+
+        MapOptionsMetadataResolver resolver = METADATA_RESOLVERS.get(format);
+        if (resolver == null) {
+            throw QueryException.error(
+                    format("Specified format '%s' is not among supported ones %s", format, METADATA_RESOLVERS.keySet())
+            );
+        }
+
+        return checkNotNull(resolver.resolve(externalFields, options, key, null));
     }
 
     @Override
@@ -122,8 +167,9 @@ public class KafkaSqlConnector extends SqlKeyValueConnector implements JetSqlCon
     ) {
         KafkaTable table = (KafkaTable) jetTable;
 
-        EntryWriter writer = table.getWriter();
-        Vertex vStart = dag.newVertex("kafka-project", mapP(writer));
+        ProcessorSupplier projectEntrySupplier =
+                projectEntrySupplier(table.getKeyUpsertDescriptor(), table.getValueUpsertDescriptor(), table.getFields());
+        Vertex vStart = dag.newVertex("kafka-project", projectEntrySupplier);
 
         String topicName = table.getTopicName();
         Vertex vEnd = dag.newVertex("kafka(" + topicName + ')',

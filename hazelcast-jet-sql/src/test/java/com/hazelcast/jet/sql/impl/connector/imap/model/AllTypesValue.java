@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.sql;
+package com.hazelcast.jet.sql.impl.connector.imap.model;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
@@ -32,10 +32,10 @@ import java.util.Objects;
 /**
  * A class that has a field of every supported type in SQL.
  */
-@SuppressWarnings("unused") // getters-setters are used through PropertyUtils
+@SuppressWarnings("unused") // getters-setters are used through reflection
 public final class AllTypesValue implements Serializable {
 
-    private String string;
+    public String string;
     private char character0;
     private Character character1;
     private boolean boolean0;
@@ -62,8 +62,6 @@ public final class AllTypesValue implements Serializable {
     private Instant instant;
     private ZonedDateTime zonedDateTime;
     private OffsetDateTime offsetDateTime;
-    /*private SqlYearMonthInterval yearMonthInterval;
-    private SqlDaySecondInterval daySecondInterval;*/
 
     public AllTypesValue() {
     }
@@ -74,8 +72,8 @@ public final class AllTypesValue implements Serializable {
                          Long long1, BigDecimal bigDecimal, BigInteger bigInteger, float float0, Float float1,
                          double double0, Double double1, LocalTime localTime, LocalDate localDate,
                          LocalDateTime localDateTime, Date date, GregorianCalendar calendar, Instant instant,
-                         ZonedDateTime zonedDateTime, OffsetDateTime offsetDateTime/*,
-                         SqlYearMonthInterval yearMonthInterval, SqlDaySecondInterval daySecondInterval*/) {
+                         ZonedDateTime zonedDateTime, OffsetDateTime offsetDateTime
+    ) {
         this.string = string;
         this.character0 = character0;
         this.character1 = character1;
@@ -103,16 +101,6 @@ public final class AllTypesValue implements Serializable {
         this.instant = instant;
         this.zonedDateTime = zonedDateTime;
         this.offsetDateTime = offsetDateTime;
-        /*this.yearMonthInterval= yearMonthIntervall;
-        this.daySecondInterval = daySecondInterval;*/
-    }
-
-    public String getString() {
-        return string;
-    }
-
-    public void setString(String string) {
-        this.string = string;
     }
 
     public char getCharacter0() {
@@ -323,22 +311,6 @@ public final class AllTypesValue implements Serializable {
         this.offsetDateTime = offsetDateTime;
     }
 
-    /*public SqlYearMonthInterval getYearMonthInterval() {
-        return yearMonthInterval;
-    }
-
-    public void setYearMonthInterval(SqlYearMonthInterval yearMonthInterval) {
-        this.yearMonthInterval = yearMonthInterval;
-    }
-
-    public SqlDaySecondInterval getDaySecondInterval() {
-        return daySecondInterval;
-    }
-
-    public void setDaySecondInterval(SqlDaySecondInterval daySecondInterval) {
-        this.daySecondInterval = daySecondInterval;
-    }*/
-
     @Override
     public String toString() {
         return "AllTypesValue{" +
@@ -369,8 +341,6 @@ public final class AllTypesValue implements Serializable {
                 ", instant=" + instant +
                 ", zonedDateTime=" + zonedDateTime +
                 ", offsetDateTime=" + offsetDateTime +
-                //", yearMonthInterval=" + yearMonthInterval +
-                //", daySecondInterval=" + daySecondInterval +
                 '}';
     }
 
@@ -409,9 +379,7 @@ public final class AllTypesValue implements Serializable {
                 Objects.equals(calendar, that.calendar) &&
                 Objects.equals(instant, that.instant) &&
                 Objects.equals(zonedDateTime, that.zonedDateTime) &&
-                Objects.equals(offsetDateTime, that.offsetDateTime) /*&&
-                Objects.equals(yearMonthInterval, that.yearMonthInterval) &&
-                Objects.equals(daySecondInterval, that.daySecondInterval)*/;
+                Objects.equals(offsetDateTime, that.offsetDateTime);
     }
 
     @Override

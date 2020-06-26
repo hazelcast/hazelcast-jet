@@ -47,21 +47,21 @@ public class SqlCdcTest extends SqlTestSupport {
     @BeforeClass
     public static void beforeClass() {
         executeSql(format("CREATE EXTERNAL TABLE %s (" +
-                        "   %s CHAR, id INT, " +
-                        "   first_name VARCHAR, " +
-                        "   last_name VARCHAR, " +
-                        "   email VARCHAR" +
+                        " %s CHAR, id INT, " +
+                        " first_name VARCHAR, " +
+                        " last_name VARCHAR, " +
+                        " email VARCHAR" +
                         ") TYPE \"%s\" " +
                         "OPTIONS (" +
-                        "  \"connector.class\" '%s', " +
-                        "  \"database.hostname\" '%s', " +
-                        "  \"database.port\" '%s', " +
-                        "  \"database.user\" '%s', " +
-                        "  \"database.password\" '%s', " +
-                        "  \"database.server.id\" '1', " +
-                        "  \"database.server.name\" '%s', " +
-                        "  \"database.whitelist\" '%s', " +
-                        "  \"table.whitelist\" '%s'" +
+                        " \"connector.class\" '%s', " +
+                        " \"database.hostname\" '%s', " +
+                        " \"database.port\" '%s', " +
+                        " \"database.user\" '%s', " +
+                        " \"database.password\" '%s', " +
+                        " \"database.server.id\" '1', " +
+                        " \"database.server.name\" '%s', " +
+                        " \"database.whitelist\" '%s', " +
+                        " \"table.whitelist\" '%s'" +
                         ")",
                 TABLE_NAME, OPERATION, CdcSqlConnector.TYPE_NAME, MY_SQL_CONNECTOR_CLASS_NAME,
                 mysql.getContainerIpAddress(), mysql.getMappedPort(MYSQL_PORT), USER, PASSWORD, SERVER_NAME,
@@ -96,10 +96,10 @@ public class SqlCdcTest extends SqlTestSupport {
         assertRowsEventuallyAnyOrder(
                 format("SELECT * FROM %s", TABLE_NAME),
                 asList(
-                        new Row('c', 1001, "Sally", "Thomas", "sally.thomas@acme.com"),
-                        new Row('c', 1002, "George", "Bailey", "gbailey@foobar.com"),
-                        new Row('c', 1003, "Edward", "Walker", "ed@walker.com"),
-                        new Row('c', 1004, "Anne", "Kretchmar", "annek@noanswer.org")));
+                        new Row("c", 1001, "Sally", "Thomas", "sally.thomas@acme.com"),
+                        new Row("c", 1002, "George", "Bailey", "gbailey@foobar.com"),
+                        new Row("c", 1003, "Edward", "Walker", "ed@walker.com"),
+                        new Row("c", 1004, "Anne", "Kretchmar", "annek@noanswer.org")));
     }
 
     @Test
@@ -107,8 +107,8 @@ public class SqlCdcTest extends SqlTestSupport {
         assertRowsEventuallyAnyOrder(
                 format("SELECT * FROM %s WHERE id=1002 or first_name='Anne'", TABLE_NAME),
                 asList(
-                        new Row('c', 1002, "George", "Bailey", "gbailey@foobar.com"),
-                        new Row('c', 1004, "Anne", "Kretchmar", "annek@noanswer.org")));
+                        new Row("c", 1002, "George", "Bailey", "gbailey@foobar.com"),
+                        new Row("c", 1004, "Anne", "Kretchmar", "annek@noanswer.org")));
     }
 
     @Test

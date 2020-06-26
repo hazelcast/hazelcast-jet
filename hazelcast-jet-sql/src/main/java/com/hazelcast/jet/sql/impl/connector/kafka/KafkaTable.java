@@ -17,20 +17,21 @@
 package com.hazelcast.jet.sql.impl.connector.kafka;
 
 import com.hazelcast.jet.sql.JetSqlConnector;
-import com.hazelcast.jet.sql.impl.connector.SqlWriters.EntryWriter;
 import com.hazelcast.jet.sql.impl.schema.JetTable;
+import com.hazelcast.sql.impl.inject.UpsertTargetDescriptor;
 import com.hazelcast.sql.impl.schema.TableField;
 import com.hazelcast.sql.impl.schema.TableStatistics;
 
 import javax.annotation.Nonnull;
 import java.util.List;
-import java.util.Map;
 import java.util.Properties;
 
 public class KafkaTable extends JetTable {
 
+    private final UpsertTargetDescriptor keyUpsertDescriptor;
+    private final UpsertTargetDescriptor valueUpsertDescriptor;
+
     private final String topicName;
-    private final EntryWriter writer;
     private final Properties kafkaProperties;
 
     public KafkaTable(
@@ -40,13 +41,16 @@ public class KafkaTable extends JetTable {
             @Nonnull TableStatistics statistics,
             @Nonnull String topicName,
             @Nonnull List<TableField> fields,
-            @Nonnull EntryWriter writer,
-            @Nonnull Properties kafkaProperties,
-            @Nonnull Map<String, String> ddlOptions
+            @Nonnull UpsertTargetDescriptor keyUpsertDescriptor,
+            @Nonnull UpsertTargetDescriptor valueUpsertDescriptor,
+            @Nonnull Properties kafkaProperties
     ) {
-        super(sqlConnector, fields, schemaName, name, statistics, ddlOptions);
+        super(sqlConnector, fields, schemaName, name, statistics);
+
+        this.keyUpsertDescriptor = keyUpsertDescriptor;
+        this.valueUpsertDescriptor = valueUpsertDescriptor;
+
         this.topicName = topicName;
-        this.writer = writer;
         this.kafkaProperties = kafkaProperties;
     }
 
@@ -54,17 +58,16 @@ public class KafkaTable extends JetTable {
         return topicName;
     }
 
-    public EntryWriter getWriter() {
-        return writer;
+    public UpsertTargetDescriptor getKeyUpsertDescriptor() {
+        return keyUpsertDescriptor;
+    }
+
+    public UpsertTargetDescriptor getValueUpsertDescriptor() {
+        return valueUpsertDescriptor;
     }
 
     public Properties getKafkaProperties() {
         return kafkaProperties;
-    }
-
-    @Override
-    public boolean isStream() {
-        return true;
     }
 
     @Override

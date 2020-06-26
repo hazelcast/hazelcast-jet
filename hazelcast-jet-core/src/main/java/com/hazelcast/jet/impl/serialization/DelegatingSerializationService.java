@@ -109,7 +109,7 @@ public class DelegatingSerializationService extends AbstractSerializationService
 
     @Override
     public PortableContext getPortableContext() {
-        throw new UnsupportedOperationException();
+        return delegate.getPortableContext();
     }
 
     @Override
