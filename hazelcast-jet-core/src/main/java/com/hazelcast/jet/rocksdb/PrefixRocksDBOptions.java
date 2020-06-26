@@ -21,6 +21,7 @@ import org.rocksdb.BloomFilter;
 import org.rocksdb.ColumnFamilyOptions;
 import org.rocksdb.FlushOptions;
 import org.rocksdb.IndexType;
+import org.rocksdb.InfoLogLevel;
 import org.rocksdb.Options;
 import org.rocksdb.ReadOptions;
 import org.rocksdb.VectorMemTableConfig;
@@ -30,16 +31,15 @@ import org.rocksdb.WriteOptions;
  * RocksDB configurations suitable for bulk-load then prefix scan use case.
 */
 public class PrefixRocksDBOptions {
-    private static final int MEMTABLE_SIZE = 64 * 1024 * 1024;
+    private static final int MEMTABLE_SIZE = 128 * 1024 * 1024;
     private static final int MEMTABLE_NUMBER = 2;
     private static final int LEVELS = 2;
-    private static final int FLUSHES = 2;
     private static final int BLOOM_BITS = 10;
 
     Options options() {
         return new Options()
                 .setCreateIfMissing(true)
-                .setMaxBackgroundFlushes(FLUSHES)
+                .setInfoLogLevel(InfoLogLevel.ERROR_LEVEL)
                 .prepareForBulkLoad()
                 .setAllowConcurrentMemtableWrite(false)
                 .setDisableAutoCompactions(true);
@@ -58,7 +58,7 @@ public class PrefixRocksDBOptions {
     }
 
     WriteOptions writeOptions() {
-        return new WriteOptions().setDisableWAL(true);
+        return new WriteOptions().setDisableWAL(true).setNoSlowdown(true);
     }
 
     ReadOptions iteratorOptions() {

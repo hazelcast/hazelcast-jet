@@ -34,14 +34,15 @@ import static com.hazelcast.jet.core.JetProperties.JET_HOME;
 
 /**
  * Responsible for managing one RocksDB instance, opening, closing and deleting the database.
- * Processors use this class to acquire any number of RocksMaps they require using getMap()
- * Each RocksMap is associated with only one ColumnFamily.
+ * Processors use this class to acquire any number of RocksDB-backed maps they require.
+ * Each map is associated with only one RocksDB ColumnFamily.
  * There is only one instance of this class associated with each job.
- * The lifecycle for this class:
- * (1) ExecutionContext retrieves an instance of this class from RocksDBRegistry.
+ * Lifecycle for this class:
+ * (1) ExecutionContext associated with a job creates two instances of this class
+ * one for prefix mode and the other for regular mode.
  * (2) ExecutionContext invokes initialize() with the directory and serialization service used for this job.
  * (3) Processors acquire the initialized instance from Processor.Context.rocksDBStateBackend() which calls
- * open() to open a new RocksDB instance if it wasn't already created.
+ * open() to create a new RocksDB instance if it wasn't already created.
  * (4) After job execution is completed, ExecutionContext invokes close() to free the RocksDB instance.
  */
 
@@ -50,6 +51,7 @@ public final class RocksDBStateBackend {
     private final ArrayList<RocksMap> maps = new ArrayList<>();
     private final ArrayList<PrefixRocksMap> prefixMaps = new ArrayList<>();
     private Options options = new RocksDBOptions().options();
+    private Options prefixOptions = new PrefixRocksDBOptions().options();
     private volatile RocksDB db;
     private InternalSerializationService serializationService;
     private Path directory;
@@ -92,8 +94,14 @@ public final class RocksDBStateBackend {
      */
     public RocksDBStateBackend usePrefixMode(boolean enable) {
         usePrefix = enable;
-        options = new PrefixRocksDBOptions().options();
         return this;
+    }
+
+    /**
+     *  Returns the directory where RocksDB instance will operate
+     */
+    public Path directory() {
+        return directory;
     }
 
     /**
@@ -105,7 +113,11 @@ public final class RocksDBStateBackend {
                 if (db == null) {
                     try {
                         RocksDB.loadLibrary();
-                        db = RocksDB.open(options, directory.toString());
+                        if (usePrefix) {
+                            db = RocksDB.open(prefixOptions, directory.toString());
+                        } else {
+                            db = RocksDB.open(options, directory.toString());
+                        }
                     } catch (Exception e) {
                         throw new JetException("Failed to create a RocksDB instance", e);
                     }
@@ -143,17 +155,23 @@ public final class RocksDBStateBackend {
         prefixMaps.add(map);
         return map;
     }
+
     /**
      * Deletes the associated RocksDB instance.
-     * Should be invoked when the job finishes execution (whether successfully or with an error)
+     * Must be invoked when the job finishes execution.
      *
      * @throws JetException if the database is closed.
      */
     public void close() throws JetException {
         if (db != null) {
+            for (RocksMap rocksMap : maps) {
+                rocksMap.close();
+            }
+            for (PrefixRocksMap prefixRocksMap : prefixMaps) {
+                prefixRocksMap.close();
+            }
             options.close();
-            maps.forEach(RocksMap::close);
-            prefixMaps.forEach(PrefixRocksMap::close);
+            prefixOptions.close();
             db.close();
         }
     }

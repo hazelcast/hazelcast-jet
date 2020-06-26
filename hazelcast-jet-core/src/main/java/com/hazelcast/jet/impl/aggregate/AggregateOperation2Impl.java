@@ -54,7 +54,7 @@ public class AggregateOperation2Impl<T0, T1, A, R>
             @Nonnull FunctionEx<? super A, ? extends R> finishFn,
             boolean hasUnboundedState
     ) {
-        super(createFn, accumulateFns, combineFn, deductFn, exportFn, finishFn,hasUnboundedState);
+        super(createFn, accumulateFns, combineFn, deductFn, exportFn, finishFn, hasUnboundedState);
     }
 
     @Nonnull @Override
@@ -75,7 +75,8 @@ public class AggregateOperation2Impl<T0, T1, A, R>
     ) {
         checkSerializable(accumulateFn0, "accumulateFn0");
         return new AggregateOperation2Impl<>(
-                createFn(), accumulateFn0, accumulateFn1(), combineFn(), deductFn(), exportFn(), finishFn(), hasUnboundedState());
+                createFn(), accumulateFn0, accumulateFn1(), combineFn(), deductFn(), exportFn(),
+                finishFn(), hasUnboundedState());
     }
 
     @Nonnull @Override
@@ -84,7 +85,8 @@ public class AggregateOperation2Impl<T0, T1, A, R>
     ) {
         checkSerializable(accumulateFn1, "accumulateFn1");
         return new AggregateOperation2Impl<>(
-                createFn(), accumulateFn0(), accumulateFn1, combineFn(), deductFn(), exportFn(), finishFn(), hasUnboundedState());
+                createFn(), accumulateFn0(), accumulateFn1, combineFn(), deductFn(), exportFn(),
+                finishFn(), hasUnboundedState());
     }
 
     @Nonnull @Override

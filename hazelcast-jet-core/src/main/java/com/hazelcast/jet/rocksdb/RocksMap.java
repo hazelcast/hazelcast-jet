@@ -140,7 +140,7 @@ public class RocksMap<K, V> implements Iterable<Entry<K, V>> {
     /**
      * Releases all native handles that this map acquires.
      */
-    public void close() {
+    void close() {
         writeOptions.close();
         readOptions.close();
         columnFamilyOptions.close();

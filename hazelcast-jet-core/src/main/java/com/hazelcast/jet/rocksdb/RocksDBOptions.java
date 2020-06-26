@@ -45,12 +45,11 @@ class RocksDBOptions {
                 .setMaxWriteBufferNumber(MEMTABLE_NUMBER)
                 .setWriteBufferSize(MEMTABLE_SIZE)
                 .setTableFormatConfig(new BlockBasedTableConfig()
-                        .setFilter(new BloomFilter(BLOOM_BITS))
-                        .setWholeKeyFiltering(true));
+                        .setFilter(new BloomFilter(BLOOM_BITS)));
     }
 
     WriteOptions writeOptions() {
-        return new WriteOptions().setDisableWAL(true);
+        return new WriteOptions().setDisableWAL(true).setNoSlowdown(true);
     }
 
     ReadOptions readOptions() {

@@ -18,6 +18,8 @@ package com.hazelcast.jet.impl.processor;
 
 import com.hazelcast.function.BiFunctionEx;
 import com.hazelcast.function.SupplierEx;
+import com.hazelcast.internal.serialization.InternalSerializationService;
+import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.core.JetTestSupport;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.datamodel.ItemsByTag;
@@ -26,6 +28,8 @@ import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.datamodel.Tuple3;
 import com.hazelcast.jet.function.TriFunction;
 import com.hazelcast.jet.impl.processor.HashJoinCollectP.HashJoinArrayList;
+import com.hazelcast.jet.rocksdb.PrefixRocksMap;
+import com.hazelcast.jet.rocksdb.RocksDBStateBackend;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import com.hazelcast.test.annotation.ParallelJVMTest;
 import org.junit.Test;
@@ -35,11 +39,8 @@ import org.junit.runner.RunWith;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 import java.util.function.BiFunction;
 import java.util.function.Function;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import static com.hazelcast.jet.core.test.TestSupport.verifyProcessor;
 import static com.hazelcast.jet.datamodel.ItemsByTag.itemsByTag;
@@ -49,14 +50,21 @@ import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
 import static com.hazelcast.jet.datamodel.Tuple3.tuple3;
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
+import static java.util.Collections.emptyMap;
 import static java.util.Collections.singletonList;
 
 @Category(ParallelJVMTest.class)
 @RunWith(HazelcastParallelClassRunner.class)
 public class HashJoinPTest extends JetTestSupport {
-
     private static final BiFunction mapToOutputBiFn = Tuple2::tuple2;
     private static final TriFunction mapToOutputTriFn = Tuple3::tuple3;
+    private static final InternalSerializationService serializationService = JetTestSupport
+            .getJetService(Jet.bootstrappedInstance())
+            .createSerializationService(emptyMap());
+    private static final RocksDBStateBackend rocksDBStateBackend = new RocksDBStateBackend()
+            .initialize(serializationService)
+            .usePrefixMode(true).open();
+    //TODO: close serialization service and state backend
 
     @Test
     public void test_oneToOneJoin_biJoin() {
@@ -368,10 +376,13 @@ public class HashJoinPTest extends JetTestSupport {
         return tuple2(key, args[0]);
     }
 
-    //TODO: return a RocksMap instead of a HashMap
     @SafeVarargs
-    private static <K, V> Map<K, Object> toMap(Tuple2<K, Object>... entries) {
-        return Stream.of(entries).collect(Collectors.toMap(Tuple2::f0, Tuple2::f1));
+    private <K, V> PrefixRocksMap<K, Object> toMap(Tuple2<K, Object>... entries) {
+        PrefixRocksMap<K, Object> prefixRocksMap = rocksDBStateBackend.getPrefixMap();
+        for (Tuple2<K, Object> e : entries) {
+            prefixRocksMap.add(e.getKey(), e.getValue());
+        }
+        return prefixRocksMap;
     }
 
     private static BiFunctionEx<List<Tag>, Object[], ItemsByTag> tupleToItemsByTag() {

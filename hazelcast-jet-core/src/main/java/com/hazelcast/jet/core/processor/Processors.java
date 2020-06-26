@@ -239,7 +239,9 @@ public final class Processors {
         // the processor doesn't save the state, there's no need to.
         return () -> new GroupP<>(nCopies(aggrOp.arity(), t -> "ALL"), aggrOp, (k, r) -> r);
     }
-
+    /**
+     * A variant of accumulateP that uses GroupP1 processor.
+     */
     @Nonnull
     public static <A, R> SupplierEx<Processor> aggregateP1(
             @Nonnull AggregateOperation<A, R> aggrOp
@@ -276,6 +278,9 @@ public final class Processors {
                 (k, r) -> r);
     }
 
+    /**
+     * A variant of accumulateP that uses GroupP1 processor.
+     */
     @Nonnull
     public static <A, R> SupplierEx<Processor> accumulateP1(@Nonnull AggregateOperation<A, R> aggrOp) {
         return () -> new GroupP1<>(
@@ -315,6 +320,9 @@ public final class Processors {
                 (k, r) -> r);
     }
 
+    /**
+     * A variant of combineP that uses GroupP1 processor.
+     */
     @Nonnull
     public static <A, R> SupplierEx<Processor> combineP1(
             @Nonnull AggregateOperation<A, R> aggrOp
@@ -361,6 +369,9 @@ public final class Processors {
         return () -> new GroupP<>(keyFns, aggrOp, mapToOutputFn);
     }
 
+    /**
+     * A variant of aggregateByKeyP that uses GroupP1 processor.
+     */
     @Nonnull
     public static <K, A, R, OUT> SupplierEx<Processor> aggregateByKeyP1(
             @Nonnull List<FunctionEx<?, ? extends K>> keyFns,
@@ -399,6 +410,9 @@ public final class Processors {
         return () -> new GroupP<>(getKeyFns, aggrOp.withIdentityFinish(), Util::entry);
     }
 
+    /**
+     * A variant of accumulateByKeyP that uses GroupP1 processor.
+     */
     @Nonnull
     public static <K, A> SupplierEx<Processor> accumulateByKeyP1(
             @Nonnull List<FunctionEx<?, ? extends K>> getKeyFns,
@@ -441,6 +455,9 @@ public final class Processors {
                 mapToOutputFn);
     }
 
+    /**
+     * A variant of combineByKeyP that uses GroupP1 processor.
+     */
     @Nonnull
     public static <K, A, R, OUT> SupplierEx<Processor> combineByKeyP1(
             @Nonnull AggregateOperation<A, R> aggrOp,

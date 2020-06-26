@@ -48,7 +48,7 @@ import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
  *     A processor acquire an instance of this class using
  *     {@link RocksDBStateBackend#getPrefixMap}.
  * </li><li>
- *     The processors issues a series of add() operations to load keys and
+ *     The processor issues a series of add() operations to load keys and
  *     values then call compact() to prepare the map for reads.
  * </li><li>
  *     The processor acquires one or more iterators using {@link #prefixRocksIterator}.
@@ -82,6 +82,7 @@ public class PrefixRocksMap<K, V> implements Iterable<Entry<K, Iterator<V>>> {
     private ColumnFamilyHandle cfh;
     private long counter = Long.MIN_VALUE;
 
+
     PrefixRocksMap(@Nonnull RocksDB db, @Nonnull String name, @Nonnull PrefixRocksDBOptions options,
                    @Nonnull InternalSerializationService serializationService) {
         this.db = db;
@@ -100,15 +101,6 @@ public class PrefixRocksMap<K, V> implements Iterable<Entry<K, Iterator<V>>> {
         try {
             cfh = db.createColumnFamily(new ColumnFamilyDescriptor(serialize(name),
                     columnFamilyOptions.useFixedLengthPrefixExtractor(serialize(prefix).length)));
-        } catch (RocksDBException e) {
-            throw new JetException("Failed to create PrefixRocksMap", e);
-        }
-    }
-
-    // opens the database in non-prefix mode since no add() or get() were issued
-    private void open() {
-        try {
-            cfh = db.createColumnFamily(new ColumnFamilyDescriptor(serialize(name), columnFamilyOptions));
         } catch (RocksDBException e) {
             throw new JetException("Failed to create PrefixRocksMap", e);
         }
@@ -164,6 +156,7 @@ public class PrefixRocksMap<K, V> implements Iterable<Entry<K, Iterator<V>>> {
      * will take too much memory and cause the job to fail.
      */
     public RocksIterator prefixRocksIterator() {
+        assert cfh != null : "PrefixRocksMap was not opened";
         RocksIterator rocksIterator = db.newIterator(cfh, prefixIteratorOptions);
         iterators.add(rocksIterator);
         return rocksIterator;
@@ -175,9 +168,7 @@ public class PrefixRocksMap<K, V> implements Iterable<Entry<K, Iterator<V>>> {
      */
     @Nonnull @Override
     public Iterator<Entry<K, Iterator<V>>> iterator() {
-        if (cfh == null) {
-            open();
-        }
+        assert cfh != null : "PrefixRocksMap was not opened";
         PrefixRocksMapIterator mapIterator = new PrefixRocksMapIterator();
         iterators.add(mapIterator.iterator);
         return mapIterator;
@@ -201,18 +192,20 @@ public class PrefixRocksMap<K, V> implements Iterable<Entry<K, Iterator<V>>> {
     }
 
     /**
-     * Releases all native handles that this map acquires.
+     * Releases all native handles that this map acquired.
      */
-    public void close() {
+    void close() {
         columnFamilyOptions.close();
         writeOptions.close();
         iteratorOptions.close();
         prefixIteratorOptions.close();
         flushOptions.close();
-        for (RocksIterator rocksIterator : iterators) {
-            rocksIterator.close();
+        if (cfh != null) {
+            cfh.close();
+            for (RocksIterator rocksIterator : iterators) {
+                rocksIterator.close();
+            }
         }
-        if(cfh != null) cfh.close();
     }
 
     private <T> byte[] serialize(T item) {

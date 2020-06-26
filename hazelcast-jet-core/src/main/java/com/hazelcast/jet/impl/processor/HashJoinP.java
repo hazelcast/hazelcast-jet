@@ -130,9 +130,6 @@ public class HashJoinP<E0> extends AbstractProcessor {
         return flatMapper.tryProcess((E0) item);
     }
 
-    //This method can, and actually needs to, return null
-    //because the iterator can have no values under that key.
-    //in which case, the traverser need to skip over the item.
     private Object lookUpJoined(int index, E0 item) {
         PrefixRocksMap<Object, Object> lookupTableForOrdinal = lookupTables.get(index);
         RocksIterator rocksIterator = iterators.get(index);
@@ -140,27 +137,22 @@ public class HashJoinP<E0> extends AbstractProcessor {
         return getValues(lookupTableForOrdinal.get(rocksIterator, key));
     }
 
-    //Instead of returning a Arraylist from PrefixRocksMap especially for joiner case,
-    // we return an iterator over those values and let processors deal with this.
-    // A processor may need a different data structure than a list, in that case we need two copies of the same data
-    // one for the map and one for the processor, which is wasteful and in extreme cases causes outOfMemoryError.
-    // Using the iterator, we only hold one block in memory at a time and let the processor either use it directly
-    // or use it to build the data structure it requires.
+    @Nullable
     private Object getValues(@Nonnull Iterator iterator) {
-        HashJoinArrayList result = null;
         if (iterator.hasNext()) {
             Object x = iterator.next();
             if (iterator.hasNext()) {
-                result = new HashJoinArrayList();
+                HashJoinArrayList result = new HashJoinArrayList();
                 result.add(x);
                 while (iterator.hasNext()) {
                     result.add(iterator.next());
                 }
+                return result;
             } else {
                 return x;
             }
         }
-        return result;
+        return null;
     }
 
     private class CombinationsTraverser<OUT> implements Traverser<OUT> {

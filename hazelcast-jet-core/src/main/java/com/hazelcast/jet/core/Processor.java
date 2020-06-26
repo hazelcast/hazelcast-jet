@@ -490,8 +490,16 @@ public interface Processor {
          */
         int globalProcessorIndex();
 
+        /**
+         * Returns the RocksDBStateBackend instance associated with the current job
+         * Invoked by processors that use RocksMap.
+         */
         RocksDBStateBackend stateBackend();
 
+        /**
+         * Returns the RocksDBStateBackend instance associated with the current job
+         * Invoked by processors that use PrefixRocksMap.
+         */
         RocksDBStateBackend prefixStateBackend();
     }
 }

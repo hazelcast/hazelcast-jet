@@ -139,6 +139,8 @@ public class ExecutionContext implements DynamicMetricsProvider {
         serializationService = jetService.createSerializationService(jobConfig.getSerializerConfigs());
         stateBackend = new RocksDBStateBackend().initialize(serializationService);
         prefixStateBackend = new RocksDBStateBackend().initialize(serializationService).usePrefixMode(true);
+        tempDirectories.put("stateBackend", stateBackend.directory().toFile());
+        tempDirectories.put("prefixStateBackend" , prefixStateBackend.directory().toFile());
         metricsEnabled = jobConfig.isMetricsEnabled() && nodeEngine.getConfig().getMetricsConfig().isEnabled();
         plan.initialize(nodeEngine, jobId, executionId, snapshotContext,
                 tempDirectories, serializationService, stateBackend, prefixStateBackend);

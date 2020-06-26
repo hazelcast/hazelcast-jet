@@ -178,6 +178,9 @@ public final class AggregateOperationBuilder<A> {
             return this;
         }
 
+        /**
+         * Sets whether the aggregate operation will have unbounded state (e.g toList(), toSet()..)
+         */
         public Arity1<T0, A, R> hasUnboundedState(boolean hasUnboundedState) {
             this.hasUnboundedState = hasUnboundedState;
             return this;
@@ -306,6 +309,9 @@ public final class AggregateOperationBuilder<A> {
             return this;
         }
 
+        /**
+         * Sets whether the aggregate operation will have unbounded state (e.g toList(), toSet()..)
+         */
         public Arity2<T0, T1, A, R> hasUnboundedState(boolean hasUnboundedState) {
             this.hasUnboundedState = hasUnboundedState;
             return this;
@@ -415,6 +421,9 @@ public final class AggregateOperationBuilder<A> {
             return this;
         }
 
+        /**
+         * Sets whether the aggregate operation will have unbounded state (e.g toList(), toSet()..)
+         */
         public Arity3<T0, T1, T2, A, R> hasUnboundedState(boolean hasUnboundedState) {
             this.hasUnboundedState = hasUnboundedState;
             return this;
@@ -547,6 +556,9 @@ public final class AggregateOperationBuilder<A> {
             return this;
         }
 
+        /**
+         * Sets whether the aggregate operation will have unbounded state (e.g toList(), toSet()..)
+         */
         public VarArity<A, R> hasUnboundedState(boolean hasUnboundedState) {
             this.hasUnboundedState = hasUnboundedState;
             return this;

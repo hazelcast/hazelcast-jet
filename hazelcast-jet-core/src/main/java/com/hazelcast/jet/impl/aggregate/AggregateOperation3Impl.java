@@ -83,7 +83,7 @@ public class AggregateOperation3Impl<T0, T1, T2, A, R>
         checkSerializable(accumulateFn0, "accumulateFn0");
         return new AggregateOperation3Impl<>(
                 createFn(), accumulateFn0, accumulateFn1(), accumulateFn2(),
-                combineFn(), deductFn(), exportFn(), finishFn(),hasUnboundedState());
+                combineFn(), deductFn(), exportFn(), finishFn(), hasUnboundedState());
     }
 
     @Nonnull @Override

@@ -100,7 +100,7 @@ public final class TestContextSupport {
                         c.logger(), c.vertexName(), 1, 1, c.processingGuarantee(),
                         c.localParallelism(), 1, c.memberCount(), new ConcurrentHashMap<>(), service,
                         new RocksDBStateBackend().initialize(service),
-                        new RocksDBStateBackend().initialize(service).usePrefixMode( true));
+                        new RocksDBStateBackend().initialize(service).usePrefixMode(true));
             }
             delegate.init(context);
         }
@@ -126,7 +126,7 @@ public final class TestContextSupport {
                         c.processingGuarantee(), c.localParallelism(), c.memberIndex(), c.memberCount(),
                         new ConcurrentHashMap<>(), serializationService,
                         new RocksDBStateBackend().initialize(serializationService),
-                        new RocksDBStateBackend().initialize(serializationService).usePrefixMode( true));
+                        new RocksDBStateBackend().initialize(serializationService).usePrefixMode(true));
             }
             delegate.init(outbox, context);
         }
