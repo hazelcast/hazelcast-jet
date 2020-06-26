@@ -78,7 +78,7 @@ public class JetSqlBackendImpl implements JetSqlBackend, ManagedService {
     }
 
     @Override
-    public JetPlan optimizeAndCreatePlan(Object context0, Object inputRel0) {
+    public JetPlan optimizeAndCreatePlan(NodeEngine nodeEngine, Object context0, Object inputRel0, List<String> rootColumnNames) {
         OptimizerContext context = (OptimizerContext) context0;
         RelNode inputRel = (RelNode) inputRel0;
 

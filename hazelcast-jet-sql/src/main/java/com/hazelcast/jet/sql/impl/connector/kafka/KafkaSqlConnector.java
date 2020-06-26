@@ -23,7 +23,6 @@ import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.kafka.KafkaProcessors;
 import com.hazelcast.jet.sql.JetSqlConnector;
 import com.hazelcast.spi.impl.NodeEngine;
-import com.hazelcast.sql.impl.QueryException;
 import com.hazelcast.sql.impl.connector.SqlKeyValueConnector;
 import com.hazelcast.sql.impl.expression.Expression;
 import com.hazelcast.sql.impl.schema.ConstantTableStatistics;
@@ -41,18 +40,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Properties;
-import java.util.function.Function;
-import java.util.stream.Stream;
 
-import static com.hazelcast.internal.util.Preconditions.checkNotNull;
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.EventTimePolicy.noEventTime;
 import static com.hazelcast.jet.core.processor.Processors.mapP;
 import static com.hazelcast.jet.sql.impl.connector.SqlProcessors.projectEntrySupplier;
 import static com.hazelcast.jet.sql.impl.expression.ExpressionUtil.projectionFn;
-import static java.lang.String.format;
-import static java.util.stream.Collectors.toMap;
+import static java.util.Collections.singletonMap;
 
 public class KafkaSqlConnector extends SqlKeyValueConnector implements JetSqlConnector {
 
@@ -60,9 +55,9 @@ public class KafkaSqlConnector extends SqlKeyValueConnector implements JetSqlCon
 
     public static final String TO_TOPIC_NAME = "topicName";
 
-    private static final Map<String, MapOptionsMetadataResolver> METADATA_RESOLVERS = Stream.of(
-            new PojoMapOptionsMetadataResolver()
-    ).collect(toMap(MapOptionsMetadataResolver::supportedFormat, Function.identity()));
+    private static final Map<String, MapOptionsMetadataResolver> METADATA_RESOLVERS =
+            singletonMap(PojoMapOptionsMetadataResolver.INSTANCE.supportedFormat(),
+                    PojoMapOptionsMetadataResolver.INSTANCE);
 
     @Override
     public String typeName() {
@@ -79,8 +74,8 @@ public class KafkaSqlConnector extends SqlKeyValueConnector implements JetSqlCon
             @Nonnull NodeEngine nodeEngine,
             @Nonnull String schemaName,
             @Nonnull String tableName,
-            @Nonnull List<ExternalField> externalFields,
-            @Nonnull Map<String, String> options
+            @Nonnull Map<String, String> options,
+            @Nullable List<ExternalField> externalFields
     ) {
         // TODO validate options
         String topicName = options.getOrDefault(TO_TOPIC_NAME, tableName);
@@ -90,8 +85,8 @@ public class KafkaSqlConnector extends SqlKeyValueConnector implements JetSqlCon
         kafkaProperties.remove(TO_KEY_CLASS);
         kafkaProperties.remove(TO_VALUE_CLASS);
 
-        MapOptionsMetadata keyMetadata = resolveMetadata(externalFields, options, true);
-        MapOptionsMetadata valueMetadata = resolveMetadata(externalFields, options, false);
+        MapOptionsMetadata keyMetadata = resolveMetadata(externalFields, options, true, null);
+        MapOptionsMetadata valueMetadata = resolveMetadata(externalFields, options, false, null);
         List<TableField> fields = mergeFields(externalFields, keyMetadata.getFields(), valueMetadata.getFields());
 
         return new KafkaTable(
@@ -105,26 +100,6 @@ public class KafkaSqlConnector extends SqlKeyValueConnector implements JetSqlCon
                 valueMetadata.getUpsertTargetDescriptor(),
                 kafkaProperties
         );
-    }
-
-    private static MapOptionsMetadata resolveMetadata(
-            List<ExternalField> externalFields,
-            Map<String, String> options,
-            boolean key
-    ) {
-        String format = options.get(key ? TO_SERIALIZATION_KEY_FORMAT : TO_SERIALIZATION_VALUE_FORMAT);
-        if (format == null) {
-            return MapOptionsMetadataResolver.resolve(externalFields, key);
-        }
-
-        MapOptionsMetadataResolver resolver = METADATA_RESOLVERS.get(format);
-        if (resolver == null) {
-            throw QueryException.error(
-                    format("Specified format '%s' is not among supported ones %s", format, METADATA_RESOLVERS.keySet())
-            );
-        }
-
-        return checkNotNull(resolver.resolve(externalFields, options, key, null));
     }
 
     @Override
@@ -178,5 +153,10 @@ public class KafkaSqlConnector extends SqlKeyValueConnector implements JetSqlCon
 
         dag.edge(between(vStart, vEnd));
         return vStart;
+    }
+
+    @Override
+    protected Map<String, MapOptionsMetadataResolver> supportedResolvers() {
+        return METADATA_RESOLVERS;
     }
 }

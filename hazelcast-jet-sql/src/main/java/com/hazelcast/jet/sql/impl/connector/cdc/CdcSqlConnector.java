@@ -70,13 +70,14 @@ public class CdcSqlConnector implements JetSqlConnector {
         return TYPE_NAME;
     }
 
-    @Nonnull
-    @Override
-    public Table createTable(@Nonnull NodeEngine nodeEngine,
-                             @Nonnull String schemaName,
-                             @Nonnull String tableName,
-                             @Nonnull List<ExternalField> externalFields,
-                             @Nonnull Map<String, String> options) {
+    @Nonnull @Override
+    public Table createTable(
+            @Nonnull NodeEngine nodeEngine,
+            @Nonnull String schemaName,
+            @Nonnull String tableName,
+            @Nonnull Map<String, String> options,
+            @Nullable List<ExternalField> externalFields
+    ) {
         // TODO validate options
 
         // TODO: column property instead of predefined name?

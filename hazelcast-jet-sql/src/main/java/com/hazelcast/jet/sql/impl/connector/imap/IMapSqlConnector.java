@@ -35,6 +35,7 @@ import com.hazelcast.sql.impl.expression.Expression;
 import com.hazelcast.sql.impl.schema.ExternalTable.ExternalField;
 import com.hazelcast.sql.impl.schema.Table;
 import com.hazelcast.sql.impl.schema.map.PartitionedMapTable;
+import com.hazelcast.sql.impl.schema.map.options.MapOptionsMetadataResolver;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -69,8 +70,8 @@ public class IMapSqlConnector extends SqlKeyValueConnector implements JetSqlConn
             @Nonnull NodeEngine nodeEngine,
             @Nonnull String schemaName,
             @Nonnull String tableName,
-            @Nonnull List<ExternalField> externalFields,
-            @Nonnull Map<String, String> options
+            @Nonnull Map<String, String> options,
+            @Nullable List<ExternalField> externalFields
     ) {
         throw new RuntimeException("should not be used");
     }
@@ -162,5 +163,10 @@ public class IMapSqlConnector extends SqlKeyValueConnector implements JetSqlConn
 
         dag.edge(between(vStart, vEnd));
         return vStart;
+    }
+
+    @Override
+    protected Map<String, MapOptionsMetadataResolver> supportedResolvers() {
+        throw new UnsupportedOperationException();
     }
 }
