@@ -199,6 +199,45 @@ CREATE ROLE name REPLICATION LOGIN;
 Note: database super-users already have all the permissions needed by
 replication too.
 
+#### Replication slots
+
+As mentioned in the [server configuration section](#server-config), the
+number of replication slots can be limited via configuration options,
+but their actual creation needs to be done explicitly.
+
+The Postgres CDC source will do this when it starts, if needed. It
+checks if the replication slot it's configured with exists in the
+database or not and will create it if not. On source disconnect the
+replications slot is *NOT* destroyed (unless the source is configured
+otherwise, but that's not supposed to be the case in production), so
+replication slot creation usually happens only once.
+
+This is important, because the replication slot is the entity that keeps
+track of what WAL entries have or haven't already been seen by a certain
+replication client and is also in charge of holding onto all WAL entries
+that might need to be resent to the replication client, in case it
+temporary disconnects. Replication slots hold the state of replication
+to specific clients.
+
+A strange effect that can be observed if the source itself is doing the
+replication slot creation is that the slot might not be up and running
+at the moment of the database snapshot being taken and transitioning
+from snapshot to following the WAL might not be seemless, data might get
+lost (ie. not seen by the source).
+
+For this reason we recommend that when using CDC on Postgres databases
+the replication slot be created *before* the source is started. To do it
+[Postgres' replication
+functions](https://www.postgresql.org/docs/12/functions-admin.html#FUNCTIONS-REPLICATION)
+can be used, in particular `pg_create_logical_replication_slot`. For
+example, for the default replication slot name used by the source
+("debezium") and the default output plugin ("decoderbufs"), the command
+would be:
+
+```text
+SELECT pg_create_logical_replication_slot('debezium', 'decoderbufs');
+```
+
 #### Client authentication
 
 Replication can only be performed for a configured number of hosts. The
