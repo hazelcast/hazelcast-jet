@@ -215,6 +215,11 @@ public final class TestSupport {
     private int outputOrdinalCount;
     private Runnable beforeEachRun = () -> { };
 
+    private int localProcessorIndex;
+    private int globalProcessorIndex;
+    private int localParallelism = 1;
+    private int totalParallelism = 1;
+
     private JetInstance jetInstance;
     private long cooperativeTimeout = COOPERATIVE_TIME_LIMIT_MS_FAIL;
     private long runUntilOutputMatchesTimeoutMillis = -1;
@@ -223,7 +228,6 @@ public final class TestSupport {
     private BiConsumer<TestMode, List<List<Object>>> assertOutputFn;
 
     private BiPredicate<? super List<?>, ? super List<?>> outputChecker = Objects::equals;
-
 
     private TestSupport(@Nonnull ProcessorMetaSupplier metaSupplier) {
         this.metaSupplier = metaSupplier;
@@ -463,6 +467,46 @@ public final class TestSupport {
      */
     public TestSupport cooperativeTimeout(long timeout) {
         this.cooperativeTimeout = timeout;
+        return this;
+    }
+
+    /**
+     * Sets the localProcessorIndex for the Processor
+     *
+     * @param localProcessorIndex localProcessorIndex, defaults to 0
+     */
+    public TestSupport localProcessorIndex(int localProcessorIndex) {
+        this.localProcessorIndex = localProcessorIndex;
+        return this;
+    }
+
+    /**
+     * Sets the globalProcessorIndex for the Processor
+     *
+     * @param globalProcessorIndex globalProcessorIndex, default to 0
+     */
+    public TestSupport globalProcessorIndex(int globalProcessorIndex) {
+        this.globalProcessorIndex = globalProcessorIndex;
+        return this;
+    }
+
+    /**
+     * Sets the localParallelism for the Processor
+     *
+     * @param localParallelism localParallelism, defaults to 1
+     */
+    public TestSupport localParallelism(int localParallelism) {
+        this.localParallelism = localParallelism;
+        return this;
+    }
+
+    /**
+     * Sets the totalParallelism for the Processor
+     *
+     * @param totalParallelism totalParallelism, defaults to 1
+     */
+    public TestSupport totalParallelism(int totalParallelism) {
+        this.totalParallelism = totalParallelism;
         return this;
     }
 
@@ -806,8 +850,11 @@ public final class TestSupport {
         TestProcessorContext context = new TestProcessorContext()
                 .setLogger(getLogger(processor.getClass().getName()))
                 .setManagedContext(serializationService.getManagedContext())
+                .setLocalProcessorIndex(localProcessorIndex)
+                .setGlobalProcessorIndex(globalProcessorIndex)
+                .setLocalParallelism(localParallelism)
+                .setTotalParallelism(totalParallelism)
                 .setSerializationService((InternalSerializationService) serializationService);
-
 
         if (jetInstance != null) {
             context.setJetInstance(jetInstance);
