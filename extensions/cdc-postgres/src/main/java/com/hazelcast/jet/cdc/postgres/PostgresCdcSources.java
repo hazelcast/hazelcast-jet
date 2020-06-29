@@ -91,6 +91,7 @@ public final class PostgresCdcSources {
             config.setProperty(CdcSource.SEQUENCE_EXTRACTOR_CLASS_PROPERTY, PostgresSequenceExtractor.class.getName());
             config.setProperty(ChangeRecordCdcSource.DB_SPECIFIC_EXTRA_FIELDS_PROPERTY, "schema");
             config.setProperty("database.server.name", UuidUtil.newUnsecureUuidString());
+            config.setProperty("snapshot.mode", "exported");
         }
 
         /**
