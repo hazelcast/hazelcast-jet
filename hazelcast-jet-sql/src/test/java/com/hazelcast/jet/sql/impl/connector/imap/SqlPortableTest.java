@@ -28,19 +28,21 @@ import com.hazelcast.nio.serialization.ClassDefinitionBuilder;
 import com.hazelcast.nio.serialization.PortableReader;
 import com.hazelcast.spi.impl.NodeEngine;
 import com.hazelcast.sql.impl.connector.LocalPartitionedMapConnector;
-import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Map.Entry;
 import java.util.Objects;
 
 import static com.hazelcast.jet.Util.entry;
+import static com.hazelcast.sql.impl.connector.SqlConnector.JAVA_SERIALIZATION_FORMAT;
 import static com.hazelcast.sql.impl.connector.SqlConnector.PORTABLE_SERIALIZATION_FORMAT;
+import static com.hazelcast.sql.impl.connector.SqlKeyValueConnector.TO_KEY_CLASS;
 import static com.hazelcast.sql.impl.connector.SqlKeyValueConnector.TO_KEY_CLASS_ID;
 import static com.hazelcast.sql.impl.connector.SqlKeyValueConnector.TO_KEY_CLASS_VERSION;
 import static com.hazelcast.sql.impl.connector.SqlKeyValueConnector.TO_KEY_FACTORY_ID;
@@ -73,9 +75,6 @@ public class SqlPortableTest extends SqlTestSupport {
     private static final int ALL_TYPES_CLASS_VERSION = 9;
 
     private static InternalSerializationService serializationService;
-
-    private String personMapName;
-    private String allTypesMapName;
 
     @BeforeClass
     // reusing ClassDefinitions as schema does not change
@@ -126,11 +125,51 @@ public class SqlPortableTest extends SqlTestSupport {
         serializationService.getPortableContext().registerClassDefinition(allTypesValueClassDefinition);
     }
 
-    @Before
-    public void before() {
-        personMapName = generateRandomName();
-        executeSql(format("CREATE EXTERNAL TABLE %s " +
-                        "TYPE \"%s\" " +
+    @Test
+    public void supportsNulls() throws IOException {
+        String name = generateMapWithRandomName();
+
+        executeSql(format("INSERT OVERWRITE %s VALUES (null, null)", name));
+
+        Entry<Data, Data> entry = randomEntryFrom(name);
+
+        PortableReader keyReader = serializationService.createPortableReader(entry.getKey());
+        assertThat(keyReader.readInt("id")).isEqualTo(0);
+
+        PortableReader valueReader = serializationService.createPortableReader(entry.getValue());
+        assertThat(valueReader.readUTF("name")).isNull();
+
+        assertRowsEventuallyAnyOrder(
+                format("SELECT id, name FROM %s", name),
+                singletonList(new Row(0, null)));
+    }
+
+    @Test
+    public void supportsFieldsShadowing() throws IOException {
+        String name = generateMapWithRandomName();
+
+        executeSql(format("INSERT OVERWRITE %s VALUES (13, 'Alice')", name));
+
+        Entry<Data, Data> entry = randomEntryFrom(name);
+
+        PortableReader keyReader = serializationService.createPortableReader(entry.getKey());
+        assertThat(keyReader.readInt("id")).isEqualTo(13);
+
+        PortableReader valueReader = serializationService.createPortableReader(entry.getValue());
+        assertThat(valueReader.readUTF("name")).isEqualTo("Alice");
+
+        assertRowsEventuallyAnyOrder(
+                format("SELECT * FROM %s", name),
+                singletonList(new Row(13, "Alice")));
+    }
+
+    @Test
+    public void supportsFieldsRemapping() throws IOException {
+        String name = generateRandomName();
+        executeSql(format("CREATE EXTERNAL TABLE %s (" +
+                        " key_id INT EXTERNAL NAME \"__key.id\"," +
+                        " value_id INT EXTERNAL NAME \"this.id\"" +
+                        ") TYPE \"%s\" " +
                         "OPTIONS (" +
                         " \"%s\" '%s'," +
                         " \"%s\" '%s'," +
@@ -141,7 +180,7 @@ public class SqlPortableTest extends SqlTestSupport {
                         " \"%s\" '%s'," +
                         " \"%s\" '%s'" +
                         ")",
-                personMapName, LocalPartitionedMapConnector.TYPE_NAME,
+                name, LocalPartitionedMapConnector.TYPE_NAME,
                 TO_SERIALIZATION_KEY_FORMAT, PORTABLE_SERIALIZATION_FORMAT,
                 TO_KEY_FACTORY_ID, PERSON_ID_FACTORY_ID,
                 TO_KEY_CLASS_ID, PERSON_ID_CLASS_ID,
@@ -152,62 +191,28 @@ public class SqlPortableTest extends SqlTestSupport {
                 TO_VALUE_CLASS_VERSION, PERSON_CLASS_VERSION
         ));
 
-        allTypesMapName = generateRandomName();
-        executeSql(format("CREATE EXTERNAL TABLE %s (" +
-                        " __key DECIMAL(10, 0)" +
-                        ") TYPE \"%s\" " +
-                        "OPTIONS (" +
-                        " \"%s\" '%s'," +
-                        " \"%s\" '%s'," +
-                        " \"%s\" '%s'," +
-                        " \"%s\" '%s'" +
-                        ")",
-                allTypesMapName, LocalPartitionedMapConnector.TYPE_NAME,
-                TO_SERIALIZATION_VALUE_FORMAT, PORTABLE_SERIALIZATION_FORMAT,
-                TO_VALUE_FACTORY_ID, ALL_TYPES_FACTORY_ID,
-                TO_VALUE_CLASS_ID, ALL_TYPES_CLASS_ID,
-                TO_VALUE_CLASS_VERSION, ALL_TYPES_CLASS_VERSION
-        ));
-    }
+        executeSql(format("INSERT OVERWRITE %s VALUES (13, 69, 'Alice')", name));
 
-    @Test
-    public void supportsNulls() throws IOException {
-        executeSql(format("INSERT OVERWRITE %s VALUES (null, null)", personMapName));
-
-        Entry<Data, Data> entry = randomEntryFrom(personMapName);
-
-        PortableReader keyReader = serializationService.createPortableReader(entry.getKey());
-        assertThat(keyReader.readInt("id")).isEqualTo(0);
-
-        PortableReader valueReader = serializationService.createPortableReader(entry.getValue());
-        assertThat(valueReader.readUTF("name")).isNull();
-
-        assertRowsEventuallyAnyOrder(
-                format("SELECT id, name FROM %s", personMapName),
-                singletonList(new Row(0, null)));
-    }
-
-    @Test
-    public void keyShadowsValue() throws IOException {
-        executeSql(format("INSERT OVERWRITE %s VALUES (13, 'Alice')", personMapName));
-
-        Entry<Data, Data> entry = randomEntryFrom(personMapName);
+        Entry<Data, Data> entry = randomEntryFrom(name);
 
         PortableReader keyReader = serializationService.createPortableReader(entry.getKey());
         assertThat(keyReader.readInt("id")).isEqualTo(13);
 
         PortableReader valueReader = serializationService.createPortableReader(entry.getValue());
+        assertThat(valueReader.readInt("id")).isEqualTo(69);
         assertThat(valueReader.readUTF("name")).isEqualTo("Alice");
 
         assertRowsEventuallyAnyOrder(
-                format("SELECT * FROM %s", personMapName),
-                singletonList(new Row(13, "Alice")));
+                format("SELECT key_id, value_id, name FROM %s", name),
+                singletonList(new Row(13, 69, "Alice")));
     }
 
     @Test
     public void supportsSchemaEvolution() {
+        String name = generateMapWithRandomName();
+
         // insert initial record
-        executeSql(format("INSERT OVERWRITE %s VALUES (13, 'Alice')", personMapName));
+        executeSql(format("INSERT OVERWRITE %s VALUES (13, 'Alice')", name));
 
         // alter schema
         executeSql(format("CREATE OR REPLACE EXTERNAL TABLE %s " +
@@ -222,7 +227,7 @@ public class SqlPortableTest extends SqlTestSupport {
                         " \"%s\" '%s'," +
                         " \"%s\" '%s'" +
                         ")",
-                personMapName, LocalPartitionedMapConnector.TYPE_NAME,
+                name, LocalPartitionedMapConnector.TYPE_NAME,
                 TO_SERIALIZATION_KEY_FORMAT, PORTABLE_SERIALIZATION_FORMAT,
                 TO_KEY_FACTORY_ID, PERSON_ID_FACTORY_ID,
                 TO_KEY_CLASS_ID, PERSON_ID_CLASS_ID,
@@ -233,11 +238,11 @@ public class SqlPortableTest extends SqlTestSupport {
                 TO_VALUE_CLASS_VERSION, PERSON_CLASS_VERSION + 1
         ));
         // insert record against new schema/class definition
-        executeSql(format("INSERT OVERWRITE %s VALUES (69, 'Bob', 123456789)", personMapName));
+        executeSql(format("INSERT OVERWRITE %s VALUES (69, 'Bob', 123456789)", name));
 
         // assert both - initial & evolved - records are correctly read
         assertRowsEventuallyAnyOrder(
-                format("SELECT * FROM %s", personMapName),
+                format("SELECT * FROM %s", name),
                 asList(
                         new Row(13, "Alice", null),
                         new Row(69, "Bob", 123456789L)));
@@ -245,6 +250,26 @@ public class SqlPortableTest extends SqlTestSupport {
 
     @Test
     public void supportsAllTypes() throws IOException {
+        String name = generateRandomName();
+        executeSql(format("CREATE EXTERNAL TABLE %s " +
+                        "TYPE \"%s\" " +
+                        "OPTIONS (" +
+                        " \"%s\" '%s'," +
+                        " \"%s\" '%s'," +
+                        " \"%s\" '%s'," +
+                        " \"%s\" '%s'," +
+                        " \"%s\" '%s'," +
+                        " \"%s\" '%s'" +
+                        ")",
+                name, LocalPartitionedMapConnector.TYPE_NAME,
+                TO_SERIALIZATION_KEY_FORMAT, JAVA_SERIALIZATION_FORMAT,
+                TO_KEY_CLASS, BigInteger.class.getName(),
+                TO_SERIALIZATION_VALUE_FORMAT, PORTABLE_SERIALIZATION_FORMAT,
+                TO_VALUE_FACTORY_ID, ALL_TYPES_FACTORY_ID,
+                TO_VALUE_CLASS_ID, ALL_TYPES_CLASS_ID,
+                TO_VALUE_CLASS_VERSION, ALL_TYPES_CLASS_VERSION
+        ));
+
         executeSql(format("INSERT OVERWRITE %s VALUES (" +
                 "13, --key\n" +
                 "'string', --varchar\n" +
@@ -266,11 +291,11 @@ public class SqlPortableTest extends SqlTestSupport {
                 "123451234567890.1, --double\n" +
                 "123451234567890.2\n" +
                 // TODO: temporal types when/if supported
-                ")", allTypesMapName
+                ")", name
         ));
 
         PortableReader allTypesReader = serializationService
-                .createPortableReader(randomEntryFrom(allTypesMapName).getValue());
+                .createPortableReader(randomEntryFrom(name).getValue());
         assertThat(allTypesReader.readUTF("string")).isEqualTo("string");
         assertThat(allTypesReader.readChar("character0")).isEqualTo('a');
         assertThat(allTypesReader.readChar("character1")).isEqualTo('b');
@@ -292,7 +317,7 @@ public class SqlPortableTest extends SqlTestSupport {
         // TODO: assert temporal types when/if supported
 
         assertRowsEventuallyAnyOrder(
-                format("SELECT * FROM %s", allTypesMapName),
+                format("SELECT * FROM %s", name),
                 singletonList(new Row(
                         BigDecimal.valueOf(13),
                         "string",
@@ -317,8 +342,35 @@ public class SqlPortableTest extends SqlTestSupport {
                 )));
     }
 
+    private static String generateMapWithRandomName() {
+        String name = generateRandomName();
+        executeSql(format("CREATE EXTERNAL TABLE %s " +
+                        "TYPE \"%s\" " +
+                        "OPTIONS (" +
+                        " \"%s\" '%s'," +
+                        " \"%s\" '%s'," +
+                        " \"%s\" '%s'," +
+                        " \"%s\" '%s'," +
+                        " \"%s\" '%s'," +
+                        " \"%s\" '%s'," +
+                        " \"%s\" '%s'," +
+                        " \"%s\" '%s'" +
+                        ")",
+                name, LocalPartitionedMapConnector.TYPE_NAME,
+                TO_SERIALIZATION_KEY_FORMAT, PORTABLE_SERIALIZATION_FORMAT,
+                TO_KEY_FACTORY_ID, PERSON_ID_FACTORY_ID,
+                TO_KEY_CLASS_ID, PERSON_ID_CLASS_ID,
+                TO_KEY_CLASS_VERSION, PERSON_ID_CLASS_VERSION,
+                TO_SERIALIZATION_VALUE_FORMAT, PORTABLE_SERIALIZATION_FORMAT,
+                TO_VALUE_FACTORY_ID, PERSON_FACTORY_ID,
+                TO_VALUE_CLASS_ID, PERSON_CLASS_ID,
+                TO_VALUE_CLASS_VERSION, PERSON_CLASS_VERSION
+        ));
+        return name;
+    }
+
     private static String generateRandomName() {
-        return "m_" + randomString().replace('-', '_');
+        return "portable_" + randomString().replace('-', '_');
     }
 
     @SuppressWarnings({"OptionalGetWithoutIsPresent", "unchecked", "rawtypes"})
@@ -328,14 +380,14 @@ public class SqlPortableTest extends SqlTestSupport {
         MapServiceContext context = service.getMapServiceContext();
 
         return Arrays.stream(context.getPartitionContainers())
-                .map(partitionContainer -> partitionContainer.getExistingRecordStore(mapName))
-                .filter(Objects::nonNull)
-                .flatMap(store -> {
-                    Iterator<Entry<Data, Record>> iterator = store.iterator();
-                    return stream(spliteratorUnknownSize(iterator, ORDERED), false);
-                })
-                .map(entry -> entry(entry.getKey(), (Data) entry.getValue().getValue()))
-                .findFirst()
-                .get();
+                     .map(partitionContainer -> partitionContainer.getExistingRecordStore(mapName))
+                     .filter(Objects::nonNull)
+                     .flatMap(store -> {
+                         Iterator<Entry<Data, Record>> iterator = store.iterator();
+                         return stream(spliteratorUnknownSize(iterator, ORDERED), false);
+                     })
+                     .map(entry -> entry(entry.getKey(), (Data) entry.getValue().getValue()))
+                     .findFirst()
+                     .get();
     }
 }

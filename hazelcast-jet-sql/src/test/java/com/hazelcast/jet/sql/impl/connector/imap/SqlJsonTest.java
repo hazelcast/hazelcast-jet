@@ -22,6 +22,7 @@ import com.hazelcast.sql.impl.connector.LocalPartitionedMapConnector;
 import org.junit.Test;
 
 import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -31,7 +32,9 @@ import java.time.ZonedDateTime;
 import java.util.Date;
 import java.util.Map;
 
+import static com.hazelcast.sql.impl.connector.SqlConnector.JAVA_SERIALIZATION_FORMAT;
 import static com.hazelcast.sql.impl.connector.SqlConnector.JSON_SERIALIZATION_FORMAT;
+import static com.hazelcast.sql.impl.connector.SqlKeyValueConnector.TO_KEY_CLASS;
 import static com.hazelcast.sql.impl.connector.SqlKeyValueConnector.TO_SERIALIZATION_KEY_FORMAT;
 import static com.hazelcast.sql.impl.connector.SqlKeyValueConnector.TO_SERIALIZATION_VALUE_FORMAT;
 import static java.lang.String.format;
@@ -49,63 +52,68 @@ public class SqlJsonTest extends SqlTestSupport {
     public void supportsNulls() {
         String name = generateRandomName();
         executeSql(format("CREATE EXTERNAL TABLE %s (" +
-                        "  __key INT," +
-                        "  id INT," +
-                        "  name VARCHAR" +
+                        " key_name VARCHAR EXTERNAL NAME \"__key.name\"," +
+                        " value_name VARCHAR EXTERNAL NAME \"this.name\"" +
                         ") TYPE \"%s\" " +
                         "OPTIONS (" +
-                        "  \"%s\" '%s'" +
-                        ")",
-                name, LocalPartitionedMapConnector.TYPE_NAME,
-                TO_SERIALIZATION_VALUE_FORMAT, JSON_SERIALIZATION_FORMAT
-        ));
-
-        executeSql(format("INSERT OVERWRITE %s VALUES (1, null, null)", name));
-
-        Map<Integer, HazelcastJsonValue> map = instance().getMap(name);
-        assertThat(map.get(1).toString()).isEqualTo("{\"id\":null,\"name\":null}");
-
-        assertRowsEventuallyAnyOrder(
-                format("SELECT __key, id, name FROM %s", name),
-                singletonList(new Row(1, null, null)));
-    }
-
-    @Test
-    public void keyShadowsValue() {
-        String name = generateRandomName();
-        executeSql(format("CREATE EXTERNAL TABLE %s (" +
-                        "  name VARCHAR" +
-                        ") TYPE \"%s\" " +
-                        "OPTIONS (" +
-                        "  \"%s\" '%s'," +
-                        "  \"%s\" '%s'" +
+                        " \"%s\" '%s'," +
+                        " \"%s\" '%s'" +
                         ")",
                 name, LocalPartitionedMapConnector.TYPE_NAME,
                 TO_SERIALIZATION_KEY_FORMAT, JSON_SERIALIZATION_FORMAT,
                 TO_SERIALIZATION_VALUE_FORMAT, JSON_SERIALIZATION_FORMAT
         ));
 
-        executeSql(format("INSERT OVERWRITE %s VALUES ('Alice')", name));
+        executeSql(format("INSERT OVERWRITE %s VALUES (null, null)", name));
 
         Map<HazelcastJsonValue, HazelcastJsonValue> map = instance().getMap(name);
-        assertThat(map.get(new HazelcastJsonValue("{\"name\":\"Alice\"}")).toString()).isEqualTo("{}");
+        assertThat(map.get(new HazelcastJsonValue("{\"name\":null}")).toString()).isEqualTo("{\"name\":null}");
 
         assertRowsEventuallyAnyOrder(
                 format("SELECT * FROM %s", name),
-                singletonList(new Row("Alice")));
+                singletonList(new Row(null, null)));
+    }
+
+    @Test
+    public void supportsFieldsRemapping() {
+        String name = generateRandomName();
+        executeSql(format("CREATE EXTERNAL TABLE %s (" +
+                        " key_name VARCHAR EXTERNAL NAME \"__key.name\"," +
+                        " value_name VARCHAR EXTERNAL NAME \"this.name\"" +
+                        ") TYPE \"%s\" " +
+                        "OPTIONS (" +
+                        " \"%s\" '%s'," +
+                        " \"%s\" '%s'" +
+                        ")",
+                name, LocalPartitionedMapConnector.TYPE_NAME,
+                TO_SERIALIZATION_KEY_FORMAT, JSON_SERIALIZATION_FORMAT,
+                TO_SERIALIZATION_VALUE_FORMAT, JSON_SERIALIZATION_FORMAT
+        ));
+
+        executeSql(format("INSERT OVERWRITE %s (value_name, key_name) VALUES ('Bob', 'Alice')", name));
+
+        Map<HazelcastJsonValue, HazelcastJsonValue> map = instance().getMap(name);
+        assertThat(map.get(new HazelcastJsonValue("{\"name\":\"Alice\"}")).toString()).isEqualTo("{\"name\":\"Bob\"}");
+
+        assertRowsEventuallyAnyOrder(
+                format("SELECT * FROM %s", name),
+                singletonList(new Row("Alice", "Bob")));
     }
 
     @Test
     public void supportsSchemaEvolution() {
         String name = generateRandomName();
         executeSql(format("CREATE EXTERNAL TABLE %s (" +
-                        "  __key INT," +
-                        "  name VARCHAR" +
+                        " name VARCHAR" +
                         ") TYPE \"%s\" " +
                         "OPTIONS (" +
-                        "  \"%s\" '%s'" +
+                        " \"%s\" '%s'," +
+                        " \"%s\" '%s'," +
+                        " \"%s\" '%s'" +
                         ")",
                 name, LocalPartitionedMapConnector.TYPE_NAME,
+                TO_SERIALIZATION_KEY_FORMAT, JAVA_SERIALIZATION_FORMAT,
+                TO_KEY_CLASS, Integer.class.getName(),
                 TO_SERIALIZATION_VALUE_FORMAT, JSON_SERIALIZATION_FORMAT
         ));
 
@@ -114,14 +122,17 @@ public class SqlJsonTest extends SqlTestSupport {
 
         // alter schema
         executeSql(format("CREATE OR REPLACE EXTERNAL TABLE %s (" +
-                        "  __key INT," +
-                        "  name VARCHAR," +
-                        "  ssn BIGINT" +
+                        " name VARCHAR," +
+                        " ssn BIGINT" +
                         ") TYPE \"%s\" " +
                         "OPTIONS (" +
-                        "  \"%s\" '%s'" +
+                        " \"%s\" '%s'," +
+                        " \"%s\" '%s'," +
+                        " \"%s\" '%s'" +
                         ")",
                 name, LocalPartitionedMapConnector.TYPE_NAME,
+                TO_SERIALIZATION_KEY_FORMAT, JAVA_SERIALIZATION_FORMAT,
+                TO_KEY_CLASS, Integer.class.getName(),
                 TO_SERIALIZATION_VALUE_FORMAT, JSON_SERIALIZATION_FORMAT
         ));
         // insert record against new schema
@@ -139,7 +150,6 @@ public class SqlJsonTest extends SqlTestSupport {
     public void supportsAllTypes() {
         String name = generateRandomName();
         executeSql(format("CREATE EXTERNAL TABLE %s (" +
-                        " __key DECIMAL(10, 0)," +
                         " string VARCHAR," +
                         " character0 CHAR," +
                         " character1 CHARACTER," +
@@ -169,9 +179,13 @@ public class SqlJsonTest extends SqlTestSupport {
                         " offsetDateTime TIMESTAMP WITH TIME ZONE" +
                         ") TYPE \"%s\" " +
                         "OPTIONS (" +
-                        "  \"%s\" '%s'" +
+                        " \"%s\" '%s'," +
+                        " \"%s\" '%s'," +
+                        " \"%s\" '%s'" +
                         ")",
                 name, LocalPartitionedMapConnector.TYPE_NAME,
+                TO_SERIALIZATION_KEY_FORMAT, JAVA_SERIALIZATION_FORMAT,
+                TO_KEY_CLASS, BigInteger.class.getName(),
                 TO_SERIALIZATION_VALUE_FORMAT, JSON_SERIALIZATION_FORMAT
         ));
 
@@ -256,6 +270,6 @@ public class SqlJsonTest extends SqlTestSupport {
     }
 
     private static String generateRandomName() {
-        return "m_" + randomString().replace('-', '_');
+        return "json_" + randomString().replace('-', '_');
     }
 }

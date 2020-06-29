@@ -17,6 +17,7 @@
 package com.hazelcast.jet.sql.impl.connector;
 
 import com.hazelcast.internal.serialization.InternalSerializationService;
+import com.hazelcast.sql.impl.extract.QueryPath;
 import com.hazelcast.sql.impl.inject.UpsertInjector;
 import com.hazelcast.sql.impl.inject.UpsertTarget;
 import com.hazelcast.sql.impl.inject.UpsertTargetDescriptor;
@@ -40,28 +41,28 @@ class EntryProjector {
             UpsertTargetDescriptor keyDescriptor,
             UpsertTargetDescriptor valueDescriptor,
             InternalSerializationService serializationService,
-            String[] names,
-            QueryDataType[] types,
-            boolean[] keys
+            QueryPath[] paths,
+            QueryDataType[] types
     ) {
         this.keyTarget = keyDescriptor.create(serializationService);
         this.valueTarget = valueDescriptor.create(serializationService);
 
         this.types = types;
 
-        this.injectors = createInjectors(keyTarget, valueTarget, names, keys);
+        this.injectors = createInjectors(keyTarget, valueTarget, paths);
     }
 
     private static UpsertInjector[] createInjectors(
             UpsertTarget keyTarget,
             UpsertTarget valueTarget,
-            String[] names,
-            boolean[] keys
+            QueryPath[] paths
     ) {
-        UpsertInjector[] injectors = new UpsertInjector[names.length];
-        for (int i = 0; i < names.length; i++) {
-            String name = names[i];
-            injectors[i] = keys[i] ? keyTarget.createInjector(name) : valueTarget.createInjector(name);
+        UpsertInjector[] injectors = new UpsertInjector[paths.length];
+        for (int i = 0; i < paths.length; i++) {
+            QueryPath path = paths[i];
+            injectors[i] = path.isKey()
+                    ? keyTarget.createInjector(path.getPath())
+                    : valueTarget.createInjector(path.getPath());
         }
         return injectors;
     }
