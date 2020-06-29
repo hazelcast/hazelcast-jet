@@ -133,7 +133,7 @@ the log output for a line like this:</p>
 below instead of our example's <code>172.17.0.2</code>. Let's submit the Hello
 World application from the distribution package:</p>
 <pre><code class="hljs css language-bash"><span class="hljs-built_in">cd</span> hazelcast-jet-enterprise-4.2-SNAPSHOT
-docker run -it -v <span class="hljs-string">"<span class="hljs-variable">$(pwd)</span>"</span>/examples:/examples hazelcast/hazelcast-jet-enterprise jet -a 172.17.0.2 submit /examples/hello-world.jar
+docker run -it -v <span class="hljs-string">"<span class="hljs-variable">$(pwd)</span>"</span>/examples:/examples hazelcast/hazelcast-jet-enterprise jet -t 172.17.0.2 submit /examples/hello-world.jar
 </code></pre>
 <p>The command mounts the local <code>examples</code> directory from <code>hazelcast-jet-enterprise-4.2-SNAPSHOT</code>
 to the container and uses <code>jet submit</code> to submit the example JAR. While

@@ -102,15 +102,14 @@ exception stack traces, if any</li>
 </ul>
 <p>The <code>jet</code> command also some global options:</p>
 <ul>
-<li><code>-a</code>: comma separated addresses for the cluster</li>
-<li><code>-n</code>: cluster name, which must match what's configured on the cluster</li>
+<li><code>-t</code>: name and comma separated addresses for the cluster, which must match
+what's configured on the cluster, cluster name is optional</li>
 <li><code>-f</code>: path to a client config file, which can be used instead of
 supplying an address and name.</li>
 </ul>
 <p>Example:</p>
 <pre><code class="hljs css language-bash">bin/jet \
-  -a 192.168.1.100:5701,192.168.1.101:5701 \
-  -n jet \
+  -t jet@192.168.1.100:5701,192.168.1.101:5701 \
   submit \
   -c &lt;MainClass&gt; \
   &lt;jar file&gt; \

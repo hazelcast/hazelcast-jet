@@ -111,7 +111,7 @@ Jet distribution. Download the Jet distribution from
 </code></pre>
 <p>Run the following command to submit the Hello World job to your Hazelcast
 Jet instance:</p>
-<pre><code class="hljs css language-bash">docker run -it -v <span class="hljs-string">"<span class="hljs-variable">$(pwd)</span>"</span>/examples:/examples hazelcast/hazelcast-jet jet -a 172.17.0.2 submit /examples/hello-world.jar
+<pre><code class="hljs css language-bash">docker run -it -v <span class="hljs-string">"<span class="hljs-variable">$(pwd)</span>"</span>/examples:/examples hazelcast/hazelcast-jet jet -t 172.17.0.2 submit /examples/hello-world.jar
 </code></pre>
 <p>The parameters are as follows:</p>
 <ul>
@@ -119,7 +119,7 @@ Jet instance:</p>
 submit command by pressing Ctrl+C</li>
 <li><code>-v &quot;$(pwd)&quot;/examples:/examples</code> mounts folder <code>examples</code> from your
 current directory to <code>/examples</code> directory inside the container</li>
-<li><code>-a 172.17.0.2</code> - shortcut for <code>--addresses</code>, specifies an address of
+<li><code>-t 172.17.0.2</code> - shortcut for <code>--targets</code>, specifies an address of
 running Hazelcast Jet instance, needs to be specified because the
 instance is not running on <code>localhost:5701</code></li>
 <li><code>submit</code> command to submit a job</li>
@@ -128,15 +128,15 @@ container</li>
 </ul>
 <p>You can list the running jobs inside the cluster by running the
 following command:</p>
-<pre><code class="hljs css language-bash">docker run hazelcast/hazelcast-jet jet -a 172.17.0.2 list-jobs
+<pre><code class="hljs css language-bash">docker run hazelcast/hazelcast-jet jet -t 172.17.0.2 list-jobs
 </code></pre>
 <p>which gives an output similar to:</p>
-<pre><code class="hljs css language-text">$ docker run hazelcast/hazelcast-jet jet -a 172.17.0.2 list-jobs
+<pre><code class="hljs css language-text">$ docker run hazelcast/hazelcast-jet jet -t 172.17.0.2 list-jobs
 ID                  STATUS             SUBMISSION TIME         NAME
 045e-987c-1940-0001 RUNNING            2020-05-18T20:08:03.020 hello-world
 </code></pre>
 <p>You can cancel a running job using the following command:</p>
-<pre><code class="hljs css language-bash">docker run hazelcast/hazelcast-jet jet -a 172.17.0.2 cancel hello-world
+<pre><code class="hljs css language-bash">docker run hazelcast/hazelcast-jet jet -t 172.17.0.2 cancel hello-world
 </code></pre>
 <h3><a class="anchor" aria-hidden="true" id="using-local-distribution"></a><a href="#using-local-distribution" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Using Local Distribution</h3>
 <p>Alternatively you can use the downloaded distribution to submit a job to
@@ -152,7 +152,7 @@ default.</p>
 <pre><code class="hljs css language-bash">docker run hazelcast/hazelcast-jet
 </code></pre>
 <p>And submit the job, specifying the cluster address:</p>
-<pre><code class="hljs css language-bash">bin/jet -a 172.17.0.2 submit examples/hello-world.jar
+<pre><code class="hljs css language-bash">bin/jet -t 172.17.0.2 submit examples/hello-world.jar
 </code></pre>
 <h2><a class="anchor" aria-hidden="true" id="configure-hazelcast-jet"></a><a href="#configure-hazelcast-jet" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Configure Hazelcast Jet</h2>
 <h3><a class="anchor" aria-hidden="true" id="java_opts"></a><a href="#java_opts" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>JAVA_OPTS</h3>
@@ -179,7 +179,7 @@ command (it expects the file in the current directory):</p>
 </code></pre>
 <p>Submit a job to the cluster, specifying cluster name in the jet command
 using <code>-n jet-1</code> option (shortcut for <code>--cluster-name</code>):</p>
-<pre><code class="hljs css language-bash">docker run -it -v <span class="hljs-string">"<span class="hljs-variable">$(pwd)</span>"</span>/examples:/examples hazelcast/hazelcast-jet jet -a 172.17.0.2 -n jet-1 submit /examples/hello-world.jar
+<pre><code class="hljs css language-bash">docker run -it -v <span class="hljs-string">"<span class="hljs-variable">$(pwd)</span>"</span>/examples:/examples hazelcast/hazelcast-jet jet -t 172.17.0.2 -n jet-1 submit /examples/hello-world.jar
 </code></pre>
 <h2><a class="anchor" aria-hidden="true" id="start-jet-cluster"></a><a href="#start-jet-cluster" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Start Jet Cluster</h2>
 <p>While running a cluster locally does not give you any computational
@@ -266,7 +266,7 @@ ADD examples/hello-world.jar /examples/
 
 ENV ADDRESSES 172.17.0.2
 
-CMD ["sh", "-c", "jet -a $ADDRESSES submit /examples/hello-world.jar"]
+CMD ["sh", "-c", "jet -t $ADDRESSES submit /examples/hello-world.jar"]
 </code></pre>
 <p>The first line specifies the <code>hazelcast/hazelcast-jet</code> image as base
 image. The <code>ADD</code> command copies the <code>hello-world.jar</code> to the <code>/examples</code>
@@ -287,7 +287,7 @@ Step 2/4 : ADD examples/hello-world.jar /examples/
 Step 3/4 : ENV ADDRESSES 172.17.0.2
  ---> Using cache
  ---> f96d01158d6e
-Step 4/4 : CMD ["sh", "-c", "jet -a $ADDRESSES submit /examples/hello-world.jar"]
+Step 4/4 : CMD ["sh", "-c", "jet -t $ADDRESSES submit /examples/hello-world.jar"]
  ---> Using cache
  ---> 6bc0f527b69c
 Successfully built 6bc0f527b69c
