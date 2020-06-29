@@ -63,6 +63,12 @@ Thank you for your valuable contributions!
 [jet-cli] Use exec in jet-start to support ctrl-C in docker environment [#2307)
 [avro] Add missing serializer for Avro Utf-8 class (#2358)
 
+4. Breaking Changes
+
+[pipeline-api] Deprecated keyed variants of mapUsingService() as the new rebalance()
+  operator can be used instead (#2149)
+[jet-cli] Deprecated --address and --cluster-name options from command-line as --targets
+  should now be used instead. (#2276)
 
 ** Hazelcast Jet 4.1.1 **
 
