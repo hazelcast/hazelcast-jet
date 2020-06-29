@@ -47,7 +47,7 @@ Thank you for your valuable contributions!
 [pipeline-api] Support for keyFn and valueFn in map sink (#2198)
 [jet-cli] Introduce --targets as the default command for specifying where to connect and
    add it as a mixins for all comments (@caioguedes #2276)
-[jet-cli] Add support JET_MODULES environment variable to import modules automatically
+[jet-cli] Add support for JET_MODULES environment variable to import modules automatically
    without having to copy them (#2314)
 [jet-cli] Support PROMETHEUS_PORT environment variable to start Jet with prometheus metrics
    enabled (#2328)
