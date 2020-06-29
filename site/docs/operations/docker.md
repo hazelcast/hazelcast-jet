@@ -226,7 +226,7 @@ You can view the contents of the default configuration file inside the
 container by running the following command:
 
 ```bash
-docker run hazelcast/hazelcast-jet:{jet-version} cat /opt/hazelcast-jet/config/hazelcast.yaml
+docker run hazelcast/hazelcast-jet cat /opt/hazelcast-jet/config/hazelcast.yaml
 ```
 
 ### Extend CLASSPATH with new Jars or Files
