@@ -49,7 +49,9 @@ public class ChangeRecordImpl implements ChangeRecord {
     ) {
         this.sequenceSource = sequenceSource;
         this.sequenceValue = sequenceValue;
+        System.err.println("\tsequenceValue = " + sequenceValue); //todo: remove
         this.keyJson = Objects.requireNonNull(keyJson, "keyJson");
+        System.err.println("\tkeyJson = " + keyJson); //todo: remove
         this.valueJson = Objects.requireNonNull(valueJson, "valueJson");
     }
 

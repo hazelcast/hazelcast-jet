@@ -106,6 +106,7 @@ public abstract class CdcSource<T> {
     }
 
     private boolean addToBuffer(SourceRecord sourceRecord, SourceBuilder.TimestampedSourceBuffer<T> buf) {
+        System.err.println("sourceRecord.sourceOffset() = " + sourceRecord.sourceOffset()); //todo: remove
         T t = mapToOutput(sourceRecord);
         if (t != null) {
             long timestamp = extractTimestamp(sourceRecord);

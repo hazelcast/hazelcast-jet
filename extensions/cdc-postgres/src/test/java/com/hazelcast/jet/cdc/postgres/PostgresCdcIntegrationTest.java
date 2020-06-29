@@ -40,6 +40,7 @@ import javax.annotation.Nonnull;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.Statement;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
@@ -48,22 +49,32 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
 import static com.hazelcast.jet.Util.entry;
+import static org.junit.Assert.assertEquals;
 
 public class PostgresCdcIntegrationTest extends AbstractPostgresCdcIntegrationTest {
 
     @Test
     //category intentionally left out, we want this one test to run in standard test suits
     public void customers() throws Exception {
+        int offset = 1005;
+        int length = 5_000;
+
         // given
-        List<String> expectedRecords = Arrays.asList(
-                "1001/0:SYNC:Customer {id=1001, firstName=Sally, lastName=Thomas, email=sally.thomas@acme.com}",
-                "1002/0:SYNC:Customer {id=1002, firstName=George, lastName=Bailey, email=gbailey@foobar.com}",
-                "1003/0:SYNC:Customer {id=1003, firstName=Edward, lastName=Walker, email=ed@walker.com}",
-                "1004/0:SYNC:Customer {id=1004, firstName=Anne, lastName=Kretchmar, email=annek@noanswer.org}",
-                "1004/1:UPDATE:Customer {id=1004, firstName=Anne Marie, lastName=Kretchmar, email=annek@noanswer.org}",
-                "1005/0:INSERT:Customer {id=1005, firstName=Jason, lastName=Bourne, email=jason@bourne.org}",
-                "1005/1:DELETE:Customer {id=1005, firstName=Jason, lastName=Bourne, email=jason@bourne.org}"
-        );
+        List<String> expectedRecords = new ArrayList<>(Arrays.asList(
+                "1001/0:(SYNC|INSERT):Customer \\{id=1001, firstName=Sally, lastName=Thomas, "
+                        + "email=sally.thomas@acme.com\\}",
+                "1002/0:(SYNC|INSERT):Customer \\{id=1002, firstName=George, lastName=Bailey, "
+                        + "email=gbailey@foobar.com\\}",
+                "1003/0:(SYNC|INSERT):Customer \\{id=1003, firstName=Edward, lastName=Walker, "
+                        + "email=ed@walker.com\\}",
+                "1004/0:(SYNC|INSERT):Customer \\{id=1004, firstName=Anne, lastName=Kretchmar, "
+                        + "email=annek@noanswer.org\\}"
+        ));
+        for (int i = offset; i < offset + length; i++) {
+            expectedRecords.add(i + "/0:(SYNC|INSERT):Customer \\{id=" + i + ", firstName=first" + i + ", lastName=last"
+                    + i + ", email=" + i + "@google.com\\}");
+        }
+        expectedRecords.sort(String::compareTo);
 
         Pipeline pipeline = Pipeline.create();
         pipeline.readFrom(source("customers"))
@@ -84,26 +95,43 @@ public class PostgresCdcIntegrationTest extends AbstractPostgresCdcIntegrationTe
                 .writeTo(Sinks.map("results"));
 
         // when
-        JetInstance jet = createJetMembers(2)[0];
+        JetInstance jet = createJetMembers(1)[0];
         Job job = jet.newJob(pipeline);
 
         //then
-        assertEqualsEventually(() -> jet.getMap("results").size(), 4);
+        assertJobStatusEventually(job, JobStatus.RUNNING);
 
         //when
         try (Connection connection = DriverManager.getConnection(postgres.getJdbcUrl(), postgres.getUsername(),
                 postgres.getPassword())) {
             connection.setSchema("inventory");
             Statement statement = connection.createStatement();
-            statement.addBatch("UPDATE customers SET first_name='Anne Marie' WHERE id=1004");
-            statement.addBatch("INSERT INTO customers VALUES (1005, 'Jason', 'Bourne', 'jason@bourne.org')");
-            statement.addBatch("DELETE FROM customers WHERE id=1005");
+            for (int i = offset; i < offset + length; i++) {
+                statement.addBatch("INSERT INTO customers VALUES (" + i + ", 'first" + i + "', 'last" + i + "', '"
+                        + i + "@google.com')");
+            }
             statement.executeBatch();
         }
 
         //then
         try {
-            assertEqualsEventually(() -> mapResultsToSortedList(jet.getMap("results")), expectedRecords);
+            assertTrueEventually(() -> {
+                List<String> actual = mapResultsToSortedList(jet.getMap("results"));
+                for (int i = 0; i < actual.size(); i++) {
+                    if (!actual.get(i).matches(expectedRecords.get(i))) {
+                        System.err.println("### i = " + i); //todo: remove
+                        System.err.println("\tactual.get(" + (i - 2) + ") = " + actual.get(i - 2)); //todo: remove
+                        System.err.println("\tactual.get(" + (i - 1) + ") = " + actual.get(i - 1)); //todo: remove
+                        System.err.println("\tactual.get(" + i + ") = " + actual.get(i));//todo: remove
+                        System.err.println("\texpectedRecords.get(" + i + ") = " + expectedRecords.get(i)); //todo: remove
+                        break;
+                    }
+                }
+                System.err.println("A = " + actual.size()); //todo: remove
+                System.err.println("E = " + expectedRecords.size()); //todo: remove
+                assertEquals(expectedRecords.size(), actual.size());
+                assertMatch(expectedRecords, actual);
+            });
         } finally {
             job.cancel();
         }
@@ -292,6 +320,7 @@ public class PostgresCdcIntegrationTest extends AbstractPostgresCdcIntegrationTe
     private StreamSource<ChangeRecord> source(String tableName) {
         return sourceBuilder(tableName)
                 .setTableWhitelist("inventory." + tableName)
+                .setCustomProperty("snapshot.mode", "exported")
                 .build();
     }
 
