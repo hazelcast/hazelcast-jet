@@ -153,8 +153,7 @@ public class MultiTableCacheIntegrationTest extends AbstractPostgresCdcIntegrati
 
     @NotNull
     private static Map<Integer, OrdersOfCustomer> getIMapContent(JetInstance jet, String name) {
-        return jet.<Integer, OrdersOfCustomer>getMap(name).entrySet().stream()
-                .collect(Collectors.toMap(Entry::getKey, Entry::getValue));
+        return new HashMap<>(jet.getMap(name));
     }
 
     @NotNull
