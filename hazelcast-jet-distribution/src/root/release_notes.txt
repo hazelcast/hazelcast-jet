@@ -126,7 +126,7 @@ Thank you for your valuable contributions!
 [jet-cli] Change smart routing (connecting to all cluster members) default to disabled (#2104)
 [pipeline-api] For xUsingServiceAsync transforms, reduce the default number of concurrent
                service calls per processor. Before: 256; now: 4. (#2204)
-
+ 
 
 ** Hazelcast Jet 4.2 **
 
