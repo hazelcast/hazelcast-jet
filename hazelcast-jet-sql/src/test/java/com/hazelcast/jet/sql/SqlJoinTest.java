@@ -30,6 +30,11 @@ import org.junit.Test;
 
 import java.io.IOException;
 
+import static com.hazelcast.sql.impl.connector.SqlConnector.JAVA_SERIALIZATION_FORMAT;
+import static com.hazelcast.sql.impl.connector.SqlKeyValueConnector.TO_KEY_CLASS;
+import static com.hazelcast.sql.impl.connector.SqlKeyValueConnector.TO_SERIALIZATION_KEY_FORMAT;
+import static com.hazelcast.sql.impl.connector.SqlKeyValueConnector.TO_SERIALIZATION_VALUE_FORMAT;
+import static com.hazelcast.sql.impl.connector.SqlKeyValueConnector.TO_VALUE_CLASS;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
@@ -54,11 +59,13 @@ public class SqlJoinTest extends SqlTestSupport {
     public void before() {
         topicName = "k_" + randomString().replace('-', '_');
         kafkaTestSupport.createTopic(topicName, INITIAL_PARTITION_COUNT);
-        executeSql(format("CREATE EXTERNAL TABLE %s (" +
-                        " __key INT," +
-                        " this VARCHAR" +
-                        ") TYPE \"%s\" " +
+        executeSql(format("CREATE EXTERNAL TABLE %s " +
+                        "TYPE \"%s\" " +
                         "OPTIONS (" +
+                        " \"%s\" '%s'," +
+                        " \"%s\" '%s'," +
+                        " \"%s\" '%s'," +
+                        " \"%s\" '%s'," +
                         " \"bootstrap.servers\" '%s'," +
                         " \"key.serializer\" '%s'," +
                         " \"key.deserializer\" '%s'," +
@@ -67,12 +74,16 @@ public class SqlJoinTest extends SqlTestSupport {
                         " \"auto.offset.reset\" 'earliest'" +
                         ")",
                 topicName, KafkaSqlConnector.TYPE_NAME,
+                TO_SERIALIZATION_KEY_FORMAT, JAVA_SERIALIZATION_FORMAT,
+                TO_KEY_CLASS, Integer.class.getName(),
+                TO_SERIALIZATION_VALUE_FORMAT, JAVA_SERIALIZATION_FORMAT,
+                TO_VALUE_CLASS, String.class.getName(),
                 kafkaTestSupport.getBrokerConnectionString(),
                 IntegerSerializer.class.getCanonicalName(), IntegerDeserializer.class.getCanonicalName(),
                 StringSerializer.class.getCanonicalName(), StringDeserializer.class.getCanonicalName()
         ));
 
-        mapName = createRandomMap();
+        mapName = createMapWithRandomName();
     }
 
     @AfterClass
@@ -208,7 +219,7 @@ public class SqlJoinTest extends SqlTestSupport {
         instance().getMap(mapName).put(1, "map1-value-1");
         instance().getMap(mapName).put(2, "map1-value-2");
 
-        String anotherMapName = createRandomMap();
+        String anotherMapName = createMapWithRandomName();
         instance().getMap(anotherMapName).put(0, "map2-value-0");
         instance().getMap(anotherMapName).put(1, "map2-value-1");
         instance().getMap(anotherMapName).put(2, "map2-value-2");
@@ -237,14 +248,22 @@ public class SqlJoinTest extends SqlTestSupport {
           .hasMessageContaining("Nested loop reader not supported for " + KafkaSqlConnector.class.getName());
     }
 
-    private static String createRandomMap() {
+    private static String createMapWithRandomName() {
         String mapName = "m_" + randomString().replace('-', '_');
         executeSql(
-                format("CREATE EXTERNAL TABLE %s (" +
-                                " __key INT," +
-                                " this VARCHAR" +
-                                ") TYPE \"%s\"",
-                        mapName, LocalPartitionedMapConnector.TYPE_NAME
+                format("CREATE EXTERNAL TABLE %s " +
+                                "TYPE \"%s\" " +
+                                "OPTIONS (" +
+                                " \"%s\" '%s'," +
+                                " \"%s\" '%s'," +
+                                " \"%s\" '%s'," +
+                                " \"%s\" '%s'" +
+                                ")",
+                        mapName, LocalPartitionedMapConnector.TYPE_NAME,
+                        TO_SERIALIZATION_KEY_FORMAT, JAVA_SERIALIZATION_FORMAT,
+                        TO_KEY_CLASS, Integer.class.getName(),
+                        TO_SERIALIZATION_VALUE_FORMAT, JAVA_SERIALIZATION_FORMAT,
+                        TO_VALUE_CLASS, String.class.getName()
                 )
         );
         return mapName;

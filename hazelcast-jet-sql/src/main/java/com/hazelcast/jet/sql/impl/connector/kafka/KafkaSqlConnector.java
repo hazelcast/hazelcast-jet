@@ -29,9 +29,9 @@ import com.hazelcast.sql.impl.schema.ConstantTableStatistics;
 import com.hazelcast.sql.impl.schema.ExternalTable.ExternalField;
 import com.hazelcast.sql.impl.schema.Table;
 import com.hazelcast.sql.impl.schema.TableField;
+import com.hazelcast.sql.impl.schema.map.options.JavaMapOptionsMetadataResolver;
 import com.hazelcast.sql.impl.schema.map.options.MapOptionsMetadata;
 import com.hazelcast.sql.impl.schema.map.options.MapOptionsMetadataResolver;
-import com.hazelcast.sql.impl.schema.map.options.PojoMapOptionsMetadataResolver;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 
 import javax.annotation.Nonnull;
@@ -40,6 +40,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Properties;
+import java.util.function.Function;
+import java.util.stream.Stream;
 
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.core.Edge.between;
@@ -47,7 +49,7 @@ import static com.hazelcast.jet.core.EventTimePolicy.noEventTime;
 import static com.hazelcast.jet.core.processor.Processors.mapP;
 import static com.hazelcast.jet.sql.impl.connector.SqlProcessors.projectEntrySupplier;
 import static com.hazelcast.jet.sql.impl.expression.ExpressionUtil.projectionFn;
-import static java.util.Collections.singletonMap;
+import static java.util.stream.Collectors.toMap;
 
 public class KafkaSqlConnector extends SqlKeyValueConnector implements JetSqlConnector {
 
@@ -55,9 +57,9 @@ public class KafkaSqlConnector extends SqlKeyValueConnector implements JetSqlCon
 
     public static final String TO_TOPIC_NAME = "topicName";
 
-    private static final Map<String, MapOptionsMetadataResolver> METADATA_RESOLVERS =
-            singletonMap(PojoMapOptionsMetadataResolver.INSTANCE.supportedFormat(),
-                    PojoMapOptionsMetadataResolver.INSTANCE);
+    private static final Map<String, MapOptionsMetadataResolver> METADATA_RESOLVERS = Stream.of(
+            JavaMapOptionsMetadataResolver.INSTANCE
+    ).collect(toMap(MapOptionsMetadataResolver::supportedFormat, Function.identity()));
 
     @Override
     public String typeName() {
@@ -87,7 +89,7 @@ public class KafkaSqlConnector extends SqlKeyValueConnector implements JetSqlCon
 
         MapOptionsMetadata keyMetadata = resolveMetadata(externalFields, options, true, null);
         MapOptionsMetadata valueMetadata = resolveMetadata(externalFields, options, false, null);
-        List<TableField> fields = mergeFields(externalFields, keyMetadata.getFields(), valueMetadata.getFields());
+        List<TableField> fields = mergeFields(keyMetadata.getFields(), valueMetadata.getFields());
 
         return new KafkaTable(
                 this,

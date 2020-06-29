@@ -26,6 +26,7 @@ import com.hazelcast.jet.impl.processor.TransformP;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.DataSerializable;
+import com.hazelcast.sql.impl.extract.QueryPath;
 import com.hazelcast.sql.impl.inject.UpsertTargetDescriptor;
 import com.hazelcast.sql.impl.schema.TableField;
 import com.hazelcast.sql.impl.schema.map.MapTableField;
@@ -55,9 +56,8 @@ public final class SqlProcessors {
         private UpsertTargetDescriptor keyDescriptor;
         private UpsertTargetDescriptor valueDescriptor;
 
-        private String[] names;
+        private QueryPath[] paths;
         private QueryDataType[] types;
-        private boolean[] keys;
 
         private transient InternalSerializationService serializationService;
 
@@ -73,17 +73,9 @@ public final class SqlProcessors {
             this.keyDescriptor = keyDescriptor;
             this.valueDescriptor = valueDescriptor;
 
-            this.names = fields.stream().map(TableField::getName).toArray(String[]::new);
+            // TODO: get rid of casting ???
+            this.paths = fields.stream().map(field -> ((MapTableField) field).getPath()).toArray(QueryPath[]::new);
             this.types = fields.stream().map(TableField::getType).toArray(QueryDataType[]::new);
-            this.keys = toKeys(fields);
-        }
-
-        private static boolean[] toKeys(List<TableField> fields) {
-            boolean[] result = new boolean[fields.size()];
-            for (int i = 0; i < fields.size(); i++) {
-                result[i] = ((MapTableField) fields.get(i)).getPath().isKey(); // TODO: get rid of casting ???
-            }
-            return result;
         }
 
         @Override
@@ -101,9 +93,8 @@ public final class SqlProcessors {
                         keyDescriptor,
                         valueDescriptor,
                         serializationService,
-                        names,
-                        types,
-                        keys
+                        paths,
+                        types
                 );
                 AbstractProcessor processor = new TransformP<Object[], Object>(row -> {
                     traverser.accept(projector.project(row));
@@ -118,18 +109,16 @@ public final class SqlProcessors {
         public void writeData(ObjectDataOutput out) throws IOException {
             out.writeObject(keyDescriptor);
             out.writeObject(valueDescriptor);
-            out.writeUTFArray(names);
+            out.writeObject(paths);
             out.writeObject(types);
-            out.writeBooleanArray(keys);
         }
 
         @Override
         public void readData(ObjectDataInput in) throws IOException {
             keyDescriptor = in.readObject();
             valueDescriptor = in.readObject();
-            names = in.readUTFArray();
+            paths = in.readObject();
             types = in.readObject();
-            keys = in.readBooleanArray();
         }
     }
 }
