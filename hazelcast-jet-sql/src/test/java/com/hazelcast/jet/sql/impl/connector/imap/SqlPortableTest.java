@@ -156,6 +156,7 @@ public class SqlPortableTest extends SqlTestSupport {
         assertThat(keyReader.readInt("id")).isEqualTo(13);
 
         PortableReader valueReader = serializationService.createPortableReader(entry.getValue());
+        assertThat(valueReader.readInt("id")).isEqualTo(0);
         assertThat(valueReader.readUTF("name")).isEqualTo("Alice");
 
         assertRowsEventuallyAnyOrder(
