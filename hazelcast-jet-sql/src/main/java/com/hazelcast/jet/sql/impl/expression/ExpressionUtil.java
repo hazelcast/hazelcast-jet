@@ -58,27 +58,6 @@ public final class ExpressionUtil {
         };
     }
 
-    public static FunctionEx<Object[], Object[]> projectionFn(
-            Expression<Boolean> predicate,
-            List<Expression<?>> projections
-    ) {
-        @SuppressWarnings("unchecked")
-        Expression<Boolean> predicate0 = predicate != null ? predicate
-                : (Expression<Boolean>) ConstantExpression.create(true, QueryDataType.BOOLEAN);
-
-        return record -> {
-            Row row = new HeapRow(record);
-            if (!Boolean.TRUE.equals(predicate0.eval(row, ZERO_ARGUMENTS_CONTEXT))) {
-                return null;
-            }
-            Object[] result = new Object[projections.size()];
-            for (int i = 0; i < projections.size(); i++) {
-                result[i] = projections.get(i).eval(row, ZERO_ARGUMENTS_CONTEXT);
-            }
-            return result;
-        };
-    }
-
     /**
      * Creates a function to project {@code Entry<Object, Object>} from the
      * source into {@code Object[]} that represents a row. The function
@@ -91,15 +70,15 @@ public final class ExpressionUtil {
             List<Expression<?>> projections
     ) {
         List<String> fieldNames = table.getFields().stream()
-                                       .map(field -> {
-                                           // TODO: get rid of casting ???
-                                           QueryPath path = ((MapTableField) field).getPath();
-                                           if (path.isKey()) {
-                                               return path.getPath() == null ? "key" : "key." + path.getPath();
-                                           } else {
-                                               return path.getPath() == null ? "value" : "value." + path.getPath();
-                                           }
-                                       }).collect(Collectors.toList());
+                .map(field -> {
+                    // TODO: get rid of casting ???
+                    QueryPath path = ((MapTableField) field).getPath();
+                    if (path.isKey()) {
+                        return path.getPath() == null ? "key" : "key." + path.getPath();
+                    } else {
+                        return path.getPath() == null ? "value" : "value." + path.getPath();
+                    }
+                }).collect(Collectors.toList());
         List<QueryDataType> fieldTypes = toList(table.getFields(), TableField::getType);
 
         @SuppressWarnings("unchecked")
