@@ -71,7 +71,7 @@ internals of Hazelcast Jet, as exposed through the Core
 
 ## JSON
 
-JSON is very frequent data exchange format. To transform the data
+JSON is a frequently used data exchange format. To transform the data
 from/to JSON format you can use `JsonUtil` utility class without adding
 an extra dependency to the classpath. The utility class uses the
 lightweight `jackson-jr` JSON library under the hood.
