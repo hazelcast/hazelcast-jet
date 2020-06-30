@@ -16,18 +16,24 @@
 
 package com.hazelcast.jet.pipeline.test;
 
+import com.hazelcast.jet.accumulator.LongAccumulator;
 import com.hazelcast.jet.annotation.EvolvingApi;
 import com.hazelcast.jet.pipeline.BatchSource;
+import com.hazelcast.jet.pipeline.BatchStage;
+import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.SourceBuilder;
 import com.hazelcast.jet.pipeline.SourceBuilder.TimestampedSourceBuffer;
 import com.hazelcast.jet.pipeline.StreamSource;
 import com.hazelcast.jet.pipeline.StreamSourceStage;
+import com.hazelcast.jet.pipeline.StreamStage;
 
 import javax.annotation.Nonnull;
+import java.io.Serializable;
 import java.util.Arrays;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
+import static com.hazelcast.jet.Traversers.traverseArray;
 import static com.hazelcast.jet.impl.util.Util.checkSerializable;
 
 /**
@@ -68,6 +74,51 @@ public final class TestSources {
     public static <T> BatchSource<T> items(@Nonnull T... items) {
         Objects.requireNonNull(items, "items");
         return items(Arrays.asList(items));
+    }
+
+    /**
+     * Returns a rebalanced batch stage that observes long values and does late materialization
+     * of batches after distributing them across the cluster, which is useful for high-throughput
+     * testing.
+     *
+     * @param range the upper range of generated long values
+     * @param stepSize the step size
+     *
+     */
+    @Nonnull
+    public static BatchStage<Long> batchStageForLongRange(Pipeline pipeline, long range, int stepSize) {
+        return pipeline
+                .readFrom(longBatchSource(range, stepSize))
+                .rebalance()
+                .flatMap(n -> {
+                    Long[] items = new Long[stepSize];
+                    Arrays.setAll(items, i -> n + i);
+                    return traverseArray(items);
+                })
+                .rebalance();
+    }
+
+    /**
+     * Returns a rebalanced stream stage that observes long values and does late materialization
+     * of values after distributing them across the cluster, which is useful for high-throughput
+     * testing.
+     *
+     * @param range the upper range of generated long values
+     * @param stepSize the step size
+     *
+     */
+    @Nonnull
+    public static StreamStage<Long> streamStageForLongRange(Pipeline pipeline, long range, int stepSize) {
+        return pipeline
+                .readFrom(longStreamSource(range, stepSize))
+                .withoutTimestamps()
+                .rebalance()
+                .flatMap(n -> {
+                    Long[] items = new Long[stepSize];
+                    Arrays.setAll(items, i -> n + i);
+                    return traverseArray(items);
+                })
+                .rebalance();
     }
 
     /**
@@ -158,6 +209,53 @@ public final class TestSources {
                 T item = generator.generate(ts, sequence++);
                 buf.add(item, ts);
                 emitSchedule += periodNanos;
+            }
+        }
+    }
+
+    private static BatchSource<Long> longBatchSource(long range, int stepSize) {
+        return SourceBuilder
+                .batch("longs", c -> new LongAccumulator())
+                .<Long>fillBufferFn(new LongSource(range, stepSize)::fillBufferFn)
+                .build();
+    }
+
+    private static StreamSource<Long> longStreamSource(long range, int stepSize) {
+        return SourceBuilder
+                .stream("longs", c -> new LongAccumulator())
+                .<Long>fillBufferFn(new LongSource(range, stepSize, true)::fillBufferFn)
+                .build();
+    }
+
+    private static final class LongSource implements Serializable {
+        private final long range;
+        private final int stepSize;
+        private boolean isStream;
+
+        LongSource(long range, int stepSize) {
+            this.range = range;
+            this.stepSize = stepSize;
+        }
+
+        LongSource(long range, int stepSize, boolean isStream) {
+            this.range = range;
+            this.stepSize = stepSize;
+            this.isStream = isStream;
+        }
+
+        void fillBufferFn(LongAccumulator counter, SourceBuilder.SourceBuffer<Long> buf) {
+            final int batchRange = 128;
+            final long loggingThreshold = 100_000;
+            long n = counter.get();
+            for (int i = 0; i < batchRange && n < range; i++, n += stepSize) {
+                buf.add(n);
+                if (n % (loggingThreshold * stepSize) == 0) {
+                    System.out.printf("Emit %,d%n", n);
+                }
+            }
+            counter.set(n);
+            if (n == range && !isStream) {
+                buf.close();
             }
         }
     }

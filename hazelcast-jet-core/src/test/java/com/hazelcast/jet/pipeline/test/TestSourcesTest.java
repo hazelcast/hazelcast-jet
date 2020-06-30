@@ -26,6 +26,7 @@ import org.junit.rules.ExpectedException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.IntStream;
+import java.util.stream.LongStream;
 
 import static com.hazelcast.jet.pipeline.test.Assertions.assertCollectedEventually;
 import static org.junit.Assert.assertEquals;
@@ -46,6 +47,38 @@ public class TestSourcesTest extends PipelineTestSupport {
                 .apply(Assertions.assertOrdered(expected));
 
         jet().newJob(p).join();
+    }
+
+    @Test
+    public void test_long_batch_range() {
+        int upperValueRange = 10_000;
+        Long[] input = LongStream.range(0, upperValueRange).boxed().toArray(Long[]::new);
+        List<Long> expected = Arrays.asList(input);
+
+        TestSources.batchStageForLongRange(p, upperValueRange, 10)
+                .apply(
+                        Assertions.assertAnyOrder(expected)
+                );
+
+        jet().newJob(p).join();
+    }
+
+    @Test
+    public void test_long_stream_range() throws Throwable {
+        int upperValueRange = 10_000;
+        Long[] input = LongStream.range(0, upperValueRange).boxed().toArray(Long[]::new);
+        List<Long> expected = Arrays.asList(input);
+
+        TestSources.streamStageForLongRange(p, upperValueRange, 10)
+                .apply(Assertions.assertCollectedEventually(20, longList -> {
+                    assertEquals(longList.size(), expected.size());
+                    for (Long value : longList) {
+                        assertTrue(expected.contains(value));
+                    }
+                }));
+
+        expectedException.expectMessage(AssertionCompletedException.class.getName());
+        executeAndPeel();
     }
 
     @Test
