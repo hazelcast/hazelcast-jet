@@ -71,11 +71,12 @@ public class SqlJsonTest extends SqlTestSupport {
 
         assertRowsEventuallyAnyOrder(
                 format("SELECT * FROM %s", name),
-                singletonList(new Row(null, null)));
+                singletonList(new Row(null, null))
+        );
     }
 
     @Test
-    public void supportsFieldsRemapping() {
+    public void supportsFieldsMapping() {
         String name = generateRandomName();
         executeSql(format("CREATE EXTERNAL TABLE %s (" +
                         " key_name VARCHAR EXTERNAL NAME \"__key.name\"," +
@@ -97,7 +98,8 @@ public class SqlJsonTest extends SqlTestSupport {
 
         assertRowsEventuallyAnyOrder(
                 format("SELECT * FROM %s", name),
-                singletonList(new Row("Alice", "Bob")));
+                singletonList(new Row("Alice", "Bob"))
+        );
     }
 
     @Test
@@ -135,6 +137,7 @@ public class SqlJsonTest extends SqlTestSupport {
                 TO_KEY_CLASS, Integer.class.getName(),
                 TO_SERIALIZATION_VALUE_FORMAT, JSON_SERIALIZATION_FORMAT
         ));
+
         // insert record against new schema
         executeSql(format("INSERT OVERWRITE %s VALUES (69, 'Bob', 123456789)", name));
 
@@ -143,7 +146,9 @@ public class SqlJsonTest extends SqlTestSupport {
                 format("SELECT * FROM %s", name),
                 asList(
                         new Row(13, "Alice", null),
-                        new Row(69, "Bob", 123456789L)));
+                        new Row(69, "Bob", 123456789L)
+                )
+        );
     }
 
     @Test
@@ -251,18 +256,19 @@ public class SqlJsonTest extends SqlTestSupport {
                         LocalDateTime.of(2020, 4, 15, 12, 23, 34, 0),
                         OffsetDateTime.ofInstant(Date.from(ofEpochMilli(1586953414200L)).toInstant(), systemDefault()),
                         ZonedDateTime.of(2020, 4, 15, 12, 23, 34, 300_000_000, UTC)
-                                     .withZoneSameInstant(localOffset())
-                                     .toOffsetDateTime(),
+                                .withZoneSameInstant(localOffset())
+                                .toOffsetDateTime(),
                         ZonedDateTime.of(2020, 4, 15, 12, 23, 34, 400_000_000, UTC)
-                                     .withZoneSameInstant(localOffset())
-                                     .toOffsetDateTime(),
+                                .withZoneSameInstant(localOffset())
+                                .toOffsetDateTime(),
                         ZonedDateTime.of(2020, 4, 15, 12, 23, 34, 500_000_000, UTC)
-                                     .withZoneSameInstant(localOffset())
-                                     .toOffsetDateTime(),
+                                .withZoneSameInstant(localOffset())
+                                .toOffsetDateTime(),
                         ZonedDateTime.of(2020, 4, 15, 12, 23, 34, 600_000_000, UTC)
-                                     .withZoneSameInstant(systemDefault())
-                                     .toOffsetDateTime()
-                )));
+                                .withZoneSameInstant(systemDefault())
+                                .toOffsetDateTime()
+                ))
+        );
     }
 
     private static ZoneOffset localOffset() {

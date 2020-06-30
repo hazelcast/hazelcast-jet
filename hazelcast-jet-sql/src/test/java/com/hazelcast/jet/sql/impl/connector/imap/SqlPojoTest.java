@@ -18,10 +18,10 @@ package com.hazelcast.jet.sql.impl.connector.imap;
 
 import com.hazelcast.jet.sql.SqlTestSupport;
 import com.hazelcast.jet.sql.impl.connector.imap.model.AllTypesValue;
+import com.hazelcast.jet.sql.impl.connector.imap.model.InsuredPerson;
 import com.hazelcast.jet.sql.impl.connector.imap.model.Person;
 import com.hazelcast.jet.sql.impl.connector.imap.model.PersonId;
 import com.hazelcast.sql.impl.connector.LocalPartitionedMapConnector;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.math.BigDecimal;
@@ -34,6 +34,7 @@ import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.util.Date;
 import java.util.GregorianCalendar;
+import java.util.Map;
 
 import static com.hazelcast.jet.core.TestUtil.createMap;
 import static com.hazelcast.sql.impl.connector.SqlConnector.JAVA_SERIALIZATION_FORMAT;
@@ -61,7 +62,8 @@ public class SqlPojoTest extends SqlTestSupport {
 
         assertRowsEventuallyAnyOrder(
                 format("SELECT * FROM %s", name),
-                singletonList(new Row(0, null)));
+                singletonList(new Row(0, null))
+        );
     }
 
     @Test
@@ -70,16 +72,18 @@ public class SqlPojoTest extends SqlTestSupport {
 
         assertMapEventually(
                 name,
-                format("INSERT OVERWRITE %s (birthday, id) VALUES ('2020-01-01', 1)", name),
-                createMap(new PersonId(1), new Person(0, LocalDate.of(2020, 1, 1))));
+                format("INSERT OVERWRITE %s (id, name) VALUES (1, 'Alice')", name),
+                createMap(new PersonId(1), new Person(0, "Alice"))
+        );
 
         assertRowsEventuallyAnyOrder(
-                format("SELECT id, birthday FROM %s", name),
-                singletonList(new Row(1, LocalDate.of(2020, 1, 1))));
+                format("SELECT * FROM %s", name),
+                singletonList(new Row(1, "Alice"))
+        );
     }
 
     @Test
-    public void supportsFieldsRemapping() {
+    public void supportsFieldsMapping() {
         String name = generateRandomName();
         executeSql(format("CREATE EXTERNAL TABLE %s (" +
                         " key_id INT EXTERNAL NAME \"__key.id\"," +
@@ -101,20 +105,25 @@ public class SqlPojoTest extends SqlTestSupport {
 
         assertMapEventually(
                 name,
-                format("INSERT OVERWRITE %s (key_id, value_id, birthday) VALUES (1, 2, '2020-01-01')", name),
-                createMap(new PersonId(1), new Person(2, LocalDate.of(2020, 1, 1))));
+                format("INSERT OVERWRITE %s (value_id, key_id, name) VALUES (2, 1, 'Alice')", name),
+                createMap(new PersonId(1), new Person(2, "Alice"))
+        );
 
         assertRowsEventuallyAnyOrder(
-                format("SELECT key_id, value_id, birthday FROM %s", name),
-                singletonList(new Row(1, 2, LocalDate.of(2020, 1, 1))));
+                format("SELECT key_id, value_id, name FROM %s", name),
+                singletonList(new Row(1, 2, "Alice"))
+        );
     }
 
     @Test
-    @Ignore // TODO: no accessor for ssn
     public void supportsFieldsExtensions() {
         String name = generateRandomName();
+
+        Map<PersonId, InsuredPerson> map = instance().getMap(name);
+        map.put(new PersonId(1), new InsuredPerson(1, "Alice", 123456789L));
+
         executeSql(format("CREATE EXTERNAL TABLE %s (" +
-                        " ssn VARCHAR" +
+                        " ssn BIGINT" +
                         ") TYPE \"%s\" " +
                         "OPTIONS (" +
                         " \"%s\" '%s'," +
@@ -131,12 +140,21 @@ public class SqlPojoTest extends SqlTestSupport {
 
         assertMapEventually(
                 name,
-                format("INSERT OVERWRITE %s (id, birthday, ssn) VALUES (1, '2020-01-01', null)", name),
-                createMap(new PersonId(1), new Person(0, LocalDate.of(2020, 1, 1))));
+                format("INSERT OVERWRITE %s (id, name, ssn) VALUES (2, 'Bob', null)", name),
+                createMap(
+                        new PersonId(1), new InsuredPerson(1, "Alice", 123456789L),
+                        new PersonId(2), new Person(0, "Bob")
+                )
+        );
 
-        assertRowsEventuallyAnyOrder(
-                format("SELECT id, birthday, ssn FROM %s", name),
-                singletonList(new Row(1, LocalDate.of(2020, 1, 1), null)));
+        // TODO: fix
+        /*assertRowsEventuallyAnyOrder(
+                format("SELECT * FROM %s", name),
+                asList(
+                        new Row(1, "Alice", 123456789L),
+                        new Row(2, "Bob", null)
+                )
+        );*/
     }
 
     @Test
@@ -247,13 +265,13 @@ public class SqlPojoTest extends SqlTestSupport {
                         LocalDateTime.of(2020, 4, 15, 12, 23, 34, 0),
                         Date.from(ofEpochMilli(1586953414200L)),
                         GregorianCalendar.from(ZonedDateTime.of(2020, 4, 15, 12, 23, 34, 300_000_000, UTC)
-                                                            .withZoneSameInstant(localOffset())),
+                                .withZoneSameInstant(localOffset())),
                         ofEpochMilli(1586953414400L),
                         ZonedDateTime.of(2020, 4, 15, 12, 23, 34, 500_000_000, UTC)
-                                     .withZoneSameInstant(localOffset()),
+                                .withZoneSameInstant(localOffset()),
                         ZonedDateTime.of(2020, 4, 15, 12, 23, 34, 600_000_000, UTC)
-                                     .withZoneSameInstant(systemDefault())
-                                     .toOffsetDateTime()
+                                .withZoneSameInstant(systemDefault())
+                                .toOffsetDateTime()
                 )));
 
         assertRowsEventuallyAnyOrder(
@@ -317,15 +335,15 @@ public class SqlPojoTest extends SqlTestSupport {
                         LocalDateTime.of(2020, 4, 15, 12, 23, 34, 0),
                         OffsetDateTime.ofInstant(Date.from(ofEpochMilli(1586953414200L)).toInstant(), systemDefault()),
                         ZonedDateTime.of(2020, 4, 15, 12, 23, 34, 300_000_000, UTC)
-                                     .withZoneSameInstant(localOffset())
-                                     .toOffsetDateTime(),
+                                .withZoneSameInstant(localOffset())
+                                .toOffsetDateTime(),
                         OffsetDateTime.ofInstant(ofEpochMilli(1586953414400L), systemDefault()),
                         ZonedDateTime.of(2020, 4, 15, 12, 23, 34, 500_000_000, UTC)
-                                     .withZoneSameInstant(localOffset())
-                                     .toOffsetDateTime(),
+                                .withZoneSameInstant(localOffset())
+                                .toOffsetDateTime(),
                         ZonedDateTime.of(2020, 4, 15, 12, 23, 34, 600_000_000, UTC)
-                                     .withZoneSameInstant(systemDefault())
-                                     .toOffsetDateTime()
+                                .withZoneSameInstant(systemDefault())
+                                .toOffsetDateTime()
                 )));
     }
 
