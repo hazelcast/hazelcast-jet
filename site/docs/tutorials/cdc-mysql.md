@@ -433,7 +433,7 @@ need to do is to run the build command:
 gradle build
 ```
 
-This will produce a jar file called `cdc-tutorial-1.0-SNAPSHOT-all.jar`
+This will produce a jar file called `cdc-tutorial-1.0-SNAPSHOT.jar`
 in the `build/libs` folder of our project.
 
 <!--Maven-->
@@ -551,7 +551,7 @@ Then we shut down our Jet member/cluster:
 <path_to_jet>/bin/jet-stop
 ```
 
-You can use Docker to stop all of the running containers:
+You can use Docker to stop all running containers:
 
 ```bash
 docker stop mysqlterm mysql
@@ -567,5 +567,3 @@ docker ps -a
 
 Of course, if any are still running, simply stop them using
 `docker stop <name>` or `docker stop <containerId>`.
-
-[Back to main](../cdc.md)
