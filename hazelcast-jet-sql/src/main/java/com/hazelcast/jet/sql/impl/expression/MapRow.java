@@ -39,7 +39,7 @@ public class MapRow implements Row {
     @Override
     public <T> T get(int index) {
         Object value = values.get(fieldNames.get(index));
-        return (T) fieldTypes.get(index).convert(value); // TODO: deduplicate somehow with other types of rows ???
+        return (T) fieldTypes.get(index).normalize(value); // TODO: deduplicate somehow with other types of rows ???
     }
 
     @Override

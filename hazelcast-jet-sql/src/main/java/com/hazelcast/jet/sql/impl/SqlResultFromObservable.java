@@ -47,7 +47,7 @@ public class SqlResultFromObservable implements SqlResult {
 
             @Override
             public SqlRow next() {
-                return new SqlRowImpl(new HeapRow(observableIt.next()));
+                return new SqlRowImpl(rowMetadata, new HeapRow(observableIt.next())); // TODO: get row metadata
             }
         };
     }

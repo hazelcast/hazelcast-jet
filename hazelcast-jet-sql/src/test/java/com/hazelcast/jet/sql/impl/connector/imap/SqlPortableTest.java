@@ -241,6 +241,7 @@ public class SqlPortableTest extends SqlTestSupport {
                 TO_VALUE_CLASS_ID, PERSON_CLASS_ID,
                 TO_VALUE_CLASS_VERSION, PERSON_CLASS_VERSION + 1
         ));
+
         // insert record against new schema/class definition
         executeSql(format("INSERT OVERWRITE %s VALUES (2, 'Bob', 123456789)", name));
 
@@ -307,6 +308,7 @@ public class SqlPortableTest extends SqlTestSupport {
                 TO_VALUE_CLASS_ID, PERSON_CLASS_ID,
                 TO_VALUE_CLASS_VERSION, PERSON_CLASS_VERSION
         ));
+
         // insert record against new schema/class definition
         executeSql(format("INSERT OVERWRITE %s VALUES (2, 'Bob', null)", name));
 

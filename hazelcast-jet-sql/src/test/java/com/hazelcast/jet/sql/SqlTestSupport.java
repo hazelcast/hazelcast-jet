@@ -43,7 +43,7 @@ public abstract class SqlTestSupport extends SimpleTestInClusterSupport {
     @BeforeClass
     public static void setUpClass() {
         initialize(1, null);
-        sqlService = instance().getHazelcastInstance().getSqlService();
+        sqlService = instance().getHazelcastInstance().getSql();
     }
 
     protected static <K, V> void assertMapEventually(String name, String sql, Map<K, V> expected) {

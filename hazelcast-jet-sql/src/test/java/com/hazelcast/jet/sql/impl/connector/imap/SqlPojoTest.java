@@ -22,6 +22,7 @@ import com.hazelcast.jet.sql.impl.connector.imap.model.InsuredPerson;
 import com.hazelcast.jet.sql.impl.connector.imap.model.Person;
 import com.hazelcast.jet.sql.impl.connector.imap.model.PersonId;
 import com.hazelcast.sql.impl.connector.LocalPartitionedMapConnector;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.math.BigDecimal;
@@ -46,6 +47,7 @@ import static java.lang.String.format;
 import static java.time.Instant.ofEpochMilli;
 import static java.time.ZoneId.systemDefault;
 import static java.time.ZoneOffset.UTC;
+import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 
 // TODO: move it to IMDG when INSERTs are supported, or at least move to one of Jet connector tests ?
@@ -116,6 +118,44 @@ public class SqlPojoTest extends SqlTestSupport {
     }
 
     @Test
+    @Ignore // fix Extractors ???
+    public void supportsSchemaEvolution() {
+        String name = createMapWithRandomName();
+
+        // insert initial record
+        executeSql(format("INSERT OVERWRITE %s VALUES (1, 'Alice')", name));
+
+        // alter schema
+        executeSql(format("CREATE OR REPLACE EXTERNAL TABLE %s " +
+                        "TYPE \"%s\" " +
+                        "OPTIONS (" +
+                        " \"%s\" '%s'," +
+                        " \"%s\" '%s'," +
+                        " \"%s\" '%s'," +
+                        " \"%s\" '%s'" +
+                        ")",
+                name, LocalPartitionedMapConnector.TYPE_NAME,
+                TO_SERIALIZATION_KEY_FORMAT, JAVA_SERIALIZATION_FORMAT,
+                TO_KEY_CLASS, PersonId.class.getName(),
+                TO_SERIALIZATION_VALUE_FORMAT, JAVA_SERIALIZATION_FORMAT,
+                TO_VALUE_CLASS, InsuredPerson.class.getName()
+        ));
+
+        // insert record against new schema
+        executeSql(format("INSERT OVERWRITE %s (id, name, ssn) VALUES (2, 'Bob', 123456789)", name));
+
+        // assert both - initial & evolved - records are correctly read
+        assertRowsEventuallyAnyOrder(
+                format("SELECT id, name, ssn FROM %s", name),
+                asList(
+                        new Row(1, "Alice", null),
+                        new Row(2, "Bob", 123456789L)
+                )
+        );
+    }
+
+    @Test
+    @Ignore // fix Extractors ???
     public void supportsFieldsExtensions() {
         String name = generateRandomName();
 
@@ -147,14 +187,13 @@ public class SqlPojoTest extends SqlTestSupport {
                 )
         );
 
-        // TODO: fix
-        /*assertRowsEventuallyAnyOrder(
+        assertRowsEventuallyAnyOrder(
                 format("SELECT * FROM %s", name),
                 asList(
                         new Row(1, "Alice", 123456789L),
                         new Row(2, "Bob", null)
                 )
-        );*/
+        );
     }
 
     @Test
