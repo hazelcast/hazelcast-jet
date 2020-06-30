@@ -53,13 +53,14 @@ public final class PostgresCdcSources {
      * to try to reconnect, at least for a certain amount of time. Future
      * versions will address the problem.
      * <p>
-     * <b>KNOWN ISSUE 2:</b> The Debezium PostgreSQL Connector this source is
-     * based on has data loss issues when synchronizing snapshots with event
-     * streams based on the Postgres WAL (Write-Ahead Log). For details see
-     * <a href="https://issues.redhat.com/browse/DBZ-2288">DBZ-2288</a>.
+     * <b>KNOWN ISSUE 2:</b> This source is based on the Debezium PostgreSQL
+     * Connector, which has some data loss issues when synchronizing snapshots
+     * with the stream of events coming from the Postgres WAL (Write-Ahead Log).
+     * For details see <a href="https://issues.redhat.com/browse/DBZ-2288">DBZ-2288</a>.
      * Currently the first streaming event that should come in right after the
-     * snapshot ends is lost. The issue is actively being looked into and we
-     * will release a fix immediately as it's available.
+     * snapshot ends is lost. Sometimes even more events can be lost. The issue
+     * is actively being looked into and we will release a fix immediately as
+     * it's available.
      *
      * @param name name of this source, needs to be unique, will be passed to
      *             the underlying Kafka Connect source
