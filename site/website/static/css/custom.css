@@ -1,6 +1,5 @@
 body {
   font-family: Source Sans Pro, Ubuntu, sans-serif;
-  /* font-weight: lighter; */
   background-color: #fffdfa;
   color: #073642;
   font-size: 17px;
@@ -16,14 +15,9 @@ a.button {
 
 .homeContainer, .projectTitle {
   color: #eee8d5;
-  /* color: #073642; */
   padding-top: 25px;
   padding-bottom: 25px;
   margin-bottom: 75px;
-}
-
-.homeContainer a, .darkBackground a {
-  /* color: #cb4b16; */
 }
 
 .homeContainer a.button {
@@ -75,15 +69,6 @@ a.button {
   max-width: 640px;
   margin: auto;
 }
-/* .promoRow a.button {
-  color: #1CAEE4;
-  border-color: #1CAEE4;
-}
-
-.promoRow a.button:hover {
-  background-color: #1CAEE4;
-  color: #fffdfa;
-} */
 
 .fixedHeaderContainer {
   background-color: #f0f0f0;
@@ -164,9 +149,6 @@ a.button {
 .card .buttonWrapper {
   text-align: center;
   margin: 10px;
-}
-
-.mainContainer .container {
 }
 
 @media only screen and (min-device-width: 360px) and (max-device-width: 736px) {

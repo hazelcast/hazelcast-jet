@@ -4,7 +4,6 @@ const CompLibrary = require('../../core/CompLibrary.js');
 const Fragment = React.Fragment;
 const Container = CompLibrary.Container;
 const GridBlock = CompLibrary.GridBlock;
-const MarkdownBlock =  CompLibrary.MarkdownBlock;
 
 class HomeSplash extends React.Component {
   render() {
@@ -208,8 +207,7 @@ class Index extends React.Component {
         <div className="mainContainer">
           <Features />
           <div style={{textAlign: 'center'}}>
-          <h1>Use Hazelcast Jet To</h1>
-          {/* <MarkdownBlock>Here are some use cases</MarkdownBlock> */}
+            <h1>Use Hazelcast Jet To</h1>
           </div>
           <UseCases />
           <Users />
