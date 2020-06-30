@@ -35,7 +35,7 @@ public class SqlPrimitiveTest extends SqlTestSupport {
 
     @Test
     public void supportsInsertSelect() {
-        String name = createMapWithRandomName();
+        String name = createTableWithRandomName();
 
         IMap<Integer, String> source = instance().getMap("source");
         source.put(0, "value-0");
@@ -44,31 +44,34 @@ public class SqlPrimitiveTest extends SqlTestSupport {
         assertMapEventually(
                 name,
                 format("INSERT OVERWRITE %s SELECT * FROM %s", name, source.getName()),
-                createMap(0, "value-0", 1, "value-1"));
+                createMap(0, "value-0", 1, "value-1")
+        );
     }
 
     @Test
     public void supportsInsertValues() {
-        String name = createMapWithRandomName();
+        String name = createTableWithRandomName();
 
         assertMapEventually(
                 name,
                 format("INSERT OVERWRITE %s (this, __key) VALUES ('2', 1), ('4', 3)", name),
-                createMap(1, "2", 3, "4"));
+                createMap(1, "2", 3, "4")
+        );
     }
 
     @Test
     public void supportsInsertWithProject() {
-        String name = createMapWithRandomName();
+        String name = createTableWithRandomName();
 
         assertMapEventually(
                 name,
                 format("INSERT OVERWRITE %s (__key, this) VALUES (0 + 1, 2)", name),
-                createMap(1, "2"));
+                createMap(1, "2")
+        );
     }
 
     @Test
-    public void supportsFieldsRemapping() {
+    public void supportsFieldsMapping() {
         String name = generateRandomName();
 
         executeSql(format("CREATE EXTERNAL TABLE %s (" +
@@ -91,19 +94,20 @@ public class SqlPrimitiveTest extends SqlTestSupport {
         assertMapEventually(
                 name,
                 format("INSERT OVERWRITE %s (name, id) VALUES ('value-2', 2)", name),
-                createMap(2, "value-2"));
+                createMap(2, "value-2")
+        );
     }
 
     @Test
     public void supportsOnlyInsertOverwrite() {
-        String name = createMapWithRandomName();
+        String name = createTableWithRandomName();
 
         assertThatThrownBy(
                 () -> executeSql(format("INSERT INTO %s (__key, this) VALUES (1, '2')", name))
         ).hasMessageContaining("Only INSERT OVERWRITE clause is supported for IMapSqlConnector");
     }
 
-    private static String createMapWithRandomName() {
+    private static String createTableWithRandomName() {
         String name = generateRandomName();
         executeSql(
                 format("CREATE EXTERNAL TABLE %s " +

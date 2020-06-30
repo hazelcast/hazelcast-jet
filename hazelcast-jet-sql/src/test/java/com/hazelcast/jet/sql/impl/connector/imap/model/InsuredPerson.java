@@ -20,41 +20,31 @@ import java.io.Serializable;
 import java.util.Objects;
 
 @SuppressWarnings("unused")
-public class Person implements Serializable {
+public class InsuredPerson extends Person implements Serializable {
 
-    private int id;
-    private String name;
+    private long ssn;
 
-    public Person() {
+    public InsuredPerson() {
     }
 
-    public Person(int id, String name) {
-        this.id = id;
-        this.name = name;
+    public InsuredPerson(int id, String name, long ssn) {
+        super(id, name);
+        this.ssn = ssn;
     }
 
-    public int getId() {
-        return id;
+    public long getSsn() {
+        return ssn;
     }
 
-    public void setId(int id) {
-        this.id = id;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
+    public void setSsn(long ssn) {
+        this.ssn = ssn;
     }
 
     @Override
     public String toString() {
-        return "Person{" +
-                "id=" + id +
-                ", name=" + name +
-                '}';
+        return "InsuredPerson{" +
+                "ssn='" + ssn + '\'' +
+                "} " + super.toString();
     }
 
     @Override
@@ -65,13 +55,15 @@ public class Person implements Serializable {
         if (o == null || getClass() != o.getClass()) {
             return false;
         }
-        Person person = (Person) o;
-        return id == person.id &&
-                Objects.equals(name, person.name);
+        if (!super.equals(o)) {
+            return false;
+        }
+        InsuredPerson that = (InsuredPerson) o;
+        return Objects.equals(ssn, that.ssn);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, name);
+        return Objects.hash(super.hashCode(), ssn);
     }
 }
