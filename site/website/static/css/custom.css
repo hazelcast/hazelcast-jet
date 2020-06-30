@@ -3,8 +3,87 @@ body {
   /* font-weight: lighter; */
   background-color: #fffdfa;
   color: #073642;
-  font-size: 1.05em;
+  font-size: 17px;
 }
+
+a.button {
+  font-weight: bold;
+}
+
+.homeContainer {
+  background-color: #073642;
+}
+
+.homeContainer, .projectTitle {
+  color: #eee8d5;
+  /* color: #073642; */
+  padding-top: 25px;
+  padding-bottom: 25px;
+  margin-bottom: 75px;
+}
+
+.homeContainer a, .darkBackground a {
+  /* color: #cb4b16; */
+}
+
+.homeContainer a.button {
+  background-color: #cb4b16;
+  border-color: #cb4b16;
+  color: #eee8d5;
+}
+
+.gridBlock {
+  padding-top: 30px;
+  padding-bottom: 30px;
+}
+.gridBlock h2 {
+  font-size: 24px;
+}
+
+.darkBackground {
+  background-color: #073642;
+}
+
+.darkBackground a {
+  color: #268bd2;
+}
+
+.lightBackground {
+  color: #073642;
+  background-color: #fffdfa;
+}
+
+
+.projectTitle {
+  font-weight: 800;
+  max-width: 800px;
+  margin: auto;
+}
+
+.projectTitle small {
+  line-height: 1.5em;
+}
+
+.imageAlignLeft .blockImage {
+  max-width: 300px;
+}
+.imageAlignRight .blockImage {
+  max-width: 300px;
+}
+
+.logos {
+  max-width: 640px;
+  margin: auto;
+}
+/* .promoRow a.button {
+  color: #1CAEE4;
+  border-color: #1CAEE4;
+}
+
+.promoRow a.button:hover {
+  background-color: #1CAEE4;
+  color: #fffdfa;
+} */
 
 .fixedHeaderContainer {
   background-color: #f0f0f0;
@@ -14,29 +93,6 @@ body {
   color: #707482;
   text-decoration: none;
   border-bottom: 1px solid #2d7de4;
-}
-
-.projectTitle {
-  color: #073642;
-  font-weight: 800;
-}
-
-.projectLogo {
-  height: 85%;
-}
-
-a.button {
-  font-weight: bold;
-}
-
-.promoRow a.button {
-  color: #ff5f00;
-  border-color: #ff5f00;
-}
-
-.promoRow a.button:hover {
-  background-color: #ff5f00;
-  color: #fffdfa;
 }
 
 .navigationSlider .slidingNav ul li a {
@@ -60,15 +116,6 @@ a.button {
   background: none;
 }
 
-.imageAlignTop .blockImage {
-  height: 160px;
-  max-width: 160px;
-}
-
-.imageAlignRight .blockImage {
-  max-height: 200px;
-  max-width: 200px;
-}
 
 .nav-footer {
   background-color: #002b36;
