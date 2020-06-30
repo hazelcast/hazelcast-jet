@@ -34,6 +34,7 @@ import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.StreamSource;
 import com.hazelcast.map.IMap;
 import com.hazelcast.test.annotation.NightlyTest;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -293,9 +294,10 @@ public class PostgresCdcIntegrationTest extends AbstractPostgresCdcIntegrationTe
 
     @Test
     @Category(NightlyTest.class)
+    @Ignore //todo: until https://issues.redhat.com/browse/DBZ-2288 fixed
     public void dataLoss() throws Exception {
         int offset = 1005;
-        int length = 10_000;
+        int length = 9995;
 
         // given
         List<String> expectedRecords = new ArrayList<>(Arrays.asList(
@@ -356,7 +358,7 @@ public class PostgresCdcIntegrationTest extends AbstractPostgresCdcIntegrationTe
             assertTrueEventually(() -> {
                 IMap<Object, Object> map = jet.getMap("results");
                 int size = map.size();
-                System.err.println("No. of records: " + size);
+                System.out.println("No. of records: " + size);
                 assertEquals(expectedRecords.size(), size);
 
                 assertMatch(expectedRecords, mapResultsToSortedList(map));
