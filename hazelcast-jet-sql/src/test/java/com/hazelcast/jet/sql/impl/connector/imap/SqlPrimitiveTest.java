@@ -65,7 +65,7 @@ public class SqlPrimitiveTest extends SqlTestSupport {
 
         assertMapEventually(
                 name,
-                format("INSERT OVERWRITE %s (__key, this) VALUES (0 + 1, 2)", name),
+                format("INSERT OVERWRITE %s (__key, this) VALUES (CAST(0 + 1 AS INT), 2)", name),
                 createMap(1, "2")
         );
     }

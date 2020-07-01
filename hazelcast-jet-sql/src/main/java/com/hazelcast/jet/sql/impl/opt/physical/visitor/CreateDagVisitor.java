@@ -28,19 +28,22 @@ import com.hazelcast.jet.sql.impl.opt.physical.ProjectPhysicalRel;
 import com.hazelcast.jet.sql.impl.opt.physical.ValuesPhysicalRel;
 import com.hazelcast.sql.impl.calcite.schema.HazelcastTable;
 import com.hazelcast.sql.impl.schema.Table;
+import com.hazelcast.sql.impl.type.converter.Converter;
+import com.hazelcast.sql.impl.type.converter.Converters;
+import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.util.ConversionUtil;
 import org.apache.calcite.util.NlsString;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Deque;
 import java.util.List;
 
 import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.processor.Processors.mapP;
 import static com.hazelcast.jet.core.processor.SourceProcessors.convenientSourceP;
-import static com.hazelcast.jet.impl.util.Util.toList;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnectorUtil.getJetSqlConnector;
 
 public class CreateDagVisitor {
@@ -58,15 +61,23 @@ public class CreateDagVisitor {
     }
 
     public void onValues(ValuesPhysicalRel rel) {
-        List<Object[]> items = toList(rel.getTuples(), tuple -> tuple.stream().map(rexLiteral -> {
-            Comparable<?> value = rexLiteral.getValue();
-            if (value instanceof NlsString) {
-                NlsString nlsString = (NlsString) value;
-                assert nlsString.getCharset().name().equals(ConversionUtil.NATIVE_UTF16_CHARSET_NAME);
-                return nlsString.getValue();
+        List<Object[]> items = new ArrayList<>(rel.getTuples().size());
+        for (List<RexLiteral> tuple : rel.getTuples()) {
+            Object[] result = new Object[tuple.size()];
+            for (int i = 0; i < tuple.size(); i++) {
+                RexLiteral literal = tuple.get(i);
+
+                Comparable<?> value = literal.getValue();
+                if (value instanceof NlsString) {
+                    NlsString nlsString = (NlsString) value;
+                    assert nlsString.getCharset().name().equals(ConversionUtil.NATIVE_UTF16_CHARSET_NAME);
+                    value = nlsString.getValue();
+                }
+
+                result[i] = convert(rel.schema().getType(i).getConverter(), value);
             }
-            return value;
-        }).toArray());
+            items.add(result);
+        }
 
         Vertex vertex = dag.newVertex("values-src", convenientSourceP(
                 pCtx -> null,
@@ -83,6 +94,21 @@ public class CreateDagVisitor {
         );
 
         push(vertex);
+    }
+
+    // TODO: move to QueryDataType ???
+    private Object convert(Converter converter, Object value) {
+        if (value == null) {
+            return null;
+        }
+
+        Class<?> valueClass = value.getClass();
+
+        if (valueClass == converter.getNormalizedValueClass()) {
+            return value;
+        }
+
+        return converter.convertToSelf(Converters.getConverter(valueClass), value);
     }
 
     public void onInsert(InsertPhysicalRel rel) {
