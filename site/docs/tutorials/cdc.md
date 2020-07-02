@@ -1,5 +1,4 @@
 ---
-id: cdc
 title: Change Data Capture from MySQL
 sidebar_label: MySQL
 description: How to monitor Change Data Capture data from a MySQL database in Jet.
