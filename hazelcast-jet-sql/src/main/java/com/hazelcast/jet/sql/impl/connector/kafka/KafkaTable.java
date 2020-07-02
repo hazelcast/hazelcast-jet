@@ -22,11 +22,10 @@ import com.hazelcast.sql.impl.inject.UpsertTargetDescriptor;
 import com.hazelcast.sql.impl.schema.TableField;
 import com.hazelcast.sql.impl.schema.TableStatistics;
 
-import javax.annotation.Nonnull;
 import java.util.List;
 import java.util.Properties;
 
-public class KafkaTable extends JetTable {
+class KafkaTable extends JetTable {
 
     private final UpsertTargetDescriptor keyUpsertDescriptor;
     private final UpsertTargetDescriptor valueUpsertDescriptor;
@@ -34,16 +33,16 @@ public class KafkaTable extends JetTable {
     private final String topicName;
     private final Properties kafkaProperties;
 
-    public KafkaTable(
-            @Nonnull JetSqlConnector sqlConnector,
-            @Nonnull String schemaName,
-            @Nonnull String name,
-            @Nonnull TableStatistics statistics,
-            @Nonnull String topicName,
-            @Nonnull List<TableField> fields,
-            @Nonnull UpsertTargetDescriptor keyUpsertDescriptor,
-            @Nonnull UpsertTargetDescriptor valueUpsertDescriptor,
-            @Nonnull Properties kafkaProperties
+    KafkaTable(
+            JetSqlConnector sqlConnector,
+            String schemaName,
+            String name,
+            TableStatistics statistics,
+            String topicName,
+            List<TableField> fields,
+            UpsertTargetDescriptor keyUpsertDescriptor,
+            UpsertTargetDescriptor valueUpsertDescriptor,
+            Properties kafkaProperties
     ) {
         super(sqlConnector, fields, schemaName, name, statistics);
 
@@ -54,19 +53,19 @@ public class KafkaTable extends JetTable {
         this.kafkaProperties = kafkaProperties;
     }
 
-    public String getTopicName() {
+    String getTopicName() {
         return topicName;
     }
 
-    public UpsertTargetDescriptor getKeyUpsertDescriptor() {
+    UpsertTargetDescriptor getKeyUpsertDescriptor() {
         return keyUpsertDescriptor;
     }
 
-    public UpsertTargetDescriptor getValueUpsertDescriptor() {
+    UpsertTargetDescriptor getValueUpsertDescriptor() {
         return valueUpsertDescriptor;
     }
 
-    public Properties getKafkaProperties() {
+    Properties getKafkaProperties() {
         return kafkaProperties;
     }
 

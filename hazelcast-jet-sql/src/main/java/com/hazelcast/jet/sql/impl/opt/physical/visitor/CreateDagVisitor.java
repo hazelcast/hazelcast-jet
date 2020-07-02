@@ -26,10 +26,9 @@ import com.hazelcast.jet.sql.impl.opt.physical.InsertPhysicalRel;
 import com.hazelcast.jet.sql.impl.opt.physical.NestedLoopJoinPhysicalRel;
 import com.hazelcast.jet.sql.impl.opt.physical.ProjectPhysicalRel;
 import com.hazelcast.jet.sql.impl.opt.physical.ValuesPhysicalRel;
+import com.hazelcast.jet.sql.impl.type.converter.FromConverter;
 import com.hazelcast.sql.impl.calcite.schema.HazelcastTable;
 import com.hazelcast.sql.impl.schema.Table;
-import com.hazelcast.sql.impl.type.converter.Converter;
-import com.hazelcast.sql.impl.type.converter.Converters;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.util.ConversionUtil;
 import org.apache.calcite.util.NlsString;
@@ -74,7 +73,7 @@ public class CreateDagVisitor {
                     value = nlsString.getValue();
                 }
 
-                result[i] = convert(rel.schema().getType(i).getConverter(), value);
+                result[i] = FromConverter.convert(rel.schema().getType(i), value);
             }
             items.add(result);
         }
@@ -94,21 +93,6 @@ public class CreateDagVisitor {
         );
 
         push(vertex);
-    }
-
-    // TODO: move to QueryDataType ???
-    private Object convert(Converter converter, Object value) {
-        if (value == null) {
-            return null;
-        }
-
-        Class<?> valueClass = value.getClass();
-
-        if (valueClass == converter.getNormalizedValueClass()) {
-            return value;
-        }
-
-        return converter.convertToSelf(Converters.getConverter(valueClass), value);
     }
 
     public void onInsert(InsertPhysicalRel rel) {

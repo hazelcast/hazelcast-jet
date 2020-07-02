@@ -43,15 +43,15 @@ public final class SqlProcessors {
     private SqlProcessors() {
     }
 
-    public static ProcessorSupplier projectEntrySupplier(
+    public static ProcessorSupplier entryProjectorProcessorSupplier(
             UpsertTargetDescriptor keyDescriptor,
             UpsertTargetDescriptor valueDescriptor,
             List<TableField> fields
     ) {
-        return new ProjectEntryProcessorSupplier(keyDescriptor, valueDescriptor, fields);
+        return new EntryProjectorProcessorSupplier(keyDescriptor, valueDescriptor, fields);
     }
 
-    private static class ProjectEntryProcessorSupplier implements ProcessorSupplier, DataSerializable {
+    private static class EntryProjectorProcessorSupplier implements ProcessorSupplier, DataSerializable {
 
         private UpsertTargetDescriptor keyDescriptor;
         private UpsertTargetDescriptor valueDescriptor;
@@ -62,10 +62,10 @@ public final class SqlProcessors {
         private transient InternalSerializationService serializationService;
 
         @SuppressWarnings("unused")
-        ProjectEntryProcessorSupplier() {
+        EntryProjectorProcessorSupplier() {
         }
 
-        ProjectEntryProcessorSupplier(
+        EntryProjectorProcessorSupplier(
                 UpsertTargetDescriptor keyDescriptor,
                 UpsertTargetDescriptor valueDescriptor,
                 List<TableField> fields

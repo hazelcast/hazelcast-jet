@@ -48,7 +48,7 @@ import static com.hazelcast.jet.Traversers.traverseIterable;
 import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.processor.Processors.flatMapUsingServiceP;
 import static com.hazelcast.jet.core.processor.SourceProcessors.readMapP;
-import static com.hazelcast.jet.sql.impl.connector.SqlProcessors.projectEntrySupplier;
+import static com.hazelcast.jet.sql.impl.connector.SqlProcessors.entryProjectorProcessorSupplier;
 import static com.hazelcast.jet.sql.impl.expression.ExpressionUtil.joinFn;
 import static com.hazelcast.jet.sql.impl.expression.ExpressionUtil.projectionFn;
 
@@ -154,9 +154,9 @@ public class IMapSqlConnector extends SqlKeyValueConnector implements JetSqlConn
     ) {
         PartitionedMapTable table = (PartitionedMapTable) table0;
 
-        ProcessorSupplier projectEntrySupplier =
-                projectEntrySupplier(table.getKeyUpsertDescriptor(), table.getValueUpsertDescriptor(), table.getFields());
-        Vertex vStart = dag.newVertex("map-project", projectEntrySupplier);
+        ProcessorSupplier projectorProcessorSupplier =
+                entryProjectorProcessorSupplier(table.getKeyUpsertDescriptor(), table.getValueUpsertDescriptor(), table.getFields());
+        Vertex vStart = dag.newVertex("map-project", projectorProcessorSupplier);
 
         String mapName = table.getName();
         Vertex vEnd = dag.newVertex("map(" + mapName + ")", SinkProcessors.writeMapP(mapName));

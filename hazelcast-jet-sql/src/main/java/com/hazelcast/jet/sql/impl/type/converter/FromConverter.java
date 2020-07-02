@@ -17,34 +17,27 @@
 package com.hazelcast.jet.sql.impl.type.converter;
 
 import com.hazelcast.sql.impl.type.QueryDataType;
-import com.hazelcast.sql.impl.type.QueryDataTypeMismatchException;
 import com.hazelcast.sql.impl.type.converter.Converter;
+import com.hazelcast.sql.impl.type.converter.Converters;
 
-/**
- * Complementary interface to {@link Converter} that converts values back to
- * the class returned by {@link Converter#getValueClass()}.
- */
-public abstract class ToConverter {
+// TODO: move to QueryDataType ???
+public final class FromConverter {
 
-    private final Class<?> normalizedValueClass;
-
-    protected ToConverter(QueryDataType type) {
-        this.normalizedValueClass = type.getConverter().getNormalizedValueClass();
+    private FromConverter() {
     }
 
-    public Object convert(Object value) {
+    public static Object convert(QueryDataType type, Object value) {
         if (value == null) {
             return null;
         }
 
         Class<?> valueClass = value.getClass();
+        Converter converter = type.getConverter();
 
-        if (!normalizedValueClass.isAssignableFrom(valueClass)) {
-            throw new QueryDataTypeMismatchException(normalizedValueClass, valueClass);
+        if (valueClass == converter.getNormalizedValueClass()) {
+            return value;
         }
 
-        return from(value);
+        return converter.convertToSelf(Converters.getConverter(valueClass), value);
     }
-
-    protected abstract Object from(Object canonicalValue);
 }

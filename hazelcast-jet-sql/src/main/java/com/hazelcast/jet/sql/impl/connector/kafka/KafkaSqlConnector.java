@@ -47,7 +47,7 @@ import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.EventTimePolicy.noEventTime;
 import static com.hazelcast.jet.core.processor.Processors.mapP;
-import static com.hazelcast.jet.sql.impl.connector.SqlProcessors.projectEntrySupplier;
+import static com.hazelcast.jet.sql.impl.connector.SqlProcessors.entryProjectorProcessorSupplier;
 import static com.hazelcast.jet.sql.impl.expression.ExpressionUtil.projectionFn;
 import static java.util.stream.Collectors.toMap;
 
@@ -55,7 +55,7 @@ public class KafkaSqlConnector extends SqlKeyValueConnector implements JetSqlCon
 
     public static final String TYPE_NAME = "com.hazelcast.Kafka";
 
-    public static final String TO_TOPIC_NAME = "topicName";
+    public static final String TO_TOPIC_NAME = "kafka.topicName";
 
     private static final Map<String, MapOptionsMetadataResolver> METADATA_RESOLVERS = Stream.of(
             JavaMapOptionsMetadataResolver.INSTANCE
@@ -144,9 +144,9 @@ public class KafkaSqlConnector extends SqlKeyValueConnector implements JetSqlCon
     ) {
         KafkaTable table = (KafkaTable) jetTable;
 
-        ProcessorSupplier projectEntrySupplier =
-                projectEntrySupplier(table.getKeyUpsertDescriptor(), table.getValueUpsertDescriptor(), table.getFields());
-        Vertex vStart = dag.newVertex("kafka-project", projectEntrySupplier);
+        ProcessorSupplier projectorProcessorSupplier =
+                entryProjectorProcessorSupplier(table.getKeyUpsertDescriptor(), table.getValueUpsertDescriptor(), table.getFields());
+        Vertex vStart = dag.newVertex("kafka-project", projectorProcessorSupplier);
 
         String topicName = table.getTopicName();
         Vertex vEnd = dag.newVertex("kafka(" + topicName + ')',

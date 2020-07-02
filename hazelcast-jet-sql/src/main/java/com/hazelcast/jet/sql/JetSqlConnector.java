@@ -31,6 +31,11 @@ import java.util.List;
  */
 public interface JetSqlConnector extends SqlConnector {
 
+    String TO_SERIALIZATION_FORMAT = "serialization.format";
+
+    String CSV_SERIALIZATION_FORMAT = "csv";
+    String AVRO_SERIALIZATION_FORMAT = "avro";
+
     /**
      * @return
      */
