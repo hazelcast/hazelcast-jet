@@ -60,8 +60,7 @@ public final class ToConverters {
         converters.put(QueryDataType.TIME, new ToCanonicalConverter(QueryDataType.TIME));
         converters.put(QueryDataType.DATE, new ToCanonicalConverter(QueryDataType.DATE));
         converters.put(QueryDataType.TIMESTAMP, new ToCanonicalConverter(QueryDataType.TIMESTAMP));
-        converters.put(QueryDataType.TIMESTAMP_WITH_TZ_ZONED_DATE_TIME,
-                ToTimestampWithTzZonedDateTimeConverter.INSTANCE);
+        converters.put(QueryDataType.TIMESTAMP_WITH_TZ_ZONED_DATE_TIME, ToTimestampWithTzZonedDateTimeConverter.INSTANCE);
         converters.put(QueryDataType.TIMESTAMP_WITH_TZ_OFFSET_DATE_TIME,
                 new ToCanonicalConverter(QueryDataType.TIMESTAMP_WITH_TZ_OFFSET_DATE_TIME));
         converters.put(QueryDataType.TIMESTAMP_WITH_TZ_DATE, ToTimestampWithTzDateConverter.INSTANCE);

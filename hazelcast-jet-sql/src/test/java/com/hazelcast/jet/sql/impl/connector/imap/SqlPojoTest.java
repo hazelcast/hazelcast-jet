@@ -22,7 +22,6 @@ import com.hazelcast.jet.sql.impl.connector.imap.model.InsuredPerson;
 import com.hazelcast.jet.sql.impl.connector.imap.model.Person;
 import com.hazelcast.jet.sql.impl.connector.imap.model.PersonId;
 import com.hazelcast.sql.impl.connector.LocalPartitionedMapConnector;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.math.BigDecimal;
@@ -118,7 +117,6 @@ public class SqlPojoTest extends SqlTestSupport {
     }
 
     @Test
-    @Ignore // fix Extractors ???
     public void supportsSchemaEvolution() {
         String name = createMapWithRandomName();
 
@@ -155,7 +153,6 @@ public class SqlPojoTest extends SqlTestSupport {
     }
 
     @Test
-    @Ignore // fix Extractors ???
     public void supportsFieldsExtensions() {
         String name = generateRandomName();
 
