@@ -10,11 +10,10 @@ other systems, for the purposes of replication, analysis and many more.
 Basically anything that requires keeping multiple heterogeneous
 datastores in sync.
 
-CDC is especially important to Jet, because it allows for the
-**streaming of changes from databases**, which can be efficiently
-processed by Jet. Jet's implementation is based on
-[Debezium](https://debezium.io/), which is an open source distributed
-platform for change data capture.
+CDC is especially important to Jet, because it makes possible the
+streaming of changes from databases, in a form efficiently processable
+by Jet. Jet's implementation is based on [Debezium](https://debezium.io/),
+which is an open source distributed platform for change data capture.
 
 In our previous tutorials on how to extract change event data from
 [MySQL](cdc.md) and [Postgres](cdc-postgres.md) databases, we've seen
