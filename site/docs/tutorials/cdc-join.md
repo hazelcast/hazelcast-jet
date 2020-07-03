@@ -55,8 +55,9 @@ supported databases are as follows:
 
 ## 4. Create a New Java Project
 
-The configuration needed differs based on which database will be used.
-See exact instructions here:
+We'll assume you're using an IDE. Create a blank Java project named
+`cdc-tutorial` and copy the provided Gradle or Maven file into it.
+They differ slightly depending on which database you use:
 
 * [MySQL](cdc.md#5-create-a-new-java-project)
 * [Postgres](cdc-postgres.md#5-create-a-new-java-project)
@@ -474,7 +475,7 @@ public class CacheRead {
         JetInstance instance = Jet.newJetClient();
 
         System.out.println("Currently there are following customers in the cache:");
-        instance.getMap("customers").values().forEach(c -> System.out.println("\t" + c));
+        instance.getMap("cache").values().forEach(c -> System.out.println("\t" + c));
 
         instance.shutdown();
     }
