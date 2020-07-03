@@ -27,7 +27,7 @@ import javax.annotation.Nullable;
 import java.util.List;
 
 /**
- *
+ * TODO
  */
 public interface JetSqlConnector extends SqlConnector {
 

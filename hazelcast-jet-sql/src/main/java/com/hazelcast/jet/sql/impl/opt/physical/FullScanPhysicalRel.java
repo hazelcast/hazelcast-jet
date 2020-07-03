@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.sql.impl.opt.physical;
 
+import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.jet.sql.impl.opt.AbstractFullScanRel;
 import com.hazelcast.jet.sql.impl.opt.physical.visitor.CreateDagVisitor;
@@ -67,8 +68,8 @@ public class FullScanPhysicalRel extends AbstractFullScanRel implements Physical
     }
 
     @Override
-    public void visit(CreateDagVisitor visitor) {
-        visitor.onFullScan(this);
+    public Vertex visit(CreateDagVisitor visitor) {
+        return visitor.onFullScan(this);
     }
 
     @Override

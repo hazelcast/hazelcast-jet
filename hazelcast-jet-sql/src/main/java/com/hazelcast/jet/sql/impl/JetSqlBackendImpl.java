@@ -16,18 +16,17 @@
 
 package com.hazelcast.jet.sql.impl;
 
+import com.hazelcast.instance.impl.HazelcastInstanceImpl;
 import com.hazelcast.internal.services.ManagedService;
-import com.hazelcast.internal.util.UuidUtil;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.core.DAG;
-import com.hazelcast.jet.core.ProcessorMetaSupplier;
-import com.hazelcast.jet.core.Vertex;
-import com.hazelcast.jet.core.processor.SinkProcessors;
+import com.hazelcast.jet.impl.JetService;
 import com.hazelcast.jet.sql.impl.opt.OptUtils;
 import com.hazelcast.jet.sql.impl.opt.logical.LogicalRel;
 import com.hazelcast.jet.sql.impl.opt.logical.LogicalRules;
+import com.hazelcast.jet.sql.impl.opt.physical.JetRootRel;
 import com.hazelcast.jet.sql.impl.opt.physical.PhysicalRel;
 import com.hazelcast.jet.sql.impl.opt.physical.PhysicalRules;
 import com.hazelcast.jet.sql.impl.opt.physical.visitor.CreateDagVisitor;
@@ -38,9 +37,12 @@ import com.hazelcast.sql.SqlColumnMetadata;
 import com.hazelcast.sql.SqlResult;
 import com.hazelcast.sql.SqlRowMetadata;
 import com.hazelcast.sql.impl.JetSqlBackend;
+import com.hazelcast.sql.impl.QueryId;
 import com.hazelcast.sql.impl.QueryUtils;
 import com.hazelcast.sql.impl.SingleValueResult;
 import com.hazelcast.sql.impl.calcite.OptimizerContext;
+import com.hazelcast.sql.impl.exec.root.BlockingRootResultConsumer;
+import com.hazelcast.sql.impl.exec.root.RootResultConsumer;
 import com.hazelcast.sql.impl.optimizer.SqlPlan;
 import com.hazelcast.sql.impl.type.QueryDataType;
 import org.apache.calcite.plan.RelOptUtil;
@@ -58,17 +60,22 @@ import org.apache.calcite.sql.validate.SqlValidatorCatalogReader;
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 
 @SuppressWarnings("unused") // used through reflection
 public class JetSqlBackendImpl implements JetSqlBackend, ManagedService {
 
     private JetInstance jetInstance;
+    private Map<QueryId, RootResultConsumer> resultConsumerRegistry;
 
     @SuppressWarnings("unused") // used through reflection
     public void initJetInstance(@Nonnull JetInstance jetInstance) {
         assert this.jetInstance == null;
         this.jetInstance = jetInstance;
+        HazelcastInstanceImpl hzInstance = (HazelcastInstanceImpl) jetInstance.getHazelcastInstance();
+        JetService jetService = hzInstance.node.nodeEngine.getService(JetService.SERVICE_NAME);
+        resultConsumerRegistry = jetService.getResultConsumerRegistry();
     }
 
     @Override
@@ -93,6 +100,16 @@ public class JetSqlBackendImpl implements JetSqlBackend, ManagedService {
         PhysicalRel physicalRel = optimizePhysical(context, logicalRel);
         System.out.println("after physical opt:\n" + RelOptUtil.toString(physicalRel));
 
+        // add a root sink if the current root is not TableModify
+        QueryId queryId;
+        boolean isInsert = physicalRel instanceof TableModify;
+        if (isInsert) {
+            queryId = null;
+        } else {
+            queryId = QueryId.create(nodeEngine.getLocalMember().getUuid());
+            physicalRel = new JetRootRel(physicalRel, nodeEngine.getThisAddress(), queryId);
+        }
+
         // check whether any table is a stream
         boolean[] isStreamRead = {false};
         RelVisitor findStreamScanVisitor = new RelVisitor() {
@@ -108,28 +125,19 @@ public class JetSqlBackendImpl implements JetSqlBackend, ManagedService {
         };
         findStreamScanVisitor.go(inputRel);
 
-        DAG dag;
-        String observableName = null;
-        SqlRowMetadata rowMetadata = null;
-        boolean isDml = inputRel instanceof TableModify;
-        if (isDml) {
-            dag = createDag(physicalRel, null);
-        } else {
-            observableName = "sql-sink-" + UuidUtil.newUnsecureUuidString();
-            dag = createDag(physicalRel, SinkProcessors.writeObservableP(observableName));
+        DAG dag = createDag(physicalRel);
 
-            RelDataType rootRowType = physicalRel.getRowType();
-            List<SqlColumnMetadata> columns = new ArrayList<>(rootRowType.getFieldCount());
+        RelDataType rootRowType = physicalRel.getRowType();
+        List<SqlColumnMetadata> columns = new ArrayList<>(rootRowType.getFieldCount());
 
-            for (RelDataTypeField field : rootRowType.getFieldList()) {
-                // TODO real type
-                columns.add(QueryUtils.getColumnMetadata(field.getName(), QueryDataType.OBJECT));
-            }
-
-            rowMetadata = new SqlRowMetadata(columns);
+        for (RelDataTypeField field : rootRowType.getFieldList()) {
+            // TODO real type
+            columns.add(QueryUtils.getColumnMetadata(field.getName(), QueryDataType.OBJECT));
         }
 
-        return new JetPlan(dag, isStreamRead[0], isDml, observableName, rowMetadata);
+        SqlRowMetadata rowMetadata = new SqlRowMetadata(columns);
+
+        return new JetPlan(dag, isStreamRead[0], isInsert, queryId, rowMetadata);
     }
 
     @Override
@@ -141,6 +149,17 @@ public class JetSqlBackendImpl implements JetSqlBackend, ManagedService {
             throw new JetException("Query timeout not supported");
         }
         JetPlan plan = (JetPlan) plan0;
+
+        // register the resultConsumer
+        RootResultConsumer consumer;
+        if (plan.isInsert()) {
+            consumer = null;
+        } else {
+            consumer = new BlockingRootResultConsumer();
+            consumer.setup(() -> { });
+            Object oldValue = resultConsumerRegistry.put(plan.getQueryId(), consumer);
+            assert oldValue == null : oldValue;
+        }
 
         // submit the job
         Job job = jetInstance.newJob(plan.getDag());
@@ -154,9 +173,7 @@ public class JetSqlBackendImpl implements JetSqlBackend, ManagedService {
                 return new SingleValueResult(-1L);
             }
         } else {
-            // TODO will not run on a client
-            return new SqlResultFromObservable(plan.getRowMetadata(),
-                    jetInstance.getObservable(plan.getObservableName()));
+            return new JetSqlResultImpl(plan.getQueryId(), consumer, plan.getRowMetadata());
         }
     }
 
@@ -183,13 +200,10 @@ public class JetSqlBackendImpl implements JetSqlBackend, ManagedService {
                 OptUtils.toPhysicalConvention(rel.getTraitSet()));
     }
 
-    private DAG createDag(PhysicalRel physicalRel, ProcessorMetaSupplier sinkSupplier) {
-        DAG dag = new DAG();
-        Vertex sink = sinkSupplier != null ? dag.newVertex("sink", sinkSupplier) : null;
-
-        CreateDagVisitor visitor = new CreateDagVisitor(dag, sink);
+    private DAG createDag(PhysicalRel physicalRel) {
+        CreateDagVisitor visitor = new CreateDagVisitor();
         physicalRel.visit(visitor);
-        return dag;
+        return visitor.getDag();
     }
 
     @Override

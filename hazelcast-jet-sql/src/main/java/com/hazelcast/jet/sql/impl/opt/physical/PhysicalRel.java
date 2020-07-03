@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.sql.impl.opt.physical;
 
+import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.sql.impl.opt.physical.visitor.CreateDagVisitor;
 import com.hazelcast.sql.impl.QueryParameterMetadata;
 import com.hazelcast.sql.impl.calcite.opt.physical.visitor.RexToExpressionVisitor;
@@ -57,9 +58,10 @@ public interface PhysicalRel extends RelNode {
     }
 
     /**
-     * Visit physical rel. A node with children should delegate to parent nodes first.
+     * Visit a physical rel.
      *
      * @param visitor Visitor.
+     * @return the DAG vertex created for this rel
      */
-    void visit(CreateDagVisitor visitor);
+    Vertex visit(CreateDagVisitor visitor);
 }

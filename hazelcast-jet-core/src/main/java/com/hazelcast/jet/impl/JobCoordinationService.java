@@ -986,6 +986,8 @@ public class JobCoordinationService {
             try {
                 return CompletableFuture.completedFuture(action.call());
             } catch (Throwable e) {
+                // most callers don't check the returned future, let's log the error
+                logger.warning(null, e);
                 return com.hazelcast.jet.impl.util.Util.exceptionallyCompletedFuture(e);
             }
         }

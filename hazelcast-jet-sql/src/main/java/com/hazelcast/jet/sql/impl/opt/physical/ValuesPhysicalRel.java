@@ -17,6 +17,7 @@
 package com.hazelcast.jet.sql.impl.opt.physical;
 
 import com.google.common.collect.ImmutableList;
+import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.sql.impl.opt.physical.visitor.CreateDagVisitor;
 import com.hazelcast.sql.impl.calcite.SqlToQueryType;
 import com.hazelcast.sql.impl.plan.node.PlanNodeSchema;
@@ -52,8 +53,8 @@ public class ValuesPhysicalRel extends Values implements PhysicalRel {
     }
 
     @Override
-    public void visit(CreateDagVisitor visitor) {
-        visitor.onValues(this);
+    public Vertex visit(CreateDagVisitor visitor) {
+        return visitor.onValues(this);
     }
 
     @Override
