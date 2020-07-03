@@ -950,7 +950,7 @@ p.readFrom(Sources.jdbc(
 
 The JDBC source only works in batching mode, meaning the query is only
 executed once, for streaming changes from the database you can follow the
-[Change Data Capture tutorial](../tutorials/cdc-mysql.md).
+[Change Data Capture tutorial](../tutorials/cdc.md).
 
 #### JDBC Data Sink
 

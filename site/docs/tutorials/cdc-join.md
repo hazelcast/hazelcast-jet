@@ -4,31 +4,32 @@ sidebar_label: Join
 description: How to maintain a joined image of Change Data Capture data from multiple tables.
 ---
 
-**Change data capture** refers to the process of **observing changes
-made to a database** and extracting them in a form usable by other
-systems, for the purposes of replication, analysis and many more.
+**Change Data Capture** (CDC) refers to the process of **observing
+changes made to a database** and extracting them in a form usable by
+other systems, for the purposes of replication, analysis and many more.
+Basically anything that requires keeping multiple heterogeneous
+datastores in sync.
 
-Change Data Capture is especially important to Jet, because it allows
-for the **streaming of changes from databases**, which can be
-efficiently processed by Jet.
-
-Implementation of CDC in Jet is based on
+CDC is especially important to Jet, because it allows for the
+**streaming of changes from databases**, which can be efficiently
+processed by Jet. Jet's implementation is based on
 [Debezium](https://debezium.io/), which is an open source distributed
 platform for change data capture.
 
 In our previous tutorials on how to extract change event data from
-[MySQL](cdc-mysql.md) and [Postgres](cdc-postgres.md) databases we've
-seen how to monitor single database tables and how maintain an
-up-to-date image of them in memory, as a map.
+[MySQL](cdc.md) and [Postgres](cdc-postgres.md) databases, we've seen
+how to monitor single database tables and how to maintain up-to-date
+images of those tables in memory, in the form of maps.
 
 Here we will examine how to make our map hold enriched data, combined
-(joined, if you will) from multiple tables. Let's say customers and all
-the orders belonging to them, as one entity.
+(joined, if you will) from multiple tables. Let's, for example, make
+each of our enriched data objects hold information about one customer
+and all the orders belonging to them.
 
 ## 1. Install Docker
 
 This tutorial uses [Docker](https://www.docker.com/) to simplify the
-setup of a PostgreSQL database, which you can freely experiment on.
+setup of databases, which you can freely experiment on.
 
 1. Follow Docker's [Get Started](https://www.docker.com/get-started)
    instructions and install it on your system.
@@ -40,21 +41,17 @@ setup of a PostgreSQL database, which you can freely experiment on.
 
 ## 2. Start Database
 
-In this tutorial we will provide all code and configs for MySQL, but
-adapting them to any of the databases covered by the previous tutorials
-should be pretty straightforward.
-
 Exact instructions for starting the supported databases are as follows:
 
-* [MySQL](cdc-mysql.md#2-start-mysql-database)
+* [MySQL](cdc.md#2-start-mysql-database)
 * [Postgres](cdc-postgres.md#2-start-postgresql-database).
 
 ## 3. Start Command Line Client
 
-Exact instructions for starting the specific Command Line Client of the
+Exact instructions for starting the specific command line client of the
 supported databases are as follows:
 
-* [MySQL](cdc-mysql.md#3-start-mysql-command-line-client)
+* [MySQL](cdc.md#3-start-mysql-command-line-client)
 * [Postgres](cdc-postgres.md#3-start-postgresql-command-line-client)
 
 ## 4. Create a New Java Project
@@ -62,7 +59,7 @@ supported databases are as follows:
 The configuration needed differs based on which database will be used.
 See exact instructions here:
 
-* [MySQL](cdc-mysql.md#5-create-a-new-java-project)
+* [MySQL](cdc.md#5-create-a-new-java-project)
 * [Postgres](cdc-postgres.md#5-create-a-new-java-project)
 
 ## 5. Define Jet Job
@@ -228,8 +225,9 @@ public class OrderEntryProcessor implements EntryProcessor<Integer, OrdersOfCust
 }
 ```
 
-In them we use a `Customer` and an `Order` for data to object mapping,
-basically a convenient way of parsing:
+In them we use the `Customer` and the `Order` classes to achieve
+convenient data parsing with the help of data to object
+mapping.
 
 ```java
 package org.example;
@@ -352,18 +350,18 @@ public class Order implements Serializable {
 }
 ```
 
-Watch out, in the Postgres DB used the order number column is called
- `id`, so the first field in `Order` would look like this:
+Watch out, in the Postgres database the order number column has a
+different name, `id`, so the first field in `Order` needs to be changed
+to:
 
 ```java
 @JsonProperty("id")
 public int orderNumber;
 ```
 
-Besides the previous two data classes, `Order` and `Customer`, we also
-define a combined structure, called `OrdersOfCustomers` which holds data
-about customers and the orders they have generated and will be stored in
-the target `IMap`:
+Besides these two data classes we also need to define our enriched
+structure, called `OrdersOfCustomers`, which will be stored in the
+target `IMap`:
 
 ```java
 package org.example;
@@ -420,12 +418,11 @@ public class OrdersOfCustomer implements Serializable {
 }
 ```
 
-Careful observers will notice another thing going on, an additional
-processing stage which handles and fixes event reoreding that might
-happen in our parallel processing pipeline. It's based on non-public
-classes because future versions of Jet (4.3 most likely) will contain
-generic solutions for the reordering problem and then this code will
-no longer be necessary:
+There is also another element in the pipeline, an extra processing stage
+which handles and fixes event reordering that might happen due to
+parallel processing. It's based on non-public classes because future
+versions of Jet (4.3 most likely) will contain generic solutions for
+the reordering problem and then this code will no longer be necessary:
 
 ```java
 package org.example;
@@ -462,10 +459,9 @@ public class Ordering {
 ```
 
 To make it evident that our pipeline serves the purpose of building an
-up-to-date cache of "orders of customer" data, which can be
-interrogated at any time let's add one more class. This code can be
-executed at any time in your IDE and will print the current content of
-the cache.
+up-to-date cache of "orders of customers", which can be interrogated at
+any time, let's add one more class. This code can be executed at will in
+your IDE and prints the current content of the cache.
 
 ```java
 package org.example;
@@ -489,9 +485,10 @@ public class CacheRead {
 
 ## 6. Package
 
-Now that we have all the pieces, we need to submit it to Jet for
-execution. Since Jet runs on our machine as a standalone cluster in a
-standalone process we need to give it all the code that we have written.
+Now that we have defined all the pieces, we need to submit the
+pipeline to Jet for execution. Since Jet runs on our machine as a
+standalone cluster in a standalone process we need to make it aware of
+all the code that we have written.
 
 For this reason we create a jar containing everything we need. All we
 need to do is to run the build command:
@@ -549,12 +546,12 @@ mv opt/hazelcast-jet-cdc-postgres-{jet-version}.jar lib
 
 3. Enable user code deployment:
 
-Due to the type of sink we have used in our pipeline we need to make
+Due to the type of sink we are using in our pipeline we need to make
 some extra changes in order for the IMDG cluster (which Jet sits
 on top of) be aware of the custom classes we have defined.
 
-Pls. append following config lines to the `config/hazelcast.yaml` file,
-at the end of the `hazelcast` block:
+Please append following config lines to the `config/hazelcast.yaml`
+file, at the end of the `hazelcast` block:
 
 ```yaml
   user-code-deployment:
@@ -585,10 +582,10 @@ at the end of the `hazelcast-client` block:
       - <path_to_project>/target/cdc-tutorial-1.0-SNAPSHOT.jar
 ```
 
+<!--END_DOCUSAURUS_CODE_TABS-->
+
 Make sure to replace `<path_to_project>` with the absolute path to where
 you created the project for this tutorial.
-
-<!--END_DOCUSAURUS_CODE_TABS-->
 
 4. Start Jet:
 
@@ -596,7 +593,7 @@ you created the project for this tutorial.
 bin/jet-start
 ```
 
-5. When you see output like this, Hazelcast Jet is up:
+5. When you see output like this, Jet is up:
 
 ```text
 Members {size:1, ver:1} [
@@ -626,9 +623,8 @@ following command:
 
 <!--END_DOCUSAURUS_CODE_TABS-->
 
-The output in the Jet members log should look something like this (we
-also log what we put in the `IMap` sink thanks to the `peek()` stages
-we inserted):
+The output in the Jet member's log should look something like this (we
+see these lines due to the `peek()` stages we've inserted):
 
 ```text
 ........
@@ -706,13 +702,11 @@ docker stop postgres
 
 <!--END_DOCUSAURUS_CODE_TABS-->
 
-Again, since we used the `--rm` flag when starting the connectors,
-Docker should remove them right after it stops them.
-We can verify that all of the other processes are stopped and removed:
+Again, since we've used the `--rm` flag when starting the connectors,
+Docker should remove them right after we stop them.
+We can verify that all processes are stopped and removed with following
+command:
 
 ```bash
 docker ps -a
 ```
-
-Of course, if any are still running, simply stop them using
-`docker stop <name>` or `docker stop <containerId>`.
