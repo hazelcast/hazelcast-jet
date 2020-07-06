@@ -79,7 +79,7 @@ class Index extends React.Component {
         background={props.background}
         >
         <GridBlock
-          align="center"
+          align={props.align}
           className="features"
           contents={props.children}
           layout={props.layout}
@@ -88,7 +88,7 @@ class Index extends React.Component {
     );
 
     const Features = () => (
-      <Block layout="fourColumn">
+      <Block layout="fourColumn"  align='center'>
         {[
            {
             title: 'Build Data Pipelines That Scale',
@@ -138,14 +138,13 @@ class Index extends React.Component {
     );
 
     const UseCases = () => (
-      <Fragment>
+      <div className="useCases">
         <Block id="data-layer" background="dark">
         {[
           {
             title: 'Serve Operational Data for Applications, Fast',
             image: `${baseUrl}img/layers2.svg`,
             imageAlign: 'left',
-            textAlign: 'center',
             content: ' Ingest data from a <a href="/docs/tutorials/cdc">relational database</a>,'
             + ' <a href="docs/api/sources-sinks#hadoop-inputformatoutputformat">Hadoop, Amazon S3, Google Cloud Storage, Azure Data Lake</a> and more,'
             + ' combine it with real-time sources'
@@ -153,7 +152,7 @@ class Index extends React.Component {
           },
         ]}
       </Block>
-      <Block id="real-time" background="light">
+      <Block id="real-time" background="dark">
       {[
         {
           title: 'React Instantly To Real-Time Data At Scale',
@@ -179,8 +178,7 @@ class Index extends React.Component {
         }
       ]}
       </Block>
-
-    </Fragment>
+    </div>
     );
 
     const Users = () => {

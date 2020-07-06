@@ -17,7 +17,6 @@ a.button {
   color: #eee8d5;
   padding-top: 25px;
   padding-bottom: 25px;
-  margin-bottom: 75px;
 }
 
 .homeContainer a.button {
@@ -26,13 +25,6 @@ a.button {
   color: #eee8d5;
 }
 
-.gridBlock {
-  padding-top: 30px;
-  padding-bottom: 30px;
-}
-.gridBlock h2 {
-  font-size: 24px;
-}
 
 .darkBackground {
   background-color: #073642;
@@ -63,6 +55,27 @@ a.button {
 }
 .imageAlignRight .blockImage {
   max-width: 300px;
+}
+
+.useCases .gridBlock {
+  max-width: 920px;
+  margin: auto;
+  padding-top: 40px;
+  padding-bottom: 40px;
+}
+
+.useCases .imageAlignLeft .blockImage {
+  /* max-width: 200px; */
+  /* margin: auto; */
+}
+
+.useCases .imageAlignRight .blockImage {
+  /* max-width: 200px; */
+  /* margin: auto; */
+}
+
+.useCases h2 {
+  /* font-size: 20px; */
 }
 
 .logos {
