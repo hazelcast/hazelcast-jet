@@ -16,7 +16,6 @@
 
 package com.hazelcast.jet.sql.impl.extract;
 
-import com.hazelcast.jet.sql.impl.type.converter.FromConverter;
 import com.hazelcast.sql.impl.extract.QueryExtractor;
 import com.hazelcast.sql.impl.extract.QueryTarget;
 import com.hazelcast.sql.impl.type.QueryDataType;
@@ -39,7 +38,7 @@ public class AvroQueryTarget implements QueryTarget {
             if (value instanceof Utf8) {
                 value = ((Utf8) value).toString();
             }
-            return FromConverter.convert(type, value);
+            return type.convert(value);
         };
     }
 }

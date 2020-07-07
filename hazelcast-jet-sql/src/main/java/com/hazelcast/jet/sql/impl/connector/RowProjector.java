@@ -77,8 +77,8 @@ public class RowProjector implements Row {
         }
 
         Object[] result = new Object[projection.size()];
-        for (int j = 0; j < projection.size(); j++) {
-            result[j] = projection.get(j).eval(this, ZERO_ARGUMENTS_CONTEXT);
+        for (int i = 0; i < projection.size(); i++) {
+            result[i] = projection.get(i).eval(this, ZERO_ARGUMENTS_CONTEXT);
         }
         return result;
     }

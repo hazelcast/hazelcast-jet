@@ -18,7 +18,6 @@ package com.hazelcast.jet.sql.impl.extract;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.hazelcast.jet.sql.impl.type.converter.FromConverter;
 import com.hazelcast.sql.impl.QueryException;
 import com.hazelcast.sql.impl.extract.QueryExtractor;
 import com.hazelcast.sql.impl.extract.QueryTarget;
@@ -26,7 +25,7 @@ import com.hazelcast.sql.impl.type.QueryDataType;
 
 import java.io.IOException;
 
-// TODO: review/improve...
+// TODO: review/improve/even remove in favor of IMDG JsonQueryTarget ?
 public class JsonQueryTarget implements QueryTarget {
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
@@ -44,7 +43,7 @@ public class JsonQueryTarget implements QueryTarget {
 
     @Override
     public QueryExtractor createExtractor(String path, QueryDataType type) {
-        return () -> FromConverter.convert(type, extractValue(json, path));
+        return () -> type.convert(extractValue(json, path));
     }
 
     private static Object extractValue(JsonNode json, String path) {

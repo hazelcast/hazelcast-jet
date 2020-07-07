@@ -19,10 +19,7 @@ package com.hazelcast.jet.sql.impl.connector.file;
 import com.hazelcast.jet.sql.SqlTestSupport;
 import org.junit.Test;
 
-import java.io.IOException;
 import java.math.BigDecimal;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -37,7 +34,7 @@ import static java.util.Collections.singletonList;
 public class SqlCsvTest extends SqlTestSupport {
 
     @Test
-    public void supportsAllTypes() throws IOException {
+    public void supportsAllTypes() {
         String name = createRandomName();
         executeSql(format("CREATE EXTERNAL TABLE %s (" +
                         " string VARCHAR," +
@@ -66,7 +63,7 @@ public class SqlCsvTest extends SqlTestSupport {
                         " \"%s\" '%s'" +
                         ")",
                 name, FileSqlConnector.TYPE_NAME,
-                FileSqlConnector.TO_DIRECTORY, Paths.get("src/test/resources").toFile().getCanonicalPath(),
+                FileSqlConnector.TO_DIRECTORY, RESOURCES_PATH,
                 FileSqlConnector.TO_GLOB, "all-types.csv",
                 TO_SERIALIZATION_FORMAT, CSV_SERIALIZATION_FORMAT
         ));

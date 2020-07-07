@@ -16,7 +16,6 @@
 
 package com.hazelcast.jet.sql.impl.extract;
 
-import com.hazelcast.jet.sql.impl.type.converter.FromConverter;
 import com.hazelcast.sql.impl.extract.QueryExtractor;
 import com.hazelcast.sql.impl.extract.QueryTarget;
 import com.hazelcast.sql.impl.type.QueryDataType;
@@ -42,6 +41,6 @@ public class CsvQueryTarget implements QueryTarget {
     @Override
     public QueryExtractor createExtractor(String name, QueryDataType type) {
         int index = indicesByNames.get(name);
-        return () -> FromConverter.convert(type, line[index]);
+        return () -> type.convert(line[index]);
     }
 }

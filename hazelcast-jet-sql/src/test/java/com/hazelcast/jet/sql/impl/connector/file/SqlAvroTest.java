@@ -19,9 +19,7 @@ package com.hazelcast.jet.sql.impl.connector.file;
 import com.hazelcast.jet.sql.SqlTestSupport;
 import org.junit.Test;
 
-import java.io.IOException;
 import java.math.BigDecimal;
-import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -36,7 +34,30 @@ import static java.util.Collections.singletonList;
 public class SqlAvroTest extends SqlTestSupport {
 
     @Test
-    public void supportsFieldsMapping() throws IOException {
+    public void supportsNulls() {
+        String name = createRandomName();
+        executeSql(format("CREATE EXTERNAL TABLE %s (" +
+                        " nonExistingField VARCHAR" +
+                        ") TYPE \"%s\" " +
+                        "OPTIONS (" +
+                        " \"%s\" '%s'," +
+                        " \"%s\" '%s'," +
+                        " \"%s\" '%s'" +
+                        ")",
+                name, FileSqlConnector.TYPE_NAME,
+                FileSqlConnector.TO_DIRECTORY, RESOURCES_PATH,
+                FileSqlConnector.TO_GLOB, "all-types.avro",
+                TO_SERIALIZATION_FORMAT, AVRO_SERIALIZATION_FORMAT
+        ));
+
+        assertRowsEventuallyAnyOrder(
+                format("SELECT * FROM %s", name),
+                singletonList(new Row((Object) null))
+        );
+    }
+
+    @Test
+    public void supportsFieldsMapping() {
         String name = createRandomName();
         executeSql(format("CREATE EXTERNAL TABLE %s (" +
                         " name VARCHAR EXTERNAL NAME string" +
@@ -47,7 +68,7 @@ public class SqlAvroTest extends SqlTestSupport {
                         " \"%s\" '%s'" +
                         ")",
                 name, FileSqlConnector.TYPE_NAME,
-                FileSqlConnector.TO_DIRECTORY, Paths.get("src/test/resources").toFile().getCanonicalPath(),
+                FileSqlConnector.TO_DIRECTORY, RESOURCES_PATH,
                 FileSqlConnector.TO_GLOB, "all-types.avro",
                 TO_SERIALIZATION_FORMAT, AVRO_SERIALIZATION_FORMAT
         ));
@@ -59,7 +80,7 @@ public class SqlAvroTest extends SqlTestSupport {
     }
 
     @Test
-    public void supportsAllTypes() throws IOException {
+    public void supportsAllTypes() {
         String name = createRandomName();
         executeSql(format("CREATE EXTERNAL TABLE %s (" +
                         " string VARCHAR," +
@@ -88,7 +109,7 @@ public class SqlAvroTest extends SqlTestSupport {
                         " \"%s\" '%s'" +
                         ")",
                 name, FileSqlConnector.TYPE_NAME,
-                FileSqlConnector.TO_DIRECTORY, Paths.get("src/test/resources").toFile().getCanonicalPath(),
+                FileSqlConnector.TO_DIRECTORY, RESOURCES_PATH,
                 FileSqlConnector.TO_GLOB, "all-types.avro",
                 TO_SERIALIZATION_FORMAT, AVRO_SERIALIZATION_FORMAT
         ));

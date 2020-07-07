@@ -16,8 +16,8 @@
 
 package com.hazelcast.jet.sql.impl.type.converter;
 
+import com.hazelcast.sql.impl.QueryException;
 import com.hazelcast.sql.impl.type.QueryDataType;
-import com.hazelcast.sql.impl.type.QueryDataTypeMismatchException;
 import com.hazelcast.sql.impl.type.converter.Converter;
 
 /**
@@ -40,7 +40,8 @@ public abstract class ToConverter {
         Class<?> valueClass = value.getClass();
 
         if (!normalizedValueClass.isAssignableFrom(valueClass)) {
-            throw new QueryDataTypeMismatchException(normalizedValueClass, valueClass);
+            throw QueryException.dataException("Type mismatch [expectedClass=" + normalizedValueClass.getName()
+                    + ", actualClass=" + valueClass.getName() + ']');
         }
 
         return from(value);

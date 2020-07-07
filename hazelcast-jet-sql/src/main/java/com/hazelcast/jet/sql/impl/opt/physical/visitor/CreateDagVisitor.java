@@ -26,7 +26,6 @@ import com.hazelcast.jet.sql.impl.opt.physical.InsertPhysicalRel;
 import com.hazelcast.jet.sql.impl.opt.physical.NestedLoopJoinPhysicalRel;
 import com.hazelcast.jet.sql.impl.opt.physical.ProjectPhysicalRel;
 import com.hazelcast.jet.sql.impl.opt.physical.ValuesPhysicalRel;
-import com.hazelcast.jet.sql.impl.type.converter.FromConverter;
 import com.hazelcast.sql.impl.calcite.schema.HazelcastTable;
 import com.hazelcast.sql.impl.schema.Table;
 import org.apache.calcite.rex.RexLiteral;
@@ -73,7 +72,7 @@ public class CreateDagVisitor {
                     value = nlsString.getValue();
                 }
 
-                result[i] = FromConverter.convert(rel.schema().getType(i), value);
+                result[i] = rel.schema().getType(i).convert(value);
             }
             items.add(result);
         }

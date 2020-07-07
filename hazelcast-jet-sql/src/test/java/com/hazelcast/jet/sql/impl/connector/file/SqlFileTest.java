@@ -20,9 +20,6 @@ import com.hazelcast.jet.sql.SqlTestSupport;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import java.io.IOException;
-import java.nio.file.Paths;
-
 import static com.hazelcast.jet.sql.JetSqlConnector.AVRO_SERIALIZATION_FORMAT;
 import static com.hazelcast.jet.sql.JetSqlConnector.TO_SERIALIZATION_FORMAT;
 import static java.lang.String.format;
@@ -34,7 +31,7 @@ public class SqlFileTest extends SqlTestSupport {
     private static String name;
 
     @BeforeClass
-    public static void beforeClass() throws IOException {
+    public static void beforeClass() {
         name = createRandomName();
         executeSql(format("CREATE EXTERNAL TABLE %s (" +
                         " username VARCHAR," +
@@ -47,7 +44,7 @@ public class SqlFileTest extends SqlTestSupport {
                         " \"%s\" '%s'" +
                         ")",
                 name, FileSqlConnector.TYPE_NAME,
-                FileSqlConnector.TO_DIRECTORY, Paths.get("src/test/resources").toFile().getCanonicalPath(),
+                FileSqlConnector.TO_DIRECTORY, RESOURCES_PATH,
                 FileSqlConnector.TO_GLOB, "users.avro",
                 TO_SERIALIZATION_FORMAT, AVRO_SERIALIZATION_FORMAT
         ));

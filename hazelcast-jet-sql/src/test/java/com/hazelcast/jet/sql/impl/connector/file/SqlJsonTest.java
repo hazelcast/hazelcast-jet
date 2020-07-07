@@ -21,7 +21,6 @@ import org.junit.Test;
 
 import java.io.IOException;
 import java.math.BigDecimal;
-import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -36,6 +35,29 @@ import static java.util.Collections.singletonList;
 public class SqlJsonTest extends SqlTestSupport {
 
     @Test
+    public void supportsNulls() {
+        String name = createRandomName();
+        executeSql(format("CREATE EXTERNAL TABLE %s (" +
+                        " nonExistingField VARCHAR" +
+                        ") TYPE \"%s\" " +
+                        "OPTIONS (" +
+                        " \"%s\" '%s'," +
+                        " \"%s\" '%s'," +
+                        " \"%s\" '%s'" +
+                        ")",
+                name, FileSqlConnector.TYPE_NAME,
+                FileSqlConnector.TO_DIRECTORY, RESOURCES_PATH,
+                FileSqlConnector.TO_GLOB, "all-types.json",
+                TO_SERIALIZATION_FORMAT, JSON_SERIALIZATION_FORMAT
+        ));
+
+        assertRowsEventuallyAnyOrder(
+                format("SELECT * FROM %s", name),
+                singletonList(new Row((Object) null))
+        );
+    }
+
+    @Test
     public void supportsFieldsMapping() throws IOException {
         String name = createRandomName();
         executeSql(format("CREATE EXTERNAL TABLE %s (" +
@@ -47,7 +69,7 @@ public class SqlJsonTest extends SqlTestSupport {
                         " \"%s\" '%s'" +
                         ")",
                 name, FileSqlConnector.TYPE_NAME,
-                FileSqlConnector.TO_DIRECTORY, Paths.get("src/test/resources").toFile().getCanonicalPath(),
+                FileSqlConnector.TO_DIRECTORY, RESOURCES_PATH,
                 FileSqlConnector.TO_GLOB, "all-types.json",
                 TO_SERIALIZATION_FORMAT, JSON_SERIALIZATION_FORMAT
         ));
@@ -88,7 +110,7 @@ public class SqlJsonTest extends SqlTestSupport {
                         " \"%s\" '%s'" +
                         ")",
                 name, FileSqlConnector.TYPE_NAME,
-                FileSqlConnector.TO_DIRECTORY, Paths.get("src/test/resources").toFile().getCanonicalPath(),
+                FileSqlConnector.TO_DIRECTORY, RESOURCES_PATH,
                 FileSqlConnector.TO_GLOB, "all-types.json",
                 TO_SERIALIZATION_FORMAT, JSON_SERIALIZATION_FORMAT
         ));

@@ -22,6 +22,7 @@ import com.hazelcast.sql.SqlRow;
 import com.hazelcast.sql.SqlService;
 import org.junit.BeforeClass;
 
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -37,6 +38,8 @@ import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public abstract class SqlTestSupport extends SimpleTestInClusterSupport {
+
+    protected static final String RESOURCES_PATH = Paths.get("src/test/resources").toFile().getAbsolutePath();
 
     private static SqlService sqlService;
 
