@@ -35,7 +35,6 @@ public class CsvQueryTarget implements QueryTarget {
     @Override
     public void setTarget(Object target) {
         line = (String[]) target;
-        // TODO: assert line.length == indicesByNames.size() ???
     }
 
     @Override

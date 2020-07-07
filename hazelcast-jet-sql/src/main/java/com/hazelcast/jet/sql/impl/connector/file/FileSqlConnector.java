@@ -42,7 +42,9 @@ public class FileSqlConnector implements JetSqlConnector {
     public static final String TO_DIRECTORY = "file.directory";
     public static final String TO_GLOB = "file.glob";
     public static final String TO_SHARED_FILE_SYSTEM = "file.sharedFileSystem";
+
     public static final String TO_CHARSET = "file.charset";
+    public static final String TO_HEADER = "file.header";
     public static final String TO_DELIMITER = "file.delimiter";
 
     @Override
@@ -67,7 +69,7 @@ public class FileSqlConnector implements JetSqlConnector {
         String directory = options.getOrDefault(TO_DIRECTORY, name);
         String glob = options.getOrDefault(TO_GLOB, "*");
         boolean sharedFileSystem = parseBoolean(options.getOrDefault(TO_SHARED_FILE_SYSTEM, "true"));
-        FileMetadata metadata = FileMetadataResolver.resolve(externalFields, options);
+        Metadata metadata = MetadataResolver.resolve(externalFields, options, directory, glob);
 
         return new FileTable(
                 this,

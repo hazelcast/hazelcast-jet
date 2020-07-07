@@ -27,7 +27,6 @@ import java.time.OffsetDateTime;
 
 import static com.hazelcast.jet.sql.JetSqlConnector.CSV_SERIALIZATION_FORMAT;
 import static com.hazelcast.jet.sql.JetSqlConnector.TO_SERIALIZATION_FORMAT;
-import static java.lang.String.format;
 import static java.time.ZoneOffset.UTC;
 import static java.util.Collections.singletonList;
 
@@ -36,61 +35,75 @@ public class SqlCsvTest extends SqlTestSupport {
     @Test
     public void supportsAllTypes() {
         String name = createRandomName();
-        executeSql(format("CREATE EXTERNAL TABLE %s (" +
-                        " string VARCHAR," +
-                        " character0 CHAR," +
-                        " boolean0 BOOLEAN," +
-                        " byte0 TINYINT," +
-                        " short0 SMALLINT," +
-                        " int0 INT, " +
-                        " long0 BIGINT," +
-                        " bigDecimal DEC(10, 1)," +
-                        " bigInteger NUMERIC(5, 0)," +
-                        " float0 REAL," +
-                        " double0 DOUBLE," +
-                        " \"localTime\" TIME," +
-                        " localDate DATE," +
-                        " localDateTime TIMESTAMP," +
-                        " \"date\" TIMESTAMP WITH LOCAL TIME ZONE (\"DATE\")," +
-                        " calendar TIMESTAMP WITH TIME ZONE (\"CALENDAR\")," +
-                        " instant TIMESTAMP WITH LOCAL TIME ZONE," +
-                        " zonedDateTime TIMESTAMP WITH TIME ZONE (\"ZONED_DATE_TIME\")," +
-                        " offsetDateTime TIMESTAMP WITH TIME ZONE" +
-                        ") TYPE \"%s\" " +
-                        "OPTIONS (" +
-                        " \"%s\" '%s'," +
-                        " \"%s\" '%s'," +
-                        " \"%s\" '%s'" +
-                        ")",
-                name, FileSqlConnector.TYPE_NAME,
-                FileSqlConnector.TO_DIRECTORY, RESOURCES_PATH,
-                FileSqlConnector.TO_GLOB, "all-types.csv",
-                TO_SERIALIZATION_FORMAT, CSV_SERIALIZATION_FORMAT
-        ));
+        executeSql("CREATE EXTERNAL TABLE " + name + " ("
+                + "string VARCHAR"
+                + ", character0 CHAR"
+                + ", boolean0 BOOLEAN"
+                + ", byte0 TINYINT"
+                + ", short0 SMALLINT"
+                + ", int0 INT"
+                + ", long0 BIGINT"
+                + ", bigDecimal DEC(10, 1)"
+                + ", bigInteger NUMERIC(5, 0)"
+                + ", float0 REAL"
+                + ", double0 DOUBLE"
+                + ", \"localTime\" TIME"
+                + ", localDate DATE"
+                + ", localDateTime TIMESTAMP"
+                + ", \"date\" TIMESTAMP WITH LOCAL TIME ZONE (\"DATE\")"
+                + ", calendar TIMESTAMP WITH TIME ZONE (\"CALENDAR\")"
+                + ", instant TIMESTAMP WITH LOCAL TIME ZONE"
+                + ", zonedDateTime TIMESTAMP WITH TIME ZONE (\"ZONED_DATE_TIME\")"
+                + ", offsetDateTime TIMESTAMP WITH TIME ZONE"
+                + ") TYPE \"" + FileSqlConnector.TYPE_NAME + "\" "
+                + "OPTIONS ("
+                + "\"" + FileSqlConnector.TO_DIRECTORY + "\" '" + RESOURCES_PATH + "'"
+                + ", \"" + FileSqlConnector.TO_GLOB + "\" '" + "all-types.csv" + "'"
+                + ", \"" + TO_SERIALIZATION_FORMAT + "\" '" + CSV_SERIALIZATION_FORMAT + "'"
+                + ")"
+        );
 
         assertRowsEventuallyAnyOrder(
-                format("SELECT * FROM %s", name),
+                "SELECT * FROM " + name,
                 singletonList(new Row(
-                        "string",
-                        "a",
-                        true,
-                        (byte) 126,
-                        (short) 32766,
-                        2147483646,
-                        9223372036854775806L,
-                        new BigDecimal("9223372036854775.111"),
-                        new BigDecimal("9223372036854775222"),
-                        1234567890.1f,
-                        123451234567890.1,
-                        LocalTime.of(12, 23, 34),
-                        LocalDate.of(2020, 7, 1),
-                        LocalDateTime.of(2020, 7, 1, 12, 23, 34, 100_000_000),
-                        OffsetDateTime.of(2020, 7, 1, 12, 23, 34, 200_000_000, UTC),
-                        OffsetDateTime.of(2020, 7, 1, 12, 23, 34, 300_000_000, UTC),
-                        OffsetDateTime.of(2020, 7, 1, 12, 23, 34, 400_000_000, UTC),
-                        OffsetDateTime.of(2020, 7, 1, 12, 23, 34, 500_000_000, UTC),
-                        OffsetDateTime.of(2020, 7, 1, 12, 23, 34, 600_000_000, UTC)
+                        "string"
+                        , "a"
+                        , true
+                        , (byte) 126
+                        , (short) 32766
+                        , 2147483646
+                        , 9223372036854775806L
+                        , new BigDecimal("9223372036854775.111")
+                        , new BigDecimal("9223372036854775222")
+                        , 1234567890.1F
+                        , 123451234567890.1
+                        , LocalTime.of(12, 23, 34)
+                        , LocalDate.of(2020, 7, 1)
+                        , LocalDateTime.of(2020, 7, 1, 12, 23, 34, 100_000_000)
+                        , OffsetDateTime.of(2020, 7, 1, 12, 23, 34, 200_000_000, UTC)
+                        , OffsetDateTime.of(2020, 7, 1, 12, 23, 34, 300_000_000, UTC)
+                        , OffsetDateTime.of(2020, 7, 1, 12, 23, 34, 400_000_000, UTC)
+                        , OffsetDateTime.of(2020, 7, 1, 12, 23, 34, 500_000_000, UTC)
+                        , OffsetDateTime.of(2020, 7, 1, 12, 23, 34, 600_000_000, UTC)
                 ))
+        );
+    }
+
+    @Test
+    public void supportsSchemaDiscovery() {
+        String name = createRandomName();
+        executeSql("CREATE EXTERNAL TABLE " + name + " "
+                + "TYPE \"" + FileSqlConnector.TYPE_NAME + "\" "
+                + "OPTIONS ("
+                + "\"" + FileSqlConnector.TO_DIRECTORY + "\" '" + RESOURCES_PATH + "'"
+                + ", \"" + FileSqlConnector.TO_GLOB + "\" '" + "file.csv" + "'"
+                + ", \"" + TO_SERIALIZATION_FORMAT + "\" '" + CSV_SERIALIZATION_FORMAT + "'"
+                + ")"
+        );
+
+        assertRowsEventuallyAnyOrder(
+                "SELECT string2, string1 FROM " + name,
+                singletonList(new Row("value2", "value1"))
         );
     }
 

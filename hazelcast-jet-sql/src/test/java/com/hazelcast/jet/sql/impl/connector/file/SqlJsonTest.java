@@ -19,7 +19,6 @@ package com.hazelcast.jet.sql.impl.connector.file;
 import com.hazelcast.jet.sql.SqlTestSupport;
 import org.junit.Test;
 
-import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -28,7 +27,6 @@ import java.time.OffsetDateTime;
 
 import static com.hazelcast.jet.sql.JetSqlConnector.TO_SERIALIZATION_FORMAT;
 import static com.hazelcast.sql.impl.connector.SqlConnector.JSON_SERIALIZATION_FORMAT;
-import static java.lang.String.format;
 import static java.time.ZoneOffset.UTC;
 import static java.util.Collections.singletonList;
 
@@ -37,107 +35,124 @@ public class SqlJsonTest extends SqlTestSupport {
     @Test
     public void supportsNulls() {
         String name = createRandomName();
-        executeSql(format("CREATE EXTERNAL TABLE %s (" +
-                        " nonExistingField VARCHAR" +
-                        ") TYPE \"%s\" " +
-                        "OPTIONS (" +
-                        " \"%s\" '%s'," +
-                        " \"%s\" '%s'," +
-                        " \"%s\" '%s'" +
-                        ")",
-                name, FileSqlConnector.TYPE_NAME,
-                FileSqlConnector.TO_DIRECTORY, RESOURCES_PATH,
-                FileSqlConnector.TO_GLOB, "all-types.json",
-                TO_SERIALIZATION_FORMAT, JSON_SERIALIZATION_FORMAT
-        ));
+        executeSql("CREATE EXTERNAL TABLE " + name + " ("
+                + "nonExistingField VARCHAR"
+                + ") TYPE \"" + FileSqlConnector.TYPE_NAME + "\" "
+                + "OPTIONS ("
+                + "\"" + FileSqlConnector.TO_DIRECTORY + "\" '" + RESOURCES_PATH + "'"
+                + ", \"" + FileSqlConnector.TO_GLOB + "\" '" + "all-types.json" + "'"
+                + ", \"" + TO_SERIALIZATION_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + "'"
+                + ")"
+        );
 
         assertRowsEventuallyAnyOrder(
-                format("SELECT * FROM %s", name),
+                "SELECT * FROM " + name,
                 singletonList(new Row((Object) null))
         );
     }
 
     @Test
-    public void supportsFieldsMapping() throws IOException {
+    public void supportsFieldsMapping() {
         String name = createRandomName();
-        executeSql(format("CREATE EXTERNAL TABLE %s (" +
-                        " name VARCHAR EXTERNAL NAME string" +
-                        ") TYPE \"%s\" " +
-                        "OPTIONS (" +
-                        " \"%s\" '%s'," +
-                        " \"%s\" '%s'," +
-                        " \"%s\" '%s'" +
-                        ")",
-                name, FileSqlConnector.TYPE_NAME,
-                FileSqlConnector.TO_DIRECTORY, RESOURCES_PATH,
-                FileSqlConnector.TO_GLOB, "all-types.json",
-                TO_SERIALIZATION_FORMAT, JSON_SERIALIZATION_FORMAT
-        ));
+        executeSql("CREATE EXTERNAL TABLE " + name + " ("
+                + "name VARCHAR EXTERNAL NAME string"
+                + ") TYPE \"" + FileSqlConnector.TYPE_NAME + "\" "
+                + "OPTIONS ("
+                + "\"" + FileSqlConnector.TO_DIRECTORY + "\" '" + RESOURCES_PATH + "'"
+                + ", \"" + FileSqlConnector.TO_GLOB + "\" '" + "all-types.json" + "'"
+                + ", \"" + TO_SERIALIZATION_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + "'"
+                + ")"
+        );
 
         assertRowsEventuallyAnyOrder(
-                format("SELECT name FROM %s", name),
+                "SELECT name FROM " + name,
                 singletonList(new Row("string"))
         );
     }
 
     @Test
-    public void supportsAllTypes() throws IOException {
+    public void supportsAllTypes() {
         String name = createRandomName();
-        executeSql(format("CREATE EXTERNAL TABLE %s (" +
-                        " string VARCHAR," +
-                        " \"character\" CHAR," +
-                        " \"boolean\" BOOLEAN," +
-                        " \"byte\" TINYINT," +
-                        " short SMALLINT," +
-                        " \"int\" INT, " +
-                        " long BIGINT," +
-                        " bigDecimal DEC(10, 1)," +
-                        " bigInteger NUMERIC(5, 0)," +
-                        " \"float\" REAL," +
-                        " \"double\" DOUBLE," +
-                        " \"localTime\" TIME," +
-                        " localDate DATE," +
-                        " localDateTime TIMESTAMP," +
-                        " \"date\" TIMESTAMP WITH LOCAL TIME ZONE (\"DATE\")," +
-                        " calendar TIMESTAMP WITH TIME ZONE (\"CALENDAR\")," +
-                        " instant TIMESTAMP WITH LOCAL TIME ZONE," +
-                        " zonedDateTime TIMESTAMP WITH TIME ZONE (\"ZONED_DATE_TIME\")," +
-                        " offsetDateTime TIMESTAMP WITH TIME ZONE" +
-                        ") TYPE \"%s\" " +
-                        "OPTIONS (" +
-                        " \"%s\" '%s'," +
-                        " \"%s\" '%s'," +
-                        " \"%s\" '%s'" +
-                        ")",
-                name, FileSqlConnector.TYPE_NAME,
-                FileSqlConnector.TO_DIRECTORY, RESOURCES_PATH,
-                FileSqlConnector.TO_GLOB, "all-types.json",
-                TO_SERIALIZATION_FORMAT, JSON_SERIALIZATION_FORMAT
-        ));
+        executeSql("CREATE EXTERNAL TABLE " + name + " ("
+                + "string VARCHAR"
+                + ", \"character\" CHAR"
+                + ", \"boolean\" BOOLEAN"
+                + ", \"byte\" TINYINT"
+                + ", short SMALLINT"
+                + ", \"int\" INT"
+                + ", long BIGINT"
+                + ", bigDecimal DEC(10, 1)"
+                + ", bigInteger NUMERIC(5, 0)"
+                + ", \"float\" REAL"
+                + ", \"double\" DOUBLE"
+                + ", \"localTime\" TIME"
+                + ", localDate DATE"
+                + ", localDateTime TIMESTAMP"
+                + ", \"date\" TIMESTAMP WITH LOCAL TIME ZONE (\"DATE\")"
+                + ", calendar TIMESTAMP WITH TIME ZONE (\"CALENDAR\")"
+                + ", instant TIMESTAMP WITH LOCAL TIME ZONE"
+                + ", zonedDateTime TIMESTAMP WITH TIME ZONE (\"ZONED_DATE_TIME\")"
+                + ", offsetDateTime TIMESTAMP WITH TIME ZONE"
+                + ") TYPE \"" + FileSqlConnector.TYPE_NAME + "\" "
+                + "OPTIONS ("
+                + "\"" + FileSqlConnector.TO_DIRECTORY + "\" '" + RESOURCES_PATH + "'"
+                + ", \"" + FileSqlConnector.TO_GLOB + "\" '" + "all-types.json" + "'"
+                + ", \"" + TO_SERIALIZATION_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + "'"
+                + ")"
+        );
 
         assertRowsEventuallyAnyOrder(
-                format("SELECT * FROM %s", name),
+                "SELECT * FROM " + name,
                 singletonList(new Row(
-                        "string",
-                        "a",
-                        true,
-                        (byte) 126,
-                        (short) 32766,
-                        2147483646,
-                        9223372036854775806L,
-                        new BigDecimal("9223372036854775.111"),
-                        new BigDecimal("9223372036854775222"),
-                        1234567890.1f,
-                        123451234567890.1,
-                        LocalTime.of(12, 23, 34),
-                        LocalDate.of(2020, 7, 1),
-                        LocalDateTime.of(2020, 7, 1, 12, 23, 34, 100_000_000),
-                        OffsetDateTime.of(2020, 7, 1, 12, 23, 34, 200_000_000, UTC),
-                        OffsetDateTime.of(2020, 7, 1, 12, 23, 34, 300_000_000, UTC),
-                        OffsetDateTime.of(2020, 7, 1, 12, 23, 34, 400_000_000, UTC),
-                        OffsetDateTime.of(2020, 7, 1, 12, 23, 34, 500_000_000, UTC),
-                        OffsetDateTime.of(2020, 7, 1, 12, 23, 34, 600_000_000, UTC)
+                        "string"
+                        , "a"
+                        , true
+                        , (byte) 126
+                        , (short) 32766
+                        , 2147483646
+                        , 9223372036854775806L
+                        , new BigDecimal("9223372036854775.111")
+                        , new BigDecimal("9223372036854775222")
+                        , 1234567890.1F
+                        , 123451234567890.1
+                        , LocalTime.of(12, 23, 34)
+                        , LocalDate.of(2020, 7, 1)
+                        , LocalDateTime.of(2020, 7, 1, 12, 23, 34, 100_000_000)
+                        , OffsetDateTime.of(2020, 7, 1, 12, 23, 34, 200_000_000, UTC)
+                        , OffsetDateTime.of(2020, 7, 1, 12, 23, 34, 300_000_000, UTC)
+                        , OffsetDateTime.of(2020, 7, 1, 12, 23, 34, 400_000_000, UTC)
+                        , OffsetDateTime.of(2020, 7, 1, 12, 23, 34, 500_000_000, UTC)
+                        , OffsetDateTime.of(2020, 7, 1, 12, 23, 34, 600_000_000, UTC)
                 ))
+        );
+    }
+
+    @Test
+    public void supportsSchemaDiscovery() {
+        String name = createRandomName();
+        executeSql("CREATE EXTERNAL TABLE " + name + " "
+                + "TYPE \"" + FileSqlConnector.TYPE_NAME + "\" "
+                + "OPTIONS ( "
+                + "\"" + FileSqlConnector.TO_DIRECTORY + "\" '" + RESOURCES_PATH + "'"
+                + ", \"" + FileSqlConnector.TO_GLOB + "\" '" + "file.json" + "'"
+                + ", \"" + TO_SERIALIZATION_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + "'"
+                + ")"
+        );
+
+        assertRowsEventuallyAnyOrder(
+                "SELECT string, \"boolean\", long, \"double\", \"null\" FROM " + name,
+                singletonList(new Row(
+                        "string"
+                        , true
+                        , 123456789.0
+                        , 123456789.1
+                        , null
+                ))
+        );
+
+        assertRowsEventuallyAnyOrder(
+                "SELECT 1 FROM " + name + " WHERE object IS NOT NULL",
+                singletonList(new Row((byte) 1))
         );
     }
 

@@ -29,7 +29,7 @@ class FileTable extends JetTable {
     private final String glob;
     private final boolean sharedFileSystem;
 
-    private final FileTargetDescriptor targetDescriptor;
+    private final TargetDescriptor targetDescriptor;
 
     FileTable(
             JetSqlConnector sqlConnector,
@@ -39,7 +39,7 @@ class FileTable extends JetTable {
             String glob,
             boolean sharedFileSystem,
             List<TableField> fields,
-            FileTargetDescriptor targetDescriptor
+            TargetDescriptor targetDescriptor
     ) {
         super(sqlConnector, fields, schemaName, name, new ConstantTableStatistics(0));
 
@@ -62,7 +62,7 @@ class FileTable extends JetTable {
         return sharedFileSystem;
     }
 
-    FileTargetDescriptor getTargetDescriptor() {
+    TargetDescriptor getTargetDescriptor() {
         return targetDescriptor;
     }
 

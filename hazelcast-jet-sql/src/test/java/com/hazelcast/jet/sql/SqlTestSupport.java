@@ -22,8 +22,8 @@ import com.hazelcast.sql.SqlRow;
 import com.hazelcast.sql.SqlService;
 import org.junit.BeforeClass;
 
-import java.nio.file.Paths;
 import javax.annotation.Nonnull;
+import java.nio.file.Paths;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -82,7 +82,7 @@ public abstract class SqlTestSupport extends SimpleTestInClusterSupport {
      * outstanding rows are ignored.
      */
     @Nonnull
-    private static List<Row> executeSqlWithLimit(String sql, int rowCountLimit, int timeLimitSeconds) {
+    private static List<Row> executeSqlWithLimit(String sql, int rowCountLimit, int timeoutSeconds) {
         CompletableFuture<Void> future = new CompletableFuture<>();
         Deque<Row> rows = new ArrayDeque<>();
 
@@ -93,7 +93,6 @@ public abstract class SqlTestSupport extends SimpleTestInClusterSupport {
                     rows.add(new Row(result.getRowMetadata().getColumnCount(), iterator.next()));
                 }
                 future.complete(null);
-                System.out.println("aaa future completed normally");
             } catch (RuntimeException e) {
                 e.printStackTrace();
                 future.completeExceptionally(e);
@@ -104,7 +103,7 @@ public abstract class SqlTestSupport extends SimpleTestInClusterSupport {
 
         try {
             try {
-                future.get(timeLimitSeconds, TimeUnit.SECONDS);
+                future.get(timeoutSeconds, TimeUnit.SECONDS);
             } catch (TimeoutException e) {
                 thread.interrupt();
                 thread.join();

@@ -16,29 +16,20 @@
 
 package com.hazelcast.jet.sql.impl.extract;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.hazelcast.sql.impl.QueryException;
+import com.hazelcast.internal.json.Json;
+import com.hazelcast.internal.json.JsonObject;
+import com.hazelcast.internal.json.JsonValue;
 import com.hazelcast.sql.impl.extract.QueryExtractor;
 import com.hazelcast.sql.impl.extract.QueryTarget;
 import com.hazelcast.sql.impl.type.QueryDataType;
 
-import java.io.IOException;
-
-// TODO: review/improve/even remove in favor of IMDG JsonQueryTarget ?
 public class JsonQueryTarget implements QueryTarget {
 
-    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
-
-    private JsonNode json;
+    private JsonObject json;
 
     @Override
     public void setTarget(Object target) {
-        try {
-            json = OBJECT_MAPPER.readTree((String) target);
-        } catch (IOException e) {
-            throw QueryException.error("Unable to parse json: " + e.getMessage(), e);
-        }
+        json = Json.parse((String) target).asObject();
     }
 
     @Override
@@ -46,16 +37,22 @@ public class JsonQueryTarget implements QueryTarget {
         return () -> type.convert(extractValue(json, path));
     }
 
-    private static Object extractValue(JsonNode json, String path) {
-        JsonNode node = json.get(path);
-        if (node == null || node.isNull()) {
+    private static Object extractValue(JsonObject json, String path) {
+        JsonValue value = json.get(path);
+        if (value == null || value.isNull()) {
             return null;
-        } else if (node.isBoolean()) {
-            return node.asBoolean();
-        } else if (node.isNumber()) {
-            return node.numberValue();
+        } else if (value.isBoolean()) {
+            return value.asBoolean();
+        } else if (value.isNumber()) {
+            if (value.toString().contains(".")) {
+                return value.asDouble();
+            } else {
+                return value.asLong();
+            }
+        } else if (value.isString()) {
+            return value.asString();
         } else {
-            return node.textValue();
+            return value;
         }
     }
 }

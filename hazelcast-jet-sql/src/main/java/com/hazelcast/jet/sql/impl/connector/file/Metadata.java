@@ -16,19 +16,28 @@
 
 package com.hazelcast.jet.sql.impl.connector.file;
 
-import com.hazelcast.function.FunctionEx;
-import com.hazelcast.sql.impl.expression.Expression;
 import com.hazelcast.sql.impl.schema.TableField;
 
-import java.nio.file.Path;
 import java.util.List;
-import java.util.stream.Stream;
 
-interface FileTargetDescriptor {
+class Metadata {
 
-    FunctionEx<? super Path, ? extends Stream<Object[]>> createReader(
+    private final List<TableField> fields;
+    private final TargetDescriptor targetDescriptor;
+
+    Metadata(
             List<TableField> fields,
-            Expression<Boolean> predicate,
-            List<Expression<?>> projection
-    );
+            TargetDescriptor targetDescriptor
+    ) {
+        this.fields = fields;
+        this.targetDescriptor = targetDescriptor;
+    }
+
+    List<TableField> getFields() {
+        return fields;
+    }
+
+    TargetDescriptor getTargetDescriptor() {
+        return targetDescriptor;
+    }
 }

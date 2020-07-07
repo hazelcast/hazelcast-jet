@@ -33,27 +33,22 @@ public class SqlFileTest extends SqlTestSupport {
     @BeforeClass
     public static void beforeClass() {
         name = createRandomName();
-        executeSql(format("CREATE EXTERNAL TABLE %s (" +
-                        " username VARCHAR," +
-                        " age INT" +
-                        ")" +
-                        "TYPE \"%s\" " +
-                        "OPTIONS (" +
-                        " \"%s\" '%s'," +
-                        " \"%s\" '%s'," +
-                        " \"%s\" '%s'" +
-                        ")",
-                name, FileSqlConnector.TYPE_NAME,
-                FileSqlConnector.TO_DIRECTORY, RESOURCES_PATH,
-                FileSqlConnector.TO_GLOB, "users.avro",
-                TO_SERIALIZATION_FORMAT, AVRO_SERIALIZATION_FORMAT
-        ));
+        executeSql("CREATE EXTERNAL TABLE " + name + " ("
+                + "username VARCHAR"
+                + ", age INT"
+                + ") TYPE \"" + FileSqlConnector.TYPE_NAME + "\" "
+                + "OPTIONS ("
+                + "\"" + FileSqlConnector.TO_DIRECTORY + "\" '" + RESOURCES_PATH + "'"
+                + ", \"" + FileSqlConnector.TO_GLOB + "\" '" + "users.avro" + "'"
+                + ", \"" + TO_SERIALIZATION_FORMAT + "\" '" + AVRO_SERIALIZATION_FORMAT + "'"
+                + ")"
+        );
     }
 
     @Test
     public void select_unicodeConstant() {
         assertRowsEventuallyAnyOrder(
-                format("SELECT '喷气式飞机' FROM %s", name),
+                "SELECT '喷气式飞机' FROM " + name,
                 asList(
                         new Row("喷气式飞机"),
                         new Row("喷气式飞机")
@@ -64,7 +59,7 @@ public class SqlFileTest extends SqlTestSupport {
     @Test
     public void fullScan() {
         assertRowsEventuallyAnyOrder(
-                format("SELECT age, username FROM %s", name),
+                "SELECT age, username FROM " + name,
                 asList(
                         new Row(0, "User0"),
                         new Row(1, "User1")
@@ -75,7 +70,7 @@ public class SqlFileTest extends SqlTestSupport {
     @Test
     public void fullScan_star() {
         assertRowsEventuallyAnyOrder(
-                format("SELECT * FROM %s", name),
+                "SELECT * FROM " + name,
                 asList(
                         new Row("User0", 0),
                         new Row("User1", 1)
@@ -94,7 +89,7 @@ public class SqlFileTest extends SqlTestSupport {
     @Test
     public void fullScan_filter2() {
         assertRowsEventuallyAnyOrder(
-                format("SELECT username FROM %s WHERE age=1 or username='User0'", name),
+                "SELECT username FROM " + name + " WHERE age=1 or username='User0'",
                 asList(
                         new Row("User0"),
                         new Row("User1")
@@ -105,7 +100,7 @@ public class SqlFileTest extends SqlTestSupport {
     @Test
     public void fullScan_projection1() {
         assertRowsEventuallyAnyOrder(
-                format("SELECT upper(username) FROM %s WHERE age=1", name),
+                "SELECT upper(username) FROM " + name + " WHERE age=1",
                 singletonList(new Row("USER1"))
         );
     }
@@ -113,7 +108,7 @@ public class SqlFileTest extends SqlTestSupport {
     @Test
     public void fullScan_projection2() {
         assertRowsEventuallyAnyOrder(
-                format("SELECT username FROM %s WHERE upper(username)='USER1'", name),
+                "SELECT username FROM " + name + " WHERE upper(username)='USER1'",
                 singletonList(new Row("User1"))
         );
     }
@@ -121,7 +116,7 @@ public class SqlFileTest extends SqlTestSupport {
     @Test
     public void fullScan_projection3() {
         assertRowsEventuallyAnyOrder(
-                format("SELECT name FROM (SELECT upper(username) name FROM %s) WHERE name='USER1'", name),
+                "SELECT name FROM (SELECT upper(username) name FROM " + name + ") WHERE name='USER1'",
                 singletonList(new Row("USER1"))
         );
     }
@@ -129,7 +124,7 @@ public class SqlFileTest extends SqlTestSupport {
     @Test
     public void fullScan_projection4() {
         assertRowsEventuallyAnyOrder(
-                format("SELECT upper(username) FROM %s WHERE upper(username)='USER1'", name),
+                "SELECT upper(username) FROM " + name + " WHERE upper(username)='USER1'",
                 singletonList(new Row("USER1"))
         );
     }
