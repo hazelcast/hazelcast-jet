@@ -44,12 +44,16 @@ import com.hazelcast.spi.impl.operationservice.LiveOperations;
 import com.hazelcast.spi.impl.operationservice.LiveOperationsTracker;
 import com.hazelcast.spi.impl.operationservice.Operation;
 import com.hazelcast.sql.impl.JetSqlBackend;
+import com.hazelcast.sql.impl.QueryId;
+import com.hazelcast.sql.impl.exec.root.RootResultConsumer;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
@@ -87,6 +91,7 @@ public class JetService implements ManagedService, MembershipAwareService, LiveO
     private final Supplier<int[]> sharedPartitionKeys = memoizeConcurrent(this::computeSharedPartitionKeys);
 
     private final JetSqlBackend jetSqlBackend;
+    private final ConcurrentMap<QueryId, RootResultConsumer> resultConsumerRegistry = new ConcurrentHashMap<>();
 
     public JetService(Node node) {
         this.logger = node.getLogger(getClass());
@@ -326,5 +331,9 @@ public class JetService implements ManagedService, MembershipAwareService, LiveO
                 jetInstance.shutdown();
             }
         }, "jet.ShutdownThread");
+    }
+
+    public Map<QueryId, RootResultConsumer> getResultConsumerRegistry() {
+        return resultConsumerRegistry;
     }
 }

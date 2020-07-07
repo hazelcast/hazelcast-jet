@@ -18,6 +18,7 @@ package com.hazelcast.jet.sql.impl;
 
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.sql.SqlRowMetadata;
+import com.hazelcast.sql.impl.QueryId;
 import com.hazelcast.sql.impl.explain.QueryExplain;
 import com.hazelcast.sql.impl.optimizer.SqlPlan;
 import com.hazelcast.sql.impl.optimizer.SqlPlanType;
@@ -27,14 +28,14 @@ public class JetPlan implements SqlPlan {
     private final DAG dag;
     private final boolean isStreaming;
     private final boolean isInsert;
-    private final String observableName;
+    private final QueryId queryId;
     private final SqlRowMetadata rowMetadata;
 
-    public JetPlan(DAG dag, boolean isStreaming, boolean isInsert, String observableName, SqlRowMetadata rowMetadata) {
+    public JetPlan(DAG dag, boolean isStreaming, boolean isInsert, QueryId queryId, SqlRowMetadata rowMetadata) {
         this.dag = dag;
         this.isStreaming = isStreaming;
         this.isInsert = isInsert;
-        this.observableName = observableName;
+        this.queryId = queryId;
         this.rowMetadata = rowMetadata;
     }
 
@@ -60,8 +61,8 @@ public class JetPlan implements SqlPlan {
         return isInsert;
     }
 
-    public String getObservableName() {
-        return observableName;
+    public QueryId getQueryId() {
+        return queryId;
     }
 
     public SqlRowMetadata getRowMetadata() {

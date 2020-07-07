@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.sql.impl.opt.physical;
 
+import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.sql.impl.opt.physical.visitor.CreateDagVisitor;
 import com.hazelcast.sql.impl.expression.Expression;
 import com.hazelcast.sql.impl.plan.node.PlanNodeSchema;
@@ -55,10 +56,8 @@ public class NestedLoopJoinPhysicalRel extends Join implements PhysicalRel {
     }
 
     @Override
-    public void visit(CreateDagVisitor visitor) {
-        visitor.onNestedLoopRead(this);
-
-        ((PhysicalRel) getLeft()).visit(visitor);
+    public Vertex visit(CreateDagVisitor visitor) {
+        return visitor.onNestedLoopRead(this);
     }
 
     @Override

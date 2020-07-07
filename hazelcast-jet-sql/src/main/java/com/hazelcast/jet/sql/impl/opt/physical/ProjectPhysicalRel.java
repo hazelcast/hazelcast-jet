@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.sql.impl.opt.physical;
 
+import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.sql.impl.opt.physical.visitor.CreateDagVisitor;
 import com.hazelcast.sql.impl.expression.Expression;
 import com.hazelcast.sql.impl.plan.node.PlanNodeSchema;
@@ -50,10 +51,8 @@ public class ProjectPhysicalRel extends Project implements PhysicalRel {
     }
 
     @Override
-    public void visit(CreateDagVisitor visitor) {
-        visitor.onProject(this);
-
-        ((PhysicalRel) getInput()).visit(visitor);
+    public Vertex visit(CreateDagVisitor visitor) {
+        return visitor.onProject(this);
     }
 
     @Override

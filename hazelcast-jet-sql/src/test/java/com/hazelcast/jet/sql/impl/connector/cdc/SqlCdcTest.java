@@ -46,28 +46,24 @@ public class SqlCdcTest extends SqlTestSupport {
 
     @BeforeClass
     public static void beforeClass() {
-        executeSql(format("CREATE EXTERNAL TABLE %s (" +
-                        " %s CHAR, " +
-                        " id INT, " +
-                        " first_name VARCHAR, " +
-                        " last_name VARCHAR, " +
-                        " email VARCHAR" +
-                        ") TYPE \"%s\" " +
-                        "OPTIONS (" +
-                        " \"connector.class\" '%s', " +
-                        " \"database.hostname\" '%s', " +
-                        " \"database.port\" '%s', " +
-                        " \"database.user\" '%s', " +
-                        " \"database.password\" '%s', " +
-                        " \"database.server.id\" '1', " +
-                        " \"database.server.name\" '%s', " +
-                        " \"database.whitelist\" '%s', " +
-                        " \"table.whitelist\" '%s'" +
-                        ")",
-                TABLE_NAME, OPERATION, CdcSqlConnector.TYPE_NAME, MY_SQL_CONNECTOR_CLASS_NAME,
-                mysql.getContainerIpAddress(), mysql.getMappedPort(MYSQL_PORT), USER, PASSWORD, SERVER_NAME,
-                SCHEMA_NAME, SCHEMA_NAME + "." + TABLE_NAME
-        ));
+        executeSql("CREATE EXTERNAL TABLE " + TABLE_NAME + " ( "
+                + OPERATION + " CHAR, "
+                + "id INT, "
+                + "first_name VARCHAR, "
+                + "last_name VARCHAR, "
+                + "email VARCHAR) "
+                + "TYPE \"" + CdcSqlConnector.TYPE_NAME + "\" "
+                + "OPTIONS ( "
+                + "\"connector.class\" '" + MY_SQL_CONNECTOR_CLASS_NAME + "', "
+                + "\"database.hostname\" '" + mysql.getContainerIpAddress() + "', "
+                + "\"database.port\" '" + mysql.getMappedPort(MYSQL_PORT) + "', "
+                + "\"database.user\" '" + USER + "', "
+                + "\"database.password\" '" + PASSWORD + "', "
+                + "\"database.server.id\" '1', "
+                + "\"database.server.name\" '" + SERVER_NAME + "', "
+                + "\"database.whitelist\" '" + SCHEMA_NAME + "', "
+                + "\"table.whitelist\" '" + SCHEMA_NAME + "." + TABLE_NAME
+                + "')");
     }
 
     @Test

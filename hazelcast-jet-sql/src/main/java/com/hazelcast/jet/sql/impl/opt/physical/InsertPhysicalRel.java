@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.sql.impl.opt.physical;
 
+import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.sql.impl.opt.physical.visitor.CreateDagVisitor;
 import com.hazelcast.jet.sql.impl.schema.JetTable;
 import com.hazelcast.sql.impl.calcite.schema.HazelcastTable;
@@ -62,10 +63,8 @@ public class InsertPhysicalRel extends TableModify implements PhysicalRel {
     }
 
     @Override
-    public void visit(CreateDagVisitor visitor) {
-        visitor.onInsert(this);
-
-        ((PhysicalRel) getInput()).visit(visitor);
+    public Vertex visit(CreateDagVisitor visitor) {
+        return visitor.onInsert(this);
     }
 
     @Override

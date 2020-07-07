@@ -23,14 +23,17 @@ import com.hazelcast.sql.SqlService;
 import org.junit.BeforeClass;
 
 import java.nio.file.Paths;
+import javax.annotation.Nonnull;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ExecutionException;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
@@ -60,39 +63,58 @@ public abstract class SqlTestSupport extends SimpleTestInClusterSupport {
     }
 
     protected static void assertRowsEventuallyAnyOrder(String sql, Collection<Row> expectedRows) {
-        try {
-            List<Row> actualRows = spawn(() -> executeSql(sql, expectedRows.size()))
-                    .get(5, TimeUnit.SECONDS);
-
-            assertThat(actualRows).containsExactlyInAnyOrderElementsOf(expectedRows);
-        } catch (InterruptedException | ExecutionException | TimeoutException e) {
-            throw sneakyThrow(e);
-        }
+        List<Row> actualRows = executeSqlWithLimit(sql, expectedRows.size(), 10);
+        assertThat(actualRows).containsExactlyInAnyOrderElementsOf(expectedRows);
     }
 
     protected static void executeSql(String sql) {
-        try (SqlResult cursor = toCursor(sql)) {
+        try (SqlResult cursor = sqlService.query(sql)) {
             cursor.iterator().forEachRemaining(o -> { });
         } catch (Exception e) {
             throw sneakyThrow(e);
         }
     }
 
-    private static List<Row> executeSql(String sql, int numberOfExpectedRows) {
-        try (SqlResult cursor = toCursor(sql)) {
-            Iterator<SqlRow> iterator = cursor.iterator();
-            List<Row> rows = new ArrayList<>(numberOfExpectedRows);
-            for (int i = 0; i < numberOfExpectedRows; i++) {
-                rows.add(new Row(cursor.getRowMetadata().getColumnCount(), iterator.next()));
+    /**
+     * Execute a query and fetch up to {@code rowCountLimit} rows, then close
+     * the result. Don't wait until the result iterator is exhausted if enough
+     * rows were fetched. Suitable for streaming queries that don't stop. The
+     * outstanding rows are ignored.
+     */
+    @Nonnull
+    private static List<Row> executeSqlWithLimit(String sql, int rowCountLimit, int timeLimitSeconds) {
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        Deque<Row> rows = new ArrayDeque<>();
+
+        Thread thread = new Thread(() -> {
+            try (SqlResult result = sqlService.query(sql)) {
+                Iterator<SqlRow> iterator = result.iterator();
+                for (int i = 0; i < rowCountLimit && iterator.hasNext(); i++) {
+                    rows.add(new Row(result.getRowMetadata().getColumnCount(), iterator.next()));
+                }
+                future.complete(null);
+                System.out.println("aaa future completed normally");
+            } catch (RuntimeException e) {
+                e.printStackTrace();
+                future.completeExceptionally(e);
             }
-            return rows;
+        });
+
+        thread.start();
+
+        try {
+            try {
+                future.get(timeLimitSeconds, TimeUnit.SECONDS);
+            } catch (TimeoutException e) {
+                thread.interrupt();
+                thread.join();
+            }
         } catch (Exception e) {
             throw sneakyThrow(e);
         }
-    }
 
-    private static SqlResult toCursor(String sql) {
-        return sqlService.query(sql);
+        // return whichever rows we've collected so far
+        return new ArrayList<>(rows);
     }
 
     protected static final class Row {
