@@ -74,6 +74,8 @@ public interface ChangeRecord {
      * Specifies the numeric value part of the record's source sequence. As long
      * as the source sequence doesn't change the values will be monotonically
      * increasing and can be used to impose ordering over the stream of records.
+     *
+     * @since 4.3
      */
     long sequenceValue();
 
@@ -82,6 +84,8 @@ public interface ChangeRecord {
      * observed in its value should be interpreted as a reset in the sequence's
      * numeric values. No ordering can be deduced for two records with different
      * sequence sources.
+     *
+     * @since 4.3
      */
     long sequenceSource();
 
