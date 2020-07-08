@@ -9,7 +9,15 @@
     ],
     "Tutorials": [
       "tutorials/kafka",
-      "tutorials/cdc",
+      {
+        "type": "subcategory",
+        "label": "Change Data Capture",
+        "ids": [
+          "tutorials/cdc",
+          "tutorials/cdc-postgres",
+          "tutorials/cdc-join"
+        ]
+      },
       "tutorials/map-join",
       "tutorials/windowing",
       "tutorials/python",
@@ -39,6 +47,7 @@
       "how-tos/custom-batch-source",
       "how-tos/custom-stream-source",
       "how-tos/custom-sink",
+      "how-tos/custom-aggregate-operation",
       "how-tos/operator",
       "how-tos/xa",
       "how-tos/grpc"
@@ -48,12 +57,13 @@
       "operations/configuration",
       "operations/discovery",
       "operations/cluster-sizing",
+      "operations/gc-concerns",
       "operations/job-management",
       "operations/docker",
       "operations/kubernetes",
       "operations/monitoring",
       "operations/version-compatibility",
-      "operations/cdc-deployment"
+      "operations/cdc"
     ],
     "Architecture": [
       "architecture/distributed-computing",

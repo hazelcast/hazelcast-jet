@@ -30,24 +30,15 @@ p.readFrom(Sources.files("/home/data/web-logs"))
 
 #### JSON Files
 
-For JSON files, the source expects each line contains a valid JSON
-string and converts it to the given object type or to a `Map` if no
-type is specified:
+For JSON files, the source expects the content of the files as
+[streaming JSON](https://en.wikipedia.org/wiki/JSON_streaming) content,
+where each JSON string is separated by a new-line. The JSON string
+itself can span on multiple lines. The source converts each JSON string
+to an object of given type or to a `Map` if no type is specified:
 
 ```java
 Pipeline p = Pipeline.create();
 p.readFrom(Sources.json("/home/data/people", Person.class))
- .filter(person -> person.location().equals("NYC"))
- .writeTo(Sinks.logger());
-```
-
-If your JSON files contain JSON strings that span multiple
-lines, you can use `filesBuilder` source:
-
-```java
-Pipeline p = Pipeline.create();
-p.readFrom(Sources.filesBuilder(sourceDir)
-    .build(JsonUtil.asMultilineJson(Person.class)))
  .filter(person -> person.location().equals("NYC"))
  .writeTo(Sinks.logger());
 ```
@@ -1046,7 +1037,7 @@ Implementation of CDC in Jet is based on
 which can handle CDC events from [any database supported by
 Debezium](https://debezium.io/documentation/reference/1.1/connectors/index.html),
 but we're also striving to make CDC sources first class citizens in Jet.
-The one for MySQL is already one (since Jet version 4.2).
+The ones for MySQL & PostgreSQL already are (since Jet version 4.2).
 
 Setting up a streaming source of CDC data is just the matter of pointing
 it at the right database via configuration:
@@ -1080,8 +1071,12 @@ As of Jet version 4.2 we have following types of CDC sources:
 
 * [DebeziumCdcSources](/javadoc/{jet-version}/com/hazelcast/jet/cdc/DebeziumCdcSources.html):
   generic source for all databases supported by Debezium
-* [MySqlCdcSources](/javadoc/{jet-version}/com/hazelcast/jet/cdc/MySqlCdcSources.html):
+* [MySqlCdcSources](/javadoc/{jet-version}/com/hazelcast/jet/cdc/mysql/MySqlCdcSources.html):
   specific, first class Jet CDC source for MySQL databases (also based
+  on Debezium, but benefiting the full range of convenience Jet can
+  additionally provide)
+* [PostgresCdcSources](/javadoc/{jet-version}/com/hazelcast/jet/cdc/postgres/PostgresCdcSources.html):
+  specific, first class Jet CDC source for PostgreSQL databases (also based
   on Debezium, but benefiting the full range of convenience Jet can
   additionally provide)
 
@@ -1125,13 +1120,49 @@ p.readFrom(source)
 > be used to map only to objects which the IMDG backend can deserialize,
 > which unfortunately doesn't include user code submitted as a part of
 > the Jet job. So in the above example it's OK to have `String` email
-> values, but we wouldn't be able to use `Customer` directly. Hopefully
-> future Jet versions will address this problem.
+> values, but we wouldn't be able to use `Customer` directly.
+>
+> If user code has to be used, then the problem can be solved with the
+> help of IMDG's "User Code Deployment" feature. Example configs for
+> that can be seen in our [CDC Join Tutorial](../tutorials/cdc-join#7-start-hazelcast-jet).
 
 ### Elasticsearch
 
 Elasticsearch is a popular fulltext search engine. Hazelcast Jet can
 use it both as a source and a sink.
+
+#### Dependency
+
+To use the Elasticsearch connector, you need to copy the
+`hazelcast-jet-elasticsearch-7` module from the `opt` folder to the
+`lib` folder and add the following dependency to your application:
+
+<!--DOCUSAURUS_CODE_TABS-->
+
+<!--Gradle-->
+
+```groovy
+compile 'com.hazelcast.jet:hazelcast-jet-elasticsearch-7:{jet-version}'
+```
+
+<!--Maven-->
+
+```xml
+<dependency>
+  <groupId>com.hazelcast.jet</groupId>
+  <artifactId>hazelcast-jet-elasticsearch-7</artifactId>
+  <version>{jet-version}</version>
+</dependency>
+```
+
+> For Elasticsearch version 6 and 5 there are separate modules
+> `hazelcast-jet-elasticsearch-6` and `hazelcast-jet-elasticsearch-5`.
+> Each module includes Elasticsearch client compatible with given major
+> version of Elasticsearch. The connector API is the same between
+> different versions, apart from a few minor differences where we
+> surface the API of Elasticsearch client. See the JavaDoc for any
+> such differences. The jars are available as separate downloads on the
+> [download page](/download) or in Maven Central.
 
 #### Source
 
@@ -1179,6 +1210,31 @@ If Hazelcast Jet nodes and Elasticsearch nodes are located on the same
 machines then the connector will use co-located reading, avoiding the
 overhead of physical network.
 
+##### Failure Scenario Considerations
+
+The connector uses retry capability of the underlying Elasticsearch
+client. This allows the connector to handle some transient network
+issues but it doesn't cover all cases.
+
+The source uses Elasticsearch's [Scroll API](https://www.elastic.co/guide/en/elasticsearch/client/java-rest/current/java-rest-high-search-scroll.html).
+The scroll context is stored on a node with the primary shard. If this
+node crashes, the search context is lost and the job can't reliably read
+all documents, so the job fails.
+
+If there is a network issue between Jet and Elasticsearch the
+Elasticsearch client retries the request, allowing the job to continue.
+
+However, there is an edge case where the scroll request is processed by
+the Elasticsearch server, moves the scroll cursor forward, but the
+response is lost. The client then retries and receives the next page,
+effectively skipping the previous page. The recommended way to handle
+this is to check the number of processed documents after the job
+finishes, possibly restart the job when not all documents are read.
+
+These are known limitations of Elasticsearch Scroll API. There is
+an [ongoing work](https://github.com/elastic/elasticsearch/pull/56480)
+on Elasticsearch side to fix these issues.
+
 #### Sink
 
 The Elasticsearch connector sink provides a builder and several
@@ -1218,6 +1274,51 @@ Sink<Map<String, Object>> elasticSink = new ElasticSinkBuilder<Map<String, Objec
 The Elasticsearch sink doesn't implement co-located writing. To achieve
 maximum write throughput provide all nodes to the `RestClient`
 and configure parallelism.
+
+##### Failure Scenario Considerations
+
+The sink connector is able to handle transient network failures,
+failures of nodes in the cluster and cluster changes, e.g., scaling up.
+
+Transient network failures between Jet and Elasticsearch cluster are
+handled by retries in the Elasticsearch client.
+
+The worst case scenario is when a master node containing a primary of a
+shard fails.
+
+First, you need to set `BulkRequest.waitForActiveShards(int)` to ensure
+that a document is replicated to at least some replicas. Also, you can't
+use the auto-generated ids and need to set the document id manually to
+avoid duplicate records.
+
+Second, you need to make sure new master node and primary shard is
+allocated before the client times out. This involves:
+
+* configuration of the following properties on the client:
+
+  ```text
+  org.apache.http.client.config.RequestConfig.Builder.setConnectionRequestTimeout
+  org.apache.http.client.config.RequestConfig.Builder.setConnectTimeout
+  org.apache.http.client.config.RequestConfig.Builder.setSocketTimeout
+  ```
+
+* and configuration of the following properties in the Elasticsearch
+  cluster:
+
+  ```text
+  cluster.election.max_timeout
+  cluster.fault_detection.follower_check.timeout
+  cluster.fault_detection.follower_check.retry_count
+  cluster.fault_detection.leader_check.timeout
+  cluster.fault_detection.leader_check.retry_count
+  cluster.follower_lag.timeout
+  transport.connect_timeout
+  transport.ping_schedule
+  network.tcp.connect_timeout
+  ```
+
+For details see Elasticsearch documentation section on
+[cluster fault detection](https://www.elastic.co/guide/en/elasticsearch/reference/current/cluster-fault-detection.html).
 
 ### MongoDB
 
@@ -1433,17 +1534,20 @@ sources are batch and some are stream oriented. The processing guarantee
 is only relevant for streaming sources, as batch jobs should just be
 restarted in face of an intermittent failure.
 
-|source|module|batch/stream|guarantee|
-|:-----|:---- |:-----------|:--------|
-|`AvroSources.files`|`hazelcast-jet-avro`|batch|N/A|
-|`DebeziumCdcSources.debezium`|`hazelcast-jet-cdc-debezium`|stream|at-least-once|
-|`ElasticSources.elastic`|`hazelcast-jet-elasticsearch-7`|batch|N/A|
-|`HadoopSources.inputFormat`|`hazelcast-jet-hadoop`|batch|N/A|
-|`KafkaSources.kafka`|`hazelcast-jet-kafka`|stream|exactly-once|
-|`MySqlCdcSources.mysql`|`hazelcast-jet-cdc-mysql`|stream|at-least-once|
+|source|artifactId (module)|batch/stream|guarantee|
+|:-----|:------------------|:-----------|:--------|
+|`AvroSources.files`|`hazelcast-jet-avro (avro)`|batch|N/A|
+|`DebeziumCdcSources.debezium`|`hazelcast-jet-cdc-debezium (cdc-debezium)`|stream|at-least-once|
+|`ElasticSources.elastic`|`hazelcast-jet-elasticsearch-5 (elasticsearch-5)`|batch|N/A|
+|`ElasticSources.elastic`|`hazelcast-jet-elasticsearch-6 (elasticsearch-6)`|batch|N/A|
+|`ElasticSources.elastic`|`hazelcast-jet-elasticsearch-7 (elasticsearch-7)`|batch|N/A|
+|`HadoopSources.inputFormat`|`hazelcast-jet-hadoop (hadoop)`|batch|N/A|
+|`KafkaSources.kafka`|`hazelcast-jet-kafka (kafka)`|stream|exactly-once|
+|`MySqlCdcSources.mysql`|`hazelcast-jet-cdc-mysql (cdc-mysql)`|stream|at-least-once|
+|`PostgresCdcSources.postgres`|`hazelcast-jet-cdc-postgres (cdc-postgres)`|stream|at-least-once|
 |`PulsarSources.pulsarConsumer`|`hazelcast-jet-contrib-pulsar`|stream|N/A|
 |`PulsarSources.pulsarReader`|`hazelcast-jet-contrib-pulsar`|stream|exactly-once|
-|`S3Sources.s3`|`hazelcast-jet-s3`|batch|N/A|
+|`S3Sources.s3`|`hazelcast-jet-s3 (s3)`|batch|N/A|
 |`Sources.cache`|`hazelcast-jet`|batch|N/A|
 |`Sources.cacheJournal`|`hazelcast-jet`|stream|exactly-once|
 |`Sources.files`|`hazelcast-jet`|batch|N/A|
@@ -1469,15 +1573,17 @@ default support at-least-once guarantee, but only some of them support
 exactly-once. If using idempotent updates, you can ensure exactly-once
 processing even with at-least-once sinks.
 
-|sink|module|streaming support|guarantee|
-|:---|:-----|:--------------|:-------------------|
-|`AvroSinks.files`|`hazelcast-jet-avro`|no|N/A|
-|`CdcSinks.map`|`hazelcast-jet-cdc-debezium`|yes|at-least-once|
-|`ElasticSinks.elastic`|`hazelcast-jet-elasticsearch-7`|yes|at-least-once|
-|`HadoopSinks.outputFormat`|`hazelcast-jet-hadoop`|no|N/A|
-|`KafkaSinks.kafka`|`hazelcast-jet-kafka`|yes|exactly-once|
+|sink|artifactId (module)|streaming support|guarantee|
+|:---|:------------------|:--------------|:-------------------|
+|`AvroSinks.files`|`hazelcast-jet-avro (avro)`|no|N/A|
+|`CdcSinks.map`|`hazelcast-jet-cdc-debezium (cdc-debezium)`|yes|at-least-once|
+|`ElasticSinks.elastic`|`hazelcast-jet-elasticsearch-5 (elasticsearch-5)`|yes|at-least-once|
+|`ElasticSinks.elastic`|`hazelcast-jet-elasticsearch-6 (elasticsearch-6)`|yes|at-least-once|
+|`ElasticSinks.elastic`|`hazelcast-jet-elasticsearch-7 (elasticsearch-7)`|yes|at-least-once|
+|`HadoopSinks.outputFormat`|`hazelcast-jet-hadoop (hadoop)`|no|N/A|
+|`KafkaSinks.kafka`|`hazelcast-jet-kafka (kafka)`|yes|exactly-once|
 |`PulsarSources.pulsarSink`|`hazelcast-jet-contrib-pulsar`|yes|at-least-once|
-|`S3Sinks.s3`|`hazelcast-jet-s3`|no|N/A|
+|`S3Sinks.s3`|`hazelcast-jet-s3 (s3)`|no|N/A|
 |`Sinks.cache`|`hazelcast-jet`|yes|at-least-once|
 |`Sinks.files`|`hazelcast-jet`|yes|exactly-once|
 |`Sinks.json`|`hazelcast-jet`|yes|exactly-once|
