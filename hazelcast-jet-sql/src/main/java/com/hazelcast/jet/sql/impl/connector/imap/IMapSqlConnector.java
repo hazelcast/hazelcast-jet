@@ -21,7 +21,6 @@ import com.hazelcast.function.FunctionEx;
 import com.hazelcast.internal.util.UuidUtil;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.core.DAG;
-import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.core.processor.SinkProcessors;
 import com.hazelcast.jet.pipeline.ServiceFactories;
@@ -48,7 +47,7 @@ import static com.hazelcast.jet.Traversers.traverseIterable;
 import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.processor.Processors.flatMapUsingServiceP;
 import static com.hazelcast.jet.core.processor.SourceProcessors.readMapP;
-import static com.hazelcast.jet.sql.impl.connector.SqlProcessors.entryProjectorProcessorSupplier;
+import static com.hazelcast.jet.sql.impl.connector.EntryProcessors.entryProjector;
 import static com.hazelcast.jet.sql.impl.expression.ExpressionUtil.joinFn;
 import static com.hazelcast.jet.sql.impl.expression.ExpressionUtil.projectionFn;
 
@@ -154,9 +153,10 @@ public class IMapSqlConnector extends SqlKeyValueConnector implements JetSqlConn
     ) {
         PartitionedMapTable table = (PartitionedMapTable) table0;
 
-        ProcessorSupplier projectorProcessorSupplier =
-                entryProjectorProcessorSupplier(table.getKeyUpsertDescriptor(), table.getValueUpsertDescriptor(), table.getFields());
-        Vertex vStart = dag.newVertex("map-project", projectorProcessorSupplier);
+        Vertex vStart = dag.newVertex(
+                "map-project",
+                entryProjector(table.getKeyUpsertDescriptor(), table.getValueUpsertDescriptor(), table.getFields())
+        );
 
         String mapName = table.getName();
         Vertex vEnd = dag.newVertex("map(" + mapName + ")", SinkProcessors.writeMapP(mapName));

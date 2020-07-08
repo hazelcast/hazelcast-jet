@@ -19,6 +19,7 @@ package com.hazelcast.jet.sql.impl.connector.imap;
 import com.hazelcast.jet.sql.SqlTestSupport;
 import com.hazelcast.map.IMap;
 import com.hazelcast.sql.impl.connector.LocalPartitionedMapConnector;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static com.hazelcast.jet.core.TestUtil.createMap;
@@ -54,7 +55,7 @@ public class SqlPrimitiveTest extends SqlTestSupport {
 
         assertMapEventually(
                 name,
-                format("INSERT OVERWRITE %s (this, __key) VALUES ('2', 1), ('4', 3)", name), // TODO ('4', 3 + 1) fails...
+                format("INSERT OVERWRITE %s (this, __key) VALUES ('2', 1), ('4', 3)", name),
                 createMap(1, "2", 3, "4")
         );
     }
@@ -67,6 +68,18 @@ public class SqlPrimitiveTest extends SqlTestSupport {
                 name,
                 format("INSERT OVERWRITE %s (__key, this) VALUES (CAST(0 + 1 AS INT), 2)", name),
                 createMap(1, "2")
+        );
+    }
+
+    @Test
+    @Ignore // TODO handle LogicalUnion ???
+    public void supportsInsertWithProject1() {
+        String name = createTableWithRandomName();
+
+        assertMapEventually(
+                name,
+                format("INSERT OVERWRITE %s (this, __key) VALUES ('2', 1), ('4', 3 + 0)", name),
+                createMap(1, "2", 3, "4")
         );
     }
 

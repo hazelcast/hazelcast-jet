@@ -70,7 +70,7 @@ public class CreateDagVisitor {
             items.add(result);
         }
 
-        Vertex vertex = dag.newVertex("values-src", convenientSourceP(
+        return dag.newVertex("values-src", convenientSourceP(
                 pCtx -> null,
                 (ignored, buf) -> {
                     items.forEach(buf::add);
@@ -83,12 +83,11 @@ public class CreateDagVisitor {
                 1,
                 true)
         );
-
-        return vertex;
     }
 
     public Vertex onInsert(InsertPhysicalRel rel) {
         Table table = rel.getTable().unwrap(HazelcastTable.class).getTarget();
+
         Vertex vertex = getJetSqlConnector(table).sink(dag, table);
         connectInput(rel.getInput(), vertex, null);
         return vertex;

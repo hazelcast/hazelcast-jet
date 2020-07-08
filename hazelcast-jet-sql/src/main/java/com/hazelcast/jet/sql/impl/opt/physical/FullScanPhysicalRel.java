@@ -17,7 +17,6 @@
 package com.hazelcast.jet.sql.impl.opt.physical;
 
 import com.hazelcast.jet.core.Vertex;
-import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.jet.sql.impl.opt.AbstractFullScanRel;
 import com.hazelcast.jet.sql.impl.opt.physical.visitor.CreateDagVisitor;
 import com.hazelcast.sql.impl.expression.Expression;
@@ -32,7 +31,7 @@ import org.apache.calcite.rex.RexNode;
 
 import java.util.List;
 
-import static java.util.stream.Collectors.toList;
+import static com.hazelcast.jet.impl.util.Util.toList;
 
 /**
  * Physical full scan over a source connector.
@@ -50,20 +49,18 @@ public class FullScanPhysicalRel extends AbstractFullScanRel implements Physical
     }
 
     public Expression<Boolean> filter() {
-        PlanNodeSchema schema = new PlanNodeSchema(Util.toList(getTableUnwrapped().getFields(), TableField::getType));
+        PlanNodeSchema schema = new PlanNodeSchema(toList(getTableUnwrapped().getFields(), TableField::getType));
         return filter(schema, getFilter());
     }
 
     public List<Expression<?>> projection() {
-        PlanNodeSchema schema = new PlanNodeSchema(Util.toList(getTableUnwrapped().getFields(), TableField::getType));
+        PlanNodeSchema schema = new PlanNodeSchema(toList(getTableUnwrapped().getFields(), TableField::getType));
         return project(schema, getProjection());
     }
 
     @Override
     public PlanNodeSchema schema() {
-        List<QueryDataType> fieldTypes = projection().stream()
-                .map(Expression::getType)
-                .collect(toList());
+        List<QueryDataType> fieldTypes = toList(projection(), Expression::getType);
         return new PlanNodeSchema(fieldTypes);
     }
 

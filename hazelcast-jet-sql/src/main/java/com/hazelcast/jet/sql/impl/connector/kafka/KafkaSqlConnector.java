@@ -18,7 +18,6 @@ package com.hazelcast.jet.sql.impl.connector.kafka;
 
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.core.DAG;
-import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.kafka.KafkaProcessors;
 import com.hazelcast.jet.sql.JetSqlConnector;
@@ -47,7 +46,7 @@ import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.EventTimePolicy.noEventTime;
 import static com.hazelcast.jet.core.processor.Processors.mapP;
-import static com.hazelcast.jet.sql.impl.connector.SqlProcessors.entryProjectorProcessorSupplier;
+import static com.hazelcast.jet.sql.impl.connector.EntryProcessors.entryProjector;
 import static com.hazelcast.jet.sql.impl.expression.ExpressionUtil.projectionFn;
 import static java.util.stream.Collectors.toMap;
 
@@ -144,9 +143,10 @@ public class KafkaSqlConnector extends SqlKeyValueConnector implements JetSqlCon
     ) {
         KafkaTable table = (KafkaTable) jetTable;
 
-        ProcessorSupplier projectorProcessorSupplier =
-                entryProjectorProcessorSupplier(table.getKeyUpsertDescriptor(), table.getValueUpsertDescriptor(), table.getFields());
-        Vertex vStart = dag.newVertex("kafka-project", projectorProcessorSupplier);
+        Vertex vStart = dag.newVertex(
+                "kafka-project",
+                entryProjector(table.getKeyUpsertDescriptor(), table.getValueUpsertDescriptor(), table.getFields())
+        );
 
         String topicName = table.getTopicName();
         Vertex vEnd = dag.newVertex("kafka(" + topicName + ')',

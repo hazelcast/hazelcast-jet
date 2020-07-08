@@ -17,7 +17,6 @@
 package com.hazelcast.jet.sql.impl.connector;
 
 import com.hazelcast.internal.serialization.InternalSerializationService;
-import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.ResettableSingletonTraverser;
@@ -38,12 +37,12 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-public final class SqlProcessors {
+public final class EntryProcessors {
 
-    private SqlProcessors() {
+    private EntryProcessors() {
     }
 
-    public static ProcessorSupplier entryProjectorProcessorSupplier(
+    public static ProcessorSupplier entryProjector(
             UpsertTargetDescriptor keyDescriptor,
             UpsertTargetDescriptor valueDescriptor,
             List<TableField> fields
@@ -86,7 +85,7 @@ public final class SqlProcessors {
         @Nonnull
         @Override
         public Collection<? extends Processor> get(int count) {
-            List<AbstractProcessor> processors = new ArrayList<>(count);
+            List<Processor> processors = new ArrayList<>(count);
             for (int i = 0; i < count; i++) {
                 ResettableSingletonTraverser<Object> traverser = new ResettableSingletonTraverser<>();
                 EntryProjector projector = new EntryProjector(
@@ -96,7 +95,7 @@ public final class SqlProcessors {
                         paths,
                         types
                 );
-                AbstractProcessor processor = new TransformP<Object[], Object>(row -> {
+                Processor processor = new TransformP<Object[], Object>(row -> {
                     traverser.accept(projector.project(row));
                     return traverser;
                 });

@@ -69,18 +69,18 @@ public class RowProjector implements Row {
         return extractors;
     }
 
-    public Object[] project(Object value) {
-        target.setTarget(value);
+    public Object[] project(Object object) {
+        target.setTarget(object);
 
         if (!Boolean.TRUE.equals(predicate.eval(this, ZERO_ARGUMENTS_CONTEXT))) {
             return null;
         }
 
-        Object[] result = new Object[projection.size()];
+        Object[] row = new Object[projection.size()];
         for (int i = 0; i < projection.size(); i++) {
-            result[i] = projection.get(i).eval(this, ZERO_ARGUMENTS_CONTEXT);
+            row[i] = projection.get(i).eval(this, ZERO_ARGUMENTS_CONTEXT);
         }
-        return result;
+        return row;
     }
 
     @SuppressWarnings("unchecked")

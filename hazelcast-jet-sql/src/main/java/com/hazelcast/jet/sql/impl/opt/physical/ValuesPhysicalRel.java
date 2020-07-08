@@ -31,7 +31,7 @@ import org.apache.calcite.rex.RexLiteral;
 
 import java.util.List;
 
-import static java.util.stream.Collectors.toList;
+import static com.hazelcast.jet.impl.util.Util.toList;
 
 public class ValuesPhysicalRel extends Values implements PhysicalRel {
 
@@ -46,9 +46,10 @@ public class ValuesPhysicalRel extends Values implements PhysicalRel {
 
     @Override
     public PlanNodeSchema schema() {
-        List<QueryDataType> fieldTypes = getRowType().getFieldList().stream()
-                                                     .map(field -> SqlToQueryType.map(field.getType().getSqlTypeName()))
-                                                     .collect(toList());
+        List<QueryDataType> fieldTypes = toList(
+                getRowType().getFieldList(),
+                field -> SqlToQueryType.map(field.getType().getSqlTypeName())
+        );
         return new PlanNodeSchema(fieldTypes);
     }
 
