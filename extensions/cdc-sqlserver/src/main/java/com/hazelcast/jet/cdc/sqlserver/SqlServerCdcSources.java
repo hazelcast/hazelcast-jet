@@ -20,9 +20,9 @@ import com.hazelcast.jet.annotation.EvolvingApi;
 import com.hazelcast.jet.cdc.ChangeRecord;
 import com.hazelcast.jet.cdc.impl.CdcSource;
 import com.hazelcast.jet.cdc.impl.ChangeRecordCdcSource;
-import com.hazelcast.jet.cdc.impl.ConstantSequenceExtractor;
 import com.hazelcast.jet.cdc.impl.DebeziumConfig;
 import com.hazelcast.jet.cdc.impl.PropertyRules;
+import com.hazelcast.jet.cdc.sqlserver.impl.SqlServerSequenceExtractor;
 import com.hazelcast.jet.pipeline.StreamSource;
 
 import javax.annotation.Nonnull;
@@ -77,8 +77,7 @@ public final class SqlServerCdcSources {
             Objects.requireNonNull(name, "name");
 
             config = new DebeziumConfig(name, "io.debezium.connector.sqlserver.SqlServerConnector");
-            config.setProperty(CdcSource.SEQUENCE_EXTRACTOR_CLASS_PROPERTY,
-                    ConstantSequenceExtractor.class.getName()); //todo
+            config.setProperty(CdcSource.SEQUENCE_EXTRACTOR_CLASS_PROPERTY, SqlServerSequenceExtractor.class.getName());
             config.setProperty(ChangeRecordCdcSource.DB_SPECIFIC_EXTRA_FIELDS_PROPERTY, "schema");
         }
 

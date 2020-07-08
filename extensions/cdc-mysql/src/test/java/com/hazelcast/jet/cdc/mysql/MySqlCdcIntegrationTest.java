@@ -93,11 +93,13 @@ public class MySqlCdcIntegrationTest extends AbstractMySqlCdcIntegrationTest {
         //when
         try (Connection connection = DriverManager.getConnection(mysql.withDatabaseName("inventory").getJdbcUrl(),
                 mysql.getUsername(), mysql.getPassword())) {
+            connection.setAutoCommit(false);
             Statement statement = connection.createStatement();
             statement.addBatch("UPDATE customers SET first_name='Anne Marie' WHERE id=1004");
             statement.addBatch("INSERT INTO customers VALUES (1005, 'Jason', 'Bourne', 'jason@bourne.org')");
             statement.addBatch("DELETE FROM customers WHERE id=1005");
             statement.executeBatch();
+            connection.commit();
         }
 
         //then

@@ -103,13 +103,15 @@ public class SqlServerCdcIntegrationTest extends AbstractCdcIntegrationTest {
         //when
         try (Connection connection = DriverManager.getConnection(mssql.getJdbcUrl() + ";databaseName=MyDB",
                 mssql.getUsername(), mssql.getPassword())) {
+            connection.setAutoCommit(false);
             connection.setSchema("inventory");
             Statement statement = connection.createStatement();
-            statement.addBatch("UPDATE MyDB.inventory.customers SET first_name = 'Anne Marie' WHERE id = 1004");
+            statement.addBatch("UPDATE MyDB.inventory.customers SET first_name='Anne Marie' WHERE id=1004");
             statement.addBatch("INSERT INTO MyDB.inventory.customers (first_name, last_name, email) VALUES " +
                     "('Jason', 'Bourne', 'jason@bourne.org')");
             statement.addBatch("DELETE FROM MyDB.inventory.customers WHERE last_name='Bourne'");
             statement.executeBatch();
+            connection.commit();
         }
 
         //then
