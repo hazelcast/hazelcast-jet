@@ -147,9 +147,7 @@ public class Edge implements IdentifiedDataSerializable {
      */
     @Nonnull
     public Edge to(@Nonnull Vertex destination) {
-        this.destination = destination;
-        this.destName = destination.getName();
-        return this;
+        return to(destination, 0);
     }
 
     /**
@@ -157,6 +155,9 @@ public class Edge implements IdentifiedDataSerializable {
      */
     @Nonnull
     public Edge to(@Nonnull Vertex destination, int ordinal) {
+        if (this.destination != null) {
+            throw new IllegalStateException("destination already set");
+        }
         this.destination = destination;
         this.destName = destination.getName();
         this.destOrdinal = ordinal;
@@ -176,7 +177,7 @@ public class Edge implements IdentifiedDataSerializable {
      */
     @Nonnull
     public Vertex getDestination() {
-        return requireNonNull(destination, "destination not yet set");
+        return requireNonNull(destination, "destination not yet set on the edge");
     }
 
     /**
@@ -199,7 +200,7 @@ public class Edge implements IdentifiedDataSerializable {
      */
     @Nonnull
     public String getDestName() {
-        return requireNonNull(destName, "destination not yet set");
+        return requireNonNull(destName, "destination not yet set on the edge");
     }
 
     /**

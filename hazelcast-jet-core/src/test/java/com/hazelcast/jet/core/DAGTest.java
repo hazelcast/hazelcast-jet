@@ -111,7 +111,8 @@ public class DAGTest {
         Vertex a = dag.newVertex("a", PROCESSOR_SUPPLIER);
 
         // Then
-        exceptionRule.expect(IllegalArgumentException.class);
+        exceptionRule.expect(NullPointerException.class);
+        exceptionRule.expectMessage("destination not yet set");
 
         // When
         dag.edge(from(a));

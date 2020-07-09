@@ -147,9 +147,6 @@ public class DAG implements IdentifiedDataSerializable, Iterable<Vertex> {
      */
     @Nonnull
     public DAG edge(@Nonnull Edge edge) {
-        if (edge.getDestination() == null) {
-            throw new IllegalArgumentException("Edge has no destination");
-        }
         if (!containsVertex(edge.getSource())) {
             throw new IllegalArgumentException(
                     containsVertexName(edge.getSource())
