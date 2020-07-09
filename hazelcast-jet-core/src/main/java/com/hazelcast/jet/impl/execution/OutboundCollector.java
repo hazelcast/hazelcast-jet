@@ -205,7 +205,7 @@ public interface OutboundCollector {
         public ProgressState offer(Object item, int partitionId) {
             OutboundCollector collector = partitionLookupTable[partitionId];
             assert collector != null : "This item should not be handled by this collector as "
-                    + "requested partitionId is not present";
+                    + "the requested partitionId is not present";
             return collector.offer(item, partitionId);
         }
 

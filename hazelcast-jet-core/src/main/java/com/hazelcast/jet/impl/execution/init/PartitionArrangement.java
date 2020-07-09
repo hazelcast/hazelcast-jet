@@ -110,4 +110,8 @@ class PartitionArrangement {
         return addrToPartitions.entrySet().stream().collect(toMap(
                 Map.Entry::getKey, e -> e.getValue().stream().mapToInt(x -> x).toArray()));
     }
+
+    public int[] getAllPartitions() {
+        return allPartitions.get();
+    }
 }
