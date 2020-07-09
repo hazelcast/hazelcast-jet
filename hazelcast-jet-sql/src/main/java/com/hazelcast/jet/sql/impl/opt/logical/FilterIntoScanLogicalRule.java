@@ -17,8 +17,11 @@
 package com.hazelcast.jet.sql.impl.opt.logical;
 
 import com.hazelcast.jet.sql.impl.opt.OptUtils;
+import com.hazelcast.sql.impl.calcite.schema.HazelcastRelOptTable;
+import com.hazelcast.sql.impl.calcite.schema.HazelcastTable;
 import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelOptRuleCall;
+import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.rel.core.Filter;
 import org.apache.calcite.rel.core.RelFactories;
 import org.apache.calcite.rel.core.TableScan;
@@ -39,6 +42,7 @@ import org.apache.calcite.rex.RexTableInputRef;
 import org.apache.calcite.rex.RexUtil;
 import org.apache.calcite.rex.RexVisitor;
 import org.apache.calcite.rex.RexWindow;
+import org.apache.calcite.util.mapping.Mappings;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -57,45 +61,52 @@ public final class FilterIntoScanLogicalRule extends RelOptRule {
     }
 
     @Override
+    // TODO: can it be simplified ???
     public void onMatch(RelOptRuleCall call) {
         Filter filter = call.rel(0);
         TableScan scan = call.rel(1);
 
-        List<RexNode> projection;
-        RexNode oldFilter;
-        if (scan instanceof FullScanLogicalRel) {
-            FullScanLogicalRel scan0 = (FullScanLogicalRel) scan;
-            projection = scan0.getProjection();
-            oldFilter = scan0.getFilter();
-        } else {
-            projection = null;
-            oldFilter = null;
+        HazelcastTable table = OptUtils.getHazelcastTable(scan);
+
+        List<RexNode> projection = scan instanceof FullScanLogicalRel
+                ? ((FullScanLogicalRel) scan).getProjection()
+                : null;
+
+        RexNode existingCondition = table.getFilter();
+
+        RexNode condition = filter.getCondition();
+
+        RexNode convertedCondition = projection == null
+                ? RexUtil.apply(Mappings.source(table.getProjects(), table.getOriginalFieldCount()), condition)
+                : RexUtil.apply(new ProjectFieldVisitor(projection), new RexNode[]{condition})[0];
+        if (existingCondition != null) {
+            convertedCondition = RexUtil.composeConjunction(
+                    scan.getCluster().getRexBuilder(),
+                    asList(existingCondition, convertedCondition),
+                    true
+            );
         }
 
-        // TODO: Old mode
-        //Mapping mapping = Mappings.target(scan.identity(), scan.getTable().getRowType().getFieldCount());
-        RexNode newFilter = projection == null ? filter.getCondition()
-                : RexUtil.apply(new SubstituteInputRefVisitor(projection), new RexNode[]{filter.getCondition()})[0];
-        if (oldFilter != null) {
-            newFilter = RexUtil.composeConjunction(scan.getCluster().getRexBuilder(), asList(oldFilter, newFilter), true);
-        }
-
-        FullScanLogicalRel newScan = new FullScanLogicalRel(
-                scan.getCluster(),
-                OptUtils.toLogicalConvention(scan.getTraitSet()),
-                scan.getTable(),
-                projection,
-                newFilter
+        RelOptTable convertedTable = OptUtils.createRelTable(
+                (HazelcastRelOptTable) scan.getTable(),
+                table.withFilter(convertedCondition),
+                scan.getCluster().getTypeFactory()
         );
 
-        call.transformTo(newScan);
+        FullScanLogicalRel rel = new FullScanLogicalRel(
+                scan.getCluster(),
+                OptUtils.toLogicalConvention(scan.getTraitSet()),
+                convertedTable,
+                projection
+        );
+        call.transformTo(rel);
     }
 
-    private static class SubstituteInputRefVisitor implements RexVisitor<RexNode> {
+    private static class ProjectFieldVisitor implements RexVisitor<RexNode> {
 
         private final List<RexNode> projection;
 
-        protected SubstituteInputRefVisitor(List<RexNode> projection) {
+        protected ProjectFieldVisitor(List<RexNode> projection) {
             this.projection = projection;
         }
 
@@ -104,14 +115,17 @@ public final class FilterIntoScanLogicalRule extends RelOptRule {
             return projection.get(inputRef.getIndex());
         }
 
+        @Override
         public RexNode visitLocalRef(RexLocalRef localRef) {
             return localRef;
         }
 
+        @Override
         public RexNode visitLiteral(RexLiteral literal) {
             return literal;
         }
 
+        @Override
         public RexNode visitOver(RexOver over) {
             final RexWindow window = over.getWindow();
             for (RexFieldCollation orderKey : window.orderKeys) {
@@ -131,10 +145,12 @@ public final class FilterIntoScanLogicalRule extends RelOptRule {
             return over;
         }
 
+        @Override
         public RexNode visitCorrelVariable(RexCorrelVariable correlVariable) {
             return correlVariable;
         }
 
+        @Override
         public RexNode visitCall(RexCall call) {
             List<RexNode> newOperands = new ArrayList<>(call.getOperands().size());
             for (RexNode operand : call.operands) {
@@ -143,14 +159,17 @@ public final class FilterIntoScanLogicalRule extends RelOptRule {
             return call.clone(call.type, newOperands);
         }
 
+        @Override
         public RexNode visitDynamicParam(RexDynamicParam dynamicParam) {
             return dynamicParam;
         }
 
+        @Override
         public RexNode visitRangeRef(RexRangeRef rangeRef) {
             return rangeRef;
         }
 
+        @Override
         public RexNode visitFieldAccess(RexFieldAccess fieldAccess) {
             final RexNode expr = fieldAccess.getReferenceExpr();
             RexNode newOperand = expr.accept(this);
@@ -160,6 +179,7 @@ public final class FilterIntoScanLogicalRule extends RelOptRule {
             return fieldAccess;
         }
 
+        @Override
         public RexNode visitSubQuery(RexSubQuery subQuery) {
             List<RexNode> newOperands = new ArrayList<>(subQuery.operands.size());
             for (RexNode operand : subQuery.operands) {

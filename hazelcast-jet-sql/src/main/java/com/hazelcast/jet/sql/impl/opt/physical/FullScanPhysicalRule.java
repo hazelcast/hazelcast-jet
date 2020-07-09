@@ -41,13 +41,11 @@ public final class FullScanPhysicalRule extends RelOptRule {
     public void onMatch(RelOptRuleCall call) {
         FullScanLogicalRel scan = call.rel(0);
 
-        // Add normal map scan.
         call.transformTo(new FullScanPhysicalRel(
                 scan.getCluster(),
                 OptUtils.toPhysicalConvention(scan.getTraitSet()),
                 scan.getTable(),
-                scan.getProjection(),
-                scan.getFilter()
+                scan.getProjection()
         ));
     }
 }

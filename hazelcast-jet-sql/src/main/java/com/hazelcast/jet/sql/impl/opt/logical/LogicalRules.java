@@ -22,7 +22,6 @@ import org.apache.calcite.rel.rules.FilterProjectTransposeRule;
 import org.apache.calcite.rel.rules.ProjectFilterTransposeRule;
 import org.apache.calcite.rel.rules.ProjectMergeRule;
 import org.apache.calcite.rel.rules.ProjectRemoveRule;
-import org.apache.calcite.rel.rules.ValuesReduceRule;
 import org.apache.calcite.tools.RuleSet;
 import org.apache.calcite.tools.RuleSets;
 
@@ -34,42 +33,28 @@ public final class LogicalRules {
     public static RuleSet getRuleSet() {
         // TODO: Use HEP instead?
         return RuleSets.ofList(
-                // Join optimization rules.
-                // new FilterJoinRule.FilterIntoJoinRule(true, RelFactories.LOGICAL_BUILDER, FilterPredicate.INSTANCE),
-                // new FilterJoinRule.JoinConditionPushRule(RelFactories.LOGICAL_BUILDER, FilterPredicate.INSTANCE),
-                // JoinPushExpressionsRule.INSTANCE,
-
-                // Filter and project rules.
+                FilterLogicalRule.INSTANCE,
                 FilterMergeRule.INSTANCE,
+
+                ProjectLogicalRule.INSTANCE,
+                // TODO: https://jira.apache.org/jira/browse/CALCITE-2223
                 ProjectMergeRule.INSTANCE,
-                FilterProjectTransposeRule.INSTANCE,
-                // TODO: ProjectMergeRule: https://jira.apache.org/jira/browse/CALCITE-2223
-                ProjectFilterTransposeRule.INSTANCE,
-                // ProjectJoinTransposeRule.INSTANCE,
                 ProjectRemoveRule.INSTANCE,
-                // TODO [viliam] IMap-specific rules, move into SqlConnector
+
+                FilterProjectTransposeRule.INSTANCE,
+                ProjectFilterTransposeRule.INSTANCE,
+
+                FullScanLogicalRule.INSTANCE,
                 ProjectIntoScanLogicalRule.INSTANCE,
                 FilterIntoScanLogicalRule.INSTANCE,
+
+                JoinLogicalRule.INSTANCE,
                 FilterIntoJoinRule.FILTER_ON_JOIN,
-                ValuesReduceRule.FILTER_INSTANCE,
-                ValuesReduceRule.PROJECT_FILTER_INSTANCE,
-                ValuesReduceRule.PROJECT_INSTANCE,
 
-                // TODO: Aggregate rules
-
-                // SemiJoinRule.PROJECT,
-                // SemiJoinRule.JOIN,
-
-                // Convert Calcite node into Hazelcast nodes.
                 // TODO: Should we extend converter here instead (see Flink)?
                 ValuesLogicalRule.INSTANCE,
-                InsertLogicalRule.INSTANCE,
-                FullScanLogicalRule.INSTANCE,
-                ProjectLogicalRule.INSTANCE,
 
-                // AggregateLogicalRule.INSTANCE,
-                // SortLogicalRule.INSTANCE,
-                JoinLogicalRule.INSTANCE
+                InsertLogicalRule.INSTANCE
 
                 // TODO: Transitive closures:
                 //  (a.a=b.b) AND (a=1) -> (a.a=b.b) AND (a=1) AND (b=1) -> pushdown to two tables, not one

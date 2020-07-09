@@ -16,12 +16,25 @@
 
 package com.hazelcast.jet.sql.impl.opt;
 
+import com.hazelcast.sql.impl.calcite.schema.HazelcastRelOptTable;
+import com.hazelcast.sql.impl.calcite.schema.HazelcastTable;
 import org.apache.calcite.plan.Convention;
+import org.apache.calcite.plan.ConventionTraitDef;
 import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelOptRuleOperand;
 import org.apache.calcite.plan.RelTrait;
 import org.apache.calcite.plan.RelTraitSet;
+import org.apache.calcite.plan.volcano.RelSubset;
+import org.apache.calcite.prepare.RelOptTableImpl;
 import org.apache.calcite.rel.RelNode;
+import org.apache.calcite.rel.core.TableScan;
+import org.apache.calcite.rel.type.RelDataTypeFactory;
+
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.IdentityHashMap;
+import java.util.Set;
 
 import static com.hazelcast.jet.sql.impl.opt.JetConventions.LOGICAL;
 import static com.hazelcast.jet.sql.impl.opt.JetConventions.PHYSICAL;
@@ -133,5 +146,57 @@ public final class OptUtils {
      */
     public static RelNode toPhysicalInput(RelNode input) {
         return convert(input, toPhysicalConvention(input.getTraitSet()));
+    }
+
+    public static HazelcastTable getHazelcastTable(TableScan scan) {
+        HazelcastTable table = scan.getTable().unwrap(HazelcastTable.class);
+
+        assert table != null;
+
+        return table;
+    }
+
+    public static HazelcastRelOptTable createRelTable(
+            HazelcastRelOptTable originalRelTable,
+            HazelcastTable convertedHazelcastTable,
+            RelDataTypeFactory typeFactory
+    ) {
+        RelOptTableImpl newTable = RelOptTableImpl.create(
+                originalRelTable.getRelOptSchema(),
+                convertedHazelcastTable.getRowType(typeFactory),
+                originalRelTable.getDelegate().getQualifiedName(),
+                convertedHazelcastTable,
+                null
+        );
+
+        return new HazelcastRelOptTable(newTable);
+    }
+
+    public static Collection<RelNode> getPhysicalRelsFromSubset(RelNode subset) {
+        if (subset instanceof RelSubset) {
+            RelSubset subset0 = (RelSubset) subset;
+
+            Set<RelTraitSet> traitSets = new HashSet<>();
+
+            Set<RelNode> res = Collections.newSetFromMap(new IdentityHashMap<>());
+
+            for (RelNode rel : subset0.getRelList()) {
+                if (!isPhysical(rel)) {
+                    continue;
+                }
+
+                if (traitSets.add(rel.getTraitSet())) {
+                    res.add(convert(subset, rel.getTraitSet()));
+                }
+            }
+
+            return res;
+        } else {
+            return Collections.emptyList();
+        }
+    }
+
+    private static boolean isPhysical(RelNode rel) {
+        return rel.getTraitSet().getTrait(ConventionTraitDef.INSTANCE).equals(JetConventions.PHYSICAL);
     }
 }

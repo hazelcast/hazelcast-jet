@@ -45,6 +45,18 @@ public final class ExpressionUtil {
     private ExpressionUtil() {
     }
 
+    public static FunctionEx<Object[], Object[]> filterFn(
+            Expression<Boolean> predicate
+    ) {
+        return values -> {
+            Row row = new HeapRow(values);
+            if (!Boolean.TRUE.equals(predicate.eval(row, ZERO_ARGUMENTS_CONTEXT))) {
+                return null;
+            }
+            return values;
+        };
+    }
+
     public static FunctionEx<Object[], Object[]> projectionFn(
             List<Expression<?>> projections
     ) {

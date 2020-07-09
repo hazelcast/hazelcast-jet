@@ -22,6 +22,7 @@ import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Edge;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.sql.impl.expression.ExpressionUtil;
+import com.hazelcast.jet.sql.impl.opt.physical.FilterPhysicalRel;
 import com.hazelcast.jet.sql.impl.opt.physical.FullScanPhysicalRel;
 import com.hazelcast.jet.sql.impl.opt.physical.InsertPhysicalRel;
 import com.hazelcast.jet.sql.impl.opt.physical.JetRootRel;
@@ -108,6 +109,14 @@ public class CreateDagVisitor {
         Vertex vertex = getJetSqlConnector(table)
                 .nestedLoopReader(dag, table, rightRel.filter(), rightRel.projection(), rel.condition());
         connectInput(rel.getLeft(), vertex, null);
+        return vertex;
+    }
+
+    public Vertex onFilter(FilterPhysicalRel rel) {
+        FunctionEx<Object[], Object[]> filter = ExpressionUtil.filterFn(rel.filter());
+
+        Vertex vertex = dag.newVertex("filter", mapP(filter::apply));
+        connectInput(rel.getInput(), vertex, null);
         return vertex;
     }
 

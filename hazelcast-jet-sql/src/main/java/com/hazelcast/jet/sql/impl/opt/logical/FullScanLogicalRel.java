@@ -25,23 +25,19 @@ import org.apache.calcite.rex.RexNode;
 
 import java.util.List;
 
-/**
- * Physical full scan over a source connector.
- */
 public class FullScanLogicalRel extends AbstractFullScanRel implements LogicalRel {
 
     public FullScanLogicalRel(
             RelOptCluster cluster,
             RelTraitSet traitSet,
             RelOptTable table,
-            List<RexNode> projection,
-            RexNode filter
+            List<RexNode> projection
     ) {
-        super(cluster, traitSet, table, projection, filter);
+        super(cluster, traitSet, table, projection);
     }
 
     @Override
     public final RelNode copy(RelTraitSet traitSet, List<RelNode> inputs) {
-        return new FullScanLogicalRel(getCluster(), traitSet, table, getProjection(), getFilter());
+        return new FullScanLogicalRel(getCluster(), traitSet, table, getProjection());
     }
 }

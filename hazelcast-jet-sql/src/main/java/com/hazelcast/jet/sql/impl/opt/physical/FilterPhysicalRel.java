@@ -14,17 +14,22 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.sql.impl.opt.logical;
+package com.hazelcast.jet.sql.impl.opt.physical;
 
+import com.hazelcast.jet.core.Vertex;
+import com.hazelcast.jet.sql.impl.opt.physical.visitor.CreateDagVisitor;
+import com.hazelcast.sql.impl.calcite.opt.AbstractFilterRel;
+import com.hazelcast.sql.impl.expression.Expression;
+import com.hazelcast.sql.impl.plan.node.PlanNodeSchema;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.Filter;
 import org.apache.calcite.rex.RexNode;
 
-public class FilterLogicalRel extends Filter implements LogicalRel {
+public class FilterPhysicalRel extends AbstractFilterRel implements PhysicalRel {
 
-    public FilterLogicalRel(
+    public FilterPhysicalRel(
         RelOptCluster cluster,
         RelTraitSet traits,
         RelNode input,
@@ -33,8 +38,22 @@ public class FilterLogicalRel extends Filter implements LogicalRel {
         super(cluster, traits, input, condition);
     }
 
+    public Expression<Boolean> filter() {
+        return filter(schema(), condition);
+    }
+
+    @Override
+    public PlanNodeSchema schema() {
+        return ((PhysicalRel) getInput()).schema();
+    }
+
+    @Override
+    public Vertex visit(CreateDagVisitor visitor) {
+        return visitor.onFilter(this);
+    }
+
     @Override
     public final Filter copy(RelTraitSet traitSet, RelNode input, RexNode condition) {
-        return new FilterLogicalRel(getCluster(), traitSet, input, condition);
+        return new FilterPhysicalRel(getCluster(), traitSet, input, condition);
     }
 }

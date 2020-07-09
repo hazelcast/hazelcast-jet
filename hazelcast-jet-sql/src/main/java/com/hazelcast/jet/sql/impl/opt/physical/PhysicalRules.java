@@ -28,15 +28,15 @@ public final class PhysicalRules {
 
     public static RuleSet getRuleSet() {
         return RuleSets.ofList(
-                InsertPhysicalRule.INSTANCE,
-                ValuesPhysicalRule.INSTANCE,
+                FilterPhysicalRule.INSTANCE,
+                ProjectPhysicalRule.INSTANCE,
+                FullScanPhysicalRule.INSTANCE,
+                JoinPhysicalRule.INSTANCE,
                 // SortPhysicalRule.INSTANCE,
                 // RootPhysicalRule.INSTANCE,
-                // FilterPhysicalRule.INSTANCE,
-                FullScanPhysicalRule.INSTANCE,
-                ProjectPhysicalRule.INSTANCE,
                 // AggregatePhysicalRule.INSTANCE,
-                JoinPhysicalRule.INSTANCE,
+                ValuesPhysicalRule.INSTANCE,
+                InsertPhysicalRule.INSTANCE,
                 new AbstractConverter.ExpandConversionRule(RelFactories.LOGICAL_BUILDER)
         );
     }

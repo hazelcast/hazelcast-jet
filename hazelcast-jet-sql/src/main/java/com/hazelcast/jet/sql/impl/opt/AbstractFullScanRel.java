@@ -16,10 +16,14 @@
 
 package com.hazelcast.jet.sql.impl.opt;
 
+import com.hazelcast.sql.impl.calcite.SqlToQueryType;
 import com.hazelcast.sql.impl.calcite.opt.cost.Cost;
 import com.hazelcast.sql.impl.calcite.opt.cost.CostUtils;
 import com.hazelcast.sql.impl.calcite.schema.HazelcastTable;
 import com.hazelcast.sql.impl.schema.Table;
+import com.hazelcast.sql.impl.schema.TableField;
+import com.hazelcast.sql.impl.type.QueryDataType;
+import com.hazelcast.sql.impl.type.QueryDataTypeFamily;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptCost;
 import org.apache.calcite.plan.RelOptPlanner;
@@ -32,10 +36,10 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.sql.type.SqlTypeName;
 
+import java.util.ArrayList;
 import java.util.List;
-
-import static java.util.stream.Collectors.toList;
 
 /**
  * Base class for scans.
@@ -43,21 +47,43 @@ import static java.util.stream.Collectors.toList;
 public abstract class AbstractFullScanRel extends TableScan {
 
     private final List<RexNode> projection;
-    private final RexNode filter;
 
     protected AbstractFullScanRel(
             RelOptCluster cluster,
             RelTraitSet traitSet,
             RelOptTable table,
-            List<RexNode> projection,
-            RexNode filter
+            List<RexNode> projection
     ) {
         super(cluster, traitSet, table);
-        this.projection = projection != null ? projection :
-                table.getRowType().getFieldList().stream()
-                     .map(field -> new RexInputRef(field.getIndex(), field.getType()))
-                     .collect(toList());
-        this.filter = filter;
+
+        this.projection = projection != null
+                ? projection
+                : projection(getTable().unwrap(HazelcastTable.class), cluster.getTypeFactory());
+    }
+
+    // TODO: almost a copy of HazelcastTable.getRowType() - need proper indices for RexInputRef
+    private static List<RexNode> projection(HazelcastTable table, RelDataTypeFactory typeFactory) {
+        List<Integer> projects = table.getProjects();
+
+        List<RexNode> projection = new ArrayList<>(projects.size());
+        for (Integer index : projects) {
+            TableField field = table.getTarget().getField(index);
+
+            QueryDataType fieldType = field.getType();
+            QueryDataTypeFamily fieldTypeFamily = fieldType.getTypeFamily();
+
+            SqlTypeName sqlTypeName = SqlToQueryType.map(fieldTypeFamily);
+
+            if (sqlTypeName == null) {
+                throw new IllegalStateException("Unexpected type family: " + fieldTypeFamily);
+            }
+
+            RelDataType relDataType = typeFactory.createSqlType(sqlTypeName);
+            RelDataType nullableRelDataType = typeFactory.createTypeWithNullability(relDataType, true);
+
+            projection.add(new RexInputRef(index, nullableRelDataType));
+        }
+        return projection;
     }
 
     public List<RexNode> getProjection() {
@@ -65,21 +91,21 @@ public abstract class AbstractFullScanRel extends TableScan {
     }
 
     public RexNode getFilter() {
-        return filter;
+        return getTable().unwrap(HazelcastTable.class).getFilter();
     }
 
     /**
      * @return Unwrapped Hazelcast table.
      */
     public Table getTableUnwrapped() {
-        return table.unwrap(HazelcastTable.class).getTarget();
+        return getTable().unwrap(HazelcastTable.class).getTarget();
     }
 
     @Override
     public final double estimateRowCount(RelMetadataQuery mq) {
         double rowCount = super.estimateRowCount(mq); // TODO not a real row count?
-        if (filter != null) {
-            double selectivity = mq.getSelectivity(this, filter); // TODO verify this works
+        if (getFilter() != null) {
+            double selectivity = mq.getSelectivity(this, getFilter()); // TODO verify this works
             rowCount = rowCount * selectivity;
         }
         return rowCount;
@@ -100,8 +126,7 @@ public abstract class AbstractFullScanRel extends TableScan {
     @Override
     public RelWriter explainTerms(RelWriter pw) {
         return super.explainTerms(pw)
-                    .item("projects", getProjection())
-                    .item("filter", getFilter());
+                    .item("projection", projection);
     }
 
     @Override

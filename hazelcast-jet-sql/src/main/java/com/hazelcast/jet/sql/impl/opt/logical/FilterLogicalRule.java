@@ -21,30 +21,31 @@ import org.apache.calcite.plan.Convention;
 import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.convert.ConverterRule;
-import org.apache.calcite.rel.logical.LogicalTableScan;
+import org.apache.calcite.rel.logical.LogicalFilter;
 
 import static com.hazelcast.jet.sql.impl.opt.JetConventions.LOGICAL;
 
-public final class FullScanLogicalRule extends ConverterRule {
+public final class FilterLogicalRule extends ConverterRule {
 
-    public static final RelOptRule INSTANCE = new FullScanLogicalRule();
+    public static final RelOptRule INSTANCE = new FilterLogicalRule();
 
-    private FullScanLogicalRule() {
+    private FilterLogicalRule() {
         super(
-                LogicalTableScan.class, Convention.NONE, LOGICAL,
-                FullScanLogicalRule.class.getSimpleName()
+                LogicalFilter.class, Convention.NONE, LOGICAL,
+                FilterLogicalRule.class.getSimpleName()
         );
     }
 
     @Override
     public RelNode convert(RelNode rel) {
-        LogicalTableScan scan = (LogicalTableScan) rel;
+        LogicalFilter filter = (LogicalFilter) rel;
+        RelNode input = filter.getInput();
 
-        return new FullScanLogicalRel(
-                scan.getCluster(),
-                OptUtils.toLogicalConvention(scan.getTraitSet()),
-                scan.getTable(),
-                null
+        return new FilterLogicalRel(
+                filter.getCluster(),
+                OptUtils.toLogicalConvention(filter.getTraitSet()),
+                OptUtils.toLogicalInput(input),
+                filter.getCondition()
         );
     }
 }

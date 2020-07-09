@@ -33,19 +33,15 @@ import java.util.List;
 
 import static com.hazelcast.jet.impl.util.Util.toList;
 
-/**
- * Physical full scan over a source connector.
- */
 public class FullScanPhysicalRel extends AbstractFullScanRel implements PhysicalRel {
 
     public FullScanPhysicalRel(
             RelOptCluster cluster,
             RelTraitSet traitSet,
             RelOptTable table,
-            List<RexNode> projection,
-            RexNode filter
+            List<RexNode> projection
     ) {
-        super(cluster, traitSet, table, projection, filter);
+        super(cluster, traitSet, table, projection);
     }
 
     public Expression<Boolean> filter() {
@@ -71,6 +67,6 @@ public class FullScanPhysicalRel extends AbstractFullScanRel implements Physical
 
     @Override
     public final RelNode copy(RelTraitSet traitSet, List<RelNode> inputs) {
-        return new FullScanPhysicalRel(getCluster(), traitSet, getTable(), getProjection(), getFilter());
+        return new FullScanPhysicalRel(getCluster(), traitSet, getTable(), getProjection());
     }
 }
