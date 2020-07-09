@@ -28,16 +28,13 @@ import org.rocksdb.WriteOptions;
  */
 class RocksDBOptions {
     private static final int MEMTABLE_SIZE = 64 * 1024 * 1024;
-    private static final int MEMTABLE_NUMBER = 2;
-    private static final int FLUSHES = 2;
+    private static final int MEMTABLE_NUMBER = 4;
     private static final int BLOOM_BITS = 10;
-    private static final int COMPACTIONS = 4;
+    private static final int CACHE_SIZE = 265 * 1024 * 1024;
+
 
     Options options() {
-        return new Options()
-                .setCreateIfMissing(true)
-                .setMaxBackgroundFlushes(FLUSHES)
-                .setMaxBackgroundCompactions(COMPACTIONS);
+        return new Options().setCreateIfMissing(true);
     }
 
     ColumnFamilyOptions columnFamilyOptions() {
@@ -45,6 +42,8 @@ class RocksDBOptions {
                 .setMaxWriteBufferNumber(MEMTABLE_NUMBER)
                 .setWriteBufferSize(MEMTABLE_SIZE)
                 .setTableFormatConfig(new BlockBasedTableConfig()
+                        .setBlockCacheSize(CACHE_SIZE)
+                        .setPinL0FilterAndIndexBlocksInCache(true)
                         .setFilter(new BloomFilter(BLOOM_BITS)));
     }
 

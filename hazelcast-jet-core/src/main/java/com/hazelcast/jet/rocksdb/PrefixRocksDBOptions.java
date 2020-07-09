@@ -32,7 +32,7 @@ import org.rocksdb.WriteOptions;
 */
 public class PrefixRocksDBOptions {
     private static final int MEMTABLE_SIZE = 128 * 1024 * 1024;
-    private static final int MEMTABLE_NUMBER = 2;
+    private static final int MEMTABLE_NUMBER = 4;
     private static final int LEVELS = 2;
     private static final int BLOOM_BITS = 10;
 
