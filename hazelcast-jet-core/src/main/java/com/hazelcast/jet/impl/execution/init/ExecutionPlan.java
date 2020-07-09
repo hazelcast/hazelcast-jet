@@ -203,11 +203,9 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
                 // createOutboundEdgeStreams() populates localConveyorMap and edgeSenderConveyorMap.
                 // Also populates instance fields: senderMap, receiverMap, tasklets.
                 List<OutboundEdgeStream> outboundStreams = createOutboundEdgeStreams(
-                        vertex, localProcessorIdx, jobSerializationService
-                );
+                        vertex, localProcessorIdx, jobSerializationService);
                 List<InboundEdgeStream> inboundStreams = createInboundEdgeStreams(
-                        vertex, localProcessorIdx, globalProcessorIndex
-                );
+                        vertex, localProcessorIdx, globalProcessorIndex);
 
                 OutboundCollector snapshotCollector = new ConveyorCollector(ssConveyor, localProcessorIdx, null);
 
@@ -490,12 +488,17 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
                 new ConveyorCollector(localConveyors[n], processorIndex, ptionsPerProcessor[n]));
 
         // in a local edge, we only have the local collectors.
-        if (!isReallyDistributed(edge)) {
+        if (edge.getDistributedTo() == null) {
             return localCollectors;
         }
 
         final int totalPtionCount = nodeEngine.getPartitionService().getPartitionCount();
-        createIfAbsentReceiverTasklet(edge, ptionsPerProcessor, totalPtionCount, jobSerializationService);
+
+        // create the receiver if we distribute to all or if we distribute to one and this member is the target
+        if (edge.getDistributedTo().equals(nodeEngine.getThisAddress())
+                || edge.getDistributedTo().equals(DISTRIBUTE_TO_ALL)) {
+            createIfAbsentReceiverTasklet(edge, ptionsPerProcessor, totalPtionCount, jobSerializationService);
+        }
 
         if (DISTRIBUTE_TO_ALL.equals(edge.getDistributedTo())) {
             // In a distribute-to-all edge, allCollectors[0] is the composite of local collectors, and
@@ -509,10 +512,12 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
                         processorIndex, entry.getValue());
             }
             return allCollectors;
+        } else if (edge.getDistributedTo().equals(nodeEngine.getThisAddress())) {
+            // this member is the target of a distribute-to-one edge, handle it as local
+            return localCollectors;
         } else {
-            // In a distribute-to-one edge, one member processes all the partitions. If it's the local member, we
-            // already handled it above and treated it as a local edge. Now it's a remote member, let's return
-            // collector only for it.
+            // this member sends all the data to one remote member, let's create a sender to that member
+            // that handles all the partitions
             final OutboundCollector[] allCollectors = {
                     new ConveyorCollector(senderConveyorMap.get(edge.getDistributedTo()), processorIndex,
                             ptionArrgmt.getAllPartitions())
@@ -563,9 +568,9 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
     }
 
     /**
-     * Returns true if the edge is distributed and if it is actually
-     * distributed to a remote member. If the edge is distributed to the local
-     * member, we treat it as not distributed.
+     * Returns true if the edge is actually distributed to a remote member. If
+     * the edge is distributed-to-one and the target is the local member, we
+     * treat it as not distributed.
      * <p>
      * Note that EdgeDef.getDistributedTo() always returns null if the job runs
      * only on a single member.
