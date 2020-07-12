@@ -34,15 +34,26 @@ import java.io.Serializable;
  */
 public class PrefixRocksDBOptions implements Serializable {
 
-    private int memtableSize = 128 * 1024 * 1024;
-    private int memtableNumber = 4;
-    private int bloomBits = 10;
+    private static final int MEMTABLE_SIZE = 128 * 1024 * 1024;
+    private static final int MEMTABLE_NUMBER = 4;
+    private static final int BLOOM_BITS = 10;
+    private int memtableSize;
+    private int memtableNumber;
+    private int bloomBits;
 
-    PrefixRocksDBOptions setOptions(PrefixRocksDBOptions options) {
-        this.memtableNumber = options.memtableNumber;
+    /**
+     * Creates a new PrefixRocksDBOptions instance with default options.
+     */
+    public PrefixRocksDBOptions() {
+        this.memtableSize = MEMTABLE_SIZE;
+        this.memtableNumber = MEMTABLE_NUMBER;
+        this.bloomBits = BLOOM_BITS;
+    }
+
+    PrefixRocksDBOptions(PrefixRocksDBOptions options) {
         this.memtableSize = options.memtableSize;
+        this.memtableNumber = options.memtableNumber;
         this.bloomBits = options.bloomBits;
-        return this;
     }
 
     /**

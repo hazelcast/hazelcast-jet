@@ -42,6 +42,8 @@ echo "# JAVA_OPTS=${JAVA_OPTS_ARRAY[*]}"
 echo "# CLASSPATH=$CLASSPATH"
 echo "########################################"
 
+mkdir -p $JET_HOME/rocksdb
+
 if [[ "$DAEMON" = "true" ]]; then
     mkdir -p $JET_HOME/logs
     DATE=`date "+%Y-%m-%d.%H.%M.%S"`

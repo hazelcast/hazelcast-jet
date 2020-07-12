@@ -150,7 +150,7 @@ public final class RocksDBStateBackend {
         assert db != null : "state backend was not opened";
         assert !usePrefix : "state backend was opened in prefix mode";
         RocksMap<K, V> map = new RocksMap<>(db, getNextName(),
-                new RocksDBOptions().setOptions(options), serializationService);
+                new RocksDBOptions(options), serializationService);
         maps.add(map);
         return map;
     }
@@ -165,7 +165,7 @@ public final class RocksDBStateBackend {
         assert db != null : "state backend was not opened";
         assert usePrefix : "state backend wasn't opened in prefix mode";
         PrefixRocksMap<K, V> map = new PrefixRocksMap<>(db, getNextName(),
-                new PrefixRocksDBOptions().setOptions(prefixOptions), serializationService);
+                new PrefixRocksDBOptions(prefixOptions), serializationService);
         prefixMaps.add(map);
         return map;
     }

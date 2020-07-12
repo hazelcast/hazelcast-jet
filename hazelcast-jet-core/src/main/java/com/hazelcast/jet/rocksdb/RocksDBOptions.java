@@ -30,17 +30,30 @@ import java.io.Serializable;
  */
 public class RocksDBOptions implements Serializable {
 
-    private int memtableSize = 64 * 1024 * 1024;
-    private int memtableNumber = 4;
-    private int bloomBits = 10;
-    private int cacheSize = 265 * 1024 * 1024;
+    private static final int MEMTABLE_SIZE = 64 * 1024 * 1024;
+    private static final int MEMTABLE_NUMBER = 4;
+    private static final int BLOOM_BITS = 10;
+    private static final int CACHE_SIZE = 265 * 1024 * 1024;
+    private int memtableSize;
+    private int memtableNumber;
+    private int bloomBits;
+    private int cacheSize;
 
-    RocksDBOptions setOptions(RocksDBOptions options) {
-        this.memtableNumber = options.memtableNumber;
+    /**
+     * Creates a new RocksDBOptions instance with default options.
+     */
+    public RocksDBOptions() {
+        this.memtableSize = MEMTABLE_SIZE;
+        this.memtableNumber = MEMTABLE_NUMBER;
+        this.bloomBits = BLOOM_BITS;
+        this.cacheSize = CACHE_SIZE;
+    }
+
+    RocksDBOptions(RocksDBOptions options) {
         this.memtableSize = options.memtableSize;
+        this.memtableNumber = options.memtableNumber;
         this.bloomBits = options.bloomBits;
         this.cacheSize = options.cacheSize;
-        return this;
     }
 
     /**
