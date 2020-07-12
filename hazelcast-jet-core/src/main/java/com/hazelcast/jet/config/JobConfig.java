@@ -26,6 +26,8 @@ import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.impl.util.ReflectionUtils;
 import com.hazelcast.jet.impl.util.ReflectionUtils.Resources;
 import com.hazelcast.jet.pipeline.ServiceFactory;
+import com.hazelcast.jet.rocksdb.PrefixRocksDBOptions;
+import com.hazelcast.jet.rocksdb.RocksDBOptions;
 import com.hazelcast.map.IMap;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
@@ -72,6 +74,39 @@ public class JobConfig implements IdentifiedDataSerializable {
     private Map<String, String> serializerConfigs = new HashMap<>();
     private JobClassLoaderFactory classLoaderFactory;
     private String initialSnapshotName;
+    private RocksDBOptions rocksDBOptions;
+    private PrefixRocksDBOptions prefixRocksDBOptions;
+
+    /**
+     * Returns user defined RocksDB options for RocksMap.
+     */
+    public RocksDBOptions getRocksDBOptions() {
+        return rocksDBOptions;
+    }
+
+    /**
+     * Sets user defined RocksDB options for RocksMap.
+     */
+    public JobConfig setRocksDBOptions(RocksDBOptions rocksDBOptions) {
+        this.rocksDBOptions = rocksDBOptions;
+        return this;
+    }
+
+    /**
+     * Returns user defined RocksDB options for PrefixRocksMap or null if not specified.
+     */
+    public PrefixRocksDBOptions getPrefixRocksDBOptions() {
+        return prefixRocksDBOptions;
+    }
+
+    /**
+     * Sets user defined RocksDB options for PrefixRocksMap or null if not specified.
+     */
+    public JobConfig setPrefixRocksDBOptions(PrefixRocksDBOptions prefixRocksDBOptions) {
+        this.prefixRocksDBOptions = prefixRocksDBOptions;
+        return this;
+    }
+
 
     /**
      * Returns the name of the job or {@code null} if no name was given.
@@ -1103,6 +1138,8 @@ public class JobConfig implements IdentifiedDataSerializable {
         out.writeUTF(initialSnapshotName);
         out.writeBoolean(enableMetrics);
         out.writeBoolean(storeMetricsAfterJobCompletion);
+        out.writeObject(rocksDBOptions);
+        out.writeObject(prefixRocksDBOptions);
     }
 
     @Override
@@ -1118,6 +1155,8 @@ public class JobConfig implements IdentifiedDataSerializable {
         initialSnapshotName = in.readUTF();
         enableMetrics = in.readBoolean();
         storeMetricsAfterJobCompletion = in.readBoolean();
+        rocksDBOptions = in.readObject();
+        prefixRocksDBOptions = in.readObject();
     }
 
     @Override

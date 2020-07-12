@@ -23,15 +23,57 @@ import org.rocksdb.Options;
 import org.rocksdb.ReadOptions;
 import org.rocksdb.WriteOptions;
 
+import java.io.Serializable;
+
 /**
  * General RocksDB Configurations
  */
-class RocksDBOptions {
-    private static final int MEMTABLE_SIZE = 64 * 1024 * 1024;
-    private static final int MEMTABLE_NUMBER = 4;
-    private static final int BLOOM_BITS = 10;
-    private static final int CACHE_SIZE = 265 * 1024 * 1024;
+public class RocksDBOptions implements Serializable {
 
+    private int memtableSize = 64 * 1024 * 1024;
+    private int memtableNumber = 4;
+    private int bloomBits = 10;
+    private int cacheSize = 265 * 1024 * 1024;
+
+    RocksDBOptions setOptions(RocksDBOptions options) {
+        this.memtableNumber = options.memtableNumber;
+        this.memtableSize = options.memtableSize;
+        this.bloomBits = options.bloomBits;
+        this.cacheSize = options.cacheSize;
+        return this;
+    }
+
+    /**
+     * Sets RocksDB MemTable Size in bytes.
+     */
+    public RocksDBOptions setMemtableSize(int memtableSize) {
+        this.memtableSize = memtableSize;
+        return this;
+    }
+
+    /**
+     * Sets the number of RocksDB MemTables per ColumnFamily.
+     */
+    public RocksDBOptions setMemtableNumber(int memtableNumber) {
+        this.memtableNumber = memtableNumber;
+        return this;
+    }
+
+    /**
+     * Sets the number of bits used for RocksDB bloom filter.
+     */
+    public RocksDBOptions setBloomBits(int bloomBits) {
+        this.bloomBits = bloomBits;
+        return this;
+    }
+
+    /**
+     * Sets the size of RocksDB block cache in bytes.
+     */
+    public RocksDBOptions setCacheSize(int cacheSize) {
+        this.cacheSize = cacheSize;
+        return this;
+    }
 
     Options options() {
         return new Options().setCreateIfMissing(true);
@@ -39,12 +81,12 @@ class RocksDBOptions {
 
     ColumnFamilyOptions columnFamilyOptions() {
         return new ColumnFamilyOptions()
-                .setMaxWriteBufferNumber(MEMTABLE_NUMBER)
-                .setWriteBufferSize(MEMTABLE_SIZE)
+                .setMaxWriteBufferNumber(memtableNumber)
+                .setWriteBufferSize(memtableSize)
                 .setTableFormatConfig(new BlockBasedTableConfig()
-                        .setBlockCacheSize(CACHE_SIZE)
+                        .setBlockCacheSize(cacheSize)
                         .setPinL0FilterAndIndexBlocksInCache(true)
-                        .setFilter(new BloomFilter(BLOOM_BITS)));
+                        .setFilter(new BloomFilter(bloomBits)));
     }
 
     WriteOptions writeOptions() {

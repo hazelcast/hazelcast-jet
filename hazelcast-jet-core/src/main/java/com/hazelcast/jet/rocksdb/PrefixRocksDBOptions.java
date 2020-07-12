@@ -27,14 +27,48 @@ import org.rocksdb.ReadOptions;
 import org.rocksdb.VectorMemTableConfig;
 import org.rocksdb.WriteOptions;
 
+import java.io.Serializable;
+
 /**
  * RocksDB configurations suitable for bulk-load then prefix scan use case.
-*/
-public class PrefixRocksDBOptions {
-    private static final int MEMTABLE_SIZE = 128 * 1024 * 1024;
-    private static final int MEMTABLE_NUMBER = 4;
-    private static final int LEVELS = 2;
-    private static final int BLOOM_BITS = 10;
+ */
+public class PrefixRocksDBOptions implements Serializable {
+
+    private int memtableSize = 128 * 1024 * 1024;
+    private int memtableNumber = 4;
+    private int bloomBits = 10;
+
+    PrefixRocksDBOptions setOptions(PrefixRocksDBOptions options) {
+        this.memtableNumber = options.memtableNumber;
+        this.memtableSize = options.memtableSize;
+        this.bloomBits = options.bloomBits;
+        return this;
+    }
+
+    /**
+     * Sets RocksDB MemTable Size in bytes.
+     */
+    public PrefixRocksDBOptions setMemtableSize(int memtableSize) {
+        this.memtableSize = memtableSize;
+        return this;
+    }
+
+    /**
+     * Sets the number of RocksDB MemTables per ColumnFamily.
+     */
+    public PrefixRocksDBOptions setMemtableNumber(int memtableNumber) {
+        this.memtableNumber = memtableNumber;
+        return this;
+    }
+
+    /**
+     * Sets the number of bits used for RocksDB bloom filter.
+     */
+    public PrefixRocksDBOptions setBloomBits(int bloomBits) {
+        this.bloomBits = bloomBits;
+        return this;
+    }
+
 
     Options options() {
         return new Options()
@@ -47,13 +81,13 @@ public class PrefixRocksDBOptions {
 
     ColumnFamilyOptions prefixColumnFamilyOptions() {
         return new ColumnFamilyOptions()
-                .setMaxWriteBufferNumber(MEMTABLE_NUMBER)
-                .setNumLevels(LEVELS)
-                .setWriteBufferSize(MEMTABLE_SIZE)
+                .setMaxWriteBufferNumber(memtableNumber)
+                .setNumLevels(2)
+                .setWriteBufferSize(memtableSize)
                 .setMemTableConfig(new VectorMemTableConfig())
                 .setTableFormatConfig(new BlockBasedTableConfig()
                         .setIndexType(IndexType.kHashSearch)
-                        .setFilter(new BloomFilter(BLOOM_BITS, false))
+                        .setFilter(new BloomFilter(bloomBits, false))
                         .setWholeKeyFiltering(false));
     }
 
@@ -72,4 +106,6 @@ public class PrefixRocksDBOptions {
     FlushOptions flushOptions() {
         return new FlushOptions().setWaitForFlush(true);
     }
+
+
 }

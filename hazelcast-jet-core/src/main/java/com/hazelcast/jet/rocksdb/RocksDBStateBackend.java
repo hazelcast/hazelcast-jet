@@ -18,7 +18,6 @@ package com.hazelcast.jet.rocksdb;
 
 import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.jet.JetException;
-import org.rocksdb.Options;
 import org.rocksdb.RocksDB;
 
 import javax.annotation.Nonnull;
@@ -50,12 +49,26 @@ public final class RocksDBStateBackend {
     private final AtomicInteger counter = new AtomicInteger(0);
     private final ArrayList<RocksMap> maps = new ArrayList<>();
     private final ArrayList<PrefixRocksMap> prefixMaps = new ArrayList<>();
-    private Options options = new RocksDBOptions().options();
-    private Options prefixOptions = new PrefixRocksDBOptions().options();
+    private RocksDBOptions options = new RocksDBOptions();
+    private PrefixRocksDBOptions prefixOptions = new PrefixRocksDBOptions();
     private volatile RocksDB db;
     private InternalSerializationService serializationService;
     private Path directory;
     private boolean usePrefix;
+
+    /**
+     * Sets user defined RocksDB options for RocksMap.
+     */
+    public void setOptions(RocksDBOptions options) {
+        this.options = options;
+    }
+
+    /**
+     * Sets user defined RocksDB options for PrefixRocksMap.
+     */
+    public void setPrefixOptions(PrefixRocksDBOptions prefixOptions) {
+        this.prefixOptions = prefixOptions;
+    }
 
     /**
      * Initialize the state backend with job-level serialization service and creates it directory.
@@ -114,9 +127,9 @@ public final class RocksDBStateBackend {
                     try {
                         RocksDB.loadLibrary();
                         if (usePrefix) {
-                            db = RocksDB.open(prefixOptions, directory.toString());
+                            db = RocksDB.open(prefixOptions.options(), directory.toString());
                         } else {
-                            db = RocksDB.open(options, directory.toString());
+                            db = RocksDB.open(options.options(), directory.toString());
                         }
                     } catch (Exception e) {
                         throw new JetException("Failed to create a RocksDB instance", e);
@@ -136,7 +149,8 @@ public final class RocksDBStateBackend {
     public <K, V> RocksMap<K, V> getMap() throws JetException {
         assert db != null : "state backend was not opened";
         assert !usePrefix : "state backend was opened in prefix mode";
-        RocksMap<K, V> map = new RocksMap<>(db, getNextName(), new RocksDBOptions(), serializationService);
+        RocksMap<K, V> map = new RocksMap<>(db, getNextName(),
+                new RocksDBOptions().setOptions(options), serializationService);
         maps.add(map);
         return map;
     }
@@ -151,7 +165,7 @@ public final class RocksDBStateBackend {
         assert db != null : "state backend was not opened";
         assert usePrefix : "state backend wasn't opened in prefix mode";
         PrefixRocksMap<K, V> map = new PrefixRocksMap<>(db, getNextName(),
-                new PrefixRocksDBOptions(), serializationService);
+                new PrefixRocksDBOptions().setOptions(prefixOptions), serializationService);
         prefixMaps.add(map);
         return map;
     }
@@ -170,8 +184,6 @@ public final class RocksDBStateBackend {
             for (PrefixRocksMap prefixRocksMap : prefixMaps) {
                 prefixRocksMap.close();
             }
-            options.close();
-            prefixOptions.close();
             db.close();
         }
     }
