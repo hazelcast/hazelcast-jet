@@ -32,28 +32,29 @@ public class RocksDBOptions implements Serializable {
 
     private static final int MEMTABLE_SIZE = 64 * 1024 * 1024;
     private static final int MEMTABLE_NUMBER = 4;
-    private static final int BLOOM_BITS = 10;
+    private static final int BLOOM_FILTER_BITS = 10;
     private static final int CACHE_SIZE = 265 * 1024 * 1024;
+
     private int memtableSize;
     private int memtableNumber;
-    private int bloomBits;
+    private int bloomFilterBits;
     private int cacheSize;
 
     /**
      * Creates a new RocksDBOptions instance with default options.
      */
     public RocksDBOptions() {
-        this.memtableSize = MEMTABLE_SIZE;
-        this.memtableNumber = MEMTABLE_NUMBER;
-        this.bloomBits = BLOOM_BITS;
-        this.cacheSize = CACHE_SIZE;
+        memtableSize = MEMTABLE_SIZE;
+        memtableNumber = MEMTABLE_NUMBER;
+        bloomFilterBits = BLOOM_FILTER_BITS;
+        cacheSize = CACHE_SIZE;
     }
 
     RocksDBOptions(RocksDBOptions options) {
-        this.memtableSize = options.memtableSize;
-        this.memtableNumber = options.memtableNumber;
-        this.bloomBits = options.bloomBits;
-        this.cacheSize = options.cacheSize;
+        memtableSize = options.memtableSize;
+        memtableNumber = options.memtableNumber;
+        bloomFilterBits = options.bloomFilterBits;
+        cacheSize = options.cacheSize;
     }
 
     /**
@@ -75,8 +76,8 @@ public class RocksDBOptions implements Serializable {
     /**
      * Sets the number of bits used for RocksDB bloom filter.
      */
-    public RocksDBOptions setBloomBits(int bloomBits) {
-        this.bloomBits = bloomBits;
+    public RocksDBOptions setBloomFilterBits(int bloomBits) {
+        this.bloomFilterBits = bloomBits;
         return this;
     }
 
@@ -94,16 +95,13 @@ public class RocksDBOptions implements Serializable {
 
     ColumnFamilyOptions columnFamilyOptions() {
         return new ColumnFamilyOptions()
-                .setMaxWriteBufferNumber(memtableNumber)
-                .setWriteBufferSize(memtableSize)
                 .setTableFormatConfig(new BlockBasedTableConfig()
-                        .setBlockCacheSize(cacheSize)
                         .setPinL0FilterAndIndexBlocksInCache(true)
-                        .setFilter(new BloomFilter(bloomBits)));
+                        .setFilter(new BloomFilter(bloomFilterBits)));
     }
 
     WriteOptions writeOptions() {
-        return new WriteOptions().setDisableWAL(true).setNoSlowdown(true);
+        return new WriteOptions().setDisableWAL(true);
     }
 
     ReadOptions readOptions() {

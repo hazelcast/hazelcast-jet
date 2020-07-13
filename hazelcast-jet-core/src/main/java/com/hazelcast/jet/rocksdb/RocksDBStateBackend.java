@@ -19,6 +19,7 @@ package com.hazelcast.jet.rocksdb;
 import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.jet.JetException;
 import org.rocksdb.RocksDB;
+import org.rocksdb.RocksDBException;
 
 import javax.annotation.Nonnull;
 import java.io.File;
@@ -111,7 +112,7 @@ public final class RocksDBStateBackend {
     }
 
     /**
-     *  Returns the directory where RocksDB instance will operate
+     * Returns the directory where RocksDB instance will operate
      */
     public Path directory() {
         return directory;
@@ -125,13 +126,12 @@ public final class RocksDBStateBackend {
             synchronized (this) {
                 if (db == null) {
                     try {
-                        RocksDB.loadLibrary();
                         if (usePrefix) {
                             db = RocksDB.open(prefixOptions.options(), directory.toString());
                         } else {
                             db = RocksDB.open(options.options(), directory.toString());
                         }
-                    } catch (Exception e) {
+                    } catch (RocksDBException e) {
                         throw new JetException("Failed to create a RocksDB instance", e);
                     }
                 }

@@ -21,7 +21,6 @@ import org.rocksdb.BloomFilter;
 import org.rocksdb.ColumnFamilyOptions;
 import org.rocksdb.FlushOptions;
 import org.rocksdb.IndexType;
-import org.rocksdb.InfoLogLevel;
 import org.rocksdb.Options;
 import org.rocksdb.ReadOptions;
 import org.rocksdb.VectorMemTableConfig;
@@ -36,24 +35,25 @@ public class PrefixRocksDBOptions implements Serializable {
 
     private static final int MEMTABLE_SIZE = 128 * 1024 * 1024;
     private static final int MEMTABLE_NUMBER = 4;
-    private static final int BLOOM_BITS = 10;
+    private static final int BLOOM_FILTER_BITS = 10;
+    private static final int NUM_LEVELS = 2;
     private int memtableSize;
     private int memtableNumber;
-    private int bloomBits;
+    private int bloomFilterBits;
 
     /**
      * Creates a new PrefixRocksDBOptions instance with default options.
      */
     public PrefixRocksDBOptions() {
-        this.memtableSize = MEMTABLE_SIZE;
-        this.memtableNumber = MEMTABLE_NUMBER;
-        this.bloomBits = BLOOM_BITS;
+        memtableSize = MEMTABLE_SIZE;
+        memtableNumber = MEMTABLE_NUMBER;
+        bloomFilterBits = BLOOM_FILTER_BITS;
     }
 
     PrefixRocksDBOptions(PrefixRocksDBOptions options) {
         this.memtableSize = options.memtableSize;
         this.memtableNumber = options.memtableNumber;
-        this.bloomBits = options.bloomBits;
+        this.bloomFilterBits = options.bloomFilterBits;
     }
 
     /**
@@ -75,8 +75,8 @@ public class PrefixRocksDBOptions implements Serializable {
     /**
      * Sets the number of bits used for RocksDB bloom filter.
      */
-    public PrefixRocksDBOptions setBloomBits(int bloomBits) {
-        this.bloomBits = bloomBits;
+    public PrefixRocksDBOptions setBloomFilterBits(int bloomFilterBits) {
+        this.bloomFilterBits = bloomFilterBits;
         return this;
     }
 
@@ -84,7 +84,6 @@ public class PrefixRocksDBOptions implements Serializable {
     Options options() {
         return new Options()
                 .setCreateIfMissing(true)
-                .setInfoLogLevel(InfoLogLevel.ERROR_LEVEL)
                 .prepareForBulkLoad()
                 .setAllowConcurrentMemtableWrite(false)
                 .setDisableAutoCompactions(true);
@@ -92,18 +91,18 @@ public class PrefixRocksDBOptions implements Serializable {
 
     ColumnFamilyOptions prefixColumnFamilyOptions() {
         return new ColumnFamilyOptions()
+                .setNumLevels(NUM_LEVELS)
                 .setMaxWriteBufferNumber(memtableNumber)
-                .setNumLevels(2)
                 .setWriteBufferSize(memtableSize)
                 .setMemTableConfig(new VectorMemTableConfig())
                 .setTableFormatConfig(new BlockBasedTableConfig()
                         .setIndexType(IndexType.kHashSearch)
-                        .setFilter(new BloomFilter(bloomBits, false))
+                        .setFilter(new BloomFilter(bloomFilterBits, false))
                         .setWholeKeyFiltering(false));
     }
 
     WriteOptions writeOptions() {
-        return new WriteOptions().setDisableWAL(true).setNoSlowdown(true);
+        return new WriteOptions().setDisableWAL(true);
     }
 
     ReadOptions iteratorOptions() {
@@ -117,6 +116,4 @@ public class PrefixRocksDBOptions implements Serializable {
     FlushOptions flushOptions() {
         return new FlushOptions().setWaitForFlush(true);
     }
-
-
 }
