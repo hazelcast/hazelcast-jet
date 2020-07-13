@@ -14,11 +14,11 @@ a contrib package. We're happy to announce that we've made several
 improvements to this package and decided to make this a part of our main
 release.
 
-Debezium is originally developed as a Kafka Connect module which can
+Debezium was developed initially as a Kafka Connect module, which can
 read the snapshot and changes of relational databases such as MySQL and
-PostgreSQL. With the Jet integration, the dependency on Kafka is removed
-and you can work with the stream of changes directly using the full
-power of the Jet API.
+PostgreSQL. Jet's Debezium integration removes the Kafka dependency
+completely, and you can work with the stream of changes directly using
+the full power of the Jet API.
 
 Along with this change, we've created a new high-level API which makes
 it easier to work directly with change stream records. For example, to
@@ -41,9 +41,9 @@ pipeline.readFrom(
 
 You can also combine this feature with Jet's
 [in-memory-storage](/docs/api/data-structures) allowing you to build an
-in-memory replicate of the database in just a few lines of code. The
+in-memory replica of the database in just a few lines of code. The
 example below will hydrate the distributed map `customers` with the
-records from the database table with same name:
+records from the database table with the same name:
 
 ```java
 StreamSource<ChangeRecord> source = MySqlCdcSources.mysql("source")
@@ -60,24 +60,24 @@ pipeline.readFrom(source)
         );
 ```
 
-For a more in-depth example for this feature, see the [CDC
+For a more in-depth example of this feature, see the [CDC
 Tutorials](/docs/tutorials/cdc).
 
 ## ElasticSearch Connectors
 
 We've also had ElasticSearch (5, 6, 7) connectors available as contrib
 modules and happy to announce that they have also been through several
-rounds of improvements and merged into the main release. A summary of
-the improvements is below:
+rounds of improvements and merged into the main release. A summary is
+below:
 
-- Support for slicing reads: Jet can make use of the slicing feature of
+- Support for slicing reads: Jet can use the slicing feature of
   ElasticSearch to read data in parallel.
 - Collocated read and write: You can make use of collocated reading from
   ElasticSearch by placing Jet on the same nodes as your ElasticSearch
   cluster - this will significantly improve the speed of querying and
   ingestion.
-- Improved retry mechanism for writes: As Jet can be used to write to 
-  ElasticSearch as part of a streaming job, we've improved the retry 
+- Improved the retry mechanism for writes: As Jet can be used to write
+  to ElasticSearch as part of a streaming job, we've improved the retry
   mechanism so that transient ES cluster failures can be retries.
 
 The ElasticSearch source and sink can be used with a simple API with the
@@ -101,21 +101,21 @@ Sink<Map<String, Object>> elasticSink = ElasticSinks.elasticsearch(
 );
 ```
 
-See [GitHub](https://github.com/hazelcast/hazelcast-jet/tree/master/examples/elastic) 
+See
+[GitHub](https://github.com/hazelcast/hazelcast-jet/tree/master/examples/elastic)
 for a full, end-to-end example.
 
 ## .rebalance() operator
 
-Hazelcast Jet by default prefers not to send the data around the
+Hazelcast Jet, by default, prefers not to send the data around the
 computing cluster. If your data source retrieves some part of the data
-stream on member A and you apply a mapping on it, this
-processing will happen on member A. In some cases, it may be desirable
-to explicitly ask Jet to re-distribute the data across the cluster, for
-example if you have a non-distributed data source but want to perform
-some computation on all the nodes.
+stream on member A and you apply a mapping to it, the processing will
+only happen on member A. If you have a non-distributed data source, this
+may mean that all processing only happens on one member.
 
-To achieve this, we've added `.rebalance()` operator to the Pipeline API.
-To use it is very simple:
+Jet 4.2 introduces the `.rebalance()` operator, which lets Jet
+re-distribute data across the cluster at any point in the pipeline. To
+use it is very simple:
 
 ```java
 Pipeline p = Pipeline.create();
@@ -129,11 +129,12 @@ For more details, please see the [documentation page](/docs/api/more-transforms#
 
 ## Improved JSON Support
 
-In previous it was possible to read JSON files by using the file source but
-it required some manual effort to setup the parsing yourself. With 4.2,
-we're now making use of [jackson-jr](https://github.com/FasterXML/jackson-jr)
-to parse json files and offer a native JSON file source. The source provides
-support for object mapping out of the box, so all you need to do is like below:
+In previous versions of Jet, it was possible to read JSON files using
+the file source, but it required some manual effort to set up the parsing
+yourself. With 4.2, we're now making use of
+[jackson-jr](https://github.com/FasterXML/jackson-jr) to parse json
+files and offer a native JSON file source. The source provides support
+for object mapping out of the box, so all you need to do is like below:
 
 ```java
 Pipeline p = Pipeline.create();
@@ -142,13 +143,14 @@ p.readFrom(Sources.json("/home/data/people", Person.class))
  .writeTo(Sinks.logger());
 ```
 
-Similarly, we have added a sink which can be used to output JSON files in 
-the same way. For more details, please see the [documentation page](/docs/api/sources-sinks#json-files).
+Similarly, we have added a sink that can output JSON files
+in the same way. For more details, please see the [documentation
+page](/docs/api/sources-sinks#json-files).
 
 ### Support for JSON parsing
 
-As part of JSON improvements, there is also now a built-in utility method which
-you can use to parse JSON inside a pipeline:
+As part of JSON improvements, there is also now a built-in utility
+method which you can use to parse JSON inside a pipeline:
 
 ```java
 stage.map(json -> JsonUtil.beanFrom(json, Person.class));
@@ -159,7 +161,7 @@ additional instructions.
 
 ### Command-line and Docker Improvements
 
-We've also made some improvements to the Jet command line scripts. A
+We've also made some improvements to the Jet command-line scripts. A
 quick summary is below:
 
 - You can now use the `config/jvm.options` file to control the JVM
@@ -167,7 +169,7 @@ quick summary is below:
 - We've added support to export JMX metrics through Prometheus. It's
   enough to specify a `PROMETHEUS_PORT` environment variable to start
   exporting metrics using Prometheus.
-- Docker image was also rebuilt using a multi-stage process for a
+- Rebuild the docker image using a multi-stage process for a
   smaller footprint.
 - You can use the `JET_MODULES` environment variable to auto-import
   modules to Jet without having to copy files, which is especially
@@ -178,17 +180,16 @@ quick summary is below:
 As part of the release, we've also made improvements and added new
 sections to the documentation:
 
-- [Jet on Kubernetes](docs/operations/kubernetes) documentation is
-  revamped and simplified.
-- [Running With Docker](docs/operations/docker) has also been
-  overhauled with additional information.
+- Revamped and simplified [Jet on
+  Kubernetes](docs/operations/kubernetes) documentation.
+- Overhauled [Running With Docker](docs/operations/docker) with
+  additional information.
 - A new section on [Garbage Collection](/docs/operations/gc-concerns) which
   was the result of our [extensive research and benchmarking](/blog/2020/06/09/jdk-gc-benchmarks-part1)
-- Extended documentation for [Python
-  transformations](docs/api/stateless-transforms#mapusingpython) are
-  added.
-- Additional information on [how to add timestamps to a
-  stream](/docs/api/pipeline#adding-timestamps-to-a-stream) was added.
+- Extended the documentation for [Python
+  transformations](docs/api/stateless-transforms#mapusingpython).
+- Added additional docs about [adding timestamps to a
+  stream](/docs/api/pipeline#adding-timestamps-to-a-stream).
 
 ## Full Release Notes
 
