@@ -229,7 +229,7 @@ Verify that CLI can connect to the cluster with the command below:
 ```bash
 $ bin/jet cluster
 State: ACTIVE
-Version: 4.1
+Version: {jet-version}
 Size: 2
 
 ADDRESS                  UUID
