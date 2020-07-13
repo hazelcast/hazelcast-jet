@@ -31,7 +31,7 @@ class HomeSplash extends React.Component {
       <h2 className="projectTitle">
         Use Your Data Instantly At Scale
         <small>Hazelcast Jet is a distributed computing platform that serves and processes massive amounts of
-           live data with a consistent low latency.
+           live data with consistent low latency.
         </small>
       </h2>
     );
@@ -97,7 +97,7 @@ class Index extends React.Component {
             content: 'Jet consumes and analyzes millions of events per second'
             + ' or terabytes of data at rest using a <a href="/docs/api/pipeline">unified API</a>. '
             + 'Jet keeps processing data <a href="/docs/architecture/fault-tolerance">without loss</a> even '
-            + ' when a node fails. You can add nodes to a live cluster and they immediately start'
+            + ' when a node fails. You can add nodes to a live cluster, and they immediately start'
             + ' sharing the computation load.'
 
           },
@@ -114,9 +114,9 @@ class Index extends React.Component {
             image: `${baseUrl}img/timer.svg`,
             imageAlign: 'top',
             content: 'Jet\'s core execution engine was designed for high throughput and low'
-            + ' overhead and latency. In rigorous tests it stayed within a'
+            + ' overhead and latency. In rigorous tests, it stayed within a'
             + ' <a href="blog/2020/06/23/jdk-gc-benchmarks-rematch">10-millisecond 99.99% latency ceiling</a>'
-            + ' for windowed stream aggregation. The engine is based on'
+            + ' for windowed stream aggregation. The engine uses '
             + ' <a href="/docs/architecture/execution-engine">coroutines</a>'
             + ' that implement suspendable computation, allowing it to run hundreds of'
             + ' concurrent jobs on a fixed number of threads.'
@@ -147,8 +147,8 @@ class Index extends React.Component {
             imageAlign: 'left',
             content: ' Ingest data from a <a href="/docs/tutorials/cdc">relational database</a>,'
             + ' <a href="docs/api/sources-sinks#hadoop-inputformatoutputformat">Hadoop, Amazon S3, Google Cloud Storage, Azure Data Lake</a> and more,'
-            + ' combine it with real-time sources'
-            + ' and serve through thousands of concurrent low-latency queries as well as fine-grained, key-based access.'
+            + ' combine it with real-time sources '
+            + ' and serve through thousands of concurrent low-latency queries and fine-grained, key-based access.'
           },
         ]}
       </Block>
@@ -158,10 +158,10 @@ class Index extends React.Component {
           title: 'React Instantly To Real-Time Data At Scale',
           image: `${baseUrl}img/electricity.svg`,
           imageAlign: 'right',
-          content: 'You can react to real-time events instantly with Jet, querying, enriching and applying inference at scale. A single node is capable of <a href="/docs/tutorials/windowing">windowing and aggregating</a> '
+          content: 'You can instantly react to real-time events with Jet, querying, enriching and applying inference at scale. A single node is capable of <a href="/docs/tutorials/windowing">windowing and aggregating</a> '
           + '100Hz sensor data from 100,000 devices with '
-          + '  <a href="blog/2020/06/23/jdk-gc-benchmarks-rematch">latencies below 10 milliseconds</a>: that\'s 10 million events / second. Jet works'
-          + ' with many streaming data sources such as <a href="docs/tutorials/kafka">Apache Kafka</a>, Apache Pulsar or message brokers such as RabbitMQ.'
+          + '  <a href="blog/2020/06/23/jdk-gc-benchmarks-rematch">latencies below 10 milliseconds</a>: that\'s 10 million events/second. Jet works'
+          + ' with many streaming data sources such as <a href="docs/tutorials/kafka">Apache Kafka</a>, Apache Pulsar, or message brokers such as RabbitMQ.'
         },
       ]}
       </Block>
@@ -171,8 +171,8 @@ class Index extends React.Component {
           title: 'Build Stateful Workflows',
           image: `${baseUrl}img/process.svg`,
           imageAlign: 'left',
-          content: 'Use Jet to build distributed and stateful workflows. Ingest data, denormalize and process it '
-          + ', running a series of distributed computations and cache the intermediate results in <a href="/docs/api/data-structures">queryable memory</a>'
+          content: 'Use Jet to build distributed and stateful workflows. Ingest data, denormalize and process it, '
+          + ' run a series of distributed computations and cache the intermediate results in <a href="/docs/api/data-structures">queryable memory</a>'
           + ' and finally write the results '
           + ' to your <a href="/docs/api/sources-sinks">destination of choice</a>.'
         }
