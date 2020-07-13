@@ -132,7 +132,7 @@ For more details, please see the [documentation page](/docs/api/more-transforms#
 In previous versions of Jet, it was possible to read JSON files using
 the file source, but it required some manual effort to set up the parsing
 yourself. With 4.2, we're now making use of
-[jackson-jr](https://github.com/FasterXML/jackson-jr) to parse json
+[jackson-jr](https://github.com/FasterXML/jackson-jr) to parse JSON
 files and offer a native JSON file source. The source provides support
 for object mapping out of the box, so all you need to do is like below:
 
