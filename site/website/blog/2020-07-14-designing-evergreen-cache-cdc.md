@@ -25,7 +25,7 @@ being not that fresh: one loads the data in-memory close to the
 consumer, and presto, one gets an instant performance boost. In regard
 to a database, this is akin to the following:
 
-![Starting architecture](assets/2020-05-20-starting-architecture.svg)
+![Starting architecture](assets/2020-07-14-starting-architecture.svg)
 
 In this read-through design, when the app requires an item, the cache
 first checks whether it has it.
@@ -48,7 +48,7 @@ This design works as expected until the database receives updates from
 another source:
 
 ![Updating the database while bypassing the
-cache](assets/2020-05-20-updating-database-bypassing-cache.svg)
+cache](assets/2020-07-14-updating-database-bypassing-cache.svg)
 
 Now, the RDBMS is still the source of truth, but the cache is not aware
 of changes made by other components.
@@ -172,7 +172,7 @@ extracts events "from the state".
 
 ## Debezium
 
-CDC is quite recent, and hadn't time to mature.
+CDC is quite recent, and hasn't had time to mature.
 As such, there's no universal standard, but specific tools.
 In this section, we are going to have a look at
 [Debezium](https://debezium.io/).
@@ -233,7 +233,7 @@ pipeline
  give or take the time it takes for the above to execute
 
 ![Final architecture with
-CDC](assets/2020-05-20-architecture-with-cdc.svg)
+CDC](assets/2020-07-14-architecture-with-cdc.svg)
 
 Note that this architecture assumes one starts from a legacy state, with
 an existing app that uses caching, where later on a new component was
@@ -264,19 +264,21 @@ the cache when data is updated
 The pipeline definition is quite straightforward:
 
 ```java
-pipeline.readFrom(DebeziumSources.cdc(configuration))            // 1
-  .withoutTimestamps()
-  .map(r -> Values.convertToString(r.valueSchema(), r.value()))  // 2
-  .apply(new JsonToPerson())                                     // 3
-  .writeTo(Sinks.remoteMap(                                      // 4
-    "entities",                                                  // 5
-    new CustomClientConfig(env.get("CACHE_HOST"))                // 6
-  ));
+pipeline.readFrom(source)                                       //1
+        .withoutTimestamps()
+        .map(r -> {
+            Person person = r.value().toObject(Person.class);   //2
+            return Util.entry(person.id, person);               //3
+        })
+        .writeTo(Sinks.remoteMap(                               //4
+                "entities",                                     //5
+                new CustomClientConfig(env.get("CACHE_HOST"))   //6
+        ));
 ```
 
-1. Get a stream of Kafka `StageRecord`
-2. Convert `StageRecord` to plain `String` that is formatted as JSON
-3. Custom code converts the `String` to a regular `Person` POJO
+1. Get a stream of Jet `ChangeRecord`
+2. Convert `ChangeRecord` to a regular `Person` POJO
+3. Wrap `Person` objects into `Map.Entry`s keyed by ID
 4. Create the sink to write to, a remote map
 5. Name of the remote map
 6. Client configuration so it can connect to the right host, cluster
