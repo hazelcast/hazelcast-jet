@@ -156,8 +156,29 @@ method which you can use to parse JSON inside a pipeline:
 stage.map(json -> JsonUtil.beanFrom(json, Person.class));
 ```
 
-See the [documentation page](docs/next/api/more-transforms#json) for
+See the [documentation page](/docs/api/more-transforms#json) for
 additional instructions.
+
+## Apache Pulsar Connector
+
+[Apache Pulsar](https://pulsar.apache.org/) is a popular, fault-tolerant
+pub-sub messaging system which is a good fit for stream processing
+systems. A connector for Apache Pulsar is now also available as a
+[contrib module](https://github.com/hazelcast/hazelcast-jet-contrib/tree/master/pulsar)
+.
+
+The source is fault-tolerant and can be used as below:
+
+```java
+StreamSource<Event> source = PulsarSources.pulsarReaderBuilder(
+                topicName,
+                () -> PulsarClient.builder().serviceUrl("pulsar://localhost:6650").build(),
+                () -> Schema.JSON(Event.class),
+                Message::getValue).build();
+```
+
+For a more detailed example, you can see the [Apache Pulsar
+Tutorial](/docs/tutorials/pulsar).
 
 ### Command-line and Docker Improvements
 
@@ -181,13 +202,13 @@ As part of the release, we've also made improvements and added new
 sections to the documentation:
 
 - Revamped and simplified [Jet on
-  Kubernetes](docs/operations/kubernetes) documentation.
-- Overhauled [Running With Docker](docs/operations/docker) with
+  Kubernetes](/docs/operations/kubernetes) documentation.
+- Overhauled [Running With Docker](/docs/operations/docker) with
   additional information.
 - A new section on [Garbage Collection](/docs/operations/gc-concerns) which
   was the result of our [extensive research and benchmarking](/blog/2020/06/09/jdk-gc-benchmarks-part1)
 - Extended the documentation for [Python
-  transformations](docs/api/stateless-transforms#mapusingpython).
+  transformations](/docs/api/stateless-transforms#mapusingpython).
 - Added additional docs about [adding timestamps to a
   stream](/docs/api/pipeline#adding-timestamps-to-a-stream).
 
