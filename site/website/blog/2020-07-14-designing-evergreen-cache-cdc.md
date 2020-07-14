@@ -355,4 +355,4 @@ MySQL](https://jet-start.sh/docs/tutorials/cdc)
 Capture](https://debezium.io/blog/2020/02/10/event-sourcing-vs-cdc/)
 - [Identifying useful info from MySQL row-based binary
 logs](https://www.percona.com/blog/2015/01/20/identifying-useful-information-mysql-row-based-binary-logs/)
-- [Demo source code](https://github.com/hazelcast/evergreen-cache)
+- [Demo source code](https://github.com/hazelcast-demos/evergreen-cache)
