@@ -89,6 +89,9 @@ public final class MySqlCdcSources {
             config = new DebeziumConfig(name, "io.debezium.connector.mysql.MySqlConnector");
             config.setProperty(CdcSource.SEQUENCE_EXTRACTOR_CLASS_PROPERTY, MySqlSequenceExtractor.class.getName());
             config.setProperty("include.schema.changes", "false");
+
+            config.setProperty("connect.keep.alive", "true");
+            config.setProperty("connect.keep.alive.interval.ms", CdcSource.DEFAULT_RECONNECT_INTERVAL_MS);
         }
 
         /**
@@ -298,6 +301,42 @@ public final class MySqlCdcSources {
         @Nonnull
         public Builder setSslTruststorePassword(@Nonnull String password) {
             config.setProperty("database.ssl.truststore.password", password);
+            return this;
+        }
+
+        /**
+         * Interval in milliseconds after which to do periodic connection checking
+         * and initiate reconnect, if necessary. Defaults to
+         * {@value DEFAULT_KEEPALIVE_S} seconds.
+         */
+        @Nonnull
+        public Builder setConnectionKeepAliveMs(long keepAliveMs) {
+            config.setProperty(CdcSource.RECONNECT_INTERVAL_MS, keepAliveMs);
+            config.setProperty("connect.keep.alive.interval.ms", keepAliveMs);
+            return this;
+        }
+
+        /**
+         * Specifies how the connector should behave when it detects that the
+         * backing database has been shut down (note: temporary connection
+         * disruptions will not be interpreted in this way; after simple
+         * network outages the connector will automatically reconnect,
+         * regardless of this setting).
+         * <p>
+         * Possible values are:
+         * <ul>
+         *     <li><em>fail</em>: will cause the whole job to fail</li>
+         *     <li><em>clear_state_and_reconnect</em>: will reconnect to
+         *      database, but will clear all internal state first, thus behaving
+         *      as if it would be connecting the first time (for example
+         *      snapshotting will be repeated)</li>
+         *     <li><em>reconnect</em>: will reconnect as is, in the same state
+         *      as it was at the moment of the disconnect </li>
+         * </ul>
+         */
+        @Nonnull
+        public Builder setReconnectBehaviour(String behaviour) {
+            config.setProperty(CdcSource.RECONNECT_BEHAVIOUR_PROPERTY, behaviour);
             return this;
         }
 

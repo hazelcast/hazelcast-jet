@@ -16,7 +16,10 @@
 
 package com.hazelcast.jet.cdc.impl;
 
+import com.hazelcast.jet.JetException;
+import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.pipeline.SourceBuilder;
+import com.hazelcast.logging.ILogger;
 import io.debezium.document.Document;
 import io.debezium.document.DocumentReader;
 import io.debezium.document.DocumentWriter;
@@ -25,6 +28,7 @@ import io.debezium.relational.history.DatabaseHistoryException;
 import io.debezium.relational.history.HistoryRecord;
 import org.apache.kafka.connect.connector.ConnectorContext;
 import org.apache.kafka.connect.data.Struct;
+import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.source.SourceConnector;
 import org.apache.kafka.connect.source.SourceRecord;
 import org.apache.kafka.connect.source.SourceTask;
@@ -43,49 +47,60 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
+import static java.util.concurrent.TimeUnit.SECONDS;
 
 public abstract class CdcSource<T> {
 
     public static final String CONNECTOR_CLASS_PROPERTY = "connector.class";
     public static final String SEQUENCE_EXTRACTOR_CLASS_PROPERTY = "sequence.extractor.class";
+    public static final String RECONNECT_INTERVAL_MS = "reconnect.interval.ms";
+    public static final String RECONNECT_BEHAVIOUR_PROPERTY = "reconnect.behaviour";
+
+    public static final long DEFAULT_RECONNECT_INTERVAL_MS = SECONDS.toMillis(5);
+    public static final ReconnectBehaviour DEFAULT_RECONNECT_BEHAVIOUR = ReconnectBehaviour.FAIL;
 
     private static final ThreadLocal<List<byte[]>> THREAD_LOCAL_HISTORY = new ThreadLocal<>();
 
-    private final SourceConnector connector;
+    private final ILogger logger;
 
+    private final Map<String, String> properties;
+    private final SourceConnector connector;
     private final SourceTask task;
     private final Map<String, String> taskConfig;
+
+    private final long reconnectIntervalMs;
+    private final ReconnectBehaviour reconnectBehaviour;
 
     private State state = new State();
     private boolean taskInit;
 
-    CdcSource(Properties properties) {
+    CdcSource(Processor.Context context, Properties properties) {
+        this.logger = context.logger();
+        this.properties = (Map<String, String>) (Map) properties;
+
         try {
             connector = newInstance(properties, CONNECTOR_CLASS_PROPERTY);
             connector.initialize(new JetConnectorContext());
-            connector.start((Map) properties);
+            connector.start(this.properties);
 
             taskConfig = connector.taskConfigs(1).get(0);
             task = (SourceTask) connector.taskClass().getConstructor().newInstance();
+
+            reconnectIntervalMs = getReconnectIntervalMs(properties);
+            reconnectBehaviour = getReconnectBehaviour(properties);
         } catch (Exception e) {
             throw rethrow(e);
         }
     }
 
     public void fillBuffer(SourceBuilder.TimestampedSourceBuffer<T> buf) {
-        if (!taskInit) {
-            task.initialize(new JetSourceTaskContext());
-
-            // Our DatabaseHistory implementation will be created by the
-            // following start() call, on this thread (blocking worker
-            // thread) and this is how we pass it the list it should
-            // use for storing history records.
-            THREAD_LOCAL_HISTORY.set(state.historyRecords);
-            task.start(taskConfig);
-            THREAD_LOCAL_HISTORY.remove();
-
-            taskInit = true;
+        try {
+            initTaskIfNeeded();
+        } catch (Exception e) {
+            waitForInitRetry(reconnectBehaviour, e);
+            return;
         }
+
         try {
             List<SourceRecord> records = task.poll();
             if (records == null) {
@@ -100,8 +115,28 @@ public abstract class CdcSource<T> {
                     state.setOffset(partition, offset);
                 }
             }
-        } catch (InterruptedException e) {
+        } catch (ConnectException ce) {
+            reconnect(reconnectBehaviour, ce);
+        } catch (InterruptedException ie) {
+            logger.warning("Waiting for data interrupted");
+        } catch (Exception e) {
             throw rethrow(e);
+        }
+    }
+
+    private void initTaskIfNeeded() {
+        if (!taskInit) {
+            task.initialize(new JetSourceTaskContext());
+
+            // Our DatabaseHistory implementation will be created by the
+            // following start() call, on this thread (blocking worker
+            // thread) and this is how we pass it the list it should
+            // use for storing history records.
+            THREAD_LOCAL_HISTORY.set(state.historyRecords);
+            task.start(taskConfig);
+            THREAD_LOCAL_HISTORY.remove();
+
+            taskInit = true;
         }
     }
 
@@ -115,7 +150,60 @@ public abstract class CdcSource<T> {
         return false;
     }
 
-    public void destroy() {
+    private void sleepMs(long ms) {
+        try {
+            Thread.sleep(ms);
+        } catch (InterruptedException e) {
+            logger.warning("Sleep interruped!", e);
+        }
+    }
+
+    private void reconnect(ReconnectBehaviour behaviour, ConnectException ce) {
+        switch (behaviour) {
+            case FAIL:
+                throw new JetException("Database shutdown detected", ce);
+            case CLEAR_STATE_AND_RECONNECT:
+                logger.warning("Connection to database lost, will attempt to reconnect and retry operations from " +
+                        "scratch: " + ce.getMessage());
+
+                disconnect();
+                state = new State();
+                connect();
+                return;
+            case RECONNECT:
+                logger.warning("Connection to database lost, will attempt to reconnect and resume operations: " +
+                        ce.getMessage());
+
+                disconnect();
+                connect();
+                return;
+            default:
+                throw new RuntimeException("Programming error, unhandled reconnect behaviour: " + behaviour);
+        }
+    }
+
+    private void waitForInitRetry(ReconnectBehaviour behaviour, Exception e) {
+        switch (behaviour) {
+            case FAIL:
+                logger.warning("Initializing connector task failed, giving up: " + e.getMessage());
+                throw new JetException("Initializing connector task failed", e);
+            case RECONNECT:
+            case CLEAR_STATE_AND_RECONNECT:
+                logger.warning("Initializing connector task failed, retrying in " + reconnectIntervalMs + "ms: " +
+                        e.getMessage());
+                sleepMs(reconnectIntervalMs);
+                return;
+            default:
+                throw new RuntimeException("Programming error, unhandled reconnect behaviour: " + behaviour);
+        }
+    }
+
+    public void connect() {
+        connector.start(properties);
+        taskInit = false;
+    }
+
+    public void disconnect() {
         try {
             task.stop();
         } finally {
@@ -132,20 +220,6 @@ public abstract class CdcSource<T> {
     }
 
     protected abstract T mapToOutput(SourceRecord record);
-
-    protected static <T> T newInstance(Properties properties, String classNameProperty) throws Exception {
-        String className = properties.getProperty(classNameProperty);
-        Class<?> clazz = Thread.currentThread().getContextClassLoader().loadClass(className);
-        return (T) clazz.getConstructor().newInstance();
-    }
-
-    private static long extractTimestamp(SourceRecord record) {
-        if (record.valueSchema().field("ts_ms") == null) {
-            return 0L;
-        } else {
-            return ((Struct) record.value()).getInt64("ts_ms");
-        }
-    }
 
     private class JetSourceTaskContext implements SourceTaskContext {
         @Override
@@ -174,6 +248,30 @@ public abstract class CdcSource<T> {
             }
             return map;
         }
+    }
+
+    protected static <T> T newInstance(Properties properties, String classNameProperty) throws Exception {
+        String className = properties.getProperty(classNameProperty);
+        Class<?> clazz = Thread.currentThread().getContextClassLoader().loadClass(className);
+        return (T) clazz.getConstructor().newInstance();
+    }
+
+    private static long extractTimestamp(SourceRecord record) {
+        if (record.valueSchema().field("ts_ms") == null) {
+            return 0L;
+        } else {
+            return ((Struct) record.value()).getInt64("ts_ms");
+        }
+    }
+
+    private static ReconnectBehaviour getReconnectBehaviour(Properties properties) {
+        String s = (String) properties.get(RECONNECT_BEHAVIOUR_PROPERTY);
+        return s == null ? DEFAULT_RECONNECT_BEHAVIOUR : Enum.valueOf(ReconnectBehaviour.class, s.toUpperCase());
+    }
+
+    private static long getReconnectIntervalMs(Properties properties) {
+        String s = (String) properties.get(RECONNECT_INTERVAL_MS);
+        return s == null ? DEFAULT_RECONNECT_INTERVAL_MS : Long.parseLong(s);
     }
 
     private static class JetConnectorContext implements ConnectorContext {
@@ -271,5 +369,13 @@ public abstract class CdcSource<T> {
         public boolean storageExists() {
             return history != null;
         }
+    }
+
+    public enum ReconnectBehaviour {
+
+        FAIL,
+        CLEAR_STATE_AND_RECONNECT,
+        RECONNECT;
+
     }
 }

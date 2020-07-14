@@ -44,6 +44,10 @@ public class DebeziumConfig {
         setProperty(key, Integer.toString(value));
     }
 
+    public void setProperty(String key, long value) {
+        setProperty(key, Long.toString(value));
+    }
+
     public void setProperty(String key, boolean value) {
         setProperty(key, Boolean.toString(value));
     }

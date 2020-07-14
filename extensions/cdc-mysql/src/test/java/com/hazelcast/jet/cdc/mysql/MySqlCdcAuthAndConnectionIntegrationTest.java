@@ -29,6 +29,7 @@ import org.junit.experimental.categories.Category;
 import java.sql.SQLException;
 
 import static com.hazelcast.jet.core.JobStatus.FAILED;
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.testcontainers.containers.MySQLContainer.MYSQL_PORT;
 
@@ -59,17 +60,13 @@ public class MySqlCdcAuthAndConnectionIntegrationTest extends AbstractMySqlCdcIn
 
     @Test
     public void incorrectAddress() {
-        String containerIpAddress = mysql.getContainerIpAddress();
-        String wrongContainerIpAddress = "172.17.5.10";
-        if (containerIpAddress.equals(wrongContainerIpAddress)) {
-            wrongContainerIpAddress = "172.17.5.20";
-        }
         StreamSource<ChangeRecord> source = MySqlCdcSources.mysql("name")
-                .setDatabaseAddress(wrongContainerIpAddress)
-                .setDatabasePort(mysql.getMappedPort(MYSQL_PORT))
+                .setDatabaseAddress(mysql.getContainerIpAddress())
+                .setDatabasePort(mysql.getMappedPort(MYSQL_PORT) + 1)
                 .setDatabaseUser("debezium")
                 .setDatabasePassword("dbz")
                 .setClusterName("dbserver1")
+                .setConnectionKeepAliveMs(SECONDS.toMillis(1))
                 .build();
 
         Pipeline pipeline = pipeline(source);
