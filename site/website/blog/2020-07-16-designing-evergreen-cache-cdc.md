@@ -25,7 +25,7 @@ being not that fresh: one loads the data in-memory close to the
 consumer, and presto, one gets an instant performance boost. In regard
 to a database, this is akin to the following:
 
-![Starting architecture](assets/2020-07-14-starting-architecture.svg)
+![Starting architecture](assets/2020-07-16-starting-architecture.svg)
 
 In this read-through design, when the app requires an item, the cache
 first checks whether it has it.
@@ -48,7 +48,7 @@ This design works as expected until the database receives updates from
 another source:
 
 ![Updating the database while bypassing the
-cache](assets/2020-07-14-updating-database-bypassing-cache.svg)
+cache](assets/2020-07-16-updating-database-bypassing-cache.svg)
 
 Now, the RDBMS is still the source of truth, but the cache is not aware
 of changes made by other components.
@@ -233,7 +233,7 @@ pipeline
  give or take the time it takes for the above to execute
 
 ![Final architecture with
-CDC](assets/2020-07-14-architecture-with-cdc.svg)
+CDC](assets/2020-07-16-architecture-with-cdc.svg)
 
 Note that this architecture assumes one starts from a legacy state, with
 an existing app that uses caching, where later on a new component was
