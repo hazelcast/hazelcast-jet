@@ -248,7 +248,7 @@ Obviously, it also can then get/put data.
 ## Talk is cheap, show me the code
 
 Sources for this post are available [on
-GitHub](https://github.com/hazelcast/evergreen-cache).
+GitHub](https://github.com/hazelcast-demos/evergreen-cache).
 
 The repository is made of the following modules:
 
@@ -315,9 +315,12 @@ cluster state
 3. Open a browser at <http://localhost:8080/>
 4. Refresh the browser, and check the logs:
 there should be not interaction with the database, only with the cache
-5. In the `update` module, execute the Maven Spring Boot plugin
+5. In the `update` module, set the database user and password and then
+execute the Maven Spring Boot plugin:
 
     ```bash
+    export SPRING_DATASOURCE_USERNAME=root
+    export SPRING_DATASOURCE_PASSWORD=root
     mvn spring-boot:run
     ```
 
