@@ -67,15 +67,15 @@ function Downloads(props) {
               version: <span className="hljs-string">{latest.version}</span>
           </code></pre>
 
-          <h3 id="modules">Jet Contrib Modules</h3>
-          <p>In addition to the modules included in the main distribution of Jet, we also have
-          various community-supported and incubating modules listed in the table below:
+          <h3 id="modules">Additional Modules</h3>
+          <p>In addition to the ones included in the main distribution, Jet also has
+          the following modules:
              </p>
           <table className="modules">
             <thead>
               <tr>
-                <th>Module Name</th>
-                <th>Download</th>
+                <th>Name</th>
+                <th>File</th>
                 <th>Size</th>
               </tr>
             </thead>
@@ -83,14 +83,14 @@ function Downloads(props) {
               {modules.map(
                 module =>
                   <tr key={module.name}>
-                    <th>
-                      <a href={module.link}>
+                    <td>
+                      <a href={module.docs}>
                         {module.name}
                       </a>
-                    </th>
+                     </td>
                     <td>
-                      <a href={module.downloadURL}>
-                        {module.fileName}
+                      <a href={module.download}>
+                        {module.filename}
                       </a>
                     </td>
                     <td>
