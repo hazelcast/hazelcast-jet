@@ -421,9 +421,9 @@ public class OrdersOfCustomer implements Serializable {
 There is also another element in the pipeline, an extra processing stage
 which handles and fixes event reordering that might happen due to
 parallel processing. It's based on sequence numbers specific to CDC
-sources so can be used only for these kinds of pipelines. Hopefully
-future versions of Jet will contain generic solutions for the reoreding
-problem.
+sources and so can be used only for these kinds of pipelines. Hopefully
+a future version of Jet will introduce a generic solution for the
+reoreding problem.
 
 ```java
 package org.example;

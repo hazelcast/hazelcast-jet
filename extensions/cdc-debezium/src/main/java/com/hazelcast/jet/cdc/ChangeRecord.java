@@ -21,14 +21,14 @@ import com.hazelcast.jet.annotation.EvolvingApi;
 import javax.annotation.Nonnull;
 
 /**
- * Information pertaining to a single data change event (insertion, delete or
+ * Information pertaining to a single data change event (insert, delete or
  * update), affecting a single database record.
  * <p>
  * Each event has a <em>key</em>, identifying the affected record, and a
  * <em>value</em>, describing the change to that record.
  * <p>
  * Most events have an <em>operation</em> which specifies the type of change
- * (insertion, delete or update). Events without an operation have specialized
+ * (insert, delete or update). Events without an operation have specialized
  * usage, for example heartbeats, and aren't supposed to affect the data model.
  * You can observe and act upon them in a Jet CDC sink, but we discourage such
  * usage.
@@ -42,7 +42,7 @@ import javax.annotation.Nonnull;
  * operation instead of {@code INSERT}, however some databases emit {@code INSERT}
  * events in both cases (a notable example is MySQL).
  * <p>
- * All events have a source specific <em>sequence</em> which can be used to
+ * All events have a source-specific <em>sequence</em> which can be used to
  * ensure their ordering. The sequence consists of two parts: a monotonically
  * increasing <em>numeric value</em> and a <em>source descriptor</em>, which
  * provides the scope of validity of the numeric value. This is needed because
@@ -72,7 +72,7 @@ public interface ChangeRecord {
 
     /**
      * Specifies the numeric value part of the record's source sequence. As long
-     * as the source sequence doesn't change the values will be monotonically
+     * as the source sequence doesn't change, the values will be monotonically
      * increasing and can be used to impose ordering over the stream of records.
      *
      * @since 4.3
