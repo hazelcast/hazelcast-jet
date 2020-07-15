@@ -17,6 +17,7 @@
 package com.hazelcast.jet.examples.cdc;
 
 import com.hazelcast.jet.Jet;
+import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.cdc.CdcSinks;
 import com.hazelcast.jet.cdc.ChangeRecord;
 import com.hazelcast.jet.cdc.mysql.MySqlCdcSources;
@@ -67,7 +68,8 @@ public class Cache {
                         r -> r.value().toObject(Customer.class).toString()));
 
         JobConfig cfg = new JobConfig().setName("mysql-monitor");
-        Jet.bootstrappedInstance().newJob(pipeline, cfg);
+        JetInstance jet = Jet.bootstrappedInstance();
+        jet.newJobIfAbsent(pipeline, cfg).join();
     }
 
 }
