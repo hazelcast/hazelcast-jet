@@ -91,7 +91,7 @@ public final class TestProcessors {
      * A source processor (stream or batch) that outputs no items and allows to
      * externally control when and whether to complete or fail.
      */
-    public static final class NoOutputSourceP implements Processor {
+    public static final class NoOutputSourceP extends AbstractProcessor {
         public static volatile CountDownLatch executionStarted;
         public static volatile CountDownLatch proceedLatch;
         public static final AtomicReference<RuntimeException> failure = new AtomicReference<>();
@@ -110,7 +110,7 @@ public final class TestProcessors {
         }
 
         @Override
-        public void init(@Nonnull Outbox outbox, @Nonnull Context context) {
+        protected void init(@Nonnull Context context) throws Exception {
             initCount.incrementAndGet();
         }
 
@@ -440,6 +440,7 @@ public final class TestProcessors {
             return flatMapper.tryProcess(watermark);
         }
     }
+
     /**
      * A source processor that saves dummy constant data to the snapshot and
      * asserts that it receives the same data. It emits no output and never

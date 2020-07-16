@@ -1,22 +1,24 @@
 /*
- * Copyright 2020 Hazelcast Inc.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
- * Licensed under the Hazelcast Community License (the "License");
+ * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- * http://hazelcast.com/hazelcast-community-license
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OF ANY KIND, either express or implied.
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
 
 /**
- * Contains classes for facilitating the processing of change data
- * capture events from various databases, alongside a generic CDC
- * source for Debizium sources.
+ * Contains source/sink connectors that deal with Change Data Capture (CDC)
+ * events from various databases as well as a generic connector for Debezium
+ * CDC sources.
+ *
+ * @since 4.2
  */
 package com.hazelcast.jet.cdc;

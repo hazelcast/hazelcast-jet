@@ -28,7 +28,7 @@ function Downloads(props) {
           <MarkdownBlock>
             The Hazelcast Jet download package includes Hazelcast Jet server and 
             several additional modules. It requires a JDK to run, which can be obtained from 
-            [AdoptOpenJDK](https://adoptopenjdk.net) (minimum version 8). For details about 
+            [AdoptOpenJDK](https://adoptopenjdk.net) (minimum version is 8 - recommended is 11 or later). For details about 
             what's included, and minimim requirements please see the
              [installation page](/docs/operations/installation).
           </MarkdownBlock>
@@ -51,7 +51,7 @@ function Downloads(props) {
                 </td>
                 <td>
                   <a
-                    href={`/javadoc/${latest.version}`} target="_blank">
+                    href={`/javadoc/${latest.version}`} target="_blank" rel="noreferrer noopener">
                     Javadoc
                   </a>
                 </td>
@@ -66,6 +66,23 @@ function Downloads(props) {
               version: <span className="hljs-string">{latest.version}</span>
          </code></pre>
          <p>For the full list of modules, please see <a href="https://search.maven.org/search?q=g:com.hazelcast.jet">Maven Central</a>.</p>
+
+        <h3 id="management-center">Management Center</h3>
+
+         <p>Jet Management Center can be used for monitoring the cluster. For instructions on how to download and run it,
+            see the <a href="/docs/enterprise/management-center">installation page</a>.</p>
+         {/*
+         <p>
+          You can download Hazelcast Jet Management Center <a href={`https://download.hazelcast.com/hazelcast-jet-management-center/hazelcast-jet-management-center-${latest.version}.tar.gz`}>here</a>.
+         </p>
+         <p>
+          You can run the Management Center without a license key, but it will only work with a single node cluster.
+          Get a 30-day trial license from <a href="https://hazelcast.com/download">the Hazelcast website</a>.
+         </p>
+         <p>  
+          For details about what's included, and minimim requirements please see the <a href="/docs/enterprise/management-center">installation page</a>.
+         </p> */}
+
           <h3 id="archive">Past Versions</h3>
           <p>Here you can find previous versions of Hazelcast Jet.</p>
           <table className="versions">
@@ -91,7 +108,7 @@ function Downloads(props) {
                       </td>
                       <td>
                         <a
-                          href={`/javadoc/${current.version}`} target="_blank">
+                          href={`/javadoc/${current.version}`} target="_blank" rel="noreferrer noopener">
                           Javadoc
                         </a>
                       </td>

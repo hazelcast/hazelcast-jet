@@ -25,7 +25,7 @@
     <parent>
         <groupId>com.hazelcast.jet</groupId>
         <artifactId>hazelcast-jet-root</artifactId>
-        <version>4.2-SNAPSHOT</version>
+        <version>4.3-SNAPSHOT</version>
     </parent>
 
     <build>
@@ -41,6 +41,7 @@
                     </execution>
                 </executions>
                 <configuration>
+                    <forceCreation>true</forceCreation>
                     <archive>
                         <index>true</index>
                         <compress>true</compress>
@@ -66,6 +67,7 @@
                 </executions>
                 <configuration>
                     <createSourcesJar>true</createSourcesJar>
+                    <shadeSourcesContent>true</shadeSourcesContent>
                     <createDependencyReducedPom>true</createDependencyReducedPom>
                     <artifactSet>
                         <includes>
@@ -89,24 +91,24 @@
                     </filters>
                     <relocations>
                         <relocation>
-                            <pattern>picocli.</pattern>
-                            <shadedPattern>com.hazelcast.jet.picocli.</shadedPattern>
+                            <pattern>picocli</pattern>
+                            <shadedPattern>com.hazelcast.jet.picocli</shadedPattern>
                         </relocation>
                         <relocation>
-                            <pattern>io.github.classgraph.</pattern>
-                            <shadedPattern>com.hazelcast.jet.io.github.classgraph.</shadedPattern>
+                            <pattern>io.github.classgraph</pattern>
+                            <shadedPattern>com.hazelcast.jet.io.github.classgraph</shadedPattern>
                         </relocation>
                         <relocation>
-                            <pattern>nonapi.io.github.classgraph.</pattern>
-                            <shadedPattern>com.hazelcast.jet.nonapi.io.github.classgraph.</shadedPattern>
+                            <pattern>nonapi.io.github.classgraph</pattern>
+                            <shadedPattern>com.hazelcast.jet.nonapi.io.github.classgraph</shadedPattern>
                         </relocation>
                         <relocation>
-                            <pattern>com.fasterxml.jackson.jr.</pattern>
-                            <shadedPattern>com.hazelcast.com.fasterxml.jackson.jr.</shadedPattern>
+                            <pattern>com.fasterxml.jackson.jr</pattern>
+                            <shadedPattern>com.hazelcast.com.fasterxml.jackson.jr</shadedPattern>
                         </relocation>
                         <relocation>
-                            <pattern>com.fasterxml.jackson.core.</pattern>
-                            <shadedPattern>com.hazelcast.com.fasterxml.jackson.core.</shadedPattern>
+                            <pattern>com.fasterxml.jackson.core</pattern>
+                            <shadedPattern>com.hazelcast.com.fasterxml.jackson.core</shadedPattern>
                         </relocation>
                     </relocations>
                     <transformers>
@@ -120,9 +122,10 @@
                 <artifactId>maven-javadoc-plugin</artifactId>
                 <configuration>
                     <includeDependencySources>true</includeDependencySources>
+                    <includeTransitiveDependencySources>true</includeTransitiveDependencySources>
                     <dependencySourceIncludes>
-                        <dependencySourceInclude>com.hazelcast:hazelcast</dependencySourceInclude>
-                        <dependencySourceInclude>com.hazelcast.jet:hazelcast-jet-core</dependencySourceInclude>
+                        <dependencySourceInclude>com.hazelcast:*</dependencySourceInclude>
+                        <dependencySourceInclude>com.hazelcast.jet:*</dependencySourceInclude>
                     </dependencySourceIncludes>
                 </configuration>
             </plugin>

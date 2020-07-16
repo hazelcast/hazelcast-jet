@@ -35,6 +35,7 @@ import com.hazelcast.map.IMap;
 import com.hazelcast.topic.ITopic;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import javax.jms.ConnectionFactory;
 import javax.sql.CommonDataSource;
 import java.nio.charset.Charset;
@@ -94,7 +95,27 @@ public final class Sinks {
             @Nonnull String sinkName,
             @Nonnull ProcessorMetaSupplier metaSupplier
     ) {
-        return new SinkImpl<>(sinkName, metaSupplier, false, null);
+        return new SinkImpl<>(sinkName, metaSupplier);
+    }
+
+    /**
+     * Returns a sink constructed directly from the given Core API processor
+     * meta-supplier.
+     * <p>
+     * The default local parallelism for this source is specified inside the
+     * {@link ProcessorMetaSupplier#preferredLocalParallelism() metaSupplier}.
+     *
+     * @param sinkName user-friendly sink name
+     * @param metaSupplier the processor meta-supplier
+     * @param partitionKeyFn key extractor function for partitioning edges to sink
+     */
+    @Nonnull
+    public static <T> Sink<T> fromProcessor(
+            @Nonnull String sinkName,
+            @Nonnull ProcessorMetaSupplier metaSupplier,
+            @Nullable FunctionEx<? super T, ?> partitionKeyFn
+    ) {
+        return new SinkImpl<>(sinkName, metaSupplier, partitionKeyFn);
     }
 
     /**
@@ -157,7 +178,7 @@ public final class Sinks {
 
     ) {
         return new SinkImpl<>("mapSink(" + mapName + ')',
-                writeMapP(mapName, toKeyFn, toValueFn), false, toKeyFn);
+                writeMapP(mapName, toKeyFn, toValueFn), toKeyFn);
     }
 
     /**
@@ -227,7 +248,8 @@ public final class Sinks {
             @Nonnull FunctionEx<? super T, ? extends V> toValueFn
     ) {
         return fromProcessor("remoteMapSink(" + mapName + ')',
-                writeRemoteMapP(mapName, clientConfig, toKeyFn, toValueFn));
+                writeRemoteMapP(mapName, clientConfig, toKeyFn, toValueFn),
+                toKeyFn);
     }
 
     /**
@@ -280,7 +302,7 @@ public final class Sinks {
             @Nonnull BinaryOperatorEx<V> mergeFn
     ) {
         return new SinkImpl<>("mapWithMergingSink(" + mapName + ')',
-                mergeMapP(mapName, toKeyFn, toValueFn,  mergeFn), false, toKeyFn);
+                mergeMapP(mapName, toKeyFn, toValueFn,  mergeFn), toKeyFn);
     }
 
     /**
@@ -344,7 +366,7 @@ public final class Sinks {
      * but for a map in a remote Hazelcast cluster identified by the supplied
      * {@code ClientConfig}.
      * <p>
-     * Due to the used API, the remote cluster must be at least 3.11.
+     * Due to the used API, the remote cluster must be at least version 4.0.
      */
     @Nonnull
     public static <T, K, V> Sink<T> remoteMapWithMerging(
@@ -355,7 +377,8 @@ public final class Sinks {
             @Nonnull BinaryOperatorEx<V> mergeFn
     ) {
         return fromProcessor("remoteMapWithMergingSink(" + mapName + ')',
-                mergeRemoteMapP(mapName, clientConfig, toKeyFn, toValueFn, mergeFn));
+                mergeRemoteMapP(mapName, clientConfig, toKeyFn, toValueFn, mergeFn),
+                toKeyFn);
     }
 
     /**
@@ -440,7 +463,7 @@ public final class Sinks {
             @Nonnull BiFunctionEx<? super V, ? super T, ? extends V> updateFn
     ) {
         return new SinkImpl<>("mapWithUpdatingSink(" + mapName + ')',
-                updateMapP(mapName, toKeyFn, updateFn), false, toKeyFn);
+                updateMapP(mapName, toKeyFn, updateFn), toKeyFn);
     }
 
     /**
@@ -498,7 +521,7 @@ public final class Sinks {
      * in a remote Hazelcast cluster identified by the supplied {@code
      * ClientConfig}.
      * <p>
-     * Due to the used API, the remote cluster must be at least 3.11.
+     * Due to the used API, the remote cluster must be at least version 4.0.
      */
     @Nonnull
     public static <T, K, V> Sink<T> remoteMapWithUpdating(
@@ -508,7 +531,8 @@ public final class Sinks {
             @Nonnull BiFunctionEx<? super V, ? super T, ? extends V> updateFn
     ) {
         return fromProcessor("remoteMapWithUpdatingSink(" + mapName + ')',
-                updateRemoteMapP(mapName, clientConfig, toKeyFn, updateFn));
+                updateRemoteMapP(mapName, clientConfig, toKeyFn, updateFn),
+                toKeyFn);
     }
 
     /**
@@ -551,6 +575,21 @@ public final class Sinks {
     }
 
     /**
+     * Convenience for {@link #mapWithEntryProcessor(int, String, FunctionEx, FunctionEx)}
+     * when the maximum number of async operations is not specified.
+     */
+    @Nonnull
+    public static <E, K, V, R> Sink<E> mapWithEntryProcessor(
+            @Nonnull String mapName,
+            @Nonnull FunctionEx<? super E, ? extends K> toKeyFn,
+            @Nonnull FunctionEx<? super E, ? extends EntryProcessor<K, V, R>> toEntryProcessorFn
+    ) {
+        return fromProcessor("mapWithEntryProcessorSink(" + mapName + ')',
+                updateMapP(mapName, toKeyFn, toEntryProcessorFn),
+                toKeyFn);
+    }
+
+    /**
      * Returns a sink that uses the items it receives to create {@code
      * EntryProcessor}s it submits to a Hazelcast {@code IMap} with the
      * specified name. For each received item it applies {@code toKeyFn} to
@@ -580,6 +619,8 @@ public final class Sinks {
      * <p>
      * The default local parallelism for this sink is 1.
      *
+     * @param maxParallelAsyncOps  maximum number of simultaneous entry
+     *                             processors affecting the map
      * @param mapName  name of the map
      * @param toKeyFn  function that extracts the key from the input item
      * @param toEntryProcessorFn function that returns the {@code EntryProcessor}
@@ -590,12 +631,14 @@ public final class Sinks {
      */
     @Nonnull
     public static <E, K, V, R> Sink<E> mapWithEntryProcessor(
+            int maxParallelAsyncOps,
             @Nonnull String mapName,
             @Nonnull FunctionEx<? super E, ? extends K> toKeyFn,
             @Nonnull FunctionEx<? super E, ? extends EntryProcessor<K, V, R>> toEntryProcessorFn
     ) {
         return fromProcessor("mapWithEntryProcessorSink(" + mapName + ')',
-                updateMapP(mapName, toKeyFn, toEntryProcessorFn));
+                updateMapP(maxParallelAsyncOps, mapName, toKeyFn, toEntryProcessorFn),
+                toKeyFn);
     }
 
     /**
@@ -662,7 +705,8 @@ public final class Sinks {
             @Nonnull FunctionEx<? super E, ? extends EntryProcessor<K, V, R>> toEntryProcessorFn
     ) {
         return fromProcessor("remoteMapWithEntryProcessorSink(" + mapName + ')',
-                updateRemoteMapP(mapName, clientConfig, toKeyFn, toEntryProcessorFn));
+                updateRemoteMapP(mapName, clientConfig, toKeyFn, toEntryProcessorFn),
+                toKeyFn);
     }
 
     /**
@@ -679,7 +723,7 @@ public final class Sinks {
     @Nonnull
     public static <T extends Entry> Sink<T> cache(@Nonnull String cacheName) {
         //noinspection Convert2MethodRef (provokes a javac 9 bug)
-        return new SinkImpl<>("cacheSink(" + cacheName + ')', writeCacheP(cacheName), false, en -> en.getKey());
+        return new SinkImpl<>("cacheSink(" + cacheName + ')', writeCacheP(cacheName), en -> en.getKey());
     }
 
     /**

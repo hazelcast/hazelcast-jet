@@ -1,24 +1,20 @@
 /*
- * Copyright 2020 Hazelcast Inc.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
- * Licensed under the Hazelcast Community License (the "License");
+ * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- * http://hazelcast.com/hazelcast-community-license
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OF ANY KIND, either express or implied.
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
 
 package com.hazelcast.jet.cdc.impl;
-
-import com.hazelcast.jet.cdc.ChangeRecord;
-import com.hazelcast.jet.pipeline.SourceBuilder;
-import com.hazelcast.jet.pipeline.StreamSource;
 
 import java.util.Objects;
 import java.util.Properties;
@@ -32,7 +28,7 @@ public class DebeziumConfig {
         Objects.requireNonNull(connectorClass, "connectorClass");
 
         properties.put("name", name);
-        properties.put("connector.class", connectorClass);
+        properties.put(CdcSource.CONNECTOR_CLASS_PROPERTY, connectorClass);
         properties.put("database.history", CdcSource.DatabaseHistoryImpl.class.getName());
         properties.put("tombstones.on.delete", "false");
     }
@@ -60,21 +56,7 @@ public class DebeziumConfig {
         setProperty(key, String.join(",", values));
     }
 
-    public void check(PropertyRules rules) {
-        rules.check(properties);
-    }
-
-    public StreamSource<ChangeRecord> createSource() {
-        return createSource(properties);
-    }
-
-    private static StreamSource<ChangeRecord> createSource(Properties properties) {
-        String name = properties.getProperty("name");
-        return SourceBuilder.timestampedStream(name, ctx -> new CdcSource(properties))
-                .fillBufferFn(CdcSource::fillBuffer)
-                .createSnapshotFn(CdcSource::createSnapshot)
-                .restoreSnapshotFn(CdcSource::restoreSnapshot)
-                .destroyFn(CdcSource::destroy)
-                .build();
+    public Properties toProperties() {
+        return properties;
     }
 }

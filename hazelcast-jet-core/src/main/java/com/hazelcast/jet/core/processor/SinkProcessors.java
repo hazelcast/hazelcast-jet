@@ -69,7 +69,7 @@ public final class SinkProcessors {
      */
     @Nonnull
     public static <K, V> ProcessorMetaSupplier writeMapP(@Nonnull String mapName) {
-        return writeMapP(mapName, Map.Entry<K, V>::getKey, Map.Entry<K, V>::getValue);
+        return writeMapP(mapName, Map.Entry::getKey, Map.Entry<K, V>::getValue);
     }
 
     /**
@@ -90,7 +90,7 @@ public final class SinkProcessors {
      * {@link Sinks#remoteMap(String, ClientConfig)}.
      */
     @Nonnull
-    public static <K, V> ProcessorMetaSupplier writeRemoteMapP(
+    public static ProcessorMetaSupplier writeRemoteMapP(
         @Nonnull String mapName, @Nonnull ClientConfig clientConfig
     ) {
         return writeRemoteMapP(mapName, clientConfig, identity(), identity());
@@ -185,6 +185,21 @@ public final class SinkProcessors {
 
     /**
      * Returns a supplier of processors for
+     * {@link Sinks#mapWithEntryProcessor(int, String, FunctionEx, FunctionEx)}.
+     */
+    @Nonnull
+    public static <T, K, V, R> ProcessorMetaSupplier updateMapP(
+            int maxParallelAsyncOps,
+            @Nonnull String mapName,
+            @Nonnull FunctionEx<? super T, ? extends K> toKeyFn,
+            @Nonnull FunctionEx<? super T, ? extends EntryProcessor<K, V, R>> toEntryProcessorFn
+
+    ) {
+        return HazelcastWriters.updateMapSupplier(maxParallelAsyncOps, mapName, null, toKeyFn, toEntryProcessorFn);
+    }
+
+    /**
+     * Returns a supplier of processors for
      * {@link Sinks#remoteMapWithEntryProcessor(String, ClientConfig, FunctionEx,
      * FunctionEx)}.
      */
@@ -203,7 +218,7 @@ public final class SinkProcessors {
      * {@link Sinks#cache(String)}.
      */
     @Nonnull
-    public static <K, V> ProcessorMetaSupplier writeCacheP(@Nonnull String cacheName) {
+    public static ProcessorMetaSupplier writeCacheP(@Nonnull String cacheName) {
         return HazelcastWriters.writeCacheSupplier(cacheName, null);
     }
 
@@ -212,7 +227,7 @@ public final class SinkProcessors {
      * {@link Sinks#remoteCache(String, ClientConfig)}.
      */
     @Nonnull
-    public static <K, V> ProcessorMetaSupplier writeRemoteCacheP(
+    public static ProcessorMetaSupplier writeRemoteCacheP(
             @Nonnull String cacheName, @Nonnull ClientConfig clientConfig
     ) {
         return HazelcastWriters.writeCacheSupplier(cacheName, clientConfig);

@@ -8,12 +8,11 @@ used to monitor a Jet cluster and manage the lifecycle of the jobs
 
 ## Download Management Center
 
-You can download Hazelcast Jet Management Center [here](https://download.hazelcast.com/hazelcast-jet-management-center/hazelcast-jet-management-center-{jet-version}.tar.gz).
-
-Once you have downloaded it, unzip it to a folder:
+Download Jet Management Center and unzip it to a folder:
 
 ```bash
-tar zxvf hazelcast-jet-enterprise-{jet-version}.tar.gz
+wget https://download.hazelcast.com/hazelcast-jet-management-center/hazelcast-jet-management-center-{jet-version}.tar.gz
+tar zxvf hazelcast-jet-management-center-{jet-version}.tar.gz
 ```
 
 ## Setting License Key

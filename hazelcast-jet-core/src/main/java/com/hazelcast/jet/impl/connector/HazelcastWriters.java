@@ -33,7 +33,6 @@ import com.hazelcast.jet.RestartableException;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
-import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.core.processor.SinkProcessors;
 import com.hazelcast.jet.impl.observer.ObservableImpl;
 import com.hazelcast.map.EntryProcessor;
@@ -101,25 +100,15 @@ public final class HazelcastWriters {
             @Nonnull String mapName,
             @Nullable ClientConfig clientConfig,
             @Nonnull FunctionEx<? super T, ? extends K> toKeyFn,
-            @Nonnull BiFunctionEx<? super V, ? super T, ? extends V> updateFn,
-            int preferredLocalParallelism
+            @Nonnull BiFunctionEx<? super V, ? super T, ? extends V> updateFn
     ) {
         checkSerializable(toKeyFn, "toKeyFn");
         checkSerializable(updateFn, "updateFn");
 
-        return ProcessorMetaSupplier.of(preferredLocalParallelism, new UpdateMapP.Supplier<>(
-                asXmlString(clientConfig), mapName, toKeyFn, updateFn
-        ));
-    }
-
-    @Nonnull
-    public static <T, K, V> ProcessorMetaSupplier updateMapSupplier(
-            @Nonnull String mapName,
-            @Nullable ClientConfig clientConfig,
-            @Nonnull FunctionEx<? super T, ? extends K> toKeyFn,
-            @Nonnull BiFunctionEx<? super V, ? super T, ? extends V> updateFn
-    ) {
-        return updateMapSupplier(mapName, clientConfig, toKeyFn, updateFn, Vertex.LOCAL_PARALLELISM_USE_DEFAULT);
+        return ProcessorMetaSupplier.of(
+                AbstractHazelcastConnectorSupplier.of(
+                        asXmlString(clientConfig),
+                        instance -> new UpdateMapP<>(instance, mapName, toKeyFn, updateFn)));
     }
 
     @Nonnull
@@ -132,9 +121,24 @@ public final class HazelcastWriters {
         checkSerializable(toKeyFn, "toKeyFn");
         checkSerializable(toEntryProcessorFn, "toEntryProcessorFn");
 
-        return ProcessorMetaSupplier.of(new UpdateMapWithEntryProcessorP.Supplier<>(
-                name, asXmlString(clientConfig), toKeyFn, toEntryProcessorFn
-        ));
+        return ProcessorMetaSupplier.of(AbstractHazelcastConnectorSupplier.of(asXmlString(clientConfig),
+                instance -> new UpdateMapWithEntryProcessorP<>(instance, name, toKeyFn, toEntryProcessorFn)));
+    }
+
+    @Nonnull
+    public static <T, K, V, R> ProcessorMetaSupplier updateMapSupplier(
+            int maxParallelAsyncOps,
+            @Nonnull String name,
+            @Nullable ClientConfig clientConfig,
+            @Nonnull FunctionEx<? super T, ? extends K> toKeyFn,
+            @Nonnull FunctionEx<? super T, ? extends EntryProcessor<K, V, R>> toEntryProcessorFn
+    ) {
+        checkSerializable(toKeyFn, "toKeyFn");
+        checkSerializable(toEntryProcessorFn, "toEntryProcessorFn");
+
+        return ProcessorMetaSupplier.of(AbstractHazelcastConnectorSupplier.of(asXmlString(clientConfig),
+                instance -> new UpdateMapWithEntryProcessorP<>(instance, maxParallelAsyncOps, name, toKeyFn,
+                        toEntryProcessorFn)));
     }
 
     @Nonnull
