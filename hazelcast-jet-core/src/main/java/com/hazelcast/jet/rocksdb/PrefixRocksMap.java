@@ -133,7 +133,7 @@ public class PrefixRocksMap<K, V> implements Iterable<Entry<K, Iterator<V>>> {
         }
         iterator.seek(serialize(key));
 
-        return new Iterator<>() {
+        return new Iterator<V>() {
             @Override
             public boolean hasNext() {
                 return iterator.isValid();

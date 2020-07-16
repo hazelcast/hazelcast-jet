@@ -377,7 +377,7 @@ public class HashJoinPTest extends JetTestSupport {
     }
 
     @SafeVarargs
-    private <K, V> PrefixRocksMap<K, Object> toMap(Tuple2<K, Object>... entries) {
+    private final <K> PrefixRocksMap<K, Object> toMap(Tuple2<K, Object>... entries) {
         PrefixRocksMap<K, Object> prefixRocksMap = rocksDBStateBackend.getPrefixMap();
         for (Tuple2<K, Object> e : entries) {
             prefixRocksMap.add(e.getKey(), e.getValue());
