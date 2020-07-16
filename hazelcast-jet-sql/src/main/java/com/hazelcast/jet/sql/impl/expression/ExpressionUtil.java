@@ -50,7 +50,7 @@ public final class ExpressionUtil {
     ) {
         return values -> {
             Row row = new HeapRow(values);
-            if (!Boolean.TRUE.equals(predicate.eval(row, ZERO_ARGUMENTS_CONTEXT))) {
+            if (!Boolean.TRUE.equals(evaluate(predicate, row))) {
                 return null;
             }
             return values;
@@ -64,7 +64,7 @@ public final class ExpressionUtil {
             Row row = new HeapRow(values);
             Object[] result = new Object[projections.size()];
             for (int i = 0; i < projections.size(); i++) {
-                result[i] = projections.get(i).eval(row, ZERO_ARGUMENTS_CONTEXT);
+                result[i] = evaluate(projections.get(i), row);
             }
             return result;
         };
@@ -100,12 +100,12 @@ public final class ExpressionUtil {
         return entry -> {
             // TODO: use something like MapScanRow ???
             Row row = new EntryRow(fieldNames, fieldTypes, entry);
-            if (!Boolean.TRUE.equals(predicate0.eval(row, ZERO_ARGUMENTS_CONTEXT))) {
+            if (!Boolean.TRUE.equals(evaluate(predicate0, row))) {
                 return null;
             }
             Object[] result = new Object[projections.size()];
             for (int i = 0; i < projections.size(); i++) {
-                result[i] = projections.get(i).eval(row, ZERO_ARGUMENTS_CONTEXT);
+                result[i] = evaluate(projections.get(i), row);
             }
             return result;
         };
@@ -123,11 +123,15 @@ public final class ExpressionUtil {
             System.arraycopy(right, 0, joined, left.length, right.length);
 
             Row row = new HeapRow(joined);
-            if (Boolean.TRUE.equals(predicate0.eval(row, ZERO_ARGUMENTS_CONTEXT))) {
+            if (Boolean.TRUE.equals(evaluate(predicate0, row))) {
                 return joined;
             } else {
                 return null;
             }
         };
+    }
+
+    public static <T> T evaluate(Expression<T> expression, Row row) {
+        return expression.eval(row, ZERO_ARGUMENTS_CONTEXT);
     }
 }

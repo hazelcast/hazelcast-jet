@@ -21,6 +21,7 @@ import com.hazelcast.jet.sql.impl.opt.physical.visitor.CreateDagVisitor;
 import com.hazelcast.sql.impl.QueryParameterMetadata;
 import com.hazelcast.sql.impl.calcite.opt.physical.visitor.RexToExpressionVisitor;
 import com.hazelcast.sql.impl.expression.Expression;
+import com.hazelcast.sql.impl.plan.node.PlanNodeFieldTypeProvider;
 import com.hazelcast.sql.impl.plan.node.PlanNodeSchema;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rex.RexNode;
@@ -39,7 +40,7 @@ public interface PhysicalRel extends RelNode {
 
     // TODO: moved to PlanNode as part of CreateDagVisitor ???
     @SuppressWarnings("unchecked")
-    default Expression<Boolean> filter(PlanNodeSchema schema, RexNode node) {
+    default Expression<Boolean> filter(PlanNodeFieldTypeProvider schema, RexNode node) {
         if (node == null) {
             return null;
         }
@@ -49,7 +50,7 @@ public interface PhysicalRel extends RelNode {
     }
 
     // TODO: moved to PlanNode as part of CreateDagVisitor ???
-    default List<Expression<?>> project(PlanNodeSchema schema, List<RexNode> nodes) {
+    default List<Expression<?>> project(PlanNodeFieldTypeProvider schema, List<RexNode> nodes) {
         // TODO: pass actual parameter metadata
         RexToExpressionVisitor converter = new RexToExpressionVisitor(schema, new QueryParameterMetadata());
         return nodes.stream()

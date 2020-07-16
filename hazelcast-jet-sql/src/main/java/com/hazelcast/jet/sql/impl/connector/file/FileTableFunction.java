@@ -1,0 +1,104 @@
+/*
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.hazelcast.jet.sql.impl.connector.file;
+
+import com.hazelcast.internal.util.UuidUtil;
+import com.hazelcast.jet.sql.impl.schema.JetTableFunction;
+import com.hazelcast.jet.sql.impl.schema.JetTableFunctionParameter;
+import com.hazelcast.jet.sql.impl.schema.UnknownStatistic;
+import com.hazelcast.sql.impl.calcite.schema.HazelcastTable;
+import com.hazelcast.sql.impl.schema.Table;
+import org.apache.calcite.rel.type.RelDataType;
+import org.apache.calcite.rel.type.RelDataTypeFactory;
+import org.apache.calcite.schema.FunctionParameter;
+
+import java.lang.reflect.Type;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
+import static com.hazelcast.jet.sql.JetSqlConnector.TO_SERIALIZATION_FORMAT;
+import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.TO_CHARSET;
+import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.TO_DELIMITER;
+import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.TO_DIRECTORY;
+import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.TO_GLOB;
+import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.TO_HEADER;
+import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.TO_SHARED_FILE_SYSTEM;
+import static java.util.Collections.emptyList;
+
+public final class FileTableFunction implements JetTableFunction {
+
+    public static final FileTableFunction INSTANCE = new FileTableFunction();
+
+    private static final Map<String, FunctionParameter> PARAMETERS_BY_CONNECTOR_NAMES = new LinkedHashMap<String, FunctionParameter>() {
+        {
+            put(TO_SERIALIZATION_FORMAT, new JetTableFunctionParameter(0, "format", String.class, true));
+            put(TO_DIRECTORY, new JetTableFunctionParameter(1, "directory", String.class, true));
+            put(TO_GLOB, new JetTableFunctionParameter(2, "glob", String.class, false));
+            put(TO_SHARED_FILE_SYSTEM, new JetTableFunctionParameter(3, "sharedFileSystem", Boolean.class, false));
+            put(TO_CHARSET, new JetTableFunctionParameter(4, "charset", String.class, false));
+            put(TO_HEADER, new JetTableFunctionParameter(5, "header", Boolean.class, false));
+            put(TO_DELIMITER, new JetTableFunctionParameter(6, "delimiter", String.class, false));
+        }
+    };
+
+    private static final String SCHEMA_NAME_FILES = "files";
+
+    public FileTableFunction() {
+    }
+
+    @Override
+    public List<FunctionParameter> getParameters() {
+        return new ArrayList<>(PARAMETERS_BY_CONNECTOR_NAMES.values());
+    }
+
+    @Override
+    public RelDataType getRowType(RelDataTypeFactory typeFactory, List<Object> arguments) {
+        return table(arguments).getRowType(typeFactory);
+    }
+
+    @Override
+    public Type getElementType(List<Object> arguments) {
+        return Object[].class;
+    }
+
+    @Override
+    public HazelcastTable table(List<Object> arguments) {
+        Map<String, String> options = new HashMap<>();
+        Iterator<String> parameterNames = PARAMETERS_BY_CONNECTOR_NAMES.keySet().iterator();
+        for (Object argument : arguments) {
+            options.put(parameterNames.next(), argument == null ? null : argument.toString());
+        }
+
+        Table table = FileSqlConnector.INSTANCE.createTable(
+                null,
+                SCHEMA_NAME_FILES,
+                randomName(),
+                options,
+                emptyList()
+        );
+
+        return new HazelcastTable(table, UnknownStatistic.INSTANCE);
+    }
+
+    private static String randomName() {
+        return "file_" + UuidUtil.newUnsecureUuidString().replace('-', '_');
+    }
+}

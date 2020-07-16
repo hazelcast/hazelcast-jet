@@ -31,6 +31,7 @@ import com.hazelcast.jet.sql.impl.opt.physical.PhysicalRel;
 import com.hazelcast.jet.sql.impl.opt.physical.PhysicalRules;
 import com.hazelcast.jet.sql.impl.opt.physical.visitor.CreateDagVisitor;
 import com.hazelcast.jet.sql.impl.schema.JetTable;
+import com.hazelcast.jet.sql.impl.validate.JetSqlOperatorTable;
 import com.hazelcast.jet.sql.impl.validate.JetSqlValidator;
 import com.hazelcast.spi.impl.NodeEngine;
 import com.hazelcast.sql.SqlColumnMetadata;
@@ -51,17 +52,14 @@ import org.apache.calcite.rel.RelVisitor;
 import org.apache.calcite.rel.core.TableModify;
 import org.apache.calcite.rel.core.TableScan;
 import org.apache.calcite.rel.type.RelDataType;
-import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rel.type.RelDataTypeField;
-import org.apache.calcite.sql.SqlOperatorTable;
-import org.apache.calcite.sql.validate.SqlConformance;
-import org.apache.calcite.sql.validate.SqlValidatorCatalogReader;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.function.BiFunction;
 
 @SuppressWarnings("unused") // used through reflection
 public class JetSqlBackendImpl implements JetSqlBackend, ManagedService {
@@ -79,9 +77,13 @@ public class JetSqlBackendImpl implements JetSqlBackend, ManagedService {
     }
 
     @Override
-    public JetSqlValidator createValidator(Object opTab, Object catalogReader, Object typeFactory, Object conformance) {
-        return new JetSqlValidator((SqlOperatorTable) opTab, (SqlValidatorCatalogReader) catalogReader,
-                (RelDataTypeFactory) typeFactory, (SqlConformance) conformance);
+    public Object operatorTable() {
+        return JetSqlOperatorTable.instance();
+    }
+
+    @Override
+    public BiFunction<Object, Object, Object> validator() {
+        return JetSqlValidator::validate;
     }
 
     @Override

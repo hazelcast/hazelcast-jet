@@ -45,6 +45,7 @@ public final class LogicalRules {
                 ProjectFilterTransposeRule.INSTANCE,
 
                 FullScanLogicalRule.INSTANCE,
+                FullFunctionScanLogicalRule.INSTANCE,
                 ProjectIntoScanLogicalRule.INSTANCE,
                 FilterIntoScanLogicalRule.INSTANCE,
 

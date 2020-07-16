@@ -16,14 +16,12 @@
 
 package com.hazelcast.jet.sql.impl.opt;
 
-import com.hazelcast.sql.impl.calcite.SqlToQueryType;
 import com.hazelcast.sql.impl.calcite.opt.cost.Cost;
 import com.hazelcast.sql.impl.calcite.opt.cost.CostUtils;
+import com.hazelcast.sql.impl.calcite.schema.HazelcastSchemaUtils;
 import com.hazelcast.sql.impl.calcite.schema.HazelcastTable;
 import com.hazelcast.sql.impl.schema.Table;
 import com.hazelcast.sql.impl.schema.TableField;
-import com.hazelcast.sql.impl.type.QueryDataType;
-import com.hazelcast.sql.impl.type.QueryDataTypeFamily;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptCost;
 import org.apache.calcite.plan.RelOptPlanner;
@@ -36,7 +34,6 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexNode;
-import org.apache.calcite.sql.type.SqlTypeName;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -61,7 +58,6 @@ public abstract class AbstractFullScanRel extends TableScan {
                 : projection(getTable().unwrap(HazelcastTable.class), cluster.getTypeFactory());
     }
 
-    // TODO: almost a copy of HazelcastTable.getRowType() - need proper indices for RexInputRef
     private static List<RexNode> projection(HazelcastTable table, RelDataTypeFactory typeFactory) {
         List<Integer> projects = table.getProjects();
 
@@ -69,19 +65,9 @@ public abstract class AbstractFullScanRel extends TableScan {
         for (Integer index : projects) {
             TableField field = table.getTarget().getField(index);
 
-            QueryDataType fieldType = field.getType();
-            QueryDataTypeFamily fieldTypeFamily = fieldType.getTypeFamily();
+            RelDataType relDataType = HazelcastSchemaUtils.convert(field, typeFactory);
 
-            SqlTypeName sqlTypeName = SqlToQueryType.map(fieldTypeFamily);
-
-            if (sqlTypeName == null) {
-                throw new IllegalStateException("Unexpected type family: " + fieldTypeFamily);
-            }
-
-            RelDataType relDataType = typeFactory.createSqlType(sqlTypeName);
-            RelDataType nullableRelDataType = typeFactory.createTypeWithNullability(relDataType, true);
-
-            projection.add(new RexInputRef(index, nullableRelDataType));
+            projection.add(new RexInputRef(index, relDataType));
         }
         return projection;
     }

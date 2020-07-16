@@ -22,6 +22,7 @@ import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.impl.connector.ReadFilesP;
 import com.hazelcast.jet.sql.JetSqlConnector;
 import com.hazelcast.spi.impl.NodeEngine;
+import com.hazelcast.sql.impl.QueryException;
 import com.hazelcast.sql.impl.expression.Expression;
 import com.hazelcast.sql.impl.schema.ExternalTable.ExternalField;
 import com.hazelcast.sql.impl.schema.Table;
@@ -34,8 +35,11 @@ import java.util.Map;
 import java.util.stream.Stream;
 
 import static java.lang.Boolean.parseBoolean;
+import static java.lang.String.format;
 
 public class FileSqlConnector implements JetSqlConnector {
+
+    static final FileSqlConnector INSTANCE = new FileSqlConnector();
 
     public static final String TYPE_NAME = "com.hazelcast.File";
 
@@ -60,13 +64,16 @@ public class FileSqlConnector implements JetSqlConnector {
     @Nonnull
     @Override
     public Table createTable(
-            @Nonnull NodeEngine nodeEngine,
+            @Nullable NodeEngine nodeEngine,
             @Nonnull String schemaName,
             @Nonnull String name,
             @Nonnull Map<String, String> options,
             @Nonnull List<ExternalField> externalFields
     ) {
-        String directory = options.getOrDefault(TO_DIRECTORY, name);
+        String directory = options.get(TO_DIRECTORY);
+        if (directory == null) {
+            throw QueryException.error(format("Missing '%s' option", TO_DIRECTORY));
+        }
         String glob = options.getOrDefault(TO_GLOB, "*");
         boolean sharedFileSystem = parseBoolean(options.getOrDefault(TO_SHARED_FILE_SYSTEM, "true"));
         Metadata metadata = MetadataResolver.resolve(externalFields, options, directory, glob);

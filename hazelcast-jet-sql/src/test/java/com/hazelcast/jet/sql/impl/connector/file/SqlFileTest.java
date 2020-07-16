@@ -129,6 +129,19 @@ public class SqlFileTest extends SqlTestSupport {
         );
     }
 
+    @Test
+    public void file_tableFunction() {
+        assertRowsEventuallyAnyOrder(
+                "SELECT username, age FROM TABLE (" +
+                        "FILE (format => 'avro', directory => '" + RESOURCES_PATH + "', glob => 'users.avro')" +
+                        ")",
+                asList(
+                        new Row("User0", 0),
+                        new Row("User1", 1)
+                )
+        );
+    }
+
     private static String createRandomName() {
         return "file_" + randomString().replace('-', '_');
     }

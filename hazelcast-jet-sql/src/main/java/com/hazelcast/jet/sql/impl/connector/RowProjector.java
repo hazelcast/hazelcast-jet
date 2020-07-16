@@ -18,7 +18,6 @@ package com.hazelcast.jet.sql.impl.connector;
 
 import com.hazelcast.sql.impl.expression.ConstantExpression;
 import com.hazelcast.sql.impl.expression.Expression;
-import com.hazelcast.sql.impl.expression.ExpressionEvalContext;
 import com.hazelcast.sql.impl.extract.QueryExtractor;
 import com.hazelcast.sql.impl.extract.QueryTarget;
 import com.hazelcast.sql.impl.row.Row;
@@ -26,11 +25,9 @@ import com.hazelcast.sql.impl.type.QueryDataType;
 
 import java.util.List;
 
-public class RowProjector implements Row {
+import static com.hazelcast.jet.sql.impl.expression.ExpressionUtil.evaluate;
 
-    private static final ExpressionEvalContext ZERO_ARGUMENTS_CONTEXT = index -> {
-        throw new IndexOutOfBoundsException("" + index);
-    };
+public class RowProjector implements Row {
 
     private final QueryTarget target;
     private final QueryExtractor[] extractors;
@@ -72,13 +69,13 @@ public class RowProjector implements Row {
     public Object[] project(Object object) {
         target.setTarget(object);
 
-        if (!Boolean.TRUE.equals(predicate.eval(this, ZERO_ARGUMENTS_CONTEXT))) {
+        if (!Boolean.TRUE.equals(evaluate(predicate, this))) {
             return null;
         }
 
         Object[] row = new Object[projection.size()];
         for (int i = 0; i < projection.size(); i++) {
-            row[i] = projection.get(i).eval(this, ZERO_ARGUMENTS_CONTEXT);
+            row[i] = evaluate(projection.get(i), this);
         }
         return row;
     }

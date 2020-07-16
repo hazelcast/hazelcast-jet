@@ -47,7 +47,7 @@ import static com.hazelcast.jet.core.EventTimePolicy.noEventTime;
 import static com.hazelcast.jet.core.processor.Processors.mapP;
 import static com.hazelcast.jet.core.processor.SourceProcessors.convenientTimestampedSourceP;
 import static com.hazelcast.jet.impl.util.Util.toList;
-import static com.hazelcast.jet.sql.impl.expression.ExpressionUtil.ZERO_ARGUMENTS_CONTEXT;
+import static com.hazelcast.jet.sql.impl.expression.ExpressionUtil.evaluate;
 import static com.hazelcast.sql.impl.type.QueryDataType.VARCHAR_CHARACTER;
 
 public class CdcSqlConnector implements JetSqlConnector {
@@ -176,12 +176,12 @@ public class CdcSqlConnector implements JetSqlConnector {
             values.put(OPERATION, operation);
 
             Row row = new MapRow(fieldNames, fieldTypes, values);
-            if (!Boolean.TRUE.equals(predicate0.eval(row, ZERO_ARGUMENTS_CONTEXT))) {
+            if (!Boolean.TRUE.equals(evaluate(predicate0, row))) {
                 return null;
             }
             Object[] result = new Object[projections.size()];
             for (int i = 0; i < projections.size(); i++) {
-                result[i] = projections.get(i).eval(row, ZERO_ARGUMENTS_CONTEXT);
+                result[i] = evaluate(projections.get(i), row);
             }
             return result;
         };
