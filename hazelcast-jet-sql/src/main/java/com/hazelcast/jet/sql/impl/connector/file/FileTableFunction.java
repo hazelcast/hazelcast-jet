@@ -84,7 +84,9 @@ public final class FileTableFunction implements JetTableFunction {
         Map<String, String> options = new HashMap<>();
         Iterator<String> parameterNames = PARAMETERS_BY_CONNECTOR_NAMES.keySet().iterator();
         for (Object argument : arguments) {
-            options.put(parameterNames.next(), argument == null ? null : argument.toString());
+            if (argument != null) {
+                options.put(parameterNames.next(), argument.toString());
+            }
         }
 
         Table table = FileSqlConnector.INSTANCE.createTable(
