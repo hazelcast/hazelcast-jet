@@ -31,9 +31,9 @@ import java.io.Serializable;
 public class RocksDBOptions implements Serializable {
 
     private static final int MEMTABLE_SIZE = 64 * 1024 * 1024;
-    private static final int MEMTABLE_NUMBER = 4;
+    private static final int MEMTABLE_NUMBER = 2;
     private static final int BLOOM_FILTER_BITS = 10;
-    private static final int CACHE_SIZE = 265 * 1024 * 1024;
+    private static final int CACHE_SIZE = 128 * 1024 * 1024;
 
     private int memtableSize;
     private int memtableNumber;

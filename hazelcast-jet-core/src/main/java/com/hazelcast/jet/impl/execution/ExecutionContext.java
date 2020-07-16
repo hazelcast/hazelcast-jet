@@ -39,6 +39,7 @@ import com.hazelcast.jet.impl.operation.SnapshotPhase1Operation.SnapshotPhase1Re
 import com.hazelcast.jet.impl.util.LoggingUtil;
 import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.jet.rocksdb.PrefixRocksDBOptions;
+import com.hazelcast.jet.rocksdb.PrefixRocksDBStateBackend;
 import com.hazelcast.jet.rocksdb.RocksDBOptions;
 import com.hazelcast.jet.rocksdb.RocksDBStateBackend;
 import com.hazelcast.logging.ILogger;
@@ -110,7 +111,7 @@ public class ExecutionContext implements DynamicMetricsProvider {
 
     private InternalSerializationService serializationService;
     private RocksDBStateBackend stateBackend;
-    private RocksDBStateBackend prefixStateBackend;
+    private PrefixRocksDBStateBackend prefixStateBackend;
 
 
     public ExecutionContext(NodeEngine nodeEngine, TaskletExecutionService taskletExecService,
@@ -140,8 +141,8 @@ public class ExecutionContext implements DynamicMetricsProvider {
         JetService jetService = nodeEngine.getService(JetService.SERVICE_NAME);
         serializationService = jetService.createSerializationService(jobConfig.getSerializerConfigs());
 
-        stateBackend = new RocksDBStateBackend().initialize(serializationService);
-        prefixStateBackend = new RocksDBStateBackend().initialize(serializationService).usePrefixMode(true);
+        stateBackend = new RocksDBStateBackend().initialize(serializationService, jobId);
+        prefixStateBackend = new PrefixRocksDBStateBackend().initialize(serializationService, jobId);
 
         RocksDBOptions rocksDBOptions = jobConfig.getRocksDBOptions();
         PrefixRocksDBOptions prefixRocksDBOptions = jobConfig.getPrefixRocksDBOptions();
@@ -152,8 +153,8 @@ public class ExecutionContext implements DynamicMetricsProvider {
             prefixStateBackend.setPrefixOptions(prefixRocksDBOptions);
         }
 
-        tempDirectories.put("stateBackend", stateBackend.directory().toFile());
-        tempDirectories.put("prefixStateBackend", prefixStateBackend.directory().toFile());
+        tempDirectories.put("stateBackend", stateBackend.directory());
+        tempDirectories.put("prefixStateBackend", prefixStateBackend.directory());
         metricsEnabled = jobConfig.isMetricsEnabled() && nodeEngine.getConfig().getMetricsConfig().isEnabled();
         plan.initialize(nodeEngine, jobId, executionId, snapshotContext,
                 tempDirectories, serializationService, stateBackend, prefixStateBackend);

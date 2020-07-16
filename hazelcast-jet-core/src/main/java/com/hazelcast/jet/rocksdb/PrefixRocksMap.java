@@ -29,6 +29,7 @@ import org.rocksdb.ReadOptions;
 import org.rocksdb.RocksDB;
 import org.rocksdb.RocksDBException;
 import org.rocksdb.RocksIterator;
+import org.rocksdb.Status.Code;
 import org.rocksdb.WriteOptions;
 
 import javax.annotation.Nonnull;
@@ -46,7 +47,7 @@ import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
  * Lifecycle:
  * <ol><li>
  *     A processor acquire an instance of this class using
- *     {@link RocksDBStateBackend#getPrefixMap}.
+ *     {@link PrefixRocksDBStateBackend#getPrefixMap}.
  * </li><li>
  *     The processor issues a series of add() operations to load keys and
  *     values then call compact() to prepare the map for reads.
@@ -115,7 +116,10 @@ public class PrefixRocksMap<K, V> implements Iterable<Entry<K, Iterator<V>>> {
         }
         try {
             db.put(cfh, writeOptions, pack(key), serialize(value));
-        } catch (Exception e) {
+        } catch (RocksDBException e) {
+            if (e.getStatus().getCode() == Code.Incomplete) {
+                throw new JetException("Write Stall", e);
+            }
             throw new JetException("Operation Failed: add", e);
         }
     }

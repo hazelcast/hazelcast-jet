@@ -29,8 +29,9 @@ import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.impl.deployment.IMapInputStream;
 import com.hazelcast.jet.impl.util.ExceptionUtil;
-import com.hazelcast.jet.rocksdb.RocksDBStateBackend;
 import com.hazelcast.jet.impl.util.IOUtil;
+import com.hazelcast.jet.rocksdb.PrefixRocksDBStateBackend;
+import com.hazelcast.jet.rocksdb.RocksDBStateBackend;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.map.IMap;
 
@@ -248,7 +249,7 @@ public final class Contexts {
         private final int localProcessorIndex;
         private final int globalProcessorIndex;
         private final RocksDBStateBackend stateBackend;
-        private final RocksDBStateBackend prefixStateBackend;
+        private final PrefixRocksDBStateBackend prefixStateBackend;
 
         @SuppressWarnings("checkstyle:ParameterNumber")
         public ProcCtx(JetInstance instance,
@@ -266,7 +267,7 @@ public final class Contexts {
                        ConcurrentHashMap<String, File> tempDirectories,
                        InternalSerializationService serializationService,
                        RocksDBStateBackend stateBackend,
-                       RocksDBStateBackend prefixStateBackend) {
+                       PrefixRocksDBStateBackend prefixStateBackend) {
             super(instance, jobId, executionId, jobConfig, logger, vertexName, localParallelism,
                     memberCount * localParallelism, memberIndex, memberCount, processingGuarantee,
                     tempDirectories, serializationService);
@@ -292,7 +293,7 @@ public final class Contexts {
         }
 
         @Override
-        public RocksDBStateBackend prefixStateBackend() {
+        public PrefixRocksDBStateBackend prefixStateBackend() {
             return prefixStateBackend.open();
         }
 
@@ -300,7 +301,7 @@ public final class Contexts {
             return stateBackend;
         }
 
-        public RocksDBStateBackend getPrefixStateBackend() {
+        public PrefixRocksDBStateBackend getPrefixStateBackend() {
             return prefixStateBackend;
         }
     }

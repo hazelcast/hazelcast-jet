@@ -29,7 +29,13 @@ import org.rocksdb.WriteOptions;
 import java.io.Serializable;
 
 /**
- * RocksDB configurations suitable for bulk-load then prefix scan use case.
+ * RocksDB configuration optimized for sequential access pattern using prefix-mode.
+ * Prefix mode consists of a bulk-loading phase followed by a prefix-scan phase.
+ * Bulk-loading uses a Vector Memtable to make a series of inserts for a set of values under some key.
+ * The key is serialized and packed with a unique long value before insertion.
+ * After bulk-loading is done, the database is compacted then the prefix-scan phase begins.
+ * Prefix-scan retrieves all values associated with each key using the key as the prefix.
+ * Prefix-scan uses RocksDB prefix iterator feature with a fixed-length prefix equal to the size of PrefixRocksMap key.
  */
 public class PrefixRocksDBOptions implements Serializable {
 
@@ -82,11 +88,12 @@ public class PrefixRocksDBOptions implements Serializable {
 
 
     Options options() {
-        return new Options()
+        Options options = new Options()
                 .setCreateIfMissing(true)
                 .prepareForBulkLoad()
-                .setAllowConcurrentMemtableWrite(false)
-                .setDisableAutoCompactions(true);
+                .setAllowConcurrentMemtableWrite(false);
+        options.setMaxSubcompactions(4);
+        return options;
     }
 
     ColumnFamilyOptions prefixColumnFamilyOptions() {
@@ -102,7 +109,7 @@ public class PrefixRocksDBOptions implements Serializable {
     }
 
     WriteOptions writeOptions() {
-        return new WriteOptions().setDisableWAL(true);
+        return new WriteOptions().setDisableWAL(true).setNoSlowdown(true);
     }
 
     ReadOptions iteratorOptions() {

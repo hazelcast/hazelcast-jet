@@ -21,6 +21,7 @@ import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.core.Processor;
+import com.hazelcast.jet.rocksdb.PrefixRocksDBStateBackend;
 import com.hazelcast.jet.rocksdb.RocksDBStateBackend;
 import com.hazelcast.logging.ILogger;
 
@@ -37,7 +38,7 @@ public class TestProcessorContext extends TestProcessorSupplierContext implement
     private int globalProcessorIndex;
     private InternalSerializationService serializationService;
     private RocksDBStateBackend stateBackend;
-    private RocksDBStateBackend prefixStateBackend;
+    private PrefixRocksDBStateBackend prefixStateBackend;
 
     /**
      * Constructor with default values.
@@ -64,18 +65,19 @@ public class TestProcessorContext extends TestProcessorSupplierContext implement
     @Override
     public RocksDBStateBackend stateBackend() {
         if (stateBackend == null) {
-            stateBackend = new RocksDBStateBackend().initialize(serializationService).open();
+            stateBackend = new RocksDBStateBackend().initialize(serializationService, jobId()).open();
         }
         return stateBackend;
     }
 
     @Override
-    public RocksDBStateBackend prefixStateBackend() {
+    public PrefixRocksDBStateBackend prefixStateBackend() {
         if (prefixStateBackend == null) {
-            prefixStateBackend = new RocksDBStateBackend().initialize(serializationService).usePrefixMode(true).open();
+            prefixStateBackend = new PrefixRocksDBStateBackend().initialize(serializationService, jobId()).open();
         }
         return prefixStateBackend;
     }
+
     /**
      * Set the job-level serialization service
      */

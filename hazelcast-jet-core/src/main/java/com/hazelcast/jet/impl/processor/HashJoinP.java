@@ -23,7 +23,6 @@ import com.hazelcast.jet.datamodel.ItemsByTag;
 import com.hazelcast.jet.datamodel.Tag;
 import com.hazelcast.jet.function.TriFunction;
 import com.hazelcast.jet.impl.pipeline.transform.HashJoinTransform;
-import com.hazelcast.jet.impl.processor.HashJoinCollectP.HashJoinArrayList;
 import com.hazelcast.jet.pipeline.BatchStage;
 import com.hazelcast.jet.rocksdb.PrefixRocksMap;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
@@ -215,6 +214,14 @@ public class HashJoinP<E0> extends AbstractProcessor {
 
             currentItem = null;
             return null;
+        }
+    }
+
+    // We need a custom ArrayList subclass because the user's V type could be
+    // ArrayList and then the logic that relies on instanceof would break
+    static final class HashJoinArrayList extends ArrayList<Object> {
+        HashJoinArrayList() {
+            super(2);
         }
     }
 }

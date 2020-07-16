@@ -39,6 +39,8 @@ import static java.util.Collections.singletonList;
  * aggregate operation on each group. The items may originate from one or
  * more inbound edges. The supplied aggregate operation must have as many
  * accumulation functions as there are inbound edges.
+ * This processor differs from GroupP because the supplied aggregate operation
+ * has small state per key and therefore it uses the plain RocksDBStateBackend.
  */
 public class GroupP1<K, A, R, OUT> extends AbstractProcessor {
     @Nonnull private final List<FunctionEx<?, ? extends K>> groupKeyFns;

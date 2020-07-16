@@ -21,7 +21,6 @@ import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.rocksdb.PrefixRocksMap;
 
 import javax.annotation.Nonnull;
-import java.util.ArrayList;
 import java.util.function.Function;
 
 
@@ -32,13 +31,9 @@ import java.util.function.Function;
  */
 public class HashJoinCollectP<K, T, V> extends AbstractProcessor {
 
-    // the value is either a V or a HashJoinArrayList (if multiple values for
-    // the key were observed)
-
     @Nonnull private final Function<T, K> keyFn;
     @Nonnull private final Function<T, V> projectFn;
     private PrefixRocksMap<K, V> lookupTable;
-
 
     public HashJoinCollectP(@Nonnull Function<T, K> keyFn, @Nonnull Function<T, V> projectFn) {
         this.keyFn = keyFn;
@@ -59,7 +54,11 @@ public class HashJoinCollectP<K, T, V> extends AbstractProcessor {
         try {
             lookupTable.add(key, value);
         } catch (JetException e) {
-            return false;
+            if (e.getMessage().equals("Write Stall")) {
+                return false;
+            } else {
+                throw e;
+            }
         }
         return true;
     }
@@ -68,13 +67,5 @@ public class HashJoinCollectP<K, T, V> extends AbstractProcessor {
     public boolean complete() {
         lookupTable.compact();
         return tryEmit(lookupTable);
-    }
-
-    // We need a custom ArrayList subclass because the user's V type could be
-    // ArrayList and then the logic that relies on instanceof would break
-    static final class HashJoinArrayList extends ArrayList<Object> {
-        HashJoinArrayList() {
-            super(2);
-        }
     }
 }

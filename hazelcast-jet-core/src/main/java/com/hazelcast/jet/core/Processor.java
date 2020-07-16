@@ -20,6 +20,7 @@ import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.RestartableException;
 import com.hazelcast.jet.config.JobConfig;
+import com.hazelcast.jet.rocksdb.PrefixRocksDBStateBackend;
 import com.hazelcast.jet.rocksdb.RocksDBStateBackend;
 import com.hazelcast.logging.ILogger;
 
@@ -495,6 +496,6 @@ public interface Processor {
          * Returns the RocksDBStateBackend instance associated with the current job
          * Invoked by processors that use PrefixRocksMap.
          */
-        RocksDBStateBackend prefixStateBackend();
+        PrefixRocksDBStateBackend prefixStateBackend();
     }
 }

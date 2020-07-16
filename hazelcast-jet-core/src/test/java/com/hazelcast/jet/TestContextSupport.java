@@ -30,6 +30,7 @@ import com.hazelcast.jet.core.test.TestProcessorContext;
 import com.hazelcast.jet.core.test.TestProcessorSupplierContext;
 import com.hazelcast.jet.impl.execution.init.Contexts.ProcCtx;
 import com.hazelcast.jet.impl.execution.init.Contexts.ProcSupplierCtx;
+import com.hazelcast.jet.rocksdb.PrefixRocksDBStateBackend;
 import com.hazelcast.jet.rocksdb.RocksDBStateBackend;
 import com.hazelcast.spi.impl.NodeEngine;
 
@@ -99,8 +100,8 @@ public final class TestContextSupport {
                 context = new ProcCtx(c.jetInstance(), c.jobId(), c.executionId(), c.jobConfig(),
                         c.logger(), c.vertexName(), 1, 1, c.processingGuarantee(),
                         c.localParallelism(), 1, c.memberCount(), new ConcurrentHashMap<>(), service,
-                        new RocksDBStateBackend().initialize(service),
-                        new RocksDBStateBackend().initialize(service).usePrefixMode(true));
+                        new RocksDBStateBackend().initialize(service, c.jobId()),
+                        new PrefixRocksDBStateBackend().initialize(service, c.jobId()));
             }
             delegate.init(context);
         }
@@ -125,8 +126,8 @@ public final class TestContextSupport {
                         c.logger(), c.vertexName(), c.localProcessorIndex(), c.globalProcessorIndex(),
                         c.processingGuarantee(), c.localParallelism(), c.memberIndex(), c.memberCount(),
                         new ConcurrentHashMap<>(), serializationService,
-                        new RocksDBStateBackend().initialize(serializationService),
-                        new RocksDBStateBackend().initialize(serializationService).usePrefixMode(true));
+                        new RocksDBStateBackend().initialize(serializationService, c.jobId()),
+                        new PrefixRocksDBStateBackend().initialize(serializationService, c.jobId()));
             }
             delegate.init(outbox, context);
         }

@@ -47,6 +47,7 @@ import com.hazelcast.jet.impl.execution.Tasklet;
 import com.hazelcast.jet.impl.execution.init.Contexts.ProcCtx;
 import com.hazelcast.jet.impl.execution.init.Contexts.ProcSupplierCtx;
 import com.hazelcast.jet.impl.util.AsyncSnapshotWriterImpl;
+import com.hazelcast.jet.rocksdb.PrefixRocksDBStateBackend;
 import com.hazelcast.jet.rocksdb.RocksDBStateBackend;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.nio.ObjectDataInput;
@@ -147,7 +148,7 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
                            ConcurrentHashMap<String, File> tempDirectories,
                            InternalSerializationService jobSerializationService,
                            RocksDBStateBackend stateBackend,
-                           RocksDBStateBackend prefixStateBackend) {
+                           PrefixRocksDBStateBackend prefixStateBackend) {
         this.nodeEngine = (NodeEngineImpl) nodeEngine;
         this.executionId = executionId;
         initProcSuppliers(jobId, executionId, tempDirectories, jobSerializationService);

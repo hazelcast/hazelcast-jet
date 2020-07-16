@@ -27,9 +27,9 @@ import com.hazelcast.jet.datamodel.Tag;
 import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.datamodel.Tuple3;
 import com.hazelcast.jet.function.TriFunction;
-import com.hazelcast.jet.impl.processor.HashJoinCollectP.HashJoinArrayList;
+import com.hazelcast.jet.impl.processor.HashJoinP.HashJoinArrayList;
+import com.hazelcast.jet.rocksdb.PrefixRocksDBStateBackend;
 import com.hazelcast.jet.rocksdb.PrefixRocksMap;
-import com.hazelcast.jet.rocksdb.RocksDBStateBackend;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import com.hazelcast.test.annotation.ParallelJVMTest;
 import org.junit.Test;
@@ -61,9 +61,8 @@ public class HashJoinPTest extends JetTestSupport {
     private static final InternalSerializationService serializationService = JetTestSupport
             .getJetService(Jet.bootstrappedInstance())
             .createSerializationService(emptyMap());
-    private static final RocksDBStateBackend rocksDBStateBackend = new RocksDBStateBackend()
-            .initialize(serializationService)
-            .usePrefixMode(true).open();
+    private static final PrefixRocksDBStateBackend rocksDBStateBackend = new PrefixRocksDBStateBackend()
+            .initialize(serializationService, 0).open();
     //TODO: close serialization service and state backend
 
     @Test

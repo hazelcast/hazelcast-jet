@@ -35,7 +35,7 @@ import static org.junit.Assert.assertTrue;
 
 public class PrefixRocksMapTest extends JetTestSupport {
 
-    private static RocksDBStateBackend rocksDBStateBackend;
+    private static PrefixRocksDBStateBackend rocksDBStateBackend;
     private static InternalSerializationService serializationService;
     private PrefixRocksMap<String, Integer> prefixRocksMap;
 
@@ -50,8 +50,7 @@ public class PrefixRocksMapTest extends JetTestSupport {
     static void init() {
         serializationService = JetTestSupport.getJetService(Jet.bootstrappedInstance())
                                              .createSerializationService(emptyMap());
-        rocksDBStateBackend = new RocksDBStateBackend().initialize(serializationService)
-                                                       .usePrefixMode(true).open();
+        rocksDBStateBackend = new PrefixRocksDBStateBackend().initialize(serializationService, 0).open();
     }
 
     @BeforeEach

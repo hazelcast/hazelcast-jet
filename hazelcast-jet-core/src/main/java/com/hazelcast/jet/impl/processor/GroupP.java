@@ -22,8 +22,8 @@ import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.datamodel.Tuple2;
+import com.hazelcast.jet.rocksdb.PrefixRocksDBStateBackend;
 import com.hazelcast.jet.rocksdb.PrefixRocksMap;
-import com.hazelcast.jet.rocksdb.RocksDBStateBackend;
 
 import javax.annotation.Nonnull;
 import java.util.Iterator;
@@ -46,7 +46,7 @@ public class GroupP<K, A, R, OUT> extends AbstractProcessor {
     @Nonnull private final AggregateOperation<A, R> aggrOp;
     private final BiFunction<? super K, ? super R, OUT> mapToOutputFn;
     private Traverser<OUT> resultTraverser;
-    private PrefixRocksMap<K, Entry<Integer, Object>> keyToValues;
+    private PrefixRocksMap<K, Entry<Integer, Object>> keyToOrdinalAndAcc;
 
     public GroupP(
             @Nonnull List<FunctionEx<?, ? extends K>> groupKeyFns,
@@ -70,8 +70,8 @@ public class GroupP<K, A, R, OUT> extends AbstractProcessor {
 
     @Override
     protected void init(@Nonnull Context context) throws Exception {
-        RocksDBStateBackend store = context.prefixStateBackend();
-        keyToValues = store.getPrefixMap();
+        PrefixRocksDBStateBackend store = context.prefixStateBackend();
+        keyToOrdinalAndAcc = store.getPrefixMap();
     }
 
     @Override
@@ -79,13 +79,14 @@ public class GroupP<K, A, R, OUT> extends AbstractProcessor {
     protected boolean tryProcess(int ordinal, @Nonnull Object item) {
         Function<Object, ? extends K> keyFn = (Function<Object, ? extends K>) groupKeyFns.get(ordinal);
         K key = keyFn.apply(item);
-        keyToValues.add(key, Tuple2.tuple2(ordinal, item));
+        keyToOrdinalAndAcc.add(key, Tuple2.tuple2(ordinal, item));
         return true;
     }
 
     @Override
     public boolean complete() {
         if (resultTraverser == null) {
+            keyToOrdinalAndAcc.compact();
             resultTraverser = new ResultTraverser()
                     // reuse null filtering done by map()
                     .map(e -> mapToOutputFn.apply(e.getKey(), aggrOp.finishFn().apply(e.getValue())));
@@ -94,7 +95,7 @@ public class GroupP<K, A, R, OUT> extends AbstractProcessor {
     }
 
     private class ResultTraverser implements Traverser<Entry<K, A>> {
-        private final Iterator<Entry<K, Iterator<Entry<Integer, Object>>>> iterator = keyToValues.compact().iterator();
+        private final Iterator<Entry<K, Iterator<Entry<Integer, Object>>>> iterator = keyToOrdinalAndAcc.iterator();
 
         @Override
         public Entry<K, A> next() {
@@ -106,8 +107,8 @@ public class GroupP<K, A, R, OUT> extends AbstractProcessor {
             A acc = aggrOp.createFn().get();
             Iterator<Entry<Integer, Object>> values = e.getValue();
             while (values.hasNext()) {
-                Entry<Integer, Object> pair = values.next();
-                aggrOp.accumulateFn(pair.getKey()).accept(acc, pair.getValue());
+                Entry<Integer, Object> ordinalAndAcc = values.next();
+                aggrOp.accumulateFn(ordinalAndAcc.getKey()).accept(acc, ordinalAndAcc.getValue());
             }
             return Tuple2.tuple2(key, acc);
         }

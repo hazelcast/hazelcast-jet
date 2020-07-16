@@ -29,6 +29,7 @@ import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.impl.MasterJobContext;
 import com.hazelcast.jet.impl.execution.SnapshotContext;
+import com.hazelcast.jet.rocksdb.PrefixRocksDBStateBackend;
 import com.hazelcast.jet.rocksdb.RocksDBStateBackend;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.spi.impl.NodeEngineImpl;
@@ -130,8 +131,8 @@ public class VertexDef_HigherPrioritySourceTest extends SimpleTestInClusterSuppo
         SnapshotContext ssContext = new SnapshotContext(mock(ILogger.class), "job", 0, EXACTLY_ONCE);
         InternalSerializationService service = (InternalSerializationService) nodeEngineImpl.getSerializationService();
         plan.initialize(nodeEngineImpl, 0, 0, ssContext, null, service,
-                new RocksDBStateBackend().initialize(service),
-                new RocksDBStateBackend().initialize(service).usePrefixMode(true));
+                new RocksDBStateBackend().initialize(service, 0),
+                new PrefixRocksDBStateBackend().initialize(service, 0));
         Set<Integer> higherPriorityVertices = VertexDef.getHigherPriorityVertices(plan.getVertices());
         String actualHigherPriorityVertices = plan.getVertices().stream()
                 .filter(v -> higherPriorityVertices.contains(v.vertexId()))
