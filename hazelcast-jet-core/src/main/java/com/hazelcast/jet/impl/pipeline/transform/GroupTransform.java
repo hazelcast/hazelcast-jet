@@ -31,12 +31,12 @@ import java.util.List;
 import static com.hazelcast.function.Functions.entryKey;
 import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.Partitioner.HASH_CODE;
+import static com.hazelcast.jet.core.processor.Processors.accumulateByKeyWithUnboundedStateP;
 import static com.hazelcast.jet.core.processor.Processors.accumulateByKeyP;
-import static com.hazelcast.jet.core.processor.Processors.accumulateByKeyP1;
+import static com.hazelcast.jet.core.processor.Processors.aggregateByKeyWithUnboundedStateP;
 import static com.hazelcast.jet.core.processor.Processors.aggregateByKeyP;
-import static com.hazelcast.jet.core.processor.Processors.aggregateByKeyP1;
+import static com.hazelcast.jet.core.processor.Processors.combineByKeyWithUnboundedStateP;
 import static com.hazelcast.jet.core.processor.Processors.combineByKeyP;
-import static com.hazelcast.jet.core.processor.Processors.combineByKeyP1;
 import static com.hazelcast.jet.impl.pipeline.transform.AggregateTransform.FIRST_STAGE_VERTEX_NAME_SUFFIX;
 
 public class GroupTransform<K, A, R, OUT> extends AbstractTransform {
@@ -90,9 +90,9 @@ public class GroupTransform<K, A, R, OUT> extends AbstractTransform {
     private void addToDagSingleStage(Planner p) {
         SupplierEx<Processor> agg;
         if (aggrOp.hasUnboundedState()) {
-            agg = aggregateByKeyP(groupKeyFns, aggrOp, mapToOutputFn);
+            agg = aggregateByKeyWithUnboundedStateP(groupKeyFns, aggrOp, mapToOutputFn);
         } else {
-            agg = aggregateByKeyP1(groupKeyFns, aggrOp, mapToOutputFn);
+            agg = aggregateByKeyP(groupKeyFns, aggrOp, mapToOutputFn);
         }
         PlannerVertex pv = p.addVertex(this, name(), localParallelism(), agg);
         p.addEdges(this, pv.v, (e, ord) -> e.distributed().partitioned(groupKeyFns.get(ord)));
@@ -120,11 +120,11 @@ public class GroupTransform<K, A, R, OUT> extends AbstractTransform {
         SupplierEx<Processor> acc;
         SupplierEx<Processor> comb;
         if (aggrOp.hasUnboundedState()) {
+            acc = accumulateByKeyWithUnboundedStateP(groupKeyFns, aggrOp);
+            comb = combineByKeyWithUnboundedStateP(aggrOp, mapToOutputFn);
+        } else {
             acc = accumulateByKeyP(groupKeyFns, aggrOp);
             comb = combineByKeyP(aggrOp, mapToOutputFn);
-        } else {
-            acc = accumulateByKeyP1(groupKeyFns, aggrOp);
-            comb = combineByKeyP1(aggrOp, mapToOutputFn);
         }
         Vertex v1 = p.dag.newVertex(name() + FIRST_STAGE_VERTEX_NAME_SUFFIX, acc)
                          .localParallelism(localParallelism());

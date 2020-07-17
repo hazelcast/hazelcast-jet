@@ -21,9 +21,8 @@ import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.core.AbstractProcessor;
-import com.hazelcast.jet.datamodel.Tuple2;
-import com.hazelcast.jet.rocksdb.PrefixRocksDBStateBackend;
-import com.hazelcast.jet.rocksdb.PrefixRocksMap;
+import com.hazelcast.jet.rocksdb.RocksDBStateBackend;
+import com.hazelcast.jet.rocksdb.RocksMap;
 
 import javax.annotation.Nonnull;
 import java.util.Iterator;
@@ -40,13 +39,16 @@ import static java.util.Collections.singletonList;
  * aggregate operation on each group. The items may originate from one or
  * more inbound edges. The supplied aggregate operation must have as many
  * accumulation functions as there are inbound edges.
+ * This processor differs from GroupWithUnboundedStateP because the supplied aggregate operation
+ * has small state per key and therefore it uses the plain RocksDBStateBackend.
  */
 public class GroupP<K, A, R, OUT> extends AbstractProcessor {
     @Nonnull private final List<FunctionEx<?, ? extends K>> groupKeyFns;
     @Nonnull private final AggregateOperation<A, R> aggrOp;
+
+    private RocksMap<K, A> keyToAcc;
     private final BiFunction<? super K, ? super R, OUT> mapToOutputFn;
     private Traverser<OUT> resultTraverser;
-    private PrefixRocksMap<K, Entry<Integer, Object>> keyToOrdinalAndAcc;
 
     public GroupP(
             @Nonnull List<FunctionEx<?, ? extends K>> groupKeyFns,
@@ -70,8 +72,8 @@ public class GroupP<K, A, R, OUT> extends AbstractProcessor {
 
     @Override
     protected void init(@Nonnull Context context) throws Exception {
-        PrefixRocksDBStateBackend store = context.prefixStateBackend();
-        keyToOrdinalAndAcc = store.getPrefixMap();
+        RocksDBStateBackend store = context.stateBackend();
+        keyToAcc = store.getMap();
     }
 
     @Override
@@ -79,14 +81,21 @@ public class GroupP<K, A, R, OUT> extends AbstractProcessor {
     protected boolean tryProcess(int ordinal, @Nonnull Object item) {
         Function<Object, ? extends K> keyFn = (Function<Object, ? extends K>) groupKeyFns.get(ordinal);
         K key = keyFn.apply(item);
-        keyToOrdinalAndAcc.add(key, Tuple2.tuple2(ordinal, item));
+        A acc;
+        if ((acc = keyToAcc.get(key)) == null) {
+            acc = aggrOp.createFn().get();
+            if (acc != null) {
+                keyToAcc.put(key, acc);
+            }
+        }
+        aggrOp.accumulateFn(ordinal).accept(acc, item);
+        keyToAcc.put(key, acc);
         return true;
     }
 
     @Override
     public boolean complete() {
         if (resultTraverser == null) {
-            keyToOrdinalAndAcc.compact();
             resultTraverser = new ResultTraverser()
                     // reuse null filtering done by map()
                     .map(e -> mapToOutputFn.apply(e.getKey(), aggrOp.finishFn().apply(e.getValue())));
@@ -95,23 +104,18 @@ public class GroupP<K, A, R, OUT> extends AbstractProcessor {
     }
 
     private class ResultTraverser implements Traverser<Entry<K, A>> {
-        private final Iterator<Entry<K, Iterator<Entry<Integer, Object>>>> iterator = keyToOrdinalAndAcc.iterator();
+        private final Iterator<Entry<K, A>> iter = keyToAcc.iterator();
 
         @Override
         public Entry<K, A> next() {
-            if (!iterator.hasNext()) {
+            if (!iter.hasNext()) {
                 return null;
             }
-            Entry<K, Iterator<Entry<Integer, Object>>> e = iterator.next();
-            K key = e.getKey();
-            A acc = aggrOp.createFn().get();
-            Iterator<Entry<Integer, Object>> values = e.getValue();
-            while (values.hasNext()) {
-                Entry<Integer, Object> ordinalAndAcc = values.next();
-                aggrOp.accumulateFn(ordinalAndAcc.getKey()).accept(acc, ordinalAndAcc.getValue());
+            try {
+                return iter.next();
+            } finally {
+                iter.remove();
             }
-            return Tuple2.tuple2(key, acc);
         }
     }
 }
-

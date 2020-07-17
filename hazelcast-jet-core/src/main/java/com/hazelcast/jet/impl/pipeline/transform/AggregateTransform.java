@@ -27,12 +27,12 @@ import javax.annotation.Nonnull;
 import java.util.List;
 
 import static com.hazelcast.jet.core.Edge.between;
+import static com.hazelcast.jet.core.processor.Processors.accumulateWithUnboundedStateP;
 import static com.hazelcast.jet.core.processor.Processors.accumulateP;
-import static com.hazelcast.jet.core.processor.Processors.accumulateP1;
+import static com.hazelcast.jet.core.processor.Processors.aggregateWithUnboundedStateP;
 import static com.hazelcast.jet.core.processor.Processors.aggregateP;
-import static com.hazelcast.jet.core.processor.Processors.aggregateP1;
+import static com.hazelcast.jet.core.processor.Processors.combineWithUnboundedStateP;
 import static com.hazelcast.jet.core.processor.Processors.combineP;
-import static com.hazelcast.jet.core.processor.Processors.combineP1;
 
 public class AggregateTransform<A, R> extends AbstractTransform {
     public static final String FIRST_STAGE_VERTEX_NAME_SUFFIX = "-prepare";
@@ -78,9 +78,9 @@ public class AggregateTransform<A, R> extends AbstractTransform {
     private void addToDagSingleStage(Planner p) {
         SupplierEx<Processor> agg;
         if (aggrOp.hasUnboundedState()) {
-            agg = aggregateP(aggrOp);
+            agg = aggregateWithUnboundedStateP(aggrOp);
         } else {
-            agg = aggregateP1(aggrOp);
+            agg = aggregateP(aggrOp);
         }
         PlannerVertex pv = p.addVertex(this, name(), 1, agg);
         p.addEdges(this, pv.v, edge -> edge.distributed().allToOne(name().hashCode()));
@@ -108,11 +108,11 @@ public class AggregateTransform<A, R> extends AbstractTransform {
         SupplierEx<Processor> acc;
         SupplierEx<Processor> comb;
         if (aggrOp.hasUnboundedState()) {
+            acc = accumulateWithUnboundedStateP(aggrOp);
+            comb = combineWithUnboundedStateP(aggrOp);
+        } else {
             acc = accumulateP(aggrOp);
             comb = combineP(aggrOp);
-        } else {
-            acc = accumulateP1(aggrOp);
-            comb = combineP1(aggrOp);
         }
         Vertex v1 = p.dag.newVertex(vertexName + FIRST_STAGE_VERTEX_NAME_SUFFIX, acc)
                          .localParallelism(localParallelism());
