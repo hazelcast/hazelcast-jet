@@ -23,6 +23,7 @@
     <files>
         <file>
             <source>${project.build.directory}/${project.build.finalName}-jar-with-dependencies.jar</source>
+            <destName>${project.build.finalName}.jar</destName>
         </file>
     </files>
     <fileSets>
