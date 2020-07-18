@@ -16,24 +16,23 @@
 
 package com.hazelcast.jet.pipeline.test;
 
-import com.hazelcast.jet.accumulator.LongAccumulator;
+import com.hazelcast.cluster.Address;
 import com.hazelcast.jet.annotation.EvolvingApi;
+import com.hazelcast.jet.core.ProcessorMetaSupplier;
+import com.hazelcast.jet.core.ProcessorSupplier;
+import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.pipeline.BatchSource;
-import com.hazelcast.jet.pipeline.BatchStage;
-import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.SourceBuilder;
-import com.hazelcast.jet.pipeline.SourceBuilder.TimestampedSourceBuffer;
+import com.hazelcast.jet.pipeline.Sources;
 import com.hazelcast.jet.pipeline.StreamSource;
 import com.hazelcast.jet.pipeline.StreamSourceStage;
-import com.hazelcast.jet.pipeline.StreamStage;
+import com.hazelcast.jet.pipeline.SourceBuilder.TimestampedSourceBuffer;
 
 import javax.annotation.Nonnull;
-import java.io.Serializable;
 import java.util.Arrays;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
-import static com.hazelcast.jet.Traversers.traverseArray;
 import static com.hazelcast.jet.impl.util.Util.checkSerializable;
 
 /**
@@ -74,51 +73,6 @@ public final class TestSources {
     public static <T> BatchSource<T> items(@Nonnull T... items) {
         Objects.requireNonNull(items, "items");
         return items(Arrays.asList(items));
-    }
-
-    /**
-     * Returns a rebalanced batch stage that observes long values and does late materialization
-     * of batches after distributing them across the cluster, which is useful for high-throughput
-     * testing.
-     *
-     * @param range the upper range of generated long values
-     * @param stepSize the step size
-     *
-     */
-    @Nonnull
-    public static BatchStage<Long> batchStageForLongRange(Pipeline pipeline, long range, int stepSize) {
-        return pipeline
-                .readFrom(longBatchSource(range, stepSize))
-                .rebalance()
-                .flatMap(n -> {
-                    Long[] items = new Long[stepSize];
-                    Arrays.setAll(items, i -> n + i);
-                    return traverseArray(items);
-                })
-                .rebalance();
-    }
-
-    /**
-     * Returns a rebalanced stream stage that observes long values and does late materialization
-     * of values after distributing them across the cluster, which is useful for high-throughput
-     * testing.
-     *
-     * @param range the upper range of generated long values
-     * @param stepSize the step size
-     *
-     */
-    @Nonnull
-    public static StreamStage<Long> streamStageForLongRange(Pipeline pipeline, long range, int stepSize) {
-        return pipeline
-                .readFrom(longStreamSource(range, stepSize))
-                .withoutTimestamps()
-                .rebalance()
-                .flatMap(n -> {
-                    Long[] items = new Long[stepSize];
-                    Arrays.setAll(items, i -> n + i);
-                    return traverseArray(items);
-                })
-                .rebalance();
     }
 
     /**
@@ -213,50 +167,70 @@ public final class TestSources {
         }
     }
 
-    private static BatchSource<Long> longBatchSource(long range, int stepSize) {
-        return SourceBuilder
-                .batch("longs", c -> new LongAccumulator())
-                .<Long>fillBufferFn(new LongSource(range, stepSize)::fillBufferFn)
-                .build();
+    /**
+     * Returns a stream source that contains long values and does late materialization
+     * of values after distributing them across the cluster, which is useful for high-throughput
+     * testing.
+     *
+     * @since 4.3
+     *
+     */
+    @Nonnull
+    public static StreamSource<Long> longStreamSource(long itemsPerSecond, long initialDelay) {
+        return longStreamSource(itemsPerSecond, initialDelay, Vertex.LOCAL_PARALLELISM_USE_DEFAULT, false);
     }
 
-    private static StreamSource<Long> longStreamSource(long range, int stepSize) {
-        return SourceBuilder
-                .stream("longs", c -> new LongAccumulator())
-                .<Long>fillBufferFn(new LongSource(range, stepSize, true)::fillBufferFn)
-                .build();
+    /**
+     * Returns a stream source that contains long values and does late materialization
+     * of values after distributing them across the cluster, which is useful for high-throughput
+     * testing.
+     *
+     * @since 4.3
+     *
+     */
+    @Nonnull
+    public static StreamSource<Long> longStreamSource(long itemsPerSecond, long initialDelay,
+                                                      int preferredLocalParallelism) {
+        return longStreamSource(itemsPerSecond, initialDelay, preferredLocalParallelism, false);
     }
 
-    private static final class LongSource implements Serializable {
-        private final long range;
-        private final int stepSize;
-        private boolean isStream;
+    /**
+     * Returns a stream source that contains long values and does late materialization
+     * of values after distributing them across the cluster, which is useful for high-throughput
+     * testing.
+     *
+     * @since 4.3
+     *
+     */
+    @Nonnull
+    public static StreamSource<Long> longStreamSource(long itemsPerSecond, long initialDelay,
+                                                      boolean shouldReportThroughput) {
+        return longStreamSource(itemsPerSecond, initialDelay,
+                Vertex.LOCAL_PARALLELISM_USE_DEFAULT, shouldReportThroughput);
+    }
 
-        LongSource(long range, int stepSize) {
-            this.range = range;
-            this.stepSize = stepSize;
-        }
+    /**
+     * Returns a stream source that contains long values and does late materialization
+     * of values after distributing them across the cluster, which is useful for high-throughput
+     * testing.
+     *
+     * @since 4.3
+     *
+     */
+    @Nonnull
+    public static StreamSource<Long> longStreamSource(long itemsPerSecond, long initialDelay,
+                                                      int preferredLocalParallelism, boolean shouldReportThroughput) {
+        return Sources.streamFromProcessorWithWatermarks("longs",
+                true,
+                eventTimePolicy -> ProcessorMetaSupplier.of(
+                        preferredLocalParallelism,
+                        (Address ignored) -> {
+                            long startTime = System.currentTimeMillis() + initialDelay;
+                            return ProcessorSupplier.of(() ->
+                                    new StreamSourceLong(startTime, itemsPerSecond,
+                                            eventTimePolicy, shouldReportThroughput));
+                        })
+        );
 
-        LongSource(long range, int stepSize, boolean isStream) {
-            this.range = range;
-            this.stepSize = stepSize;
-            this.isStream = isStream;
-        }
-
-        void fillBufferFn(LongAccumulator counter, SourceBuilder.SourceBuffer<Long> buf) {
-            final int batchRange = 128;
-            final long loggingThreshold = 100_000;
-            long n = counter.get();
-            for (int i = 0; i < batchRange && n < range; i++, n += stepSize) {
-                buf.add(n);
-                if (n % (loggingThreshold * stepSize) == 0) {
-                    System.out.printf("Emit %,d%n", n);
-                }
-            }
-            counter.set(n);
-            if (n == range && !isStream) {
-                buf.close();
-            }
-        }
     }
 }

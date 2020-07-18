@@ -50,29 +50,21 @@ public class TestSourcesTest extends PipelineTestSupport {
     }
 
     @Test
-    public void test_long_batch_range() {
-        int upperValueRange = 10_000;
-        Long[] input = LongStream.range(0, upperValueRange).boxed().toArray(Long[]::new);
+    public void test_stream_source_long() throws Throwable {
+        int itemsPerSecond = 10;
+        int timeout = 10;
+        int numberOfExpectedValues = timeout * itemsPerSecond;
+        Long[] input = LongStream.range(0, numberOfExpectedValues).boxed().toArray(Long[]::new);
         List<Long> expected = Arrays.asList(input);
 
-        TestSources.batchStageForLongRange(p, upperValueRange, 10)
-                .apply(
-                        Assertions.assertAnyOrder(expected)
-                );
-
-        jet().newJob(p).join();
-    }
-
-    @Test
-    public void test_long_stream_range() throws Throwable {
-        int upperValueRange = 10_000;
-        Long[] input = LongStream.range(0, upperValueRange).boxed().toArray(Long[]::new);
-        List<Long> expected = Arrays.asList(input);
-
-        TestSources.streamStageForLongRange(p, upperValueRange, 10)
-                .apply(Assertions.assertCollectedEventually(20, longList -> {
-                    assertEquals(longList.size(), expected.size());
-                    for (Long value : longList) {
+        p.readFrom(TestSources.longStreamSource(itemsPerSecond, 0)).
+                withIngestionTimestamps().
+                apply(assertCollectedEventually(timeout, items -> {
+                    assertTrue("list should contain at least " + numberOfExpectedValues + " items",
+                            items.size() >= numberOfExpectedValues);
+                    assertTrue("list should contain less than " + 2 * numberOfExpectedValues + " items",
+                            items.size() < 2 * numberOfExpectedValues);
+                    for (Long value : items) {
                         assertTrue(expected.contains(value));
                     }
                 }));
