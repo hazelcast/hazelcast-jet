@@ -108,9 +108,10 @@ public class PrefixRocksMap<K, V> {
     }
 
     /**
-     * adds the provided value in the list associated with the key.
+     * Adds the provided value in the list associated with the key.
+     * Returns true if the write request succeeded, false if a write stall occurred.
      */
-    public void add(K key, V value) throws JetException {
+    public boolean add(K key, V value) throws JetException {
         if (cfh == null) {
             open(key);
         }
@@ -118,10 +119,11 @@ public class PrefixRocksMap<K, V> {
             db.put(cfh, writeOptions, pack(key), serialize(value));
         } catch (RocksDBException e) {
             if (e.getStatus().getCode() == Code.Incomplete) {
-                throw new JetException("Write Stall", e);
+                return false;
             }
             throw new JetException("Operation Failed: add", e);
         }
+        return true;
     }
 
     /**

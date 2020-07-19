@@ -80,8 +80,7 @@ public class GroupWithUnboundedStateP<K, A, R, OUT> extends AbstractProcessor {
     protected boolean tryProcess(int ordinal, @Nonnull Object item) {
         Function<Object, ? extends K> keyFn = (Function<Object, ? extends K>) groupKeyFns.get(ordinal);
         K key = keyFn.apply(item);
-        keyToOrdinalAndAcc.add(key, Tuple2.tuple2(ordinal, item));
-        return true;
+        return keyToOrdinalAndAcc.add(key, Tuple2.tuple2(ordinal, item));
     }
 
     @Override

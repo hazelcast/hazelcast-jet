@@ -16,7 +16,6 @@
 
 package com.hazelcast.jet.impl.processor;
 
-import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.rocksdb.PrefixRocksMap;
 
@@ -51,16 +50,7 @@ public class HashJoinCollectP<K, T, V> extends AbstractProcessor {
         T t = (T) item;
         K key = keyFn.apply(t);
         V value = projectFn.apply(t);
-        try {
-            lookupTable.add(key, value);
-        } catch (JetException e) {
-            if (e.getMessage().equals("Write Stall")) {
-                return false;
-            } else {
-                throw e;
-            }
-        }
-        return true;
+        return lookupTable.add(key, value);
     }
 
     @Override
