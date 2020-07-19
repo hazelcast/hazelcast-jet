@@ -24,6 +24,7 @@ import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.rocksdb.PrefixRocksDBStateBackend;
 import com.hazelcast.jet.rocksdb.PrefixRocksMap;
+import com.hazelcast.jet.rocksdb.PrefixRocksMap.PrefixRocksMapIterator;
 
 import javax.annotation.Nonnull;
 import java.util.Iterator;
@@ -95,11 +96,12 @@ public class GroupWithUnboundedStateP<K, A, R, OUT> extends AbstractProcessor {
     }
 
     private class ResultTraverser implements Traverser<Entry<K, A>> {
-        private final Iterator<Entry<K, Iterator<Entry<Integer, Object>>>> iterator = keyToOrdinalAndAcc.iterator();
+        private final PrefixRocksMapIterator iterator = keyToOrdinalAndAcc.iterator();
 
         @Override
         public Entry<K, A> next() {
             if (!iterator.hasNext()) {
+                iterator.close();
                 return null;
             }
             Entry<K, Iterator<Entry<Integer, Object>>> e = iterator.next();

@@ -1,3 +1,19 @@
+/*
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.hazelcast.jet.rocksdb;
 
 import com.hazelcast.internal.serialization.InternalSerializationService;
@@ -13,21 +29,25 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.hazelcast.jet.core.JetProperties.JET_HOME;
 
+/**
+ * An implementation of RocksDBStateBackend that is optimized for sequential access pattern.
+ * see {@link RocksDBStateBackend}
+ */
 public class PrefixRocksDBStateBackend {
 
     private final AtomicInteger counter = new AtomicInteger(0);
     private final ArrayList<PrefixRocksMap> prefixMaps = new ArrayList<>();
-    private PrefixRocksDBOptions prefixOptions = new PrefixRocksDBOptions();
+    private PrefixRocksDBOptions rocksDBOptions = new PrefixRocksDBOptions();
     private volatile RocksDB db;
     private InternalSerializationService serializationService;
     private File directory;
-    private Options dbOptions;
+    private Options options;
 
     /**
      * Sets user defined RocksDB options for PrefixRocksMap.
      */
-    public void setPrefixOptions(PrefixRocksDBOptions prefixOptions) {
-        this.prefixOptions = prefixOptions;
+    public void setRocksDBOptions(PrefixRocksDBOptions rocksDBOptions) {
+        this.rocksDBOptions = rocksDBOptions;
     }
 
     /**
@@ -76,8 +96,8 @@ public class PrefixRocksDBStateBackend {
                         if (!directory.mkdir()) {
                             throw new JetException("Failed to create RocksDB directory");
                         }
-                        dbOptions = prefixOptions.options();
-                        db = RocksDB.open(dbOptions, directory.toString());
+                        options = rocksDBOptions.options();
+                        db = RocksDB.open(options, directory.toString());
                     } catch (RocksDBException e) {
                         throw new JetException("Failed to create a RocksDB instance", e);
                     }
@@ -97,7 +117,7 @@ public class PrefixRocksDBStateBackend {
     public <K, V> PrefixRocksMap<K, V> getPrefixMap() throws JetException {
         assert db != null : "state backend was not opened";
         PrefixRocksMap<K, V> map = new PrefixRocksMap<>(db, getNextName(),
-                new PrefixRocksDBOptions(prefixOptions), serializationService);
+                new PrefixRocksDBOptions(rocksDBOptions), serializationService);
         prefixMaps.add(map);
         return map;
     }
@@ -113,7 +133,7 @@ public class PrefixRocksDBStateBackend {
             for (PrefixRocksMap prefixRocksMap : prefixMaps) {
                 prefixRocksMap.close();
             }
-            dbOptions.close();
+            options.close();
             db.close();
         }
     }

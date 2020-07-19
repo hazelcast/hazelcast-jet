@@ -20,6 +20,7 @@ import com.hazelcast.internal.nio.IOUtil;
 import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.core.JetTestSupport;
+import com.hazelcast.jet.rocksdb.PrefixRocksMap.PrefixRocksMapIterator;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -27,7 +28,6 @@ import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.Map.Entry;
 
 import static java.util.Collections.emptyMap;
 import static org.junit.Assert.assertEquals;
@@ -96,7 +96,7 @@ public class PrefixRocksMapTest extends JetTestSupport {
         prefixRocksMap.add(key3, value);
         prefixRocksMap.add(key1, value);
         prefixRocksMap.add(key2, value);
-        Iterator<Entry<String, Iterator<Integer>>> iterator = prefixRocksMap.iterator();
+        PrefixRocksMapIterator iterator = prefixRocksMap.iterator();
 
         //Then
         assertEquals(key1, iterator.next().getKey());

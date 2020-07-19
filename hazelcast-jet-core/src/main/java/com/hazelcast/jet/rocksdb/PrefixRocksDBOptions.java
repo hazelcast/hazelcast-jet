@@ -43,9 +43,11 @@ public class PrefixRocksDBOptions implements Serializable {
     private static final int MEMTABLE_NUMBER = 4;
     private static final int BLOOM_FILTER_BITS = 10;
     private static final int NUM_LEVELS = 2;
+    private static final int SUB_COMPACTIONS = 4;
     private int memtableSize;
     private int memtableNumber;
     private int bloomFilterBits;
+    private int subCompactions;
 
     /**
      * Creates a new PrefixRocksDBOptions instance with default options.
@@ -60,6 +62,7 @@ public class PrefixRocksDBOptions implements Serializable {
         this.memtableSize = options.memtableSize;
         this.memtableNumber = options.memtableNumber;
         this.bloomFilterBits = options.bloomFilterBits;
+        this.subCompactions = options.subCompactions;
     }
 
     /**
@@ -86,13 +89,20 @@ public class PrefixRocksDBOptions implements Serializable {
         return this;
     }
 
+    /**
+     * Sets the number of threads to use for sub-compaction.
+     */
+    public PrefixRocksDBOptions setSubCompactions(int subCompactions) {
+        this.subCompactions = subCompactions;
+        return this;
+    }
 
     Options options() {
         Options options = new Options()
                 .setCreateIfMissing(true)
                 .prepareForBulkLoad()
                 .setAllowConcurrentMemtableWrite(false);
-        options.setMaxSubcompactions(4);
+        options.setMaxSubcompactions(subCompactions);
         return options;
     }
 

@@ -147,10 +147,10 @@ public class ExecutionContext implements DynamicMetricsProvider {
         RocksDBOptions rocksDBOptions = jobConfig.getRocksDBOptions();
         PrefixRocksDBOptions prefixRocksDBOptions = jobConfig.getPrefixRocksDBOptions();
         if (rocksDBOptions != null) {
-            stateBackend.setOptions(rocksDBOptions);
+            stateBackend.setRocksDBOptions(rocksDBOptions);
         }
         if (prefixRocksDBOptions != null) {
-            prefixStateBackend.setPrefixOptions(prefixRocksDBOptions);
+            prefixStateBackend.setRocksDBOptions(prefixRocksDBOptions);
         }
 
         tempDirectories.put("stateBackend", stateBackend.directory());

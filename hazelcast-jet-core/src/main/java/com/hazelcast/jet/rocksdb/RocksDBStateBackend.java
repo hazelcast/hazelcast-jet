@@ -47,17 +47,17 @@ import static com.hazelcast.jet.core.JetProperties.JET_HOME;
 public final class RocksDBStateBackend {
     private final AtomicInteger counter = new AtomicInteger(0);
     private final ArrayList<RocksMap> maps = new ArrayList<>();
-    private RocksDBOptions options = new RocksDBOptions();
+    private RocksDBOptions rocksDBOptions = new RocksDBOptions();
     private volatile RocksDB db;
     private InternalSerializationService serializationService;
     private File directory;
-    private Options DBOptions;
+    private Options options;
 
     /**
      * Sets user defined RocksDB options for RocksMap.
      */
-    public void setOptions(RocksDBOptions options) {
-        this.options = options;
+    public void setRocksDBOptions(RocksDBOptions rocksDBOptions) {
+        this.rocksDBOptions = rocksDBOptions;
     }
 
     /**
@@ -106,8 +106,8 @@ public final class RocksDBStateBackend {
                         if (!directory.mkdir()) {
                             throw new JetException("Failed to create RocksDB directory");
                         }
-                        DBOptions = options.options();
-                        db = RocksDB.open(DBOptions, directory.toString());
+                        options = rocksDBOptions.options();
+                        db = RocksDB.open(options, directory.toString());
                     } catch (RocksDBException e) {
                         throw new JetException("Failed to create a RocksDB instance", e);
                     }
@@ -126,7 +126,7 @@ public final class RocksDBStateBackend {
     public <K, V> RocksMap<K, V> getMap() throws JetException {
         assert db != null : "state backend was not opened";
         RocksMap<K, V> map = new RocksMap<>(db, getNextName(),
-                new RocksDBOptions(options), serializationService);
+                new RocksDBOptions(rocksDBOptions), serializationService);
         maps.add(map);
         return map;
     }
@@ -142,7 +142,7 @@ public final class RocksDBStateBackend {
             for (RocksMap rocksMap : maps) {
                 rocksMap.close();
             }
-            DBOptions.close();
+            options.close();
             db.close();
         }
     }

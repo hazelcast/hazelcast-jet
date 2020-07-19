@@ -105,7 +105,7 @@
         <dependency>
             <groupId>com.hazelcast</groupId>
             <artifactId>hazelcast</artifactId>
-            <version>4.0.1</version>
+            <version>${hazelcast.version}</version>
         </dependency>
         <dependency>
             <groupId>io.github.classgraph</groupId>

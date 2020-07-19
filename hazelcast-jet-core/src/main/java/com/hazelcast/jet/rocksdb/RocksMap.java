@@ -32,9 +32,6 @@ import org.rocksdb.WriteOptions;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
 import java.util.Map.Entry;
 
 import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
@@ -46,14 +43,14 @@ import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
  * @param <K> the type of key
  * @param <V> the type of value
  */
-public class RocksMap<K, V> implements Iterable<Entry<K, V>> {
+public class RocksMap<K, V> {
     private final RocksDB db;
     private final InternalSerializationService serializationService;
     private final ColumnFamilyOptions columnFamilyOptions;
     private final WriteOptions writeOptions;
     private final ReadOptions readOptions;
     private final ColumnFamilyHandle cfh;
-    private final ArrayList<RocksMapIterator> iterators = new ArrayList<>();
+    private final ArrayList<RocksIterator> iterators = new ArrayList<>();
 
     RocksMap(@Nonnull RocksDB db, @Nonnull String name, @Nonnull RocksDBOptions options,
              @Nonnull InternalSerializationService serializationService) {
@@ -116,25 +113,13 @@ public class RocksMap<K, V> implements Iterable<Entry<K, V>> {
     }
 
     /**
-     * Returns all key-value mappings in this map.
-     *
-     * @return a HashMap containing all key-value pairs
-     * @throws JetException if the database is closed
+     * Returns an iterator over the contents of this map.
      */
-    public Map<K, V> getAll() {
-        Map<K, V> map = new HashMap<>();
-        for (Entry<K, V> entry : this) {
-            map.put(entry.getKey(), entry.getValue());
-        }
-        return map;
-    }
-
     @Nonnull
-    @Override
-    public Iterator<Entry<K, V>> iterator() {
-        RocksMapIterator iterator = new RocksMapIterator();
-        iterators.add(iterator);
-        return iterator;
+    public RocksMapIterator iterator() {
+        RocksMapIterator mapIterator = new RocksMapIterator();
+        iterators.add(mapIterator.iterator);
+        return mapIterator;
     }
 
     /**
@@ -144,7 +129,9 @@ public class RocksMap<K, V> implements Iterable<Entry<K, V>> {
         writeOptions.close();
         readOptions.close();
         columnFamilyOptions.close();
-        iterators.forEach(RocksMapIterator::close);
+        for (RocksIterator iterator : iterators) {
+            iterator.close();
+        }
         cfh.close();
     }
 
@@ -165,32 +152,49 @@ public class RocksMap<K, V> implements Iterable<Entry<K, V>> {
         return serializationService.readObject(in);
     }
 
-    private class RocksMapIterator implements Iterator<Entry<K, V>> {
+    /**
+     * Iterator over the entries in RocksMap.
+     * The iterator creates a snapshot of the map when it is created,
+     * any update applied after the iterator is created can't be seen by the iterator.
+     * Callers have to invoke close() at the end to release the associated native iterator.
+     */
+    public final class RocksMapIterator {
         private final RocksIterator iterator;
 
-        RocksMapIterator() {
+        private RocksMapIterator() {
             iterator = db.newIterator(cfh, readOptions);
             iterator.seekToFirst();
         }
 
-        @Override
+        /**
+         * Returns whether the iterator has more entries to traverse.
+         */
         public boolean hasNext() {
             return iterator.isValid();
         }
 
-        @Override
+        /**
+         * Returns the next entry in the map.
+         */
         public Entry<K, V> next() {
             Tuple2<K, V> tuple = tuple2(deserialize(iterator.key()), deserialize(iterator.value()));
             iterator.next();
             return tuple;
         }
 
-        @Override
+        /**
+         * Removes the current entry from the map.
+         */
+        //TODO: decide whether implement the method since iterator uses a snapshot of the database.
         public void remove() {
         }
 
-        void close() {
+        /**
+         * Releases the native RocksDB iterator used by this iterator.
+         */
+        public void close() {
             iterator.close();
+            iterators.remove(iterator);
         }
     }
 }

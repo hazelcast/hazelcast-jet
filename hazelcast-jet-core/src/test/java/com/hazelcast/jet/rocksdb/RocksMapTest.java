@@ -20,13 +20,13 @@ import com.hazelcast.internal.nio.IOUtil;
 import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.core.JetTestSupport;
+import com.hazelcast.jet.rocksdb.RocksMap.RocksMapIterator;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 
@@ -89,23 +89,6 @@ public class RocksMapTest extends JetTestSupport {
     }
 
     @Test
-    public void when_putKeyValues_then_getAllReturnsAllValues() {
-        //Given
-        String key1 = "key1";
-        String key2 = "key2";
-        Integer value1 = 1;
-        Integer value2 = 2;
-
-        //When
-        rocksMap.put(key1, value1);
-        rocksMap.put(key2, value2);
-        Map<String, Integer> map = new HashMap<>(rocksMap.getAll());
-
-        assertEquals("rocksMap.getAll() doesn't return the value used in rocksMap.putAll()", value1, map.get(key1));
-        assertEquals("rocksMap.getAll() doesn't return the value used in rocksMap.putAll()", value2, map.get(key2));
-    }
-
-    @Test
     public void whenCreateIterator_then_rocksMapCreatesSnapshot() {
         //Given
         String key1 = "key1";
@@ -119,7 +102,7 @@ public class RocksMapTest extends JetTestSupport {
         //When
         rocksMap.put(key1, value1);
         rocksMap.put(key2, value2);
-        Iterator<Entry<String, Integer>> iterator = rocksMap.iterator();
+        RocksMapIterator iterator = rocksMap.iterator();
         rocksMap.put(key1, value3);
 
         //Then

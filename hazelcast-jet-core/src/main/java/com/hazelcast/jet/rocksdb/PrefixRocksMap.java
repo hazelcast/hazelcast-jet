@@ -70,7 +70,7 @@ import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
  * @param <K> the type of key
  * @param <V> the type of value
  */
-public class PrefixRocksMap<K, V> implements Iterable<Entry<K, Iterator<V>>> {
+public class PrefixRocksMap<K, V> {
     private final RocksDB db;
     private final String name;
     private final InternalSerializationService serializationService;
@@ -170,8 +170,8 @@ public class PrefixRocksMap<K, V> implements Iterable<Entry<K, Iterator<V>>> {
      * Returns an iterator over the contents of this map. This iterator is
      * guaranteed to return all keys totally ordered.
      */
-    @Nonnull @Override
-    public Iterator<Entry<K, Iterator<V>>> iterator() {
+    @Nonnull
+    public PrefixRocksMapIterator iterator() {
         assert cfh != null : "PrefixRocksMap was not opened";
         PrefixRocksMapIterator mapIterator = new PrefixRocksMapIterator();
         iterators.add(mapIterator.iterator);
@@ -183,7 +183,7 @@ public class PrefixRocksMap<K, V> implements Iterable<Entry<K, Iterator<V>>> {
      * invoked to prepare RocksMap for reads after bulk-loading with a series of
      * add() calls.
      */
-    public PrefixRocksMap<K, V> compact() throws JetException {
+    public void compact() throws JetException {
         if (cfh != null) {
             try {
                 db.flush(flushOptions, cfh);
@@ -192,7 +192,6 @@ public class PrefixRocksMap<K, V> implements Iterable<Entry<K, Iterator<V>>> {
                 throw new JetException("Failed to Compact RocksDB", e);
             }
         }
-        return this;
     }
 
     /**
@@ -241,22 +240,32 @@ public class PrefixRocksMap<K, V> implements Iterable<Entry<K, Iterator<V>>> {
         }
     }
 
-    private class PrefixRocksMapIterator implements Iterator<Entry<K, Iterator<V>>> {
-        final RocksIterator iterator;
+    /**
+     * Iterator over the entries in PrefixRocksMap.
+     * The iterator creates a snapshot of the map when it is created,
+     * any update applied after the iterator is created can't be seen by the iterator.
+     * Callers have to invoke close() at the end to release the associated native iterator.
+     */
+    public final class PrefixRocksMapIterator {
+        private final RocksIterator iterator;
         private final RocksIterator prefixIterator;
 
-        PrefixRocksMapIterator() {
+        private PrefixRocksMapIterator() {
             iterator = db.newIterator(cfh, iteratorOptions);
             iterator.seekToFirst();
             prefixIterator = prefixRocksIterator();
         }
 
-        @Override
+        /**
+         * Returns whether the iterator has more entries to traverse.
+         */
         public boolean hasNext() {
             return iterator.isValid();
         }
 
-        @Override
+        /**
+         * Returns the next entry in the map.
+         */
         public Entry<K, Iterator<V>> next() {
             Tuple2<K, Iterator<V>> tuple = tuple2(deserialize(iterator.key()),
                     get(prefixIterator, deserialize(iterator.key())));
@@ -268,8 +277,14 @@ public class PrefixRocksMap<K, V> implements Iterable<Entry<K, Iterator<V>>> {
             return tuple;
         }
 
-        @Override
-        public void remove() {
+        /**
+         * Releases the native RocksDB iterator used by this iterator.
+         */
+        public void close() {
+            iterator.close();
+            prefixIterator.close();
+            iterators.remove(iterator);
+            iterators.remove(prefixIterator);
         }
     }
 }

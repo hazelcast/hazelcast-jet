@@ -202,7 +202,8 @@ public class ProcessorsTest extends SimpleTestInClusterSupport {
     public void aggregateByKey() {
         FunctionEx<Object, String> keyFn = Object::toString;
         TestSupport
-                .verifyProcessor(aggregateByKeyWithUnboundedStateP(singletonList(keyFn), aggregateToListAndString(), Util::entry))
+                .verifyProcessor(aggregateByKeyWithUnboundedStateP(singletonList(keyFn),
+                        aggregateToListAndString(), Util::entry))
                 .disableSnapshots()
                 .outputChecker(TestSupport.SAME_ITEMS_ANY_ORDER)
                 .input(asList(1, 1, 2, 2))
@@ -216,7 +217,8 @@ public class ProcessorsTest extends SimpleTestInClusterSupport {
     public void accumulateByKey() {
         FunctionEx<Object, String> keyFn = Object::toString;
         TestSupport
-                .verifyProcessor(Processors.accumulateByKeyWithUnboundedStateP(singletonList(keyFn), aggregateToListAndString()))
+                .verifyProcessor(Processors.accumulateByKeyWithUnboundedStateP(singletonList(keyFn),
+                        aggregateToListAndString()))
                 .disableSnapshots()
                 .input(asList(1, 1, 2, 2))
                 .outputChecker(TestSupport.SAME_ITEMS_ANY_ORDER)

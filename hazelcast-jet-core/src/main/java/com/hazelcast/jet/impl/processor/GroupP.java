@@ -23,9 +23,9 @@ import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.rocksdb.RocksDBStateBackend;
 import com.hazelcast.jet.rocksdb.RocksMap;
+import com.hazelcast.jet.rocksdb.RocksMap.RocksMapIterator;
 
 import javax.annotation.Nonnull;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.function.BiFunction;
@@ -104,11 +104,12 @@ public class GroupP<K, A, R, OUT> extends AbstractProcessor {
     }
 
     private class ResultTraverser implements Traverser<Entry<K, A>> {
-        private final Iterator<Entry<K, A>> iter = keyToAcc.iterator();
+        private final RocksMapIterator iter = keyToAcc.iterator();
 
         @Override
         public Entry<K, A> next() {
             if (!iter.hasNext()) {
+                iter.close();
                 return null;
             }
             try {
