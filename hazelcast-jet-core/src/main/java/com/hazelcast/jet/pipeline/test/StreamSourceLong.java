@@ -62,7 +62,8 @@ public class StreamSourceLong extends AbstractProcessor {
     private long nowNanos;
 
     /**
-     * Creates a stream source for Long values that is supposed to be used for performance testing purposes.
+     * Creates a stream source for Long values that is supposed to be
+     * used for performance testing purposes.
      *
      * @since 4.3
      */
@@ -92,8 +93,8 @@ public class StreamSourceLong extends AbstractProcessor {
     @Override
     public boolean complete() {
         nowNanos = System.nanoTime();
-        detectAndReportHiccup();
         emitEvents();
+        detectAndReportHiccup();
         if (isReportingThroughput) {
             reportThroughput();
         }

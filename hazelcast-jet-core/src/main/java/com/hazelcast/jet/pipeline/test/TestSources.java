@@ -176,8 +176,8 @@ public final class TestSources {
      *
      */
     @Nonnull
-    public static StreamSource<Long> longStreamSource(long itemsPerSecond, long initialDelay) {
-        return longStreamSource(itemsPerSecond, initialDelay, Vertex.LOCAL_PARALLELISM_USE_DEFAULT, false);
+    public static StreamSource<Long> streamSourceLong(long itemsPerSecond, long initialDelay) {
+        return streamSourceLong(itemsPerSecond, initialDelay, Vertex.LOCAL_PARALLELISM_USE_DEFAULT, false);
     }
 
     /**
@@ -189,9 +189,10 @@ public final class TestSources {
      *
      */
     @Nonnull
-    public static StreamSource<Long> longStreamSource(long itemsPerSecond, long initialDelay,
-                                                      int preferredLocalParallelism) {
-        return longStreamSource(itemsPerSecond, initialDelay, preferredLocalParallelism, false);
+    public static StreamSource<Long> streamSourceLong(
+            long itemsPerSecond, long initialDelay, int preferredLocalParallelism
+    ) {
+        return streamSourceLong(itemsPerSecond, initialDelay, preferredLocalParallelism, false);
     }
 
     /**
@@ -203,9 +204,10 @@ public final class TestSources {
      *
      */
     @Nonnull
-    public static StreamSource<Long> longStreamSource(long itemsPerSecond, long initialDelay,
-                                                      boolean shouldReportThroughput) {
-        return longStreamSource(itemsPerSecond, initialDelay,
+    public static StreamSource<Long> streamSourceLong(
+            long itemsPerSecond, long initialDelay, boolean shouldReportThroughput
+    ) {
+        return streamSourceLong(itemsPerSecond, initialDelay,
                 Vertex.LOCAL_PARALLELISM_USE_DEFAULT, shouldReportThroughput);
     }
 
@@ -218,8 +220,9 @@ public final class TestSources {
      *
      */
     @Nonnull
-    public static StreamSource<Long> longStreamSource(long itemsPerSecond, long initialDelay,
-                                                      int preferredLocalParallelism, boolean shouldReportThroughput) {
+    public static StreamSource<Long> streamSourceLong(
+            long itemsPerSecond, long initialDelay, int preferredLocalParallelism, boolean shouldReportThroughput
+    ) {
         return Sources.streamFromProcessorWithWatermarks("longs",
                 true,
                 eventTimePolicy -> ProcessorMetaSupplier.of(
