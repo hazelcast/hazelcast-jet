@@ -22,7 +22,9 @@ import com.hazelcast.jet.core.TestProcessors.CollectPerProcessorSink;
 import com.hazelcast.jet.core.TestProcessors.ListsSourceP;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import java.util.Collection;
 import java.util.HashSet;
@@ -35,6 +37,9 @@ import static java.util.stream.Collectors.toList;
 import static org.junit.Assert.assertEquals;
 
 public class RoutingPolicyDistributedTest extends SimpleTestInClusterSupport {
+
+    @Rule
+    public ExpectedException exception = ExpectedException.none();
 
     private static final List<Integer>[] NUMBERS = new List[]{
             IntStream.range(0, 4096).boxed().collect(toList()),
@@ -77,6 +82,20 @@ public class RoutingPolicyDistributedTest extends SimpleTestInClusterSupport {
         assertEquals(0, consumerSup.getListAt(1).size());
 
         assertEquals(setOf(NUMBERS), setOf(consumerSup.getListAt(2), consumerSup.getListAt(3)));
+    }
+
+    @Test
+    public void when_distributedToOne_and_targetMemberMissing() throws Exception {
+        DAG dag = new DAG();
+        Vertex producer = producer(NUMBERS);
+        Vertex consumer = consumer(2);
+
+        dag.vertex(producer)
+           .vertex(consumer)
+           .edge(between(producer, consumer).distributeTo(new Address("1.2.3.4", 9999)));
+
+        exception.expectMessage("target not member");
+        instance().newJob(dag).join();
     }
 
     private Vertex consumer(int localParallelism) {
