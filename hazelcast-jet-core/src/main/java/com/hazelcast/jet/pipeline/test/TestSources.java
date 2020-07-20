@@ -36,8 +36,8 @@ import java.util.concurrent.TimeUnit;
 import static com.hazelcast.jet.impl.util.Util.checkSerializable;
 
 /**
- * Contains factory methods for various mock sources which can be used
- * for pipeline testing and development.
+ * Contains factory methods for various mock sources which can be used for
+ * pipeline testing and development.
  *
  * @since 3.2
  */
@@ -48,8 +48,8 @@ public final class TestSources {
     }
 
     /**
-     * Returns a batch source which iterates through the supplied iterable and then
-     * terminates.
+     * Returns a batch source which iterates through the supplied iterable and
+     * then terminates.
      *
      * @since 3.2
      */
@@ -64,8 +64,8 @@ public final class TestSources {
     }
 
     /**
-     * Returns a batch source which iterates through the supplied items and then
-     * terminates.
+     * Returns a batch source which iterates through the supplied items and
+     * then terminates.
      *
      * @since 3.2
      */
@@ -76,20 +76,20 @@ public final class TestSources {
     }
 
     /**
-     * Returns a streaming source which generates events of type {@link SimpleEvent} at
-     * the specified rate infinitely.
+     * Returns a streaming source which generates events of type {@link
+     * SimpleEvent} at the specified rate infinitely.
      * <p>
      * The source supports {@linkplain
      * StreamSourceStage#withNativeTimestamps(long) native timestamps}. The
-     * timestamp is the current system time at the moment they are
-     * generated. The source is not distributed and all the items are
-     * generated on the same node. This source is not fault-tolerant.
-     * The sequence will be reset once a job is restarted.
+     * timestamp is the current system time at the moment they are generated.
+     * The source is not distributed and all the items are generated on the
+     * same node. This source is not fault-tolerant. The sequence will be
+     * reset once a job is restarted.
      * <p>
-     * <b>Note:</b>
-     * There is no absolute guarantee that the actual rate of emitted
-     * items will match the supplied value. It is done on a best-effort
-     * basis.
+     * <strong>Note:</strong>
+     * There is no absolute guarantee that the actual rate of emitted items
+     * will match the supplied value. It is ensured that no emitted event's
+     * timestamp will be in the future.
      *
      * @param itemsPerSecond how many items should be emitted each second
      *
@@ -107,15 +107,15 @@ public final class TestSources {
      * <p>
      * The source supports {@linkplain
      * StreamSourceStage#withNativeTimestamps(long) native timestamps}. The
-     * timestamp is the current system time at the moment they are
-     * generated. The source is not distributed and all the items are
-     * generated on the same node. This source is not fault-tolerant.
-     * The sequence will be reset once a job is restarted.
+     * timestamp is the current system time at the moment they are generated.
+     * The source is not distributed and all the items are generated on the
+     * same node. This source is not fault-tolerant. The sequence will be
+     * reset once a job is restarted.
      * <p>
-     * <b>Note:</b>
-     * There is no absolute guarantee that the actual rate of emitted
-     * items will match the supplied value. It is done on a best-effort
-     * basis.
+     * <strong>Note:</strong>
+     * There is no absolute guarantee that the actual rate of emitted items
+     * will match the supplied value. It is ensured that no emitted event's
+     * timestamp will be in the future.
      *
      * @param itemsPerSecond how many items should be emitted each second
      * @param generatorFn a function which takes the timestamp and the sequence of the generated
@@ -137,6 +137,12 @@ public final class TestSources {
             .build();
     }
 
+    /**
+     * A class used for creating a {@link StreamSource} as in {@link
+     * #itemStream(int itemsPerSecond)}. The desired number of created values
+     * per second as well as the value generator function {@link
+     * GeneratorFunction} need to be set.
+     */
     private static final class ItemStreamSource<T> {
         private static final int MAX_BATCH_SIZE = 1024;
 
@@ -146,11 +152,26 @@ public final class TestSources {
         private long emitSchedule;
         private long sequence;
 
+        /**
+         * Initializes the class.
+         *
+         * @param itemsPerSecond how many items should be emitted each second
+         * @param generator generator function defining how to create
+         *                  values
+         */
         private ItemStreamSource(int itemsPerSecond, GeneratorFunction<? extends T> generator) {
             this.periodNanos = TimeUnit.SECONDS.toNanos(1) / itemsPerSecond;
             this.generator = generator;
         }
 
+        /**
+         * Adds generated values to the passed {@link TimestampedSourceBuffer} as
+         * long as the emit schedule allows and until a maximum of {@link
+         * #MAX_BATCH_SIZE} values are added.
+         *
+         * @param buf buffer to which generated values are added
+         *
+         */
         void fillBuffer(TimestampedSourceBuffer<T> buf) throws Exception {
             long nowNs = System.nanoTime();
             if (emitSchedule == 0) {
@@ -168,22 +189,39 @@ public final class TestSources {
     }
 
     /**
-     * Returns a stream source that contains long values and does late materialization
-     * of values after distributing them across the cluster, which is useful for high-throughput
-     * testing.
+     * Returns a {@link com.hazelcast.jet.pipeline.StreamSource} for {@code
+     * long} values. The value creation is distributed across the cluster and
+     * is done using {@link StreamSourceLong}. All {@link StreamSourceLong}
+     * instances are created identically, one per cluster member. The returned
+     * source is designed to be used for high-throughput performance testing.
+     *
+     * @param itemsPerSecond how many items should be emitted each second
+     * @param initialDelay initial delay before emitting values
+     *
+     * @return {@link com.hazelcast.jet.pipeline.StreamSource} with {@code long} values
+     *          created in a distributed fashion
      *
      * @since 4.3
      *
      */
     @Nonnull
     public static StreamSource<Long> streamSourceLong(long itemsPerSecond, long initialDelay) {
-        return streamSourceLong(itemsPerSecond, initialDelay, Vertex.LOCAL_PARALLELISM_USE_DEFAULT, false);
+        return streamSourceLong(itemsPerSecond, initialDelay, Vertex.LOCAL_PARALLELISM_USE_DEFAULT);
     }
 
     /**
-     * Returns a stream source that contains long values and does late materialization
-     * of values after distributing them across the cluster, which is useful for high-throughput
-     * testing.
+     * Returns a {@link com.hazelcast.jet.pipeline.StreamSource} for {@code
+     * long} values. The value creation is distributed across the cluster and
+     * is done using {@link StreamSourceLong}. All {@link StreamSourceLong}
+     * instances are created identically, one per cluster member. The returned
+     * source is designed to be used for high-throughput performance testing.
+     *
+     * @param itemsPerSecond how many items should be emitted each second
+     * @param initialDelay initial delay before emitting values
+     * @param preferredLocalParallelism the preferred local parallelism
+     *
+     * @return {@link com.hazelcast.jet.pipeline.StreamSource} with {@code long} values
+     *          created in a distributed fashion
      *
      * @since 4.3
      *
@@ -192,46 +230,14 @@ public final class TestSources {
     public static StreamSource<Long> streamSourceLong(
             long itemsPerSecond, long initialDelay, int preferredLocalParallelism
     ) {
-        return streamSourceLong(itemsPerSecond, initialDelay, preferredLocalParallelism, false);
-    }
-
-    /**
-     * Returns a stream source that contains long values and does late materialization
-     * of values after distributing them across the cluster, which is useful for high-throughput
-     * testing.
-     *
-     * @since 4.3
-     *
-     */
-    @Nonnull
-    public static StreamSource<Long> streamSourceLong(
-            long itemsPerSecond, long initialDelay, boolean shouldReportThroughput
-    ) {
-        return streamSourceLong(itemsPerSecond, initialDelay,
-                Vertex.LOCAL_PARALLELISM_USE_DEFAULT, shouldReportThroughput);
-    }
-
-    /**
-     * Returns a stream source that contains long values and does late materialization
-     * of values after distributing them across the cluster, which is useful for high-throughput
-     * testing.
-     *
-     * @since 4.3
-     *
-     */
-    @Nonnull
-    public static StreamSource<Long> streamSourceLong(
-            long itemsPerSecond, long initialDelay, int preferredLocalParallelism, boolean shouldReportThroughput
-    ) {
-        return Sources.streamFromProcessorWithWatermarks("longs",
+        return Sources.streamFromProcessorWithWatermarks("longValues",
                 true,
                 eventTimePolicy -> ProcessorMetaSupplier.of(
                         preferredLocalParallelism,
                         (Address ignored) -> {
                             long startTime = System.currentTimeMillis() + initialDelay;
                             return ProcessorSupplier.of(() ->
-                                    new StreamSourceLong(startTime, itemsPerSecond,
-                                            eventTimePolicy, shouldReportThroughput));
+                                    new StreamSourceLong(startTime, itemsPerSecond, eventTimePolicy));
                         })
         );
 

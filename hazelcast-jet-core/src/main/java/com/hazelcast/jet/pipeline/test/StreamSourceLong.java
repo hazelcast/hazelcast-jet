@@ -19,33 +19,39 @@ package com.hazelcast.jet.pipeline.test;
 import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.core.AppendableTraverser;
 import com.hazelcast.jet.core.EventTimePolicy;
+import com.hazelcast.jet.core.Processor;
+import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.Watermark;
+import com.hazelcast.logging.ILogger;
+import com.hazelcast.logging.Logger;
 
 import javax.annotation.Nonnull;
 
 import static com.hazelcast.jet.impl.JetEvent.jetEvent;
-import static java.util.concurrent.TimeUnit.HOURS;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 /**
- * Represents a StreamSource containing Long values which can be used
- * for performance pipeline testing and development.
+ * Represents an {@link AbstractProcessor} that indefinitely emits {@code
+ * long} values. The purpose of the class is to enable creating a
+ * distributed {@link com.hazelcast.jet.pipeline.StreamSource} for
+ * high-throughput performance testing. An example usage can be found in
+ * {@link TestSources#streamSourceLong(long itemsPerSecond, long
+ * initialDelay, int preferredLocalParallelism)}.
  *
  * @since 4.3
  */
 public class StreamSourceLong extends AbstractProcessor {
 
     private static final long SOURCE_THROUGHPUT_REPORTING_PERIOD_SECONDS = 10;
-    private static final long SIMPLE_TIME_SPAN_MILLIS = HOURS.toMillis(3);
 
     private static final long REPORT_PERIOD_NANOS = SECONDS.toNanos(SOURCE_THROUGHPUT_REPORTING_PERIOD_SECONDS);
     private static final long HICCUP_REPORT_THRESHOLD_MILLIS = 10;
     private final long nanoTimeMillisToCurrentTimeMillis = determineTimeOffset();
     private final long startTime;
     private final long itemsPerSecond;
-    private final boolean isReportingThroughput;
+    private final ILogger logger = Logger.getLogger(StreamSourceLong.class);
     private final long wmGranularity;
     private final long wmOffset;
     private long globalProcessorIndex;
@@ -62,8 +68,11 @@ public class StreamSourceLong extends AbstractProcessor {
     private long nowNanos;
 
     /**
-     * Creates a stream source for Long values that is supposed to be
-     * used for performance testing purposes.
+     * Creates a stream source for {@code long} values.
+     *
+     * @param startTime when to start in milliseconds
+     * @param itemsPerSecond how many items, i.e., {@code long} values, should be emitted each second
+     * @param eventTimePolicy which {@linkplain EventTimePolicy} to apply
      *
      * @since 4.3
      */
@@ -71,16 +80,23 @@ public class StreamSourceLong extends AbstractProcessor {
     public StreamSourceLong(
             long startTime,
             long itemsPerSecond,
-            EventTimePolicy<? super Long> eventTimePolicy,
-            boolean shouldReportThroughput
+            EventTimePolicy<? super Long> eventTimePolicy
     ) {
         this.wmGranularity = eventTimePolicy.watermarkThrottlingFrameSize();
         this.wmOffset = eventTimePolicy.watermarkThrottlingFrameOffset();
         this.startTime = MILLISECONDS.toNanos(startTime + nanoTimeMillisToCurrentTimeMillis);
         this.itemsPerSecond = itemsPerSecond;
-        this.isReportingThroughput = shouldReportThroughput;
     }
 
+    /**
+     * Initializes this stream source by setting various attributes, such as
+     * {@link #totalParallelism}, {@link #globalProcessorIndex}, and the {@link
+     * #emitPeriod}.
+     *
+     * @param context processor context
+     *
+     * @since 4.3
+     */
     @Override
     protected void init(Context context) {
         totalParallelism = context.totalParallelism();
@@ -90,17 +106,42 @@ public class StreamSourceLong extends AbstractProcessor {
                 startTime + SECONDS.toNanos(1) * globalProcessorIndex / itemsPerSecond;
     }
 
+    /**
+     * Invokes the emission of events ({@link #emitEvents()}), the detection
+     * and reporting of hiccups ({@link #detectAndReportHiccup()}), and reports
+     * the throughput ({@link #reportThroughput()}) if the log level is set to
+     * {@link java.util.logging.Level#FINE}. Always returns false, i.e., never
+     * indicates that the source is complete to emit events for a potentially
+     * infinite time, which is typical for stream source processors (see {@link
+     * Processor#complete()}).
+     *
+     * @return always {@code false} so that this method is called again
+     *
+     * @since 4.3
+     */
     @Override
     public boolean complete() {
         nowNanos = System.nanoTime();
         emitEvents();
         detectAndReportHiccup();
-        if (isReportingThroughput) {
+        if (logger.isFineEnabled()) {
             reportThroughput();
         }
         return false;
     }
 
+    /**
+     * Emits stream events ({@link com.hazelcast.jet.impl.JetEvent}) according
+     * to the defined rate/schedule. The events contain a {@code long} value
+     * that represents the product of the event counter, {@link
+     * ProcessorMetaSupplier.Context#totalParallelism()}, and {@link
+     * Context#globalProcessorIndex()}. An event is emitted by appending it to
+     * the {@link #traverser}. According the the defined watermark granularity
+     * ({@link #wmGranularity}), watermarks are also appended to the {@link
+     * AppendableTraverser}.
+     *
+     * @since 4.3
+     */
     private void emitEvents() {
         while (emitFromTraverser(traverser) && emitSchedule <= nowNanos) {
             long timestamp = NANOSECONDS.toMillis(emitSchedule) - nanoTimeMillisToCurrentTimeMillis;
@@ -115,14 +156,27 @@ public class StreamSourceLong extends AbstractProcessor {
         }
     }
 
+    /**
+     * Detects hiccups and reports them to the log along with an information
+     * about the global processor index (see {@link Context#globalProcessorIndex()}.
+     *
+     * @since 4.3
+     */
     private void detectAndReportHiccup() {
         long millisSinceLastCall = NANOSECONDS.toMillis(nowNanos - lastCallNanos);
         if (millisSinceLastCall > HICCUP_REPORT_THRESHOLD_MILLIS) {
-            System.out.printf("*** Source #%d hiccup: %,d ms%n", globalProcessorIndex, millisSinceLastCall);
+            logger.info(String.format("*** Source #%d hiccup: %,d ms%n", globalProcessorIndex, millisSinceLastCall));
         }
         lastCallNanos = nowNanos;
     }
 
+    /**
+     * Reports the achieved throughput to the log in defined reporting
+     * intervals as number of items/second, including an information about the
+     * global processor index (see {@link Context#globalProcessorIndex()}).
+     *
+     * @since 4.3
+     */
     private void reportThroughput() {
         long nanosSinceLastReport = nowNanos - lastReport;
         if (nanosSinceLastReport < REPORT_PERIOD_NANOS) {
@@ -131,26 +185,21 @@ public class StreamSourceLong extends AbstractProcessor {
         lastReport = nowNanos;
         long itemCountSinceLastReport = counter - counterAtLastReport;
         counterAtLastReport = counter;
-        System.out.printf("%,d p%d: %,.0f items/second%n",
-                simpleTime(NANOSECONDS.toMillis(nowNanos)),
+        logger.fine(String.format("p%d: %,.0f items/second%n",
                 globalProcessorIndex,
-                itemCountSinceLastReport / ((double) nanosSinceLastReport / SECONDS.toNanos(1))
-        );
+                itemCountSinceLastReport / ((double) nanosSinceLastReport / SECONDS.toNanos(1))));
     }
 
-    @Override
-    public boolean tryProcessWatermark(Watermark watermark) {
-        throw new UnsupportedOperationException("Source processor shouldn't be asked to process a watermark");
-    }
-
+    /**
+     * Calculates the difference between {@link System#nanoTime()} converted to
+     * milliseconds and {@link System#currentTimeMillis()}.
+     *
+     * @return the calculated time offset/difference
+     *
+     * @since 4.3
+     */
     private static long determineTimeOffset() {
-        long milliTime = System.currentTimeMillis();
-        long nanoTime = System.nanoTime();
-        return NANOSECONDS.toMillis(nanoTime) - milliTime;
-    }
-
-    private static long simpleTime(long timeMillis) {
-        return timeMillis % SIMPLE_TIME_SPAN_MILLIS;
+        return NANOSECONDS.toMillis(System.nanoTime()) - System.currentTimeMillis();
     }
 
 }
