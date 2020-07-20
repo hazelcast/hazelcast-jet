@@ -65,7 +65,8 @@ public class Cache {
                 .peek()
                 .writeTo(CdcSinks.map("customers",
                         r -> r.key().toMap().get("id"),
-                        r -> r.value().toObject(Customer.class).toString()));
+                        r -> r.value().toObject(Customer.class).toString())
+                );
 
         JobConfig cfg = new JobConfig().setName("mysql-monitor");
         JetInstance jet = Jet.bootstrappedInstance();
