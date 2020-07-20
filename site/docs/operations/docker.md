@@ -79,7 +79,7 @@ Run the following command to submit the Hello World job to your Hazelcast
 Jet instance:
 
 ```bash
-docker run -it -v "$(pwd)"/examples:/examples hazelcast/hazelcast-jet jet -a 172.17.0.2 submit /examples/hello-world.jar
+docker run -it -v "$(pwd)"/examples:/examples hazelcast/hazelcast-jet jet -t 172.17.0.2 submit /examples/hello-world.jar
 ```
 
 The parameters are as follows:
@@ -88,7 +88,7 @@ The parameters are as follows:
   submit command by pressing Ctrl+C
 * `-v "$(pwd)"/examples:/examples` mounts folder `examples` from your
   current directory to `/examples` directory inside the container
-* `-a 172.17.0.2` - shortcut for `--addresses`, specifies an address of
+* `-t 172.17.0.2` - shortcut for `--targets`, specifies an address of
   running Hazelcast Jet instance, needs to be specified because the
   instance is not running on `localhost:5701`
 * `submit` command to submit a job
@@ -99,13 +99,13 @@ You can list the running jobs inside the cluster by running the
 following command:
 
 ```bash
-docker run hazelcast/hazelcast-jet jet -a 172.17.0.2 list-jobs
+docker run hazelcast/hazelcast-jet jet -t 172.17.0.2 list-jobs
 ```
 
 which gives an output similar to:
 
 ```text
-$ docker run hazelcast/hazelcast-jet jet -a 172.17.0.2 list-jobs
+$ docker run hazelcast/hazelcast-jet jet -t 172.17.0.2 list-jobs
 ID                  STATUS             SUBMISSION TIME         NAME
 045e-987c-1940-0001 RUNNING            2020-05-18T20:08:03.020 hello-world
 ```
@@ -113,7 +113,7 @@ ID                  STATUS             SUBMISSION TIME         NAME
 You can cancel a running job using the following command:
 
 ```bash
-docker run hazelcast/hazelcast-jet jet -a 172.17.0.2 cancel hello-world
+docker run hazelcast/hazelcast-jet jet -t 172.17.0.2 cancel hello-world
 ```
 
 ### Using Local Distribution
@@ -140,8 +140,21 @@ docker run hazelcast/hazelcast-jet
 And submit the job, specifying the cluster address:
 
 ```bash
-bin/jet -a 172.17.0.2 submit examples/hello-world.jar
+bin/jet -t 172.17.0.2 submit examples/hello-world.jar
 ```
+
+## Start Management Center
+
+Management center provides an easy way to monitor Hazelcast Jet cluster
+and running jobs. Start Management Center with the following command:
+
+```bash
+docker run -p 8081:8081 -e JET_MEMBER_ADDRESS=172.17.0.2 hazelcast/hazelcast-jet-management-center
+```
+
+After a few seconds you can access the management center on
+[http://localhost:8081](http://localhost:8081), the default
+username/password are admin/admin.
 
 ## Configure Hazelcast Jet
 
@@ -153,6 +166,29 @@ to pass multiple VM arguments to your Hazelcast Jet member.
 ```bash
 docker run -e JAVA_OPTS="-Xms512M -Xmx1024M" -p 5701:5701 hazelcast/hazelcast-jet
 ```
+
+### Memory configuration
+
+In the Docker environment the memory is limited by
+`-XX:MaxRAMPercentage=80.0` setting, this means the heap will take at
+most 80 % of all available memory.  By default a Docker container can
+use all available memory, unless `-m/--memory` parameter is specified.
+Run the following command to start Hazelcast Jet with 2 GB allocated to
+the container, maximum heap limited to 1640 MB (2048*0.8):
+
+```bash
+docker run --memory 2g hazelcast/hazelcast-jet
+```
+
+The `MaxRAMPercentage` value can be overridden in the `JAVA_OPTS`
+variable:  
+
+```bash
+docker run --memory 2g -e JAVA_OPTS="-XX:MaxRAMPercentage=85.0" hazelcast/hazelcast-jet
+```
+
+Note that you need to leave enough free space for Metaspace and other
+overheads.
 
 ### Custom Hazelcast Jet Configuration File
 
@@ -183,7 +219,52 @@ Submit a job to the cluster, specifying cluster name in the jet command
 using `-n jet-1` option (shortcut for `--cluster-name`):
 
 ```bash
-docker run -it -v "$(pwd)"/examples:/examples hazelcast/hazelcast-jet jet -a 172.17.0.2 -n jet-1 submit /examples/hello-world.jar
+docker run -it -v "$(pwd)"/examples:/examples hazelcast/hazelcast-jet jet -t 172.17.0.2 -n jet-1 submit /examples/hello-world.jar
+```
+
+You can view the contents of the default configuration file inside the
+container by running the following command:
+
+```bash
+docker run hazelcast/hazelcast-jet cat /opt/hazelcast-jet/config/hazelcast.yaml
+```
+
+### Extend CLASSPATH with new Jars or Files
+
+If you have custom jars or files to put into classpath of your Docker
+container, you can put those files into a folder, e.g., `ext`, mount
+the folder to the container, use `CLASSPATH` environment variable and
+pass it via `docker run` command. Please see the following example:
+
+```bash
+docker run -e CLASSPATH="/opt/hazelcast-jet/ext/" -v PATH_TO_EXT_FOLDER:/opt/hazelcast-jet/ext hazelcast/hazelcast-jet
+```
+
+Alternatively you can mount a single jar file directly into the `lib` folder:
+
+```bash
+docker run -v PATH_TO_JAR_FILE:/opt/hazelcast-jet/lib/JAR_FILE.jar hazelcast/hazelcast-jet
+```
+
+### Set Default Logging Level
+
+The logging level can be changed using the `LOGGING_LEVEL` environment
+variable, for example, to see the `DEBUG` logs run the following
+command:
+
+```bash
+docker run -e LOGGING_LEVEL=DEBUG hazelcast/hazelcast-jet
+```
+
+Available logging levels are (from highest to lowest): `FATAL`, `ERROR`,
+`WARN`, `INFO`, `DEBUG`, `TRACE`. The default logging level is `INFO`.
+
+Note that if you need more custom logging configuration, you can
+configure your own `log4j2.properties` file by mounting it into your
+container like below:
+
+```bash
+docker run -e -v PATH_TO_LOCAL_CONFIG_FILE:/opt/hazelcast-jet/config/log4j2.properties hazelcast/hazelcast-jet
 ```
 
 ## Start Jet Cluster
@@ -308,7 +389,7 @@ ADD examples/hello-world.jar /examples/
 
 ENV ADDRESSES 172.17.0.2
 
-CMD ["sh", "-c", "jet -a $ADDRESSES submit /examples/hello-world.jar"]
+CMD ["sh", "-c", "jet -t $ADDRESSES submit /examples/hello-world.jar"]
 ```
 
 The first line specifies the `hazelcast/hazelcast-jet` image as base
@@ -336,7 +417,7 @@ Step 2/4 : ADD examples/hello-world.jar /examples/
 Step 3/4 : ENV ADDRESSES 172.17.0.2
  ---> Using cache
  ---> f96d01158d6e
-Step 4/4 : CMD ["sh", "-c", "jet -a $ADDRESSES submit /examples/hello-world.jar"]
+Step 4/4 : CMD ["sh", "-c", "jet -t $ADDRESSES submit /examples/hello-world.jar"]
  ---> Using cache
  ---> 6bc0f527b69c
 Successfully built 6bc0f527b69c
