@@ -90,7 +90,7 @@ public final class FullFunctionScanLogicalRule extends ConverterRule {
                 arguments.add(evaluate(operand.accept(evaluator), EmptyRow.INSTANCE));
             }
         }
-        return function.table(arguments);
+        return function.table(arguments, scan.getRowType());
     }
 
     private static JetTableFunction extractFunction(LogicalTableFunctionScan scan) {

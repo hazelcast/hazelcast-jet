@@ -74,17 +74,12 @@ public final class FileTableFunction implements JetTableFunction {
 
     @Override
     public RelDataType getRowType(RelDataTypeFactory typeFactory, List<Object> arguments) {
-        return table(arguments).getRowType(typeFactory);
+        return table(options(arguments), emptyList()).getRowType(typeFactory);
     }
 
     @Override
     public Type getElementType(List<Object> arguments) {
         return Object[].class;
-    }
-
-    @Override
-    public HazelcastTable table(List<Object> arguments) {
-        return table(options(arguments), emptyList());
     }
 
     @Override

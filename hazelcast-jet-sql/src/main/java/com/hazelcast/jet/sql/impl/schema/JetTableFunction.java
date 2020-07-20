@@ -39,7 +39,5 @@ public interface JetTableFunction extends TableFunction {
         return new PlanNodeSchema(types);
     }
 
-    HazelcastTable table(List<Object> arguments);
-
     HazelcastTable table(List<Object> arguments, RelDataType rowType);
 }
