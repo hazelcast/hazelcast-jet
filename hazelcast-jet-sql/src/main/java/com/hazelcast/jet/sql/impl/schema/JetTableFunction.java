@@ -21,6 +21,7 @@ import com.hazelcast.sql.impl.calcite.schema.HazelcastTable;
 import com.hazelcast.sql.impl.plan.node.PlanNodeFieldTypeProvider;
 import com.hazelcast.sql.impl.plan.node.PlanNodeSchema;
 import com.hazelcast.sql.impl.type.QueryDataType;
+import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.schema.TableFunction;
 
@@ -39,4 +40,6 @@ public interface JetTableFunction extends TableFunction {
     }
 
     HazelcastTable table(List<Object> arguments);
+
+    HazelcastTable table(List<Object> arguments, RelDataType rowType);
 }

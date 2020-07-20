@@ -20,10 +20,13 @@ import com.hazelcast.internal.util.UuidUtil;
 import com.hazelcast.jet.sql.impl.schema.JetTableFunction;
 import com.hazelcast.jet.sql.impl.schema.JetTableFunctionParameter;
 import com.hazelcast.jet.sql.impl.schema.UnknownStatistic;
+import com.hazelcast.sql.impl.calcite.SqlToQueryType;
 import com.hazelcast.sql.impl.calcite.schema.HazelcastTable;
+import com.hazelcast.sql.impl.schema.ExternalTable.ExternalField;
 import com.hazelcast.sql.impl.schema.Table;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
+import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.schema.FunctionParameter;
 
 import java.lang.reflect.Type;
@@ -81,23 +84,42 @@ public final class FileTableFunction implements JetTableFunction {
 
     @Override
     public HazelcastTable table(List<Object> arguments) {
-        Map<String, String> options = new HashMap<>();
-        Iterator<String> parameterNames = PARAMETERS_BY_CONNECTOR_NAMES.keySet().iterator();
-        for (Object argument : arguments) {
-            if (argument != null) {
-                options.put(parameterNames.next(), argument.toString());
-            }
+        return table(options(arguments), emptyList());
+    }
+
+    @Override
+    public HazelcastTable table(List<Object> arguments, RelDataType rowType) {
+        Map<String, String> options = options(arguments);
+
+        List<ExternalField> fields = new ArrayList<>();
+        for (RelDataTypeField relField : rowType.getFieldList()) {
+            fields.add(new ExternalField(relField.getName(), SqlToQueryType.map(relField.getType().getSqlTypeName()), null));
         }
 
+        return table(options, fields);
+    }
+
+    private HazelcastTable table(Map<String, String> options, List<ExternalField> fields) {
         Table table = FileSqlConnector.INSTANCE.createTable(
                 null,
                 SCHEMA_NAME_FILES,
                 randomName(),
                 options,
-                emptyList()
+                fields
         );
-
         return new HazelcastTable(table, UnknownStatistic.INSTANCE);
+    }
+
+    private Map<String, String> options(List<Object> arguments) {
+        Map<String, String> options = new HashMap<>();
+        Iterator<String> parameterNames = PARAMETERS_BY_CONNECTOR_NAMES.keySet().iterator();
+        for (Object argument : arguments) {
+            String parameterName = parameterNames.next();
+            if (argument != null) {
+                options.put(parameterName, argument.toString());
+            }
+        }
+        return options;
     }
 
     private static String randomName() {
