@@ -507,7 +507,7 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
         // assign remote partitions to outbound data collectors
         final Map<Address, int[]> memberToPartitions = edge.getDistributedTo().equals(DISTRIBUTE_TO_ALL)
                 ? ptionArrgmt.remotePartitionAssignment.get()
-                : ptionArrgmt.distributeToOne(edge.getDistributedTo());
+                : ptionArrgmt.remotePartitionAssignmentToOne(edge.getDistributedTo());
         allCollectors = new OutboundCollector[memberToPartitions.size() + 1];
         allCollectors[0] = compositeCollector(localCollectors, edge, totalPtionCount);
         int index = 1;
@@ -529,24 +529,22 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
             return new int[downstreamParallelism][];
         }
 
-        if (DISTRIBUTE_TO_ALL.equals(edge.getDistributedTo())) {
-            // the edge is distributed to all members, every member handles a part of the partitions
-            return ptionArrgmt.assignPartitionsToProcessors(downstreamParallelism, true);
-        } else if (edge.getDistributedTo() != null) {
-            if (nodeEngine.getThisAddress().equals(edge.getDistributedTo())) {
-                // the edge is distributed to a specific member and this member is the target member, let's
-                // distribute all the partitions to local processors, just like for a local edge
-                return ptionArrgmt.assignPartitionsToProcessors(downstreamParallelism, false);
-            } else {
-                // the edge is distributed to a specific member and this member is NOT the target member,
-                // we assign 0 partitions to each processor
-                int[][] res = new int[downstreamParallelism][];
-                Arrays.fill(res, new int[0]);
-                return res;
-            }
+        if (edge.getDistributedTo() == null
+                || nodeEngine.getThisAddress().equals(edge.getDistributedTo())) {
+            // the edge is local-partitioned or it is distributed to one member and this member is the target
+            return ptionArrgmt.assignPartitionsToProcessors(downstreamParallelism, false);
         }
-        // the edge is local-partitioned, distribute all the partitions to local processors
-        return ptionArrgmt.assignPartitionsToProcessors(downstreamParallelism, false);
+
+        if (edge.getDistributedTo().equals(DISTRIBUTE_TO_ALL)) {
+            // the edge is distributed to all members, every member handles a subset of the partitions
+            return ptionArrgmt.assignPartitionsToProcessors(downstreamParallelism, true);
+        }
+
+        // the edge is distributed to a specific member and this member is NOT the target member,
+        // we assign zero partitions to each processor
+        int[][] res = new int[downstreamParallelism][];
+        Arrays.fill(res, new int[0]);
+        return res;
     }
 
     private void createIfAbsentReceiverTasklet(EdgeDef edge,

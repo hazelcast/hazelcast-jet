@@ -112,18 +112,15 @@ class PartitionArrangement {
                 Map.Entry::getKey, e -> e.getValue().stream().mapToInt(x -> x).toArray()));
     }
 
-    public int[] getAllPartitions() {
-        return allPartitions.get();
-    }
-
     /**
      * Returns an assignment where all partitions are assigned to the target
      * member and no partitions are assigned to other members.
      */
-    public Map<Address, int[]> distributeToOne(Address target) {
+    public Map<Address, int[]> remotePartitionAssignmentToOne(Address target) {
         Map<Address, int[]> res = new HashMap<>();
+        res.put(target, allPartitions.get());
         for (Address address : remotePartitionAssignment.get().keySet()) {
-            res.put(address, address.equals(target) ? getAllPartitions() : new int[0]);
+            res.putIfAbsent(address, new int[0]);
         }
         return res;
     }
