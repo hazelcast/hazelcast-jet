@@ -172,19 +172,19 @@ public interface OutboundCollector {
             this.partitioner = partitioner;
             this.partitionLookupTable = new OutboundCollector[partitionCount];
 
-            int[] myPartitions = new int[partitionCount];
+            partitions = new int[Arrays.stream(collectors).mapToInt(c -> c.getPartitions().length).sum()];
             int idx = 0;
             for (OutboundCollector collector : collectors) {
                 int[] partitionsForCollector = collector.getPartitions();
                 assert partitionsForCollector != null : "collector must define partitions";
 
                 for (int partition : partitionsForCollector) {
+                    assert partitionLookupTable[partition] == null : "duplicate partition " + partition;
                     partitionLookupTable[partition] = collector;
                 }
-                System.arraycopy(partitionsForCollector, 0, myPartitions, idx, partitionsForCollector.length);
+                System.arraycopy(partitionsForCollector, 0, partitions, idx, partitionsForCollector.length);
                 idx += partitionsForCollector.length;
             }
-            this.partitions = Arrays.copyOf(myPartitions, idx);
         }
 
         @Override

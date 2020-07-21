@@ -529,15 +529,25 @@ public final class TestProcessors {
      */
     public static final class CollectPerProcessorSink implements ProcessorMetaSupplier {
 
-        static volatile List<List<Object>> lists;
+        static List<Address> members;
+        static List<List<Object>> lists;
 
         List<Object> getListAt(int i) {
             return lists.get(i);
         }
 
+        List<List<Object>> getLists() {
+            return lists;
+        }
+
         @Override
         public void init(@Nonnull Context context) {
             lists = IntStream.range(0, context.totalParallelism()).mapToObj(i -> new ArrayList<>()).collect(toList());
+            members = new ArrayList<>(context.memberCount());
+            for (int i = 0; i < context.memberCount(); i++) {
+                // add placeholders for the members
+                members.add(null);
+            }
         }
 
         @Nonnull @Override
@@ -548,6 +558,7 @@ public final class TestProcessors {
                 @Override
                 protected void init(@Nonnull Context context) {
                     this.list = lists.get(context.globalProcessorIndex());
+                    members.set(context.memberIndex(), context.jetInstance().getCluster().getLocalMember().getAddress());
                 }
 
                 @Override
@@ -556,6 +567,9 @@ public final class TestProcessors {
                 }
             });
         }
-    }
 
+        public List<Address> getMembers() {
+            return members;
+        }
+    }
 }

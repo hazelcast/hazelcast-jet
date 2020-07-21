@@ -59,7 +59,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -72,9 +71,9 @@ import java.util.stream.IntStream;
 
 import static com.hazelcast.internal.util.concurrent.ConcurrentConveyor.concurrentConveyor;
 import static com.hazelcast.jet.config.EdgeConfig.DEFAULT_QUEUE_SIZE;
+import static com.hazelcast.jet.core.Edge.DISTRIBUTE_TO_ALL;
 import static com.hazelcast.jet.impl.execution.OutboundCollector.compositeCollector;
 import static com.hazelcast.jet.impl.execution.TaskletExecutionService.TASKLET_INIT_CLOSE_EXECUTOR_NAME;
-import static com.hazelcast.jet.core.Edge.DISTRIBUTE_TO_ALL;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 import static com.hazelcast.jet.impl.util.ImdgUtil.readList;
 import static com.hazelcast.jet.impl.util.ImdgUtil.writeList;
@@ -368,7 +367,7 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
         final List<OutboundEdgeStream> outboundStreams = new ArrayList<>();
         for (EdgeDef edge : srcVertex.outboundEdges()) {
             Map<Address, ConcurrentConveyor<Object>> memberToSenderConveyorMap = null;
-            if (isReallyDistributed(edge)) {
+            if (edge.getDistributedTo() != null) {
                 memberToSenderConveyorMap =
                         memberToSenderConveyorMap(edgeSenderConveyorMap, edge, jobSerializationService);
             }
@@ -388,15 +387,10 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
             EdgeDef edge,
             InternalSerializationService jobSerializationService
     ) {
-        assert isReallyDistributed(edge) : "Edge is not distributed";
+        assert edge.getDistributedTo() != null : "Edge is not distributed";
         return edgeSenderConveyorMap.computeIfAbsent(edge.edgeId(), x -> {
             final Map<Address, ConcurrentConveyor<Object>> addrToConveyor = new HashMap<>();
-            Set<Address> remoteMembers = this.remoteMembers.get();
-            if (!edge.getDistributedTo().equals(DISTRIBUTE_TO_ALL)) {
-                assert remoteMembers.contains(edge.getDistributedTo());
-                remoteMembers = Collections.singleton(edge.getDistributedTo());
-            }
-            for (Address destAddr : remoteMembers) {
+            for (Address destAddr : remoteMembers.get()) {
                 final ConcurrentConveyor<Object> conveyor = createConveyorArray(
                         1, edge.sourceVertex().localParallelism(), edge.getConfig().getQueueSize())[0];
                 final ConcurrentInboundEdgeStream inboundEdgeStream = newEdgeStream(edge, conveyor,
@@ -477,7 +471,7 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
          * For a distributed edge, there is one additional producer per member represented
          * by the ReceiverTasklet.
          */
-        final int[][] ptionsPerProcessor = getPartitionDistribution(edge, downstreamParallelism);
+        final int[][] ptionsPerProcessor = getLocalPartitionDistribution(edge, downstreamParallelism);
         final ConcurrentConveyor<Object>[] localConveyors = localConveyorMap.computeIfAbsent(edge.edgeId(),
                 e -> {
                     int queueCount = upstreamParallelism + (edge.getDistributedTo() != null ? numRemoteMembers : 0);
@@ -492,49 +486,67 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
             return localCollectors;
         }
 
-        final int totalPtionCount = nodeEngine.getPartitionService().getPartitionCount();
+        // the distributed-to-one edge must be partitioned and the target member must be present
+        if (!edge.getDistributedTo().equals(DISTRIBUTE_TO_ALL)) {
+            if (edge.routingPolicy() != RoutingPolicy.PARTITIONED) {
+                throw new JetException("An edge distributing to a specific member must be partitioned: " + edge);
+            }
+            if (!ptionArrgmt.remotePartitionAssignment.get().containsKey(edge.getDistributedTo())
+                    && !edge.getDistributedTo().equals(nodeEngine.getThisAddress())) {
+                throw new JetException("The target member of an edge is not present in the cluster or is a lite member: "
+                        + edge);
+            }
+        }
 
-        // create the receiver if we distribute to all or if we distribute to one and this member is the target
-        if (edge.getDistributedTo().equals(nodeEngine.getThisAddress())
-                || edge.getDistributedTo().equals(DISTRIBUTE_TO_ALL)) {
-            createIfAbsentReceiverTasklet(edge, ptionsPerProcessor, totalPtionCount, jobSerializationService);
+        // in a distributed edge, allCollectors[0] is the composite of local collectors, and
+        // allCollectors[n] where n > 0 is a collector pointing to a remote member _n_.
+        final int totalPtionCount = nodeEngine.getPartitionService().getPartitionCount();
+        final OutboundCollector[] allCollectors;
+        createIfAbsentReceiverTasklet(edge, ptionsPerProcessor, totalPtionCount, jobSerializationService);
+
+        // assign remote partitions to outbound data collectors
+        final Map<Address, int[]> memberToPartitions = edge.getDistributedTo().equals(DISTRIBUTE_TO_ALL)
+                ? ptionArrgmt.remotePartitionAssignment.get()
+                : ptionArrgmt.distributeToOne(edge.getDistributedTo());
+        allCollectors = new OutboundCollector[memberToPartitions.size() + 1];
+        allCollectors[0] = compositeCollector(localCollectors, edge, totalPtionCount);
+        int index = 1;
+        for (Map.Entry<Address, int[]> entry : memberToPartitions.entrySet()) {
+            allCollectors[index++] = new ConveyorCollectorWithPartition(senderConveyorMap.get(entry.getKey()),
+                    processorIndex, entry.getValue());
+        }
+        return allCollectors;
+    }
+
+    /**
+     * Return the partition distribution for local conveyors. The first
+     * dimension in the result is the processor index, at that index is the
+     * list of partitions.
+     */
+    private int[][] getLocalPartitionDistribution(EdgeDef edge, int downstreamParallelism) {
+        if (!edge.routingPolicy().equals(RoutingPolicy.PARTITIONED)) {
+            // the edge is not partitioned, use `null` for each processor
+            return new int[downstreamParallelism][];
         }
 
         if (DISTRIBUTE_TO_ALL.equals(edge.getDistributedTo())) {
-            // In a distribute-to-all edge, allCollectors[0] is the composite of local collectors, and
-            // allCollectors[1..n] is a collector pointing to a remote member _n_.
-            final Map<Address, int[]> memberToPartitions = ptionArrgmt.remotePartitionAssignment.get();
-            final OutboundCollector[] allCollectors = new OutboundCollector[memberToPartitions.size() + 1];
-            allCollectors[0] = compositeCollector(localCollectors, edge, totalPtionCount);
-            int index = 1;
-            for (Map.Entry<Address, int[]> entry : memberToPartitions.entrySet()) {
-                allCollectors[index++] = new ConveyorCollectorWithPartition(senderConveyorMap.get(entry.getKey()),
-                        processorIndex, entry.getValue());
+            // the edge is distributed to all members, every member handles a part of the partitions
+            return ptionArrgmt.assignPartitionsToProcessors(downstreamParallelism, true);
+        } else if (edge.getDistributedTo() != null) {
+            if (nodeEngine.getThisAddress().equals(edge.getDistributedTo())) {
+                // the edge is distributed to a specific member and this member is the target member, let's
+                // distribute all the partitions to local processors, just like for a local edge
+                return ptionArrgmt.assignPartitionsToProcessors(downstreamParallelism, false);
+            } else {
+                // the edge is distributed to a specific member and this member is NOT the target member,
+                // we assign 0 partitions to each processor
+                int[][] res = new int[downstreamParallelism][];
+                Arrays.fill(res, new int[0]);
+                return res;
             }
-            return allCollectors;
-        } else if (edge.getDistributedTo().equals(nodeEngine.getThisAddress())) {
-            // this member is the target of a distribute-to-one edge, handle it as local
-            return localCollectors;
-        } else {
-            // this member sends all the data to one remote member, let's create a sender to that member
-            // that handles all the partitions
-            final OutboundCollector[] allCollectors = {
-                    new ConveyorCollector(senderConveyorMap.get(edge.getDistributedTo()), processorIndex,
-                            ptionArrgmt.getAllPartitions())
-            };
-            return allCollectors;
         }
-    }
-
-    private int[][] getPartitionDistribution(EdgeDef edge, int downstreamParallelism) {
-        if (edge.routingPolicy().equals(RoutingPolicy.PARTITIONED)) {
-            // By "distributed" here we mean that this member processes only a part of the partitions.
-            // In the distribute-to-one case, the target member processes all the partitions. Other
-            // members also think they process all the partitions, but they will not receive any data.
-            boolean distributed = DISTRIBUTE_TO_ALL.equals(edge.getDistributedTo());
-            return ptionArrgmt.assignPartitionsToProcessors(downstreamParallelism, distributed);
-        }
-        return new int[downstreamParallelism][];
+        // the edge is local-partitioned, distribute all the partitions to local processors
+        return ptionArrgmt.assignPartitionsToProcessors(downstreamParallelism, false);
     }
 
     private void createIfAbsentReceiverTasklet(EdgeDef edge,
@@ -565,18 +577,6 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
                        }
                        return addrToTasklet;
                    });
-    }
-
-    /**
-     * Returns true if the edge is actually distributed to a remote member. If
-     * the edge is distributed-to-one and the target is the local member, we
-     * treat it as not distributed.
-     * <p>
-     * Note that EdgeDef.getDistributedTo() always returns null if the job runs
-     * only on a single member.
-     */
-    private boolean isReallyDistributed(EdgeDef edge) {
-        return edge.getDistributedTo() != null && !edge.getDistributedTo().equals(nodeEngine.getThisAddress());
     }
 
     private JetConfig getConfig() {

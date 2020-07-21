@@ -19,6 +19,7 @@ package com.hazelcast.jet.impl.execution.init;
 import com.hazelcast.cluster.Address;
 
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
@@ -113,5 +114,17 @@ class PartitionArrangement {
 
     public int[] getAllPartitions() {
         return allPartitions.get();
+    }
+
+    /**
+     * Returns an assignment where all partitions are assigned to the target
+     * member and no partitions are assigned to other members.
+     */
+    public Map<Address, int[]> distributeToOne(Address target) {
+        Map<Address, int[]> res = new HashMap<>();
+        for (Address address : remotePartitionAssignment.get().keySet()) {
+            res.put(address, address.equals(target) ? getAllPartitions() : new int[0]);
+        }
+        return res;
     }
 }

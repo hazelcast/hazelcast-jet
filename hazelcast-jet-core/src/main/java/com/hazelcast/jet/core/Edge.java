@@ -381,7 +381,7 @@ public class Edge implements IdentifiedDataSerializable {
 
     /**
      * Declares that the edge is local. A local edge only transfers data within
-     * the same member.
+     * the same member, network is not involved. This setting is the default.
      *
      * @see #distributed()
      * @see #distributeTo(Address)
