@@ -17,6 +17,7 @@
 package com.hazelcast.jet.impl.connector;
 
 import com.hazelcast.function.SupplierEx;
+import com.hazelcast.jet.test.IgnoreOnJenkinsWindows;
 import com.hazelcast.test.annotation.NightlyTest;
 import com.rabbitmq.jms.admin.RMQConnectionFactory;
 import org.junit.ClassRule;
@@ -25,7 +26,7 @@ import org.testcontainers.containers.RabbitMQContainer;
 
 import javax.jms.ConnectionFactory;
 
-@Category(NightlyTest.class)
+@Category({NightlyTest.class, IgnoreOnJenkinsWindows.class})
 public class JmsSourceIntegrationTest_RabbitMQ extends JmsSourceIntegrationTestBase {
 
     @ClassRule
