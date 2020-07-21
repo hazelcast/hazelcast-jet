@@ -55,6 +55,7 @@ public class StatefulMappingStressTest extends JetTestSupport {
 
     @Test
     public void mapStateful_stressTest() {
+        assertTrue(false);
         stressTest(
                 streamStageWithKey -> streamStageWithKey.mapStateful(TTL,
                         Object::new,
