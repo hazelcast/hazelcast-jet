@@ -1,5 +1,5 @@
 ---
-title: Distributed Data Structures
+title: Distributed Data Structures temp
 description: Distributed data structures inherited from Hazelcast and how Jet makes use of them.
 ---
 
