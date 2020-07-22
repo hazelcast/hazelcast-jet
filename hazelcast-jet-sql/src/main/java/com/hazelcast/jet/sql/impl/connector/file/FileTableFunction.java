@@ -19,14 +19,13 @@ package com.hazelcast.jet.sql.impl.connector.file;
 import com.hazelcast.internal.util.UuidUtil;
 import com.hazelcast.jet.sql.impl.schema.JetTableFunction;
 import com.hazelcast.jet.sql.impl.schema.JetTableFunctionParameter;
-import com.hazelcast.jet.sql.impl.schema.UnknownStatistic;
 import com.hazelcast.sql.impl.calcite.SqlToQueryType;
 import com.hazelcast.sql.impl.calcite.schema.HazelcastTable;
+import com.hazelcast.sql.impl.calcite.schema.UnknownStatistic;
 import com.hazelcast.sql.impl.schema.ExternalTable.ExternalField;
 import com.hazelcast.sql.impl.schema.Table;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
-import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.schema.FunctionParameter;
 
 import java.lang.reflect.Type;
@@ -37,6 +36,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import static com.hazelcast.jet.impl.util.Util.toList;
 import static com.hazelcast.jet.sql.JetSqlConnector.TO_SERIALIZATION_FORMAT;
 import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.TO_CHARSET;
 import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.TO_DELIMITER;
@@ -64,7 +64,7 @@ public final class FileTableFunction implements JetTableFunction {
 
     private static final String SCHEMA_NAME_FILES = "files";
 
-    public FileTableFunction() {
+    private FileTableFunction() {
     }
 
     @Override
@@ -86,10 +86,10 @@ public final class FileTableFunction implements JetTableFunction {
     public HazelcastTable table(List<Object> arguments, RelDataType rowType) {
         Map<String, String> options = options(arguments);
 
-        List<ExternalField> fields = new ArrayList<>();
-        for (RelDataTypeField relField : rowType.getFieldList()) {
-            fields.add(new ExternalField(relField.getName(), SqlToQueryType.map(relField.getType().getSqlTypeName()), null));
-        }
+        List<ExternalField> fields = toList(
+                rowType.getFieldList(),
+                field -> new ExternalField(field.getName(), SqlToQueryType.map(field.getType().getSqlTypeName()), null)
+        );
 
         return table(options, fields);
     }

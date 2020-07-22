@@ -34,6 +34,7 @@ import com.hazelcast.jet.sql.impl.schema.JetTable;
 import com.hazelcast.jet.sql.impl.validate.JetSqlOperatorTable;
 import com.hazelcast.jet.sql.impl.validate.JetSqlValidator;
 import com.hazelcast.spi.impl.NodeEngine;
+import com.hazelcast.spi.impl.NodeEngineImpl;
 import com.hazelcast.sql.SqlColumnMetadata;
 import com.hazelcast.sql.SqlResult;
 import com.hazelcast.sql.SqlRowMetadata;
@@ -58,22 +59,25 @@ import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Properties;
 import java.util.function.BiFunction;
 
 @SuppressWarnings("unused") // used through reflection
 public class JetSqlBackendImpl implements JetSqlBackend, ManagedService {
 
+    private NodeEngine nodeEngine;
     private JetInstance jetInstance;
     private Map<QueryId, RootResultConsumer> resultConsumerRegistry;
 
     @SuppressWarnings("unused") // used through reflection
     public void initJetInstance(@Nonnull JetInstance jetInstance) {
-        assert this.jetInstance == null;
-        this.jetInstance = jetInstance;
-        HazelcastInstanceImpl hzInstance = (HazelcastInstanceImpl) jetInstance.getHazelcastInstance();
-        JetService jetService = hzInstance.node.nodeEngine.getService(JetService.SERVICE_NAME);
-        resultConsumerRegistry = jetService.getResultConsumerRegistry();
+        this.jetInstance = Objects.requireNonNull(jetInstance);
+
+        this.nodeEngine = ((HazelcastInstanceImpl) jetInstance.getHazelcastInstance()).node.nodeEngine;
+
+        JetService jetService = nodeEngine.getService(JetService.SERVICE_NAME);
+        this.resultConsumerRegistry = jetService.getResultConsumerRegistry();
     }
 
     @Override
@@ -88,11 +92,12 @@ public class JetSqlBackendImpl implements JetSqlBackend, ManagedService {
 
     @Override
     public JetPlan optimizeAndCreatePlan(
-            NodeEngine nodeEngine,
             Object context0,
             Object inputRel0,
             List<String> rootColumnNames
     ) {
+        NodeEngineImpl nodeEngine1 = ((HazelcastInstanceImpl) jetInstance.getHazelcastInstance()).node.nodeEngine;
+
         OptimizerContext context = (OptimizerContext) context0;
         RelNode inputRel = (RelNode) inputRel0;
 
