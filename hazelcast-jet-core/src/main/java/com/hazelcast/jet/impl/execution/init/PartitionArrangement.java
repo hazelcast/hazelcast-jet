@@ -102,9 +102,8 @@ class PartitionArrangement {
      */
     public Map<Address, int[]> remotePartitionAssignmentToOne(Address target) {
         Map<Address, int[]> res = new HashMap<>();
-        res.put(target, allPartitions);
         for (Address address : remotePartitionAssignment.keySet()) {
-            res.putIfAbsent(address, new int[0]);
+            res.put(address, address.equals(target) ? allPartitions : new int[0]);
         }
         return res;
     }
