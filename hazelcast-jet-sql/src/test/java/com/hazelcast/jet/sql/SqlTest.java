@@ -16,9 +16,19 @@
 
 package com.hazelcast.jet.sql;
 
+import com.hazelcast.sql.impl.connector.LocalPartitionedMapConnector;
+import org.junit.Ignore;
 import org.junit.Test;
 
+import java.util.Map;
+
+import static com.hazelcast.sql.impl.connector.SqlConnector.JAVA_SERIALIZATION_FORMAT;
+import static com.hazelcast.sql.impl.connector.SqlKeyValueConnector.TO_KEY_CLASS;
+import static com.hazelcast.sql.impl.connector.SqlKeyValueConnector.TO_SERIALIZATION_KEY_FORMAT;
+import static com.hazelcast.sql.impl.connector.SqlKeyValueConnector.TO_SERIALIZATION_VALUE_FORMAT;
+import static com.hazelcast.sql.impl.connector.SqlKeyValueConnector.TO_VALUE_CLASS;
 import static java.util.Arrays.asList;
+import static java.util.Collections.singletonList;
 
 public class SqlTest extends SqlTestSupport {
 
@@ -31,5 +41,72 @@ public class SqlTest extends SqlTestSupport {
                         new Row((byte) -4)
                 )
         );
+    }
+
+    @Test
+    @Ignore // not yet supported
+    public void supportsCreatingMapFromFile() {
+        String name = generateRandomName();
+
+        assertRowsEventuallyAnyOrder(
+                "CREATE EXTERNAL TABLE " + name + " ("
+                        + "key INT EXTERNAL NAME \"__key\""
+                        + ") TYPE \"" + LocalPartitionedMapConnector.TYPE_NAME + "\" "
+                        + "OPTIONS ("
+                        + "\"" + TO_SERIALIZATION_KEY_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
+                        + ", \"" + TO_KEY_CLASS + "\" '" + Integer.class.getName() + "'"
+                        + ", \"" + TO_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
+                        + ", \"" + TO_VALUE_CLASS + "\" '" + String.class.getName() + "'"
+                        + ") AS "
+                        + "SELECT age, username FROM TABLE ("
+                        + "FILE (format => 'avro', directory => '" + RESOURCES_PATH + "', glob => 'users.avro')"
+                        + ")",
+                singletonList(new Row(-1L)) // TODO: should be affected row count...
+        );
+
+        assertRowsEventuallyAnyOrder(
+                "SELECT key, username FROM " + name,
+                asList(
+                        new Row(0, "User0"),
+                        new Row(1, "User1")
+                )
+        );
+    }
+
+    @Test
+    @Ignore // not yet supported
+    public void supportsCreatingMapFromAnotherMap() {
+        String sourceName = generateRandomName();
+        String destinationName = generateRandomName();
+
+        Map<Integer, String> map = instance().getMap(sourceName);
+        map.put(0, "value-0");
+        map.put(1, "value-1");
+
+        assertRowsEventuallyAnyOrder(
+                "CREATE EXTERNAL TABLE " + destinationName + " ("
+                        + "key VARCHAR EXTERNAL NAME \"__key\""
+                        + ") TYPE \"" + LocalPartitionedMapConnector.TYPE_NAME + "\" "
+                        + "OPTIONS ("
+                        + "\"" + TO_SERIALIZATION_KEY_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
+                        + ", \"" + TO_KEY_CLASS + "\" '" + String.class.getName() + "'"
+                        + ", \"" + TO_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
+                        + ", \"" + TO_VALUE_CLASS + "\" '" + Long.class.getName() + "'"
+                        + ") AS "
+                        + "SELECT this AS \"value\", CAST(__key + 1 AS BIGINT) AS id FROM " + sourceName,
+                singletonList(new Row(-1L)) // TODO: should be affected row count...
+        );
+
+        assertRowsEventuallyAnyOrder(
+                "SELECT key, id FROM " + destinationName,
+                asList(
+                        new Row("value-0", 1L),
+                        new Row("value-1", 2L)
+                )
+        );
+    }
+
+    private static String generateRandomName() {
+        return "pojo_" + randomString().replace('-', '_');
     }
 }
