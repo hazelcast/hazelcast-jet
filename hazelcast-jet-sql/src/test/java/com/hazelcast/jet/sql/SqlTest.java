@@ -59,7 +59,7 @@ public class SqlTest extends SqlTestSupport {
                         + ", \"" + TO_VALUE_CLASS + "\" '" + String.class.getName() + "'"
                         + ") AS "
                         + "SELECT age, username FROM TABLE ("
-                        + "FILE (format => 'avro', directory => '" + RESOURCES_PATH + "', glob => 'users.avro')"
+                        + "FILE ('avro', '" + RESOURCES_PATH + "', 'users.avro')"
                         + ")",
                 singletonList(new Row(-1L)) // TODO: should be affected row count...
         );
@@ -106,7 +106,35 @@ public class SqlTest extends SqlTestSupport {
         );
     }
 
+    @Test
+    @Ignore // not yet supported
+    public void supportsCreatingMapFromValues() {
+        String name = generateRandomName();
+
+        assertRowsEventuallyAnyOrder(
+                "CREATE EXTERNAL TABLE " + name + " ("
+                        + "key TINYINT EXTERNAL NAME \"__key\""
+                        + ") TYPE \"" + LocalPartitionedMapConnector.TYPE_NAME + "\" "
+                        + "OPTIONS ("
+                        + "\"" + TO_SERIALIZATION_KEY_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
+                        + ", \"" + TO_KEY_CLASS + "\" '" + Byte.class.getName() + "'"
+                        + ", \"" + TO_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
+                        + ", \"" + TO_VALUE_CLASS + "\" '" + String.class.getName() + "'"
+                        + ") AS "
+                        + "VALUES (0, 'value-0'), (1, 'value-1')",
+                singletonList(new Row(-1L)) // TODO: should be affected row count...
+        );
+
+        assertRowsEventuallyAnyOrder(
+                "SELECT * FROM " + name,
+                asList(
+                        new Row((byte) 0, "value-0"),
+                        new Row((byte) 1, "value-1")
+                )
+        );
+    }
+
     private static String generateRandomName() {
-        return "pojo_" + randomString().replace('-', '_');
+        return "m_" + randomString().replace('-', '_');
     }
 }
