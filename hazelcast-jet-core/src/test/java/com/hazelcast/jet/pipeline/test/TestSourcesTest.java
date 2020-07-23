@@ -57,7 +57,7 @@ public class TestSourcesTest extends PipelineTestSupport {
         Long[] input = LongStream.range(0, numberOfExpectedValues).boxed().toArray(Long[]::new);
         List<Long> expected = Arrays.asList(input);
 
-        p.readFrom(TestSources.streamSourceLong(itemsPerSecond, 0)).
+        p.readFrom(TestSources.longStream(itemsPerSecond, 0)).
                 withIngestionTimestamps().
                 apply(assertCollectedEventually(timeout, items -> {
                     assertTrue("list should contain at least " + numberOfExpectedValues + " items",

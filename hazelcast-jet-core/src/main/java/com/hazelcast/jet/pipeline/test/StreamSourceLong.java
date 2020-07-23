@@ -20,7 +20,6 @@ import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.core.AppendableTraverser;
 import com.hazelcast.jet.core.EventTimePolicy;
 import com.hazelcast.jet.core.Processor;
-import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.Watermark;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.logging.Logger;
@@ -33,12 +32,13 @@ import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 /**
- * Represents an {@link AbstractProcessor} that indefinitely emits {@code
- * long} values. The purpose of the class is to enable creating a
- * distributed {@link com.hazelcast.jet.pipeline.StreamSource} for
- * high-throughput performance testing. An example usage can be found in
- * {@link TestSources#streamSourceLong(long itemsPerSecond, long
- * initialDelay, int preferredLocalParallelism)}.
+ * Represents an {@link AbstractProcessor} or streaming source that
+ * indefinitely emits {@code long} values at a fixed interval. The source
+ * never emits events from the future, but emits at full-speed otherwise.
+ * The {@code long} values represent unique sequence numbers. The main
+ * purpose of this class is to enable high-throughput performance testing.
+ * An example usage can be found in {@link TestSources#longStream(long
+ * itemsPerSecond, long initialDelay)}.
  *
  * @since 4.3
  */
@@ -68,7 +68,7 @@ public class StreamSourceLong extends AbstractProcessor {
     private long nowNanos;
 
     /**
-     * Creates a stream source for {@code long} values.
+     * Creates a stream source that emits {@code long} values.
      *
      * @param startTime when to start in milliseconds
      * @param itemsPerSecond how many items, i.e., {@code long} values, should be emitted each second
@@ -113,7 +113,9 @@ public class StreamSourceLong extends AbstractProcessor {
      * {@link java.util.logging.Level#FINE}. Always returns false, i.e., never
      * indicates that the source is complete to emit events for a potentially
      * infinite time, which is typical for stream source processors (see {@link
-     * Processor#complete()}).
+     * Processor#complete()}). Values are emitted at a fixed interval. The
+     * source never emit events from the future, but emits at full-speed
+     * otherwise. The {@code long} values represent unique sequence numbers.
      *
      * @return always {@code false} so that this method is called again
      *
@@ -130,18 +132,6 @@ public class StreamSourceLong extends AbstractProcessor {
         return false;
     }
 
-    /**
-     * Emits stream events ({@link com.hazelcast.jet.impl.JetEvent}) according
-     * to the defined rate/schedule. The events contain a {@code long} value
-     * that represents the product of the event counter, {@link
-     * ProcessorMetaSupplier.Context#totalParallelism()}, and {@link
-     * Context#globalProcessorIndex()}. An event is emitted by appending it to
-     * the {@link #traverser}. According the the defined watermark granularity
-     * ({@link #wmGranularity}), watermarks are also appended to the {@link
-     * AppendableTraverser}.
-     *
-     * @since 4.3
-     */
     private void emitEvents() {
         while (emitFromTraverser(traverser) && emitSchedule <= nowNanos) {
             long timestamp = NANOSECONDS.toMillis(emitSchedule) - nanoTimeMillisToCurrentTimeMillis;
@@ -156,12 +146,6 @@ public class StreamSourceLong extends AbstractProcessor {
         }
     }
 
-    /**
-     * Detects hiccups and reports them to the log along with an information
-     * about the global processor index (see {@link Context#globalProcessorIndex()}.
-     *
-     * @since 4.3
-     */
     private void detectAndReportHiccup() {
         long millisSinceLastCall = NANOSECONDS.toMillis(nowNanos - lastCallNanos);
         if (millisSinceLastCall > HICCUP_REPORT_THRESHOLD_MILLIS) {
@@ -170,13 +154,6 @@ public class StreamSourceLong extends AbstractProcessor {
         lastCallNanos = nowNanos;
     }
 
-    /**
-     * Reports the achieved throughput to the log in defined reporting
-     * intervals as number of items/second, including an information about the
-     * global processor index (see {@link Context#globalProcessorIndex()}).
-     *
-     * @since 4.3
-     */
     private void reportThroughput() {
         long nanosSinceLastReport = nowNanos - lastReport;
         if (nanosSinceLastReport < REPORT_PERIOD_NANOS) {
@@ -190,14 +167,6 @@ public class StreamSourceLong extends AbstractProcessor {
                 itemCountSinceLastReport / ((double) nanosSinceLastReport / SECONDS.toNanos(1))));
     }
 
-    /**
-     * Calculates the difference between {@link System#nanoTime()} converted to
-     * milliseconds and {@link System#currentTimeMillis()}.
-     *
-     * @return the calculated time offset/difference
-     *
-     * @since 4.3
-     */
     private static long determineTimeOffset() {
         return NANOSECONDS.toMillis(System.nanoTime()) - System.currentTimeMillis();
     }

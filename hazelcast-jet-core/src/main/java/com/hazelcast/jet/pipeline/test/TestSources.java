@@ -20,7 +20,6 @@ import com.hazelcast.cluster.Address;
 import com.hazelcast.jet.annotation.EvolvingApi;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
-import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.pipeline.BatchSource;
 import com.hazelcast.jet.pipeline.SourceBuilder;
 import com.hazelcast.jet.pipeline.Sources;
@@ -138,11 +137,38 @@ public final class TestSources {
     }
 
     /**
-     * A class used for creating a {@link StreamSource} as in {@link
-     * #itemStream(int itemsPerSecond)}. The desired number of created values
-     * per second as well as the value generator function {@link
-     * GeneratorFunction} need to be set.
+     * Returns a {@link com.hazelcast.jet.pipeline.StreamSource} emitting
+     * {@code long} values that is designed to be used for high-throughput
+     * performance testing. The value creation is distributed across the
+     * cluster and is done using {@link StreamSourceLong}. Values are emitted
+     * at a fixed interval. The source never emits events from the future, but
+     * emits at full-speed otherwise. The {@code long} values represent unique
+     * sequence numbers.
+     *
+     * @param itemsPerSecond how many items should be emitted each second
+     * @param initialDelay initial delay in milliseconds before emitting values
+     *
+     * @return {@link com.hazelcast.jet.pipeline.StreamSource} with {@code long} values
+     *          created in a distributed fashion
+     *
+     * @since 4.3
+     *
      */
+    @Nonnull
+    public static StreamSource<Long> longStream(
+            long itemsPerSecond, long initialDelay
+    ) {
+        return Sources.streamFromProcessorWithWatermarks("longValues",
+                true,
+                eventTimePolicy -> ProcessorMetaSupplier.of(
+                        (Address ignored) -> {
+                            long startTime = System.currentTimeMillis() + initialDelay;
+                            return ProcessorSupplier.of(() ->
+                                    new StreamSourceLong(startTime, itemsPerSecond, eventTimePolicy));
+                        })
+        );
+    }
+
     private static final class ItemStreamSource<T> {
         private static final int MAX_BATCH_SIZE = 1024;
 
@@ -152,26 +178,11 @@ public final class TestSources {
         private long emitSchedule;
         private long sequence;
 
-        /**
-         * Initializes the class.
-         *
-         * @param itemsPerSecond how many items should be emitted each second
-         * @param generator generator function defining how to create
-         *                  values
-         */
         private ItemStreamSource(int itemsPerSecond, GeneratorFunction<? extends T> generator) {
             this.periodNanos = TimeUnit.SECONDS.toNanos(1) / itemsPerSecond;
             this.generator = generator;
         }
 
-        /**
-         * Adds generated values to the passed {@link TimestampedSourceBuffer} as
-         * long as the emit schedule allows and until a maximum of {@link
-         * #MAX_BATCH_SIZE} values are added.
-         *
-         * @param buf buffer to which generated values are added
-         *
-         */
         void fillBuffer(TimestampedSourceBuffer<T> buf) throws Exception {
             long nowNs = System.nanoTime();
             if (emitSchedule == 0) {
@@ -188,58 +199,4 @@ public final class TestSources {
         }
     }
 
-    /**
-     * Returns a {@link com.hazelcast.jet.pipeline.StreamSource} for {@code
-     * long} values. The value creation is distributed across the cluster and
-     * is done using {@link StreamSourceLong}. All {@link StreamSourceLong}
-     * instances are created identically, one per cluster member. The returned
-     * source is designed to be used for high-throughput performance testing.
-     *
-     * @param itemsPerSecond how many items should be emitted each second
-     * @param initialDelay initial delay before emitting values
-     *
-     * @return {@link com.hazelcast.jet.pipeline.StreamSource} with {@code long} values
-     *          created in a distributed fashion
-     *
-     * @since 4.3
-     *
-     */
-    @Nonnull
-    public static StreamSource<Long> streamSourceLong(long itemsPerSecond, long initialDelay) {
-        return streamSourceLong(itemsPerSecond, initialDelay, Vertex.LOCAL_PARALLELISM_USE_DEFAULT);
-    }
-
-    /**
-     * Returns a {@link com.hazelcast.jet.pipeline.StreamSource} for {@code
-     * long} values. The value creation is distributed across the cluster and
-     * is done using {@link StreamSourceLong}. All {@link StreamSourceLong}
-     * instances are created identically, one per cluster member. The returned
-     * source is designed to be used for high-throughput performance testing.
-     *
-     * @param itemsPerSecond how many items should be emitted each second
-     * @param initialDelay initial delay before emitting values
-     * @param preferredLocalParallelism the preferred local parallelism
-     *
-     * @return {@link com.hazelcast.jet.pipeline.StreamSource} with {@code long} values
-     *          created in a distributed fashion
-     *
-     * @since 4.3
-     *
-     */
-    @Nonnull
-    public static StreamSource<Long> streamSourceLong(
-            long itemsPerSecond, long initialDelay, int preferredLocalParallelism
-    ) {
-        return Sources.streamFromProcessorWithWatermarks("longValues",
-                true,
-                eventTimePolicy -> ProcessorMetaSupplier.of(
-                        preferredLocalParallelism,
-                        (Address ignored) -> {
-                            long startTime = System.currentTimeMillis() + initialDelay;
-                            return ProcessorSupplier.of(() ->
-                                    new StreamSourceLong(startTime, itemsPerSecond, eventTimePolicy));
-                        })
-        );
-
-    }
 }
