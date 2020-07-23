@@ -75,8 +75,8 @@ public final class TestSources {
     }
 
     /**
-     * Returns a streaming source which generates events of type {@link
-     * SimpleEvent} at the specified rate infinitely.
+     * Returns a streaming source that generates events of type {@link
+     * SimpleEvent} at the specified rate.
      * <p>
      * The source supports {@linkplain
      * StreamSourceStage#withNativeTimestamps(long) native timestamps}. The
@@ -101,8 +101,8 @@ public final class TestSources {
     }
 
     /**
-     * Returns a streaming source which generates events created by the {@code
-     * generatorFn} at the specified rate infinitely.
+     * Returns a streaming source that generates events created by the {@code
+     * generatorFn} at the specified rate.
      * <p>
      * The source supports {@linkplain
      * StreamSourceStage#withNativeTimestamps(long) native timestamps}. The
@@ -137,34 +137,42 @@ public final class TestSources {
     }
 
     /**
-     * Returns a {@link com.hazelcast.jet.pipeline.StreamSource} emitting
-     * {@code long} values that is designed to be used for high-throughput
-     * performance testing. The value creation is distributed across the
-     * cluster and is done using {@link StreamSourceLong}. Values are emitted
-     * at a fixed interval. The source never emits events from the future, but
-     * emits at full-speed otherwise. The {@code long} values represent unique
-     * sequence numbers.
+     * Returns a {@link com.hazelcast.jet.pipeline.StreamSource} that emits an
+     * ever-increasing sequence of {@code Long} numbers with native timestamps
+     * that are exactly the same amount of time apart, as specified by the
+     * supplied {@code eventsPerSecond} parameter. The source is distributed and
+     * suitable for high-throughput performance testing. It emits the events at
+     * the maximum possible speed, constrained by the invariant that it will
+     * never emit an event whose timestamp is in the future.
+     * <p>
+     * The emission of events is distributed across the parallel processors in
+     * a round-robin fashion: processor 0 emits the first event, processor 1
+     * the second one, and so on. There is no coordination that would prevent
+     * processor 1 from emitting its event before processor 0, though, so this
+     * only applies to the event timestamps.
+     * <p>
+     * Use the {@code initialDelayMillis} parameter to give enough time to the
+     * Jet cluster to initialize the job on the whole cluster before the time
+     * of the first event arrives, so that there is no initial flood of events
+     * from the past. The point of reference is the moment at which the
+     * coordinator node creates the job's execution plan, before sending it out
+     * to the rest of the cluster.
      *
-     * @param itemsPerSecond how many items should be emitted each second
-     * @param initialDelay initial delay in milliseconds before emitting values
-     *
-     * @return {@link com.hazelcast.jet.pipeline.StreamSource} with {@code long} values
-     *          created in a distributed fashion
+     * @param eventsPerSecond the desired event rate
+     * @param initialDelayMillis initial delay in milliseconds before emitting values
      *
      * @since 4.3
      *
      */
     @Nonnull
-    public static StreamSource<Long> longStream(
-            long itemsPerSecond, long initialDelay
-    ) {
+    public static StreamSource<Long> longStream(long eventsPerSecond, long initialDelayMillis) {
         return Sources.streamFromProcessorWithWatermarks("longValues",
                 true,
                 eventTimePolicy -> ProcessorMetaSupplier.of(
                         (Address ignored) -> {
-                            long startTime = System.currentTimeMillis() + initialDelay;
+                            long startTime = System.currentTimeMillis() + initialDelayMillis;
                             return ProcessorSupplier.of(() ->
-                                    new StreamSourceLong(startTime, itemsPerSecond, eventTimePolicy));
+                                    new StreamSourceLong(startTime, eventsPerSecond, eventTimePolicy));
                         })
         );
     }

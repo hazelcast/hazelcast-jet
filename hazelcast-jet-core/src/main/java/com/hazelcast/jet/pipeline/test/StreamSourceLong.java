@@ -32,13 +32,7 @@ import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 /**
- * Represents an {@link AbstractProcessor} or streaming source that
- * indefinitely emits {@code long} values at a fixed interval. The source
- * never emits events from the future, but emits at full-speed otherwise.
- * The {@code long} values represent unique sequence numbers. The main
- * purpose of this class is to enable high-throughput performance testing.
- * An example usage can be found in {@link TestSources#longStream(long
- * itemsPerSecond, long initialDelay)}.
+ * Implements the {@link TestSources#longStream} source.
  *
  * @since 4.3
  */
@@ -67,17 +61,8 @@ public class StreamSourceLong extends AbstractProcessor {
     private long lastEmittedWm;
     private long nowNanos;
 
-    /**
-     * Creates a stream source that emits {@code long} values.
-     *
-     * @param startTime when to start in milliseconds
-     * @param itemsPerSecond how many items, i.e., {@code long} values, should be emitted each second
-     * @param eventTimePolicy which {@linkplain EventTimePolicy} to apply
-     *
-     * @since 4.3
-     */
     @Nonnull
-    public StreamSourceLong(
+    StreamSourceLong(
             long startTime,
             long itemsPerSecond,
             EventTimePolicy<? super Long> eventTimePolicy
@@ -88,15 +73,6 @@ public class StreamSourceLong extends AbstractProcessor {
         this.itemsPerSecond = itemsPerSecond;
     }
 
-    /**
-     * Initializes this stream source by setting various attributes, such as
-     * {@link #totalParallelism}, {@link #globalProcessorIndex}, and the {@link
-     * #emitPeriod}.
-     *
-     * @param context processor context
-     *
-     * @since 4.3
-     */
     @Override
     protected void init(Context context) {
         totalParallelism = context.totalParallelism();
@@ -106,21 +82,6 @@ public class StreamSourceLong extends AbstractProcessor {
                 startTime + SECONDS.toNanos(1) * globalProcessorIndex / itemsPerSecond;
     }
 
-    /**
-     * Invokes the emission of events ({@link #emitEvents()}), the detection
-     * and reporting of hiccups ({@link #detectAndReportHiccup()}), and reports
-     * the throughput ({@link #reportThroughput()}) if the log level is set to
-     * {@link java.util.logging.Level#FINE}. Always returns false, i.e., never
-     * indicates that the source is complete to emit events for a potentially
-     * infinite time, which is typical for stream source processors (see {@link
-     * Processor#complete()}). Values are emitted at a fixed interval. The
-     * source never emit events from the future, but emits at full-speed
-     * otherwise. The {@code long} values represent unique sequence numbers.
-     *
-     * @return always {@code false} so that this method is called again
-     *
-     * @since 4.3
-     */
     @Override
     public boolean complete() {
         nowNanos = System.nanoTime();
