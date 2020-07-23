@@ -50,7 +50,7 @@ public class TestSourcesTest extends PipelineTestSupport {
     }
 
     @Test
-    public void test_streamSourceLong() throws Throwable {
+    public void test_longStream() throws Throwable {
         int itemsPerSecond = 10;
         int timeout = 10;
         int numberOfExpectedValues = timeout * itemsPerSecond;
