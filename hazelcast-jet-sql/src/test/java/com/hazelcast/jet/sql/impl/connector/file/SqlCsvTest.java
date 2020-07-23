@@ -37,23 +37,17 @@ public class SqlCsvTest extends SqlTestSupport {
         String name = createRandomName();
         executeSql("CREATE EXTERNAL TABLE " + name + " ("
                 + "string VARCHAR"
-                + ", character0 CHAR"
-                + ", boolean0 BOOLEAN"
-                + ", byte0 TINYINT"
-                + ", short0 SMALLINT"
-                + ", int0 INT"
-                + ", long0 BIGINT"
-                + ", bigDecimal DEC(10, 1)"
-                + ", bigInteger NUMERIC(5, 0)"
-                + ", float0 REAL"
-                + ", double0 DOUBLE"
-                + ", \"localTime\" TIME"
-                + ", localDate DATE"
-                + ", localDateTime TIMESTAMP"
-                + ", \"date\" TIMESTAMP WITH LOCAL TIME ZONE (\"DATE\")"
-                + ", calendar TIMESTAMP WITH TIME ZONE (\"CALENDAR\")"
-                + ", instant TIMESTAMP WITH LOCAL TIME ZONE"
-                + ", zonedDateTime TIMESTAMP WITH TIME ZONE (\"ZONED_DATE_TIME\")"
+                + ", \"boolean\" BOOLEAN"
+                + ", byte TINYINT"
+                + ", short SMALLINT"
+                + ", \"int\" INT"
+                + ", long BIGINT"
+                + ", \"float\" REAL"
+                + ", \"double\" DOUBLE"
+                + ", \"decimal\" DECIMAL"
+                + ", \"time\" TIME"
+                + ", \"date\" DATE"
+                + ", \"timestamp\" TIMESTAMP"
                 + ", offsetDateTime TIMESTAMP WITH TIME ZONE"
                 + ") TYPE \"" + FileSqlConnector.TYPE_NAME + "\" "
                 + "OPTIONS ("
@@ -67,24 +61,18 @@ public class SqlCsvTest extends SqlTestSupport {
                 "SELECT * FROM " + name,
                 singletonList(new Row(
                         "string"
-                        , "a"
                         , true
                         , (byte) 126
                         , (short) 32766
                         , 2147483646
                         , 9223372036854775806L
-                        , new BigDecimal("9223372036854775.111")
-                        , new BigDecimal("9223372036854775222")
                         , 1234567890.1F
                         , 123451234567890.1
+                        , new BigDecimal("9223372036854775.111")
                         , LocalTime.of(12, 23, 34)
                         , LocalDate.of(2020, 7, 1)
                         , LocalDateTime.of(2020, 7, 1, 12, 23, 34, 100_000_000)
                         , OffsetDateTime.of(2020, 7, 1, 12, 23, 34, 200_000_000, UTC)
-                        , OffsetDateTime.of(2020, 7, 1, 12, 23, 34, 300_000_000, UTC)
-                        , OffsetDateTime.of(2020, 7, 1, 12, 23, 34, 400_000_000, UTC)
-                        , OffsetDateTime.of(2020, 7, 1, 12, 23, 34, 500_000_000, UTC)
-                        , OffsetDateTime.of(2020, 7, 1, 12, 23, 34, 600_000_000, UTC)
                 ))
         );
     }

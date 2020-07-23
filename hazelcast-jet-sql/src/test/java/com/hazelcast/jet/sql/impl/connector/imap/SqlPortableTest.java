@@ -51,7 +51,6 @@ import static com.hazelcast.sql.impl.connector.SqlKeyValueConnector.TO_SERIALIZA
 import static com.hazelcast.sql.impl.connector.SqlKeyValueConnector.TO_VALUE_CLASS_ID;
 import static com.hazelcast.sql.impl.connector.SqlKeyValueConnector.TO_VALUE_CLASS_VERSION;
 import static com.hazelcast.sql.impl.connector.SqlKeyValueConnector.TO_VALUE_FACTORY_ID;
-import static java.lang.String.format;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 import static java.util.Spliterator.ORDERED;
@@ -105,22 +104,14 @@ public class SqlPortableTest extends SqlTestSupport {
         ClassDefinition allTypesValueClassDefinition =
                 new ClassDefinitionBuilder(ALL_TYPES_FACTORY_ID, ALL_TYPES_CLASS_ID, ALL_TYPES_CLASS_VERSION)
                         .addUTFField("string")
-                        .addCharField("character0")
-                        .addCharField("character1")
-                        .addBooleanField("boolean0")
-                        .addBooleanField("boolean1")
-                        .addByteField("byte0")
-                        .addByteField("byte1")
-                        .addShortField("short0")
-                        .addShortField("short1")
-                        .addIntField("int0")
-                        .addIntField("int1")
-                        .addLongField("long0")
-                        .addLongField("long1")
-                        .addFloatField("float0")
-                        .addFloatField("float1")
-                        .addDoubleField("double0")
-                        .addDoubleField("double1")
+                        .addCharField("character")
+                        .addBooleanField("boolean")
+                        .addByteField("byte")
+                        .addShortField("short")
+                        .addIntField("int")
+                        .addLongField("long")
+                        .addFloatField("float")
+                        .addDoubleField("double")
                         .build();
         serializationService.getPortableContext().registerClassDefinition(allTypesValueClassDefinition);
     }
@@ -129,7 +120,7 @@ public class SqlPortableTest extends SqlTestSupport {
     public void supportsNulls() throws IOException {
         String name = createTableWithRandomName();
 
-        executeSql(format("INSERT OVERWRITE %s VALUES (null, null)", name));
+        executeSql("INSERT OVERWRITE " + name + " VALUES (null, null)");
 
         Entry<Data, Data> entry = randomEntryFrom(name);
 
@@ -140,7 +131,7 @@ public class SqlPortableTest extends SqlTestSupport {
         assertThat(valueReader.readUTF("name")).isNull();
 
         assertRowsEventuallyAnyOrder(
-                format("SELECT * FROM %s", name),
+                "SELECT * FROM " + name,
                 singletonList(new Row(0, null))
         );
     }
@@ -149,7 +140,7 @@ public class SqlPortableTest extends SqlTestSupport {
     public void supportsFieldsShadowing() throws IOException {
         String name = createTableWithRandomName();
 
-        executeSql(format("INSERT OVERWRITE %s (id, name) VALUES (1, 'Alice')", name));
+        executeSql("INSERT OVERWRITE " + name + " (id, name) VALUES (1, 'Alice')");
 
         Entry<Data, Data> entry = randomEntryFrom(name);
 
@@ -161,7 +152,7 @@ public class SqlPortableTest extends SqlTestSupport {
         assertThat(valueReader.readUTF("name")).isEqualTo("Alice");
 
         assertRowsEventuallyAnyOrder(
-                format("SELECT * FROM %s", name),
+                "SELECT * FROM " + name,
                 singletonList(new Row(1, "Alice"))
         );
     }
@@ -169,32 +160,23 @@ public class SqlPortableTest extends SqlTestSupport {
     @Test
     public void supportsFieldsMapping() throws IOException {
         String name = generateRandomName();
-        executeSql(format("CREATE EXTERNAL TABLE %s (" +
-                        " key_id INT EXTERNAL NAME \"__key.id\"," +
-                        " value_id INT EXTERNAL NAME \"this.id\"" +
-                        ") TYPE \"%s\" " +
-                        "OPTIONS (" +
-                        " \"%s\" '%s'," +
-                        " \"%s\" '%s'," +
-                        " \"%s\" '%s'," +
-                        " \"%s\" '%s'," +
-                        " \"%s\" '%s'," +
-                        " \"%s\" '%s'," +
-                        " \"%s\" '%s'," +
-                        " \"%s\" '%s'" +
-                        ")",
-                name, LocalPartitionedMapConnector.TYPE_NAME,
-                TO_SERIALIZATION_KEY_FORMAT, PORTABLE_SERIALIZATION_FORMAT,
-                TO_KEY_FACTORY_ID, PERSON_ID_FACTORY_ID,
-                TO_KEY_CLASS_ID, PERSON_ID_CLASS_ID,
-                TO_KEY_CLASS_VERSION, PERSON_ID_CLASS_VERSION,
-                TO_SERIALIZATION_VALUE_FORMAT, PORTABLE_SERIALIZATION_FORMAT,
-                TO_VALUE_FACTORY_ID, PERSON_FACTORY_ID,
-                TO_VALUE_CLASS_ID, PERSON_CLASS_ID,
-                TO_VALUE_CLASS_VERSION, PERSON_CLASS_VERSION
-        ));
+        executeSql("CREATE EXTERNAL TABLE " + name + " ("
+                + "key_id INT EXTERNAL NAME \"__key.id\""
+                + ", value_id INT EXTERNAL NAME \"this.id\""
+                + ") TYPE \"" + LocalPartitionedMapConnector.TYPE_NAME + "\" "
+                + "OPTIONS ("
+                + "\"" + TO_SERIALIZATION_KEY_FORMAT + "\" '" + PORTABLE_SERIALIZATION_FORMAT + "'"
+                + ", \"" + TO_KEY_FACTORY_ID + "\" '" + PERSON_ID_FACTORY_ID + "'"
+                + ", \"" + TO_KEY_CLASS_ID + "\" '" + PERSON_ID_CLASS_ID + "'"
+                + ", \"" + TO_KEY_CLASS_VERSION + "\" '" + PERSON_ID_CLASS_VERSION + "'"
+                + ", \"" + TO_SERIALIZATION_VALUE_FORMAT + "\" '" + PORTABLE_SERIALIZATION_FORMAT + "'"
+                + ", \"" + TO_VALUE_FACTORY_ID + "\" '" + PERSON_FACTORY_ID + "'"
+                + ", \"" + TO_VALUE_CLASS_ID + "\" '" + PERSON_CLASS_ID + "'"
+                + ", \"" + TO_VALUE_CLASS_VERSION + "\" '" + PERSON_CLASS_VERSION + "'"
+                + ")"
+        );
 
-        executeSql(format("INSERT OVERWRITE %s (value_id, key_id, name) VALUES (2, 1, 'Alice')", name));
+        executeSql("INSERT OVERWRITE " + name + " (value_id, key_id, name) VALUES (2, 1, 'Alice')");
 
         Entry<Data, Data> entry = randomEntryFrom(name);
 
@@ -206,7 +188,7 @@ public class SqlPortableTest extends SqlTestSupport {
         assertThat(valueReader.readUTF("name")).isEqualTo("Alice");
 
         assertRowsEventuallyAnyOrder(
-                format("SELECT key_id, value_id, name FROM %s", name),
+                "SELECT key_id, value_id, name FROM " + name,
                 singletonList(new Row(1, 2, "Alice"))
         );
     }
@@ -216,38 +198,29 @@ public class SqlPortableTest extends SqlTestSupport {
         String name = createTableWithRandomName();
 
         // insert initial record
-        executeSql(format("INSERT OVERWRITE %s VALUES (1, 'Alice')", name));
+        executeSql("INSERT OVERWRITE " + name + " VALUES (1, 'Alice')");
 
         // alter schema
-        executeSql(format("CREATE OR REPLACE EXTERNAL TABLE %s " +
-                        "TYPE \"%s\" " +
-                        "OPTIONS (" +
-                        " \"%s\" '%s'," +
-                        " \"%s\" '%s'," +
-                        " \"%s\" '%s'," +
-                        " \"%s\" '%s'," +
-                        " \"%s\" '%s'," +
-                        " \"%s\" '%s'," +
-                        " \"%s\" '%s'," +
-                        " \"%s\" '%s'" +
-                        ")",
-                name, LocalPartitionedMapConnector.TYPE_NAME,
-                TO_SERIALIZATION_KEY_FORMAT, PORTABLE_SERIALIZATION_FORMAT,
-                TO_KEY_FACTORY_ID, PERSON_ID_FACTORY_ID,
-                TO_KEY_CLASS_ID, PERSON_ID_CLASS_ID,
-                TO_KEY_CLASS_VERSION, PERSON_ID_CLASS_VERSION,
-                TO_SERIALIZATION_VALUE_FORMAT, PORTABLE_SERIALIZATION_FORMAT,
-                TO_VALUE_FACTORY_ID, PERSON_FACTORY_ID,
-                TO_VALUE_CLASS_ID, PERSON_CLASS_ID,
-                TO_VALUE_CLASS_VERSION, PERSON_CLASS_VERSION + 1
-        ));
+        executeSql("CREATE OR REPLACE EXTERNAL TABLE " + name + " "
+                + "TYPE \"" + LocalPartitionedMapConnector.TYPE_NAME + "\" "
+                + "OPTIONS ("
+                + "\"" + TO_SERIALIZATION_KEY_FORMAT + "\" '" + PORTABLE_SERIALIZATION_FORMAT + "'"
+                + ", \"" + TO_KEY_FACTORY_ID + "\" '" + PERSON_ID_FACTORY_ID + "'"
+                + ", \"" + TO_KEY_CLASS_ID + "\" '" + PERSON_ID_CLASS_ID + "'"
+                + ", \"" + TO_KEY_CLASS_VERSION + "\" '" + PERSON_ID_CLASS_VERSION + "'"
+                + ", \"" + TO_SERIALIZATION_VALUE_FORMAT + "\" '" + PORTABLE_SERIALIZATION_FORMAT + "'"
+                + ", \"" + TO_VALUE_FACTORY_ID + "\" '" + PERSON_FACTORY_ID + "'"
+                + ", \"" + TO_VALUE_CLASS_ID + "\" '" + PERSON_CLASS_ID + "'"
+                + ", \"" + TO_VALUE_CLASS_VERSION + "\" '" + (PERSON_CLASS_VERSION + 1) + "'"
+                + ")"
+        );
 
         // insert record against new schema/class definition
-        executeSql(format("INSERT OVERWRITE %s VALUES (2, 'Bob', 123456789)", name));
+        executeSql("INSERT OVERWRITE " + name + " VALUES (2, 'Bob', 123456789)");
 
         // assert both - initial & evolved - records are correctly read
         assertRowsEventuallyAnyOrder(
-                format("SELECT * FROM %s", name),
+                "SELECT * FROM " + name,
                 asList(
                         new Row(1, "Alice", null),
                         new Row(2, "Bob", 123456789L)
@@ -258,63 +231,44 @@ public class SqlPortableTest extends SqlTestSupport {
     @Test
     public void supportsFieldsExtensions() {
         String name = generateRandomName();
-        executeSql(format("CREATE OR REPLACE EXTERNAL TABLE %s " +
-                        "TYPE \"%s\" " +
-                        "OPTIONS (" +
-                        " \"%s\" '%s'," +
-                        " \"%s\" '%s'," +
-                        " \"%s\" '%s'," +
-                        " \"%s\" '%s'," +
-                        " \"%s\" '%s'," +
-                        " \"%s\" '%s'," +
-                        " \"%s\" '%s'," +
-                        " \"%s\" '%s'" +
-                        ")",
-                name, LocalPartitionedMapConnector.TYPE_NAME,
-                TO_SERIALIZATION_KEY_FORMAT, PORTABLE_SERIALIZATION_FORMAT,
-                TO_KEY_FACTORY_ID, PERSON_ID_FACTORY_ID,
-                TO_KEY_CLASS_ID, PERSON_ID_CLASS_ID,
-                TO_KEY_CLASS_VERSION, PERSON_ID_CLASS_VERSION,
-                TO_SERIALIZATION_VALUE_FORMAT, PORTABLE_SERIALIZATION_FORMAT,
-                TO_VALUE_FACTORY_ID, PERSON_FACTORY_ID,
-                TO_VALUE_CLASS_ID, PERSON_CLASS_ID,
-                TO_VALUE_CLASS_VERSION, PERSON_CLASS_VERSION + 1
-        ));
+        executeSql("CREATE OR REPLACE EXTERNAL TABLE " + name + " "
+                + "TYPE \"" + LocalPartitionedMapConnector.TYPE_NAME + "\" "
+                + "OPTIONS ( \"" + TO_SERIALIZATION_KEY_FORMAT + "\" '" + PORTABLE_SERIALIZATION_FORMAT + "'"
+                + ", \"" + TO_KEY_FACTORY_ID + "\" '" + PERSON_ID_FACTORY_ID + "'"
+                + ", \"" + TO_KEY_CLASS_ID + "\" '" + PERSON_ID_CLASS_ID + "'"
+                + ", \"" + TO_KEY_CLASS_VERSION + "\" '" + PERSON_ID_CLASS_VERSION + "'"
+                + ", \"" + TO_SERIALIZATION_VALUE_FORMAT + "\" '" + PORTABLE_SERIALIZATION_FORMAT + "'"
+                + ", \"" + TO_VALUE_FACTORY_ID + "\" '" + PERSON_FACTORY_ID + "'"
+                + ", \"" + TO_VALUE_CLASS_ID + "\" '" + PERSON_CLASS_ID + "'"
+                + ", \"" + TO_VALUE_CLASS_VERSION + "\" '" + (PERSON_CLASS_VERSION + 1) + "'"
+                + ")"
+        );
 
         // insert initial record
-        executeSql(format("INSERT OVERWRITE %s VALUES (1, 'Alice', 123456789)", name));
+        executeSql("INSERT OVERWRITE " + name + " VALUES (1, 'Alice', 123456789)");
 
         // alter schema
-        executeSql(format("CREATE OR REPLACE EXTERNAL TABLE %s (" +
-                        " ssn BIGINT" +
-                        ") TYPE \"%s\" " +
-                        "OPTIONS (" +
-                        " \"%s\" '%s'," +
-                        " \"%s\" '%s'," +
-                        " \"%s\" '%s'," +
-                        " \"%s\" '%s'," +
-                        " \"%s\" '%s'," +
-                        " \"%s\" '%s'," +
-                        " \"%s\" '%s'," +
-                        " \"%s\" '%s'" +
-                        ")",
-                name, LocalPartitionedMapConnector.TYPE_NAME,
-                TO_SERIALIZATION_KEY_FORMAT, PORTABLE_SERIALIZATION_FORMAT,
-                TO_KEY_FACTORY_ID, PERSON_ID_FACTORY_ID,
-                TO_KEY_CLASS_ID, PERSON_ID_CLASS_ID,
-                TO_KEY_CLASS_VERSION, PERSON_ID_CLASS_VERSION,
-                TO_SERIALIZATION_VALUE_FORMAT, PORTABLE_SERIALIZATION_FORMAT,
-                TO_VALUE_FACTORY_ID, PERSON_FACTORY_ID,
-                TO_VALUE_CLASS_ID, PERSON_CLASS_ID,
-                TO_VALUE_CLASS_VERSION, PERSON_CLASS_VERSION
-        ));
+        executeSql("CREATE OR REPLACE EXTERNAL TABLE " + name + " ("
+                + "ssn BIGINT"
+                + ") TYPE \"" + LocalPartitionedMapConnector.TYPE_NAME + "\" "
+                + "OPTIONS ("
+                + "\"" + TO_SERIALIZATION_KEY_FORMAT + "\" '" + PORTABLE_SERIALIZATION_FORMAT + "'"
+                + ", \"" + TO_KEY_FACTORY_ID + "\" '" + PERSON_ID_FACTORY_ID + "'"
+                + ", \"" + TO_KEY_CLASS_ID + "\" '" + PERSON_ID_CLASS_ID + "'"
+                + ", \"" + TO_KEY_CLASS_VERSION + "\" '" + PERSON_ID_CLASS_VERSION + "'"
+                + ", \"" + TO_SERIALIZATION_VALUE_FORMAT + "\" '" + PORTABLE_SERIALIZATION_FORMAT + "'"
+                + ", \"" + TO_VALUE_FACTORY_ID + "\" '" + PERSON_FACTORY_ID + "'"
+                + ", \"" + TO_VALUE_CLASS_ID + "\" '" + PERSON_CLASS_ID + "'"
+                + ", \"" + TO_VALUE_CLASS_VERSION + "\" '" + PERSON_CLASS_VERSION + "'"
+                + ")"
+        );
 
         // insert record against new schema/class definition
-        executeSql(format("INSERT OVERWRITE %s VALUES (2, 'Bob', null)", name));
+        executeSql("INSERT OVERWRITE " + name + " VALUES (2, 'Bob', null)");
 
         // assert both - initial & evolved - records are correctly read
         assertRowsEventuallyAnyOrder(
-                format("SELECT * FROM %s", name),
+                "SELECT * FROM " + name,
                 asList(
                         new Row(1, "Alice", 123456789L),
                         new Row(2, "Bob", null)
@@ -325,93 +279,62 @@ public class SqlPortableTest extends SqlTestSupport {
     @Test
     public void supportsAllTypes() throws IOException {
         String name = generateRandomName();
-        executeSql(format("CREATE EXTERNAL TABLE %s " +
-                        "TYPE \"%s\" " +
-                        "OPTIONS (" +
-                        " \"%s\" '%s'," +
-                        " \"%s\" '%s'," +
-                        " \"%s\" '%s'," +
-                        " \"%s\" '%s'," +
-                        " \"%s\" '%s'," +
-                        " \"%s\" '%s'" +
-                        ")",
-                name, LocalPartitionedMapConnector.TYPE_NAME,
-                TO_SERIALIZATION_KEY_FORMAT, JAVA_SERIALIZATION_FORMAT,
-                TO_KEY_CLASS, BigInteger.class.getName(),
-                TO_SERIALIZATION_VALUE_FORMAT, PORTABLE_SERIALIZATION_FORMAT,
-                TO_VALUE_FACTORY_ID, ALL_TYPES_FACTORY_ID,
-                TO_VALUE_CLASS_ID, ALL_TYPES_CLASS_ID,
-                TO_VALUE_CLASS_VERSION, ALL_TYPES_CLASS_VERSION
-        ));
+        executeSql("CREATE EXTERNAL TABLE " + name + " "
+                + "TYPE \"" + LocalPartitionedMapConnector.TYPE_NAME + "\" "
+                + "OPTIONS ("
+                + "\"" + TO_SERIALIZATION_KEY_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
+                + ", \"" + TO_KEY_CLASS + "\" '" + BigInteger.class.getName() + "'"
+                + ", \"" + TO_SERIALIZATION_VALUE_FORMAT + "\" '" + PORTABLE_SERIALIZATION_FORMAT + "'"
+                + ", \"" + TO_VALUE_FACTORY_ID + "\" '" + ALL_TYPES_FACTORY_ID + "'"
+                + ", \"" + TO_VALUE_CLASS_ID + "\" '" + ALL_TYPES_CLASS_ID + "'"
+                + ", \"" + TO_VALUE_CLASS_VERSION + "\" '" + ALL_TYPES_CLASS_VERSION + "'"
+                + ")"
+        );
 
-        executeSql(format("INSERT OVERWRITE %s VALUES (" +
-                "13, --key\n" +
-                "'string', --varchar\n" +
-                "'a', --character\n" +
-                "'b',\n" +
-                "true, --boolean\n" +
-                "false,\n" +
-                "126, --byte\n" +
-                "127, \n" +
-                "32766, --short\n" +
-                "32767, \n" +
-                "2147483646, --int \n" +
-                "2147483647,\n" +
-                "9223372036854775806, --long\n" +
-                "9223372036854775807,\n" +
-                // TODO: BigDecimal/BigDecimal types when/if supported
-                "1234567890.1, --float\n" +
-                "1234567890.2, \n" +
-                "123451234567890.1, --double\n" +
-                "123451234567890.2\n" +
+        executeSql("INSERT OVERWRITE " + name + " VALUES ("
+                + "13"
+                + ", 'string'"
+                + ", 'a'"
+                + ", true"
+                + ", 126"
+                + ", 32766"
+                + ", 2147483646"
+                + ", 9223372036854775806"
+                + ", 1234567890.1"
+                + ", 123451234567890.1"
+                // TODO: BigDecimal types when/if supported
                 // TODO: temporal types when/if supported
-                ")", name
-        ));
+                + ")"
+        );
 
         PortableReader allTypesReader = serializationService
                 .createPortableReader(randomEntryFrom(name).getValue());
         assertThat(allTypesReader.readUTF("string")).isEqualTo("string");
-        assertThat(allTypesReader.readChar("character0")).isEqualTo('a');
-        assertThat(allTypesReader.readChar("character1")).isEqualTo('b');
-        assertThat(allTypesReader.readBoolean("boolean0")).isTrue();
-        assertThat(allTypesReader.readBoolean("boolean1")).isFalse();
-        assertThat(allTypesReader.readByte("byte0")).isEqualTo((byte) 126);
-        assertThat(allTypesReader.readByte("byte1")).isEqualTo((byte) 127);
-        assertThat(allTypesReader.readShort("short0")).isEqualTo((short) 32766);
-        assertThat(allTypesReader.readShort("short1")).isEqualTo((short) 32767);
-        assertThat(allTypesReader.readInt("int0")).isEqualTo(2147483646);
-        assertThat(allTypesReader.readInt("int1")).isEqualTo(2147483647);
-        assertThat(allTypesReader.readLong("long0")).isEqualTo(9223372036854775806L);
-        assertThat(allTypesReader.readLong("long1")).isEqualTo(9223372036854775807L);
+        assertThat(allTypesReader.readChar("character")).isEqualTo('a');
+        assertThat(allTypesReader.readBoolean("boolean")).isTrue();
+        assertThat(allTypesReader.readByte("byte")).isEqualTo((byte) 126);
+        assertThat(allTypesReader.readShort("short")).isEqualTo((short) 32766);
+        assertThat(allTypesReader.readInt("int")).isEqualTo(2147483646);
+        assertThat(allTypesReader.readLong("long")).isEqualTo(9223372036854775806L);
+        assertThat(allTypesReader.readFloat("float")).isEqualTo(1234567890.1F);
+        assertThat(allTypesReader.readDouble("double")).isEqualTo(123451234567890.1D);
         // TODO: assert BigDecimal/BigDecimal types when/if supported
-        assertThat(allTypesReader.readFloat("float0")).isEqualTo(1234567890.1F);
-        assertThat(allTypesReader.readFloat("float1")).isEqualTo(1234567890.2F);
-        assertThat(allTypesReader.readDouble("double0")).isEqualTo(123451234567890.1D);
-        assertThat(allTypesReader.readDouble("double1")).isEqualTo(123451234567890.2D);
         // TODO: assert temporal types when/if supported
 
         assertRowsEventuallyAnyOrder(
-                format("SELECT * FROM %s", name),
+                "SELECT * FROM " + name,
                 singletonList(new Row(
                         BigDecimal.valueOf(13),
                         "string",
                         "a",
-                        "b",
                         true,
-                        false,
                         (byte) 126,
-                        (byte) 127,
                         (short) 32766,
-                        (short) 32767,
                         2147483646,
-                        2147483647,
                         9223372036854775806L,
-                        9223372036854775807L,
-                        // TODO: assert BigDecimal/BigDecimal types when/if supported
                         1234567890.1F,
-                        1234567890.2F,
-                        123451234567890.1D,
-                        123451234567890.2D
+                        123451234567890.1D
+                        // TODO: assert BigDecimal/BigDecimal types when/if supported
                         // TODO: assert temporal types when/if supported
                 ))
         );
@@ -419,28 +342,19 @@ public class SqlPortableTest extends SqlTestSupport {
 
     private static String createTableWithRandomName() {
         String name = generateRandomName();
-        executeSql(format("CREATE EXTERNAL TABLE %s " +
-                        "TYPE \"%s\" " +
-                        "OPTIONS (" +
-                        " \"%s\" '%s'," +
-                        " \"%s\" '%s'," +
-                        " \"%s\" '%s'," +
-                        " \"%s\" '%s'," +
-                        " \"%s\" '%s'," +
-                        " \"%s\" '%s'," +
-                        " \"%s\" '%s'," +
-                        " \"%s\" '%s'" +
-                        ")",
-                name, LocalPartitionedMapConnector.TYPE_NAME,
-                TO_SERIALIZATION_KEY_FORMAT, PORTABLE_SERIALIZATION_FORMAT,
-                TO_KEY_FACTORY_ID, PERSON_ID_FACTORY_ID,
-                TO_KEY_CLASS_ID, PERSON_ID_CLASS_ID,
-                TO_KEY_CLASS_VERSION, PERSON_ID_CLASS_VERSION,
-                TO_SERIALIZATION_VALUE_FORMAT, PORTABLE_SERIALIZATION_FORMAT,
-                TO_VALUE_FACTORY_ID, PERSON_FACTORY_ID,
-                TO_VALUE_CLASS_ID, PERSON_CLASS_ID,
-                TO_VALUE_CLASS_VERSION, PERSON_CLASS_VERSION
-        ));
+        executeSql("CREATE EXTERNAL TABLE " + name + " "
+                + "TYPE \"" + LocalPartitionedMapConnector.TYPE_NAME + "\" "
+                + "OPTIONS ("
+                + "\"" + TO_SERIALIZATION_KEY_FORMAT + "\" '" + PORTABLE_SERIALIZATION_FORMAT + "'"
+                + ", \"" + TO_KEY_FACTORY_ID + "\" '" + PERSON_ID_FACTORY_ID + "'"
+                + ", \"" + TO_KEY_CLASS_ID + "\" '" + PERSON_ID_CLASS_ID + "'"
+                + ", \"" + TO_KEY_CLASS_VERSION + "\" '" + PERSON_ID_CLASS_VERSION + "'"
+                + ", \"" + TO_SERIALIZATION_VALUE_FORMAT + "\" '" + PORTABLE_SERIALIZATION_FORMAT + "'"
+                + ", \"" + TO_VALUE_FACTORY_ID + "\" '" + PERSON_FACTORY_ID + "'"
+                + ", \"" + TO_VALUE_CLASS_ID + "\" '" + PERSON_CLASS_ID + "'"
+                + ", \"" + TO_VALUE_CLASS_VERSION + "\" '" + PERSON_CLASS_VERSION + "'"
+                + ")"
+        );
         return name;
     }
 
@@ -455,14 +369,14 @@ public class SqlPortableTest extends SqlTestSupport {
         MapServiceContext context = service.getMapServiceContext();
 
         return Arrays.stream(context.getPartitionContainers())
-                .map(partitionContainer -> partitionContainer.getExistingRecordStore(mapName))
-                .filter(Objects::nonNull)
-                .flatMap(store -> {
-                    Iterator<Entry<Data, Record>> iterator = store.iterator();
-                    return stream(spliteratorUnknownSize(iterator, ORDERED), false);
-                })
-                .map(entry -> entry(entry.getKey(), (Data) entry.getValue().getValue()))
-                .findFirst()
-                .get();
+                     .map(partitionContainer -> partitionContainer.getExistingRecordStore(mapName))
+                     .filter(Objects::nonNull)
+                     .flatMap(store -> {
+                         Iterator<Entry<Data, Record>> iterator = store.iterator();
+                         return stream(spliteratorUnknownSize(iterator, ORDERED), false);
+                     })
+                     .map(entry -> entry(entry.getKey(), (Data) entry.getValue().getValue()))
+                     .findFirst()
+                     .get();
     }
 }

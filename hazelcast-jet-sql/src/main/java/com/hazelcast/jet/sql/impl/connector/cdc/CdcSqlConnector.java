@@ -48,7 +48,7 @@ import static com.hazelcast.jet.core.processor.Processors.mapP;
 import static com.hazelcast.jet.core.processor.SourceProcessors.convenientTimestampedSourceP;
 import static com.hazelcast.jet.impl.util.Util.toList;
 import static com.hazelcast.jet.sql.impl.expression.ExpressionUtil.evaluate;
-import static com.hazelcast.sql.impl.type.QueryDataType.VARCHAR_CHARACTER;
+import static com.hazelcast.sql.impl.type.QueryDataType.VARCHAR;
 
 public class CdcSqlConnector implements JetSqlConnector {
 
@@ -87,8 +87,8 @@ public class CdcSqlConnector implements JetSqlConnector {
                                                          .orElse(null);
         if (operationTypeField == null) {
             throw new IllegalStateException(OPERATION + " column is required");
-        } else if (!VARCHAR_CHARACTER.equals(operationTypeField.type())) {
-            throw new IllegalArgumentException(OPERATION + " column must be of " + VARCHAR_CHARACTER + " type");
+        } else if (!VARCHAR.equals(operationTypeField.type())) {
+            throw new IllegalArgumentException(OPERATION + " column must be of " + VARCHAR + " type");
         }
 
         Properties cdcProperties = new Properties();
@@ -153,19 +153,19 @@ public class CdcSqlConnector implements JetSqlConnector {
                 : (Expression<Boolean>) ConstantExpression.create(true, QueryDataType.BOOLEAN);
 
         return record -> {
-            char operation;
+            String operation;
             switch (record.operation()) {
                 case SYNC:
-                    operation = 's';
+                    operation = "s";
                     break;
                 case INSERT:
-                    operation = 'c';
+                    operation = "c";
                     break;
                 case UPDATE:
-                    operation = 'u';
+                    operation = "u";
                     break;
                 case DELETE:
-                    operation = 'd';
+                    operation = "d";
                     break;
                 case UNSPECIFIED:
                 default:

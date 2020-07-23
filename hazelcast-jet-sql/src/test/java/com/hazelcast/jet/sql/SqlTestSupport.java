@@ -24,6 +24,8 @@ import org.junit.BeforeClass;
 
 import javax.annotation.Nonnull;
 import java.nio.file.Paths;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -38,6 +40,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
+import static java.time.ZoneId.systemDefault;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public abstract class SqlTestSupport extends SimpleTestInClusterSupport {
@@ -112,6 +115,10 @@ public abstract class SqlTestSupport extends SimpleTestInClusterSupport {
 
         // return whichever rows we've collected so far
         return new ArrayList<>(rows);
+    }
+
+    protected static ZoneOffset localOffset() {
+        return systemDefault().getRules().getOffset(LocalDateTime.now());
     }
 
     protected static final class Row {

@@ -44,7 +44,7 @@ public class SqlPrimitiveTest extends SqlTestSupport {
 
         assertMapEventually(
                 name,
-                format("INSERT OVERWRITE %s SELECT * FROM %s", name, source.getName()),
+                "INSERT OVERWRITE " + name + " SELECT * FROM " + source.getName(),
                 createMap(0, "value-0", 1, "value-1")
         );
     }
@@ -55,7 +55,7 @@ public class SqlPrimitiveTest extends SqlTestSupport {
 
         assertMapEventually(
                 name,
-                format("INSERT OVERWRITE %s (this, __key) VALUES ('2', 1), ('4', 3)", name),
+                "INSERT OVERWRITE " + name + " (this, __key) VALUES ('2', 1), ('4', 3)",
                 createMap(1, "2", 3, "4")
         );
     }
@@ -66,7 +66,7 @@ public class SqlPrimitiveTest extends SqlTestSupport {
 
         assertMapEventually(
                 name,
-                format("INSERT OVERWRITE %s (__key, this) VALUES (CAST(0 + 1 AS INT), 2)", name),
+                "INSERT OVERWRITE " + name + " (__key, this) VALUES (CAST(0 + 1 AS INT), 2)",
                 createMap(1, "2")
         );
     }
@@ -78,7 +78,7 @@ public class SqlPrimitiveTest extends SqlTestSupport {
 
         assertMapEventually(
                 name,
-                format("INSERT OVERWRITE %s (this, __key) VALUES ('2', 1), ('4', 3 + 0)", name),
+                "INSERT OVERWRITE " + name + " (this, __key) VALUES ('2', 1), ('4', 3 + 0)",
                 createMap(1, "2", 3, "4")
         );
     }
@@ -87,22 +87,17 @@ public class SqlPrimitiveTest extends SqlTestSupport {
     public void supportsFieldsMapping() {
         String name = generateRandomName();
 
-        executeSql(format("CREATE EXTERNAL TABLE %s (" +
-                        " id INT EXTERNAL NAME __key," +
-                        " name VARCHAR EXTERNAL NAME this" +
-                        ") TYPE \"%s\" " +
-                        "OPTIONS (" +
-                        " \"%s\" '%s'," +
-                        " \"%s\" '%s'," +
-                        " \"%s\" '%s'," +
-                        " \"%s\" '%s'" +
-                        ")",
-                name, LocalPartitionedMapConnector.TYPE_NAME,
-                TO_SERIALIZATION_KEY_FORMAT, JAVA_SERIALIZATION_FORMAT,
-                TO_KEY_CLASS, Integer.class.getName(),
-                TO_SERIALIZATION_VALUE_FORMAT, JAVA_SERIALIZATION_FORMAT,
-                TO_VALUE_CLASS, String.class.getName()
-        ));
+        executeSql("CREATE EXTERNAL TABLE " + name + " ("
+                + "id INT EXTERNAL NAME __key"
+                + ", name VARCHAR EXTERNAL NAME this"
+                + ") TYPE \"" + LocalPartitionedMapConnector.TYPE_NAME + "\" "
+                + "OPTIONS ("
+                + "\"" + TO_SERIALIZATION_KEY_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
+                + ", \"" + TO_KEY_CLASS + "\" '" + Integer.class.getName() + "'"
+                + ", \"" + TO_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
+                + ", \"" + TO_VALUE_CLASS + "\" '" + String.class.getName() + "'"
+                + ")"
+        );
 
         assertMapEventually(
                 name,
@@ -115,28 +110,20 @@ public class SqlPrimitiveTest extends SqlTestSupport {
     public void supportsOnlyInsertOverwrite() {
         String name = createTableWithRandomName();
 
-        assertThatThrownBy(
-                () -> executeSql(format("INSERT INTO %s (__key, this) VALUES (1, '2')", name))
-        ).hasMessageContaining("Only INSERT OVERWRITE clause is supported for IMapSqlConnector");
+        assertThatThrownBy(() -> executeSql("INSERT INTO " + name + " (__key, this) VALUES (1, '2')"))
+                .hasMessageContaining("Only INSERT OVERWRITE clause is supported for IMapSqlConnector");
     }
 
     private static String createTableWithRandomName() {
         String name = generateRandomName();
-        executeSql(
-                format("CREATE EXTERNAL TABLE %s " +
-                                "TYPE \"%s\" " +
-                                "OPTIONS (" +
-                                " \"%s\" '%s'," +
-                                " \"%s\" '%s'," +
-                                " \"%s\" '%s'," +
-                                " \"%s\" '%s'" +
-                                ")",
-                        name, LocalPartitionedMapConnector.TYPE_NAME,
-                        TO_SERIALIZATION_KEY_FORMAT, JAVA_SERIALIZATION_FORMAT,
-                        TO_KEY_CLASS, Integer.class.getName(),
-                        TO_SERIALIZATION_VALUE_FORMAT, JAVA_SERIALIZATION_FORMAT,
-                        TO_VALUE_CLASS, String.class.getName()
-                )
+        executeSql("CREATE EXTERNAL TABLE " + name + " "
+                + "TYPE \"" + LocalPartitionedMapConnector.TYPE_NAME + "\" "
+                + "OPTIONS ("
+                + "\"" + TO_SERIALIZATION_KEY_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
+                + ", \"" + TO_KEY_CLASS + "\" '" + Integer.class.getName() + "'"
+                + ", \"" + TO_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
+                + ", \"" + TO_VALUE_CLASS + "\" '" + String.class.getName() + "'"
+                + ")"
         );
         return name;
     }

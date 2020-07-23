@@ -42,7 +42,6 @@ import static com.hazelcast.sql.impl.connector.SqlKeyValueConnector.TO_KEY_CLASS
 import static com.hazelcast.sql.impl.connector.SqlKeyValueConnector.TO_SERIALIZATION_KEY_FORMAT;
 import static com.hazelcast.sql.impl.connector.SqlKeyValueConnector.TO_SERIALIZATION_VALUE_FORMAT;
 import static com.hazelcast.sql.impl.connector.SqlKeyValueConnector.TO_VALUE_CLASS;
-import static java.lang.String.format;
 import static java.time.Instant.ofEpochMilli;
 import static java.time.ZoneId.systemDefault;
 import static java.time.ZoneOffset.UTC;
@@ -58,11 +57,11 @@ public class SqlPojoTest extends SqlTestSupport {
 
         assertMapEventually(
                 name,
-                format("INSERT OVERWRITE %s VALUES (null, null)", name),
+                "INSERT OVERWRITE " + name + " VALUES (null, null)",
                 createMap(new PersonId(), new Person()));
 
         assertRowsEventuallyAnyOrder(
-                format("SELECT * FROM %s", name),
+                "SELECT * FROM " + name,
                 singletonList(new Row(0, null))
         );
     }
@@ -73,12 +72,12 @@ public class SqlPojoTest extends SqlTestSupport {
 
         assertMapEventually(
                 name,
-                format("INSERT OVERWRITE %s (id, name) VALUES (1, 'Alice')", name),
+                "INSERT OVERWRITE " + name + " (id, name) VALUES (1, 'Alice')",
                 createMap(new PersonId(1), new Person(0, "Alice"))
         );
 
         assertRowsEventuallyAnyOrder(
-                format("SELECT * FROM %s", name),
+                "SELECT * FROM " + name,
                 singletonList(new Row(1, "Alice"))
         );
     }
@@ -86,32 +85,26 @@ public class SqlPojoTest extends SqlTestSupport {
     @Test
     public void supportsFieldsMapping() {
         String name = generateRandomName();
-        executeSql(format("CREATE EXTERNAL TABLE %s (" +
-                        " key_id INT EXTERNAL NAME \"__key.id\"," +
-                        " value_id INT EXTERNAL NAME \"this.id\"" +
-                        ")" +
-                        "TYPE \"%s\" " +
-                        "OPTIONS (" +
-                        " \"%s\" '%s'," +
-                        " \"%s\" '%s'," +
-                        " \"%s\" '%s'," +
-                        " \"%s\" '%s'" +
-                        ")",
-                name, LocalPartitionedMapConnector.TYPE_NAME,
-                TO_SERIALIZATION_KEY_FORMAT, JAVA_SERIALIZATION_FORMAT,
-                TO_KEY_CLASS, PersonId.class.getName(),
-                TO_SERIALIZATION_VALUE_FORMAT, JAVA_SERIALIZATION_FORMAT,
-                TO_VALUE_CLASS, Person.class.getName()
-        ));
+        executeSql("CREATE EXTERNAL TABLE " + name + " ("
+                + "key_id INT EXTERNAL NAME \"__key.id\""
+                + ", value_id INT EXTERNAL NAME \"this.id\""
+                + ") TYPE \"" + LocalPartitionedMapConnector.TYPE_NAME + "\" "
+                + "OPTIONS ("
+                + "\"" + TO_SERIALIZATION_KEY_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
+                + ", \"" + TO_KEY_CLASS + "\" '" + PersonId.class.getName() + "'"
+                + ", \"" + TO_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
+                + ", \"" + TO_VALUE_CLASS + "\" '" + Person.class.getName() + "'"
+                + ")"
+        );
 
         assertMapEventually(
                 name,
-                format("INSERT OVERWRITE %s (value_id, key_id, name) VALUES (2, 1, 'Alice')", name),
+                "INSERT OVERWRITE " + name + " (value_id, key_id, name) VALUES (2, 1, 'Alice')",
                 createMap(new PersonId(1), new Person(2, "Alice"))
         );
 
         assertRowsEventuallyAnyOrder(
-                format("SELECT key_id, value_id, name FROM %s", name),
+                "SELECT key_id, value_id, name FROM " + name,
                 singletonList(new Row(1, 2, "Alice"))
         );
     }
@@ -121,30 +114,25 @@ public class SqlPojoTest extends SqlTestSupport {
         String name = createMapWithRandomName();
 
         // insert initial record
-        executeSql(format("INSERT OVERWRITE %s VALUES (1, 'Alice')", name));
+        executeSql("INSERT OVERWRITE " + name + " VALUES (1, 'Alice')");
 
         // alter schema
-        executeSql(format("CREATE OR REPLACE EXTERNAL TABLE %s " +
-                        "TYPE \"%s\" " +
-                        "OPTIONS (" +
-                        " \"%s\" '%s'," +
-                        " \"%s\" '%s'," +
-                        " \"%s\" '%s'," +
-                        " \"%s\" '%s'" +
-                        ")",
-                name, LocalPartitionedMapConnector.TYPE_NAME,
-                TO_SERIALIZATION_KEY_FORMAT, JAVA_SERIALIZATION_FORMAT,
-                TO_KEY_CLASS, PersonId.class.getName(),
-                TO_SERIALIZATION_VALUE_FORMAT, JAVA_SERIALIZATION_FORMAT,
-                TO_VALUE_CLASS, InsuredPerson.class.getName()
-        ));
+        executeSql("CREATE OR REPLACE EXTERNAL TABLE " + name + " "
+                + "TYPE \"" + LocalPartitionedMapConnector.TYPE_NAME + "\" "
+                + "OPTIONS ("
+                + "\"" + TO_SERIALIZATION_KEY_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
+                + ", \"" + TO_KEY_CLASS + "\" '" + PersonId.class.getName() + "'"
+                + ", \"" + TO_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
+                + ", \"" + TO_VALUE_CLASS + "\" '" + InsuredPerson.class.getName() + "'"
+                + ")"
+        );
 
         // insert record against new schema
-        executeSql(format("INSERT OVERWRITE %s (id, name, ssn) VALUES (2, 'Bob', 123456789)", name));
+        executeSql("INSERT OVERWRITE " + name + " (id, name, ssn) VALUES (2, 'Bob', 123456789)");
 
         // assert both - initial & evolved - records are correctly read
         assertRowsEventuallyAnyOrder(
-                format("SELECT id, name, ssn FROM %s", name),
+                "SELECT id, name, ssn FROM " + name,
                 asList(
                         new Row(1, "Alice", null),
                         new Row(2, "Bob", 123456789L)
@@ -159,25 +147,20 @@ public class SqlPojoTest extends SqlTestSupport {
         Map<PersonId, InsuredPerson> map = instance().getMap(name);
         map.put(new PersonId(1), new InsuredPerson(1, "Alice", 123456789L));
 
-        executeSql(format("CREATE EXTERNAL TABLE %s (" +
-                        " ssn BIGINT" +
-                        ") TYPE \"%s\" " +
-                        "OPTIONS (" +
-                        " \"%s\" '%s'," +
-                        " \"%s\" '%s'," +
-                        " \"%s\" '%s'," +
-                        " \"%s\" '%s'" +
-                        ")",
-                name, LocalPartitionedMapConnector.TYPE_NAME,
-                TO_SERIALIZATION_KEY_FORMAT, JAVA_SERIALIZATION_FORMAT,
-                TO_KEY_CLASS, PersonId.class.getName(),
-                TO_SERIALIZATION_VALUE_FORMAT, JAVA_SERIALIZATION_FORMAT,
-                TO_VALUE_CLASS, Person.class.getName()
-        ));
+        executeSql("CREATE EXTERNAL TABLE " + name + " ("
+                + "ssn BIGINT"
+                + ") TYPE \"" + LocalPartitionedMapConnector.TYPE_NAME + "\" "
+                + "OPTIONS ("
+                + "\"" + TO_SERIALIZATION_KEY_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
+                + ", \"" + TO_KEY_CLASS + "\" '" + PersonId.class.getName() + "'"
+                + ", \"" + TO_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
+                + ", \"" + TO_VALUE_CLASS + "\" '" + Person.class.getName() + "'"
+                + ")"
+        );
 
         assertMapEventually(
                 name,
-                format("INSERT OVERWRITE %s (id, name, ssn) VALUES (2, 'Bob', null)", name),
+                "INSERT OVERWRITE " + name + " (id, name, ssn) VALUES (2, 'Bob', null)",
                 createMap(
                         new PersonId(1), new InsuredPerson(1, "Alice", 123456789L),
                         new PersonId(2), new Person(0, "Bob")
@@ -185,7 +168,7 @@ public class SqlPojoTest extends SqlTestSupport {
         );
 
         assertRowsEventuallyAnyOrder(
-                format("SELECT * FROM %s", name),
+                "SELECT * FROM " + name,
                 asList(
                         new Row(1, "Alice", 123456789L),
                         new Row(2, "Bob", null)
@@ -196,84 +179,76 @@ public class SqlPojoTest extends SqlTestSupport {
     @Test
     public void supportsAllTypes() {
         String name = generateRandomName();
-        executeSql(format("CREATE EXTERNAL TABLE %s " +
-                        "TYPE \"%s\" " +
-                        "OPTIONS (" +
-                        " \"%s\" '%s'," +
-                        " \"%s\" '%s'," +
-                        " \"%s\" '%s'," +
-                        " \"%s\" '%s'" +
-                        ")",
-                name, LocalPartitionedMapConnector.TYPE_NAME,
-                TO_SERIALIZATION_KEY_FORMAT, JAVA_SERIALIZATION_FORMAT,
-                TO_KEY_CLASS, BigInteger.class.getName(),
-                TO_SERIALIZATION_VALUE_FORMAT, JAVA_SERIALIZATION_FORMAT,
-                TO_VALUE_CLASS, AllTypesValue.class.getName()
-        ));
+        executeSql("CREATE EXTERNAL TABLE " + name + " "
+                + "TYPE \"" + LocalPartitionedMapConnector.TYPE_NAME + "\" "
+                + "OPTIONS ("
+                + "\"" + TO_SERIALIZATION_KEY_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
+                + ", \"" + TO_KEY_CLASS + "\" '" + BigInteger.class.getName() + "'"
+                + ", \"" + TO_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
+                + ", \"" + TO_VALUE_CLASS + "\" '" + AllTypesValue.class.getName() + "'"
+                + ")"
+        );
 
         assertMapEventually(
                 name,
-                format("INSERT OVERWRITE %s (" +
-                                " __key," +
-                                " string," +
-                                " character0," +
-                                " character1," +
-                                " boolean0," +
-                                " boolean1," +
-                                " byte0," +
-                                " byte1," +
-                                " short0," +
-                                " short1," +
-                                " int0, " +
-                                " int1," +
-                                " long0," +
-                                " long1," +
-                                " bigDecimal," +
-                                " bigInteger," +
-                                " float0," +
-                                " float1," +
-                                " double0," +
-                                " double1," +
-                                " \"localTime\"," +
-                                " localDate," +
-                                " localDateTime," +
-                                " \"date\"," +
-                                " calendar," +
-                                " instant," +
-                                " zonedDateTime," +
-                                " offsetDateTime" +
-                                ") VALUES (\n" +
-                                "1, --key\n" +
-                                "'string', --varchar\n" +
-                                "'a', --character\n" +
-                                "'b',\n" +
-                                "true, --boolean\n" +
-                                "false,\n" +
-                                "126, --byte\n" +
-                                "127, \n" +
-                                "32766, --short\n" +
-                                "32767, \n" +
-                                "2147483646, --int \n" +
-                                "2147483647,\n" +
-                                "9223372036854775806, --long\n" +
-                                "9223372036854775807,\n" +
-                                "9223372036854775.123, --bigDecimal\n" +
-                                "9223372036854775222, --bigInteger\n" +
-                                "1234567890.1, --float\n" +
-                                "1234567890.2, \n" +
-                                "123451234567890.1, --double\n" +
-                                "123451234567890.2,\n" +
-                                "time'12:23:34', -- local time\n" +
-                                "date'2020-04-15', -- local date \n" +
-                                "timestamp'2020-04-15 12:23:34.1', --timestamp\n" +
-                                "timestamp'2020-04-15 12:23:34.2', --timestamp with tz\n" +
-                                "timestamp'2020-04-15 12:23:34.3', --timestamp with tz\n" +
-                                "timestamp'2020-04-15 12:23:34.4', --timestamp with tz\n" +
-                                "timestamp'2020-04-15 12:23:34.5', --timestamp with tz\n" +
-                                "timestamp'2020-04-15 12:23:34.6' --timestamp with tz\n" +
-                                ")",
-                        name
-                ),
+                "INSERT OVERWRITE " + name + " ("
+                        + "__key"
+                        + ", string"
+                        + ", character0"
+                        + ", character1"
+                        + ", boolean0"
+                        + ", boolean1"
+                        + ", byte0"
+                        + ", byte1"
+                        + ", short0"
+                        + ", short1"
+                        + ", int0"
+                        + ", int1"
+                        + ", long0"
+                        + ", long1"
+                        + ", bigDecimal"
+                        + ", bigInteger"
+                        + ", float0"
+                        + ", float1"
+                        + ", double0, double1"
+                        + ", \"localTime\""
+                        + ", localDate"
+                        + ", localDateTime"
+                        + ", \"date\""
+                        + ", calendar"
+                        + ", instant"
+                        + ", zonedDateTime"
+                        + ", offsetDateTime"
+                        + ") VALUES ("
+                        + "1"
+                        + ", 'string'"
+                        + ", 'a'"
+                        + ", 'b'"
+                        + ", true"
+                        + ", false"
+                        + ", 126"
+                        + ", 127"
+                        + ", 32766"
+                        + ", 32767"
+                        + ", 2147483646"
+                        + ", 2147483647"
+                        + ", 9223372036854775806"
+                        + ", 9223372036854775807"
+                        + ", 9223372036854775.123"
+                        + ", 9223372036854775222"
+                        + ", 1234567890.1"
+                        + ", 1234567890.2"
+                        + ", 123451234567890.1"
+                        + ", 123451234567890.2"
+                        + ", time'12:23:34'"
+                        + ", date'2020-04-15'"
+                        + ", timestamp'2020-04-15 12:23:34.1'"
+                        + ", timestamp'2020-04-15 12:23:34.2'"
+                        + ", timestamp'2020-04-15 12:23:34.3'"
+                        + ", timestamp'2020-04-15 12:23:34.4'"
+                        + ", timestamp'2020-04-15 12:23:34.5'"
+                        + ", timestamp'2020-04-15 12:23:34.6'"
+                        + ")",
                 createMap(BigInteger.valueOf(1), new AllTypesValue(
                         "string",
                         'a',
@@ -301,48 +276,42 @@ public class SqlPojoTest extends SqlTestSupport {
                         LocalDateTime.of(2020, 4, 15, 12, 23, 34, 0),
                         Date.from(ofEpochMilli(1586953414200L)),
                         GregorianCalendar.from(ZonedDateTime.of(2020, 4, 15, 12, 23, 34, 300_000_000, UTC)
-                                .withZoneSameInstant(localOffset())),
+                                                            .withZoneSameInstant(localOffset())),
                         ofEpochMilli(1586953414400L),
                         ZonedDateTime.of(2020, 4, 15, 12, 23, 34, 500_000_000, UTC)
-                                .withZoneSameInstant(localOffset()),
+                                     .withZoneSameInstant(localOffset()),
                         ZonedDateTime.of(2020, 4, 15, 12, 23, 34, 600_000_000, UTC)
-                                .withZoneSameInstant(systemDefault())
-                                .toOffsetDateTime()
+                                     .withZoneSameInstant(systemDefault())
+                                     .toOffsetDateTime()
                 )));
 
         assertRowsEventuallyAnyOrder(
-                format("SELECT" +
-                                " __key," +
-                                " string," +
-                                " character0," +
-                                " character1," +
-                                " boolean0," +
-                                " boolean1," +
-                                " byte0," +
-                                " byte1," +
-                                " short0," +
-                                " short1," +
-                                " int0," +
-                                " int1," +
-                                " long0," +
-                                " long1," +
-                                " bigDecimal," +
-                                " bigInteger," +
-                                " float0," +
-                                " float1," +
-                                " double0," +
-                                " double1," +
-                                " \"localTime\"," +
-                                " localDate," +
-                                " localDateTime," +
-                                " \"date\"," +
-                                " calendar," +
-                                " instant," +
-                                " zonedDateTime," +
-                                " offsetDateTime" +
-                                " FROM %s",
-                        name
-                ),
+                "SELECT"
+                        + " __key"
+                        + ", string"
+                        + ", character0"
+                        + ", character1"
+                        + ", boolean0"
+                        + ", boolean1"
+                        + ", byte0, byte1"
+                        + ", short0, short1"
+                        + ", int0, int1"
+                        + ", long0, long1"
+                        + ", bigDecimal"
+                        + ", bigInteger"
+                        + ", float0"
+                        + ", float1"
+                        + ", double0"
+                        + ", double1"
+                        + ", \"localTime\""
+                        + ", localDate"
+                        + ", localDateTime"
+                        + ", \"date\""
+                        + ", calendar"
+                        + ", instant"
+                        + ", zonedDateTime"
+                        + ", offsetDateTime "
+                        + "FROM " + name,
                 singletonList(new Row(
                         BigDecimal.valueOf(1),
                         "string",
@@ -371,38 +340,29 @@ public class SqlPojoTest extends SqlTestSupport {
                         LocalDateTime.of(2020, 4, 15, 12, 23, 34, 0),
                         OffsetDateTime.ofInstant(Date.from(ofEpochMilli(1586953414200L)).toInstant(), systemDefault()),
                         ZonedDateTime.of(2020, 4, 15, 12, 23, 34, 300_000_000, UTC)
-                                .withZoneSameInstant(localOffset())
-                                .toOffsetDateTime(),
+                                     .withZoneSameInstant(localOffset())
+                                     .toOffsetDateTime(),
                         OffsetDateTime.ofInstant(ofEpochMilli(1586953414400L), systemDefault()),
                         ZonedDateTime.of(2020, 4, 15, 12, 23, 34, 500_000_000, UTC)
-                                .withZoneSameInstant(localOffset())
-                                .toOffsetDateTime(),
+                                     .withZoneSameInstant(localOffset())
+                                     .toOffsetDateTime(),
                         ZonedDateTime.of(2020, 4, 15, 12, 23, 34, 600_000_000, UTC)
-                                .withZoneSameInstant(systemDefault())
-                                .toOffsetDateTime()
+                                     .withZoneSameInstant(systemDefault())
+                                     .toOffsetDateTime()
                 )));
-    }
-
-    private static ZoneOffset localOffset() {
-        return systemDefault().getRules().getOffset(LocalDateTime.now());
     }
 
     private static String createMapWithRandomName() {
         String name = generateRandomName();
-        executeSql(format("CREATE EXTERNAL TABLE %s " +
-                        "TYPE \"%s\" " +
-                        "OPTIONS (" +
-                        " \"%s\" '%s'," +
-                        " \"%s\" '%s'," +
-                        " \"%s\" '%s'," +
-                        " \"%s\" '%s'" +
-                        ")",
-                name, LocalPartitionedMapConnector.TYPE_NAME,
-                TO_SERIALIZATION_KEY_FORMAT, JAVA_SERIALIZATION_FORMAT,
-                TO_KEY_CLASS, PersonId.class.getName(),
-                TO_SERIALIZATION_VALUE_FORMAT, JAVA_SERIALIZATION_FORMAT,
-                TO_VALUE_CLASS, Person.class.getName()
-        ));
+        executeSql("CREATE EXTERNAL TABLE " + name + " "
+                + "TYPE \"" + LocalPartitionedMapConnector.TYPE_NAME + "\" "
+                + "OPTIONS ("
+                + "\"" + TO_SERIALIZATION_KEY_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
+                + ", \"" + TO_KEY_CLASS + "\" '" + PersonId.class.getName() + "'"
+                + ", \"" + TO_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
+                + ", \"" + TO_VALUE_CLASS + "\" '" + Person.class.getName() + "'"
+                + ")"
+        );
         return name;
     }
 

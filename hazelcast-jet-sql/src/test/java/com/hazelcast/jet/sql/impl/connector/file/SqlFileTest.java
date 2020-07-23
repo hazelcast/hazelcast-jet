@@ -22,7 +22,6 @@ import org.junit.Test;
 
 import static com.hazelcast.jet.sql.JetSqlConnector.AVRO_SERIALIZATION_FORMAT;
 import static com.hazelcast.jet.sql.JetSqlConnector.TO_SERIALIZATION_FORMAT;
-import static java.lang.String.format;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 
@@ -81,7 +80,7 @@ public class SqlFileTest extends SqlTestSupport {
     @Test
     public void fullScan_filter1() {
         assertRowsEventuallyAnyOrder(
-                format("SELECT username FROM %s WHERE age=1", name),
+                "SELECT username FROM " + name + " WHERE age=1",
                 singletonList(new Row("User1"))
         );
     }
