@@ -156,8 +156,10 @@ public final class TestSources {
      * of the first event arrives, so that there is no initial flood of events
      * from the past. The point of reference is the moment at which the
      * coordinator node creates the job's execution plan, before sending it out
-     * to the rest of the cluster. This source is not fault-tolerant. The
-     * sequence will be reset once a job is restarted.
+     * to the rest of the cluster.
+     * <p>
+     * This source is not fault-tolerant. The sequence will be reset once a job
+     * is restarted.
      *
      * @param eventsPerSecond the desired event rate
      * @param initialDelayMillis initial delay in milliseconds before emitting values
