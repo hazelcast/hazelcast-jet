@@ -19,7 +19,6 @@ package com.hazelcast.jet.pipeline.test;
 import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.core.AppendableTraverser;
 import com.hazelcast.jet.core.EventTimePolicy;
-import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.Watermark;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.logging.Logger;
@@ -36,7 +35,7 @@ import static java.util.concurrent.TimeUnit.SECONDS;
  *
  * @since 4.3
  */
-public class StreamSourceLong extends AbstractProcessor {
+public class LongStreamSourceP extends AbstractProcessor {
 
     private static final long SOURCE_THROUGHPUT_REPORTING_PERIOD_SECONDS = 10;
 
@@ -45,7 +44,7 @@ public class StreamSourceLong extends AbstractProcessor {
     private final long nanoTimeMillisToCurrentTimeMillis = determineTimeOffset();
     private final long startTime;
     private final long itemsPerSecond;
-    private final ILogger logger = Logger.getLogger(StreamSourceLong.class);
+    private final ILogger logger = Logger.getLogger(LongStreamSourceP.class);
     private final long wmGranularity;
     private final long wmOffset;
     private long globalProcessorIndex;
@@ -62,7 +61,7 @@ public class StreamSourceLong extends AbstractProcessor {
     private long nowNanos;
 
     @Nonnull
-    StreamSourceLong(
+    LongStreamSourceP(
             long startTime,
             long itemsPerSecond,
             EventTimePolicy<? super Long> eventTimePolicy

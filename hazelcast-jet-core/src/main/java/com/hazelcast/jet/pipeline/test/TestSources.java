@@ -172,7 +172,7 @@ public final class TestSources {
                         (Address ignored) -> {
                             long startTime = System.currentTimeMillis() + initialDelayMillis;
                             return ProcessorSupplier.of(() ->
-                                    new StreamSourceLong(startTime, eventsPerSecond, eventTimePolicy));
+                                    new LongStreamSourceP(startTime, eventsPerSecond, eventTimePolicy));
                         })
         );
     }
