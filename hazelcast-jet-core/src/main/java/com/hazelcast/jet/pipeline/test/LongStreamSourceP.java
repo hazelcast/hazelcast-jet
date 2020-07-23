@@ -60,7 +60,6 @@ public class LongStreamSourceP extends AbstractProcessor {
     private long lastEmittedWm;
     private long nowNanos;
 
-    @Nonnull
     LongStreamSourceP(
             long startTime,
             long itemsPerSecond,
@@ -73,7 +72,7 @@ public class LongStreamSourceP extends AbstractProcessor {
     }
 
     @Override
-    protected void init(Context context) {
+    protected void init(@Nonnull Context context) {
         totalParallelism = context.totalParallelism();
         globalProcessorIndex = context.globalProcessorIndex();
         emitPeriod = SECONDS.toNanos(1) * totalParallelism / itemsPerSecond;
