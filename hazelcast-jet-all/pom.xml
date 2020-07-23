@@ -71,6 +71,7 @@
                     <createDependencyReducedPom>true</createDependencyReducedPom>
                     <artifactSet>
                         <includes>
+                            <include>org.rocksdb:rocksdbjni</include>
                             <include>com.hazelcast.jet:*</include>
                             <include>com.hazelcast:*</include>
                             <include>info.picocli:picocli</include>

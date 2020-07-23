@@ -103,7 +103,7 @@ public final class RocksDBStateBackend {
             synchronized (this) {
                 if (db == null) {
                     try {
-                        if (!directory.mkdir()) {
+                        if (!directory.isDirectory() && !directory.mkdirs()) {
                             throw new JetException("Failed to create RocksDB directory");
                         }
                         options = rocksDBOptions.options();
