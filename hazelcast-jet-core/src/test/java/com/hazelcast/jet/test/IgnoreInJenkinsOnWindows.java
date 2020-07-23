@@ -21,5 +21,5 @@ package com.hazelcast.jet.test;
  * <p>
  * This is typically used for tests which use docker.
  */
-public interface IgnoreOnJenkinsWindows {
+public interface IgnoreInJenkinsOnWindows {
 }

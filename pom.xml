@@ -617,7 +617,7 @@
                                 </goals>
                                 <configuration>
                                     <excludedGroups combine.self="override">
-                                        com.hazelcast.jet.test.IgnoreOnJenkinsWindows
+                                        com.hazelcast.jet.test.IgnoreInJenkinsOnWindows
                                     </excludedGroups>
                                 </configuration>
                             </execution>
@@ -628,7 +628,7 @@
                                 </goals>
                                 <configuration>
                                     <excludedGroups combine.self="override">
-                                        com.hazelcast.jet.test.IgnoreOnJenkinsWindows
+                                        com.hazelcast.jet.test.IgnoreInJenkinsOnWindows
                                     </excludedGroups>
                                 </configuration>
                             </execution>

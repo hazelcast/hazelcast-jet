@@ -23,7 +23,7 @@ import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sink;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.test.TestSources;
-import com.hazelcast.jet.test.IgnoreOnJenkinsWindows;
+import com.hazelcast.jet.test.IgnoreInJenkinsOnWindows;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -54,7 +54,7 @@ import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 
-@Category({IgnoreOnJenkinsWindows.class})
+@Category({IgnoreInJenkinsOnWindows.class})
 public class WriteJdbcPTest extends SimpleTestInClusterSupport {
 
     @ClassRule

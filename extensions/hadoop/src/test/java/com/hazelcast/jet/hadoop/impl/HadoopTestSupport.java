@@ -17,11 +17,11 @@
 package com.hazelcast.jet.hadoop.impl;
 
 import com.hazelcast.jet.SimpleTestInClusterSupport;
-import com.hazelcast.jet.test.IgnoreOnJenkinsWindows;
+import com.hazelcast.jet.test.IgnoreInJenkinsOnWindows;
 import org.junit.Before;
 import org.junit.experimental.categories.Category;
 
-@Category({IgnoreOnJenkinsWindows.class})
+@Category({IgnoreInJenkinsOnWindows.class})
 public abstract class HadoopTestSupport extends SimpleTestInClusterSupport {
 
     @Before

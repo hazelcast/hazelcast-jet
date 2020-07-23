@@ -20,7 +20,7 @@ import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.test.TestSources;
 import com.hazelcast.jet.s3.S3Sinks.S3SinkContext;
-import com.hazelcast.jet.test.IgnoreOnJenkinsWindows;
+import com.hazelcast.jet.test.IgnoreInJenkinsOnWindows;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.logging.Logger;
 import com.hazelcast.test.HazelcastSerialClassRunner;
@@ -47,7 +47,7 @@ import static org.junit.Assert.assertEquals;
 import static software.amazon.awssdk.core.sync.ResponseTransformer.toInputStream;
 
 @RunWith(HazelcastSerialClassRunner.class)
-@Category({IgnoreOnJenkinsWindows.class})
+@Category({IgnoreInJenkinsOnWindows.class})
 public class S3MockTest extends S3TestBase {
 
     @ClassRule

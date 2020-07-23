@@ -23,7 +23,7 @@ import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.impl.JetEvent;
-import com.hazelcast.jet.test.IgnoreOnJenkinsWindows;
+import com.hazelcast.jet.test.IgnoreInJenkinsOnWindows;
 import com.hazelcast.map.IMap;
 
 import javax.annotation.Nonnull;
@@ -36,7 +36,7 @@ import org.junit.experimental.categories.Category;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-@Category({IgnoreOnJenkinsWindows.class})
+@Category({IgnoreInJenkinsOnWindows.class})
 public class AbstractCdcIntegrationTest extends JetTestSupport {
 
     @Nonnull
