@@ -17,7 +17,6 @@
 package com.hazelcast.jet.sql;
 
 import com.hazelcast.sql.impl.connector.LocalPartitionedMapConnector;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.Map;
@@ -44,7 +43,6 @@ public class SqlTest extends SqlTestSupport {
     }
 
     @Test
-    @Ignore // not yet supported
     public void supportsCreatingMapFromFile() {
         String name = generateRandomName();
 
@@ -74,7 +72,6 @@ public class SqlTest extends SqlTestSupport {
     }
 
     @Test
-    @Ignore // not yet supported
     public void supportsCreatingMapFromAnotherMap() {
         String sourceName = generateRandomName();
         String destinationName = generateRandomName();
@@ -107,7 +104,6 @@ public class SqlTest extends SqlTestSupport {
     }
 
     @Test
-    @Ignore // not yet supported
     public void supportsCreatingMapFromValues() {
         String name = generateRandomName();
 
