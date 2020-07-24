@@ -29,6 +29,7 @@ import java.util.stream.IntStream;
 import java.util.stream.LongStream;
 
 import static com.hazelcast.jet.pipeline.test.Assertions.assertCollectedEventually;
+import static java.util.stream.Collectors.toList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -54,12 +55,11 @@ public class TestSourcesTest extends PipelineTestSupport {
         int itemsPerSecond = 10;
         int timeout = 10;
         int numberOfExpectedValues = timeout * itemsPerSecond;
-        Long[] input = LongStream.range(0, numberOfExpectedValues).boxed().toArray(Long[]::new);
-        List<Long> expected = Arrays.asList(input);
+        List<Long> expected = LongStream.range(0, numberOfExpectedValues).boxed().collect(toList());
 
-        p.readFrom(TestSources.longStream(itemsPerSecond, 0)).
-                withIngestionTimestamps().
-                apply(assertCollectedEventually(timeout, items -> {
+        p.readFrom(TestSources.longStream(itemsPerSecond, 0))
+                .withIngestionTimestamps()
+                .apply(assertCollectedEventually(timeout, items -> {
                     assertTrue("list should contain at least " + numberOfExpectedValues + " items",
                             items.size() >= numberOfExpectedValues);
                     assertTrue("list should contain less than " + 2 * numberOfExpectedValues + " items",

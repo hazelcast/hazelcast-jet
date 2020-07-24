@@ -137,7 +137,7 @@ public final class TestSources {
     }
 
     /**
-     * Returns a {@link com.hazelcast.jet.pipeline.StreamSource} that emits an
+     * Returns a {@link StreamSource} that emits an
      * ever-increasing sequence of {@code Long} numbers with native timestamps
      * that are exactly the same amount of time apart, as specified by the
      * supplied {@code eventsPerSecond} parameter. The source is distributed and
