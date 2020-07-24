@@ -137,13 +137,13 @@ public final class TestSources {
     }
 
     /**
-     * Returns a {@link StreamSource} that emits an
-     * ever-increasing sequence of {@code Long} numbers with native timestamps
-     * that are exactly the same amount of time apart, as specified by the
-     * supplied {@code eventsPerSecond} parameter. The source is distributed and
-     * suitable for high-throughput performance testing. It emits the events at
-     * the maximum possible speed, constrained by the invariant that it will
-     * never emit an event whose timestamp is in the future.
+     * Returns a {@link StreamSource} that emits an ever-increasing sequence of
+     * {@code Long} numbers with native timestamps that are exactly the same
+     * amount of time apart, as specified by the supplied {@code
+     * eventsPerSecond} parameter. The source is distributed and suitable for
+     * high-throughput performance testing. It emits the events at the maximum
+     * possible speed, constrained by the invariant that it will never emit an
+     * event whose timestamp is in the future.
      * <p>
      * The emission of events is distributed across the parallel processors in
      * a round-robin fashion: processor 0 emits the first event, processor 1
