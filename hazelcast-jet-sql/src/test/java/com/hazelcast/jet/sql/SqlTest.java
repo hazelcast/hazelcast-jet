@@ -48,7 +48,7 @@ public class SqlTest extends SqlTestSupport {
 
         assertRowsEventuallyAnyOrder(
                 "CREATE EXTERNAL TABLE " + name + " ("
-                        + "key INT EXTERNAL NAME \"__key\""
+                        + "key EXTERNAL NAME \"__key\""
                         + ") TYPE \"" + LocalPartitionedMapConnector.TYPE_NAME + "\" "
                         + "OPTIONS ("
                         + "\"" + TO_SERIALIZATION_KEY_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
@@ -82,7 +82,7 @@ public class SqlTest extends SqlTestSupport {
 
         assertRowsEventuallyAnyOrder(
                 "CREATE EXTERNAL TABLE " + destinationName + " ("
-                        + "key VARCHAR EXTERNAL NAME \"__key\""
+                        + "key EXTERNAL NAME \"__key\""
                         + ") TYPE \"" + LocalPartitionedMapConnector.TYPE_NAME + "\" "
                         + "OPTIONS ("
                         + "\"" + TO_SERIALIZATION_KEY_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
@@ -109,7 +109,7 @@ public class SqlTest extends SqlTestSupport {
 
         assertRowsEventuallyAnyOrder(
                 "CREATE EXTERNAL TABLE " + name + " ("
-                        + "key TINYINT EXTERNAL NAME \"__key\""
+                        + "key EXTERNAL NAME \"__key\""
                         + ") TYPE \"" + LocalPartitionedMapConnector.TYPE_NAME + "\" "
                         + "OPTIONS ("
                         + "\"" + TO_SERIALIZATION_KEY_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
