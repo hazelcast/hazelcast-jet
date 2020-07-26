@@ -34,7 +34,6 @@ import static com.hazelcast.jet.core.JetProperties.JET_HOME;
  * see {@link RocksDBStateBackend}
  */
 public class PrefixRocksDBStateBackend {
-
     private final AtomicInteger counter = new AtomicInteger(0);
     private final ArrayList<PrefixRocksMap> prefixMaps = new ArrayList<>();
     private PrefixRocksDBOptions rocksDBOptions = new PrefixRocksDBOptions();
@@ -93,7 +92,7 @@ public class PrefixRocksDBStateBackend {
             synchronized (this) {
                 if (db == null) {
                     try {
-                        if (!directory.mkdir()) {
+                        if (!directory.isDirectory() && !directory.mkdirs()) {
                             throw new JetException("Failed to create RocksDB directory");
                         }
                         options = rocksDBOptions.options();
