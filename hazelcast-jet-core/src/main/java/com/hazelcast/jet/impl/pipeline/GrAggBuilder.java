@@ -98,7 +98,8 @@ public class GrAggBuilder<K> {
     ) {
         checkSerializable(mapToOutputFn, "mapToOutputFn");
         List<Transform> upstreamTransforms = toList(upstreamStages, s -> s.transform);
-        AbstractTransform transform = new GroupTransform<>(upstreamTransforms, keyFns, aggrOp, mapToOutputFn);
+        //TODO: make this configurable
+        AbstractTransform transform = new GroupTransform<>(upstreamTransforms, keyFns, aggrOp, mapToOutputFn, false);
         pipelineImpl.connect(upstreamStages, transform);
         return new BatchStageImpl<>(transform, pipelineImpl);
     }

@@ -469,14 +469,15 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
     <K1, T1_IN, T1, R, RET> RET attachHashJoin(
             @Nonnull BatchStage<T1_IN> stage1,
             @Nonnull JoinClause<K1, ? super T, ? super T1_IN, ? extends T1> joinClause,
-            @Nonnull BiFunctionEx<T, T1, R> mapToOutputFn
+            @Nonnull BiFunctionEx<T, T1, R> mapToOutputFn,
+            boolean usePersistence
     ) {
         checkSerializable(mapToOutputFn, "mapToOutputFn");
         return attach(new HashJoinTransform<>(
                         asList(transform, transformOf(stage1)),
                         singletonList(fnAdapter.adaptJoinClause(joinClause)),
                         emptyList(),
-                        fnAdapter.adaptHashJoinOutputFn(mapToOutputFn)
+                        fnAdapter.adaptHashJoinOutputFn(mapToOutputFn), usePersistence
                 ),
                 singletonList(stage1),
                 fnAdapter);
@@ -489,15 +490,16 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
             @Nonnull JoinClause<K1, ? super T, ? super T1_IN, ? extends T1> joinClause1,
             @Nonnull BatchStage<T2_IN> stage2,
             @Nonnull JoinClause<K2, ? super T, ? super T2_IN, ? extends T2> joinClause2,
-            @Nonnull TriFunction<T, T1, T2, R> mapToOutputFn
+            @Nonnull TriFunction<T, T1, T2, R> mapToOutputFn,
+            boolean usePersistence
     ) {
         checkSerializable(mapToOutputFn, "mapToOutputFn");
         return attach(new HashJoinTransform(
                         asList(transform, transformOf(stage1), transformOf(stage2)),
                         asList(fnAdapter.adaptJoinClause(joinClause1), fnAdapter.adaptJoinClause(joinClause2)),
                         emptyList(),
-                        fnAdapter.adaptHashJoinOutputFn(mapToOutputFn)
-                ),
+                        fnAdapter.adaptHashJoinOutputFn(mapToOutputFn),
+                        usePersistence),
                 asList(stage1, stage2),
                 fnAdapter);
     }

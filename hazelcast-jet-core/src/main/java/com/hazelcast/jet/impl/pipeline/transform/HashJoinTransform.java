@@ -26,7 +26,9 @@ import com.hazelcast.jet.function.TriFunction;
 import com.hazelcast.jet.impl.pipeline.Planner;
 import com.hazelcast.jet.impl.pipeline.Planner.PlannerVertex;
 import com.hazelcast.jet.impl.processor.HashJoinCollectP;
+import com.hazelcast.jet.impl.processor.HashJoinCollectWithPersistenceP;
 import com.hazelcast.jet.impl.processor.HashJoinP;
+import com.hazelcast.jet.impl.processor.HashJoinWithPersistenceP;
 import com.hazelcast.jet.pipeline.JoinClause;
 
 import javax.annotation.Nonnull;
@@ -50,12 +52,15 @@ public class HashJoinTransform<T0, R> extends AbstractTransform {
     private final TriFunction mapToOutputTriFn;
     @Nullable
     private final List<Boolean> whereNullsNotAllowed;
+    private boolean usePersistence;
+
 
     public HashJoinTransform(
             @Nonnull List<Transform> upstream,
             @Nonnull List<JoinClause<?, ? super T0, ?, ?>> clauses,
             @Nonnull List<Tag> tags,
-            @Nonnull BiFunctionEx mapToOutputBiFn
+            @Nonnull BiFunctionEx mapToOutputBiFn,
+            boolean usePersistence
     ) {
         super(upstream.size() + "-way hash-join", upstream);
         this.clauses = clauses;
@@ -63,13 +68,15 @@ public class HashJoinTransform<T0, R> extends AbstractTransform {
         this.mapToOutputBiFn = mapToOutputBiFn;
         this.mapToOutputTriFn = null;
         this.whereNullsNotAllowed = null;
+        this.usePersistence = usePersistence;
     }
 
     public <T1, T2> HashJoinTransform(
             @Nonnull List<Transform> upstream,
             @Nonnull List<JoinClause<?, ? super T0, ?, ?>> clauses,
             @Nonnull List<Tag> tags,
-            @Nonnull TriFunction<T0, T1, T2, R> mapToOutputTriFn
+            @Nonnull TriFunction<T0, T1, T2, R> mapToOutputTriFn,
+            boolean usePersistence
     ) {
         super(upstream.size() + "-way hash-join", upstream);
         this.clauses = clauses;
@@ -77,13 +84,15 @@ public class HashJoinTransform<T0, R> extends AbstractTransform {
         this.mapToOutputBiFn = null;
         this.mapToOutputTriFn = mapToOutputTriFn;
         this.whereNullsNotAllowed = null;
+        this.usePersistence = usePersistence;
     }
     public HashJoinTransform(
             @Nonnull List<Transform> upstream,
             @Nonnull List<JoinClause<?, ? super T0, ?, ?>> clauses,
             @Nonnull List<Tag> tags,
             @Nonnull BiFunctionEx mapToOutputBiFn,
-            @Nonnull List<Boolean> whereNullsNotAllowed
+            @Nonnull List<Boolean> whereNullsNotAllowed,
+            boolean usePersistence
     ) {
         super(upstream.size() + "-way hash-join", upstream);
         this.clauses = clauses;
@@ -91,6 +100,7 @@ public class HashJoinTransform<T0, R> extends AbstractTransform {
         this.mapToOutputBiFn = mapToOutputBiFn;
         this.mapToOutputTriFn = null;
         this.whereNullsNotAllowed = whereNullsNotAllowed;
+        this.usePersistence = usePersistence;
     }
 
     //         ---------           ----------           ----------
@@ -127,9 +137,15 @@ public class HashJoinTransform<T0, R> extends AbstractTransform {
 
         // must be extracted to variable, probably because of serialization bug
         BiFunctionEx<List<Tag>, Object[], ItemsByTag> tupleToItems = tupleToItemsByTag(whereNullsNotAllowed);
-
-        Vertex joiner = p.addVertex(this, name() + "-joiner", localParallelism(),
-                () -> new HashJoinP<>(keyFns, tags, mapToOutputBiFn, mapToOutputTriFn, tupleToItems)).v;
+        Vertex joiner;
+        if (usePersistence) {
+            joiner = p.addVertex(this, name() + "-joiner", localParallelism(),
+                    () -> new HashJoinWithPersistenceP<>(keyFns, tags, mapToOutputBiFn, mapToOutputTriFn, tupleToItems)).v;
+        }
+        else {
+            joiner = p.addVertex(this, name() + "-joiner", localParallelism(),
+                    () -> new HashJoinP<>(keyFns, tags, mapToOutputBiFn, mapToOutputTriFn, tupleToItems)).v;
+        }
         Edge edgeToJoiner = from(primary.v, primary.nextAvailableOrdinal()).to(joiner, 0);
         applyRebalancing(edgeToJoiner, this);
         p.dag.edge(edgeToJoiner);
@@ -141,8 +157,15 @@ public class HashJoinTransform<T0, R> extends AbstractTransform {
             JoinClause<?, ?, ?, ?> clause = this.clauses.get(collectorOrdinal - 1);
             FunctionEx<Object, Object> getKeyFn = (FunctionEx<Object, Object>) clause.rightKeyFn();
             FunctionEx<Object, Object> projectFn = (FunctionEx<Object, Object>) clause.rightProjectFn();
-            Vertex collector = p.dag.newVertex(collectorName + collectorOrdinal,
-                    () -> new HashJoinCollectP(getKeyFn, projectFn));
+            Vertex collector;
+            if (usePersistence) {
+               collector = p.dag.newVertex(collectorName + collectorOrdinal,
+                        () -> new HashJoinCollectWithPersistenceP(getKeyFn, projectFn));
+            }
+            else {
+                collector = p.dag.newVertex(collectorName + collectorOrdinal,
+                        () -> new HashJoinCollectP<>(getKeyFn, projectFn));
+            }
             collector.localParallelism(1);
             p.dag.edge(from(fromPv.v, fromPv.nextAvailableOrdinal())
                     .to(collector, 0)

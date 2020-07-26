@@ -31,12 +31,15 @@ import java.util.List;
 import static com.hazelcast.function.Functions.entryKey;
 import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.Partitioner.HASH_CODE;
-import static com.hazelcast.jet.core.processor.Processors.accumulateByKeyWithUnboundedStateP;
 import static com.hazelcast.jet.core.processor.Processors.accumulateByKeyP;
-import static com.hazelcast.jet.core.processor.Processors.aggregateByKeyWithUnboundedStateP;
+import static com.hazelcast.jet.core.processor.Processors.accumulateByKeyWithPersistenceAndUnboundedStateP;
+import static com.hazelcast.jet.core.processor.Processors.accumulateByKeyWithPersistenceP;
 import static com.hazelcast.jet.core.processor.Processors.aggregateByKeyP;
-import static com.hazelcast.jet.core.processor.Processors.combineByKeyWithUnboundedStateP;
+import static com.hazelcast.jet.core.processor.Processors.aggregateByKeyWithPersistenceAndUnboundedStateP;
+import static com.hazelcast.jet.core.processor.Processors.aggregateByKeyWithPersistenceP;
 import static com.hazelcast.jet.core.processor.Processors.combineByKeyP;
+import static com.hazelcast.jet.core.processor.Processors.combineByKeyWithPersistenceAndUnboundedStateP;
+import static com.hazelcast.jet.core.processor.Processors.combineByKeyWithPersistenceP;
 import static com.hazelcast.jet.impl.pipeline.transform.AggregateTransform.FIRST_STAGE_VERTEX_NAME_SUFFIX;
 
 public class GroupTransform<K, A, R, OUT> extends AbstractTransform {
@@ -46,17 +49,20 @@ public class GroupTransform<K, A, R, OUT> extends AbstractTransform {
     private final AggregateOperation<A, R> aggrOp;
     @Nonnull
     private final BiFunctionEx<? super K, ? super R, OUT> mapToOutputFn;
+    private final boolean usePersistence;
 
     public GroupTransform(
             @Nonnull List<Transform> upstream,
             @Nonnull List<FunctionEx<?, ? extends K>> groupKeyFns,
             @Nonnull AggregateOperation<A, R> aggrOp,
-            @Nonnull BiFunctionEx<? super K, ? super R, OUT> mapToOutputFn
+            @Nonnull BiFunctionEx<? super K, ? super R, OUT> mapToOutputFn,
+            boolean usePersistence
     ) {
         super(createName(upstream), upstream);
         this.groupKeyFns = groupKeyFns;
         this.aggrOp = aggrOp;
         this.mapToOutputFn = mapToOutputFn;
+        this.usePersistence = usePersistence;
     }
 
     private static String createName(@Nonnull List<Transform> upstream) {
@@ -89,8 +95,10 @@ public class GroupTransform<K, A, R, OUT> extends AbstractTransform {
     //                         -----------------
     private void addToDagSingleStage(Planner p) {
         SupplierEx<Processor> agg;
-        if (aggrOp.hasUnboundedState()) {
-            agg = aggregateByKeyWithUnboundedStateP(groupKeyFns, aggrOp, mapToOutputFn);
+        if (usePersistence && aggrOp.hasUnboundedState()) {
+            agg = aggregateByKeyWithPersistenceAndUnboundedStateP(groupKeyFns, aggrOp, mapToOutputFn);
+        } else if (usePersistence) {
+            agg = aggregateByKeyWithPersistenceP(groupKeyFns, aggrOp, mapToOutputFn);
         } else {
             agg = aggregateByKeyP(groupKeyFns, aggrOp, mapToOutputFn);
         }
@@ -119,9 +127,12 @@ public class GroupTransform<K, A, R, OUT> extends AbstractTransform {
         List<FunctionEx<?, ? extends K>> groupKeyFns = this.groupKeyFns;
         SupplierEx<Processor> acc;
         SupplierEx<Processor> comb;
-        if (aggrOp.hasUnboundedState()) {
-            acc = accumulateByKeyWithUnboundedStateP(groupKeyFns, aggrOp);
-            comb = combineByKeyWithUnboundedStateP(aggrOp, mapToOutputFn);
+        if (usePersistence && aggrOp.hasUnboundedState()) {
+            acc = accumulateByKeyWithPersistenceAndUnboundedStateP(groupKeyFns, aggrOp);
+            comb = combineByKeyWithPersistenceAndUnboundedStateP(aggrOp, mapToOutputFn);
+        } else if (usePersistence) {
+            acc = accumulateByKeyWithPersistenceP(groupKeyFns, aggrOp);
+            comb = combineByKeyWithPersistenceP(aggrOp, mapToOutputFn);
         } else {
             acc = accumulateByKeyP(groupKeyFns, aggrOp);
             comb = combineByKeyP(aggrOp, mapToOutputFn);

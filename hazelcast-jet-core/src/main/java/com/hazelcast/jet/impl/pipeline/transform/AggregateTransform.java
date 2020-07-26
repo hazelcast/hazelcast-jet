@@ -27,25 +27,31 @@ import javax.annotation.Nonnull;
 import java.util.List;
 
 import static com.hazelcast.jet.core.Edge.between;
-import static com.hazelcast.jet.core.processor.Processors.accumulateWithUnboundedStateP;
 import static com.hazelcast.jet.core.processor.Processors.accumulateP;
-import static com.hazelcast.jet.core.processor.Processors.aggregateWithUnboundedStateP;
+import static com.hazelcast.jet.core.processor.Processors.accumulateWithPersistenceAndUnboundedStateP;
+import static com.hazelcast.jet.core.processor.Processors.accumulateWithPersistenceP;
 import static com.hazelcast.jet.core.processor.Processors.aggregateP;
-import static com.hazelcast.jet.core.processor.Processors.combineWithUnboundedStateP;
+import static com.hazelcast.jet.core.processor.Processors.aggregateWithPersistenceAndUnboundedStateP;
+import static com.hazelcast.jet.core.processor.Processors.aggregateWithPersistenceP;
 import static com.hazelcast.jet.core.processor.Processors.combineP;
+import static com.hazelcast.jet.core.processor.Processors.combineWithPersistenceAndUnboundedStateP;
+import static com.hazelcast.jet.core.processor.Processors.combineWithPersistenceP;
 
 public class AggregateTransform<A, R> extends AbstractTransform {
     public static final String FIRST_STAGE_VERTEX_NAME_SUFFIX = "-prepare";
 
     @Nonnull
     private final AggregateOperation<A, ? extends R> aggrOp;
+    private final boolean usePersistence;
 
     public AggregateTransform(
             @Nonnull List<Transform> upstream,
-            @Nonnull AggregateOperation<A, ? extends R> aggrOp
+            @Nonnull AggregateOperation<A, ? extends R> aggrOp,
+            boolean usePersistence
     ) {
         super(createName(upstream), upstream);
         this.aggrOp = aggrOp;
+        this.usePersistence = usePersistence;
     }
 
     private static String createName(@Nonnull List<Transform> upstream) {
@@ -77,8 +83,11 @@ public class AggregateTransform<A, R> extends AbstractTransform {
     //                   ----------------
     private void addToDagSingleStage(Planner p) {
         SupplierEx<Processor> agg;
-        if (aggrOp.hasUnboundedState()) {
-            agg = aggregateWithUnboundedStateP(aggrOp);
+
+        if (usePersistence && aggrOp.hasUnboundedState()) {
+            agg = aggregateWithPersistenceAndUnboundedStateP(aggrOp);
+        } else if (usePersistence) {
+            agg = aggregateWithPersistenceP(aggrOp);
         } else {
             agg = aggregateP(aggrOp);
         }
@@ -107,9 +116,12 @@ public class AggregateTransform<A, R> extends AbstractTransform {
         String vertexName = name();
         SupplierEx<Processor> acc;
         SupplierEx<Processor> comb;
-        if (aggrOp.hasUnboundedState()) {
-            acc = accumulateWithUnboundedStateP(aggrOp);
-            comb = combineWithUnboundedStateP(aggrOp);
+        if (usePersistence && aggrOp.hasUnboundedState()) {
+            acc = accumulateWithPersistenceAndUnboundedStateP(aggrOp);
+            comb = combineWithPersistenceAndUnboundedStateP(aggrOp);
+        } else if (usePersistence) {
+            acc = accumulateWithPersistenceP(aggrOp);
+            comb = combineWithPersistenceP(aggrOp);
         } else {
             acc = accumulateP(aggrOp);
             comb = combineP(aggrOp);

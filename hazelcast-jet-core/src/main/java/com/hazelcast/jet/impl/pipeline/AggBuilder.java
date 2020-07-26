@@ -77,7 +77,8 @@ public class AggBuilder {
         if (wDef != null) {
             transform = new WindowAggregateTransform<>(upstreamTransforms, wDef, adaptedAggrOp);
         } else {
-            transform = new AggregateTransform<>(upstreamTransforms, adaptedAggrOp);
+            //TODO make this configurable
+            transform = new AggregateTransform<>(upstreamTransforms, adaptedAggrOp, false);
         }
         OUT_STAGE attached = createOutStageFn.get(transform, ADAPT_TO_JET_EVENT, pipelineImpl);
         pipelineImpl.connectGeneralStages(upstreamStages, transform);

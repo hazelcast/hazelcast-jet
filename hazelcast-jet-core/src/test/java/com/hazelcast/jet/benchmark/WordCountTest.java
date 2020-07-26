@@ -60,7 +60,7 @@ import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
 import static com.hazelcast.jet.aggregate.AggregateOperations.summingLong;
 import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.Partitioner.HASH_CODE;
-import static com.hazelcast.jet.core.processor.Processors.aggregateByKeyWithUnboundedStateP;
+import static com.hazelcast.jet.core.processor.Processors.aggregateByKeyP;
 import static com.hazelcast.jet.core.processor.Processors.flatMapP;
 import static com.hazelcast.jet.core.processor.Processors.noopP;
 import static java.util.Collections.singletonList;
@@ -163,11 +163,11 @@ public class WordCountTest extends HazelcastTestSupport implements Serializable 
         );
         // word -> (word, count)
         Vertex aggregateStage1 = dag.newVertex("aggregateStage1",
-                aggregateByKeyWithUnboundedStateP(singletonList(wholeItem()), counting(), Util::entry));
+                aggregateByKeyP(singletonList(wholeItem()), counting(), Util::entry));
         // (word, count) -> (word, count)
         FunctionEx<Entry, ?> getEntryKeyFn = Entry::getKey;
         Vertex aggregateStage2 = dag.newVertex("aggregateStage2",
-                aggregateByKeyWithUnboundedStateP(
+                aggregateByKeyP(
                         singletonList(getEntryKeyFn),
                         summingLong(Entry<String, Long>::getValue),
                         Util::entry

@@ -23,17 +23,18 @@ import com.hazelcast.jet.datamodel.ItemsByTag;
 import com.hazelcast.jet.datamodel.Tag;
 import com.hazelcast.jet.function.TriFunction;
 import com.hazelcast.jet.impl.pipeline.transform.HashJoinTransform;
-import com.hazelcast.jet.impl.processor.HashJoinCollectP.HashJoinArrayList;
 import com.hazelcast.jet.pipeline.BatchStage;
+import com.hazelcast.jet.rocksdb.PrefixRocksMap;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import org.rocksdb.RocksIterator;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
@@ -66,17 +67,18 @@ import static java.util.Objects.requireNonNull;
 @SuppressWarnings("unchecked")
 @SuppressFBWarnings(value = "NP_PARAMETER_MUST_BE_NONNULL_BUT_MARKED_AS_NULLABLE",
         justification = "https://github.com/spotbugs/spotbugs/issues/844")
-public class HashJoinP<E0> extends AbstractProcessor {
+public class HashJoinWithPersistenceP<E0> extends AbstractProcessor {
 
     private final List<Function<E0, Object>> keyFns;
-    private final List<Map<Object, Object>> lookupTables;
+    private final List<PrefixRocksMap> lookupTables;
     private final FlatMapper<E0, Object> flatMapper;
-
+    //pool of native iterators, should be made in another way?
+    private final List<RocksIterator> iterators;
     private boolean ordinal0Consumed;
 
     @SuppressFBWarnings(value = "NP_PARAMETER_MUST_BE_NONNULL_BUT_MARKED_AS_NULLABLE",
             justification = "https://github.com/spotbugs/spotbugs/issues/844")
-    public HashJoinP(
+    public HashJoinWithPersistenceP(
             @Nonnull List<Function<E0, Object>> keyFns,
             @Nonnull List<Tag> tags,
             @Nullable BiFunction mapToOutputBiFn,
@@ -85,6 +87,7 @@ public class HashJoinP<E0> extends AbstractProcessor {
     ) {
         this.keyFns = keyFns;
         this.lookupTables = new ArrayList<>(Collections.nCopies(keyFns.size(), null));
+        this.iterators = new ArrayList<>(Collections.nCopies(keyFns.size(), null));
         BiFunction<E0, Object[], Object> mapTupleToOutputFn;
         checkTrue(mapToOutputBiFn != null ^ mapToOutputTriFn != null,
                 "Exactly one of mapToOutputBiFn and mapToOutputTriFn must be non-null");
@@ -114,7 +117,9 @@ public class HashJoinP<E0> extends AbstractProcessor {
     @Override
     protected boolean tryProcess(int ordinal, @Nonnull Object item) {
         assert !ordinal0Consumed : "Edge 0 must have a lower priority than all other edges";
-        lookupTables.set(ordinal - 1, (Map) item);
+        //for each map we keep one iterator for that map to limit the number of open iterators
+        lookupTables.set(ordinal - 1, (PrefixRocksMap) item);
+        iterators.set(ordinal - 1, ((PrefixRocksMap) item).prefixRocksIterator());
         return true;
     }
 
@@ -124,11 +129,29 @@ public class HashJoinP<E0> extends AbstractProcessor {
         return flatMapper.tryProcess((E0) item);
     }
 
-    @Nonnull
     private Object lookUpJoined(int index, E0 item) {
-        Map<Object, Object> lookupTableForOrdinal = lookupTables.get(index);
+        PrefixRocksMap<Object, Object> lookupTableForOrdinal = lookupTables.get(index);
+        RocksIterator rocksIterator = iterators.get(index);
         Object key = keyFns.get(index).apply(item);
-        return lookupTableForOrdinal.get(key);
+        return getValues(lookupTableForOrdinal.get(rocksIterator, key));
+    }
+
+    @Nullable
+    private Object getValues(@Nonnull Iterator iterator) {
+        if (iterator.hasNext()) {
+            Object x = iterator.next();
+            if (iterator.hasNext()) {
+                HashJoinArrayList result = new HashJoinArrayList();
+                result.add(x);
+                while (iterator.hasNext()) {
+                    result.add(iterator.next());
+                }
+                return result;
+            } else {
+                return x;
+            }
+        }
+        return null;
     }
 
     private class CombinationsTraverser<OUT> implements Traverser<OUT> {
@@ -191,6 +214,14 @@ public class HashJoinP<E0> extends AbstractProcessor {
 
             currentItem = null;
             return null;
+        }
+    }
+
+    // We need a custom ArrayList subclass because the user's V type could be
+    // ArrayList and then the logic that relies on instanceof would break
+    static final class HashJoinArrayList extends ArrayList<Object> {
+        HashJoinArrayList() {
+            super(2);
         }
     }
 }

@@ -177,6 +177,12 @@ public interface BatchStageWithKey<T, K> extends GeneralStageWithKey<T, K> {
             @Nonnull AggregateOperation1<? super T, ?, ? extends R> aggrOp
     );
 
+    @Nonnull
+    <R> BatchStage<Entry<K, R>> aggregate(
+            @Nonnull AggregateOperation1<? super T, ?, ? extends R> aggrOp,
+            boolean usePersistence
+    );
+
     /**
      * Attaches a stage that performs the given cogroup-and-aggregate operation
      * over the items from both this stage and {@code stage1} you supply. It
@@ -211,6 +217,13 @@ public interface BatchStageWithKey<T, K> extends GeneralStageWithKey<T, K> {
     <T1, R> BatchStage<Entry<K, R>> aggregate2(
             @Nonnull BatchStageWithKey<T1, ? extends K> stage1,
             @Nonnull AggregateOperation2<? super T, ? super T1, ?, R> aggrOp
+    );
+
+    @Nonnull
+    <T1, R> BatchStage<Entry<K, R>> aggregate2(
+            @Nonnull BatchStageWithKey<T1, ? extends K> stage1,
+            @Nonnull AggregateOperation2<? super T, ? super T1, ?, R> aggrOp,
+            boolean usePersistence
     );
 
     /**
@@ -249,9 +262,19 @@ public interface BatchStageWithKey<T, K> extends GeneralStageWithKey<T, K> {
             @Nonnull BatchStageWithKey<? extends T1, ? extends K> stage1,
             @Nonnull AggregateOperation1<? super T1, ?, ? extends R1> aggrOp1
     ) {
+        return aggregate2(aggrOp0, stage1, aggrOp1, false);
+    }
+
+    @Nonnull
+    default <T1, R0, R1> BatchStage<Entry<K, Tuple2<R0, R1>>> aggregate2(
+            @Nonnull AggregateOperation1<? super T, ?, ? extends R0> aggrOp0,
+            @Nonnull BatchStageWithKey<? extends T1, ? extends K> stage1,
+            @Nonnull AggregateOperation1<? super T1, ?, ? extends R1> aggrOp1,
+            boolean usePersistence
+    ) {
         AggregateOperation2<? super T, ? super T1, ?, Tuple2<R0, R1>> aggrOp =
                 aggregateOperation2(aggrOp0, aggrOp1, Tuple2::tuple2);
-        return aggregate2(stage1, aggrOp);
+        return aggregate2(stage1, aggrOp, usePersistence);
     }
 
     /**
@@ -279,7 +302,7 @@ public interface BatchStageWithKey<T, K> extends GeneralStageWithKey<T, K> {
      * If you can express your logic in terms of three single-input aggregate
      * operations, one for each input stream, then you should use {@link
      * #aggregate3(AggregateOperation1, BatchStageWithKey, AggregateOperation1,
-     *             BatchStageWithKey, AggregateOperation1)
+     *             BatchStageWithKey, AggregateOperation1, boolean)
      * stage0.aggregate2(aggrOp0, stage1, aggrOp1, stage2, aggrOp2)} because it
      * offers a simpler API. Use this variant only when your aggregate
      * operation must combine the input streams into the same accumulator.
@@ -295,6 +318,14 @@ public interface BatchStageWithKey<T, K> extends GeneralStageWithKey<T, K> {
             @Nonnull BatchStageWithKey<T1, ? extends K> stage1,
             @Nonnull BatchStageWithKey<T2, ? extends K> stage2,
             @Nonnull AggregateOperation3<? super T, ? super T1, ? super T2, ?, ? extends R> aggrOp
+    );
+
+    @Nonnull
+    <T1, T2, R> BatchStage<Entry<K, R>> aggregate3(
+            @Nonnull BatchStageWithKey<T1, ? extends K> stage1,
+            @Nonnull BatchStageWithKey<T2, ? extends K> stage2,
+            @Nonnull AggregateOperation3<? super T, ? super T1, ? super T2, ?, ? extends R> aggrOp,
+            boolean usePersistence
     );
 
     /**
@@ -342,9 +373,21 @@ public interface BatchStageWithKey<T, K> extends GeneralStageWithKey<T, K> {
             @Nonnull BatchStageWithKey<T2, ? extends K> stage2,
             @Nonnull AggregateOperation1<? super T2, ?, ? extends R2> aggrOp2
     ) {
+        return aggregate3(aggrOp0, stage1, aggrOp1, stage2, aggrOp2, false);
+    }
+
+    @Nonnull
+    default <T1, T2, R0, R1, R2> BatchStage<Entry<K, Tuple3<R0, R1, R2>>> aggregate3(
+            @Nonnull AggregateOperation1<? super T, ?, ? extends R0> aggrOp0,
+            @Nonnull BatchStageWithKey<T1, ? extends K> stage1,
+            @Nonnull AggregateOperation1<? super T1, ?, ? extends R1> aggrOp1,
+            @Nonnull BatchStageWithKey<T2, ? extends K> stage2,
+            @Nonnull AggregateOperation1<? super T2, ?, ? extends R2> aggrOp2,
+            boolean usePersistence
+    ) {
         AggregateOperation3<T, T1, T2, ?, Tuple3<R0, R1, R2>> aggrOp =
                 aggregateOperation3(aggrOp0, aggrOp1, aggrOp2, Tuple3::tuple3);
-        return aggregate3(stage1, stage2, aggrOp);
+        return aggregate3(stage1, stage2, aggrOp, usePersistence);
     }
 
     /**

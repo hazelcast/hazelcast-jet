@@ -50,7 +50,8 @@ public class PrefixRocksMapTest extends JetTestSupport {
     static void init() {
         serializationService = JetTestSupport.getJetService(Jet.bootstrappedInstance())
                                              .createSerializationService(emptyMap());
-        rocksDBStateBackend = new PrefixRocksDBStateBackend().initialize(serializationService, 0).open();
+        rocksDBStateBackend = (PrefixRocksDBStateBackend) new PrefixRocksDBStateBackend()
+                .initialize(serializationService, 0).open();
     }
 
     @BeforeEach

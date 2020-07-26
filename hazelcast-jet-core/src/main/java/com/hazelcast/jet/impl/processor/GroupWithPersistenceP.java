@@ -21,12 +21,11 @@ import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.core.AbstractProcessor;
+import com.hazelcast.jet.rocksdb.RocksMap;
+import com.hazelcast.jet.rocksdb.RocksMap.RocksMapIterator;
 
 import javax.annotation.Nonnull;
-import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.Map.Entry;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -39,16 +38,18 @@ import static java.util.Collections.singletonList;
  * aggregate operation on each group. The items may originate from one or
  * more inbound edges. The supplied aggregate operation must have as many
  * accumulation functions as there are inbound edges.
+ * This processor differs from GroupWithPersistenceAndUnboundedStateP because the supplied aggregate operation
+ * has small state per key and therefore it uses the plain RocksDBStateBackend.
  */
-public class GroupP<K, A, R, OUT> extends AbstractProcessor {
+public class GroupWithPersistenceP<K, A, R, OUT> extends AbstractProcessor {
     @Nonnull private final List<FunctionEx<?, ? extends K>> groupKeyFns;
     @Nonnull private final AggregateOperation<A, R> aggrOp;
 
-    private final Map<K, A> keyToAcc = new HashMap<>();
-    private Traverser<OUT> resultTraverser;
+    private RocksMap<K, A> keyToAcc;
     private final BiFunction<? super K, ? super R, OUT> mapToOutputFn;
+    private Traverser<OUT> resultTraverser;
 
-    public GroupP(
+    public GroupWithPersistenceP(
             @Nonnull List<FunctionEx<?, ? extends K>> groupKeyFns,
             @Nonnull AggregateOperation<A, R> aggrOp,
             @Nonnull BiFunction<? super K, ? super R, OUT> mapToOutputFn
@@ -60,7 +61,7 @@ public class GroupP<K, A, R, OUT> extends AbstractProcessor {
         this.mapToOutputFn = mapToOutputFn;
     }
 
-    public <T> GroupP(
+    public <T> GroupWithPersistenceP(
             @Nonnull FunctionEx<? super T, ? extends K> groupKeyFn,
             @Nonnull AggregateOperation1<? super T, A, R> aggrOp,
             @Nonnull BiFunction<? super K, ? super R, OUT> mapToOutputFn
@@ -69,12 +70,24 @@ public class GroupP<K, A, R, OUT> extends AbstractProcessor {
     }
 
     @Override
+    protected void init(@Nonnull Context context) throws Exception {
+        keyToAcc = context.stateBackend().getMap();
+    }
+
+    @Override
     @SuppressWarnings("unchecked")
     protected boolean tryProcess(int ordinal, @Nonnull Object item) {
         Function<Object, ? extends K> keyFn = (Function<Object, ? extends K>) groupKeyFns.get(ordinal);
         K key = keyFn.apply(item);
-        A acc = keyToAcc.computeIfAbsent(key, k -> aggrOp.createFn().get());
+        A acc;
+        if ((acc = keyToAcc.get(key)) == null) {
+            acc = aggrOp.createFn().get();
+            if (acc != null) {
+                keyToAcc.put(key, acc);
+            }
+        }
         aggrOp.accumulateFn(ordinal).accept(acc, item);
+        keyToAcc.put(key, acc);
         return true;
     }
 
@@ -89,11 +102,12 @@ public class GroupP<K, A, R, OUT> extends AbstractProcessor {
     }
 
     private class ResultTraverser implements Traverser<Entry<K, A>> {
-        private final Iterator<Entry<K, A>> iter = keyToAcc.entrySet().iterator();
+        private final RocksMapIterator iter = keyToAcc.iterator();
 
         @Override
         public Entry<K, A> next() {
             if (!iter.hasNext()) {
+                iter.close();
                 return null;
             }
             try {

@@ -140,23 +140,44 @@ public class BatchStageWithKeyImpl<T, K> extends StageWithGroupingBase<T, K> imp
         return computeStage.attachPartitionedCustomTransform(stageName, procSupplier, keyFn());
     }
 
-    @Nonnull @Override
+    @Nonnull
+    @Override
     public <R> BatchStage<Entry<K, R>> aggregate(
             @Nonnull AggregateOperation1<? super T, ?, ? extends R> aggrOp
+    ) {
+        return aggregate(aggrOp, false);
+    }
+
+    @Nonnull
+    @Override
+    public <R> BatchStage<Entry<K, R>> aggregate(
+            @Nonnull AggregateOperation1<? super T, ?, ? extends R> aggrOp,
+            boolean usePersistence
     ) {
         return computeStage.attach(new GroupTransform<>(
                         singletonList(computeStage.transform),
                         singletonList(keyFn()),
                         aggrOp,
-                        Util::entry),
+                        Util::entry, usePersistence),
                 DO_NOT_ADAPT);
     }
 
-    @Nonnull @Override
-    @SuppressWarnings("rawtypes")
+    @Nonnull
+    @Override
     public <T1, R> BatchStage<Entry<K, R>> aggregate2(
             @Nonnull BatchStageWithKey<T1, ? extends K> stage1,
             @Nonnull AggregateOperation2<? super T, ? super T1, ?, R> aggrOp
+    ) {
+        return aggregate2(stage1, aggrOp, false);
+    }
+
+    @Nonnull
+    @Override
+    @SuppressWarnings("rawtypes")
+    public <T1, R> BatchStage<Entry<K, R>> aggregate2(
+            @Nonnull BatchStageWithKey<T1, ? extends K> stage1,
+            @Nonnull AggregateOperation2<? super T, ? super T1, ?, R> aggrOp,
+            boolean usePersistence
     ) {
         ComputeStageImplBase computeStage1 = ((StageWithGroupingBase) stage1).computeStage;
         return computeStage.attach(
@@ -164,18 +185,30 @@ public class BatchStageWithKeyImpl<T, K> extends StageWithGroupingBase<T, K> imp
                         asList(computeStage.transform, computeStage1.transform),
                         asList(keyFn(), stage1.keyFn()),
                         aggrOp,
-                        Util::entry
+                        Util::entry, usePersistence
                 ),
                 singletonList((GeneralStage<?>) computeStage1),
                 DO_NOT_ADAPT);
     }
 
-    @Nonnull @Override
-    @SuppressWarnings("rawtypes")
+    @Nonnull
+    @Override
     public <T1, T2, R> BatchStage<Entry<K, R>> aggregate3(
             @Nonnull BatchStageWithKey<T1, ? extends K> stage1,
             @Nonnull BatchStageWithKey<T2, ? extends K> stage2,
             @Nonnull AggregateOperation3<? super T, ? super T1, ? super T2, ?, ? extends R> aggrOp
+    ) {
+        return aggregate3(stage1, stage2, aggrOp, false);
+    }
+
+    @Nonnull
+    @Override
+    @SuppressWarnings("rawtypes")
+    public <T1, T2, R> BatchStage<Entry<K, R>> aggregate3(
+            @Nonnull BatchStageWithKey<T1, ? extends K> stage1,
+            @Nonnull BatchStageWithKey<T2, ? extends K> stage2,
+            @Nonnull AggregateOperation3<? super T, ? super T1, ? super T2, ?, ? extends R> aggrOp,
+            boolean usePersistence
     ) {
         ComputeStageImplBase computeStage1 = ((StageWithGroupingBase) stage1).computeStage;
         ComputeStageImplBase computeStage2 = ((StageWithGroupingBase) stage2).computeStage;
@@ -184,7 +217,7 @@ public class BatchStageWithKeyImpl<T, K> extends StageWithGroupingBase<T, K> imp
                         asList(computeStage.transform, computeStage1.transform, computeStage2.transform),
                         asList(keyFn(), stage1.keyFn(), stage2.keyFn()),
                         aggrOp,
-                        Util::entry),
+                        Util::entry, usePersistence),
                 asList((GeneralStage<?>) computeStage1, (GeneralStage<?>) computeStage2),
                 DO_NOT_ADAPT);
     }

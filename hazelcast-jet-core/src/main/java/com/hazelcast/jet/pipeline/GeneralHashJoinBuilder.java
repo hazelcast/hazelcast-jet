@@ -141,7 +141,7 @@ public abstract class GeneralHashJoinBuilder<T0> {
                 orderedClauses
                         .stream()
                         .map(e -> e.getValue().inner)
-                        .collect(toList()));
+                        .collect(toList()),false);
         pipelineImpl.connectGeneralStages(upstream, hashJoinTransform);
         return createOutStageFn.get(hashJoinTransform, fnAdapter, pipelineImpl);
     }

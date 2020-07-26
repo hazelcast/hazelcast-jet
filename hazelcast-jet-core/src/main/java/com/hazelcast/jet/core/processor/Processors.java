@@ -42,8 +42,9 @@ import com.hazelcast.jet.datamodel.KeyedWindowResult;
 import com.hazelcast.jet.function.TriFunction;
 import com.hazelcast.jet.impl.processor.AsyncTransformUsingServiceOrderedP;
 import com.hazelcast.jet.impl.processor.AsyncTransformUsingServiceUnorderedP;
-import com.hazelcast.jet.impl.processor.GroupWithUnboundedStateP;
 import com.hazelcast.jet.impl.processor.GroupP;
+import com.hazelcast.jet.impl.processor.GroupWithPersistenceAndUnboundedStateP;
+import com.hazelcast.jet.impl.processor.GroupWithPersistenceP;
 import com.hazelcast.jet.impl.processor.InsertWatermarksP;
 import com.hazelcast.jet.impl.processor.SessionWindowP;
 import com.hazelcast.jet.impl.processor.SlidingWindowP;
@@ -172,20 +173,20 @@ import static java.util.Collections.singletonList;
  * </tr><tr>
  *     <th>batch,<br>no grouping</th>
  *
- *     <td>{@link #aggregateWithUnboundedStateP}</td>
- *     <td>{@link #accumulateWithUnboundedStateP}</td>
- *     <td>{@link #combineWithUnboundedStateP}</td>
+ *     <td>{@link #aggregateWithPersistenceAndUnboundedStateP}</td>
+ *     <td>{@link #accumulateWithPersistenceAndUnboundedStateP}</td>
+ *     <td>{@link #combineWithPersistenceAndUnboundedStateP}</td>
  * </tr><tr>
  *     <th>batch, group by key</th>
  *
- *     <td>{@link #aggregateByKeyWithUnboundedStateP}</td>
- *     <td>{@link #accumulateByKeyWithUnboundedStateP}</td>
- *     <td rowspan='2'>{@link #combineByKeyWithUnboundedStateP}</td>
+ *     <td>{@link #aggregateByKeyWithPersistenceAndUnboundedStateP}</td>
+ *     <td>{@link #accumulateByKeyWithPersistenceAndUnboundedStateP}</td>
+ *     <td rowspan='2'>{@link #combineByKeyWithPersistenceAndUnboundedStateP}</td>
  * </tr><tr>
  *     <th>batch, co-group by key</th>
  *
- *     <td>{@link #aggregateByKeyWithUnboundedStateP}</td>
- *     <td>{@link #accumulateByKeyWithUnboundedStateP}</td>
+ *     <td>{@link #aggregateByKeyWithPersistenceAndUnboundedStateP}</td>
+ *     <td>{@link #accumulateByKeyWithPersistenceAndUnboundedStateP}</td>
  * </tr><tr>
  *     <th>stream, group by key<br>and aligned window</th>
  *
@@ -241,15 +242,26 @@ public final class Processors {
     }
 
     /**
-     * A variant of aggregateP that uses GroupWithUnboundedStateP processor.
+     * A variant of aggregateP that uses GroupWithPersistenceP processor.
      */
     @Nonnull
-    public static <A, R> SupplierEx<Processor> aggregateWithUnboundedStateP(
+    public static <A, R> SupplierEx<Processor> aggregateWithPersistenceP(
             @Nonnull AggregateOperation<A, R> aggrOp
     ) {
         // We should use the same constant key as the input edges do, but since
         // the processor doesn't save the state, there's no need to.
-        return () -> new GroupWithUnboundedStateP<>(nCopies(aggrOp.arity(), t -> "ALL"), aggrOp, (k, r) -> r);
+        return () -> new GroupWithPersistenceP<>(nCopies(aggrOp.arity(), t -> "ALL"), aggrOp, (k, r) -> r);
+    }
+    /**
+     * A variant of aggregateP that uses GroupWithPersistenceAndUnboundedStateP processor.
+     */
+    @Nonnull
+    public static <A, R> SupplierEx<Processor> aggregateWithPersistenceAndUnboundedStateP(
+            @Nonnull AggregateOperation<A, R> aggrOp
+    ) {
+        // We should use the same constant key as the input edges do, but since
+        // the processor doesn't save the state, there's no need to.
+        return () -> new GroupWithPersistenceAndUnboundedStateP<>(nCopies(aggrOp.arity(), t -> "ALL"), aggrOp, (k, r) -> r);
     }
 
     /**
@@ -280,11 +292,25 @@ public final class Processors {
     }
 
     /**
-     * A variant of accumulateP that uses GroupWithUnboundedStateP processor.
+     * A variant of accumulateP that uses GroupWithPersistenceP processor.
      */
     @Nonnull
-    public static <A, R> SupplierEx<Processor> accumulateWithUnboundedStateP(@Nonnull AggregateOperation<A, R> aggrOp) {
-        return () -> new GroupWithUnboundedStateP<>(
+    public static <A, R> SupplierEx<Processor> accumulateWithPersistenceP(@Nonnull AggregateOperation<A, R> aggrOp) {
+        return () -> new GroupWithPersistenceP<>(
+                // We should use the same constant key as the input edges do, but since
+                // the processor doesn't save the state, there's no need to.
+                nCopies(aggrOp.arity(), t -> "ALL"),
+                aggrOp.withIdentityFinish(),
+                (k, r) -> r);
+    }
+
+    /**
+     * A variant of accumulateP that uses GroupWithPersistenceAndUnboundedStateP processor.
+     */
+    @Nonnull
+    public static <A, R> SupplierEx<Processor> accumulateWithPersistenceAndUnboundedStateP(
+            @Nonnull AggregateOperation<A, R> aggrOp) {
+        return () -> new GroupWithPersistenceAndUnboundedStateP<>(
                 // We should use the same constant key as the input edges do, but since
                 // the processor doesn't save the state, there's no need to.
                 nCopies(aggrOp.arity(), t -> "ALL"),
@@ -322,14 +348,26 @@ public final class Processors {
                 (k, r) -> r);
     }
 
-    /**
-     * A variant of combineP that uses GroupWithUnboundedStateP processor.
-     */
     @Nonnull
-    public static <A, R> SupplierEx<Processor> combineWithUnboundedStateP(
+    public static <A, R> SupplierEx<Processor> combineWithPersistenceP(
             @Nonnull AggregateOperation<A, R> aggrOp
     ) {
-        return () -> new GroupWithUnboundedStateP<>(
+        return () -> new GroupWithPersistenceP<>(
+                // We should use the same constant key as the input edges do, but since
+                // the processor doesn't save the state, there's no need to.
+                t -> "ALL",
+                aggrOp.withCombiningAccumulateFn(identity()),
+                (k, r) -> r);
+    }
+
+    /**
+     * A variant of combineP that uses GroupWithPersistenceAndUnboundedStateP processor.
+     */
+    @Nonnull
+    public static <A, R> SupplierEx<Processor> combineWithPersistenceAndUnboundedStateP(
+            @Nonnull AggregateOperation<A, R> aggrOp
+    ) {
+        return () -> new GroupWithPersistenceAndUnboundedStateP<>(
                 // We should use the same constant key as the input edges do, but since
                 // the processor doesn't save the state, there's no need to.
                 t -> "ALL",
@@ -372,15 +410,27 @@ public final class Processors {
     }
 
     /**
-     * A variant of aggregateByKeyP that uses GroupWithUnboundedStateP processor.
+     * A variant of aggregateByKeyP that uses GroupWithPersistenceP processor.
      */
     @Nonnull
-    public static <K, A, R, OUT> SupplierEx<Processor> aggregateByKeyWithUnboundedStateP(
+    public static <K, A, R, OUT> SupplierEx<Processor> aggregateByKeyWithPersistenceP(
             @Nonnull List<FunctionEx<?, ? extends K>> keyFns,
             @Nonnull AggregateOperation<A, R> aggrOp,
             @Nonnull BiFunctionEx<? super K, ? super R, OUT> mapToOutputFn
     ) {
-        return () -> new GroupWithUnboundedStateP<>(keyFns, aggrOp, mapToOutputFn);
+        return () -> new GroupWithPersistenceP<>(keyFns, aggrOp, mapToOutputFn);
+    }
+
+    /**
+     * A variant of aggregateByKeyP that uses GroupWithPersistenceAndUnboundedStateP processor.
+     */
+    @Nonnull
+    public static <K, A, R, OUT> SupplierEx<Processor> aggregateByKeyWithPersistenceAndUnboundedStateP(
+            @Nonnull List<FunctionEx<?, ? extends K>> keyFns,
+            @Nonnull AggregateOperation<A, R> aggrOp,
+            @Nonnull BiFunctionEx<? super K, ? super R, OUT> mapToOutputFn
+    ) {
+        return () -> new GroupWithPersistenceAndUnboundedStateP<>(keyFns, aggrOp, mapToOutputFn);
     }
 
     /**
@@ -413,14 +463,25 @@ public final class Processors {
     }
 
     /**
-     * A variant of accumulateByKeyP that uses GroupWithUnboundedStateP processor.
+     * A variant of accumulateByKeyP that uses GroupWithPersistenceP processor.
      */
     @Nonnull
-    public static <K, A> SupplierEx<Processor> accumulateByKeyWithUnboundedStateP(
+    public static <K, A> SupplierEx<Processor> accumulateByKeyWithPersistenceP(
             @Nonnull List<FunctionEx<?, ? extends K>> getKeyFns,
             @Nonnull AggregateOperation<A, ?> aggrOp
     ) {
-        return () -> new GroupWithUnboundedStateP<>(getKeyFns, aggrOp.withIdentityFinish(), Util::entry);
+        return () -> new GroupWithPersistenceP<>(getKeyFns, aggrOp.withIdentityFinish(), Util::entry);
+    }
+
+    /**
+     * A variant of accumulateByKeyP that uses GroupWithPersistenceAndUnboundedStateP processor.
+     */
+    @Nonnull
+    public static <K, A> SupplierEx<Processor> accumulateByKeyWithPersistenceAndUnboundedStateP(
+            @Nonnull List<FunctionEx<?, ? extends K>> getKeyFns,
+            @Nonnull AggregateOperation<A, ?> aggrOp
+    ) {
+        return () -> new GroupWithPersistenceAndUnboundedStateP<>(getKeyFns, aggrOp.withIdentityFinish(), Util::entry);
     }
 
 
@@ -429,7 +490,7 @@ public final class Processors {
      * two-stage group-and-aggregate setup. Each processor applies the {@link
      * AggregateOperation1#combineFn() combine} aggregation primitive to the
      * entries received from several upstream instances of {@link
-     * #accumulateByKeyWithUnboundedStateP}. After exhausting all its input it emits one item per
+     * #accumulateByKeyWithPersistenceAndUnboundedStateP}. After exhausting all its input it emits one item per
      * distinct key. It computes the item to emit by passing each (key, result)
      * pair to {@code mapToOutputFn}.
      * <p>
@@ -458,15 +519,26 @@ public final class Processors {
                 mapToOutputFn);
     }
 
+    @Nonnull
+    public static <K, A, R, OUT> SupplierEx<Processor> combineByKeyWithPersistenceP(
+            @Nonnull AggregateOperation<A, R> aggrOp,
+            @Nonnull BiFunctionEx<? super K, ? super R, OUT> mapToOutputFn
+    ) {
+        return () -> new GroupWithPersistenceP<>(
+                Entry::getKey,
+                aggrOp.withCombiningAccumulateFn(Entry<K, A>::getValue),
+                mapToOutputFn);
+    }
+
     /**
      * A variant of combineByKeyP that uses GroupPWithUnboundedStateP processor.
      */
     @Nonnull
-    public static <K, A, R, OUT> SupplierEx<Processor> combineByKeyWithUnboundedStateP(
+    public static <K, A, R, OUT> SupplierEx<Processor> combineByKeyWithPersistenceAndUnboundedStateP(
             @Nonnull AggregateOperation<A, R> aggrOp,
             @Nonnull BiFunctionEx<? super K, ? super R, OUT> mapToOutputFn
     ) {
-        return () -> new GroupWithUnboundedStateP<>(
+        return () -> new GroupWithPersistenceAndUnboundedStateP<>(
                 Entry::getKey,
                 aggrOp.withCombiningAccumulateFn(Entry<K, A>::getValue),
                 mapToOutputFn);

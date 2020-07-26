@@ -36,9 +36,9 @@ import java.util.stream.Stream;
 import static com.hazelcast.jet.Traversers.traverseItems;
 import static com.hazelcast.jet.Traversers.traverseIterable;
 import static com.hazelcast.jet.Util.entry;
-import static com.hazelcast.jet.core.processor.Processors.aggregateByKeyWithUnboundedStateP;
-import static com.hazelcast.jet.core.processor.Processors.combineByKeyWithUnboundedStateP;
-import static com.hazelcast.jet.core.processor.Processors.combineWithUnboundedStateP;
+import static com.hazelcast.jet.core.processor.Processors.aggregateByKeyP;
+import static com.hazelcast.jet.core.processor.Processors.combineByKeyP;
+import static com.hazelcast.jet.core.processor.Processors.combineP;
 import static com.hazelcast.jet.core.processor.Processors.filterP;
 import static com.hazelcast.jet.core.processor.Processors.filterUsingServiceP;
 import static com.hazelcast.jet.core.processor.Processors.flatMapP;
@@ -202,7 +202,7 @@ public class ProcessorsTest extends SimpleTestInClusterSupport {
     public void aggregateByKey() {
         FunctionEx<Object, String> keyFn = Object::toString;
         TestSupport
-                .verifyProcessor(aggregateByKeyWithUnboundedStateP(singletonList(keyFn),
+                .verifyProcessor(aggregateByKeyP(singletonList(keyFn),
                         aggregateToListAndString(), Util::entry))
                 .disableSnapshots()
                 .outputChecker(TestSupport.SAME_ITEMS_ANY_ORDER)
@@ -217,7 +217,7 @@ public class ProcessorsTest extends SimpleTestInClusterSupport {
     public void accumulateByKey() {
         FunctionEx<Object, String> keyFn = Object::toString;
         TestSupport
-                .verifyProcessor(Processors.accumulateByKeyWithUnboundedStateP(singletonList(keyFn),
+                .verifyProcessor(Processors.accumulateByKeyP(singletonList(keyFn),
                         aggregateToListAndString()))
                 .disableSnapshots()
                 .input(asList(1, 1, 2, 2))
@@ -231,7 +231,7 @@ public class ProcessorsTest extends SimpleTestInClusterSupport {
     @Test
     public void combineByKey() {
         TestSupport
-                .verifyProcessor(combineByKeyWithUnboundedStateP(aggregateToListAndString(), Util::entry))
+                .verifyProcessor(combineByKeyP(aggregateToListAndString(), Util::entry))
                 .disableSnapshots()
                 .outputChecker(TestSupport.SAME_ITEMS_ANY_ORDER)
                 .input(asList(
@@ -249,7 +249,7 @@ public class ProcessorsTest extends SimpleTestInClusterSupport {
     @Test
     public void aggregate() {
         TestSupport
-                .verifyProcessor(Processors.aggregateWithUnboundedStateP(aggregateToListAndString()))
+                .verifyProcessor(Processors.aggregateP(aggregateToListAndString()))
                 .disableSnapshots()
                 .input(asList(1, 2))
                 .expectOutput(singletonList("[1, 2]"));
@@ -258,7 +258,7 @@ public class ProcessorsTest extends SimpleTestInClusterSupport {
     @Test
     public void accumulate() {
         TestSupport
-                .verifyProcessor(Processors.accumulateWithUnboundedStateP(aggregateToListAndString()))
+                .verifyProcessor(Processors.accumulateP(aggregateToListAndString()))
                 .disableSnapshots()
                 .input(asList(1, 2))
                 .expectOutput(singletonList(asList(1, 2)));
@@ -267,7 +267,7 @@ public class ProcessorsTest extends SimpleTestInClusterSupport {
     @Test
     public void combine() {
         TestSupport
-                .verifyProcessor(combineWithUnboundedStateP(aggregateToListAndString()))
+                .verifyProcessor(combineP(aggregateToListAndString()))
                 .disableSnapshots()
                 .input(asList(
                         singletonList(1),

@@ -22,7 +22,6 @@ import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.datamodel.Tuple2;
-import com.hazelcast.jet.rocksdb.PrefixRocksDBStateBackend;
 import com.hazelcast.jet.rocksdb.PrefixRocksMap;
 import com.hazelcast.jet.rocksdb.PrefixRocksMap.PrefixRocksMapIterator;
 
@@ -42,14 +41,14 @@ import static java.util.Collections.singletonList;
  * more inbound edges. The supplied aggregate operation must have as many
  * accumulation functions as there are inbound edges.
  */
-public class GroupWithUnboundedStateP<K, A, R, OUT> extends AbstractProcessor {
+public class GroupWithPersistenceAndUnboundedStateP<K, A, R, OUT> extends AbstractProcessor {
     @Nonnull private final List<FunctionEx<?, ? extends K>> groupKeyFns;
     @Nonnull private final AggregateOperation<A, R> aggrOp;
     private final BiFunction<? super K, ? super R, OUT> mapToOutputFn;
     private Traverser<OUT> resultTraverser;
     private PrefixRocksMap<K, Entry<Integer, Object>> keyToOrdinalAndAcc;
 
-    public GroupWithUnboundedStateP(
+    public GroupWithPersistenceAndUnboundedStateP(
             @Nonnull List<FunctionEx<?, ? extends K>> groupKeyFns,
             @Nonnull AggregateOperation<A, R> aggrOp,
             @Nonnull BiFunction<? super K, ? super R, OUT> mapToOutputFn
@@ -61,7 +60,7 @@ public class GroupWithUnboundedStateP<K, A, R, OUT> extends AbstractProcessor {
         this.mapToOutputFn = mapToOutputFn;
     }
 
-    public <T> GroupWithUnboundedStateP(
+    public <T> GroupWithPersistenceAndUnboundedStateP(
             @Nonnull FunctionEx<? super T, ? extends K> groupKeyFn,
             @Nonnull AggregateOperation1<? super T, A, R> aggrOp,
             @Nonnull BiFunction<? super K, ? super R, OUT> mapToOutputFn
@@ -71,8 +70,7 @@ public class GroupWithUnboundedStateP<K, A, R, OUT> extends AbstractProcessor {
 
     @Override
     protected void init(@Nonnull Context context) throws Exception {
-        PrefixRocksDBStateBackend store = context.prefixStateBackend();
-        keyToOrdinalAndAcc = store.getPrefixMap();
+        keyToOrdinalAndAcc = context.prefixStateBackend().getPrefixMap();
     }
 
     @Override
