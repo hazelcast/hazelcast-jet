@@ -132,6 +132,7 @@ public class PrefixRocksDBStateBackend {
             for (PrefixRocksMap prefixRocksMap : prefixMaps) {
                 prefixRocksMap.close();
             }
+            rocksDBOptions.close();
             options.close();
             db.close();
         }

@@ -142,6 +142,7 @@ public final class RocksDBStateBackend {
             for (RocksMap rocksMap : maps) {
                 rocksMap.close();
             }
+            rocksDBOptions.close();
             options.close();
             db.close();
         }

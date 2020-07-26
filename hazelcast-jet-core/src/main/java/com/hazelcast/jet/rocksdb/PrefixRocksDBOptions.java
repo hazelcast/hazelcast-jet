@@ -23,9 +23,11 @@ import org.rocksdb.FlushOptions;
 import org.rocksdb.IndexType;
 import org.rocksdb.Options;
 import org.rocksdb.ReadOptions;
+import org.rocksdb.RocksDB;
 import org.rocksdb.VectorMemTableConfig;
 import org.rocksdb.WriteOptions;
 
+import javax.annotation.Nonnull;
 import java.io.Serializable;
 
 /**
@@ -48,6 +50,11 @@ public class PrefixRocksDBOptions implements Serializable {
     private int memtableNumber;
     private int bloomFilterBits;
     private int subCompactions;
+    private BloomFilter filter;
+
+    static {
+        RocksDB.loadLibrary();
+    }
 
     /**
      * Creates a new PrefixRocksDBOptions instance with default options.
@@ -56,44 +63,34 @@ public class PrefixRocksDBOptions implements Serializable {
         memtableSize = MEMTABLE_SIZE;
         memtableNumber = MEMTABLE_NUMBER;
         bloomFilterBits = BLOOM_FILTER_BITS;
+        subCompactions = SUB_COMPACTIONS;
+        filter = new BloomFilter(bloomFilterBits, false);
     }
 
-    PrefixRocksDBOptions(PrefixRocksDBOptions options) {
-        this.memtableSize = options.memtableSize;
-        this.memtableNumber = options.memtableNumber;
-        this.bloomFilterBits = options.bloomFilterBits;
-        this.subCompactions = options.subCompactions;
+    //need it to copy options passed to different maps
+    PrefixRocksDBOptions(@Nonnull PrefixRocksDBOptions options) {
+        memtableSize = options.memtableSize;
+        memtableNumber = options.memtableNumber;
+        bloomFilterBits = options.bloomFilterBits;
+        subCompactions = options.subCompactions;
+        filter = new BloomFilter(bloomFilterBits, false);
     }
 
-    /**
-     * Sets RocksDB MemTable Size in bytes.
-     */
-    public PrefixRocksDBOptions setMemtableSize(int memtableSize) {
-        this.memtableSize = memtableSize;
-        return this;
-    }
-
-    /**
-     * Sets the number of RocksDB MemTables per ColumnFamily.
-     */
-    public PrefixRocksDBOptions setMemtableNumber(int memtableNumber) {
-        this.memtableNumber = memtableNumber;
-        return this;
-    }
-
-    /**
-     * Sets the number of bits used for RocksDB bloom filter.
-     */
-    public PrefixRocksDBOptions setBloomFilterBits(int bloomFilterBits) {
-        this.bloomFilterBits = bloomFilterBits;
-        return this;
-    }
-
-    /**
-     * Sets the number of threads to use for sub-compaction.
-     */
-    public PrefixRocksDBOptions setSubCompactions(int subCompactions) {
-        this.subCompactions = subCompactions;
+    public PrefixRocksDBOptions setOptions(@Nonnull RocksDBOptionsBuilder options) {
+        if (options.memtableSize != null) {
+            memtableSize = options.memtableSize;
+        }
+        if (options.memtableNumber != null) {
+            memtableNumber = options.memtableNumber;
+        }
+        if (options.bloomFilterBits != null) {
+            bloomFilterBits = options.bloomFilterBits;
+            filter.close();
+            filter = new BloomFilter(bloomFilterBits, false);
+        }
+        if (options.subCompactions != null) {
+            subCompactions = options.subCompactions;
+        }
         return this;
     }
 
@@ -114,7 +111,7 @@ public class PrefixRocksDBOptions implements Serializable {
                 .setMemTableConfig(new VectorMemTableConfig())
                 .setTableFormatConfig(new BlockBasedTableConfig()
                         .setIndexType(IndexType.kHashSearch)
-                        .setFilter(new BloomFilter(bloomFilterBits, false))
+                        .setFilter(filter)
                         .setWholeKeyFiltering(false));
     }
 
@@ -132,5 +129,9 @@ public class PrefixRocksDBOptions implements Serializable {
 
     FlushOptions flushOptions() {
         return new FlushOptions().setWaitForFlush(true);
+    }
+
+    void close() {
+        filter.close();
     }
 }

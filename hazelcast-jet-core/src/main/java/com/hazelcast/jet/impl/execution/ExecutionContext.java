@@ -41,6 +41,7 @@ import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.jet.rocksdb.PrefixRocksDBOptions;
 import com.hazelcast.jet.rocksdb.PrefixRocksDBStateBackend;
 import com.hazelcast.jet.rocksdb.RocksDBOptions;
+import com.hazelcast.jet.rocksdb.RocksDBOptionsBuilder;
 import com.hazelcast.jet.rocksdb.RocksDBStateBackend;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.spi.impl.NodeEngine;
@@ -144,13 +145,12 @@ public class ExecutionContext implements DynamicMetricsProvider {
         stateBackend = new RocksDBStateBackend().initialize(serializationService, jobId);
         prefixStateBackend = new PrefixRocksDBStateBackend().initialize(serializationService, jobId);
 
-        RocksDBOptions rocksDBOptions = jobConfig.getRocksDBOptions();
-        PrefixRocksDBOptions prefixRocksDBOptions = jobConfig.getPrefixRocksDBOptions();
-        if (rocksDBOptions != null) {
-            stateBackend.setRocksDBOptions(rocksDBOptions);
-        }
-        if (prefixRocksDBOptions != null) {
-            prefixStateBackend.setRocksDBOptions(prefixRocksDBOptions);
+        RocksDBOptionsBuilder rocksDBOptionsBuilder = jobConfig.getRocksDBOptionsBuilder();
+        if (rocksDBOptionsBuilder != null) {
+            stateBackend.setRocksDBOptions(new RocksDBOptions()
+                    .setOptions(rocksDBOptionsBuilder));
+            prefixStateBackend.setRocksDBOptions(new PrefixRocksDBOptions()
+                    .setOptions(rocksDBOptionsBuilder));
         }
 
         tempDirectories.put("stateBackend", stateBackend.directory());
