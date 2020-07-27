@@ -131,8 +131,8 @@ public class VertexDef_HigherPrioritySourceTest extends SimpleTestInClusterSuppo
         SnapshotContext ssContext = new SnapshotContext(mock(ILogger.class), "job", 0, EXACTLY_ONCE);
         InternalSerializationService service = (InternalSerializationService) nodeEngineImpl.getSerializationService();
         plan.initialize(nodeEngineImpl, 0, 0, ssContext, null, service,
-                new RocksDBStateBackend().initialize(service, 0),
-                new PrefixRocksDBStateBackend().initialize(service, 0));
+                (RocksDBStateBackend) new RocksDBStateBackend().initialize(service, 0),
+                (PrefixRocksDBStateBackend) new PrefixRocksDBStateBackend().initialize(service, 0));
         Set<Integer> higherPriorityVertices = VertexDef.getHigherPriorityVertices(plan.getVertices());
         String actualHigherPriorityVertices = plan.getVertices().stream()
                 .filter(v -> higherPriorityVertices.contains(v.vertexId()))

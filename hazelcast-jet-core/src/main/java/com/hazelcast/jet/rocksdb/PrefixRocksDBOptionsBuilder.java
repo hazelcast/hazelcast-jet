@@ -13,21 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.hazelcast.jet.rocksdb;
 
 /**
- * Configuration Builder for RocksDBStateBackend options.
+ * Configuration Builder for PrefixRocksDBStateBackend options.
  */
-public class RocksDBOptionsBuilder extends AbstractRocksDBOptionsBuilder {
-
-    Integer cacheSize;
+public class PrefixRocksDBOptionsBuilder extends AbstractRocksDBOptionsBuilder {
+    Integer subCompactions;
 
     /**
-     * Sets the size of RocksDB block cache in bytes.
+     * Sets the number of threads to use for sub-compaction.
      */
-    public RocksDBOptionsBuilder setCacheSize(int cacheSize) {
-        this.cacheSize = cacheSize;
+    public PrefixRocksDBOptionsBuilder setSubCompactions(int subCompactions) {
+        this.subCompactions = subCompactions;
         return this;
     }
 }

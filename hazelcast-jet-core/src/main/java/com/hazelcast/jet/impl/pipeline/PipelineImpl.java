@@ -212,16 +212,13 @@ public class PipelineImpl implements Pipeline {
 
     void persist(BatchStage<?> stage) {
         Transform transform = transformOf(stage);
-        if(transform instanceof AggregateTransform) {
+        if (transform instanceof AggregateTransform) {
             ((AggregateTransform) transform).setUsePersistence(true);
-        }
-        else if(transform instanceof GroupTransform) {
+        } else if (transform instanceof GroupTransform) {
             ((GroupTransform) transform).setUsePersistence(true);
-        }
-        else if(transform instanceof HashJoinTransform) {
+        } else if (transform instanceof HashJoinTransform) {
             ((HashJoinTransform) transform).setUsePersistence(true);
-        }
-        else {
+        } else {
             throw new JetException("Using persistence is only allowed for join and aggregate operations");
         }
     }

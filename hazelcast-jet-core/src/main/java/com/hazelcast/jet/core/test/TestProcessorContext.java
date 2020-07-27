@@ -65,7 +65,8 @@ public class TestProcessorContext extends TestProcessorSupplierContext implement
     @Override
     public RocksDBStateBackend stateBackend() {
         if (stateBackend == null) {
-            stateBackend = new RocksDBStateBackend().initialize(serializationService, jobId()).open();
+            stateBackend = (RocksDBStateBackend) new RocksDBStateBackend()
+                    .initialize(serializationService, jobId()).open();
         }
         return stateBackend;
     }
@@ -73,7 +74,8 @@ public class TestProcessorContext extends TestProcessorSupplierContext implement
     @Override
     public PrefixRocksDBStateBackend prefixStateBackend() {
         if (prefixStateBackend == null) {
-            prefixStateBackend = new PrefixRocksDBStateBackend().initialize(serializationService, jobId()).open();
+            prefixStateBackend = (PrefixRocksDBStateBackend) new PrefixRocksDBStateBackend()
+                    .initialize(serializationService, jobId()).open();
         }
         return prefixStateBackend;
     }

@@ -42,7 +42,6 @@ public class RocksDBOptions implements Serializable {
     private int memtableNumber;
     private int bloomFilterBits;
     private int cacheSize;
-    private BloomFilter filter;
     private LRUCache cache;
 
     static {
@@ -57,19 +56,22 @@ public class RocksDBOptions implements Serializable {
         memtableNumber = MEMTABLE_NUMBER;
         bloomFilterBits = BLOOM_FILTER_BITS;
         cacheSize = CACHE_SIZE;
-        filter = new BloomFilter(bloomFilterBits, false);
         cache = new LRUCache(cacheSize);
     }
-    //need it to copy options passed to different maps
+
+    // need it to make a copy of this instance so a new instance with the same
+    // configuration is passed to each new map.
     RocksDBOptions(@Nonnull RocksDBOptions options) {
         memtableSize = options.memtableSize;
         memtableNumber = options.memtableNumber;
         bloomFilterBits = options.bloomFilterBits;
         cacheSize = options.cacheSize;
-        filter = new BloomFilter(bloomFilterBits, false);
         cache = new LRUCache(cacheSize);
     }
 
+    /**
+     * Sets RocksDB options using the builder instance the user provided through JobConfig.
+     */
     public RocksDBOptions setOptions(@Nonnull RocksDBOptionsBuilder options) {
         if (options.memtableSize != null) {
             memtableSize = options.memtableSize;
@@ -79,8 +81,6 @@ public class RocksDBOptions implements Serializable {
         }
         if (options.bloomFilterBits != null) {
             bloomFilterBits = options.bloomFilterBits;
-            filter.close();
-            filter = new BloomFilter(bloomFilterBits, false);
         }
         if (options.cacheSize != null) {
             cacheSize = options.cacheSize;
@@ -101,7 +101,7 @@ public class RocksDBOptions implements Serializable {
                 .setTableFormatConfig(new BlockBasedTableConfig()
                         .setBlockCache(cache)
                         .setPinL0FilterAndIndexBlocksInCache(true)
-                        .setFilter(filter));
+                        .setFilter(new BloomFilter(bloomFilterBits, false)));
     }
 
     WriteOptions writeOptions() {
@@ -113,7 +113,6 @@ public class RocksDBOptions implements Serializable {
     }
 
     void close() {
-    filter.close();
     cache.close();
     }
 }

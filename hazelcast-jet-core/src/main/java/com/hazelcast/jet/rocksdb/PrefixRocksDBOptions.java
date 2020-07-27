@@ -23,7 +23,6 @@ import org.rocksdb.FlushOptions;
 import org.rocksdb.IndexType;
 import org.rocksdb.Options;
 import org.rocksdb.ReadOptions;
-import org.rocksdb.RocksDB;
 import org.rocksdb.VectorMemTableConfig;
 import org.rocksdb.WriteOptions;
 
@@ -39,7 +38,7 @@ import java.io.Serializable;
  * Prefix-scan retrieves all values associated with each key using the key as the prefix.
  * Prefix-scan uses RocksDB prefix iterator feature with a fixed-length prefix equal to the size of PrefixRocksMap key.
  */
-public class PrefixRocksDBOptions implements Serializable {
+public class PrefixRocksDBOptions extends RocksDBOptions implements Serializable {
 
     private static final int MEMTABLE_SIZE = 128 * 1024 * 1024;
     private static final int MEMTABLE_NUMBER = 4;
@@ -50,11 +49,6 @@ public class PrefixRocksDBOptions implements Serializable {
     private int memtableNumber;
     private int bloomFilterBits;
     private int subCompactions;
-    private BloomFilter filter;
-
-    static {
-        RocksDB.loadLibrary();
-    }
 
     /**
      * Creates a new PrefixRocksDBOptions instance with default options.
@@ -64,19 +58,20 @@ public class PrefixRocksDBOptions implements Serializable {
         memtableNumber = MEMTABLE_NUMBER;
         bloomFilterBits = BLOOM_FILTER_BITS;
         subCompactions = SUB_COMPACTIONS;
-        filter = new BloomFilter(bloomFilterBits, false);
     }
 
-    //need it to copy options passed to different maps
+    // need it to make a copy of this instance so a new instance with the same
+    // configuration is passed to each new map.
     PrefixRocksDBOptions(@Nonnull PrefixRocksDBOptions options) {
         memtableSize = options.memtableSize;
         memtableNumber = options.memtableNumber;
         bloomFilterBits = options.bloomFilterBits;
         subCompactions = options.subCompactions;
-        filter = new BloomFilter(bloomFilterBits, false);
     }
-
-    public PrefixRocksDBOptions setOptions(@Nonnull RocksDBOptionsBuilder options) {
+    /**
+     * Sets RocksDB options using the builder instance the user provided through JobConfig.
+     */
+    public PrefixRocksDBOptions setOptions(@Nonnull PrefixRocksDBOptionsBuilder options) {
         if (options.memtableSize != null) {
             memtableSize = options.memtableSize;
         }
@@ -85,8 +80,6 @@ public class PrefixRocksDBOptions implements Serializable {
         }
         if (options.bloomFilterBits != null) {
             bloomFilterBits = options.bloomFilterBits;
-            filter.close();
-            filter = new BloomFilter(bloomFilterBits, false);
         }
         if (options.subCompactions != null) {
             subCompactions = options.subCompactions;
@@ -94,6 +87,7 @@ public class PrefixRocksDBOptions implements Serializable {
         return this;
     }
 
+    @Override
     Options options() {
         Options options = new Options()
                 .setCreateIfMissing(true)
@@ -103,7 +97,8 @@ public class PrefixRocksDBOptions implements Serializable {
         return options;
     }
 
-    ColumnFamilyOptions prefixColumnFamilyOptions() {
+    @Override
+    ColumnFamilyOptions columnFamilyOptions() {
         return new ColumnFamilyOptions()
                 .setNumLevels(NUM_LEVELS)
                 .setMaxWriteBufferNumber(memtableNumber)
@@ -111,10 +106,11 @@ public class PrefixRocksDBOptions implements Serializable {
                 .setMemTableConfig(new VectorMemTableConfig())
                 .setTableFormatConfig(new BlockBasedTableConfig()
                         .setIndexType(IndexType.kHashSearch)
-                        .setFilter(filter)
+                        .setFilter(new BloomFilter(bloomFilterBits, false))
                         .setWholeKeyFiltering(false));
     }
 
+    @Override
     WriteOptions writeOptions() {
         return new WriteOptions().setDisableWAL(true).setNoSlowdown(true);
     }
@@ -131,7 +127,7 @@ public class PrefixRocksDBOptions implements Serializable {
         return new FlushOptions().setWaitForFlush(true);
     }
 
+    @Override
     void close() {
-        filter.close();
     }
 }

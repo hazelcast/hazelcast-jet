@@ -89,7 +89,7 @@ public class PrefixRocksMap<K, V> {
         this.db = db;
         this.name = name;
         this.serializationService = serializationService;
-        columnFamilyOptions = options.prefixColumnFamilyOptions();
+        columnFamilyOptions = options.columnFamilyOptions();
         writeOptions = options.writeOptions();
         prefixIteratorOptions = options.prefixIteratorOptions();
         iteratorOptions = options.iteratorOptions();

@@ -349,6 +349,9 @@ public final class Processors {
                 (k, r) -> r);
     }
 
+    /**
+     * A variant of combineP that uses GroupWithPersistenceP processor.
+     */
     @Nonnull
     public static <A, R> SupplierEx<Processor> combineWithPersistenceP(
             @Nonnull AggregateOperation<A, R> aggrOp
@@ -520,6 +523,9 @@ public final class Processors {
                 mapToOutputFn);
     }
 
+    /**
+     * A variant of combineByKeyP that uses GroupPWithPersistenceP processor.
+     */
     @Nonnull
     public static <K, A, R, OUT> SupplierEx<Processor> combineByKeyWithPersistenceP(
             @Nonnull AggregateOperation<A, R> aggrOp,
@@ -532,7 +538,7 @@ public final class Processors {
     }
 
     /**
-     * A variant of combineByKeyP that uses GroupPWithUnboundedStateP processor.
+     * A variant of combineByKeyP that uses GroupPWithPersistenceAndUnboundedStateP processor.
      */
     @Nonnull
     public static <K, A, R, OUT> SupplierEx<Processor> combineByKeyWithPersistenceAndUnboundedStateP(

@@ -289,12 +289,12 @@ public final class Contexts {
 
         @Override
         public RocksDBStateBackend stateBackend() {
-            return stateBackend.open();
+            return (RocksDBStateBackend) stateBackend.open();
         }
 
         @Override
         public PrefixRocksDBStateBackend prefixStateBackend() {
-            return prefixStateBackend.open();
+            return (PrefixRocksDBStateBackend) prefixStateBackend.open();
         }
 
         public RocksDBStateBackend getStateBackend() {

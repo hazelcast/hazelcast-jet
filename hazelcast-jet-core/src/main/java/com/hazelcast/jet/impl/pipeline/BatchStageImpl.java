@@ -85,7 +85,7 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
     }
 
     @Nonnull @Override
-    public BatchStage<T> usePersistence(){
+    public BatchStage<T> usePersistence() {
         pipelineImpl.persist(this);
         return this;
     }

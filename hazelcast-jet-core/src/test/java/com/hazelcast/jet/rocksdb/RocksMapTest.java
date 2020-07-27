@@ -52,7 +52,8 @@ public class RocksMapTest extends JetTestSupport {
     static void init() {
         serializationService = JetTestSupport.getJetService(Jet.bootstrappedInstance())
                                              .createSerializationService(emptyMap());
-        rocksDBStateBackend = new RocksDBStateBackend().initialize(serializationService, 0).open();
+        rocksDBStateBackend = (RocksDBStateBackend) new RocksDBStateBackend()
+                .initialize(serializationService, 0).open();
     }
 
     @BeforeEach
