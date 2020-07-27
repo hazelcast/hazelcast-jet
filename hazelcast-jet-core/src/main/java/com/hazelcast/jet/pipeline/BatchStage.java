@@ -66,12 +66,8 @@ public interface BatchStage<T> extends GeneralStage<T> {
     @Nonnull @Override
     BatchStage<T> rebalance();
 
-    /**
-     * Uses the implementation that is based on RocksDB state backend for this batch stage
-     * instead of the in-memory implementation.
-     * Can only be applied to join or aggregate stages.
-     */
-    @Nonnull
+
+    @Nonnull @Override
     BatchStage<T> usePersistence();
 
     @Nonnull @Override

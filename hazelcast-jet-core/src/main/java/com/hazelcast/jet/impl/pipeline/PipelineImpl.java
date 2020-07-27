@@ -210,7 +210,7 @@ public class PipelineImpl implements Pipeline {
         }
     }
 
-    void persist(BatchStage<?> stage) {
+    void persist(GeneralStage<?> stage) {
         Transform transform = transformOf(stage);
         if (transform instanceof AggregateTransform) {
             ((AggregateTransform) transform).setUsePersistence(true);

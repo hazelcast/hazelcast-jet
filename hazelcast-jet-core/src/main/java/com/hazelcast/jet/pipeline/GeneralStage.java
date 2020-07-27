@@ -1065,6 +1065,14 @@ public interface GeneralStage<T> extends Stage {
     <K> GeneralStage<T> rebalance(@Nonnull FunctionEx<? super T, ? extends K> keyFn);
 
     /**
+     * Uses the implementation that is based on RocksDB state backend for this stage
+     * instead of the in-memory implementation.
+     * Can only be applied to join or aggregate stages.
+     */
+    @Nonnull
+    GeneralStage<T> usePersistence();
+
+    /**
      * Adds a timestamp to each item in the stream using the supplied function
      * and specifies the allowed amount of disorder between them. As the stream
      * moves on, the timestamps must increase, but you can tell Jet to accept

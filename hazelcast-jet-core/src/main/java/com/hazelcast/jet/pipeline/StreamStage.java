@@ -76,6 +76,9 @@ public interface StreamStage<T> extends GeneralStage<T> {
     StreamStage<T> rebalance();
 
     @Nonnull @Override
+    StreamStage<T> usePersistence();
+
+    @Nonnull @Override
     <R> StreamStage<R> map(@Nonnull FunctionEx<? super T, ? extends R> mapFn);
 
     @Nonnull @Override

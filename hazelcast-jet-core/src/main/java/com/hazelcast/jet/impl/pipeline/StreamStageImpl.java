@@ -78,6 +78,12 @@ public class StreamStageImpl<T> extends ComputeStageImplBase<T> implements Strea
     }
 
     @Nonnull @Override
+    public StreamStage<T> usePersistence() {
+        pipelineImpl.persist(this);
+        return this;
+    }
+
+    @Nonnull @Override
     public StageWithWindow<T> window(WindowDefinition wDef) {
         return new StageWithWindowImpl<>(this, wDef);
     }
