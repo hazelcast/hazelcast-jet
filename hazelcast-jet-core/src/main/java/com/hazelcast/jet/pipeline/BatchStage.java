@@ -66,6 +66,9 @@ public interface BatchStage<T> extends GeneralStage<T> {
     @Nonnull @Override
     BatchStage<T> rebalance();
 
+    @Nonnull
+    BatchStage<T> usePersistence();
+
     @Nonnull @Override
     <R> BatchStage<R> map(@Nonnull FunctionEx<? super T, ? extends R> mapFn);
 
@@ -204,14 +207,6 @@ public interface BatchStage<T> extends GeneralStage<T> {
     );
 
     @Nonnull @Override
-    <K, T1_IN, T1, R> BatchStage<R> hashJoin(
-            @Nonnull BatchStage<T1_IN> stage1,
-            @Nonnull JoinClause<K, ? super T, ? super T1_IN, ? extends T1> joinClause1,
-            @Nonnull BiFunctionEx<T, T1, R> mapToOutputFn,
-            boolean usePersistence
-    );
-
-    @Nonnull @Override
     <K, T1_IN, T1, R> BatchStage<R> innerHashJoin(
             @Nonnull BatchStage<T1_IN> stage1,
             @Nonnull JoinClause<K, ? super T, ? super T1_IN, ? extends T1> joinClause1,
@@ -219,34 +214,7 @@ public interface BatchStage<T> extends GeneralStage<T> {
     );
 
     @Nonnull @Override
-    <K, T1_IN, T1, R> BatchStage<R> innerHashJoin(
-            @Nonnull BatchStage<T1_IN> stage1,
-            @Nonnull JoinClause<K, ? super T, ? super T1_IN, ? extends T1> joinClause1,
-            @Nonnull BiFunctionEx<T, T1, R> mapToOutputFn,
-            boolean usePersistence
-    );
-
-    @Nonnull @Override
     <K1, K2, T1_IN, T2_IN, T1, T2, R> BatchStage<R> hashJoin2(
-            @Nonnull BatchStage<T1_IN> stage1,
-            @Nonnull JoinClause<K1, ? super T, ? super T1_IN, ? extends T1> joinClause1,
-            @Nonnull BatchStage<T2_IN> stage2,
-            @Nonnull JoinClause<K2, ? super T, ? super T2_IN, ? extends T2> joinClause2,
-            @Nonnull TriFunction<T, T1, T2, R> mapToOutputFn
-    );
-
-    @Nonnull @Override
-    <K1, K2, T1_IN, T2_IN, T1, T2, R> BatchStage<R> hashJoin2(
-            @Nonnull BatchStage<T1_IN> stage1,
-            @Nonnull JoinClause<K1, ? super T, ? super T1_IN, ? extends T1> joinClause1,
-            @Nonnull BatchStage<T2_IN> stage2,
-            @Nonnull JoinClause<K2, ? super T, ? super T2_IN, ? extends T2> joinClause2,
-            @Nonnull TriFunction<T, T1, T2, R> mapToOutputFn,
-            boolean usePersistence
-    );
-
-    @Nonnull @Override
-    <K1, K2, T1_IN, T2_IN, T1, T2, R> BatchStage<R> innerHashJoin2(
             @Nonnull BatchStage<T1_IN> stage1,
             @Nonnull JoinClause<K1, ? super T, ? super T1_IN, ? extends T1> joinClause1,
             @Nonnull BatchStage<T2_IN> stage2,
@@ -260,8 +228,7 @@ public interface BatchStage<T> extends GeneralStage<T> {
             @Nonnull JoinClause<K1, ? super T, ? super T1_IN, ? extends T1> joinClause1,
             @Nonnull BatchStage<T2_IN> stage2,
             @Nonnull JoinClause<K2, ? super T, ? super T2_IN, ? extends T2> joinClause2,
-            @Nonnull TriFunction<T, T1, T2, R> mapToOutputFn,
-            boolean usePersistence
+            @Nonnull TriFunction<T, T1, T2, R> mapToOutputFn
     );
 
     @Nonnull @Override
@@ -285,12 +252,6 @@ public interface BatchStage<T> extends GeneralStage<T> {
     @Nonnull
     <R> BatchStage<R> aggregate(
             @Nonnull AggregateOperation1<? super T, ?, ? extends R> aggrOp
-    );
-
-    @Nonnull
-    <R> BatchStage<R> aggregate(
-            @Nonnull AggregateOperation1<? super T, ?, ? extends R> aggrOp,
-            boolean usePersistence
     );
 
     /**
@@ -328,12 +289,6 @@ public interface BatchStage<T> extends GeneralStage<T> {
             @Nonnull BatchStage<T1> stage1,
             @Nonnull AggregateOperation2<? super T, ? super T1, ?, ? extends R> aggrOp);
 
-    @Nonnull
-    <T1, R> BatchStage<R> aggregate2(
-            @Nonnull BatchStage<T1> stage1,
-            @Nonnull AggregateOperation2<? super T, ? super T1, ?, ? extends R> aggrOp,
-            boolean usePersistence);
-
     /**
      * Attaches a stage that co-aggregates the data from this and the supplied
      * stage by performing a separate aggregate operation on each and emitting
@@ -363,16 +318,6 @@ public interface BatchStage<T> extends GeneralStage<T> {
             @Nonnull AggregateOperation1<? super T1, ?, ? extends R1> aggrOp1
     ) {
         return aggregate2(stage1, aggregateOperation2(aggrOp0, aggrOp1));
-    }
-
-    @Nonnull
-    default <T1, R0, R1> BatchStage<Tuple2<R0, R1>> aggregate2(
-            @Nonnull AggregateOperation1<? super T, ?, ? extends R0> aggrOp0,
-            @Nonnull BatchStage<T1> stage1,
-            @Nonnull AggregateOperation1<? super T1, ?, ? extends R1> aggrOp1,
-            boolean usePersistence
-    ) {
-        return aggregate2(stage1, aggregateOperation2(aggrOp0, aggrOp1), usePersistence);
     }
 
     /**
@@ -415,14 +360,6 @@ public interface BatchStage<T> extends GeneralStage<T> {
             @Nonnull BatchStage<T2> stage2,
             @Nonnull AggregateOperation3<? super T, ? super T1, ? super T2, ?, ? extends R> aggrOp);
 
-    @Nonnull
-    <T1, T2, R> BatchStage<R> aggregate3(
-            @Nonnull BatchStage<T1> stage1,
-            @Nonnull BatchStage<T2> stage2,
-            @Nonnull AggregateOperation3<? super T, ? super T1, ? super T2, ?, ? extends R> aggrOp,
-            boolean usePersistence);
-
-
     /**
      * Attaches a stage that co-aggregates the data from this and the two
      * supplied stages by performing a separate aggregate operation on each and
@@ -459,19 +396,6 @@ public interface BatchStage<T> extends GeneralStage<T> {
             @Nonnull AggregateOperation1<? super T2, ?, ? extends R2> aggrOp2
     ) {
         return aggregate3(stage1, stage2, aggregateOperation3(aggrOp0, aggrOp1, aggrOp2, Tuple3::tuple3));
-    }
-
-    @Nonnull
-    default <T1, T2, R0, R1, R2> BatchStage<Tuple3<R0, R1, R2>> aggregate3(
-            @Nonnull AggregateOperation1<? super T, ?, ? extends R0> aggrOp0,
-            @Nonnull BatchStage<T1> stage1,
-            @Nonnull AggregateOperation1<? super T1, ?, ? extends R1> aggrOp1,
-            @Nonnull BatchStage<T2> stage2,
-            @Nonnull AggregateOperation1<? super T2, ?, ? extends R2> aggrOp2,
-            boolean usePersistence
-    ) {
-        return aggregate3(stage1, stage2, aggregateOperation3(aggrOp0, aggrOp1, aggrOp2, Tuple3::tuple3),
-                usePersistence);
     }
 
     /**

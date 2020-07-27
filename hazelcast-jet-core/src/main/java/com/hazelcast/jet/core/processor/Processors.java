@@ -261,7 +261,8 @@ public final class Processors {
     ) {
         // We should use the same constant key as the input edges do, but since
         // the processor doesn't save the state, there's no need to.
-        return () -> new GroupWithPersistenceAndUnboundedStateP<>(nCopies(aggrOp.arity(), t -> "ALL"), aggrOp, (k, r) -> r);
+        return () -> new GroupWithPersistenceAndUnboundedStateP<>(
+                nCopies(aggrOp.arity(), t -> "ALL"), aggrOp, (k, r) -> r);
     }
 
     /**

@@ -49,20 +49,18 @@ public class GroupTransform<K, A, R, OUT> extends AbstractTransform {
     private final AggregateOperation<A, R> aggrOp;
     @Nonnull
     private final BiFunctionEx<? super K, ? super R, OUT> mapToOutputFn;
-    private final boolean usePersistence;
+    private boolean usePersistence;
 
     public GroupTransform(
             @Nonnull List<Transform> upstream,
             @Nonnull List<FunctionEx<?, ? extends K>> groupKeyFns,
             @Nonnull AggregateOperation<A, R> aggrOp,
-            @Nonnull BiFunctionEx<? super K, ? super R, OUT> mapToOutputFn,
-            boolean usePersistence
+            @Nonnull BiFunctionEx<? super K, ? super R, OUT> mapToOutputFn
     ) {
         super(createName(upstream), upstream);
         this.groupKeyFns = groupKeyFns;
         this.aggrOp = aggrOp;
         this.mapToOutputFn = mapToOutputFn;
-        this.usePersistence = usePersistence;
     }
 
     private static String createName(@Nonnull List<Transform> upstream) {
@@ -78,6 +76,10 @@ public class GroupTransform<K, A, R, OUT> extends AbstractTransform {
         } else {
             addToDagTwoStage(p);
         }
+    }
+
+    public void setUsePersistence(boolean usePersistence) {
+        this.usePersistence = usePersistence;
     }
 
     //                   ---------        ---------

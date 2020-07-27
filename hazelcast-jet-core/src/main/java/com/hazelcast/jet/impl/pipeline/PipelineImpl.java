@@ -16,9 +16,13 @@
 
 package com.hazelcast.jet.impl.pipeline;
 
+import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.impl.pipeline.transform.AbstractTransform;
+import com.hazelcast.jet.impl.pipeline.transform.AggregateTransform;
 import com.hazelcast.jet.impl.pipeline.transform.BatchSourceTransform;
+import com.hazelcast.jet.impl.pipeline.transform.GroupTransform;
+import com.hazelcast.jet.impl.pipeline.transform.HashJoinTransform;
 import com.hazelcast.jet.impl.pipeline.transform.SinkTransform;
 import com.hazelcast.jet.impl.pipeline.transform.StreamSourceTransform;
 import com.hazelcast.jet.impl.pipeline.transform.Transform;
@@ -44,6 +48,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.stream.IntStream;
 
+import static com.hazelcast.jet.impl.pipeline.AbstractStage.transformOf;
 import static com.hazelcast.jet.impl.pipeline.ComputeStageImplBase.ADAPT_TO_JET_EVENT;
 import static com.hazelcast.jet.impl.util.Util.addOrIncrementIndexInName;
 import static com.hazelcast.jet.impl.util.Util.escapeGraphviz;
@@ -202,6 +207,22 @@ public class PipelineImpl implements Pipeline {
             while (!usedNames.add(transform.name())) {
                 transform.setName(addOrIncrementIndexInName(transform.name()));
             }
+        }
+    }
+
+    void persist(BatchStage<?> stage) {
+        Transform transform = transformOf(stage);
+        if(transform instanceof AggregateTransform) {
+            ((AggregateTransform) transform).setUsePersistence(true);
+        }
+        else if(transform instanceof GroupTransform) {
+            ((GroupTransform) transform).setUsePersistence(true);
+        }
+        else if(transform instanceof HashJoinTransform) {
+            ((HashJoinTransform) transform).setUsePersistence(true);
+        }
+        else {
+            throw new JetException("Using persistence is only allowed for join and aggregate operations");
         }
     }
 

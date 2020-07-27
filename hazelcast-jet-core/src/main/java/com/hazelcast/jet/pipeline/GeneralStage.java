@@ -752,14 +752,6 @@ public interface GeneralStage<T> extends Stage {
             @Nonnull BiFunctionEx<T, T1, R> mapToOutputFn
     );
 
-    @Nonnull
-    <K, T1_IN, T1, R> GeneralStage<R> hashJoin(
-            @Nonnull BatchStage<T1_IN> stage1,
-            @Nonnull JoinClause<K, ? super T, ? super T1_IN, ? extends T1> joinClause1,
-            @Nonnull BiFunctionEx<T, T1, R> mapToOutputFn,
-            boolean usePersistence
-    );
-
     /**
      * Attaches to both this and the supplied stage an inner hash-joining stage
      * and returns it. This stage plays the role of the <em>primary stage</em>
@@ -801,14 +793,6 @@ public interface GeneralStage<T> extends Stage {
             @Nonnull BatchStage<T1_IN> stage1,
             @Nonnull JoinClause<K, ? super T, ? super T1_IN, ? extends T1> joinClause1,
             @Nonnull BiFunctionEx<T, T1, R> mapToOutputFn
-    );
-
-    @Nonnull
-    <K, T1_IN, T1, R> GeneralStage<R> innerHashJoin(
-            @Nonnull BatchStage<T1_IN> stage1,
-            @Nonnull JoinClause<K, ? super T, ? super T1_IN, ? extends T1> joinClause1,
-            @Nonnull BiFunctionEx<T, T1, R> mapToOutputFn,
-            boolean usePersistence
     );
 
     /**
@@ -854,16 +838,6 @@ public interface GeneralStage<T> extends Stage {
             @Nonnull BatchStage<T2_IN> stage2,
             @Nonnull JoinClause<K2, ? super T, ? super T2_IN, ? extends T2> joinClause2,
             @Nonnull TriFunction<T, T1, T2, R> mapToOutputFn
-    );
-
-    @Nonnull
-    <K1, K2, T1_IN, T2_IN, T1, T2, R> GeneralStage<R> hashJoin2(
-            @Nonnull BatchStage<T1_IN> stage1,
-            @Nonnull JoinClause<K1, ? super T, ? super T1_IN, ? extends T1> joinClause1,
-            @Nonnull BatchStage<T2_IN> stage2,
-            @Nonnull JoinClause<K2, ? super T, ? super T2_IN, ? extends T2> joinClause2,
-            @Nonnull TriFunction<T, T1, T2, R> mapToOutputFn,
-            boolean usePersistence
     );
 
     /**
@@ -916,16 +890,6 @@ public interface GeneralStage<T> extends Stage {
             @Nonnull BatchStage<T2_IN> stage2,
             @Nonnull JoinClause<K2, ? super T, ? super T2_IN, ? extends T2> joinClause2,
             @Nonnull TriFunction<T, T1, T2, R> mapToOutputFn
-    );
-
-    @Nonnull
-    <K1, K2, T1_IN, T2_IN, T1, T2, R> GeneralStage<R> innerHashJoin2(
-            @Nonnull BatchStage<T1_IN> stage1,
-            @Nonnull JoinClause<K1, ? super T, ? super T1_IN, ? extends T1> joinClause1,
-            @Nonnull BatchStage<T2_IN> stage2,
-            @Nonnull JoinClause<K2, ? super T, ? super T2_IN, ? extends T2> joinClause2,
-            @Nonnull TriFunction<T, T1, T2, R> mapToOutputFn,
-            boolean usePersistence
     );
 
     /**

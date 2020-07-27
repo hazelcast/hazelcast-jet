@@ -42,16 +42,14 @@ public class AggregateTransform<A, R> extends AbstractTransform {
 
     @Nonnull
     private final AggregateOperation<A, ? extends R> aggrOp;
-    private final boolean usePersistence;
+    private boolean usePersistence;
 
     public AggregateTransform(
             @Nonnull List<Transform> upstream,
-            @Nonnull AggregateOperation<A, ? extends R> aggrOp,
-            boolean usePersistence
+            @Nonnull AggregateOperation<A, ? extends R> aggrOp
     ) {
         super(createName(upstream), upstream);
         this.aggrOp = aggrOp;
-        this.usePersistence = usePersistence;
     }
 
     private static String createName(@Nonnull List<Transform> upstream) {
@@ -67,6 +65,10 @@ public class AggregateTransform<A, R> extends AbstractTransform {
         } else {
             addToDagTwoStage(p);
         }
+    }
+
+    public void setUsePersistence(boolean usePersistence) {
+        this.usePersistence = usePersistence;
     }
 
     //               ---------       ---------

@@ -59,8 +59,7 @@ public class HashJoinTransform<T0, R> extends AbstractTransform {
             @Nonnull List<Transform> upstream,
             @Nonnull List<JoinClause<?, ? super T0, ?, ?>> clauses,
             @Nonnull List<Tag> tags,
-            @Nonnull BiFunctionEx mapToOutputBiFn,
-            boolean usePersistence
+            @Nonnull BiFunctionEx mapToOutputBiFn
     ) {
         super(upstream.size() + "-way hash-join", upstream);
         this.clauses = clauses;
@@ -68,15 +67,13 @@ public class HashJoinTransform<T0, R> extends AbstractTransform {
         this.mapToOutputBiFn = mapToOutputBiFn;
         this.mapToOutputTriFn = null;
         this.whereNullsNotAllowed = null;
-        this.usePersistence = usePersistence;
     }
 
     public <T1, T2> HashJoinTransform(
             @Nonnull List<Transform> upstream,
             @Nonnull List<JoinClause<?, ? super T0, ?, ?>> clauses,
             @Nonnull List<Tag> tags,
-            @Nonnull TriFunction<T0, T1, T2, R> mapToOutputTriFn,
-            boolean usePersistence
+            @Nonnull TriFunction<T0, T1, T2, R> mapToOutputTriFn
     ) {
         super(upstream.size() + "-way hash-join", upstream);
         this.clauses = clauses;
@@ -84,15 +81,13 @@ public class HashJoinTransform<T0, R> extends AbstractTransform {
         this.mapToOutputBiFn = null;
         this.mapToOutputTriFn = mapToOutputTriFn;
         this.whereNullsNotAllowed = null;
-        this.usePersistence = usePersistence;
     }
     public HashJoinTransform(
             @Nonnull List<Transform> upstream,
             @Nonnull List<JoinClause<?, ? super T0, ?, ?>> clauses,
             @Nonnull List<Tag> tags,
             @Nonnull BiFunctionEx mapToOutputBiFn,
-            @Nonnull List<Boolean> whereNullsNotAllowed,
-            boolean usePersistence
+            @Nonnull List<Boolean> whereNullsNotAllowed
     ) {
         super(upstream.size() + "-way hash-join", upstream);
         this.clauses = clauses;
@@ -100,7 +95,6 @@ public class HashJoinTransform<T0, R> extends AbstractTransform {
         this.mapToOutputBiFn = mapToOutputBiFn;
         this.mapToOutputTriFn = null;
         this.whereNullsNotAllowed = whereNullsNotAllowed;
-        this.usePersistence = usePersistence;
     }
 
     //         ---------           ----------           ----------
@@ -141,8 +135,7 @@ public class HashJoinTransform<T0, R> extends AbstractTransform {
         if (usePersistence) {
             joiner = p.addVertex(this, name() + "-joiner", localParallelism(),
                     () -> new HashJoinWithPersistenceP<>(keyFns, tags, mapToOutputBiFn, mapToOutputTriFn, tupleToItems)).v;
-        }
-        else {
+        } else {
             joiner = p.addVertex(this, name() + "-joiner", localParallelism(),
                     () -> new HashJoinP<>(keyFns, tags, mapToOutputBiFn, mapToOutputTriFn, tupleToItems)).v;
         }
@@ -161,8 +154,7 @@ public class HashJoinTransform<T0, R> extends AbstractTransform {
             if (usePersistence) {
                collector = p.dag.newVertex(collectorName + collectorOrdinal,
                         () -> new HashJoinCollectWithPersistenceP(getKeyFn, projectFn));
-            }
-            else {
+            } else {
                 collector = p.dag.newVertex(collectorName + collectorOrdinal,
                         () -> new HashJoinCollectP<>(getKeyFn, projectFn));
             }
@@ -175,6 +167,10 @@ public class HashJoinTransform<T0, R> extends AbstractTransform {
                     .broadcast().priority(-1));
             collectorOrdinal++;
         }
+    }
+
+    public void setUsePersistence(boolean usePersistence) {
+        this.usePersistence = usePersistence;
     }
 
     private static BiFunctionEx<List<Tag>, Object[], ItemsByTag> tupleToItemsByTag(List<Boolean> nullsNotAllowed) {

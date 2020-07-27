@@ -50,7 +50,6 @@ import static java.util.stream.Stream.concat;
  * type safety.
  *
  * @param <T0> the type of the items in the primary stage
- *
  * @since 3.0
  */
 @SuppressWarnings("rawtypes")
@@ -141,7 +140,7 @@ public abstract class GeneralHashJoinBuilder<T0> {
                 orderedClauses
                         .stream()
                         .map(e -> e.getValue().inner)
-                        .collect(toList()),false);
+                        .collect(toList()));
         pipelineImpl.connectGeneralStages(upstream, hashJoinTransform);
         return createOutStageFn.get(hashJoinTransform, fnAdapter, pipelineImpl);
     }
