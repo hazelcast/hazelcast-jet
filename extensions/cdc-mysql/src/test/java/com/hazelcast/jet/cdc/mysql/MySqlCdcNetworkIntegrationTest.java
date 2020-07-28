@@ -65,6 +65,10 @@ import static org.testcontainers.containers.MySQLContainer.MYSQL_PORT;
 @Parameterized.UseParametersRunnerFactory(HazelcastSerialParametersRunnerFactory.class)
 public class MySqlCdcNetworkIntegrationTest extends AbstractCdcIntegrationTest {
 
+    //todo: check for memory leaks when attempting to reconnect
+
+    //todo: document all this behaviour in the connector javadoc
+
     private static final long CONNECTION_KEEPALIVE_MS = SECONDS.toMillis(1);
 
     @Parameter
@@ -159,7 +163,7 @@ public class MySqlCdcNetworkIntegrationTest extends AbstractCdcIntegrationTest {
             assertJobStatusEventually(job, RUNNING);
 
             // and DB is stopped
-            TimeUnit.MILLISECONDS.sleep(ThreadLocalRandom.current().nextInt(0, 500));
+            TimeUnit.MILLISECONDS.sleep(ThreadLocalRandom.current().nextInt(100, 500));
             stopContainer(mysql);
 
             // and DB is started anew
@@ -300,7 +304,6 @@ public class MySqlCdcNetworkIntegrationTest extends AbstractCdcIntegrationTest {
 
     private static MySQLContainer<?> initMySql(Network network, Integer fixedExposedPort) {
         MySQLContainer<?> mysql = new MySQLContainer<>("debezium/example-mysql:1.2")
-                .withNetwork(network)
                 .withUsername("mysqluser")
                 .withPassword("mysqlpw");
         if (fixedExposedPort != null) {

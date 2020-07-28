@@ -360,6 +360,39 @@ public final class PostgresCdcSources {
         }
 
         /**
+         * Interval in milliseconds after which to retry connecting, if previous
+         * attempts have failed. Defaults to
+         * {@value CdcSource#DEFAULT_RECONNECT_INTERVAL_MS} milliseconds.
+         */
+        @Nonnull
+        public Builder setReconnectIntervalMs(long intervalMs) {
+            config.setProperty(CdcSource.RECONNECT_INTERVAL_MS, intervalMs);
+            config.setProperty("slot.retry.delay.ms", intervalMs);
+            return this;
+        }
+
+        /**
+         * Specifies how the connector should behave when it looses connection
+         * to the backing database.
+         * <p>
+         * Possible values are:
+         * <ul>
+         *     <li><em>fail</em>: will cause the whole job to fail</li>
+         *     <li><em>clear_state_and_reconnect</em>: will reconnect to
+         *      database, but will clear all internal state first, thus behaving
+         *      as if it would be connecting the first time (for example
+         *      snapshotting will be repeated)</li>
+         *     <li><em>reconnect</em>: will reconnect as is, in the same state
+         *      as it was at the moment of the disconnect </li>
+         * </ul>
+         */
+        @Nonnull
+        public Builder setReconnectBehaviour(String behaviour) {
+            config.setProperty(CdcSource.RECONNECT_BEHAVIOUR_PROPERTY, behaviour);
+            return this;
+        }
+
+        /**
          * Can be used to set any property not explicitly covered by other
          * methods or to override properties we have hidden.
          */

@@ -307,7 +307,7 @@ public final class MySqlCdcSources {
         /**
          * Interval in milliseconds after which to do periodic connection checking
          * and initiate reconnect, if necessary. Defaults to
-         * {@value DEFAULT_KEEPALIVE_S} seconds.
+         * {@value CdcSource#DEFAULT_RECONNECT_INTERVAL_MS} milliseconds.
          */
         @Nonnull
         public Builder setConnectionKeepAliveMs(long keepAliveMs) {

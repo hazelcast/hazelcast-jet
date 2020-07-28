@@ -16,19 +16,25 @@
 
 package com.hazelcast.jet.cdc.postgres;
 
+import com.github.dockerjava.api.command.CreateContainerCmd;
+import com.github.dockerjava.api.model.ExposedPort;
+import com.github.dockerjava.api.model.PortBinding;
+import com.github.dockerjava.api.model.Ports;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.cdc.AbstractCdcIntegrationTest;
-import com.hazelcast.jet.cdc.CdcSinks;
 import com.hazelcast.jet.cdc.ChangeRecord;
+import com.hazelcast.jet.cdc.impl.CdcSource.ReconnectBehaviour;
 import com.hazelcast.jet.pipeline.Pipeline;
+import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.StreamSource;
+import com.hazelcast.test.HazelcastSerialParametersRunnerFactory;
 import com.hazelcast.test.annotation.NightlyTest;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameter;
 import org.testcontainers.containers.Network;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.containers.ToxiproxyContainer;
@@ -37,139 +43,239 @@ import javax.annotation.Nonnull;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.Arrays;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.function.Consumer;
 
+import static com.hazelcast.jet.Util.entry;
+import static com.hazelcast.jet.cdc.impl.CdcSource.ReconnectBehaviour.CLEAR_STATE_AND_RECONNECT;
+import static com.hazelcast.jet.cdc.impl.CdcSource.ReconnectBehaviour.FAIL;
+import static com.hazelcast.jet.cdc.impl.CdcSource.ReconnectBehaviour.RECONNECT;
+import static com.hazelcast.jet.core.JobStatus.FAILED;
+import static com.hazelcast.jet.core.JobStatus.RUNNING;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.testcontainers.containers.PostgreSQLContainer.POSTGRESQL_PORT;
 
+@RunWith(Parameterized.class)
+@Parameterized.UseParametersRunnerFactory(HazelcastSerialParametersRunnerFactory.class)
 public class PostgresCdcNetworkIntegrationTest extends AbstractCdcIntegrationTest {
 
-    @Rule
-    public Network network = Network.newNetwork();
+    //todo: check for memory leaks when attempting to reconnect
 
-    @Rule
-    public PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("debezium/example-postgres:1.2")
-            .withNetwork(network)
-            .withDatabaseName("postgres")
-            .withUsername("postgres")
-            .withPassword("postgres");
+    //todo: document all this behaviour in the connector javadoc
 
-    @Rule
-    public ToxiproxyContainer toxiproxy = new ToxiproxyContainer()
-            .withNetwork(network);
+    private static final long RECONNECT_INTERVAL_MS = SECONDS.toMillis(1);
 
-    private ToxiproxyContainer.ContainerProxy proxy;
+    @Parameter
+    public ReconnectBehaviour reconnectBehaviour;
 
-    @Before
-    public void before() {
-        proxy = toxiproxy.getProxy(postgres, POSTGRESQL_PORT);
+    @Parameterized.Parameters(name = "{index}: behaviour={0}")
+    public static Iterable<?> parameters() {
+        return Arrays.asList(FAIL, RECONNECT, CLEAR_STATE_AND_RECONNECT);
     }
 
     @Test
     @Category(NightlyTest.class)
-    public void when_networkDisconnectDuringBinlogRead_then_connectorReconnectsInternally() throws Exception {
-        // given
-        Pipeline pipeline = Pipeline.create();
-        pipeline.readFrom(source(proxy.getContainerIpAddress(), proxy.getProxyPort()))
-                .withNativeTimestamps(0)
-                .writeTo(CdcSinks.map("results", r -> r.key().toMap().get("id"), r -> r.value().toJson()));
+    public void when_noDatabaseToConnectTo() {
+        Pipeline pipeline = initPipeline("localhost", POSTGRESQL_PORT);
 
-        // when
+        // when job starts
         JetInstance jet = createJetMembers(2)[0];
         Job job = jet.newJob(pipeline);
 
-        //then
-        assertEqualsEventually(() -> jet.getMap("results").size(), 4);
+        // then can't connect to DB
+        assertTrueEventually(() -> assertTrue(job.getStatus().equals(RUNNING) || job.getStatus().equals(FAILED)));
+        assertTrueAllTheTime(() -> assertTrue(jet.getMap("results").isEmpty()),
+                MILLISECONDS.toSeconds(2 * RECONNECT_INTERVAL_MS));
 
-        //wait transition to WAL reading
-        SECONDS.sleep(3);
-
-        //cut the connection
-        proxy.setConnectionCut(true);
-
-        //generate events
-        try (Connection connection = DriverManager.getConnection(postgres.getJdbcUrl(), postgres.getUsername(),
-                postgres.getPassword())) {
-            connection.setSchema("inventory");
-            connection.createStatement()
-                    .execute("INSERT INTO customers VALUES (1005, 'Jason', 'Bourne', 'jason@bourne.org')");
-        }
-
-        //wait a bit
-        SECONDS.sleep(3);
-
-        //re-establish the connection
-        System.err.println("Re-enabling the connection ..."); //todo: remove
-        proxy.setConnectionCut(false);
-
-        //then
+        // when DB starts
+        PostgreSQLContainer<?> postgres = initPostgres(null, POSTGRESQL_PORT);
         try {
-            assertEqualsEventually(() -> jet.getMap("results").size(), 5);
+            // then
+            if (FAIL.equals(reconnectBehaviour)) {
+                // then job fails
+                assertJobStatusEventually(job, FAILED);
+                assertTrue(jet.getMap("results").isEmpty());
+            } else {
+                try {
+                    assertEqualsEventually(() -> jet.getMap("results").size(), 4);
+                    assertEquals(RUNNING, job.getStatus());
+                } finally {
+                    job.cancel();
+                }
+            }
         } finally {
-            job.cancel();
+            postgres.stop();
         }
     }
 
     @Test
     @Category(NightlyTest.class)
-    @Ignore //only semi-automatic ...
-    public void when_databaseShutdownDetectedDuringBinlogRead_then_connectorGetsRestarted() throws Exception {
-        String host = "127.0.0.1";
-        Integer port = POSTGRESQL_PORT;
-        String user = "postgres";
-        String password = "postgres";
-
-        while (!canConnect(host, port, user, password)) {
-            System.err.println("Start DB with following command: docker run -it --rm --name postgres -p 5432:5432 -e " +
-                    "POSTGRES_DB=postgres -e POSTGRES_USER=" + user + " -e POSTGRES_PASSWORD=" +
-                    password + " debezium/example-postgres:1.2");
-            SECONDS.sleep(3);
-        }
-
-        Pipeline pipeline = Pipeline.create();
-        pipeline.readFrom(source(host, port))
-                .withNativeTimestamps(0)
-                .writeTo(CdcSinks.map("results", r -> r.key().toMap().get("id"), r -> r.value().toJson()));
-
-        JetInstance jet = createJetMembers(2)[0];
-        Job job = jet.newJob(pipeline);
-
-        assertEqualsEventually(() -> jet.getMap("results").size(), 4);
-
-        while (canConnect(host, port, user, password)) {
-            System.err.println("Kill DB with following command: docker container stop postgres");
-            SECONDS.sleep(1);
-        }
-
-        while (!canConnect(host, port, user, password)) {
-            System.err.println("Start DB with following command: docker run -it --rm --name postgres -p 5432:5432 -e " +
-                    "POSTGRES_DB=postgres -e POSTGRES_USER=" + user + " -e POSTGRES_PASSWORD=" + password +
-                    " debezium/example-postgres:1.2");
-            SECONDS.sleep(3);
-        }
-
-        SECONDS.sleep(30); //todo: postgres recovery is problematic, if we insert data while disconnected, then it's lost
-
-        try (Connection connection = DriverManager.getConnection("jdbc:postgresql://" + host + ":" + port + "/postgres"
-                , user, password)) {
-            connection.setSchema("inventory");
-            connection.createStatement().execute(
-                    "INSERT INTO customers VALUES (1005, 'Jason', 'Bourne', 'jason@bourne.org')");
-        }
-
-        //then
+    public void when_networkDisconnectDuringSnapshotting_then_jetSourceIsStuckUntilReconnect() throws Exception {
+        Network network = initNetwork();
+        PostgreSQLContainer<?> postgres = initPostgres(network, null);
+        ToxiproxyContainer toxiproxy = initToxiproxy(network);
+        ToxiproxyContainer.ContainerProxy proxy = initProxy(toxiproxy, postgres);
+        Pipeline pipeline = initPipeline(proxy.getContainerIpAddress(), proxy.getProxyPort());
         try {
-            assertEqualsEventually(() -> jet.getMap("results").size(), 5);
+            // when job starts
+            JetInstance jet = createJetMembers(2)[0];
+            Job job = jet.newJob(pipeline);
+            assertJobStatusEventually(job, RUNNING);
+
+            // and connection is cut
+            MILLISECONDS.sleep(ThreadLocalRandom.current().nextInt(0, 500));
+            proxy.setConnectionCut(true);
+
+            // and some time passes
+            MILLISECONDS.sleep(2 * RECONNECT_INTERVAL_MS);
+
+            // and connection recovers
+            proxy.setConnectionCut(false);
+
+            // then connector manages to reconnect and finish snapshot
+            try {
+                assertEqualsEventually(() -> jet.getMap("results").size(), 4);
+            } finally {
+                job.cancel();
+            }
         } finally {
-            job.cancel();
+            toxiproxy.stop();
+            postgres.stop();
         }
     }
 
-    private static boolean canConnect(String host, int port, String user, String password) {
+    @Test
+    @Category(NightlyTest.class)
+    public void when_databaseShutdownDuringSnapshotting() throws Exception {
+        PostgreSQLContainer<?> postgres = initPostgres(null, POSTGRESQL_PORT);
+        Pipeline pipeline = initPipeline(postgres.getContainerIpAddress(), POSTGRESQL_PORT);
         try {
-            DriverManager.getConnection("jdbc:postgresql://" + host + ":" + port + "/postgres", user, password);
-            return true;
-        } catch (SQLException throwables) {
-            return false;
+            // when job starts
+            JetInstance jet = createJetMembers(2)[0];
+            Job job = jet.newJob(pipeline);
+            assertJobStatusEventually(job, RUNNING);
+
+            // and DB is stopped
+            MILLISECONDS.sleep(ThreadLocalRandom.current().nextInt(100, 500));
+            stopContainer(postgres);
+
+            // and DB is started anew
+            postgres = initPostgres(null, POSTGRESQL_PORT);
+
+            // then
+            if (FAIL.equals(reconnectBehaviour)) {
+                // then job fails
+                assertJobStatusEventually(job, FAILED);
+            } else {
+                try {
+                    assertEqualsEventually(() -> jet.getMap("results").size(), 4);
+                    assertEquals(RUNNING, job.getStatus());
+                } finally {
+                    job.cancel();
+                }
+            }
+        } finally {
+            postgres.stop();
+        }
+    }
+
+    @Test
+    @Category(NightlyTest.class)
+    public void when_shortConnectionLossDuringBinlogReading_then_connectorDoesNotNoticeAnything() throws Exception {
+        Network network = initNetwork();
+        PostgreSQLContainer<?> postgres = initPostgres(network, null);
+        ToxiproxyContainer toxiproxy = initToxiproxy(network);
+        ToxiproxyContainer.ContainerProxy proxy = initProxy(toxiproxy, postgres);
+        Pipeline pipeline = initPipeline(proxy.getContainerIpAddress(), proxy.getProxyPort());
+        try {
+            // when connector is up and transitions to binlog reading
+            JetInstance jet = createJetMembers(2)[0];
+            Job job = jet.newJob(pipeline);
+            assertEqualsEventually(() -> jet.getMap("results").size(), 4);
+            SECONDS.sleep(3);
+            insertRecords(postgres, 1005);
+            assertEqualsEventually(() -> jet.getMap("results").size(), 5);
+
+            // and the connection is cut
+            proxy.setConnectionCut(true);
+
+            // and some new events get generated in the DB
+            insertRecords(postgres, 1006, 1007);
+
+            // and some time passes
+            MILLISECONDS.sleep(5 * RECONNECT_INTERVAL_MS); //todo: can I somehow make it notice faster?
+
+            // and the connection is re-established
+            proxy.setConnectionCut(false);
+
+            // then
+            try {
+                // then job keeps running, connector starts freshly, including snapshotting
+                assertEqualsEventually(() -> jet.getMap("results").size(), 7);
+                assertEquals(RUNNING, job.getStatus());
+            } finally {
+                job.cancel();
+            }
+        } finally {
+            toxiproxy.stop();
+            postgres.stop();
+        }
+    }
+
+    @Test
+    @Category(NightlyTest.class)
+    public void when_databaseShutdownDuringBinlogReading() throws Exception {
+        if (RECONNECT.equals(reconnectBehaviour)) {
+            return; //doesn't make sense to test this mode with this scenario
+        }
+
+        PostgreSQLContainer<?> postgres = initPostgres(null, POSTGRESQL_PORT);
+        Pipeline pipeline = initPipeline(postgres.getContainerIpAddress(), POSTGRESQL_PORT);
+        try {
+            // when connector is up and transitions to binlog reading
+            JetInstance jet = createJetMembers(2)[0];
+            Job job = jet.newJob(pipeline);
+            assertEqualsEventually(() -> jet.getMap("results").size(), 4);
+            SECONDS.sleep(3);
+            insertRecords(postgres, 1005);
+            assertEqualsEventually(() -> jet.getMap("results").size(), 5);
+
+            // and DB is stopped
+            stopContainer(postgres);
+
+            // and results are cleared
+            jet.getMap("results").clear();
+            assertEqualsEventually(() -> jet.getMap("results").size(), 0);
+
+            // and DB is started anew
+            postgres = initPostgres(null, POSTGRESQL_PORT);
+            insertRecords(postgres, 1005);
+
+            // and some time passes
+            SECONDS.sleep(3);
+            insertRecords(postgres, 1006, 1007);
+
+            // then
+            if (FAIL.equals(reconnectBehaviour)) {
+                // then job fails
+                assertJobStatusEventually(job, FAILED);
+                assertTrue(jet.getMap("results").isEmpty());
+            } else {
+                try {
+                    // then job keeps running, connector starts freshly, including snapshotting
+                    assertEqualsEventually(() -> jet.getMap("results").size(), 7);
+                    assertEquals(RUNNING, job.getStatus());
+                } finally {
+                    job.cancel();
+                }
+            }
+        } finally {
+            postgres.stop();
         }
     }
 
@@ -182,8 +288,84 @@ public class PostgresCdcNetworkIntegrationTest extends AbstractCdcIntegrationTes
                 .setDatabasePassword("postgres")
                 .setDatabaseName("postgres")
                 .setTableWhitelist("inventory.customers")
-                .setCustomProperty("status.update.interval.ms", "1000") //todo: always set for source, like MySQL keepalive
+                .setReconnectIntervalMs(1000)
+                .setReconnectBehaviour(reconnectBehaviour.name())
                 .build();
+    }
+
+    private Pipeline initPipeline(String host, int port) {
+        Pipeline pipeline = Pipeline.create();
+        pipeline.readFrom(source(host, port))
+                .withNativeTimestamps(0)
+                .map(r -> entry(r.key().toMap().get("id"), r.value().toJson()))
+                .writeTo(Sinks.map("results"));
+        return pipeline;
+    }
+
+    private static Network initNetwork() {
+        return Network.newNetwork();
+    }
+
+    private static PostgreSQLContainer<?> initPostgres(Network network, Integer fixedExposedPort) {
+        PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("debezium/example-postgres:1.2")
+                .withDatabaseName("postgres")
+                .withUsername("postgres")
+                .withPassword("postgres");
+        if (fixedExposedPort != null) {
+            Consumer<CreateContainerCmd> cmd = e -> e.withPortBindings(
+                    new PortBinding(Ports.Binding.bindPort(fixedExposedPort), new ExposedPort(fixedExposedPort)));
+            postgres = postgres.withCreateContainerCmdModifier(cmd);
+        }
+        if (network != null) {
+            postgres =  postgres.withNetwork(network);
+        }
+        postgres.start();
+        waitUntilUp(postgres);
+        return postgres;
+    }
+
+    private static ToxiproxyContainer initToxiproxy(Network network) {
+        ToxiproxyContainer toxiproxy = new ToxiproxyContainer().withNetwork(network);
+        toxiproxy.start();
+        return toxiproxy;
+    }
+
+    private static ToxiproxyContainer.ContainerProxy initProxy(
+            ToxiproxyContainer toxiproxy, PostgreSQLContainer<?> postgres) {
+        return toxiproxy.getProxy(postgres, POSTGRESQL_PORT);
+    }
+
+    private static void waitUntilUp(PostgreSQLContainer<?> postgres) {
+        for (;;) {
+            try {
+                try (Connection connection = DriverManager.getConnection(postgres.getJdbcUrl(), postgres.getUsername(),
+                        postgres.getPassword())) {
+                    connection.setSchema("inventory");
+                    boolean successfull = connection.createStatement().execute("SELECT 1");
+                    if (successfull) {
+                        return;
+                    }
+                }
+            } catch (SQLException throwables) {
+                // repeat
+            }
+            System.out.println("Waiting for the database to come up...");
+        }
+    }
+
+    private static void insertRecords(PostgreSQLContainer<?> postgres, int... ids) throws SQLException {
+        try (Connection connection = DriverManager.getConnection(postgres.getJdbcUrl(), postgres.getUsername(),
+                postgres.getPassword())) {
+            connection.setSchema("inventory");
+            connection.setAutoCommit(false);
+            Statement statement = connection.createStatement();
+            for (int id : ids) {
+                statement.addBatch("INSERT INTO customers VALUES (" + id + ", 'Jason', 'Bourne', " +
+                        "'jason" + id + "@bourne.org')");
+            }
+            statement.executeBatch();
+            connection.commit();
+        }
     }
 
 }

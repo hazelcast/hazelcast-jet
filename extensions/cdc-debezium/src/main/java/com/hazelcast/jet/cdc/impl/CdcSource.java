@@ -47,7 +47,6 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
-import static java.util.concurrent.TimeUnit.SECONDS;
 
 public abstract class CdcSource<T> {
 
@@ -56,7 +55,7 @@ public abstract class CdcSource<T> {
     public static final String RECONNECT_INTERVAL_MS = "reconnect.interval.ms";
     public static final String RECONNECT_BEHAVIOUR_PROPERTY = "reconnect.behaviour";
 
-    public static final long DEFAULT_RECONNECT_INTERVAL_MS = SECONDS.toMillis(5);
+    public static final long DEFAULT_RECONNECT_INTERVAL_MS = 5_000;
     public static final ReconnectBehaviour DEFAULT_RECONNECT_BEHAVIOUR = ReconnectBehaviour.FAIL;
 
     private static final ThreadLocal<List<byte[]>> THREAD_LOCAL_HISTORY = new ThreadLocal<>();
@@ -65,14 +64,13 @@ public abstract class CdcSource<T> {
 
     private final Map<String, String> properties;
     private final SourceConnector connector;
-    private final SourceTask task;
     private final Map<String, String> taskConfig;
 
     private final long reconnectIntervalMs;
     private final ReconnectBehaviour reconnectBehaviour;
 
     private State state = new State();
-    private boolean taskInit;
+    private SourceTask task;
 
     CdcSource(Processor.Context context, Properties properties) {
         this.logger = context.logger();
@@ -81,13 +79,12 @@ public abstract class CdcSource<T> {
         try {
             connector = newInstance(properties, CONNECTOR_CLASS_PROPERTY);
             connector.initialize(new JetConnectorContext());
-            connector.start(this.properties);
-
-            taskConfig = connector.taskConfigs(1).get(0);
-            task = (SourceTask) connector.taskClass().getConstructor().newInstance();
 
             reconnectIntervalMs = getReconnectIntervalMs(properties);
             reconnectBehaviour = getReconnectBehaviour(properties);
+
+            connect();
+            taskConfig = connector.taskConfigs(1).get(0);
         } catch (Exception e) {
             throw rethrow(e);
         }
@@ -97,6 +94,7 @@ public abstract class CdcSource<T> {
         try {
             initTaskIfNeeded();
         } catch (Exception e) {
+            task = null;
             waitForInitRetry(reconnectBehaviour, e);
             return;
         }
@@ -124,8 +122,9 @@ public abstract class CdcSource<T> {
         }
     }
 
-    private void initTaskIfNeeded() {
-        if (!taskInit) {
+    private void initTaskIfNeeded() throws Exception {
+        if (task == null) {
+            task = (SourceTask) connector.taskClass().getConstructor().newInstance();
             task.initialize(new JetSourceTaskContext());
 
             // Our DatabaseHistory implementation will be created by the
@@ -135,8 +134,6 @@ public abstract class CdcSource<T> {
             THREAD_LOCAL_HISTORY.set(state.historyRecords);
             task.start(taskConfig);
             THREAD_LOCAL_HISTORY.remove();
-
-            taskInit = true;
         }
     }
 
@@ -200,13 +197,13 @@ public abstract class CdcSource<T> {
 
     public void connect() {
         connector.start(properties);
-        taskInit = false;
     }
 
     public void disconnect() {
         try {
             task.stop();
         } finally {
+            task = null;
             connector.stop();
         }
     }
