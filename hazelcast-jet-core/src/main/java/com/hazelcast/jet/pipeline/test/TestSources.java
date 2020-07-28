@@ -171,12 +171,11 @@ public final class TestSources {
     public static StreamSource<Long> longStream(long eventsPerSecond, long initialDelayMillis) {
         return Sources.streamFromProcessorWithWatermarks("longStream",
                 true,
-                eventTimePolicy -> ProcessorMetaSupplier.of(
-                        (Address ignored) -> {
-                            long startTime = System.currentTimeMillis() + initialDelayMillis;
-                            return ProcessorSupplier.of(() ->
-                                    new LongStreamSourceP(startTime, eventsPerSecond, eventTimePolicy));
-                        })
+                eventTimePolicy -> {
+                    long startTime = System.currentTimeMillis() + initialDelayMillis;
+                    return ProcessorMetaSupplier.of(() ->
+                            new LongStreamSourceP(startTime, eventsPerSecond, eventTimePolicy));
+                }
         );
     }
 
