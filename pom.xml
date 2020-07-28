@@ -539,6 +539,9 @@
                                 <goals>
                                     <goal>test</goal>
                                 </goals>
+                                <configuration>
+                                    <skip combine.self="override">true</skip>
+                                </configuration>
                             </execution>
                             <execution>
                                 <id>regular-tests</id>
@@ -550,6 +553,7 @@
                                         ${argLine}
                                         -Dhazelcast.test.defaultTestTimeoutInSeconds=600
                                     </argLine>
+                                    <forkCount combine.self="override">1</forkCount>
                                     <excludedGroups combine.self="override" />
                                 </configuration>
                             </execution>
@@ -591,6 +595,41 @@
                                         com.hazelcast.test.annotation.SlowTest
                                     </groups>
                                     <excludedGroups combine.self="override" />
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>windows-jenkins</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>serial-tests</id>
+                                <goals>
+                                    <goal>test</goal>
+                                </goals>
+                                <configuration>
+                                    <excludedGroups combine.self="override">
+                                        com.hazelcast.jet.test.IgnoreInJenkinsOnWindows
+                                    </excludedGroups>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>regular-tests</id>
+                                <goals>
+                                    <goal>test</goal>
+                                </goals>
+                                <configuration>
+                                    <excludedGroups combine.self="override">
+                                        com.hazelcast.jet.test.IgnoreInJenkinsOnWindows
+                                    </excludedGroups>
                                 </configuration>
                             </execution>
                         </executions>

@@ -15,7 +15,7 @@ const isLocalhost = Boolean(
 
 const siteConfig = {
     title: 'Hazelcast Jet', // Title for your website.
-    tagline: 'Open-Source Distributed Computing Platform',
+    tagline: 'Open-Source Distributed Stream Processing',
     url: 'https://jet-start.sh', // Your website URL
     baseUrl: '/', // Base URL for your project */
     // For github.io type URLs, you would set the url and baseUrl like:
@@ -37,7 +37,7 @@ const siteConfig = {
         {page: 'demos', label: "Demos"},
         // {href: `/javadoc/${latestVersion}`, label: "Javadoc"},
         {href: 'https://github.com/hazelcast/hazelcast-jet', label: "GitHub"},
-        {href: 'https://hz-community-slack.herokuapp.com/', label: "Community"},
+        {href: 'https://slack.hazelcast.com/', label: "Community"},
         {blog: true, label: 'Blog'},
         {search: true},
     ],
@@ -85,6 +85,12 @@ const siteConfig = {
     scripts: ['https://buttons.github.io/buttons.js', 
     'https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.0/clipboard.min.js',
     '/js/code-block-buttons.js',
+    {
+        src:  'https://plausible.io/js/plausible.js',
+        async: true,
+        defer: true,
+        "data-domain": 'jet-start.sh'
+    }
     ],
 
     separateCss: ['static/javadoc'],
