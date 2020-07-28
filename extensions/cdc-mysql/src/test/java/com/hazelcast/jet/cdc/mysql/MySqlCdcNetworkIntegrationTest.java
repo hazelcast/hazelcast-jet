@@ -23,10 +23,10 @@ import com.github.dockerjava.api.model.Ports;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.cdc.AbstractCdcIntegrationTest;
-import com.hazelcast.jet.cdc.CdcSinks;
 import com.hazelcast.jet.cdc.ChangeRecord;
 import com.hazelcast.jet.cdc.impl.CdcSource.ReconnectBehaviour;
 import com.hazelcast.jet.pipeline.Pipeline;
+import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.StreamSource;
 import com.hazelcast.test.HazelcastSerialParametersRunnerFactory;
 import com.hazelcast.test.annotation.NightlyTest;
@@ -47,6 +47,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
+import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.cdc.impl.CdcSource.ReconnectBehaviour.CLEAR_STATE_AND_RECONNECT;
 import static com.hazelcast.jet.cdc.impl.CdcSource.ReconnectBehaviour.FAIL;
 import static com.hazelcast.jet.cdc.impl.CdcSource.ReconnectBehaviour.RECONNECT;
@@ -288,7 +289,8 @@ public class MySqlCdcNetworkIntegrationTest extends AbstractCdcIntegrationTest {
         Pipeline pipeline = Pipeline.create();
         pipeline.readFrom(source(host, port))
                 .withNativeTimestamps(0)
-                .writeTo(CdcSinks.map("results", r -> r.key().toMap().get("id"), r -> r.value().toJson()));
+                .map(r -> entry(r.key().toMap().get("id"), r.value().toJson()))
+                .writeTo(Sinks.map("results"));
         return pipeline;
     }
 
