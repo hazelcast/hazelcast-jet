@@ -134,7 +134,7 @@ public class Edge implements IdentifiedDataSerializable {
 
     /**
      * Returns an edge with the given source vertex at the given ordinal
-     * and no destination vertex. Typically follewed by a call to one of
+     * and no destination vertex. Typically followed by a call to one of
      * the {@code to()} methods.
      */
     @Nonnull
@@ -175,9 +175,9 @@ public class Edge implements IdentifiedDataSerializable {
     /**
      * Returns this edge's destination vertex.
      */
-    @Nonnull
+    @Nullable
     public Vertex getDestination() {
-        return requireNonNull(destination, "destination not yet set on the edge");
+        return destination;
     }
 
     /**
@@ -198,9 +198,9 @@ public class Edge implements IdentifiedDataSerializable {
     /**
      * Returns the name of the destination vertex.
      */
-    @Nonnull
+    @Nullable
     public String getDestName() {
-        return requireNonNull(destName, "destination not yet set on the edge");
+        return destName;
     }
 
     /**

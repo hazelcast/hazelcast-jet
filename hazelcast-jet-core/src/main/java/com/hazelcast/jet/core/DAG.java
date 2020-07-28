@@ -147,6 +147,10 @@ public class DAG implements IdentifiedDataSerializable, Iterable<Vertex> {
      */
     @Nonnull
     public DAG edge(@Nonnull Edge edge) {
+        if (edge.getDestination() == null) {
+            throw new IllegalArgumentException("Edge has no destination");
+        }
+        assert edge.getDestName() != null;
         if (!containsVertex(edge.getSource())) {
             throw new IllegalArgumentException(
                     containsVertexName(edge.getSource())
@@ -361,7 +365,7 @@ public class DAG implements IdentifiedDataSerializable, Iterable<Vertex> {
             edge.add("to", e.getDestName());
             edge.add("toOrdinal", e.getDestOrdinal());
             edge.add("priority", e.getPriority());
-            edge.add("distributedTo", e.getDistributedTo() + "");
+            edge.add("distributedTo", String.valueOf(e.getDistributedTo()));
             edge.add("type", e.getRoutingPolicy().toString().toLowerCase());
             edges.add(edge);
         }
