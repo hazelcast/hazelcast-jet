@@ -449,9 +449,10 @@ target <code>IMap</code>:</p>
 </code></pre>
 <p>There is also another element in the pipeline, an extra processing stage
 which handles and fixes event reordering that might happen due to
-parallel processing. It's based on non-public classes because future
-versions of Jet (4.3 most likely) will contain generic solutions for
-the reordering problem and then this code will no longer be necessary:</p>
+parallel processing. It's based on sequence numbers specific to CDC
+sources and so can be used only for these kinds of pipelines. Hopefully
+a future version of Jet will introduce a generic solution for the
+reoreding problem.</p>
 <pre><code class="hljs css language-java"><span class="token keyword">package</span> <span class="token namespace">org<span class="token punctuation">.</span>example</span><span class="token punctuation">;</span>
 
 <span class="token keyword">import</span> <span class="token namespace">com<span class="token punctuation">.</span>hazelcast<span class="token punctuation">.</span>jet<span class="token punctuation">.</span>accumulator</span><span class="token punctuation">.</span><span class="token class-name">LongAccumulator</span><span class="token punctuation">;</span>
