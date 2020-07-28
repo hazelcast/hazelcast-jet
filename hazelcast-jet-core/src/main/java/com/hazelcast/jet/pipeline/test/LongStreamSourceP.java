@@ -16,16 +16,16 @@
 
 package com.hazelcast.jet.pipeline.test;
 
+import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.core.AppendableTraverser;
+import com.hazelcast.jet.core.EventTimeMapper;
 import com.hazelcast.jet.core.EventTimePolicy;
-import com.hazelcast.jet.core.Watermark;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.logging.Logger;
 
 import javax.annotation.Nonnull;
 
-import static com.hazelcast.jet.impl.JetEvent.jetEvent;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -41,32 +41,26 @@ public class LongStreamSourceP extends AbstractProcessor {
     private static final long HICCUP_REPORT_THRESHOLD_MILLIS = 10;
     private static final long NANOS_PER_SECOND = SECONDS.toNanos(1);
 
+    private final ILogger logger = Logger.getLogger(LongStreamSourceP.class);
     private final long nanoTimeMillisToCurrentTimeMillis = determineTimeOffset();
     private final long eventsPerSecond;
-    private final ILogger logger = Logger.getLogger(LongStreamSourceP.class);
-    private final long wmGranularity;
-    private final long wmOffset;
+    private final EventTimeMapper<? super Long> eventTimeMapper;
     private long startNanoTime;
     private long globalProcessorIndex;
     private long totalParallelism;
 
-    private final AppendableTraverser<Object> traverser = new AppendableTraverser<>(2);
     private long lastReportNanos;
     private long valueAtLastReport;
     private long lastCallNanos;
     private long valueToEmit;
-    private long lastEmittedWm;
     private long nowNanoTime;
+    private Traverser<Object> traverser = new AppendableTraverser<>(2);
 
-    LongStreamSourceP(
-            long startTime,
-            long eventsPerSecond,
-            EventTimePolicy<? super Long> eventTimePolicy
-    ) {
-        this.wmGranularity = eventTimePolicy.watermarkThrottlingFrameSize();
-        this.wmOffset = eventTimePolicy.watermarkThrottlingFrameOffset();
-        this.startNanoTime = MILLISECONDS.toNanos(startTime + nanoTimeMillisToCurrentTimeMillis);
+    LongStreamSourceP(long startTime, long eventsPerSecond, EventTimePolicy<? super Long> eventTimePolicy) {
+        this.startNanoTime = startTime; // temporarily holds the parameter value until init
         this.eventsPerSecond = eventsPerSecond;
+        this.eventTimeMapper = new EventTimeMapper<>(eventTimePolicy);
+        eventTimeMapper.addPartitions(1);
     }
 
     @Override
@@ -74,7 +68,8 @@ public class LongStreamSourceP extends AbstractProcessor {
         totalParallelism = context.totalParallelism();
         globalProcessorIndex = context.globalProcessorIndex();
         valueToEmit = globalProcessorIndex;
-        startNanoTime += valueToEmit * NANOS_PER_SECOND / eventsPerSecond;
+        startNanoTime = MILLISECONDS.toNanos(startNanoTime + nanoTimeMillisToCurrentTimeMillis) +
+                valueToEmit * NANOS_PER_SECOND / eventsPerSecond;
         lastCallNanos = lastReportNanos = startNanoTime;
     }
 
@@ -94,13 +89,8 @@ public class LongStreamSourceP extends AbstractProcessor {
         while (emitFromTraverser(traverser) && valueToEmit < emitValuesUpTo) {
             long timestampNanoTime = startNanoTime + valueToEmit * NANOS_PER_SECOND / eventsPerSecond;
             long timestamp = NANOSECONDS.toMillis(timestampNanoTime) - nanoTimeMillisToCurrentTimeMillis;
-            traverser.append(jetEvent(timestamp, valueToEmit));
+            traverser = eventTimeMapper.flatMapEvent(nowNanoTime, valueToEmit, 0, timestamp);
             valueToEmit += totalParallelism;
-            if (timestamp >= lastEmittedWm + wmGranularity) {
-                long wmToEmit = timestamp - (timestamp % wmGranularity) + wmOffset;
-                traverser.append(new Watermark(wmToEmit));
-                lastEmittedWm = wmToEmit;
-            }
         }
     }
 
