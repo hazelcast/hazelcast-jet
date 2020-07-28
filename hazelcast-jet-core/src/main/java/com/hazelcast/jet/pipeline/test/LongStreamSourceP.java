@@ -56,7 +56,7 @@ public class LongStreamSourceP extends AbstractProcessor {
     private long lastReport;
     private long counterAtLastReport;
     private long lastCallNanos;
-    private long counter;
+    private long emittedCount;
     private long lastEmittedWm;
     private long nowNanos;
 
@@ -94,8 +94,8 @@ public class LongStreamSourceP extends AbstractProcessor {
     private void emitEvents() {
         while (emitFromTraverser(traverser) && emitSchedule <= nowNanos) {
             long timestamp = NANOSECONDS.toMillis(emitSchedule) - nanoTimeMillisToCurrentTimeMillis;
-            traverser.append(jetEvent(timestamp, counter * totalParallelism + globalProcessorIndex));
-            counter++;
+            traverser.append(jetEvent(timestamp, emittedCount * totalParallelism + globalProcessorIndex));
+            emittedCount++;
             emitSchedule += emitPeriod;
             if (timestamp >= lastEmittedWm + wmGranularity) {
                 long wmToEmit = timestamp - (timestamp % wmGranularity) + wmOffset;
@@ -119,8 +119,8 @@ public class LongStreamSourceP extends AbstractProcessor {
             return;
         }
         lastReport = nowNanos;
-        long itemCountSinceLastReport = counter - counterAtLastReport;
-        counterAtLastReport = counter;
+        long itemCountSinceLastReport = emittedCount - counterAtLastReport;
+        counterAtLastReport = emittedCount;
         logger.fine(String.format("p%d: %,.0f items/second%n",
                 globalProcessorIndex,
                 itemCountSinceLastReport / ((double) nanosSinceLastReport / SECONDS.toNanos(1))));
