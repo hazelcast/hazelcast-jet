@@ -169,7 +169,7 @@ public final class TestSources {
      */
     @Nonnull
     public static StreamSource<Long> longStream(long eventsPerSecond, long initialDelayMillis) {
-        return Sources.streamFromProcessorWithWatermarks("longValues",
+        return Sources.streamFromProcessorWithWatermarks("longStream",
                 true,
                 eventTimePolicy -> ProcessorMetaSupplier.of(
                         (Address ignored) -> {
