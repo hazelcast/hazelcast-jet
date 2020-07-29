@@ -16,10 +16,8 @@
 
 package com.hazelcast.jet.pipeline.test;
 
-import com.hazelcast.cluster.Address;
 import com.hazelcast.jet.annotation.EvolvingApi;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
-import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.pipeline.BatchSource;
 import com.hazelcast.jet.pipeline.SourceBuilder;
 import com.hazelcast.jet.pipeline.Sources;
