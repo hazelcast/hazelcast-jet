@@ -65,8 +65,6 @@ import static org.testcontainers.containers.MySQLContainer.MYSQL_PORT;
 @Parameterized.UseParametersRunnerFactory(HazelcastSerialParametersRunnerFactory.class)
 public class MySqlCdcNetworkIntegrationTest extends AbstractCdcIntegrationTest {
 
-    //todo: use longer versions of the tests to check for memory leaks
-
     private static final long CONNECTION_KEEPALIVE_MS = SECONDS.toMillis(1);
 
     @Parameter

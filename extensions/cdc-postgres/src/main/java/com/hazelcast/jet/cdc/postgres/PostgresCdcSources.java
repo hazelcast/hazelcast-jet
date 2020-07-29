@@ -46,12 +46,57 @@ public final class PostgresCdcSources {
      * Creates a CDC source that streams change data from a PostgreSQL database
      * to Hazelcast Jet.
      * <p>
-     * <b>KNOWN ISSUE 1:</b> If Jet can't reach the database when it attempts to
-     * start the source or if it looses the connection to the database from an
-     * already running source, it throws an exception and terminate the
-     * execution of the job. This behaviour is not ideal, would be much better
-     * to try to reconnect, at least for a certain amount of time. Future
-     * versions will address the problem.
+     * Behaviour of the source on connection disruptions to the database is
+     * configurable and is governed by the {@code setReconnectBehaviour(String)}
+     * setting (as far as the underlying Debezium connector cooperates, read
+     * further for details).
+     * <p>
+     * The default reconnect behaviour is <em>FAIL</em>, which threats any
+     * connection failure as an unrecoverable problem and produces the failure
+     * of the source and the entire job. (How Jet handles job failures and what
+     * ways there are for recovering from them, is a generic issue not discussed
+     * here.)
+     * <p>
+     * The other two behaviour options, <em>RECONNECT</em> and
+     * <em>CLEAR_STATE_AND_RECONNECT</em>, instruct the source to try to
+     * automatically recover from any connection failure by restarting
+     * the whole source. The two types of behaviour differ from each-other in
+     * how exactly they handle the restart, if they preserve the current state
+     * of the source or if they reset it. If the state is kept, then
+     * snapshotting should not be repeated and streaming the WAL should resume
+     * at the position where it left off. If the state is reset, then the source
+     * will behave as if it were its initial start, so will do a snapshot and
+     * will start trailing the WAL where it syncs with the snapshot's end.
+     * <p>
+     * One caveat of the restart process is that it can work correctly only as
+     * long as the Postgres replication slot, which it's based on, has
+     * <em>not</em> lost data. When the Postgres database cluster experiences
+     * failures and the source needs to be connected to a different database
+     * instance, manual intervention from an administrator might become
+     * necessary to ensure that replication slot has been re-created properly,
+     * without data loss.
+     * <p>
+     * Depending on the lifecycle phase the source is in, there are some
+     * discrepancies and peculiarities in this behaviour. There are also further
+     * settings for influencing it. See what follows for details.
+     * <p>
+     * On the <em>initial start</em> of the connector, if the reconnect
+     * behaviour is set to <em>FAIL</em> and the database is not immediately
+     * reachable, the source will fail. Otherwise, it will try to reconnect
+     * until it succeeds. How much it will wait between two successive reconnect
+     * attempts can be configured via the {@code setReconnectIntervalMs(long)}
+     * setting.
+     * <p>
+     * If the connection to the database fails, either during the
+     * <em>snapshotting</em>, or the <em>WAL trailing</em> phase, then the
+     * connector notices the failure only after a very long delay
+     * (have measured it to 150 seconds and have not found a way to configure
+     * it). If the connection recovers in the meantime, then it will resume
+     * operations like nothing had happened. If the connection goes down due to
+     * the database being shut down cleanly, the connector can detect it and
+     * react immediately, but if the outage is purely at the network level,
+     * then, more often than not, the above mentioned long delay needs to be
+     * waited out.
      *
      * @param name name of this source, needs to be unique, will be passed to
      *             the underlying Kafka Connect source

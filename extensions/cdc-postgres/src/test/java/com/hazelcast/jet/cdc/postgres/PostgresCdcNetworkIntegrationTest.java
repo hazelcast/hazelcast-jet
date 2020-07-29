@@ -64,10 +64,6 @@ import static org.testcontainers.containers.PostgreSQLContainer.POSTGRESQL_PORT;
 @Parameterized.UseParametersRunnerFactory(HazelcastSerialParametersRunnerFactory.class)
 public class PostgresCdcNetworkIntegrationTest extends AbstractCdcIntegrationTest {
 
-    //todo: use longer versions of the tests to check for memory leaks
-
-    //todo: document all this behaviour in the connector javadoc
-
     private static final long RECONNECT_INTERVAL_MS = SECONDS.toMillis(1);
 
     @Parameter
@@ -115,7 +111,7 @@ public class PostgresCdcNetworkIntegrationTest extends AbstractCdcIntegrationTes
 
     @Test
     @Category(NightlyTest.class)
-    public void when_networkDisconnectDuringSnapshotting_then_jetSourceIsStuckUntilReconnect() throws Exception {
+    public void when_shortNetworkDisconnectDuringSnapshotting_then_connectorDoesNotNoticeAnything() throws Exception {
         Network network = initNetwork();
         PostgreSQLContainer<?> postgres = initPostgres(network, null);
         ToxiproxyContainer toxiproxy = initToxiproxy(network);
@@ -133,6 +129,7 @@ public class PostgresCdcNetworkIntegrationTest extends AbstractCdcIntegrationTes
 
             // and some time passes
             MILLISECONDS.sleep(2 * RECONNECT_INTERVAL_MS);
+            //it takes the bloody thing 150 seconds to notice the connection being down, so it won't notice this...
 
             // and connection recovers
             proxy.setConnectionCut(false);
@@ -151,7 +148,7 @@ public class PostgresCdcNetworkIntegrationTest extends AbstractCdcIntegrationTes
 
     @Test
     @Category(NightlyTest.class)
-    public void when_databaseShutdownDuringSnapshotting() throws Exception {
+    public void when_databaseShutdownOrLongDisconnectDuringSnapshotting() throws Exception {
         PostgreSQLContainer<?> postgres = initPostgres(null, POSTGRESQL_PORT);
         Pipeline pipeline = initPipeline(postgres.getContainerIpAddress(), POSTGRESQL_PORT);
         try {
@@ -229,7 +226,7 @@ public class PostgresCdcNetworkIntegrationTest extends AbstractCdcIntegrationTes
 
     @Test
     @Category(NightlyTest.class)
-    public void when_databaseShutdownDuringBinlogReading() throws Exception {
+    public void when_databaseShutdownOrLongDisconnectDuringBinlogReading() throws Exception {
         if (RECONNECT.equals(reconnectBehaviour)) {
             return; //doesn't make sense to test this mode with this scenario
         }
