@@ -158,6 +158,10 @@ public final class TestSources {
      * <p>
      * This source is not fault-tolerant. The sequence will be reset once a job
      * is restarted.
+     * <p>
+     * <strong>Note:</strong>
+     * A clock skew between any two cluster members may result in an artificial
+     * increase of latency.
      *
      * @param eventsPerSecond the desired event rate
      * @param initialDelayMillis initial delay in milliseconds before emitting values
