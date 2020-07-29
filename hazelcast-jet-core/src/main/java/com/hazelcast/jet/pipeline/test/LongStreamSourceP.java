@@ -38,7 +38,7 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 public class LongStreamSourceP extends AbstractProcessor {
 
     private static final long SOURCE_THROUGHPUT_REPORTING_PERIOD_SECONDS = 5;
-    private static final long HICCUP_REPORT_THRESHOLD_MILLIS = 10;
+    private static final long HICCUP_REPORT_THRESHOLD_NANOS = MILLISECONDS.toNanos(10);
     private static final long NANOS_PER_SECOND = SECONDS.toNanos(1);
 
     private final ILogger logger = Logger.getLogger(LongStreamSourceP.class);
@@ -95,9 +95,11 @@ public class LongStreamSourceP extends AbstractProcessor {
     }
 
     private void detectAndReportHiccup() {
-        long millisSinceLastCall = NANOSECONDS.toMillis(nowNanoTime - lastCallNanos);
-        if (millisSinceLastCall > HICCUP_REPORT_THRESHOLD_MILLIS) {
-            logger.info(String.format("*** Source #%d hiccup: %,d ms%n", globalProcessorIndex, millisSinceLastCall));
+        if ((nowNanoTime - lastCallNanos) > HICCUP_REPORT_THRESHOLD_NANOS) {
+            logger.info(String.format("*** Source #%d hiccup: %,d ms%n",
+                    globalProcessorIndex,
+                    NANOSECONDS.toMillis(nowNanoTime - lastCallNanos)
+            ));
         }
         lastCallNanos = nowNanoTime;
     }
