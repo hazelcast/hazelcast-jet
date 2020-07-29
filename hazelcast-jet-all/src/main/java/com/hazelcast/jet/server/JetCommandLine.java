@@ -477,13 +477,15 @@ public class JetCommandLine implements Runnable {
             config.setClusterName(clusterName);
             return config;
         }
+
+        ClientConfig config = ConfigProvider.locateAndGetClientConfig();
         if (targetsMixin.getTargets() != null) {
-            ClientConfig config = new ClientConfig();
             config.getNetworkConfig().setAddresses(targetsMixin.getAddresses());
             config.setClusterName(targetsMixin.getClusterName());
             return config;
         }
-        return ConfigProvider.locateAndGetClientConfig();
+
+        return config;
     }
 
     private boolean isYaml() {
