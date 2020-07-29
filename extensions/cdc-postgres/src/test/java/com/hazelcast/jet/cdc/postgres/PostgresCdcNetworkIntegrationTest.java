@@ -64,7 +64,7 @@ import static org.testcontainers.containers.PostgreSQLContainer.POSTGRESQL_PORT;
 @Parameterized.UseParametersRunnerFactory(HazelcastSerialParametersRunnerFactory.class)
 public class PostgresCdcNetworkIntegrationTest extends AbstractCdcIntegrationTest {
 
-    //todo: check for memory leaks when attempting to reconnect
+    //todo: use longer versions of the tests to check for memory leaks
 
     //todo: document all this behaviour in the connector javadoc
 
@@ -208,7 +208,7 @@ public class PostgresCdcNetworkIntegrationTest extends AbstractCdcIntegrationTes
             insertRecords(postgres, 1006, 1007);
 
             // and some time passes
-            MILLISECONDS.sleep(5 * RECONNECT_INTERVAL_MS); //todo: can I somehow make it notice faster?
+            MILLISECONDS.sleep(5 * RECONNECT_INTERVAL_MS);
 
             // and the connection is re-established
             proxy.setConnectionCut(false);

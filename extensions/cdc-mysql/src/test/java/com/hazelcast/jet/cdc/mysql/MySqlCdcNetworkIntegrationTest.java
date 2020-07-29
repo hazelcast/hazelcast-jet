@@ -65,9 +65,7 @@ import static org.testcontainers.containers.MySQLContainer.MYSQL_PORT;
 @Parameterized.UseParametersRunnerFactory(HazelcastSerialParametersRunnerFactory.class)
 public class MySqlCdcNetworkIntegrationTest extends AbstractCdcIntegrationTest {
 
-    //todo: check for memory leaks when attempting to reconnect
-
-    //todo: document all this behaviour in the connector javadoc
+    //todo: use longer versions of the tests to check for memory leaks
 
     private static final long CONNECTION_KEEPALIVE_MS = SECONDS.toMillis(1);
 
@@ -284,7 +282,7 @@ public class MySqlCdcNetworkIntegrationTest extends AbstractCdcIntegrationTest {
                 .setDatabasePassword("dbz")
                 .setClusterName("dbserver1").setDatabaseWhitelist("inventory")
                 .setTableWhitelist("inventory." + "customers")
-                .setConnectionKeepAliveMs(CONNECTION_KEEPALIVE_MS)
+                .setReconnectIntervalMs(CONNECTION_KEEPALIVE_MS)
                 .setReconnectBehaviour(reconnectBehaviour.name())
                 .build();
     }

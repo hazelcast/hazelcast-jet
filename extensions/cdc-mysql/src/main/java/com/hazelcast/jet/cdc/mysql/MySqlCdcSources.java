@@ -45,12 +45,60 @@ public final class MySqlCdcSources {
      * Creates a CDC source that streams change data from a MySQL database to
      * Hazelcast Jet.
      * <p>
-     * <b>KNOWN ISSUE:</b> If Jet can't reach the database when it attempts to
-     * start the source or if it looses the connection to the database from an
-     * already running source, it throws an exception and terminate the
-     * execution of the job. This behaviour is not ideal, would be much better
-     * to try to reconnect, at least for a certain amount of time. Future
-     * versions will address the problem.
+     * Behaviour of the source on connection disruptions to the database is
+     * configurable and is governed by the {@code setReconnectBehaviour(String)}
+     * setting (as far as the underlying Debezium connector cooperates, read
+     * further for details).
+     * <p>
+     * The default reconnect behaviour is <em>FAIL</em>, which threats any
+     * connection failure as an unrecoverable problem and produces the failure
+     * of the source and the entire job. (How Jet handles job failures and what
+     * ways there are for recovering from them, is a generic issue not discussed
+     * here.)
+     * <p>
+     * The other two behaviour options, <em>RECONNECT</em> and
+     * <em>CLEAR_STATE_AND_RECONNECT</em>, instruct the source to try to
+     * automatically recover from any connection failure by reconnecting,
+     * either via the connector's internal reconnect mechanisms or by restarting
+     * the whole source. The two types of behaviour differ from each-other in
+     * how exactly they handle the source restart, if they preserve the current
+     * state of the source or if they reset it. If the state is kept, then
+     * snapshotting should not be repeated and streaming the binlog should
+     * resume at the position where it left off. If the state is reset, then the
+     * source will behave as if it were its initial start, so will do a snapshot
+     * and will start trailing the binlog where it syncs with the snapshot's
+     * end.
+     * <p>
+     * Depending on the lifecycle phase the source is in, however, there are
+     * some discrepancies and peculiarities in this behaviour. There are also
+     * further settings for influencing it. See what follows for details.
+     * <p>
+     * On the <em>initial start</em> of the connector, if the reconnect
+     * behaviour is set to <em>FAIL</em> and the database is not immediately
+     * reachable, the source will fail. Otherwise, it will try to reconnect
+     * until it succeeds. How much it will wait between two successive reconnect
+     * attempts can be configured via the {@code setReconnectIntervalMs(long)}
+     * setting.
+     * <p>
+     * If the connection to the database fails <em>during the snapshotting
+     * phase</em> then the connector is stuck in this state until it manages to
+     * reconnect. This, unfortunately, is the case even when reconnect behaviour
+     * is set to <em>FAIL</em> and is related to the peculiarities of the
+     * underlying Debezium connector's implementation. If the connection goes
+     * down due to the database being shut down, it sometimes can detect that
+     * and react properly, but if the outage is purely at the network level,
+     * then, more often than not, it's not detected.
+     * <p>
+     * During the <em>binlog trailing</em> phase all connection disruptions
+     * will be detected, but internally not all of them are handled the same
+     * way. If the database is shut down, then the connector can detect that
+     * and will not handle it. It will just fail and, depending on the reconnect
+     * behaviour, Jet can trigger the restarting of the source. If the outage
+     * is at the network level or a database shutdown is not detected as such,
+     * then the connector will trigger internal reconnecting, even if the
+     * source's reconnect behaviour is set to <em>FAIL</em> and will do this
+     * until it manages to connect. The frequency of these attempt can also
+     * be influenced via the {@code setReconnectIntervalMs(long)} setting.
      *
      * @param name name of this source, needs to be unique, will be passed to
      *             the underlying Kafka Connect source
@@ -310,9 +358,9 @@ public final class MySqlCdcSources {
          * {@value CdcSource#DEFAULT_RECONNECT_INTERVAL_MS} milliseconds.
          */
         @Nonnull
-        public Builder setConnectionKeepAliveMs(long keepAliveMs) {
-            config.setProperty(CdcSource.RECONNECT_INTERVAL_MS, keepAliveMs);
-            config.setProperty("connect.keep.alive.interval.ms", keepAliveMs);
+        public Builder setReconnectIntervalMs(long intervalMs) {
+            config.setProperty(CdcSource.RECONNECT_INTERVAL_MS, intervalMs);
+            config.setProperty("connect.keep.alive.interval.ms", intervalMs);
             return this;
         }
 
@@ -323,14 +371,14 @@ public final class MySqlCdcSources {
          * network outages the connector will automatically reconnect,
          * regardless of this setting).
          * <p>
-         * Possible values are:
+         * Possible values are (they are <em>not</em> case sensitive):
          * <ul>
-         *     <li><em>fail</em>: will cause the whole job to fail</li>
-         *     <li><em>clear_state_and_reconnect</em>: will reconnect to
+         *     <li><em>FAIL</em>: will cause the whole job to fail</li>
+         *     <li><em>CLEAR_STATE_AND_RECONNECT</em>: will reconnect to
          *      database, but will clear all internal state first, thus behaving
          *      as if it would be connecting the first time (for example
          *      snapshotting will be repeated)</li>
-         *     <li><em>reconnect</em>: will reconnect as is, in the same state
+         *     <li><em>RECONNECT</em>: will reconnect as is, in the same state
          *      as it was at the moment of the disconnect </li>
          * </ul>
          */
