@@ -41,7 +41,6 @@ public class LongStreamSourceP extends AbstractProcessor {
     private static final long HICCUP_REPORT_THRESHOLD_NANOS = MILLISECONDS.toNanos(10);
     private static final long NANOS_PER_SECOND = SECONDS.toNanos(1);
 
-    private final ILogger logger = Logger.getLogger(LongStreamSourceP.class);
     private final long nanoTimeMillisToCurrentTimeMillis = determineTimeOffset();
     private final long eventsPerSecond;
     private final EventTimeMapper<? super Long> eventTimeMapper;
@@ -54,6 +53,7 @@ public class LongStreamSourceP extends AbstractProcessor {
     private long lastCallNanos;
     private long valueToEmit;
     private long nowNanoTime;
+    private ILogger logger;
     private Traverser<Object> traverser = new AppendableTraverser<>(2);
 
     LongStreamSourceP(long startTime, long eventsPerSecond, EventTimePolicy<? super Long> eventTimePolicy) {
@@ -65,6 +65,7 @@ public class LongStreamSourceP extends AbstractProcessor {
 
     @Override
     protected void init(@Nonnull Context context) {
+        logger = context.logger();
         totalParallelism = context.totalParallelism();
         globalProcessorIndex = context.globalProcessorIndex();
         valueToEmit = globalProcessorIndex;
