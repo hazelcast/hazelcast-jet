@@ -165,7 +165,6 @@ public final class TestSources {
      * @param initialDelayMillis initial delay in milliseconds before emitting values
      *
      * @since 4.3
-     *
      */
     @Nonnull
     public static StreamSource<Long> longStream(long eventsPerSecond, long initialDelayMillis) {
