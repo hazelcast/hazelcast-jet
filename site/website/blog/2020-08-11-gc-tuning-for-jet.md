@@ -38,7 +38,7 @@ now able to push G1 below the 10 ms line. Since G1 is stable across a
 wide range of throughputs, we immediately got it to perform within 10 ms
 at double the throughput than in the previous round.
 
-# The Setup
+## The Setup
 
 Our setup is for the most part identical to the one in the previous
 post. We refreshed the code a bit, we now use the released version 4.2
@@ -47,23 +47,77 @@ we used for Shenandoah. For G1 and ZGC we used Oracle OpenJDK 15 EA33,
 which doesn't include Shenandoah.
 
 We also implemented a parallelized event source simulator. Its higher
-peak throughput allows it to catch up faster after a hiccup, helping
-to reduce the latency a bit more.
+throughput allows it to catch up faster after a hiccup, helping to
+reduce the latency a bit more. The processing pipeline itself is
+identical to the previous round,
+[here](https://github.com/mtopolnik/jet-gc-benchmark/blob/round-3/src/main/java/org/example/StreamingRound3.java)
+is the complete source code.
 
 We determined how many threads the given GC uses, set the size of the
-Jet thread pool to 16 (c5.4xlarge vCPUs) minus that value and then did
-some trial-and-error runs to find the optimum. Shenandoah takes 4
-threads for itself, so we gave Jet 12. G1 uses 3 threads, so we gave Jet  
-13\. Finally, ZGC uses just 2 threads, but we found Jet to perform a bit
-better with 13 instead of the theoretical 14 threads, so we used that.
-We also experimented with changing the GC's automatic choice for the
-thread count, but didn't find a setting that would bet the default.
+Jet thread pool to 16
+([c5.4xlarge](https://aws.amazon.com/ec2/instance-types/c5/) vCPUs)
+minus that value and then did some trial-and-error runs to find the
+optimum. Shenandoah takes 4 threads for itself, so we gave Jet 12. G1
+uses 3 threads, so we gave Jet 13\. Finally, ZGC uses just 2 threads,
+but we found Jet to perform a bit better with 13 instead of the
+theoretical 14 threads, so we used that. We also experimented with
+changing the GC's automatic choice for the thread count, but didn't find
+a setting that would beat the default.
 
 Additionally, with G1 we saw that in certain cases, even with
 `MaxGCPauseMillis=5` (same as in the previous post), the size of the new
-generation would grow large enough to negatively impact latency.
-Therefore we added `MaxNewSize` with one of `100m`, `150m` and `200m`,
-depending on the chosen throughput. This was also determined through
-trial and error, the results seemed to be the best when a minor GC was
-occurring about 10-20 times per second.
+generation would grow large enough for Minor GC pauses to impact
+latency. Therefore we added `MaxNewSize` with one of `100m`, `150m` and
+`200m`, depending on the chosen throughput. This was also determined
+through trial and error, the results seemed to be the best when a minor
+GC was occurring about 10-20 times per second.
 
+## The Results
+
+Comparing ZGC's results below with those in the [previous
+round](/blog/2020/06/23/jdk-gc-benchmarks-rematch#a-sneak-peek-into-upcoming-versions),
+we can see the latency stayed about the same where it was already good,
+but the range of throughputs got extended from 8 to 10 M items/second,
+a solid 25% improvement.
+
+The effect on G1 is sort of dual to the above: while the G1 already had
+great throughput but fell just short of making it below the 10 ms line,
+in this round its latency improved across the board, up to 40% at
+places. The best news: the maximum throughput at which Hazelcast Jet can
+maintain a 99.99% latency up to 10 ms just got pushed out from 8 to 20
+million items per second, a 250% boost!
+
+![Latency on c5.4xlarge, 1 M Events per Second](assets/2020-08-11-latency-1m.png)
+
+Encouraged by this strong result, we dreamed up a scenario like this: we
+have 100,000 devices, each producing a 100 Hz measurement stream. Can a
+single-node Hazelcast Jet handle this load and produce, say, the time
+integral of the measured quantity from each device over a 1 second
+window, with a 10 ms latency? This implies an order-of-magnitude leap in
+the event rate, from 1 M to 10 M events per second.
+
+Nominally, the scenario results in the same combined input+output
+throughput as well as about the same size of state that we already saw
+work: 20 M items/second and 10 M stored map entries. It's the maximum
+point where G1 was still inside 10 ms, but even at 25 M items/second it
+still had pretty low latency. However, for reasons we haven't
+identified, the input rate seems to have a stronger impact on GC, so
+when we traded output for input, it turned out that G1 was nowhere near
+handling it.
+
+But, since we picked the c5.4xlarge instance type as a medium-level
+option, for this "elite use case" we considered the most elite instance
+as well: c5.metal. It commands 96 vCPUs and has some scary amount of RAM
+that we won't need. On this hardware G1 decides to take 16 threads for
+itself, so the natural choice would be 80 threads for Jet. However,
+through trial and error we chased down the real optimum, which turned
+out to be 64 threads. Here is what we got:
+
+![Latency on c5.metal, 10 M Events per Second](assets/2020-08-11-latency-10m.png)
+
+G1 comfortably makes it to the 20 M mark and then goes on all the way to
+40 M items per second, gracefully degrading and reaching 60 M with just
+12 ms. Beyond this point it was Jet who ran out of steam. The pipeline,
+shuttling around 60 million items per second through concurrent queues,
+just couldn't max out the G1! We repeated the test with more threads
+given to Jet, 78, but that didn't help, either.
