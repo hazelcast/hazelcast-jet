@@ -55,15 +55,17 @@ public class TestSourcesTest extends PipelineTestSupport {
         int itemsPerSecond = 10;
         int timeout = 10;
         int numberOfExpectedValues = timeout * itemsPerSecond;
-        List<Long> expected = LongStream.range(0, numberOfExpectedValues).boxed().collect(toList());
+        List<Long> expected = LongStream.range(0, numberOfExpectedValues + itemsPerSecond).boxed().collect(toList());
 
         p.readFrom(TestSources.longStream(itemsPerSecond, 0))
-                .withIngestionTimestamps()
+                .withNativeTimestamps(0)
                 .apply(assertCollectedEventually(timeout, items -> {
-                    assertTrue("list should contain at least " + numberOfExpectedValues + " items",
-                            items.size() >= numberOfExpectedValues);
-                    assertTrue("list should contain less than " + 2 * numberOfExpectedValues + " items",
-                            items.size() < 2 * numberOfExpectedValues);
+                    assertTrue("list should contain at least " + (numberOfExpectedValues - itemsPerSecond)
+                                    + " items, but contains only contains " + items.size() + " items",
+                            items.size() >= (numberOfExpectedValues - itemsPerSecond));
+                    assertTrue("list should contain less than " + (numberOfExpectedValues + itemsPerSecond) +
+                                    " items, but contains only contains " + items.size() + " items",
+                            items.size() < (numberOfExpectedValues + itemsPerSecond));
                     for (Long value : items) {
                         assertTrue(expected.contains(value));
                     }
@@ -88,7 +90,6 @@ public class TestSourcesTest extends PipelineTestSupport {
 
         expectedException.expectMessage(AssertionCompletedException.class.getName());
         executeAndPeel();
-
     }
 
     @Test
