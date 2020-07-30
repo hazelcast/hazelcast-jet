@@ -26,10 +26,10 @@ instantiates to run a data pipeline. On the other hand, a concurrent
 garbage collector creates its own thread pool to run the cleanup in the
 background. So if we would shrink Jet's thread pool so that its size
 plus the size of the GC thread pool doesn't exceed the number of CPU
-cores, the GC could have a slice of the CPU all for itself and wouldn't
-interfere with Jet's latency. In most low-latency use cases, the
-application doesn't need 100% CPU, but it needs its share of the CPU
-100% of the time.
+cores, we may hope the GC would have a slice of the CPU all for itself
+and wouldn't interfere with Jet's latency. In most low-latency use
+cases, the application doesn't need 100% CPU, but it needs its share of
+the CPU 100% of the time.
 
 Our hopes materialized in the benchmark: this trick had a drammatic
 impact on the latency with all three garbage collectors we tested
@@ -89,12 +89,16 @@ million items per second, a 250% boost!
 
 ![Latency on c5.4xlarge, 1 M Events per Second](assets/2020-08-11-latency-1m.png)
 
+## Upgrading to 10 M Events per Second
+
 Encouraged by this strong result, we dreamed up a scenario like this: we
 have 100,000 devices, each producing a 100 Hz measurement stream. Can a
 single-node Hazelcast Jet handle this load and produce, say, the time
 integral of the measured quantity from each device over a 1 second
 window, with a 10 ms latency? This implies an order-of-magnitude leap in
-the event rate, from 1 M to 10 M events per second.
+the event rate, from 1 M to 10 M events per second. Now you can see why
+we needed that new event source, the single-threaded one from the
+previous round was good only for up to 2.5 M events per second.
 
 Nominally, the scenario results in the same combined input+output
 throughput as well as about the same size of state that we already saw
