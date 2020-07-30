@@ -22,7 +22,6 @@ import com.hazelcast.jet.core.AppendableTraverser;
 import com.hazelcast.jet.core.EventTimeMapper;
 import com.hazelcast.jet.core.EventTimePolicy;
 import com.hazelcast.logging.ILogger;
-import com.hazelcast.logging.Logger;
 
 import javax.annotation.Nonnull;
 
