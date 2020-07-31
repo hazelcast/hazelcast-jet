@@ -32,11 +32,11 @@ cases, the application doesn't need 100% CPU, but it needs its share of
 the CPU 100% of the time.
 
 Our hopes materialized in the benchmark: this trick had a drammatic
-impact on the latency with all three garbage collectors we tested
-(G1, ZGC and Shenandoah). The most important outcome was that we were
-now able to push G1 below the 10 ms line. Since G1 is stable across a
-wide range of throughputs, we immediately got it to perform within 10 ms
-at double the throughput than in the previous round.
+impact on the latency with both garbage collectors we tested (G1 and
+ZGC). The most important outcome was that we were now able to push G1
+below the 10 ms line. Since G1 is stable across a wide range of
+throughputs, we immediately got it to perform within 10 ms at double the
+throughput than in the previous round.
 
 ## The Setup
 
@@ -123,21 +123,3 @@ G1 comfortably makes it to the 20 M mark and then goes on all the way to
 pipeline running at full speed just couldn't max out the G1! We repeated
 the test with more threads given to Jet, 78, but that didn't make a
 difference.
-
-## Results on Shenandoah
-
-Our experience so far with Shenandoah, in its current experimental
-state, told us it probably wouldn't make it into the 10 ms zone, but
-naturally we were still interested to see how much it would benefit from
-this Jet thread pool sizing trick. We used the release version of JDK
-14.0.2, which includes the late improvement discussed in the previous
-round (the EA releases of OpenJDK disable Shenandoah, which is why we
-couldn't use the same JVM for all tests). Shenandoah takes 4 threads for
-itself, so we gave Jet the remaining 12 threads. We compared this setup
-to the default one, where Jet takes 16 threads:
-
-![Shenandoah Latency on c5.4xlarge, 1 M Events per Second](assets/2020-08-05-latency-shen.png)
-
-The improvement at the low end is pretty massive, 3-4 times, and
-Shenandoah almost makes it within the 10 ms envelope. A the higher rates
-the improvement is still there, but not as relevant.
