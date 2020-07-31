@@ -16,9 +16,10 @@
 
 package com.hazelcast.jet.sql.impl.connector.kafka;
 
-import com.hazelcast.jet.sql.JetSqlConnector;
+import com.hazelcast.jet.sql.SqlConnector;
 import com.hazelcast.jet.sql.impl.schema.JetTable;
 import com.hazelcast.sql.impl.inject.UpsertTargetDescriptor;
+import com.hazelcast.sql.impl.plan.cache.PlanObjectId;
 import com.hazelcast.sql.impl.schema.TableField;
 import com.hazelcast.sql.impl.schema.TableStatistics;
 
@@ -34,7 +35,7 @@ class KafkaTable extends JetTable {
     private final Properties kafkaProperties;
 
     KafkaTable(
-            JetSqlConnector sqlConnector,
+            SqlConnector sqlConnector,
             String schemaName,
             String name,
             TableStatistics statistics,
@@ -67,6 +68,11 @@ class KafkaTable extends JetTable {
 
     Properties getKafkaProperties() {
         return kafkaProperties;
+    }
+
+    @Override
+    public PlanObjectId getObjectId() {
+        throw new UnsupportedOperationException();
     }
 
     @Override

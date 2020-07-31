@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 
 // TODO: use QueryTargetDescriptors instead ?
+@Deprecated
 public class MapRow implements Row {
 
     private final List<String> fieldNames;

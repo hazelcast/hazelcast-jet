@@ -16,7 +16,7 @@
 
 package com.hazelcast.jet.sql.impl.connector.file;
 
-import com.hazelcast.jet.sql.JetSqlConnector;
+import com.hazelcast.jet.sql.SqlConnector;
 import com.hazelcast.jet.sql.impl.schema.JetTable;
 import com.hazelcast.sql.impl.schema.ConstantTableStatistics;
 import com.hazelcast.sql.impl.schema.TableField;
@@ -32,7 +32,7 @@ class FileTable extends JetTable {
     private final TargetDescriptor targetDescriptor;
 
     FileTable(
-            JetSqlConnector sqlConnector,
+            SqlConnector sqlConnector,
             String schemaName,
             String name,
             String directory,

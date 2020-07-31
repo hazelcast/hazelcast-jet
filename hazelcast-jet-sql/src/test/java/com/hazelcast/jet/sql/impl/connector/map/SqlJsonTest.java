@@ -14,11 +14,10 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.sql.impl.connector.imap;
+package com.hazelcast.jet.sql.impl.connector.map;
 
 import com.hazelcast.core.HazelcastJsonValue;
 import com.hazelcast.jet.sql.SqlTestSupport;
-import com.hazelcast.sql.impl.connector.LocalPartitionedMapConnector;
 import org.junit.Test;
 
 import java.math.BigDecimal;
@@ -30,11 +29,11 @@ import java.time.OffsetDateTime;
 import java.util.Date;
 import java.util.Map;
 
-import static com.hazelcast.sql.impl.connector.SqlConnector.JAVA_SERIALIZATION_FORMAT;
-import static com.hazelcast.sql.impl.connector.SqlConnector.JSON_SERIALIZATION_FORMAT;
-import static com.hazelcast.sql.impl.connector.SqlKeyValueConnector.TO_KEY_CLASS;
-import static com.hazelcast.sql.impl.connector.SqlKeyValueConnector.TO_SERIALIZATION_KEY_FORMAT;
-import static com.hazelcast.sql.impl.connector.SqlKeyValueConnector.TO_SERIALIZATION_VALUE_FORMAT;
+import static com.hazelcast.jet.sql.SqlConnector.JAVA_SERIALIZATION_FORMAT;
+import static com.hazelcast.jet.sql.SqlConnector.JSON_SERIALIZATION_FORMAT;
+import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.TO_KEY_CLASS;
+import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.TO_SERIALIZATION_KEY_FORMAT;
+import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.TO_SERIALIZATION_VALUE_FORMAT;
 import static java.time.Instant.ofEpochMilli;
 import static java.time.ZoneId.systemDefault;
 import static java.util.Arrays.asList;

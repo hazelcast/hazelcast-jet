@@ -17,12 +17,12 @@
 package com.hazelcast.jet.sql.impl.connector.file;
 
 import com.hazelcast.internal.util.UuidUtil;
+import com.hazelcast.jet.sql.impl.schema.ExternalField;
 import com.hazelcast.jet.sql.impl.schema.JetTableFunction;
 import com.hazelcast.jet.sql.impl.schema.JetTableFunctionParameter;
+import com.hazelcast.jet.sql.impl.schema.UnknownStatistic;
 import com.hazelcast.sql.impl.calcite.SqlToQueryType;
 import com.hazelcast.sql.impl.calcite.schema.HazelcastTable;
-import com.hazelcast.sql.impl.calcite.schema.UnknownStatistic;
-import com.hazelcast.sql.impl.schema.ExternalTable.ExternalField;
 import com.hazelcast.sql.impl.schema.Table;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
@@ -37,7 +37,7 @@ import java.util.List;
 import java.util.Map;
 
 import static com.hazelcast.jet.impl.util.Util.toList;
-import static com.hazelcast.jet.sql.JetSqlConnector.TO_SERIALIZATION_FORMAT;
+import static com.hazelcast.jet.sql.SqlConnector.TO_SERIALIZATION_FORMAT;
 import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.TO_CHARSET;
 import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.TO_DELIMITER;
 import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.TO_DIRECTORY;

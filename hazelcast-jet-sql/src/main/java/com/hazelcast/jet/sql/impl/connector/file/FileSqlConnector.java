@@ -20,11 +20,11 @@ import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.impl.connector.ReadFilesP;
-import com.hazelcast.jet.sql.JetSqlConnector;
+import com.hazelcast.jet.sql.SqlConnector;
+import com.hazelcast.jet.sql.impl.schema.ExternalField;
 import com.hazelcast.spi.impl.NodeEngine;
 import com.hazelcast.sql.impl.QueryException;
 import com.hazelcast.sql.impl.expression.Expression;
-import com.hazelcast.sql.impl.schema.ExternalTable.ExternalField;
 import com.hazelcast.sql.impl.schema.Table;
 
 import javax.annotation.Nonnull;
@@ -37,7 +37,7 @@ import java.util.stream.Stream;
 import static java.lang.Boolean.parseBoolean;
 import static java.lang.String.format;
 
-public class FileSqlConnector implements JetSqlConnector {
+public class FileSqlConnector implements SqlConnector {
 
     static final FileSqlConnector INSTANCE = new FileSqlConnector();
 

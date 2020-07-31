@@ -14,14 +14,13 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.sql.impl.connector.imap;
+package com.hazelcast.jet.sql.impl.connector.map;
 
 import com.hazelcast.jet.sql.SqlTestSupport;
-import com.hazelcast.jet.sql.impl.connector.imap.model.AllTypesValue;
-import com.hazelcast.jet.sql.impl.connector.imap.model.InsuredPerson;
-import com.hazelcast.jet.sql.impl.connector.imap.model.Person;
-import com.hazelcast.jet.sql.impl.connector.imap.model.PersonId;
-import com.hazelcast.sql.impl.connector.LocalPartitionedMapConnector;
+import com.hazelcast.jet.sql.impl.connector.map.model.AllTypesValue;
+import com.hazelcast.jet.sql.impl.connector.map.model.InsuredPerson;
+import com.hazelcast.jet.sql.impl.connector.map.model.Person;
+import com.hazelcast.jet.sql.impl.connector.map.model.PersonId;
 import org.junit.Test;
 
 import java.math.BigDecimal;
@@ -30,18 +29,17 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.Map;
 
 import static com.hazelcast.jet.core.TestUtil.createMap;
-import static com.hazelcast.sql.impl.connector.SqlConnector.JAVA_SERIALIZATION_FORMAT;
-import static com.hazelcast.sql.impl.connector.SqlKeyValueConnector.TO_KEY_CLASS;
-import static com.hazelcast.sql.impl.connector.SqlKeyValueConnector.TO_SERIALIZATION_KEY_FORMAT;
-import static com.hazelcast.sql.impl.connector.SqlKeyValueConnector.TO_SERIALIZATION_VALUE_FORMAT;
-import static com.hazelcast.sql.impl.connector.SqlKeyValueConnector.TO_VALUE_CLASS;
+import static com.hazelcast.jet.sql.SqlConnector.JAVA_SERIALIZATION_FORMAT;
+import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.TO_KEY_CLASS;
+import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.TO_SERIALIZATION_KEY_FORMAT;
+import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.TO_SERIALIZATION_VALUE_FORMAT;
+import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.TO_VALUE_CLASS;
 import static java.time.Instant.ofEpochMilli;
 import static java.time.ZoneId.systemDefault;
 import static java.time.ZoneOffset.UTC;

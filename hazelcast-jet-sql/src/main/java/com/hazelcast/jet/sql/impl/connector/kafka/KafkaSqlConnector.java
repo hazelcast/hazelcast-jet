@@ -20,17 +20,16 @@ import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.kafka.KafkaProcessors;
-import com.hazelcast.jet.sql.JetSqlConnector;
+import com.hazelcast.jet.sql.impl.connector.JavaEntryMetadataResolver;
+import com.hazelcast.jet.sql.impl.connector.EntryMetadata;
+import com.hazelcast.jet.sql.impl.connector.EntryMetadataResolver;
+import com.hazelcast.jet.sql.impl.connector.EntrySqlConnector;
+import com.hazelcast.jet.sql.impl.schema.ExternalField;
 import com.hazelcast.spi.impl.NodeEngine;
-import com.hazelcast.sql.impl.connector.SqlKeyValueConnector;
 import com.hazelcast.sql.impl.expression.Expression;
 import com.hazelcast.sql.impl.schema.ConstantTableStatistics;
-import com.hazelcast.sql.impl.schema.ExternalTable.ExternalField;
 import com.hazelcast.sql.impl.schema.Table;
 import com.hazelcast.sql.impl.schema.TableField;
-import com.hazelcast.sql.impl.schema.map.options.JavaMapOptionsMetadataResolver;
-import com.hazelcast.sql.impl.schema.map.options.MapOptionsMetadata;
-import com.hazelcast.sql.impl.schema.map.options.MapOptionsMetadataResolver;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 
 import javax.annotation.Nonnull;
@@ -50,15 +49,15 @@ import static com.hazelcast.jet.sql.impl.connector.EntryProcessors.entryProjecto
 import static com.hazelcast.jet.sql.impl.expression.ExpressionUtil.projectionFn;
 import static java.util.stream.Collectors.toMap;
 
-public class KafkaSqlConnector extends SqlKeyValueConnector implements JetSqlConnector {
+public class KafkaSqlConnector extends EntrySqlConnector {
 
     public static final String TYPE_NAME = "com.hazelcast.Kafka";
 
     public static final String TO_TOPIC_NAME = "kafka.topicName";
 
-    private static final Map<String, MapOptionsMetadataResolver> METADATA_RESOLVERS = Stream.of(
-            JavaMapOptionsMetadataResolver.INSTANCE
-    ).collect(toMap(MapOptionsMetadataResolver::supportedFormat, Function.identity()));
+    private static final Map<String, EntryMetadataResolver> METADATA_RESOLVERS = Stream.of(
+            JavaEntryMetadataResolver.INSTANCE
+    ).collect(toMap(EntryMetadataResolver::supportedFormat, Function.identity()));
 
     @Override
     public String typeName() {
@@ -70,7 +69,8 @@ public class KafkaSqlConnector extends SqlKeyValueConnector implements JetSqlCon
         return true;
     }
 
-    @Nonnull @Override
+    @Nonnull
+    @Override
     public Table createTable(
             @Nonnull NodeEngine nodeEngine,
             @Nonnull String schemaName,
@@ -86,8 +86,8 @@ public class KafkaSqlConnector extends SqlKeyValueConnector implements JetSqlCon
         kafkaProperties.remove(TO_KEY_CLASS);
         kafkaProperties.remove(TO_VALUE_CLASS);
 
-        MapOptionsMetadata keyMetadata = resolveMetadata(externalFields, options, true, null);
-        MapOptionsMetadata valueMetadata = resolveMetadata(externalFields, options, false, null);
+        EntryMetadata keyMetadata = resolveMetadata(externalFields, options, true, null);
+        EntryMetadata valueMetadata = resolveMetadata(externalFields, options, false, null);
         List<TableField> fields = mergeFields(keyMetadata.getFields(), valueMetadata.getFields());
 
         return new KafkaTable(
@@ -108,7 +108,8 @@ public class KafkaSqlConnector extends SqlKeyValueConnector implements JetSqlCon
         return true;
     }
 
-    @Nullable @Override
+    @Nullable
+    @Override
     public Vertex fullScanReader(
             @Nonnull DAG dag,
             @Nonnull Table table0,
@@ -122,6 +123,7 @@ public class KafkaSqlConnector extends SqlKeyValueConnector implements JetSqlCon
         Vertex sourceVertex = dag.newVertex("kafka(" + topicName + ")",
                 KafkaProcessors.streamKafkaP(table.getKafkaProperties(), FunctionEx.identity(), noEventTime(), topicName));
 
+        // TODO: use descriptors
         FunctionEx<Entry<Object, Object>, Object[]> mapFn = projectionFn(table, predicate, projections);
         FunctionEx<ConsumerRecord<Object, Object>, Object[]> wrapToEntryFn = record ->
                 mapFn.apply(entry(record.key(), record.value()));
@@ -136,7 +138,8 @@ public class KafkaSqlConnector extends SqlKeyValueConnector implements JetSqlCon
         return true;
     }
 
-    @Nullable @Override
+    @Nullable
+    @Override
     public Vertex sink(
             @Nonnull DAG dag,
             @Nonnull Table jetTable
@@ -158,7 +161,7 @@ public class KafkaSqlConnector extends SqlKeyValueConnector implements JetSqlCon
     }
 
     @Override
-    protected Map<String, MapOptionsMetadataResolver> supportedResolvers() {
+    protected Map<String, EntryMetadataResolver> supportedResolvers() {
         return METADATA_RESOLVERS;
     }
 }

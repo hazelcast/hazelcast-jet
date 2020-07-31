@@ -25,8 +25,8 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
 
-import static com.hazelcast.jet.sql.JetSqlConnector.CSV_SERIALIZATION_FORMAT;
-import static com.hazelcast.jet.sql.JetSqlConnector.TO_SERIALIZATION_FORMAT;
+import static com.hazelcast.jet.sql.SqlConnector.CSV_SERIALIZATION_FORMAT;
+import static com.hazelcast.jet.sql.SqlConnector.TO_SERIALIZATION_FORMAT;
 import static java.time.ZoneOffset.UTC;
 import static java.util.Collections.singletonList;
 

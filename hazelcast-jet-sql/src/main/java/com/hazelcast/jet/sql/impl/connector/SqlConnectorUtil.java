@@ -17,8 +17,8 @@
 package com.hazelcast.jet.sql.impl.connector;
 
 import com.hazelcast.jet.JetException;
-import com.hazelcast.jet.sql.JetSqlConnector;
-import com.hazelcast.jet.sql.impl.connector.imap.IMapSqlConnector;
+import com.hazelcast.jet.sql.SqlConnector;
+import com.hazelcast.jet.sql.impl.connector.map.IMapSqlConnector;
 import com.hazelcast.jet.sql.impl.schema.JetTable;
 import com.hazelcast.sql.impl.schema.Table;
 import com.hazelcast.sql.impl.schema.map.PartitionedMapTable;
@@ -28,8 +28,9 @@ public final class SqlConnectorUtil {
 
     private SqlConnectorUtil() { }
 
-    public static JetSqlConnector getJetSqlConnector(Table table) {
-        JetSqlConnector connector;
+    // TODO: should not be needed ???
+    public static SqlConnector getJetSqlConnector(Table table) {
+        SqlConnector connector;
         if (table instanceof JetTable) {
             connector = ((JetTable) table).getSqlConnector();
         } else if (table instanceof PartitionedMapTable) {

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.sql.impl.connector.imap;
+package com.hazelcast.jet.sql.impl.connector.map;
 
 import com.hazelcast.instance.impl.HazelcastInstanceImpl;
 import com.hazelcast.internal.serialization.Data;
@@ -27,7 +27,6 @@ import com.hazelcast.nio.serialization.ClassDefinition;
 import com.hazelcast.nio.serialization.ClassDefinitionBuilder;
 import com.hazelcast.nio.serialization.PortableReader;
 import com.hazelcast.spi.impl.NodeEngine;
-import com.hazelcast.sql.impl.connector.LocalPartitionedMapConnector;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -40,17 +39,17 @@ import java.util.Map.Entry;
 import java.util.Objects;
 
 import static com.hazelcast.jet.Util.entry;
-import static com.hazelcast.sql.impl.connector.SqlConnector.JAVA_SERIALIZATION_FORMAT;
-import static com.hazelcast.sql.impl.connector.SqlConnector.PORTABLE_SERIALIZATION_FORMAT;
-import static com.hazelcast.sql.impl.connector.SqlKeyValueConnector.TO_KEY_CLASS;
-import static com.hazelcast.sql.impl.connector.SqlKeyValueConnector.TO_KEY_CLASS_ID;
-import static com.hazelcast.sql.impl.connector.SqlKeyValueConnector.TO_KEY_CLASS_VERSION;
-import static com.hazelcast.sql.impl.connector.SqlKeyValueConnector.TO_KEY_FACTORY_ID;
-import static com.hazelcast.sql.impl.connector.SqlKeyValueConnector.TO_SERIALIZATION_KEY_FORMAT;
-import static com.hazelcast.sql.impl.connector.SqlKeyValueConnector.TO_SERIALIZATION_VALUE_FORMAT;
-import static com.hazelcast.sql.impl.connector.SqlKeyValueConnector.TO_VALUE_CLASS_ID;
-import static com.hazelcast.sql.impl.connector.SqlKeyValueConnector.TO_VALUE_CLASS_VERSION;
-import static com.hazelcast.sql.impl.connector.SqlKeyValueConnector.TO_VALUE_FACTORY_ID;
+import static com.hazelcast.jet.sql.SqlConnector.JAVA_SERIALIZATION_FORMAT;
+import static com.hazelcast.jet.sql.SqlConnector.PORTABLE_SERIALIZATION_FORMAT;
+import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.TO_KEY_CLASS;
+import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.TO_KEY_CLASS_ID;
+import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.TO_KEY_CLASS_VERSION;
+import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.TO_KEY_FACTORY_ID;
+import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.TO_SERIALIZATION_KEY_FORMAT;
+import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.TO_SERIALIZATION_VALUE_FORMAT;
+import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.TO_VALUE_CLASS_ID;
+import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.TO_VALUE_CLASS_VERSION;
+import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.TO_VALUE_FACTORY_ID;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 import static java.util.Spliterator.ORDERED;

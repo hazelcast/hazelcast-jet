@@ -16,7 +16,8 @@
 
 package com.hazelcast.jet.sql.impl.schema;
 
-import com.hazelcast.jet.sql.JetSqlConnector;
+import com.hazelcast.jet.sql.SqlConnector;
+import com.hazelcast.sql.impl.plan.cache.PlanObjectId;
 import com.hazelcast.sql.impl.schema.Table;
 import com.hazelcast.sql.impl.schema.TableField;
 import com.hazelcast.sql.impl.schema.TableStatistics;
@@ -26,10 +27,10 @@ import java.util.List;
 
 public abstract class JetTable extends Table {
 
-    private final JetSqlConnector sqlConnector;
+    private final SqlConnector sqlConnector;
 
     protected JetTable(
-            @Nonnull JetSqlConnector sqlConnector,
+            @Nonnull SqlConnector sqlConnector,
             @Nonnull List<TableField> fields,
             @Nonnull String schemaName,
             @Nonnull String name,
@@ -44,7 +45,12 @@ public abstract class JetTable extends Table {
     }
 
     @Nonnull
-    public JetSqlConnector getSqlConnector() {
+    public SqlConnector getSqlConnector() {
         return sqlConnector;
+    }
+
+    @Override
+    public PlanObjectId getObjectId() {
+        throw new UnsupportedOperationException();
     }
 }

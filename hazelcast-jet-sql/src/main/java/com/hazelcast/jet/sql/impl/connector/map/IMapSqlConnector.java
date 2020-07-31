@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.sql.impl.connector.imap;
+package com.hazelcast.jet.sql.impl.connector.map;
 
 import com.hazelcast.function.BiFunctionEx;
 import com.hazelcast.function.FunctionEx;
@@ -24,17 +24,17 @@ import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.core.processor.SinkProcessors;
 import com.hazelcast.jet.pipeline.ServiceFactories;
-import com.hazelcast.jet.sql.JetSqlConnector;
+import com.hazelcast.jet.sql.SqlConnector;
+import com.hazelcast.jet.sql.impl.connector.EntryMetadataResolver;
+import com.hazelcast.jet.sql.impl.connector.EntrySqlConnector;
 import com.hazelcast.jet.sql.impl.expression.ExpressionUtil;
+import com.hazelcast.jet.sql.impl.schema.ExternalField;
 import com.hazelcast.map.IMap;
 import com.hazelcast.query.Predicates;
 import com.hazelcast.spi.impl.NodeEngine;
-import com.hazelcast.sql.impl.connector.SqlKeyValueConnector;
 import com.hazelcast.sql.impl.expression.Expression;
-import com.hazelcast.sql.impl.schema.ExternalTable.ExternalField;
 import com.hazelcast.sql.impl.schema.Table;
 import com.hazelcast.sql.impl.schema.map.PartitionedMapTable;
-import com.hazelcast.sql.impl.schema.map.options.MapOptionsMetadataResolver;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -52,7 +52,7 @@ import static com.hazelcast.jet.sql.impl.expression.ExpressionUtil.joinFn;
 import static com.hazelcast.jet.sql.impl.expression.ExpressionUtil.projectionFn;
 
 // TODO remove this class in favor of imdg implementation
-public class IMapSqlConnector extends SqlKeyValueConnector implements JetSqlConnector {
+public class IMapSqlConnector extends EntrySqlConnector implements SqlConnector {
 
     @Override
     public String typeName() {
@@ -166,7 +166,7 @@ public class IMapSqlConnector extends SqlKeyValueConnector implements JetSqlConn
     }
 
     @Override
-    protected Map<String, MapOptionsMetadataResolver> supportedResolvers() {
+    protected Map<String, EntryMetadataResolver> supportedResolvers() {
         throw new UnsupportedOperationException();
     }
 }
