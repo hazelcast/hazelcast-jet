@@ -33,18 +33,18 @@ the CPU 100% of the time.
 
 Our hopes materialized in the benchmark: this trick had a drammatic
 impact on the latency with all three garbage collectors we tested
-(Shenandoah, ZGC and G1). The most important outcome was that we were
+(G1, ZGC and Shenandoah). The most important outcome was that we were
 now able to push G1 below the 10 ms line. Since G1 is stable across a
 wide range of throughputs, we immediately got it to perform within 10 ms
 at double the throughput than in the previous round.
 
 ## The Setup
 
-Our setup is for the most part identical to the one in the previous
-post. We refreshed the code a bit, we now use the released version 4.2
-of Hazelcast Jet, as well as the released version of JDK 14.0.2 which
-we used for Shenandoah. For G1 and ZGC we used Oracle OpenJDK 15 EA33,
-which doesn't include Shenandoah.
+Based on the expectations set by the previous benchmark, we first
+focused on the ZGC and G1 collectors on the latest pre-release of Java
+15\. Our setup stayed the same for the most part. We refreshed the code
+a bit and now use the released version 4.2 of Hazelcast Jet with OpenJDK
+15 EA33.
 
 We also implemented a parallelized event source simulator. Its higher
 throughput allows it to catch up faster after a hiccup, helping to
@@ -57,8 +57,7 @@ We determined how many threads the given GC uses, set the size of the
 Jet thread pool to 16
 ([c5.4xlarge](https://aws.amazon.com/ec2/instance-types/c5/) vCPUs)
 minus that value and then did some trial-and-error runs to find the
-optimum. Shenandoah takes 4 threads for itself, so we gave Jet 12. G1
-uses 3 threads, so we gave Jet 13\. Finally, ZGC uses just 2 threads,
+optimum. G1 uses 3 threads, so we gave Jet 13\. ZGC uses just 2 threads,
 but we found Jet to perform a bit better with 13 instead of the
 theoretical 14 threads, so we used that. We also experimented with
 changing the GC's automatic choice for the thread count, but didn't find
@@ -83,8 +82,8 @@ a solid 25% improvement.
 The effect on G1 is sort of dual to the above: while the G1 already had
 great throughput but fell just short of making it below the 10 ms line,
 in this round its latency improved across the board, up to 40% at
-places. The best news: the maximum throughput at which Hazelcast Jet can
-maintain a 99.99% latency up to 10 ms just got pushed out from 8 to 20
+places. The best news: the maximum throughput at which Hazelcast Jet
+maintains a 99.99% latency up to 10 ms just got pushed out from 8 to 20
 million items per second, a 250% boost!
 
 ![Latency on c5.4xlarge, 1 M Events per Second](assets/2020-08-11-latency-1m.png)
@@ -92,26 +91,25 @@ million items per second, a 250% boost!
 ## Upgrading to 10 M Events per Second
 
 Encouraged by this strong result, we dreamed up a scenario like this: we
-have 100,000 devices, each producing a 100 Hz measurement stream. Can a
+have 100,000 sensors, each producing a 100 Hz measurement stream. Can a
 single-node Hazelcast Jet handle this load and produce, say, the time
-integral of the measured quantity from each device over a 1 second
-window, with a 10 ms latency? This implies an order-of-magnitude leap in
-the event rate, from 1 M to 10 M events per second. Now you can see why
-we needed that new event source, the single-threaded one from the
-previous round was good only for up to 2.5 M events per second.
+integral of the measured quantity from each sensor over a 1-second
+window, at a 10 ms latency? This implies an order-of-magnitude leap in
+the event rate, from 1 M to 10 M events per second, but also a reduction
+in window length by the same factor, from ten seconds to one.
 
 Nominally, the scenario results in the same combined input+output
 throughput as well as about the same size of state that we already saw
 work: 20 M items/second and 10 M stored map entries. It's the maximum
 point where G1 was still inside 10 ms, but even at 25 M items/second it
-still had pretty low latency. However, for reasons we haven't
+still had pretty low latency. However, for reasons we haven't yet
 identified, the input rate seems to have a stronger impact on GC, so
 when we traded output for input, it turned out that G1 was nowhere near
 handling it.
 
 But, since we picked the c5.4xlarge instance type as a medium-level
-option, for this "elite use case" we considered the most elite instance
-as well: c5.metal. It commands 96 vCPUs and has some scary amount of RAM
+option, for this "elite scenario" we considered the top-shelf EC2 box as
+well: c5.metal. It commands 96 vCPUs and has some scary amount of RAM
 that we won't need. On this hardware G1 decides to take 16 threads for
 itself, so the natural choice would be 80 threads for Jet. However,
 through trial and error we chased down the real optimum, which turned
@@ -121,7 +119,24 @@ out to be 64 threads. Here is what we got:
 
 G1 comfortably makes it to the 20 M mark and then goes on all the way to
 40 M items per second, gracefully degrading and reaching 60 M with just
-12 ms. Beyond this point it was Jet who ran out of steam. The pipeline,
-shuttling around 60 million items per second through concurrent queues,
-just couldn't max out the G1! We repeated the test with more threads
-given to Jet, 78, but that didn't help, either.
+12 ms. Beyond this point it was Jet who ran out of steam. The Jet
+pipeline running at full speed just couldn't max out the G1! We repeated
+the test with more threads given to Jet, 78, but that didn't make a
+difference.
+
+## Results on Shenandoah
+
+Our experience so far with Shenandoah, in its current experimental
+state, told us it probably wouldn't make it into the 10 ms zone, but
+naturally we were still interested to see how much it would benefit from
+this Jet thread pool sizing trick. We used the release version of JDK
+14.0.2, which includes the late improvement discussed in the previous
+round. Shenandoah takes 4 threads for itself, so we gave Jet the
+remaining 12 threads. We compared this setup to the default one, where
+Jet takes 16 threads:
+
+![Shenandoah Latency on c5.4xlarge, 1 M Events per Second](assets/2020-08-11-latency-shen.png)
+
+The improvement at the low end is pretty massive, 3-4 times, and
+Shenandoah almost makes it within the 10 ms envelope. A the higher rates
+the improvement is still there, but not as relevant.
