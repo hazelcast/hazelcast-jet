@@ -86,7 +86,7 @@ places. The best news: the maximum throughput at which Hazelcast Jet
 maintains a 99.99% latency up to 10 ms just got pushed out from 8 to 20
 million items per second, a 250% boost!
 
-![Latency on c5.4xlarge, 1 M Events per Second](assets/2020-08-11-latency-1m.png)
+![Latency on c5.4xlarge, 1 M Events per Second](assets/2020-08-05-latency-1m.png)
 
 ## Upgrading to 10 M Events per Second
 
@@ -115,7 +115,7 @@ itself, so the natural choice would be 80 threads for Jet. However,
 through trial and error we chased down the real optimum, which turned
 out to be 64 threads. Here is what we got:
 
-![Latency on c5.metal, 10 M Events per Second](assets/2020-08-11-latency-10m.png)
+![Latency on c5.metal, 10 M Events per Second](assets/2020-08-05-latency-10m.png)
 
 G1 comfortably makes it to the 20 M mark and then goes on all the way to
 40 M items per second, gracefully degrading and reaching 60 M with just
@@ -131,11 +131,12 @@ state, told us it probably wouldn't make it into the 10 ms zone, but
 naturally we were still interested to see how much it would benefit from
 this Jet thread pool sizing trick. We used the release version of JDK
 14.0.2, which includes the late improvement discussed in the previous
-round. Shenandoah takes 4 threads for itself, so we gave Jet the
-remaining 12 threads. We compared this setup to the default one, where
-Jet takes 16 threads:
+round (the EA releases of OpenJDK disable Shenandoah, which is why we
+couldn't use the same JVM for all tests). Shenandoah takes 4 threads for
+itself, so we gave Jet the remaining 12 threads. We compared this setup
+to the default one, where Jet takes 16 threads:
 
-![Shenandoah Latency on c5.4xlarge, 1 M Events per Second](assets/2020-08-11-latency-shen.png)
+![Shenandoah Latency on c5.4xlarge, 1 M Events per Second](assets/2020-08-05-latency-shen.png)
 
 The improvement at the low end is pretty massive, 3-4 times, and
 Shenandoah almost makes it within the 10 ms envelope. A the higher rates
