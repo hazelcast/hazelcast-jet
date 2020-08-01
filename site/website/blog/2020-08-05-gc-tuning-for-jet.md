@@ -90,9 +90,9 @@ a solid 25% improvement.
 The effect on G1 is sort of dual to the above: while the G1 already had
 great throughput but fell just short of making it below the 10 ms line,
 in this round its latency improved across the board, up to 40% at
-places. The best news: **the maximum throughput at which Hazelcast Jet
-maintains 99.99% latency within 10 ms now lies at 20 million items per
-second**, a 250% boost!
+places. The best news: **the maximum throughput at which a single
+Hazelcast Jet node maintains 99.99% latency within 10 ms now lies at 20
+million items per second**, a 250% boost!
 
 ![Latency on c5.4xlarge, 1 M Events per Second](assets/2020-08-05-latency-1m.png)
 
