@@ -96,7 +96,7 @@ second**, a 250% boost!
 
 ![Latency on c5.4xlarge, 1 M Events per Second](assets/2020-08-05-latency-1m.png)
 
-## Upgrading to 10 M Events per Second
+## Upgrading to 10 M Input Events per Second
 
 Encouraged by this strong result, we dreamed up a scenario like this: we
 have 100,000 sensors, each producing a 100 Hz measurement stream. Can a
