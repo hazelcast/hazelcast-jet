@@ -71,6 +71,14 @@ latency. Therefore we added `MaxNewSize` with one of `100m`, `150m` and
 through trial and error, the results seemed to be the best when a minor
 GC was occurring about 10-20 times per second.
 
+Summarizing, these are the changes we made with respect to the setup in
+the previous post:
+
+1. Reduced Jet's cooperative thread pool size
+2. Parallel event source where previously it was single-threaded
+3. Used the `MaxNewSize` JVM parameter for G1
+4. Updated Hazelcast Jet and JDK versions
+
 ## The Results
 
 Comparing ZGC's results below with those in the [previous
