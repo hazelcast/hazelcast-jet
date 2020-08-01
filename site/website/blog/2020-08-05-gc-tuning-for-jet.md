@@ -40,11 +40,10 @@ throughput than in the previous round.
 
 ## The Setup
 
-Based on the expectations set by the previous benchmark, we first
-focused on the ZGC and G1 collectors on the latest pre-release of Java
-15\. Our setup stayed the same for the most part. We refreshed the code
-a bit and now use the released version 4.2 of Hazelcast Jet with OpenJDK
-15 EA33.
+Based on the expectations set by the previous benchmark, we focused on
+the ZGC and G1 collectors and the latest pre-release of Java 15\. Our
+setup stayed the same for the most part; we refreshed the code a bit and
+now use the released version 4.2 of Hazelcast Jet with OpenJDK 15 EA33.
 
 We also implemented a parallelized event source simulator. Its higher
 throughput allows it to catch up faster after a hiccup, helping to
