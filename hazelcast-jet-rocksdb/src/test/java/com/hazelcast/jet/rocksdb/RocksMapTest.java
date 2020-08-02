@@ -18,11 +18,9 @@ package com.hazelcast.jet.rocksdb;
 
 import com.hazelcast.internal.nio.IOUtil;
 import com.hazelcast.internal.serialization.InternalSerializationService;
-import com.hazelcast.jet.Jet;
-import com.hazelcast.jet.core.JetTestSupport;
 import com.hazelcast.jet.rocksdb.RocksMap.RocksMapIterator;
+import com.hazelcast.test.HazelcastTestSupport;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -30,13 +28,12 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import static java.util.Collections.emptyMap;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 
-public class RocksMapTest extends JetTestSupport {
+public class RocksMapTest extends HazelcastTestSupport {
     private static RocksDBStateBackend rocksDBStateBackend;
     private static InternalSerializationService serializationService;
     private RocksMap<String, Integer> rocksMap;
@@ -48,16 +45,13 @@ public class RocksMapTest extends JetTestSupport {
         serializationService.dispose();
     }
 
-    @BeforeAll
-    static void init() {
-        serializationService = JetTestSupport.getJetService(Jet.bootstrappedInstance())
-                                             .createSerializationService(emptyMap());
-        rocksDBStateBackend = (RocksDBStateBackend) new RocksDBStateBackend()
-                .initialize(serializationService, 0).open();
-    }
-
     @BeforeEach
     void initTest() {
+        if (serializationService == null) {
+            serializationService = getSerializationService(createHazelcastInstance());
+            rocksDBStateBackend = (RocksDBStateBackend) new RocksDBStateBackend()
+                    .initialize(serializationService, 0).open();
+        }
         rocksMap = rocksDBStateBackend.getMap();
     }
 

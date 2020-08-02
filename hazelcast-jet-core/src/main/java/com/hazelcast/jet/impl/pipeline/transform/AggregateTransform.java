@@ -22,6 +22,7 @@ import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.impl.pipeline.Planner;
 import com.hazelcast.jet.impl.pipeline.Planner.PlannerVertex;
+import com.hazelcast.jet.pipeline.PersistableTransform;
 
 import javax.annotation.Nonnull;
 import java.util.List;
@@ -37,7 +38,7 @@ import static com.hazelcast.jet.core.processor.Processors.combineP;
 import static com.hazelcast.jet.core.processor.Processors.combineWithPersistenceAndUnboundedStateP;
 import static com.hazelcast.jet.core.processor.Processors.combineWithPersistenceP;
 
-public class AggregateTransform<A, R> extends AbstractTransform {
+public class AggregateTransform<A, R> extends AbstractTransform implements PersistableTransform {
     public static final String FIRST_STAGE_VERTEX_NAME_SUFFIX = "-prepare";
 
     @Nonnull
@@ -67,6 +68,7 @@ public class AggregateTransform<A, R> extends AbstractTransform {
         }
     }
 
+    @Override
     public void setUsePersistence(boolean usePersistence) {
         this.usePersistence = usePersistence;
     }

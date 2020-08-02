@@ -30,6 +30,7 @@ import com.hazelcast.jet.impl.processor.HashJoinCollectWithPersistenceP;
 import com.hazelcast.jet.impl.processor.HashJoinP;
 import com.hazelcast.jet.impl.processor.HashJoinWithPersistenceP;
 import com.hazelcast.jet.pipeline.JoinClause;
+import com.hazelcast.jet.pipeline.PersistableTransform;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -41,7 +42,7 @@ import static com.hazelcast.jet.impl.pipeline.Planner.tailList;
 import static com.hazelcast.jet.impl.util.Util.toList;
 
 @SuppressWarnings("rawtypes")
-public class HashJoinTransform<T0, R> extends AbstractTransform {
+public class HashJoinTransform<T0, R> extends AbstractTransform implements PersistableTransform {
     @Nonnull
     private final List<JoinClause<?, ? super T0, ?, ?>> clauses;
     @Nonnull
@@ -95,6 +96,11 @@ public class HashJoinTransform<T0, R> extends AbstractTransform {
         this.mapToOutputBiFn = mapToOutputBiFn;
         this.mapToOutputTriFn = null;
         this.whereNullsNotAllowed = whereNullsNotAllowed;
+    }
+
+    @Override
+    public void setUsePersistence(boolean usePersistence) {
+        this.usePersistence = usePersistence;
     }
 
     //         ---------           ----------           ----------
@@ -167,10 +173,6 @@ public class HashJoinTransform<T0, R> extends AbstractTransform {
                     .broadcast().priority(-1));
             collectorOrdinal++;
         }
-    }
-
-    public void setUsePersistence(boolean usePersistence) {
-        this.usePersistence = usePersistence;
     }
 
     private static BiFunctionEx<List<Tag>, Object[], ItemsByTag> tupleToItemsByTag(List<Boolean> nullsNotAllowed) {

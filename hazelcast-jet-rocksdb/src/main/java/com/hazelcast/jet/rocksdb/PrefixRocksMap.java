@@ -17,8 +17,7 @@
 package com.hazelcast.jet.rocksdb;
 
 import com.hazelcast.internal.serialization.InternalSerializationService;
-import com.hazelcast.jet.JetException;
-import com.hazelcast.jet.datamodel.Tuple2;
+import com.hazelcast.core.HazelcastException;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import org.rocksdb.ColumnFamilyDescriptor;
@@ -39,7 +38,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Map.Entry;
 
-import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
+import static com.hazelcast.jet.rocksdb.Tuple2.tuple2;
 
 /**
  * A RocksDB-backed Map that stores lists of values mapped to keys.
@@ -103,7 +102,7 @@ public class PrefixRocksMap<K, V> {
             cfh = db.createColumnFamily(new ColumnFamilyDescriptor(serialize(name),
                     columnFamilyOptions.useFixedLengthPrefixExtractor(serialize(prefix).length)));
         } catch (RocksDBException e) {
-            throw new JetException("Failed to create PrefixRocksMap", e);
+            throw new HazelcastException("Failed to create PrefixRocksMap", e);
         }
     }
 
@@ -111,7 +110,7 @@ public class PrefixRocksMap<K, V> {
      * Adds the provided value in the list associated with the key.
      * Returns true if the write request succeeded, false if a write stall occurred.
      */
-    public boolean add(K key, V value) throws JetException {
+    public boolean add(K key, V value) throws HazelcastException {
         if (cfh == null) {
             open(key);
         }
@@ -121,7 +120,7 @@ public class PrefixRocksMap<K, V> {
             if (e.getStatus().getCode() == Code.Incomplete) {
                 return false;
             }
-            throw new JetException("Operation Failed: add", e);
+            throw new HazelcastException("Operation Failed: add", e);
         }
         return true;
     }
@@ -185,13 +184,13 @@ public class PrefixRocksMap<K, V> {
      * invoked to prepare RocksMap for reads after bulk-loading with a series of
      * add() calls.
      */
-    public void compact() throws JetException {
+    public void compact() throws HazelcastException {
         if (cfh != null) {
             try {
                 db.flush(flushOptions, cfh);
                 db.compactRange(cfh);
             } catch (RocksDBException e) {
-                throw new JetException("Failed to Compact RocksDB", e);
+                throw new HazelcastException("Failed to Compact RocksDB", e);
             }
         }
     }
@@ -238,7 +237,7 @@ public class PrefixRocksMap<K, V> {
             bytes.write(serialize(counter++));
             return bytes.toByteArray();
         } catch (IOException e) {
-            throw new JetException();
+            throw new HazelcastException();
         }
     }
 

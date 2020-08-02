@@ -35,6 +35,7 @@
         <module>hazelcast-jet-distribution</module>
         <module>hazelcast-jet-core</module>
         <module>hazelcast-jet-spring</module>
+        <module>hazelcast-jet-rocksdb</module>
     </modules>
 
     <repositories>

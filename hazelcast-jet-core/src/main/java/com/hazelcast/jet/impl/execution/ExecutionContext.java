@@ -37,6 +37,7 @@ import com.hazelcast.jet.impl.execution.init.ExecutionPlan;
 import com.hazelcast.jet.impl.metrics.RawJobMetrics;
 import com.hazelcast.jet.impl.operation.SnapshotPhase1Operation.SnapshotPhase1Result;
 import com.hazelcast.jet.impl.util.LoggingUtil;
+import com.hazelcast.jet.impl.util.ReflectionUtils;
 import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.jet.rocksdb.PrefixRocksDBOptions;
 import com.hazelcast.jet.rocksdb.PrefixRocksDBOptionsBuilder;
@@ -143,25 +144,24 @@ public class ExecutionContext implements DynamicMetricsProvider {
         JetService jetService = nodeEngine.getService(JetService.SERVICE_NAME);
         serializationService = jetService.createSerializationService(jobConfig.getSerializerConfigs());
 
-        stateBackend = (RocksDBStateBackend) new RocksDBStateBackend().initialize(serializationService, jobId);
-        prefixStateBackend = (PrefixRocksDBStateBackend) new PrefixRocksDBStateBackend()
-                .initialize(serializationService, jobId);
-
-        RocksDBOptionsBuilder rocksDBOptionsBuilder = jobConfig.getRocksDBOptions();
-        PrefixRocksDBOptionsBuilder prefixRocksDBOptionsBuilder = jobConfig.getPrefixRocksDBOptions();
-
-        if (rocksDBOptionsBuilder != null) {
-            stateBackend.setRocksDBOptions(new RocksDBOptions()
-                    .setOptions(rocksDBOptionsBuilder));
+        if (ReflectionUtils.isClassDefined("com.hazelcast.jet.rocksdb.AbstractRocksDBStateBackend")) {
+            stateBackend = (RocksDBStateBackend) new RocksDBStateBackend().initialize(serializationService, jobId);
+            prefixStateBackend = (PrefixRocksDBStateBackend) new PrefixRocksDBStateBackend()
+                    .initialize(serializationService, jobId);
+            RocksDBOptionsBuilder rocksDBOptionsBuilder = jobConfig.getRocksDBOptions();
+            PrefixRocksDBOptionsBuilder prefixRocksDBOptionsBuilder = jobConfig.getPrefixRocksDBOptions();
+            if (rocksDBOptionsBuilder != null) {
+                stateBackend.setRocksDBOptions(new RocksDBOptions()
+                        .setOptions(rocksDBOptionsBuilder));
+            }
+            if (prefixRocksDBOptionsBuilder != null) {
+                prefixStateBackend.setRocksDBOptions(new PrefixRocksDBOptions()
+                        .setOptions(prefixRocksDBOptionsBuilder));
+            }
+            tempDirectories.put("stateBackend", stateBackend.directory());
+            tempDirectories.put("prefixStateBackend", prefixStateBackend.directory());
         }
 
-        if (prefixRocksDBOptionsBuilder != null) {
-            prefixStateBackend.setRocksDBOptions(new PrefixRocksDBOptions()
-                    .setOptions(prefixRocksDBOptionsBuilder));
-        }
-
-        tempDirectories.put("stateBackend", stateBackend.directory());
-        tempDirectories.put("prefixStateBackend", prefixStateBackend.directory());
         metricsEnabled = jobConfig.isMetricsEnabled() && nodeEngine.getConfig().getMetricsConfig().isEnabled();
         plan.initialize(nodeEngine, jobId, executionId, snapshotContext,
                 tempDirectories, serializationService, stateBackend, prefixStateBackend);
@@ -235,8 +235,12 @@ public class ExecutionContext implements DynamicMetricsProvider {
             }
         }
 
-        stateBackend.close();
-        prefixStateBackend.close();
+        if(stateBackend != null) {
+            stateBackend.close();
+        }
+        if (prefixStateBackend != null) {
+            prefixStateBackend.close();
+        }
 
         tempDirectories.forEach((k, dir) -> {
             try {

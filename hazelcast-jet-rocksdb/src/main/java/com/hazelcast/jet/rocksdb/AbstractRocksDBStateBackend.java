@@ -15,8 +15,8 @@
  */
 package com.hazelcast.jet.rocksdb;
 
+import com.hazelcast.core.HazelcastException;
 import com.hazelcast.internal.serialization.InternalSerializationService;
-import com.hazelcast.jet.JetException;
 import org.rocksdb.Options;
 import org.rocksdb.RocksDB;
 import org.rocksdb.RocksDBException;
@@ -25,7 +25,6 @@ import javax.annotation.Nonnull;
 import java.io.File;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static com.hazelcast.jet.core.JetProperties.JET_HOME;
 
 /**
  * Responsible for managing one RocksDB instance, opening, closing and deleting the database.
@@ -45,10 +44,10 @@ public abstract class AbstractRocksDBStateBackend {
     protected RocksDBOptions rocksDBOptions;
     protected volatile RocksDB db;
     protected InternalSerializationService serializationService;
-    protected Options options;
     protected String directoryName;
     protected String mapName;
-    private final AtomicInteger counter = new AtomicInteger(0);;
+    private final AtomicInteger counter = new AtomicInteger(0);
+    private Options options;
     private File directory;
 
     /**
@@ -58,7 +57,7 @@ public abstract class AbstractRocksDBStateBackend {
      * @param directory the directory where RocksDB creates its temp directory.
      */
     public AbstractRocksDBStateBackend initialize(InternalSerializationService service, String directory,
-                                          long jobId) throws JetException {
+                                          long jobId) throws HazelcastException {
         serializationService = service;
         this.directory = new File(directory + directoryName + jobId);
         return this;
@@ -69,14 +68,15 @@ public abstract class AbstractRocksDBStateBackend {
      *
      * @param service the serialization service configured for this job.
      */
-    public AbstractRocksDBStateBackend initialize(InternalSerializationService service, long jobId) throws JetException {
+    public AbstractRocksDBStateBackend initialize(InternalSerializationService service, long jobId)
+            throws HazelcastException {
         initialize(service, defaultPath(), jobId);
         return this;
     }
 
     @Nonnull
     private String defaultPath() {
-        String jetHome = new File(System.getProperty(JET_HOME.getName(), JET_HOME.getDefaultValue())).getAbsolutePath();
+        String jetHome = new File(System.getProperty("jet.home", "")).getAbsolutePath();
         return jetHome + "/rocksdb";
     }
 
@@ -96,12 +96,12 @@ public abstract class AbstractRocksDBStateBackend {
                 if (db == null) {
                     try {
                         if (!directory.isDirectory() && !directory.mkdirs()) {
-                            throw new JetException("Failed to create RocksDB directory");
+                            throw new HazelcastException("Failed to create RocksDB directory");
                         }
                         options = rocksDBOptions.options();
                         db = RocksDB.open(options, directory.toString());
                     } catch (RocksDBException e) {
-                        throw new JetException("Failed to create a RocksDB instance", e);
+                        throw new HazelcastException("Failed to create a RocksDB instance", e);
                     }
                 }
             }
@@ -112,9 +112,9 @@ public abstract class AbstractRocksDBStateBackend {
      * Deletes the associated RocksDB instance.
      * Must be invoked when the job finishes execution.
      *
-     * @throws JetException if the database is closed.
+     * @throws HazelcastException if the database is closed.
      */
-    public void close() throws JetException {
+    public void close() throws HazelcastException {
         if (db != null) {
             options.close();
             rocksDBOptions.close();

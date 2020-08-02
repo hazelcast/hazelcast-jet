@@ -16,9 +16,8 @@
 
 package com.hazelcast.jet.rocksdb;
 
+import com.hazelcast.core.HazelcastException;
 import com.hazelcast.internal.serialization.InternalSerializationService;
-import com.hazelcast.jet.JetException;
-import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import org.rocksdb.ColumnFamilyDescriptor;
@@ -34,7 +33,7 @@ import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.Map.Entry;
 
-import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
+import static com.hazelcast.jet.rocksdb.Tuple2.tuple2;
 
 /**
  * RocksMap is RocksDB-backed HashMap.
@@ -62,7 +61,7 @@ public class RocksMap<K, V> {
         try {
             cfh = db.createColumnFamily(new ColumnFamilyDescriptor(serialize(name), columnFamilyOptions));
         } catch (RocksDBException e) {
-            throw new JetException("Failed to create RocksMap", e);
+            throw new HazelcastException("Failed to create RocksMap", e);
         }
     }
 
@@ -71,15 +70,15 @@ public class RocksMap<K, V> {
      *
      * @param key the key whose value is to be returned
      * @return the value associated with key or null if the key doesn't exist
-     * @throws JetException if the database is closed
+     * @throws HazelcastException if the database is closed
      */
 
-    public V get(Object key) throws JetException {
+    public V get(Object key) throws HazelcastException {
         try {
             byte[] valueBytes = db.get(cfh, readOptions, serialize(key));
             return deserialize(valueBytes);
         } catch (RocksDBException e) {
-            throw new JetException("Operation Failed: Get", e);
+            throw new HazelcastException("Operation Failed: Get", e);
         }
     }
 
@@ -88,13 +87,13 @@ public class RocksMap<K, V> {
      * If the key is already present, it updates the current value.
      *
      * @param key the key whose value is to be updated
-     * @throws JetException if the database is closed
+     * @throws HazelcastException if the database is closed
      */
-    public void put(K key, V value) throws JetException {
+    public void put(K key, V value) throws HazelcastException {
         try {
             db.put(cfh, writeOptions, serialize(key), serialize(value));
         } catch (RocksDBException e) {
-            throw new JetException("Operation Failed: Put", e);
+            throw new HazelcastException("Operation Failed: Put", e);
         }
     }
 
@@ -102,13 +101,13 @@ public class RocksMap<K, V> {
      * Deletes the mapping between key and value.
      *
      * @param key the key whose value is to be removed
-     * @throws JetException if the database is closed
+     * @throws HazelcastException if the database is closed
      */
-    public void remove(K key) throws JetException {
+    public void remove(K key) throws HazelcastException {
         try {
             db.delete(cfh, writeOptions, serialize(key));
         } catch (RocksDBException e) {
-            throw new JetException("Operation Failed: Delete", e);
+            throw new HazelcastException("Operation Failed: Delete", e);
         }
     }
 

@@ -21,6 +21,7 @@ import com.hazelcast.function.BiPredicateEx;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.function.PredicateEx;
 import com.hazelcast.function.SupplierEx;
+import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.Traversers;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
@@ -31,6 +32,7 @@ import com.hazelcast.jet.function.TriFunction;
 import com.hazelcast.jet.impl.pipeline.transform.AbstractTransform;
 import com.hazelcast.jet.impl.pipeline.transform.AggregateTransform;
 import com.hazelcast.jet.impl.pipeline.transform.Transform;
+import com.hazelcast.jet.impl.util.ReflectionUtils;
 import com.hazelcast.jet.pipeline.BatchStage;
 import com.hazelcast.jet.pipeline.BatchStageWithKey;
 import com.hazelcast.jet.pipeline.JoinClause;
@@ -86,8 +88,11 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
 
     @Nonnull @Override
     public BatchStage<T> usePersistence() {
-        pipelineImpl.persist(this);
-        return this;
+        if(ReflectionUtils.isClassDefined("com.hazelcast.jet.rocksdb.AbstractRocksDBStateBackend")) {
+            pipelineImpl.persist(this);
+            return this;
+        }
+        throw new JetException("Dependency on hazelcast-jet-rocksdb module was not added");
     }
 
     @Nonnull @Override

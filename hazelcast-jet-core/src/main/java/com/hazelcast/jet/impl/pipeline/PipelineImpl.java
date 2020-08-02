@@ -29,6 +29,7 @@ import com.hazelcast.jet.impl.pipeline.transform.Transform;
 import com.hazelcast.jet.pipeline.BatchSource;
 import com.hazelcast.jet.pipeline.BatchStage;
 import com.hazelcast.jet.pipeline.GeneralStage;
+import com.hazelcast.jet.pipeline.PersistableTransform;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sink;
 import com.hazelcast.jet.pipeline.SinkStage;
@@ -212,14 +213,10 @@ public class PipelineImpl implements Pipeline {
 
     void persist(GeneralStage<?> stage) {
         Transform transform = transformOf(stage);
-        if (transform instanceof AggregateTransform) {
-            ((AggregateTransform) transform).setUsePersistence(true);
-        } else if (transform instanceof GroupTransform) {
-            ((GroupTransform) transform).setUsePersistence(true);
-        } else if (transform instanceof HashJoinTransform) {
-            ((HashJoinTransform) transform).setUsePersistence(true);
+        if (transform instanceof PersistableTransform) {
+            ((PersistableTransform) transform).setUsePersistence(true);
         } else {
-            throw new JetException("Using persistence is only allowed for join and aggregate operations");
+            throw new JetException("Using persistence is only allowed for Join and Aggregate operations");
         }
     }
 

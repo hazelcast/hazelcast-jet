@@ -127,6 +127,10 @@ public final class ReflectionUtils {
         }
     }
 
+    public static boolean isClassDefined(String className) {
+        return ClassLoaderUtil.isClassDefined(className);
+    }
+
     public static final class Resources {
 
         private final Collection<ClassResource> classes;

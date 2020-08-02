@@ -16,7 +16,7 @@
 
 package com.hazelcast.jet.rocksdb;
 
-import com.hazelcast.jet.JetException;
+import com.hazelcast.core.HazelcastException;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
@@ -49,10 +49,10 @@ public class PrefixRocksDBStateBackend extends AbstractRocksDBStateBackend {
     /**
      * Returns a new PrefixRocksMap instance.
      *
-     * @throws JetException if the database is closed.
+     * @throws HazelcastException if the database is closed.
      */
     @Nonnull
-    public <K, V> PrefixRocksMap<K, V> getPrefixMap() throws JetException {
+    public <K, V> PrefixRocksMap<K, V> getPrefixMap() throws HazelcastException {
         assert db != null : "state backend was not opened";
         PrefixRocksMap<K, V> map = new PrefixRocksMap<>(db, getNextName(),
                 new PrefixRocksDBOptions((PrefixRocksDBOptions) rocksDBOptions), serializationService);
@@ -61,7 +61,7 @@ public class PrefixRocksDBStateBackend extends AbstractRocksDBStateBackend {
     }
 
     @Override
-    public void close() throws JetException {
+    public void close() throws HazelcastException {
         super.close();
         for (PrefixRocksMap prefixRocksMap : prefixMaps) {
             prefixRocksMap.close();
