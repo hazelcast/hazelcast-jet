@@ -16,27 +16,70 @@ possible.
 In this round we wanted to look at the same problem from the opposite
 angle: what can we do to help Hazelcast Jet achieve the best performance
 available on a JVM? How much throughput can we get while staying within
-the tight 10 ms bound for 99.99th percentile latency?
+the tight 10 ms bound for 99.99th percentile latency? We found our
+opportunity in a distinct design feature of Jet: the Cooperative Thread
+Pool.
 
-We found one major factor: since Jet uses [cooperative
-multithreading](/docs/architecture/execution-engine) (similar to the
-concepts of Green Threads and Coroutines), it always uses the same,
-fixed-size thread pool no matter how many concurrent tasks it
-instantiates to run a data pipeline. On the other hand, a concurrent
-garbage collector creates its own thread pool to run the cleanup in the
-background. So if we would shrink Jet's thread pool so that its size
-plus the size of the GC thread pool doesn't exceed the number of CPU
-cores, we may hope the GC would have a slice of the CPU all for itself
-and wouldn't interfere with Jet's latency. In most low-latency use
-cases, the application doesn't need 100% CPU, but it needs its share of
-the CPU 100% of the time.
+## Native Threads with Concurrent GC
 
-Our hopes materialized in the benchmark: this trick had a drammatic
-impact on the latency with both garbage collectors we tested (G1 and
-ZGC). The most important outcome was that we were now able to push G1
-below the 10 ms line. Since G1 is stable across a wide range of
-throughputs, we immediately got it to perform within 10 ms at double the
-throughput than in the previous round.
+Let's go through an example with a streaming job running on a four-core
+machine. In a typical execution engine design, every task (roughly
+corresponding to a [DAG vertex](/docs/concepts/dag)) gets its own thread
+to execute it:
+
+![Native Multithreading](assets/2020-08-05-dag1.svg)
+
+There are eight threads and the OS is in charge of deciding how to
+schedule them to run on the four available cores. The application has
+no direct control over this.
+
+This is how it will look when we add a concurrent GC thread into the
+picture:
+
+![Native Multithreading with a GC Thread](assets/2020-08-05-dag1-with-gc.svg)
+
+There's one more thread now, the concurrent GC thread, and it's
+additionally interfering with the computation pipeline.
+
+## Green Threads with Concurrent GC
+
+In Hazelcast Jet, tasks are designed to be
+[cooperative](/docs/architecture/execution-engine): every time you give
+it control a bunch of data to process, the task will run for a short
+while and return. It doesn't have to process all the data in one go and
+the execution engine will give it control again later with all the
+still-pending data. This basic design is also present in the concepts of
+_green threads_ and _coroutines_, and the main point is that it is
+several orders of magnitude cheaper for Jet to switch between what we
+call _tasklets_ than for the OS to switch between threads.
+
+This design allows Jet to always use the same, fixed-size thread pool no
+matter how many concurrent tasks it instantiates to run a data pipeline.
+So, on the example of a four-core machine, it looks like this:
+
+![Cooperative Multithreading](assets/2020-08-05-dag2.svg)
+
+By default, Jet creates as many threads for itself as there are
+available CPU cores. Now comes another advantage of this design: if we
+know there will also be a concurrent GC thread, we can configure it to
+use one thread less:
+
+![Cooperative Multithreading with a GC Thread](assets/2020-08-05-dag2-with-gc.svg)
+
+There are still as many threads as CPU cores and the OS doesn't have to
+do any context switching. We did give up one entire CPU core just for
+GC, reducing the CPU capacity available to Jet, but we allowed
+background GC to run truly concurrently to the Jet tasks. In low-latency
+application, **the application doesn't need 100% CPU, but it needs its
+share of the CPU 100% of the time.**
+
+We went to see if this setup really makes the difference we hope for,
+and found it indeed had a drammatic impact on the latency with both
+garbage collectors we tested (G1 and ZGC). The most important outcome
+was that we were now able to push G1 below the 10 ms line. Since G1 is
+stable across a wide range of throughputs, we immediately got it to
+perform within 10 ms at **double the throughput than in the previous
+round**.
 
 ## The Setup
 
