@@ -45,7 +45,7 @@ additionally interfering with the computation pipeline.
 
 In Hazelcast Jet, tasks are designed to be
 [cooperative](/docs/architecture/execution-engine): every time you give
-it control a bunch of data to process, the task will run for a short
+it a bunch of data to process, the task will run for a short
 while and return. It doesn't have to process all the data in one go and
 the execution engine will give it control again later with all the
 still-pending data. This basic design is also present in the concepts of
@@ -63,12 +63,12 @@ By default, Jet creates as many threads for itself as there are
 available CPU cores. If you wonder at this point what happens to
 blocking IO calls, for example connecting to a JDBC data source, Jet
 does support a backdoor where it creates a dedicated thread for such a
-tasklet. Such threads aren't CPU-bound and usually their interference is
-quite low, but in a low-latency applications you should avoid depending
-on blocking APIs.
+tasklet. Threads that block for IO aren't CPU-bound and usually their
+interference is quite low, but in a low-latency applications you should
+avoid depending on blocking APIs.
 
 Now comes another advantage of this design: if we know there will also
-be a concurrent GC thread, we can configure it to use one thread less:
+be a concurrent GC thread, we can configure Jet to use one thread less:
 
 ![Cooperative Multithreading with a GC Thread](assets/2020-08-05-dag2-with-gc.svg)
 
@@ -76,7 +76,7 @@ There are still as many threads as CPU cores and the OS doesn't have to
 do any context switching. We did give up one entire CPU core just for
 GC, reducing the CPU capacity available to Jet, but we allowed
 background GC to run truly concurrently to the Jet tasks. In low-latency
-application, **the application doesn't need 100% CPU, but it needs its
+scenarios, **the application doesn't need 100% CPU, but it needs its
 share of the CPU 100% of the time.**
 
 We went to see if this setup really makes the difference we hope for,
@@ -95,8 +95,8 @@ setup stayed the same for the most part; we refreshed the code a bit and
 now use the released version 4.2 of Hazelcast Jet with OpenJDK 15 EA33.
 
 We also implemented a parallelized event source simulator. Its higher
-throughput allows it to catch up faster after a hiccup, helping to
-reduce the latency a bit more. The processing pipeline itself is
+throughput capacity allows it to catch up faster after a hiccup, helping
+to reduce the latency a bit more. The processing pipeline itself is
 identical to the previous round,
 [here](https://github.com/mtopolnik/jet-gc-benchmark/blob/round-3/src/main/java/org/example/StreamingRound3.java)
 is the complete source code.
