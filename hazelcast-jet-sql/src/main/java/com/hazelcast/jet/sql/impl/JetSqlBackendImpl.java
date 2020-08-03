@@ -91,6 +91,7 @@ import java.util.Objects;
 import java.util.Properties;
 import java.util.Set;
 
+import static java.util.Arrays.asList;
 import static java.util.stream.Collectors.toList;
 import static org.apache.calcite.sql.SqlKind.ARGUMENT_ASSIGNMENT;
 import static org.apache.calcite.sql.SqlKind.COLLECTION_TABLE;
@@ -105,21 +106,19 @@ import static org.apache.calcite.sql.SqlKind.VALUES;
 // TODO: break down this class pls....
 public class JetSqlBackendImpl implements JetSqlBackend, ManagedService {
 
-    private static final Set<SqlKind> SUPPORTED_KINDS = new HashSet<SqlKind>() {{
-        add(CREATE_TABLE);
-        add(DROP_TABLE);
-        add(COLUMN_DECL);
-        add(ROW);
-        add(VALUES);
-        add(INSERT);
-        add(COLLECTION_TABLE);
-        add(ARGUMENT_ASSIGNMENT);
-    }};
+    private static final Set<SqlKind> SUPPORTED_KINDS = new HashSet<>(asList(
+        CREATE_TABLE,
+        DROP_TABLE,
+        COLUMN_DECL,
+        ROW,
+        VALUES,
+        INSERT,
+        COLLECTION_TABLE,
+        ARGUMENT_ASSIGNMENT));
 
-    private static final Set<SqlOperator> SUPPORTED_OPERATORS = new HashSet<SqlOperator>() {{
-        add(SqlOption.OPERATOR);
-        add(JetSqlOperatorTable.FILE);
-    }};
+    private static final Set<SqlOperator> SUPPORTED_OPERATORS = new HashSet<>(asList(
+        SqlOption.OPERATOR,
+        JetSqlOperatorTable.FILE));
 
     private JetInstance jetInstance;
     private NodeEngine nodeEngine;
@@ -145,12 +144,12 @@ public class JetSqlBackendImpl implements JetSqlBackend, ManagedService {
     }
 
     @Override
-    public Object kinds() {
+    public Set<?> kinds() {
         return SUPPORTED_KINDS;
     }
 
     @Override
-    public Object operators() {
+    public Set<?> operators() {
         return SUPPORTED_OPERATORS;
     }
 

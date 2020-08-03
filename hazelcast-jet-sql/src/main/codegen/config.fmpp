@@ -355,6 +355,8 @@ data: {
       "XML"
       "YEARS"
       "ZONE"
+
+      # added by Hazelcast
       "OVERWRITE"
     ]
 
