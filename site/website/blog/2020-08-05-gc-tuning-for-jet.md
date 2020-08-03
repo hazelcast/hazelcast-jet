@@ -60,9 +60,15 @@ So, on the example of a four-core machine, it looks like this:
 ![Cooperative Multithreading](assets/2020-08-05-dag2.svg)
 
 By default, Jet creates as many threads for itself as there are
-available CPU cores. Now comes another advantage of this design: if we
-know there will also be a concurrent GC thread, we can configure it to
-use one thread less:
+available CPU cores. If you wonder at this point what happens to
+blocking IO calls, for example connecting to a JDBC data source, Jet
+does support a backdoor where it creates a dedicated thread for such a
+tasklet. Such threads aren't CPU-bound and usually their interference is
+quite low, but in a low-latency applications you should avoid depending
+on blocking APIs.
+
+Now comes another advantage of this design: if we know there will also
+be a concurrent GC thread, we can configure it to use one thread less:
 
 ![Cooperative Multithreading with a GC Thread](assets/2020-08-05-dag2-with-gc.svg)
 
