@@ -190,8 +190,6 @@ public class JetSqlBackendImpl implements JetSqlBackend, ManagedService {
 
     @Override
     public Object createPlan(
-            List<List<String>> searchPaths,
-            String sql,
             Object node0,
             Object parameterRowType0,
             Object context0
@@ -202,8 +200,6 @@ public class JetSqlBackendImpl implements JetSqlBackend, ManagedService {
 
         if (node instanceof SqlCreateExternalTable) {
             return toCreateTablePlan(
-                    searchPaths,
-                    sql,
                     (SqlCreateExternalTable) node,
                     parameterRowType,
                     context
@@ -217,8 +213,6 @@ public class JetSqlBackendImpl implements JetSqlBackend, ManagedService {
     }
 
     private SqlPlan toCreateTablePlan(
-            List<List<String>> searchPaths,
-            String sql,
             SqlCreateExternalTable node,
             RelDataType parameterRowType,
             OptimizerContext context
