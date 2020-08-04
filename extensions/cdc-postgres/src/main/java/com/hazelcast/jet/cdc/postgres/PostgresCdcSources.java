@@ -46,12 +46,12 @@ public final class PostgresCdcSources {
      * Creates a CDC source that streams change data from a PostgreSQL database
      * to Hazelcast Jet.
      * <p>
-     * If Jet can't reach the database when it attempts to start the source or
-     * if it looses the connection to the database from an already running
-     * source, it throws an exception and terminate the execution of the job.
-     * This behaviour is not ideal, would be much better to try to reconnect,
-     * at least for a certain amount of time. Future versions will address the
-     * problem.
+     * <b>KNOWN ISSUE 1:</b> If Jet can't reach the database when it attempts to
+     * start the source or if it looses the connection to the database from an
+     * already running source, it throws an exception and terminate the
+     * execution of the job. This behaviour is not ideal, would be much better
+     * to try to reconnect, at least for a certain amount of time. Future
+     * versions will address the problem.
      *
      * @param name name of this source, needs to be unique, will be passed to
      *             the underlying Kafka Connect source
@@ -91,6 +91,7 @@ public final class PostgresCdcSources {
             config.setProperty(CdcSource.SEQUENCE_EXTRACTOR_CLASS_PROPERTY, PostgresSequenceExtractor.class.getName());
             config.setProperty(ChangeRecordCdcSource.DB_SPECIFIC_EXTRA_FIELDS_PROPERTY, "schema");
             config.setProperty("database.server.name", UuidUtil.newUnsecureUuidString());
+            config.setProperty("snapshot.mode", "exported");
         }
 
         /**

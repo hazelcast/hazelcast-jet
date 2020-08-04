@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.impl.observer;
 
+import com.hazelcast.client.HazelcastClientNotActiveException;
 import com.hazelcast.client.impl.clientside.HazelcastClientInstanceImpl;
 import com.hazelcast.config.Config;
 import com.hazelcast.config.RingbufferConfig;
@@ -215,6 +216,9 @@ public class ObservableImpl<T> implements Observable<T> {
 
                 for (int i = 0; i < result.size(); i++) {
                     try {
+                        if (cancelled) {
+                            return;
+                        }
                         onNewMessage(result.get(i));
                     } catch (Throwable t) {
                         logger.warning("Terminating message listener '" + id + "'. " +
@@ -266,6 +270,10 @@ public class ObservableImpl<T> implements Observable<T> {
             } else if (t instanceof HazelcastInstanceNotActiveException) {
                 if (logger.isFinestEnabled()) {
                     logger.finest("Terminating message listener '" + id + "'. Reason: HazelcastInstance is shutting down");
+                }
+            } else if (t instanceof HazelcastClientNotActiveException) {
+                if (logger.isFinestEnabled()) {
+                    logger.finest("Terminating message listener '" + id + "'. Reason: HazelcastClient is shutting down");
                 }
             } else if (t instanceof DistributedObjectDestroyedException) {
                 if (logger.isFinestEnabled()) {

@@ -37,7 +37,7 @@ const siteConfig = {
         {page: 'demos', label: "Demos"},
         // {href: `/javadoc/${latestVersion}`, label: "Javadoc"},
         {href: 'https://github.com/hazelcast/hazelcast-jet', label: "GitHub"},
-        {href: 'https://hz-community-slack.herokuapp.com/', label: "Community"},
+        {href: 'https://slack.hazelcast.com/', label: "Community"},
         {blog: true, label: 'Blog'},
         {search: true},
     ],
@@ -54,7 +54,7 @@ const siteConfig = {
 
     /* Colors for website */
     colors: {
-        primaryColor: '#2d7de4',
+        primaryColor: '#268bd2',
         secondaryColor: '#e5e5e5',
     },
 
@@ -85,6 +85,12 @@ const siteConfig = {
     scripts: ['https://buttons.github.io/buttons.js', 
     'https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.0/clipboard.min.js',
     '/js/code-block-buttons.js',
+    {
+        src:  'https://plausible.io/js/plausible.js',
+        async: true,
+        defer: true,
+        "data-domain": 'jet-start.sh'
+    }
     ],
 
     separateCss: ['static/javadoc'],
