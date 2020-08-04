@@ -27,7 +27,6 @@ import static com.hazelcast.sql.impl.connector.SqlKeyValueConnector.TO_SERIALIZA
 import static com.hazelcast.sql.impl.connector.SqlKeyValueConnector.TO_SERIALIZATION_VALUE_FORMAT;
 import static com.hazelcast.sql.impl.connector.SqlKeyValueConnector.TO_VALUE_CLASS;
 import static java.util.Arrays.asList;
-import static java.util.Collections.singletonList;
 
 public class SqlTest extends SqlTestSupport {
 
@@ -46,7 +45,7 @@ public class SqlTest extends SqlTestSupport {
     public void supportsCreatingMapFromFile() {
         String name = generateRandomName();
 
-        assertRowsEventuallyAnyOrder(
+        executeSql(
                 "CREATE EXTERNAL TABLE " + name + " ("
                         + "key EXTERNAL NAME \"__key\""
                         + ") TYPE \"" + LocalPartitionedMapConnector.TYPE_NAME + "\" "
@@ -58,8 +57,7 @@ public class SqlTest extends SqlTestSupport {
                         + ") AS "
                         + "SELECT age, username FROM TABLE ("
                         + "FILE ('avro', '" + RESOURCES_PATH + "', 'users.avro')"
-                        + ")",
-                singletonList(new Row(-1L)) // TODO: should be affected row count...
+                        + ")"
         );
 
         assertRowsEventuallyAnyOrder(
@@ -80,7 +78,7 @@ public class SqlTest extends SqlTestSupport {
         map.put(0, "value-0");
         map.put(1, "value-1");
 
-        assertRowsEventuallyAnyOrder(
+        executeSql(
                 "CREATE EXTERNAL TABLE " + destinationName + " ("
                         + "key EXTERNAL NAME \"__key\""
                         + ") TYPE \"" + LocalPartitionedMapConnector.TYPE_NAME + "\" "
@@ -90,8 +88,7 @@ public class SqlTest extends SqlTestSupport {
                         + ", \"" + TO_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
                         + ", \"" + TO_VALUE_CLASS + "\" '" + Long.class.getName() + "'"
                         + ") AS "
-                        + "SELECT this AS \"value\", CAST(__key + 1 AS BIGINT) AS id FROM " + sourceName,
-                singletonList(new Row(-1L)) // TODO: should be affected row count...
+                        + "SELECT this AS \"value\", CAST(__key + 1 AS BIGINT) AS id FROM " + sourceName
         );
 
         assertRowsEventuallyAnyOrder(
@@ -107,7 +104,7 @@ public class SqlTest extends SqlTestSupport {
     public void supportsCreatingMapFromValues() {
         String name = generateRandomName();
 
-        assertRowsEventuallyAnyOrder(
+        executeSql(
                 "CREATE EXTERNAL TABLE " + name + " ("
                         + "key EXTERNAL NAME \"__key\""
                         + ") TYPE \"" + LocalPartitionedMapConnector.TYPE_NAME + "\" "
@@ -117,8 +114,7 @@ public class SqlTest extends SqlTestSupport {
                         + ", \"" + TO_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
                         + ", \"" + TO_VALUE_CLASS + "\" '" + String.class.getName() + "'"
                         + ") AS "
-                        + "VALUES (0, 'value-0'), (1, 'value-1')",
-                singletonList(new Row(-1L)) // TODO: should be affected row count...
+                        + "VALUES (0, 'value-0'), (1, 'value-1')"
         );
 
         assertRowsEventuallyAnyOrder(

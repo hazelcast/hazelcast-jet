@@ -68,6 +68,16 @@ public class JetSqlResultImpl extends AbstractSqlResult {
         }
     }
 
+    @Override
+    public boolean isUpdateCount() {
+        return false;
+    }
+
+    @Override
+    public long updateCount() {
+        throw new IllegalStateException("This result doesn't contain update count");
+    }
+
     private final class RowToSqlRowIterator implements Iterator<SqlRow> {
 
         private final Iterator<Row> delegate;
