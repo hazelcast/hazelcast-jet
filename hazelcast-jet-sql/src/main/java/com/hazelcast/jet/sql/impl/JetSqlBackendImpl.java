@@ -36,13 +36,12 @@ import com.hazelcast.jet.sql.impl.opt.physical.PhysicalRules;
 import com.hazelcast.jet.sql.impl.opt.physical.visitor.CreateDagVisitor;
 import com.hazelcast.jet.sql.impl.parse.SqlCreateExternalTable;
 import com.hazelcast.jet.sql.impl.parse.SqlDropExternalTable;
-import com.hazelcast.jet.sql.impl.parse.SqlOption;
 import com.hazelcast.jet.sql.impl.parse.SqlTableColumn;
+import com.hazelcast.jet.sql.impl.parse.UnsupportedOperationVisitor;
 import com.hazelcast.jet.sql.impl.schema.ExternalCatalog;
 import com.hazelcast.jet.sql.impl.schema.ExternalField;
 import com.hazelcast.jet.sql.impl.schema.ExternalTable;
 import com.hazelcast.jet.sql.impl.schema.JetTable;
-import com.hazelcast.jet.sql.impl.validate.JetSqlOperatorTable;
 import com.hazelcast.jet.sql.impl.validate.JetSqlValidator;
 import com.hazelcast.spi.impl.NodeEngine;
 import com.hazelcast.sql.SqlColumnMetadata;
@@ -54,6 +53,7 @@ import com.hazelcast.sql.impl.QueryUtils;
 import com.hazelcast.sql.impl.SqlResultImpl;
 import com.hazelcast.sql.impl.calcite.OptimizerContext;
 import com.hazelcast.sql.impl.calcite.parse.QueryConvertResult;
+import com.hazelcast.sql.impl.calcite.parse.QueryParseResult;
 import com.hazelcast.sql.impl.calcite.parser.JetSqlParser;
 import com.hazelcast.sql.impl.calcite.schema.HazelcastTable;
 import com.hazelcast.sql.impl.exec.root.BlockingRootResultConsumer;
@@ -72,9 +72,7 @@ import org.apache.calcite.rel.core.TableScan;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rel.type.RelDataTypeField;
-import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlNode;
-import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.validate.SqlConformance;
 import org.apache.calcite.sql.validate.SqlValidator;
 import org.apache.calcite.sql.validate.SqlValidatorCatalogReader;
@@ -83,42 +81,17 @@ import org.apache.calcite.sql2rel.SqlToRelConverter.Config;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Properties;
-import java.util.Set;
 
-import static java.util.Arrays.asList;
 import static java.util.stream.Collectors.toList;
-import static org.apache.calcite.sql.SqlKind.ARGUMENT_ASSIGNMENT;
-import static org.apache.calcite.sql.SqlKind.COLLECTION_TABLE;
-import static org.apache.calcite.sql.SqlKind.COLUMN_DECL;
-import static org.apache.calcite.sql.SqlKind.CREATE_TABLE;
-import static org.apache.calcite.sql.SqlKind.DROP_TABLE;
-import static org.apache.calcite.sql.SqlKind.INSERT;
-import static org.apache.calcite.sql.SqlKind.ROW;
-import static org.apache.calcite.sql.SqlKind.VALUES;
 
 @SuppressWarnings("unused") // used through reflection
 // TODO: break down this class pls....
 public class JetSqlBackendImpl implements JetSqlBackend, ManagedService {
-
-    private static final Set<SqlKind> SUPPORTED_KINDS = new HashSet<>(asList(
-        CREATE_TABLE,
-        DROP_TABLE,
-        COLUMN_DECL,
-        ROW,
-        VALUES,
-        INSERT,
-        COLLECTION_TABLE,
-        ARGUMENT_ASSIGNMENT));
-
-    private static final Set<SqlOperator> SUPPORTED_OPERATORS = new HashSet<>(asList(
-        SqlOption.OPERATOR,
-        JetSqlOperatorTable.FILE));
 
     private JetInstance jetInstance;
     private NodeEngine nodeEngine;
@@ -144,16 +117,6 @@ public class JetSqlBackendImpl implements JetSqlBackend, ManagedService {
     }
 
     @Override
-    public Set<?> kinds() {
-        return SUPPORTED_KINDS;
-    }
-
-    @Override
-    public Set<?> operators() {
-        return SUPPORTED_OPERATORS;
-    }
-
-    @Override
     public Object createParserFactory() {
         return JetSqlParser.FACTORY;
     }
@@ -165,6 +128,11 @@ public class JetSqlBackendImpl implements JetSqlBackend, ManagedService {
                 (RelDataTypeFactory) typeFactory,
                 (SqlConformance) conformance
         );
+    }
+
+    @Override
+    public Object createUnsupportedOperationVisitor(Object catalogReader) {
+        return new UnsupportedOperationVisitor((CatalogReader) catalogReader);
     }
 
     @Override
@@ -189,43 +157,42 @@ public class JetSqlBackendImpl implements JetSqlBackend, ManagedService {
 
     @Override
     public Object createPlan(
-            Object node0,
-            Object parameterRowType0,
+            Object parseResult0,
             Object context0
     ) {
+        QueryParseResult parseResult = (QueryParseResult) parseResult0;
+
         OptimizerContext context = (OptimizerContext) context0;
-        RelDataType parameterRowType = (RelDataType) parameterRowType0;
-        SqlNode node = (SqlNode) node0;
+        SqlNode node = parseResult.getNode();
 
         if (node instanceof SqlCreateExternalTable) {
             return toCreateTablePlan(
-                    (SqlCreateExternalTable) node,
-                    parameterRowType,
+                    parseResult,
                     context
             );
         } else if (node instanceof SqlDropExternalTable) {
             return toRemoveTablePlan((SqlDropExternalTable) node);
         } else {
-            QueryConvertResult convertResult = context.convert(node);
+            QueryConvertResult convertResult = context.convert(parseResult);
             return toPlan(convertResult.getRel(), context);
         }
     }
 
     private SqlPlan toCreateTablePlan(
-            SqlCreateExternalTable node,
-            RelDataType parameterRowType,
+            QueryParseResult parseResult,
             OptimizerContext context
     ) {
+        SqlCreateExternalTable node = (SqlCreateExternalTable) parseResult.getNode();
         SqlNode source = node.source();
         if (source == null) {
             List<ExternalField> externalFields = node.columns()
-                .map(field -> new ExternalField(field.name(), field.type(), field.externalName()))
-                .collect(toList());
+                                                     .map(field -> new ExternalField(field.name(), field.type(), field.externalName()))
+                                                     .collect(toList());
             ExternalTable externalTable = new ExternalTable(node.name(), node.type(), externalFields, node.options());
 
             return new CreateExternalTablePlan(externalTable, node.getReplace(), node.ifNotExists(), this);
         } else {
-            QueryConvertResult convertedResult = context.convert(node);
+            QueryConvertResult convertedResult = context.convert(parseResult);
 
             // TODO: ExternalTable is already being created in JetSqlToRelConverter, any way to reuse it ???
             List<ExternalField> externalFields = new ArrayList<>();
@@ -351,7 +318,8 @@ public class JetSqlBackendImpl implements JetSqlBackend, ManagedService {
             consumer = null;
         } else {
             consumer = new BlockingRootResultConsumer();
-            consumer.setup(() -> { });
+            consumer.setup(() -> {
+            });
             Object oldValue = resultConsumerRegistry.put(plan.getQueryId(), consumer);
             assert oldValue == null : oldValue;
         }

@@ -25,6 +25,12 @@ public interface ParserResource {
 
     ParserResource RESOURCE = Resources.create(ParserResource.class);
 
+    @BaseMessage("{0}")
+    ExInst<SqlValidatorException> error(String s);
+
+    @BaseMessage("{0} is not supported")
+    ExInst<SqlValidatorException> notSupported(String name);
+
     @BaseMessage("Too many columns were specified")
     ExInst<SqlValidatorException> tooManyColumnsSpecified();
 
