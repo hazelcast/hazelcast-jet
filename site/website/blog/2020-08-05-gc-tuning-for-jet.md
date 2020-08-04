@@ -31,7 +31,8 @@ to execute it:
 
 There are eight threads and the OS is in charge of deciding how to
 schedule them to run on the four available cores. The application has
-no direct control over this.
+no direct control over this and the cost of switching from one thread
+to another on the same CPU core is around 2-10 microseconds.
 
 This is how it will look when we add a concurrent GC thread into the
 picture:
