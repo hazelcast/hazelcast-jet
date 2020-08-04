@@ -45,13 +45,12 @@ additionally interfering with the computation pipeline.
 
 In Hazelcast Jet, tasks are designed to be
 [cooperative](/docs/architecture/execution-engine): every time you give
-it a bunch of data to process, the task will run for a short
-while and return. It doesn't have to process all the data in one go and
-the execution engine will give it control again later with all the
+it a bunch of data to process, the task will run for a short while and
+return. It doesn't have to process all the data in one go and the
+execution engine will give it control again later with all the
 still-pending data. This basic design is also present in the concepts of
-_green threads_ and _coroutines_, and the main point is that it is
-several orders of magnitude cheaper for Jet to switch between what we
-call _tasklets_ than for the OS to switch between threads.
+_green threads_ and _coroutines_. In Hazelcast Jet we call them
+[_tasklets_](/docs/architecture/execution-engine#tasklet).
 
 This design allows Jet to always use the same, fixed-size thread pool no
 matter how many concurrent tasks it instantiates to run a data pipeline.
@@ -60,12 +59,16 @@ So, on the example of a four-core machine, it looks like this:
 ![Cooperative Multithreading](assets/2020-08-05-dag2.svg)
 
 By default, Jet creates as many threads for itself as there are
-available CPU cores. If you wonder at this point what happens to
-blocking IO calls, for example connecting to a JDBC data source, Jet
-does support a backdoor where it creates a dedicated thread for such a
-tasklet. Threads that block for IO aren't CPU-bound and usually their
-interference is quite low, but in a low-latency applications you should
-avoid depending on blocking APIs.
+available CPU cores, and inside each thread there are many tasklets.
+Switching from one tasklet to the next is extremely cheap &mdash; it
+boils down to one tasklet returning from its `call()` method, the
+top-level loop taking the next tasklet from a list, and invoking its
+`call()` method. If you wonder at this point what happens to blocking IO
+calls, for example connecting to a JDBC data source, Jet does support a
+backdoor where it creates a dedicated thread for such a tasklet. Threads
+that block for IO aren't CPU-bound and usually their interference is
+quite low, but in a low-latency applications you should avoid depending
+on blocking APIs.
 
 Now comes another advantage of this design: if we know there will also
 be a concurrent GC thread, we can configure Jet to use one thread less:
