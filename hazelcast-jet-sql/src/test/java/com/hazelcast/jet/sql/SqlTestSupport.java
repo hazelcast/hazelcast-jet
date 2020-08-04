@@ -71,9 +71,7 @@ public abstract class SqlTestSupport extends SimpleTestInClusterSupport {
     }
 
     protected static void executeSql(String sql) {
-        try (SqlResult cursor = sqlService.query(sql)) {
-            cursor.iterator().forEachRemaining(o -> { });
-        }
+        sqlService.query(sql);
     }
 
     /**

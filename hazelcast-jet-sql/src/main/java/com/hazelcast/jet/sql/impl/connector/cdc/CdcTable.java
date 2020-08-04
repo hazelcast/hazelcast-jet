@@ -56,4 +56,9 @@ public class CdcTable extends JetTable {
     public String toString() {
         return getClass().getSimpleName() + "{tableName=" + getName() + '}';
     }
+
+    @Override
+    public PlanObjectId getObjectId() {
+        throw new UnsupportedOperationException();
+    }
 }

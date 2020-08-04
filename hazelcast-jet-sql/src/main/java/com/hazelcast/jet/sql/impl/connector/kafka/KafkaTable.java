@@ -79,4 +79,9 @@ class KafkaTable extends JetTable {
     public String toString() {
         return getClass().getSimpleName() + "{topicName=" + topicName + '}';
     }
+
+    @Override
+    public PlanObjectId getObjectId() {
+        throw new UnsupportedOperationException();
+    }
 }

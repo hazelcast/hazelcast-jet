@@ -51,7 +51,7 @@ import com.hazelcast.sql.SqlRowMetadata;
 import com.hazelcast.sql.impl.JetSqlBackend;
 import com.hazelcast.sql.impl.QueryId;
 import com.hazelcast.sql.impl.QueryUtils;
-import com.hazelcast.sql.impl.SingleValueResult;
+import com.hazelcast.sql.impl.SqlResultImpl;
 import com.hazelcast.sql.impl.calcite.OptimizerContext;
 import com.hazelcast.sql.impl.calcite.parse.QueryConvertResult;
 import com.hazelcast.sql.impl.calcite.parser.JetSqlParser;
@@ -361,11 +361,11 @@ public class JetSqlBackendImpl implements JetSqlBackend, ManagedService {
 
         if (plan.isInsert()) {
             if (plan.isStreaming()) {
-                return new SingleValueResult(job.getId());
+                return SqlResultImpl.createUpdateCountResult(-1);
             } else {
                 job.join();
                 // TODO return real updated row count
-                return new SingleValueResult(-1L);
+                return SqlResultImpl.createUpdateCountResult(-1);
             }
         } else {
             return new JetSqlResultImpl(plan.getQueryId(), consumer, plan.getRowMetadata());
