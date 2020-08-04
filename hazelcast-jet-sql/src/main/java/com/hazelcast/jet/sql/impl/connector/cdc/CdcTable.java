@@ -18,7 +18,6 @@ package com.hazelcast.jet.sql.impl.connector.cdc;
 
 import com.hazelcast.jet.sql.SqlConnector;
 import com.hazelcast.jet.sql.impl.schema.JetTable;
-import com.hazelcast.sql.impl.plan.cache.PlanObjectId;
 import com.hazelcast.sql.impl.schema.TableField;
 import com.hazelcast.sql.impl.schema.TableStatistics;
 
@@ -48,17 +47,7 @@ public class CdcTable extends JetTable {
     }
 
     @Override
-    public PlanObjectId getObjectId() {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
     public String toString() {
         return getClass().getSimpleName() + "{tableName=" + getName() + '}';
-    }
-
-    @Override
-    public PlanObjectId getObjectId() {
-        throw new UnsupportedOperationException();
     }
 }

@@ -374,12 +374,12 @@ public class JetSqlBackendImpl implements JetSqlBackend, ManagedService {
 
     SqlResult execute(CreateExternalTablePlan plan) {
         catalog.createTable(plan.schema(), plan.replace(), plan.ifNotExists());
-        return new SingleValueResult(0L);
+        return SqlResultImpl.createUpdateCountResult(0L);
     }
 
     SqlResult execute(RemoveExternalTablePlan plan) {
         catalog.removeTable(plan.name(), plan.ifExists());
-        return new SingleValueResult(0L);
+        return SqlResultImpl.createUpdateCountResult(0L);
     }
 
     @Override

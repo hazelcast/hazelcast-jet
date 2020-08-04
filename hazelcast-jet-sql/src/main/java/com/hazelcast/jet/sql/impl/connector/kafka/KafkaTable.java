@@ -19,7 +19,6 @@ package com.hazelcast.jet.sql.impl.connector.kafka;
 import com.hazelcast.jet.sql.SqlConnector;
 import com.hazelcast.jet.sql.impl.schema.JetTable;
 import com.hazelcast.sql.impl.inject.UpsertTargetDescriptor;
-import com.hazelcast.sql.impl.plan.cache.PlanObjectId;
 import com.hazelcast.sql.impl.schema.TableField;
 import com.hazelcast.sql.impl.schema.TableStatistics;
 
@@ -71,17 +70,7 @@ class KafkaTable extends JetTable {
     }
 
     @Override
-    public PlanObjectId getObjectId() {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
     public String toString() {
         return getClass().getSimpleName() + "{topicName=" + topicName + '}';
-    }
-
-    @Override
-    public PlanObjectId getObjectId() {
-        throw new UnsupportedOperationException();
     }
 }

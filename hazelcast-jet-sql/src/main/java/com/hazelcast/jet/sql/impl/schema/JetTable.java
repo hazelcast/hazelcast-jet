@@ -40,6 +40,11 @@ public abstract class JetTable extends Table {
         this.sqlConnector = sqlConnector;
     }
 
+    @Override
+    public final PlanObjectId getObjectId() {
+        return null;
+    }
+
     public final boolean isStream() {
         return sqlConnector.isStream();
     }
@@ -47,10 +52,5 @@ public abstract class JetTable extends Table {
     @Nonnull
     public SqlConnector getSqlConnector() {
         return sqlConnector;
-    }
-
-    @Override
-    public PlanObjectId getObjectId() {
-        throw new UnsupportedOperationException();
     }
 }
