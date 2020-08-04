@@ -13,7 +13,7 @@
         <id>https://jet-start.sh/blog/2020/07/16/designing-evergreen-cache-cdc.html</id>
         <link href="https://jet-start.sh/blog/2020/07/16/designing-evergreen-cache-cdc.html"/>
         <updated>2020-07-16T06:00:00.000Z</updated>
-        <summary type="html"><![CDATA[<p>It has been said that there are two things hard in software development, naming things and cache invalidation (while some add off-by-one errors to the mix). I believe that keeping the cache in sync with the source of truth might count as a third one....</p>]]></summary>
+        <summary type="html"><![CDATA[<p>It has been said that there are two things hard in software development: naming things and cache invalidation (while some add off-by-one errors to the mix). I believe that keeping the cache in sync with the source of truth might count as a third one....</p>]]></summary>
         <author>
             <name>Nicolas Frankel</name>
             <uri>https://twitter.com/nicolas_frankel</uri>

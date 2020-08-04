@@ -62,14 +62,14 @@
                 };
               }
             });
-        </script></nav></div><div class="container mainContainer postContainer blogContainer"><div class="wrapper"><div class="posts"><div class="post"><header class="postHeader"><h1 class="postHeaderTitle"><a href="/blog/2020/07/16/designing-evergreen-cache-cdc">Designing an Evergreen Cache with Change Data Capture</a></h1><p class="post-meta">July 16, 2020</p><div class="authorBlock"><p class="post-authorName"><a href="https://twitter.com/nicolas_frankel" target="_blank" rel="noreferrer noopener">Nicolas Frankel</a></p><div class="authorPhoto"><a href="https://twitter.com/nicolas_frankel" target="_blank" rel="noreferrer noopener"><img src="https://3l0wd94f0qdd10om8642z9se-wpengine.netdna-ssl.com/wp-content/uploads/2019/12/nicolas-frankel-170x170.jpg" alt="Nicolas Frankel"/></a></div></div></header><article class="post-content"><div><span><p>It has been said that there are two things hard in software development,
+        </script></nav></div><div class="container mainContainer postContainer blogContainer"><div class="wrapper"><div class="posts"><div class="post"><header class="postHeader"><h1 class="postHeaderTitle"><a href="/blog/2020/07/16/designing-evergreen-cache-cdc">Designing an Evergreen Cache with Change Data Capture</a></h1><p class="post-meta">July 16, 2020</p><div class="authorBlock"><p class="post-authorName"><a href="https://twitter.com/nicolas_frankel" target="_blank" rel="noreferrer noopener">Nicolas Frankel</a></p><div class="authorPhoto"><a href="https://twitter.com/nicolas_frankel" target="_blank" rel="noreferrer noopener"><img src="https://3l0wd94f0qdd10om8642z9se-wpengine.netdna-ssl.com/wp-content/uploads/2019/12/nicolas-frankel-170x170.jpg" alt="Nicolas Frankel"/></a></div></div></header><article class="post-content"><div><span><p>It has been said that there are two things hard in software development:
 naming things and cache invalidation (while some add off-by-one errors
 to the mix).
 I believe that keeping the cache in sync with the source of truth might
 count as a third one.
 In this post, I'd like to tackle this issue, describe the ideal
 situation -
-1 cache, 1 datastore, describe the problem of having multiple components
+1 cache, 1 datastore - describe the problem of having multiple components
 that can write to the datastore, list all possible solutions, and
 describe one elegant solution based on Change Data Capture and Jet.</p>
 <h2><a class="anchor" aria-hidden="true" id="the-ideal-design"></a><a href="#the-ideal-design" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>The ideal design</h2>
@@ -93,8 +93,8 @@ for the fetching/storing logic instead of the cache.</p>
 <p>The RDBMS is the sole source of truth - as it should be. Since the cache
 intercepts write statements to the RDBMS, it's a mirror of the data.</p>
 <h2><a class="anchor" aria-hidden="true" id="handling-third-party-database-updates"></a><a href="#handling-third-party-database-updates" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Handling third-party database updates</h2>
-<p>This design works as expected until the database receives updates from
-another source:</p>
+<p>This design works as expected as long as the database doesn't receive
+updates from another source:</p>
 <p><img src="/blog/assets/2020-07-16-updating-database-bypassing-cache.svg" alt="Updating the database while bypassing the
 cache"></p>
 <p>Now, the RDBMS is still the source of truth, but the cache is not aware
@@ -106,19 +106,18 @@ compared to what is the source of truth in the RDBMS.</p>
 <p>Since the cache only queries the RDBMS if it doesn't store the requested
 item, let's remove items after a specific time.
 This is a built-in feature in enterprise-grade caches such as Hazelcast
-IMDG, and it is known as the Time-To-Live.
+IMDG and it is known as the Time-To-Live.
 When an item is stored, a TTL can be attached to it.
-After that time has elapsed, the item is removed from the cache, and it
+After that time has elapsed, the item is removed from the cache and it
 will be fetched from the RDBMS again if needed.</p>
 <p>This approach has a couple of downsides:</p>
 <ol>
-<li>If an item is not updated in the RDBMS, but is evicted from the
-cache, then there's an extra query from the cache to the RDBMS when it's
-needed by the app.
-This is a net loss of resources.</li>
-<li>If an item is updated in the RDBMS, but its TTL has not been reached
-yet, then the cache will return the stale data.
-This defeats the purpose.</li>
+<li><p>If an item is not updated in the RDBMS, but is evicted from the
+cache, then there's an extra query from the cache to the RDBMS when
+it's needed by the app. This is a net loss of resources.</p></li>
+<li><p>If an item is updated in the RDBMS, but its TTL has not been reached
+yet, then the cache will return the stale data. This defeats the
+purpose.</p></li>
 </ol>
 <p>With longer TTL, we avoid unnecessary round trips but return more stale
 data.
@@ -140,17 +139,17 @@ regular periodicity.
 Thus, it's not possible to make the two match.</p>
 <p>Instead of polling, it would make much more sense to be event-driven:</p>
 <ol>
-<li>if no writes happen, there's no need to update the cache</li>
-<li>if a write happens, then the relevant cache item should be updated
-accordingly</li>
+<li><p>if no writes happen, there's no need to update the cache</p></li>
+<li><p>if a write happens, then the relevant cache item should be updated
+accordingly</p></li>
 </ol>
-<p>In RDBMS, this event-driven approach is implemented via <em>triggers</em>.
+<p>In RDBMS this event-driven approach is implemented via <em>triggers</em>.
 Triggers are dedicated stored procedures that are launched in response
 to specific events, such as an <code>INSERT</code> or an <code>UPDATE</code>.</p>
-<p>That works pretty well when the acted-upon object is inside the database
-<em>e.g.</em> &quot;when a record of table A is updated, then add a record to table
+<p>That works pretty well when the acted-upon object is inside the database,
+e.g. &quot;when a record of table A is updated, then add a record to table
 B&quot;.
-For our use-case, where the acted-upon object is the cache, which sits
+For our use case where the acted-upon object is the cache which sits
 outside the database, it's not as simple.
 For example, MySQL allows you to <a href="https://dev.mysql.com/doc/refman/8.0/en/faqs-triggers.html#faq-mysql-can-triggers-udf">make an external system call from a
 trigger</a>.
@@ -175,7 +174,7 @@ Kleppmann).
 This definition is because a database keeps a record of all changes in
 an implementation-dependent append-only log.
 Regularly, it uses it to manage its state. Some RDBMS also have other
-usage <em>e.g.</em> MySQL uses the log for replication across nodes.</p>
+usage, e.g. MySQL uses the log for replication across nodes.</p>
 <p>For example, here's a sample for MySQL binlog:</p>
 <pre><code class="hljs css language-text">### UPDATE `test`.`t`
 ### WHERE
@@ -198,26 +197,24 @@ usage <em>e.g.</em> MySQL uses the log for replication across nodes.</p>
 the latter captures state by aggregating events, while the former
 extracts events &quot;from the state&quot;.</p>
 <h2><a class="anchor" aria-hidden="true" id="debezium"></a><a href="#debezium" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Debezium</h2>
-<p>CDC is quite recent, and hasn't had time to mature.
+<p>CDC is quite recent and hasn't had time to mature.
 As such, there's no universal standard, but specific tools.
 In this section, we are going to have a look at
 <a href="https://debezium.io/">Debezium</a>.
 Debezium is an Open Source set of services for CDC provided by Red Hat.</p>
 <p>Debezium is an umbrella term covering several components:</p>
 <ol>
-<li>Debezium Connectors are specific bridges that read the append-only
-proprietary log for each supported database.
-For example, there’s a connector for MySQL, one for MongoDB, one for
-PostgreSQL, etc.</li>
-<li>Each connector is also a Kafka Connect Source Connector:
-this allows to easily output CDC events to one’s Kafka cluster</li>
-<li>Finally, the Debezium Engine is a JAR that allows Debezium to be
-embedded in one’s applications.
-Note that even in that case, Debezium produces Kafka Connect-specific
-content, which then needs to be handled and transformed in one’s
-application.</li>
+<li><p>Debezium Connectors are specific bridges that read the append-only
+proprietary log for each supported database. For example, there’s a
+connector for MySQL, one for MongoDB, one for PostgreSQL, etc.</p></li>
+<li><p>Each connector is also a Kafka Connect Source Connector:
+this allows to easily output CDC events to one’s Kafka cluster</p></li>
+<li><p>Finally, the Debezium Engine is a JAR that allows Debezium to be
+embedded in one’s applications. Note that even in that case, Debezium
+produces Kafka Connect-specific content, which then needs to be
+handled and transformed in one’s application.</p></li>
 </ol>
-<p>While Kafka is a great technology, and probably also quite widespread
+<p>While Kafka is a great technology and probably also quite widespread
 nowadays, data in Kafka needs to be persisted to disk.
 The benefit of persistence is that data survive even in the event of the
 cluster going down.
@@ -232,7 +229,7 @@ It has sources and sinks to integrate with several file, messaging and
 database systems (such as Amazon S3, Kafka, message brokers and
 relational databases).</p>
 <p>Jet also provides a Debezium module where it can process change events
-directly from the database, and write them to its distributed key-value
+directly from the database and write them to its distributed key-value
 store.
 This avoids having to write the intermediate messages to Kafka and then
 read again to be written to a separate cache.</p>
@@ -240,26 +237,25 @@ read again to be written to a separate cache.</p>
 <p>It’s (finally!) time to assemble all the previous bits together.
 Here are the components and their responsibilities:</p>
 <ol>
-<li>A MySQL database instance is where the data is stored.
-It’s accessed in read-only mode by the cache, and in write-only mode by
-some external component</li>
-<li>A Jet instance reads events to MySQL through the Debezium connector,
-transforms them into cache-compatible key-value pairs, and updates the
-cache accordingly.
-Note that while Jet pipelines provide filtering capabilities, it’s also
-possible to filter items in the CDC connector to optimize load of the
-pipeline</li>
-<li>The app uses the cache, which is always up-to-date with the database,
-give or take the time it takes for the above to execute</li>
+<li><p>A MySQL database instance is where the data is stored.
+It’s accessed in read-only mode by the cache, and in write-only mode
+by some external component</p></li>
+<li><p>A Jet instance reads events from MySQL through the Debezium connector,
+transforms them into cache-compatible key-value pairs, and updates
+the cache accordingly. Note that while Jet pipelines provide
+filtering capabilities, it’s also possible to filter items in the CDC
+connector to optimize the load of the pipeline</p></li>
+<li><p>The app uses the cache, which is always up-to-date with the database,
+give or take the time it takes for the above to execute</p></li>
 </ol>
 <p><img src="/blog/assets/2020-07-16-architecture-with-cdc.svg" alt="Final architecture with
 CDC"></p>
-<p>Note that this architecture assumes one starts from a legacy state, with
-an existing app that uses caching, where later on a new component was
-set up that could update the database.</p>
+<p>Note that this architecture assumes one starts from a legacy state with
+an existing app that uses caching, where a new component that could
+update the database was set up later on.</p>
 <p>If one starts from scratch, it’s possible to simplify the above diagram
 (and associated code) as Jet embeds its own Hazelcast instance.
-In that case, instead of Jet being a client of a third-party Hazelcast
+In that case instead of Jet being a client of a third-party Hazelcast
 instance, Jet is the one to configure and start the instance.
 Obviously, it also can then get/put data.</p>
 <h2><a class="anchor" aria-hidden="true" id="talk-is-cheap-show-me-the-code"></a><a href="#talk-is-cheap-show-me-the-code" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Talk is cheap, show me the code</h2>
@@ -267,14 +263,14 @@ Obviously, it also can then get/put data.</p>
 GitHub</a>.</p>
 <p>The repository is made of the following modules:</p>
 <ul>
-<li><code>app</code> is a Spring Boot application using Spring Data JDBC to access a
-MySQL database.
-It abstracts away Hazelcast by using a Spring Cache layer</li>
-<li><code>update</code> is a Spring Shell application.
+<li><p><code>app</code> is a Spring Boot application using Spring Data JDBC to access a
+MySQL database. It abstracts away Hazelcast by using a Spring Cache
+layer</p></li>
+<li><p><code>update</code> is a Spring Shell application.
 It allows to update the data inside the database, with the cache none
-the wiser</li>
-<li><code>pipeline</code> is the Jet pipeline that listens to CDC events and update
-the cache when data is updated</li>
+the wiser</p></li>
+<li><p><code>pipeline</code> is the Jet pipeline that listens to CDC events and updates
+the cache when data is updated</p></li>
 </ul>
 <p>The pipeline definition is quite straightforward:</p>
 <pre><code class="hljs css language-java">pipeline<span class="token punctuation">.</span><span class="token function">readFrom</span><span class="token punctuation">(</span>source<span class="token punctuation">)</span>                                       <span class="token comment">//1</span>
@@ -289,13 +285,13 @@ the cache when data is updated</li>
         <span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
 </code></pre>
 <ol>
-<li>Get a stream of Jet <code>ChangeRecord</code></li>
-<li>Convert <code>ChangeRecord</code> to a regular <code>Person</code> POJO</li>
-<li>Wrap <code>Person</code> objects into <code>Map.Entry</code>s keyed by ID</li>
-<li>Create the sink to write to, a remote map</li>
-<li>Name of the remote map</li>
-<li>Client configuration so it can connect to the right host, cluster
-and instance</li>
+<li><p>Get a stream of Jet <code>ChangeRecord</code></p></li>
+<li><p>Convert <code>ChangeRecord</code> to a regular <code>Person</code> POJO</p></li>
+<li><p>Wrap <code>Person</code> objects into <code>Map.Entry</code>s keyed by ID</p></li>
+<li><p>Create the sink to write to, a remote map</p></li>
+<li><p>Name of the remote map</p></li>
+<li><p>Client configuration so it can connect to the right host, cluster
+and instance</p></li>
 </ol>
 <pre><code class="hljs css language-java"><span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">CustomClientConfig</span> <span class="token keyword">extends</span> <span class="token class-name">ClientConfig</span> <span class="token punctuation">{</span>
 
@@ -312,14 +308,14 @@ run the build:</p>
 <pre><code class="hljs css language-bash">mvn compile
 </code></pre></li>
 <li><p>At the root of the repo, run the compose file.
-This will start a MySQL instance, the app, the Jet pipeline job, as well
-as Hazelcast Management Center to get additional insight into the
-cluster state</p>
+This will start a MySQL instance, the app, the Jet pipeline job, as
+well as Hazelcast Management Center to get additional insight into
+the cluster state</p>
 <pre><code class="hljs css language-bash">docker-compose up
 </code></pre></li>
 <li><p>Open a browser at <a href="http://localhost:8080/">http://localhost:8080/</a></p></li>
-<li><p>Refresh the browser, and check the logs:
-there should be not interaction with the database, only with the cache</p></li>
+<li><p>Refresh the browser, and check the logs: there should be no
+interaction with the database, only with the cache</p></li>
 <li><p>In the <code>update</code> module, set the database user and password and then
 execute the Maven Spring Boot plugin:</p>
 <pre><code class="hljs css language-bash"><span class="hljs-built_in">export</span> SPRING_DATASOURCE_USERNAME=root
@@ -333,28 +329,27 @@ The following command will update the <code>firstName</code> value of the
 entity with PK <code>1</code> with value <code>&quot;Foo&quot;</code></p>
 <pre><code class="hljs css language-bash">update 1 Foo
 </code></pre></li>
-<li><p>Refresh the browser again.
-The cache has been updated, the application doesn’t access the database,
-and still the value <code>Foo</code> should be shown for entity with PK <code>1</code></p></li>
+<li><p>Refresh the browser again. The cache has been updated, the
+application doesn’t access the database, and still the value <code>Foo</code>
+should be shown for entity with PK <code>1</code></p></li>
 </ol>
 <h2><a class="anchor" aria-hidden="true" id="conclusion"></a><a href="#conclusion" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Conclusion</h2>
 <p>Caching is easy if the cache is the only component that writes to the
 database.
 As soon as other components update the database, no traditional strategy
-to keep the data of the database and the cache in-sync is satisfying.</p>
+to keep the data of the database and the cache in sync is satisfying.</p>
 <p>The Hazelcast Jet streaming engine, using Debezium under the hood, is
 able to leverage Change Data Capture over traditional RDBMS to achieve
 an evergreen cache in a simple way.</p>
 <h2><a class="anchor" aria-hidden="true" id="references"></a><a href="#references" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>References</h2>
 <ul>
-<li><a href="https://jet-start.sh/docs/get-started/intro">Introduction to Jet</a></li>
-<li><a href="https://jet-start.sh/docs/tutorials/cdc">Change Data Capture from
-MySQL</a></li>
-<li><a href="https://debezium.io/blog/2020/02/10/event-sourcing-vs-cdc/">Event Sourcing vs. Change Data
-Capture</a></li>
-<li><a href="https://www.percona.com/blog/2015/01/20/identifying-useful-information-mysql-row-based-binary-logs/">Identifying useful info from MySQL row-based binary
-logs</a></li>
-<li><a href="https://github.com/hazelcast-demos/evergreen-cache">Demo source code</a></li>
+<li><p><a href="https://jet-start.sh/docs/get-started/intro">Introduction to Jet</a></p></li>
+<li><p><a href="https://jet-start.sh/docs/tutorials/cdc">Change Data Capture from MySQL</a></p></li>
+<li><p><a href="https://debezium.io/blog/2020/02/10/event-sourcing-vs-cdc/">Event Sourcing vs. Change Data
+Capture</a></p></li>
+<li><p><a href="https://www.percona.com/blog/2015/01/20/identifying-useful-information-mysql-row-based-binary-logs/">Identifying useful info from MySQL row-based binary
+logs</a></p></li>
+<li><p><a href="https://github.com/hazelcast-demos/evergreen-cache">Demo source code</a></p></li>
 </ul>
 </span></div></article></div><div class="post"><header class="postHeader"><h1 class="postHeaderTitle"><a href="/blog/2020/07/14/jet-42-is-released">Jet 4.2 is Released</a></h1><p class="post-meta">July 14, 2020</p><div class="authorBlock"><p class="post-authorName"><a href="http://twitter.com/cgencer" target="_blank" rel="noreferrer noopener">Can Gencer</a></p><div class="authorPhoto"><a href="http://twitter.com/cgencer" target="_blank" rel="noreferrer noopener"><img src="https://pbs.twimg.com/profile_images/1187734846749196288/elqWdrPj_400x400.jpg" alt="Can Gencer"/></a></div></div></header><article class="post-content"><div><span><p>Jet 4.2 is finally here! Here's an overview of what's new:</p>
 <h2><a class="anchor" aria-hidden="true" id="change-data-capture-support-for-mysql-and-postgresql"></a><a href="#change-data-capture-support-for-mysql-and-postgresql" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Change Data Capture Support for MySQL and PostgreSQL</h2>

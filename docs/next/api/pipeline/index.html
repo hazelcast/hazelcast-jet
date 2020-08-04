@@ -96,15 +96,15 @@ a <code>SourceStreamStage</code> which offers just these methods:</p>
 <ul>
 <li><p><code>withNativeTimestamps()</code>
 declares that the stream will use source's native timestamps. This
-typically refers to the timestamps that the external source system sets
-on each event.</p></li>
+typically refers to the timestamps that the external source system
+sets on each event.</p></li>
 <li><p><code>withTimestamps(timestampFn)</code>
 provides a function to the source that determines the timestamp of
 each event.</p></li>
 <li><p><code>withoutTimestamps()</code>
-declares that the source stage has no timestamps. Use this if you don't
-need them (i.e., your pipeline won't perform windowed aggregation or stateful
-mapping).</p></li>
+declares that the source stage has no timestamps. Use this if you
+don't need them (i.e., your pipeline won't perform windowed
+aggregation or stateful mapping).</p></li>
 </ul>
 <p>Exceptionally, you may need to call <code>withoutTimestamps()</code> on the source
 stage, then perform some transformations that determine the event
