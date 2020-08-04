@@ -53,19 +53,21 @@ public class TestSourcesTest extends PipelineTestSupport {
     @Test
     public void test_longStream() throws Throwable {
         int itemsPerSecond = 10;
-        int timeout = 10;
-        int numberOfExpectedValues = timeout * itemsPerSecond;
-        List<Long> expected = LongStream.range(0, numberOfExpectedValues + itemsPerSecond).boxed().collect(toList());
+        int timeoutSeconds = 10;
+        // we give a 4-second grace period, the runner on Jenkins is sometimes surprisingly slow
+        int numberOfExpectedValuesMin = (timeoutSeconds - 4) * itemsPerSecond;
+        int numberOfExpectedValuesMax = timeoutSeconds * itemsPerSecond;
+        List<Long> expected = LongStream.range(0, numberOfExpectedValuesMax).boxed().collect(toList());
 
         p.readFrom(TestSources.longStream(itemsPerSecond, 0))
                 .withNativeTimestamps(0)
-                .apply(assertCollectedEventually(timeout, items -> {
-                    assertTrue("list should contain at least " + (numberOfExpectedValues - itemsPerSecond)
+                .apply(assertCollectedEventually(timeoutSeconds, items -> {
+                    assertTrue("list should contain at least " + numberOfExpectedValuesMin
                                     + " items, but contains only contains " + items.size() + " items",
-                            items.size() >= (numberOfExpectedValues - itemsPerSecond));
-                    assertTrue("list should contain less than " + (numberOfExpectedValues + itemsPerSecond) +
-                                    " items, but contains only contains " + items.size() + " items",
-                            items.size() < (numberOfExpectedValues + itemsPerSecond));
+                            items.size() >= numberOfExpectedValuesMin);
+                    assertTrue("list should contain at most " + numberOfExpectedValuesMax +
+                                    " items, but contains " + items.size() + " items",
+                            items.size() < numberOfExpectedValuesMax);
                     for (Long value : items) {
                         assertTrue(expected.contains(value));
                     }
