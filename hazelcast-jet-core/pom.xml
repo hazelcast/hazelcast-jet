@@ -98,11 +98,6 @@
 
     <dependencies>
         <dependency>
-            <groupId>org.rocksdb</groupId>
-            <artifactId>rocksdbjni</artifactId>
-            <version>5.18.4</version>
-        </dependency>
-        <dependency>
             <groupId>com.hazelcast.jet</groupId>
             <artifactId>hazelcast-jet-rocksdb</artifactId>
             <version>4.3-SNAPSHOT</version>

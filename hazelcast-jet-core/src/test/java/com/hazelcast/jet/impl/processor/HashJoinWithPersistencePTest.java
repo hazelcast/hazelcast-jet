@@ -20,6 +20,7 @@ import com.hazelcast.function.BiFunctionEx;
 import com.hazelcast.function.SupplierEx;
 import com.hazelcast.internal.nio.IOUtil;
 import com.hazelcast.internal.serialization.InternalSerializationService;
+import com.hazelcast.internal.serialization.impl.DefaultSerializationServiceBuilder;
 import com.hazelcast.jet.core.JetTestSupport;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.datamodel.ItemsByTag;
@@ -30,7 +31,7 @@ import com.hazelcast.jet.function.TriFunction;
 import com.hazelcast.jet.rocksdb.PrefixRocksDBStateBackend;
 import com.hazelcast.jet.rocksdb.PrefixRocksMap;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -56,13 +57,11 @@ public class HashJoinWithPersistencePTest extends JetTestSupport {
     private static PrefixRocksDBStateBackend rocksDBStateBackend;
     private static InternalSerializationService serializationService;
 
-    @BeforeEach
-    void initTest() {
-        if (serializationService == null) {
-            serializationService = getSerializationService(createHazelcastInstance());
-            rocksDBStateBackend = (PrefixRocksDBStateBackend) new PrefixRocksDBStateBackend()
-                    .initialize(serializationService, 0).open();
-        }
+    @BeforeAll
+    static void init() {
+        serializationService = new DefaultSerializationServiceBuilder().build();
+        rocksDBStateBackend = (PrefixRocksDBStateBackend) new PrefixRocksDBStateBackend()
+                .initialize(serializationService, 0).open();
     }
 
     @AfterAll
@@ -386,7 +385,8 @@ public class HashJoinWithPersistencePTest extends JetTestSupport {
         return singletonList(tuple2(key, args[0]));
     }
 
-    private <K, V> PrefixRocksMap<K, V> toRocksMap(List<Tuple2<K, V>>... lists) {
+    @SafeVarargs
+    private static  <K, V> PrefixRocksMap<K, V> toRocksMap(List<Tuple2<K, V>>... lists) {
         PrefixRocksMap<K, V> map = rocksDBStateBackend.getPrefixMap();
         for (List<Tuple2<K, V>> list : lists) {
             list.forEach(e -> map.add(e.getKey(), e.getValue()));
