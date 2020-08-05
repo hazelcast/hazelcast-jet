@@ -44,9 +44,11 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Properties;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
+import static java.util.concurrent.TimeUnit.NANOSECONDS;
 
 public abstract class CdcSource<T> {
 
@@ -55,7 +57,7 @@ public abstract class CdcSource<T> {
     public static final String RECONNECT_INTERVAL_MS = "reconnect.interval.ms";
     public static final String RECONNECT_BEHAVIOUR_PROPERTY = "reconnect.behaviour";
 
-    public static final long DEFAULT_RECONNECT_INTERVAL_MS = 5_000;
+    public static final long DEFAULT_RECONNECT_INTERVAL_MS = TimeUnit.SECONDS.toMillis(5);
     public static final ReconnectBehaviour DEFAULT_RECONNECT_BEHAVIOUR = ReconnectBehaviour.FAIL;
 
     private static final ThreadLocal<List<byte[]>> THREAD_LOCAL_HISTORY = new ThreadLocal<>();
@@ -66,11 +68,12 @@ public abstract class CdcSource<T> {
     private final SourceConnector connector;
     private final Map<String, String> taskConfig;
 
-    private final long reconnectIntervalMs;
+    private final long reconnectIntervalNanos;
     private final ReconnectBehaviour reconnectBehaviour;
 
     private State state = new State();
     private SourceTask task;
+    private Long sleepUntilNanoTime = null;
 
     CdcSource(Processor.Context context, Properties properties) {
         this.logger = context.logger();
@@ -80,7 +83,7 @@ public abstract class CdcSource<T> {
             connector = newInstance(properties, CONNECTOR_CLASS_PROPERTY);
             connector.initialize(new JetConnectorContext());
 
-            reconnectIntervalMs = getReconnectIntervalMs(properties);
+            reconnectIntervalNanos = getReconnectIntervalNanos(properties);
             reconnectBehaviour = getReconnectBehaviour(properties);
 
             connect();
@@ -95,6 +98,14 @@ public abstract class CdcSource<T> {
     }
 
     public void fillBuffer(SourceBuilder.TimestampedSourceBuffer<T> buf) {
+        if (sleepUntilNanoTime != null) {
+            if (System.nanoTime() < sleepUntilNanoTime) {
+                return;
+            } else {
+                sleepUntilNanoTime = null;
+            }
+        }
+
         try {
             if (task == null) {
                 task = startNewTask();
@@ -152,14 +163,6 @@ public abstract class CdcSource<T> {
         return false;
     }
 
-    private void sleepMs(long ms) {
-        try {
-            Thread.sleep(ms);
-        } catch (InterruptedException e) {
-            logger.warning("Sleep interruped!", e);
-        }
-    }
-
     private void reconnect(ReconnectBehaviour behaviour, ConnectException ce) {
         switch (behaviour) {
             case FAIL:
@@ -191,9 +194,9 @@ public abstract class CdcSource<T> {
                 throw new JetException("Initializing connector task failed", e);
             case RECONNECT:
             case CLEAR_STATE_AND_RECONNECT:
-                logger.warning("Initializing connector task failed, retrying in " + reconnectIntervalMs + "ms: " +
-                        e.getMessage());
-                sleepMs(reconnectIntervalMs);
+                logger.warning("Initializing connector task failed, retrying in " +
+                        NANOSECONDS.toMillis(reconnectIntervalNanos) + "ms: " + e.getMessage());
+                sleepUntilNanoTime = System.nanoTime() + reconnectIntervalNanos;
                 return;
             default:
                 throw new RuntimeException("Programming error, unhandled reconnect behaviour: " + behaviour);
@@ -271,9 +274,9 @@ public abstract class CdcSource<T> {
         return s == null ? DEFAULT_RECONNECT_BEHAVIOUR : Enum.valueOf(ReconnectBehaviour.class, s.toUpperCase());
     }
 
-    private static long getReconnectIntervalMs(Properties properties) {
+    private static long getReconnectIntervalNanos(Properties properties) {
         String s = (String) properties.get(RECONNECT_INTERVAL_MS);
-        return s == null ? DEFAULT_RECONNECT_INTERVAL_MS : Long.parseLong(s);
+        return TimeUnit.MILLISECONDS.toNanos(s == null ? DEFAULT_RECONNECT_INTERVAL_MS : Long.parseLong(s));
     }
 
     private static class JetConnectorContext implements ConnectorContext {
@@ -377,7 +380,7 @@ public abstract class CdcSource<T> {
 
         FAIL,
         CLEAR_STATE_AND_RECONNECT,
-        RECONNECT;
+        RECONNECT
 
     }
 }
