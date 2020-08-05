@@ -23,10 +23,8 @@ import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.core.test.TestSupport;
-import com.hazelcast.test.HazelcastParallelClassRunner;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.junit.runner.RunWith;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -36,9 +34,17 @@ import java.util.stream.Stream;
 import static com.hazelcast.jet.Traversers.traverseItems;
 import static com.hazelcast.jet.Traversers.traverseIterable;
 import static com.hazelcast.jet.Util.entry;
+import static com.hazelcast.jet.core.processor.Processors.accumulateByKeyWithPersistenceAndUnboundedStateP;
+import static com.hazelcast.jet.core.processor.Processors.accumulateByKeyWithPersistenceP;
 import static com.hazelcast.jet.core.processor.Processors.aggregateByKeyP;
+import static com.hazelcast.jet.core.processor.Processors.aggregateByKeyWithPersistenceAndUnboundedStateP;
+import static com.hazelcast.jet.core.processor.Processors.aggregateByKeyWithPersistenceP;
 import static com.hazelcast.jet.core.processor.Processors.combineByKeyP;
+import static com.hazelcast.jet.core.processor.Processors.combineByKeyWithPersistenceAndUnboundedStateP;
+import static com.hazelcast.jet.core.processor.Processors.combineByKeyWithPersistenceP;
 import static com.hazelcast.jet.core.processor.Processors.combineP;
+import static com.hazelcast.jet.core.processor.Processors.combineWithPersistenceAndUnboundedStateP;
+import static com.hazelcast.jet.core.processor.Processors.combineWithPersistenceP;
 import static com.hazelcast.jet.core.processor.Processors.filterP;
 import static com.hazelcast.jet.core.processor.Processors.filterUsingServiceP;
 import static com.hazelcast.jet.core.processor.Processors.flatMapP;
@@ -56,7 +62,6 @@ import static java.util.concurrent.CompletableFuture.supplyAsync;
 import static java.util.stream.Collectors.toList;
 import static org.junit.Assert.assertEquals;
 
-@RunWith(HazelcastParallelClassRunner.class)
 public class ProcessorsTest extends SimpleTestInClusterSupport {
 
     @BeforeClass
@@ -214,10 +219,69 @@ public class ProcessorsTest extends SimpleTestInClusterSupport {
     }
 
     @Test
+    public void aggregateByKeyWithPersistence() {
+        FunctionEx<Object, String> keyFn = Object::toString;
+        TestSupport
+                .verifyProcessor(aggregateByKeyWithPersistenceP(singletonList(keyFn),
+                        aggregateToListAndString(), Util::entry))
+                .disableSnapshots()
+                .outputChecker(TestSupport.SAME_ITEMS_ANY_ORDER)
+                .input(asList(1, 1, 2, 2))
+                .expectOutput(asList(
+                        entry("1", "[1, 1]"),
+                        entry("2", "[2, 2]")
+                ));
+    }
+
+    @Test
+    public void aggregateByKeyWithPersistenceAndUnboundedState() {
+        FunctionEx<Object, String> keyFn = Object::toString;
+        TestSupport
+                .verifyProcessor(aggregateByKeyWithPersistenceAndUnboundedStateP(singletonList(keyFn),
+                        aggregateToListAndString(), Util::entry))
+                .disableSnapshots()
+                .outputChecker(TestSupport.SAME_ITEMS_ANY_ORDER)
+                .input(asList(1, 1, 2, 2))
+                .expectOutput(asList(
+                        entry("1", "[1, 1]"),
+                        entry("2", "[2, 2]")
+                ));
+    }
+    @Test
     public void accumulateByKey() {
         FunctionEx<Object, String> keyFn = Object::toString;
         TestSupport
                 .verifyProcessor(Processors.accumulateByKeyP(singletonList(keyFn),
+                        aggregateToListAndString()))
+                .disableSnapshots()
+                .input(asList(1, 1, 2, 2))
+                .outputChecker(TestSupport.SAME_ITEMS_ANY_ORDER)
+                .expectOutput(asList(
+                        entry("1", asList(1, 1)),
+                        entry("2", asList(2, 2))
+                ));
+    }
+
+    @Test
+    public void accumulateByKeyWithPersistence() {
+        FunctionEx<Object, String> keyFn = Object::toString;
+        TestSupport
+                .verifyProcessor(accumulateByKeyWithPersistenceP(singletonList(keyFn),
+                        aggregateToListAndString()))
+                .disableSnapshots()
+                .input(asList(1, 1, 2, 2))
+                .outputChecker(TestSupport.SAME_ITEMS_ANY_ORDER)
+                .expectOutput(asList(
+                        entry("1", asList(1, 1)),
+                        entry("2", asList(2, 2))
+                ));
+    }
+
+    @Test
+    public void accumulateByKeyWithPersistenceAndUnboundedState() {
+        FunctionEx<Object, String> keyFn = Object::toString;
+        TestSupport
+                .verifyProcessor(accumulateByKeyWithPersistenceAndUnboundedStateP(singletonList(keyFn),
                         aggregateToListAndString()))
                 .disableSnapshots()
                 .input(asList(1, 1, 2, 2))
@@ -247,9 +311,63 @@ public class ProcessorsTest extends SimpleTestInClusterSupport {
     }
 
     @Test
+    public void combineByKeyWithPersistence() {
+        TestSupport
+                .verifyProcessor(combineByKeyWithPersistenceP(aggregateToListAndString(), Util::entry))
+                .disableSnapshots()
+                .outputChecker(TestSupport.SAME_ITEMS_ANY_ORDER)
+                .input(asList(
+                        entry("1", asList(1, 2)),
+                        entry("1", asList(3, 4)),
+                        entry("2", asList(5, 6)),
+                        entry("2", asList(7, 8))
+                ))
+                .expectOutput(asList(
+                        entry("1", "[1, 2, 3, 4]"),
+                        entry("2", "[5, 6, 7, 8]")
+                ));
+    }
+
+    @Test
+    public void combineByKeyWithPersistenceAndUnboundedState() {
+        TestSupport
+                .verifyProcessor(combineByKeyWithPersistenceAndUnboundedStateP(aggregateToListAndString(), Util::entry))
+                .disableSnapshots()
+                .outputChecker(TestSupport.SAME_ITEMS_ANY_ORDER)
+                .input(asList(
+                        entry("1", asList(1, 2)),
+                        entry("1", asList(3, 4)),
+                        entry("2", asList(5, 6)),
+                        entry("2", asList(7, 8))
+                ))
+                .expectOutput(asList(
+                        entry("1", "[1, 2, 3, 4]"),
+                        entry("2", "[5, 6, 7, 8]")
+                ));
+    }
+
+    @Test
     public void aggregate() {
         TestSupport
                 .verifyProcessor(Processors.aggregateP(aggregateToListAndString()))
+                .disableSnapshots()
+                .input(asList(1, 2))
+                .expectOutput(singletonList("[1, 2]"));
+    }
+
+    @Test
+    public void aggregateWithPersistence() {
+        TestSupport
+                .verifyProcessor(Processors.aggregateWithPersistenceP(aggregateToListAndString()))
+                .disableSnapshots()
+                .input(asList(1, 2))
+                .expectOutput(singletonList("[1, 2]"));
+    }
+
+    @Test
+    public void aggregateWithPersistenceAndUnboundedState() {
+        TestSupport
+                .verifyProcessor(Processors.aggregateWithPersistenceAndUnboundedStateP(aggregateToListAndString()))
                 .disableSnapshots()
                 .input(asList(1, 2))
                 .expectOutput(singletonList("[1, 2]"));
@@ -265,9 +383,52 @@ public class ProcessorsTest extends SimpleTestInClusterSupport {
     }
 
     @Test
+    public void accumulateWithPersistence() {
+        TestSupport
+                .verifyProcessor(Processors.accumulateWithPersistenceP(aggregateToListAndString()))
+                .disableSnapshots()
+                .input(asList(1, 2))
+                .expectOutput(singletonList(asList(1, 2)));
+    }
+
+    @Test
+    public void accumulateWithPersistenceAndUnboundedState() {
+        TestSupport
+                .verifyProcessor(Processors.accumulateWithPersistenceAndUnboundedStateP(aggregateToListAndString()))
+                .disableSnapshots()
+                .input(asList(1, 2))
+                .expectOutput(singletonList(asList(1, 2)));
+    }
+
+
+    @Test
     public void combine() {
         TestSupport
                 .verifyProcessor(combineP(aggregateToListAndString()))
+                .disableSnapshots()
+                .input(asList(
+                        singletonList(1),
+                        singletonList(2)
+                ))
+                .expectOutput(singletonList("[1, 2]"));
+    }
+
+    @Test
+    public void combineWithPersistence() {
+        TestSupport
+                .verifyProcessor(combineWithPersistenceP(aggregateToListAndString()))
+                .disableSnapshots()
+                .input(asList(
+                        singletonList(1),
+                        singletonList(2)
+                ))
+                .expectOutput(singletonList("[1, 2]"));
+    }
+
+    @Test
+    public void combineWithPersistenceAndUnboundedState() {
+        TestSupport
+                .verifyProcessor(combineWithPersistenceAndUnboundedStateP(aggregateToListAndString()))
                 .disableSnapshots()
                 .input(asList(
                         singletonList(1),
@@ -285,6 +446,7 @@ public class ProcessorsTest extends SimpleTestInClusterSupport {
     }
 
     private static <T> AggregateOperation1<T, List<T>, String> aggregateToListAndString() {
+        //no need to set hasUnboundedState here since it only matters to AggregateTransform
         return AggregateOperation
                 .<List<T>>withCreate(ArrayList::new)
                 .<T>andAccumulate(List::add)

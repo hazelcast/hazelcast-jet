@@ -17,7 +17,6 @@
 package com.hazelcast.jet.core.test;
 
 import com.hazelcast.core.ManagedContext;
-import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.core.Processor;
@@ -36,7 +35,6 @@ public class TestProcessorContext extends TestProcessorSupplierContext implement
 
     private int localProcessorIndex;
     private int globalProcessorIndex;
-    private InternalSerializationService serializationService;
     private RocksDBStateBackend stateBackend;
     private PrefixRocksDBStateBackend prefixStateBackend;
 
@@ -64,27 +62,21 @@ public class TestProcessorContext extends TestProcessorSupplierContext implement
 
     @Override
     public RocksDBStateBackend stateBackend() {
-        if (stateBackend == null) {
-            stateBackend = (RocksDBStateBackend) new RocksDBStateBackend()
-                    .initialize(serializationService, jobId()).open();
-        }
-        return stateBackend;
+        return (RocksDBStateBackend) stateBackend.open();
     }
 
     @Override
     public PrefixRocksDBStateBackend prefixStateBackend() {
-        if (prefixStateBackend == null) {
-            prefixStateBackend = (PrefixRocksDBStateBackend) new PrefixRocksDBStateBackend()
-                    .initialize(serializationService, jobId()).open();
-        }
-        return prefixStateBackend;
+        return (PrefixRocksDBStateBackend) prefixStateBackend.open();
     }
 
-    /**
-     * Set the job-level serialization service
-     */
-    public TestProcessorContext setSerializationService(InternalSerializationService serializationService) {
-        this.serializationService = serializationService;
+    public TestProcessorContext setStateBackend(RocksDBStateBackend stateBackend) {
+        this.stateBackend = stateBackend;
+        return this;
+    }
+
+    public TestProcessorContext setPrefixStateBackend(PrefixRocksDBStateBackend prefixStateBackend) {
+        this.prefixStateBackend = prefixStateBackend;
         return this;
     }
 

@@ -20,6 +20,7 @@ import com.hazelcast.cluster.Address;
 import com.hazelcast.config.NetworkConfig;
 import com.hazelcast.function.SupplierEx;
 import com.hazelcast.instance.BuildInfoProvider;
+import com.hazelcast.internal.nio.IOUtil;
 import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.internal.serialization.SerializationService;
 import com.hazelcast.internal.serialization.SerializationServiceAware;
@@ -33,6 +34,8 @@ import com.hazelcast.jet.core.Processor.Context;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.Watermark;
+import com.hazelcast.jet.rocksdb.PrefixRocksDBStateBackend;
+import com.hazelcast.jet.rocksdb.RocksDBStateBackend;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.logging.impl.LoggingServiceImpl;
 import com.hazelcast.spi.impl.SerializationServiceSupport;
@@ -229,6 +232,10 @@ public final class TestSupport {
 
     private BiPredicate<? super List<?>, ? super List<?>> outputChecker = Objects::equals;
 
+    private SerializationService serializationService;
+    private RocksDBStateBackend stateBackend;
+    private PrefixRocksDBStateBackend prefixStateBackend;
+
     private TestSupport(@Nonnull ProcessorMetaSupplier metaSupplier) {
         this.metaSupplier = metaSupplier;
     }
@@ -379,6 +386,15 @@ public final class TestSupport {
             supplier.close(null);
         } catch (Exception e) {
             throw sneakyThrow(e);
+        }
+
+        if(stateBackend != null) {
+            stateBackend.close();
+            IOUtil.delete(stateBackend.directory());
+        }
+        if(prefixStateBackend != null) {
+            prefixStateBackend.close();
+            IOUtil.delete(prefixStateBackend.directory());
         }
     }
 
@@ -836,31 +852,47 @@ public final class TestSupport {
         }
     }
 
+    private InternalSerializationService getSerializationService() {
+        if (serializationService == null) {
+            if (jetInstance != null && jetInstance.getHazelcastInstance() instanceof SerializationServiceSupport) {
+                SerializationServiceSupport impl = (SerializationServiceSupport) jetInstance.getHazelcastInstance();
+                serializationService = impl.getSerializationService();
+            } else {
+                serializationService = new DefaultSerializationServiceBuilder()
+                        .setManagedContext(e -> e)
+                        .build();
+            }
+        }
+        return (InternalSerializationService) serializationService;
+    }
+
     private void initProcessor(Processor processor, TestOutbox outbox) {
-        SerializationService serializationService;
-        if (jetInstance != null && jetInstance.getHazelcastInstance() instanceof SerializationServiceSupport) {
-            SerializationServiceSupport impl = (SerializationServiceSupport) jetInstance.getHazelcastInstance();
-            serializationService = impl.getSerializationService();
-        } else {
-            serializationService = new DefaultSerializationServiceBuilder()
-                    .setManagedContext(e -> e)
-                    .build();
+
+        if (stateBackend == null) {
+            stateBackend = (RocksDBStateBackend) new RocksDBStateBackend()
+                    .initialize(getSerializationService(), 1);
+        }
+
+        if (prefixStateBackend == null) {
+            prefixStateBackend = (PrefixRocksDBStateBackend) new PrefixRocksDBStateBackend()
+                    .initialize(getSerializationService(), 1);
         }
 
         TestProcessorContext context = new TestProcessorContext()
                 .setLogger(getLogger(processor.getClass().getName()))
-                .setManagedContext(serializationService.getManagedContext())
+                .setManagedContext(getSerializationService().getManagedContext())
                 .setLocalProcessorIndex(localProcessorIndex)
                 .setGlobalProcessorIndex(globalProcessorIndex)
                 .setLocalParallelism(localParallelism)
                 .setTotalParallelism(totalParallelism)
-                .setSerializationService((InternalSerializationService) serializationService);
+                .setStateBackend(stateBackend)
+                .setPrefixStateBackend(prefixStateBackend);
 
         if (jetInstance != null) {
             context.setJetInstance(jetInstance);
         }
         if (processor instanceof SerializationServiceAware) {
-            ((SerializationServiceAware) processor).setSerializationService(serializationService);
+            ((SerializationServiceAware) processor).setSerializationService(getSerializationService());
         }
         try {
             processor.init(outbox, context);

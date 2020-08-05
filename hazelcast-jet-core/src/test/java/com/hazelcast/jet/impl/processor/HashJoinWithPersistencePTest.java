@@ -379,7 +379,7 @@ public class HashJoinWithPersistencePTest extends JetTestSupport {
             // i.e it expects (k, v1), (k, v2)... not (k, [v1, v2,...])
             // so we build a list of tuples out of the list of values passed and use it to populate the map.
             ArrayList<Tuple2<K, V>> list = new ArrayList<>();
-            Arrays.asList(args).forEach(t -> list.add(tuple2(key, t)));
+            asList(args).forEach(t -> list.add(tuple2(key, t)));
             return list;
         }
         return singletonList(tuple2(key, args[0]));
@@ -388,9 +388,7 @@ public class HashJoinWithPersistencePTest extends JetTestSupport {
     @SafeVarargs
     private static  <K, V> PrefixRocksMap<K, V> toRocksMap(List<Tuple2<K, V>>... lists) {
         PrefixRocksMap<K, V> map = rocksDBStateBackend.getPrefixMap();
-        for (List<Tuple2<K, V>> list : lists) {
-            list.forEach(e -> map.add(e.getKey(), e.getValue()));
-        }
+        asList(lists).forEach(list -> list.forEach(item -> map.add(item.getKey(), item.getValue())));
         return map;
     }
 

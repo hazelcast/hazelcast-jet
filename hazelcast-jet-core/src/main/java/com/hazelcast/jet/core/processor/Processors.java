@@ -248,10 +248,9 @@ public final class Processors {
     public static <A, R> SupplierEx<Processor> aggregateWithPersistenceP(
             @Nonnull AggregateOperation<A, R> aggrOp
     ) {
-        // We should use the same constant key as the input edges do, but since
-        // the processor doesn't save the state, there's no need to.
         return () -> new GroupWithPersistenceP<>(nCopies(aggrOp.arity(), t -> "ALL"), aggrOp, (k, r) -> r);
     }
+
     /**
      * A variant of aggregateP that uses GroupWithPersistenceAndUnboundedStateP processor.
      */
@@ -259,8 +258,6 @@ public final class Processors {
     public static <A, R> SupplierEx<Processor> aggregateWithPersistenceAndUnboundedStateP(
             @Nonnull AggregateOperation<A, R> aggrOp
     ) {
-        // We should use the same constant key as the input edges do, but since
-        // the processor doesn't save the state, there's no need to.
         return () -> new GroupWithPersistenceAndUnboundedStateP<>(
                 nCopies(aggrOp.arity(), t -> "ALL"), aggrOp, (k, r) -> r);
     }
@@ -298,8 +295,6 @@ public final class Processors {
     @Nonnull
     public static <A, R> SupplierEx<Processor> accumulateWithPersistenceP(@Nonnull AggregateOperation<A, R> aggrOp) {
         return () -> new GroupWithPersistenceP<>(
-                // We should use the same constant key as the input edges do, but since
-                // the processor doesn't save the state, there's no need to.
                 nCopies(aggrOp.arity(), t -> "ALL"),
                 aggrOp.withIdentityFinish(),
                 (k, r) -> r);
@@ -312,8 +307,6 @@ public final class Processors {
     public static <A, R> SupplierEx<Processor> accumulateWithPersistenceAndUnboundedStateP(
             @Nonnull AggregateOperation<A, R> aggrOp) {
         return () -> new GroupWithPersistenceAndUnboundedStateP<>(
-                // We should use the same constant key as the input edges do, but since
-                // the processor doesn't save the state, there's no need to.
                 nCopies(aggrOp.arity(), t -> "ALL"),
                 aggrOp.withIdentityFinish(),
                 (k, r) -> r);
@@ -357,8 +350,6 @@ public final class Processors {
             @Nonnull AggregateOperation<A, R> aggrOp
     ) {
         return () -> new GroupWithPersistenceP<>(
-                // We should use the same constant key as the input edges do, but since
-                // the processor doesn't save the state, there's no need to.
                 t -> "ALL",
                 aggrOp.withCombiningAccumulateFn(identity()),
                 (k, r) -> r);
@@ -372,8 +363,6 @@ public final class Processors {
             @Nonnull AggregateOperation<A, R> aggrOp
     ) {
         return () -> new GroupWithPersistenceAndUnboundedStateP<>(
-                // We should use the same constant key as the input edges do, but since
-                // the processor doesn't save the state, there's no need to.
                 t -> "ALL",
                 aggrOp.withCombiningAccumulateFn(identity()),
                 (k, r) -> r);
