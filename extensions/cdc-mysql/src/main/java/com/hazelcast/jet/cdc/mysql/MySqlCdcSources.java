@@ -50,7 +50,7 @@ public final class MySqlCdcSources {
      * setting (as far as the underlying Debezium connector cooperates, read
      * further for details).
      * <p>
-     * The default reconnect behaviour is <em>FAIL</em>, which threats any
+     * The default reconnect behaviour is <em>FAIL</em>, which treats any
      * connection failure as an unrecoverable problem and produces the failure
      * of the source and the entire job. (How Jet handles job failures and what
      * ways there are for recovering from them, is a generic issue not discussed
@@ -60,10 +60,10 @@ public final class MySqlCdcSources {
      * <em>CLEAR_STATE_AND_RECONNECT</em>, instruct the source to try to
      * automatically recover from any connection failure by reconnecting,
      * either via the connector's internal reconnect mechanisms or by restarting
-     * the whole source. The two types of behaviour differ from each-other in
-     * how exactly they handle the source restart, if they preserve the current
-     * state of the source or if they reset it. If the state is kept, then
-     * snapshotting should not be repeated and streaming the binlog should
+     * the whole source. The two types of behaviour differ from each other in
+     * how exactly they handle the source restart, whether they preserve the
+     * current state of the source or if they reset it. If the state is kept,
+     * then snapshotting should not be repeated and streaming the binlog should
      * resume at the position where it left off. If the state is reset, then the
      * source will behave as if it were its initial start, so will do a snapshot
      * and will start trailing the binlog where it syncs with the snapshot's
