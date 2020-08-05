@@ -46,7 +46,7 @@ public class JsonCdcSource extends CdcSource<Entry<String, String>> {
                 .fillBufferFn(JsonCdcSource::fillBuffer)
                 .createSnapshotFn(CdcSource::createSnapshot)
                 .restoreSnapshotFn(CdcSource::restoreSnapshot)
-                .destroyFn(CdcSource::disconnect)
+                .destroyFn(CdcSource::destroy)
                 .build();
     }
 }

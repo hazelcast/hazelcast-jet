@@ -90,6 +90,10 @@ public abstract class CdcSource<T> {
         }
     }
 
+    public void destroy() {
+        disconnect();
+    }
+
     public void fillBuffer(SourceBuilder.TimestampedSourceBuffer<T> buf) {
         try {
             initTaskIfNeeded();
@@ -195,11 +199,11 @@ public abstract class CdcSource<T> {
         }
     }
 
-    public void connect() {
+    private void connect() {
         connector.start(properties);
     }
 
-    public void disconnect() {
+    private void disconnect() {
         try {
             task.stop();
         } finally {

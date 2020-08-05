@@ -71,7 +71,7 @@ public class ChangeRecordCdcSource extends CdcSource<ChangeRecord> {
                 .fillBufferFn(ChangeRecordCdcSource::fillBuffer)
                 .createSnapshotFn(CdcSource::createSnapshot)
                 .restoreSnapshotFn(CdcSource::restoreSnapshot)
-                .destroyFn(CdcSource::disconnect)
+                .destroyFn(CdcSource::destroy)
                 .build();
     }
 
