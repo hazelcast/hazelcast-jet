@@ -100,8 +100,8 @@ public class JetService implements ManagedService, MembershipAwareService, LiveO
 
         JetSqlService jetSqlService;
         try {
-            Class<?> sqlBackendClass = Class.forName("com.hazelcast.jet.sql.impl.JetSqlServiceImpl");
-            jetSqlService = (JetSqlService) sqlBackendClass.newInstance();
+            Class<?> jetSqlServiceClass = Class.forName("com.hazelcast.jet.sql.impl.JetSqlServiceImpl");
+            jetSqlService = (JetSqlService) jetSqlServiceClass.newInstance();
         } catch (ClassNotFoundException e) {
             jetSqlService = null;
         } catch (ReflectiveOperationException e) {
