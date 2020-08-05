@@ -6,12 +6,19 @@ authorURL: https://twitter.com/mtopolnik
 authorImageURL: https://i.imgur.com/xuavzce.jpg
 ---
 
-In a [previous post](/blog/2020/06/23/jdk-gc-benchmarks-rematch) we
-showed that a modern JVM running live stream aggregation can achieve a
-99.99% latency lower than 10 milliseconds. The focus of that post was
-comparing the different GC options available for the JVM. In order to
-maintain a level playing field, we kept to the default settings as much
-possible.
+This post is a part of a series:
+
+- [Part 1 (Intro and high-throughput streaming
+  benchmark)](/blog/2020/06/09/jdk-gc-benchmarks-part1)
+- [Part 2 (batch workload benchmark)](/blog/2020/06/09/jdk-gc-benchmarks-part2)
+- [Part 3 (low-latency benchmark)](/blog/2020/06/23/jdk-gc-benchmarks-rematch)
+- Part 4 (you are here)
+
+In Part 3 we showed that a modern JVM running live stream aggregation
+can achieve a 99.99% latency lower than 10 milliseconds. The focus of
+that post was comparing the different GC options available for the JVM.
+In order to maintain a level playing field, we kept to the default
+settings as much possible.
 
 In this round we wanted to look at the same problem from the opposite
 angle: what can we do to help Hazelcast Jet achieve the best performance
