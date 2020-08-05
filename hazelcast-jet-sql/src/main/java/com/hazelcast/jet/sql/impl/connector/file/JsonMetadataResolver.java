@@ -140,7 +140,7 @@ final class JsonMetadataResolver {
         }
     }
 
-    private static class JsonTargetDescriptor implements TargetDescriptor {
+    private static final class JsonTargetDescriptor implements TargetDescriptor {
 
         private final String charset;
 

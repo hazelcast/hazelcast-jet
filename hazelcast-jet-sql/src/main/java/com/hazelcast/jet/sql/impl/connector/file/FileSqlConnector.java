@@ -39,8 +39,6 @@ import static java.lang.String.format;
 
 public class FileSqlConnector implements SqlConnector {
 
-    static final FileSqlConnector INSTANCE = new FileSqlConnector();
-
     public static final String TYPE_NAME = "com.hazelcast.File";
 
     public static final String TO_DIRECTORY = "file.directory";
@@ -50,6 +48,8 @@ public class FileSqlConnector implements SqlConnector {
     public static final String TO_CHARSET = "file.charset";
     public static final String TO_HEADER = "file.header";
     public static final String TO_DELIMITER = "file.delimiter";
+
+    static final FileSqlConnector INSTANCE = new FileSqlConnector();
 
     @Override
     public String typeName() {

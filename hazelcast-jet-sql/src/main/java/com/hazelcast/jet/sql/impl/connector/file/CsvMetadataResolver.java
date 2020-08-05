@@ -140,7 +140,7 @@ final class CsvMetadataResolver {
         return null;
     }
 
-    private static class CsvTargetDescriptor implements TargetDescriptor {
+    private static final class CsvTargetDescriptor implements TargetDescriptor {
 
         private final String charset;
         private final String delimiter;

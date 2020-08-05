@@ -98,8 +98,8 @@ public final class ProjectIntoScanLogicalRule extends RelOptRule {
 
         List<Integer> convertedProjects = projectFieldVisitor.createConvertedScanProjects();
         if (convertedProjects.size() == table.getProjects().size()) {
-            // The Project operator already references all the fields from the TableScan. No trimming is possible, so further
-            // optimization makes no sense.
+            // The Project operator already references all the fields from the TableScan. No trimming is possible, so
+            // further optimization makes no sense.
             // E.g. "SELECT f3, f2, f1 FROM t" where t=[f1, f2, f3]
             return;
         }
@@ -146,7 +146,8 @@ public final class ProjectIntoScanLogicalRule extends RelOptRule {
             assert scanField != null;
 
             // Track all column expressions from the Project operator that refer to the same TableScan field.
-            List<RexInputRef> projectInputs = scanFieldIndexToProjectInputs.computeIfAbsent(scanField, (k) -> new ArrayList<>(1));
+            List<RexInputRef> projectInputs =
+                    scanFieldIndexToProjectInputs.computeIfAbsent(scanField, (k) -> new ArrayList<>(1));
 
             projectInputs.add(projectInput);
 

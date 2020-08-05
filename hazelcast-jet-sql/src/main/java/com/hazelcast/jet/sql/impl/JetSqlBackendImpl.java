@@ -50,6 +50,7 @@ import com.hazelcast.sql.impl.calcite.parser.JetSqlParser;
 import com.hazelcast.sql.impl.calcite.schema.HazelcastTable;
 import com.hazelcast.sql.impl.optimizer.OptimizationTask;
 import com.hazelcast.sql.impl.optimizer.SqlPlan;
+import com.hazelcast.sql.impl.schema.Table;
 import com.hazelcast.sql.impl.schema.TableField;
 import com.hazelcast.sql.impl.type.QueryDataType;
 import org.apache.calcite.plan.RelOptCluster;
@@ -160,8 +161,8 @@ public class JetSqlBackendImpl implements JetSqlBackend {
         SqlNode source = node.source();
         if (source == null) {
             List<ExternalField> externalFields = node.columns()
-                                                     .map(field -> new ExternalField(field.name(), field.type(), field.externalName()))
-                                                     .collect(toList());
+                    .map(field -> new ExternalField(field.name(), field.type(), field.externalName()))
+                    .collect(toList());
             ExternalTable externalTable = new ExternalTable(node.name(), node.type(), externalFields, node.options());
 
             return new CreateExternalTablePlan(externalTable, node.getReplace(), node.ifNotExists(), sqlService);
@@ -171,7 +172,8 @@ public class JetSqlBackendImpl implements JetSqlBackend {
             // TODO: ExternalTable is already being created in JetSqlToRelConverter, any way to reuse it ???
             List<ExternalField> externalFields = new ArrayList<>();
             Iterator<SqlTableColumn> columns = node.columns().iterator();
-            for (TableField field : convertedResult.getRel().getTable().unwrap(HazelcastTable.class).getTarget().getFields()) {
+            Table table = convertedResult.getRel().getTable().unwrap(HazelcastTable.class).getTarget();
+            for (TableField field : table.getFields()) {
                 SqlTableColumn column = columns.hasNext() ? columns.next() : null;
 
                 String name = field.getName();

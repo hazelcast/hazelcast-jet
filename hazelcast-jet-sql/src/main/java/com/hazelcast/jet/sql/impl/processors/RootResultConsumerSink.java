@@ -90,7 +90,7 @@ public class RootResultConsumerSink implements Processor {
         @SuppressWarnings("unused") // for deserialization
         private MetaSupplier() { }
 
-        public MetaSupplier(Address initiatorAddress, QueryId queryId) {
+        MetaSupplier(Address initiatorAddress, QueryId queryId) {
             this.initiatorAddress = initiatorAddress;
             this.queryId = queryId;
         }

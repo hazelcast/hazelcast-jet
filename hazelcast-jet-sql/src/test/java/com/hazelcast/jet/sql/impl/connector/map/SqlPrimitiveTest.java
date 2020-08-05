@@ -73,7 +73,7 @@ public class SqlPrimitiveTest extends SqlTestSupport {
     @Test
     @Ignore // TODO handle LogicalUnion ???
     public void supportsInsertWithProject1() {
-        String name =createTableWithRandomName();
+        String name = createTableWithRandomName();
 
         assertMapEventually(
                 name,

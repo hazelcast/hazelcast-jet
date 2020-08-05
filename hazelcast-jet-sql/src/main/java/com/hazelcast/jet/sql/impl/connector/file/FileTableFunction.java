@@ -50,17 +50,18 @@ public final class FileTableFunction implements JetTableFunction {
 
     public static final FileTableFunction INSTANCE = new FileTableFunction();
 
-    private static final Map<String, FunctionParameter> PARAMETERS_BY_CONNECTOR_NAMES = new LinkedHashMap<String, FunctionParameter>() {
-        {
-            put(TO_SERIALIZATION_FORMAT, new JetTableFunctionParameter(0, "format", String.class, true));
-            put(TO_DIRECTORY, new JetTableFunctionParameter(1, "directory", String.class, true));
-            put(TO_GLOB, new JetTableFunctionParameter(2, "glob", String.class, false));
-            put(TO_SHARED_FILE_SYSTEM, new JetTableFunctionParameter(3, "sharedFileSystem", Boolean.class, false));
-            put(TO_CHARSET, new JetTableFunctionParameter(4, "charset", String.class, false));
-            put(TO_HEADER, new JetTableFunctionParameter(5, "header", Boolean.class, false));
-            put(TO_DELIMITER, new JetTableFunctionParameter(6, "delimiter", String.class, false));
-        }
-    };
+    private static final Map<String, FunctionParameter> PARAMETERS_BY_CONNECTOR_NAMES =
+            new LinkedHashMap<String, FunctionParameter>() {{
+                int ordinal = 0;
+                put(TO_SERIALIZATION_FORMAT, new JetTableFunctionParameter(ordinal++, "format", String.class, true));
+                put(TO_DIRECTORY, new JetTableFunctionParameter(ordinal++, "directory", String.class, true));
+                put(TO_GLOB, new JetTableFunctionParameter(ordinal++, "glob", String.class, false));
+                put(TO_SHARED_FILE_SYSTEM, new JetTableFunctionParameter(ordinal++, "sharedFileSystem", Boolean.class,
+                        false));
+                put(TO_CHARSET, new JetTableFunctionParameter(ordinal++, "charset", String.class, false));
+                put(TO_HEADER, new JetTableFunctionParameter(ordinal++, "header", Boolean.class, false));
+                put(TO_DELIMITER, new JetTableFunctionParameter(ordinal, "delimiter", String.class, false));
+            }};
 
     private static final String SCHEMA_NAME_FILES = "files";
 

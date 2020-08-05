@@ -89,7 +89,8 @@ public class LocalPartitionedMapConnector extends EntrySqlConnector {
 
         long estimatedRowCount = estimatePartitionedMapRowCount(nodeEngine, context, mapName);
         List<MapTableIndex> indexes = container != null ? getPartitionedMapIndexes(container, fields) : emptyList();
-        int distributionFieldOrdinal = container != null ? getPartitionedMapDistributionField(container, context, fields) : -1;
+        int distributionFieldOrdinal =
+                container != null ? getPartitionedMapDistributionField(container, context, fields) : -1;
         boolean nativeMemoryEnabled = container != null && nodeEngine.getConfig().getNativeMemoryConfig().isEnabled()
                 && container.getMapConfig().getInMemoryFormat() == NATIVE;
 

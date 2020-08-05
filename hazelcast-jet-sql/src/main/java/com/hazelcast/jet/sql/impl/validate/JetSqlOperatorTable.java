@@ -47,10 +47,22 @@ import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class JetSqlOperatorTable extends ReflectiveSqlOperatorTable {
+public final class JetSqlOperatorTable extends ReflectiveSqlOperatorTable {
+
+    private static final JetSqlOperatorTable INSTANCE = new JetSqlOperatorTable();
+
+    static {
+        INSTANCE.init();
+    }
 
     @SuppressWarnings("unused")
     public static final SqlFunction FILE = from(FileTableFunction.INSTANCE, "FILE");
+
+    private JetSqlOperatorTable() { }
+
+    public static JetSqlOperatorTable instance() {
+        return INSTANCE;
+    }
 
     @SuppressWarnings("SameParameterValue")
     private static SqlFunction from(TableFunction function, String name) {
@@ -89,19 +101,6 @@ public class JetSqlOperatorTable extends ReflectiveSqlOperatorTable {
         } else {
             return JavaTypeFactoryImpl.toSql(typeFactory, type);
         }
-    }
-
-    private static final JetSqlOperatorTable INSTANCE = new JetSqlOperatorTable();
-
-    static {
-        INSTANCE.init();
-    }
-
-    private JetSqlOperatorTable() {
-    }
-
-    public static JetSqlOperatorTable instance() {
-        return INSTANCE;
     }
 
     @Override

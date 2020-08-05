@@ -36,12 +36,34 @@ import java.util.Map;
 //   (TableSchemaField, Table, TableField, QueryDataType etc. need to be public then?)
 public interface SqlConnector {
 
+    /**
+     * TODO
+     */
     String TO_SERIALIZATION_FORMAT = "serialization.format";
 
+    /**
+     * TODO
+     */
     String JAVA_SERIALIZATION_FORMAT = "java";
+
+    /**
+     * TODO
+     */
     String PORTABLE_SERIALIZATION_FORMAT = "portable";
+
+    /**
+     * TODO
+     */
     String JSON_SERIALIZATION_FORMAT = "json";
+
+    /**
+     * TODO
+     */
     String CSV_SERIALIZATION_FORMAT = "csv";
+
+    /**
+     * TODO
+     */
     String AVRO_SERIALIZATION_FORMAT = "avro";
 
     /**
@@ -59,7 +81,7 @@ public interface SqlConnector {
     String typeName();
 
     /**
-     * @return
+     * TODO
      */
     boolean isStream();
 
