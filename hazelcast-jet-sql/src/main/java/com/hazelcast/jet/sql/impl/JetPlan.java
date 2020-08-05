@@ -26,15 +26,15 @@ interface JetPlan extends SqlPlan {
         private final boolean ifNotExists;
         private final ExecutionPlan executionPlan;
 
-        private final JetSqlBackendImpl jetSqlBackend;
+        private final JetSqlServiceImpl sqlService;
 
         CreateExternalTablePlan(
                 ExternalTable schema,
                 boolean replace,
                 boolean ifNotExists,
-                JetSqlBackendImpl jetSqlBackend
+                JetSqlServiceImpl sqlService
         ) {
-            this(schema, replace, ifNotExists, null, jetSqlBackend);
+            this(schema, replace, ifNotExists, null, sqlService);
         }
 
         CreateExternalTablePlan(
@@ -42,20 +42,20 @@ interface JetPlan extends SqlPlan {
                 boolean replace,
                 boolean ifNotExists,
                 ExecutionPlan executionPlan,
-                JetSqlBackendImpl jetSqlBackend
+                JetSqlServiceImpl sqlService
         ) {
             this.schema = schema;
             this.replace = replace;
             this.ifNotExists = ifNotExists;
             this.executionPlan = executionPlan;
 
-            this.jetSqlBackend = jetSqlBackend;
+            this.sqlService = sqlService;
         }
 
         @Override
         public SqlResult execute(List<Object> params, long timeout, int pageSize) {
-            SqlResult result = jetSqlBackend.execute(this);
-            return executionPlan == null ? result : jetSqlBackend.execute(executionPlan);
+            SqlResult result = sqlService.execute(this);
+            return executionPlan == null ? result : sqlService.execute(executionPlan);
         }
 
         ExternalTable schema() {
@@ -76,22 +76,22 @@ interface JetPlan extends SqlPlan {
         private final String name;
         private final boolean ifExists;
 
-        private final JetSqlBackendImpl jetSqlBackend;
+        private final JetSqlServiceImpl sqlService;
 
         RemoveExternalTablePlan(
                 String name,
                 boolean ifExists,
-                JetSqlBackendImpl jetSqlBackend
+                JetSqlServiceImpl sqlService
         ) {
             this.name = name;
             this.ifExists = ifExists;
 
-            this.jetSqlBackend = jetSqlBackend;
+            this.sqlService = sqlService;
         }
 
         @Override
         public SqlResult execute(List<Object> params, long timeout, int pageSize) {
-            return jetSqlBackend.execute(this);
+            return sqlService.execute(this);
         }
 
         String name() {
@@ -111,7 +111,7 @@ interface JetPlan extends SqlPlan {
         private final QueryId queryId;
         private final SqlRowMetadata rowMetadata;
 
-        private final JetSqlBackendImpl jetSqlBackend;
+        private final JetSqlServiceImpl sqlService;
 
         ExecutionPlan(
                 DAG dag,
@@ -119,7 +119,7 @@ interface JetPlan extends SqlPlan {
                 boolean isInsert,
                 QueryId queryId,
                 SqlRowMetadata rowMetadata,
-                JetSqlBackendImpl jetSqlBackend
+                JetSqlServiceImpl sqlService
         ) {
             this.dag = dag;
             this.isStreaming = isStreaming;
@@ -127,12 +127,12 @@ interface JetPlan extends SqlPlan {
             this.queryId = queryId;
             this.rowMetadata = rowMetadata;
 
-            this.jetSqlBackend = jetSqlBackend;
+            this.sqlService = sqlService;
         }
 
         @Override
         public SqlResult execute(List<Object> params, long timeout, int pageSize) {
-            return jetSqlBackend.execute(this);
+            return sqlService.execute(this);
         }
 
         DAG getDag() {

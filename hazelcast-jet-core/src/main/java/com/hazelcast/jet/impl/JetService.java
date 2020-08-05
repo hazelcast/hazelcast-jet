@@ -43,7 +43,7 @@ import com.hazelcast.spi.impl.NodeEngineImpl;
 import com.hazelcast.spi.impl.operationservice.LiveOperations;
 import com.hazelcast.spi.impl.operationservice.LiveOperationsTracker;
 import com.hazelcast.spi.impl.operationservice.Operation;
-import com.hazelcast.sql.impl.JetSqlBackend;
+import com.hazelcast.sql.impl.JetSqlService;
 import com.hazelcast.sql.impl.QueryId;
 import com.hazelcast.sql.impl.exec.root.RootResultConsumer;
 
@@ -90,7 +90,7 @@ public class JetService implements ManagedService, MembershipAwareService, LiveO
 
     private final Supplier<int[]> sharedPartitionKeys = memoizeConcurrent(this::computeSharedPartitionKeys);
 
-    private final JetSqlBackend jetSqlBackend;
+    private final JetSqlService jetSqlService;
     private final ConcurrentMap<QueryId, RootResultConsumer> resultConsumerRegistry = new ConcurrentHashMap<>();
 
     public JetService(Node node) {
@@ -98,16 +98,16 @@ public class JetService implements ManagedService, MembershipAwareService, LiveO
         this.liveOperationRegistry = new LiveOperationRegistry();
         this.shutdownHookThread = shutdownHookThread(node);
 
-        JetSqlBackend jetSqlBackendTmp;
+        JetSqlService jetSqlService;
         try {
-            Class<?> sqlBackendClass = Class.forName("com.hazelcast.jet.sql.impl.JetSqlBackendImpl");
-            jetSqlBackendTmp = (JetSqlBackend) sqlBackendClass.newInstance();
+            Class<?> jetSqlServiceClass = Class.forName("com.hazelcast.jet.sql.impl.JetSqlServiceImpl");
+            jetSqlService = (JetSqlService) jetSqlServiceClass.newInstance();
         } catch (ClassNotFoundException e) {
-            jetSqlBackendTmp = null;
+            jetSqlService = null;
         } catch (ReflectiveOperationException e) {
             throw new RuntimeException(e);
         }
-        jetSqlBackend = jetSqlBackendTmp;
+        this.jetSqlService = jetSqlService;
     }
 
     // ManagedService
@@ -141,10 +141,10 @@ public class JetService implements ManagedService, MembershipAwareService, LiveO
         logger.info("Setting number of cooperative threads and default parallelism to "
                 + config.getInstanceConfig().getCooperativeThreadCount());
 
-        if (jetSqlBackend != null) {
+        if (jetSqlService != null) {
             try {
-                Method initJetInstanceMethod = jetSqlBackend.getClass().getMethod("initJetInstance", JetInstance.class);
-                initJetInstanceMethod.invoke(jetSqlBackend, jetInstance);
+                Method initJetInstanceMethod = jetSqlService.getClass().getMethod("initJetInstance", JetInstance.class);
+                initJetInstanceMethod.invoke(jetSqlService, jetInstance);
             } catch (ReflectiveOperationException e) {
                 throw new RuntimeException(e);
             }
@@ -246,8 +246,8 @@ public class JetService implements ManagedService, MembershipAwareService, LiveO
         return jobExecutionService;
     }
 
-    public JetSqlBackend getJetSqlBackend() {
-        return jetSqlBackend;
+    public JetSqlService getJetSqlService() {
+        return jetSqlService;
     }
 
     /**
