@@ -63,7 +63,9 @@ public class LocalElasticSinkTest extends CommonElasticSinksTest {
 
         Sink<String> elasticSink = new ElasticSinkBuilder<>()
                 .clientFn(() -> {
-                    RestClientBuilder builder = spy(RestClient.builder(HttpHost.create("localhost:9200")));
+                    RestClientBuilder builder = spy(RestClient.builder(HttpHost.create(
+                            ElasticSupport.elastic.get().getHttpHostAddress()
+                    )));
                     when(builder.build()).thenAnswer(invocation -> {
                         Object result = invocation.callRealMethod();
                         RestClient client = (RestClient) spy(result);
