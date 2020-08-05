@@ -23,7 +23,7 @@ import com.hazelcast.internal.nio.Packet;
 import com.hazelcast.jet.impl.operation.PrepareForPassiveClusterOperation;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.spi.impl.NodeEngineImpl;
-import com.hazelcast.sql.impl.JetSqlBackend;
+import com.hazelcast.sql.impl.JetSqlService;
 
 import javax.annotation.Nonnull;
 import java.util.HashMap;
@@ -109,8 +109,8 @@ class NodeExtensionCommon {
     Map<String, Object> createExtensionServices() {
         Map<String, Object> extensionServices = new HashMap<>();
         extensionServices.put(JetService.SERVICE_NAME, jetService);
-        if (jetService.getJetSqlBackend() != null) {
-            extensionServices.put(JetSqlBackend.SERVICE_NAME, jetService.getJetSqlBackend());
+        if (jetService.getJetSqlService() != null) {
+            extensionServices.put(JetSqlService.SERVICE_NAME, jetService.getJetSqlService());
         }
         return extensionServices;
     }

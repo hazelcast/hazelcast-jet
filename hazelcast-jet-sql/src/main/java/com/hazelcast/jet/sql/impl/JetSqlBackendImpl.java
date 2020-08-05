@@ -16,13 +16,7 @@
 
 package com.hazelcast.jet.sql.impl;
 
-import com.hazelcast.instance.impl.HazelcastInstanceImpl;
-import com.hazelcast.internal.services.ManagedService;
-import com.hazelcast.jet.JetException;
-import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.Job;
 import com.hazelcast.jet.core.DAG;
-import com.hazelcast.jet.impl.JetService;
 import com.hazelcast.jet.sql.impl.JetPlan.CreateExternalTablePlan;
 import com.hazelcast.jet.sql.impl.JetPlan.ExecutionPlan;
 import com.hazelcast.jet.sql.impl.JetPlan.RemoveExternalTablePlan;
@@ -45,19 +39,16 @@ import com.hazelcast.jet.sql.impl.schema.JetTable;
 import com.hazelcast.jet.sql.impl.validate.JetSqlValidator;
 import com.hazelcast.spi.impl.NodeEngine;
 import com.hazelcast.sql.SqlColumnMetadata;
-import com.hazelcast.sql.SqlResult;
 import com.hazelcast.sql.SqlRowMetadata;
-import com.hazelcast.sql.impl.JetSqlBackend;
 import com.hazelcast.sql.impl.QueryId;
 import com.hazelcast.sql.impl.QueryUtils;
-import com.hazelcast.sql.impl.SqlResultImpl;
+import com.hazelcast.sql.impl.calcite.JetSqlBackend;
 import com.hazelcast.sql.impl.calcite.OptimizerContext;
 import com.hazelcast.sql.impl.calcite.parse.QueryConvertResult;
 import com.hazelcast.sql.impl.calcite.parse.QueryParseResult;
 import com.hazelcast.sql.impl.calcite.parser.JetSqlParser;
 import com.hazelcast.sql.impl.calcite.schema.HazelcastTable;
-import com.hazelcast.sql.impl.exec.root.BlockingRootResultConsumer;
-import com.hazelcast.sql.impl.exec.root.RootResultConsumer;
+import com.hazelcast.sql.impl.optimizer.OptimizationTask;
 import com.hazelcast.sql.impl.optimizer.SqlPlan;
 import com.hazelcast.sql.impl.schema.TableField;
 import com.hazelcast.sql.impl.type.QueryDataType;
@@ -73,96 +64,79 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.sql.SqlNode;
+import org.apache.calcite.sql.parser.SqlParserImplFactory;
+import org.apache.calcite.sql.util.SqlVisitor;
 import org.apache.calcite.sql.validate.SqlConformance;
 import org.apache.calcite.sql.validate.SqlValidator;
-import org.apache.calcite.sql.validate.SqlValidatorCatalogReader;
 import org.apache.calcite.sql2rel.SqlRexConvertletTable;
+import org.apache.calcite.sql2rel.SqlToRelConverter;
 import org.apache.calcite.sql2rel.SqlToRelConverter.Config;
 
-import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Properties;
 
 import static java.util.stream.Collectors.toList;
 
-@SuppressWarnings("unused") // used through reflection
-// TODO: break down this class pls....
-public class JetSqlBackendImpl implements JetSqlBackend, ManagedService {
+public class JetSqlBackendImpl implements JetSqlBackend {
 
-    private JetInstance jetInstance;
-    private NodeEngine nodeEngine;
+    private final NodeEngine nodeEngine;
+    private final JetSqlServiceImpl sqlService;
 
-    private Map<QueryId, RootResultConsumer> resultConsumerRegistry;
+    private final ExternalCatalog catalog;
 
-    private ExternalCatalog catalog;
+    JetSqlBackendImpl(NodeEngine nodeEngine, JetSqlServiceImpl sqlService, ExternalCatalog catalog) {
+        this.sqlService = sqlService;
+        this.nodeEngine = nodeEngine;
 
-    @SuppressWarnings("unused") // used through reflection
-    public void initJetInstance(@Nonnull JetInstance jetInstance) {
-        this.jetInstance = Objects.requireNonNull(jetInstance);
-        this.nodeEngine = ((HazelcastInstanceImpl) jetInstance.getHazelcastInstance()).node.nodeEngine;
-
-        JetService jetService = nodeEngine.getService(JetService.SERVICE_NAME);
-        this.resultConsumerRegistry = jetService.getResultConsumerRegistry();
-
-        this.catalog = new ExternalCatalog(nodeEngine);
+        this.catalog = catalog;
     }
 
     @Override
-    public Object tableResolver() {
-        return catalog;
-    }
-
-    @Override
-    public Object createParserFactory() {
+    public SqlParserImplFactory parserFactory() {
         return JetSqlParser.FACTORY;
     }
 
     @Override
-    public Object createValidator(Object catalogReader, Object typeFactory, Object conformance) {
-        return new JetSqlValidator(
-                (SqlValidatorCatalogReader) catalogReader,
-                (RelDataTypeFactory) typeFactory,
-                (SqlConformance) conformance
-        );
+    public SqlValidator validator(
+            CatalogReader catalogReader,
+            RelDataTypeFactory typeFactory,
+            SqlConformance sqlConformance
+    ) {
+        return new JetSqlValidator(catalogReader, typeFactory, sqlConformance);
     }
 
     @Override
-    public Object createUnsupportedOperationVisitor(Object catalogReader) {
-        return new UnsupportedOperationVisitor((CatalogReader) catalogReader);
+    public SqlVisitor<Void> unsupportedOperationVisitor(CatalogReader catalogReader) {
+        return new UnsupportedOperationVisitor(catalogReader);
     }
 
     @Override
-    public Object createConverter(
-            Object viewExpander,
-            Object validator,
-            Object catalogReader,
-            Object cluster,
-            Object convertletTable,
-            Object config
+    public SqlToRelConverter converter(
+            ViewExpander viewExpander,
+            SqlValidator sqlValidator,
+            CatalogReader catalogReader,
+            RelOptCluster relOptCluster,
+            SqlRexConvertletTable sqlRexConvertletTable,
+            Config config
     ) {
         return new JetSqlToRelConverter(
-                (ViewExpander) viewExpander,
-                (SqlValidator) validator,
-                (CatalogReader) catalogReader,
-                (RelOptCluster) cluster,
-                (SqlRexConvertletTable) convertletTable,
-                (Config) config,
+                viewExpander,
+                sqlValidator,
+                catalogReader,
+                relOptCluster,
+                sqlRexConvertletTable,
+                config,
                 catalog
         );
     }
 
     @Override
-    public Object createPlan(
-            Object parseResult0,
-            Object context0
+    public SqlPlan createPlan(
+            OptimizationTask task,
+            QueryParseResult parseResult,
+            OptimizerContext context
     ) {
-        QueryParseResult parseResult = (QueryParseResult) parseResult0;
-
-        OptimizerContext context = (OptimizerContext) context0;
         SqlNode node = parseResult.getNode();
 
         if (node instanceof SqlCreateExternalTable) {
@@ -190,7 +164,7 @@ public class JetSqlBackendImpl implements JetSqlBackend, ManagedService {
                                                      .collect(toList());
             ExternalTable externalTable = new ExternalTable(node.name(), node.type(), externalFields, node.options());
 
-            return new CreateExternalTablePlan(externalTable, node.getReplace(), node.ifNotExists(), this);
+            return new CreateExternalTablePlan(externalTable, node.getReplace(), node.ifNotExists(), sqlService);
         } else {
             QueryConvertResult convertedResult = context.convert(parseResult);
 
@@ -215,13 +189,13 @@ public class JetSqlBackendImpl implements JetSqlBackend, ManagedService {
                     node.getReplace(),
                     node.ifNotExists(),
                     populateTablePlan,
-                    this
+                    sqlService
             );
         }
     }
 
     private SqlPlan toRemoveTablePlan(SqlDropExternalTable sqlDropTable) {
-        return new RemoveExternalTablePlan(sqlDropTable.name(), sqlDropTable.ifExists(), this);
+        return new RemoveExternalTablePlan(sqlDropTable.name(), sqlDropTable.ifExists(), sqlService);
     }
 
     private ExecutionPlan toPlan(RelNode inputRel, OptimizerContext context) {
@@ -268,7 +242,7 @@ public class JetSqlBackendImpl implements JetSqlBackend, ManagedService {
 
         SqlRowMetadata rowMetadata = new SqlRowMetadata(columns);
 
-        return new ExecutionPlan(dag, isStreamRead[0], isInsert, queryId, rowMetadata, this);
+        return new ExecutionPlan(dag, isStreamRead[0], isInsert, queryId, rowMetadata, sqlService);
     }
 
     /**
@@ -298,67 +272,5 @@ public class JetSqlBackendImpl implements JetSqlBackend, ManagedService {
         CreateDagVisitor visitor = new CreateDagVisitor();
         physicalRel.visit(visitor);
         return visitor.getDag();
-    }
-
-    @Override
-    public SqlResult execute(SqlPlan plan, List<Object> params, long timeout, int pageSize) {
-        if (params != null && !params.isEmpty()) {
-            throw new JetException("Query parameters not yet supported");
-        }
-        if (timeout > 0) {
-            throw new JetException("Query timeout not supported");
-        }
-
-        return ((JetPlan) plan).execute(params, timeout, pageSize);
-    }
-
-    SqlResult execute(ExecutionPlan plan) {
-        RootResultConsumer consumer;
-        if (plan.isInsert()) {
-            consumer = null;
-        } else {
-            consumer = new BlockingRootResultConsumer();
-            consumer.setup(() -> {
-            });
-            Object oldValue = resultConsumerRegistry.put(plan.getQueryId(), consumer);
-            assert oldValue == null : oldValue;
-        }
-
-        // submit the job
-        Job job = jetInstance.newJob(plan.getDag());
-
-        if (plan.isInsert()) {
-            if (plan.isStreaming()) {
-                return SqlResultImpl.createUpdateCountResult(-1);
-            } else {
-                job.join();
-                // TODO return real updated row count
-                return SqlResultImpl.createUpdateCountResult(-1);
-            }
-        } else {
-            return new JetSqlResultImpl(plan.getQueryId(), consumer, plan.getRowMetadata());
-        }
-    }
-
-    SqlResult execute(CreateExternalTablePlan plan) {
-        catalog.createTable(plan.schema(), plan.replace(), plan.ifNotExists());
-        return SqlResultImpl.createUpdateCountResult(0L);
-    }
-
-    SqlResult execute(RemoveExternalTablePlan plan) {
-        catalog.removeTable(plan.name(), plan.ifExists());
-        return SqlResultImpl.createUpdateCountResult(0L);
-    }
-
-    @Override
-    public void init(NodeEngine nodeEngine, Properties properties) {
-    }
-
-    @Override
-    public void reset() {
-    }
-
-    @Override
-    public void shutdown(boolean terminate) {
     }
 }
