@@ -96,9 +96,10 @@ public abstract class CdcSource<T> {
 
     public void fillBuffer(SourceBuilder.TimestampedSourceBuffer<T> buf) {
         try {
-            initTaskIfNeeded();
+            if (task == null) {
+                task = startNewTask();
+            }
         } catch (Exception e) {
-            task = null;
             waitForInitRetry(reconnectBehaviour, e);
             return;
         }
@@ -126,19 +127,18 @@ public abstract class CdcSource<T> {
         }
     }
 
-    private void initTaskIfNeeded() throws Exception {
-        if (task == null) {
-            task = (SourceTask) connector.taskClass().getConstructor().newInstance();
-            task.initialize(new JetSourceTaskContext());
+    private SourceTask startNewTask() throws Exception {
+        SourceTask task = (SourceTask) connector.taskClass().getConstructor().newInstance();
+        task.initialize(new JetSourceTaskContext());
 
-            // Our DatabaseHistory implementation will be created by the
-            // following start() call, on this thread (blocking worker
-            // thread) and this is how we pass it the list it should
-            // use for storing history records.
-            THREAD_LOCAL_HISTORY.set(state.historyRecords);
-            task.start(taskConfig);
-            THREAD_LOCAL_HISTORY.remove();
-        }
+        // Our DatabaseHistory implementation will be created by the
+        // following start() call, on this thread (blocking worker
+        // thread) and this is how we pass it the list it should
+        // use for storing history records.
+        THREAD_LOCAL_HISTORY.set(state.historyRecords);
+        task.start(taskConfig);
+        THREAD_LOCAL_HISTORY.remove();
+        return task;
     }
 
     private boolean addToBuffer(SourceRecord sourceRecord, SourceBuilder.TimestampedSourceBuffer<T> buf) {
