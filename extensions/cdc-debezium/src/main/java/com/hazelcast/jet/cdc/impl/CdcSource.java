@@ -122,6 +122,7 @@ public abstract class CdcSource<T> {
             reconnect(reconnectBehaviour, ce);
         } catch (InterruptedException ie) {
             logger.warning("Waiting for data interrupted");
+            Thread.currentThread().interrupt();
         } catch (Exception e) {
             throw rethrow(e);
         }
