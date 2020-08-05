@@ -27,6 +27,7 @@ import java.util.Map.Entry;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 
 // TODO: use QueryTargetDescriptors instead ?
+@Deprecated
 class EntryRow implements Row {
 
     private final List<String> fieldNames;

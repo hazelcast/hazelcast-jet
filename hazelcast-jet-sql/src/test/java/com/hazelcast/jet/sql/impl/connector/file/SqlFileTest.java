@@ -20,8 +20,8 @@ import com.hazelcast.jet.sql.SqlTestSupport;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import static com.hazelcast.jet.sql.JetSqlConnector.AVRO_SERIALIZATION_FORMAT;
-import static com.hazelcast.jet.sql.JetSqlConnector.TO_SERIALIZATION_FORMAT;
+import static com.hazelcast.jet.sql.SqlConnector.AVRO_SERIALIZATION_FORMAT;
+import static com.hazelcast.jet.sql.SqlConnector.TO_SERIALIZATION_FORMAT;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 

@@ -20,7 +20,6 @@ import com.hazelcast.core.DistributedObject;
 import com.hazelcast.jet.config.JetClientConfig;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.core.JetTestSupport;
-import com.hazelcast.sql.impl.schema.ExternalCatalog;
 import com.hazelcast.test.HazelcastSerialClassRunner;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -80,7 +79,7 @@ public abstract class SimpleTestInClusterSupport extends JetTestSupport {
         }
         for (DistributedObject o : instances()[0].getHazelcastInstance().getDistributedObjects()) {
             // ignore the SQL catalog
-            if (o.getName().equals(ExternalCatalog.CATALOG_MAP_NAME)) {
+            if (o.getName().startsWith("__sql.")) { // TODO: extract ???
                 continue;
             }
             o.destroy();

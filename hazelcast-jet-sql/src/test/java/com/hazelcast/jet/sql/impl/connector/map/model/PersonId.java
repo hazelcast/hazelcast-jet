@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.sql.impl.connector.imap.model;
+package com.hazelcast.jet.sql.impl.connector.map.model;
 
 import java.io.Serializable;
 import java.util.Objects;

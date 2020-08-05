@@ -23,14 +23,14 @@ import com.hazelcast.jet.cdc.impl.ChangeRecordCdcSource;
 import com.hazelcast.jet.cdc.impl.ConstantSequenceExtractor;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Vertex;
-import com.hazelcast.jet.sql.JetSqlConnector;
+import com.hazelcast.jet.sql.SqlConnector;
 import com.hazelcast.jet.sql.impl.expression.MapRow;
+import com.hazelcast.jet.sql.impl.schema.ExternalField;
 import com.hazelcast.spi.impl.NodeEngine;
 import com.hazelcast.sql.impl.expression.ConstantExpression;
 import com.hazelcast.sql.impl.expression.Expression;
 import com.hazelcast.sql.impl.row.Row;
 import com.hazelcast.sql.impl.schema.ConstantTableStatistics;
-import com.hazelcast.sql.impl.schema.ExternalTable.ExternalField;
 import com.hazelcast.sql.impl.schema.Table;
 import com.hazelcast.sql.impl.schema.TableField;
 import com.hazelcast.sql.impl.type.QueryDataType;
@@ -50,7 +50,7 @@ import static com.hazelcast.jet.impl.util.Util.toList;
 import static com.hazelcast.jet.sql.impl.expression.ExpressionUtil.evaluate;
 import static com.hazelcast.sql.impl.type.QueryDataType.VARCHAR;
 
-public class CdcSqlConnector implements JetSqlConnector {
+public class CdcSqlConnector implements SqlConnector {
 
     public static final String TYPE_NAME = "com.hazelcast.Cdc";
     public static final String OPERATION = "__operation";

@@ -16,17 +16,17 @@
 
 package com.hazelcast.jet.sql.impl.connector.file;
 
+import com.hazelcast.jet.sql.impl.schema.ExternalField;
 import com.hazelcast.sql.impl.QueryException;
-import com.hazelcast.sql.impl.schema.ExternalTable.ExternalField;
 
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
-import static com.hazelcast.jet.sql.JetSqlConnector.AVRO_SERIALIZATION_FORMAT;
-import static com.hazelcast.jet.sql.JetSqlConnector.CSV_SERIALIZATION_FORMAT;
-import static com.hazelcast.jet.sql.JetSqlConnector.TO_SERIALIZATION_FORMAT;
-import static com.hazelcast.sql.impl.connector.SqlConnector.JSON_SERIALIZATION_FORMAT;
+import static com.hazelcast.jet.sql.SqlConnector.AVRO_SERIALIZATION_FORMAT;
+import static com.hazelcast.jet.sql.SqlConnector.CSV_SERIALIZATION_FORMAT;
+import static com.hazelcast.jet.sql.SqlConnector.JSON_SERIALIZATION_FORMAT;
+import static com.hazelcast.jet.sql.SqlConnector.TO_SERIALIZATION_FORMAT;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 

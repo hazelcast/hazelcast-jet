@@ -18,28 +18,71 @@ package com.hazelcast.jet.sql;
 
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Vertex;
-import com.hazelcast.sql.impl.connector.SqlConnector;
+import com.hazelcast.jet.sql.impl.schema.ExternalField;
+import com.hazelcast.spi.impl.NodeEngine;
 import com.hazelcast.sql.impl.expression.Expression;
 import com.hazelcast.sql.impl.schema.Table;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.List;
+import java.util.Map;
 
 /**
  * TODO
  */
-public interface JetSqlConnector extends SqlConnector {
+// TODO: merge with JetSqlConnector ???
+// TODO: make this class public for user connectors
+//   (TableSchemaField, Table, TableField, QueryDataType etc. need to be public then?)
+public interface SqlConnector {
 
     String TO_SERIALIZATION_FORMAT = "serialization.format";
 
+    String JAVA_SERIALIZATION_FORMAT = "java";
+    String PORTABLE_SERIALIZATION_FORMAT = "portable";
+    String JSON_SERIALIZATION_FORMAT = "json";
     String CSV_SERIALIZATION_FORMAT = "csv";
     String AVRO_SERIALIZATION_FORMAT = "avro";
+
+    /**
+     * A key in the table options (TO).
+     * <p>
+     * Specifies the accessed object name. If missing, the external table name
+     * itself is used.
+     */
+    String TO_OBJECT_NAME = "objectName";
+
+    /**
+     * Return the name of the connector as seen in the {@code TYPE} clause in
+     * the {@code CREATE EXTERNAL TABLE} command.
+     */
+    String typeName();
 
     /**
      * @return
      */
     boolean isStream();
+
+    /**
+     * Creates a Table object with the given fields. Will not attempt to
+     * connect to the remote service.
+     *
+     * @param externalFields optional list of fields. If {@code null},
+     *                       an attempt to resolve them automatically will be made. If not
+     *                       successful, an exception will be thrown. An empty list is
+     *                       valid, it means there are zero columns in the table: you can
+     *                       still query hidden fields or count the records. No validation
+     *                       is performed: if fields are given, no connection to remote
+     *                       source is made.
+     */
+    @Nonnull
+    Table createTable(
+            @Nonnull NodeEngine nodeEngine,
+            @Nonnull String schemaName,
+            @Nonnull String tableName,
+            @Nonnull Map<String, String> options,
+            @Nonnull List<ExternalField> externalFields
+    );
 
     /**
      * @return

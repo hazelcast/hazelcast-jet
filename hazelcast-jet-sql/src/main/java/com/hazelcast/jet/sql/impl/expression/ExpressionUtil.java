@@ -76,6 +76,7 @@ public final class ExpressionUtil {
      * evaluates the predicate and returns null if it didn't pass. Then it evaluates
      * all the projections
      */
+    @Deprecated // TODO: use descriptors/targets
     public static FunctionEx<Entry<Object, Object>, Object[]> projectionFn(
             Table table,
             Expression<Boolean> predicate,

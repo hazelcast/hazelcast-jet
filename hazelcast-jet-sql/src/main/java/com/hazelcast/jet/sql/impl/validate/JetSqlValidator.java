@@ -16,50 +16,49 @@
 
 package com.hazelcast.jet.sql.impl.validate;
 
-import com.hazelcast.jet.sql.JetSqlConnector;
-import com.hazelcast.sql.impl.calcite.parse.SqlExtendedInsert;
+import com.hazelcast.jet.sql.SqlConnector;
+import com.hazelcast.jet.sql.impl.parse.SqlExtendedInsert;
 import com.hazelcast.sql.impl.calcite.schema.HazelcastTable;
-import org.apache.calcite.prepare.Prepare.CatalogReader;
-import org.apache.calcite.runtime.CalciteContextException;
+import com.hazelcast.sql.impl.calcite.validate.HazelcastSqlValidator;
+import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.runtime.Resources;
+import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlNode;
-import org.apache.calcite.sql.SqlUtil;
-import org.apache.calcite.sql.parser.SqlParserPos;
-import org.apache.calcite.sql.validate.SqlValidatorException;
+import org.apache.calcite.sql.validate.SqlConformance;
+import org.apache.calcite.sql.validate.SqlValidatorCatalogReader;
 
 import static com.hazelcast.jet.sql.impl.connector.SqlConnectorUtil.getJetSqlConnector;
 
-// TODO: most probably should be moved to HazelcastSqlValidator when IMDG starts supporting inserts
-public final class JetSqlValidator {
+public class JetSqlValidator extends HazelcastSqlValidator {
 
     private static final JetSqlValidatorResource RESOURCES = Resources.create(JetSqlValidatorResource.class);
 
-    private JetSqlValidator() {
+    public JetSqlValidator(
+            SqlValidatorCatalogReader catalogReader,
+            RelDataTypeFactory typeFactory,
+            SqlConformance conformance
+    ) {
+        super(JetSqlOperatorTable.instance(), catalogReader, typeFactory, conformance);
     }
 
-    public static Object validate(
-            Object catalogReader,
-            Object node
-    ) {
-        CatalogReader catalogReader0 = (CatalogReader) catalogReader;
+    @Override
+    public SqlNode validate(SqlNode topNode) {
+        if (topNode.getKind().belongsTo(SqlKind.DDL)) {
+            topNode.validate(this, getEmptyScope());
+            return topNode;
+        }
 
-        if (node instanceof SqlExtendedInsert) {
-            SqlExtendedInsert insert = ((SqlExtendedInsert) node);
-            HazelcastTable table = catalogReader0.getTable(insert.tableNames()).unwrap(HazelcastTable.class);
-            JetSqlConnector connector = getJetSqlConnector(table.getTarget());
+        SqlNode validated = super.validate(topNode);
+
+        if (validated instanceof SqlExtendedInsert) {
+            SqlExtendedInsert insert = ((SqlExtendedInsert) validated);
+            HazelcastTable table = getCatalogReader().getTable(insert.tableNames()).unwrap(HazelcastTable.class);
+            SqlConnector connector = getJetSqlConnector(table.getTarget());
             if (!insert.isOverwrite() && !connector.supportsPlainInserts()) {
                 throw newValidationError(insert,
                         RESOURCES.plainInsertNotSupported(connector.getClass().getSimpleName()));
             }
         }
-        return node;
-    }
-
-    private static CalciteContextException newValidationError(
-            SqlNode node,
-            Resources.ExInst<SqlValidatorException> e
-    ) {
-        SqlParserPos pos = node.getParserPosition();
-        return SqlUtil.newContextException(pos, e);
+        return validated;
     }
 }

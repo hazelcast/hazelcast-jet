@@ -14,37 +14,47 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.sql.impl.connector.imap.model;
+package com.hazelcast.jet.sql.impl.connector.map.model;
 
 import java.io.Serializable;
 import java.util.Objects;
 
 @SuppressWarnings("unused")
-public class InsuredPerson extends Person implements Serializable {
+public class Person implements Serializable {
 
-    private long ssn;
+    private int id;
+    private String name;
 
-    public InsuredPerson() {
+    public Person() {
     }
 
-    public InsuredPerson(int id, String name, long ssn) {
-        super(id, name);
-        this.ssn = ssn;
+    public Person(int id, String name) {
+        this.id = id;
+        this.name = name;
     }
 
-    public long getSsn() {
-        return ssn;
+    public int getId() {
+        return id;
     }
 
-    public void setSsn(long ssn) {
-        this.ssn = ssn;
+    public void setId(int id) {
+        this.id = id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
     }
 
     @Override
     public String toString() {
-        return "InsuredPerson{" +
-                "ssn='" + ssn + '\'' +
-                "} " + super.toString();
+        return "Person{" +
+                "id=" + id +
+                ", name=" + name +
+                '}';
     }
 
     @Override
@@ -55,15 +65,13 @@ public class InsuredPerson extends Person implements Serializable {
         if (o == null || getClass() != o.getClass()) {
             return false;
         }
-        if (!super.equals(o)) {
-            return false;
-        }
-        InsuredPerson that = (InsuredPerson) o;
-        return Objects.equals(ssn, that.ssn);
+        Person person = (Person) o;
+        return id == person.id &&
+                Objects.equals(name, person.name);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(super.hashCode(), ssn);
+        return Objects.hash(id, name);
     }
 }
