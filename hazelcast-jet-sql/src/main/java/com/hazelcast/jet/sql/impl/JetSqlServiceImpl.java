@@ -116,12 +116,12 @@ public class JetSqlServiceImpl implements JetSqlService, ManagedService {
 
     SqlResult execute(CreateExternalTablePlan plan) {
         catalog.createTable(plan.schema(), plan.replace(), plan.ifNotExists());
-        return SqlResultImpl.createUpdateCountResult(0L);
+        return SqlResultImpl.createUpdateCountResult(-1);
     }
 
     SqlResult execute(RemoveExternalTablePlan plan) {
         catalog.removeTable(plan.name(), plan.ifExists());
-        return SqlResultImpl.createUpdateCountResult(0L);
+        return SqlResultImpl.createUpdateCountResult(-1);
     }
 
     @Override
