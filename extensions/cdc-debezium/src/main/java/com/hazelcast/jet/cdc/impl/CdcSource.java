@@ -64,54 +64,33 @@ public abstract class CdcSource<T> {
 
     private final ILogger logger;
 
-    private final Map<String, String> properties;
-    private final SourceConnector connector;
-    private final Map<String, String> taskConfig;
+    private final Properties properties;
 
     private final long reconnectIntervalNanos;
     private final ReconnectBehaviour reconnectBehaviour;
 
     private State state = new State();
+    private SourceConnector connector;
+    private Map<String, String> taskConfig;
     private SourceTask task;
-    private Long sleepUntilNanoTime = null;
+    private Long sleepUntilNanoTime;
 
     CdcSource(Processor.Context context, Properties properties) {
         this.logger = context.logger();
-        this.properties = (Map<String, String>) (Map) properties;
-
-        try {
-            connector = newInstance(properties, CONNECTOR_CLASS_PROPERTY);
-            connector.initialize(new JetConnectorContext());
-
-            reconnectIntervalNanos = getReconnectIntervalNanos(properties);
-            reconnectBehaviour = getReconnectBehaviour(properties);
-
-            connect();
-            taskConfig = connector.taskConfigs(1).get(0);
-        } catch (Exception e) {
-            throw rethrow(e);
-        }
+        this.properties = properties;
+        reconnectIntervalNanos = getReconnectIntervalNanos(properties);
+        reconnectBehaviour = getReconnectBehaviour(properties);
     }
 
     public void destroy() {
-        disconnect();
+        task.stop();
+        task = null;
+        connector.stop();
+        connector = null;
     }
 
     public void fillBuffer(SourceBuilder.TimestampedSourceBuffer<T> buf) {
-        if (sleepUntilNanoTime != null) {
-            if (System.nanoTime() < sleepUntilNanoTime) {
-                return;
-            } else {
-                sleepUntilNanoTime = null;
-            }
-        }
-
-        try {
-            if (task == null) {
-                task = startNewTask();
-            }
-        } catch (Exception e) {
-            waitForInitRetry(reconnectBehaviour, e);
+        if (isSleepNeeded() || !isConnectorReady() || !isTaskReady()) {
             return;
         }
 
@@ -139,6 +118,59 @@ public abstract class CdcSource<T> {
         }
     }
 
+    private boolean isSleepNeeded() {
+        if (sleepUntilNanoTime != null) {
+            if (System.nanoTime() < sleepUntilNanoTime) {
+                return true;
+            }
+            sleepUntilNanoTime = null;
+        }
+        return false;
+    }
+
+    private boolean isConnectorReady() {
+        try {
+            if (connector == null) {
+                connector = startNewConnector();
+                taskConfig = connector.taskConfigs(1).get(0);
+            }
+            return true;
+        } catch (Exception e) {
+            throw rethrow(e);
+        }
+    }
+
+    private SourceConnector startNewConnector() throws Exception {
+        SourceConnector connector = newInstance(properties, CONNECTOR_CLASS_PROPERTY);
+        connector.initialize(new JetConnectorContext());
+        connector.start((Map) properties);
+        return connector;
+    }
+
+    private boolean isTaskReady() {
+        try {
+            if (task == null) {
+                task = startNewTask();
+            }
+            return true;
+        } catch (Exception e) {
+            switch (reconnectBehaviour) {
+                case FAIL:
+                    logger.warning("Initializing connector task failed, giving up: " + e.getMessage());
+                    throw new JetException("Initializing connector task failed", e);
+                case RECONNECT:
+                case CLEAR_STATE_AND_RECONNECT:
+                    logger.warning("Initializing connector task failed, retrying in " +
+                            NANOSECONDS.toMillis(reconnectIntervalNanos) + "ms: " + e.getMessage());
+                    sleepUntilNanoTime = System.nanoTime() + reconnectIntervalNanos;
+                    break;
+                default:
+                    throw new RuntimeException("Programming error, unhandled reconnect behaviour: " + reconnectBehaviour);
+            }
+            return false;
+        }
+    }
+
     private SourceTask startNewTask() throws Exception {
         SourceTask task = (SourceTask) connector.taskClass().getConstructor().newInstance();
         task.initialize(new JetSourceTaskContext());
@@ -149,18 +181,9 @@ public abstract class CdcSource<T> {
         // use for storing history records.
         THREAD_LOCAL_HISTORY.set(state.historyRecords);
         task.start(taskConfig);
+        System.err.println("### task START");
         THREAD_LOCAL_HISTORY.remove();
         return task;
-    }
-
-    private boolean addToBuffer(SourceRecord sourceRecord, SourceBuilder.TimestampedSourceBuffer<T> buf) {
-        T t = mapToOutput(sourceRecord);
-        if (t != null) {
-            long timestamp = extractTimestamp(sourceRecord);
-            buf.add(t, timestamp);
-            return true;
-        }
-        return false;
     }
 
     private void reconnect(ReconnectBehaviour behaviour, ConnectException ce) {
@@ -171,49 +194,28 @@ public abstract class CdcSource<T> {
                 logger.warning("Connection to database lost, will attempt to reconnect and retry operations from " +
                         "scratch: " + ce.getMessage());
 
-                disconnect();
+                destroy();
                 state = new State();
-                connect();
                 return;
             case RECONNECT:
                 logger.warning("Connection to database lost, will attempt to reconnect and resume operations: " +
                         ce.getMessage());
 
-                disconnect();
-                connect();
+                destroy();
                 return;
             default:
                 throw new RuntimeException("Programming error, unhandled reconnect behaviour: " + behaviour);
         }
     }
 
-    private void waitForInitRetry(ReconnectBehaviour behaviour, Exception e) {
-        switch (behaviour) {
-            case FAIL:
-                logger.warning("Initializing connector task failed, giving up: " + e.getMessage());
-                throw new JetException("Initializing connector task failed", e);
-            case RECONNECT:
-            case CLEAR_STATE_AND_RECONNECT:
-                logger.warning("Initializing connector task failed, retrying in " +
-                        NANOSECONDS.toMillis(reconnectIntervalNanos) + "ms: " + e.getMessage());
-                sleepUntilNanoTime = System.nanoTime() + reconnectIntervalNanos;
-                return;
-            default:
-                throw new RuntimeException("Programming error, unhandled reconnect behaviour: " + behaviour);
+    private boolean addToBuffer(SourceRecord sourceRecord, SourceBuilder.TimestampedSourceBuffer<T> buf) {
+        T t = mapToOutput(sourceRecord);
+        if (t != null) {
+            long timestamp = extractTimestamp(sourceRecord);
+            buf.add(t, timestamp);
+            return true;
         }
-    }
-
-    private void connect() {
-        connector.start(properties);
-    }
-
-    private void disconnect() {
-        try {
-            task.stop();
-        } finally {
-            task = null;
-            connector.stop();
-        }
+        return false;
     }
 
     public State createSnapshot() {
