@@ -63,6 +63,7 @@ import static org.testcontainers.containers.MySQLContainer.MYSQL_PORT;
 
 @RunWith(Parameterized.class)
 @Parameterized.UseParametersRunnerFactory(HazelcastSerialParametersRunnerFactory.class)
+@Category(NightlyTest.class)
 public class MySqlCdcNetworkIntegrationTest extends AbstractCdcIntegrationTest {
 
     private static final long CONNECTION_KEEPALIVE_MS = SECONDS.toMillis(1);
@@ -76,7 +77,6 @@ public class MySqlCdcNetworkIntegrationTest extends AbstractCdcIntegrationTest {
     }
 
     @Test
-    @Category(NightlyTest.class)
     public void when_noDatabaseToConnectTo() {
         Pipeline pipeline = initPipeline("localhost", MYSQL_PORT);
 
@@ -112,7 +112,6 @@ public class MySqlCdcNetworkIntegrationTest extends AbstractCdcIntegrationTest {
     }
 
     @Test
-    @Category(NightlyTest.class)
     public void when_networkDisconnectDuringSnapshotting_then_jetSourceIsStuckUntilReconnect() throws Exception {
         Network network = initNetwork();
         MySQLContainer<?> mysql = initMySql(network, null);
@@ -151,7 +150,6 @@ public class MySqlCdcNetworkIntegrationTest extends AbstractCdcIntegrationTest {
     }
 
     @Test
-    @Category(NightlyTest.class)
     public void when_databaseShutdownDuringSnapshotting() throws Exception {
         MySQLContainer<?> mysql = initMySql(null, MYSQL_PORT);
         Pipeline pipeline = initPipeline(mysql.getContainerIpAddress(), MYSQL_PORT);
@@ -189,7 +187,6 @@ public class MySqlCdcNetworkIntegrationTest extends AbstractCdcIntegrationTest {
     }
 
     @Test
-    @Category(NightlyTest.class)
     public void when_networkDisconnectDuringBinlogRead_then_connectorReconnectsInternally() throws Exception {
         Network network = initNetwork();
         MySQLContainer<?> mysql = initMySql(network, null);
@@ -230,7 +227,6 @@ public class MySqlCdcNetworkIntegrationTest extends AbstractCdcIntegrationTest {
     }
 
     @Test
-    @Category(NightlyTest.class)
     public void when_databaseShutdownDuringBinlogReading() throws Exception {
         MySQLContainer<?> mysql = initMySql(null, MYSQL_PORT);
         Pipeline pipeline = initPipeline(mysql.getContainerIpAddress(), MYSQL_PORT);

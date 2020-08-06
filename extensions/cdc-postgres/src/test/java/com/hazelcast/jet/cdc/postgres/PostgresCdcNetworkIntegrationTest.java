@@ -62,6 +62,7 @@ import static org.testcontainers.containers.PostgreSQLContainer.POSTGRESQL_PORT;
 
 @RunWith(Parameterized.class)
 @Parameterized.UseParametersRunnerFactory(HazelcastSerialParametersRunnerFactory.class)
+@Category(NightlyTest.class)
 public class PostgresCdcNetworkIntegrationTest extends AbstractCdcIntegrationTest {
 
     private static final long RECONNECT_INTERVAL_MS = SECONDS.toMillis(1);
@@ -75,7 +76,6 @@ public class PostgresCdcNetworkIntegrationTest extends AbstractCdcIntegrationTes
     }
 
     @Test
-    @Category(NightlyTest.class)
     public void when_noDatabaseToConnectTo() {
         Pipeline pipeline = initPipeline("localhost", POSTGRESQL_PORT);
 
@@ -110,7 +110,6 @@ public class PostgresCdcNetworkIntegrationTest extends AbstractCdcIntegrationTes
     }
 
     @Test
-    @Category(NightlyTest.class)
     public void when_shortNetworkDisconnectDuringSnapshotting_then_connectorDoesNotNoticeAnything() throws Exception {
         Network network = initNetwork();
         PostgreSQLContainer<?> postgres = initPostgres(network, null);
@@ -150,7 +149,6 @@ public class PostgresCdcNetworkIntegrationTest extends AbstractCdcIntegrationTes
     }
 
     @Test
-    @Category(NightlyTest.class)
     public void when_databaseShutdownOrLongDisconnectDuringSnapshotting() throws Exception {
         PostgreSQLContainer<?> postgres = initPostgres(null, POSTGRESQL_PORT);
         Pipeline pipeline = initPipeline(postgres.getContainerIpAddress(), POSTGRESQL_PORT);
@@ -188,7 +186,6 @@ public class PostgresCdcNetworkIntegrationTest extends AbstractCdcIntegrationTes
     }
 
     @Test
-    @Category(NightlyTest.class)
     public void when_shortConnectionLossDuringBinlogReading_then_connectorDoesNotNoticeAnything() throws Exception {
         Network network = initNetwork();
         PostgreSQLContainer<?> postgres = initPostgres(network, null);
@@ -231,7 +228,6 @@ public class PostgresCdcNetworkIntegrationTest extends AbstractCdcIntegrationTes
     }
 
     @Test
-    @Category(NightlyTest.class)
     public void when_databaseShutdownOrLongDisconnectDuringBinlogReading() throws Exception {
         if (RECONNECT.equals(reconnectBehaviour)) {
             return; //doesn't make sense to test this mode with this scenario
