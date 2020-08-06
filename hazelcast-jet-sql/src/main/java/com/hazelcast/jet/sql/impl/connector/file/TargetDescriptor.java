@@ -16,17 +16,15 @@
 
 package com.hazelcast.jet.sql.impl.connector.file;
 
-import com.hazelcast.function.FunctionEx;
+import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.sql.impl.expression.Expression;
 import com.hazelcast.sql.impl.schema.TableField;
 
-import java.nio.file.Path;
 import java.util.List;
-import java.util.stream.Stream;
 
 interface TargetDescriptor {
 
-    FunctionEx<? super Path, ? extends Stream<Object[]>> createReader(
+    ProcessorMetaSupplier processor(
             List<TableField> fields,
             Expression<Boolean> predicate,
             List<Expression<?>> projection

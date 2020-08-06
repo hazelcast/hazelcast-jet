@@ -37,7 +37,7 @@ public class SqlFileTest extends SqlTestSupport {
                 + ", age INT"
                 + ") TYPE \"" + FileSqlConnector.TYPE_NAME + "\" "
                 + "OPTIONS ("
-                + "\"" + FileSqlConnector.TO_DIRECTORY + "\" '" + RESOURCES_PATH + "'"
+                + "\"" + FileSqlConnector.TO_PATH + "\" '" + RESOURCES_PATH + "'"
                 + ", \"" + FileSqlConnector.TO_GLOB + "\" '" + "users.avro" + "'"
                 + ", \"" + TO_SERIALIZATION_FORMAT + "\" '" + AVRO_SERIALIZATION_FORMAT + "'"
                 + ")"
@@ -132,7 +132,7 @@ public class SqlFileTest extends SqlTestSupport {
     public void file_tableFunction() {
         assertRowsEventuallyAnyOrder(
                 "SELECT username, age FROM TABLE (" +
-                        "FILE (format => 'avro', directory => '" + RESOURCES_PATH + "', glob => 'users.avro')" +
+                        "FILE (format => 'avro', path => '" + RESOURCES_PATH + "', glob => 'users.avro')" +
                         ")",
                 asList(
                         new Row("User0", 0),

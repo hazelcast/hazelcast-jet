@@ -25,49 +25,21 @@ import java.util.List;
 
 class FileTable extends JetTable {
 
-    private final String directory;
-    private final String glob;
-    private final boolean sharedFileSystem;
-
     private final TargetDescriptor targetDescriptor;
 
     FileTable(
             SqlConnector sqlConnector,
             String schemaName,
             String name,
-            String directory,
-            String glob,
-            boolean sharedFileSystem,
             List<TableField> fields,
             TargetDescriptor targetDescriptor
     ) {
         super(sqlConnector, fields, schemaName, name, new ConstantTableStatistics(0));
 
-        this.directory = directory;
-        this.glob = glob;
-        this.sharedFileSystem = sharedFileSystem;
-
         this.targetDescriptor = targetDescriptor;
-    }
-
-    String getDirectory() {
-        return directory;
-    }
-
-    String getGlob() {
-        return glob;
-    }
-
-    boolean isSharedFileSystem() {
-        return sharedFileSystem;
     }
 
     TargetDescriptor getTargetDescriptor() {
         return targetDescriptor;
-    }
-
-    @Override
-    public String toString() {
-        return getClass().getSimpleName() + "{directory=" + directory + '}';
     }
 }

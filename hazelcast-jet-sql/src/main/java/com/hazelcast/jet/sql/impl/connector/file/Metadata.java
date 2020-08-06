@@ -22,22 +22,19 @@ import java.util.List;
 
 class Metadata {
 
-    private final List<TableField> fields;
     private final TargetDescriptor targetDescriptor;
+    private final List<TableField> fields;
 
-    Metadata(
-            List<TableField> fields,
-            TargetDescriptor targetDescriptor
-    ) {
-        this.fields = fields;
+    Metadata(TargetDescriptor targetDescriptor, List<TableField> fields) {
         this.targetDescriptor = targetDescriptor;
+        this.fields = fields;
     }
 
-    List<TableField> getFields() {
-        return fields;
-    }
-
-    TargetDescriptor getTargetDescriptor() {
+    TargetDescriptor targetDescriptor() {
         return targetDescriptor;
+    }
+
+    List<TableField> fields() {
+        return fields;
     }
 }

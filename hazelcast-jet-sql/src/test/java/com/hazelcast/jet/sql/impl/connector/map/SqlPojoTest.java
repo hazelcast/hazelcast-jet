@@ -29,6 +29,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.util.Date;
 import java.util.GregorianCalendar;
@@ -348,6 +349,10 @@ public class SqlPojoTest extends SqlTestSupport {
                                      .withZoneSameInstant(systemDefault())
                                      .toOffsetDateTime()
                 )));
+    }
+
+    protected static ZoneOffset localOffset() {
+        return systemDefault().getRules().getOffset(LocalDateTime.now());
     }
 
     private static String createMapWithRandomName() {

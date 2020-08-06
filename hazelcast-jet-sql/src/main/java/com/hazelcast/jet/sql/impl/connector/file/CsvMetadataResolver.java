@@ -16,8 +16,12 @@
 
 package com.hazelcast.jet.sql.impl.connector.file;
 
+import com.hazelcast.function.BiFunctionEx;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.function.SupplierEx;
+import com.hazelcast.jet.core.ProcessorMetaSupplier;
+import com.hazelcast.jet.hadoop.impl.ReadHadoopNewApiP;
+import com.hazelcast.jet.impl.connector.ReadFilesP;
 import com.hazelcast.jet.sql.impl.connector.RowProjector;
 import com.hazelcast.jet.sql.impl.extract.CsvQueryTarget;
 import com.hazelcast.jet.sql.impl.schema.ExternalField;
@@ -25,6 +29,9 @@ import com.hazelcast.sql.impl.QueryException;
 import com.hazelcast.sql.impl.expression.Expression;
 import com.hazelcast.sql.impl.schema.TableField;
 import com.hazelcast.sql.impl.type.QueryDataType;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
@@ -37,45 +44,99 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
-import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.TO_CHARSET;
-import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.TO_DELIMITER;
-import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.TO_HEADER;
-import static java.nio.charset.StandardCharsets.UTF_8;
+import static com.hazelcast.jet.hadoop.impl.SerializableConfiguration.asSerializable;
+import static java.util.stream.Collectors.toMap;
 
 final class CsvMetadataResolver {
 
     private CsvMetadataResolver() {
     }
 
-    static Metadata resolve(
-            List<ExternalField> externalFields,
-            Map<String, String> options,
-            String directory,
-            String glob
-    ) throws IOException {
-        String charset = options.getOrDefault(TO_CHARSET, UTF_8.name());
-        boolean header = Boolean.parseBoolean(options.getOrDefault(TO_HEADER, "false"));
-        String delimiter = options.getOrDefault(TO_DELIMITER, ",");
-
+    static Metadata resolve(List<ExternalField> externalFields, FileOptions options) throws IOException {
         return !externalFields.isEmpty()
-                ? resolveFromFields(externalFields, charset, header, delimiter)
-                : resolveFromSample(directory, glob, charset, delimiter);
+                ? resolveFromFields(externalFields, options)
+                : resolveFromSample(options);
     }
 
-    private static Metadata resolveFromFields(
-            List<ExternalField> externalFields,
-            String charset,
-            boolean header,
-            String delimiter
-    ) {
+    private static Metadata resolveFromFields(List<ExternalField> externalFields, FileOptions options) {
+        String path = options.path();
+        String glob = options.glob();
+        boolean sharedFileSystem = options.sharedFileSystem();
+        String charset = options.charset();
+        String delimiter = options.delimiter();
+        boolean header = options.header();
+
+        List<TableField> fields = fields(externalFields);
+
+        return new Metadata(
+                new CsvTargetDescriptor(path, glob, sharedFileSystem, charset, delimiter, header),
+                fields
+        );
+    }
+
+    private static Metadata resolveFromSample(FileOptions options) throws IOException {
+        String path = options.path();
+        String glob = options.glob();
+        boolean sharedFileSystem = options.sharedFileSystem();
+        String charset = options.charset();
+        String delimiter = options.delimiter();
+
+        String line = line(path, glob);
+        if (line == null) {
+            throw new IllegalArgumentException("No data found in '" + path + "/" + glob + "'");
+        }
+
+        Map<String, TableField> fields = new HashMap<>();
+
+        String[] headers = line.split(delimiter);
+        for (String header : headers) {
+            TableField field = new FileTableField(header, QueryDataType.VARCHAR);
+
+            fields.putIfAbsent(field.getName(), field);
+        }
+
+        return new Metadata(
+                new CsvTargetDescriptor(path, glob, sharedFileSystem, charset, delimiter, true),
+                new ArrayList<>(fields.values())
+        );
+    }
+
+    private static String line(String directory, String glob) throws IOException {
+        for (Path path : Files.newDirectoryStream(Paths.get(directory), glob)) {
+            Optional<String> line = Files.lines(path).findFirst();
+            if (line.isPresent()) {
+                return line.get();
+            }
+        }
+        return null;
+    }
+
+    static Metadata resolve(List<ExternalField> externalFields, FileOptions options, Job job) throws IOException {
+        // TODO: resolve from sample
+        if (externalFields.isEmpty()) {
+            throw QueryException.error("Empty column list");
+        }
+
+        String path = options.path();
+        String delimiter = options.delimiter();
+
+        TextInputFormat.addInputPath(job, new org.apache.hadoop.fs.Path(path));
+        job.setInputFormatClass(TextInputFormat.class);
+
+        List<TableField> fields = fields(externalFields);
+
+        return new Metadata(
+                new HadoopCsvTargetDescriptor(delimiter, job.getConfiguration()),
+                fields
+        );
+    }
+
+    private static List<TableField> fields(List<ExternalField> externalFields) {
         List<TableField> fields = new ArrayList<>();
-        Map<String, Integer> indicesByNames = new HashMap<>();
-
-        for (int i = 0; i < externalFields.size(); i++) {
-            ExternalField externalField = externalFields.get(i);
-
+        for (ExternalField externalField : externalFields) {
             String name = externalField.name();
             QueryDataType type = externalField.type();
 
@@ -87,80 +148,49 @@ final class CsvMetadataResolver {
             TableField field = new FileTableField(name, type);
 
             fields.add(field);
-            indicesByNames.put(field.getName(), i);
         }
-
-        return new Metadata(
-                fields,
-                new CsvTargetDescriptor(charset, delimiter, header, indicesByNames)
-        );
+        return fields;
     }
 
-    private static Metadata resolveFromSample(
-            String directory,
-            String glob,
-            String charset,
-            String delimiter
-    ) throws IOException {
-        String line = line(directory, glob);
-        if (line == null) {
-            throw new IllegalArgumentException("No data found in '" + directory + "/" + glob + "'");
-        }
-
-        Map<String, TableField> fields = new HashMap<>();
-        Map<String, Integer> indicesByNames = new HashMap<>();
-
-        String[] headers = line.split(delimiter);
-        for (int i = 0; i < headers.length; i++) {
-            String header = headers[i];
-
-            TableField field = new FileTableField(header, QueryDataType.VARCHAR);
-
-            if (fields.putIfAbsent(field.getName(), field) == null) {
-                indicesByNames.put(field.getName(), i);
-            }
-        }
-
-        return new Metadata(
-                new ArrayList<>(fields.values()),
-                new CsvTargetDescriptor(charset, delimiter, true, indicesByNames)
-        );
+    private static Map<String, Integer> indices(List<TableField> fields) {
+        return IntStream.range(0, fields.size()).boxed().collect(toMap(i -> fields.get(i).getName(), i -> i));
     }
 
-    private static String line(
-            String directory,
-            String glob
-    ) throws IOException {
-        for (Path path : Files.newDirectoryStream(Paths.get(directory), glob)) {
-            Optional<String> line = Files.lines(path).findFirst();
-            if (line.isPresent()) {
-                return line.get();
-            }
-        }
-        return null;
+    private static String[] paths(List<TableField> fields) {
+        return fields.stream().map(TableField::getName).toArray(String[]::new);
+    }
+
+    private static QueryDataType[] types(List<TableField> fields) {
+        return fields.stream().map(TableField::getType).toArray(QueryDataType[]::new);
     }
 
     private static final class CsvTargetDescriptor implements TargetDescriptor {
 
+        private final String path;
+        private final String glob;
+        private final boolean sharedFileSystem;
         private final String charset;
         private final String delimiter;
         private final boolean containsHeader;
-        private final Map<String, Integer> indicesByNames;
 
         private CsvTargetDescriptor(
+                String path,
+                String glob,
+                boolean sharedFileSystem,
                 String charset,
                 String delimiter,
-                boolean containsHeader,
-                Map<String, Integer> indicesByNames
+                boolean containsHeader
         ) {
+            this.path = path;
+            this.glob = glob;
+            this.sharedFileSystem = sharedFileSystem;
             this.charset = charset;
             this.delimiter = delimiter;
             this.containsHeader = containsHeader;
-            this.indicesByNames = indicesByNames;
         }
 
         @Override
-        public FunctionEx<? super Path, ? extends Stream<Object[]>> createReader(
+        public ProcessorMetaSupplier processor(
                 List<TableField> fields,
                 Expression<Boolean> predicate,
                 List<Expression<?>> projection
@@ -168,14 +198,14 @@ final class CsvMetadataResolver {
             String charset = this.charset;
             long linesToSkip = this.containsHeader ? 1 : 0;
             String delimiter = this.delimiter;
-            Map<String, Integer> indicesByNames = this.indicesByNames;
-            String[] paths = fields.stream().map(TableField::getName).toArray(String[]::new);
-            QueryDataType[] types = fields.stream().map(TableField::getType).toArray(QueryDataType[]::new);
+            Map<String, Integer> indicesByNames = indices(fields);
+            String[] paths = paths(fields);
+            QueryDataType[] types = types(fields);
 
             SupplierEx<RowProjector> projectorSupplier =
                     () -> new RowProjector(new CsvQueryTarget(indicesByNames), paths, types, predicate, projection);
 
-            return path -> {
+            FunctionEx<? super Path, ? extends Stream<Object[]>> readFileFn = path -> {
                 RowProjector projector = projectorSupplier.get();
 
                 return Files.lines(path, Charset.forName(charset))
@@ -184,6 +214,44 @@ final class CsvMetadataResolver {
                             .map(projector::project)
                             .filter(Objects::nonNull);
             };
+
+            return ReadFilesP.metaSupplier(path, glob, sharedFileSystem, readFileFn);
+        }
+    }
+
+    private static class HadoopCsvTargetDescriptor implements TargetDescriptor {
+
+        private final String delimiter;
+        private final Configuration configuration;
+
+        private HadoopCsvTargetDescriptor(
+                String delimiter,
+                Configuration configuration
+        ) {
+            this.delimiter = delimiter;
+            this.configuration = configuration;
+        }
+
+        @Override
+        public ProcessorMetaSupplier processor(
+                List<TableField> fields,
+                Expression<Boolean> predicate,
+                List<Expression<?>> projection
+        ) {
+            String delimiter = this.delimiter;
+            Map<String, Integer> indicesByNames = indices(fields);
+            String[] paths = paths(fields);
+            QueryDataType[] types = types(fields);
+
+            SupplierEx<RowProjector> projectorSupplier =
+                    () -> new RowProjector(new CsvQueryTarget(indicesByNames), paths, types, predicate, projection);
+
+            SupplierEx<BiFunctionEx<Object, Object, Object[]>> projectionSupplierFn = () -> {
+                RowProjector projector = projectorSupplier.get();
+                return (position, line) -> projector.project(line.toString().split(delimiter));
+            };
+
+            return new ReadHadoopNewApiP.MetaSupplier<>(asSerializable(configuration), projectionSupplierFn);
         }
     }
 }

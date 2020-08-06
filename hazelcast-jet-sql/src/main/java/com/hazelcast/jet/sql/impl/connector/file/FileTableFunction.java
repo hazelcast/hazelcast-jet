@@ -40,7 +40,7 @@ import static com.hazelcast.jet.impl.util.Util.toList;
 import static com.hazelcast.jet.sql.SqlConnector.TO_SERIALIZATION_FORMAT;
 import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.TO_CHARSET;
 import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.TO_DELIMITER;
-import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.TO_DIRECTORY;
+import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.TO_PATH;
 import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.TO_GLOB;
 import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.TO_HEADER;
 import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.TO_SHARED_FILE_SYSTEM;
@@ -50,11 +50,12 @@ public final class FileTableFunction implements JetTableFunction {
 
     public static final FileTableFunction INSTANCE = new FileTableFunction();
 
+    // TODO: replace format specific options with map or FILE() -> CSV()/JSON()/AVRO()
     private static final Map<String, FunctionParameter> PARAMETERS_BY_CONNECTOR_NAMES =
             new LinkedHashMap<String, FunctionParameter>() {{
                 int ordinal = 0;
                 put(TO_SERIALIZATION_FORMAT, new JetTableFunctionParameter(ordinal++, "format", String.class, true));
-                put(TO_DIRECTORY, new JetTableFunctionParameter(ordinal++, "directory", String.class, true));
+                put(TO_PATH, new JetTableFunctionParameter(ordinal++, "path", String.class, true));
                 put(TO_GLOB, new JetTableFunctionParameter(ordinal++, "glob", String.class, false));
                 put(TO_SHARED_FILE_SYSTEM, new JetTableFunctionParameter(ordinal++, "sharedFileSystem", Boolean.class,
                         false));

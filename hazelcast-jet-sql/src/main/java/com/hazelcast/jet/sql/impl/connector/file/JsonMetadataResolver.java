@@ -22,6 +22,8 @@ import com.hazelcast.internal.json.Json;
 import com.hazelcast.internal.json.JsonObject;
 import com.hazelcast.internal.json.JsonObject.Member;
 import com.hazelcast.internal.json.JsonValue;
+import com.hazelcast.jet.core.ProcessorMetaSupplier;
+import com.hazelcast.jet.impl.connector.ReadFilesP;
 import com.hazelcast.jet.sql.impl.connector.RowProjector;
 import com.hazelcast.jet.sql.impl.extract.JsonQueryTarget;
 import com.hazelcast.jet.sql.impl.schema.ExternalField;
@@ -43,31 +45,23 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Stream;
 
-import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.TO_CHARSET;
-import static java.nio.charset.StandardCharsets.UTF_8;
-
 final class JsonMetadataResolver {
 
     private JsonMetadataResolver() {
     }
 
-    static Metadata resolve(
-            List<ExternalField> externalFields,
-            Map<String, String> options,
-            String directory,
-            String glob
-    ) throws IOException {
-        String charset = options.getOrDefault(TO_CHARSET, UTF_8.name());
-
+    static Metadata resolve(List<ExternalField> externalFields, FileOptions options) throws IOException {
         return !externalFields.isEmpty()
-                ? resolveFromFields(externalFields, charset)
-                : resolveFromSample(directory, glob, charset);
+                ? resolveFromFields(externalFields, options)
+                : resolveFromSample(options);
     }
 
-    private static Metadata resolveFromFields(
-            List<ExternalField> externalFields,
-            String charset
-    ) {
+    private static Metadata resolveFromFields(List<ExternalField> externalFields, FileOptions options) {
+        String path = options.path();
+        String glob = options.glob();
+        boolean sharedFileSystem = options.sharedFileSystem();
+        String charset = options.charset();
+
         List<TableField> fields = new ArrayList<>();
 
         for (ExternalField externalField : externalFields) {
@@ -80,24 +74,25 @@ final class JsonMetadataResolver {
                         "Invalid field external name - '" + externalName + "'. Nested fields are not supported."
                 );
             }
-            String path = externalName == null ? externalField.name() : externalName;
+            String fieldPath = externalName == null ? externalField.name() : externalName;
 
-            TableField field = new FileTableField(name, type, path);
+            TableField field = new FileTableField(name, type, fieldPath);
 
             fields.add(field);
         }
 
-        return new Metadata(fields, new JsonTargetDescriptor(charset));
+        return new Metadata(new JsonTargetDescriptor(path, glob, sharedFileSystem, charset), fields);
     }
 
-    private static Metadata resolveFromSample(
-            String directory,
-            String glob,
-            String charset
-    ) throws IOException {
-        String line = line(directory, glob);
+    private static Metadata resolveFromSample(FileOptions options) throws IOException {
+        String path = options.path();
+        String glob = options.glob();
+        boolean sharedFileSystem = options.sharedFileSystem();
+        String charset = options.charset();
+
+        String line = line(path, glob);
         if (line == null) {
-            throw new IllegalArgumentException("No data found in '" + directory + "/" + glob + "'");
+            throw new IllegalArgumentException("No data found in '" + path + "/" + glob + "'");
         }
 
         Map<String, TableField> fields = new HashMap<>();
@@ -112,13 +107,13 @@ final class JsonMetadataResolver {
             fields.putIfAbsent(field.getName(), field);
         }
 
-        return new Metadata(new ArrayList<>(fields.values()), new JsonTargetDescriptor(charset));
+        return new Metadata(
+                new JsonTargetDescriptor(path, glob, sharedFileSystem, charset),
+                new ArrayList<>(fields.values())
+        );
     }
 
-    private static String line(
-            String directory,
-            String glob
-    ) throws IOException {
+    private static String line(String directory, String glob) throws IOException {
         for (Path path : Files.newDirectoryStream(Paths.get(directory), glob)) {
             Optional<String> line = Files.lines(path).findFirst();
             if (line.isPresent()) {
@@ -142,16 +137,25 @@ final class JsonMetadataResolver {
 
     private static final class JsonTargetDescriptor implements TargetDescriptor {
 
+        private final String path;
+        private final String glob;
+        private final boolean sharedFileSystem;
         private final String charset;
 
         private JsonTargetDescriptor(
+                String path,
+                String glob,
+                boolean sharedFileSystem,
                 String charset
         ) {
+            this.path = path;
+            this.glob = glob;
+            this.sharedFileSystem = sharedFileSystem;
             this.charset = charset;
         }
 
         @Override
-        public FunctionEx<? super Path, ? extends Stream<Object[]>> createReader(
+        public ProcessorMetaSupplier processor(
                 List<TableField> fields,
                 Expression<Boolean> predicate,
                 List<Expression<?>> projection
@@ -164,13 +168,15 @@ final class JsonMetadataResolver {
             SupplierEx<RowProjector> projectorSupplier =
                     () -> new RowProjector(new JsonQueryTarget(), paths, types, predicate, projection);
 
-            return path -> {
+            FunctionEx<? super Path, ? extends Stream<Object[]>> readFileFn = path -> {
                 RowProjector projector = projectorSupplier.get();
 
                 return Files.lines(path, Charset.forName(charset))
                             .map(projector::project)
                             .filter(Objects::nonNull);
             };
+
+            return ReadFilesP.metaSupplier(path, glob, sharedFileSystem, readFileFn);
         }
     }
 }

@@ -18,6 +18,8 @@ package com.hazelcast.jet.sql.impl.connector.file;
 
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.function.SupplierEx;
+import com.hazelcast.jet.core.ProcessorMetaSupplier;
+import com.hazelcast.jet.impl.connector.ReadFilesP;
 import com.hazelcast.jet.sql.impl.connector.RowProjector;
 import com.hazelcast.jet.sql.impl.extract.AvroQueryTarget;
 import com.hazelcast.jet.sql.impl.schema.ExternalField;
@@ -51,19 +53,17 @@ final class AvroMetadataResolver {
     private AvroMetadataResolver() {
     }
 
-    static Metadata resolve(
-            List<ExternalField> externalFields,
-            String directory,
-            String glob
-    ) throws IOException {
+    static Metadata resolve(List<ExternalField> externalFields, FileOptions options) throws IOException {
         return !externalFields.isEmpty()
-                ? resolveFromFields(externalFields)
-                : resolveFromSample(directory, glob);
+                ? resolveFromFields(externalFields, options)
+                : resolveFromSample(options);
     }
 
-    private static Metadata resolveFromFields(
-            List<ExternalField> externalFields
-    ) {
+    private static Metadata resolveFromFields(List<ExternalField> externalFields, FileOptions options) {
+        String path = options.path();
+        String glob = options.glob();
+        boolean sharedFileSystem = options.sharedFileSystem();
+
         List<TableField> fields = new ArrayList<>();
 
         for (ExternalField externalField : externalFields) {
@@ -76,23 +76,27 @@ final class AvroMetadataResolver {
                         format("Invalid field external name - '%s'. Nested fields are not supported.", externalName)
                 );
             }
-            String path = externalName == null ? externalField.name() : externalName;
+            String filePath = externalName == null ? externalField.name() : externalName;
 
-            TableField field = new FileTableField(name, type, path);
+            TableField field = new FileTableField(name, type, filePath);
 
             fields.add(field);
         }
 
-        return new Metadata(fields, AvroTargetDescriptor.INSTANCE);
+        return new Metadata(
+                new AvroTargetDescriptor(path, glob, sharedFileSystem),
+                fields
+        );
     }
 
-    private static Metadata resolveFromSample(
-            String directory,
-            String glob
-    ) throws IOException {
-        Schema schema = schema(directory, glob);
+    private static Metadata resolveFromSample(FileOptions options) throws IOException {
+        String path = options.path();
+        String glob = options.glob();
+        boolean sharedFileSystem = options.sharedFileSystem();
+
+        Schema schema = schema(path, glob);
         if (schema == null) {
-            throw new IllegalArgumentException("No data found in '" + directory + "/" + glob + "'");
+            throw new IllegalArgumentException("No data found in '" + path + "/" + glob + "'");
         }
 
         Map<String, TableField> fields = new HashMap<>();
@@ -106,13 +110,13 @@ final class AvroMetadataResolver {
             fields.putIfAbsent(field.getName(), field);
         }
 
-        return new Metadata(new ArrayList<>(fields.values()), AvroTargetDescriptor.INSTANCE);
+        return new Metadata(
+                new AvroTargetDescriptor(path, glob, sharedFileSystem),
+                new ArrayList<>(fields.values())
+        );
     }
 
-    private static Schema schema(
-            String directory,
-            String glob
-    ) throws IOException {
+    private static Schema schema(String directory, String glob) throws IOException {
         for (Path path : Files.newDirectoryStream(Paths.get(directory), glob)) {
             File file = path.toFile();
 
@@ -145,10 +149,22 @@ final class AvroMetadataResolver {
 
     private static class AvroTargetDescriptor implements TargetDescriptor {
 
-        private static final AvroTargetDescriptor INSTANCE = new AvroTargetDescriptor();
+        private final String path;
+        private final String glob;
+        private final boolean sharedFileSystem;
+
+        private AvroTargetDescriptor(
+                String path,
+                String glob,
+                boolean sharedFileSystem
+        ) {
+            this.path = path;
+            this.glob = glob;
+            this.sharedFileSystem = sharedFileSystem;
+        }
 
         @Override
-        public FunctionEx<? super Path, ? extends Stream<Object[]>> createReader(
+        public ProcessorMetaSupplier processor(
                 List<TableField> fields,
                 Expression<Boolean> predicate,
                 List<Expression<?>> projection
@@ -160,7 +176,7 @@ final class AvroMetadataResolver {
             SupplierEx<RowProjector> projectorSupplier =
                     () -> new RowProjector(new AvroQueryTarget(), paths, types, predicate, projection);
 
-            return path -> {
+            FunctionEx<? super Path, ? extends Stream<Object[]>> readFileFn = path -> {
                 RowProjector projector = projectorSupplier.get();
 
                 DataFileReader<GenericRecord> reader = new DataFileReader<>(path.toFile(), new GenericDatumReader<>());
@@ -169,6 +185,8 @@ final class AvroMetadataResolver {
                                     .filter(Objects::nonNull)
                                     .onClose(() -> uncheckRun(reader::close));
             };
+
+            return ReadFilesP.metaSupplier(path, glob, sharedFileSystem, readFileFn);
         }
     }
 }

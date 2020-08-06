@@ -16,35 +16,26 @@
 
 package com.hazelcast.jet.sql.impl.connector.file;
 
-import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Vertex;
-import com.hazelcast.jet.impl.connector.ReadFilesP;
 import com.hazelcast.jet.sql.SqlConnector;
 import com.hazelcast.jet.sql.impl.schema.ExternalField;
 import com.hazelcast.spi.impl.NodeEngine;
-import com.hazelcast.sql.impl.QueryException;
 import com.hazelcast.sql.impl.expression.Expression;
 import com.hazelcast.sql.impl.schema.Table;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Stream;
-
-import static java.lang.Boolean.parseBoolean;
-import static java.lang.String.format;
 
 public class FileSqlConnector implements SqlConnector {
 
     public static final String TYPE_NAME = "com.hazelcast.File";
 
-    public static final String TO_DIRECTORY = "file.directory";
+    public static final String TO_PATH = "file.path";
     public static final String TO_GLOB = "file.glob";
     public static final String TO_SHARED_FILE_SYSTEM = "file.sharedFileSystem";
-
     public static final String TO_CHARSET = "file.charset";
     public static final String TO_HEADER = "file.header";
     public static final String TO_DELIMITER = "file.delimiter";
@@ -70,23 +61,14 @@ public class FileSqlConnector implements SqlConnector {
             @Nonnull Map<String, String> options,
             @Nonnull List<ExternalField> externalFields
     ) {
-        String directory = options.get(TO_DIRECTORY);
-        if (directory == null) {
-            throw QueryException.error(format("Missing '%s' option", TO_DIRECTORY));
-        }
-        String glob = options.getOrDefault(TO_GLOB, "*");
-        boolean sharedFileSystem = parseBoolean(options.getOrDefault(TO_SHARED_FILE_SYSTEM, "true"));
-        Metadata metadata = MetadataResolver.resolve(externalFields, options, directory, glob);
+        Metadata metadata = MetadataResolver.resolve(externalFields, FileOptions.from(options));
 
         return new FileTable(
                 this,
                 schemaName,
                 name,
-                directory,
-                glob,
-                sharedFileSystem,
-                metadata.getFields(),
-                metadata.getTargetDescriptor()
+                metadata.fields(),
+                metadata.targetDescriptor()
         );
     }
 
@@ -106,15 +88,9 @@ public class FileSqlConnector implements SqlConnector {
     ) {
         FileTable table = (FileTable) table0;
 
-        String directory = table.getDirectory();
-        String glob = table.getGlob();
-        boolean sharedFileSystem = table.isSharedFileSystem();
-        FunctionEx<? super Path, ? extends Stream<Object[]>> readerFn =
-                table.getTargetDescriptor().createReader(table.getFields(), predicate, projection);
-
         return dag.newVertex(
-                "file(" + directory + ")",
-                ReadFilesP.metaSupplier(directory, glob, sharedFileSystem, readerFn)
+                "file(" + table + ")",
+                table.getTargetDescriptor().processor(table.getFields(), predicate, projection)
         );
     }
 }

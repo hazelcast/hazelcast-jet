@@ -18,61 +18,71 @@ package com.hazelcast.jet.sql.impl.connector.file;
 
 import com.hazelcast.jet.sql.impl.schema.ExternalField;
 import com.hazelcast.sql.impl.QueryException;
+import org.apache.hadoop.mapreduce.Job;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Map;
 
 import static com.hazelcast.jet.sql.SqlConnector.AVRO_SERIALIZATION_FORMAT;
 import static com.hazelcast.jet.sql.SqlConnector.CSV_SERIALIZATION_FORMAT;
 import static com.hazelcast.jet.sql.SqlConnector.JSON_SERIALIZATION_FORMAT;
-import static com.hazelcast.jet.sql.SqlConnector.TO_SERIALIZATION_FORMAT;
-import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 
 final class MetadataResolver {
+
+    private static final String HDFS_SCHEMA = "hdfs://";
 
     private MetadataResolver() {
     }
 
     static Metadata resolve(
             List<ExternalField> externalFields,
-            Map<String, String> options,
-            String directory,
-            String glob
+            FileOptions options
     ) {
         try {
-            String format = resolveFormat(options);
-            return requireNonNull(resolveMetadata(format, externalFields, options, directory, glob));
+            String path = options.path();
+            if (path.startsWith(HDFS_SCHEMA)) {
+                Job job = Job.getInstance();
+                return resolveMetadata(externalFields, options, job);
+                // s3, adl, gs, wasbs
+            } else {
+                return requireNonNull(resolveMetadata(externalFields, options));
+            }
         } catch (IOException e) {
             throw QueryException.error("Unable to resolve table metadata : " + e.getMessage(), e);
         }
     }
 
-    private static String resolveFormat(Map<String, String> options) {
-        String format = options.get(TO_SERIALIZATION_FORMAT);
-        if (format == null) {
-            throw QueryException.error(format("Missing '%s' option", TO_SERIALIZATION_FORMAT));
+    private static Metadata resolveMetadata(
+            List<ExternalField> externalFields,
+            FileOptions options
+    ) throws IOException {
+        String format = options.format();
+        switch (format) {
+            case CSV_SERIALIZATION_FORMAT:
+                return CsvMetadataResolver.resolve(externalFields, options);
+            case JSON_SERIALIZATION_FORMAT:
+                return JsonMetadataResolver.resolve(externalFields, options);
+            case AVRO_SERIALIZATION_FORMAT:
+                return AvroMetadataResolver.resolve(externalFields, options);
+            default:
+                throw QueryException.error("Unsupported serialization format - '" + format + "'");
         }
-        return format;
     }
 
     private static Metadata resolveMetadata(
-            String format,
             List<ExternalField> externalFields,
-            Map<String, String> options,
-            String directory,
-            String glob
+            FileOptions options,
+            Job job
     ) throws IOException {
+        String format = options.format();
         switch (format) {
             case CSV_SERIALIZATION_FORMAT:
-                return CsvMetadataResolver.resolve(externalFields, options, directory, glob);
+                return CsvMetadataResolver.resolve(externalFields, options, job);
             case JSON_SERIALIZATION_FORMAT:
-                return JsonMetadataResolver.resolve(externalFields, options, directory, glob);
             case AVRO_SERIALIZATION_FORMAT:
-                return AvroMetadataResolver.resolve(externalFields, directory, glob);
             default:
-                throw QueryException.error(format("Unsupported serialization format - '%s'", format));
+                throw QueryException.error("Unsupported serialization format - '" + format + "'");
         }
     }
 }

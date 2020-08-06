@@ -51,7 +51,7 @@ public final class HadoopProcessors {
     ) {
         configuration = SerializableConfiguration.asSerializable(configuration);
         if (configuration.get(MRJobConfig.INPUT_FORMAT_CLASS_ATTR) != null) {
-            return new ReadHadoopNewApiP.MetaSupplier<>(configuration, projectionFn);
+            return new ReadHadoopNewApiP.MetaSupplier<>(configuration, () -> projectionFn);
         } else {
             return new ReadHadoopOldApiP.MetaSupplier<>((JobConf) configuration, projectionFn);
         }

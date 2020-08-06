@@ -42,15 +42,19 @@ public abstract class JetTable extends Table {
 
     @Override
     public final PlanObjectId getObjectId() {
-        return null;
+        throw new UnsupportedOperationException();
+    }
+
+    public SqlConnector getSqlConnector() {
+        return sqlConnector;
     }
 
     public final boolean isStream() {
         return sqlConnector.isStream();
     }
 
-    @Nonnull
-    public SqlConnector getSqlConnector() {
-        return sqlConnector;
+    @Override
+    public String toString() {
+        return getClass().getSimpleName() + "[" + getSchemaName() + "." + getName() + ']';
     }
 }
