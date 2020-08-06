@@ -51,6 +51,9 @@ public class ExternalCatalog implements TableResolver {
 
     public boolean createTable(ExternalTable table, boolean replace, boolean ifNotExists) {
         // catch all the potential errors - missing connector, class, invalid format or field definitions etc. - early
+        // TODO: store the resolved table definition
+        //  - to have consistent results
+        //  - to avoid i.e. filesystem hits on each PlanCacheChecker.check() if its a file table resolved from a sample
         try {
             toTable(table);
         } catch (Exception e) {
