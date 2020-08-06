@@ -57,8 +57,8 @@ it a bunch of data to process, the task will run for a short while and
 return. It doesn't have to process all the data in one go and the
 execution engine will give it control again later with all the
 still-pending data. This basic design is also present in the concepts of
-**green threads** and **coroutines**. In Hazelcast Jet we call them
-[**tasklets**](/docs/architecture/execution-engine#tasklet).
+_green threads_ and _coroutines_. In Hazelcast Jet we call them
+[_tasklets_](/docs/architecture/execution-engine#tasklet).
 
 This design allows Jet to always use the same, fixed-size thread pool no
 matter how many concurrent tasks it instantiates to run a data pipeline.
