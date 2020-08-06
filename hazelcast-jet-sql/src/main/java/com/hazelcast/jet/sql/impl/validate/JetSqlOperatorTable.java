@@ -49,14 +49,14 @@ import java.util.stream.Collectors;
 
 public final class JetSqlOperatorTable extends ReflectiveSqlOperatorTable {
 
+    @SuppressWarnings("unused")
+    public static final SqlFunction FILE = from(FileTableFunction.INSTANCE, "FILE");
+
     private static final JetSqlOperatorTable INSTANCE = new JetSqlOperatorTable();
 
     static {
         INSTANCE.init();
     }
-
-    @SuppressWarnings("unused")
-    public static final SqlFunction FILE = from(FileTableFunction.INSTANCE, "FILE");
 
     private JetSqlOperatorTable() { }
 

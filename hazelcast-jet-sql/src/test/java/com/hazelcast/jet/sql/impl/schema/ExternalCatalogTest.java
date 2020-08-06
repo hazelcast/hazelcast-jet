@@ -41,6 +41,7 @@ import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.TO_VALUE_CL
 import static com.hazelcast.sql.impl.type.QueryDataType.INT;
 import static com.hazelcast.sql.impl.type.QueryDataType.VARCHAR;
 import static java.util.Collections.emptyList;
+import static java.util.Collections.emptyMap;
 import static java.util.stream.Collectors.toMap;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -59,6 +60,19 @@ public class ExternalCatalogTest extends SimpleTestInClusterSupport {
     @AfterClass
     public static void afterClass() {
         FACTORY.shutdownAll();
+    }
+
+    @Test
+    public void throws_whenTriesToCreateInvalidTable() {
+        // given
+        String name = "table_to_validate";
+        ExternalCatalog catalog = externalCatalog();
+
+        // when
+        // then
+        assertThatThrownBy(() -> catalog.createTable(new ExternalTable(name, "non.existing.connector", emptyList(), emptyMap()), true, true))
+                .isInstanceOf(QueryException.class);
+        assertThat(catalog.getTables().stream().noneMatch(table -> table.getName().equals(name))).isTrue();
     }
 
     @Test

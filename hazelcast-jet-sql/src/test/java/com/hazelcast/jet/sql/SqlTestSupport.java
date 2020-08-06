@@ -16,7 +16,6 @@
 
 package com.hazelcast.jet.sql;
 
-import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.SimpleTestInClusterSupport;
 import com.hazelcast.sql.SqlResult;
 import com.hazelcast.sql.SqlRow;
@@ -56,28 +55,6 @@ public abstract class SqlTestSupport extends SimpleTestInClusterSupport {
         sqlService = instance().getHazelcastInstance().getSql();
     }
 
-    protected SqlResult executeQuery(JetInstance target, String sql) {
-        return target.getHazelcastInstance().getSql().query(sql);
-    }
-
-    protected List<SqlRow> getQueryRows(SqlResult cursor) {
-        List<SqlRow> rows = new ArrayList<>();
-
-        for (SqlRow row : cursor) {
-            rows.add(row);
-        }
-
-        return rows;
-    }
-
-    protected List<SqlRow> getQueryRows(JetInstance target, String sql) {
-        try (SqlResult cursor = executeQuery(target, sql)) {
-            return getQueryRows(cursor);
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to execute query and get result set rows: " + sql, e);
-        }
-    }
-
     protected static <K, V> void assertMapEventually(String name, String sql, Map<K, V> expected) {
         executeSql(sql);
 
@@ -93,8 +70,8 @@ public abstract class SqlTestSupport extends SimpleTestInClusterSupport {
         assertThat(actualRows).containsExactlyInAnyOrderElementsOf(expectedRows);
     }
 
-    protected static void executeSql(String sql) {
-        sqlService.query(sql);
+    protected static SqlResult executeSql(String sql) {
+        return sqlService.query(sql);
     }
 
     /**
