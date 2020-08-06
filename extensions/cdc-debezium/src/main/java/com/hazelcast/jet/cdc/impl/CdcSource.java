@@ -181,7 +181,6 @@ public abstract class CdcSource<T> {
         // use for storing history records.
         THREAD_LOCAL_HISTORY.set(state.historyRecords);
         task.start(taskConfig);
-        System.err.println("### task START");
         THREAD_LOCAL_HISTORY.remove();
         return task;
     }
