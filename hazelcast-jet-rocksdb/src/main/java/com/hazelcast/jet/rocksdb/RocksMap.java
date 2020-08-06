@@ -73,7 +73,7 @@ public class RocksMap<K, V> {
      * @throws HazelcastException if the database is closed
      */
 
-    public V get(Object key) throws HazelcastException {
+    public V get(K key) throws HazelcastException {
         try {
             byte[] valueBytes = db.get(cfh, readOptions, serialize(key));
             return deserialize(valueBytes);

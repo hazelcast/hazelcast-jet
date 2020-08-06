@@ -265,9 +265,9 @@ public class PrefixRocksMap<K, V> {
         }
 
         /**
-         * Returns the next entry in the map.
+         * Returns the next key associated with an iterator over all values for that key.
          */
-        public Entry<K, Iterator<V>> next() {
+        public Entry<K, Iterator<V>> nextValues() {
             Tuple2<K, Iterator<V>> tuple = tuple2(deserialize(iterator.key()),
                     get(prefixIterator, deserialize(iterator.key())));
             //skip over the current prefix
@@ -276,6 +276,22 @@ public class PrefixRocksMap<K, V> {
                 iterator.next();
             }
             return tuple;
+        }
+
+        /**
+         * Returns the next entry in the map.
+         */
+        public Entry<K, V> next() {
+            Tuple2<K, V> t = tuple2(deserialize(iterator.key()), deserialize(iterator.value()));
+            iterator.next();
+            return t;
+        }
+
+        /**
+         * Returns the current entry in the map.
+         */
+        public Entry<K, V> peek() {
+            return tuple2(deserialize(iterator.key()), deserialize(iterator.value()));
         }
 
         /**

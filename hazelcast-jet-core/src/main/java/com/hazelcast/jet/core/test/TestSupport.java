@@ -385,9 +385,13 @@ public final class TestSupport {
             }
             supplier.close(null);
         } catch (Exception e) {
+            cleanup();
             throw sneakyThrow(e);
         }
+        cleanup();
+    }
 
+    private void cleanup() {
         if(stateBackend != null) {
             stateBackend.close();
             IOUtil.delete(stateBackend.directory());

@@ -101,7 +101,7 @@ public class GroupWithPersistenceAndUnboundedStateP<K, A, R, OUT> extends Abstra
                 iterator.close();
                 return null;
             }
-            Entry<K, Iterator<Entry<Integer, Object>>> e = iterator.next();
+            Entry<K, Iterator<Entry<Integer, Object>>> e = iterator.nextValues();
             K key = e.getKey();
             A acc = aggrOp.createFn().get();
             Iterator<Entry<Integer, Object>> values = e.getValue();

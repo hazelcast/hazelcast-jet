@@ -48,6 +48,8 @@ import com.hazelcast.jet.impl.processor.GroupWithPersistenceP;
 import com.hazelcast.jet.impl.processor.InsertWatermarksP;
 import com.hazelcast.jet.impl.processor.SessionWindowP;
 import com.hazelcast.jet.impl.processor.SlidingWindowP;
+import com.hazelcast.jet.impl.processor.SortP;
+import com.hazelcast.jet.impl.processor.SortPrepareP;
 import com.hazelcast.jet.impl.processor.TransformP;
 import com.hazelcast.jet.impl.processor.TransformStatefulP;
 import com.hazelcast.jet.impl.processor.TransformUsingServiceP;
@@ -58,6 +60,7 @@ import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 import static com.hazelcast.function.FunctionEx.identity;
@@ -1120,6 +1123,16 @@ public final class Processors {
     ) {
         return TransformUsingServiceP.<C, S, T, R>supplier(serviceFactory,
                 (singletonTraverser, service, item) -> flatMapFn.apply(service, item));
+    }
+
+    @Nonnull
+    public static <V> SupplierEx<Processor> sortPrepareP(Function<V, Long> keyFn) {
+        return () -> new SortPrepareP<V>();
+    }
+
+    @Nonnull
+    public static <V> SupplierEx<Processor> sortP() {
+        return () -> new SortP<V>();
     }
 
     /**

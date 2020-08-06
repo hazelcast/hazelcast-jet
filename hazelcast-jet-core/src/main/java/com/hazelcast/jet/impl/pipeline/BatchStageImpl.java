@@ -41,6 +41,7 @@ import com.hazelcast.jet.pipeline.ServiceFactory;
 import javax.annotation.Nonnull;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
 
 import static com.hazelcast.jet.impl.util.Util.checkSerializable;
 import static com.hazelcast.jet.impl.util.Util.toList;
@@ -79,6 +80,11 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
     public <K> BatchStage<T> rebalance(@Nonnull FunctionEx<? super T, ? extends K> keyFn) {
         checkSerializable(keyFn, "keyFn");
         return new BatchStageImpl<>(this, keyFn);
+    }
+
+    @Nonnull @Override
+    public BatchStage<T> sort(@Nonnull Function<T, Long> keyFn) {
+        return attachSort(keyFn);
     }
 
     @Nonnull @Override

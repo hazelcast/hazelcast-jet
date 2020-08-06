@@ -38,6 +38,7 @@ import com.hazelcast.replicatedmap.ReplicatedMap;
 import javax.annotation.Nonnull;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
 
 import static com.hazelcast.function.Functions.wholeItem;
 import static com.hazelcast.jet.aggregate.AggregateOperations.aggregateOperation2;
@@ -66,6 +67,8 @@ public interface BatchStage<T> extends GeneralStage<T> {
     @Nonnull @Override
     BatchStage<T> rebalance();
 
+    @Nonnull
+    BatchStage<T> sort(@Nonnull Function<T, Long> keyFn);
 
     @Nonnull @Override
     BatchStage<T> usePersistence();
