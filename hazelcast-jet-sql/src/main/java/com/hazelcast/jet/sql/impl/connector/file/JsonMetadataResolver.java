@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.sql.impl.connector.file;
 
+import com.hazelcast.function.BiFunctionEx;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.function.SupplierEx;
 import com.hazelcast.internal.json.Json;
@@ -23,6 +24,7 @@ import com.hazelcast.internal.json.JsonObject;
 import com.hazelcast.internal.json.JsonObject.Member;
 import com.hazelcast.internal.json.JsonValue;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
+import com.hazelcast.jet.hadoop.impl.ReadHadoopNewApiP;
 import com.hazelcast.jet.impl.connector.ReadFilesP;
 import com.hazelcast.jet.sql.impl.connector.RowProjector;
 import com.hazelcast.jet.sql.impl.extract.JsonQueryTarget;
@@ -31,6 +33,9 @@ import com.hazelcast.sql.impl.QueryException;
 import com.hazelcast.sql.impl.expression.Expression;
 import com.hazelcast.sql.impl.schema.TableField;
 import com.hazelcast.sql.impl.type.QueryDataType;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
@@ -44,6 +49,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Stream;
+
+import static com.hazelcast.jet.hadoop.impl.SerializableConfiguration.asSerializable;
 
 final class JsonMetadataResolver {
 
@@ -62,26 +69,12 @@ final class JsonMetadataResolver {
         boolean sharedFileSystem = options.sharedFileSystem();
         String charset = options.charset();
 
-        List<TableField> fields = new ArrayList<>();
+        List<TableField> fields = fields(externalFields);
 
-        for (ExternalField externalField : externalFields) {
-            String name = externalField.name();
-            QueryDataType type = externalField.type();
-
-            String externalName = externalField.externalName();
-            if (externalName != null && externalName.chars().filter(ch -> ch == '.').count() > 0) {
-                throw QueryException.error(
-                        "Invalid field external name - '" + externalName + "'. Nested fields are not supported."
-                );
-            }
-            String fieldPath = externalName == null ? externalField.name() : externalName;
-
-            TableField field = new FileTableField(name, type, fieldPath);
-
-            fields.add(field);
-        }
-
-        return new Metadata(new JsonTargetDescriptor(path, glob, sharedFileSystem, charset), fields);
+        return new Metadata(
+                new JsonTargetDescriptor(path, glob, sharedFileSystem, charset),
+                fields
+        );
     }
 
     private static Metadata resolveFromSample(FileOptions options) throws IOException {
@@ -135,6 +128,54 @@ final class JsonMetadataResolver {
         }
     }
 
+    static Metadata resolve(List<ExternalField> externalFields, FileOptions options, Job job) throws IOException {
+        // TODO: resolve from sample
+        if (externalFields.isEmpty()) {
+            throw QueryException.error("Empty column list");
+        }
+
+        String path = options.path();
+
+        TextInputFormat.addInputPath(job, new org.apache.hadoop.fs.Path(path));
+        job.setInputFormatClass(TextInputFormat.class);
+
+        List<TableField> fields = fields(externalFields);
+
+        return new Metadata(
+                new HadoopJsonTargetDescriptor(job.getConfiguration()),
+                fields
+        );
+    }
+
+    private static List<TableField> fields(List<ExternalField> externalFields) {
+        List<TableField> fields = new ArrayList<>();
+        for (ExternalField externalField : externalFields) {
+            String name = externalField.name();
+            QueryDataType type = externalField.type();
+
+            String externalName = externalField.externalName();
+            if (externalName != null && externalName.chars().filter(ch -> ch == '.').count() > 0) {
+                throw QueryException.error(
+                        "Invalid field external name - '" + externalName + "'. Nested fields are not supported."
+                );
+            }
+            String path = externalName == null ? externalField.name() : externalName;
+
+            TableField field = new FileTableField(name, type, path);
+
+            fields.add(field);
+        }
+        return fields;
+    }
+
+    private static String[] paths(List<TableField> fields) {
+        return fields.stream().map(TableField::getName).toArray(String[]::new);
+    }
+
+    private static QueryDataType[] types(List<TableField> fields) {
+        return fields.stream().map(TableField::getType).toArray(QueryDataType[]::new);
+    }
+
     private static final class JsonTargetDescriptor implements TargetDescriptor {
 
         private final String path;
@@ -177,6 +218,37 @@ final class JsonMetadataResolver {
             };
 
             return ReadFilesP.metaSupplier(path, glob, sharedFileSystem, readFileFn);
+        }
+    }
+
+    private static class HadoopJsonTargetDescriptor implements TargetDescriptor {
+
+        private final Configuration configuration;
+
+        private HadoopJsonTargetDescriptor(
+                Configuration configuration
+        ) {
+            this.configuration = configuration;
+        }
+
+        @Override
+        public ProcessorMetaSupplier processor(
+                List<TableField> fields,
+                Expression<Boolean> predicate,
+                List<Expression<?>> projection
+        ) {
+            String[] paths = paths(fields);
+            QueryDataType[] types = types(fields);
+
+            SupplierEx<RowProjector> projectorSupplier =
+                    () -> new RowProjector(new JsonQueryTarget(), paths, types, predicate, projection);
+
+            SupplierEx<BiFunctionEx<Object, Object, Object[]>> projectionSupplierFn = () -> {
+                RowProjector projector = projectorSupplier.get();
+                return (position, line) -> projector.project(line.toString());
+            };
+
+            return new ReadHadoopNewApiP.MetaSupplier<>(asSerializable(configuration), projectionSupplierFn);
         }
     }
 }

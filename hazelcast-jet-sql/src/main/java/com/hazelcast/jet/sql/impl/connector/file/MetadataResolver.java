@@ -80,6 +80,7 @@ final class MetadataResolver {
             case CSV_SERIALIZATION_FORMAT:
                 return CsvMetadataResolver.resolve(externalFields, options, job);
             case JSON_SERIALIZATION_FORMAT:
+                return JsonMetadataResolver.resolve(externalFields, options, job);
             case AVRO_SERIALIZATION_FORMAT:
             default:
                 throw QueryException.error("Unsupported serialization format - '" + format + "'");

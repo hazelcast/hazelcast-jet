@@ -30,6 +30,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 
 import static com.hazelcast.jet.sql.SqlConnector.CSV_SERIALIZATION_FORMAT;
+import static com.hazelcast.jet.sql.SqlConnector.JSON_SERIALIZATION_FORMAT;
 import static com.hazelcast.jet.sql.SqlConnector.TO_SERIALIZATION_FORMAT;
 import static java.util.Arrays.asList;
 
@@ -68,6 +69,35 @@ public class SqlHadoopTest extends SqlTestSupport {
 
         store("/csv/users-1.csv", "Joe,Doe");
         store("/csv/users-2.csv", "Alice,Smith\nBob,Unknown");
+
+        assertRowsEventuallyAnyOrder(
+                "SELECT * FROM " + name,
+                asList(
+                        new Row("Joe", "Doe")
+                        , new Row("Alice", "Smith")
+                        , new Row("Bob", "Unknown")
+                )
+        );
+    }
+
+    @Test
+    public void supportsJson() throws IOException {
+        String name = createRandomName();
+        executeSql("CREATE EXTERNAL TABLE " + name + " ("
+                + "firstName VARCHAR"
+                + ", lastName VARCHAR"
+                + ") TYPE \"" + FileSqlConnector.TYPE_NAME + "\" "
+                + "OPTIONS ("
+                + "\"" + FileSqlConnector.TO_PATH + "\" '" + cluster.getFileSystem().getUri() + "/json/" + "'"
+                + ", \"" + TO_SERIALIZATION_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + "'"
+                + ")"
+        );
+
+        store("/json/users-1.csv", "{\"firstName\": \"Joe\", \"lastName\": \"Doe\"}");
+        store("/json/users-2.csv",
+                "{\"firstName\": \"Alice\", \"lastName\": \"Smith\"}\n" +
+                        "{\"firstName\": \"Bob\", \"lastName\": \"Unknown\"}"
+        );
 
         assertRowsEventuallyAnyOrder(
                 "SELECT * FROM " + name,
