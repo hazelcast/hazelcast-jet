@@ -129,7 +129,7 @@ public final class PostgresCdcSources {
          * @param name name of the source, needs to be unique, will be passed to
          *             the underlying Kafka Connect source
          */
-        private Builder(String name) {
+        private Builder(@Nonnull String name) {
             Objects.requireNonNull(name, "name");
 
             config = new DebeziumConfig(name, "io.debezium.connector.postgresql.PostgresConnector");

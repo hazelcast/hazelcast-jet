@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.cdc.impl;
 
+import javax.annotation.Nonnull;
 import java.util.Objects;
 import java.util.Properties;
 
@@ -23,7 +24,7 @@ public class DebeziumConfig {
 
     private final Properties properties = new Properties();
 
-    public DebeziumConfig(String name, String connectorClass) {
+    public DebeziumConfig(@Nonnull String name, @Nonnull String connectorClass) {
         Objects.requireNonNull(name, "name");
         Objects.requireNonNull(connectorClass, "connectorClass");
 

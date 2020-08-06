@@ -131,7 +131,7 @@ public final class MySqlCdcSources {
          *             will be passed to the underlying Kafka
          *             Connect source
          */
-        private Builder(String name) {
+        private Builder(@Nonnull String name) {
             Objects.requireNonNull(name, "name");
 
             config = new DebeziumConfig(name, "io.debezium.connector.mysql.MySqlConnector");
