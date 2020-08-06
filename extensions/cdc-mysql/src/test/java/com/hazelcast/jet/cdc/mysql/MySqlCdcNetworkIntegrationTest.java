@@ -161,7 +161,7 @@ public class MySqlCdcNetworkIntegrationTest extends AbstractCdcIntegrationTest {
 
             // and snapshotting is ongoing (we have no exact way of identifying
             // the moment, but random sleep will catch it at least some of the time)
-            TimeUnit.MILLISECONDS.sleep(ThreadLocalRandom.current().nextInt(4000, 5000));
+            TimeUnit.MILLISECONDS.sleep(ThreadLocalRandom.current().nextInt(100, 500));
 
             // and DB is stopped
             stopContainer(mysql);
