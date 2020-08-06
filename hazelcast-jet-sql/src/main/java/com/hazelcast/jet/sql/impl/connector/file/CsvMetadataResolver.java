@@ -30,6 +30,8 @@ import com.hazelcast.sql.impl.expression.Expression;
 import com.hazelcast.sql.impl.schema.TableField;
 import com.hazelcast.sql.impl.type.QueryDataType;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 
@@ -246,7 +248,7 @@ final class CsvMetadataResolver {
             SupplierEx<RowProjector> projectorSupplier =
                     () -> new RowProjector(new CsvQueryTarget(indicesByNames), paths, types, predicate, projection);
 
-            SupplierEx<BiFunctionEx<Object, Object, Object[]>> projectionSupplierFn = () -> {
+            SupplierEx<BiFunctionEx<LongWritable, Text, Object[]>> projectionSupplierFn = () -> {
                 RowProjector projector = projectorSupplier.get();
                 return (position, line) -> projector.project(line.toString().split(delimiter));
             };

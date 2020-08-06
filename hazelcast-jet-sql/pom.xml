@@ -52,6 +52,12 @@
             <version>${project.parent.version}</version>
             <optional>true</optional>
         </dependency>
+        <dependency>
+            <groupId>org.apache.avro</groupId>
+            <artifactId>avro-mapred</artifactId>
+            <version>${avro.version}</version>
+            <optional>true</optional>
+        </dependency>
 
         <dependency>
             <groupId>com.hazelcast.jet</groupId>

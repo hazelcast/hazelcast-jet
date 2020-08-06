@@ -16,9 +16,11 @@
 
 package com.hazelcast.jet.sql.impl.connector.file;
 
+import com.hazelcast.function.BiFunctionEx;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
+import com.hazelcast.jet.hadoop.impl.ReadHadoopNewApiP;
 import com.hazelcast.jet.impl.connector.ReadFilesP;
 import com.hazelcast.jet.sql.impl.connector.RowProjector;
 import com.hazelcast.jet.sql.impl.extract.AvroQueryTarget;
@@ -31,6 +33,11 @@ import org.apache.avro.Schema;
 import org.apache.avro.file.DataFileReader;
 import org.apache.avro.generic.GenericDatumReader;
 import org.apache.avro.generic.GenericRecord;
+import org.apache.avro.mapred.AvroKey;
+import org.apache.avro.mapreduce.AvroKeyInputFormat;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.NullWritable;
+import org.apache.hadoop.mapreduce.Job;
 
 import java.io.File;
 import java.io.IOException;
@@ -45,8 +52,8 @@ import java.util.Objects;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
+import static com.hazelcast.jet.hadoop.impl.SerializableConfiguration.asSerializable;
 import static com.hazelcast.jet.impl.util.Util.uncheckRun;
-import static java.lang.String.format;
 
 final class AvroMetadataResolver {
 
@@ -64,24 +71,7 @@ final class AvroMetadataResolver {
         String glob = options.glob();
         boolean sharedFileSystem = options.sharedFileSystem();
 
-        List<TableField> fields = new ArrayList<>();
-
-        for (ExternalField externalField : externalFields) {
-            String name = externalField.name();
-            QueryDataType type = externalField.type();
-
-            String externalName = externalField.externalName();
-            if (externalName != null && externalName.chars().filter(ch -> ch == '.').count() > 0) {
-                throw QueryException.error(
-                        format("Invalid field external name - '%s'. Nested fields are not supported.", externalName)
-                );
-            }
-            String filePath = externalName == null ? externalField.name() : externalName;
-
-            TableField field = new FileTableField(name, type, filePath);
-
-            fields.add(field);
-        }
+        List<TableField> fields = fields(externalFields);
 
         return new Metadata(
                 new AvroTargetDescriptor(path, glob, sharedFileSystem),
@@ -147,6 +137,55 @@ final class AvroMetadataResolver {
         }
     }
 
+    static Metadata resolve(List<ExternalField> externalFields, FileOptions options, Job job) throws IOException {
+        // TODO: resolve from sample
+        if (externalFields.isEmpty()) {
+            throw QueryException.error("Empty column list");
+        }
+
+        String path = options.path();
+
+        AvroKeyInputFormat.addInputPath(job, new org.apache.hadoop.fs.Path(path));
+        job.setInputFormatClass(AvroKeyInputFormat.class);
+
+        List<TableField> fields = fields(externalFields);
+
+        return new Metadata(
+                new HadoopAvroTargetDescriptor(job.getConfiguration()),
+                fields
+        );
+    }
+
+    private static List<TableField> fields(List<ExternalField> externalFields) {
+        List<TableField> fields = new ArrayList<>();
+        for (ExternalField externalField : externalFields) {
+            String name = externalField.name();
+            QueryDataType type = externalField.type();
+
+            String externalName = externalField.externalName();
+            if (externalName != null && externalName.chars().filter(ch -> ch == '.').count() > 0) {
+                throw QueryException.error(
+                        "Invalid field external name - '" + externalName + "'. Nested fields are not supported."
+                );
+            }
+            String filePath = externalName == null ? externalField.name() : externalName;
+
+            TableField field = new FileTableField(name, type, filePath);
+
+            fields.add(field);
+        }
+        return fields;
+    }
+
+    private static String[] paths(List<TableField> fields) {
+        // TODO: get rid of casting ???
+        return fields.stream().map(field -> ((FileTableField) field).getPath()).toArray(String[]::new);
+    }
+
+    private static QueryDataType[] types(List<TableField> fields) {
+        return fields.stream().map(TableField::getType).toArray(QueryDataType[]::new);
+    }
+
     private static class AvroTargetDescriptor implements TargetDescriptor {
 
         private final String path;
@@ -169,9 +208,8 @@ final class AvroMetadataResolver {
                 Expression<Boolean> predicate,
                 List<Expression<?>> projection
         ) {
-            // TODO: get rid of casting ???
-            String[] paths = fields.stream().map(field -> ((FileTableField) field).getPath()).toArray(String[]::new);
-            QueryDataType[] types = fields.stream().map(TableField::getType).toArray(QueryDataType[]::new);
+            String[] paths = paths(fields);
+            QueryDataType[] types = types(fields);
 
             SupplierEx<RowProjector> projectorSupplier =
                     () -> new RowProjector(new AvroQueryTarget(), paths, types, predicate, projection);
@@ -187,6 +225,37 @@ final class AvroMetadataResolver {
             };
 
             return ReadFilesP.metaSupplier(path, glob, sharedFileSystem, readFileFn);
+        }
+    }
+
+    private static class HadoopAvroTargetDescriptor implements TargetDescriptor {
+
+        private final Configuration configuration;
+
+        private HadoopAvroTargetDescriptor(
+                Configuration configuration
+        ) {
+            this.configuration = configuration;
+        }
+
+        @Override
+        public ProcessorMetaSupplier processor(
+                List<TableField> fields,
+                Expression<Boolean> predicate,
+                List<Expression<?>> projection
+        ) {
+            String[] paths = paths(fields);
+            QueryDataType[] types = types(fields);
+
+            SupplierEx<RowProjector> projectorSupplier =
+                    () -> new RowProjector(new AvroQueryTarget(), paths, types, predicate, projection);
+
+            SupplierEx<BiFunctionEx<AvroKey<GenericRecord>, NullWritable, Object[]>> projectionSupplierFn = () -> {
+                RowProjector projector = projectorSupplier.get();
+                return (key, value) -> projector.project(key.datum());
+            };
+
+            return new ReadHadoopNewApiP.MetaSupplier<>(asSerializable(configuration), projectionSupplierFn);
         }
     }
 }

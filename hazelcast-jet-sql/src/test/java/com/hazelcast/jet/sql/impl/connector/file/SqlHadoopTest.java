@@ -28,7 +28,9 @@ import org.junit.Test;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Paths;
 
+import static com.hazelcast.jet.sql.SqlConnector.AVRO_SERIALIZATION_FORMAT;
 import static com.hazelcast.jet.sql.SqlConnector.CSV_SERIALIZATION_FORMAT;
 import static com.hazelcast.jet.sql.SqlConnector.JSON_SERIALIZATION_FORMAT;
 import static com.hazelcast.jet.sql.SqlConnector.TO_SERIALIZATION_FORMAT;
@@ -109,9 +111,39 @@ public class SqlHadoopTest extends SqlTestSupport {
         );
     }
 
+    @Test
+    public void supportsAvro() throws IOException {
+        String name = createRandomName();
+        executeSql("CREATE EXTERNAL TABLE " + name + " ("
+                + "age INT"
+                + ", username VARCHAR"
+                + ") TYPE \"" + FileSqlConnector.TYPE_NAME + "\" "
+                + "OPTIONS ("
+                + "\"" + FileSqlConnector.TO_PATH + "\" '" + cluster.getFileSystem().getUri() + "/avro/" + "'"
+                + ", \"" + TO_SERIALIZATION_FORMAT + "\" '" + AVRO_SERIALIZATION_FORMAT + "'"
+                + ")"
+        );
+
+        store("/avro/users-1.avro", Files.readAllBytes(Paths.get("src/test/resources/users.avro")));
+
+        assertRowsEventuallyAnyOrder(
+                "SELECT * FROM " + name,
+                asList(
+                        new Row(0, "User0")
+                        , new Row(1, "User1")
+                )
+        );
+    }
+
     private static void store(String path, String content) throws IOException {
         try (FSDataOutputStream output = cluster.getFileSystem().create(new Path(path))) {
             output.writeBytes(content);
+        }
+    }
+
+    private static void store(String path, byte[] content) throws IOException {
+        try (FSDataOutputStream output = cluster.getFileSystem().create(new Path(path))) {
+            output.write(content);
         }
     }
 

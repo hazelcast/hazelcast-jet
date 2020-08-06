@@ -34,6 +34,8 @@ import com.hazelcast.sql.impl.expression.Expression;
 import com.hazelcast.sql.impl.schema.TableField;
 import com.hazelcast.sql.impl.type.QueryDataType;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 
@@ -169,7 +171,8 @@ final class JsonMetadataResolver {
     }
 
     private static String[] paths(List<TableField> fields) {
-        return fields.stream().map(TableField::getName).toArray(String[]::new);
+        // TODO: get rid of casting ???
+        return fields.stream().map(field -> ((FileTableField) field).getPath()).toArray(String[]::new);
     }
 
     private static QueryDataType[] types(List<TableField> fields) {
@@ -202,9 +205,8 @@ final class JsonMetadataResolver {
                 List<Expression<?>> projection
         ) {
             String charset = this.charset;
-            // TODO: get rid of casting ???
-            String[] paths = fields.stream().map(field -> ((FileTableField) field).getPath()).toArray(String[]::new);
-            QueryDataType[] types = fields.stream().map(TableField::getType).toArray(QueryDataType[]::new);
+            String[] paths = paths(fields);
+            QueryDataType[] types = types(fields);
 
             SupplierEx<RowProjector> projectorSupplier =
                     () -> new RowProjector(new JsonQueryTarget(), paths, types, predicate, projection);
@@ -243,7 +245,7 @@ final class JsonMetadataResolver {
             SupplierEx<RowProjector> projectorSupplier =
                     () -> new RowProjector(new JsonQueryTarget(), paths, types, predicate, projection);
 
-            SupplierEx<BiFunctionEx<Object, Object, Object[]>> projectionSupplierFn = () -> {
+            SupplierEx<BiFunctionEx<LongWritable, Text, Object[]>> projectionSupplierFn = () -> {
                 RowProjector projector = projectorSupplier.get();
                 return (position, line) -> projector.project(line.toString());
             };
