@@ -20,6 +20,7 @@ import com.github.dockerjava.api.command.CreateContainerCmd;
 import com.github.dockerjava.api.model.ExposedPort;
 import com.github.dockerjava.api.model.PortBinding;
 import com.github.dockerjava.api.model.Ports;
+import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.cdc.AbstractCdcIntegrationTest;
@@ -56,6 +57,7 @@ import static com.hazelcast.jet.core.JobStatus.FAILED;
 import static com.hazelcast.jet.core.JobStatus.RUNNING;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.testcontainers.containers.PostgreSQLContainer.POSTGRESQL_PORT;
@@ -82,30 +84,29 @@ public class PostgresCdcNetworkIntegrationTest extends AbstractCdcIntegrationTes
         // when job starts
         JetInstance jet = createJetMembers(2)[0];
         Job job = jet.newJob(pipeline);
+        // then
+        if (FAIL.equals(reconnectBehaviour)) {
+            // then job fails
+            assertThatThrownBy(job::join)
+                    .hasCauseInstanceOf(JetException.class)
+                    .hasStackTraceContaining("Initializing connector task failed");
+            assertTrue(jet.getMap("results").isEmpty());
+        } else {
+            // then can't connect to DB
+            assertJobStatusEventually(job, RUNNING);
+            assertTrueAllTheTime(() -> assertTrue(jet.getMap("results").isEmpty()),
+                    MILLISECONDS.toSeconds(2 * RECONNECT_INTERVAL_MS));
 
-        // then can't connect to DB
-        assertTrueEventually(() -> assertTrue(job.getStatus().equals(RUNNING) || job.getStatus().equals(FAILED)));
-        assertTrueAllTheTime(() -> assertTrue(jet.getMap("results").isEmpty()),
-                MILLISECONDS.toSeconds(2 * RECONNECT_INTERVAL_MS));
-
-        // when DB starts
-        PostgreSQLContainer<?> postgres = initPostgres(null, POSTGRESQL_PORT);
-        try {
-            // then
-            if (FAIL.equals(reconnectBehaviour)) {
-                // then job fails
-                assertJobStatusEventually(job, FAILED);
-                assertTrue(jet.getMap("results").isEmpty());
-            } else {
-                try {
-                    assertEqualsEventually(() -> jet.getMap("results").size(), 4);
-                    assertEquals(RUNNING, job.getStatus());
-                } finally {
-                    job.cancel();
-                }
+            // when DB starts
+            PostgreSQLContainer<?> postgres = initPostgres(null, POSTGRESQL_PORT);
+            try {
+                // then source connects successfully
+                assertEqualsEventually(() -> jet.getMap("results").size(), 4);
+                assertEquals(RUNNING, job.getStatus());
+            } finally {
+                job.cancel();
+                postgres.stop();
             }
-        } finally {
-            postgres.stop();
         }
     }
 
@@ -165,14 +166,15 @@ public class PostgresCdcNetworkIntegrationTest extends AbstractCdcIntegrationTes
             // and DB is stopped
             stopContainer(postgres);
 
-            // and DB is started anew
-            postgres = initPostgres(null, POSTGRESQL_PORT);
-
             // then
             if (FAIL.equals(reconnectBehaviour)) {
                 // then job fails
                 assertJobStatusEventually(job, FAILED);
             } else {
+                // and DB is started anew
+                postgres = initPostgres(null, POSTGRESQL_PORT);
+
+                // then snapshotting finishes successfully
                 try {
                     assertEqualsEventually(() -> jet.getMap("results").size(), 4);
                     assertEquals(RUNNING, job.getStatus());
@@ -247,24 +249,24 @@ public class PostgresCdcNetworkIntegrationTest extends AbstractCdcIntegrationTes
             // and DB is stopped
             stopContainer(postgres);
 
-            // and results are cleared
-            jet.getMap("results").clear();
-            assertEqualsEventually(() -> jet.getMap("results").size(), 0);
-
-            // and DB is started anew
-            postgres = initPostgres(null, POSTGRESQL_PORT);
-            insertRecords(postgres, 1005);
-
-            // and some time passes
-            SECONDS.sleep(3);
-            insertRecords(postgres, 1006, 1007);
-
-            // then
             if (FAIL.equals(reconnectBehaviour)) {
                 // then job fails
-                assertJobStatusEventually(job, FAILED);
-                assertTrue(jet.getMap("results").isEmpty());
+                assertThatThrownBy(job::join)
+                        .hasCauseInstanceOf(JetException.class)
+                        .hasStackTraceContaining("Database shutdown detected");
             } else {
+                // and results are cleared
+                jet.getMap("results").clear();
+                assertEqualsEventually(() -> jet.getMap("results").size(), 0);
+
+                // and DB is started anew
+                postgres = initPostgres(null, POSTGRESQL_PORT);
+                insertRecords(postgres, 1005);
+
+                // and some time passes
+                SECONDS.sleep(3);
+                insertRecords(postgres, 1006, 1007);
+
                 try {
                     // then job keeps running, connector starts freshly, including snapshotting
                     assertEqualsEventually(() -> jet.getMap("results").size(), 7);
@@ -316,7 +318,7 @@ public class PostgresCdcNetworkIntegrationTest extends AbstractCdcIntegrationTes
             postgres = postgres.withCreateContainerCmdModifier(cmd);
         }
         if (network != null) {
-            postgres =  postgres.withNetwork(network);
+            postgres = postgres.withNetwork(network);
         }
         postgres.start();
         waitUntilUp(postgres);
@@ -335,7 +337,7 @@ public class PostgresCdcNetworkIntegrationTest extends AbstractCdcIntegrationTes
     }
 
     private static void waitUntilUp(PostgreSQLContainer<?> postgres) {
-        for (;;) {
+        for (; ; ) {
             try {
                 try (Connection connection = DriverManager.getConnection(postgres.getJdbcUrl(), postgres.getUsername(),
                         postgres.getPassword())) {

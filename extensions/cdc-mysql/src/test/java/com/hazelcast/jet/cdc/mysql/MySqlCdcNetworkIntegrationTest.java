@@ -20,6 +20,7 @@ import com.github.dockerjava.api.command.CreateContainerCmd;
 import com.github.dockerjava.api.model.ExposedPort;
 import com.github.dockerjava.api.model.PortBinding;
 import com.github.dockerjava.api.model.Ports;
+import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.cdc.AbstractCdcIntegrationTest;
@@ -55,6 +56,7 @@ import static com.hazelcast.jet.core.JobStatus.FAILED;
 import static com.hazelcast.jet.core.JobStatus.RUNNING;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.runners.Parameterized.Parameter;
@@ -84,30 +86,28 @@ public class MySqlCdcNetworkIntegrationTest extends AbstractCdcIntegrationTest {
         JetInstance jet = createJetMembers(2)[0];
         Job job = jet.newJob(pipeline);
 
-        // then can't connect to DB
-        assertTrueEventually(() -> assertTrue(job.getStatus().equals(RUNNING) || job.getStatus().equals(FAILED)));
-        assertTrueAllTheTime(() -> assertTrue(jet.getMap("results").isEmpty()),
-                2 * MILLISECONDS.toSeconds(CONNECTION_KEEPALIVE_MS));
+        if (FAIL.equals(reconnectBehaviour)) {
+            // then job fails
+            assertThatThrownBy(job::join)
+                    .hasCauseInstanceOf(JetException.class)
+                    .hasStackTraceContaining("Initializing connector task failed");
+            assertTrue(jet.getMap("results").isEmpty());
+        } else {
+            // and can't connect to DB
+            assertJobStatusEventually(job, RUNNING);
+            assertTrueAllTheTime(() -> assertTrue(jet.getMap("results").isEmpty()),
+                    2 * MILLISECONDS.toSeconds(CONNECTION_KEEPALIVE_MS));
 
-        // when DB starts
-        MySQLContainer<?> mysql = initMySql(null, MYSQL_PORT);
-
-        try {
-            // then
-            if (FAIL.equals(reconnectBehaviour)) {
-                // then job fails
-                assertJobStatusEventually(job, FAILED);
-                assertTrue(jet.getMap("results").isEmpty());
-            } else {
-                try {
-                    assertEqualsEventually(() -> jet.getMap("results").size(), 4);
-                    assertEquals(RUNNING, job.getStatus());
-                } finally {
-                    job.cancel();
-                }
+            // and DB starts
+            MySQLContainer<?> mysql = initMySql(null, MYSQL_PORT);
+            try {
+                // then source connects successfully
+                assertEqualsEventually(() -> jet.getMap("results").size(), 4);
+                assertEquals(RUNNING, job.getStatus());
+            } finally {
+                job.cancel();
+                mysql.stop();
             }
-        } finally {
-            mysql.stop();
         }
     }
 
@@ -161,19 +161,19 @@ public class MySqlCdcNetworkIntegrationTest extends AbstractCdcIntegrationTest {
 
             // and snapshotting is ongoing (we have no exact way of identifying
             // the moment, but random sleep will catch it at least some of the time)
-            TimeUnit.MILLISECONDS.sleep(ThreadLocalRandom.current().nextInt(100, 500));
+            TimeUnit.MILLISECONDS.sleep(ThreadLocalRandom.current().nextInt(4000, 5000));
 
             // and DB is stopped
             stopContainer(mysql);
 
-            // and DB is started anew
-            mysql = initMySql(null, MYSQL_PORT);
-
-            // then
             if (FAIL.equals(reconnectBehaviour)) {
                 // then job fails
                 assertJobStatusEventually(job, FAILED);
             } else {
+                // and DB is started anew
+                mysql = initMySql(null, MYSQL_PORT);
+
+                // then snapshotting finishes successfully
                 try {
                     assertEqualsEventually(() -> jet.getMap("results").size(), 4);
                     assertEquals(RUNNING, job.getStatus());
@@ -242,20 +242,20 @@ public class MySqlCdcNetworkIntegrationTest extends AbstractCdcIntegrationTest {
             // and DB is stopped
             stopContainer(mysql);
 
-            // and results are cleared
-            jet.getMap("results").clear();
-            assertEqualsEventually(() -> jet.getMap("results").size(), 0);
-
-            // and DB is started anew
-            mysql = initMySql(null, MYSQL_PORT);
-            insertRecords(mysql, 1005, 1006, 1007);
-
-            // then
             if (FAIL.equals(reconnectBehaviour)) {
                 // then job fails
-                assertJobStatusEventually(job, FAILED);
-                assertTrue(jet.getMap("results").isEmpty());
+                assertThatThrownBy(job::join)
+                        .hasCauseInstanceOf(JetException.class)
+                        .hasStackTraceContaining("Database shutdown detected");
             } else {
+                // and results are cleared
+                jet.getMap("results").clear();
+                assertEqualsEventually(() -> jet.getMap("results").size(), 0);
+
+                // and DB is started anew
+                mysql = initMySql(null, MYSQL_PORT);
+                insertRecords(mysql, 1005, 1006, 1007);
+
                 try {
                     if (CLEAR_STATE_AND_RECONNECT.equals(reconnectBehaviour)) {
                         // then job keeps running, connector starts freshly, including snapshotting
@@ -310,7 +310,7 @@ public class MySqlCdcNetworkIntegrationTest extends AbstractCdcIntegrationTest {
             mysql = mysql.withCreateContainerCmdModifier(cmd);
         }
         if (network != null) {
-            mysql =  mysql.withNetwork(network);
+            mysql = mysql.withNetwork(network);
         }
         mysql.start();
         return mysql;
