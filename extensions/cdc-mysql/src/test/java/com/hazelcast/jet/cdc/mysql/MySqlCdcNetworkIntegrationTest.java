@@ -52,7 +52,6 @@ import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.cdc.impl.CdcSource.ReconnectBehaviour.CLEAR_STATE_AND_RECONNECT;
 import static com.hazelcast.jet.cdc.impl.CdcSource.ReconnectBehaviour.FAIL;
 import static com.hazelcast.jet.cdc.impl.CdcSource.ReconnectBehaviour.RECONNECT;
-import static com.hazelcast.jet.core.JobStatus.FAILED;
 import static com.hazelcast.jet.core.JobStatus.RUNNING;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -168,7 +167,9 @@ public class MySqlCdcNetworkIntegrationTest extends AbstractCdcIntegrationTest {
 
             if (FAIL.equals(reconnectBehaviour)) {
                 // then job fails
-                assertJobStatusEventually(job, FAILED);
+                assertThatThrownBy(job::join)
+                        .hasCauseInstanceOf(JetException.class)
+                        .hasStackTraceContaining("Database shutdown detected");
             } else {
                 // and DB is started anew
                 mysql = initMySql(null, MYSQL_PORT);
