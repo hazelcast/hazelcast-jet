@@ -125,8 +125,11 @@ public class MySqlCdcNetworkIntegrationTest extends AbstractCdcIntegrationTest {
             Job job = jet.newJob(pipeline);
             assertJobStatusEventually(job, RUNNING);
 
-            // and connection is cut
+            // and snapshotting is ongoing (we have no exact way of identifying
+            // the moment, but random sleep will catch it at least some of the time)
             TimeUnit.MILLISECONDS.sleep(ThreadLocalRandom.current().nextInt(0, 500));
+
+            // and connection is cut
             proxy.setConnectionCut(true);
 
             // and some time passes
@@ -158,8 +161,11 @@ public class MySqlCdcNetworkIntegrationTest extends AbstractCdcIntegrationTest {
             Job job = jet.newJob(pipeline);
             assertJobStatusEventually(job, RUNNING);
 
-            // and DB is stopped
+            // and snapshotting is ongoing (we have no exact way of identifying
+            // the moment, but random sleep will catch it at least some of the time)
             TimeUnit.MILLISECONDS.sleep(ThreadLocalRandom.current().nextInt(100, 500));
+
+            // and DB is stopped
             stopContainer(mysql);
 
             // and DB is started anew
