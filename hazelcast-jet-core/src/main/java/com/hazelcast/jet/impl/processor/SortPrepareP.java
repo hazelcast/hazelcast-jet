@@ -1,5 +1,6 @@
 package com.hazelcast.jet.impl.processor;
 
+import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.rocksdb.PrefixRocksMap;
 
@@ -8,19 +9,10 @@ import java.util.function.Function;
 
 public class SortPrepareP<V> extends AbstractProcessor {
 
-    private Function<V, Long> keyFn;
+    private final FunctionEx<V, Long> keyFn;
     private PrefixRocksMap<Long, V> rocksMap;
 
-    public SortPrepareP<V> setKeyFn(Function<V, Long> keyFn) {
-        this.keyFn = keyFn;
-        return this;
-    }
-
-    public SortPrepareP() {
-        this.keyFn = l -> (Long) l;
-    }
-
-    public SortPrepareP(Function<V, Long> keyFn) {
+    public SortPrepareP(FunctionEx<V, Long> keyFn) {
         this.keyFn = keyFn;
     }
 

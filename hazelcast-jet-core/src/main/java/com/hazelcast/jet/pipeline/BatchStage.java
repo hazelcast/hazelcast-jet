@@ -68,7 +68,7 @@ public interface BatchStage<T> extends GeneralStage<T> {
     BatchStage<T> rebalance();
 
     @Nonnull
-    BatchStage<T> sort(@Nonnull Function<T, Long> keyFn);
+    BatchStage<T> sort(@Nonnull FunctionEx<T, Long> keyFn);
 
     @Nonnull @Override
     BatchStage<T> usePersistence();

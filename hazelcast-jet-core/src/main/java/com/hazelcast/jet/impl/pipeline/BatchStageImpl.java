@@ -83,7 +83,7 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
     }
 
     @Nonnull @Override
-    public BatchStage<T> sort(@Nonnull Function<T, Long> keyFn) {
+    public BatchStage<T> sort(@Nonnull FunctionEx<T, Long> keyFn) {
         return attachSort(keyFn);
     }
 

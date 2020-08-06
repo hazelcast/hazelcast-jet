@@ -136,7 +136,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
 
     @Nonnull
     @SuppressWarnings({"unchecked"})
-    <RET> RET attachSort(Function<T, Long> keyFn) {
+    <RET> RET attachSort(FunctionEx<T, Long> keyFn) {
         return (RET) attach(new SortTransform<>(this.transform, keyFn), fnAdapter);
     }
 

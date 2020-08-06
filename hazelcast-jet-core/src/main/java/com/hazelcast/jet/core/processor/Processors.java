@@ -1126,8 +1126,8 @@ public final class Processors {
     }
 
     @Nonnull
-    public static <V> SupplierEx<Processor> sortPrepareP(Function<V, Long> keyFn) {
-        return () -> new SortPrepareP<V>();
+    public static <V> SupplierEx<Processor> sortPrepareP(FunctionEx<V, Long> keyFn) {
+        return () -> new SortPrepareP<V>(keyFn);
     }
 
     @Nonnull
