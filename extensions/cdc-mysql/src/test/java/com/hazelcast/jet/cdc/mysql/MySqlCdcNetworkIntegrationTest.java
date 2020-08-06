@@ -88,8 +88,8 @@ public class MySqlCdcNetworkIntegrationTest extends AbstractCdcIntegrationTest {
         if (FAIL.equals(reconnectBehaviour)) {
             // then job fails
             assertThatThrownBy(job::join)
-                    .hasCauseInstanceOf(JetException.class)
-                    .hasStackTraceContaining("Initializing connector task failed");
+                    .hasRootCauseInstanceOf(JetException.class)
+                    .hasStackTraceContaining("Connecting to database failed");
             assertTrue(jet.getMap("results").isEmpty());
         } else {
             // and can't connect to DB
@@ -168,8 +168,8 @@ public class MySqlCdcNetworkIntegrationTest extends AbstractCdcIntegrationTest {
             if (FAIL.equals(reconnectBehaviour)) {
                 // then job fails
                 assertThatThrownBy(job::join)
-                        .hasCauseInstanceOf(JetException.class)
-                        .hasStackTraceContaining("Database shutdown detected");
+                        .hasRootCauseInstanceOf(JetException.class)
+                        .hasStackTraceContaining("Connection to database lost");
             } else {
                 // and DB is started anew
                 mysql = initMySql(null, MYSQL_PORT);
@@ -246,8 +246,8 @@ public class MySqlCdcNetworkIntegrationTest extends AbstractCdcIntegrationTest {
             if (FAIL.equals(reconnectBehaviour)) {
                 // then job fails
                 assertThatThrownBy(job::join)
-                        .hasCauseInstanceOf(JetException.class)
-                        .hasStackTraceContaining("Database shutdown detected");
+                        .hasRootCauseInstanceOf(JetException.class)
+                        .hasStackTraceContaining("Connection to database lost");
             } else {
                 // and results are cleared
                 jet.getMap("results").clear();

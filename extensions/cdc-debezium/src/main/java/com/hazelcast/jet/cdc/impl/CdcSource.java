@@ -157,7 +157,7 @@ public abstract class CdcSource<T> {
             switch (reconnectBehaviour) {
                 case FAIL:
                     logger.warning("Initializing connector task failed, giving up: " + e.getMessage());
-                    throw new JetException("Initializing connector task failed", e);
+                    throw new JetException("Connecting to database failed" + (e.getMessage() == null ? "" : ": " + e.getMessage()));
                 case RECONNECT:
                 case CLEAR_STATE_AND_RECONNECT:
                     logger.warning("Initializing connector task failed, retrying in " +
@@ -188,7 +188,8 @@ public abstract class CdcSource<T> {
     private void reconnect(ReconnectBehaviour behaviour, ConnectException ce) {
         switch (behaviour) {
             case FAIL:
-                throw new JetException("Database shutdown detected", ce);
+                throw new JetException("Connection to database lost" + (ce.getMessage() == null ? "" :
+                        ": " + ce.getMessage()));
             case CLEAR_STATE_AND_RECONNECT:
                 logger.warning("Connection to database lost, will attempt to reconnect and retry operations from " +
                         "scratch: " + ce.getMessage());
