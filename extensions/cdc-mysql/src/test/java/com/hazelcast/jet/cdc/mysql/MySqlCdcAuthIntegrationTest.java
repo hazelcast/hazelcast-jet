@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.cdc.mysql;
 
+import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.cdc.ChangeRecord;
@@ -25,8 +26,6 @@ import com.hazelcast.jet.pipeline.StreamSource;
 import com.hazelcast.test.annotation.NightlyTest;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
-import java.sql.SQLException;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.testcontainers.containers.MySQLContainer.MYSQL_PORT;
@@ -52,7 +51,7 @@ public class MySqlCdcAuthIntegrationTest extends AbstractMySqlCdcIntegrationTest
         Job job = jet.newJob(pipeline);
         // then
         assertThatThrownBy(job::join)
-                .hasRootCauseInstanceOf(SQLException.class)
+                .hasRootCauseInstanceOf(JetException.class)
                 .hasStackTraceContaining("Access denied for user");
     }
 

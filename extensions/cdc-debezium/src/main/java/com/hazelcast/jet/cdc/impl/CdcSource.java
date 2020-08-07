@@ -142,13 +142,11 @@ public abstract class CdcSource<T> {
         } catch (ConnectException ce) {
             switch (reconnectBehaviour) {
                 case FAIL:
-                    logger.warning("Initializing connector task failed, giving up: " + ce.getMessage());
-                    throw new JetException("Connecting to database failed" +
-                            (ce.getMessage() == null ? "" : ": " + ce.getMessage()));
+                    throw new JetException("Connecting to database failed" + getCause(ce));
                 case RECONNECT:
                 case CLEAR_STATE_AND_RECONNECT:
                     logger.warning("Initializing connector task failed, retrying in " +
-                            NANOSECONDS.toMillis(reconnectIntervalNanos) + "ms: " + ce.getMessage());
+                            NANOSECONDS.toMillis(reconnectIntervalNanos) + "ms" + getCause(ce));
                     sleepUntilNanoTime = System.nanoTime() + reconnectIntervalNanos;
                     break;
                 default:
@@ -186,18 +184,17 @@ public abstract class CdcSource<T> {
     private void reconnect(ReconnectBehaviour behaviour, ConnectException ce) {
         switch (behaviour) {
             case FAIL:
-                throw new JetException("Connection to database lost" + (ce.getMessage() == null ? "" :
-                        ": " + ce.getMessage()));
+                throw new JetException("Connection to database lost" + getCause(ce));
             case CLEAR_STATE_AND_RECONNECT:
                 logger.warning("Connection to database lost, will attempt to reconnect and retry operations from " +
-                        "scratch: " + ce.getMessage());
+                        "scratch" + getCause(ce));
 
                 destroy();
                 state = new State();
                 return;
             case RECONNECT:
-                logger.warning("Connection to database lost, will attempt to reconnect and resume operations: " +
-                        ce.getMessage());
+                logger.warning("Connection to database lost, will attempt to reconnect and resume operations" +
+                        getCause(ce));
 
                 destroy();
                 return;
@@ -225,6 +222,17 @@ public abstract class CdcSource<T> {
     }
 
     protected abstract T mapToOutput(SourceRecord record);
+
+    private static String getCause(ConnectException ce) {
+        StringBuilder sb = new StringBuilder();
+        if (ce.getMessage() != null) {
+            sb.append(" : ").append(ce.getMessage());
+        }
+        if (ce.getCause() != null && ce.getCause().getMessage() != null) {
+            sb.append(" : ").append(ce.getCause().getMessage());
+        }
+        return sb.toString();
+    }
 
     private class JetSourceTaskContext implements SourceTaskContext {
         @Override

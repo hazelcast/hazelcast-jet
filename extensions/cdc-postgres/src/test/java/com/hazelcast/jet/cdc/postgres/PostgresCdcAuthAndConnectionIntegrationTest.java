@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.cdc.postgres;
 
+import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.cdc.ChangeRecord;
@@ -25,9 +26,6 @@ import com.hazelcast.jet.pipeline.StreamSource;
 import com.hazelcast.test.annotation.NightlyTest;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.postgresql.util.PSQLException;
-
-import java.sql.SQLException;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.testcontainers.containers.PostgreSQLContainer.POSTGRESQL_PORT;
@@ -53,7 +51,7 @@ public class PostgresCdcAuthAndConnectionIntegrationTest extends AbstractPostgre
         Job job = jet.newJob(pipeline);
         // then
         assertThatThrownBy(job::join)
-                .hasRootCauseInstanceOf(SQLException.class)
+                .hasRootCauseInstanceOf(JetException.class)
                 .hasStackTraceContaining("password authentication failed for user \"postgres\"");
     }
 
@@ -75,7 +73,7 @@ public class PostgresCdcAuthAndConnectionIntegrationTest extends AbstractPostgre
         Job job = jet.newJob(pipeline);
         // then
         assertThatThrownBy(job::join)
-                .hasRootCauseInstanceOf(PSQLException.class)
+                .hasRootCauseInstanceOf(JetException.class)
                 .hasStackTraceContaining("database \"wrongDatabaseName\" does not exist");
     }
 
