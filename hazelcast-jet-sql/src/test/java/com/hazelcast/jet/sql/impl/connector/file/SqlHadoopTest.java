@@ -64,7 +64,7 @@ public class SqlHadoopTest extends SqlTestSupport {
                 + ", lastName VARCHAR"
                 + ") TYPE \"" + FileSqlConnector.TYPE_NAME + "\" "
                 + "OPTIONS ("
-                + "\"" + FileSqlConnector.TO_PATH + "\" '" + cluster.getFileSystem().getUri() + "/csv/" + "'"
+                + "\"" + FileSqlConnector.TO_PATH + "\" '" + path("csv") + "'"
                 + ", \"" + TO_SERIALIZATION_FORMAT + "\" '" + CSV_SERIALIZATION_FORMAT + "'"
                 + ")"
         );
@@ -83,6 +83,28 @@ public class SqlHadoopTest extends SqlTestSupport {
     }
 
     @Test
+    public void supportsCsvSchemaDiscovery() throws IOException {
+        store("/inferred-csv/users.csv", "id,name\n1,Alice\n2,Bob");
+
+        String name = createRandomName();
+        executeSql("CREATE EXTERNAL TABLE " + name + " "
+                + "TYPE \"" + FileSqlConnector.TYPE_NAME + "\" "
+                + "OPTIONS ("
+                + "\"" + FileSqlConnector.TO_PATH + "\" '" + path("inferred-csv") + "'"
+                + ", \"" + TO_SERIALIZATION_FORMAT + "\" '" + CSV_SERIALIZATION_FORMAT + "'"
+                + ")"
+        );
+
+        assertRowsEventuallyAnyOrder(
+                "SELECT name, id FROM " + name,
+                asList(
+                        new Row("Alice", "1")
+                        , new Row("Bob", "2")
+                )
+        );
+    }
+
+    @Test
     public void supportsJson() throws IOException {
         String name = createRandomName();
         executeSql("CREATE EXTERNAL TABLE " + name + " ("
@@ -90,7 +112,7 @@ public class SqlHadoopTest extends SqlTestSupport {
                 + ", lastName VARCHAR"
                 + ") TYPE \"" + FileSqlConnector.TYPE_NAME + "\" "
                 + "OPTIONS ("
-                + "\"" + FileSqlConnector.TO_PATH + "\" '" + cluster.getFileSystem().getUri() + "/json/" + "'"
+                + "\"" + FileSqlConnector.TO_PATH + "\" '" + path("json") + "'"
                 + ", \"" + TO_SERIALIZATION_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + "'"
                 + ")"
         );
@@ -112,6 +134,31 @@ public class SqlHadoopTest extends SqlTestSupport {
     }
 
     @Test
+    public void supportsJsonSchemaDiscovery() throws IOException {
+        store("/inferred-json/users.csv",
+                "{\"id\": \"1\", \"name\": \"Alice\"}\n"
+                        + "{\"id\": \"2\", \"name\": \"Bob\"}"
+        );
+
+        String name = createRandomName();
+        executeSql("CREATE EXTERNAL TABLE " + name + " "
+                + "TYPE \"" + FileSqlConnector.TYPE_NAME + "\" "
+                + "OPTIONS ("
+                + "\"" + FileSqlConnector.TO_PATH + "\" '" + path("inferred-json") + "'"
+                + ", \"" + TO_SERIALIZATION_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + "'"
+                + ")"
+        );
+
+        assertRowsEventuallyAnyOrder(
+                "SELECT name, id FROM " + name,
+                asList(
+                        new Row("Alice", "1")
+                        , new Row("Bob", "2")
+                )
+        );
+    }
+
+    @Test
     public void supportsAvro() throws IOException {
         String name = createRandomName();
         executeSql("CREATE EXTERNAL TABLE " + name + " ("
@@ -119,12 +166,12 @@ public class SqlHadoopTest extends SqlTestSupport {
                 + ", username VARCHAR"
                 + ") TYPE \"" + FileSqlConnector.TYPE_NAME + "\" "
                 + "OPTIONS ("
-                + "\"" + FileSqlConnector.TO_PATH + "\" '" + cluster.getFileSystem().getUri() + "/avro/" + "'"
+                + "\"" + FileSqlConnector.TO_PATH + "\" '" + path("avro") + "'"
                 + ", \"" + TO_SERIALIZATION_FORMAT + "\" '" + AVRO_SERIALIZATION_FORMAT + "'"
                 + ")"
         );
 
-        store("/avro/users-1.avro", Files.readAllBytes(Paths.get("src/test/resources/users.avro")));
+        store("/avro/users.avro", Files.readAllBytes(Paths.get("src/test/resources/users.avro")));
 
         assertRowsEventuallyAnyOrder(
                 "SELECT * FROM " + name,
@@ -133,6 +180,32 @@ public class SqlHadoopTest extends SqlTestSupport {
                         , new Row(1, "User1")
                 )
         );
+    }
+
+    @Test
+    public void supportsAvroSchemaDiscovery() throws IOException {
+        store("/inferred-avro/users.avro", Files.readAllBytes(Paths.get("src/test/resources/users.avro")));
+
+        String name = createRandomName();
+        executeSql("CREATE EXTERNAL TABLE " + name + " "
+                + "TYPE \"" + FileSqlConnector.TYPE_NAME + "\" "
+                + "OPTIONS ("
+                + "\"" + FileSqlConnector.TO_PATH + "\" '" + path("inferred-avro") + "'"
+                + ", \"" + TO_SERIALIZATION_FORMAT + "\" '" + AVRO_SERIALIZATION_FORMAT + "'"
+                + ")"
+        );
+
+        assertRowsEventuallyAnyOrder(
+                "SELECT username, age FROM " + name,
+                asList(
+                        new Row("User0", 0)
+                        , new Row("User1", 1)
+                )
+        );
+    }
+
+    private static String path(String suffix) throws IOException {
+        return cluster.getFileSystem().getUri() + "/" + suffix;
     }
 
     private static void store(String path, String content) throws IOException {

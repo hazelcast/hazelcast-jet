@@ -60,11 +60,11 @@ final class MetadataResolver {
         String format = options.format();
         switch (format) {
             case CSV_SERIALIZATION_FORMAT:
-                return CsvMetadataResolver.resolve(externalFields, options);
+                return LocalCsvMetadataResolver.resolve(externalFields, options);
             case JSON_SERIALIZATION_FORMAT:
-                return JsonMetadataResolver.resolve(externalFields, options);
+                return LocalJsonMetadataResolver.resolve(externalFields, options);
             case AVRO_SERIALIZATION_FORMAT:
-                return AvroMetadataResolver.resolve(externalFields, options);
+                return LocalAvroMetadataResolver.resolve(externalFields, options);
             default:
                 throw QueryException.error("Unsupported serialization format - '" + format + "'");
         }
@@ -78,11 +78,11 @@ final class MetadataResolver {
         String format = options.format();
         switch (format) {
             case CSV_SERIALIZATION_FORMAT:
-                return CsvMetadataResolver.resolve(externalFields, options, job);
+                return RemoteCsvMetadataResolver.resolve(externalFields, options, job);
             case JSON_SERIALIZATION_FORMAT:
-                return JsonMetadataResolver.resolve(externalFields, options, job);
+                return RemoteJsonMetadataResolver.resolve(externalFields, options, job);
             case AVRO_SERIALIZATION_FORMAT:
-                return AvroMetadataResolver.resolve(externalFields, options, job);
+                return RemoteAvroMetadataResolver.resolve(externalFields, options, job);
             default:
                 throw QueryException.error("Unsupported serialization format - '" + format + "'");
         }
