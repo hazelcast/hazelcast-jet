@@ -36,7 +36,7 @@ interface CsvMetadataResolver {
 
         Map<String, ExternalField> fields = new LinkedHashMap<>();
         for (String header : headers) {
-            ExternalField field = new ExternalField(header, QueryDataType.VARCHAR, null);
+            ExternalField field = new ExternalField(header, QueryDataType.VARCHAR);
 
             fields.putIfAbsent(field.name(), field);
         }

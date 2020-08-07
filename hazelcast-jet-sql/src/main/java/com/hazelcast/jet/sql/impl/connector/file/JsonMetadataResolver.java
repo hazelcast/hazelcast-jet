@@ -40,7 +40,7 @@ interface JsonMetadataResolver {
             String name = member.getName();
             QueryDataType type = resolveType(member.getValue());
 
-            ExternalField field = new ExternalField(name, type, null);
+            ExternalField field = new ExternalField(name, type);
 
             fields.putIfAbsent(field.name(), field);
         }

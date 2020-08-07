@@ -91,7 +91,7 @@ public final class FileTableFunction implements JetTableFunction {
 
         List<ExternalField> fields = toList(
                 rowType.getFieldList(),
-                field -> new ExternalField(field.getName(), SqlToQueryType.map(field.getType().getSqlTypeName()), null)
+                field -> new ExternalField(field.getName(), SqlToQueryType.map(field.getType().getSqlTypeName()))
         );
 
         return table(options, fields);

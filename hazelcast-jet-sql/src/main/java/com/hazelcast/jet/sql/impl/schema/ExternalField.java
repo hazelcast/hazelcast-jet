@@ -41,6 +41,10 @@ public class ExternalField implements DataSerializable {
     private ExternalField() {
     }
 
+    public ExternalField(String name, QueryDataType type) {
+        this(name, type, null);
+    }
+
     public ExternalField(String name, QueryDataType type, String externalName) {
         this.properties = new HashMap<>();
         this.properties.put(NAME, Objects.requireNonNull(name));

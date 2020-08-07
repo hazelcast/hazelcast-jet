@@ -75,7 +75,7 @@ public class ExternalCatalogTest extends SimpleTestInClusterSupport {
                 new ExternalTable(
                         name,
                         "non.existing.connector",
-                        singletonList(new ExternalField("name", INT, null)),
+                        singletonList(new ExternalField("name", INT)),
                         emptyMap()),
                 true,
                 true

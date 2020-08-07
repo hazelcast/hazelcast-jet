@@ -35,7 +35,7 @@ interface AvroMetadataResolver {
             String name = avroField.name();
             QueryDataType type = resolveType(avroField.schema().getType());
 
-            ExternalField field = new ExternalField(name, type, null);
+            ExternalField field = new ExternalField(name, type);
 
             fields.putIfAbsent(field.name(), field);
         }
