@@ -25,6 +25,7 @@ import com.hazelcast.sql.impl.schema.Table;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -84,6 +85,20 @@ public interface SqlConnector {
      * TODO
      */
     boolean isStream();
+
+    /**
+     * TODO
+     * @param nodeEngine
+     * @param options
+     * @return
+     */
+    @Nonnull
+    default List<ExternalField> resolveFields(
+            @Nonnull NodeEngine nodeEngine,
+            @Nonnull Map<String, String> options
+    ) {
+        return Collections.emptyList();
+    }
 
     /**
      * Creates a Table object with the given fields. Will not attempt to

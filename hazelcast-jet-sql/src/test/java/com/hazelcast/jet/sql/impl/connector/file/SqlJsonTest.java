@@ -39,9 +39,9 @@ public class SqlJsonTest extends SqlTestSupport {
                 + "nonExistingField VARCHAR"
                 + ") TYPE \"" + FileSqlConnector.TYPE_NAME + "\" "
                 + "OPTIONS ("
-                + "\"" + FileSqlConnector.TO_PATH + "\" '" + RESOURCES_PATH + "'"
+                + "\"" + TO_SERIALIZATION_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + "'"
+                + ", \"" + FileSqlConnector.TO_PATH + "\" '" + RESOURCES_PATH + "'"
                 + ", \"" + FileSqlConnector.TO_GLOB + "\" '" + "all-types.json" + "'"
-                + ", \"" + TO_SERIALIZATION_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + "'"
                 + ")"
         );
 
@@ -58,9 +58,9 @@ public class SqlJsonTest extends SqlTestSupport {
                 + "name VARCHAR EXTERNAL NAME string"
                 + ") TYPE \"" + FileSqlConnector.TYPE_NAME + "\" "
                 + "OPTIONS ("
-                + "\"" + FileSqlConnector.TO_PATH + "\" '" + RESOURCES_PATH + "'"
+                + "\"" + TO_SERIALIZATION_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + "'"
+                + ", \"" + FileSqlConnector.TO_PATH + "\" '" + RESOURCES_PATH + "'"
                 + ", \"" + FileSqlConnector.TO_GLOB + "\" '" + "all-types.json" + "'"
-                + ", \"" + TO_SERIALIZATION_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + "'"
                 + ")"
         );
 
@@ -89,9 +89,9 @@ public class SqlJsonTest extends SqlTestSupport {
                 + ", offsetDateTime TIMESTAMP WITH TIME ZONE"
                 + ") TYPE \"" + FileSqlConnector.TYPE_NAME + "\" "
                 + "OPTIONS ("
-                + "\"" + FileSqlConnector.TO_PATH + "\" '" + RESOURCES_PATH + "'"
+                + "\"" + TO_SERIALIZATION_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + "'"
+                + ", \"" + FileSqlConnector.TO_PATH + "\" '" + RESOURCES_PATH + "'"
                 + ", \"" + FileSqlConnector.TO_GLOB + "\" '" + "all-types.json" + "'"
-                + ", \"" + TO_SERIALIZATION_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + "'"
                 + ")"
         );
 
@@ -121,9 +121,9 @@ public class SqlJsonTest extends SqlTestSupport {
         executeSql("CREATE EXTERNAL TABLE " + name + " "
                 + "TYPE \"" + FileSqlConnector.TYPE_NAME + "\" "
                 + "OPTIONS ( "
-                + "\"" + FileSqlConnector.TO_PATH + "\" '" + RESOURCES_PATH + "'"
+                + "\"" + TO_SERIALIZATION_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + "'"
+                + ", \"" + FileSqlConnector.TO_PATH + "\" '" + RESOURCES_PATH + "'"
                 + ", \"" + FileSqlConnector.TO_GLOB + "\" '" + "file.json" + "'"
-                + ", \"" + TO_SERIALIZATION_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + "'"
                 + ")"
         );
 

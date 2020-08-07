@@ -29,6 +29,19 @@ import java.util.Map;
 
 interface AvroMetadataResolver {
 
+    static List<ExternalField> fields(Schema schema) {
+        Map<String, ExternalField> fields = new LinkedHashMap<>();
+        for (Schema.Field avroField : schema.getFields()) {
+            String name = avroField.name();
+            QueryDataType type = resolveType(avroField.schema().getType());
+
+            ExternalField field = new ExternalField(name, type, null);
+
+            fields.putIfAbsent(field.name(), field);
+        }
+        return new ArrayList<>(fields.values());
+    }
+
     static List<TableField> fields(List<ExternalField> externalFields) {
         List<TableField> fields = new ArrayList<>();
         for (ExternalField externalField : externalFields) {
@@ -48,19 +61,6 @@ interface AvroMetadataResolver {
             fields.add(field);
         }
         return fields;
-    }
-
-    static List<TableField> fields(Schema schema) {
-        Map<String, TableField> fields = new LinkedHashMap<>();
-        for (Schema.Field avroField : schema.getFields()) {
-            String name = avroField.name();
-            QueryDataType type = resolveType(avroField.schema().getType());
-
-            TableField field = new FileTableField(name, type);
-
-            fields.putIfAbsent(field.getName(), field);
-        }
-        return new ArrayList<>(fields.values());
     }
 
     static QueryDataType resolveType(Schema.Type type) {

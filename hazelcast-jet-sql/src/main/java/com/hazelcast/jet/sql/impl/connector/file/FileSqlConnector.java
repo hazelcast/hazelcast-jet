@@ -54,6 +54,15 @@ public class FileSqlConnector implements SqlConnector {
 
     @Nonnull
     @Override
+    public List<ExternalField> resolveFields(
+            @Nonnull NodeEngine nodeEngine,
+            @Nonnull Map<String, String> options
+    ) {
+        return MetadataResolver.resolve(FileOptions.from(options));
+    }
+
+    @Nonnull
+    @Override
     public Table createTable(
             @Nullable NodeEngine nodeEngine,
             @Nonnull String schemaName,
@@ -89,7 +98,7 @@ public class FileSqlConnector implements SqlConnector {
         FileTable table = (FileTable) table0;
 
         return dag.newVertex(
-                "file(" + table + ")",
+                table.toString(),
                 table.getTargetDescriptor().processor(table.getFields(), predicate, projection)
         );
     }

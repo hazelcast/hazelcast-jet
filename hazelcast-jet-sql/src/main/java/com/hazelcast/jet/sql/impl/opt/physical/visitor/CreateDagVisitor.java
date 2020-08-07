@@ -129,7 +129,7 @@ public class CreateDagVisitor {
     }
 
     public Vertex onRoot(JetRootRel rootRel) {
-        Vertex vertex = dag.newVertex("client-sink",
+        Vertex vertex = dag.newVertex("ClientSink",
                 rootResultConsumerSink(rootRel.getInitiatorAddress(), rootRel.getQueryId()));
         // TODO proper all-to-one
         connectInput(rootRel.getInput(), vertex, edge -> edge.allToOne("aaa"));

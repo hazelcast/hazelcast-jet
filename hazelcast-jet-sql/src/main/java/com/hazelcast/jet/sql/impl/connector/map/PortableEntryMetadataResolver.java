@@ -31,6 +31,7 @@ import com.hazelcast.sql.impl.schema.TableField;
 import com.hazelcast.sql.impl.schema.map.MapTableField;
 import com.hazelcast.sql.impl.type.QueryDataType;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -44,6 +45,8 @@ import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.TO_VALUE_CL
 import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.TO_VALUE_CLASS_VERSION;
 import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.TO_VALUE_FACTORY_ID;
 import static com.hazelcast.jet.sql.impl.connector.ResolverUtil.lookupClassDefinition;
+import static com.hazelcast.sql.impl.extract.QueryPath.KEY_PREFIX;
+import static com.hazelcast.sql.impl.extract.QueryPath.VALUE_PREFIX;
 
 // TODO: deduplicate with MapSampleMetadataResolver
 final class PortableEntryMetadataResolver implements EntryMetadataResolver {
@@ -59,42 +62,31 @@ final class PortableEntryMetadataResolver implements EntryMetadataResolver {
     }
 
     @Override
-    public EntryMetadata resolve(
+    public List<ExternalField> resolveFields(
+            Map<String, String> options,
+            boolean isKey,
+            InternalSerializationService serializationService
+    ) {
+        ClassDefinition classDefinition = resolveClassDefinition(isKey, options, serializationService);
+
+        List<ExternalField> fields = new ArrayList<>();
+        for (Entry<String, FieldType> entry : resolvePortable(classDefinition).entrySet()) {
+            String name = entry.getKey();
+            QueryDataType type = resolvePortableType(entry.getValue());
+
+            fields.add(new ExternalField(name, type, (isKey ? KEY_PREFIX : VALUE_PREFIX) + name));
+        }
+        return fields;
+    }
+
+    @Override
+    public EntryMetadata resolveMetadata(
             List<ExternalField> externalFields,
             Map<String, String> options,
             boolean isKey,
             InternalSerializationService serializationService
     ) {
-        String factoryIdProperty = isKey ? TO_KEY_FACTORY_ID : TO_VALUE_FACTORY_ID;
-        String factoryId = options.get(factoryIdProperty);
-        String classIdProperty = isKey ? TO_KEY_CLASS_ID : TO_VALUE_CLASS_ID;
-        String classId = options.get(classIdProperty);
-        String classVersionProperty = isKey ? TO_KEY_CLASS_VERSION : TO_VALUE_CLASS_VERSION;
-        String classVersion = options.get(classVersionProperty);
-
-        if (factoryId == null || classId == null || classVersion == null) {
-            throw QueryException.error(
-                    "Unable to resolve table metadata. Missing ['"
-                            + factoryIdProperty + "'|'"
-                            + classIdProperty + "'|'"
-                            + classVersionProperty
-                            + "'] option(s)");
-        }
-
-        ClassDefinition classDefinition = lookupClassDefinition(
-                serializationService,
-                Integer.parseInt(factoryId),
-                Integer.parseInt(classId),
-                Integer.parseInt(classVersion)
-        );
-        return resolvePortable(externalFields, classDefinition, isKey);
-    }
-
-    private EntryMetadata resolvePortable(
-            List<ExternalField> externalFields,
-            ClassDefinition classDefinition,
-            boolean isKey
-    ) {
+        ClassDefinition classDefinition = resolveClassDefinition(isKey, options, serializationService);
 
         Map<QueryPath, ExternalField> externalFieldsByPath = isKey
                 ? extractKeyFields(externalFields)
@@ -171,5 +163,34 @@ final class PortableEntryMetadataResolver implements EntryMetadataResolver {
             default:
                 return QueryDataType.OBJECT;
         }
+    }
+
+    private ClassDefinition resolveClassDefinition(
+            boolean isKey,
+            Map<String, String> options,
+            InternalSerializationService serializationService
+    ) {
+        String factoryIdProperty = isKey ? TO_KEY_FACTORY_ID : TO_VALUE_FACTORY_ID;
+        String factoryId = options.get(factoryIdProperty);
+        String classIdProperty = isKey ? TO_KEY_CLASS_ID : TO_VALUE_CLASS_ID;
+        String classId = options.get(classIdProperty);
+        String classVersionProperty = isKey ? TO_KEY_CLASS_VERSION : TO_VALUE_CLASS_VERSION;
+        String classVersion = options.get(classVersionProperty);
+
+        if (factoryId == null || classId == null || classVersion == null) {
+            throw QueryException.error(
+                    "Unable to resolve table metadata. Missing ['"
+                            + factoryIdProperty + "'|'"
+                            + classIdProperty + "'|'"
+                            + classVersionProperty
+                            + "'] option(s)");
+        }
+
+        return lookupClassDefinition(
+                serializationService,
+                Integer.parseInt(factoryId),
+                Integer.parseInt(classId),
+                Integer.parseInt(classVersion)
+        );
     }
 }

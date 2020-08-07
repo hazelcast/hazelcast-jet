@@ -31,6 +31,18 @@ import static java.util.stream.Collectors.toMap;
 
 interface CsvMetadataResolver {
 
+    static List<ExternalField> fields(String line, String delimiter) {
+        String[] headers = line.split(delimiter);
+
+        Map<String, ExternalField> fields = new LinkedHashMap<>();
+        for (String header : headers) {
+            ExternalField field = new ExternalField(header, QueryDataType.VARCHAR, null);
+
+            fields.putIfAbsent(field.name(), field);
+        }
+        return new ArrayList<>(fields.values());
+    }
+
     static List<TableField> fields(List<ExternalField> externalFields) {
         List<TableField> fields = new ArrayList<>();
         for (ExternalField externalField : externalFields) {
@@ -47,18 +59,6 @@ interface CsvMetadataResolver {
             fields.add(field);
         }
         return fields;
-    }
-
-    static List<TableField> fields(String line, String delimiter) {
-        String[] headers = line.split(delimiter);
-
-        Map<String, TableField> fields = new LinkedHashMap<>();
-        for (String header : headers) {
-            TableField field = new FileTableField(header, QueryDataType.VARCHAR);
-
-            fields.putIfAbsent(field.getName(), field);
-        }
-        return new ArrayList<>(fields.values());
     }
 
     static Map<String, Integer> indices(List<TableField> fields) {

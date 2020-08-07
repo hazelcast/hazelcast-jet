@@ -51,7 +51,16 @@ final class JsonEntryMetadataResolver implements EntryMetadataResolver {
     }
 
     @Override
-    public EntryMetadata resolve(
+    public List<ExternalField> resolveFields(
+            Map<String, String> options,
+            boolean isKey,
+            InternalSerializationService serializationService
+    ) {
+        throw QueryException.error("Empty column list"); // TODO: resolve from sample ???
+    }
+
+    @Override
+    public EntryMetadata resolveMetadata(
             List<ExternalField> externalFields,
             Map<String, String> options,
             boolean isKey,

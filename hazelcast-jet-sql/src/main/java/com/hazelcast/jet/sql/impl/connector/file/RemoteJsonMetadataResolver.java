@@ -52,34 +52,9 @@ final class RemoteJsonMetadataResolver implements JsonMetadataResolver {
     private RemoteJsonMetadataResolver() {
     }
 
-    static Metadata resolve(List<ExternalField> externalFields, FileOptions options, Job job) throws IOException {
-        TextInputFormat.addInputPath(job, new Path(options.path()));
-        job.setInputFormatClass(TextInputFormat.class);
-
-        return !externalFields.isEmpty()
-                ? resolveFromFields(externalFields, job)
-                : resolveFromSample(options, job);
-    }
-
-    private static Metadata resolveFromFields(List<ExternalField> externalFields, Job job) {
-        List<TableField> fields = fields(externalFields);
-
-        return new Metadata(
-                new JsonTargetDescriptor(job.getConfiguration()),
-                fields
-        );
-    }
-
-    private static Metadata resolveFromSample(FileOptions options, Job job) throws IOException {
-        Configuration configuration = job.getConfiguration();
-
-        String line = line(options.path(), configuration);
-        List<TableField> fields = fields(line);
-
-        return new Metadata(
-                new JsonTargetDescriptor(configuration),
-                fields
-        );
+    static List<ExternalField> resolveFields(FileOptions options, Job job) throws IOException {
+        String line = line(options.path(), job.getConfiguration());
+        return fields(line);
     }
 
     private static String line(String directory, Configuration configuration) throws IOException {
@@ -99,6 +74,18 @@ final class RemoteJsonMetadataResolver implements JsonMetadataResolver {
             }
         }
         throw new IllegalArgumentException("No data found in '" + directory + "'");
+    }
+
+    static Metadata resolveMetadata(List<ExternalField> externalFields, FileOptions options, Job job) throws IOException {
+        TextInputFormat.addInputPath(job, new Path(options.path()));
+        job.setInputFormatClass(TextInputFormat.class);
+
+        List<TableField> fields = fields(externalFields);
+
+        return new Metadata(
+                new JsonTargetDescriptor(job.getConfiguration()),
+                fields
+        );
     }
 
     private static class JsonTargetDescriptor implements TargetDescriptor {

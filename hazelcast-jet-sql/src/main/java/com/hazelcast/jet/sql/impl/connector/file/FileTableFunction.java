@@ -40,11 +40,10 @@ import static com.hazelcast.jet.impl.util.Util.toList;
 import static com.hazelcast.jet.sql.SqlConnector.TO_SERIALIZATION_FORMAT;
 import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.TO_CHARSET;
 import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.TO_DELIMITER;
-import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.TO_PATH;
 import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.TO_GLOB;
 import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.TO_HEADER;
+import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.TO_PATH;
 import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.TO_SHARED_FILE_SYSTEM;
-import static java.util.Collections.emptyList;
 
 public final class FileTableFunction implements JetTableFunction {
 
@@ -76,7 +75,9 @@ public final class FileTableFunction implements JetTableFunction {
 
     @Override
     public RelDataType getRowType(RelDataTypeFactory typeFactory, List<Object> arguments) {
-        return table(options(arguments), emptyList()).getRowType(typeFactory);
+        Map<String, String> options = options(arguments);
+        List<ExternalField> fields = FileSqlConnector.INSTANCE.resolveFields(null, options);
+        return table(options(arguments), fields).getRowType(typeFactory);
     }
 
     @Override

@@ -39,9 +39,9 @@ public class SqlAvroTest extends SqlTestSupport {
                 + "nonExistingField VARCHAR"
                 + ") TYPE \"" + FileSqlConnector.TYPE_NAME + "\" "
                 + "OPTIONS ("
-                + "\"" + FileSqlConnector.TO_PATH + "\" '" + RESOURCES_PATH + "'"
+                + "\"" + TO_SERIALIZATION_FORMAT + "\" '" + AVRO_SERIALIZATION_FORMAT + "'"
+                + ", \"" + FileSqlConnector.TO_PATH + "\" '" + RESOURCES_PATH + "'"
                 + ", \"" + FileSqlConnector.TO_GLOB + "\" '" + "all-types.avro" + "'"
-                + ", \"" + TO_SERIALIZATION_FORMAT + "\" '" + AVRO_SERIALIZATION_FORMAT + "'"
                 + ")"
         );
 
@@ -58,9 +58,9 @@ public class SqlAvroTest extends SqlTestSupport {
                 + "name VARCHAR EXTERNAL NAME string"
                 + ") TYPE \"" + FileSqlConnector.TYPE_NAME + "\" "
                 + "OPTIONS ("
-                + "\"" + FileSqlConnector.TO_PATH + "\" '" + RESOURCES_PATH + "'"
+                + "\"" + TO_SERIALIZATION_FORMAT + "\" '" + AVRO_SERIALIZATION_FORMAT + "'"
+                + ", \"" + FileSqlConnector.TO_PATH + "\" '" + RESOURCES_PATH + "'"
                 + ", \"" + FileSqlConnector.TO_GLOB + "\" '" + "all-types.avro" + "'"
-                + ", \"" + TO_SERIALIZATION_FORMAT + "\" '" + AVRO_SERIALIZATION_FORMAT + "'"
                 + ")"
         );
 
@@ -89,9 +89,9 @@ public class SqlAvroTest extends SqlTestSupport {
                 + ", offsetDateTime TIMESTAMP WITH TIME ZONE"
                 + ") TYPE \"" + FileSqlConnector.TYPE_NAME + "\" "
                 + "OPTIONS ("
-                + "\"" + FileSqlConnector.TO_PATH + "\" '" + RESOURCES_PATH + "'"
+                + "\"" + TO_SERIALIZATION_FORMAT + "\" '" + AVRO_SERIALIZATION_FORMAT + "'"
+                + ", \"" + FileSqlConnector.TO_PATH + "\" '" + RESOURCES_PATH + "'"
                 + ", \"" + FileSqlConnector.TO_GLOB + "\" '" + "all-types.avro" + "'"
-                + ", \"" + TO_SERIALIZATION_FORMAT + "\" '" + AVRO_SERIALIZATION_FORMAT + "'"
                 + ")"
         );
 
@@ -121,9 +121,9 @@ public class SqlAvroTest extends SqlTestSupport {
         executeSql("CREATE EXTERNAL TABLE " + name + " "
                 + "TYPE \"" + FileSqlConnector.TYPE_NAME + "\" "
                 + "OPTIONS ( "
-                + "\"" + FileSqlConnector.TO_PATH + "\" '" + RESOURCES_PATH + "'"
+                + "\"" + TO_SERIALIZATION_FORMAT + "\" '" + AVRO_SERIALIZATION_FORMAT + "'"
+                + ", \"" + FileSqlConnector.TO_PATH + "\" '" + RESOURCES_PATH + "'"
                 + ", \"" + FileSqlConnector.TO_GLOB + "\" '" + "file.avro" + "'"
-                + ", \"" + TO_SERIALIZATION_FORMAT + "\" '" + AVRO_SERIALIZATION_FORMAT + "'"
                 + ")"
         );
 

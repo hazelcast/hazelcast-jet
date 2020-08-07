@@ -51,35 +51,10 @@ final class RemoteCsvMetadataResolver implements CsvMetadataResolver {
     private RemoteCsvMetadataResolver() {
     }
 
-    static Metadata resolve(List<ExternalField> externalFields, FileOptions options, Job job) throws IOException {
-        TextInputFormat.addInputPath(job, new Path(options.path()));
-        job.setInputFormatClass(TextInputFormat.class);
-
-        return !externalFields.isEmpty()
-                ? resolveFromFields(externalFields, options, job)
-                : resolveFromSample(options, job);
-    }
-
-    private static Metadata resolveFromFields(List<ExternalField> externalFields, FileOptions options, Job job) {
-        List<TableField> fields = fields(externalFields);
-
-        return new Metadata(
-                new CsvTargetDescriptor(options.delimiter(), options.header(), job.getConfiguration()),
-                fields
-        );
-    }
-
-    private static Metadata resolveFromSample(FileOptions options, Job job) throws IOException {
-        String delimiter = options.delimiter();
-        Configuration configuration = job.getConfiguration();
-
-        String line = line(options.path(), configuration);
-        List<TableField> fields = fields(line, delimiter);
-
-        return new Metadata(
-                new CsvTargetDescriptor(delimiter, true, configuration), // TODO: ensure header options is set to true ???
-                fields
-        );
+    static List<ExternalField> resolveFields(FileOptions options, Job job) throws IOException {
+        // TODO: ensure options.header() == true ???
+        String line = line(options.path(), job.getConfiguration());
+        return fields(line, options.delimiter());
     }
 
     private static String line(String directory, Configuration configuration) throws IOException {
@@ -99,6 +74,18 @@ final class RemoteCsvMetadataResolver implements CsvMetadataResolver {
             }
         }
         throw new IllegalArgumentException("No data found in '" + directory + "'");
+    }
+
+    static Metadata resolveMetadata(List<ExternalField> externalFields, FileOptions options, Job job) throws IOException {
+        TextInputFormat.addInputPath(job, new Path(options.path()));
+        job.setInputFormatClass(TextInputFormat.class);
+
+        List<TableField> fields = fields(externalFields);
+
+        return new Metadata(
+                new CsvTargetDescriptor(options.delimiter(), options.header(), job.getConfiguration()),
+                fields
+        );
     }
 
     private static class CsvTargetDescriptor implements TargetDescriptor {

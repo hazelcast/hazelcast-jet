@@ -34,6 +34,7 @@ import static com.hazelcast.jet.sql.SqlConnector.AVRO_SERIALIZATION_FORMAT;
 import static com.hazelcast.jet.sql.SqlConnector.CSV_SERIALIZATION_FORMAT;
 import static com.hazelcast.jet.sql.SqlConnector.JSON_SERIALIZATION_FORMAT;
 import static com.hazelcast.jet.sql.SqlConnector.TO_SERIALIZATION_FORMAT;
+import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.TO_HEADER;
 import static java.util.Arrays.asList;
 
 public class SqlHadoopTest extends SqlTestSupport {
@@ -64,8 +65,8 @@ public class SqlHadoopTest extends SqlTestSupport {
                 + ", lastName VARCHAR"
                 + ") TYPE \"" + FileSqlConnector.TYPE_NAME + "\" "
                 + "OPTIONS ("
-                + "\"" + FileSqlConnector.TO_PATH + "\" '" + path("csv") + "'"
-                + ", \"" + TO_SERIALIZATION_FORMAT + "\" '" + CSV_SERIALIZATION_FORMAT + "'"
+                + "\"" + TO_SERIALIZATION_FORMAT + "\" '" + CSV_SERIALIZATION_FORMAT + "'"
+                + ", \"" + FileSqlConnector.TO_PATH + "\" '" + path("csv") + "'"
                 + ")"
         );
 
@@ -90,8 +91,9 @@ public class SqlHadoopTest extends SqlTestSupport {
         executeSql("CREATE EXTERNAL TABLE " + name + " "
                 + "TYPE \"" + FileSqlConnector.TYPE_NAME + "\" "
                 + "OPTIONS ("
-                + "\"" + FileSqlConnector.TO_PATH + "\" '" + path("inferred-csv") + "'"
-                + ", \"" + TO_SERIALIZATION_FORMAT + "\" '" + CSV_SERIALIZATION_FORMAT + "'"
+                + "\"" + TO_SERIALIZATION_FORMAT + "\" '" + CSV_SERIALIZATION_FORMAT + "'"
+                + ", \"" + FileSqlConnector.TO_PATH + "\" '" + path("inferred-csv") + "'"
+                + ", \"" + TO_HEADER + "\" '" + Boolean.TRUE + "'"
                 + ")"
         );
 
@@ -112,8 +114,8 @@ public class SqlHadoopTest extends SqlTestSupport {
                 + ", lastName VARCHAR"
                 + ") TYPE \"" + FileSqlConnector.TYPE_NAME + "\" "
                 + "OPTIONS ("
-                + "\"" + FileSqlConnector.TO_PATH + "\" '" + path("json") + "'"
-                + ", \"" + TO_SERIALIZATION_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + "'"
+                + "\"" + TO_SERIALIZATION_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + "'"
+                + ", \"" + FileSqlConnector.TO_PATH + "\" '" + path("json") + "'"
                 + ")"
         );
 
@@ -144,8 +146,8 @@ public class SqlHadoopTest extends SqlTestSupport {
         executeSql("CREATE EXTERNAL TABLE " + name + " "
                 + "TYPE \"" + FileSqlConnector.TYPE_NAME + "\" "
                 + "OPTIONS ("
-                + "\"" + FileSqlConnector.TO_PATH + "\" '" + path("inferred-json") + "'"
-                + ", \"" + TO_SERIALIZATION_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + "'"
+                + "\"" + TO_SERIALIZATION_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + "'"
+                + ", \"" + FileSqlConnector.TO_PATH + "\" '" + path("inferred-json") + "'"
                 + ")"
         );
 
@@ -166,8 +168,8 @@ public class SqlHadoopTest extends SqlTestSupport {
                 + ", username VARCHAR"
                 + ") TYPE \"" + FileSqlConnector.TYPE_NAME + "\" "
                 + "OPTIONS ("
-                + "\"" + FileSqlConnector.TO_PATH + "\" '" + path("avro") + "'"
-                + ", \"" + TO_SERIALIZATION_FORMAT + "\" '" + AVRO_SERIALIZATION_FORMAT + "'"
+                + "\"" + TO_SERIALIZATION_FORMAT + "\" '" + AVRO_SERIALIZATION_FORMAT + "'"
+                + ", \"" + FileSqlConnector.TO_PATH + "\" '" + path("avro") + "'"
                 + ")"
         );
 
@@ -190,8 +192,8 @@ public class SqlHadoopTest extends SqlTestSupport {
         executeSql("CREATE EXTERNAL TABLE " + name + " "
                 + "TYPE \"" + FileSqlConnector.TYPE_NAME + "\" "
                 + "OPTIONS ("
-                + "\"" + FileSqlConnector.TO_PATH + "\" '" + path("inferred-avro") + "'"
-                + ", \"" + TO_SERIALIZATION_FORMAT + "\" '" + AVRO_SERIALIZATION_FORMAT + "'"
+                + "\"" + TO_SERIALIZATION_FORMAT + "\" '" + AVRO_SERIALIZATION_FORMAT + "'"
+                + ", \"" + FileSqlConnector.TO_PATH + "\" '" + path("inferred-avro") + "'"
                 + ")"
         );
 

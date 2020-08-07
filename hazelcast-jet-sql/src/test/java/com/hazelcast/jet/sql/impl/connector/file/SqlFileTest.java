@@ -37,9 +37,9 @@ public class SqlFileTest extends SqlTestSupport {
                 + ", age INT"
                 + ") TYPE \"" + FileSqlConnector.TYPE_NAME + "\" "
                 + "OPTIONS ("
-                + "\"" + FileSqlConnector.TO_PATH + "\" '" + RESOURCES_PATH + "'"
+                + "\"" + TO_SERIALIZATION_FORMAT + "\" '" + AVRO_SERIALIZATION_FORMAT + "'"
+                + ", \"" + FileSqlConnector.TO_PATH + "\" '" + RESOURCES_PATH + "'"
                 + ", \"" + FileSqlConnector.TO_GLOB + "\" '" + "users.avro" + "'"
-                + ", \"" + TO_SERIALIZATION_FORMAT + "\" '" + AVRO_SERIALIZATION_FORMAT + "'"
                 + ")"
         );
     }

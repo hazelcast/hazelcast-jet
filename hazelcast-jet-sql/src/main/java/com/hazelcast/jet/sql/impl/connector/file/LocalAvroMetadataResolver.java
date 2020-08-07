@@ -51,32 +51,9 @@ final class LocalAvroMetadataResolver {
     private LocalAvroMetadataResolver() {
     }
 
-    static Metadata resolve(List<ExternalField> externalFields, FileOptions options) throws IOException {
-        return !externalFields.isEmpty()
-                ? resolveFromFields(externalFields, options)
-                : resolveFromSample(options);
-    }
-
-    private static Metadata resolveFromFields(List<ExternalField> externalFields, FileOptions options) {
-        List<TableField> fields = fields(externalFields);
-
-        return new Metadata(
-                new AvroTargetDescriptor(options.path(), options.glob(), options.sharedFileSystem()),
-                fields
-        );
-    }
-
-    private static Metadata resolveFromSample(FileOptions options) throws IOException {
-        String path = options.path();
-        String glob = options.glob();
-
-        Schema schema = schema(path, glob);
-        List<TableField> fields = fields(schema);
-
-        return new Metadata(
-                new AvroTargetDescriptor(path, glob, options.sharedFileSystem()),
-                fields
-        );
+    static List<ExternalField> resolveFields(FileOptions options) throws IOException {
+        Schema schema = schema(options.path(), options.glob());
+        return fields(schema);
     }
 
     private static Schema schema(String directory, String glob) throws IOException {
@@ -88,6 +65,15 @@ final class LocalAvroMetadataResolver {
             }
         }
         throw new IllegalArgumentException("No data found in '" + directory + "/" + glob + "'");
+    }
+
+    static Metadata resolveMetadata(List<ExternalField> externalFields, FileOptions options) {
+        List<TableField> fields = fields(externalFields);
+
+        return new Metadata(
+                new AvroTargetDescriptor(options.path(), options.glob(), options.sharedFileSystem()),
+                fields
+        );
     }
 
     private static class AvroTargetDescriptor implements TargetDescriptor {

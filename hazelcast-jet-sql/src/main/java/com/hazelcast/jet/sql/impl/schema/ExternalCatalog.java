@@ -50,25 +50,43 @@ public class ExternalCatalog implements TableResolver {
     }
 
     public boolean createTable(ExternalTable table, boolean replace, boolean ifNotExists) {
-        // catch all the potential errors - missing connector, class, invalid format or field definitions etc. - early
-        // TODO: store the resolved table definition
-        //  - to have consistent results
-        //  - to avoid i.e. filesystem hits on each PlanCacheChecker.check() if its a file table resolved from a sample
+        ExternalTable validated = validate(table);
+
+        String name = validated.name();
+        if (ifNotExists) {
+            return tables().putIfAbsent(name, validated) == null;
+        } else if (replace) {
+            tables().put(name, validated);
+        } else if (tables().putIfAbsent(name, validated) != null) {
+            throw QueryException.error("'" + name + "' table already exists");
+        }
+        return true;
+    }
+
+    private ExternalTable validate(ExternalTable table) {
+        ExternalTable resolvedTable = table.fields().isEmpty() ? resolveTable(table) : table;
+
+        // catch all the potential errors early - missing connector, class, invalid format or field definitions etc.
         try {
-            toTable(table);
+            toTable(resolvedTable);
         } catch (Exception e) {
             throw QueryException.error("Invalid table definition: " + e.getMessage(), e);
         }
 
-        String name = table.name();
-        if (ifNotExists) {
-            return tables().putIfAbsent(name, table) == null;
-        } else if (replace) {
-            tables().put(name, table);
-        } else if (tables().putIfAbsent(name, table) != null) {
-            throw QueryException.error("'" + name + "' table already exists");
+        return resolvedTable;
+    }
+
+    private ExternalTable resolveTable(ExternalTable table) {
+        SqlConnector connector = findConnector(table.type());
+
+        Map<String, String> options = table.options();
+
+        List<ExternalField> fields = connector.resolveFields(nodeEngine, options);
+        if (fields.isEmpty()) {
+            throw QueryException.error("Empty column list");
         }
-        return true;
+
+        return new ExternalTable(table.name(), table.type(), fields, options);
     }
 
     public void removeTable(String name, boolean ifExists) {
@@ -96,8 +114,11 @@ public class ExternalCatalog implements TableResolver {
     }
 
     public Table toTable(ExternalTable table) {
-        String type = table.type();
-        SqlConnector connector = requireNonNull(sqlConnectorCache.forType(type), "Unknown connector type '" + type + "'");
+        SqlConnector connector = findConnector(table.type());
         return connector.createTable(nodeEngine, SCHEMA_NAME_PUBLIC, table.name(), table.options(), table.fields());
+    }
+
+    private SqlConnector findConnector(String type) {
+        return requireNonNull(sqlConnectorCache.forType(type), "Unknown connector type '" + type + "'");
     }
 }

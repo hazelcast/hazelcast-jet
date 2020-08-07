@@ -20,10 +20,10 @@ import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.kafka.KafkaProcessors;
-import com.hazelcast.jet.sql.impl.connector.JavaEntryMetadataResolver;
 import com.hazelcast.jet.sql.impl.connector.EntryMetadata;
 import com.hazelcast.jet.sql.impl.connector.EntryMetadataResolver;
 import com.hazelcast.jet.sql.impl.connector.EntrySqlConnector;
+import com.hazelcast.jet.sql.impl.connector.JavaEntryMetadataResolver;
 import com.hazelcast.jet.sql.impl.schema.ExternalField;
 import com.hazelcast.spi.impl.NodeEngine;
 import com.hazelcast.sql.impl.expression.Expression;
@@ -67,6 +67,15 @@ public class KafkaSqlConnector extends EntrySqlConnector {
     @Override
     public boolean isStream() {
         return true;
+    }
+
+    @Nonnull
+    @Override
+    public List<ExternalField> resolveFields(
+            @Nonnull NodeEngine nodeEngine,
+            @Nonnull Map<String, String> options
+    ) {
+        return resolveFields(options, null);
     }
 
     @Nonnull

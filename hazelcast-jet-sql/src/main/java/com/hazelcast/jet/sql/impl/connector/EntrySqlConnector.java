@@ -48,6 +48,41 @@ public abstract class EntrySqlConnector implements SqlConnector {
 
     protected abstract Map<String, EntryMetadataResolver> supportedResolvers();
 
+    protected List<ExternalField> resolveFields(
+            Map<String, String> options,
+            InternalSerializationService serializationService
+    ) {
+        List<ExternalField> keyFields = resolveFields(options, true, serializationService);
+        List<ExternalField> valueFields = resolveFields(options, false, serializationService);
+
+        Map<String, ExternalField> fields = keyFields.stream()
+                                                     .collect(
+                                                             LinkedHashMap::new,
+                                                             (map, field) -> map.put(field.name(), field),
+                                                             Map::putAll
+                                                     );
+
+        // value fields do not override key fields.
+        for (ExternalField valueField : valueFields) {
+            fields.putIfAbsent(valueField.name(), valueField);
+        }
+
+        return new ArrayList<>(fields.values());
+    }
+
+    private List<ExternalField> resolveFields(
+            Map<String, String> options,
+            boolean isKey,
+            InternalSerializationService serializationService
+    ) {
+        String format = resolveFormat(options, isKey);
+        EntryMetadataResolver resolver = supportedResolvers().get(format);
+        if (resolver == null) {
+            throw QueryException.error(format("Unsupported serialization format - '%s'", format));
+        }
+        return requireNonNull(resolver.resolveFields(options, isKey, serializationService));
+    }
+
     protected EntryMetadata resolveMetadata(
             List<ExternalField> externalFields,
             Map<String, String> options,
@@ -59,7 +94,7 @@ public abstract class EntrySqlConnector implements SqlConnector {
         if (resolver == null) {
             throw QueryException.error(format("Unsupported serialization format - '%s'", format));
         }
-        return requireNonNull(resolver.resolve(externalFields, options, isKey, serializationService));
+        return requireNonNull(resolver.resolveMetadata(externalFields, options, isKey, serializationService));
     }
 
     private static String resolveFormat(Map<String, String> options, boolean isKey) {

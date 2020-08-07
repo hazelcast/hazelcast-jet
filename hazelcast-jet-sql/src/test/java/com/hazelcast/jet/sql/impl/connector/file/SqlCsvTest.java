@@ -51,9 +51,9 @@ public class SqlCsvTest extends SqlTestSupport {
                 + ", offsetDateTime TIMESTAMP WITH TIME ZONE"
                 + ") TYPE \"" + FileSqlConnector.TYPE_NAME + "\" "
                 + "OPTIONS ("
-                + "\"" + FileSqlConnector.TO_PATH + "\" '" + RESOURCES_PATH + "'"
+                + "\"" + TO_SERIALIZATION_FORMAT + "\" '" + CSV_SERIALIZATION_FORMAT + "'"
+                + ", \"" + FileSqlConnector.TO_PATH + "\" '" + RESOURCES_PATH + "'"
                 + ", \"" + FileSqlConnector.TO_GLOB + "\" '" + "all-types.csv" + "'"
-                + ", \"" + TO_SERIALIZATION_FORMAT + "\" '" + CSV_SERIALIZATION_FORMAT + "'"
                 + ")"
         );
 
@@ -83,9 +83,10 @@ public class SqlCsvTest extends SqlTestSupport {
         executeSql("CREATE EXTERNAL TABLE " + name + " "
                 + "TYPE \"" + FileSqlConnector.TYPE_NAME + "\" "
                 + "OPTIONS ("
-                + "\"" + FileSqlConnector.TO_PATH + "\" '" + RESOURCES_PATH + "'"
+                + "\"" + TO_SERIALIZATION_FORMAT + "\" '" + CSV_SERIALIZATION_FORMAT + "'"
+                + ", \"" + FileSqlConnector.TO_PATH + "\" '" + RESOURCES_PATH + "'"
                 + ", \"" + FileSqlConnector.TO_GLOB + "\" '" + "file.csv" + "'"
-                + ", \"" + TO_SERIALIZATION_FORMAT + "\" '" + CSV_SERIALIZATION_FORMAT + "'"
+                + ", \"" + FileSqlConnector.TO_HEADER + "\" '" + Boolean.TRUE + "'"
                 + ")"
         );
 

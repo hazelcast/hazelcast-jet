@@ -44,32 +44,9 @@ final class LocalJsonMetadataResolver implements JsonMetadataResolver {
     private LocalJsonMetadataResolver() {
     }
 
-    static Metadata resolve(List<ExternalField> externalFields, FileOptions options) throws IOException {
-        return !externalFields.isEmpty()
-                ? resolveFromFields(externalFields, options)
-                : resolveFromSample(options);
-    }
-
-    private static Metadata resolveFromFields(List<ExternalField> externalFields, FileOptions options) {
-        List<TableField> fields = fields(externalFields);
-
-        return new Metadata(
-                new JsonTargetDescriptor(options.path(), options.glob(), options.sharedFileSystem(), options.charset()),
-                fields
-        );
-    }
-
-    private static Metadata resolveFromSample(FileOptions options) throws IOException {
-        String path = options.path();
-        String glob = options.glob();
-
-        String line = line(path, glob);
-        List<TableField> fields = fields(line);
-
-        return new Metadata(
-                new JsonTargetDescriptor(path, glob, options.sharedFileSystem(), options.charset()),
-                fields
-        );
+    static List<ExternalField> resolveFields(FileOptions options) throws IOException {
+        String line = line(options.path(), options.glob());
+        return fields(line);
     }
 
     private static String line(String directory, String glob) throws IOException {
@@ -80,6 +57,15 @@ final class LocalJsonMetadataResolver implements JsonMetadataResolver {
             }
         }
         throw new IllegalArgumentException("No data found in '" + directory + "/" + glob + "'");
+    }
+
+    static Metadata resolveMetadata(List<ExternalField> externalFields, FileOptions options) {
+        List<TableField> fields = fields(externalFields);
+
+        return new Metadata(
+                new JsonTargetDescriptor(options.path(), options.glob(), options.sharedFileSystem(), options.charset()),
+                fields
+        );
     }
 
     private static final class JsonTargetDescriptor implements TargetDescriptor {

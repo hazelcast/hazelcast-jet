@@ -45,13 +45,23 @@ final class LocalCsvMetadataResolver implements CsvMetadataResolver {
     private LocalCsvMetadataResolver() {
     }
 
-    static Metadata resolve(List<ExternalField> externalFields, FileOptions options) throws IOException {
-        return !externalFields.isEmpty()
-                ? resolveFromFields(externalFields, options)
-                : resolveFromSample(options);
+    static List<ExternalField> resolveFields(FileOptions options) throws IOException {
+        // TODO: ensure options.header() == true ???
+        String line = line(options.path(), options.glob());
+        return fields(line, options.delimiter());
     }
 
-    private static Metadata resolveFromFields(List<ExternalField> externalFields, FileOptions options) {
+    private static String line(String directory, String glob) throws IOException {
+        for (Path path : Files.newDirectoryStream(Paths.get(directory), glob)) { // TODO: directory check
+            Optional<String> line = Files.lines(path).findFirst();
+            if (line.isPresent()) {
+                return line.get();
+            }
+        }
+        throw new IllegalArgumentException("No data found in '" + directory + "/" + glob + "'");
+    }
+
+    static Metadata resolveMetadata(List<ExternalField> externalFields, FileOptions options) {
         List<TableField> fields = fields(externalFields);
 
         return new Metadata(
@@ -65,37 +75,6 @@ final class LocalCsvMetadataResolver implements CsvMetadataResolver {
                 ),
                 fields
         );
-    }
-
-    private static Metadata resolveFromSample(FileOptions options) throws IOException {
-        String path = options.path();
-        String glob = options.glob();
-        String delimiter = options.delimiter();
-
-        String line = line(path, glob);
-        List<TableField> fields = fields(line, delimiter);
-
-        return new Metadata(
-                new CsvTargetDescriptor(
-                        path,
-                        glob,
-                        options.sharedFileSystem(),
-                        options.charset(),
-                        delimiter,
-                        true // TODO: ensure header options is set to true ???
-                ),
-                fields
-        );
-    }
-
-    private static String line(String directory, String glob) throws IOException {
-        for (Path path : Files.newDirectoryStream(Paths.get(directory), glob)) { // TODO: directory check
-            Optional<String> line = Files.lines(path).findFirst();
-            if (line.isPresent()) {
-                return line.get();
-            }
-        }
-        throw new IllegalArgumentException("No data found in '" + directory + "/" + glob + "'");
     }
 
     private static final class CsvTargetDescriptor implements TargetDescriptor {

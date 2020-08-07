@@ -53,34 +53,9 @@ final class RemoteAvroMetadataResolver {
     private RemoteAvroMetadataResolver() {
     }
 
-    static Metadata resolve(List<ExternalField> externalFields, FileOptions options, Job job) throws IOException {
-        AvroKeyInputFormat.addInputPath(job, new Path(options.path()));
-        job.setInputFormatClass(AvroKeyInputFormat.class);
-
-        return !externalFields.isEmpty()
-                ? resolveFromFields(externalFields, job)
-                : resolveFromSample(options, job);
-    }
-
-    static Metadata resolveFromFields(List<ExternalField> externalFields, Job job) {
-        List<TableField> fields = fields(externalFields);
-
-        return new Metadata(
-                new AvroTargetDescriptor(job.getConfiguration()),
-                fields
-        );
-    }
-
-    private static Metadata resolveFromSample(FileOptions options, Job job) throws IOException {
-        Configuration configuration = job.getConfiguration();
-
-        Schema schema = schema(options.path(), configuration);
-        List<TableField> fields = fields(schema);
-
-        return new Metadata(
-                new AvroTargetDescriptor(configuration),
-                fields
-        );
+    static List<ExternalField> resolveFields(FileOptions options, Job job) throws IOException {
+        Schema schema = schema(options.path(), job.getConfiguration());
+        return fields(schema);
     }
 
     private static Schema schema(String directory, Configuration configuration) throws IOException {
@@ -96,6 +71,18 @@ final class RemoteAvroMetadataResolver {
             }
         }
         throw new IllegalArgumentException("No data found in '" + directory + "'");
+    }
+
+    static Metadata resolveMetadata(List<ExternalField> externalFields, FileOptions options, Job job) throws IOException {
+        AvroKeyInputFormat.addInputPath(job, new Path(options.path()));
+        job.setInputFormatClass(AvroKeyInputFormat.class);
+
+        List<TableField> fields = fields(externalFields);
+
+        return new Metadata(
+                new AvroTargetDescriptor(job.getConfiguration()),
+                fields
+        );
     }
 
     private static class AvroTargetDescriptor implements TargetDescriptor {

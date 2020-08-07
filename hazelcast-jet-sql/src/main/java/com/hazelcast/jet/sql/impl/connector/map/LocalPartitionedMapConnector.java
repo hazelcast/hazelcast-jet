@@ -67,6 +67,15 @@ public class LocalPartitionedMapConnector extends EntrySqlConnector {
 
     @Nonnull
     @Override
+    public List<ExternalField> resolveFields(
+            @Nonnull NodeEngine nodeEngine,
+            @Nonnull Map<String, String> options
+    ) {
+        return resolveFields(options, (InternalSerializationService) nodeEngine.getSerializationService());
+    }
+
+    @Nonnull
+    @Override
     public Table createTable(
             @Nonnull NodeEngine nodeEngine,
             @Nonnull String schemaName,

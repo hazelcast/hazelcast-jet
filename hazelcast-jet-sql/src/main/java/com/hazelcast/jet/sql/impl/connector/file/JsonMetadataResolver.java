@@ -32,6 +32,21 @@ import java.util.Map;
 
 interface JsonMetadataResolver {
 
+    static List<ExternalField> fields(String line) {
+        JsonObject object = Json.parse(line).asObject();
+
+        Map<String, ExternalField> fields = new LinkedHashMap<>();
+        for (Member member : object) {
+            String name = member.getName();
+            QueryDataType type = resolveType(member.getValue());
+
+            ExternalField field = new ExternalField(name, type, null);
+
+            fields.putIfAbsent(field.name(), field);
+        }
+        return new ArrayList<>(fields.values());
+    }
+
     static List<TableField> fields(List<ExternalField> externalFields) {
         List<TableField> fields = new ArrayList<>();
         for (ExternalField externalField : externalFields) {
@@ -52,22 +67,6 @@ interface JsonMetadataResolver {
         }
         return fields;
     }
-
-    static List<TableField> fields(String line) {
-        JsonObject object = Json.parse(line).asObject();
-
-        Map<String, TableField> fields = new LinkedHashMap<>();
-        for (Member member : object) {
-            String name = member.getName();
-            QueryDataType type = resolveType(member.getValue());
-
-            TableField field = new FileTableField(name, type);
-
-            fields.putIfAbsent(field.getName(), field);
-        }
-        return new ArrayList<>(fields.values());
-    }
-
 
     static QueryDataType resolveType(JsonValue value) {
         if (value.isBoolean()) {
