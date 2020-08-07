@@ -17,6 +17,7 @@
 package com.hazelcast.jet.cdc;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.accumulator.LongAccumulator;
@@ -39,6 +40,7 @@ import java.util.Map.Entry;
 import java.util.Objects;
 
 import static com.hazelcast.jet.Util.entry;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.testcontainers.containers.MySQLContainer.MYSQL_PORT;
 import static org.testcontainers.containers.PostgreSQLContainer.POSTGRESQL_PORT;
 
@@ -360,6 +362,25 @@ public class DebeziumCdcIntegrationTest extends AbstractCdcIntegrationTest {
                 .withDatabaseName("postgres")
                 .withUsername("postgres")
                 .withPassword("postgres");
+    }
+
+    @Test
+    public void invalidConnectorClass() {
+        StreamSource<Entry<String, String>> source = DebeziumCdcSources.debeziumJson("connector",
+                "io.debezium.connector.xxx.BlaBlaBla")
+                .build();
+
+        Pipeline pipeline = Pipeline.create();
+        pipeline.readFrom(source)
+                .withNativeTimestamps(0)
+                .writeTo(Sinks.noop());
+
+        // when
+        JetInstance jet = createJetMembers(2)[0];
+        Job job = jet.newJob(pipeline);
+        assertThatThrownBy(job::join)
+                .hasRootCauseInstanceOf(JetException.class)
+                .hasStackTraceContaining("connector class io.debezium.connector.xxx.BlaBlaBla not found");
     }
 
     private static class Customer {

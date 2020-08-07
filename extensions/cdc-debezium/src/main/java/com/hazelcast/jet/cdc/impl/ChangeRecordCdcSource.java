@@ -44,7 +44,8 @@ public class ChangeRecordCdcSource extends CdcSource<ChangeRecord> {
     public ChangeRecordCdcSource(Processor.Context context, Properties properties) {
         super(context, properties);
         try {
-            sequenceExtractor = newInstance(properties, SEQUENCE_EXTRACTOR_CLASS_PROPERTY);
+            sequenceExtractor = newInstance(properties.getProperty(SEQUENCE_EXTRACTOR_CLASS_PROPERTY),
+                    "sequence extractor ");
             transform = initTransform(properties.getProperty(DB_SPECIFIC_EXTRA_FIELDS_PROPERTY));
         } catch (Exception e) {
             throw rethrow(e);

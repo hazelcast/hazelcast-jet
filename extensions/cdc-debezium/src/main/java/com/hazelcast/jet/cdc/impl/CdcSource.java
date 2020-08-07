@@ -36,6 +36,7 @@ import org.apache.kafka.connect.source.SourceTaskContext;
 import org.apache.kafka.connect.storage.OffsetStorageReader;
 
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -90,7 +91,7 @@ public abstract class CdcSource<T> {
     }
 
     public void fillBuffer(SourceBuilder.TimestampedSourceBuffer<T> buf) {
-        if (isSleepNeeded() || !isConnectorReady() || !isTaskReady()) {
+        if (isSleepNeeded() || !isConnectionUp()) {
             return;
         }
 
@@ -128,51 +129,48 @@ public abstract class CdcSource<T> {
         return false;
     }
 
-    private boolean isConnectorReady() {
+    private boolean isConnectionUp() {
         try {
             if (connector == null) {
                 connector = startNewConnector();
                 taskConfig = connector.taskConfigs(1).get(0);
             }
-            return true;
-        } catch (Exception e) {
-            throw rethrow(e);
-        }
-    }
-
-    private SourceConnector startNewConnector() throws Exception {
-        SourceConnector connector = newInstance(properties, CONNECTOR_CLASS_PROPERTY);
-        connector.initialize(new JetConnectorContext());
-        connector.start((Map) properties);
-        return connector;
-    }
-
-    private boolean isTaskReady() {
-        try {
             if (task == null) {
                 task = startNewTask();
             }
             return true;
-        } catch (Exception e) {
+        } catch (ConnectException ce) {
             switch (reconnectBehaviour) {
                 case FAIL:
-                    logger.warning("Initializing connector task failed, giving up: " + e.getMessage());
-                    throw new JetException("Connecting to database failed" + (e.getMessage() == null ? "" : ": " + e.getMessage()));
+                    logger.warning("Initializing connector task failed, giving up: " + ce.getMessage());
+                    throw new JetException("Connecting to database failed" +
+                            (ce.getMessage() == null ? "" : ": " + ce.getMessage()));
                 case RECONNECT:
                 case CLEAR_STATE_AND_RECONNECT:
                     logger.warning("Initializing connector task failed, retrying in " +
-                            NANOSECONDS.toMillis(reconnectIntervalNanos) + "ms: " + e.getMessage());
+                            NANOSECONDS.toMillis(reconnectIntervalNanos) + "ms: " + ce.getMessage());
                     sleepUntilNanoTime = System.nanoTime() + reconnectIntervalNanos;
                     break;
                 default:
                     throw new RuntimeException("Programming error, unhandled reconnect behaviour: " + reconnectBehaviour);
             }
             return false;
+        } catch (JetException je) {
+            throw je;
+        } catch (Exception e) {
+            throw rethrow(e);
         }
     }
 
-    private SourceTask startNewTask() throws Exception {
-        SourceTask task = (SourceTask) connector.taskClass().getConstructor().newInstance();
+    private SourceConnector startNewConnector() {
+        SourceConnector connector = newInstance(properties.getProperty(CONNECTOR_CLASS_PROPERTY), "connector");
+        connector.initialize(new JetConnectorContext());
+        connector.start((Map) properties);
+        return connector;
+    }
+
+    private SourceTask startNewTask() {
+        SourceTask task = newInstance(connector.taskClass().getName(), "task");
         task.initialize(new JetSourceTaskContext());
 
         // Our DatabaseHistory implementation will be created by the
@@ -257,10 +255,22 @@ public abstract class CdcSource<T> {
         }
     }
 
-    protected static <T> T newInstance(Properties properties, String classNameProperty) throws Exception {
-        String className = properties.getProperty(classNameProperty);
-        Class<?> clazz = Thread.currentThread().getContextClassLoader().loadClass(className);
-        return (T) clazz.getConstructor().newInstance();
+    protected static <T> T newInstance(String className, String type) throws JetException {
+        try {
+            Class<?> clazz = Thread.currentThread().getContextClassLoader().loadClass(className);
+            return (T) clazz.getConstructor().newInstance();
+        } catch (ClassNotFoundException e) {
+            throw new JetException(String.format("%s class %s not found", type, className));
+        } catch (InstantiationException e) {
+            throw new JetException(String.format("%s class %s can't be instantiated", type, className));
+        } catch (IllegalArgumentException | NoSuchMethodException e) {
+            throw new JetException(String.format("%s class %s has no default constructor", type, className));
+        } catch (IllegalAccessException e) {
+            throw new JetException(String.format("Default constructor of %s class %s is not accessible", type, className));
+        } catch (InvocationTargetException e) {
+            throw new JetException(
+                    String.format("%s class %s failed on construction: %s", type, className, e.getMessage()));
+        }
     }
 
     private static long extractTimestamp(SourceRecord record) {
