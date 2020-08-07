@@ -23,12 +23,11 @@ public class SortTransform<V> extends AbstractTransform {
 
     @Override
     public void addToDag(Planner p) {
-
         Vertex v1 = p.dag.newVertex(name() + FIRST_STAGE_VERTEX_NAME_SUFFIX, Processors.sortPrepareP(keyFn))
                          .localParallelism(1);
         PlannerVertex pv2 = p.addVertex(this, name(), 1,
                 ProcessorMetaSupplier.forceTotalParallelismOne(ProcessorSupplier.of(Processors.sortP())));
         p.addEdges(this, v1);
-        p.dag.edge(between(v1, pv2.v).distributed().allToOne(name().hashCode()));
+        p.dag.edge(between(v1, pv2.v).distributed());
     }
 }
