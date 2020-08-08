@@ -50,9 +50,9 @@ stage). ZGC is an experimental collector under intense development, so
 you can expect further improvements, including generational GC behavior,
 in the future.
 
-In our tests we found that in JDK version 14.0.2, the other low-latency
-collector, Shenandoah, did not perform as well as ZGC and latencies
-with it exceeded 10 ms in many cases.
+In our tests we found that as of JDK version 14.0.2, the other
+low-latency collector, Shenandoah, still did not perform as well as ZGC
+and latencies with it exceeded 10 ms in many cases.
 
 ### Reduce the Jet Cooperative Thread Pool
 
