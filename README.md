@@ -30,7 +30,7 @@ Jet automatically rescales the execution plan to use the new nodes as
 well. If you remove a node or it fails, Jet scales it down seamlessly
 without losing any computational state, thus delivering the
 [exactly-once processing
-guarantee](https://jet-start.sh/docs/architecture/fault-tolerance).
+guarantee](https://jet-start.sh/docs/concepts/processing-guarantees).
 
 This is a self-contained Java class that implements a common example
 program, called the "Word Count", computing the word frequency histogram
@@ -47,7 +47,7 @@ class WordCount {
         JetInstance jet = Jet.bootstrappedInstance();
 
         Pipeline p = Pipeline.create();
-        p.readFrom(Sources.files("books"))
+        p.readFrom(Sources.files("/path/to/text-files"))
          .flatMap(line -> traverseArray(line.toLowerCase().split("\\W+")))
          .filter(word -> !word.isEmpty())
          .groupingKey(word -> word)
@@ -59,9 +59,13 @@ class WordCount {
 }
 ```
 
-To run this code directly, you need the single Hazelcast Jet JAR on the
-classpath. In this case it automatically creates an isolated instance
-of Hazelcast Jet into which it deploys the code.
+The code expects to find a set of text files in the folder you name as
+the source, and outputs its results to the console (the default logging
+destination).
+
+To run it directly, you need the single Hazelcast Jet JAR
+on the classpath. In this case it automatically creates an isolated
+instance of Hazelcast Jet into which it deploys the code.
 
 To deploy it to a Jet cluster you've set up beforehand, build a JAR
 containing the class and issue the `jet submit` command:
@@ -70,6 +74,24 @@ containing the class and issue the `jet submit` command:
 $ cd /path/to/hazelcast/jet
 $ bin/jet submit /path/to/word-count.jar
 ```
+
+Using files on the local filesystem is just a toy example; Jet comes
+with out-of-the-box support for many kinds of [data sources and
+sinks](https://jet-start.sh/docs/api/sources-sinks), including:
+
+* Apache Kafka
+* Apache Pulsar
+* Debezium
+* Elasticsearch
+* JDBC
+* JMS
+* InfluxDB
+* Local Files (Text, Avro, JSON)
+* Apache Hadoop
+* Hazelcast
+* Redis
+* MongoDB
+* Twitter
 
 ## When should you use Jet?
 
@@ -175,23 +197,6 @@ Jet supports a variety of transforms and operators. These include:
 * [Stateful
   transforms](https://jet-start.sh/docs/api/stateful-transforms) such as
   aggregations and stateful mapping.
-
-Jet can work with a large variety of [sources and
-sinks](https://jet-start.sh/docs/api/sources-sinks), including:
-
-* Apache Kafka
-* Apache Pulsar
-* Debezium
-* Elasticsearch
-* JDBC
-* JMS
-* InfluxDB
-* Local Files (Text, Avro, JSON)
-* Apache Hadoop
-* Hazelcast
-* Redis
-* MongoDB
-* Twitter
 
 ## Community
 
