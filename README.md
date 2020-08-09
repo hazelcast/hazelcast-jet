@@ -13,52 +13,73 @@
 
 # What is Hazelcast Jet?
 
-[Hazelcast Jet](https://jet-start.sh/) is an open-source, in-memory
-distributed stream and batch processing engine.
+[Hazelcast Jet](https://jet-start.sh/) is an open-source in-memory,
+distributed data processing engine. You can use it to process both live
+streams in [event time](docs/concepts/event-time) and batches of
+potentially huge, static datasets.
 
-It provides a Java API to build stream and batch processing applications
-through the use of a [dataflow programming
-model](https://jet-start.sh/docs/concepts/dag) and deploy them to run on
-a cluster of nodes. Jet will automatically use all the computational
-resources on the cluster to run your application.
+The Java API you use to program a data processing pipeline follows the
+[dataflow programming paradigm](https://jet-start.sh/docs/concepts/dag),
+akin to the Java Streams API. To run the program, set up a cluster of
+Hazelcast Jet instances and deploy it there. Jet builds an execution
+plan that automatically uses all the computational resources of the
+cluster.
 
-If you add more nodes to the cluster, Jet automatically scales up your
-application to run on the new nodes. If you remove nodes from the
-cluster, it scales down the application seamlessly without losing the
-current computational state, using [exactly-once
-processing](https://jet-start.sh/docs/architecture/fault-tolerance). 
+If you add more nodes to the cluster while your application is running,
+Jet automatically rescales the execution plan to use the new nodes as
+well. If you remove a node or it fails, Jet scales it down seamlessly
+without losing any computational state, thus delivering the
+[exactly-once processing
+guarantee](https://jet-start.sh/docs/architecture/fault-tolerance).
 
-For example, you can represent the classical word count problem as
-follows using the Jet API:
+This is a self-contained Java class that implements a common example
+program, called the "Word Count", computing the word frequency histogram
+of a body of text:
 
 ```java
-JetInstance jet = Jet.bootstrappedInstance();
-Pipeline p = Pipeline.create();
-p.readFrom(Sources.files("books"))
- .flatMap(line -> traverseArray(line.toLowerCase().split("\\W+")))
- .filter(word -> !word.isEmpty())
- .groupingKey(word -> word)
- .aggregate(AggregateOperations.counting())
- .writeTo(Sinks.logger());
+import com.hazelcast.jet.*;
+import com.hazelcast.jet.pipeline.*;
+import static com.hazelcast.jet.Traversers.traverseArray;
+import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
 
-jet.newJob(p).join();
+class WordCount {
+    public static void main(String[] args) {
+        JetInstance jet = Jet.bootstrappedInstance();
+
+        Pipeline p = Pipeline.create();
+        p.readFrom(Sources.files("books"))
+         .flatMap(line -> traverseArray(line.toLowerCase().split("\\W+")))
+         .filter(word -> !word.isEmpty())
+         .groupingKey(word -> word)
+         .aggregate(AggregateOperations.counting())
+         .writeTo(Sinks.logger());
+
+        jet.newJob(p).join();
+    }
+}
 ```
 
-and then deploy the application to the cluster:
+To run this code directly, you need the single Hazelcast Jet JAR on the
+classpath. In this case it automatically creates an isolated instance
+of Hazelcast Jet into which it deploys the code.
+
+To deploy it to a Jet cluster you've set up beforehand, build a JAR
+containing the class and issue the `jet submit` command:
 
 ```bash
-bin/jet submit word-count.jar
+$ cd /path/to/hazelcast/jet
+$ bin/jet submit /path/to/word-count.jar
 ```
 
 ## When should you use Jet?
 
 Jet is a good fit when you need to process large amounts of data in a
-distributed fashion. Use it to build a variety of
+distributed fashion. You can use it to build a variety of
 data-processing applications, such as:
 
-* Low-latency unbounded stateful stream processing. For example,
-  detecting trends in 100 Hz sensor data from 100,000 devices and sending
-  corrective feedback within 10 milliseconds.
+* Low-latency stateful stream processing. For example, detecting trends
+  in 100 Hz sensor data from 100,000 devices and sending corrective
+  feedback within 10 milliseconds.
 * High-throughput, large-state stream processing. For example,
   tracking GPS locations of millions of users, inferring their velocity
   vectors.
@@ -74,7 +95,7 @@ Jet uses a unique execution model with [cooperative
 multithreading](https://jet-start.sh/docs/architecture/execution-engine)
 and can achieve [extremely low
 latencies](https://jet-start.sh/blog/2020/08/05/gc-tuning-for-jet) while
-processing millions of items per second just on a single node:
+processing millions of items per second on just a single node:
 
 <img src="images/latency.png"/>
 
@@ -150,7 +171,7 @@ Jet supports a variety of transforms and operators. These include:
 
 * [Stateless
   transforms](https://jet-start.sh/docs/api/stateless-transforms) such
-  as mapping and filtering. 
+  as mapping and filtering.
 * [Stateful
   transforms](https://jet-start.sh/docs/api/stateful-transforms) such as
   aggregations and stateful mapping.
@@ -232,7 +253,7 @@ Source code in this repository is covered by one of two licenses:
     License](licenses/hazelcast-community-license.txt)
 
 The default license throughout the repository is Apache License 2.0
-unless the  
+unless the
 header specifies another license. Please see the [Licensing
 section](https://jet-start.sh/license) for more information.
 
