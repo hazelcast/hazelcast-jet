@@ -214,8 +214,9 @@ out to be 64 threads. Here is what we got:</p>
 pipeline running at full speed just couldn't max out the G1! We repeated
 the test with more threads given to Jet, 78, but that didn't make a
 difference.</p>
-<p><em>If you enjoyed reading this post, feel free to give our <a href="https://github.com/hazelcast/hazelcast-jet">GitHub
-repository</a> a star!</em></p>
+<p><em>If you enjoyed reading this post, check out Jet at
+<a href="https://github.com/hazelcast/hazelcast-jet">GitHub</a> and give us a
+star!</em></p>
 </span></div></article></div><div class="post"><header class="postHeader"><h1 class="postHeaderTitle"><a href="/blog/2020/07/16/designing-evergreen-cache-cdc">Designing an Evergreen Cache with Change Data Capture</a></h1><p class="post-meta">July 16, 2020</p><div class="authorBlock"><p class="post-authorName"><a href="https://twitter.com/nicolas_frankel" target="_blank" rel="noreferrer noopener">Nicolas Frankel</a></p><div class="authorPhoto"><a href="https://twitter.com/nicolas_frankel" target="_blank" rel="noreferrer noopener"><img src="https://3l0wd94f0qdd10om8642z9se-wpengine.netdna-ssl.com/wp-content/uploads/2019/12/nicolas-frankel-170x170.jpg" alt="Nicolas Frankel"/></a></div></div></header><article class="post-content"><div><span><p>It has been said that there are two things hard in software development:
 naming things and cache invalidation (while some add off-by-one errors
 to the mix).
@@ -952,8 +953,9 @@ bottom line of a scenario where everything above 10 ms is already a
 failure.</p>
 <p>The wider chart also gives better insight into the stability of G1,
 keeping itself below 20 ms all the way up to 20 M items per second.</p>
-<p><em>If you enjoyed reading this post, feel free to give our <a href="https://github.com/hazelcast/hazelcast-jet">GitHub
-repository</a> a star!</em></p>
+<p><em>If you enjoyed reading this post, check out Jet at
+<a href="https://github.com/hazelcast/hazelcast-jet">GitHub</a> and give us a
+star!</em></p>
 </span></div></article></div><div class="post"><header class="postHeader"><h1 class="postHeaderTitle"><a href="/blog/2020/06/09/jdk-gc-benchmarks-part2">Performance of Modern Java on Data-Heavy Workloads, Part 2</a></h1><p class="post-meta">June 9, 2020</p><div class="authorBlock"><p class="post-authorName"><a href="https://twitter.com/mtopolnik" target="_blank" rel="noreferrer noopener">Marko Topolnik</a></p><div class="authorPhoto"><a href="https://twitter.com/mtopolnik" target="_blank" rel="noreferrer noopener"><img src="https://i.imgur.com/xuavzce.jpg" alt="Marko Topolnik"/></a></div></div></header><article class="post-content"><div><span><p>This post is a part of a series:</p>
 <ul>
 <li><a href="/blog/2020/06/09/jdk-gc-benchmarks-part1">Part 1 (Intro and high-throughput streaming
@@ -1129,8 +1131,9 @@ sufficiently short duration that the rest of the pipeline didn't get
 stalled. The pipeline has mechanisms that dampen out short hiccups and
 as long as the GC pauses are within acceptable limits (up to some 150
 ms), the effect of GC stays local.</p>
-<p><em>If you enjoyed reading this post, feel free to give our <a href="https://github.com/hazelcast/hazelcast-jet">GitHub
-repository</a> a star!</em></p>
+<p><em>If you enjoyed reading this post, check out Jet at
+<a href="https://github.com/hazelcast/hazelcast-jet">GitHub</a> and give us a
+star!</em></p>
 </span></div></article></div><div class="post"><header class="postHeader"><h1 class="postHeaderTitle"><a href="/blog/2020/06/09/jdk-gc-benchmarks-part1">Performance of Modern Java on Data-Heavy Workloads, Part 1</a></h1><p class="post-meta">June 9, 2020</p><div class="authorBlock"><p class="post-authorName"><a href="https://twitter.com/mtopolnik" target="_blank" rel="noreferrer noopener">Marko Topolnik</a></p><div class="authorPhoto"><a href="https://twitter.com/mtopolnik" target="_blank" rel="noreferrer noopener"><img src="https://i.imgur.com/xuavzce.jpg" alt="Marko Topolnik"/></a></div></div></header><article class="post-content"><div><span><p>This post is a part of a series:</p>
 <ul>
 <li>Part 1 (you are here)</li>
@@ -1398,8 +1401,9 @@ would start out with a constantly increasing latency, but then after
 around two minutes, its performance would improve and the latency would
 make a full recovery.</p>
 <p>Go to <a href="/blog/2020/06/09/jdk-gc-benchmarks-part2">Part 2: the Batch Pipeline Benchmarks</a>.</p>
-<p><em>If you enjoyed reading this post, feel free to give our <a href="https://github.com/hazelcast/hazelcast-jet">GitHub
-repository</a> a star!</em></p>
+<p><em>If you enjoyed reading this post, check out Jet at
+<a href="https://github.com/hazelcast/hazelcast-jet">GitHub</a> and give us a
+star!</em></p>
 </span></div></article></div><div class="post"><header class="postHeader"><h1 class="postHeaderTitle"><a href="/blog/2020/05/25/grcp">Processing 10M queries / second on a single node using Jet and gRPC</a></h1><p class="post-meta">May 25, 2020</p><div class="authorBlock"><p class="post-authorName"><a target="_blank" rel="noreferrer noopener">Frantisek Hartman, Marko Topolnik</a></p></div></header><article class="post-content"><div><span><p>Implementing data processing pipelines occasionally requires calling an
 external service, for example: predicting/classifying based on a ML
 model, looking up records from a database or a full-text search engine,
