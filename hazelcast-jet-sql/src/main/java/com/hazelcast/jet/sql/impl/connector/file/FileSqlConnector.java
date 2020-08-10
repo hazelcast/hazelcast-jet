@@ -29,6 +29,9 @@ import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 
+import static com.hazelcast.jet.sql.impl.connector.file.MetadataResolver.resolveMetadata;
+import static com.hazelcast.jet.sql.impl.connector.file.MetadataResolver.resolveSchema;
+
 public class FileSqlConnector implements SqlConnector {
 
     public static final String TYPE_NAME = "com.hazelcast.File";
@@ -54,11 +57,12 @@ public class FileSqlConnector implements SqlConnector {
 
     @Nonnull
     @Override
-    public List<ExternalField> resolveFields(
-            @Nonnull NodeEngine nodeEngine,
-            @Nonnull Map<String, String> options
+    public List<ExternalField> createSchema(
+            @Nullable NodeEngine nodeEngine,
+            @Nonnull Map<String, String> options,
+            @Nonnull List<ExternalField> externalFields
     ) {
-        return MetadataResolver.resolve(FileOptions.from(options));
+        return resolveSchema(externalFields, FileOptions.from(options));
     }
 
     @Nonnull
@@ -70,7 +74,7 @@ public class FileSqlConnector implements SqlConnector {
             @Nonnull Map<String, String> options,
             @Nonnull List<ExternalField> externalFields
     ) {
-        Metadata metadata = MetadataResolver.resolve(externalFields, FileOptions.from(options));
+        Metadata metadata = resolveMetadata(externalFields, FileOptions.from(options));
 
         return new FileTable(
                 this,

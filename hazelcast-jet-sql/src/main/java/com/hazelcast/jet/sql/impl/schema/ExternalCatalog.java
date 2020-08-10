@@ -24,6 +24,8 @@ import com.hazelcast.sql.impl.schema.Table;
 import com.hazelcast.sql.impl.schema.TableResolver;
 
 import javax.annotation.Nonnull;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -50,43 +52,31 @@ public class ExternalCatalog implements TableResolver {
     }
 
     public boolean createTable(ExternalTable table, boolean replace, boolean ifNotExists) {
-        ExternalTable validated = validate(table);
+        ExternalTable resolved = resolveTable(table);
 
-        String name = validated.name();
+        String name = resolved.name();
         if (ifNotExists) {
-            return catalogStorage().putIfAbsent(name, validated) == null;
+            return catalogStorage().putIfAbsent(name, resolved) == null;
         } else if (replace) {
-            catalogStorage().put(name, validated);
-        } else if (catalogStorage().putIfAbsent(name, validated) != null) {
+            catalogStorage().put(name, resolved);
+        } else if (catalogStorage().putIfAbsent(name, resolved) != null) {
             throw QueryException.error("'" + name + "' table already exists");
         }
         return true;
     }
 
-    private ExternalTable validate(ExternalTable table) {
-        ExternalTable resolvedTable = table.fields().isEmpty() ? resolveTable(table) : table;
-
-        // catch all the potential errors early - missing connector, class, invalid format or field definitions etc.
+    private ExternalTable resolveTable(ExternalTable table) {
         try {
-            toTable(resolvedTable);
+            SqlConnector connector = findConnector(table.type());
+
+            Map<String, String> options = table.options();
+
+            List<ExternalField> fields = connector.createSchema(nodeEngine, options, table.fields());
+
+            return new ExternalTable(table.name(), table.type(), new ArrayList<>(fields), new HashMap<>(options));
         } catch (Exception e) {
             throw QueryException.error("Invalid table definition: " + e.getMessage(), e);
         }
-
-        return resolvedTable;
-    }
-
-    private ExternalTable resolveTable(ExternalTable table) {
-        SqlConnector connector = findConnector(table.type());
-
-        Map<String, String> options = table.options();
-
-        List<ExternalField> fields = connector.resolveFields(nodeEngine, options);
-        if (fields.isEmpty()) {
-            throw QueryException.error("Empty column list");
-        }
-
-        return new ExternalTable(table.name(), table.type(), fields, options);
     }
 
     public void removeTable(String name, boolean ifExists) {

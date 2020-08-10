@@ -20,13 +20,12 @@ import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.jet.sql.SqlConnector;
 import com.hazelcast.jet.sql.impl.schema.ExternalField;
 import com.hazelcast.sql.impl.QueryException;
-import com.hazelcast.sql.impl.schema.TableField;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
+import java.util.stream.Stream;
 
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
@@ -48,42 +47,21 @@ public abstract class EntrySqlConnector implements SqlConnector {
 
     protected abstract Map<String, EntryMetadataResolver> supportedResolvers();
 
-    protected List<ExternalField> resolveFields(
+    protected List<ExternalField> resolveSchema(
+            List<ExternalField> externalFields,
             Map<String, String> options,
             InternalSerializationService serializationService
     ) {
-        List<ExternalField> keyFields = resolveFields(options, true, serializationService);
-        List<ExternalField> valueFields = resolveFields(options, false, serializationService);
+        List<ExternalField> keyFields = resolveSchema(externalFields, options, true, serializationService);
+        List<ExternalField> valueFields = resolveSchema(externalFields, options, false, serializationService);
 
-        Map<String, ExternalField> fields = keyFields.stream()
-                                                     .collect(
-                                                             LinkedHashMap::new,
-                                                             (map, field) -> map.put(field.name(), field),
-                                                             Map::putAll
-                                                     );
-
-        // value fields do not override key fields.
-        for (ExternalField valueField : valueFields) {
-            fields.putIfAbsent(valueField.name(), valueField);
-        }
+        Map<String, ExternalField> fields = Stream.concat(keyFields.stream(), valueFields.stream())
+            .collect(LinkedHashMap::new, (map, field) -> map.putIfAbsent(field.name(), field), Map::putAll);
 
         return new ArrayList<>(fields.values());
     }
 
-    private List<ExternalField> resolveFields(
-            Map<String, String> options,
-            boolean isKey,
-            InternalSerializationService serializationService
-    ) {
-        String format = resolveFormat(options, isKey);
-        EntryMetadataResolver resolver = supportedResolvers().get(format);
-        if (resolver == null) {
-            throw QueryException.error(format("Unsupported serialization format - '%s'", format));
-        }
-        return requireNonNull(resolver.resolveFields(options, isKey, serializationService));
-    }
-
-    protected EntryMetadata resolveMetadata(
+    private List<ExternalField> resolveSchema(
             List<ExternalField> externalFields,
             Map<String, String> options,
             boolean isKey,
@@ -94,6 +72,17 @@ public abstract class EntrySqlConnector implements SqlConnector {
         if (resolver == null) {
             throw QueryException.error(format("Unsupported serialization format - '%s'", format));
         }
+        return requireNonNull(resolver.resolveSchema(externalFields, options, isKey, serializationService));
+    }
+
+    protected EntryMetadata resolveMetadata(
+            List<ExternalField> externalFields,
+            Map<String, String> options,
+            boolean isKey,
+            InternalSerializationService serializationService
+    ) {
+        String format = resolveFormat(options, isKey);
+        EntryMetadataResolver resolver = requireNonNull(supportedResolvers().get(format));
         return requireNonNull(resolver.resolveMetadata(externalFields, options, isKey, serializationService));
     }
 
@@ -104,20 +93,5 @@ public abstract class EntrySqlConnector implements SqlConnector {
             throw QueryException.error(format("Missing '%s' option", option));
         }
         return format;
-    }
-
-    // TODO: deduplicate with AbstractMapTableResolver
-    protected static List<TableField> mergeFields(
-            Map<String, TableField> keyFields,
-            Map<String, TableField> valueFields
-    ) {
-        Map<String, TableField> fields = new LinkedHashMap<>(keyFields);
-
-        // value fields do not override key fields.
-        for (Entry<String, TableField> valueFieldEntry : valueFields.entrySet()) {
-            fields.putIfAbsent(valueFieldEntry.getKey(), valueFieldEntry.getValue());
-        }
-
-        return new ArrayList<>(fields.values());
     }
 }

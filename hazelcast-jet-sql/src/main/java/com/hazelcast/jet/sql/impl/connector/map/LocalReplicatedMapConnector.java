@@ -31,13 +31,16 @@ import com.hazelcast.sql.impl.schema.TableField;
 import com.hazelcast.sql.impl.schema.map.ReplicatedMapTable;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
+import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
+import static java.util.stream.Stream.concat;
 
 public class LocalReplicatedMapConnector extends EntrySqlConnector {
 
@@ -61,6 +64,16 @@ public class LocalReplicatedMapConnector extends EntrySqlConnector {
 
     @Nonnull
     @Override
+    public List<ExternalField> createSchema(
+            @Nullable NodeEngine nodeEngine,
+            @Nonnull Map<String, String> options,
+            @Nonnull List<ExternalField> externalFields
+    ) {
+        return resolveSchema(externalFields, options, (InternalSerializationService) nodeEngine.getSerializationService());
+    }
+
+    @Nonnull
+    @Override
     public Table createTable(
             @Nonnull NodeEngine nodeEngine,
             @Nonnull String schemaName,
@@ -74,7 +87,8 @@ public class LocalReplicatedMapConnector extends EntrySqlConnector {
 
         EntryMetadata keyMetadata = resolveMetadata(externalFields, options, true, ss);
         EntryMetadata valueMetadata = resolveMetadata(externalFields, options, false, ss);
-        List<TableField> fields = mergeFields(keyMetadata.getFields(), valueMetadata.getFields());
+        List<TableField> fields = concat(keyMetadata.getFields().stream(), valueMetadata.getFields().stream())
+                .collect(toList());
 
         // TODO: deduplicate with ReplicatedMapTableResolver ???
         ReplicatedMapService service = nodeEngine.getService(ReplicatedMapService.SERVICE_NAME);

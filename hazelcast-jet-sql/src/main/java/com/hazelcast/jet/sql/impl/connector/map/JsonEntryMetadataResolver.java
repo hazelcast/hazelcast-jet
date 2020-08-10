@@ -28,6 +28,7 @@ import com.hazelcast.sql.impl.schema.TableField;
 import com.hazelcast.sql.impl.schema.map.MapTableField;
 import com.hazelcast.sql.impl.type.QueryDataType;
 
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -51,16 +52,7 @@ final class JsonEntryMetadataResolver implements EntryMetadataResolver {
     }
 
     @Override
-    public List<ExternalField> resolveFields(
-            Map<String, String> options,
-            boolean isKey,
-            InternalSerializationService serializationService
-    ) {
-        throw QueryException.error("Empty column list"); // TODO: resolve from sample ???
-    }
-
-    @Override
-    public EntryMetadata resolveMetadata(
+    public List<ExternalField> resolveSchema(
             List<ExternalField> externalFields,
             Map<String, String> options,
             boolean isKey,
@@ -74,25 +66,48 @@ final class JsonEntryMetadataResolver implements EntryMetadataResolver {
             throw QueryException.error("Empty " + (isKey ? "key" : "value") + " column list");
         }
 
-        LinkedHashMap<String, TableField> fields = new LinkedHashMap<>();
-        Set<String> pathsRequiringConversion = new HashSet<>();
-
-        for (Entry<QueryPath, ExternalField> externalField : externalFieldsByPath.entrySet()) {
-            QueryPath path = externalField.getKey();
+        Map<String, ExternalField> fields = new LinkedHashMap<>();
+        for (Entry<QueryPath, ExternalField> entry : externalFieldsByPath.entrySet()) {
+            QueryPath path = entry.getKey();
             if (path.getPath() == null) {
                 throw QueryException.error("Invalid external name '" + path.getFullPath() + "'");
             }
-            QueryDataType type = externalField.getValue().type();
-            String name = externalField.getValue().name();
+            QueryDataType type = entry.getValue().type();
+            String name = entry.getValue().name();
+
+            ExternalField field = new ExternalField(name, type, path.getFullPath());
+
+            fields.putIfAbsent(field.name(), field);
+        }
+        return new ArrayList<>(fields.values());
+    }
+
+    @Override
+    public EntryMetadata resolveMetadata(
+            List<ExternalField> externalFields,
+            Map<String, String> options,
+            boolean isKey,
+            InternalSerializationService serializationService
+    ) {
+        Map<QueryPath, ExternalField> externalFieldsByPath = isKey
+                ? extractKeyFields(externalFields)
+                : extractValueFields(externalFields, name -> new QueryPath(name, false));
+
+        List<TableField> fields = new ArrayList<>();
+        Set<String> pathsRequiringConversion = new HashSet<>();
+        for (Entry<QueryPath, ExternalField> entry : externalFieldsByPath.entrySet()) {
+            QueryPath path = entry.getKey();
+            QueryDataType type = entry.getValue().type();
+            String name = entry.getValue().name();
             boolean requiresConversion = doesRequireConversion(type);
 
             MapTableField field = new MapTableField(name, type, false, path, requiresConversion);
 
-            if (fields.putIfAbsent(field.getName(), field) == null && field.isRequiringConversion()) {
+            fields.add(field);
+            if (field.isRequiringConversion()) {
                 pathsRequiringConversion.add(field.getPath().getPath());
             }
         }
-
         return new EntryMetadata(
                 new GenericQueryTargetDescriptor(pathsRequiringConversion),
                 JsonUpsertTargetDescriptor.INSTANCE,

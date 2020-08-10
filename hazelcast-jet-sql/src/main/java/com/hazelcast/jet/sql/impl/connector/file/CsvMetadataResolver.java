@@ -31,7 +31,25 @@ import static java.util.stream.Collectors.toMap;
 
 interface CsvMetadataResolver {
 
-    static List<ExternalField> fields(String line, String delimiter) {
+    static List<ExternalField> schema(List<ExternalField> externalFields) {
+        List<ExternalField> fields = new ArrayList<>();
+        for (ExternalField externalField : externalFields) {
+            String name = externalField.name();
+            QueryDataType type = externalField.type();
+
+            String externalName = externalField.externalName();
+            if (externalName != null) {
+                throw QueryException.error("External names are not supported");
+            }
+
+            ExternalField field = new ExternalField(name, type);
+
+            fields.add(field);
+        }
+        return fields;
+    }
+
+    static List<ExternalField> schema(String line, String delimiter) {
         String[] headers = line.split(delimiter);
 
         Map<String, ExternalField> fields = new LinkedHashMap<>();
@@ -48,11 +66,6 @@ interface CsvMetadataResolver {
         for (ExternalField externalField : externalFields) {
             String name = externalField.name();
             QueryDataType type = externalField.type();
-
-            String externalName = externalField.externalName();
-            if (externalName != null) {
-                throw QueryException.error("External names are not supported");
-            }
 
             TableField field = new FileTableField(name, type);
 

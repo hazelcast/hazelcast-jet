@@ -44,6 +44,7 @@ import java.util.List;
 import java.util.Map;
 
 import static com.hazelcast.jet.hadoop.impl.SerializableConfiguration.asSerializable;
+import static com.hazelcast.jet.sql.impl.connector.file.CsvMetadataResolver.schema;
 import static com.hazelcast.jet.sql.impl.connector.file.CsvMetadataResolver.fields;
 
 final class RemoteCsvMetadataResolver implements CsvMetadataResolver {
@@ -51,10 +52,18 @@ final class RemoteCsvMetadataResolver implements CsvMetadataResolver {
     private RemoteCsvMetadataResolver() {
     }
 
-    static List<ExternalField> resolveFields(FileOptions options, Job job) throws IOException {
-        // TODO: ensure options.header() == true ???
-        String line = line(options.path(), job.getConfiguration());
-        return fields(line, options.delimiter());
+    static List<ExternalField> resolveSchema(
+            List<ExternalField> externalFields,
+            FileOptions options,
+            Job job
+    ) throws IOException {
+        if (!externalFields.isEmpty()) {
+            return schema(externalFields);
+        } else {
+            // TODO: ensure options.header() == true ???
+            String line = line(options.path(), job.getConfiguration());
+            return schema(line, options.delimiter());
+        }
     }
 
     private static String line(String directory, Configuration configuration) throws IOException {

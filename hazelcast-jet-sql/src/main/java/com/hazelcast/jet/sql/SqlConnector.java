@@ -88,17 +88,18 @@ public interface SqlConnector {
 
     /**
      * TODO
+     *
      * @param nodeEngine
      * @param options
+     * @param externalFields
      * @return
      */
     @Nonnull
-    default List<ExternalField> resolveFields(
-            @Nonnull NodeEngine nodeEngine,
-            @Nonnull Map<String, String> options
-    ) {
-        return Collections.emptyList();
-    }
+    List<ExternalField> createSchema(
+            @Nullable NodeEngine nodeEngine,
+            @Nonnull Map<String, String> options,
+            @Nonnull List<ExternalField> externalFields
+    );
 
     /**
      * Creates a Table object with the given fields. Will not attempt to

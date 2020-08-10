@@ -38,6 +38,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Stream;
 
+import static com.hazelcast.jet.sql.impl.connector.file.CsvMetadataResolver.schema;
 import static com.hazelcast.jet.sql.impl.connector.file.CsvMetadataResolver.fields;
 
 final class LocalCsvMetadataResolver implements CsvMetadataResolver {
@@ -45,10 +46,17 @@ final class LocalCsvMetadataResolver implements CsvMetadataResolver {
     private LocalCsvMetadataResolver() {
     }
 
-    static List<ExternalField> resolveFields(FileOptions options) throws IOException {
-        // TODO: ensure options.header() == true ???
-        String line = line(options.path(), options.glob());
-        return fields(line, options.delimiter());
+    static List<ExternalField> resolveSchema(
+            List<ExternalField> externalFields,
+            FileOptions options
+    ) throws IOException {
+        if (!externalFields.isEmpty()) {
+            return schema(externalFields);
+        } else {
+            // TODO: ensure options.header() == true ???
+            String line = line(options.path(), options.glob());
+            return schema(line, options.delimiter());
+        }
     }
 
     private static String line(String directory, String glob) throws IOException {

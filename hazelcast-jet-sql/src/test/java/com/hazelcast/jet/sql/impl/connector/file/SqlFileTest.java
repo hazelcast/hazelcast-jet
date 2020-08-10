@@ -17,7 +17,7 @@
 package com.hazelcast.jet.sql.impl.connector.file;
 
 import com.hazelcast.jet.sql.SqlTestSupport;
-import org.junit.BeforeClass;
+import org.junit.Before;
 import org.junit.Test;
 
 import static com.hazelcast.jet.sql.SqlConnector.AVRO_SERIALIZATION_FORMAT;
@@ -29,8 +29,8 @@ public class SqlFileTest extends SqlTestSupport {
 
     private static String name;
 
-    @BeforeClass
-    public static void beforeClass() {
+    @Before
+    public void before() {
         name = createRandomName();
         executeSql("CREATE EXTERNAL TABLE " + name + " ("
                 + "username VARCHAR"

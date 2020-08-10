@@ -17,10 +17,10 @@
 package com.hazelcast.jet.sql.impl.connector.map;
 
 import com.hazelcast.internal.serialization.InternalSerializationService;
-import com.hazelcast.jet.sql.impl.connector.JavaEntryMetadataResolver;
 import com.hazelcast.jet.sql.impl.connector.EntryMetadata;
 import com.hazelcast.jet.sql.impl.connector.EntryMetadataResolver;
 import com.hazelcast.jet.sql.impl.connector.EntrySqlConnector;
+import com.hazelcast.jet.sql.impl.connector.JavaEntryMetadataResolver;
 import com.hazelcast.jet.sql.impl.schema.ExternalField;
 import com.hazelcast.map.impl.MapContainer;
 import com.hazelcast.map.impl.MapService;
@@ -33,6 +33,7 @@ import com.hazelcast.sql.impl.schema.map.MapTableIndex;
 import com.hazelcast.sql.impl.schema.map.PartitionedMapTable;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -43,7 +44,9 @@ import static com.hazelcast.sql.impl.schema.map.MapTableUtils.estimatePartitione
 import static com.hazelcast.sql.impl.schema.map.MapTableUtils.getPartitionedMapDistributionField;
 import static com.hazelcast.sql.impl.schema.map.MapTableUtils.getPartitionedMapIndexes;
 import static java.util.Collections.emptyList;
+import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
+import static java.util.stream.Stream.concat;
 
 public class LocalPartitionedMapConnector extends EntrySqlConnector {
 
@@ -67,11 +70,12 @@ public class LocalPartitionedMapConnector extends EntrySqlConnector {
 
     @Nonnull
     @Override
-    public List<ExternalField> resolveFields(
-            @Nonnull NodeEngine nodeEngine,
-            @Nonnull Map<String, String> options
+    public List<ExternalField> createSchema(
+            @Nullable NodeEngine nodeEngine,
+            @Nonnull Map<String, String> options,
+            @Nonnull List<ExternalField> externalFields
     ) {
-        return resolveFields(options, (InternalSerializationService) nodeEngine.getSerializationService());
+        return resolveSchema(externalFields, options, (InternalSerializationService) nodeEngine.getSerializationService());
     }
 
     @Nonnull
@@ -89,7 +93,8 @@ public class LocalPartitionedMapConnector extends EntrySqlConnector {
 
         EntryMetadata keyMetadata = resolveMetadata(externalFields, options, true, ss);
         EntryMetadata valueMetadata = resolveMetadata(externalFields, options, false, ss);
-        List<TableField> fields = mergeFields(keyMetadata.getFields(), valueMetadata.getFields());
+        List<TableField> fields = concat(keyMetadata.getFields().stream(), valueMetadata.getFields().stream())
+                .collect(toList());
 
         // TODO: deduplicate with PartitionedMapTableResolver ???
         MapService service = nodeEngine.getService(MapService.SERVICE_NAME);

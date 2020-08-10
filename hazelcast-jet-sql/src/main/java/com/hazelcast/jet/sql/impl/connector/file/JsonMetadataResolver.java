@@ -32,7 +32,28 @@ import java.util.Map;
 
 interface JsonMetadataResolver {
 
-    static List<ExternalField> fields(String line) {
+    static List<ExternalField> schema(List<ExternalField> externalFields) {
+        List<ExternalField> fields = new ArrayList<>();
+        for (ExternalField externalField : externalFields) {
+            String name = externalField.name();
+            QueryDataType type = externalField.type();
+
+            String externalName = externalField.externalName();
+            if (externalName != null && externalName.chars().filter(ch -> ch == '.').count() > 0) {
+                throw QueryException.error(
+                        "Invalid field external name - '" + externalName + "'. Nested fields are not supported."
+                );
+            }
+            String path = externalName == null ? externalField.name() : externalName;
+
+            ExternalField field = new ExternalField(name, type, path);
+
+            fields.add(field);
+        }
+        return fields;
+    }
+
+    static List<ExternalField> schema(String line) {
         JsonObject object = Json.parse(line).asObject();
 
         Map<String, ExternalField> fields = new LinkedHashMap<>();
@@ -54,11 +75,6 @@ interface JsonMetadataResolver {
             QueryDataType type = externalField.type();
 
             String externalName = externalField.externalName();
-            if (externalName != null && externalName.chars().filter(ch -> ch == '.').count() > 0) {
-                throw QueryException.error(
-                        "Invalid field external name - '" + externalName + "'. Nested fields are not supported."
-                );
-            }
             String path = externalName == null ? externalField.name() : externalName;
 
             TableField field = new FileTableField(name, type, path);

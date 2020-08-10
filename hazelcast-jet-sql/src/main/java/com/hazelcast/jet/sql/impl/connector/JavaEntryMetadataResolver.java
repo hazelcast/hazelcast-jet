@@ -40,12 +40,9 @@ import static com.hazelcast.jet.sql.SqlConnector.JAVA_SERIALIZATION_FORMAT;
 import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.TO_KEY_CLASS;
 import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.TO_VALUE_CLASS;
 import static com.hazelcast.sql.impl.extract.QueryPath.KEY;
-import static com.hazelcast.sql.impl.extract.QueryPath.KEY_PREFIX;
 import static com.hazelcast.sql.impl.extract.QueryPath.VALUE;
 import static com.hazelcast.sql.impl.extract.QueryPath.VALUE_PATH;
-import static com.hazelcast.sql.impl.extract.QueryPath.VALUE_PREFIX;
 import static java.util.Collections.singletonList;
-import static java.util.Collections.singletonMap;
 
 // TODO: deduplicate with MapSampleMetadataResolver
 public final class JavaEntryMetadataResolver implements EntryMetadataResolver {
@@ -61,37 +58,7 @@ public final class JavaEntryMetadataResolver implements EntryMetadataResolver {
     }
 
     @Override
-    public List<ExternalField> resolveFields(
-            Map<String, String> options,
-            boolean isKey,
-            InternalSerializationService serializationService
-    ) {
-        Class<?> clazz = resolveClass(isKey, options);
-        QueryDataType type = QueryDataTypeUtils.resolveTypeForClass(clazz);
-        if (type != QueryDataType.OBJECT) {
-            return resolvePrimitive(isKey, type);
-        } else {
-            return resolveObject(isKey, clazz);
-        }
-    }
-
-    private List<ExternalField> resolvePrimitive(boolean isKey, QueryDataType type) {
-        return singletonList(new ExternalField(isKey ? KEY : VALUE, type, isKey ? KEY : VALUE));
-    }
-
-    private List<ExternalField> resolveObject(boolean isKey, Class<?> clazz) {
-        List<ExternalField> fields = new ArrayList<>();
-        for (Entry<String, Class<?>> entry : ResolverUtil.resolveClass(clazz).entrySet()) {
-            String name = entry.getKey();
-            QueryDataType type = QueryDataTypeUtils.resolveTypeForClass(entry.getValue());
-
-            fields.add(new ExternalField(name, type, (isKey ? KEY_PREFIX : VALUE_PREFIX) + name));
-        }
-        return fields;
-    }
-
-    @Override
-    public EntryMetadata resolveMetadata(
+    public List<ExternalField> resolveSchema(
             List<ExternalField> externalFields,
             Map<String, String> options,
             boolean isKey,
@@ -100,13 +67,13 @@ public final class JavaEntryMetadataResolver implements EntryMetadataResolver {
         Class<?> clazz = resolveClass(isKey, options);
         QueryDataType type = QueryDataTypeUtils.resolveTypeForClass(clazz);
         if (type != QueryDataType.OBJECT) {
-            return resolvePrimitive(externalFields, type, isKey);
+            return resolvePrimitiveSchema(externalFields, type, isKey);
         } else {
-            return resolveObject(externalFields, clazz, isKey);
+            return resolveObjectSchema(externalFields, clazz, isKey);
         }
     }
 
-    private EntryMetadata resolvePrimitive(
+    private List<ExternalField> resolvePrimitiveSchema(
             List<ExternalField> externalFields,
             QueryDataType type,
             boolean isKey
@@ -123,22 +90,18 @@ public final class JavaEntryMetadataResolver implements EntryMetadataResolver {
         }
         String name = externalField == null ? (isKey ? KEY : VALUE) : externalField.name();
 
-        TableField field = new MapTableField(name, type, false, path);
+        ExternalField field = new ExternalField(name, type, path.getFullPath());
 
         for (ExternalField ef : externalFieldsByPath.values()) {
-            if (!field.getName().equals(ef.name())) {
+            if (!field.name().equals(ef.name())) {
                 throw QueryException.error("Unmapped field - '" + ef.name() + "'");
             }
         }
 
-        return new EntryMetadata(
-                GenericQueryTargetDescriptor.DEFAULT,
-                PrimitiveUpsertTargetDescriptor.INSTANCE,
-                new LinkedHashMap<>(singletonMap(field.getName(), field))
-        );
+        return singletonList(field);
     }
 
-    private EntryMetadata resolveObject(
+    private List<ExternalField> resolveObjectSchema(
             List<ExternalField> externalFields,
             Class<?> clazz,
             boolean isKey
@@ -147,9 +110,7 @@ public final class JavaEntryMetadataResolver implements EntryMetadataResolver {
                 ? extractKeyFields(externalFields)
                 : extractValueFields(externalFields, name -> new QueryPath(name, false));
 
-        LinkedHashMap<String, TableField> fields = new LinkedHashMap<>();
-        Map<String, String> typeNamesByPaths = new HashMap<>();
-
+        Map<String, ExternalField> fields = new LinkedHashMap<>();
         for (Entry<String, Class<?>> entry : ResolverUtil.resolveClass(clazz).entrySet()) {
             QueryPath path = new QueryPath(entry.getKey(), isKey);
             QueryDataType type = QueryDataTypeUtils.resolveTypeForClass(entry.getValue());
@@ -160,27 +121,84 @@ public final class JavaEntryMetadataResolver implements EntryMetadataResolver {
             }
             String name = externalField == null ? entry.getKey() : externalField.name();
 
-            MapTableField field = new MapTableField(name, type, false, path);
+            ExternalField field = new ExternalField(name, type, path.getFullPath());
 
-            if (fields.putIfAbsent(field.getName(), field) == null) {
-                typeNamesByPaths.put(field.getPath().getPath(), entry.getValue().getName());
-            }
+            fields.putIfAbsent(field.name(), field);
         }
-
         for (Entry<QueryPath, ExternalField> entry : externalFieldsByPath.entrySet()) {
             QueryPath path = entry.getKey();
             String name = entry.getValue().name();
             QueryDataType type = entry.getValue().type();
 
-            TableField field = new MapTableField(name, type, false, path);
+            ExternalField field = new ExternalField(name, type, path.getFullPath());
 
-            fields.put(field.getName(), field);
+            fields.putIfAbsent(field.name(), field);
         }
+        return new ArrayList<>(fields.values());
+    }
+
+    @Override
+    public EntryMetadata resolveMetadata(
+            List<ExternalField> externalFields,
+            Map<String, String> options,
+            boolean isKey,
+            InternalSerializationService serializationService
+    ) {
+        Class<?> clazz = resolveClass(isKey, options);
+        QueryDataType type = QueryDataTypeUtils.resolveTypeForClass(clazz);
+        if (type != QueryDataType.OBJECT) {
+            return resolvePrimitiveMetadata(externalFields, isKey);
+        } else {
+            return resolveObjectMetadata(externalFields, clazz, isKey);
+        }
+    }
+
+    private EntryMetadata resolvePrimitiveMetadata(List<ExternalField> externalFields, boolean isKey) {
+        Map<QueryPath, ExternalField> externalFieldsByPath = isKey
+                ? extractKeyFields(externalFields)
+                : extractValueFields(externalFields, name -> VALUE_PATH);
+
+        QueryPath path = isKey ? QueryPath.KEY_PATH : QueryPath.VALUE_PATH;
+        ExternalField externalField = externalFieldsByPath.get(path);
+
+        TableField field = new MapTableField(externalField.name(), externalField.type(), false, path);
 
         return new EntryMetadata(
                 GenericQueryTargetDescriptor.DEFAULT,
+                PrimitiveUpsertTargetDescriptor.INSTANCE,
+                singletonList(field)
+        );
+    }
+
+    private EntryMetadata resolveObjectMetadata(
+            List<ExternalField> externalFields,
+            Class<?> clazz,
+            boolean isKey
+    ) {
+        Map<QueryPath, ExternalField> externalFieldsByPath = isKey
+                ? extractKeyFields(externalFields)
+                : extractValueFields(externalFields, name -> new QueryPath(name, false));
+
+        Map<String, Class<?>> typesByNames = ResolverUtil.resolveClass(clazz);
+
+        List<TableField> fields = new ArrayList<>();
+        Map<String, String> typeNamesByPaths = new HashMap<>();
+        for (Entry<QueryPath, ExternalField> entry : externalFieldsByPath.entrySet()) {
+            QueryPath path = entry.getKey();
+            QueryDataType type = entry.getValue().type();
+            String name = entry.getValue().name();
+
+            TableField field = new MapTableField(name, type, false, path);
+
+            fields.add(field);
+            if (typesByNames.get(path.getPath()) != null) {
+                typeNamesByPaths.put(path.getPath(), typesByNames.get(path.getPath()).getName());
+            }
+        }
+        return new EntryMetadata(
+                GenericQueryTargetDescriptor.DEFAULT,
                 new PojoUpsertTargetDescriptor(clazz.getName(), typeNamesByPaths),
-                new LinkedHashMap<>(fields)
+                fields
         );
     }
 

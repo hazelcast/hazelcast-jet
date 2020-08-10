@@ -71,15 +71,11 @@ public class CdcSqlConnector implements SqlConnector {
     }
 
     @Nonnull @Override
-    public Table createTable(
-            @Nonnull NodeEngine nodeEngine,
-            @Nonnull String schemaName,
-            @Nonnull String tableName,
+    public List<ExternalField> createSchema(
+            @Nullable NodeEngine nodeEngine,
             @Nonnull Map<String, String> options,
-            @Nullable List<ExternalField> externalFields
+            @Nonnull List<ExternalField> externalFields
     ) {
-        // TODO validate options
-
         // TODO: column property instead of predefined name?
         ExternalField operationTypeField = externalFields.stream()
                                                          .filter(field -> OPERATION.equalsIgnoreCase(field.name()))
@@ -91,6 +87,17 @@ public class CdcSqlConnector implements SqlConnector {
             throw new IllegalArgumentException(OPERATION + " column must be of " + VARCHAR + " type");
         }
 
+        return toList(externalFields, ef -> new ExternalField(ef.name(), ef.type()));
+    }
+
+    @Nonnull @Override
+    public Table createTable(
+            @Nonnull NodeEngine nodeEngine,
+            @Nonnull String schemaName,
+            @Nonnull String tableName,
+            @Nonnull Map<String, String> options,
+            @Nonnull List<ExternalField> externalFields
+    ) {
         Properties cdcProperties = new Properties();
         cdcProperties.putAll(options);
         cdcProperties.put(NAME, tableName);

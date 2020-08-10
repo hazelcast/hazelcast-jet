@@ -47,7 +47,9 @@ import static com.hazelcast.jet.core.EventTimePolicy.noEventTime;
 import static com.hazelcast.jet.core.processor.Processors.mapP;
 import static com.hazelcast.jet.sql.impl.connector.EntryProcessors.entryProjector;
 import static com.hazelcast.jet.sql.impl.expression.ExpressionUtil.projectionFn;
+import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
+import static java.util.stream.Stream.concat;
 
 public class KafkaSqlConnector extends EntrySqlConnector {
 
@@ -71,11 +73,12 @@ public class KafkaSqlConnector extends EntrySqlConnector {
 
     @Nonnull
     @Override
-    public List<ExternalField> resolveFields(
-            @Nonnull NodeEngine nodeEngine,
-            @Nonnull Map<String, String> options
+    public List<ExternalField> createSchema(
+            @Nullable NodeEngine nodeEngine,
+            @Nonnull Map<String, String> options,
+            @Nonnull List<ExternalField> externalFields
     ) {
-        return resolveFields(options, null);
+        return resolveSchema(externalFields, options, null);
     }
 
     @Nonnull
@@ -97,7 +100,8 @@ public class KafkaSqlConnector extends EntrySqlConnector {
 
         EntryMetadata keyMetadata = resolveMetadata(externalFields, options, true, null);
         EntryMetadata valueMetadata = resolveMetadata(externalFields, options, false, null);
-        List<TableField> fields = mergeFields(keyMetadata.getFields(), valueMetadata.getFields());
+        List<TableField> fields = concat(keyMetadata.getFields().stream(), valueMetadata.getFields().stream())
+                .collect(toList());
 
         return new KafkaTable(
                 this,

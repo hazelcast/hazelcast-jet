@@ -53,9 +53,17 @@ final class RemoteAvroMetadataResolver {
     private RemoteAvroMetadataResolver() {
     }
 
-    static List<ExternalField> resolveFields(FileOptions options, Job job) throws IOException {
-        Schema schema = schema(options.path(), job.getConfiguration());
-        return fields(schema);
+    static List<ExternalField> resolveSchema(
+            List<ExternalField> externalFields,
+            FileOptions options,
+            Job job
+    ) throws IOException {
+        if (!externalFields.isEmpty()) {
+            return JsonMetadataResolver.schema(externalFields);
+        } else {
+            Schema schema = schema(options.path(), job.getConfiguration());
+            return AvroMetadataResolver.schema(schema);
+        }
     }
 
     private static Schema schema(String directory, Configuration configuration) throws IOException {

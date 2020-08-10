@@ -17,7 +17,7 @@
 package com.hazelcast.jet.sql.impl.connector.cdc;
 
 import com.hazelcast.jet.sql.SqlTestSupport;
-import org.junit.BeforeClass;
+import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.testcontainers.containers.MySQLContainer;
@@ -44,8 +44,8 @@ public class SqlCdcTest extends SqlTestSupport {
 
     private static final String MY_SQL_CONNECTOR_CLASS_NAME = "io.debezium.connector.mysql.MySqlConnector";
 
-    @BeforeClass
-    public static void beforeClass() {
+    @Before
+    public void before() {
         executeSql("CREATE EXTERNAL TABLE " + TABLE_NAME + " ( "
                 + OPERATION + " VARCHAR, "
                 + "id INT, "

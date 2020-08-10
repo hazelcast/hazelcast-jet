@@ -231,7 +231,12 @@ public final class ReadHadoopNewApiP<K, V, R> extends AbstractProcessor {
                                         .stream()
                                         .map(IndexedInputSplit::getNewSplit)
                                         .collect(toList());
-                                return new ReadHadoopNewApiP<>(configuration, inputFormat, mappedSplits, projectionSupplierFn);
+                                return new ReadHadoopNewApiP<>(
+                                        configuration,
+                                        inputFormat,
+                                        mappedSplits,
+                                        projectionSupplierFn
+                                );
                             }
                     ).collect(toList());
         }

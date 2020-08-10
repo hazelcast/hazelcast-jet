@@ -29,21 +29,8 @@ import java.util.Map;
 
 interface AvroMetadataResolver {
 
-    static List<ExternalField> fields(Schema schema) {
-        Map<String, ExternalField> fields = new LinkedHashMap<>();
-        for (Schema.Field avroField : schema.getFields()) {
-            String name = avroField.name();
-            QueryDataType type = resolveType(avroField.schema().getType());
-
-            ExternalField field = new ExternalField(name, type);
-
-            fields.putIfAbsent(field.name(), field);
-        }
-        return new ArrayList<>(fields.values());
-    }
-
-    static List<TableField> fields(List<ExternalField> externalFields) {
-        List<TableField> fields = new ArrayList<>();
+    static List<ExternalField> schema(List<ExternalField> externalFields) {
+        List<ExternalField> fields = new ArrayList<>();
         for (ExternalField externalField : externalFields) {
             String name = externalField.name();
             QueryDataType type = externalField.type();
@@ -56,11 +43,24 @@ interface AvroMetadataResolver {
             }
             String path = externalName == null ? externalField.name() : externalName;
 
-            TableField field = new FileTableField(name, type, path);
+            ExternalField field = new ExternalField(name, type, path);
 
             fields.add(field);
         }
         return fields;
+    }
+
+    static List<ExternalField> schema(Schema schema) {
+        Map<String, ExternalField> fields = new LinkedHashMap<>();
+        for (Schema.Field avroField : schema.getFields()) {
+            String name = avroField.name();
+            QueryDataType type = resolveType(avroField.schema().getType());
+
+            ExternalField field = new ExternalField(name, type);
+
+            fields.putIfAbsent(field.name(), field);
+        }
+        return new ArrayList<>(fields.values());
     }
 
     static QueryDataType resolveType(Schema.Type type) {
@@ -82,6 +82,22 @@ interface AvroMetadataResolver {
             default:
                 return QueryDataType.OBJECT;
         }
+    }
+
+    static List<TableField> fields(List<ExternalField> externalFields) {
+        List<TableField> fields = new ArrayList<>();
+        for (ExternalField externalField : externalFields) {
+            String name = externalField.name();
+            QueryDataType type = externalField.type();
+
+            String externalName = externalField.externalName();
+            String path = externalName == null ? externalField.name() : externalName;
+
+            TableField field = new FileTableField(name, type, path);
+
+            fields.add(field);
+        }
+        return fields;
     }
 
     static String[] paths(List<TableField> fields) {

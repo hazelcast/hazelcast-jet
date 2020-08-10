@@ -46,14 +46,21 @@ import static com.hazelcast.jet.sql.impl.connector.file.AvroMetadataResolver.fie
 import static com.hazelcast.jet.sql.impl.connector.file.AvroMetadataResolver.paths;
 import static com.hazelcast.jet.sql.impl.connector.file.AvroMetadataResolver.types;
 
-final class LocalAvroMetadataResolver {
+final class LocalAvroMetadataResolver implements AvroMetadataResolver {
 
     private LocalAvroMetadataResolver() {
     }
 
-    static List<ExternalField> resolveFields(FileOptions options) throws IOException {
-        Schema schema = schema(options.path(), options.glob());
-        return fields(schema);
+    static List<ExternalField> resolveSchema(
+            List<ExternalField> externalFields,
+            FileOptions options
+    ) throws IOException {
+        if (!externalFields.isEmpty()) {
+            return JsonMetadataResolver.schema(externalFields);
+        } else {
+            Schema schema = schema(options.path(), options.glob());
+            return AvroMetadataResolver.schema(schema);
+        }
     }
 
     private static Schema schema(String directory, String glob) throws IOException {

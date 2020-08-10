@@ -20,17 +20,17 @@ import com.hazelcast.sql.impl.extract.QueryTargetDescriptor;
 import com.hazelcast.sql.impl.inject.UpsertTargetDescriptor;
 import com.hazelcast.sql.impl.schema.TableField;
 
-import java.util.LinkedHashMap;
+import java.util.List;
 
 public class EntryMetadata {
 
     private final QueryTargetDescriptor queryTargetDescriptor;
     private final UpsertTargetDescriptor upsertTargetDescriptor;
-    private final LinkedHashMap<String, TableField> fields;
+    private final List<TableField> fields;
 
     public EntryMetadata(QueryTargetDescriptor queryTargetDescriptor,
                          UpsertTargetDescriptor upsertTargetDescriptor,
-                         LinkedHashMap<String, TableField> fields) {
+                         List<TableField> fields) {
         this.queryTargetDescriptor = queryTargetDescriptor;
         this.upsertTargetDescriptor = upsertTargetDescriptor;
         this.fields = fields;
@@ -44,8 +44,7 @@ public class EntryMetadata {
         return upsertTargetDescriptor;
     }
 
-    @SuppressWarnings("checkstyle:IllegalType")
-    public LinkedHashMap<String, TableField> getFields() {
+    public List<TableField> getFields() {
         return fields;
     }
 }

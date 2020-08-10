@@ -38,15 +38,25 @@ import java.util.Optional;
 import java.util.stream.Stream;
 
 import static com.hazelcast.jet.sql.impl.connector.file.JsonMetadataResolver.fields;
+import static com.hazelcast.jet.sql.impl.connector.file.JsonMetadataResolver.paths;
+import static com.hazelcast.jet.sql.impl.connector.file.JsonMetadataResolver.schema;
+import static com.hazelcast.jet.sql.impl.connector.file.JsonMetadataResolver.types;
 
 final class LocalJsonMetadataResolver implements JsonMetadataResolver {
 
     private LocalJsonMetadataResolver() {
     }
 
-    static List<ExternalField> resolveFields(FileOptions options) throws IOException {
-        String line = line(options.path(), options.glob());
-        return fields(line);
+    static List<ExternalField> resolveSchema(
+            List<ExternalField> externalFields,
+            FileOptions options
+    ) throws IOException {
+        if (!externalFields.isEmpty()) {
+            return schema(externalFields);
+        } else {
+            String line = line(options.path(), options.glob());
+            return schema(line);
+        }
     }
 
     private static String line(String directory, String glob) throws IOException {
@@ -94,8 +104,8 @@ final class LocalJsonMetadataResolver implements JsonMetadataResolver {
                 List<Expression<?>> projection
         ) {
             String charset = this.charset;
-            String[] paths = JsonMetadataResolver.paths(fields);
-            QueryDataType[] types = JsonMetadataResolver.types(fields);
+            String[] paths = paths(fields);
+            QueryDataType[] types = types(fields);
 
             SupplierEx<RowProjector> projectorSupplier =
                     () -> new RowProjector(new JsonQueryTarget(), paths, types, predicate, projection);

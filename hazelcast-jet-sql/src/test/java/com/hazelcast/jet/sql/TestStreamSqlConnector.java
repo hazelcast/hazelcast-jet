@@ -32,6 +32,7 @@ import com.hazelcast.sql.impl.schema.ConstantTableStatistics;
 import com.hazelcast.sql.impl.schema.Table;
 import com.hazelcast.sql.impl.schema.TableField;
 import com.hazelcast.sql.impl.type.QueryDataType;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import javax.annotation.Nonnull;
@@ -40,10 +41,12 @@ import java.util.Map;
 
 import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.processor.Processors.mapP;
+import static com.hazelcast.jet.impl.util.Util.toList;
 import static java.util.Collections.singletonList;
 
 public class TestStreamSqlConnector implements SqlConnector {
-    private static final List<TableField> FIELDS = singletonList(new TableField("v", QueryDataType.BIGINT, false));
+
+    private static final List<ExternalField> SCHEMA = singletonList(new ExternalField("v", QueryDataType.BIGINT));
 
     @Override
     public String typeName() {
@@ -55,6 +58,18 @@ public class TestStreamSqlConnector implements SqlConnector {
         return true;
     }
 
+    @NotNull @Override
+    public List<ExternalField> createSchema(
+            @Nullable NodeEngine nodeEngine,
+            @NotNull Map<String, String> options,
+            @NotNull List<ExternalField> externalFields
+    ) {
+        if (externalFields.size() > 0) {
+            throw QueryException.error("Don't specify external fields, they are fixed");
+        }
+        return SCHEMA;
+    }
+
     @Nonnull @Override
     public Table createTable(
             @Nonnull NodeEngine nodeEngine,
@@ -63,10 +78,11 @@ public class TestStreamSqlConnector implements SqlConnector {
             @Nonnull Map<String, String> options,
             @Nonnull List<ExternalField> externalFields
     ) {
-        if (externalFields.size() > 0) {
-            throw QueryException.error("Don't specify external fields, they are fixed");
-        }
-        return new JetTable(this, FIELDS, schemaName, tableName, new ConstantTableStatistics(0));
+        return new JetTable(
+                this,
+                toList(externalFields, ef -> new TableField(ef.name(), ef.type(), false)),
+                schemaName, tableName, new ConstantTableStatistics(0)
+        );
     }
 
     @Nullable @Override

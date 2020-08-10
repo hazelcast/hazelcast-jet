@@ -45,6 +45,7 @@ import java.util.List;
 import static com.hazelcast.jet.hadoop.impl.SerializableConfiguration.asSerializable;
 import static com.hazelcast.jet.sql.impl.connector.file.JsonMetadataResolver.fields;
 import static com.hazelcast.jet.sql.impl.connector.file.JsonMetadataResolver.paths;
+import static com.hazelcast.jet.sql.impl.connector.file.JsonMetadataResolver.schema;
 import static com.hazelcast.jet.sql.impl.connector.file.JsonMetadataResolver.types;
 
 final class RemoteJsonMetadataResolver implements JsonMetadataResolver {
@@ -52,9 +53,17 @@ final class RemoteJsonMetadataResolver implements JsonMetadataResolver {
     private RemoteJsonMetadataResolver() {
     }
 
-    static List<ExternalField> resolveFields(FileOptions options, Job job) throws IOException {
-        String line = line(options.path(), job.getConfiguration());
-        return fields(line);
+    static List<ExternalField> resolveSchema(
+            List<ExternalField> externalFields,
+            FileOptions options,
+            Job job
+    ) throws IOException {
+        if (!externalFields.isEmpty()) {
+            return schema(externalFields);
+        } else {
+            String line = line(options.path(), job.getConfiguration());
+            return schema(line);
+        }
     }
 
     private static String line(String directory, Configuration configuration) throws IOException {
