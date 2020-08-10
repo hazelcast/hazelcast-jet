@@ -36,35 +36,37 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.Map.Entry;
 
 import static com.hazelcast.jet.rocksdb.Tuple2.tuple2;
 
 /**
- * A RocksDB-backed Map that stores lists of values mapped to keys.
+ * A RocksDB-backed {@link Map} that stores a list of values mapped to each key.
  * This Map makes use of RocksDB bulk-loading and prefix iteration features.
- * Lifecycle:
+ * <p>Lifecycle:
  * <ol><li>
  *     A processor acquire an instance of this class using
  *     {@link PrefixRocksDBStateBackend#getPrefixMap}.
  * </li><li>
- *     The processor issues a series of add() operations to load keys and
- *     values then call compact() to prepare the map for reads.
+ *     The processor issues a series of {@link #add} operations to load keys and
+ *     values then call {@link #compact} to prepare the map for scan.
  * </li><li>
  *     The processor acquires one or more iterators using {@link #prefixRocksIterator}.
  * </li><li>
- *     The processor can issue a series of get() operations using the iterators
+ *     The processor can issue a series of {@link #get} operations using the iterators
  *     it acquired to retrieve the values in the map.
  * </li><li>
- * The processor calls close() to release all memory this map owns.
+ * The processor calls {@link #close} to release all memory this map owns.
  * </li></ol>
- * <p>
+ * </p><p>
  * Notes:
  * <ol><li>
- * get() operations on this map are thread-safe however add() operations are not.
+ * {@link #get} operations on this map are thread-safe however {@link #add} operations are not.
  * </li><li>
- * Not calling close() after execution completes will cause a memory leak.
+ * Not calling {@link #close} after execution completes will cause a memory leak.
  * </li></ol>
+ * see {@link PrefixRocksDBOptions}
  *
  * @param <K> the type of key
  * @param <V> the type of value
@@ -154,10 +156,9 @@ public class PrefixRocksMap<K, V> {
     }
 
     /**
-     * Used to acquire a native RocksDB iterator. The returned iterator is used
-     * by callers to preform prefix reads and iteration. Should be used with
-     * caution not to create to many native iterators. Callers need to reuse
-     * the returned iterator. Otherwise, creating and iterator on each read
+     * Used to acquire a native RocksDB iterator. The returned iterator is used to preform prefix
+     * reads. Should be used with caution not to create to many native iterators.
+     * Callers need to reuse the returned iterator. Otherwise, creating a new iterator on each read
      * will take too much memory and cause the job to fail.
      */
     public RocksIterator prefixRocksIterator() {
@@ -182,7 +183,7 @@ public class PrefixRocksMap<K, V> {
     /**
      * Compacts RocksMap's ColumnFamily from level 0 to level 1. This should be
      * invoked to prepare RocksMap for reads after bulk-loading with a series of
-     * add() calls.
+     * {@link #add} calls.
      */
     public void compact() throws HazelcastException {
         if (cfh != null) {
@@ -242,10 +243,10 @@ public class PrefixRocksMap<K, V> {
     }
 
     /**
-     * Iterator over the entries in PrefixRocksMap.
+     * Iterator over the entries in the map.
      * The iterator creates a snapshot of the map when it is created,
      * any update applied after the iterator is created can't be seen by the iterator.
-     * Callers have to invoke close() at the end to release the associated native iterator.
+     * Callers have to invoke {@link #close} at the end to release the associated native iterator.
      */
     public final class PrefixRocksMapIterator {
         private final RocksIterator iterator;

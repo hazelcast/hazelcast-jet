@@ -62,6 +62,10 @@ import static java.util.Objects.requireNonNull;
  * In the latter case the function must expect {@code ItemsByTag} as the
  * second argument. It uses {@code mapToOutputTriFn} for the two-arity
  * case ({@code tags == null && keyFns.size() == 2}).
+ *
+ * This processor uses in-memory map to store its state which limits
+ * the size of state it can hold.
+ * see {@link HashJoinWithPersistenceP}
  */
 @SuppressWarnings("unchecked")
 @SuppressFBWarnings(value = "NP_PARAMETER_MUST_BE_NONNULL_BUT_MARKED_AS_NULLABLE",

@@ -53,6 +53,7 @@ import com.hazelcast.jet.impl.processor.SortPrepareP;
 import com.hazelcast.jet.impl.processor.TransformP;
 import com.hazelcast.jet.impl.processor.TransformStatefulP;
 import com.hazelcast.jet.impl.processor.TransformUsingServiceP;
+import com.hazelcast.jet.pipeline.GeneralStage;
 import com.hazelcast.jet.pipeline.ServiceFactory;
 
 import javax.annotation.Nonnull;
@@ -245,7 +246,8 @@ public final class Processors {
     }
 
     /**
-     * A variant of aggregateP that uses GroupWithPersistenceP processor.
+     * Returns a variant of {@link #aggregateP} that uses that uses that uses RocksDB backend persistence
+     * instead of in-memory maps to store its state.
      */
     @Nonnull
     public static <A, R> SupplierEx<Processor> aggregateWithPersistenceP(
@@ -255,7 +257,8 @@ public final class Processors {
     }
 
     /**
-     * A variant of aggregateP that uses GroupWithPersistenceAndUnboundedStateP processor.
+     * Returns a variant of {@link #aggregateP} that uses that uses that uses RocksDB backend persistence
+     * instead of in-memory maps to store its state.
      */
     @Nonnull
     public static <A, R> SupplierEx<Processor> aggregateWithPersistenceAndUnboundedStateP(
@@ -293,7 +296,8 @@ public final class Processors {
     }
 
     /**
-     * A variant of accumulateP that uses GroupWithPersistenceP processor.
+     * Returns a variant of {@link #accumulateP} that uses that uses that uses RocksDB backend persistence
+     * instead of in-memory maps to store its state.
      */
     @Nonnull
     public static <A, R> SupplierEx<Processor> accumulateWithPersistenceP(@Nonnull AggregateOperation<A, R> aggrOp) {
@@ -304,7 +308,8 @@ public final class Processors {
     }
 
     /**
-     * A variant of accumulateP that uses GroupWithPersistenceAndUnboundedStateP processor.
+     * Returns a variant of {@link #accumulateP} that uses that uses that uses RocksDB backend persistence
+     * instead of in-memory maps to store its state.
      */
     @Nonnull
     public static <A, R> SupplierEx<Processor> accumulateWithPersistenceAndUnboundedStateP(
@@ -346,7 +351,8 @@ public final class Processors {
     }
 
     /**
-     * A variant of combineP that uses GroupWithPersistenceP processor.
+     * Returns a variant of {@link #combineP} that uses that uses that uses RocksDB backend persistence
+     * instead of in-memory maps to store its state.
      */
     @Nonnull
     public static <A, R> SupplierEx<Processor> combineWithPersistenceP(
@@ -359,7 +365,8 @@ public final class Processors {
     }
 
     /**
-     * A variant of combineP that uses GroupWithPersistenceAndUnboundedStateP processor.
+     * Returns a variant of combineP that uses that uses that uses RocksDB backend persistence
+     * of in-memory maps to store its state.
      */
     @Nonnull
     public static <A, R> SupplierEx<Processor> combineWithPersistenceAndUnboundedStateP(
@@ -406,7 +413,8 @@ public final class Processors {
     }
 
     /**
-     * A variant of aggregateByKeyP that uses GroupWithPersistenceP processor.
+     * Returns a variant of {@link #aggregateByKeyP} that uses RocksDB backend persistence
+     * instead of in-memory maps to store its state.
      */
     @Nonnull
     public static <K, A, R, OUT> SupplierEx<Processor> aggregateByKeyWithPersistenceP(
@@ -418,7 +426,8 @@ public final class Processors {
     }
 
     /**
-     * A variant of aggregateByKeyP that uses GroupWithPersistenceAndUnboundedStateP processor.
+     * Returns a variant of {@link #aggregateByKeyP} that uses RocksDB backend persistence
+     * instead of in-memory maps to store its state.
      */
     @Nonnull
     public static <K, A, R, OUT> SupplierEx<Processor> aggregateByKeyWithPersistenceAndUnboundedStateP(
@@ -459,7 +468,8 @@ public final class Processors {
     }
 
     /**
-     * A variant of accumulateByKeyP that uses GroupWithPersistenceP processor.
+     * Returns a variant of {@link #accumulateByKeyP} that uses that uses RocksDB backend persistence
+     * instead of in-memory maps to store its state.
      */
     @Nonnull
     public static <K, A> SupplierEx<Processor> accumulateByKeyWithPersistenceP(
@@ -470,7 +480,8 @@ public final class Processors {
     }
 
     /**
-     * A variant of accumulateByKeyP that uses GroupWithPersistenceAndUnboundedStateP processor.
+     * Returns a variant of {@link #accumulateByKeyP} that uses that uses RocksDB backend persistence
+     * instead of in-memory maps to store its state.
      */
     @Nonnull
     public static <K, A> SupplierEx<Processor> accumulateByKeyWithPersistenceAndUnboundedStateP(
@@ -516,7 +527,8 @@ public final class Processors {
     }
 
     /**
-     * A variant of combineByKeyP that uses GroupPWithPersistenceP processor.
+     * Returns A variant of {@link #combineByKeyP} that uses that uses that uses RocksDB backend persistence
+     * instead of in-memory maps to store its state.
      */
     @Nonnull
     public static <K, A, R, OUT> SupplierEx<Processor> combineByKeyWithPersistenceP(
@@ -530,7 +542,8 @@ public final class Processors {
     }
 
     /**
-     * A variant of combineByKeyP that uses GroupPWithPersistenceAndUnboundedStateP processor.
+     * Returns A variant of {@link #combineByKeyP} that uses that uses that uses RocksDB backend persistence
+     * instead of in-memory maps to store its state.
      */
     @Nonnull
     public static <K, A, R, OUT> SupplierEx<Processor> combineByKeyWithPersistenceAndUnboundedStateP(
@@ -1125,11 +1138,24 @@ public final class Processors {
                 (singletonTraverser, service, item) -> flatMapFn.apply(service, item));
     }
 
+    /**
+     * Returns a supplier of processors for a vertex that performs the prepare phase of sorting.
+     * The processors sorts the input dataset locally at each cluster member using RocksDB
+     * state backend to prepare it for the global sorting phase.
+     * There can be only one {@link SortPrepareP} processor per cluster member for
+     * each sort stage.
+     */
     @Nonnull
     public static <V> SupplierEx<Processor> sortPrepareP(FunctionEx<V, Long> keyFn) {
         return () -> new SortPrepareP<V>(keyFn);
     }
 
+    /**
+     * Returns a supplier of processors for a vertex that performs the global sorting phase.
+     * The processor consumes the locally sorted dataset from each cluster member
+     * then sorts the whole dataset using RocksDB state backend.
+     * There can be only one {@link SortP} processor for each sort stage.
+     */
     @Nonnull
     public static <V> SupplierEx<Processor> sortP() {
         return () -> new SortP<V>();

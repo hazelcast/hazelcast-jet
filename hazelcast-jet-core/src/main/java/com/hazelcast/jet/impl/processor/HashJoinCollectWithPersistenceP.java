@@ -24,9 +24,7 @@ import java.util.function.Function;
 
 
 /**
- * Implements the "collector" stage in a hash join transformation. This
- * stage collects the entire joined stream into a hashtable and then
- * broadcasts it to all local second-stage processors.
+ * A variant of {@link HashJoinCollectP} that uses RocksDB state backend instead of in-memory maps to store it state.
  */
 public class HashJoinCollectWithPersistenceP<K, T, V> extends AbstractProcessor {
 

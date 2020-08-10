@@ -32,15 +32,16 @@ import java.io.Serializable;
 /**
  * RocksDB configuration optimized for sequential access pattern using prefix-mode.
  * Prefix mode consists of a bulk-loading phase followed by a prefix-scan phase.
- * Bulk-loading uses a Vector Memtable to make a series of inserts for a set of values under some key.
+ * Bulk-loading uses a Vector Memtable to make a series of inserts for a list of values under some key.
  * The key is serialized and packed with a unique long value before insertion.
  * After bulk-loading is done, the database is compacted then the prefix-scan phase begins.
  * Prefix-scan retrieves all values associated with each key using the key as the prefix.
- * Prefix-scan uses RocksDB prefix iterator feature with a fixed-length prefix equal to the size of PrefixRocksMap key.
+ * Prefix-scan uses RocksDB prefix iterator feature with a fixed-length prefix equal to the size of
+ * {@link PrefixRocksMap} key.
  */
-public class PrefixRocksDBOptions extends RocksDBOptions implements Serializable {
+public class PrefixRocksDBOptions extends RocksDBOptions {
 
-    private static final int MEMTABLE_SIZE = 128 * 1024 * 1024;
+    private static final int MEMTABLE_SIZE = 128;
     private static final int MEMTABLE_NUMBER = 4;
     private static final int BLOOM_FILTER_BITS = 10;
     private static final int NUM_LEVELS = 2;
@@ -60,16 +61,16 @@ public class PrefixRocksDBOptions extends RocksDBOptions implements Serializable
         subCompactions = SUB_COMPACTIONS;
     }
 
-    // need it to make a copy of this instance so a new instance with the same
-    // configuration is passed to each new map.
     PrefixRocksDBOptions(@Nonnull PrefixRocksDBOptions options) {
         memtableSize = options.memtableSize;
         memtableNumber = options.memtableNumber;
         bloomFilterBits = options.bloomFilterBits;
         subCompactions = options.subCompactions;
     }
+
     /**
-     * Sets RocksDB options using the builder instance the user provided through JobConfig.
+     * Sets RocksDB options using the {@link PrefixRocksDBOptionsBuilder} instance the user provided through
+     * {@code JobConfig.setPrefixRocksDBOptions()}
      */
     public PrefixRocksDBOptions setOptions(@Nonnull PrefixRocksDBOptionsBuilder options) {
         if (options.memtableSize != null) {

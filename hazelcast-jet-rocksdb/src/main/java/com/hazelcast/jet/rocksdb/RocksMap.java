@@ -31,13 +31,14 @@ import org.rocksdb.WriteOptions;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
+import java.util.Map;
 import java.util.Map.Entry;
 
 import static com.hazelcast.jet.rocksdb.Tuple2.tuple2;
 
 /**
- * RocksMap is RocksDB-backed HashMap.
- * Responsible for providing the interface of HashMap to processors.
+ * A RocksDB-backed {@link Map} suitable for the general access pattern.
+ * see {@link RocksDBStateBackend}
  *
  * @param <K> the type of key
  * @param <V> the type of value
@@ -98,7 +99,7 @@ public class RocksMap<K, V> {
     }
 
     /**
-     * Deletes the mapping between key and value.
+     * Deletes the key-value mapping.
      *
      * @param key the key whose value is to be removed
      * @throws HazelcastException if the database is closed
@@ -153,9 +154,9 @@ public class RocksMap<K, V> {
 
     /**
      * Iterator over the entries in RocksMap.
-     * The iterator creates a snapshot of the map when it is created,
-     * any update applied after the iterator is created can't be seen by the iterator.
-     * Callers have to invoke close() at the end to release the associated native iterator.
+     * The iterator creates a snapshot of the map when it is created.
+     * Any update applied after the iterator is created can't be seen by this iterator.
+     * Callers have to invoke {@link #close} at the end to release the underlying native iterator.
      */
     public final class RocksMapIterator {
         private final RocksIterator iterator;
@@ -166,7 +167,7 @@ public class RocksMap<K, V> {
         }
 
         /**
-         * Returns whether the iterator has more entries to traverse.
+         * Returns whether the iterator has more entries to iterate over.
          */
         public boolean hasNext() {
             return iterator.isValid();
@@ -179,13 +180,6 @@ public class RocksMap<K, V> {
             Tuple2<K, V> tuple = tuple2(deserialize(iterator.key()), deserialize(iterator.value()));
             iterator.next();
             return tuple;
-        }
-
-        /**
-         * Removes the current entry from the map.
-         */
-        //TODO: decide whether implement the method since iterator uses a snapshot of the database.
-        public void remove() {
         }
 
         /**

@@ -29,6 +29,9 @@ import java.util.function.Function;
  * Implements the "collector" stage in a hash join transformation. This
  * stage collects the entire joined stream into a hashtable and then
  * broadcasts it to all local second-stage processors.
+ * This processor uses in-memory map to store its state which limits
+ * the size of state it can hold.
+ * see {@link HashJoinCollectWithPersistenceP}
  */
 public class HashJoinCollectP<K, T, V> extends AbstractProcessor {
 

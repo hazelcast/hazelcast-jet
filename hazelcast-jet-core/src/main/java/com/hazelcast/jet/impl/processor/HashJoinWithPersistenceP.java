@@ -22,8 +22,6 @@ import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.datamodel.ItemsByTag;
 import com.hazelcast.jet.datamodel.Tag;
 import com.hazelcast.jet.function.TriFunction;
-import com.hazelcast.jet.impl.pipeline.transform.HashJoinTransform;
-import com.hazelcast.jet.pipeline.BatchStage;
 import com.hazelcast.jet.rocksdb.PrefixRocksMap;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.rocksdb.RocksIterator;
@@ -42,27 +40,7 @@ import static com.hazelcast.internal.util.Preconditions.checkTrue;
 import static java.util.Objects.requireNonNull;
 
 /**
- * Implements the {@linkplain HashJoinTransform hash-join transform}. On
- * all edges except 0 it receives a single item &mdash; the lookup table
- * for that edge (a {@code Map}) and then it processes edge 0 by joining
- * to each item the data from the lookup tables.
- * <p>
- * It extracts a separate key for each of the lookup tables using the
- * functions supplied in the {@code keyFns} argument. Element 0 in that
- * list corresponds to the lookup table received at ordinal 1 and so on.
- * <p>
- * It uses the {@code tags} list to populate the output items. It can be
- * {@code null}, in which case {@code keyFns} must have either one or two
- * elements, corresponding to the two supported special cases in {@link
- * BatchStage} (hash-joining with one or two enriching streams).
- * <p>
- * After looking up all the joined items the processor calls the supplied
- * {@code mapToOutput*Fn} to get the final output item. It uses {@code
- * mapToOutputBiFn} both for the single-arity case ({@code tags == null &&
- * keyFns.size() == 1}) and the variable-arity case ({@code tags != null}).
- * In the latter case the function must expect {@code ItemsByTag} as the
- * second argument. It uses {@code mapToOutputTriFn} for the two-arity
- * case ({@code tags == null && keyFns.size() == 2}).
+ * A variant of {@link HashJoinP} that uses RocksDB state backend instead of in-memory maps to store it state.
  */
 @SuppressWarnings("unchecked")
 @SuppressFBWarnings(value = "NP_PARAMETER_MUST_BE_NONNULL_BUT_MARKED_AS_NULLABLE",

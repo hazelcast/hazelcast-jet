@@ -19,7 +19,6 @@ import java.io.Serializable;
 
 /**
  * Base class of configuration builder for RocksDB options.
- * An instance of this class is passed to JobConfig to set custom options for RocksDB.
  */
 public abstract class AbstractRocksDBOptionsBuilder implements Serializable {
     Integer memtableSize;
@@ -35,7 +34,7 @@ public abstract class AbstractRocksDBOptionsBuilder implements Serializable {
     }
 
     /**
-     * Sets the number of RocksDB MemTables per ColumnFamily.
+     * Sets the number of RocksDB in-memory MemTables per ColumnFamily.
      */
     public AbstractRocksDBOptionsBuilder setMemtableNumber(int memtableNumber) {
         this.memtableNumber = memtableNumber;

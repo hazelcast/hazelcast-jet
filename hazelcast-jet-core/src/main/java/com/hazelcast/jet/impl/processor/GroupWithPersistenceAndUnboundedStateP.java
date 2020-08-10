@@ -36,10 +36,10 @@ import static com.hazelcast.internal.util.Preconditions.checkTrue;
 import static java.util.Collections.singletonList;
 
 /**
- * Batch processor that groups items by key and computes the supplied
- * aggregate operation on each group. The items may originate from one or
- * more inbound edges. The supplied aggregate operation must have as many
- * accumulation functions as there are inbound edges.
+ * A Variant of {@link GroupP} that uses RocksDB state backend to store state instead of in-memory maps.
+ * The difference between this processor and {@link GroupWithPersistenceAndUnboundedStateP} is that
+ * the state that this processor holds per key is unbounded.
+ * Each key is associated with a list of values that can grow very large.
  */
 public class GroupWithPersistenceAndUnboundedStateP<K, A, R, OUT> extends AbstractProcessor {
     @Nonnull private final List<FunctionEx<?, ? extends K>> groupKeyFns;

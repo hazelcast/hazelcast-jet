@@ -22,15 +22,14 @@ import javax.annotation.Nonnull;
 import java.util.ArrayList;
 
 /**
- * An implementation of AbstractRocksDBStateBackend that is optimized for sequential access pattern.
- * see {@link AbstractRocksDBStateBackend}
+ * An implementation of {@link AbstractRocksDBStateBackend} that is optimized for sequential access pattern.
  */
 public class PrefixRocksDBStateBackend extends AbstractRocksDBStateBackend {
 
     private final ArrayList<PrefixRocksMap> prefixMaps;
 
     /**
-     * Creates a new RocksDBStateBackend instance.
+     * Creates a new PrefixRocksDBStateBackend instance.
      */
     public PrefixRocksDBStateBackend() {
         prefixMaps = new ArrayList<>();
@@ -40,14 +39,14 @@ public class PrefixRocksDBStateBackend extends AbstractRocksDBStateBackend {
     }
 
     /**
-     * Sets user defined RocksDB options for PrefixRocksMap.
+     * Sets user defined RocksDB options for {@link PrefixRocksMap}.
      */
     public void setRocksDBOptions(PrefixRocksDBOptions rocksDBOptions) {
         this.rocksDBOptions = rocksDBOptions;
     }
 
     /**
-     * Returns a new PrefixRocksMap instance.
+     * Returns a new {@link PrefixRocksMap} instance.
      *
      * @throws HazelcastException if the database is closed.
      */

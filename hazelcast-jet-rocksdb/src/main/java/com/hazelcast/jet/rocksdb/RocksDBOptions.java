@@ -29,7 +29,8 @@ import javax.annotation.Nonnull;
 import java.io.Serializable;
 
 /**
- * General RocksDB Configurations
+ * General RocksDB Configurations.
+ * see {@link RocksMap}, {@link RocksDBStateBackend}
  */
 public class RocksDBOptions implements Serializable {
 
@@ -59,8 +60,6 @@ public class RocksDBOptions implements Serializable {
         cache = new LRUCache(cacheSize);
     }
 
-    // need it to make a copy of this instance so a new instance with the same
-    // configuration is passed to each new map.
     RocksDBOptions(@Nonnull RocksDBOptions options) {
         memtableSize = options.memtableSize;
         memtableNumber = options.memtableNumber;
@@ -70,7 +69,8 @@ public class RocksDBOptions implements Serializable {
     }
 
     /**
-     * Sets RocksDB options using the builder instance the user provided through JobConfig.
+     * Sets RocksDB options using the {@link RocksDBOptionsBuilder} instance the user provided through
+     * {@code JobConfig.setRocksDBOptions()}
      */
     public RocksDBOptions setOptions(@Nonnull RocksDBOptionsBuilder options) {
         if (options.memtableSize != null) {

@@ -23,8 +23,8 @@ import java.util.ArrayList;
 
 
 /**
- * An implementation of AbstractRocksDBStateBackend that is optimized for sequential access pattern.
- * see {@link AbstractRocksDBStateBackend}
+ * An implementation of {@link AbstractRocksDBStateBackend} that is optimized for the general access pattern consisting
+ * of interfering reads and updates.
  */
 public class RocksDBStateBackend extends AbstractRocksDBStateBackend {
 
@@ -41,14 +41,14 @@ public class RocksDBStateBackend extends AbstractRocksDBStateBackend {
     }
 
     /**
-     * Sets user defined RocksDB options for RocksMap.
+     * Sets user defined RocksDB options for {@link RocksMap}.
      */
     public void setRocksDBOptions(RocksDBOptions rocksDBOptions) {
         this.rocksDBOptions = rocksDBOptions;
     }
 
     /**
-     * Returns a new RocksMap instance
+     * Returns a new {@link RocksMap} instance
      *
      * @throws HazelcastException if the database is closed
      */

@@ -14,6 +14,6 @@
  * limitations under the License.
  */
 /**
- * This Package contains the proposed RocksDB state backend design for GSOC 2020.
+ * Contains the RocksDB state backend feature for Hazelcast Jet.
  */
 package com.hazelcast.jet.rocksdb;

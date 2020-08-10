@@ -39,6 +39,9 @@ import static java.util.Collections.singletonList;
  * aggregate operation on each group. The items may originate from one or
  * more inbound edges. The supplied aggregate operation must have as many
  * accumulation functions as there are inbound edges.
+ * This Processor uses in-memory map to store its state which limits the size of
+ * state it can hold.
+ * see {@link GroupWithPersistenceP}.
  */
 public class GroupP<K, A, R, OUT> extends AbstractProcessor {
     @Nonnull private final List<FunctionEx<?, ? extends K>> groupKeyFns;

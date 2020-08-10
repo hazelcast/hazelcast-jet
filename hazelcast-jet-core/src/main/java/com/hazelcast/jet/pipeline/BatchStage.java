@@ -38,7 +38,6 @@ import com.hazelcast.replicatedmap.ReplicatedMap;
 import javax.annotation.Nonnull;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Function;
 
 import static com.hazelcast.function.Functions.wholeItem;
 import static com.hazelcast.jet.aggregate.AggregateOperations.aggregateOperation2;
@@ -67,6 +66,11 @@ public interface BatchStage<T> extends GeneralStage<T> {
     @Nonnull @Override
     BatchStage<T> rebalance();
 
+    /**
+     * Attaches a stage that sorts the items based on the provided function.
+     *
+     * @param keyFn a function that extracts the key to sort on.
+     */
     @Nonnull
     BatchStage<T> sort(@Nonnull FunctionEx<T, Long> keyFn);
 

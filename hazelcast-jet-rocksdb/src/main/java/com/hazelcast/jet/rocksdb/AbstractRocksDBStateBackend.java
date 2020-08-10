@@ -32,12 +32,19 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Each map is associated with only one RocksDB ColumnFamily.
  * There is only one instance of this class associated with each job.
  * Lifecycle for this class:
- * (1) ExecutionContext associated with a job creates two instances of this class
- * one for prefix mode and the other for regular mode.
- * (2) ExecutionContext invokes initialize() with the directory and serialization service used for this job.
- * (3) Processors acquire the initialized instance from Processor.Context.rocksDBStateBackend() which calls
- * open() to create a new RocksDB instance if it wasn't already created.
- * (4) After job execution is completed, ExecutionContext invokes close() to free the RocksDB instance.
+ * <ol><li>
+ * The {@code ExecutionContext} instance associated with a job creates two instances of this class
+ * one for prefix mode and one for regular mode.
+ * </li><li>
+ * {@code ExecutionContext.initialize()} initializes the state backend with the directory and serialization service
+ * used for this job.
+ * </li><li>
+ * Processors acquire the initialized instance from {@code Processor.Context.rocksDBStateBackend()} which calls
+ * {@link #open} to create a the underlying RocksDB instance if it wasn't already created.
+ * </li><li>
+ * (4) After job execution is completed, {@code ExecutionContext.completeExecution()} invokes {@link #close} to
+ * delete the RocksDB instance.
+ * </li></ol>
  */
 public abstract class AbstractRocksDBStateBackend {
 
