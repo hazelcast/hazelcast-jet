@@ -5,7 +5,6 @@ import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.rocksdb.PrefixRocksMap;
 
 import javax.annotation.Nonnull;
-import java.util.function.Function;
 
 public class SortPrepareP<V> extends AbstractProcessor {
 

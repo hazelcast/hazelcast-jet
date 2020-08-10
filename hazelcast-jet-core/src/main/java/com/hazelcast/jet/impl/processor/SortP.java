@@ -3,6 +3,7 @@ package com.hazelcast.jet.impl.processor;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.rocksdb.PrefixRocksMap;
+import com.hazelcast.jet.rocksdb.PrefixRocksMap.Iterator;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
@@ -13,7 +14,7 @@ import static com.hazelcast.jet.Util.entry;
 
 public class SortP<V> extends AbstractProcessor {
 
-    private final List<PrefixRocksMap<Long, V>.PrefixRocksMapIterator> sortedMapsIterators = new ArrayList<>();
+    private final List<PrefixRocksMap<Long, V>.Iterator> sortedMapsIterators = new ArrayList<>();
     private ResultTraverser resultTraverser;
 
     @Override
@@ -35,9 +36,9 @@ public class SortP<V> extends AbstractProcessor {
         @Override
         public V next() {
             Entry<Long, V> min = entry(Long.MAX_VALUE, null);
-            PrefixRocksMap<Long, V>.PrefixRocksMapIterator minIterator = null;
+            Iterator minIterator = null;
 
-            for (PrefixRocksMap<Long, V>.PrefixRocksMapIterator iterator : sortedMapsIterators) {
+            for (PrefixRocksMap<Long, V>.Iterator iterator : sortedMapsIterators) {
                 if (!iterator.hasNext()) {
                     continue;
                 }
