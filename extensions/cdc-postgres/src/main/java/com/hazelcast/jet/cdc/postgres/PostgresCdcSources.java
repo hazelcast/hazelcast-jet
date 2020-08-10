@@ -23,6 +23,8 @@ import com.hazelcast.jet.cdc.impl.CdcSource;
 import com.hazelcast.jet.cdc.impl.ChangeRecordCdcSource;
 import com.hazelcast.jet.cdc.impl.DebeziumConfig;
 import com.hazelcast.jet.cdc.impl.PropertyRules;
+import com.hazelcast.jet.retry.RetryStrategies;
+import com.hazelcast.jet.retry.RetryStrategy;
 import com.hazelcast.jet.cdc.postgres.impl.PostgresSequenceExtractor;
 import com.hazelcast.jet.pipeline.StreamSource;
 
@@ -47,22 +49,24 @@ public final class PostgresCdcSources {
      * to Hazelcast Jet.
      * <p>
      * Behaviour of the source on connection disruptions to the database is
-     * configurable and is governed by the {@code setReconnectBehaviour(String)}
-     * setting (as far as the underlying Debezium connector cooperates, read
-     * further for details).
+     * configurable and is governed by the {@link RetryStrategy} passed into
+     * {@code setReconnectBehaviour())} setting.
      * <p>
-     * The default reconnect behaviour is <em>FAIL</em>, which threats any
+     * The default reconnect behaviour is <em>never</em>, which treats any
      * connection failure as an unrecoverable problem and produces the failure
      * of the source and the entire job. (How Jet handles job failures and what
      * ways there are for recovering from them, is a generic issue not discussed
      * here.)
      * <p>
-     * The other two behaviour options, <em>RECONNECT</em> and
-     * <em>CLEAR_STATE_AND_RECONNECT</em>, instruct the source to try to
-     * automatically recover from any connection failure by restarting
-     * the whole source. The two types of behaviour differ from each-other in
-     * how exactly they handle the restart, if they preserve the current state
-     * of the source or if they reset it. If the state is kept, then
+     * Other behaviour options, which specify that "retry attempts" should be
+     * made, will result in the source initiating reconnect attempts to the
+     * database, either via the Debezium connector's internal reconnect
+     * mechanisms or by restarting the whole source.
+     * <p>
+     * There is a further setting influencing reconnect behaviour, specified via
+     * the {@code setShouldStateBeResetOnReconnect()} setting. The boolean flag
+     * passed specifies what should happen to the connector's state on
+     * reconnect, if it should be kept or reset. If the state is kept, then
      * snapshotting should not be repeated and streaming the WAL should resume
      * at the position where it left off. If the state is reset, then the source
      * will behave as if it were its initial start, so will do a snapshot and
@@ -76,27 +80,15 @@ public final class PostgresCdcSources {
      * necessary to ensure that replication slot has been re-created properly,
      * without data loss.
      * <p>
-     * Depending on the lifecycle phase the source is in, there are some
-     * discrepancies and peculiarities in this behaviour. There are also further
-     * settings for influencing it. See what follows for details.
-     * <p>
-     * On the <em>initial start</em> of the connector, if the reconnect
-     * behaviour is set to <em>FAIL</em> and the database is not immediately
-     * reachable, the source will fail. Otherwise, it will try to reconnect
-     * until it succeeds. How much it will wait between two successive reconnect
-     * attempts can be configured via the {@code setReconnectIntervalMs(long)}
-     * setting.
-     * <p>
-     * If the connection to the database fails, either during the
-     * <em>snapshotting</em>, or the <em>WAL trailing</em> phase, then the
-     * connector notices the failure only after a very long delay
-     * (have measured it to 150 seconds and have not found a way to configure
-     * it). If the connection recovers in the meantime, then it will resume
-     * operations like nothing had happened. If the connection goes down due to
-     * the database being shut down cleanly, the connector can detect it and
-     * react immediately, but if the outage is purely at the network level,
-     * then, more often than not, the above mentioned long delay needs to be
-     * waited out.
+     * Unfortunetely there are unpleasant aspects of the reconnect mechanism.
+     * When the connection to the database fails, then the connector notices the
+     * failure only after a very long delay (have measured it to 150 seconds and
+     * have not found a way to configure it). If the connection recovers in the
+     * meantime, then it will resume operations like nothing had happened.
+     * If the connection goes down due to the database being shut down cleanly,
+     * the connector can detect it and react immediately, but if the outage is
+     * purely at the network level, then, more often than not, the above
+     * mentioned long delay needs to be waited out.
      *
      * @param name name of this source, needs to be unique, will be passed to
      *             the underlying Kafka Connect source
@@ -405,35 +397,29 @@ public final class PostgresCdcSources {
         }
 
         /**
-         * Interval in milliseconds after which to retry connecting, if previous
-         * attempts have failed. Defaults to
-         * {@value CdcSource#DEFAULT_RECONNECT_INTERVAL_MS} milliseconds.
+         * Specifies how the connector should behave when it detects that the
+         * backing database has been shut dow.
+         * <p>
+         * Defaults to {@link RetryStrategies#never()}.
+         *
          */
         @Nonnull
-        public Builder setReconnectIntervalMs(long intervalMs) {
-            config.setProperty(CdcSource.RECONNECT_INTERVAL_MS, intervalMs);
-            config.setProperty("slot.retry.delay.ms", intervalMs);
+        public Builder setReconnectBehaviour(RetryStrategy retryStrategy) {
+            config.setProperty(CdcSource.RECONNECT_BEHAVIOUR_PROPERTY, retryStrategy);
             return this;
         }
 
         /**
-         * Specifies how the connector should behave when it looses connection
-         * to the backing database.
-         * <p>
-         * Possible values are:
-         * <ul>
-         *     <li><em>fail</em>: will cause the whole job to fail</li>
-         *     <li><em>clear_state_and_reconnect</em>: will reconnect to
-         *      database, but will clear all internal state first, thus behaving
-         *      as if it would be connecting the first time (for example
-         *      snapshotting will be repeated)</li>
-         *     <li><em>reconnect</em>: will reconnect as is, in the same state
-         *      as it was at the moment of the disconnect </li>
-         * </ul>
+         * Specifies if the source's state should be kept or discarded during
+         * reconnect attempts to the database. If the state is kept, then
+         * snapshotting should not be repeated and streaming the binlog should
+         * resume at the position where it left off. If the state is reset, then
+         * the source will behave as if it were its initial start, so will do a
+         * snapshot and will start trailing the binlog where it syncs with the
+         * snapshot's end.
          */
-        @Nonnull
-        public Builder setReconnectBehaviour(String behaviour) {
-            config.setProperty(CdcSource.RECONNECT_BEHAVIOUR_PROPERTY, behaviour);
+        @Nonnull Builder setShouldStateBeResetOnReconnect(boolean reset) {
+            config.setProperty(CdcSource.RECONNECT_RESET_STATE_PROPERTY, reset);
             return this;
         }
 

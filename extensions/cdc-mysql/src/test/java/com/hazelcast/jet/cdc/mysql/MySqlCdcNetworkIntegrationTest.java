@@ -25,16 +25,20 @@ import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.cdc.AbstractCdcIntegrationTest;
 import com.hazelcast.jet.cdc.ChangeRecord;
-import com.hazelcast.jet.cdc.impl.CdcSource.ReconnectBehaviour;
+import com.hazelcast.jet.core.JobStatus;
+import com.hazelcast.jet.retry.RetryStrategies;
+import com.hazelcast.jet.retry.RetryStrategy;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.StreamSource;
+import com.hazelcast.jet.test.SerialTest;
 import com.hazelcast.test.HazelcastSerialParametersRunnerFactory;
 import com.hazelcast.test.annotation.NightlyTest;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameters;
 import org.testcontainers.containers.MySQLContainer;
 import org.testcontainers.containers.Network;
 import org.testcontainers.containers.ToxiproxyContainer;
@@ -44,14 +48,12 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 import static com.hazelcast.jet.Util.entry;
-import static com.hazelcast.jet.cdc.impl.CdcSource.ReconnectBehaviour.CLEAR_STATE_AND_RECONNECT;
-import static com.hazelcast.jet.cdc.impl.CdcSource.ReconnectBehaviour.FAIL;
-import static com.hazelcast.jet.cdc.impl.CdcSource.ReconnectBehaviour.RECONNECT;
 import static com.hazelcast.jet.core.JobStatus.RUNNING;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -59,22 +61,31 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.runners.Parameterized.Parameter;
-import static org.junit.runners.Parameterized.Parameters;
 import static org.testcontainers.containers.MySQLContainer.MYSQL_PORT;
 
 @RunWith(Parameterized.class)
 @Parameterized.UseParametersRunnerFactory(HazelcastSerialParametersRunnerFactory.class)
-@Category(NightlyTest.class)
+@Category({SerialTest.class, NightlyTest.class})
 public class MySqlCdcNetworkIntegrationTest extends AbstractCdcIntegrationTest {
 
-    private static final long CONNECTION_KEEPALIVE_MS = SECONDS.toMillis(1);
+    private static final long RECONNECT_INTERVAL_MS = SECONDS.toMillis(1);
 
-    @Parameter
-    public ReconnectBehaviour reconnectBehaviour;
+    @Parameter(value = 0)
+    public RetryStrategy reconnectBehaviour;
 
-    @Parameters(name = "{index}: behaviour={0}")
-    public static Iterable<?> parameters() {
-        return Arrays.asList(FAIL, RECONNECT, CLEAR_STATE_AND_RECONNECT);
+    @Parameter(value = 1)
+    public boolean resetStateOnReconnect;
+
+    @Parameter(value = 2)
+    public String testName;
+
+    @Parameters(name = "{2}")
+    public static Collection<Object[]> data() {
+        return Arrays.asList(new Object[][] {
+                { RetryStrategies.never(), false, "fail"},
+                { RetryStrategies.indefinitely(RECONNECT_INTERVAL_MS), false, "reconnect"},
+                { RetryStrategies.indefinitely(RECONNECT_INTERVAL_MS), true, "reconnect w/ state reset"}
+        });
     }
 
     @Test
@@ -85,17 +96,18 @@ public class MySqlCdcNetworkIntegrationTest extends AbstractCdcIntegrationTest {
         JetInstance jet = createJetMembers(2)[0];
         Job job = jet.newJob(pipeline);
 
-        if (FAIL.equals(reconnectBehaviour)) {
+        boolean neverReconnect = reconnectBehaviour.getMaxAttempts() == 0;
+        if (neverReconnect) {
             // then job fails
             assertThatThrownBy(job::join)
                     .hasRootCauseInstanceOf(JetException.class)
-                    .hasStackTraceContaining("Connecting to database failed");
+                    .hasStackTraceContaining("Failed connecting to database");
             assertTrue(jet.getMap("results").isEmpty());
         } else {
             // and can't connect to DB
             assertJobStatusEventually(job, RUNNING);
             assertTrueAllTheTime(() -> assertTrue(jet.getMap("results").isEmpty()),
-                    2 * MILLISECONDS.toSeconds(CONNECTION_KEEPALIVE_MS));
+                    2 * MILLISECONDS.toSeconds(RECONNECT_INTERVAL_MS));
 
             // and DB starts
             MySQLContainer<?> mysql = initMySql(null, MYSQL_PORT);
@@ -106,6 +118,7 @@ public class MySqlCdcNetworkIntegrationTest extends AbstractCdcIntegrationTest {
             } finally {
                 job.cancel();
                 mysql.stop();
+                assertJobStatusEventually(job, JobStatus.FAILED);
             }
         }
     }
@@ -132,7 +145,7 @@ public class MySqlCdcNetworkIntegrationTest extends AbstractCdcIntegrationTest {
             proxy.setConnectionCut(true);
 
             // and some time passes
-            SECONDS.sleep(2 * MILLISECONDS.toSeconds(CONNECTION_KEEPALIVE_MS));
+            SECONDS.sleep(2 * MILLISECONDS.toSeconds(RECONNECT_INTERVAL_MS));
 
             // and connection recovers
             proxy.setConnectionCut(false);
@@ -142,6 +155,7 @@ public class MySqlCdcNetworkIntegrationTest extends AbstractCdcIntegrationTest {
                 assertEqualsEventually(() -> jet.getMap("results").size(), 4);
             } finally {
                 job.cancel();
+                assertJobStatusEventually(job, JobStatus.FAILED);
             }
         }
     }
@@ -163,7 +177,8 @@ public class MySqlCdcNetworkIntegrationTest extends AbstractCdcIntegrationTest {
             // and DB is stopped
             stopContainer(mysql);
 
-            if (FAIL.equals(reconnectBehaviour)) {
+            boolean neverReconnect = reconnectBehaviour.getMaxAttempts() == 0;
+            if (neverReconnect) {
                 // then job fails
                 assertThatThrownBy(job::join)
                         .hasRootCauseInstanceOf(JetException.class)
@@ -178,6 +193,7 @@ public class MySqlCdcNetworkIntegrationTest extends AbstractCdcIntegrationTest {
                     assertEquals(RUNNING, job.getStatus());
                 } finally {
                     job.cancel();
+                    assertJobStatusEventually(job, JobStatus.FAILED);
                 }
             }
         } finally {
@@ -209,7 +225,7 @@ public class MySqlCdcNetworkIntegrationTest extends AbstractCdcIntegrationTest {
             insertRecords(mysql, 1006, 1007);
 
             // and some time passes
-            TimeUnit.MILLISECONDS.sleep(2 * CONNECTION_KEEPALIVE_MS);
+            TimeUnit.MILLISECONDS.sleep(2 * RECONNECT_INTERVAL_MS);
 
             // and the connection is re-established
             proxy.setConnectionCut(false);
@@ -219,6 +235,7 @@ public class MySqlCdcNetworkIntegrationTest extends AbstractCdcIntegrationTest {
                 assertEqualsEventually(() -> jet.getMap("results").size(), 7);
             } finally {
                 job.cancel();
+                assertJobStatusEventually(job, JobStatus.FAILED);
             }
         }
     }
@@ -239,7 +256,8 @@ public class MySqlCdcNetworkIntegrationTest extends AbstractCdcIntegrationTest {
             // and DB is stopped
             stopContainer(mysql);
 
-            if (FAIL.equals(reconnectBehaviour)) {
+            boolean neverReconnect = reconnectBehaviour.getMaxAttempts() == 0;
+            if (neverReconnect) {
                 // then job fails
                 assertThatThrownBy(job::join)
                         .hasRootCauseInstanceOf(JetException.class)
@@ -254,7 +272,7 @@ public class MySqlCdcNetworkIntegrationTest extends AbstractCdcIntegrationTest {
                 insertRecords(mysql, 1005, 1006, 1007);
 
                 try {
-                    if (CLEAR_STATE_AND_RECONNECT.equals(reconnectBehaviour)) {
+                    if (resetStateOnReconnect) {
                         // then job keeps running, connector starts freshly, including snapshotting
                         assertEqualsEventually(() -> jet.getMap("results").size(), 7);
                         assertEquals(RUNNING, job.getStatus());
@@ -264,6 +282,7 @@ public class MySqlCdcNetworkIntegrationTest extends AbstractCdcIntegrationTest {
                     }
                 } finally {
                     job.cancel();
+                    assertJobStatusEventually(job, JobStatus.FAILED);
                 }
             }
         } finally {
@@ -279,8 +298,8 @@ public class MySqlCdcNetworkIntegrationTest extends AbstractCdcIntegrationTest {
                 .setDatabasePassword("dbz")
                 .setClusterName("dbserver1").setDatabaseWhitelist("inventory")
                 .setTableWhitelist("inventory." + "customers")
-                .setReconnectIntervalMs(CONNECTION_KEEPALIVE_MS)
-                .setReconnectBehaviour(reconnectBehaviour.name())
+                .setReconnectBehaviour(reconnectBehaviour)
+                .setShouldStateBeResetOnReconnect(resetStateOnReconnect)
                 .build();
     }
 

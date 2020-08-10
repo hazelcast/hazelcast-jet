@@ -21,6 +21,7 @@ import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.accumulator.LongAccumulator;
+import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.StreamSource;
@@ -107,6 +108,7 @@ public class DebeziumCdcIntegrationTest extends AbstractCdcIntegrationTest {
                 assertEqualsEventually(() -> mapResultsToSortedList(jet.getMap("results")), expectedRecords);
             } finally {
                 job.cancel();
+                assertJobStatusEventually(job, JobStatus.FAILED);
             }
         } finally {
             container.stop();
@@ -199,6 +201,7 @@ public class DebeziumCdcIntegrationTest extends AbstractCdcIntegrationTest {
                 assertTrueEventually(() -> assertMatch(expectedRecords, mapResultsToSortedList(jet.getMap("results"))));
             } finally {
                 job.cancel();
+                assertJobStatusEventually(job, JobStatus.FAILED);
             }
         } finally {
             container.stop();
@@ -281,6 +284,7 @@ public class DebeziumCdcIntegrationTest extends AbstractCdcIntegrationTest {
                 assertEqualsEventually(() -> mapResultsToSortedList(jet.getMap("results")), expectedRecords);
             } finally {
                 job.cancel();
+                assertJobStatusEventually(job, JobStatus.FAILED);
             }
         } finally {
             container.stop();
@@ -351,6 +355,7 @@ public class DebeziumCdcIntegrationTest extends AbstractCdcIntegrationTest {
                 assertTrueEventually(() -> assertMatch(expectedRecords, mapResultsToSortedList(jet.getMap("results"))));
             } finally {
                 job.cancel();
+                assertJobStatusEventually(job, JobStatus.FAILED);
             }
         } finally {
             container.stop();

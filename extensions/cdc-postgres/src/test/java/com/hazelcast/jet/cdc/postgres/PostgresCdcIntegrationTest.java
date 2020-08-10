@@ -107,6 +107,7 @@ public class PostgresCdcIntegrationTest extends AbstractPostgresCdcIntegrationTe
             assertEqualsEventually(() -> mapResultsToSortedList(jet.getMap("results")), expectedRecords);
         } finally {
             job.cancel();
+            assertJobStatusEventually(job, JobStatus.FAILED);
         }
     }
 
@@ -147,6 +148,7 @@ public class PostgresCdcIntegrationTest extends AbstractPostgresCdcIntegrationTe
             assertEqualsEventually(() -> mapResultsToSortedList(jet.getMap("results")), expectedRecords);
         } finally {
             job.cancel();
+            assertJobStatusEventually(job, JobStatus.FAILED);
         }
     }
 
@@ -214,6 +216,7 @@ public class PostgresCdcIntegrationTest extends AbstractPostgresCdcIntegrationTe
             assertEqualsEventually(() -> mapResultsToSortedList(jet.getMap("results")), expectedRecords);
         } finally {
             job.cancel();
+            assertJobStatusEventually(job, JobStatus.FAILED);
         }
     }
 
@@ -356,6 +359,7 @@ public class PostgresCdcIntegrationTest extends AbstractPostgresCdcIntegrationTe
             });
         } finally {
             job.cancel();
+            assertJobStatusEventually(job, JobStatus.FAILED);
         }
     }
 

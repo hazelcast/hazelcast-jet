@@ -24,10 +24,14 @@ import com.hazelcast.jet.cdc.impl.DebeziumConfig;
 import com.hazelcast.jet.cdc.impl.PropertyRules;
 import com.hazelcast.jet.cdc.mysql.impl.MySqlSequenceExtractor;
 import com.hazelcast.jet.pipeline.StreamSource;
+import com.hazelcast.jet.retry.RetryStrategies;
+import com.hazelcast.jet.retry.RetryStrategy;
 
 import javax.annotation.Nonnull;
 import java.util.Objects;
 import java.util.Properties;
+
+import static com.hazelcast.jet.cdc.impl.CdcSource.RECONNECT_BEHAVIOUR_PROPERTY;
 
 /**
  * Contains factory methods for creating change data capture sources
@@ -46,47 +50,42 @@ public final class MySqlCdcSources {
      * Hazelcast Jet.
      * <p>
      * Behaviour of the source on connection disruptions to the database is
-     * configurable and is governed by the {@code setReconnectBehaviour(String)}
-     * setting (as far as the underlying Debezium connector cooperates, read
-     * further for details).
+     * configurable and is governed by the {@link RetryStrategy} passed into
+     * {@code setReconnectBehaviour())} setting (as far as the underlying
+     * Debezium connector cooperates, read further for details).
      * <p>
-     * The default reconnect behaviour is <em>FAIL</em>, which treats any
+     * The default reconnect behaviour is <em>never</em>, which treats any
      * connection failure as an unrecoverable problem and produces the failure
      * of the source and the entire job. (How Jet handles job failures and what
      * ways there are for recovering from them, is a generic issue not discussed
      * here.)
      * <p>
-     * The other two behaviour options, <em>RECONNECT</em> and
-     * <em>CLEAR_STATE_AND_RECONNECT</em>, instruct the source to try to
-     * automatically recover from any connection failure by reconnecting,
-     * either via the connector's internal reconnect mechanisms or by restarting
-     * the whole source. The two types of behaviour differ from each other in
-     * how exactly they handle the source restart, whether they preserve the
-     * current state of the source or if they reset it. If the state is kept,
-     * then snapshotting should not be repeated and streaming the binlog should
+     * Other behaviour options, which specify that "retry attempts" should be
+     * made, will result in the source initiating reconnect attempts to the
+     * database, either via the Debezium connector's internal reconnect
+     * mechanisms or by restarting the whole source.
+     * <p>
+     * There is a further setting influencing reconnect behaviour, specified via
+     * the {@code setShouldStateBeResetOnReconnect()} setting. The boolean flag
+     * passed specifies what should happen to the connector's state on
+     * reconnect, if it should be kept or reset. If the state is kept, then
+     * snapshotting should not be repeated and streaming the binlog should
      * resume at the position where it left off. If the state is reset, then the
      * source will behave as if it were its initial start, so will do a snapshot
      * and will start trailing the binlog where it syncs with the snapshot's
      * end.
      * <p>
      * Depending on the lifecycle phase the source is in, however, there are
-     * some discrepancies and peculiarities in this behaviour. There are also
-     * further settings for influencing it. See what follows for details.
-     * <p>
-     * On the <em>initial start</em> of the connector, if the reconnect
-     * behaviour is set to <em>FAIL</em> and the database is not immediately
-     * reachable, the source will fail. Otherwise, it will try to reconnect
-     * until it succeeds. How much it will wait between two successive reconnect
-     * attempts can be configured via the {@code setReconnectIntervalMs(long)}
-     * setting.
+     * some discrepancies and peculiarities in this behaviour. See what follows
+     * for details.
      * <p>
      * If the connection to the database fails <em>during the snapshotting
      * phase</em> then the connector is stuck in this state until it manages to
-     * reconnect. This, unfortunately, is the case even when reconnect behaviour
-     * is set to <em>FAIL</em> and is related to the peculiarities of the
-     * underlying Debezium connector's implementation. If the connection goes
-     * down due to the database being shut down, it sometimes can detect that
-     * and react properly, but if the outage is purely at the network level,
+     * reconnect. This, unfortunately, is the case <em>regardless of the
+     * reconnect behaviour specified</em> and is related to the peculiarities
+     * of the underlying Debezium connector's implementation. If the connection
+     * goes down due to the database being shut down, it sometimes can detect
+     * that and react properly, but if the outage is purely at the network level,
      * then, more often than not, it's not detected.
      * <p>
      * During the <em>binlog trailing</em> phase all connection disruptions
@@ -95,10 +94,14 @@ public final class MySqlCdcSources {
      * and will not handle it. It will just fail and, depending on the reconnect
      * behaviour, Jet can trigger the restarting of the source. If the outage
      * is at the network level or a database shutdown is not detected as such,
-     * then the connector will trigger internal reconnecting, even if the
-     * source's reconnect behaviour is set to <em>FAIL</em> and will do this
-     * until it manages to connect. The frequency of these attempt can also
-     * be influenced via the {@code setReconnectIntervalMs(long)} setting.
+     * then the Debezium connector will trigger internal reconnecting, which the
+     * source can't completely control. In such cases the {@code RetryStrategy}'s
+     * {@link RetryStrategy#getIntervalFunction() IntervalFunction} will only be
+     * partially taken into consideration. This is caused by the fact that
+     * the connectors retry mechanism is capable only of fixed period
+     * retrying. The fixed period that will be applied is what the
+     * {@code IntervalFunction} returns for the 1st attempt, so
+     * {@code intervalFunction.apply(1)}.
      *
      * @param name name of this source, needs to be unique, will be passed to
      *             the underlying Kafka Connect source
@@ -137,9 +140,6 @@ public final class MySqlCdcSources {
             config = new DebeziumConfig(name, "io.debezium.connector.mysql.MySqlConnector");
             config.setProperty(CdcSource.SEQUENCE_EXTRACTOR_CLASS_PROPERTY, MySqlSequenceExtractor.class.getName());
             config.setProperty("include.schema.changes", "false");
-
-            config.setProperty("connect.keep.alive", "true");
-            config.setProperty("connect.keep.alive.interval.ms", CdcSource.DEFAULT_RECONNECT_INTERVAL_MS);
         }
 
         /**
@@ -353,38 +353,43 @@ public final class MySqlCdcSources {
         }
 
         /**
-         * Interval in milliseconds after which to do periodic connection checking
-         * and initiate reconnect, if necessary. Defaults to
-         * {@value CdcSource#DEFAULT_RECONNECT_INTERVAL_MS} milliseconds.
-         */
-        @Nonnull
-        public Builder setReconnectIntervalMs(long intervalMs) {
-            config.setProperty(CdcSource.RECONNECT_INTERVAL_MS, intervalMs);
-            config.setProperty("connect.keep.alive.interval.ms", intervalMs);
-            return this;
-        }
-
-        /**
-         * Specifies how the connector should behave when it detects that the
+         * Specifies how the source should behave when it detects that the
          * backing database has been shut down (note: temporary connection
          * disruptions will not be interpreted in this way; after simple
          * network outages the connector will automatically reconnect,
          * regardless of this setting).
          * <p>
-         * Possible values are (they are <em>not</em> case sensitive):
-         * <ul>
-         *     <li><em>FAIL</em>: will cause the whole job to fail</li>
-         *     <li><em>CLEAR_STATE_AND_RECONNECT</em>: will reconnect to
-         *      database, but will clear all internal state first, thus behaving
-         *      as if it would be connecting the first time (for example
-         *      snapshotting will be repeated)</li>
-         *     <li><em>RECONNECT</em>: will reconnect as is, in the same state
-         *      as it was at the moment of the disconnect </li>
-         * </ul>
+         * Defaults to {@link RetryStrategies#never()}.
+         * <p>
+         * When reconnection is being handled by the MySQL Debezium Connector's
+         * internal mechanisms (as opposed to reconnection triggered by this
+         * Jet source), then the {@code RetryStrategy}'s
+         * {@link RetryStrategy#getIntervalFunction() IntervalFunction} is only
+         * partially taken into consideration. This is caused by the fact that
+         * the connectors retry mechanism is capable only of fixed period
+         * retrying, while the {@code IntervalFunction} can specify arbitrarily
+         * complex behaviour (variable wait times for each attempt). The fixed
+         * period that will be applied is what the {@code IntervalFunction}
+         * returns for the 1st attempt, so {@code intervalFunction.apply(1)}.
+         *
          */
         @Nonnull
-        public Builder setReconnectBehaviour(String behaviour) {
-            config.setProperty(CdcSource.RECONNECT_BEHAVIOUR_PROPERTY, behaviour);
+        public Builder setReconnectBehaviour(RetryStrategy retryStrategy) {
+            config.setProperty(RECONNECT_BEHAVIOUR_PROPERTY, retryStrategy);
+            return this;
+        }
+
+        /**
+         * Specifies if the source's state should be kept or discarded during
+         * reconnect attempts to the database. If the state is kept, then
+         * snapshotting should not be repeated and streaming the binlog should
+         * resume at the position where it left off. If the state is reset, then
+         * the source will behave as if it were its initial start, so will do a
+         * snapshot and will start trailing the binlog where it syncs with the
+         * snapshot's end.
+         */
+        @Nonnull Builder setShouldStateBeResetOnReconnect(boolean reset) {
+            config.setProperty(CdcSource.RECONNECT_RESET_STATE_PROPERTY, reset);
             return this;
         }
 
@@ -405,7 +410,20 @@ public final class MySqlCdcSources {
         public StreamSource<ChangeRecord> build() {
             Properties properties = config.toProperties();
             RULES.check(properties);
+
+            properties.setProperty("connect.keep.alive", "true");
+            String intervalMs = getKeepAliveIntervalMs(properties);
+            properties.setProperty("connect.keep.alive.interval.ms", intervalMs);
+            properties.setProperty("connect.timeout.ms", intervalMs);
+
             return ChangeRecordCdcSource.fromProperties(properties);
+        }
+
+        private static String getKeepAliveIntervalMs(Properties properties) {
+            RetryStrategy reconnectBehaviour = (RetryStrategy) properties.get(RECONNECT_BEHAVIOUR_PROPERTY);
+            reconnectBehaviour = reconnectBehaviour == null ? CdcSource.DEFAULT_RECONNECT_BEHAVIOUR : reconnectBehaviour;
+            long waitMs = reconnectBehaviour.getIntervalFunction().waitAfterAttempt(1);
+            return Long.toString(waitMs / 2);
         }
 
     }

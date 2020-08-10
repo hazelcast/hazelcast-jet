@@ -19,6 +19,9 @@ package com.hazelcast.jet.cdc.impl;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.pipeline.SourceBuilder;
+import com.hazelcast.jet.retry.RetryStrategies;
+import com.hazelcast.jet.retry.RetryStrategy;
+import com.hazelcast.jet.retry.impl.RetryTracker;
 import com.hazelcast.logging.ILogger;
 import io.debezium.document.Document;
 import io.debezium.document.DocumentReader;
@@ -45,53 +48,56 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Properties;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
-import static java.util.concurrent.TimeUnit.NANOSECONDS;
 
 public abstract class CdcSource<T> {
 
     public static final String CONNECTOR_CLASS_PROPERTY = "connector.class";
     public static final String SEQUENCE_EXTRACTOR_CLASS_PROPERTY = "sequence.extractor.class";
-    public static final String RECONNECT_INTERVAL_MS = "reconnect.interval.ms";
     public static final String RECONNECT_BEHAVIOUR_PROPERTY = "reconnect.behaviour";
+    public static final String RECONNECT_RESET_STATE_PROPERTY = "reconnect.reset.state";
 
-    public static final long DEFAULT_RECONNECT_INTERVAL_MS = TimeUnit.SECONDS.toMillis(5);
-    public static final ReconnectBehaviour DEFAULT_RECONNECT_BEHAVIOUR = ReconnectBehaviour.FAIL;
+    public static final RetryStrategy DEFAULT_RECONNECT_BEHAVIOUR = RetryStrategies.never();
 
     private static final ThreadLocal<List<byte[]>> THREAD_LOCAL_HISTORY = new ThreadLocal<>();
 
     private final ILogger logger;
-
     private final Properties properties;
 
-    private final long reconnectIntervalNanos;
-    private final ReconnectBehaviour reconnectBehaviour;
+    private final RetryTracker reconnectTracker;
+    private final boolean clearStateOnReconnect;
 
     private State state = new State();
     private SourceConnector connector;
     private Map<String, String> taskConfig;
     private SourceTask task;
-    private Long sleepUntilNanoTime;
 
     CdcSource(Processor.Context context, Properties properties) {
         this.logger = context.logger();
         this.properties = properties;
-        reconnectIntervalNanos = getReconnectIntervalNanos(properties);
-        reconnectBehaviour = getReconnectBehaviour(properties);
+        this.reconnectTracker = new RetryTracker(getRetryStrategy(properties));
+        this.clearStateOnReconnect = getClearStateOnReconnect(properties);
     }
 
     public void destroy() {
-        task.stop();
-        task = null;
-        connector.stop();
-        connector = null;
+        if (task != null) {
+            task.stop();
+            task = null;
+        }
+        if (connector != null) {
+            connector.stop();
+            connector = null;
+        }
     }
 
     public void fillBuffer(SourceBuilder.TimestampedSourceBuffer<T> buf) {
-        if (isSleepNeeded() || !isConnectionUp()) {
+        if (reconnectTracker.needsToWait()) {
+            return;
+        }
+
+        if (!isConnectionUp()) {
             return;
         }
 
@@ -110,23 +116,13 @@ public abstract class CdcSource<T> {
                 }
             }
         } catch (ConnectException ce) {
-            reconnect(reconnectBehaviour, ce);
+            reconnect(ce);
         } catch (InterruptedException ie) {
             logger.warning("Waiting for data interrupted");
             Thread.currentThread().interrupt();
         } catch (Exception e) {
-            throw rethrow(e);
+            throw shutDownAndThrow(rethrow(e));
         }
-    }
-
-    private boolean isSleepNeeded() {
-        if (sleepUntilNanoTime != null) {
-            if (System.nanoTime() < sleepUntilNanoTime) {
-                return true;
-            }
-            sleepUntilNanoTime = null;
-        }
-        return false;
     }
 
     private boolean isConnectionUp() {
@@ -138,25 +134,25 @@ public abstract class CdcSource<T> {
             if (task == null) {
                 task = startNewTask();
             }
+            reconnectTracker.reset();
             return true;
         } catch (ConnectException ce) {
-            switch (reconnectBehaviour) {
-                case FAIL:
-                    throw new JetException("Connecting to database failed" + getCause(ce));
-                case RECONNECT:
-                case CLEAR_STATE_AND_RECONNECT:
-                    logger.warning("Initializing connector task failed, retrying in " +
-                            NANOSECONDS.toMillis(reconnectIntervalNanos) + "ms" + getCause(ce));
-                    sleepUntilNanoTime = System.nanoTime() + reconnectIntervalNanos;
-                    break;
-                default:
-                    throw new RuntimeException("Programming error, unhandled reconnect behaviour: " + reconnectBehaviour);
-            }
+            handleConnectException(ce);
             return false;
         } catch (JetException je) {
-            throw je;
+            throw shutDownAndThrow(je);
         } catch (Exception e) {
-            throw rethrow(e);
+            throw shutDownAndThrow(rethrow(e));
+        }
+    }
+
+    private void handleConnectException(ConnectException ce) {
+        reconnectTracker.attemptFailed();
+        if (reconnectTracker.shouldTryAgain()) {
+            long waitTimeMs = reconnectTracker.getNextWaitTimeMs();
+            logger.warning("Initializing connector task failed, retrying in " + waitTimeMs + "ms" + getCause(ce));
+        } else {
+            throw shutDownAndThrow(new JetException("Failed connecting to database" + getCause(ce)));
         }
     }
 
@@ -181,25 +177,18 @@ public abstract class CdcSource<T> {
         return task;
     }
 
-    private void reconnect(ReconnectBehaviour behaviour, ConnectException ce) {
-        switch (behaviour) {
-            case FAIL:
-                throw new JetException("Connection to database lost" + getCause(ce));
-            case CLEAR_STATE_AND_RECONNECT:
-                logger.warning("Connection to database lost, will attempt to reconnect and retry operations from " +
-                        "scratch" + getCause(ce));
+    private void reconnect(ConnectException ce) {
+        if (reconnectTracker.shouldTryAgain()) {
+            logger.warning("Connection to database lost, will attempt to reconnect and retry operations from " +
+                    "scratch" + getCause(ce));
 
-                destroy();
+            destroy();
+            reconnectTracker.reset();
+            if (clearStateOnReconnect) {
                 state = new State();
-                return;
-            case RECONNECT:
-                logger.warning("Connection to database lost, will attempt to reconnect and resume operations" +
-                        getCause(ce));
-
-                destroy();
-                return;
-            default:
-                throw new RuntimeException("Programming error, unhandled reconnect behaviour: " + behaviour);
+            }
+        } else {
+            throw shutDownAndThrow(new JetException("Connection to database lost" + getCause(ce)));
         }
     }
 
@@ -222,6 +211,11 @@ public abstract class CdcSource<T> {
     }
 
     protected abstract T mapToOutput(SourceRecord record);
+
+    private <T extends Throwable> T shutDownAndThrow(T t) {
+        destroy();
+        return t;
+    }
 
     private static String getCause(ConnectException ce) {
         StringBuilder sb = new StringBuilder();
@@ -289,14 +283,14 @@ public abstract class CdcSource<T> {
         }
     }
 
-    private static ReconnectBehaviour getReconnectBehaviour(Properties properties) {
-        String s = (String) properties.get(RECONNECT_BEHAVIOUR_PROPERTY);
-        return s == null ? DEFAULT_RECONNECT_BEHAVIOUR : Enum.valueOf(ReconnectBehaviour.class, s.toUpperCase());
+    private static RetryStrategy getRetryStrategy(Properties properties) {
+        RetryStrategy strategy = (RetryStrategy) properties.get(RECONNECT_BEHAVIOUR_PROPERTY);
+        return strategy == null ? DEFAULT_RECONNECT_BEHAVIOUR : strategy;
     }
 
-    private static long getReconnectIntervalNanos(Properties properties) {
-        String s = (String) properties.get(RECONNECT_INTERVAL_MS);
-        return TimeUnit.MILLISECONDS.toNanos(s == null ? DEFAULT_RECONNECT_INTERVAL_MS : Long.parseLong(s));
+    private static boolean getClearStateOnReconnect(Properties properties) {
+        String s = (String) properties.get(RECONNECT_RESET_STATE_PROPERTY);
+        return Boolean.parseBoolean(s);
     }
 
     private static class JetConnectorContext implements ConnectorContext {
@@ -394,13 +388,5 @@ public abstract class CdcSource<T> {
         public boolean storageExists() {
             return history != null;
         }
-    }
-
-    public enum ReconnectBehaviour {
-
-        FAIL,
-        CLEAR_STATE_AND_RECONNECT,
-        RECONNECT
-
     }
 }

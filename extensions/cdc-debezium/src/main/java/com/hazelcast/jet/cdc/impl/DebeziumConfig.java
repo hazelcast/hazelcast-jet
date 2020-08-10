@@ -34,11 +34,15 @@ public class DebeziumConfig {
         properties.put("tombstones.on.delete", "false");
     }
 
-    public void setProperty(String key, String value) {
+    public void setProperty(String key, Object value) {
         Objects.requireNonNull(key, "key");
         Objects.requireNonNull(value, "value");
 
         properties.put(key, value);
+    }
+
+    public void setProperty(String key, String value) {
+        setProperty(key, (Object) value);
     }
 
     public void setProperty(String key, int value) {
