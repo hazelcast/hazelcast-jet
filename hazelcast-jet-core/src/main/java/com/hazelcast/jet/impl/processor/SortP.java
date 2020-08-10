@@ -3,18 +3,18 @@ package com.hazelcast.jet.impl.processor;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.rocksdb.PrefixRocksMap;
-import com.hazelcast.jet.rocksdb.PrefixRocksMap.PrefixRocksMapIterator;
+import com.hazelcast.jet.rocksdb.PrefixRocksMap.Iterator;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map.Entry;
 
-import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
+import static com.hazelcast.jet.Util.entry;
 
 public class SortP<V> extends AbstractProcessor {
 
-    private final List<PrefixRocksMapIterator> sortedMapsIterators = new ArrayList<>();
+    private final List<PrefixRocksMap<Long, V>.Iterator> sortedMapsIterators = new ArrayList<>();
     private ResultTraverser resultTraverser;
 
     @Override
@@ -32,19 +32,19 @@ public class SortP<V> extends AbstractProcessor {
         return emitFromTraverser(resultTraverser);
     }
 
-    private class ResultTraverser implements Traverser<Entry<Long, V>> {
+    private class ResultTraverser implements Traverser<V> {
         @Override
-        @SuppressWarnings("unchecked")
-        public Entry<Long, V> next() {
-            Entry<Long, V> min = tuple2(Long.MAX_VALUE, null);
-            PrefixRocksMapIterator minIterator = null;
+        public V next() {
+            Entry<Long, V> min = entry(Long.MAX_VALUE, null);
+            Iterator minIterator = null;
 
-            for (PrefixRocksMapIterator iterator : sortedMapsIterators) {
+            for (PrefixRocksMap<Long, V>.Iterator iterator : sortedMapsIterators) {
                 if (!iterator.hasNext()) {
                     continue;
                 }
-                if ((Long) iterator.peek().getKey() <= min.getKey()) {
-                    min = iterator.peek();
+                Entry<Long, V> e = iterator.peek();
+                if (e.getKey() <= min.getKey()) {
+                    min = e;
                     minIterator = iterator;
                 }
             }
@@ -52,7 +52,7 @@ public class SortP<V> extends AbstractProcessor {
                 return null;
             }
             minIterator.next();
-            return min;
+            return min.getValue();
         }
     }
 }

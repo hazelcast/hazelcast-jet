@@ -19,7 +19,6 @@ package com.hazelcast.jet.rocksdb;
 import com.hazelcast.internal.nio.IOUtil;
 import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.internal.serialization.impl.DefaultSerializationServiceBuilder;
-import com.hazelcast.jet.rocksdb.PrefixRocksMap.PrefixRocksMapIterator;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -94,7 +93,7 @@ public class PrefixRocksMapTest {
         prefixRocksMap.add(key3, value);
         prefixRocksMap.add(key1, value);
         prefixRocksMap.add(key2, value);
-        PrefixRocksMapIterator iterator = prefixRocksMap.iterator();
+        PrefixRocksMap<String, Integer>.Iterator iterator = prefixRocksMap.iterator();
 
         //Then
         assertEquals(key1, iterator.next().getKey());

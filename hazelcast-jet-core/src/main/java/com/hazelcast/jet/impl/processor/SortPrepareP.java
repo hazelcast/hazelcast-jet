@@ -5,14 +5,13 @@ import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.rocksdb.PrefixRocksMap;
 
 import javax.annotation.Nonnull;
-import java.util.function.Function;
 
 public class SortPrepareP<V> extends AbstractProcessor {
 
-    private final FunctionEx<V, Long> keyFn;
+    private final FunctionEx<? super V, ? extends Long> keyFn;
     private PrefixRocksMap<Long, V> rocksMap;
 
-    public SortPrepareP(FunctionEx<V, Long> keyFn) {
+    public SortPrepareP(FunctionEx<? super V, ? extends Long> keyFn) {
         this.keyFn = keyFn;
     }
 

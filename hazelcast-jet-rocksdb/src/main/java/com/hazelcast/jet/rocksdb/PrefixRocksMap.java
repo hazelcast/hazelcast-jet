@@ -35,7 +35,6 @@ import javax.annotation.Nonnull;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 
@@ -134,13 +133,13 @@ public class PrefixRocksMap<K, V> {
      *
      * @return an iterator over the values associated with the key.
      */
-    public Iterator<V> get(RocksIterator iterator, K key) {
+    public java.util.Iterator<V> get(RocksIterator iterator, K key) {
         if (cfh == null) {
             open(key);
         }
         iterator.seek(serialize(key));
 
-        return new Iterator<V>() {
+        return new java.util.Iterator<V>() {
             @Override
             public boolean hasNext() {
                 return iterator.isValid();
@@ -173,9 +172,9 @@ public class PrefixRocksMap<K, V> {
      * guaranteed to return all keys totally ordered.
      */
     @Nonnull
-    public PrefixRocksMapIterator iterator() {
+    public Iterator iterator() {
         assert cfh != null : "PrefixRocksMap was not opened";
-        PrefixRocksMapIterator mapIterator = new PrefixRocksMapIterator();
+        Iterator mapIterator = new Iterator();
         iterators.add(mapIterator.iterator);
         return mapIterator;
     }
@@ -248,11 +247,11 @@ public class PrefixRocksMap<K, V> {
      * any update applied after the iterator is created can't be seen by the iterator.
      * Callers have to invoke {@link #close} at the end to release the associated native iterator.
      */
-    public final class PrefixRocksMapIterator {
+    public final class Iterator {
         private final RocksIterator iterator;
         private final RocksIterator prefixIterator;
 
-        private PrefixRocksMapIterator() {
+        private Iterator() {
             iterator = db.newIterator(cfh, iteratorOptions);
             iterator.seekToFirst();
             prefixIterator = prefixRocksIterator();
@@ -268,8 +267,8 @@ public class PrefixRocksMap<K, V> {
         /**
          * Returns the next key associated with an iterator over all values for that key.
          */
-        public Entry<K, Iterator<V>> nextValues() {
-            Tuple2<K, Iterator<V>> tuple = tuple2(deserialize(iterator.key()),
+        public Entry<K, java.util.Iterator<V>> nextValues() {
+            Tuple2<K, java.util.Iterator<V>> tuple = tuple2(deserialize(iterator.key()),
                     get(prefixIterator, deserialize(iterator.key())));
             //skip over the current prefix
             K current = deserialize(iterator.key());
