@@ -33,7 +33,6 @@ import com.hazelcast.sql.impl.schema.map.MapTableIndex;
 import com.hazelcast.sql.impl.schema.map.PartitionedMapTable;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -70,12 +69,12 @@ public class LocalPartitionedMapConnector extends EntrySqlConnector {
 
     @Nonnull
     @Override
-    public List<ExternalField> createSchema(
-            @Nullable NodeEngine nodeEngine,
+    public List<ExternalField> resolveAndValidateFields(
+            @Nonnull NodeEngine nodeEngine,
             @Nonnull Map<String, String> options,
-            @Nonnull List<ExternalField> externalFields
+            @Nonnull List<ExternalField> userFields
     ) {
-        return resolveSchema(externalFields, options, (InternalSerializationService) nodeEngine.getSerializationService());
+        return resolveSchema(userFields, options, (InternalSerializationService) nodeEngine.getSerializationService());
     }
 
     @Nonnull
@@ -87,7 +86,7 @@ public class LocalPartitionedMapConnector extends EntrySqlConnector {
             @Nonnull Map<String, String> options,
             @Nonnull List<ExternalField> externalFields
     ) {
-        String mapName = options.getOrDefault(TO_OBJECT_NAME, name);
+        String mapName = options.getOrDefault(OPTION_OBJECT_NAME, name);
 
         InternalSerializationService ss = (InternalSerializationService) nodeEngine.getSerializationService();
 

@@ -44,7 +44,7 @@ import java.io.IOException;
 import java.util.List;
 
 import static com.hazelcast.jet.hadoop.impl.SerializableConfiguration.asSerializable;
-import static com.hazelcast.jet.sql.impl.connector.file.AvroMetadataResolver.fields;
+import static com.hazelcast.jet.sql.impl.connector.file.AvroMetadataResolver.toTableFields;
 import static com.hazelcast.jet.sql.impl.connector.file.AvroMetadataResolver.paths;
 import static com.hazelcast.jet.sql.impl.connector.file.AvroMetadataResolver.types;
 
@@ -53,20 +53,21 @@ final class RemoteAvroMetadataResolver {
     private RemoteAvroMetadataResolver() {
     }
 
-    static List<ExternalField> resolveSchema(
-            List<ExternalField> externalFields,
+    static List<ExternalField> resolveFields(
+            List<ExternalField> userFields,
             FileOptions options,
             Job job
     ) throws IOException {
-        if (!externalFields.isEmpty()) {
-            return JsonMetadataResolver.schema(externalFields);
+        if (!userFields.isEmpty()) {
+            AvroMetadataResolver.validateFields(userFields);
+            return userFields;
         } else {
-            Schema schema = schema(options.path(), job.getConfiguration());
-            return AvroMetadataResolver.schema(schema);
+            Schema schema = findAvroSchema(options.path(), job.getConfiguration());
+            return AvroMetadataResolver.resolveFieldsFromSchema(schema);
         }
     }
 
-    private static Schema schema(String directory, Configuration configuration) throws IOException {
+    private static Schema findAvroSchema(String directory, Configuration configuration) throws IOException {
         Path path = new Path(directory);
         try (FileSystem filesystem = path.getFileSystem(configuration)) {
             RemoteIterator<LocatedFileStatus> filesIterator = filesystem.listFiles(path, false); // TODO: directory check, recursive ???
@@ -85,7 +86,7 @@ final class RemoteAvroMetadataResolver {
         AvroKeyInputFormat.addInputPath(job, new Path(options.path()));
         job.setInputFormatClass(AvroKeyInputFormat.class);
 
-        List<TableField> fields = fields(externalFields);
+        List<TableField> fields = toTableFields(externalFields);
 
         return new Metadata(
                 new AvroTargetDescriptor(job.getConfiguration()),

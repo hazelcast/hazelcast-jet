@@ -26,7 +26,7 @@ import java.time.LocalTime;
 import java.time.OffsetDateTime;
 
 import static com.hazelcast.jet.sql.SqlConnector.CSV_SERIALIZATION_FORMAT;
-import static com.hazelcast.jet.sql.SqlConnector.TO_SERIALIZATION_FORMAT;
+import static com.hazelcast.jet.sql.SqlConnector.OPTION_SERIALIZATION_FORMAT;
 import static java.time.ZoneOffset.UTC;
 import static java.util.Collections.singletonList;
 
@@ -51,9 +51,9 @@ public class SqlCsvTest extends SqlTestSupport {
                 + ", offsetDateTime TIMESTAMP WITH TIME ZONE"
                 + ") TYPE \"" + FileSqlConnector.TYPE_NAME + "\" "
                 + "OPTIONS ("
-                + "\"" + TO_SERIALIZATION_FORMAT + "\" '" + CSV_SERIALIZATION_FORMAT + "'"
-                + ", \"" + FileSqlConnector.TO_PATH + "\" '" + RESOURCES_PATH + "'"
-                + ", \"" + FileSqlConnector.TO_GLOB + "\" '" + "all-types.csv" + "'"
+                + "\"" + OPTION_SERIALIZATION_FORMAT + "\" '" + CSV_SERIALIZATION_FORMAT + "'"
+                + ", \"" + FileSqlConnector.OPTION_PATH + "\" '" + RESOURCES_PATH + "'"
+                + ", \"" + FileSqlConnector.OPTION_GLOB + "\" '" + "all-types.csv" + "'"
                 + ")"
         );
 
@@ -83,10 +83,10 @@ public class SqlCsvTest extends SqlTestSupport {
         executeSql("CREATE EXTERNAL TABLE " + name + " "
                 + "TYPE \"" + FileSqlConnector.TYPE_NAME + "\" "
                 + "OPTIONS ("
-                + "\"" + TO_SERIALIZATION_FORMAT + "\" '" + CSV_SERIALIZATION_FORMAT + "'"
-                + ", \"" + FileSqlConnector.TO_PATH + "\" '" + RESOURCES_PATH + "'"
-                + ", \"" + FileSqlConnector.TO_GLOB + "\" '" + "file.csv" + "'"
-                + ", \"" + FileSqlConnector.TO_HEADER + "\" '" + Boolean.TRUE + "'"
+                + "\"" + OPTION_SERIALIZATION_FORMAT + "\" '" + CSV_SERIALIZATION_FORMAT + "'"
+                + ", \"" + FileSqlConnector.OPTION_PATH + "\" '" + RESOURCES_PATH + "'"
+                + ", \"" + FileSqlConnector.OPTION_GLOB + "\" '" + "file.csv" + "'"
+                + ", \"" + FileSqlConnector.OPTION_HEADER + "\" '" + Boolean.TRUE + "'"
                 + ")"
         );
 

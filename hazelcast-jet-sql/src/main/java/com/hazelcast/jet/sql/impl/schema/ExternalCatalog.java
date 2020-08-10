@@ -71,9 +71,17 @@ public class ExternalCatalog implements TableResolver {
 
             Map<String, String> options = table.options();
 
-            List<ExternalField> fields = connector.createSchema(nodeEngine, options, table.fields());
+            List<ExternalField> fields = connector.resolveAndValidateFields(nodeEngine, options, table.fields());
 
-            return new ExternalTable(table.name(), table.type(), new ArrayList<>(fields), new HashMap<>(options));
+            // ensure the collection types because we use imdg-serialization and types like singletonMap aren't supported
+            if (!(options instanceof HashMap)) {
+                options = new HashMap<>(options);
+            }
+            if (!(fields instanceof ArrayList)) {
+                fields = new ArrayList<>(fields);
+            }
+
+            return new ExternalTable(table.name(), table.type(), fields, options);
         } catch (Exception e) {
             throw QueryException.error("Invalid table definition: " + e.getMessage(), e);
         }

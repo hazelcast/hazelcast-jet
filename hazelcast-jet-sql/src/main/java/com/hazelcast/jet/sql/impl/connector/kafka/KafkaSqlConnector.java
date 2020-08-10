@@ -73,12 +73,12 @@ public class KafkaSqlConnector extends EntrySqlConnector {
 
     @Nonnull
     @Override
-    public List<ExternalField> createSchema(
-            @Nullable NodeEngine nodeEngine,
+    public List<ExternalField> resolveAndValidateFields(
+            @Nonnull NodeEngine nodeEngine,
             @Nonnull Map<String, String> options,
-            @Nonnull List<ExternalField> externalFields
+            @Nonnull List<ExternalField> userFields
     ) {
-        return resolveSchema(externalFields, options, null);
+        return resolveSchema(userFields, options, null);
     }
 
     @Nonnull
@@ -88,7 +88,7 @@ public class KafkaSqlConnector extends EntrySqlConnector {
             @Nonnull String schemaName,
             @Nonnull String tableName,
             @Nonnull Map<String, String> options,
-            @Nullable List<ExternalField> externalFields
+            @Nonnull List<ExternalField> externalFields
     ) {
         // TODO validate options
         String topicName = options.getOrDefault(TO_TOPIC_NAME, tableName);

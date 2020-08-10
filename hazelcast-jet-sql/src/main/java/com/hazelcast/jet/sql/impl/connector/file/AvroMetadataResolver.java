@@ -27,30 +27,20 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import static com.hazelcast.jet.impl.util.Util.toList;
+
 interface AvroMetadataResolver {
 
-    static List<ExternalField> schema(List<ExternalField> externalFields) {
-        List<ExternalField> fields = new ArrayList<>();
-        for (ExternalField externalField : externalFields) {
-            String name = externalField.name();
-            QueryDataType type = externalField.type();
-
-            String externalName = externalField.externalName();
-            if (externalName != null && externalName.chars().filter(ch -> ch == '.').count() > 0) {
-                throw QueryException.error(
-                        "Invalid field external name - '" + externalName + "'. Nested fields are not supported."
-                );
+    static void validateFields(List<ExternalField> userFields) {
+        for (ExternalField f : userFields) {
+            String path = f.externalName() == null ? f.name() : f.externalName();
+            if (path.indexOf('.') >= 0) {
+                throw QueryException.error("Invalid field name - '" + path + "'. Nested fields are not supported.");
             }
-            String path = externalName == null ? externalField.name() : externalName;
-
-            ExternalField field = new ExternalField(name, type, path);
-
-            fields.add(field);
         }
-        return fields;
     }
 
-    static List<ExternalField> schema(Schema schema) {
+    static List<ExternalField> resolveFieldsFromSchema(Schema schema) {
         Map<String, ExternalField> fields = new LinkedHashMap<>();
         for (Schema.Field avroField : schema.getFields()) {
             String name = avroField.name();
@@ -84,20 +74,9 @@ interface AvroMetadataResolver {
         }
     }
 
-    static List<TableField> fields(List<ExternalField> externalFields) {
-        List<TableField> fields = new ArrayList<>();
-        for (ExternalField externalField : externalFields) {
-            String name = externalField.name();
-            QueryDataType type = externalField.type();
-
-            String externalName = externalField.externalName();
-            String path = externalName == null ? externalField.name() : externalName;
-
-            TableField field = new FileTableField(name, type, path);
-
-            fields.add(field);
-        }
-        return fields;
+    static List<TableField> toTableFields(List<ExternalField> externalFields) {
+        return toList(externalFields,
+                f -> new FileTableField(f.name(), f.type(), f.externalName() == null ? f.name() : f.externalName()));
     }
 
     static String[] paths(List<TableField> fields) {

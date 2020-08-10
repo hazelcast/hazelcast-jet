@@ -26,7 +26,7 @@ import java.time.LocalTime;
 import java.time.OffsetDateTime;
 
 import static com.hazelcast.jet.sql.SqlConnector.JSON_SERIALIZATION_FORMAT;
-import static com.hazelcast.jet.sql.SqlConnector.TO_SERIALIZATION_FORMAT;
+import static com.hazelcast.jet.sql.SqlConnector.OPTION_SERIALIZATION_FORMAT;
 import static java.time.ZoneOffset.UTC;
 import static java.util.Collections.singletonList;
 
@@ -39,9 +39,9 @@ public class SqlJsonTest extends SqlTestSupport {
                 + "nonExistingField VARCHAR"
                 + ") TYPE \"" + FileSqlConnector.TYPE_NAME + "\" "
                 + "OPTIONS ("
-                + "\"" + TO_SERIALIZATION_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + "'"
-                + ", \"" + FileSqlConnector.TO_PATH + "\" '" + RESOURCES_PATH + "'"
-                + ", \"" + FileSqlConnector.TO_GLOB + "\" '" + "all-types.json" + "'"
+                + "\"" + OPTION_SERIALIZATION_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + "'"
+                + ", \"" + FileSqlConnector.OPTION_PATH + "\" '" + RESOURCES_PATH + "'"
+                + ", \"" + FileSqlConnector.OPTION_GLOB + "\" '" + "all-types.json" + "'"
                 + ")"
         );
 
@@ -58,9 +58,9 @@ public class SqlJsonTest extends SqlTestSupport {
                 + "name VARCHAR EXTERNAL NAME string"
                 + ") TYPE \"" + FileSqlConnector.TYPE_NAME + "\" "
                 + "OPTIONS ("
-                + "\"" + TO_SERIALIZATION_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + "'"
-                + ", \"" + FileSqlConnector.TO_PATH + "\" '" + RESOURCES_PATH + "'"
-                + ", \"" + FileSqlConnector.TO_GLOB + "\" '" + "all-types.json" + "'"
+                + "\"" + OPTION_SERIALIZATION_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + "'"
+                + ", \"" + FileSqlConnector.OPTION_PATH + "\" '" + RESOURCES_PATH + "'"
+                + ", \"" + FileSqlConnector.OPTION_GLOB + "\" '" + "all-types.json" + "'"
                 + ")"
         );
 
@@ -89,9 +89,9 @@ public class SqlJsonTest extends SqlTestSupport {
                 + ", offsetDateTime TIMESTAMP WITH TIME ZONE"
                 + ") TYPE \"" + FileSqlConnector.TYPE_NAME + "\" "
                 + "OPTIONS ("
-                + "\"" + TO_SERIALIZATION_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + "'"
-                + ", \"" + FileSqlConnector.TO_PATH + "\" '" + RESOURCES_PATH + "'"
-                + ", \"" + FileSqlConnector.TO_GLOB + "\" '" + "all-types.json" + "'"
+                + "\"" + OPTION_SERIALIZATION_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + "'"
+                + ", \"" + FileSqlConnector.OPTION_PATH + "\" '" + RESOURCES_PATH + "'"
+                + ", \"" + FileSqlConnector.OPTION_GLOB + "\" '" + "all-types.json" + "'"
                 + ")"
         );
 
@@ -121,9 +121,9 @@ public class SqlJsonTest extends SqlTestSupport {
         executeSql("CREATE EXTERNAL TABLE " + name + " "
                 + "TYPE \"" + FileSqlConnector.TYPE_NAME + "\" "
                 + "OPTIONS ( "
-                + "\"" + TO_SERIALIZATION_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + "'"
-                + ", \"" + FileSqlConnector.TO_PATH + "\" '" + RESOURCES_PATH + "'"
-                + ", \"" + FileSqlConnector.TO_GLOB + "\" '" + "file.json" + "'"
+                + "\"" + OPTION_SERIALIZATION_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + "'"
+                + ", \"" + FileSqlConnector.OPTION_PATH + "\" '" + RESOURCES_PATH + "'"
+                + ", \"" + FileSqlConnector.OPTION_GLOB + "\" '" + "file.json" + "'"
                 + ")"
         );
 

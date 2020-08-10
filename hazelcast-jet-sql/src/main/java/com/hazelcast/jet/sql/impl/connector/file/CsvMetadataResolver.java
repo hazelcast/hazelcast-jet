@@ -27,29 +27,20 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.IntStream;
 
+import static com.hazelcast.jet.impl.util.Util.toList;
 import static java.util.stream.Collectors.toMap;
 
 interface CsvMetadataResolver {
 
-    static List<ExternalField> schema(List<ExternalField> externalFields) {
-        List<ExternalField> fields = new ArrayList<>();
-        for (ExternalField externalField : externalFields) {
-            String name = externalField.name();
-            QueryDataType type = externalField.type();
-
-            String externalName = externalField.externalName();
-            if (externalName != null) {
-                throw QueryException.error("External names are not supported");
+    static void validateFields(List<ExternalField> userFields) {
+        for (ExternalField externalField : userFields) {
+            if (externalField.externalName() != null) {
+                throw QueryException.error("EXTERNAL NAME not supported");
             }
-
-            ExternalField field = new ExternalField(name, type);
-
-            fields.add(field);
         }
-        return fields;
     }
 
-    static List<ExternalField> schema(String line, String delimiter) {
+    static List<ExternalField> resolveFieldsFromSample(String line, String delimiter) {
         String[] headers = line.split(delimiter);
 
         Map<String, ExternalField> fields = new LinkedHashMap<>();
@@ -61,17 +52,8 @@ interface CsvMetadataResolver {
         return new ArrayList<>(fields.values());
     }
 
-    static List<TableField> fields(List<ExternalField> externalFields) {
-        List<TableField> fields = new ArrayList<>();
-        for (ExternalField externalField : externalFields) {
-            String name = externalField.name();
-            QueryDataType type = externalField.type();
-
-            TableField field = new FileTableField(name, type);
-
-            fields.add(field);
-        }
-        return fields;
+    static List<TableField> toTableFields(List<ExternalField> externalFields) {
+        return toList(externalFields, f -> new FileTableField(f.name(), f.type()));
     }
 
     static Map<String, Integer> indices(List<TableField> fields) {

@@ -30,18 +30,18 @@ import java.util.List;
 import java.util.Map;
 
 import static com.hazelcast.jet.sql.impl.connector.file.MetadataResolver.resolveMetadata;
-import static com.hazelcast.jet.sql.impl.connector.file.MetadataResolver.resolveSchema;
+import static java.util.Collections.emptyList;
 
 public class FileSqlConnector implements SqlConnector {
 
     public static final String TYPE_NAME = "com.hazelcast.File";
 
-    public static final String TO_PATH = "file.path";
-    public static final String TO_GLOB = "file.glob";
-    public static final String TO_SHARED_FILE_SYSTEM = "file.sharedFileSystem";
-    public static final String TO_CHARSET = "file.charset";
-    public static final String TO_HEADER = "file.header";
-    public static final String TO_DELIMITER = "file.delimiter";
+    public static final String OPTION_PATH = "file.path";
+    public static final String OPTION_GLOB = "file.glob";
+    public static final String OPTION_SHARED_FILE_SYSTEM = "file.sharedFileSystem";
+    public static final String OPTION_CHARSET = "file.charset";
+    public static final String OPTION_HEADER = "file.header";
+    public static final String OPTION_DELIMITER = "file.delimiter";
     public static final String S3_ACCESS_KEY = "file.s3a.access.key";
     public static final String S3_SECRET_KEY = "file.s3a.secret.key";
 
@@ -59,18 +59,32 @@ public class FileSqlConnector implements SqlConnector {
 
     @Nonnull
     @Override
-    public List<ExternalField> createSchema(
-            @Nullable NodeEngine nodeEngine,
+    public List<ExternalField> resolveAndValidateFields(
+            @Nonnull NodeEngine nodeEngine,
             @Nonnull Map<String, String> options,
-            @Nonnull List<ExternalField> externalFields
+            @Nonnull List<ExternalField> userFields
     ) {
-        return resolveSchema(externalFields, FileOptions.from(options));
+        return MetadataResolver.resolveAndValidateFields(userFields, FileOptions.from(options));
+    }
+
+    public static List<ExternalField> resolveAndValidateFields(@Nonnull Map<String, String> options) {
+        return MetadataResolver.resolveAndValidateFields(emptyList(), FileOptions.from(options));
     }
 
     @Nonnull
     @Override
     public Table createTable(
-            @Nullable NodeEngine nodeEngine,
+            @Nonnull NodeEngine nodeEngine,
+            @Nonnull String schemaName,
+            @Nonnull String name,
+            @Nonnull Map<String, String> options,
+            @Nonnull List<ExternalField> externalFields
+    ) {
+        return createTable(schemaName, name, options, externalFields);
+    }
+
+    @Nonnull
+    public static Table createTable(
             @Nonnull String schemaName,
             @Nonnull String name,
             @Nonnull Map<String, String> options,
@@ -79,7 +93,7 @@ public class FileSqlConnector implements SqlConnector {
         Metadata metadata = resolveMetadata(externalFields, FileOptions.from(options));
 
         return new FileTable(
-                this,
+                INSTANCE,
                 schemaName,
                 name,
                 metadata.fields(),

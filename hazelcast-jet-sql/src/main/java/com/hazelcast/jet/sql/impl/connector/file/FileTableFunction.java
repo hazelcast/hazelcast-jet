@@ -27,42 +27,36 @@ import com.hazelcast.sql.impl.schema.Table;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.schema.FunctionParameter;
+import org.apache.calcite.util.Pair;
 
 import java.lang.reflect.Type;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 import static com.hazelcast.jet.impl.util.Util.toList;
-import static com.hazelcast.jet.sql.SqlConnector.TO_SERIALIZATION_FORMAT;
-import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.TO_CHARSET;
-import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.TO_DELIMITER;
-import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.TO_GLOB;
-import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.TO_HEADER;
-import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.TO_PATH;
-import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.TO_SHARED_FILE_SYSTEM;
-import static java.util.Collections.emptyList;
+import static com.hazelcast.jet.sql.SqlConnector.OPTION_SERIALIZATION_FORMAT;
+import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.OPTION_CHARSET;
+import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.OPTION_DELIMITER;
+import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.OPTION_GLOB;
+import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.OPTION_HEADER;
+import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.OPTION_PATH;
+import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.OPTION_SHARED_FILE_SYSTEM;
+import static java.util.Arrays.asList;
 
 public final class FileTableFunction implements JetTableFunction {
 
     public static final FileTableFunction INSTANCE = new FileTableFunction();
 
-    // TODO: replace format specific options with map or FILE() -> CSV()/JSON()/AVRO()
-    private static final Map<String, FunctionParameter> PARAMETERS_BY_CONNECTOR_NAMES =
-            new LinkedHashMap<String, FunctionParameter>() {{
-                int ordinal = 0;
-                put(TO_SERIALIZATION_FORMAT, new JetTableFunctionParameter(ordinal++, "format", String.class, true));
-                put(TO_PATH, new JetTableFunctionParameter(ordinal++, "path", String.class, true));
-                put(TO_GLOB, new JetTableFunctionParameter(ordinal++, "glob", String.class, false));
-                put(TO_SHARED_FILE_SYSTEM, new JetTableFunctionParameter(ordinal++, "sharedFileSystem", Boolean.class,
-                        false));
-                put(TO_CHARSET, new JetTableFunctionParameter(ordinal++, "charset", String.class, false));
-                put(TO_HEADER, new JetTableFunctionParameter(ordinal++, "header", Boolean.class, false));
-                put(TO_DELIMITER, new JetTableFunctionParameter(ordinal, "delimiter", String.class, false));
-            }};
+    // TODO: replace format-specific options with map or FILE() -> CSV()/JSON()/AVRO()
+    private static final List<Pair<String, FunctionParameter>> PARAMETERS = asList(
+            Pair.of(OPTION_SERIALIZATION_FORMAT, new JetTableFunctionParameter(0, "format", String.class, true)),
+            Pair.of(OPTION_PATH, new JetTableFunctionParameter(1, "path", String.class, true)),
+            Pair.of(OPTION_GLOB, new JetTableFunctionParameter(2, "glob", String.class, false)),
+            Pair.of(OPTION_SHARED_FILE_SYSTEM, new JetTableFunctionParameter(3, "sharedFileSystem", Boolean.class, false)),
+            Pair.of(OPTION_CHARSET, new JetTableFunctionParameter(4, "charset", String.class, false)),
+            Pair.of(OPTION_HEADER, new JetTableFunctionParameter(5, "header", Boolean.class, false)),
+            Pair.of(OPTION_DELIMITER, new JetTableFunctionParameter(6, "delimiter", String.class, false)));
 
     private static final String SCHEMA_NAME_FILES = "files";
 
@@ -71,14 +65,14 @@ public final class FileTableFunction implements JetTableFunction {
 
     @Override
     public List<FunctionParameter> getParameters() {
-        return new ArrayList<>(PARAMETERS_BY_CONNECTOR_NAMES.values());
+        return Pair.right(PARAMETERS);
     }
 
     @Override
     public RelDataType getRowType(RelDataTypeFactory typeFactory, List<Object> arguments) {
-        Map<String, String> options = options(arguments);
-        List<ExternalField> fields = FileSqlConnector.INSTANCE.createSchema(null, options, emptyList());
-        return table(options(arguments), fields).getRowType(typeFactory);
+        Map<String, String> options = optionsFromFunctionArguments(arguments);
+        List<ExternalField> fields = FileSqlConnector.resolveAndValidateFields(options);
+        return createHazelcastTable(options, fields).getRowType(typeFactory);
     }
 
     @Override
@@ -88,19 +82,18 @@ public final class FileTableFunction implements JetTableFunction {
 
     @Override
     public HazelcastTable table(List<Object> arguments, RelDataType rowType) {
-        Map<String, String> options = options(arguments);
+        Map<String, String> options = optionsFromFunctionArguments(arguments);
 
         List<ExternalField> fields = toList(
                 rowType.getFieldList(),
                 field -> new ExternalField(field.getName(), SqlToQueryType.map(field.getType().getSqlTypeName()))
         );
 
-        return table(options, fields);
+        return createHazelcastTable(options, fields);
     }
 
-    private HazelcastTable table(Map<String, String> options, List<ExternalField> fields) {
-        Table table = FileSqlConnector.INSTANCE.createTable(
-                null,
+    private HazelcastTable createHazelcastTable(Map<String, String> options, List<ExternalField> fields) {
+        Table table = FileSqlConnector.createTable(
                 SCHEMA_NAME_FILES,
                 randomName(),
                 options,
@@ -109,13 +102,15 @@ public final class FileTableFunction implements JetTableFunction {
         return new HazelcastTable(table, UnknownStatistic.INSTANCE);
     }
 
-    private Map<String, String> options(List<Object> arguments) {
+    /**
+     * Takes a list of function arguments and converts it to equivalent options
+     * that would be used if the file was declared using DDL.
+     */
+    private Map<String, String> optionsFromFunctionArguments(List<Object> arguments) {
         Map<String, String> options = new HashMap<>();
-        Iterator<String> parameterNames = PARAMETERS_BY_CONNECTOR_NAMES.keySet().iterator();
-        for (Object argument : arguments) {
-            String parameterName = parameterNames.next();
-            if (argument != null) {
-                options.put(parameterName, argument.toString());
+        for (int i = 0; i < PARAMETERS.size(); i++) {
+            if (arguments.get(i) != null) {
+                options.put(PARAMETERS.get(i).left, arguments.get(i).toString());
             }
         }
         return options;

@@ -21,7 +21,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import static com.hazelcast.jet.sql.SqlConnector.AVRO_SERIALIZATION_FORMAT;
-import static com.hazelcast.jet.sql.SqlConnector.TO_SERIALIZATION_FORMAT;
+import static com.hazelcast.jet.sql.SqlConnector.OPTION_SERIALIZATION_FORMAT;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 
@@ -37,9 +37,9 @@ public class SqlFileTest extends SqlTestSupport {
                 + ", age INT"
                 + ") TYPE \"" + FileSqlConnector.TYPE_NAME + "\" "
                 + "OPTIONS ("
-                + "\"" + TO_SERIALIZATION_FORMAT + "\" '" + AVRO_SERIALIZATION_FORMAT + "'"
-                + ", \"" + FileSqlConnector.TO_PATH + "\" '" + RESOURCES_PATH + "'"
-                + ", \"" + FileSqlConnector.TO_GLOB + "\" '" + "users.avro" + "'"
+                + "\"" + OPTION_SERIALIZATION_FORMAT + "\" '" + AVRO_SERIALIZATION_FORMAT + "'"
+                + ", \"" + FileSqlConnector.OPTION_PATH + "\" '" + RESOURCES_PATH + "'"
+                + ", \"" + FileSqlConnector.OPTION_GLOB + "\" '" + "users.avro" + "'"
                 + ")"
         );
     }

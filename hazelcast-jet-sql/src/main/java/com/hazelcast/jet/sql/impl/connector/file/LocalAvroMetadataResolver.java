@@ -33,6 +33,7 @@ import org.apache.avro.generic.GenericRecord;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -42,7 +43,7 @@ import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 import static com.hazelcast.jet.impl.util.Util.uncheckRun;
-import static com.hazelcast.jet.sql.impl.connector.file.AvroMetadataResolver.fields;
+import static com.hazelcast.jet.sql.impl.connector.file.AvroMetadataResolver.toTableFields;
 import static com.hazelcast.jet.sql.impl.connector.file.AvroMetadataResolver.paths;
 import static com.hazelcast.jet.sql.impl.connector.file.AvroMetadataResolver.types;
 
@@ -51,31 +52,34 @@ final class LocalAvroMetadataResolver implements AvroMetadataResolver {
     private LocalAvroMetadataResolver() {
     }
 
-    static List<ExternalField> resolveSchema(
-            List<ExternalField> externalFields,
+    static List<ExternalField> resolveFields(
+            List<ExternalField> userFields,
             FileOptions options
     ) throws IOException {
-        if (!externalFields.isEmpty()) {
-            return JsonMetadataResolver.schema(externalFields);
+        if (!userFields.isEmpty()) {
+            AvroMetadataResolver.validateFields(userFields);
+            return userFields;
         } else {
-            Schema schema = schema(options.path(), options.glob());
-            return AvroMetadataResolver.schema(schema);
+            Schema schema = findAvroSchema(options.path(), options.glob());
+            return AvroMetadataResolver.resolveFieldsFromSchema(schema);
         }
     }
 
-    private static Schema schema(String directory, String glob) throws IOException {
-        for (Path path : Files.newDirectoryStream(Paths.get(directory), glob)) { // TODO: directory check
-            File file = path.toFile();
+    private static Schema findAvroSchema(String directory, String glob) throws IOException {
+        try (DirectoryStream<Path> directoryStream = Files.newDirectoryStream(Paths.get(directory), glob)) {
+            for (Path path : directoryStream) { // TODO: directory check
+                File file = path.toFile();
 
-            try (DataFileReader<GenericRecord> reader = new DataFileReader<>(file, new GenericDatumReader<>())) {
-                return reader.getSchema();
+                try (DataFileReader<GenericRecord> reader = new DataFileReader<>(file, new GenericDatumReader<>())) {
+                    return reader.getSchema();
+                }
             }
         }
-        throw new IllegalArgumentException("No data found in '" + directory + "/" + glob + "'");
+        throw new IllegalArgumentException("No files matching '" + directory + "/" + glob + "' found");
     }
 
     static Metadata resolveMetadata(List<ExternalField> externalFields, FileOptions options) {
-        List<TableField> fields = fields(externalFields);
+        List<TableField> fields = toTableFields(externalFields);
 
         return new Metadata(
                 new AvroTargetDescriptor(options.path(), options.glob(), options.sharedFileSystem()),

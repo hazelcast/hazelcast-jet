@@ -65,10 +65,10 @@ public class IMapSqlConnector extends EntrySqlConnector implements SqlConnector 
     }
 
     @Nonnull @Override
-    public List<ExternalField> createSchema(
-            @Nullable NodeEngine nodeEngine,
+    public List<ExternalField> resolveAndValidateFields(
+            @Nonnull NodeEngine nodeEngine,
             @Nonnull Map<String, String> options,
-            @Nonnull List<ExternalField> externalFields
+            @Nonnull List<ExternalField> userFields
     ) {
         throw new RuntimeException("should not be used");
     }
@@ -79,7 +79,7 @@ public class IMapSqlConnector extends EntrySqlConnector implements SqlConnector 
             @Nonnull String schemaName,
             @Nonnull String tableName,
             @Nonnull Map<String, String> options,
-            @Nullable List<ExternalField> externalFields
+            @Nonnull List<ExternalField> externalFields
     ) {
         throw new RuntimeException("should not be used");
     }

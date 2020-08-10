@@ -20,15 +20,15 @@ import com.hazelcast.sql.impl.QueryException;
 
 import java.util.Map;
 
-import static com.hazelcast.jet.sql.SqlConnector.TO_SERIALIZATION_FORMAT;
+import static com.hazelcast.jet.sql.SqlConnector.OPTION_SERIALIZATION_FORMAT;
+import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.OPTION_CHARSET;
+import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.OPTION_DELIMITER;
+import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.OPTION_GLOB;
+import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.OPTION_HEADER;
+import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.OPTION_PATH;
+import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.OPTION_SHARED_FILE_SYSTEM;
 import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.S3_ACCESS_KEY;
 import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.S3_SECRET_KEY;
-import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.TO_CHARSET;
-import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.TO_DELIMITER;
-import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.TO_GLOB;
-import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.TO_HEADER;
-import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.TO_PATH;
-import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.TO_SHARED_FILE_SYSTEM;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 final class FileOptions {
@@ -36,11 +36,11 @@ final class FileOptions {
     private final Map<String, String> options;
 
     private FileOptions(Map<String, String> options) {
-        if (options.get(TO_SERIALIZATION_FORMAT) == null) {
-            throw QueryException.error("Missing '" + TO_SERIALIZATION_FORMAT + "' option");
+        if (options.get(OPTION_SERIALIZATION_FORMAT) == null) {
+            throw QueryException.error("Missing '" + OPTION_SERIALIZATION_FORMAT + "' option");
         }
-        if (options.get(TO_PATH) == null) {
-            throw QueryException.error("Missing '" + TO_PATH + "' option");
+        if (options.get(OPTION_PATH) == null) {
+            throw QueryException.error("Missing '" + OPTION_PATH + "' option");
         }
 
         this.options = options;
@@ -51,31 +51,31 @@ final class FileOptions {
     }
 
     String format() {
-        return options.get(TO_SERIALIZATION_FORMAT);
+        return options.get(OPTION_SERIALIZATION_FORMAT);
     }
 
     String path() {
-        return options.get(TO_PATH);
+        return options.get(OPTION_PATH);
     }
 
     String glob() {
-        return options.getOrDefault(TO_GLOB, "*");
+        return options.getOrDefault(OPTION_GLOB, "*");
     }
 
     boolean sharedFileSystem() {
-        return Boolean.parseBoolean(options.getOrDefault(TO_SHARED_FILE_SYSTEM, "true"));
+        return Boolean.parseBoolean(options.getOrDefault(OPTION_SHARED_FILE_SYSTEM, "true"));
     }
 
     String charset() {
-        return options.getOrDefault(TO_CHARSET, UTF_8.name());
+        return options.getOrDefault(OPTION_CHARSET, UTF_8.name());
     }
 
     String delimiter() {
-        return options.getOrDefault(TO_DELIMITER, ",");
+        return options.getOrDefault(OPTION_DELIMITER, ",");
     }
 
     boolean header() {
-        return Boolean.parseBoolean(options.getOrDefault(TO_HEADER, "false"));
+        return Boolean.parseBoolean(options.getOrDefault(OPTION_HEADER, "false"));
     }
 
     String s3AccessKey() {

@@ -44,25 +44,26 @@ import java.util.List;
 import java.util.Map;
 
 import static com.hazelcast.jet.hadoop.impl.SerializableConfiguration.asSerializable;
-import static com.hazelcast.jet.sql.impl.connector.file.CsvMetadataResolver.schema;
-import static com.hazelcast.jet.sql.impl.connector.file.CsvMetadataResolver.fields;
+import static com.hazelcast.jet.sql.impl.connector.file.CsvMetadataResolver.resolveFieldsFromSample;
+import static com.hazelcast.jet.sql.impl.connector.file.CsvMetadataResolver.toTableFields;
 
 final class RemoteCsvMetadataResolver implements CsvMetadataResolver {
 
     private RemoteCsvMetadataResolver() {
     }
 
-    static List<ExternalField> resolveSchema(
-            List<ExternalField> externalFields,
+    static List<ExternalField> resolveFields(
+            List<ExternalField> userFields,
             FileOptions options,
             Job job
     ) throws IOException {
-        if (!externalFields.isEmpty()) {
-            return schema(externalFields);
+        if (!userFields.isEmpty()) {
+            CsvMetadataResolver.validateFields(userFields);
+            return userFields;
         } else {
             // TODO: ensure options.header() == true ???
             String line = line(options.path(), job.getConfiguration());
-            return schema(line, options.delimiter());
+            return resolveFieldsFromSample(line, options.delimiter());
         }
     }
 
@@ -73,8 +74,10 @@ final class RemoteCsvMetadataResolver implements CsvMetadataResolver {
             while (filesIterator.hasNext()) {
                 LocatedFileStatus file = filesIterator.next();
 
-                try (Reader input = new InputStreamReader(filesystem.open(file.getPath()));
-                     BufferedReader reader = new BufferedReader(input)) {
+                try (
+                        Reader input = new InputStreamReader(filesystem.open(file.getPath()));
+                        BufferedReader reader = new BufferedReader(input)
+                ) {
                     String line = reader.readLine();
                     if (line != null) {
                         return line;
@@ -89,7 +92,7 @@ final class RemoteCsvMetadataResolver implements CsvMetadataResolver {
         TextInputFormat.addInputPath(job, new Path(options.path()));
         job.setInputFormatClass(TextInputFormat.class);
 
-        List<TableField> fields = fields(externalFields);
+        List<TableField> fields = toTableFields(externalFields);
 
         return new Metadata(
                 new CsvTargetDescriptor(options.delimiter(), options.header(), job.getConfiguration()),

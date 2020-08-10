@@ -43,9 +43,9 @@ import java.io.Reader;
 import java.util.List;
 
 import static com.hazelcast.jet.hadoop.impl.SerializableConfiguration.asSerializable;
-import static com.hazelcast.jet.sql.impl.connector.file.JsonMetadataResolver.fields;
+import static com.hazelcast.jet.sql.impl.connector.file.JsonMetadataResolver.toTableFields;
 import static com.hazelcast.jet.sql.impl.connector.file.JsonMetadataResolver.paths;
-import static com.hazelcast.jet.sql.impl.connector.file.JsonMetadataResolver.schema;
+import static com.hazelcast.jet.sql.impl.connector.file.JsonMetadataResolver.resolveFieldsFromSample;
 import static com.hazelcast.jet.sql.impl.connector.file.JsonMetadataResolver.types;
 
 final class RemoteJsonMetadataResolver implements JsonMetadataResolver {
@@ -53,16 +53,17 @@ final class RemoteJsonMetadataResolver implements JsonMetadataResolver {
     private RemoteJsonMetadataResolver() {
     }
 
-    static List<ExternalField> resolveSchema(
-            List<ExternalField> externalFields,
+    static List<ExternalField> resolveFields(
+            List<ExternalField> userFields,
             FileOptions options,
             Job job
     ) throws IOException {
-        if (!externalFields.isEmpty()) {
-            return schema(externalFields);
+        if (!userFields.isEmpty()) {
+            JsonMetadataResolver.validateFields(userFields);
+            return userFields;
         } else {
             String line = line(options.path(), job.getConfiguration());
-            return schema(line);
+            return resolveFieldsFromSample(line);
         }
     }
 
@@ -73,8 +74,10 @@ final class RemoteJsonMetadataResolver implements JsonMetadataResolver {
             while (filesIterator.hasNext()) {
                 LocatedFileStatus file = filesIterator.next();
 
-                try (Reader input = new InputStreamReader(filesystem.open(file.getPath()));
-                     BufferedReader reader = new BufferedReader(input)) {
+                try (
+                        Reader input = new InputStreamReader(filesystem.open(file.getPath()));
+                        BufferedReader reader = new BufferedReader(input)
+                ) {
                     String line = reader.readLine();
                     if (line != null) {
                         return line;
@@ -89,7 +92,7 @@ final class RemoteJsonMetadataResolver implements JsonMetadataResolver {
         TextInputFormat.addInputPath(job, new Path(options.path()));
         job.setInputFormatClass(TextInputFormat.class);
 
-        List<TableField> fields = fields(externalFields);
+        List<TableField> fields = toTableFields(externalFields);
 
         return new Metadata(
                 new JsonTargetDescriptor(job.getConfiguration()),

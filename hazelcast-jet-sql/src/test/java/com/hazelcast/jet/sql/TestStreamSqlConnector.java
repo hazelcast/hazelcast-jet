@@ -59,12 +59,12 @@ public class TestStreamSqlConnector implements SqlConnector {
     }
 
     @NotNull @Override
-    public List<ExternalField> createSchema(
-            @Nullable NodeEngine nodeEngine,
+    public List<ExternalField> resolveAndValidateFields(
+            @Nonnull NodeEngine nodeEngine,
             @NotNull Map<String, String> options,
-            @NotNull List<ExternalField> externalFields
+            @NotNull List<ExternalField> userFields
     ) {
-        if (externalFields.size() > 0) {
+        if (userFields.size() > 0) {
             throw QueryException.error("Don't specify external fields, they are fixed");
         }
         return SCHEMA;

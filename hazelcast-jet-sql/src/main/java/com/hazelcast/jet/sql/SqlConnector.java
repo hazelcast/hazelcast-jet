@@ -39,7 +39,7 @@ public interface SqlConnector {
     /**
      * TODO
      */
-    String TO_SERIALIZATION_FORMAT = "serialization.format";
+    String OPTION_SERIALIZATION_FORMAT = "serialization.format";
 
     /**
      * TODO
@@ -72,7 +72,7 @@ public interface SqlConnector {
      * Specifies the accessed object name. If missing, the external table name
      * itself is used.
      */
-    String TO_OBJECT_NAME = "objectName";
+    String OPTION_OBJECT_NAME = "objectName";
 
     /**
      * Return the name of the connector as seen in the {@code TYPE} clause in
@@ -86,23 +86,28 @@ public interface SqlConnector {
     boolean isStream();
 
     /**
-     * Creates a table schema based on given options and fields. Might connect
-     * to remote service if needed (i.e. to resolve the schema, based on sample record).
-     * Such schema is persisted on a cluster and passed to {@link SqlConnector#createTable}
-     * during query parsing.
+     *  Resolve a final field list given a field list and options from the
+     *  user. The {@code userFields} can be empty, in this case the connector
+     *  is supposed to resolve them. The returned list must not be empty.
+     *  <p>
+     *  The method is free to do any changes to the user-provided field list, but
+     *  should document the behavior to the user. Generally, it should not
+     *  remove columns, but might add some.
+     *  <p>
+     *  The returned field list will be stored in the catalog and if the user lists
+     *  the catalog, they will be visible to the user. It will be later passed
+     *  to {@link #createTable}.
      *
      * @param nodeEngine     an instance of {@link NodeEngine}
-     * @param options        connector specific options
-     * @param externalFields list of fields. If empty, an attempt to resolve them
-     *                       automatically will be made. If not successful, an
-     *                       exception will be thrown.
-     * @return
+     * @param options        user-provided options
+     * @param userFields user-provided list of fields, possibly empty
+     * @return final field list, must not be empty
      */
     @Nonnull
-    List<ExternalField> createSchema(
-            @Nullable NodeEngine nodeEngine,
+    List<ExternalField> resolveAndValidateFields(
+            @Nonnull NodeEngine nodeEngine,
             @Nonnull Map<String, String> options,
-            @Nonnull List<ExternalField> externalFields
+            @Nonnull List<ExternalField> userFields
     );
 
     /**
@@ -112,7 +117,6 @@ public interface SqlConnector {
      * @param nodeEngine     an instance of {@link NodeEngine}
      * @param options        connector specific options
      * @param externalFields list of fields.
-     * @return
      */
     @Nonnull
     Table createTable(
@@ -124,7 +128,7 @@ public interface SqlConnector {
     );
 
     /**
-     * @return
+     * TODO
      */
     default boolean supportsFullScanReader() {
         return false;
@@ -152,7 +156,7 @@ public interface SqlConnector {
      * Then the projection will be {@code {1}} and the predicate will be {@code
      * {2}=10}.
      *
-     * @param table
+     * @param table TODO
      * @param predicate  SQL expression to filter the rows
      * @param projection list of field names to return
      */
@@ -171,7 +175,7 @@ public interface SqlConnector {
     }
 
     /**
-     * @return
+     * TODO
      */
     default boolean supportsNestedLoopReader() {
         return false;
@@ -202,14 +206,14 @@ public interface SqlConnector {
     }
 
     /**
-     * @return
+     * TODO
      */
     default boolean supportsSink() {
         return false;
     }
 
     /**
-     * @return
+     * TODO
      */
     // TODO: naming ...
     default boolean supportsPlainInserts() {

@@ -31,15 +31,14 @@ import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.stream.Stream;
 
-import static com.hazelcast.jet.sql.impl.connector.file.JsonMetadataResolver.fields;
+import static com.hazelcast.jet.impl.util.Util.firstLineFromFirstFile;
+import static com.hazelcast.jet.sql.impl.connector.file.JsonMetadataResolver.toTableFields;
 import static com.hazelcast.jet.sql.impl.connector.file.JsonMetadataResolver.paths;
-import static com.hazelcast.jet.sql.impl.connector.file.JsonMetadataResolver.schema;
+import static com.hazelcast.jet.sql.impl.connector.file.JsonMetadataResolver.resolveFieldsFromSample;
 import static com.hazelcast.jet.sql.impl.connector.file.JsonMetadataResolver.types;
 
 final class LocalJsonMetadataResolver implements JsonMetadataResolver {
@@ -47,30 +46,24 @@ final class LocalJsonMetadataResolver implements JsonMetadataResolver {
     private LocalJsonMetadataResolver() {
     }
 
-    static List<ExternalField> resolveSchema(
-            List<ExternalField> externalFields,
+    static List<ExternalField> resolveFields(
+            List<ExternalField> userFields,
             FileOptions options
     ) throws IOException {
-        if (!externalFields.isEmpty()) {
-            return schema(externalFields);
+        if (!userFields.isEmpty()) {
+            JsonMetadataResolver.validateFields(userFields);
+            return userFields;
         } else {
-            String line = line(options.path(), options.glob());
-            return schema(line);
-        }
-    }
-
-    private static String line(String directory, String glob) throws IOException {
-        for (Path path : Files.newDirectoryStream(Paths.get(directory), glob)) { // TODO: directory check
-            Optional<String> line = Files.lines(path).findFirst();
-            if (line.isPresent()) {
-                return line.get();
+            String line = firstLineFromFirstFile(options.path(), options.glob());
+            if (line == null) {
+                throw new IllegalArgumentException("No data found in '" + options.path() + "/" + options.glob() + "'");
             }
+            return resolveFieldsFromSample(line);
         }
-        throw new IllegalArgumentException("No data found in '" + directory + "/" + glob + "'");
     }
 
     static Metadata resolveMetadata(List<ExternalField> externalFields, FileOptions options) {
-        List<TableField> fields = fields(externalFields);
+        List<TableField> fields = toTableFields(externalFields);
 
         return new Metadata(
                 new JsonTargetDescriptor(options.path(), options.glob(), options.sharedFileSystem(), options.charset()),

@@ -17,10 +17,10 @@
 package com.hazelcast.jet.sql.impl.connector.map;
 
 import com.hazelcast.internal.serialization.InternalSerializationService;
-import com.hazelcast.jet.sql.impl.connector.JavaEntryMetadataResolver;
 import com.hazelcast.jet.sql.impl.connector.EntryMetadata;
 import com.hazelcast.jet.sql.impl.connector.EntryMetadataResolver;
 import com.hazelcast.jet.sql.impl.connector.EntrySqlConnector;
+import com.hazelcast.jet.sql.impl.connector.JavaEntryMetadataResolver;
 import com.hazelcast.jet.sql.impl.schema.ExternalField;
 import com.hazelcast.replicatedmap.impl.ReplicatedMapService;
 import com.hazelcast.replicatedmap.impl.record.ReplicatedRecordStore;
@@ -31,7 +31,6 @@ import com.hazelcast.sql.impl.schema.TableField;
 import com.hazelcast.sql.impl.schema.map.ReplicatedMapTable;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -64,12 +63,12 @@ public class LocalReplicatedMapConnector extends EntrySqlConnector {
 
     @Nonnull
     @Override
-    public List<ExternalField> createSchema(
-            @Nullable NodeEngine nodeEngine,
+    public List<ExternalField> resolveAndValidateFields(
+            @Nonnull NodeEngine nodeEngine,
             @Nonnull Map<String, String> options,
-            @Nonnull List<ExternalField> externalFields
+            @Nonnull List<ExternalField> userFields
     ) {
-        return resolveSchema(externalFields, options, (InternalSerializationService) nodeEngine.getSerializationService());
+        return resolveSchema(userFields, options, (InternalSerializationService) nodeEngine.getSerializationService());
     }
 
     @Nonnull
@@ -81,7 +80,7 @@ public class LocalReplicatedMapConnector extends EntrySqlConnector {
             @Nonnull Map<String, String> options,
             @Nonnull List<ExternalField> externalFields
     ) {
-        String mapName = options.getOrDefault(TO_OBJECT_NAME, name);
+        String mapName = options.getOrDefault(OPTION_OBJECT_NAME, name);
 
         InternalSerializationService ss = (InternalSerializationService) nodeEngine.getSerializationService();
 
