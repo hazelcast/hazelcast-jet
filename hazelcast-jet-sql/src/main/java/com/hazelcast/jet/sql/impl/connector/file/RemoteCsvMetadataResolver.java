@@ -70,7 +70,8 @@ final class RemoteCsvMetadataResolver implements CsvMetadataResolver {
     private static String line(String directory, Configuration configuration) throws IOException {
         Path path = new Path(directory);
         try (FileSystem filesystem = path.getFileSystem(configuration)) {
-            RemoteIterator<LocatedFileStatus> filesIterator = filesystem.listFiles(path, false); // TODO: directory check, recursive ???
+            // TODO: directory check, recursive ???
+            RemoteIterator<LocatedFileStatus> filesIterator = filesystem.listFiles(path, false);
             while (filesIterator.hasNext()) {
                 LocatedFileStatus file = filesIterator.next();
 
@@ -100,7 +101,7 @@ final class RemoteCsvMetadataResolver implements CsvMetadataResolver {
         );
     }
 
-    private static class CsvTargetDescriptor implements TargetDescriptor {
+    private static final class CsvTargetDescriptor implements TargetDescriptor {
 
         private final String delimiter;
         private final boolean header;

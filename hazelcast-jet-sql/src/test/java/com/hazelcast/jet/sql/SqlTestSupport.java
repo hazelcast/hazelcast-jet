@@ -130,7 +130,7 @@ public abstract class SqlTestSupport extends SimpleTestInClusterSupport {
      * java serialization for both key and value with the given classes.
      */
     public static String javaSerializableMapDdl(String name, Class<?> keyClass, Class<?> valueClass) {
-        return "CREATE EXTERNAL TABLE "+ name + " TYPE \"" + LocalPartitionedMapConnector.TYPE_NAME + "\"\n"
+        return "CREATE EXTERNAL TABLE " + name + " TYPE \"" + LocalPartitionedMapConnector.TYPE_NAME + "\"\n"
                 + "OPTIONS (\n"
                 + '"' + TO_SERIALIZATION_KEY_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "',\n"
                 + '"' + TO_KEY_CLASS + "\" '" + keyClass.getName() + "',\n"

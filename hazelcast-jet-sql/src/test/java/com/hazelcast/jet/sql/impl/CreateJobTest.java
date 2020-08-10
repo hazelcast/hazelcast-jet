@@ -34,10 +34,10 @@ import static org.junit.Assert.assertTrue;
 
 public class CreateJobTest extends SimpleTestInClusterSupport {
 
+    private static SqlService sqlService;
+
     @Rule
     public ExpectedException exception = ExpectedException.none();
-
-    private static SqlService sqlService;
 
     @BeforeClass
     public static void beforeClass() {

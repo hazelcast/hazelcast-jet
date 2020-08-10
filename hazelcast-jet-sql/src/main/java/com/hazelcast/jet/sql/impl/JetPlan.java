@@ -117,7 +117,13 @@ interface JetPlan extends SqlPlan {
         private final ExecutionPlan executionPlan;
         private final JetSqlServiceImpl sqlService;
 
-        public CreateJobPlan(String name, JobConfig jobConfig, boolean ifNotExists, ExecutionPlan executionPlan, JetSqlServiceImpl sqlService) {
+        CreateJobPlan(
+                String name,
+                JobConfig jobConfig,
+                boolean ifNotExists,
+                ExecutionPlan executionPlan,
+                JetSqlServiceImpl sqlService
+        ) {
             this.name = name;
             this.jobConfig = jobConfig;
             this.ifNotExists = ifNotExists;
@@ -152,7 +158,7 @@ interface JetPlan extends SqlPlan {
         private final boolean ifExists;
         private final JetSqlServiceImpl sqlService;
 
-        public DropJobPlan(String name, boolean ifExists, JetSqlServiceImpl sqlService) {
+        DropJobPlan(String name, boolean ifExists, JetSqlServiceImpl sqlService) {
             this.name = name;
             this.ifExists = ifExists;
             this.sqlService = sqlService;

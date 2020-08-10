@@ -87,7 +87,7 @@ final class LocalAvroMetadataResolver implements AvroMetadataResolver {
         );
     }
 
-    private static class AvroTargetDescriptor implements TargetDescriptor {
+    private static final class AvroTargetDescriptor implements TargetDescriptor {
 
         private final String path;
         private final String glob;

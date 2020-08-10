@@ -51,6 +51,7 @@ public class SqlCreateJob extends SqlCreate {
 
     private final JobConfig jobConfig = new JobConfig();
 
+    @SuppressWarnings("checkstyle:ExecutableStatementCount")
     public SqlCreateJob(
             SqlIdentifier name,
             SqlNodeList options,

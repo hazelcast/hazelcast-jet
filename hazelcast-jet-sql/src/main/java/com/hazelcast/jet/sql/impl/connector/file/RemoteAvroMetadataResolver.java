@@ -70,11 +70,15 @@ final class RemoteAvroMetadataResolver {
     private static Schema findAvroSchema(String directory, Configuration configuration) throws IOException {
         Path path = new Path(directory);
         try (FileSystem filesystem = path.getFileSystem(configuration)) {
-            RemoteIterator<LocatedFileStatus> filesIterator = filesystem.listFiles(path, false); // TODO: directory check, recursive ???
+            // TODO: directory check, recursive ???
+            RemoteIterator<LocatedFileStatus> filesIterator = filesystem.listFiles(path, false);
             if (filesIterator.hasNext()) {
                 LocatedFileStatus file = filesIterator.next();
 
-                try (DataFileStream<GenericRecord> stream = new DataFileStream<>(filesystem.open(file.getPath()), new GenericDatumReader<>())) {
+                try (
+                        DataFileStream<GenericRecord> stream =
+                                new DataFileStream<>(filesystem.open(file.getPath()), new GenericDatumReader<>())
+                ) {
                     return stream.getSchema();
                 }
             }
@@ -94,7 +98,7 @@ final class RemoteAvroMetadataResolver {
         );
     }
 
-    private static class AvroTargetDescriptor implements TargetDescriptor {
+    private static final class AvroTargetDescriptor implements TargetDescriptor {
 
         private final Configuration configuration;
 
