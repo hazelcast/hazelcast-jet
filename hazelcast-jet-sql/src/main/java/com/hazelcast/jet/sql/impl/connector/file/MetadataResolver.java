@@ -33,6 +33,10 @@ final class MetadataResolver {
 
     private static final String HDFS_SCHEMA = "hdfs://";
 
+    private static final String S3_SCHEMA = "s3a://";
+    private static final String S3_ACCESS_KEY = "fs.s3a.access.key";
+    private static final String S3_SECRET_KEY = "fs.s3a.secret.key";
+
     private MetadataResolver() {
     }
 
@@ -42,7 +46,10 @@ final class MetadataResolver {
             if (path.startsWith(HDFS_SCHEMA)) {
                 Job job = Job.getInstance();
                 return requireNonNull(resolveRemoteFileSchema(externalFields, options, job));
-                // s3, adl, gs, wasbs
+            } else if (path.startsWith(S3_SCHEMA)) {
+                Job job = createS3Job(options);
+                return requireNonNull(resolveRemoteFileSchema(externalFields, options, job));
+                // adl, gs, wasbs
             } else {
                 return requireNonNull(resolveLocalFileSchema(externalFields, options));
             }
@@ -92,7 +99,10 @@ final class MetadataResolver {
             if (path.startsWith(HDFS_SCHEMA)) {
                 Job job = Job.getInstance();
                 return requireNonNull(resolveRemoteFileMetadata(externalFields, options, job));
-                // s3, adl, gs, wasbs
+            } else if (path.startsWith(S3_SCHEMA)) {
+                Job job = createS3Job(options);
+                return requireNonNull(resolveRemoteFileMetadata(externalFields, options, job));
+                // adl, gs, wasbs
             } else {
                 return requireNonNull(resolveLocalFileMetadata(externalFields, options));
             }
@@ -131,5 +141,12 @@ final class MetadataResolver {
             default:
                 throw QueryException.error("Unsupported serialization format - '" + format + "'");
         }
+    }
+
+    private static Job createS3Job(FileOptions options) throws IOException {
+        Job job = Job.getInstance();
+        job.getConfiguration().set(S3_ACCESS_KEY, options.s3AccessKey());
+        job.getConfiguration().set(S3_SECRET_KEY, options.s3SecretKey());
+        return job;
     }
 }

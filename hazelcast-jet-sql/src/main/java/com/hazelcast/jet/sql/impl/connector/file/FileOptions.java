@@ -21,6 +21,8 @@ import com.hazelcast.sql.impl.QueryException;
 import java.util.Map;
 
 import static com.hazelcast.jet.sql.SqlConnector.TO_SERIALIZATION_FORMAT;
+import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.S3_ACCESS_KEY;
+import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.S3_SECRET_KEY;
 import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.TO_CHARSET;
 import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.TO_DELIMITER;
 import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.TO_GLOB;
@@ -74,5 +76,21 @@ final class FileOptions {
 
     boolean header() {
         return Boolean.parseBoolean(options.getOrDefault(TO_HEADER, "false"));
+    }
+
+    String s3AccessKey() {
+        String value = options.get(S3_ACCESS_KEY);
+        if (value == null) {
+            throw QueryException.error("Missing '" + S3_ACCESS_KEY + "' option");
+        }
+        return value;
+    }
+
+    String s3SecretKey() {
+        String value = options.get(S3_SECRET_KEY);
+        if (value == null) {
+            throw QueryException.error("Missing '" + S3_SECRET_KEY + "' option");
+        }
+        return value;
     }
 }

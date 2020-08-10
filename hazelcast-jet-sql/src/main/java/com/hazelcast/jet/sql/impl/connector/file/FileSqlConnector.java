@@ -42,6 +42,8 @@ public class FileSqlConnector implements SqlConnector {
     public static final String TO_CHARSET = "file.charset";
     public static final String TO_HEADER = "file.header";
     public static final String TO_DELIMITER = "file.delimiter";
+    public static final String S3_ACCESS_KEY = "file.s3a.access.key";
+    public static final String S3_SECRET_KEY = "file.s3a.secret.key";
 
     static final FileSqlConnector INSTANCE = new FileSqlConnector();
 
