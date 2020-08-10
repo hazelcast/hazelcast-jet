@@ -98,10 +98,14 @@ public class CreateJobTest extends SimpleTestInClusterSupport {
         sqlService.query(javaSerializableMapDdl("dest", Long.class, Long.class));
 
         sqlService.query("CREATE JOB testJob AS INSERT OVERWRITE dest SELECT v, v FROM src");
-        assertEquals(1, instance().getJobs().size());
+        assertEquals(1, countActiveJobs());
 
         sqlService.query("CREATE JOB IF NOT EXISTS testJob AS INSERT OVERWRITE dest SELECT v, v FROM src");
-        assertEquals(1, instance().getJobs().size());
+        assertEquals(1, countActiveJobs());
+    }
+
+    private long countActiveJobs() {
+        return instance().getJobs().stream().filter(j -> !j.getStatus().isTerminal()).count();
     }
 
     @Test
