@@ -3,7 +3,7 @@ package com.hazelcast.jet.impl.processor;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.rocksdb.PrefixRocksMap;
-import com.hazelcast.jet.rocksdb.PrefixRocksMap.Iterator;
+import com.hazelcast.jet.rocksdb.PrefixRocksMap.Cursor;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
@@ -14,13 +14,13 @@ import static com.hazelcast.jet.Util.entry;
 
 public class SortP<V> extends AbstractProcessor {
 
-    private final List<PrefixRocksMap<Long, V>.Iterator> sortedMapsIterators = new ArrayList<>();
+    private final List<Cursor> sortedMapsCursors = new ArrayList<>();
     private ResultTraverser resultTraverser;
 
     @Override
     @SuppressWarnings("unchecked")
     protected boolean tryProcess(int ordinal, @Nonnull Object item) {
-        sortedMapsIterators.add(((PrefixRocksMap<Long, V>) item).iterator());
+        sortedMapsCursors.add(((PrefixRocksMap<Long, V>) item).cursor());
         return true;
     }
 
@@ -36,22 +36,22 @@ public class SortP<V> extends AbstractProcessor {
         @Override
         public V next() {
             Entry<Long, V> min = entry(Long.MAX_VALUE, null);
-            Iterator minIterator = null;
+            Cursor minCursor = null;
 
-            for (PrefixRocksMap<Long, V>.Iterator iterator : sortedMapsIterators) {
-                if (!iterator.hasNext()) {
+            for (Cursor cursor : sortedMapsCursors) {
+                if (!cursor.advance()) {
                     continue;
                 }
-                Entry<Long, V> e = iterator.peek();
+                Entry<Long, V> e = cursor.getEntry();
                 if (e.getKey() <= min.getKey()) {
                     min = e;
-                    minIterator = iterator;
+                    minCursor = cursor;
                 }
             }
-            if (minIterator == null) {
+            if (minCursor == null) {
                 return null;
             }
-            minIterator.next();
+            minCursor.advance();
             return min.getValue();
         }
     }

@@ -23,6 +23,7 @@ import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.rocksdb.PrefixRocksMap;
+import com.hazelcast.jet.rocksdb.PrefixRocksMap.Cursor;
 
 import javax.annotation.Nonnull;
 import java.util.Iterator;
@@ -32,6 +33,7 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import static com.hazelcast.internal.util.Preconditions.checkTrue;
+import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
 import static java.util.Collections.singletonList;
 
 /**
@@ -77,7 +79,7 @@ public class GroupWithPersistenceAndUnboundedStateP<K, A, R, OUT> extends Abstra
     protected boolean tryProcess(int ordinal, @Nonnull Object item) {
         Function<Object, ? extends K> keyFn = (Function<Object, ? extends K>) groupKeyFns.get(ordinal);
         K key = keyFn.apply(item);
-        return keyToOrdinalAndAcc.add(key, Tuple2.tuple2(ordinal, item));
+        return keyToOrdinalAndAcc.add(key, tuple2(ordinal, item));
     }
 
     @Override
@@ -92,16 +94,15 @@ public class GroupWithPersistenceAndUnboundedStateP<K, A, R, OUT> extends Abstra
     }
 
     private class ResultTraverser implements Traverser<Entry<K, A>> {
-        private final PrefixRocksMap<K, Entry<Integer, Object>>.Iterator iterator =
-                keyToOrdinalAndAcc.iterator();
+        private final Cursor cursor = keyToOrdinalAndAcc.cursor();
 
         @Override
         public Entry<K, A> next() {
-            if (!iterator.hasNext()) {
-                iterator.close();
+            if (!cursor.advance()) {
+                cursor.close();
                 return null;
             }
-            Entry<K, Iterator<Entry<Integer, Object>>> e = iterator.nextValues();
+            Entry<K, Iterator<Entry<Integer, Object>>> e = cursor.getValues();
             K key = e.getKey();
             A acc = aggrOp.createFn().get();
             Iterator<Entry<Integer, Object>> values = e.getValue();
@@ -109,7 +110,7 @@ public class GroupWithPersistenceAndUnboundedStateP<K, A, R, OUT> extends Abstra
                 Entry<Integer, Object> ordinalAndAcc = values.next();
                 aggrOp.accumulateFn(ordinalAndAcc.getKey()).accept(acc, ordinalAndAcc.getValue());
             }
-            return Tuple2.tuple2(key, acc);
+            return tuple2(key, acc);
         }
     }
 }

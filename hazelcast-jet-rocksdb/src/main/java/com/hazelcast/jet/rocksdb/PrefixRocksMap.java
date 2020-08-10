@@ -16,8 +16,8 @@
 
 package com.hazelcast.jet.rocksdb;
 
-import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.core.HazelcastException;
+import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import org.rocksdb.ColumnFamilyDescriptor;
@@ -35,6 +35,7 @@ import javax.annotation.Nonnull;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 
@@ -133,13 +134,13 @@ public class PrefixRocksMap<K, V> {
      *
      * @return an iterator over the values associated with the key.
      */
-    public java.util.Iterator<V> get(RocksIterator iterator, K key) {
+    public Iterator<V> get(RocksIterator iterator, K key) {
         if (cfh == null) {
             open(key);
         }
         iterator.seek(serialize(key));
 
-        return new java.util.Iterator<V>() {
+        return new Iterator<V>() {
             @Override
             public boolean hasNext() {
                 return iterator.isValid();
@@ -172,9 +173,9 @@ public class PrefixRocksMap<K, V> {
      * guaranteed to return all keys totally ordered.
      */
     @Nonnull
-    public Iterator iterator() {
+    public Cursor cursor() {
         assert cfh != null : "PrefixRocksMap was not opened";
-        Iterator mapIterator = new Iterator();
+        Cursor mapIterator = new Cursor();
         iterators.add(mapIterator.iterator);
         return mapIterator;
     }
@@ -242,56 +243,58 @@ public class PrefixRocksMap<K, V> {
     }
 
     /**
-     * Iterator over the entries in the map.
-     * The iterator creates a snapshot of the map when it is created,
-     * any update applied after the iterator is created can't be seen by the iterator.
-     * Callers have to invoke {@link #close} at the end to release the associated native iterator.
+     * Cursor that traverses the {@link PrefixRocksMap}.
+     * The cursor creates a snapshot of the map when it is created,
+     * any update applied after the cursor is created can't be seen by the cursor.
+     * The Cursor initially points to null. Users need to first call {@link #advance}
+     * before using the cursor.
+     * Users need to call {@link #close} at the end to release the associated native iterator.
      */
-    public final class Iterator {
+    public final class Cursor {
         private final RocksIterator iterator;
         private final RocksIterator prefixIterator;
+        private Entry<K, V> current;
 
-        private Iterator() {
+        private Cursor() {
             iterator = db.newIterator(cfh, iteratorOptions);
             iterator.seekToFirst();
             prefixIterator = prefixRocksIterator();
         }
 
         /**
-         * Returns whether the iterator has more entries to traverse.
+         * Returns the current key associated with an iterator over all values for the current key.
          */
-        public boolean hasNext() {
-            return iterator.isValid();
-        }
-
-        /**
-         * Returns the next key associated with an iterator over all values for that key.
-         */
-        public Entry<K, java.util.Iterator<V>> nextValues() {
+        public Entry<K, java.util.Iterator<V>> getValues() {
             Tuple2<K, java.util.Iterator<V>> tuple = tuple2(deserialize(iterator.key()),
                     get(prefixIterator, deserialize(iterator.key())));
-            //skip over the current prefix
-            K current = deserialize(iterator.key());
-            while (deserialize(iterator.key()).equals(current) && iterator.isValid()) {
-                iterator.next();
+            //advance the cursor until it gets out of current prefix
+            K prefix = deserialize(iterator.key());
+            while (advance()) {
+                if (!prefix.equals(current.getKey())) {
+                    break;
+                }
             }
             return tuple;
         }
 
         /**
-         * Returns the next entry in the map.
+         * Returns the current entry in the map.
          */
-        public Entry<K, V> next() {
-            Tuple2<K, V> t = tuple2(deserialize(iterator.key()), deserialize(iterator.value()));
-            iterator.next();
-            return t;
+        public Entry<K, V> getEntry() {
+            return current;
         }
 
         /**
-         * Returns the current entry in the map.
+         * Advances the cursor to the next entry in the map.
+         * Returns true if there is more entries in the map, false otherwise.
          */
-        public Entry<K, V> peek() {
-            return tuple2(deserialize(iterator.key()), deserialize(iterator.value()));
+        public boolean advance() {
+            if (iterator.isValid()) {
+                current = tuple2(deserialize(iterator.key()), deserialize(iterator.value()));
+                iterator.next();
+                return true;
+            }
+            return false;
         }
 
         /**
