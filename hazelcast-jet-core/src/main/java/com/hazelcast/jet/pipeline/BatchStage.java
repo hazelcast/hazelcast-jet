@@ -67,9 +67,8 @@ public interface BatchStage<T> extends GeneralStage<T> {
     BatchStage<T> rebalance();
 
     /**
-     * Attaches a stage that sorts the items based on the provided function.
-     *
-     * @param keyFn a function that extracts the key to sort on.
+     * Attaches a stage that sorts the items based on the key extracted
+     * by {@code keyFn}.
      */
     @Nonnull
     BatchStage<T> sort(@Nonnull FunctionEx<T, Long> keyFn);
