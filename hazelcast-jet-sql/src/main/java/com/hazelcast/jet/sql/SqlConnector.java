@@ -25,7 +25,6 @@ import com.hazelcast.sql.impl.schema.Table;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -87,11 +86,16 @@ public interface SqlConnector {
     boolean isStream();
 
     /**
-     * TODO
+     * Creates a table schema based on given options and fields. Might connect
+     * to remote service if needed (i.e. to resolve the schema, based on sample record).
+     * Such schema is persisted on a cluster and passed to {@link SqlConnector#createTable}
+     * during query parsing.
      *
-     * @param nodeEngine
-     * @param options
-     * @param externalFields
+     * @param nodeEngine     an instance of {@link NodeEngine}
+     * @param options        connector specific options
+     * @param externalFields list of fields. If empty, an attempt to resolve them
+     *                       automatically will be made. If not successful, an
+     *                       exception will be thrown.
      * @return
      */
     @Nonnull
@@ -102,16 +106,13 @@ public interface SqlConnector {
     );
 
     /**
-     * Creates a Table object with the given fields. Will not attempt to
+     * Creates a {@link Table} object with the given fields. Should not not attempt to
      * connect to the remote service.
      *
-     * @param externalFields optional list of fields. If {@code null},
-     *                       an attempt to resolve them automatically will be made. If not
-     *                       successful, an exception will be thrown. An empty list is
-     *                       valid, it means there are zero columns in the table: you can
-     *                       still query hidden fields or count the records. No validation
-     *                       is performed: if fields are given, no connection to remote
-     *                       source is made.
+     * @param nodeEngine     an instance of {@link NodeEngine}
+     * @param options        connector specific options
+     * @param externalFields list of fields.
+     * @return
      */
     @Nonnull
     Table createTable(
