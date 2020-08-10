@@ -25,11 +25,11 @@ import com.hazelcast.sql.impl.schema.TableStatistics;
 import javax.annotation.Nonnull;
 import java.util.List;
 
-public abstract class JetTable extends Table {
+public class JetTable extends Table {
 
     private final SqlConnector sqlConnector;
 
-    protected JetTable(
+    public JetTable(
             @Nonnull SqlConnector sqlConnector,
             @Nonnull List<TableField> fields,
             @Nonnull String schemaName,

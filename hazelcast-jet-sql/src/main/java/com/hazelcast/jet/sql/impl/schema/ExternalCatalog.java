@@ -54,10 +54,10 @@ public class ExternalCatalog implements TableResolver {
 
         String name = validated.name();
         if (ifNotExists) {
-            return tables().putIfAbsent(name, validated) == null;
+            return catalogStorage().putIfAbsent(name, validated) == null;
         } else if (replace) {
-            tables().put(name, validated);
-        } else if (tables().putIfAbsent(name, validated) != null) {
+            catalogStorage().put(name, validated);
+        } else if (catalogStorage().putIfAbsent(name, validated) != null) {
             throw QueryException.error("'" + name + "' table already exists");
         }
         return true;
@@ -90,7 +90,7 @@ public class ExternalCatalog implements TableResolver {
     }
 
     public void removeTable(String name, boolean ifExists) {
-        if (tables().remove(name) == null && !ifExists) {
+        if (catalogStorage().remove(name) == null && !ifExists) {
             throw QueryException.error("'" + name + "' table does not exist");
         }
     }
@@ -103,12 +103,12 @@ public class ExternalCatalog implements TableResolver {
     @Override
     @Nonnull
     public List<Table> getTables() {
-        return tables().values().stream()
-                       .map(this::toTable)
-                       .collect(toList());
+        return catalogStorage().values().stream()
+                               .map(this::toTable)
+                               .collect(toList());
     }
 
-    private Map<String, ExternalTable> tables() {
+    private Map<String, ExternalTable> catalogStorage() {
         // TODO: use the right storage
         return nodeEngine.getHazelcastInstance().getReplicatedMap(CATALOG_MAP_NAME);
     }
@@ -120,5 +120,9 @@ public class ExternalCatalog implements TableResolver {
 
     private SqlConnector findConnector(String type) {
         return requireNonNull(sqlConnectorCache.forType(type), "Unknown connector type '" + type + "'");
+    }
+
+    public void clear() {
+        catalogStorage().clear();
     }
 }

@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.sql.impl.parse;
 
+import com.hazelcast.internal.util.Preconditions;
 import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.sql.SqlCreate;
 import org.apache.calcite.sql.SqlIdentifier;
@@ -69,6 +70,7 @@ public class SqlCreateExternalTable extends SqlCreate {
         this.type = requireNonNull(type, "Type should not be null");
         this.options = requireNonNull(options, "Options should not be null");
         this.source = source;
+        Preconditions.checkTrue(name.names.size() == 1, name.toString());
     }
 
     public String name() {
@@ -112,17 +114,13 @@ public class SqlCreateExternalTable extends SqlCreate {
         writer.keyword("CREATE");
 
         if (getReplace()) {
-            writer.keyword("OR");
-            writer.keyword("REPLACE");
+            writer.keyword("OR REPLACE");
         }
 
-        writer.keyword("EXTERNAL");
-        writer.keyword("TABLE");
+        writer.keyword("EXTERNAL TABLE");
 
         if (ifNotExists) {
-            writer.keyword("IF");
-            writer.keyword("NOT");
-            writer.keyword("EXISTS");
+            writer.keyword("IF NOT EXISTS");
         }
 
         name.unparse(writer, leftPrec, rightPrec);

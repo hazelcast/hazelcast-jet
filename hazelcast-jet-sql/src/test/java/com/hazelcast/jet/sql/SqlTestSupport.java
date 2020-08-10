@@ -17,6 +17,7 @@
 package com.hazelcast.jet.sql;
 
 import com.hazelcast.jet.SimpleTestInClusterSupport;
+import com.hazelcast.jet.sql.impl.connector.map.LocalPartitionedMapConnector;
 import com.hazelcast.sql.SqlResult;
 import com.hazelcast.sql.SqlRow;
 import com.hazelcast.sql.SqlService;
@@ -40,6 +41,11 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
+import static com.hazelcast.jet.sql.SqlConnector.JAVA_SERIALIZATION_FORMAT;
+import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.TO_KEY_CLASS;
+import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.TO_SERIALIZATION_KEY_FORMAT;
+import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.TO_SERIALIZATION_VALUE_FORMAT;
+import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.TO_VALUE_CLASS;
 import static java.time.ZoneId.systemDefault;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -117,6 +123,19 @@ public abstract class SqlTestSupport extends SimpleTestInClusterSupport {
 
     protected static ZoneOffset localOffset() {
         return systemDefault().getRules().getOffset(LocalDateTime.now());
+    }
+
+    /**
+     * Create DDL for an IMap with the given {@code name}, that uses
+     * java serialization for both key and value with the given classes.
+     */
+    public static String javaSerializableMapDdl(String name, Class<?> keyClass, Class<?> valueClass) {
+        return "CREATE EXTERNAL TABLE "+ name + " TYPE \"" + LocalPartitionedMapConnector.TYPE_NAME + "\"\n"
+                + "OPTIONS (\n"
+                + '"' + TO_SERIALIZATION_KEY_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "',\n"
+                + '"' + TO_KEY_CLASS + "\" '" + keyClass.getName() + "',\n"
+                + '"' + TO_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "',\n"
+                + '"' + TO_VALUE_CLASS + "\" '" + valueClass.getName() + "')\n";
     }
 
     protected static final class Row {

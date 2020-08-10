@@ -112,6 +112,19 @@ public class SchemaTest extends SqlTestSupport {
                 .isInstanceOf(SqlException.class);
     }
 
+    @Test
+    public void when_schemaNameUsed_then_rejected() {
+        assertThatThrownBy(() ->
+                executeSql(javaSerializableMapDdl("schema." + createRandomName(), Long.class, Long.class)))
+                        .hasMessageContaining("Encountered \".\" at line 1, column 29");
+    }
+
+    @Test
+    public void when_emptyColumnList_then_fail() {
+        assertThatThrownBy(() -> executeSql("CREATE EXTERNAL TABLE t() TYPE t"))
+                .hasMessageContaining("Encountered \")\" at line 1");
+    }
+
     private static String createRandomName() {
         return "schema_" + randomString().replace('-', '_');
     }

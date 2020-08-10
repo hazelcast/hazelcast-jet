@@ -25,4 +25,7 @@ import org.apache.calcite.sql.validate.SqlValidatorException;
 public interface JetSqlValidatorResource {
     @Resources.BaseMessage("Only INSERT OVERWRITE clause is supported for {0}")
     Resources.ExInst<SqlValidatorException> plainInsertNotSupported(String connectorName);
+
+    @Resources.BaseMessage("You must use CREATE JOB statement for a streaming DML query")
+    Resources.ExInst<SqlValidatorException> mustUseCreateJob();
 }

@@ -18,8 +18,10 @@ package com.hazelcast.jet.sql.impl;
 
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.sql.impl.JetPlan.CreateExternalTablePlan;
+import com.hazelcast.jet.sql.impl.JetPlan.CreateJobPlan;
+import com.hazelcast.jet.sql.impl.JetPlan.DropExternalTablePlan;
+import com.hazelcast.jet.sql.impl.JetPlan.DropJobPlan;
 import com.hazelcast.jet.sql.impl.JetPlan.ExecutionPlan;
-import com.hazelcast.jet.sql.impl.JetPlan.RemoveExternalTablePlan;
 import com.hazelcast.jet.sql.impl.convert.JetSqlToRelConverter;
 import com.hazelcast.jet.sql.impl.opt.OptUtils;
 import com.hazelcast.jet.sql.impl.opt.logical.LogicalRel;
@@ -29,7 +31,9 @@ import com.hazelcast.jet.sql.impl.opt.physical.PhysicalRel;
 import com.hazelcast.jet.sql.impl.opt.physical.PhysicalRules;
 import com.hazelcast.jet.sql.impl.opt.physical.visitor.CreateDagVisitor;
 import com.hazelcast.jet.sql.impl.parse.SqlCreateExternalTable;
+import com.hazelcast.jet.sql.impl.parse.SqlCreateJob;
 import com.hazelcast.jet.sql.impl.parse.SqlDropExternalTable;
+import com.hazelcast.jet.sql.impl.parse.SqlDropJob;
 import com.hazelcast.jet.sql.impl.parse.SqlTableColumn;
 import com.hazelcast.jet.sql.impl.parse.UnsupportedOperationVisitor;
 import com.hazelcast.jet.sql.impl.schema.ExternalCatalog;
@@ -141,22 +145,20 @@ public class JetSqlBackendImpl implements JetSqlBackend {
         SqlNode node = parseResult.getNode();
 
         if (node instanceof SqlCreateExternalTable) {
-            return toCreateTablePlan(
-                    parseResult,
-                    context
-            );
+            return toCreateTablePlan(parseResult, context);
         } else if (node instanceof SqlDropExternalTable) {
-            return toRemoveTablePlan((SqlDropExternalTable) node);
+            return toDropTablePlan((SqlDropExternalTable) node);
+        } else if (node instanceof SqlCreateJob) {
+            return toCreateJobPlan(parseResult, context);
+        } else if (node instanceof SqlDropJob) {
+            return toDropJobPlan((SqlDropJob) node);
         } else {
             QueryConvertResult convertResult = context.convert(parseResult);
             return toPlan(convertResult.getRel(), context);
         }
     }
 
-    private SqlPlan toCreateTablePlan(
-            QueryParseResult parseResult,
-            OptimizerContext context
-    ) {
+    private SqlPlan toCreateTablePlan(QueryParseResult parseResult, OptimizerContext context) {
         SqlCreateExternalTable node = (SqlCreateExternalTable) parseResult.getNode();
         SqlNode source = node.source();
         if (source == null) {
@@ -165,7 +167,7 @@ public class JetSqlBackendImpl implements JetSqlBackend {
                     .collect(toList());
             ExternalTable externalTable = new ExternalTable(node.name(), node.type(), externalFields, node.options());
 
-            return new CreateExternalTablePlan(externalTable, node.getReplace(), node.ifNotExists(), sqlService);
+            return new CreateExternalTablePlan(externalTable, node.getReplace(), node.ifNotExists(), null, sqlService);
         } else {
             QueryConvertResult convertedResult = context.convert(parseResult);
 
@@ -196,8 +198,22 @@ public class JetSqlBackendImpl implements JetSqlBackend {
         }
     }
 
-    private SqlPlan toRemoveTablePlan(SqlDropExternalTable sqlDropTable) {
-        return new RemoveExternalTablePlan(sqlDropTable.name(), sqlDropTable.ifExists(), sqlService);
+    private SqlPlan toDropTablePlan(SqlDropExternalTable sqlDropTable) {
+        return new DropExternalTablePlan(sqlDropTable.name(), sqlDropTable.ifExists(), sqlService);
+    }
+
+    private SqlPlan toCreateJobPlan(QueryParseResult parseResult, OptimizerContext context) {
+        SqlCreateJob node = (SqlCreateJob) parseResult.getNode();
+        SqlNode source = node.dmlStatement();
+        QueryParseResult newParseResult = new QueryParseResult(source, parseResult.getParameterRowType(), false,
+                parseResult.getValidator());
+        QueryConvertResult convertedResult = context.convert(newParseResult);
+        ExecutionPlan dmlPlan = toPlan(convertedResult.getRel(), context);
+        return new CreateJobPlan(node.name(), node.jobConfig(), node.ifNotExists(), dmlPlan, sqlService);
+    }
+
+    private SqlPlan toDropJobPlan(SqlDropJob node) {
+        return new DropJobPlan(node.name(), node.ifExists(), sqlService);
     }
 
     private ExecutionPlan toPlan(RelNode inputRel, OptimizerContext context) {

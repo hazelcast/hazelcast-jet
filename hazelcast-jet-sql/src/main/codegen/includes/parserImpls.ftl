@@ -15,8 +15,48 @@
 -->
 
 /**
-* Parses CREATE EXTERNAL TABLE statement.
-*/
+ * Parses CREATE JOB statement.
+ */
+SqlCreate SqlCreateJob(Span span, boolean replace) :
+{
+    SqlParserPos startPos = span.pos();
+
+    SqlIdentifier name;
+    boolean ifNotExists = false;
+    SqlNodeList sqlOptions = SqlNodeList.EMPTY;
+    SqlExtendedInsert dmlStatement = null;
+
+    if (replace) {
+        throw QueryException.error("OR REPLACE not supported with CREATE JOB");
+    }
+}
+{
+    <JOB>
+    [
+        <IF> <NOT> <EXISTS> { ifNotExists = true; }
+    ]
+    name = SimpleIdentifier()
+    [
+        <OPTIONS>
+        sqlOptions = SqlOptions()
+    ]
+    <AS>
+    dmlStatement = SqlExtendedInsert()
+    {
+        return new SqlCreateJob(
+            name,
+            sqlOptions,
+            dmlStatement,
+            replace,
+            ifNotExists,
+            startPos.plus(getPos())
+        );
+    }
+}
+
+/**
+ * Parses CREATE EXTERNAL TABLE statement.
+ */
 SqlCreate SqlCreateExternalTable(Span span, boolean replace) :
 {
     SqlParserPos startPos = span.pos();
@@ -43,7 +83,7 @@ SqlCreate SqlCreateExternalTable(Span span, boolean replace) :
     ]
     [
         <AS>
-        source = OrderedQueryOrExpr(ExprContext.ACCEPT_QUERY)
+        source = QueryOrExpr(ExprContext.ACCEPT_QUERY)
     ]
     {
         return new SqlCreateExternalTable(
@@ -76,7 +116,7 @@ SqlNodeList TableColumns():
         (
             <COMMA> column = TableColumn()
             {
-                if (columns.putIfAbsent(column.name(), column) != null) {
+                if (columns.put(column.name(), column) != null) {
                    throw SqlUtil.newContextException(getPos(),
                        ParserResource.RESOURCE.duplicateColumn(column.name()));
                 }
@@ -204,8 +244,8 @@ QueryDataType DateTimeType() :
 }
 
 /**
-* Parses OPTIONS.
-*/
+ * Parses OPTIONS.
+ */
 SqlNodeList SqlOptions():
 {
     Span span;
@@ -223,7 +263,7 @@ SqlNodeList SqlOptions():
         (
             <COMMA> sqlOption = SqlOption()
             {
-                if (sqlOptions.putIfAbsent(sqlOption.key(), sqlOption) != null) {
+                if (sqlOptions.put(sqlOption.key(), sqlOption) != null) {
                     throw SqlUtil.newContextException(getPos(),
                         ParserResource.RESOURCE.duplicateOption(sqlOption.key()));
                 }
@@ -252,8 +292,29 @@ SqlOption SqlOption() :
 }
 
 /**
-* Parses DROP EXTERNAL TABLE statement.
-*/
+ * Parses DROP JOB statement.
+ */
+SqlDrop SqlDropJob(Span span, boolean replace) :
+{
+    SqlParserPos pos = span.pos();
+
+    SqlIdentifier name;
+    boolean ifExists = false;
+}
+{
+    <JOB>
+    [
+        <IF> <EXISTS> { ifExists = true; }
+    ]
+    name = SimpleIdentifier()
+    {
+        return new SqlDropJob(name, ifExists, pos.plus(getPos()));
+    }
+}
+
+/**
+ * Parses DROP EXTERNAL TABLE statement.
+ */
 SqlDrop SqlDropExternalTable(Span span, boolean replace) :
 {
     SqlParserPos pos = span.pos();
@@ -273,9 +334,9 @@ SqlDrop SqlDropExternalTable(Span span, boolean replace) :
 }
 
 /**
-* Parses an extended INSERT statement.
-*/
-SqlInsert SqlExtendedInsert() :
+ * Parses an extended INSERT statement.
+ */
+SqlExtendedInsert SqlExtendedInsert() :
 {
     Span span;
     SqlNode table;
@@ -313,7 +374,7 @@ SqlInsert SqlExtendedInsert() :
             }
         }
     ]
-    source = OrderedQueryOrExpr(ExprContext.ACCEPT_QUERY) {
+    source = QueryOrExpr(ExprContext.ACCEPT_QUERY) {
         return new SqlExtendedInsert(
             table,
             source,

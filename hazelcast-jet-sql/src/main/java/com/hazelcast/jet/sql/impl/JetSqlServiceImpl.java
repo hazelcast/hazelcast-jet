@@ -21,14 +21,18 @@ import com.hazelcast.internal.services.ManagedService;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
+import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.impl.JetService;
 import com.hazelcast.jet.sql.impl.JetPlan.CreateExternalTablePlan;
+import com.hazelcast.jet.sql.impl.JetPlan.CreateJobPlan;
+import com.hazelcast.jet.sql.impl.JetPlan.DropExternalTablePlan;
+import com.hazelcast.jet.sql.impl.JetPlan.DropJobPlan;
 import com.hazelcast.jet.sql.impl.JetPlan.ExecutionPlan;
-import com.hazelcast.jet.sql.impl.JetPlan.RemoveExternalTablePlan;
 import com.hazelcast.jet.sql.impl.schema.ExternalCatalog;
 import com.hazelcast.spi.impl.NodeEngine;
 import com.hazelcast.sql.SqlResult;
 import com.hazelcast.sql.impl.JetSqlService;
+import com.hazelcast.sql.impl.QueryException;
 import com.hazelcast.sql.impl.QueryId;
 import com.hazelcast.sql.impl.SqlResultImpl;
 import com.hazelcast.sql.impl.exec.root.BlockingRootResultConsumer;
@@ -68,6 +72,11 @@ public class JetSqlServiceImpl implements JetSqlService, ManagedService {
     @Override
     public List<TableResolver> tableResolvers() {
         return Collections.singletonList(catalog);
+    }
+
+    @Override
+    public void clearCatalog() {
+        catalog.clear();
     }
 
     @Override
@@ -115,16 +124,38 @@ public class JetSqlServiceImpl implements JetSqlService, ManagedService {
     }
 
     SqlResult execute(CreateExternalTablePlan plan) {
-        catalog.createTable(plan.schema(), plan.replace(), plan.ifNotExists());
+        catalog.createTable(plan.externalTable(), plan.replace(), plan.ifNotExists());
         return SqlResultImpl.createUpdateCountResult(-1);
     }
 
-    SqlResult execute(RemoveExternalTablePlan plan) {
+    SqlResult execute(DropExternalTablePlan plan) {
         catalog.removeTable(plan.name(), plan.ifExists());
         return SqlResultImpl.createUpdateCountResult(-1);
     }
 
-    @Override
+    SqlResult execute(CreateJobPlan plan) {
+        if (plan.isIfNotExists()) {
+            jetInstance.newJobIfAbsent(plan.getExecutionPlan().getDag(), plan.getJobConfig());
+        } else {
+            jetInstance.newJob(plan.getExecutionPlan().getDag(), plan.getJobConfig());
+        }
+        return SqlResultImpl.createUpdateCountResult(-1);
+    }
+
+    SqlResult execute(DropJobPlan plan) {
+        Job job = jetInstance.getJob(plan.getName());
+        JobStatus jobStatus = job == null ? null : job.getStatus();
+        if (job == null || job.getStatus().isTerminal()) {
+            if (plan.isIfExists()) {
+                return SqlResultImpl.createUpdateCountResult(-1);
+            }
+            throw QueryException.error("Job doesn't exist or already terminated: " + plan.getName());
+        }
+        job.cancel();
+        return SqlResultImpl.createUpdateCountResult(-1);
+    }
+
+        @Override
     public void init(NodeEngine nodeEngine, Properties properties) {
     }
 

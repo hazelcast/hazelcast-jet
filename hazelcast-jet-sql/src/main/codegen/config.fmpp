@@ -21,25 +21,29 @@ data: {
     # List of additional classes and packages to import.
     # Example. "org.apache.calcite.sql.*", "java.util.List".
     imports: [
-      "java.util.Map"
-      "java.util.LinkedHashMap"
-      "org.apache.calcite.sql.SqlCreate"
-      "org.apache.calcite.sql.SqlDrop"
-      "com.hazelcast.sql.impl.type.QueryDataType"
+      "com.hazelcast.jet.sql.impl.parse.ParserResource"
       "com.hazelcast.jet.sql.impl.parse.SqlCreateExternalTable"
-      "com.hazelcast.jet.sql.impl.parse.SqlTableColumn"
+      "com.hazelcast.jet.sql.impl.parse.SqlCreateJob"
       "com.hazelcast.jet.sql.impl.parse.SqlDataType"
-      "com.hazelcast.jet.sql.impl.parse.SqlOption"
       "com.hazelcast.jet.sql.impl.parse.SqlDropExternalTable"
+      "com.hazelcast.jet.sql.impl.parse.SqlDropJob"
       "com.hazelcast.jet.sql.impl.parse.SqlExtendedInsert"
       "com.hazelcast.jet.sql.impl.parse.SqlExtendedInsertKeyword"
-      "com.hazelcast.jet.sql.impl.parse.ParserResource"
+      "com.hazelcast.jet.sql.impl.parse.SqlOption"
+      "com.hazelcast.jet.sql.impl.parse.SqlTableColumn"
+      "com.hazelcast.sql.impl.QueryException"
+      "com.hazelcast.sql.impl.type.QueryDataType"
+      "java.util.LinkedHashMap"
+      "java.util.Map"
+      "org.apache.calcite.sql.SqlCreate"
+      "org.apache.calcite.sql.SqlDrop"
     ]
 
     # List of new keywords. Example: "DATABASES", "TABLES". If the keyword is not a reserved
     # keyword add it to 'nonReservedKeywords' section.
     keywords: [
       "IF"
+      "JOB"
       "OVERWRITE"
     ]
 
@@ -357,6 +361,7 @@ data: {
       "ZONE"
 
       # added by Hazelcast
+      "JOB"
       "OVERWRITE"
     ]
 
@@ -410,12 +415,14 @@ data: {
     # Each must accept arguments "(SqlParserPos pos, boolean replace)".
     createStatementParserMethods: [
       "SqlCreateExternalTable"
+      "SqlCreateJob"
     ]
 
     # List of methods for parsing extensions to "DROP" calls.
     # Each must accept arguments "(SqlParserPos pos)".
     dropStatementParserMethods: [
       "SqlDropExternalTable"
+      "SqlDropJob"
     ]
 
     # Binary operators tokens

@@ -321,6 +321,10 @@ public final class UnsupportedOperationVisitor implements SqlVisitor<Void> {
                 processOther(call);
                 break;
 
+            case OTHER_DDL:
+                processOtherDdl(call);
+                break;
+
             default:
                 throw unsupported(call, call.getKind());
         }
@@ -354,6 +358,12 @@ public final class UnsupportedOperationVisitor implements SqlVisitor<Void> {
         }
 
         throw unsupported(call, operator.getName());
+    }
+
+    private void processOtherDdl(SqlCall call) {
+        if (!(call instanceof SqlCreateJob) && !(call instanceof SqlDropJob)) {
+            throw unsupported(call, "OTHER DDL class not supported: " + call.getClass().getSimpleName());
+        }
     }
 
     private CalciteContextException unsupported(SqlNode node, SqlKind kind) {

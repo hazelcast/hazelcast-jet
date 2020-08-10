@@ -34,14 +34,14 @@ import java.util.List;
 
 import static java.util.Objects.requireNonNull;
 
-public class SqlDropExternalTable extends SqlDrop {
+public class SqlDropJob extends SqlDrop {
 
     private static final SqlSpecialOperator OPERATOR =
-            new SqlSpecialOperator("DROP EXTERNAL TABLE", SqlKind.DROP_TABLE);
+            new SqlSpecialOperator("DROP JOB", SqlKind.OTHER_DDL);
 
     private final SqlIdentifier name;
 
-    public SqlDropExternalTable(SqlIdentifier name, boolean ifExists, SqlParserPos pos) {
+    public SqlDropJob(SqlIdentifier name, boolean ifExists, SqlParserPos pos) {
         super(OPERATOR, pos, ifExists);
         this.name = requireNonNull(name, "Name should not be null");
         Preconditions.checkTrue(name.names.size() == 1, name.toString());
@@ -55,21 +55,19 @@ public class SqlDropExternalTable extends SqlDrop {
         return ifExists;
     }
 
-    @Override
-    @Nonnull
+    @Override @Nonnull
     public SqlOperator getOperator() {
         return OPERATOR;
     }
 
-    @Override
-    @Nonnull
+    @Override @Nonnull
     public List<SqlNode> getOperandList() {
         return ImmutableNullableList.of(name);
     }
 
     @Override
     public void unparse(SqlWriter writer, int leftPrec, int rightPrec) {
-        writer.keyword("DROP EXTERNAL TABLE");
+        writer.keyword("DROP JOB");
         if (ifExists) {
             writer.keyword("IF EXISTS");
         }

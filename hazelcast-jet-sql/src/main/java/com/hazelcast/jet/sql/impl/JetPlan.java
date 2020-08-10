@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.sql.impl;
 
+import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.sql.impl.schema.ExternalTable;
 import com.hazelcast.sql.SqlResult;
@@ -37,30 +38,20 @@ interface JetPlan extends SqlPlan {
 
     class CreateExternalTablePlan implements JetPlan {
 
-        private final ExternalTable schema;
+        private final ExternalTable externalTable;
         private final boolean replace;
         private final boolean ifNotExists;
         private final ExecutionPlan executionPlan;
-
         private final JetSqlServiceImpl sqlService;
 
         CreateExternalTablePlan(
-                ExternalTable schema,
-                boolean replace,
-                boolean ifNotExists,
-                JetSqlServiceImpl sqlService
-        ) {
-            this(schema, replace, ifNotExists, null, sqlService);
-        }
-
-        CreateExternalTablePlan(
-                ExternalTable schema,
+                ExternalTable externalTable,
                 boolean replace,
                 boolean ifNotExists,
                 ExecutionPlan executionPlan,
                 JetSqlServiceImpl sqlService
         ) {
-            this.schema = schema;
+            this.externalTable = externalTable;
             this.replace = replace;
             this.ifNotExists = ifNotExists;
             this.executionPlan = executionPlan;
@@ -74,8 +65,8 @@ interface JetPlan extends SqlPlan {
             return executionPlan == null ? result : sqlService.execute(executionPlan);
         }
 
-        ExternalTable schema() {
-            return schema;
+        ExternalTable externalTable() {
+            return externalTable;
         }
 
         boolean replace() {
@@ -87,14 +78,14 @@ interface JetPlan extends SqlPlan {
         }
     }
 
-    class RemoveExternalTablePlan implements JetPlan {
+    class DropExternalTablePlan implements JetPlan {
 
         private final String name;
         private final boolean ifExists;
 
         private final JetSqlServiceImpl sqlService;
 
-        RemoveExternalTablePlan(
+        DropExternalTablePlan(
                 String name,
                 boolean ifExists,
                 JetSqlServiceImpl sqlService
@@ -115,6 +106,68 @@ interface JetPlan extends SqlPlan {
         }
 
         boolean ifExists() {
+            return ifExists;
+        }
+    }
+
+    class CreateJobPlan implements JetPlan {
+        private final String name;
+        private final JobConfig jobConfig;
+        private final boolean ifNotExists;
+        private final ExecutionPlan executionPlan;
+        private final JetSqlServiceImpl sqlService;
+
+        public CreateJobPlan(String name, JobConfig jobConfig, boolean ifNotExists, ExecutionPlan executionPlan, JetSqlServiceImpl sqlService) {
+            this.name = name;
+            this.jobConfig = jobConfig;
+            this.ifNotExists = ifNotExists;
+            this.executionPlan = executionPlan;
+            this.sqlService = sqlService;
+        }
+
+        @Override
+        public SqlResult execute(List<Object> params, long timeout, int pageSize) {
+            return sqlService.execute(this);
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public JobConfig getJobConfig() {
+            return jobConfig;
+        }
+
+        public boolean isIfNotExists() {
+            return ifNotExists;
+        }
+
+        public ExecutionPlan getExecutionPlan() {
+            return executionPlan;
+        }
+    }
+
+    class DropJobPlan implements JetPlan {
+        private final String name;
+        private final boolean ifExists;
+        private final JetSqlServiceImpl sqlService;
+
+        public DropJobPlan(String name, boolean ifExists, JetSqlServiceImpl sqlService) {
+            this.name = name;
+            this.ifExists = ifExists;
+            this.sqlService = sqlService;
+        }
+
+        @Override
+        public SqlResult execute(List<Object> params, long timeout, int pageSize) {
+            return sqlService.execute(this);
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public boolean isIfExists() {
             return ifExists;
         }
     }
