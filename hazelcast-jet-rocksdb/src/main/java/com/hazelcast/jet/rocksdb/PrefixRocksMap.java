@@ -62,7 +62,7 @@ import static com.hazelcast.jet.rocksdb.Tuple2.tuple2;
  * </p><p>
  * Notes:
  * <ol><li>
- * {@link #getAllValues} operations on this map are thread-safe however {@link #add} operations are not.
+ * {@link #getAllValues} operation is tread-safe, however {@link #add} operation is not.
  * </li><li>
  * Not calling {@link #close} after execution completes will cause a memory leak.
  * </li></ol>
@@ -169,7 +169,7 @@ public class PrefixRocksMap<K, V> {
     }
 
     /**
-     * Returns an iterator over the contents of this map. This iterator is
+     * Returns an cursor over the contents of this map. This cursor is
      * guaranteed to return all keys totally ordered.
      */
     @Nonnull

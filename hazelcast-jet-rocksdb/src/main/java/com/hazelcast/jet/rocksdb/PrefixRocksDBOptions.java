@@ -27,7 +27,6 @@ import org.rocksdb.VectorMemTableConfig;
 import org.rocksdb.WriteOptions;
 
 import javax.annotation.Nonnull;
-import java.io.Serializable;
 
 /**
  * RocksDB configuration optimized for sequential access pattern using prefix-mode.
@@ -126,9 +125,5 @@ public class PrefixRocksDBOptions extends RocksDBOptions {
 
     FlushOptions flushOptions() {
         return new FlushOptions().setWaitForFlush(true);
-    }
-
-    @Override
-    void close() {
     }
 }

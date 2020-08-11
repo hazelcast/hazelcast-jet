@@ -32,7 +32,7 @@ import java.io.Serializable;
  * General RocksDB Configurations.
  * see {@link RocksMap}, {@link RocksDBStateBackend}
  */
-public class RocksDBOptions implements Serializable {
+public class RocksDBOptions {
 
     private static final int MEMTABLE_SIZE = 64 * 1024 * 1024;
     private static final int MEMTABLE_NUMBER = 2;
@@ -43,7 +43,6 @@ public class RocksDBOptions implements Serializable {
     private int memtableNumber;
     private int bloomFilterBits;
     private int cacheSize;
-    private LRUCache cache;
 
     static {
         RocksDB.loadLibrary();
@@ -57,7 +56,6 @@ public class RocksDBOptions implements Serializable {
         memtableNumber = MEMTABLE_NUMBER;
         bloomFilterBits = BLOOM_FILTER_BITS;
         cacheSize = CACHE_SIZE;
-        cache = new LRUCache(cacheSize);
     }
 
     RocksDBOptions(@Nonnull RocksDBOptions options) {
@@ -65,7 +63,6 @@ public class RocksDBOptions implements Serializable {
         memtableNumber = options.memtableNumber;
         bloomFilterBits = options.bloomFilterBits;
         cacheSize = options.cacheSize;
-        cache = new LRUCache(cacheSize);
     }
 
     /**
@@ -84,8 +81,6 @@ public class RocksDBOptions implements Serializable {
         }
         if (options.cacheSize != null) {
             cacheSize = options.cacheSize;
-            cache.close();
-            cache = new LRUCache(cacheSize);
         }
         return this;
     }
@@ -99,7 +94,7 @@ public class RocksDBOptions implements Serializable {
                 .setWriteBufferSize(memtableSize)
                 .setMaxWriteBufferNumber(memtableNumber)
                 .setTableFormatConfig(new BlockBasedTableConfig()
-                        .setBlockCache(cache)
+                        .setBlockCache(new LRUCache(cacheSize))
                         .setPinL0FilterAndIndexBlocksInCache(true)
                         .setFilter(new BloomFilter(bloomFilterBits, false)));
     }
@@ -110,9 +105,5 @@ public class RocksDBOptions implements Serializable {
 
     ReadOptions readOptions() {
         return new ReadOptions();
-    }
-
-    void close() {
-    cache.close();
     }
 }
