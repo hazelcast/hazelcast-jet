@@ -28,6 +28,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Stream;
 
 import static com.hazelcast.sql.impl.QueryUtils.CATALOG;
 import static com.hazelcast.sql.impl.QueryUtils.SCHEMA_NAME_PUBLIC;
@@ -65,6 +66,11 @@ public class ExternalCatalog implements TableResolver {
         return true;
     }
 
+    @Nonnull
+    public Stream<ExternalTable> getExternalTables() {
+        return catalogStorage().values().stream();
+    }
+
     private ExternalTable resolveTable(ExternalTable table) {
         try {
             SqlConnector connector = findConnector(table.type());
@@ -98,8 +104,7 @@ public class ExternalCatalog implements TableResolver {
         return SEARCH_PATHS;
     }
 
-    @Override
-    @Nonnull
+    @Nonnull @Override
     public List<Table> getTables() {
         return catalogStorage().values().stream()
                                .map(this::toTable)

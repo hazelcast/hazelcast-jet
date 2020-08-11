@@ -30,6 +30,7 @@ data: {
       "com.hazelcast.jet.sql.impl.parse.SqlExtendedInsert"
       "com.hazelcast.jet.sql.impl.parse.SqlExtendedInsertKeyword"
       "com.hazelcast.jet.sql.impl.parse.SqlOption"
+      "com.hazelcast.jet.sql.impl.parse.SqlShowExternalTables"
       "com.hazelcast.jet.sql.impl.parse.SqlTableColumn"
       "com.hazelcast.sql.impl.QueryException"
       "com.hazelcast.sql.impl.type.QueryDataType"
@@ -45,6 +46,7 @@ data: {
       "IF"
       "JOB"
       "OVERWRITE"
+      "TABLES"
     ]
 
     # List of keywords from "keywords" section that are not reserved.
@@ -363,6 +365,7 @@ data: {
       # added by Hazelcast
       "JOB"
       "OVERWRITE"
+      "TABLES"
     ]
 
     # List of non-reserved keywords to add;
@@ -384,6 +387,7 @@ data: {
     # Return type of method implementation should be 'SqlNode'.
     # Example: SqlShowDatabases(), SqlShowTables().
     statementParserMethods: [
+      "SqlShowExternalTables()"
       "SqlExtendedInsert()"
     ]
 

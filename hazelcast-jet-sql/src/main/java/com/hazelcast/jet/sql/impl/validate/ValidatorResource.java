@@ -22,7 +22,8 @@ import org.apache.calcite.sql.validate.SqlValidatorException;
 /**
  * Error message resources.
  */
-public interface JetSqlValidatorResource {
+interface ValidatorResource {
+
     @Resources.BaseMessage("Only INSERT OVERWRITE clause is supported for {0}")
     Resources.ExInst<SqlValidatorException> plainInsertNotSupported(String connectorName);
 

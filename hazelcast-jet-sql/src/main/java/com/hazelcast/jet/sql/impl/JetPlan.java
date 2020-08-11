@@ -42,27 +42,28 @@ interface JetPlan extends SqlPlan {
         private final boolean replace;
         private final boolean ifNotExists;
         private final ExecutionPlan executionPlan;
-        private final JetSqlServiceImpl sqlService;
+
+        private final JetPlanExecutor planExecutor;
 
         CreateExternalTablePlan(
                 ExternalTable externalTable,
                 boolean replace,
                 boolean ifNotExists,
                 ExecutionPlan executionPlan,
-                JetSqlServiceImpl sqlService
+                JetPlanExecutor planExecutor
         ) {
             this.externalTable = externalTable;
             this.replace = replace;
             this.ifNotExists = ifNotExists;
             this.executionPlan = executionPlan;
 
-            this.sqlService = sqlService;
+            this.planExecutor = planExecutor;
         }
 
         @Override
         public SqlResult execute(List<Object> params, long timeout, int pageSize) {
-            SqlResult result = sqlService.execute(this);
-            return executionPlan == null ? result : sqlService.execute(executionPlan);
+            SqlResult result = planExecutor.execute(this);
+            return executionPlan == null ? result : planExecutor.execute(executionPlan);
         }
 
         ExternalTable externalTable() {
@@ -83,22 +84,22 @@ interface JetPlan extends SqlPlan {
         private final String name;
         private final boolean ifExists;
 
-        private final JetSqlServiceImpl sqlService;
+        private final JetPlanExecutor planExecutor;
 
         DropExternalTablePlan(
                 String name,
                 boolean ifExists,
-                JetSqlServiceImpl sqlService
+                JetPlanExecutor planExecutor
         ) {
             this.name = name;
             this.ifExists = ifExists;
 
-            this.sqlService = sqlService;
+            this.planExecutor = planExecutor;
         }
 
         @Override
         public SqlResult execute(List<Object> params, long timeout, int pageSize) {
-            return sqlService.execute(this);
+            return planExecutor.execute(this);
         }
 
         String name() {
@@ -110,30 +111,47 @@ interface JetPlan extends SqlPlan {
         }
     }
 
+    class ShowExternalTablesPlan implements JetPlan {
+
+        private final JetPlanExecutor planExecutor;
+
+        public ShowExternalTablesPlan(JetPlanExecutor planExecutor) {
+            this.planExecutor = planExecutor;
+        }
+
+        @Override
+        public SqlResult execute(List<Object> params, long timeout, int pageSize) {
+            return planExecutor.execute(this);
+        }
+    }
+
     class CreateJobPlan implements JetPlan {
+
         private final String name;
         private final JobConfig jobConfig;
         private final boolean ifNotExists;
         private final ExecutionPlan executionPlan;
-        private final JetSqlServiceImpl sqlService;
+
+        private final JetPlanExecutor planExecutor;
 
         CreateJobPlan(
                 String name,
                 JobConfig jobConfig,
                 boolean ifNotExists,
                 ExecutionPlan executionPlan,
-                JetSqlServiceImpl sqlService
+                JetPlanExecutor planExecutor
         ) {
             this.name = name;
             this.jobConfig = jobConfig;
             this.ifNotExists = ifNotExists;
             this.executionPlan = executionPlan;
-            this.sqlService = sqlService;
+
+            this.planExecutor = planExecutor;
         }
 
         @Override
         public SqlResult execute(List<Object> params, long timeout, int pageSize) {
-            return sqlService.execute(this);
+            return planExecutor.execute(this);
         }
 
         public String getName() {
@@ -154,19 +172,21 @@ interface JetPlan extends SqlPlan {
     }
 
     class DropJobPlan implements JetPlan {
+
         private final String name;
         private final boolean ifExists;
-        private final JetSqlServiceImpl sqlService;
 
-        DropJobPlan(String name, boolean ifExists, JetSqlServiceImpl sqlService) {
+        private final JetPlanExecutor planExecutor;
+
+        DropJobPlan(String name, boolean ifExists, JetPlanExecutor planExecutor) {
             this.name = name;
             this.ifExists = ifExists;
-            this.sqlService = sqlService;
+            this.planExecutor = planExecutor;
         }
 
         @Override
         public SqlResult execute(List<Object> params, long timeout, int pageSize) {
-            return sqlService.execute(this);
+            return planExecutor.execute(this);
         }
 
         public String getName() {
@@ -186,7 +206,7 @@ interface JetPlan extends SqlPlan {
         private final QueryId queryId;
         private final SqlRowMetadata rowMetadata;
 
-        private final JetSqlServiceImpl sqlService;
+        private final JetPlanExecutor planExecutor;
 
         ExecutionPlan(
                 DAG dag,
@@ -194,7 +214,7 @@ interface JetPlan extends SqlPlan {
                 boolean isInsert,
                 QueryId queryId,
                 SqlRowMetadata rowMetadata,
-                JetSqlServiceImpl sqlService
+                JetPlanExecutor planExecutor
         ) {
             this.dag = dag;
             this.isStreaming = isStreaming;
@@ -202,12 +222,12 @@ interface JetPlan extends SqlPlan {
             this.queryId = queryId;
             this.rowMetadata = rowMetadata;
 
-            this.sqlService = sqlService;
+            this.planExecutor = planExecutor;
         }
 
         @Override
         public SqlResult execute(List<Object> params, long timeout, int pageSize) {
-            return sqlService.execute(this);
+            return planExecutor.execute(this);
         }
 
         DAG getDag() {

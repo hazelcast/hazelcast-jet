@@ -36,7 +36,6 @@ import org.apache.calcite.sql.SqlUtil;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.util.SqlVisitor;
-import org.apache.calcite.sql.validate.SqlValidatorCatalogReader;
 import org.apache.calcite.sql.validate.SqlValidatorException;
 
 import java.util.HashSet;
@@ -49,6 +48,8 @@ import static com.hazelcast.jet.sql.impl.parse.ParserResource.RESOURCE;
  */
 @SuppressWarnings("checkstyle:ExecutableStatementCount")
 public final class UnsupportedOperationVisitor implements SqlVisitor<Void> {
+
+    public static final UnsupportedOperationVisitor INSTANCE = new UnsupportedOperationVisitor();
 
     /**
      * A set of {@link SqlKind} values that are supported without any additional validation.
@@ -181,16 +182,13 @@ public final class UnsupportedOperationVisitor implements SqlVisitor<Void> {
         SUPPORTED_OPERATORS.add(SqlStdOperatorTable.LOCALTIMESTAMP);
         SUPPORTED_OPERATORS.add(SqlStdOperatorTable.LOCALTIME);
 
+        // Extensions
         SUPPORTED_OPERATORS.add(SqlOption.OPERATOR);
+        SUPPORTED_OPERATORS.add(SqlShowExternalTables.OPERATOR);
         SUPPORTED_OPERATORS.add(JetSqlOperatorTable.FILE);
     }
 
-    private final SqlValidatorCatalogReader catalogReader;
-
-    public UnsupportedOperationVisitor(
-            SqlValidatorCatalogReader catalogReader
-    ) {
-        this.catalogReader = catalogReader;
+    private UnsupportedOperationVisitor() {
     }
 
     @Override

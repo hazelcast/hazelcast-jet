@@ -31,6 +31,9 @@ public interface ParserResource {
     @BaseMessage("{0} is not supported")
     ExInst<SqlValidatorException> notSupported(String name);
 
+    @BaseMessage("{0} is not supported with {1}")
+    ExInst<SqlValidatorException> notSupported(String option, String statement);
+
     @BaseMessage("Too many columns were specified")
     ExInst<SqlValidatorException> tooManyColumnsSpecified();
 

@@ -30,13 +30,15 @@ import javax.annotation.Nonnull;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
-public class JetSqlResultImpl extends AbstractSqlResult {
+public class JetDynamicSqlResultImpl extends AbstractSqlResult {
+
     private final QueryId queryId;
     private final RootResultConsumer rootResultConsumer;
     private final SqlRowMetadata rowMetadata;
+
     private Iterator<SqlRow> iterator;
 
-    public JetSqlResultImpl(QueryId queryId, RootResultConsumer rootResultConsumer, SqlRowMetadata rowMetadata) {
+    public JetDynamicSqlResultImpl(QueryId queryId, RootResultConsumer rootResultConsumer, SqlRowMetadata rowMetadata) {
         this.queryId = queryId;
         this.rootResultConsumer = rootResultConsumer;
         this.rowMetadata = rowMetadata;
@@ -45,11 +47,6 @@ public class JetSqlResultImpl extends AbstractSqlResult {
     @Override
     public QueryId getQueryId() {
         return queryId;
-    }
-
-    @Override
-    public void closeOnError(QueryException exception) {
-        rootResultConsumer.onError(exception);
     }
 
     @Nonnull @Override
@@ -76,6 +73,11 @@ public class JetSqlResultImpl extends AbstractSqlResult {
     @Override
     public long updateCount() {
         throw new IllegalStateException("This result doesn't contain update count");
+    }
+
+    @Override
+    public void closeOnError(QueryException exception) {
+        rootResultConsumer.onError(exception);
     }
 
     private final class RowToSqlRowIterator implements Iterator<SqlRow> {

@@ -25,8 +25,6 @@ import org.junit.BeforeClass;
 
 import javax.annotation.Nonnull;
 import java.nio.file.Paths;
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -46,7 +44,6 @@ import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.TO_KEY_CLAS
 import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.TO_SERIALIZATION_KEY_FORMAT;
 import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.TO_SERIALIZATION_VALUE_FORMAT;
 import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.TO_VALUE_CLASS;
-import static java.time.ZoneId.systemDefault;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public abstract class SqlTestSupport extends SimpleTestInClusterSupport {
@@ -121,10 +118,6 @@ public abstract class SqlTestSupport extends SimpleTestInClusterSupport {
         return new ArrayList<>(rows);
     }
 
-    protected static ZoneOffset localOffset() {
-        return systemDefault().getRules().getOffset(LocalDateTime.now());
-    }
-
     /**
      * Create DDL for an IMap with the given {@code name}, that uses
      * java serialization for both key and value with the given classes.
@@ -135,7 +128,8 @@ public abstract class SqlTestSupport extends SimpleTestInClusterSupport {
                 + '"' + TO_SERIALIZATION_KEY_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "',\n"
                 + '"' + TO_KEY_CLASS + "\" '" + keyClass.getName() + "',\n"
                 + '"' + TO_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "',\n"
-                + '"' + TO_VALUE_CLASS + "\" '" + valueClass.getName() + "')\n";
+                + '"' + TO_VALUE_CLASS + "\" '" + valueClass.getName() + "'\n"
+                + ")";
     }
 
     protected static final class Row {

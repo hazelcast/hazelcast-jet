@@ -31,13 +31,14 @@ import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.TO_KEY_CLAS
 import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.TO_SERIALIZATION_KEY_FORMAT;
 import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.TO_SERIALIZATION_VALUE_FORMAT;
 import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.TO_VALUE_CLASS;
+import static java.util.Collections.singletonList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public class SchemaTest extends SqlTestSupport {
 
     @Test
-    public void testTableCreation() {
+    public void when_tableIsDeclared_then_itIsAvailable() {
         // given
         String name = createRandomName();
 
@@ -66,7 +67,29 @@ public class SchemaTest extends SqlTestSupport {
     }
 
     @Test
-    public void testDeclaredTablePriority() {
+    public void when_tableIsDeclared_then_itCanBeListed() {
+        // given
+        String name = createRandomName();
+        executeSql(
+                "CREATE EXTERNAL TABLE " + name + " "
+                        + "TYPE \"" + LocalPartitionedMapConnector.TYPE_NAME + "\" "
+                        + "OPTIONS ("
+                        + "\"" + TO_SERIALIZATION_KEY_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
+                        + ", \"" + TO_KEY_CLASS + "\" '" + Integer.class.getName() + "'"
+                        + ", \"" + TO_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
+                        + ", \"" + TO_VALUE_CLASS + "\" '" + String.class.getName() + "'"
+                        + ")"
+        );
+
+        // when
+        assertRowsEventuallyAnyOrder(
+                "SHOW EXTERNAL TABLES",
+                singletonList(new Row(name))
+        );
+    }
+
+    @Test
+    public void when_tableIsDeclared_then_itsDefinitionHasPrecedenceOverDiscoveredOne() {
         // given
         String name = createRandomName();
         executeSql(
@@ -90,7 +113,7 @@ public class SchemaTest extends SqlTestSupport {
     }
 
     @Test
-    public void testTableRemoval() {
+    public void when_tableIsDropped_then_itIsNotAvailable() {
         // given
         String name = createRandomName();
         executeSql(

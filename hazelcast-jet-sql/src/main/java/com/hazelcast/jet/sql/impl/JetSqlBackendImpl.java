@@ -22,6 +22,7 @@ import com.hazelcast.jet.sql.impl.JetPlan.CreateJobPlan;
 import com.hazelcast.jet.sql.impl.JetPlan.DropExternalTablePlan;
 import com.hazelcast.jet.sql.impl.JetPlan.DropJobPlan;
 import com.hazelcast.jet.sql.impl.JetPlan.ExecutionPlan;
+import com.hazelcast.jet.sql.impl.JetPlan.ShowExternalTablesPlan;
 import com.hazelcast.jet.sql.impl.convert.JetSqlToRelConverter;
 import com.hazelcast.jet.sql.impl.opt.OptUtils;
 import com.hazelcast.jet.sql.impl.opt.logical.LogicalRel;
@@ -34,6 +35,7 @@ import com.hazelcast.jet.sql.impl.parse.SqlCreateExternalTable;
 import com.hazelcast.jet.sql.impl.parse.SqlCreateJob;
 import com.hazelcast.jet.sql.impl.parse.SqlDropExternalTable;
 import com.hazelcast.jet.sql.impl.parse.SqlDropJob;
+import com.hazelcast.jet.sql.impl.parse.SqlShowExternalTables;
 import com.hazelcast.jet.sql.impl.parse.SqlTableColumn;
 import com.hazelcast.jet.sql.impl.parse.UnsupportedOperationVisitor;
 import com.hazelcast.jet.sql.impl.schema.ExternalCatalog;
@@ -86,15 +88,15 @@ import static java.util.stream.Collectors.toList;
 public class JetSqlBackendImpl implements JetSqlBackend {
 
     private final NodeEngine nodeEngine;
-    private final JetSqlServiceImpl sqlService;
 
     private final ExternalCatalog catalog;
+    private final JetPlanExecutor planExecutor;
 
-    JetSqlBackendImpl(NodeEngine nodeEngine, JetSqlServiceImpl sqlService, ExternalCatalog catalog) {
-        this.sqlService = sqlService;
+    JetSqlBackendImpl(NodeEngine nodeEngine, ExternalCatalog catalog, JetPlanExecutor planExecutor) {
         this.nodeEngine = nodeEngine;
 
         this.catalog = catalog;
+        this.planExecutor = planExecutor;
     }
 
     @Override
@@ -113,7 +115,7 @@ public class JetSqlBackendImpl implements JetSqlBackend {
 
     @Override
     public SqlVisitor<Void> unsupportedOperationVisitor(CatalogReader catalogReader) {
-        return new UnsupportedOperationVisitor(catalogReader);
+        return UnsupportedOperationVisitor.INSTANCE;
     }
 
     @Override
@@ -148,6 +150,8 @@ public class JetSqlBackendImpl implements JetSqlBackend {
             return toCreateTablePlan(parseResult, context);
         } else if (node instanceof SqlDropExternalTable) {
             return toDropTablePlan((SqlDropExternalTable) node);
+        } else if (node instanceof SqlShowExternalTables) {
+            return toShowTablesPlan();
         } else if (node instanceof SqlCreateJob) {
             return toCreateJobPlan(parseResult, context);
         } else if (node instanceof SqlDropJob) {
@@ -167,7 +171,7 @@ public class JetSqlBackendImpl implements JetSqlBackend {
                     .collect(toList());
             ExternalTable externalTable = new ExternalTable(node.name(), node.type(), externalFields, node.options());
 
-            return new CreateExternalTablePlan(externalTable, node.getReplace(), node.ifNotExists(), null, sqlService);
+            return new CreateExternalTablePlan(externalTable, node.getReplace(), node.ifNotExists(), null, planExecutor);
         } else {
             QueryConvertResult convertedResult = context.convert(parseResult);
 
@@ -193,13 +197,17 @@ public class JetSqlBackendImpl implements JetSqlBackend {
                     node.getReplace(),
                     node.ifNotExists(),
                     populateTablePlan,
-                    sqlService
+                    planExecutor
             );
         }
     }
 
     private SqlPlan toDropTablePlan(SqlDropExternalTable sqlDropTable) {
-        return new DropExternalTablePlan(sqlDropTable.name(), sqlDropTable.ifExists(), sqlService);
+        return new DropExternalTablePlan(sqlDropTable.name(), sqlDropTable.ifExists(), planExecutor);
+    }
+
+    private SqlPlan toShowTablesPlan() {
+        return new ShowExternalTablesPlan(planExecutor);
     }
 
     private SqlPlan toCreateJobPlan(QueryParseResult parseResult, OptimizerContext context) {
@@ -209,11 +217,11 @@ public class JetSqlBackendImpl implements JetSqlBackend {
                 parseResult.getValidator());
         QueryConvertResult convertedResult = context.convert(newParseResult);
         ExecutionPlan dmlPlan = toPlan(convertedResult.getRel(), context);
-        return new CreateJobPlan(node.name(), node.jobConfig(), node.ifNotExists(), dmlPlan, sqlService);
+        return new CreateJobPlan(node.name(), node.jobConfig(), node.ifNotExists(), dmlPlan, planExecutor);
     }
 
     private SqlPlan toDropJobPlan(SqlDropJob node) {
-        return new DropJobPlan(node.name(), node.ifExists(), sqlService);
+        return new DropJobPlan(node.name(), node.ifExists(), planExecutor);
     }
 
     private ExecutionPlan toPlan(RelNode inputRel, OptimizerContext context) {
@@ -260,7 +268,7 @@ public class JetSqlBackendImpl implements JetSqlBackend {
 
         SqlRowMetadata rowMetadata = new SqlRowMetadata(columns);
 
-        return new ExecutionPlan(dag, isStreamRead[0], isInsert, queryId, rowMetadata, sqlService);
+        return new ExecutionPlan(dag, isStreamRead[0], isInsert, queryId, rowMetadata, planExecutor);
     }
 
     /**

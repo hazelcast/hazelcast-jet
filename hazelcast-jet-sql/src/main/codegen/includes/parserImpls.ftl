@@ -27,7 +27,7 @@ SqlCreate SqlCreateJob(Span span, boolean replace) :
     SqlExtendedInsert dmlStatement = null;
 
     if (replace) {
-        throw QueryException.error("OR REPLACE not supported with CREATE JOB");
+        throw SqlUtil.newContextException(getPos(), ParserResource.RESOURCE.notSupported("OR REPLACE", "CREATE JOB"));
     }
 }
 {
@@ -51,6 +51,27 @@ SqlCreate SqlCreateJob(Span span, boolean replace) :
             ifNotExists,
             startPos.plus(getPos())
         );
+    }
+}
+
+/**
+ * Parses DROP JOB statement.
+ */
+SqlDrop SqlDropJob(Span span, boolean replace) :
+{
+    SqlParserPos pos = span.pos();
+
+    SqlIdentifier name;
+    boolean ifExists = false;
+}
+{
+    <JOB>
+    [
+        <IF> <EXISTS> { ifExists = true; }
+    ]
+    name = SimpleIdentifier()
+    {
+        return new SqlDropJob(name, ifExists, pos.plus(getPos()));
     }
 }
 
@@ -117,8 +138,7 @@ SqlNodeList TableColumns():
             <COMMA> column = TableColumn()
             {
                 if (columns.put(column.name(), column) != null) {
-                   throw SqlUtil.newContextException(getPos(),
-                       ParserResource.RESOURCE.duplicateColumn(column.name()));
+                   throw SqlUtil.newContextException(getPos(), ParserResource.RESOURCE.duplicateColumn(column.name()));
                 }
             }
         )*
@@ -244,75 +264,6 @@ QueryDataType DateTimeType() :
 }
 
 /**
- * Parses OPTIONS.
- */
-SqlNodeList SqlOptions():
-{
-    Span span;
-
-    Map<String, SqlNode> sqlOptions = new LinkedHashMap<String, SqlNode>();
-    SqlOption sqlOption;
-}
-{
-    <LPAREN> { span = span(); }
-    [
-        sqlOption = SqlOption()
-        {
-            sqlOptions.put(sqlOption.key(), sqlOption);
-        }
-        (
-            <COMMA> sqlOption = SqlOption()
-            {
-                if (sqlOptions.put(sqlOption.key(), sqlOption) != null) {
-                    throw SqlUtil.newContextException(getPos(),
-                        ParserResource.RESOURCE.duplicateOption(sqlOption.key()));
-                }
-            }
-        )*
-    ]
-    <RPAREN>
-    {
-        return new SqlNodeList(sqlOptions.values(), span.end(this));
-    }
-}
-
-SqlOption SqlOption() :
-{
-    Span span;
-
-    SqlIdentifier key;
-    SqlNode value;
-}
-{
-    key = SimpleIdentifier() { span = span(); }
-    value = StringLiteral()
-    {
-        return new SqlOption(key, value, span.end(this));
-    }
-}
-
-/**
- * Parses DROP JOB statement.
- */
-SqlDrop SqlDropJob(Span span, boolean replace) :
-{
-    SqlParserPos pos = span.pos();
-
-    SqlIdentifier name;
-    boolean ifExists = false;
-}
-{
-    <JOB>
-    [
-        <IF> <EXISTS> { ifExists = true; }
-    ]
-    name = SimpleIdentifier()
-    {
-        return new SqlDropJob(name, ifExists, pos.plus(getPos()));
-    }
-}
-
-/**
  * Parses DROP EXTERNAL TABLE statement.
  */
 SqlDrop SqlDropExternalTable(Span span, boolean replace) :
@@ -330,6 +281,19 @@ SqlDrop SqlDropExternalTable(Span span, boolean replace) :
     name = SimpleIdentifier()
     {
         return new SqlDropExternalTable(name, ifExists, pos.plus(getPos()));
+    }
+}
+
+/**
+* Parses SHOW EXTERNAL TABLES statement.
+*/
+SqlShowExternalTables SqlShowExternalTables() :
+{
+}
+{
+    <SHOW> <EXTERNAL> <TABLES>
+    {
+        return new SqlShowExternalTables(getPos());
     }
 }
 
@@ -383,5 +347,52 @@ SqlExtendedInsert SqlExtendedInsert() :
             columns,
             span.end(source)
         );
+    }
+}
+
+/**
+ * Parses OPTIONS.
+ */
+SqlNodeList SqlOptions():
+{
+    Span span;
+
+    Map<String, SqlNode> sqlOptions = new LinkedHashMap<String, SqlNode>();
+    SqlOption sqlOption;
+}
+{
+    <LPAREN> { span = span(); }
+    [
+        sqlOption = SqlOption()
+        {
+            sqlOptions.put(sqlOption.key(), sqlOption);
+        }
+        (
+            <COMMA> sqlOption = SqlOption()
+            {
+                if (sqlOptions.put(sqlOption.key(), sqlOption) != null) {
+                    throw SqlUtil.newContextException(getPos(), ParserResource.RESOURCE.duplicateOption(sqlOption.key()));
+                }
+            }
+        )*
+    ]
+    <RPAREN>
+    {
+        return new SqlNodeList(sqlOptions.values(), span.end(this));
+    }
+}
+
+SqlOption SqlOption() :
+{
+    Span span;
+
+    SqlIdentifier key;
+    SqlNode value;
+}
+{
+    key = SimpleIdentifier() { span = span(); }
+    value = StringLiteral()
+    {
+        return new SqlOption(key, value, span.end(this));
     }
 }

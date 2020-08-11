@@ -19,6 +19,7 @@ package com.hazelcast.jet.sql.impl.validate;
 import com.hazelcast.jet.sql.SqlConnector;
 import com.hazelcast.jet.sql.impl.parse.SqlCreateJob;
 import com.hazelcast.jet.sql.impl.parse.SqlExtendedInsert;
+import com.hazelcast.jet.sql.impl.parse.SqlShowExternalTables;
 import com.hazelcast.sql.impl.calcite.schema.HazelcastTable;
 import com.hazelcast.sql.impl.calcite.validate.HazelcastSqlValidator;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
@@ -35,7 +36,7 @@ import static com.hazelcast.jet.sql.impl.connector.SqlConnectorUtil.getJetSqlCon
 
 public class JetSqlValidator extends HazelcastSqlValidator {
 
-    private static final JetSqlValidatorResource RESOURCES = Resources.create(JetSqlValidatorResource.class);
+    private static final ValidatorResource RESOURCES = Resources.create(ValidatorResource.class);
 
     private boolean isCreateJob;
 
@@ -55,6 +56,10 @@ public class JetSqlValidator extends HazelcastSqlValidator {
 
         if (topNode.getKind().belongsTo(SqlKind.DDL)) {
             topNode.validate(this, getEmptyScope());
+            return topNode;
+        }
+
+        if (topNode instanceof SqlShowExternalTables) {
             return topNode;
         }
 
