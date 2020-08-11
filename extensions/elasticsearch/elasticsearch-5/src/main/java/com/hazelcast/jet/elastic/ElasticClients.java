@@ -63,10 +63,11 @@ public final class ElasticClients {
      * http://elastic-host:9200}</pre>
      *
      * @see HttpHost#create(String)
+     * @since 4.3
      */
     @Nonnull
-    public static RestClientBuilder client(@Nonnull String s) {
-        return RestClient.builder(HttpHost.create(s));
+    public static RestClientBuilder client(@Nonnull String location) {
+        return RestClient.builder(HttpHost.create(location));
     }
 
     /**
