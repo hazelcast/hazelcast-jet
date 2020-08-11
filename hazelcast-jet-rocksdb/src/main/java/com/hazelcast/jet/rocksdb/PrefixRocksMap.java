@@ -54,7 +54,7 @@ import static com.hazelcast.jet.rocksdb.Tuple2.tuple2;
  * </li><li>
  *     The processor acquires one or more iterators using {@link #prefixRocksIterator}.
  * </li><li>
- *     The processor can issue a series of {@link #get} operations using the iterators
+ *     The processor can issue a series of {@link #getAllValues} operations using the iterators
  *     it acquired to retrieve the values in the map.
  * </li><li>
  * The processor calls {@link #close} to release all memory this map owns.
@@ -62,7 +62,7 @@ import static com.hazelcast.jet.rocksdb.Tuple2.tuple2;
  * </p><p>
  * Notes:
  * <ol><li>
- * {@link #get} operations on this map are thread-safe however {@link #add} operations are not.
+ * {@link #getAllValues} operations on this map are thread-safe however {@link #add} operations are not.
  * </li><li>
  * Not calling {@link #close} after execution completes will cause a memory leak.
  * </li></ol>
@@ -134,7 +134,7 @@ public class PrefixRocksMap<K, V> {
      *
      * @return an iterator over the values associated with the key.
      */
-    public Iterator<V> get(RocksIterator iterator, K key) {
+    public Iterator<V> getAllValues(RocksIterator iterator, K key) {
         if (cfh == null) {
             open(key);
         }

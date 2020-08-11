@@ -71,7 +71,7 @@ public class PrefixRocksMapTest {
         prefixRocksMap.add(key, value3);
 
         //Then
-        Iterator<Integer> iterator = prefixRocksMap.get(prefixRocksMap.prefixRocksIterator(), key);
+        Iterator<Integer> iterator = prefixRocksMap.getAllValues(prefixRocksMap.prefixRocksIterator(), key);
 
         while (iterator.hasNext()) {
             values.add(iterator.next());

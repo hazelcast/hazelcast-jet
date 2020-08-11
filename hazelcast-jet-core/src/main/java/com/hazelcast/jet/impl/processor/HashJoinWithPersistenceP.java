@@ -111,7 +111,7 @@ public class HashJoinWithPersistenceP<E0> extends AbstractProcessor {
         PrefixRocksMap<Object, Object> lookupTableForOrdinal = lookupTables.get(index);
         RocksIterator rocksIterator = iterators.get(index);
         Object key = keyFns.get(index).apply(item);
-        return getValues(lookupTableForOrdinal.get(rocksIterator, key));
+        return getValues(lookupTableForOrdinal.getAllValues(rocksIterator, key));
     }
 
     @Nullable
