@@ -16,16 +16,27 @@
 
 package com.hazelcast.jet.sql.impl.schema;
 
+import com.hazelcast.jet.sql.impl.parse.SqlCreateExternalTable;
+import com.hazelcast.jet.sql.impl.parse.SqlOption;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.DataSerializable;
+import org.apache.calcite.sql.SqlIdentifier;
+import org.apache.calcite.sql.SqlLiteral;
+import org.apache.calcite.sql.SqlNode;
+import org.apache.calcite.sql.SqlNodeList;
+import org.apache.calcite.sql.SqlWriter;
+import org.apache.calcite.sql.parser.SqlParserPos;
+import org.apache.calcite.sql.pretty.SqlPrettyWriter;
 
 import java.io.IOException;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
+import java.util.stream.Collector;
 
 /**
  * User-defined table schema definition.
@@ -80,6 +91,34 @@ public class ExternalTable implements DataSerializable {
 
     public Map<String, String> options() {
         return Collections.unmodifiableMap(options);
+    }
+
+    public String ddl() {
+        SqlParserPos z = SqlParserPos.ZERO;
+        Collector<SqlNode, SqlNodeList, SqlNodeList> sqlNodeListCollector = Collector.of(
+                () -> new SqlNodeList(z),
+                SqlNodeList::add,
+                (l1, l2) -> {throw new UnsupportedOperationException();});
+
+        SqlNode ddl = new SqlCreateExternalTable(
+                new SqlIdentifier(name, z),
+                externalFields.stream().map(f -> f.toSqlColumn()).collect(sqlNodeListCollector),
+                new SqlIdentifier(type, z),
+                options.entrySet().stream()
+                       .sorted(Entry.comparingByKey())
+                       .map(o -> new SqlOption(
+                               new SqlIdentifier(o.getKey(), z),
+                               SqlLiteral.createCharString(o.getValue(), z),
+                               z))
+                       .collect(sqlNodeListCollector),
+                null,
+                false,
+                false,
+                z);
+
+        SqlWriter writer = new SqlPrettyWriter();
+        ddl.unparse(writer, 0, 0);
+        return writer.toString();
     }
 
     @Override

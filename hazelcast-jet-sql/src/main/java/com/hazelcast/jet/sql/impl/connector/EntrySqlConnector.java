@@ -32,18 +32,18 @@ import static java.util.Objects.requireNonNull;
 
 public abstract class EntrySqlConnector implements SqlConnector {
 
-    public static final String TO_SERIALIZATION_KEY_FORMAT = "serialization.key.format";
-    public static final String TO_SERIALIZATION_VALUE_FORMAT = "serialization.value.format";
+    public static final String OPTION_SERIALIZATION_KEY_FORMAT = "serialization.key.format";
+    public static final String OPTION_SERIALIZATION_VALUE_FORMAT = "serialization.value.format";
 
-    public static final String TO_KEY_CLASS = "serialization.key.java.class";
-    public static final String TO_VALUE_CLASS = "serialization.value.java.class";
+    public static final String OPTION_KEY_CLASS = "serialization.key.java.class";
+    public static final String OPTION_VALUE_CLASS = "serialization.value.java.class";
 
-    public static final String TO_KEY_FACTORY_ID = "serialization.key.portable.factoryId";
-    public static final String TO_KEY_CLASS_ID = "serialization.key.portable.classId";
-    public static final String TO_KEY_CLASS_VERSION = "serialization.key.portable.classVersion";
-    public static final String TO_VALUE_FACTORY_ID = "serialization.value.portable.factoryId";
-    public static final String TO_VALUE_CLASS_ID = "serialization.value.portable.classId";
-    public static final String TO_VALUE_CLASS_VERSION = "serialization.value.portable.classVersion";
+    public static final String OPTION_KEY_FACTORY_ID = "serialization.key.portable.factoryId";
+    public static final String OPTION_KEY_CLASS_ID = "serialization.key.portable.classId";
+    public static final String OPTION_KEY_CLASS_VERSION = "serialization.key.portable.classVersion";
+    public static final String OPTION_VALUE_FACTORY_ID = "serialization.value.portable.factoryId";
+    public static final String OPTION_VALUE_CLASS_ID = "serialization.value.portable.classId";
+    public static final String OPTION_VALUE_CLASS_VERSION = "serialization.value.portable.classVersion";
 
     protected abstract Map<String, EntryMetadataResolver> supportedResolvers();
 
@@ -87,7 +87,7 @@ public abstract class EntrySqlConnector implements SqlConnector {
     }
 
     private static String resolveFormat(Map<String, String> options, boolean isKey) {
-        String option = isKey ? TO_SERIALIZATION_KEY_FORMAT : TO_SERIALIZATION_VALUE_FORMAT;
+        String option = isKey ? OPTION_SERIALIZATION_KEY_FORMAT : OPTION_SERIALIZATION_VALUE_FORMAT;
         String format = options.get(option);
         if (format == null) {
             throw QueryException.error(format("Missing '%s' option", option));

@@ -31,9 +31,9 @@ import java.util.Map;
 
 import static com.hazelcast.jet.sql.SqlConnector.JAVA_SERIALIZATION_FORMAT;
 import static com.hazelcast.jet.sql.SqlConnector.JSON_SERIALIZATION_FORMAT;
-import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.TO_KEY_CLASS;
-import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.TO_SERIALIZATION_KEY_FORMAT;
-import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.TO_SERIALIZATION_VALUE_FORMAT;
+import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.OPTION_KEY_CLASS;
+import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.OPTION_SERIALIZATION_KEY_FORMAT;
+import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.OPTION_SERIALIZATION_VALUE_FORMAT;
 import static java.time.Instant.ofEpochMilli;
 import static java.time.ZoneId.systemDefault;
 import static java.util.Arrays.asList;
@@ -51,8 +51,8 @@ public class SqlJsonTest extends SqlTestSupport {
                 + ", value_name VARCHAR EXTERNAL NAME \"this.name\""
                 + ") TYPE \"" + LocalPartitionedMapConnector.TYPE_NAME + "\" "
                 + "OPTIONS ("
-                + "\"" + TO_SERIALIZATION_KEY_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + "'"
-                + ", \"" + TO_SERIALIZATION_VALUE_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + "'"
+                + "\"" + OPTION_SERIALIZATION_KEY_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + "'"
+                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + "'"
                 + ")");
 
         executeSql("INSERT OVERWRITE " + name + " VALUES (null, null)");
@@ -74,8 +74,8 @@ public class SqlJsonTest extends SqlTestSupport {
                 + ", value_name VARCHAR EXTERNAL NAME \"this.name\""
                 + ") TYPE \"" + LocalPartitionedMapConnector.TYPE_NAME + "\" "
                 + "OPTIONS ("
-                + "\"" + TO_SERIALIZATION_KEY_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + "'"
-                + ", \"" + TO_SERIALIZATION_VALUE_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + "'"
+                + "\"" + OPTION_SERIALIZATION_KEY_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + "'"
+                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + "'"
                 + ")");
 
         executeSql("INSERT OVERWRITE " + name + " (value_name, key_name) VALUES ('Bob', 'Alice')");
@@ -96,9 +96,9 @@ public class SqlJsonTest extends SqlTestSupport {
                 + "name VARCHAR"
                 + ") TYPE \"" + LocalPartitionedMapConnector.TYPE_NAME + "\" "
                 + "OPTIONS ("
-                + "\"" + TO_SERIALIZATION_KEY_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
-                + ", \"" + TO_KEY_CLASS + "\" '" + Integer.class.getName() + "', "
-                + "\"" + TO_SERIALIZATION_VALUE_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + "'"
+                + "\"" + OPTION_SERIALIZATION_KEY_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
+                + ", \"" + OPTION_KEY_CLASS + "\" '" + Integer.class.getName() + "', "
+                + "\"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + "'"
                 + ")");
 
         // insert initial record
@@ -110,9 +110,9 @@ public class SqlJsonTest extends SqlTestSupport {
                 + ", ssn BIGINT"
                 + ") TYPE \"" + LocalPartitionedMapConnector.TYPE_NAME + "\" "
                 + "OPTIONS ("
-                + "\"" + TO_SERIALIZATION_KEY_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
-                + ", \"" + TO_KEY_CLASS + "\" '" + Integer.class.getName() + "'"
-                + ", \"" + TO_SERIALIZATION_VALUE_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + "'"
+                + "\"" + OPTION_SERIALIZATION_KEY_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
+                + ", \"" + OPTION_KEY_CLASS + "\" '" + Integer.class.getName() + "'"
+                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + "'"
                 + ")");
 
         // insert record against new schema
@@ -147,9 +147,9 @@ public class SqlJsonTest extends SqlTestSupport {
                 + ", offsetDateTime TIMESTAMP WITH TIME ZONE"
                 + ") TYPE \"" + LocalPartitionedMapConnector.TYPE_NAME + "\" "
                 + "OPTIONS ("
-                + "\"" + TO_SERIALIZATION_KEY_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
-                + ", \"" + TO_KEY_CLASS + "\" '" + BigInteger.class.getName() + "'"
-                + ", \"" + TO_SERIALIZATION_VALUE_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + "'"
+                + "\"" + OPTION_SERIALIZATION_KEY_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
+                + ", \"" + OPTION_KEY_CLASS + "\" '" + BigInteger.class.getName() + "'"
+                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + "'"
                 + ")");
 
         executeSql("INSERT OVERWRITE " + name + " VALUES ("

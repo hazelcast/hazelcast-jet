@@ -39,10 +39,10 @@ import java.util.Map;
 
 import static com.hazelcast.jet.core.TestUtil.createMap;
 import static com.hazelcast.jet.sql.SqlConnector.JAVA_SERIALIZATION_FORMAT;
-import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.TO_KEY_CLASS;
-import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.TO_SERIALIZATION_KEY_FORMAT;
-import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.TO_SERIALIZATION_VALUE_FORMAT;
-import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.TO_VALUE_CLASS;
+import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.OPTION_KEY_CLASS;
+import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.OPTION_SERIALIZATION_KEY_FORMAT;
+import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.OPTION_SERIALIZATION_VALUE_FORMAT;
+import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.OPTION_VALUE_CLASS;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
@@ -79,10 +79,10 @@ public class SqlKafkaTest extends SqlTestSupport {
                         " \"auto.offset.reset\" 'earliest'" +
                         ")",
                 topicName, KafkaSqlConnector.TYPE_NAME,
-                TO_SERIALIZATION_KEY_FORMAT, JAVA_SERIALIZATION_FORMAT,
-                TO_KEY_CLASS, Integer.class.getName(),
-                TO_SERIALIZATION_VALUE_FORMAT, JAVA_SERIALIZATION_FORMAT,
-                TO_VALUE_CLASS, String.class.getName(),
+                OPTION_SERIALIZATION_KEY_FORMAT, JAVA_SERIALIZATION_FORMAT,
+                OPTION_KEY_CLASS, Integer.class.getName(),
+                OPTION_SERIALIZATION_VALUE_FORMAT, JAVA_SERIALIZATION_FORMAT,
+                OPTION_VALUE_CLASS, String.class.getName(),
                 kafkaTestSupport.getBrokerConnectionString(),
                 IntegerSerializer.class.getCanonicalName(), IntegerDeserializer.class.getCanonicalName(),
                 StringSerializer.class.getCanonicalName(), StringDeserializer.class.getCanonicalName()
@@ -127,10 +127,10 @@ public class SqlKafkaTest extends SqlTestSupport {
                         " \"auto.offset.reset\" 'earliest'" +
                         ")",
                 topicName, KafkaSqlConnector.TYPE_NAME,
-                TO_SERIALIZATION_KEY_FORMAT, JAVA_SERIALIZATION_FORMAT,
-                TO_KEY_CLASS, BigInteger.class.getName(),
-                TO_SERIALIZATION_VALUE_FORMAT, JAVA_SERIALIZATION_FORMAT,
-                TO_VALUE_CLASS, String.class.getName(),
+                OPTION_SERIALIZATION_KEY_FORMAT, JAVA_SERIALIZATION_FORMAT,
+                OPTION_KEY_CLASS, BigInteger.class.getName(),
+                OPTION_SERIALIZATION_VALUE_FORMAT, JAVA_SERIALIZATION_FORMAT,
+                OPTION_VALUE_CLASS, String.class.getName(),
                 kafkaTestSupport.getBrokerConnectionString(),
                 BigIntegerSerializer.class.getCanonicalName(), BigIntegerDeserializer.class.getCanonicalName(),
                 StringSerializer.class.getCanonicalName(), StringDeserializer.class.getCanonicalName()
@@ -161,10 +161,10 @@ public class SqlKafkaTest extends SqlTestSupport {
                         " \"auto.offset.reset\" 'earliest'" +
                         ")",
                 topicName, KafkaSqlConnector.TYPE_NAME,
-                TO_SERIALIZATION_KEY_FORMAT, JAVA_SERIALIZATION_FORMAT,
-                TO_KEY_CLASS, Integer.class.getName(),
-                TO_SERIALIZATION_VALUE_FORMAT, JAVA_SERIALIZATION_FORMAT,
-                TO_VALUE_CLASS, Person.class.getName(),
+                OPTION_SERIALIZATION_KEY_FORMAT, JAVA_SERIALIZATION_FORMAT,
+                OPTION_KEY_CLASS, Integer.class.getName(),
+                OPTION_SERIALIZATION_VALUE_FORMAT, JAVA_SERIALIZATION_FORMAT,
+                OPTION_VALUE_CLASS, Person.class.getName(),
                 kafkaTestSupport.getBrokerConnectionString(),
                 IntegerSerializer.class.getCanonicalName(), IntegerDeserializer.class.getCanonicalName(),
                 PersonSerializer.class.getCanonicalName(), PersonDeserializer.class.getCanonicalName()

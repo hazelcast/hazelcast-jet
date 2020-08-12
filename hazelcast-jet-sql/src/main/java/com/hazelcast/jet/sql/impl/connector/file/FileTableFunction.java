@@ -19,7 +19,7 @@ package com.hazelcast.jet.sql.impl.connector.file;
 import com.hazelcast.internal.util.UuidUtil;
 import com.hazelcast.jet.sql.impl.schema.ExternalField;
 import com.hazelcast.jet.sql.impl.schema.JetTableFunction;
-import com.hazelcast.jet.sql.impl.schema.JetTableFunctionParameter;
+import com.hazelcast.jet.sql.impl.schema.JetFunctionParameter;
 import com.hazelcast.jet.sql.impl.schema.UnknownStatistic;
 import com.hazelcast.sql.impl.calcite.SqlToQueryType;
 import com.hazelcast.sql.impl.calcite.schema.HazelcastTable;
@@ -51,13 +51,13 @@ public final class FileTableFunction implements JetTableFunction {
     // TODO: replace format-specific options with map or FILE() -> CSV()/JSON()/AVRO()
     @SuppressWarnings("checkstyle:MagicNumber")
     private static final List<Pair<String, FunctionParameter>> PARAMETERS = asList(
-            Pair.of(OPTION_SERIALIZATION_FORMAT, new JetTableFunctionParameter(0, "format", String.class, true)),
-            Pair.of(OPTION_PATH, new JetTableFunctionParameter(1, "path", String.class, true)),
-            Pair.of(OPTION_GLOB, new JetTableFunctionParameter(2, "glob", String.class, false)),
-            Pair.of(OPTION_SHARED_FILE_SYSTEM, new JetTableFunctionParameter(3, "sharedFileSystem", Boolean.class, false)),
-            Pair.of(OPTION_CHARSET, new JetTableFunctionParameter(4, "charset", String.class, false)),
-            Pair.of(OPTION_HEADER, new JetTableFunctionParameter(5, "header", Boolean.class, false)),
-            Pair.of(OPTION_DELIMITER, new JetTableFunctionParameter(6, "delimiter", String.class, false)));
+            Pair.of(OPTION_SERIALIZATION_FORMAT, new JetFunctionParameter(0, "format", String.class, true)),
+            Pair.of(OPTION_PATH, new JetFunctionParameter(1, "path", String.class, true)),
+            Pair.of(OPTION_GLOB, new JetFunctionParameter(2, "glob", String.class, false)),
+            Pair.of(OPTION_SHARED_FILE_SYSTEM, new JetFunctionParameter(3, "sharedFileSystem", Boolean.class, false)),
+            Pair.of(OPTION_CHARSET, new JetFunctionParameter(4, "charset", String.class, false)),
+            Pair.of(OPTION_HEADER, new JetFunctionParameter(5, "header", Boolean.class, false)),
+            Pair.of(OPTION_DELIMITER, new JetFunctionParameter(6, "delimiter", String.class, false)));
 
     private static final String SCHEMA_NAME_FILES = "files";
 

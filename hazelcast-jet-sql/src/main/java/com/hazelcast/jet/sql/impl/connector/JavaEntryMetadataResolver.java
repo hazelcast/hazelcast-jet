@@ -37,8 +37,8 @@ import java.util.Map.Entry;
 
 import static com.hazelcast.jet.impl.util.ReflectionUtils.loadClass;
 import static com.hazelcast.jet.sql.SqlConnector.JAVA_SERIALIZATION_FORMAT;
-import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.TO_KEY_CLASS;
-import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.TO_VALUE_CLASS;
+import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.OPTION_KEY_CLASS;
+import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.OPTION_VALUE_CLASS;
 import static com.hazelcast.sql.impl.extract.QueryPath.KEY;
 import static com.hazelcast.sql.impl.extract.QueryPath.VALUE;
 import static com.hazelcast.sql.impl.extract.QueryPath.VALUE_PATH;
@@ -203,7 +203,7 @@ public final class JavaEntryMetadataResolver implements EntryMetadataResolver {
     }
 
     private Class<?> resolveClass(boolean isKey, Map<String, String> options) {
-        String classNameProperty = isKey ? TO_KEY_CLASS : TO_VALUE_CLASS;
+        String classNameProperty = isKey ? OPTION_KEY_CLASS : OPTION_VALUE_CLASS;
         String className = options.get(classNameProperty);
 
         if (className == null) {

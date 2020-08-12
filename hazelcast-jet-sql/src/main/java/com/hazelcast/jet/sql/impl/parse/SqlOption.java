@@ -70,7 +70,6 @@ public class SqlOption extends SqlCall {
     @Override
     public void unparse(SqlWriter writer, int leftPrec, int rightPrec) {
         key.unparse(writer, leftPrec, rightPrec);
-        writer.keyword(" ");
         value.unparse(writer, leftPrec, rightPrec);
     }
 }

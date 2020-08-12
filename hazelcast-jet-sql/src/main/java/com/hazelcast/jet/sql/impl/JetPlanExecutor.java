@@ -42,7 +42,7 @@ import com.hazelcast.sql.impl.row.HeapRow;
 import java.util.List;
 import java.util.Map;
 
-import static java.util.Collections.singletonList;
+import static java.util.Arrays.asList;
 import static java.util.stream.Collectors.toList;
 
 class JetPlanExecutor {
@@ -74,10 +74,12 @@ class JetPlanExecutor {
     }
 
     SqlResult execute(@SuppressWarnings("unused") ShowExternalTablesPlan plan) {
-        SqlRowMetadata metadata = new SqlRowMetadata(singletonList(new SqlColumnMetadata("name", SqlColumnType.VARCHAR)));
+        SqlRowMetadata metadata = new SqlRowMetadata(asList(
+                new SqlColumnMetadata("name", SqlColumnType.VARCHAR),
+                new SqlColumnMetadata("ddl", SqlColumnType.VARCHAR)));
         List<SqlRow> rows = catalog.getExternalTables()
-                                   .map(table -> new SqlRowImpl(metadata, new HeapRow(new Object[]{table.name()})))
-                                   .collect(toList());
+                .map(table -> new SqlRowImpl(metadata, new HeapRow(new Object[]{table.name(), table.ddl()})))
+                .collect(toList());
 
         return new JetStaticSqlResultImpl(
                 QueryId.create(jetInstance.getHazelcastInstance().getLocalEndpoint().getUuid()),

@@ -20,14 +20,14 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.schema.FunctionParameter;
 
-public class JetTableFunctionParameter implements FunctionParameter {
+public class JetFunctionParameter implements FunctionParameter {
 
     private final int ordinal;
     private final String name;
     private final Class<?> type;
     private final boolean required;
 
-    public JetTableFunctionParameter(int ordinal, String name, Class<?> type, boolean required) {
+    public JetFunctionParameter(int ordinal, String name, Class<?> type, boolean required) {
         this.ordinal = ordinal;
         this.name = name;
         this.type = type;

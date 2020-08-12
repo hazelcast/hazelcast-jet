@@ -16,10 +16,14 @@
 
 package com.hazelcast.jet.sql.impl.schema;
 
+import com.hazelcast.jet.sql.impl.parse.SqlDataType;
+import com.hazelcast.jet.sql.impl.parse.SqlTableColumn;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.DataSerializable;
 import com.hazelcast.sql.impl.type.QueryDataType;
+import org.apache.calcite.sql.SqlIdentifier;
+import org.apache.calcite.sql.parser.SqlParserPos;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -71,6 +75,15 @@ public class ExternalField implements DataSerializable {
      */
     public String externalName() {
         return (String) properties.get(EXTERNAL_NAME);
+    }
+
+    public SqlTableColumn toSqlColumn() {
+        SqlParserPos z = SqlParserPos.ZERO;
+        return new SqlTableColumn(
+                new SqlIdentifier(name(), z),
+                new SqlDataType(type(), z),
+                new SqlIdentifier(externalName(), z),
+                z);
     }
 
     @Override

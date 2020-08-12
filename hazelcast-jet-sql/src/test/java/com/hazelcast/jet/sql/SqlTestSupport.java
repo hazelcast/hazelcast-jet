@@ -40,10 +40,10 @@ import java.util.concurrent.TimeoutException;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 import static com.hazelcast.jet.sql.SqlConnector.JAVA_SERIALIZATION_FORMAT;
-import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.TO_KEY_CLASS;
-import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.TO_SERIALIZATION_KEY_FORMAT;
-import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.TO_SERIALIZATION_VALUE_FORMAT;
-import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.TO_VALUE_CLASS;
+import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.OPTION_KEY_CLASS;
+import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.OPTION_SERIALIZATION_KEY_FORMAT;
+import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.OPTION_SERIALIZATION_VALUE_FORMAT;
+import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.OPTION_VALUE_CLASS;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public abstract class SqlTestSupport extends SimpleTestInClusterSupport {
@@ -125,10 +125,10 @@ public abstract class SqlTestSupport extends SimpleTestInClusterSupport {
     public static String javaSerializableMapDdl(String name, Class<?> keyClass, Class<?> valueClass) {
         return "CREATE EXTERNAL TABLE " + name + " TYPE \"" + LocalPartitionedMapConnector.TYPE_NAME + "\"\n"
                 + "OPTIONS (\n"
-                + '"' + TO_SERIALIZATION_KEY_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "',\n"
-                + '"' + TO_KEY_CLASS + "\" '" + keyClass.getName() + "',\n"
-                + '"' + TO_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "',\n"
-                + '"' + TO_VALUE_CLASS + "\" '" + valueClass.getName() + "'\n"
+                + '"' + OPTION_SERIALIZATION_KEY_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "',\n"
+                + '"' + OPTION_KEY_CLASS + "\" '" + keyClass.getName() + "',\n"
+                + '"' + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "',\n"
+                + '"' + OPTION_VALUE_CLASS + "\" '" + valueClass.getName() + "'\n"
                 + ")";
     }
 

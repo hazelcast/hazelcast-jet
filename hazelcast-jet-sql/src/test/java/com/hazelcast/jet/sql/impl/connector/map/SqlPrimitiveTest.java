@@ -23,10 +23,10 @@ import org.junit.Test;
 
 import static com.hazelcast.jet.core.TestUtil.createMap;
 import static com.hazelcast.jet.sql.SqlConnector.JAVA_SERIALIZATION_FORMAT;
-import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.TO_KEY_CLASS;
-import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.TO_SERIALIZATION_KEY_FORMAT;
-import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.TO_SERIALIZATION_VALUE_FORMAT;
-import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.TO_VALUE_CLASS;
+import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.OPTION_KEY_CLASS;
+import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.OPTION_SERIALIZATION_KEY_FORMAT;
+import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.OPTION_SERIALIZATION_VALUE_FORMAT;
+import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.OPTION_VALUE_CLASS;
 import static java.lang.String.format;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -91,10 +91,10 @@ public class SqlPrimitiveTest extends SqlTestSupport {
                 + ", name VARCHAR EXTERNAL NAME this"
                 + ") TYPE \"" + LocalPartitionedMapConnector.TYPE_NAME + "\" "
                 + "OPTIONS ("
-                + "\"" + TO_SERIALIZATION_KEY_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
-                + ", \"" + TO_KEY_CLASS + "\" '" + Integer.class.getName() + "'"
-                + ", \"" + TO_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
-                + ", \"" + TO_VALUE_CLASS + "\" '" + String.class.getName() + "'"
+                + "\"" + OPTION_SERIALIZATION_KEY_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
+                + ", \"" + OPTION_KEY_CLASS + "\" '" + Integer.class.getName() + "'"
+                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
+                + ", \"" + OPTION_VALUE_CLASS + "\" '" + String.class.getName() + "'"
                 + ")"
         );
 
@@ -118,10 +118,10 @@ public class SqlPrimitiveTest extends SqlTestSupport {
         executeSql("CREATE EXTERNAL TABLE " + name + " "
                 + "TYPE \"" + LocalPartitionedMapConnector.TYPE_NAME + "\" "
                 + "OPTIONS ("
-                + "\"" + TO_SERIALIZATION_KEY_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
-                + ", \"" + TO_KEY_CLASS + "\" '" + Integer.class.getName() + "'"
-                + ", \"" + TO_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
-                + ", \"" + TO_VALUE_CLASS + "\" '" + String.class.getName() + "'"
+                + "\"" + OPTION_SERIALIZATION_KEY_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
+                + ", \"" + OPTION_KEY_CLASS + "\" '" + Integer.class.getName() + "'"
+                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
+                + ", \"" + OPTION_VALUE_CLASS + "\" '" + String.class.getName() + "'"
                 + ")"
         );
         return name;

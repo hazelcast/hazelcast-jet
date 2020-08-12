@@ -27,10 +27,10 @@ import org.junit.Test;
 import java.util.Map;
 
 import static com.hazelcast.jet.sql.SqlConnector.JAVA_SERIALIZATION_FORMAT;
-import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.TO_KEY_CLASS;
-import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.TO_SERIALIZATION_KEY_FORMAT;
-import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.TO_SERIALIZATION_VALUE_FORMAT;
-import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.TO_VALUE_CLASS;
+import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.OPTION_KEY_CLASS;
+import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.OPTION_SERIALIZATION_KEY_FORMAT;
+import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.OPTION_SERIALIZATION_VALUE_FORMAT;
+import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.OPTION_VALUE_CLASS;
 import static java.util.Collections.singletonList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -47,10 +47,10 @@ public class SchemaTest extends SqlTestSupport {
                 "CREATE EXTERNAL TABLE " + name + " "
                         + "TYPE \"" + LocalPartitionedMapConnector.TYPE_NAME + "\" "
                         + "OPTIONS ("
-                        + "\"" + TO_SERIALIZATION_KEY_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
-                        + ", \"" + TO_KEY_CLASS + "\" '" + Integer.class.getName() + "'"
-                        + ", \"" + TO_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
-                        + ", \"" + TO_VALUE_CLASS + "\" '" + String.class.getName() + "'"
+                        + "\"" + OPTION_SERIALIZATION_KEY_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
+                        + ", \"" + OPTION_KEY_CLASS + "\" '" + Integer.class.getName() + "'"
+                        + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
+                        + ", \"" + OPTION_VALUE_CLASS + "\" '" + String.class.getName() + "'"
                         + ")"
         );
 
@@ -70,21 +70,23 @@ public class SchemaTest extends SqlTestSupport {
     public void when_tableIsDeclared_then_itCanBeListed() {
         // given
         String name = createRandomName();
-        executeSql(
-                "CREATE EXTERNAL TABLE " + name + " "
-                        + "TYPE \"" + LocalPartitionedMapConnector.TYPE_NAME + "\" "
-                        + "OPTIONS ("
-                        + "\"" + TO_SERIALIZATION_KEY_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
-                        + ", \"" + TO_KEY_CLASS + "\" '" + Integer.class.getName() + "'"
-                        + ", \"" + TO_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
-                        + ", \"" + TO_VALUE_CLASS + "\" '" + String.class.getName() + "'"
-                        + ")"
-        );
+        String sql = "CREATE EXTERNAL TABLE \"" + name + "\" (" + System.lineSeparator()
+                + "  \"__key\" INT EXTERNAL NAME \"__key\"," + System.lineSeparator()
+                + "  \"this\" VARCHAR EXTERNAL NAME \"this\"" + System.lineSeparator()
+                + ")" + System.lineSeparator()
+                + "TYPE \"" + LocalPartitionedMapConnector.TYPE_NAME + "\"" + System.lineSeparator()
+                + "OPTIONS (" + System.lineSeparator()
+                + "  \"" + OPTION_SERIALIZATION_KEY_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'," + System.lineSeparator()
+                + "  \"" + OPTION_KEY_CLASS + "\" '" + Integer.class.getName() + "'," + System.lineSeparator()
+                + "  \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'," + System.lineSeparator()
+                + "  \"" + OPTION_VALUE_CLASS + "\" '" + String.class.getName() + "'" + System.lineSeparator()
+                + ")";
+        executeSql(sql);
 
         // when
         assertRowsEventuallyAnyOrder(
                 "SHOW EXTERNAL TABLES",
-                singletonList(new Row(name))
+                singletonList(new Row(name, sql))
         );
     }
 
@@ -96,10 +98,10 @@ public class SchemaTest extends SqlTestSupport {
                 "CREATE EXTERNAL TABLE " + name + " "
                         + "TYPE \"" + LocalPartitionedMapConnector.TYPE_NAME + "\" "
                         + "OPTIONS ("
-                        + "\"" + TO_SERIALIZATION_KEY_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
-                        + ", \"" + TO_KEY_CLASS + "\" '" + Integer.class.getName() + "'"
-                        + ", \"" + TO_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
-                        + ", \"" + TO_VALUE_CLASS + "\" '" + Person.class.getName() + "'"
+                        + "\"" + OPTION_SERIALIZATION_KEY_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
+                        + ", \"" + OPTION_KEY_CLASS + "\" '" + Integer.class.getName() + "'"
+                        + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
+                        + ", \"" + OPTION_VALUE_CLASS + "\" '" + Person.class.getName() + "'"
                         + ")"
         );
 
@@ -120,10 +122,10 @@ public class SchemaTest extends SqlTestSupport {
                 "CREATE EXTERNAL TABLE " + name + " "
                         + "TYPE \"" + LocalPartitionedMapConnector.TYPE_NAME + "\" "
                         + "OPTIONS ("
-                        + "\"" + TO_SERIALIZATION_KEY_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
-                        + ", \"" + TO_KEY_CLASS + "\" '" + Integer.class.getName() + "'"
-                        + ", \"" + TO_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
-                        + ", \"" + TO_VALUE_CLASS + "\" '" + Person.class.getName() + "'"
+                        + "\"" + OPTION_SERIALIZATION_KEY_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
+                        + ", \"" + OPTION_KEY_CLASS + "\" '" + Integer.class.getName() + "'"
+                        + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
+                        + ", \"" + OPTION_VALUE_CLASS + "\" '" + Person.class.getName() + "'"
                         + ")"
         );
 

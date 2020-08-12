@@ -38,12 +38,12 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 import static com.hazelcast.jet.sql.SqlConnector.PORTABLE_SERIALIZATION_FORMAT;
-import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.TO_KEY_CLASS_ID;
-import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.TO_KEY_CLASS_VERSION;
-import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.TO_KEY_FACTORY_ID;
-import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.TO_VALUE_CLASS_ID;
-import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.TO_VALUE_CLASS_VERSION;
-import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.TO_VALUE_FACTORY_ID;
+import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.OPTION_KEY_CLASS_ID;
+import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.OPTION_KEY_CLASS_VERSION;
+import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.OPTION_KEY_FACTORY_ID;
+import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.OPTION_VALUE_CLASS_ID;
+import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.OPTION_VALUE_CLASS_VERSION;
+import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.OPTION_VALUE_FACTORY_ID;
 import static com.hazelcast.jet.sql.impl.connector.ResolverUtil.lookupClassDefinition;
 
 // TODO: deduplicate with MapSampleMetadataResolver
@@ -173,11 +173,11 @@ final class PortableEntryMetadataResolver implements EntryMetadataResolver {
             Map<String, String> options,
             InternalSerializationService serializationService
     ) {
-        String factoryIdProperty = isKey ? TO_KEY_FACTORY_ID : TO_VALUE_FACTORY_ID;
+        String factoryIdProperty = isKey ? OPTION_KEY_FACTORY_ID : OPTION_VALUE_FACTORY_ID;
         String factoryId = options.get(factoryIdProperty);
-        String classIdProperty = isKey ? TO_KEY_CLASS_ID : TO_VALUE_CLASS_ID;
+        String classIdProperty = isKey ? OPTION_KEY_CLASS_ID : OPTION_VALUE_CLASS_ID;
         String classId = options.get(classIdProperty);
-        String classVersionProperty = isKey ? TO_KEY_CLASS_VERSION : TO_VALUE_CLASS_VERSION;
+        String classVersionProperty = isKey ? OPTION_KEY_CLASS_VERSION : OPTION_VALUE_CLASS_VERSION;
         String classVersion = options.get(classVersionProperty);
 
         if (factoryId == null || classId == null || classVersion == null) {

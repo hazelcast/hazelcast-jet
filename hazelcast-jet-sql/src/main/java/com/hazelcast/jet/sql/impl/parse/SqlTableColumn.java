@@ -79,14 +79,11 @@ public class SqlTableColumn extends SqlCall {
     @Override
     public void unparse(SqlWriter writer, int leftPrec, int rightPrec) {
         name.unparse(writer, leftPrec, rightPrec);
-        writer.print(" ");
         if (type != null) {
             type.unparse(writer, leftPrec, rightPrec);
         }
         if (externalName != null) {
-            writer.print(" ");
-            writer.keyword("EXTERNAL");
-            writer.keyword("NAME");
+            writer.keyword("EXTERNAL NAME");
             externalName.unparse(writer, leftPrec, rightPrec);
         }
     }

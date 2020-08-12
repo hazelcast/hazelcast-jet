@@ -37,10 +37,10 @@ import java.util.Map;
 
 import static com.hazelcast.jet.core.TestUtil.createMap;
 import static com.hazelcast.jet.sql.SqlConnector.JAVA_SERIALIZATION_FORMAT;
-import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.TO_KEY_CLASS;
-import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.TO_SERIALIZATION_KEY_FORMAT;
-import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.TO_SERIALIZATION_VALUE_FORMAT;
-import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.TO_VALUE_CLASS;
+import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.OPTION_KEY_CLASS;
+import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.OPTION_SERIALIZATION_KEY_FORMAT;
+import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.OPTION_SERIALIZATION_VALUE_FORMAT;
+import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.OPTION_VALUE_CLASS;
 import static java.time.Instant.ofEpochMilli;
 import static java.time.ZoneId.systemDefault;
 import static java.time.ZoneOffset.UTC;
@@ -89,10 +89,10 @@ public class SqlPojoTest extends SqlTestSupport {
                 + ", value_id INT EXTERNAL NAME \"this.id\""
                 + ") TYPE \"" + LocalPartitionedMapConnector.TYPE_NAME + "\" "
                 + "OPTIONS ("
-                + "\"" + TO_SERIALIZATION_KEY_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
-                + ", \"" + TO_KEY_CLASS + "\" '" + PersonId.class.getName() + "'"
-                + ", \"" + TO_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
-                + ", \"" + TO_VALUE_CLASS + "\" '" + Person.class.getName() + "'"
+                + "\"" + OPTION_SERIALIZATION_KEY_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
+                + ", \"" + OPTION_KEY_CLASS + "\" '" + PersonId.class.getName() + "'"
+                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
+                + ", \"" + OPTION_VALUE_CLASS + "\" '" + Person.class.getName() + "'"
                 + ")"
         );
 
@@ -119,10 +119,10 @@ public class SqlPojoTest extends SqlTestSupport {
         executeSql("CREATE OR REPLACE EXTERNAL TABLE " + name + " "
                 + "TYPE \"" + LocalPartitionedMapConnector.TYPE_NAME + "\" "
                 + "OPTIONS ("
-                + "\"" + TO_SERIALIZATION_KEY_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
-                + ", \"" + TO_KEY_CLASS + "\" '" + PersonId.class.getName() + "'"
-                + ", \"" + TO_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
-                + ", \"" + TO_VALUE_CLASS + "\" '" + InsuredPerson.class.getName() + "'"
+                + "\"" + OPTION_SERIALIZATION_KEY_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
+                + ", \"" + OPTION_KEY_CLASS + "\" '" + PersonId.class.getName() + "'"
+                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
+                + ", \"" + OPTION_VALUE_CLASS + "\" '" + InsuredPerson.class.getName() + "'"
                 + ")"
         );
 
@@ -150,10 +150,10 @@ public class SqlPojoTest extends SqlTestSupport {
                 + "ssn BIGINT"
                 + ") TYPE \"" + LocalPartitionedMapConnector.TYPE_NAME + "\" "
                 + "OPTIONS ("
-                + "\"" + TO_SERIALIZATION_KEY_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
-                + ", \"" + TO_KEY_CLASS + "\" '" + PersonId.class.getName() + "'"
-                + ", \"" + TO_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
-                + ", \"" + TO_VALUE_CLASS + "\" '" + Person.class.getName() + "'"
+                + "\"" + OPTION_SERIALIZATION_KEY_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
+                + ", \"" + OPTION_KEY_CLASS + "\" '" + PersonId.class.getName() + "'"
+                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
+                + ", \"" + OPTION_VALUE_CLASS + "\" '" + Person.class.getName() + "'"
                 + ")"
         );
 
@@ -181,10 +181,10 @@ public class SqlPojoTest extends SqlTestSupport {
         executeSql("CREATE EXTERNAL TABLE " + name + " "
                 + "TYPE \"" + LocalPartitionedMapConnector.TYPE_NAME + "\" "
                 + "OPTIONS ("
-                + "\"" + TO_SERIALIZATION_KEY_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
-                + ", \"" + TO_KEY_CLASS + "\" '" + BigInteger.class.getName() + "'"
-                + ", \"" + TO_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
-                + ", \"" + TO_VALUE_CLASS + "\" '" + AllTypesValue.class.getName() + "'"
+                + "\"" + OPTION_SERIALIZATION_KEY_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
+                + ", \"" + OPTION_KEY_CLASS + "\" '" + BigInteger.class.getName() + "'"
+                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
+                + ", \"" + OPTION_VALUE_CLASS + "\" '" + AllTypesValue.class.getName() + "'"
                 + ")"
         );
 
@@ -360,10 +360,10 @@ public class SqlPojoTest extends SqlTestSupport {
         executeSql("CREATE EXTERNAL TABLE " + name + " "
                 + "TYPE \"" + LocalPartitionedMapConnector.TYPE_NAME + "\" "
                 + "OPTIONS ("
-                + "\"" + TO_SERIALIZATION_KEY_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
-                + ", \"" + TO_KEY_CLASS + "\" '" + PersonId.class.getName() + "'"
-                + ", \"" + TO_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
-                + ", \"" + TO_VALUE_CLASS + "\" '" + Person.class.getName() + "'"
+                + "\"" + OPTION_SERIALIZATION_KEY_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
+                + ", \"" + OPTION_KEY_CLASS + "\" '" + PersonId.class.getName() + "'"
+                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
+                + ", \"" + OPTION_VALUE_CLASS + "\" '" + Person.class.getName() + "'"
                 + ")"
         );
         return name;

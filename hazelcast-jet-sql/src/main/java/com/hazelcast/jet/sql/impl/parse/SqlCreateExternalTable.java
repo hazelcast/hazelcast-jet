@@ -161,7 +161,7 @@ public class SqlCreateExternalTable extends SqlCreate {
     private void printIndent(SqlWriter writer) {
         writer.sep(",", false);
         writer.newlineAndIndent();
-        writer.print(" ");
+        writer.print("  ");
     }
 
     @Override

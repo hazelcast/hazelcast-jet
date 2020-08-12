@@ -22,10 +22,10 @@ import org.junit.Test;
 import java.util.Map;
 
 import static com.hazelcast.jet.sql.SqlConnector.JAVA_SERIALIZATION_FORMAT;
-import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.TO_KEY_CLASS;
-import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.TO_SERIALIZATION_KEY_FORMAT;
-import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.TO_SERIALIZATION_VALUE_FORMAT;
-import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.TO_VALUE_CLASS;
+import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.OPTION_KEY_CLASS;
+import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.OPTION_SERIALIZATION_KEY_FORMAT;
+import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.OPTION_SERIALIZATION_VALUE_FORMAT;
+import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.OPTION_VALUE_CLASS;
 import static java.util.Arrays.asList;
 
 public class SqlTest extends SqlTestSupport {
@@ -50,10 +50,10 @@ public class SqlTest extends SqlTestSupport {
                         + "key EXTERNAL NAME \"__key\""
                         + ") TYPE \"" + LocalPartitionedMapConnector.TYPE_NAME + "\" "
                         + "OPTIONS ("
-                        + "\"" + TO_SERIALIZATION_KEY_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
-                        + ", \"" + TO_KEY_CLASS + "\" '" + Integer.class.getName() + "'"
-                        + ", \"" + TO_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
-                        + ", \"" + TO_VALUE_CLASS + "\" '" + String.class.getName() + "'"
+                        + "\"" + OPTION_SERIALIZATION_KEY_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
+                        + ", \"" + OPTION_KEY_CLASS + "\" '" + Integer.class.getName() + "'"
+                        + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
+                        + ", \"" + OPTION_VALUE_CLASS + "\" '" + String.class.getName() + "'"
                         + ") AS "
                         + "SELECT age, username FROM TABLE ("
                         + "FILE ('avro', '" + RESOURCES_PATH + "', 'users.avro')"
@@ -83,10 +83,10 @@ public class SqlTest extends SqlTestSupport {
                         + "key EXTERNAL NAME \"__key\""
                         + ") TYPE \"" + LocalPartitionedMapConnector.TYPE_NAME + "\" "
                         + "OPTIONS ("
-                        + "\"" + TO_SERIALIZATION_KEY_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
-                        + ", \"" + TO_KEY_CLASS + "\" '" + String.class.getName() + "'"
-                        + ", \"" + TO_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
-                        + ", \"" + TO_VALUE_CLASS + "\" '" + Long.class.getName() + "'"
+                        + "\"" + OPTION_SERIALIZATION_KEY_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
+                        + ", \"" + OPTION_KEY_CLASS + "\" '" + String.class.getName() + "'"
+                        + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
+                        + ", \"" + OPTION_VALUE_CLASS + "\" '" + Long.class.getName() + "'"
                         + ") AS "
                         + "SELECT this AS \"value\", CAST(__key + 1 AS BIGINT) AS id FROM " + sourceName
         );
@@ -109,10 +109,10 @@ public class SqlTest extends SqlTestSupport {
                         + "key EXTERNAL NAME \"__key\""
                         + ") TYPE \"" + LocalPartitionedMapConnector.TYPE_NAME + "\" "
                         + "OPTIONS ("
-                        + "\"" + TO_SERIALIZATION_KEY_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
-                        + ", \"" + TO_KEY_CLASS + "\" '" + Byte.class.getName() + "'"
-                        + ", \"" + TO_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
-                        + ", \"" + TO_VALUE_CLASS + "\" '" + String.class.getName() + "'"
+                        + "\"" + OPTION_SERIALIZATION_KEY_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
+                        + ", \"" + OPTION_KEY_CLASS + "\" '" + Byte.class.getName() + "'"
+                        + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
+                        + ", \"" + OPTION_VALUE_CLASS + "\" '" + String.class.getName() + "'"
                         + ") AS "
                         + "VALUES (0, 'value-0'), (1, 'value-1')"
         );

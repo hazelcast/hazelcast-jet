@@ -95,8 +95,8 @@ public class KafkaSqlConnector extends EntrySqlConnector {
         Properties kafkaProperties = new Properties();
         kafkaProperties.putAll(options);
         kafkaProperties.remove(TO_TOPIC_NAME);
-        kafkaProperties.remove(TO_KEY_CLASS);
-        kafkaProperties.remove(TO_VALUE_CLASS);
+        kafkaProperties.remove(OPTION_KEY_CLASS);
+        kafkaProperties.remove(OPTION_VALUE_CLASS);
 
         EntryMetadata keyMetadata = resolveMetadata(externalFields, options, true, null);
         EntryMetadata valueMetadata = resolveMetadata(externalFields, options, false, null);
