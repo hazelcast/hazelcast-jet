@@ -19,9 +19,13 @@ package com.hazelcast.jet.sql.impl.connector.file;
 import com.hazelcast.function.BiFunctionEx;
 import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
+import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.hadoop.impl.ReadHadoopNewApiP;
+import com.hazelcast.jet.hadoop.impl.WriteHadoopNewApiP;
+import com.hazelcast.jet.sql.impl.connector.Processors;
 import com.hazelcast.jet.sql.impl.connector.RowProjector;
 import com.hazelcast.jet.sql.impl.extract.JsonQueryTarget;
+import com.hazelcast.jet.sql.impl.inject.JsonUpsertTargetDescriptor;
 import com.hazelcast.jet.sql.impl.schema.ExternalField;
 import com.hazelcast.sql.impl.expression.Expression;
 import com.hazelcast.sql.impl.schema.TableField;
@@ -35,6 +39,7 @@ import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
+import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -42,10 +47,11 @@ import java.io.InputStreamReader;
 import java.io.Reader;
 import java.util.List;
 
+import static com.hazelcast.function.FunctionEx.identity;
 import static com.hazelcast.jet.hadoop.impl.SerializableConfiguration.asSerializable;
-import static com.hazelcast.jet.sql.impl.connector.file.JsonMetadataResolver.toTableFields;
 import static com.hazelcast.jet.sql.impl.connector.file.JsonMetadataResolver.paths;
 import static com.hazelcast.jet.sql.impl.connector.file.JsonMetadataResolver.resolveFieldsFromSample;
+import static com.hazelcast.jet.sql.impl.connector.file.JsonMetadataResolver.toTableFields;
 import static com.hazelcast.jet.sql.impl.connector.file.JsonMetadataResolver.types;
 
 final class RemoteJsonMetadataResolver implements JsonMetadataResolver {
@@ -90,10 +96,13 @@ final class RemoteJsonMetadataResolver implements JsonMetadataResolver {
     }
 
     static Metadata resolveMetadata(List<ExternalField> externalFields, FileOptions options, Job job) throws IOException {
+        List<TableField> fields = toTableFields(externalFields);
+
         TextInputFormat.addInputPath(job, new Path(options.path()));
         job.setInputFormatClass(TextInputFormat.class);
 
-        List<TableField> fields = toTableFields(externalFields);
+        job.setOutputFormatClass(TextOutputFormat.class);
+        TextOutputFormat.setOutputPath(job, new Path(options.path()));
 
         return new Metadata(
                 new JsonTargetDescriptor(job.getConfiguration()),
@@ -112,7 +121,7 @@ final class RemoteJsonMetadataResolver implements JsonMetadataResolver {
         }
 
         @Override
-        public ProcessorMetaSupplier processor(
+        public ProcessorMetaSupplier readProcessor(
                 List<TableField> fields,
                 Expression<Boolean> predicate,
                 List<Expression<?>> projection
@@ -129,6 +138,16 @@ final class RemoteJsonMetadataResolver implements JsonMetadataResolver {
             };
 
             return new ReadHadoopNewApiP.MetaSupplier<>(asSerializable(configuration), projectionSupplierFn);
+        }
+
+        @Override
+        public ProcessorSupplier projectorProcessor(List<TableField> fields) {
+            return Processors.projector(JsonUpsertTargetDescriptor.INSTANCE, paths(fields), types(fields));
+        }
+
+        @Override
+        public ProcessorMetaSupplier writeProcessor(List<TableField> fields) {
+            return new WriteHadoopNewApiP.MetaSupplier<>(asSerializable(configuration), o -> null, identity());
         }
     }
 }

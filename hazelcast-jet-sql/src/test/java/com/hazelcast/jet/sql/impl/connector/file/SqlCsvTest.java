@@ -19,21 +19,28 @@ package com.hazelcast.jet.sql.impl.connector.file;
 import com.hazelcast.jet.sql.SqlTestSupport;
 import org.junit.Test;
 
+import java.io.File;
+import java.io.IOException;
 import java.math.BigDecimal;
+import java.nio.file.Files;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.time.OffsetDateTime;
+import java.time.ZonedDateTime;
 
 import static com.hazelcast.jet.sql.SqlConnector.CSV_SERIALIZATION_FORMAT;
 import static com.hazelcast.jet.sql.SqlConnector.OPTION_SERIALIZATION_FORMAT;
+import static java.time.ZoneId.systemDefault;
 import static java.time.ZoneOffset.UTC;
 import static java.util.Collections.singletonList;
 
 public class SqlCsvTest extends SqlTestSupport {
 
     @Test
-    public void supportsAllTypes() {
+    public void supportsAllTypes() throws IOException {
+        File directory = Files.createTempDirectory("sql-test-local-csv").toFile();
+        directory.deleteOnExit();
+
         String name = createRandomName();
         executeSql("CREATE EXTERNAL TABLE " + name + " ("
                 + "string VARCHAR"
@@ -52,8 +59,24 @@ public class SqlCsvTest extends SqlTestSupport {
                 + ") TYPE \"" + FileSqlConnector.TYPE_NAME + "\" "
                 + "OPTIONS ("
                 + "\"" + OPTION_SERIALIZATION_FORMAT + "\" '" + CSV_SERIALIZATION_FORMAT + "'"
-                + ", \"" + FileSqlConnector.OPTION_PATH + "\" '" + RESOURCES_PATH + "'"
-                + ", \"" + FileSqlConnector.OPTION_GLOB + "\" '" + "all-types.csv" + "'"
+                + ", \"" + FileSqlConnector.OPTION_PATH + "\" '" + directory.getAbsolutePath() + "'"
+                + ")"
+        );
+
+        executeSql("INSERT INTO " + name + " VALUES ("
+                + "'string'"
+                + ", true"
+                + ", 126"
+                + ", 32766"
+                + ", 2147483646"
+                + ", 9223372036854775806"
+                + ", 1234567890.1"
+                + ", 123451234567890.1"
+                + ", 9223372036854775.111"
+                + ", time'12:23:34'"
+                + ", date'2020-07-01'"
+                + ", timestamp'2020-07-01 12:23:34.1'"
+                + ", timestamp'2020-07-01 12:23:34.2'"
                 + ")"
         );
 
@@ -71,8 +94,10 @@ public class SqlCsvTest extends SqlTestSupport {
                         , new BigDecimal("9223372036854775.111")
                         , LocalTime.of(12, 23, 34)
                         , LocalDate.of(2020, 7, 1)
-                        , LocalDateTime.of(2020, 7, 1, 12, 23, 34, 100_000_000)
-                        , OffsetDateTime.of(2020, 7, 1, 12, 23, 34, 200_000_000, UTC)
+                        , LocalDateTime.of(2020, 7, 1, 12, 23, 34, 0)
+                        , ZonedDateTime.of(2020, 7, 1, 12, 23, 34, 200_000_000, UTC)
+                                       .withZoneSameInstant(systemDefault())
+                                       .toOffsetDateTime()
                 ))
         );
     }

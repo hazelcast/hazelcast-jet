@@ -16,61 +16,50 @@
 
 package com.hazelcast.jet.sql.impl.connector;
 
-import com.hazelcast.sql.impl.extract.QueryPath;
 import com.hazelcast.sql.impl.inject.UpsertInjector;
 import com.hazelcast.sql.impl.inject.UpsertTarget;
 import com.hazelcast.sql.impl.type.QueryDataType;
 
-import java.util.Map.Entry;
-
-import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.sql.impl.type.converter.ToConverters.getToConverter;
 
-class EntryProjector {
+class Projector {
 
-    private final UpsertTarget keyTarget;
-    private final UpsertTarget valueTarget;
+    private final UpsertTarget target;
 
     private final QueryDataType[] types;
 
     private final UpsertInjector[] injectors;
 
-    EntryProjector(
-            UpsertTarget keyTarget,
-            UpsertTarget valueTarget,
-            QueryPath[] paths,
+    Projector(
+            UpsertTarget target,
+            String[] paths,
             QueryDataType[] types
     ) {
-        this.keyTarget = keyTarget;
-        this.valueTarget = valueTarget;
+        this.target = target;
 
         this.types = types;
 
-        this.injectors = createInjectors(keyTarget, valueTarget, paths);
+        this.injectors = createInjectors(target, paths);
     }
 
     private static UpsertInjector[] createInjectors(
-            UpsertTarget keyTarget,
-            UpsertTarget valueTarget,
-            QueryPath[] paths
+            UpsertTarget target,
+            String[] paths
     ) {
         UpsertInjector[] injectors = new UpsertInjector[paths.length];
         for (int i = 0; i < paths.length; i++) {
-            QueryPath path = paths[i];
-            injectors[i] = path.isKey()
-                    ? keyTarget.createInjector(path.getPath())
-                    : valueTarget.createInjector(path.getPath());
+            String path = paths[i];
+            injectors[i] = target.createInjector(path);
         }
         return injectors;
     }
 
-    Entry<Object, Object> project(Object[] row) {
-        keyTarget.init();
-        valueTarget.init();
+    Object project(Object[] row) {
+        target.init();
         for (int i = 0; i < row.length; i++) {
             Object value = getToConverter(types[i]).convert(row[i]);
             injectors[i].set(value);
         }
-        return entry(keyTarget.conclude(), valueTarget.conclude());
+        return target.conclude();
     }
 }

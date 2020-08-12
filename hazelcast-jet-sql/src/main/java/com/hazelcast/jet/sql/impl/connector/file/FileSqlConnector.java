@@ -29,6 +29,7 @@ import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 
+import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.sql.impl.connector.file.MetadataResolver.resolveMetadata;
 import static java.util.Collections.emptyList;
 
@@ -119,7 +120,31 @@ public class FileSqlConnector implements SqlConnector {
 
         return dag.newVertex(
                 table.toString(),
-                table.getTargetDescriptor().processor(table.getFields(), predicate, projection)
+                table.getTargetDescriptor().readProcessor(table.getFields(), predicate, projection)
         );
+    }
+
+    @Override
+    public boolean supportsSink() {
+        return true;
+    }
+
+    @Nonnull
+    @Override
+    public Vertex sink(@Nonnull DAG dag, @Nonnull Table table0) {
+        FileTable table = (FileTable) table0;
+
+        Vertex vStart = dag.newVertex(
+                "Project(" + table + ")",
+                table.getTargetDescriptor().projectorProcessor(table.getFields())
+        );
+
+        Vertex vEnd = dag.newVertex(
+                table.toString(),
+                table.getTargetDescriptor().writeProcessor(table.getFields())
+        );
+
+        dag.edge(between(vStart, vEnd));
+        return vStart;
     }
 }

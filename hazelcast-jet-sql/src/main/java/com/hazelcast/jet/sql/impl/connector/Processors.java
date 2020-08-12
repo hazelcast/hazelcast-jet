@@ -25,10 +25,7 @@ import com.hazelcast.jet.impl.processor.TransformP;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.DataSerializable;
-import com.hazelcast.sql.impl.extract.QueryPath;
 import com.hazelcast.sql.impl.inject.UpsertTargetDescriptor;
-import com.hazelcast.sql.impl.schema.TableField;
-import com.hazelcast.sql.impl.schema.map.MapTableField;
 import com.hazelcast.sql.impl.type.QueryDataType;
 
 import javax.annotation.Nonnull;
@@ -37,44 +34,41 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-public final class EntryProcessors {
+public final class Processors {
 
-    private EntryProcessors() {
+    private Processors() {
     }
 
-    public static ProcessorSupplier entryProjector(
-            UpsertTargetDescriptor keyDescriptor,
-            UpsertTargetDescriptor valueDescriptor,
-            List<TableField> fields
+    public static ProcessorSupplier projector(
+            UpsertTargetDescriptor descriptor,
+            String[] paths,
+            QueryDataType[] types
     ) {
-        return new EntryProjectorProcessorSupplier(keyDescriptor, valueDescriptor, fields);
+        return new ProjectorProcessorSupplier(descriptor, paths, types);
     }
 
-    private static class EntryProjectorProcessorSupplier implements ProcessorSupplier, DataSerializable {
+    private static class ProjectorProcessorSupplier implements ProcessorSupplier, DataSerializable {
 
-        private UpsertTargetDescriptor keyDescriptor;
-        private UpsertTargetDescriptor valueDescriptor;
+        private UpsertTargetDescriptor descriptor;
 
-        private QueryPath[] paths;
+        private String[] paths;
         private QueryDataType[] types;
 
         private transient InternalSerializationService serializationService;
 
         @SuppressWarnings("unused")
-        EntryProjectorProcessorSupplier() {
+        ProjectorProcessorSupplier() {
         }
 
-        EntryProjectorProcessorSupplier(
-                UpsertTargetDescriptor keyDescriptor,
-                UpsertTargetDescriptor valueDescriptor,
-                List<TableField> fields
+        ProjectorProcessorSupplier(
+                UpsertTargetDescriptor descriptor,
+                String[] paths,
+                QueryDataType[] types
         ) {
-            this.keyDescriptor = keyDescriptor;
-            this.valueDescriptor = valueDescriptor;
+            this.descriptor = descriptor;
 
-            // TODO: get rid of casting ???
-            this.paths = fields.stream().map(field -> ((MapTableField) field).getPath()).toArray(QueryPath[]::new);
-            this.types = fields.stream().map(TableField::getType).toArray(QueryDataType[]::new);
+            this.paths = paths;
+            this.types = types;
         }
 
         @Override
@@ -88,9 +82,8 @@ public final class EntryProcessors {
             List<Processor> processors = new ArrayList<>(count);
             for (int i = 0; i < count; i++) {
                 ResettableSingletonTraverser<Object> traverser = new ResettableSingletonTraverser<>();
-                EntryProjector projector = new EntryProjector(
-                        keyDescriptor.create(serializationService),
-                        valueDescriptor.create(serializationService),
+                Projector projector = new Projector(
+                        descriptor.create(serializationService),
                         paths,
                         types
                 );
@@ -105,16 +98,14 @@ public final class EntryProcessors {
 
         @Override
         public void writeData(ObjectDataOutput out) throws IOException {
-            out.writeObject(keyDescriptor);
-            out.writeObject(valueDescriptor);
+            out.writeObject(descriptor);
             out.writeObject(paths);
             out.writeObject(types);
         }
 
         @Override
         public void readData(ObjectDataInput in) throws IOException {
-            keyDescriptor = in.readObject();
-            valueDescriptor = in.readObject();
+            descriptor = in.readObject();
             paths = in.readObject();
             types = in.readObject();
         }

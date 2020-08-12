@@ -16,52 +16,42 @@
 
 package com.hazelcast.jet.sql.impl.inject;
 
-import com.hazelcast.internal.json.Json;
-import com.hazelcast.internal.json.JsonObject;
 import com.hazelcast.sql.impl.inject.UpsertInjector;
 import com.hazelcast.sql.impl.inject.UpsertTarget;
 import com.hazelcast.sql.impl.type.QueryDataType;
 
 // TODO: can it be non-thread safe ?
-class JsonUpsertTarget implements UpsertTarget {
+class CsvUpsertTarget implements UpsertTarget {
 
-    private JsonObject json;
+    private final StringBuilder line;
+    private final String delimiter;
 
-    JsonUpsertTarget() {
+    private int i;
+
+    CsvUpsertTarget(String delimiter) {
+        this.line = new StringBuilder();
+        this.delimiter = delimiter;
     }
 
     @Override
     public UpsertInjector createInjector(String path) {
         return value -> {
-            if (value instanceof Boolean) {
-                json.add(path, (boolean) value);
-            } else if (value instanceof Byte) {
-                json.add(path, (byte) value);
-            } else if (value instanceof Short) {
-                json.add(path, (short) value);
-            } else if (value instanceof Integer) {
-                json.add(path, (int) value);
-            } else if (value instanceof Long) {
-                json.add(path, (long) value);
-            } else if (value instanceof Float) {
-                json.add(path, (float) value);
-            } else if (value instanceof Double) {
-                json.add(path, (double) value);
-            } else {
-                json.add(path, (String) QueryDataType.VARCHAR.convert(value));
+            if (i++ > 0) {
+                line.append(delimiter);
             }
+
+            line.append(QueryDataType.VARCHAR.convert(value));
         };
     }
 
     @Override
     public void init() {
-        json = Json.object();
+        line.setLength(0);
+        i = 0;
     }
 
     @Override
     public Object conclude() {
-        JsonObject json = this.json;
-        this.json = null;
-        return json.toString();
+        return line.toString();
     }
 }

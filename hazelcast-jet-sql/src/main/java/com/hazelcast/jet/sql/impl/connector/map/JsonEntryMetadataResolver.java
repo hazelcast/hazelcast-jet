@@ -19,7 +19,7 @@ package com.hazelcast.jet.sql.impl.connector.map;
 import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.jet.sql.impl.connector.EntryMetadata;
 import com.hazelcast.jet.sql.impl.connector.EntryMetadataResolver;
-import com.hazelcast.jet.sql.impl.inject.JsonUpsertTargetDescriptor;
+import com.hazelcast.jet.sql.impl.inject.HazelcastJsonUpsertTargetDescriptor;
 import com.hazelcast.jet.sql.impl.schema.ExternalField;
 import com.hazelcast.sql.impl.QueryException;
 import com.hazelcast.sql.impl.extract.GenericQueryTargetDescriptor;
@@ -110,7 +110,7 @@ final class JsonEntryMetadataResolver implements EntryMetadataResolver {
         }
         return new EntryMetadata(
                 new GenericQueryTargetDescriptor(pathsRequiringConversion),
-                JsonUpsertTargetDescriptor.INSTANCE,
+                HazelcastJsonUpsertTargetDescriptor.INSTANCE,
                 fields
         );
     }

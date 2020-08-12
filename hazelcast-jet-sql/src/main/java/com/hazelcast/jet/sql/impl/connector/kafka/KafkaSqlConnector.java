@@ -23,7 +23,7 @@ import com.hazelcast.jet.kafka.KafkaProcessors;
 import com.hazelcast.jet.sql.impl.connector.EntryMetadata;
 import com.hazelcast.jet.sql.impl.connector.EntryMetadataResolver;
 import com.hazelcast.jet.sql.impl.connector.EntrySqlConnector;
-import com.hazelcast.jet.sql.impl.connector.JavaEntryMetadataResolver;
+import com.hazelcast.jet.sql.impl.connector.map.JavaEntryMetadataResolver;
 import com.hazelcast.jet.sql.impl.schema.ExternalField;
 import com.hazelcast.spi.impl.NodeEngine;
 import com.hazelcast.sql.impl.expression.Expression;

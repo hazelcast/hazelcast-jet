@@ -33,8 +33,8 @@ import static java.util.stream.Collectors.toMap;
 interface CsvMetadataResolver {
 
     static void validateFields(List<ExternalField> userFields) {
-        for (ExternalField externalField : userFields) {
-            if (externalField.externalName() != null) {
+        for (ExternalField field : userFields) {
+            if (field.externalName() != null) {
                 throw QueryException.error("EXTERNAL NAME not supported");
             }
         }

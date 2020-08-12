@@ -43,7 +43,7 @@ public class SqlHadoopTest extends SqlTestSupport {
 
     @BeforeClass
     public static void beforeClass() throws IOException {
-        File directory = Files.createTempDirectory("test_sql_hdfs").toFile().getAbsoluteFile();
+        File directory = Files.createTempDirectory("sql-test-hdfs").toFile().getAbsoluteFile();
         directory.deleteOnExit();
 
         Configuration configuration = new Configuration();
@@ -61,8 +61,8 @@ public class SqlHadoopTest extends SqlTestSupport {
     public void supportsCsv() throws IOException {
         String name = createRandomName();
         executeSql("CREATE EXTERNAL TABLE " + name + " ("
-                + "firstName VARCHAR"
-                + ", lastName VARCHAR"
+                + "id BIGINT"
+                + ", name VARCHAR"
                 + ") TYPE \"" + FileSqlConnector.TYPE_NAME + "\" "
                 + "OPTIONS ("
                 + "\"" + OPTION_SERIALIZATION_FORMAT + "\" '" + CSV_SERIALIZATION_FORMAT + "'"
@@ -70,15 +70,13 @@ public class SqlHadoopTest extends SqlTestSupport {
                 + ")"
         );
 
-        store("/csv/users-1.csv", "Joe,Doe");
-        store("/csv/users-2.csv", "Alice,Smith\nBob,Unknown");
+        executeSql("INSERT INTO " + name + " VALUES (1, 'Alice'), (2, 'Bob')");
 
         assertRowsEventuallyAnyOrder(
                 "SELECT * FROM " + name,
                 asList(
-                        new Row("Joe", "Doe")
-                        , new Row("Alice", "Smith")
-                        , new Row("Bob", "Unknown")
+                        new Row(1L, "Alice")
+                        , new Row(2L, "Bob")
                 )
         );
     }
@@ -110,8 +108,8 @@ public class SqlHadoopTest extends SqlTestSupport {
     public void supportsJson() throws IOException {
         String name = createRandomName();
         executeSql("CREATE EXTERNAL TABLE " + name + " ("
-                + "firstName VARCHAR"
-                + ", lastName VARCHAR"
+                + "id BIGINT"
+                + ", name VARCHAR"
                 + ") TYPE \"" + FileSqlConnector.TYPE_NAME + "\" "
                 + "OPTIONS ("
                 + "\"" + OPTION_SERIALIZATION_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + "'"
@@ -119,18 +117,13 @@ public class SqlHadoopTest extends SqlTestSupport {
                 + ")"
         );
 
-        store("/json/users-1.csv", "{\"firstName\": \"Joe\", \"lastName\": \"Doe\"}");
-        store("/json/users-2.csv",
-                "{\"firstName\": \"Alice\", \"lastName\": \"Smith\"}\n" +
-                        "{\"firstName\": \"Bob\", \"lastName\": \"Unknown\"}"
-        );
+        executeSql("INSERT INTO " + name + " VALUES (1, 'Alice'), (2, 'Bob')");
 
         assertRowsEventuallyAnyOrder(
                 "SELECT * FROM " + name,
                 asList(
-                        new Row("Joe", "Doe")
-                        , new Row("Alice", "Smith")
-                        , new Row("Bob", "Unknown")
+                        new Row(1L, "Alice")
+                        , new Row(2L, "Bob")
                 )
         );
     }
@@ -164,8 +157,8 @@ public class SqlHadoopTest extends SqlTestSupport {
     public void supportsAvro() throws IOException {
         String name = createRandomName();
         executeSql("CREATE EXTERNAL TABLE " + name + " ("
-                + "age INT"
-                + ", username VARCHAR"
+                + "id BIGINT"
+                + ", name VARCHAR"
                 + ") TYPE \"" + FileSqlConnector.TYPE_NAME + "\" "
                 + "OPTIONS ("
                 + "\"" + OPTION_SERIALIZATION_FORMAT + "\" '" + AVRO_SERIALIZATION_FORMAT + "'"
@@ -173,13 +166,13 @@ public class SqlHadoopTest extends SqlTestSupport {
                 + ")"
         );
 
-        store("/avro/users.avro", Files.readAllBytes(Paths.get("src/test/resources/users.avro")));
+        executeSql("INSERT INTO " + name + " VALUES (1, 'Alice'), (2, 'Bob')");
 
         assertRowsEventuallyAnyOrder(
                 "SELECT * FROM " + name,
                 asList(
-                        new Row(0, "User0")
-                        , new Row(1, "User1")
+                        new Row(1L, "Alice")
+                        , new Row(2L, "Bob")
                 )
         );
     }

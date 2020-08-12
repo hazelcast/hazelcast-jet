@@ -19,9 +19,13 @@ package com.hazelcast.jet.sql.impl.connector.file;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
+import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.impl.connector.ReadFilesP;
+import com.hazelcast.jet.impl.connector.WriteFileP;
+import com.hazelcast.jet.sql.impl.connector.Processors;
 import com.hazelcast.jet.sql.impl.connector.RowProjector;
 import com.hazelcast.jet.sql.impl.extract.CsvQueryTarget;
+import com.hazelcast.jet.sql.impl.inject.CsvUpsertTargetDescriptor;
 import com.hazelcast.jet.sql.impl.schema.ExternalField;
 import com.hazelcast.sql.impl.expression.Expression;
 import com.hazelcast.sql.impl.schema.TableField;
@@ -36,9 +40,13 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Stream;
 
+import static com.hazelcast.function.FunctionEx.identity;
 import static com.hazelcast.jet.impl.util.Util.firstLineFromFirstFile;
-import static com.hazelcast.jet.sql.impl.connector.file.CsvMetadataResolver.toTableFields;
+import static com.hazelcast.jet.sql.impl.connector.file.CsvMetadataResolver.paths;
 import static com.hazelcast.jet.sql.impl.connector.file.CsvMetadataResolver.resolveFieldsFromSample;
+import static com.hazelcast.jet.sql.impl.connector.file.CsvMetadataResolver.toTableFields;
+import static com.hazelcast.jet.sql.impl.connector.file.CsvMetadataResolver.types;
+import static com.hazelcast.jet.sql.impl.connector.file.CsvMetadataResolver.validateFields;
 
 final class LocalCsvMetadataResolver implements CsvMetadataResolver {
 
@@ -50,7 +58,7 @@ final class LocalCsvMetadataResolver implements CsvMetadataResolver {
             FileOptions options
     ) throws IOException {
         if (!userFields.isEmpty()) {
-            CsvMetadataResolver.validateFields(userFields);
+            validateFields(userFields);
             return userFields;
         } else {
             // TODO: ensure options.header() == true ???
@@ -104,7 +112,7 @@ final class LocalCsvMetadataResolver implements CsvMetadataResolver {
         }
 
         @Override
-        public ProcessorMetaSupplier processor(
+        public ProcessorMetaSupplier readProcessor(
                 List<TableField> fields,
                 Expression<Boolean> predicate,
                 List<Expression<?>> projection
@@ -113,8 +121,8 @@ final class LocalCsvMetadataResolver implements CsvMetadataResolver {
             long linesToSkip = this.header ? 1 : 0;
             String delimiter = this.delimiter;
             Map<String, Integer> indicesByNames = CsvMetadataResolver.indices(fields);
-            String[] paths = CsvMetadataResolver.paths(fields);
-            QueryDataType[] types = CsvMetadataResolver.types(fields);
+            String[] paths = paths(fields);
+            QueryDataType[] types = types(fields);
 
             SupplierEx<RowProjector> projectorSupplier =
                     () -> new RowProjector(new CsvQueryTarget(indicesByNames), paths, types, predicate, projection);
@@ -130,6 +138,17 @@ final class LocalCsvMetadataResolver implements CsvMetadataResolver {
             };
 
             return ReadFilesP.metaSupplier(path, glob, sharedFileSystem, readFileFn);
+        }
+
+        @Override
+        public ProcessorSupplier projectorProcessor(List<TableField> fields) {
+            return Processors.projector(new CsvUpsertTargetDescriptor(delimiter), paths(fields), types(fields));
+        }
+
+        @Override
+        public ProcessorMetaSupplier writeProcessor(List<TableField> fields) {
+            // TODO: customizable settings
+            return WriteFileP.metaSupplier(path, identity(), charset, null, 1024, true);
         }
     }
 }

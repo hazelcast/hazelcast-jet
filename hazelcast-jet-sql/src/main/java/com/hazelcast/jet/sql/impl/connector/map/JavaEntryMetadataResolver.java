@@ -14,9 +14,12 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.sql.impl.connector;
+package com.hazelcast.jet.sql.impl.connector.map;
 
 import com.hazelcast.internal.serialization.InternalSerializationService;
+import com.hazelcast.jet.sql.impl.connector.EntryMetadata;
+import com.hazelcast.jet.sql.impl.connector.EntryMetadataResolver;
+import com.hazelcast.jet.sql.impl.connector.ResolverUtil;
 import com.hazelcast.jet.sql.impl.inject.PojoUpsertTargetDescriptor;
 import com.hazelcast.jet.sql.impl.inject.PrimitiveUpsertTargetDescriptor;
 import com.hazelcast.jet.sql.impl.schema.ExternalField;

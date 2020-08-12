@@ -14,24 +14,14 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.sql.impl.connector.file;
+package com.hazelcast.jet.sql.impl.inject;
 
-import com.hazelcast.jet.core.ProcessorMetaSupplier;
-import com.hazelcast.jet.core.ProcessorSupplier;
-import com.hazelcast.sql.impl.expression.Expression;
-import com.hazelcast.sql.impl.schema.TableField;
+import com.hazelcast.core.HazelcastJsonValue;
 
-import java.util.List;
+class HazelcastJsonUpsertTarget extends JsonUpsertTarget {
 
-interface TargetDescriptor {
-
-    ProcessorMetaSupplier readProcessor(
-            List<TableField> fields,
-            Expression<Boolean> predicate,
-            List<Expression<?>> projection
-    );
-
-    ProcessorSupplier projectorProcessor(List<TableField> fields);
-
-    ProcessorMetaSupplier writeProcessor(List<TableField> fields);
+    @Override
+    public Object conclude() {
+        return new HazelcastJsonValue((String) super.conclude());
+    }
 }

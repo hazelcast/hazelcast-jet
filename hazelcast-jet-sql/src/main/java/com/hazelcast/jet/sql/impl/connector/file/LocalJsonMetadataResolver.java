@@ -19,9 +19,13 @@ package com.hazelcast.jet.sql.impl.connector.file;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
+import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.impl.connector.ReadFilesP;
+import com.hazelcast.jet.impl.connector.WriteFileP;
+import com.hazelcast.jet.sql.impl.connector.Processors;
 import com.hazelcast.jet.sql.impl.connector.RowProjector;
 import com.hazelcast.jet.sql.impl.extract.JsonQueryTarget;
+import com.hazelcast.jet.sql.impl.inject.JsonUpsertTargetDescriptor;
 import com.hazelcast.jet.sql.impl.schema.ExternalField;
 import com.hazelcast.sql.impl.expression.Expression;
 import com.hazelcast.sql.impl.schema.TableField;
@@ -35,10 +39,11 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Stream;
 
+import static com.hazelcast.function.FunctionEx.identity;
 import static com.hazelcast.jet.impl.util.Util.firstLineFromFirstFile;
-import static com.hazelcast.jet.sql.impl.connector.file.JsonMetadataResolver.toTableFields;
 import static com.hazelcast.jet.sql.impl.connector.file.JsonMetadataResolver.paths;
 import static com.hazelcast.jet.sql.impl.connector.file.JsonMetadataResolver.resolveFieldsFromSample;
+import static com.hazelcast.jet.sql.impl.connector.file.JsonMetadataResolver.toTableFields;
 import static com.hazelcast.jet.sql.impl.connector.file.JsonMetadataResolver.types;
 
 final class LocalJsonMetadataResolver implements JsonMetadataResolver {
@@ -91,7 +96,7 @@ final class LocalJsonMetadataResolver implements JsonMetadataResolver {
         }
 
         @Override
-        public ProcessorMetaSupplier processor(
+        public ProcessorMetaSupplier readProcessor(
                 List<TableField> fields,
                 Expression<Boolean> predicate,
                 List<Expression<?>> projection
@@ -112,6 +117,17 @@ final class LocalJsonMetadataResolver implements JsonMetadataResolver {
             };
 
             return ReadFilesP.metaSupplier(path, glob, sharedFileSystem, readFileFn);
+        }
+
+        @Override
+        public ProcessorSupplier projectorProcessor(List<TableField> fields) {
+            return Processors.projector(JsonUpsertTargetDescriptor.INSTANCE, paths(fields), types(fields));
+        }
+
+        @Override
+        public ProcessorMetaSupplier writeProcessor(List<TableField> fields) {
+            // TODO: customizable settings
+            return WriteFileP.metaSupplier(path, identity(), charset, null, 1024, true);
         }
     }
 }

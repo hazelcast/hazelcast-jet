@@ -19,9 +19,13 @@ package com.hazelcast.jet.sql.impl.connector.file;
 import com.hazelcast.function.BiFunctionEx;
 import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
+import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.hadoop.impl.ReadHadoopNewApiP;
+import com.hazelcast.jet.hadoop.impl.WriteHadoopNewApiP;
+import com.hazelcast.jet.sql.impl.connector.Processors;
 import com.hazelcast.jet.sql.impl.connector.RowProjector;
 import com.hazelcast.jet.sql.impl.extract.CsvQueryTarget;
+import com.hazelcast.jet.sql.impl.inject.CsvUpsertTargetDescriptor;
 import com.hazelcast.jet.sql.impl.schema.ExternalField;
 import com.hazelcast.sql.impl.expression.Expression;
 import com.hazelcast.sql.impl.schema.TableField;
@@ -35,6 +39,7 @@ import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
+import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -43,9 +48,14 @@ import java.io.Reader;
 import java.util.List;
 import java.util.Map;
 
+import static com.hazelcast.function.FunctionEx.identity;
 import static com.hazelcast.jet.hadoop.impl.SerializableConfiguration.asSerializable;
+import static com.hazelcast.jet.sql.impl.connector.file.CsvMetadataResolver.indices;
+import static com.hazelcast.jet.sql.impl.connector.file.CsvMetadataResolver.paths;
 import static com.hazelcast.jet.sql.impl.connector.file.CsvMetadataResolver.resolveFieldsFromSample;
 import static com.hazelcast.jet.sql.impl.connector.file.CsvMetadataResolver.toTableFields;
+import static com.hazelcast.jet.sql.impl.connector.file.CsvMetadataResolver.types;
+import static com.hazelcast.jet.sql.impl.connector.file.CsvMetadataResolver.validateFields;
 
 final class RemoteCsvMetadataResolver implements CsvMetadataResolver {
 
@@ -58,7 +68,7 @@ final class RemoteCsvMetadataResolver implements CsvMetadataResolver {
             Job job
     ) throws IOException {
         if (!userFields.isEmpty()) {
-            CsvMetadataResolver.validateFields(userFields);
+            validateFields(userFields);
             return userFields;
         } else {
             // TODO: ensure options.header() == true ???
@@ -90,10 +100,13 @@ final class RemoteCsvMetadataResolver implements CsvMetadataResolver {
     }
 
     static Metadata resolveMetadata(List<ExternalField> externalFields, FileOptions options, Job job) throws IOException {
+        List<TableField> fields = toTableFields(externalFields);
+
         TextInputFormat.addInputPath(job, new Path(options.path()));
         job.setInputFormatClass(TextInputFormat.class);
 
-        List<TableField> fields = toTableFields(externalFields);
+        job.setOutputFormatClass(TextOutputFormat.class);
+        TextOutputFormat.setOutputPath(job, new Path(options.path()));
 
         return new Metadata(
                 new CsvTargetDescriptor(options.delimiter(), options.header(), job.getConfiguration()),
@@ -118,16 +131,16 @@ final class RemoteCsvMetadataResolver implements CsvMetadataResolver {
         }
 
         @Override
-        public ProcessorMetaSupplier processor(
+        public ProcessorMetaSupplier readProcessor(
                 List<TableField> fields,
                 Expression<Boolean> predicate,
                 List<Expression<?>> projection
         ) {
             String delimiter = this.delimiter;
             boolean header = this.header;
-            Map<String, Integer> indicesByNames = CsvMetadataResolver.indices(fields);
-            String[] paths = CsvMetadataResolver.paths(fields);
-            QueryDataType[] types = CsvMetadataResolver.types(fields);
+            Map<String, Integer> indicesByNames = indices(fields);
+            String[] paths = paths(fields);
+            QueryDataType[] types = types(fields);
 
             SupplierEx<RowProjector> projectorSupplier =
                     () -> new RowProjector(new CsvQueryTarget(indicesByNames), paths, types, predicate, projection);
@@ -144,6 +157,16 @@ final class RemoteCsvMetadataResolver implements CsvMetadataResolver {
             };
 
             return new ReadHadoopNewApiP.MetaSupplier<>(asSerializable(configuration), projectionSupplierFn);
+        }
+
+        @Override
+        public ProcessorSupplier projectorProcessor(List<TableField> fields) {
+            return Processors.projector(new CsvUpsertTargetDescriptor(delimiter), paths(fields), types(fields));
+        }
+
+        @Override
+        public ProcessorMetaSupplier writeProcessor(List<TableField> fields) {
+            return new WriteHadoopNewApiP.MetaSupplier<>(asSerializable(configuration), o -> null, identity());
         }
     }
 }

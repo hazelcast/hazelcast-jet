@@ -20,7 +20,6 @@ import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.jet.sql.impl.connector.EntryMetadata;
 import com.hazelcast.jet.sql.impl.connector.EntryMetadataResolver;
 import com.hazelcast.jet.sql.impl.connector.EntrySqlConnector;
-import com.hazelcast.jet.sql.impl.connector.JavaEntryMetadataResolver;
 import com.hazelcast.jet.sql.impl.schema.ExternalField;
 import com.hazelcast.map.impl.MapContainer;
 import com.hazelcast.map.impl.MapService;

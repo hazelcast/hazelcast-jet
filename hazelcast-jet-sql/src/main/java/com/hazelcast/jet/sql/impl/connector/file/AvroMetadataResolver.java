@@ -21,6 +21,8 @@ import com.hazelcast.sql.impl.QueryException;
 import com.hazelcast.sql.impl.schema.TableField;
 import com.hazelcast.sql.impl.type.QueryDataType;
 import org.apache.avro.Schema;
+import org.apache.avro.SchemaBuilder;
+import org.apache.avro.SchemaBuilder.FieldAssembler;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -32,8 +34,8 @@ import static com.hazelcast.jet.impl.util.Util.toList;
 interface AvroMetadataResolver {
 
     static void validateFields(List<ExternalField> userFields) {
-        for (ExternalField f : userFields) {
-            String path = f.externalName() == null ? f.name() : f.externalName();
+        for (ExternalField field : userFields) {
+            String path = field.externalName() == null ? field.name() : field.externalName();
             if (path.indexOf('.') >= 0) {
                 throw QueryException.error("Invalid field name - '" + path + "'. Nested fields are not supported.");
             }
@@ -86,5 +88,37 @@ interface AvroMetadataResolver {
 
     static QueryDataType[] types(List<TableField> fields) {
         return fields.stream().map(TableField::getType).toArray(QueryDataType[]::new);
+    }
+
+    static Schema schema(List<TableField> fields) {
+        String[] paths = paths(fields);
+        QueryDataType[] types = types(fields);
+
+        FieldAssembler<Schema> schema = SchemaBuilder.record("name").namespace("namespace").fields(); // TODO:
+        for (int i = 0; i < fields.size(); i++) {
+            switch (types[i].getTypeFamily()) {
+                case BOOLEAN:
+                    schema = schema.name(paths[i]).type().booleanType().noDefault();
+                    break;
+                case TINYINT:
+                case SMALLINT:
+                case INT:
+                    schema = schema.name(paths[i]).type().intType().noDefault();
+                    break;
+                case BIGINT:
+                    schema = schema.name(paths[i]).type().longType().noDefault();
+                    break;
+                case REAL:
+                    schema = schema.name(paths[i]).type().floatType().noDefault();
+                    break;
+                case DOUBLE:
+                    schema = schema.name(paths[i]).type().doubleType().noDefault();
+                    break;
+                default:
+                    schema = schema.name(paths[i]).type().stringType().noDefault();
+                    break;
+            }
+        }
+        return schema.endRecord();
     }
 }

@@ -32,6 +32,7 @@ import java.util.Map;
 import static java.lang.Character.toLowerCase;
 import static java.lang.Character.toUpperCase;
 
+// TODO: move it to ReflectionUtil ?
 public final class ResolverUtil {
 
     private static final String METHOD_PREFIX_GET = "get";

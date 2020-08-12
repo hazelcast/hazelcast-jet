@@ -39,8 +39,8 @@ interface JsonMetadataResolver {
      * externalName for each field.
      */
     static void validateFields(List<ExternalField> userFields) {
-        for (ExternalField f : userFields) {
-            String path = f.externalName() == null ? f.name() : f.externalName();
+        for (ExternalField field : userFields) {
+            String path = field.externalName() == null ? field.name() : field.externalName();
             if (path.indexOf('.') >= 0) {
                 throw QueryException.error("Invalid field name - '" + path + "'. Nested fields are not supported.");
             }
