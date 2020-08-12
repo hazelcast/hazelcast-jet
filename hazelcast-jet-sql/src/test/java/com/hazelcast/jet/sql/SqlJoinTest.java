@@ -19,6 +19,7 @@ package com.hazelcast.jet.sql;
 import com.hazelcast.jet.kafka.impl.KafkaTestSupport;
 import com.hazelcast.jet.sql.impl.connector.kafka.KafkaSqlConnector;
 import com.hazelcast.jet.sql.impl.connector.map.LocalPartitionedMapConnector;
+import com.hazelcast.sql.SqlService;
 import org.apache.kafka.common.serialization.IntegerDeserializer;
 import org.apache.kafka.common.serialization.IntegerSerializer;
 import org.apache.kafka.common.serialization.StringDeserializer;
@@ -40,7 +41,15 @@ import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-public class SqlJoinTest extends SqlTestSupport {
+public class SqlJoinTest extends JetSqlTestSupport {
+
+    private static SqlService sqlService;
+
+    @BeforeClass
+    public static void setUpClass() {
+        initialize(1, null);
+        sqlService = instance().getHazelcastInstance().getSql();
+    }
 
     private static final int INITIAL_PARTITION_COUNT = 4;
 
@@ -59,7 +68,7 @@ public class SqlJoinTest extends SqlTestSupport {
     public void before() {
         topicName = "k_" + randomString().replace('-', '_');
         kafkaTestSupport.createTopic(topicName, INITIAL_PARTITION_COUNT);
-        executeSql(format("CREATE EXTERNAL TABLE %s " +
+        sqlService.query(format("CREATE EXTERNAL TABLE %s " +
                         "TYPE \"%s\" " +
                         "OPTIONS (" +
                         " \"%s\" '%s'," +
@@ -242,7 +251,7 @@ public class SqlJoinTest extends SqlTestSupport {
 
     @Test
     public void enrichment_join_fails_for_not_supported_connector() {
-        assertThatThrownBy(() -> executeSql(
+        assertThatThrownBy(() -> sqlService.query(
                 format("SELECT 1 FROM %s k JOIN %s m ON m.__key = k.__key", mapName, topicName)
         )).hasCauseInstanceOf(UnsupportedOperationException.class)
           .hasMessageContaining("Nested loop reader not supported for " + KafkaSqlConnector.class.getName());
@@ -250,7 +259,7 @@ public class SqlJoinTest extends SqlTestSupport {
 
     private static String createMapWithRandomName() {
         String mapName = "m_" + randomString().replace('-', '_');
-        executeSql(
+        sqlService.query(
                 format("CREATE EXTERNAL TABLE %s " +
                                 "TYPE \"%s\" " +
                                 "OPTIONS (" +

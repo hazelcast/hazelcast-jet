@@ -17,8 +17,11 @@
 package com.hazelcast.jet.sql;
 
 import com.hazelcast.jet.sql.impl.connector.map.LocalPartitionedMapConnector;
+import com.hazelcast.sql.SqlService;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
+import java.nio.file.Paths;
 import java.util.Map;
 
 import static com.hazelcast.jet.sql.SqlConnector.JAVA_SERIALIZATION_FORMAT;
@@ -28,7 +31,17 @@ import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.OPTION_SERI
 import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.OPTION_VALUE_CLASS;
 import static java.util.Arrays.asList;
 
-public class SqlTest extends SqlTestSupport {
+public class SqlTest extends JetSqlTestSupport {
+
+    private static final String RESOURCES_PATH = Paths.get("src/test/resources").toFile().getAbsolutePath();
+
+    private static SqlService sqlService;
+
+    @BeforeClass
+    public static void setUpClass() {
+        initialize(1, null);
+        sqlService = instance().getHazelcastInstance().getSql();
+    }
 
     @Test
     public void supportsValues() {
@@ -45,7 +58,7 @@ public class SqlTest extends SqlTestSupport {
     public void supportsCreatingMapFromFile() {
         String name = generateRandomName();
 
-        executeSql(
+        sqlService.query(
                 "CREATE EXTERNAL TABLE " + name + " ("
                         + "key EXTERNAL NAME \"__key\""
                         + ") TYPE \"" + LocalPartitionedMapConnector.TYPE_NAME + "\" "
@@ -78,7 +91,7 @@ public class SqlTest extends SqlTestSupport {
         map.put(0, "value-0");
         map.put(1, "value-1");
 
-        executeSql(
+        sqlService.query(
                 "CREATE EXTERNAL TABLE " + destinationName + " ("
                         + "key EXTERNAL NAME \"__key\""
                         + ") TYPE \"" + LocalPartitionedMapConnector.TYPE_NAME + "\" "
@@ -104,7 +117,7 @@ public class SqlTest extends SqlTestSupport {
     public void supportsCreatingMapFromValues() {
         String name = generateRandomName();
 
-        executeSql(
+        sqlService.query(
                 "CREATE EXTERNAL TABLE " + name + " ("
                         + "key EXTERNAL NAME \"__key\""
                         + ") TYPE \"" + LocalPartitionedMapConnector.TYPE_NAME + "\" "

@@ -28,7 +28,7 @@ import org.junit.rules.ExpectedException;
 
 import static com.hazelcast.jet.config.ProcessingGuarantee.EXACTLY_ONCE;
 import static com.hazelcast.jet.core.JobStatus.RUNNING;
-import static com.hazelcast.jet.sql.SqlTestSupport.javaSerializableMapDdl;
+import static com.hazelcast.jet.sql.JetSqlTestSupport.javaSerializableMapDdl;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -156,7 +156,7 @@ public class CreateJobTest extends SimpleTestInClusterSupport {
         sqlService.query("CREATE JOB testJob AS INSERT OVERWRITE dest SELECT v, v FROM src");
         Job job = instance().getJob("testJob");
         assertNotNull(job);
-        assertJobRunningEventually(client, job, null);
+        assertJobRunningEventually(instance(), job, null);
 
         // When
         client.shutdown();

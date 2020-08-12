@@ -16,11 +16,13 @@
 
 package com.hazelcast.jet.sql.impl.connector.map;
 
-import com.hazelcast.jet.sql.SqlTestSupport;
+import com.hazelcast.jet.sql.JetSqlTestSupport;
 import com.hazelcast.jet.sql.impl.connector.map.model.AllTypesValue;
 import com.hazelcast.jet.sql.impl.connector.map.model.InsuredPerson;
 import com.hazelcast.jet.sql.impl.connector.map.model.Person;
 import com.hazelcast.jet.sql.impl.connector.map.model.PersonId;
+import com.hazelcast.sql.SqlService;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.math.BigDecimal;
@@ -48,7 +50,15 @@ import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 
 // TODO: move it to IMDG when INSERTs are supported, or at least move to one of Jet connector tests ?
-public class SqlPojoTest extends SqlTestSupport {
+public class SqlPojoTest extends JetSqlTestSupport {
+
+    private static SqlService sqlService;
+
+    @BeforeClass
+    public static void setUpClass() {
+        initialize(1, null);
+        sqlService = instance().getHazelcastInstance().getSql();
+    }
 
     @Test
     public void supportsNulls() {
@@ -84,7 +94,7 @@ public class SqlPojoTest extends SqlTestSupport {
     @Test
     public void supportsFieldsMapping() {
         String name = generateRandomName();
-        executeSql("CREATE EXTERNAL TABLE " + name + " ("
+        sqlService.query("CREATE EXTERNAL TABLE " + name + " ("
                 + "key_id INT EXTERNAL NAME \"__key.id\""
                 + ", value_id INT EXTERNAL NAME \"this.id\""
                 + ") TYPE \"" + LocalPartitionedMapConnector.TYPE_NAME + "\" "
@@ -113,10 +123,10 @@ public class SqlPojoTest extends SqlTestSupport {
         String name = createMapWithRandomName();
 
         // insert initial record
-        executeSql("INSERT OVERWRITE " + name + " VALUES (1, 'Alice')");
+        sqlService.query("INSERT OVERWRITE " + name + " VALUES (1, 'Alice')");
 
         // alter schema
-        executeSql("CREATE OR REPLACE EXTERNAL TABLE " + name + " "
+        sqlService.query("CREATE OR REPLACE EXTERNAL TABLE " + name + " "
                 + "TYPE \"" + LocalPartitionedMapConnector.TYPE_NAME + "\" "
                 + "OPTIONS ("
                 + "\"" + OPTION_SERIALIZATION_KEY_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
@@ -127,7 +137,7 @@ public class SqlPojoTest extends SqlTestSupport {
         );
 
         // insert record against new schema
-        executeSql("INSERT OVERWRITE " + name + " (id, name, ssn) VALUES (2, 'Bob', 123456789)");
+        sqlService.query("INSERT OVERWRITE " + name + " (id, name, ssn) VALUES (2, 'Bob', 123456789)");
 
         // assert both - initial & evolved - records are correctly read
         assertRowsEventuallyAnyOrder(
@@ -146,7 +156,7 @@ public class SqlPojoTest extends SqlTestSupport {
         Map<PersonId, InsuredPerson> map = instance().getMap(name);
         map.put(new PersonId(1), new InsuredPerson(1, "Alice", 123456789L));
 
-        executeSql("CREATE EXTERNAL TABLE " + name + " ("
+        sqlService.query("CREATE EXTERNAL TABLE " + name + " ("
                 + "ssn BIGINT"
                 + ") TYPE \"" + LocalPartitionedMapConnector.TYPE_NAME + "\" "
                 + "OPTIONS ("
@@ -178,7 +188,7 @@ public class SqlPojoTest extends SqlTestSupport {
     @Test
     public void supportsAllTypes() {
         String name = generateRandomName();
-        executeSql("CREATE EXTERNAL TABLE " + name + " "
+        sqlService.query("CREATE EXTERNAL TABLE " + name + " "
                 + "TYPE \"" + LocalPartitionedMapConnector.TYPE_NAME + "\" "
                 + "OPTIONS ("
                 + "\"" + OPTION_SERIALIZATION_KEY_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
@@ -357,7 +367,7 @@ public class SqlPojoTest extends SqlTestSupport {
 
     private static String createMapWithRandomName() {
         String name = generateRandomName();
-        executeSql("CREATE EXTERNAL TABLE " + name + " "
+        sqlService.query("CREATE EXTERNAL TABLE " + name + " "
                 + "TYPE \"" + LocalPartitionedMapConnector.TYPE_NAME + "\" "
                 + "OPTIONS ("
                 + "\"" + OPTION_SERIALIZATION_KEY_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"

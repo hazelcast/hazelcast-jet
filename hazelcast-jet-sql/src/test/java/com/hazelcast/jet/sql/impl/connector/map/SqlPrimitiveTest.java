@@ -16,8 +16,10 @@
 
 package com.hazelcast.jet.sql.impl.connector.map;
 
-import com.hazelcast.jet.sql.SqlTestSupport;
+import com.hazelcast.jet.sql.JetSqlTestSupport;
 import com.hazelcast.map.IMap;
+import com.hazelcast.sql.SqlService;
+import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -31,7 +33,15 @@ import static java.lang.String.format;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 // TODO: move it to IMDG when INSERTs are supported, or at least move to one of Jet connector tests ?
-public class SqlPrimitiveTest extends SqlTestSupport {
+public class SqlPrimitiveTest extends JetSqlTestSupport {
+
+    private static SqlService sqlService;
+
+    @BeforeClass
+    public static void setUpClass() {
+        initialize(1, null);
+        sqlService = instance().getHazelcastInstance().getSql();
+    }
 
     @Test
     public void supportsInsertSelect() {
@@ -86,7 +96,7 @@ public class SqlPrimitiveTest extends SqlTestSupport {
     public void supportsFieldsMapping() {
         String name = generateRandomName();
 
-        executeSql("CREATE EXTERNAL TABLE " + name + " ("
+        sqlService.query("CREATE EXTERNAL TABLE " + name + " ("
                 + "id INT EXTERNAL NAME __key"
                 + ", name VARCHAR EXTERNAL NAME this"
                 + ") TYPE \"" + LocalPartitionedMapConnector.TYPE_NAME + "\" "
@@ -109,13 +119,13 @@ public class SqlPrimitiveTest extends SqlTestSupport {
     public void supportsOnlyInsertOverwrite() {
         String name = createTableWithRandomName();
 
-        assertThatThrownBy(() -> executeSql("INSERT INTO " + name + " (__key, this) VALUES (1, '2')"))
+        assertThatThrownBy(() -> sqlService.query("INSERT INTO " + name + " (__key, this) VALUES (1, '2')"))
                 .hasMessageContaining("Only INSERT OVERWRITE clause is supported for IMapSqlConnector");
     }
 
     private static String createTableWithRandomName() {
         String name = generateRandomName();
-        executeSql("CREATE EXTERNAL TABLE " + name + " "
+        sqlService.query("CREATE EXTERNAL TABLE " + name + " "
                 + "TYPE \"" + LocalPartitionedMapConnector.TYPE_NAME + "\" "
                 + "OPTIONS ("
                 + "\"" + OPTION_SERIALIZATION_KEY_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"

@@ -20,6 +20,7 @@ import com.hazelcast.jet.JetInstance;
 import com.hazelcast.sql.SqlResult;
 import com.hazelcast.sql.SqlRow;
 import com.hazelcast.sql.SqlService;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.util.Iterator;
@@ -28,10 +29,15 @@ import java.util.Map;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 
-public class ClientSqlTest extends SqlTestSupport {
+public class ClientSqlTest extends JetSqlTestSupport {
+
+    @BeforeClass
+    public static void setUpClass() {
+        initialize(1, null);
+    }
 
     @Test
-    public void test() {
+    public void basicTest() {
         JetInstance client = factory().newClient();
         SqlService sqlService = client.getHazelcastInstance().getSql();
         Map<Integer, Integer> myMap = client.getMap("my_map");

@@ -16,12 +16,14 @@
 
 package com.hazelcast.jet.sql.impl.schema;
 
-import com.hazelcast.jet.sql.SqlTestSupport;
+import com.hazelcast.jet.sql.JetSqlTestSupport;
 import com.hazelcast.jet.sql.impl.connector.map.LocalPartitionedMapConnector;
 import com.hazelcast.jet.sql.impl.schema.model.IdentifiedPerson;
 import com.hazelcast.jet.sql.impl.schema.model.Person;
 import com.hazelcast.sql.SqlException;
 import com.hazelcast.sql.SqlResult;
+import com.hazelcast.sql.SqlService;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.util.Map;
@@ -35,7 +37,15 @@ import static java.util.Collections.singletonList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-public class SchemaTest extends SqlTestSupport {
+public class SchemaTest extends JetSqlTestSupport {
+
+    private static SqlService sqlService;
+
+    @BeforeClass
+    public static void setUpClass() {
+        initialize(1, null);
+        sqlService = instance().getHazelcastInstance().getSql();
+    }
 
     @Test
     public void when_tableIsDeclared_then_itIsAvailable() {
@@ -43,7 +53,7 @@ public class SchemaTest extends SqlTestSupport {
         String name = createRandomName();
 
         // when
-        SqlResult createResult = executeSql(
+        SqlResult createResult = sqlService.query(
                 "CREATE EXTERNAL TABLE " + name + " "
                         + "TYPE \"" + LocalPartitionedMapConnector.TYPE_NAME + "\" "
                         + "OPTIONS ("
@@ -59,7 +69,7 @@ public class SchemaTest extends SqlTestSupport {
         assertThat(createResult.updateCount()).isEqualTo(-1);
 
         // when
-        SqlResult updateResult = executeSql("SELECT __key, this FROM public." + name);
+        SqlResult updateResult = sqlService.query("SELECT __key, this FROM public." + name);
 
         // then
         assertThat(updateResult.isUpdateCount()).isFalse();
@@ -81,12 +91,12 @@ public class SchemaTest extends SqlTestSupport {
                 + "  \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'," + System.lineSeparator()
                 + "  \"" + OPTION_VALUE_CLASS + "\" '" + String.class.getName() + "'" + System.lineSeparator()
                 + ")";
-        executeSql(sql);
+        sqlService.query(sql);
 
         // when
         assertRowsEventuallyAnyOrder(
                 "SHOW EXTERNAL TABLES",
-                singletonList(new Row(name, sql))
+                singletonList(new JetSqlTestSupport.Row(name, sql))
         );
     }
 
@@ -94,7 +104,7 @@ public class SchemaTest extends SqlTestSupport {
     public void when_tableIsDeclared_then_itsDefinitionHasPrecedenceOverDiscoveredOne() {
         // given
         String name = createRandomName();
-        executeSql(
+        sqlService.query(
                 "CREATE EXTERNAL TABLE " + name + " "
                         + "TYPE \"" + LocalPartitionedMapConnector.TYPE_NAME + "\" "
                         + "OPTIONS ("
@@ -110,7 +120,7 @@ public class SchemaTest extends SqlTestSupport {
 
         // when
         // then
-        assertThatThrownBy(() -> executeSql("SELECT id FROM " + name))
+        assertThatThrownBy(() -> sqlService.query("SELECT id FROM " + name))
                 .isInstanceOf(SqlException.class);
     }
 
@@ -118,7 +128,7 @@ public class SchemaTest extends SqlTestSupport {
     public void when_tableIsDropped_then_itIsNotAvailable() {
         // given
         String name = createRandomName();
-        executeSql(
+        sqlService.query(
                 "CREATE EXTERNAL TABLE " + name + " "
                         + "TYPE \"" + LocalPartitionedMapConnector.TYPE_NAME + "\" "
                         + "OPTIONS ("
@@ -130,23 +140,23 @@ public class SchemaTest extends SqlTestSupport {
         );
 
         // when
-        executeSql("DROP EXTERNAL TABLE " + name);
+        sqlService.query("DROP EXTERNAL TABLE " + name);
 
         // then
-        assertThatThrownBy(() -> executeSql("SELECT * FROM public." + name))
+        assertThatThrownBy(() -> sqlService.query("SELECT * FROM public." + name))
                 .isInstanceOf(SqlException.class);
     }
 
     @Test
     public void when_schemaNameUsed_then_rejected() {
         assertThatThrownBy(() ->
-                executeSql(javaSerializableMapDdl("schema." + createRandomName(), Long.class, Long.class)))
+                sqlService.query(javaSerializableMapDdl("schema." + createRandomName(), Long.class, Long.class)))
                         .hasMessageContaining("Encountered \".\" at line 1, column 29");
     }
 
     @Test
     public void when_emptyColumnList_then_fail() {
-        assertThatThrownBy(() -> executeSql("CREATE EXTERNAL TABLE t() TYPE t"))
+        assertThatThrownBy(() -> sqlService.query("CREATE EXTERNAL TABLE t() TYPE t"))
                 .hasMessageContaining("Encountered \")\" at line 1");
     }
 
