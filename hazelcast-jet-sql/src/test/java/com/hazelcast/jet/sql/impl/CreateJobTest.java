@@ -16,6 +16,8 @@
 
 package com.hazelcast.jet.sql.impl;
 
+import com.hazelcast.jet.JetInstance;
+import com.hazelcast.jet.Job;
 import com.hazelcast.jet.SimpleTestInClusterSupport;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.sql.SqlService;
@@ -25,6 +27,7 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
 import static com.hazelcast.jet.config.ProcessingGuarantee.EXACTLY_ONCE;
+import static com.hazelcast.jet.core.JobStatus.RUNNING;
 import static com.hazelcast.jet.sql.SqlTestSupport.javaSerializableMapDdl;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.Assert.assertEquals;
@@ -104,10 +107,6 @@ public class CreateJobTest extends SimpleTestInClusterSupport {
         assertEquals(1, countActiveJobs());
     }
 
-    private long countActiveJobs() {
-        return instance().getJobs().stream().filter(j -> !j.getStatus().isTerminal()).count();
-    }
-
     @Test
     public void when_dropNonExistingJob_then_fail() {
         assertThatThrownBy(() ->
@@ -144,5 +143,30 @@ public class CreateJobTest extends SimpleTestInClusterSupport {
         assertTrue("isSplitBrainProtectionEnabled", config.isSplitBrainProtectionEnabled());
         assertFalse("isMetricsEnabled", config.isMetricsEnabled());
         assertEquals("fooSnapshot", config.getInitialSnapshotName());
+    }
+
+    @Test
+    public void when_clientDisconnects_then_jobContinues() {
+        JetInstance client = factory().newClient();
+        SqlService sqlService = client.getHazelcastInstance().getSql();
+
+        sqlService.query("CREATE EXTERNAL TABLE src TYPE TestStream");
+        sqlService.query(javaSerializableMapDdl("dest", Long.class, Long.class));
+
+        sqlService.query("CREATE JOB testJob AS INSERT OVERWRITE dest SELECT v, v FROM src");
+        Job job = instance().getJob("testJob");
+        assertNotNull(job);
+        assertJobRunningEventually(client, job, null);
+
+        // When
+        client.shutdown();
+        sleepSeconds(1);
+
+        // Then
+        assertEquals(RUNNING, job.getStatus());
+    }
+
+    private long countActiveJobs() {
+        return instance().getJobs().stream().filter(j -> !j.getStatus().isTerminal()).count();
     }
 }
