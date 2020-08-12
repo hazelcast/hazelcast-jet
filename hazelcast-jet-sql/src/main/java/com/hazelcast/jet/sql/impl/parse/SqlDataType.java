@@ -21,13 +21,15 @@ import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlWriter;
 import org.apache.calcite.sql.parser.SqlParserPos;
 
+import java.util.Objects;
+
 public class SqlDataType extends SqlIdentifier {
 
     private final QueryDataType type;
 
     public SqlDataType(QueryDataType type, SqlParserPos pos) {
         super(type.toString(), pos);
-        this.type = type;
+        this.type = Objects.requireNonNull(type);
     }
 
     public QueryDataType type() {

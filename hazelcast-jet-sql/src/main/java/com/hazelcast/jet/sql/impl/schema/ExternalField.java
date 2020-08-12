@@ -79,11 +79,14 @@ public class ExternalField implements DataSerializable {
 
     public SqlTableColumn toSqlColumn() {
         SqlParserPos z = SqlParserPos.ZERO;
+        QueryDataType type = type();
+        String externalName = externalName();
         return new SqlTableColumn(
                 new SqlIdentifier(name(), z),
-                new SqlDataType(type(), z),
-                new SqlIdentifier(externalName(), z),
-                z);
+                type == null ? null : new SqlDataType(type(), z),
+                externalName == null ? null : new SqlIdentifier(externalName(), z),
+                z
+        );
     }
 
     @Override
