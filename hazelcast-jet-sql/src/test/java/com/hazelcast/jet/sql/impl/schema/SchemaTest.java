@@ -53,16 +53,7 @@ public class SchemaTest extends JetSqlTestSupport {
         String name = createRandomName();
 
         // when
-        SqlResult createResult = sqlService.query(
-                "CREATE EXTERNAL TABLE " + name + " "
-                        + "TYPE \"" + LocalPartitionedMapConnector.TYPE_NAME + "\" "
-                        + "OPTIONS ("
-                        + "\"" + OPTION_SERIALIZATION_KEY_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
-                        + ", \"" + OPTION_KEY_CLASS + "\" '" + Integer.class.getName() + "'"
-                        + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
-                        + ", \"" + OPTION_VALUE_CLASS + "\" '" + String.class.getName() + "'"
-                        + ")"
-        );
+        SqlResult createResult = sqlService.query(javaSerializableMapDdl(name, Integer.class, String.class));
 
         // then
         assertThat(createResult.isUpdateCount()).isTrue();
@@ -104,16 +95,7 @@ public class SchemaTest extends JetSqlTestSupport {
     public void when_tableIsDeclared_then_itsDefinitionHasPrecedenceOverDiscoveredOne() {
         // given
         String name = createRandomName();
-        sqlService.query(
-                "CREATE EXTERNAL TABLE " + name + " "
-                        + "TYPE \"" + LocalPartitionedMapConnector.TYPE_NAME + "\" "
-                        + "OPTIONS ("
-                        + "\"" + OPTION_SERIALIZATION_KEY_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
-                        + ", \"" + OPTION_KEY_CLASS + "\" '" + Integer.class.getName() + "'"
-                        + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
-                        + ", \"" + OPTION_VALUE_CLASS + "\" '" + Person.class.getName() + "'"
-                        + ")"
-        );
+        sqlService.query(javaSerializableMapDdl(name, Integer.class, Person.class));
 
         Map<Integer, Person> map = instance().getMap(name);
         map.put(1, new IdentifiedPerson(2, "Alice"));
@@ -128,16 +110,7 @@ public class SchemaTest extends JetSqlTestSupport {
     public void when_tableIsDropped_then_itIsNotAvailable() {
         // given
         String name = createRandomName();
-        sqlService.query(
-                "CREATE EXTERNAL TABLE " + name + " "
-                        + "TYPE \"" + LocalPartitionedMapConnector.TYPE_NAME + "\" "
-                        + "OPTIONS ("
-                        + "\"" + OPTION_SERIALIZATION_KEY_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
-                        + ", \"" + OPTION_KEY_CLASS + "\" '" + Integer.class.getName() + "'"
-                        + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
-                        + ", \"" + OPTION_VALUE_CLASS + "\" '" + Person.class.getName() + "'"
-                        + ")"
-        );
+        sqlService.query(javaSerializableMapDdl(name, Integer.class, Person.class));
 
         // when
         sqlService.query("DROP EXTERNAL TABLE " + name);

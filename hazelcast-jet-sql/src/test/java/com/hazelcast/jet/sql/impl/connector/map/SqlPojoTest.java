@@ -188,15 +188,7 @@ public class SqlPojoTest extends JetSqlTestSupport {
     @Test
     public void supportsAllTypes() {
         String name = generateRandomName();
-        sqlService.query("CREATE EXTERNAL TABLE " + name + " "
-                + "TYPE \"" + LocalPartitionedMapConnector.TYPE_NAME + "\" "
-                + "OPTIONS ("
-                + "\"" + OPTION_SERIALIZATION_KEY_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
-                + ", \"" + OPTION_KEY_CLASS + "\" '" + BigInteger.class.getName() + "'"
-                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
-                + ", \"" + OPTION_VALUE_CLASS + "\" '" + AllTypesValue.class.getName() + "'"
-                + ")"
-        );
+        sqlService.query(javaSerializableMapDdl(name, BigInteger.class, AllTypesValue.class));
 
         assertMapEventually(
                 name,
@@ -367,15 +359,7 @@ public class SqlPojoTest extends JetSqlTestSupport {
 
     private static String createMapWithRandomName() {
         String name = generateRandomName();
-        sqlService.query("CREATE EXTERNAL TABLE " + name + " "
-                + "TYPE \"" + LocalPartitionedMapConnector.TYPE_NAME + "\" "
-                + "OPTIONS ("
-                + "\"" + OPTION_SERIALIZATION_KEY_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
-                + ", \"" + OPTION_KEY_CLASS + "\" '" + PersonId.class.getName() + "'"
-                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
-                + ", \"" + OPTION_VALUE_CLASS + "\" '" + Person.class.getName() + "'"
-                + ")"
-        );
+        sqlService.query(javaSerializableMapDdl(name, PersonId.class, Person.class));
         return name;
     }
 

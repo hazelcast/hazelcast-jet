@@ -125,15 +125,7 @@ public class SqlPrimitiveTest extends JetSqlTestSupport {
 
     private static String createTableWithRandomName() {
         String name = generateRandomName();
-        sqlService.query("CREATE EXTERNAL TABLE " + name + " "
-                + "TYPE \"" + LocalPartitionedMapConnector.TYPE_NAME + "\" "
-                + "OPTIONS ("
-                + "\"" + OPTION_SERIALIZATION_KEY_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
-                + ", \"" + OPTION_KEY_CLASS + "\" '" + Integer.class.getName() + "'"
-                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
-                + ", \"" + OPTION_VALUE_CLASS + "\" '" + String.class.getName() + "'"
-                + ")"
-        );
+        sqlService.query(javaSerializableMapDdl(name, Integer.class, String.class));
         return name;
     }
 

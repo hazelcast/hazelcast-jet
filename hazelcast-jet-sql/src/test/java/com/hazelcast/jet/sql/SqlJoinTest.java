@@ -18,7 +18,6 @@ package com.hazelcast.jet.sql;
 
 import com.hazelcast.jet.kafka.impl.KafkaTestSupport;
 import com.hazelcast.jet.sql.impl.connector.kafka.KafkaSqlConnector;
-import com.hazelcast.jet.sql.impl.connector.map.LocalPartitionedMapConnector;
 import com.hazelcast.sql.SqlService;
 import org.apache.kafka.common.serialization.IntegerDeserializer;
 import org.apache.kafka.common.serialization.IntegerSerializer;
@@ -259,22 +258,7 @@ public class SqlJoinTest extends JetSqlTestSupport {
 
     private static String createMapWithRandomName() {
         String mapName = "m_" + randomString().replace('-', '_');
-        sqlService.query(
-                format("CREATE EXTERNAL TABLE %s " +
-                                "TYPE \"%s\" " +
-                                "OPTIONS (" +
-                                " \"%s\" '%s'," +
-                                " \"%s\" '%s'," +
-                                " \"%s\" '%s'," +
-                                " \"%s\" '%s'" +
-                                ")",
-                        mapName, LocalPartitionedMapConnector.TYPE_NAME,
-                        OPTION_SERIALIZATION_KEY_FORMAT, JAVA_SERIALIZATION_FORMAT,
-                        OPTION_KEY_CLASS, Integer.class.getName(),
-                        OPTION_SERIALIZATION_VALUE_FORMAT, JAVA_SERIALIZATION_FORMAT,
-                        OPTION_VALUE_CLASS, String.class.getName()
-                )
-        );
+        sqlService.query(javaSerializableMapDdl(mapName, Integer.class, String.class));
         return mapName;
     }
 }
