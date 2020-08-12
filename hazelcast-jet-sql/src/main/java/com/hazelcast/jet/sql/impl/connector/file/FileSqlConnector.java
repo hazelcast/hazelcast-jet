@@ -43,8 +43,8 @@ public class FileSqlConnector implements SqlConnector {
     public static final String OPTION_CHARSET = "file.charset";
     public static final String OPTION_HEADER = "file.header";
     public static final String OPTION_DELIMITER = "file.delimiter";
-    public static final String S3_ACCESS_KEY = "file.s3a.access.key";
-    public static final String S3_SECRET_KEY = "file.s3a.secret.key";
+    public static final String OPTION_S3_ACCESS_KEY = "file.s3a.access.key";
+    public static final String OPTION_S3_SECRET_KEY = "file.s3a.secret.key";
 
     static final FileSqlConnector INSTANCE = new FileSqlConnector();
 
@@ -118,10 +118,7 @@ public class FileSqlConnector implements SqlConnector {
     ) {
         FileTable table = (FileTable) table0;
 
-        return dag.newVertex(
-                table.toString(),
-                table.getTargetDescriptor().readProcessor(table.getFields(), predicate, projection)
-        );
+        return dag.newVertex(table.toString(), table.readProcessor(predicate, projection));
     }
 
     @Override
@@ -134,15 +131,8 @@ public class FileSqlConnector implements SqlConnector {
     public Vertex sink(@Nonnull DAG dag, @Nonnull Table table0) {
         FileTable table = (FileTable) table0;
 
-        Vertex vStart = dag.newVertex(
-                "Project(" + table + ")",
-                table.getTargetDescriptor().projectorProcessor(table.getFields())
-        );
-
-        Vertex vEnd = dag.newVertex(
-                table.toString(),
-                table.getTargetDescriptor().writeProcessor(table.getFields())
-        );
+        Vertex vStart = dag.newVertex("Project(" + table + ")", table.projectionProcessor());
+        Vertex vEnd = dag.newVertex(table.toString(), table.writeProcessor());
 
         dag.edge(between(vStart, vEnd));
         return vStart;
