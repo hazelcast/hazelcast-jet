@@ -45,6 +45,7 @@ import static com.hazelcast.jet.sql.impl.connector.file.JsonMetadataResolver.pat
 import static com.hazelcast.jet.sql.impl.connector.file.JsonMetadataResolver.resolveFieldsFromSample;
 import static com.hazelcast.jet.sql.impl.connector.file.JsonMetadataResolver.toTableFields;
 import static com.hazelcast.jet.sql.impl.connector.file.JsonMetadataResolver.types;
+import static com.hazelcast.jet.sql.impl.connector.file.JsonMetadataResolver.validateFields;
 
 final class LocalJsonMetadataResolver implements JsonMetadataResolver {
 
@@ -56,7 +57,7 @@ final class LocalJsonMetadataResolver implements JsonMetadataResolver {
             FileOptions options
     ) throws IOException {
         if (!userFields.isEmpty()) {
-            JsonMetadataResolver.validateFields(userFields);
+            validateFields(userFields);
             return userFields;
         } else {
             String line = firstLineFromFirstFile(options.path(), options.glob());

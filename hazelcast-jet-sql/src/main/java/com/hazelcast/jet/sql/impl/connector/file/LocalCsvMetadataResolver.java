@@ -42,6 +42,7 @@ import java.util.stream.Stream;
 
 import static com.hazelcast.function.FunctionEx.identity;
 import static com.hazelcast.jet.impl.util.Util.firstLineFromFirstFile;
+import static com.hazelcast.jet.sql.impl.connector.file.CsvMetadataResolver.indices;
 import static com.hazelcast.jet.sql.impl.connector.file.CsvMetadataResolver.paths;
 import static com.hazelcast.jet.sql.impl.connector.file.CsvMetadataResolver.resolveFieldsFromSample;
 import static com.hazelcast.jet.sql.impl.connector.file.CsvMetadataResolver.toTableFields;
@@ -120,7 +121,7 @@ final class LocalCsvMetadataResolver implements CsvMetadataResolver {
             String charset = this.charset;
             long linesToSkip = this.header ? 1 : 0;
             String delimiter = this.delimiter;
-            Map<String, Integer> indicesByNames = CsvMetadataResolver.indices(fields);
+            Map<String, Integer> indicesByNames = indices(fields);
             String[] paths = paths(fields);
             QueryDataType[] types = types(fields);
 
