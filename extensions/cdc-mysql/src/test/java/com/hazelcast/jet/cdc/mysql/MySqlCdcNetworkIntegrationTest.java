@@ -112,12 +112,13 @@ public class MySqlCdcNetworkIntegrationTest extends AbstractCdcIntegrationTest {
 
     @Test
     public void when_networkDisconnectDuringSnapshotting_then_jetSourceIsStuckUntilReconnect() throws Exception {
-        Network network = initNetwork();
-        MySQLContainer<?> mysql = initMySql(network, null);
-        ToxiproxyContainer toxiproxy = initToxiproxy(network);
-        ToxiproxyContainer.ContainerProxy proxy = initProxy(toxiproxy, mysql);
-        Pipeline pipeline = initPipeline(proxy.getContainerIpAddress(), proxy.getProxyPort());
-        try {
+        try (
+                Network network = initNetwork();
+                MySQLContainer<?> mysql = initMySql(network, null);
+                ToxiproxyContainer toxiproxy = initToxiproxy(network);
+        ) {
+            ToxiproxyContainer.ContainerProxy proxy = initProxy(toxiproxy, mysql);
+            Pipeline pipeline = initPipeline(proxy.getContainerIpAddress(), proxy.getProxyPort());
             // when job starts
             JetInstance jet = createJetMembers(2)[0];
             Job job = jet.newJob(pipeline);
@@ -142,9 +143,6 @@ public class MySqlCdcNetworkIntegrationTest extends AbstractCdcIntegrationTest {
             } finally {
                 job.cancel();
             }
-        } finally {
-            toxiproxy.stop();
-            mysql.stop();
         }
     }
 
@@ -189,12 +187,13 @@ public class MySqlCdcNetworkIntegrationTest extends AbstractCdcIntegrationTest {
 
     @Test
     public void when_networkDisconnectDuringBinlogRead_then_connectorReconnectsInternally() throws Exception {
-        Network network = initNetwork();
-        MySQLContainer<?> mysql = initMySql(network, null);
-        ToxiproxyContainer toxiproxy = initToxiproxy(network);
-        ToxiproxyContainer.ContainerProxy proxy = initProxy(toxiproxy, mysql);
-        Pipeline pipeline = initPipeline(proxy.getContainerIpAddress(), proxy.getProxyPort());
-        try {
+        try (
+                Network network = initNetwork();
+                MySQLContainer<?> mysql = initMySql(network, null);
+                ToxiproxyContainer toxiproxy = initToxiproxy(network);
+        ) {
+            ToxiproxyContainer.ContainerProxy proxy = initProxy(toxiproxy, mysql);
+            Pipeline pipeline = initPipeline(proxy.getContainerIpAddress(), proxy.getProxyPort());
             // when connector is up and transitions to binlog reading
             JetInstance jet = createJetMembers(2)[0];
             Job job = jet.newJob(pipeline);
@@ -221,9 +220,6 @@ public class MySqlCdcNetworkIntegrationTest extends AbstractCdcIntegrationTest {
             } finally {
                 job.cancel();
             }
-        } finally {
-            toxiproxy.stop();
-            mysql.stop();
         }
     }
 

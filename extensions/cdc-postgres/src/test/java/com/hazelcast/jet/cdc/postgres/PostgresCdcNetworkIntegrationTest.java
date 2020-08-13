@@ -111,12 +111,13 @@ public class PostgresCdcNetworkIntegrationTest extends AbstractCdcIntegrationTes
 
     @Test
     public void when_shortNetworkDisconnectDuringSnapshotting_then_connectorDoesNotNoticeAnything() throws Exception {
-        Network network = initNetwork();
-        PostgreSQLContainer<?> postgres = initPostgres(network, null);
-        ToxiproxyContainer toxiproxy = initToxiproxy(network);
-        ToxiproxyContainer.ContainerProxy proxy = initProxy(toxiproxy, postgres);
-        Pipeline pipeline = initPipeline(proxy.getContainerIpAddress(), proxy.getProxyPort());
-        try {
+        try (
+                Network network = initNetwork();
+                PostgreSQLContainer<?> postgres = initPostgres(network, null);
+                ToxiproxyContainer toxiproxy = initToxiproxy(network);
+        ) {
+            ToxiproxyContainer.ContainerProxy proxy = initProxy(toxiproxy, postgres);
+            Pipeline pipeline = initPipeline(proxy.getContainerIpAddress(), proxy.getProxyPort());
             // when job starts
             JetInstance jet = createJetMembers(2)[0];
             Job job = jet.newJob(pipeline);
@@ -142,9 +143,6 @@ public class PostgresCdcNetworkIntegrationTest extends AbstractCdcIntegrationTes
             } finally {
                 job.cancel();
             }
-        } finally {
-            toxiproxy.stop();
-            postgres.stop();
         }
     }
 
@@ -190,12 +188,13 @@ public class PostgresCdcNetworkIntegrationTest extends AbstractCdcIntegrationTes
 
     @Test
     public void when_shortConnectionLossDuringBinlogReading_then_connectorDoesNotNoticeAnything() throws Exception {
-        Network network = initNetwork();
-        PostgreSQLContainer<?> postgres = initPostgres(network, null);
-        ToxiproxyContainer toxiproxy = initToxiproxy(network);
-        ToxiproxyContainer.ContainerProxy proxy = initProxy(toxiproxy, postgres);
-        Pipeline pipeline = initPipeline(proxy.getContainerIpAddress(), proxy.getProxyPort());
-        try {
+        try (
+                Network network = initNetwork();
+                PostgreSQLContainer<?> postgres = initPostgres(network, null);
+                ToxiproxyContainer toxiproxy = initToxiproxy(network);
+        ) {
+            ToxiproxyContainer.ContainerProxy proxy = initProxy(toxiproxy, postgres);
+            Pipeline pipeline = initPipeline(proxy.getContainerIpAddress(), proxy.getProxyPort());
             // when connector is up and transitions to binlog reading
             JetInstance jet = createJetMembers(2)[0];
             Job job = jet.newJob(pipeline);
@@ -224,9 +223,6 @@ public class PostgresCdcNetworkIntegrationTest extends AbstractCdcIntegrationTes
             } finally {
                 job.cancel();
             }
-        } finally {
-            toxiproxy.stop();
-            postgres.stop();
         }
     }
 
