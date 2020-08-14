@@ -1147,18 +1147,18 @@ public final class Processors {
      */
     @Nonnull
     public static <V> SupplierEx<Processor> sortPrepareP(FunctionEx<V, Long> keyFn) {
-        return () -> new SortPrepareP<V>(keyFn);
+        return () -> new SortPrepareP<>(keyFn);
     }
 
     /**
      * Returns a supplier of processors for a vertex that performs the global sorting phase.
-     * The processor consumes the locally sorted dataset from each cluster member
-     * then sorts the whole dataset using RocksDB state backend.
+     * The processor consumes the locally sorted dataset from all cluster members
+     * and outputs the smallest item in all members.
      * There can be only one {@link SortP} processor for each sort stage.
      */
     @Nonnull
-    public static <V> SupplierEx<Processor> sortP() {
-        return () -> new SortP<V>();
+    public static SupplierEx<Processor> sortP() {
+        return SortP::new;
     }
 
     /**
