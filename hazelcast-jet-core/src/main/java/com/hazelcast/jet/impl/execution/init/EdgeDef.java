@@ -26,6 +26,7 @@ import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 
 import java.io.IOException;
+import java.util.Comparator;
 import java.util.Map;
 
 public class EdgeDef implements IdentifiedDataSerializable {
@@ -38,6 +39,7 @@ public class EdgeDef implements IdentifiedDataSerializable {
     private RoutingPolicy routingPolicy;
     private Partitioner partitioner;
     private EdgeConfig config;
+    private Comparator<Object> comparator;
 
     // transient fields populated and used after deserialization
     private transient String id;
@@ -56,6 +58,7 @@ public class EdgeDef implements IdentifiedDataSerializable {
         this.routingPolicy = edge.getRoutingPolicy();
         this.partitioner = edge.getPartitioner();
         this.config = config;
+        this.comparator = edge.getComparator();
     }
 
     void initTransientFields(Map<Integer, VertexDef> vMap, VertexDef nearVertex, boolean isOutbound) {
@@ -105,6 +108,10 @@ public class EdgeDef implements IdentifiedDataSerializable {
         return isDistributed;
     }
 
+    Comparator<Object> getComparator() {
+        return comparator;
+    }
+
     EdgeConfig getConfig() {
         return config;
     }
@@ -129,6 +136,7 @@ public class EdgeDef implements IdentifiedDataSerializable {
         out.writeInt(sourceOrdinal);
         out.writeInt(priority);
         out.writeBoolean(isDistributed);
+        out.writeObject(getComparator());
         out.writeObject(routingPolicy);
         CustomClassLoadedObject.write(out, partitioner);
         out.writeObject(config);
@@ -141,6 +149,7 @@ public class EdgeDef implements IdentifiedDataSerializable {
         sourceOrdinal = in.readInt();
         priority = in.readInt();
         isDistributed = in.readBoolean();
+        comparator = in.readObject();
         routingPolicy = in.readObject();
         partitioner = CustomClassLoadedObject.read(in);
         config = in.readObject();

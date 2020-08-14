@@ -26,6 +26,7 @@ import com.hazelcast.logging.ILogger;
 import com.hazelcast.logging.Logger;
 
 import java.util.BitSet;
+import java.util.Comparator;
 import java.util.function.Predicate;
 import java.util.function.ToIntFunction;
 
@@ -33,6 +34,7 @@ import static com.hazelcast.jet.impl.execution.DoneItem.DONE_ITEM;
 import static com.hazelcast.jet.impl.execution.WatermarkCoalescer.NO_NEW_WM;
 import static com.hazelcast.jet.impl.util.ProgressState.DONE;
 import static com.hazelcast.jet.impl.util.ProgressState.MADE_PROGRESS;
+import static com.hazelcast.jet.impl.util.ProgressState.NO_PROGRESS;
 import static com.hazelcast.jet.impl.util.Util.toLocalTime;
 
 /**
@@ -47,7 +49,7 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
     private final ConcurrentConveyor<Object> conveyor;
     private final ProgressTracker tracker = new ProgressTracker();
     private final ItemDetector itemDetector = new ItemDetector();
-
+    private Comparator<Object> comparator;
     private final WatermarkCoalescer watermarkCoalescer;
     private final BitSet receivedBarriers; // indicates if current snapshot is received on the queue
     private final ILogger logger;
@@ -81,6 +83,12 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
         logger.finest("Coalescing " + conveyor.queueCount() + " input queues");
     }
 
+    public ConcurrentInboundEdgeStream(ConcurrentConveyor<Object> conveyor, int ordinal, int priority,
+                                       boolean waitForAllBarriers, String debugName, Comparator<Object> comparator) {
+        this(conveyor, ordinal, priority, waitForAllBarriers, debugName);
+        this.comparator = comparator;
+    }
+
     @Override
     public int ordinal() {
         return ordinal;
@@ -89,6 +97,10 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
     @Override
     public int priority() {
         return priority;
+    }
+
+    public boolean hasComparator() {
+        return comparator != null;
     }
 
     @Override
@@ -163,6 +175,30 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
             tracker.notDone();
         }
         return tracker.toProgressState();
+    }
+
+    public ProgressState drainToWithComparator(Predicate<Object> dest) {
+        int minIndex = 0;
+        Object minItem = null;
+        for (int queueIndex = 0; queueIndex < conveyor.queueCount(); queueIndex++) {
+            final QueuedPipe<Object> q = conveyor.queue(queueIndex);
+            if (q == null) {
+                continue;
+            }
+            if (q.peek() == null) {
+                return NO_PROGRESS;
+            }
+            if(q.peek() == DONE_ITEM) {
+                return DONE;
+            }
+            if (minItem == null || comparator.compare(minItem, q.peek()) > 0) {
+                minIndex = queueIndex;
+                minItem = q.peek();
+            }
+        }
+        conveyor.queue(minIndex).poll();
+        dest.test(minItem);
+        return MADE_PROGRESS;
     }
 
     private boolean maybeEmitWm(long timestamp, Predicate<Object> dest) {

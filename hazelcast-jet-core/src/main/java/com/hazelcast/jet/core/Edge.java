@@ -32,6 +32,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.Serializable;
+import java.util.Comparator;
 import java.util.Map;
 import java.util.Objects;
 
@@ -75,6 +76,7 @@ public class Edge implements IdentifiedDataSerializable {
     private boolean isDistributed;
     private Partitioner<?> partitioner;
     private RoutingPolicy routingPolicy = RoutingPolicy.UNICAST;
+    private Comparator<Object> comparator;
 
     private EdgeConfig config;
 
@@ -322,6 +324,15 @@ public class Edge implements IdentifiedDataSerializable {
         return this;
     }
 
+    public Edge monotonicOrder(Comparator<Object> comparator) {
+        this.comparator = comparator;
+        return this;
+    }
+
+    public Comparator<Object> getComparator() {
+        return comparator;
+    }
+
     /**
      * Activates the {@link RoutingPolicy#ISOLATED ISOLATED} routing policy
      * which establishes isolated paths from upstream to downstream processors.
@@ -478,6 +489,7 @@ public class Edge implements IdentifiedDataSerializable {
         out.writeInt(getDestOrdinal());
         out.writeInt(getPriority());
         out.writeBoolean(isDistributed());
+        out.writeObject(getComparator());
         out.writeObject(getRoutingPolicy());
         CustomClassLoadedObject.write(out, getPartitioner());
         out.writeObject(getConfig());
@@ -491,6 +503,7 @@ public class Edge implements IdentifiedDataSerializable {
         destOrdinal = in.readInt();
         priority = in.readInt();
         isDistributed = in.readBoolean();
+        comparator = in.readObject();
         routingPolicy = in.readObject();
         try {
             partitioner = CustomClassLoadedObject.read(in);

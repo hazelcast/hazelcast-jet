@@ -124,7 +124,6 @@ public abstract class AbstractRocksDBStateBackend {
     public void close() throws HazelcastException {
         if (db != null) {
             options.close();
-            rocksDBOptions.close();
             db.close();
         }
     }
@@ -132,5 +131,9 @@ public abstract class AbstractRocksDBStateBackend {
     @Nonnull
     protected String getNextName() {
         return mapName + counter.getAndIncrement();
+    }
+
+    RocksDB getDBInstance() {
+        return db;
     }
 }

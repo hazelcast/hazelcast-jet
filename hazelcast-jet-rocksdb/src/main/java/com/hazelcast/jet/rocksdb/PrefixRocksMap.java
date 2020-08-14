@@ -265,7 +265,7 @@ public class PrefixRocksMap<K, V> {
          * Returns the current key associated with an iterator over all values for the current key.
          */
         public Entry<K, Iterator<V>> getValues() {
-            K prefix = deserialize(iterator.key());
+            K prefix = current.getKey();
             Tuple2<K, Iterator<V>> result = tuple2(prefix, getAllValues(prefixIterator, prefix));
             //advance the cursor until it gets out of current prefix
             while (advance() && prefix.equals(current.getKey())) {

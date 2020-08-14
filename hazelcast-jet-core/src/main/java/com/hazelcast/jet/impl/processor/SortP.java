@@ -20,16 +20,16 @@ public class SortP<V> extends AbstractProcessor {
     @Override
     @SuppressWarnings("unchecked")
     protected boolean tryProcess(int ordinal, @Nonnull Object item) {
-        sortedMapsCursors.add(((PrefixRocksMap<Long, V>) item).cursor());
         return true;
     }
 
     @Override
     public boolean complete() {
-        if (resultTraverser == null) {
-            resultTraverser = new ResultTraverser();
-        }
-        return emitFromTraverser(resultTraverser);
+//        if (resultTraverser == null) {
+//            resultTraverser = new ResultTraverser();
+//        }
+//        return emitFromTraverser(resultTraverser);
+        return true;
     }
 
     private class ResultTraverser implements Traverser<V> {

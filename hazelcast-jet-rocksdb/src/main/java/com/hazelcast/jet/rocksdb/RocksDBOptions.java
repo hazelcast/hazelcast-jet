@@ -32,7 +32,7 @@ import java.io.Serializable;
  * General RocksDB Configurations.
  * see {@link RocksMap}, {@link RocksDBStateBackend}
  */
-public class RocksDBOptions {
+public class RocksDBOptions implements Serializable {
 
     private static final int MEMTABLE_SIZE = 64 * 1024 * 1024;
     private static final int MEMTABLE_NUMBER = 2;

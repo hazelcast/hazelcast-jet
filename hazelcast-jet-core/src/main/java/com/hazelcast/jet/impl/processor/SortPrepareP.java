@@ -1,8 +1,10 @@
 package com.hazelcast.jet.impl.processor;
 
 import com.hazelcast.function.FunctionEx;
+import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.rocksdb.PrefixRocksMap;
+import com.hazelcast.jet.rocksdb.PrefixRocksMap.Cursor;
 
 import javax.annotation.Nonnull;
 
@@ -10,6 +12,7 @@ public class SortPrepareP<V> extends AbstractProcessor {
 
     private final FunctionEx<? super V, ? extends Long> keyFn;
     private PrefixRocksMap<Long, V> rocksMap;
+    private ResultTraverser resultTraverser;
 
     public SortPrepareP(FunctionEx<? super V, ? extends Long> keyFn) {
         this.keyFn = keyFn;
@@ -31,6 +34,22 @@ public class SortPrepareP<V> extends AbstractProcessor {
     @Override
     public boolean complete() {
         rocksMap.compact();
-        return tryEmit(rocksMap);
+        if (resultTraverser == null) {
+            resultTraverser = new ResultTraverser();
+        }
+        return emitFromTraverser(resultTraverser);
+    }
+
+    private class ResultTraverser implements Traverser<V> {
+        Cursor cursor = rocksMap.cursor();
+
+        @Override
+        public V next() {
+            if (!cursor.advance()) {
+                cursor.close();
+                return null;
+            }
+            return (V) cursor.getEntry().getValue();
+        }
     }
 }

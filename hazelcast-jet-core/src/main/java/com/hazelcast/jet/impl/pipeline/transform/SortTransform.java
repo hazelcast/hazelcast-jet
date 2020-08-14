@@ -8,6 +8,9 @@ import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.impl.pipeline.Planner;
 import com.hazelcast.jet.impl.pipeline.Planner.PlannerVertex;
 
+import java.io.Serializable;
+import java.util.Comparator;
+
 import static com.hazelcast.jet.core.Edge.between;
 
 
@@ -28,6 +31,10 @@ public class SortTransform<V> extends AbstractTransform {
         PlannerVertex pv2 = p.addVertex(this, name(), 1,
                 ProcessorMetaSupplier.forceTotalParallelismOne(ProcessorSupplier.of(Processors.sortP())));
         p.addEdges(this, v1);
-        p.dag.edge(between(v1, pv2.v).distributed());
+        p.dag.edge(between(v1, pv2.v).distributed().allToOne(name().hashCode()).monotonicOrder((SerializableComparator<Object>)
+                (o1, o2) -> Long.compare((long) o1, (long) o2)));
+    }
+
+    public interface SerializableComparator<T> extends Comparator<T>, Serializable {
     }
 }
