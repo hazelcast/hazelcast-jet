@@ -22,7 +22,7 @@ import com.hazelcast.jet.sql.impl.parse.SqlExtendedInsert;
 import com.hazelcast.jet.sql.impl.parse.SqlShowExternalTables;
 import com.hazelcast.sql.impl.calcite.schema.HazelcastTable;
 import com.hazelcast.sql.impl.calcite.validate.HazelcastSqlValidator;
-import org.apache.calcite.rel.type.RelDataTypeFactory;
+import com.hazelcast.sql.impl.calcite.validate.types.HazelcastTypeFactory;
 import org.apache.calcite.runtime.Resources;
 import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlKind;
@@ -42,7 +42,7 @@ public class JetSqlValidator extends HazelcastSqlValidator {
 
     public JetSqlValidator(
             SqlValidatorCatalogReader catalogReader,
-            RelDataTypeFactory typeFactory,
+            HazelcastTypeFactory typeFactory,
             SqlConformance conformance
     ) {
         super(JetSqlOperatorTable.instance(), catalogReader, typeFactory, conformance);

@@ -111,7 +111,7 @@ public class RootResultConsumerSink implements Processor {
         public Function<? super Address, ? extends ProcessorSupplier> get(@Nonnull List<Address> addresses) {
             return address -> initiatorAddress.equals(address)
                     ? new Supplier(queryId)
-                    : ProcessorSupplier.of(() -> new AbstractProcessor() { });
+                    : ProcessorSupplier.of(NoInputProcessor::new);
         }
 
         @Override
@@ -176,4 +176,9 @@ public class RootResultConsumerSink implements Processor {
             queryId = in.readObject();
         }
     }
+
+    /**
+     * A processor that throws if it receives any input.
+     */
+    private static class NoInputProcessor extends AbstractProcessor { }
 }

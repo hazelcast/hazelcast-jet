@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.sql.impl.opt.physical.visitor;
 
+import com.hazelcast.cluster.Address;
 import com.hazelcast.function.ConsumerEx;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.core.DAG;
@@ -51,6 +52,11 @@ import static com.hazelcast.jet.sql.impl.processors.RootResultConsumerSink.rootR
 public class CreateDagVisitor {
 
     private final DAG dag = new DAG();
+    private final Address localMemberAddress;
+
+    public CreateDagVisitor(Address localMemberAddress) {
+        this.localMemberAddress = localMemberAddress;
+    }
 
     public Vertex onValues(ValuesPhysicalRel rel) {
         List<Object[]> items = new ArrayList<>(rel.getTuples().size());
@@ -131,8 +137,12 @@ public class CreateDagVisitor {
     public Vertex onRoot(JetRootRel rootRel) {
         Vertex vertex = dag.newVertex("ClientSink",
                 rootResultConsumerSink(rootRel.getInitiatorAddress(), rootRel.getQueryId()));
-        // TODO proper all-to-one
-        connectInput(rootRel.getInput(), vertex, edge -> edge.allToOne("aaa"));
+
+        // We use distribute-to-one edge to send all the items to the initiator member.
+        // Such edge has to be partitioned, but the sink is LP=1 anyway, so we can use
+        // allToOne with any key, it goes to a single processor on a single member anyway.
+        connectInput(rootRel.getInput(), vertex,
+                edge -> edge.allToOne("").distributeTo(localMemberAddress));
         return vertex;
     }
 

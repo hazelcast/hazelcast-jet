@@ -17,37 +17,69 @@
 package com.hazelcast.jet.sql;
 
 import com.hazelcast.jet.JetInstance;
+import com.hazelcast.jet.Job;
+import com.hazelcast.sql.SqlQuery;
 import com.hazelcast.sql.SqlResult;
 import com.hazelcast.sql.SqlRow;
 import com.hazelcast.sql.SqlService;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import java.util.Iterator;
+import java.util.BitSet;
 import java.util.Map;
+import java.util.stream.IntStream;
 
+import static com.hazelcast.function.FunctionEx.identity;
+import static com.hazelcast.jet.core.JobStatus.FAILED;
+import static com.hazelcast.jet.core.JobStatus.RUNNING;
+import static java.util.stream.Collectors.toMap;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 
 public class ClientSqlTest extends JetSqlTestSupport {
 
     @BeforeClass
     public static void setUpClass() {
-        initialize(1, null);
+        // TODO currently fails on 2 members, fix it
+        initialize(2, null);
     }
 
     @Test
-    public void basicTest() {
+    public void test_jetJobReturnRowsToClientFrom() {
         JetInstance client = factory().newClient();
         SqlService sqlService = client.getHazelcastInstance().getSql();
         Map<Integer, Integer> myMap = client.getMap("my_map");
-        myMap.put(1, 2);
+        final int itemCount = 10_000;
+        myMap.putAll(IntStream.range(0, itemCount).boxed().collect(toMap(identity(), identity())));
 
         SqlResult result = sqlService.query("select /*+jet*/ __key, this from my_map");
-        Iterator<SqlRow> iterator = result.iterator();
-        SqlRow row = iterator.next();
-        assertEquals(Integer.valueOf(1), row.getObject(0));
-        assertEquals(Integer.valueOf(2), row.getObject(1));
-        assertFalse(iterator.hasNext());
+        BitSet seenValues = new BitSet(itemCount);
+        for (SqlRow r : result) {
+            Integer v = r.getObject(0);
+            assertFalse("value already seen: " + v, seenValues.get(v));
+            seenValues.set(v);
+        }
+        assertEquals(itemCount, seenValues.cardinality());
+    }
+
+    @Test
+    public void when_clientDisconnects_then_jobCancelled() {
+        JetInstance client = factory().newClient();
+        SqlService sqlService = client.getHazelcastInstance().getSql();
+
+        sqlService.query("CREATE EXTERNAL TABLE t TYPE " + TestStreamSqlConnector.TYPE_NAME);
+        // TODO remove the cursorBufferSize, it's a workaround for client that returns only after a full page
+        sqlService.query(new SqlQuery("SELECT * FROM t").setCursorBufferSize(1));
+
+        Job job = instance().getJobs().stream().filter(j -> !j.getStatus().isTerminal()).findFirst().orElse(null);
+        assertNotNull("no active job found", job);
+        assertJobStatusEventually(job, RUNNING);
+
+        client.shutdown();
+        assertJobStatusEventually(job, FAILED);
+        assertThatThrownBy(() -> job.join())
+                .hasMessageContaining("QueryException: Client cannot be reached");
     }
 }

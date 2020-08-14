@@ -156,7 +156,7 @@ public class CreateJobTest extends SimpleTestInClusterSupport {
         sqlService.query("CREATE JOB testJob AS INSERT OVERWRITE dest SELECT v, v FROM src");
         Job job = instance().getJob("testJob");
         assertNotNull(job);
-        assertJobRunningEventually(instance(), job, null);
+        assertJobStatusEventually(job, RUNNING);
 
         // When
         client.shutdown();
