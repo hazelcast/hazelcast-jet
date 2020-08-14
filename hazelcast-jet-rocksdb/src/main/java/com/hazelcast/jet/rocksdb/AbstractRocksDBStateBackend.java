@@ -115,6 +115,7 @@ public abstract class AbstractRocksDBStateBackend {
         }
         return this;
     }
+
     /**
      * Deletes the associated RocksDB instance.
      * Must be invoked when the job finishes execution.
@@ -131,9 +132,5 @@ public abstract class AbstractRocksDBStateBackend {
     @Nonnull
     protected String getNextName() {
         return mapName + counter.getAndIncrement();
-    }
-
-    RocksDB getDBInstance() {
-        return db;
     }
 }
