@@ -79,10 +79,6 @@ public abstract class SimpleTestInClusterSupport extends JetTestSupport {
         }
         // ditch all objects
         for (DistributedObject o : instances()[0].getHazelcastInstance().getDistributedObjects()) {
-            // ignore the SQL catalog
-            if (o.getName().startsWith("__sql.")) { // TODO: extract ???
-                continue;
-            }
             o.destroy();
         }
         // clear the SQL catalog

@@ -53,6 +53,7 @@ import static com.hazelcast.jet.sql.impl.connector.file.JsonMetadataResolver.pat
 import static com.hazelcast.jet.sql.impl.connector.file.JsonMetadataResolver.resolveFieldsFromSample;
 import static com.hazelcast.jet.sql.impl.connector.file.JsonMetadataResolver.toTableFields;
 import static com.hazelcast.jet.sql.impl.connector.file.JsonMetadataResolver.types;
+import static com.hazelcast.jet.sql.impl.connector.file.JsonMetadataResolver.validateFields;
 
 final class RemoteJsonMetadataResolver implements JsonMetadataResolver {
 
@@ -65,7 +66,7 @@ final class RemoteJsonMetadataResolver implements JsonMetadataResolver {
             Job job
     ) throws IOException {
         if (!userFields.isEmpty()) {
-            JsonMetadataResolver.validateFields(userFields);
+            validateFields(userFields);
             return userFields;
         } else {
             String line = line(options.path(), job.getConfiguration());

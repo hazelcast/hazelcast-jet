@@ -48,7 +48,7 @@ public final class FileTableFunction implements JetTableFunction {
 
     public static final FileTableFunction INSTANCE = new FileTableFunction();
 
-    // TODO: replace format-specific options with map or FILE() -> CSV()/JSON()/AVRO()
+    // TODO: replace format-specific options with map or FILE() -> CSV()/JSON()/AVRO() ?
     @SuppressWarnings("checkstyle:MagicNumber")
     private static final List<Pair<String, FunctionParameter>> PARAMETERS = asList(
             Pair.of(OPTION_SERIALIZATION_FORMAT, new JetFunctionParameter(0, "format", String.class, true)),
