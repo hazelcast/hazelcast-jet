@@ -47,6 +47,7 @@ import com.hazelcast.sql.impl.JetSqlService;
 import com.hazelcast.sql.impl.QueryId;
 import com.hazelcast.sql.impl.exec.root.RootResultConsumer;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.util.Map;
@@ -75,7 +76,7 @@ public class JetService implements ManagedService, MembershipAwareService, LiveO
     private NodeEngineImpl nodeEngine;
     private final ILogger logger;
     private final LiveOperationRegistry liveOperationRegistry;
-    private final AtomicReference<CompletableFuture> shutdownFuture = new AtomicReference<>();
+    private final AtomicReference<CompletableFuture<Void>> shutdownFuture = new AtomicReference<>();
     private final Thread shutdownHookThread;
 
     private JetConfig config;
@@ -90,6 +91,7 @@ public class JetService implements ManagedService, MembershipAwareService, LiveO
 
     private final Supplier<int[]> sharedPartitionKeys = memoizeConcurrent(this::computeSharedPartitionKeys);
 
+    @Nullable
     private final JetSqlService jetSqlService;
     private final ConcurrentMap<QueryId, RootResultConsumer> resultConsumerRegistry = new ConcurrentHashMap<>();
 
@@ -214,6 +216,7 @@ public class JetService implements ManagedService, MembershipAwareService, LiveO
                 .from(getNodeEngine().getSerializationService(), serializerConfigs);
     }
 
+    @SuppressWarnings("unused") // parameters are used from jet-enterprise
     public Operation createExportSnapshotOperation(long jobId, String name, boolean cancelJob) {
         throw new UnsupportedOperationException("You need Hazelcast Jet Enterprise to use this feature");
     }
@@ -246,6 +249,7 @@ public class JetService implements ManagedService, MembershipAwareService, LiveO
         return jobExecutionService;
     }
 
+    @Nullable
     public JetSqlService getJetSqlService() {
         return jetSqlService;
     }
