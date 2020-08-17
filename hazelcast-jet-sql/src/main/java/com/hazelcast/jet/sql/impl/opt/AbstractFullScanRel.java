@@ -99,14 +99,7 @@ public abstract class AbstractFullScanRel extends TableScan {
 
     @Override
     public final RelDataType deriveRowType() {
-        RelDataTypeFactory.Builder builder = getCluster().getTypeFactory().builder();
-
-        for (int i = 0; i < getProjection().size(); i++) {
-            RexNode project = getProjection().get(i);
-            builder.add("$" + i, project.getType());
-        }
-
-        return builder.build();
+        return getTable().unwrap(HazelcastTable.class).getRowType(getCluster().getTypeFactory());
     }
 
     @Override

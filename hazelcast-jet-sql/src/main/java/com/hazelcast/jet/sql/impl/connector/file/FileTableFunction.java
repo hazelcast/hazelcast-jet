@@ -41,6 +41,8 @@ import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.OPTION_
 import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.OPTION_GLOB;
 import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.OPTION_HEADER;
 import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.OPTION_PATH;
+import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.OPTION_S3_ACCESS_KEY;
+import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.OPTION_S3_SECRET_KEY;
 import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.OPTION_SHARED_FILE_SYSTEM;
 import static java.util.Arrays.asList;
 
@@ -57,7 +59,12 @@ public final class FileTableFunction implements JetTableFunction {
             Pair.of(OPTION_SHARED_FILE_SYSTEM, new JetFunctionParameter(3, "sharedFileSystem", Boolean.class, false)),
             Pair.of(OPTION_CHARSET, new JetFunctionParameter(4, "charset", String.class, false)),
             Pair.of(OPTION_HEADER, new JetFunctionParameter(5, "header", Boolean.class, false)),
-            Pair.of(OPTION_DELIMITER, new JetFunctionParameter(6, "delimiter", String.class, false)));
+            Pair.of(OPTION_DELIMITER, new JetFunctionParameter(6, "delimiter", String.class, false)),
+
+            // TODO: cloud credentials as map ?
+            Pair.of(OPTION_S3_ACCESS_KEY, new JetFunctionParameter(7, "s3AccessKey", String.class, false)),
+            Pair.of(OPTION_S3_SECRET_KEY, new JetFunctionParameter(8, "s3SecretKey", String.class, false))
+    );
 
     private static final String SCHEMA_NAME_FILES = "files";
 
