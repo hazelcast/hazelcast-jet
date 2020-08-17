@@ -54,6 +54,7 @@ import com.hazelcast.sql.impl.calcite.parse.QueryConvertResult;
 import com.hazelcast.sql.impl.calcite.parse.QueryParseResult;
 import com.hazelcast.sql.impl.calcite.parser.JetSqlParser;
 import com.hazelcast.sql.impl.calcite.schema.HazelcastTable;
+import com.hazelcast.sql.impl.calcite.validate.types.HazelcastTypeFactory;
 import com.hazelcast.sql.impl.optimizer.OptimizationTask;
 import com.hazelcast.sql.impl.optimizer.SqlPlan;
 import com.hazelcast.sql.impl.schema.Table;
@@ -68,7 +69,6 @@ import org.apache.calcite.rel.RelVisitor;
 import org.apache.calcite.rel.core.TableModify;
 import org.apache.calcite.rel.core.TableScan;
 import org.apache.calcite.rel.type.RelDataType;
-import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.parser.SqlParserImplFactory;
@@ -107,7 +107,7 @@ public class JetSqlBackendImpl implements JetSqlBackend {
     @Override
     public SqlValidator validator(
             CatalogReader catalogReader,
-            RelDataTypeFactory typeFactory,
+            HazelcastTypeFactory typeFactory,
             SqlConformance sqlConformance
     ) {
         return new JetSqlValidator(catalogReader, typeFactory, sqlConformance);
@@ -295,7 +295,7 @@ public class JetSqlBackendImpl implements JetSqlBackend {
     }
 
     private DAG createDag(PhysicalRel physicalRel) {
-        CreateDagVisitor visitor = new CreateDagVisitor();
+        CreateDagVisitor visitor = new CreateDagVisitor(nodeEngine.getLocalMember().getAddress());
         physicalRel.visit(visitor);
         return visitor.getDag();
     }

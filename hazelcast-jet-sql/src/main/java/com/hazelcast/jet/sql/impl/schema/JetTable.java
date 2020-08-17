@@ -17,7 +17,7 @@
 package com.hazelcast.jet.sql.impl.schema;
 
 import com.hazelcast.jet.sql.SqlConnector;
-import com.hazelcast.sql.impl.plan.cache.PlanObjectId;
+import com.hazelcast.sql.impl.plan.cache.PlanObjectKey;
 import com.hazelcast.sql.impl.schema.Table;
 import com.hazelcast.sql.impl.schema.TableField;
 import com.hazelcast.sql.impl.schema.TableStatistics;
@@ -41,8 +41,9 @@ public class JetTable extends Table {
     }
 
     @Override
-    public final PlanObjectId getObjectId() {
-        throw new UnsupportedOperationException();
+    public final PlanObjectKey getObjectKey() {
+        // TODO correctly support the plan cache
+        return null;
     }
 
     public SqlConnector getSqlConnector() {

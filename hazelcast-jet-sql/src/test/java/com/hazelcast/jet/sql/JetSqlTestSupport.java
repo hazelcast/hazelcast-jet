@@ -18,13 +18,11 @@ package com.hazelcast.jet.sql;
 
 import com.hazelcast.jet.SimpleTestInClusterSupport;
 import com.hazelcast.jet.sql.impl.connector.map.LocalPartitionedMapConnector;
+import com.hazelcast.map.IMap;
 import com.hazelcast.sql.SqlResult;
 import com.hazelcast.sql.SqlRow;
 import com.hazelcast.sql.SqlService;
-import org.junit.BeforeClass;
 
-import javax.annotation.Nonnull;
-import java.nio.file.Paths;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -46,52 +44,40 @@ import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.OPTION_SERI
 import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.OPTION_VALUE_CLASS;
 import static org.assertj.core.api.Assertions.assertThat;
 
-public abstract class SqlTestSupport extends SimpleTestInClusterSupport {
+public abstract class JetSqlTestSupport extends SimpleTestInClusterSupport {
 
-    protected static final String RESOURCES_PATH = Paths.get("src/test/resources").toFile().getAbsolutePath();
+    /**
+     * Execute a query and assert that it eventually contains the expected entries.
+     *
+     * @param mapName The IMap name
+     * @param sql The query
+     * @param expected Expected IMap contents after executing the query
+     */
+    public static <K, V> void assertMapEventually(String mapName, String sql, Map<K, V> expected) {
+        instance().getHazelcastInstance().getSql().query(sql);
 
-    private static SqlService sqlService;
-
-    @BeforeClass
-    public static void setUpClass() {
-        initialize(1, null);
-        sqlService = instance().getHazelcastInstance().getSql();
-    }
-
-    protected static <K, V> void assertMapEventually(String name, String sql, Map<K, V> expected) {
-        executeSql(sql);
-
-        assertTrueEventually(
-                null,
-                () -> assertThat(new HashMap<>(instance().getMap(name))).containsExactlyEntriesOf(expected),
-                5
-        );
-    }
-
-    protected static void assertRowsEventuallyAnyOrder(String sql, Collection<Row> expectedRows) {
-        List<Row> actualRows = executeSqlWithLimit(sql, expectedRows.size(), 10);
-        assertThat(actualRows).containsExactlyInAnyOrderElementsOf(expectedRows);
-    }
-
-    protected static SqlResult executeSql(String sql) {
-        return sqlService.query(sql);
+        IMap<K, V> map = instance().getMap(mapName);
+        assertTrueEventually(() ->
+                assertThat(new HashMap<>(map)).containsExactlyEntriesOf(expected), 20);
     }
 
     /**
-     * Execute a query and fetch up to {@code rowCountLimit} rows, then close
-     * the result. Don't wait until the result iterator is exhausted if enough
-     * rows were fetched. Suitable for streaming queries that don't stop. The
-     * outstanding rows are ignored.
+     * Execute a query and wait for the results to contain all the {@code
+     * expectedRows}. If there are more rows in the result, they are ignored.
+     * Suitable for streaming queries that don't terminate.
+     *
+     * @param sql The query
+     * @param expectedRows Expected rows
      */
-    @Nonnull
-    private static List<Row> executeSqlWithLimit(String sql, int rowCountLimit, int timeoutSeconds) {
+    public static void assertRowsEventuallyAnyOrder(String sql, Collection<Row> expectedRows) {
+        SqlService sqlService = instance().getHazelcastInstance().getSql();
         CompletableFuture<Void> future = new CompletableFuture<>();
         Deque<Row> rows = new ArrayDeque<>();
 
         Thread thread = new Thread(() -> {
             try (SqlResult result = sqlService.query(sql)) {
                 Iterator<SqlRow> iterator = result.iterator();
-                for (int i = 0; i < rowCountLimit && iterator.hasNext(); i++) {
+                for (int i = 0; i < expectedRows.size() && iterator.hasNext(); i++) {
                     rows.add(new Row(result.getRowMetadata().getColumnCount(), iterator.next()));
                 }
                 future.complete(null);
@@ -105,7 +91,7 @@ public abstract class SqlTestSupport extends SimpleTestInClusterSupport {
 
         try {
             try {
-                future.get(timeoutSeconds, TimeUnit.SECONDS);
+                future.get(10, TimeUnit.SECONDS);
             } catch (TimeoutException e) {
                 thread.interrupt();
                 thread.join();
@@ -114,8 +100,8 @@ public abstract class SqlTestSupport extends SimpleTestInClusterSupport {
             throw sneakyThrow(e);
         }
 
-        // return whichever rows we've collected so far
-        return new ArrayList<>(rows);
+        List<Row> actualRows = new ArrayList<>(rows);
+        assertThat(actualRows).containsExactlyInAnyOrderElementsOf(expectedRows);
     }
 
     /**
@@ -132,7 +118,13 @@ public abstract class SqlTestSupport extends SimpleTestInClusterSupport {
                 + ")";
     }
 
-    protected static final class Row {
+    /**
+     * A class passed to utility methods in this class. We don't use SqlRow
+     * directly because:
+     * - SqlRow doesn't implement `equals`
+     * - It's not easy to create SqlRow instance
+     */
+    public static final class Row {
 
         private final Object[] values;
 

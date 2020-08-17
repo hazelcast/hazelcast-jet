@@ -16,23 +16,37 @@
 
 package com.hazelcast.jet.sql.impl.connector.file;
 
-import com.hazelcast.jet.sql.SqlTestSupport;
+import com.hazelcast.jet.sql.JetSqlTestSupport;
+import com.hazelcast.sql.SqlService;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
+
+import java.nio.file.Paths;
 
 import static com.hazelcast.jet.sql.SqlConnector.AVRO_SERIALIZATION_FORMAT;
 import static com.hazelcast.jet.sql.SqlConnector.OPTION_SERIALIZATION_FORMAT;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 
-public class SqlFileTest extends SqlTestSupport {
+public class SqlFileTest extends JetSqlTestSupport {
+
+    private static final String RESOURCES_PATH = Paths.get("src/test/resources").toFile().getAbsolutePath();
+
+    private static SqlService sqlService;
+
+    @BeforeClass
+    public static void setUpClass() {
+        initialize(1, null);
+        sqlService = instance().getHazelcastInstance().getSql();
+    }
 
     private static String name;
 
     @Before
     public void before() {
         name = createRandomName();
-        executeSql("CREATE EXTERNAL TABLE " + name + " ("
+        sqlService.query("CREATE EXTERNAL TABLE " + name + " ("
                 + "username VARCHAR"
                 + ", age INT"
                 + ") TYPE \"" + FileSqlConnector.TYPE_NAME + "\" "

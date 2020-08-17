@@ -16,8 +16,10 @@
 
 package com.hazelcast.jet.sql.impl.connector.cdc;
 
-import com.hazelcast.jet.sql.SqlTestSupport;
+import com.hazelcast.jet.sql.JetSqlTestSupport;
+import com.hazelcast.sql.SqlService;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.testcontainers.containers.MySQLContainer;
@@ -28,7 +30,15 @@ import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 import static org.testcontainers.containers.MySQLContainer.MYSQL_PORT;
 
-public class SqlCdcTest extends SqlTestSupport {
+public class SqlCdcTest extends JetSqlTestSupport {
+
+    private static SqlService sqlService;
+
+    @BeforeClass
+    public static void setUpClass() {
+        initialize(1, null);
+        sqlService = instance().getHazelcastInstance().getSql();
+    }
 
     @ClassRule
     public static MySQLContainer<?> mysql = new MySQLContainer<>("debezium/example-mysql:1.2")
@@ -46,7 +56,7 @@ public class SqlCdcTest extends SqlTestSupport {
 
     @Before
     public void before() {
-        executeSql("CREATE EXTERNAL TABLE " + TABLE_NAME + " ( "
+        sqlService.query("CREATE EXTERNAL TABLE " + TABLE_NAME + " ( "
                 + OPERATION + " VARCHAR, "
                 + "id INT, "
                 + "first_name VARCHAR, "

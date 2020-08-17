@@ -16,7 +16,8 @@
 
 package com.hazelcast.jet.sql.impl.connector.file;
 
-import com.hazelcast.jet.sql.SqlTestSupport;
+import com.hazelcast.jet.sql.JetSqlTestSupport;
+import com.hazelcast.sql.SqlService;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
@@ -37,9 +38,16 @@ import static com.hazelcast.jet.sql.SqlConnector.OPTION_SERIALIZATION_FORMAT;
 import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.OPTION_HEADER;
 import static java.util.Arrays.asList;
 
-public class SqlHadoopTest extends SqlTestSupport {
+public class SqlHadoopTest extends JetSqlTestSupport {
 
     private static MiniDFSCluster cluster;
+    private static SqlService sqlService;
+
+    @BeforeClass
+    public static void setUpClass() {
+        initialize(1, null);
+        sqlService = instance().getHazelcastInstance().getSql();
+    }
 
     @BeforeClass
     public static void beforeClass() throws IOException {
@@ -60,7 +68,7 @@ public class SqlHadoopTest extends SqlTestSupport {
     @Test
     public void supportsCsv() throws IOException {
         String name = createRandomName();
-        executeSql("CREATE EXTERNAL TABLE " + name + " ("
+        sqlService.query("CREATE EXTERNAL TABLE " + name + " ("
                 + "id BIGINT"
                 + ", name VARCHAR"
                 + ") TYPE \"" + FileSqlConnector.TYPE_NAME + "\" "
@@ -70,13 +78,13 @@ public class SqlHadoopTest extends SqlTestSupport {
                 + ")"
         );
 
-        executeSql("INSERT INTO " + name + " VALUES (1, 'Alice'), (2, 'Bob')");
+        sqlService.query("INSERT INTO " + name + " VALUES (1, 'Alice'), (2, 'Bob')");
 
         assertRowsEventuallyAnyOrder(
                 "SELECT * FROM " + name,
                 asList(
-                        new Row(1L, "Alice")
-                        , new Row(2L, "Bob")
+                        new Row(1L, "Alice"),
+                        new Row(2L, "Bob")
                 )
         );
     }
@@ -86,7 +94,7 @@ public class SqlHadoopTest extends SqlTestSupport {
         store("/inferred-csv/users.csv", "id,name\n1,Alice\n2,Bob");
 
         String name = createRandomName();
-        executeSql("CREATE EXTERNAL TABLE " + name + " "
+        sqlService.query("CREATE EXTERNAL TABLE " + name + " "
                 + "TYPE \"" + FileSqlConnector.TYPE_NAME + "\" "
                 + "OPTIONS ("
                 + "\"" + OPTION_SERIALIZATION_FORMAT + "\" '" + CSV_SERIALIZATION_FORMAT + "'"
@@ -107,7 +115,7 @@ public class SqlHadoopTest extends SqlTestSupport {
     @Test
     public void supportsJson() throws IOException {
         String name = createRandomName();
-        executeSql("CREATE EXTERNAL TABLE " + name + " ("
+        sqlService.query("CREATE EXTERNAL TABLE " + name + " ("
                 + "id BIGINT"
                 + ", name VARCHAR"
                 + ") TYPE \"" + FileSqlConnector.TYPE_NAME + "\" "
@@ -117,7 +125,7 @@ public class SqlHadoopTest extends SqlTestSupport {
                 + ")"
         );
 
-        executeSql("INSERT INTO " + name + " VALUES (1, 'Alice'), (2, 'Bob')");
+        sqlService.query("INSERT INTO " + name + " VALUES (1, 'Alice'), (2, 'Bob')");
 
         assertRowsEventuallyAnyOrder(
                 "SELECT * FROM " + name,
@@ -136,7 +144,7 @@ public class SqlHadoopTest extends SqlTestSupport {
         );
 
         String name = createRandomName();
-        executeSql("CREATE EXTERNAL TABLE " + name + " "
+        sqlService.query("CREATE EXTERNAL TABLE " + name + " "
                 + "TYPE \"" + FileSqlConnector.TYPE_NAME + "\" "
                 + "OPTIONS ("
                 + "\"" + OPTION_SERIALIZATION_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + "'"
@@ -156,7 +164,7 @@ public class SqlHadoopTest extends SqlTestSupport {
     @Test
     public void supportsAvro() throws IOException {
         String name = createRandomName();
-        executeSql("CREATE EXTERNAL TABLE " + name + " ("
+        sqlService.query("CREATE EXTERNAL TABLE " + name + " ("
                 + "id BIGINT"
                 + ", name VARCHAR"
                 + ") TYPE \"" + FileSqlConnector.TYPE_NAME + "\" "
@@ -166,7 +174,7 @@ public class SqlHadoopTest extends SqlTestSupport {
                 + ")"
         );
 
-        executeSql("INSERT INTO " + name + " VALUES (1, 'Alice'), (2, 'Bob')");
+        sqlService.query("INSERT INTO " + name + " VALUES (1, 'Alice'), (2, 'Bob')");
 
         assertRowsEventuallyAnyOrder(
                 "SELECT * FROM " + name,
@@ -182,7 +190,7 @@ public class SqlHadoopTest extends SqlTestSupport {
         store("/inferred-avro/users.avro", Files.readAllBytes(Paths.get("src/test/resources/users.avro")));
 
         String name = createRandomName();
-        executeSql("CREATE EXTERNAL TABLE " + name + " "
+        sqlService.query("CREATE EXTERNAL TABLE " + name + " "
                 + "TYPE \"" + FileSqlConnector.TYPE_NAME + "\" "
                 + "OPTIONS ("
                 + "\"" + OPTION_SERIALIZATION_FORMAT + "\" '" + AVRO_SERIALIZATION_FORMAT + "'"

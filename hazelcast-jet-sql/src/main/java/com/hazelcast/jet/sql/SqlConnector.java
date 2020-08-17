@@ -36,6 +36,7 @@ import java.util.Map;
 //   (TableSchemaField, Table, TableField, QueryDataType etc. need to be public then?)
 public interface SqlConnector {
 
+    // TODO do these options apply to every SQL connector? Should we move them?
     /**
      * TODO
      */

@@ -17,12 +17,13 @@
 package com.hazelcast.jet.sql.impl.connector.kafka;
 
 import com.hazelcast.jet.kafka.impl.KafkaTestSupport;
-import com.hazelcast.jet.sql.SqlTestSupport;
+import com.hazelcast.jet.sql.JetSqlTestSupport;
 import com.hazelcast.jet.sql.impl.connector.kafka.model.BigIntegerDeserializer;
 import com.hazelcast.jet.sql.impl.connector.kafka.model.BigIntegerSerializer;
 import com.hazelcast.jet.sql.impl.connector.kafka.model.Person;
 import com.hazelcast.jet.sql.impl.connector.kafka.model.PersonDeserializer;
 import com.hazelcast.jet.sql.impl.connector.kafka.model.PersonSerializer;
+import com.hazelcast.sql.SqlService;
 import org.apache.kafka.common.serialization.IntegerDeserializer;
 import org.apache.kafka.common.serialization.IntegerSerializer;
 import org.apache.kafka.common.serialization.StringDeserializer;
@@ -47,7 +48,15 @@ import static java.lang.String.format;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 
-public class SqlKafkaTest extends SqlTestSupport {
+public class SqlKafkaTest extends JetSqlTestSupport {
+
+    private static SqlService sqlService;
+
+    @BeforeClass
+    public static void setUpClass() {
+        initialize(1, null);
+        sqlService = instance().getHazelcastInstance().getSql();
+    }
 
     private static final int INITIAL_PARTITION_COUNT = 4;
 
@@ -64,7 +73,7 @@ public class SqlKafkaTest extends SqlTestSupport {
     @Before
     public void before() {
         topicName = createRandomTopic();
-        executeSql(format("CREATE EXTERNAL TABLE %s " +
+        sqlService.query(format("CREATE EXTERNAL TABLE %s " +
                         "TYPE \"%s\" " +
                         "OPTIONS (" +
                         " \"%s\" '%s'," +
@@ -112,7 +121,7 @@ public class SqlKafkaTest extends SqlTestSupport {
     @Test
     public void select_convert() {
         String topicName = createRandomTopic();
-        executeSql(format("CREATE EXTERNAL TABLE %s " +
+        sqlService.query(format("CREATE EXTERNAL TABLE %s " +
                         "TYPE \"%s\" " +
                         "OPTIONS (" +
                         " \"%s\" '%s'," +
@@ -136,7 +145,7 @@ public class SqlKafkaTest extends SqlTestSupport {
                 StringSerializer.class.getCanonicalName(), StringDeserializer.class.getCanonicalName()
         ));
 
-        executeSql(format("INSERT INTO %s VALUES (12, 'a')", topicName));
+        sqlService.query(format("INSERT INTO %s VALUES (12, 'a')", topicName));
 
         assertRowsEventuallyAnyOrder(
                 format("SELECT __key + 1, this FROM %s", topicName),
@@ -146,7 +155,7 @@ public class SqlKafkaTest extends SqlTestSupport {
     @Test
     public void select_pojo() {
         String topicName = createRandomTopic();
-        executeSql(format("CREATE EXTERNAL TABLE %s " +
+        sqlService.query(format("CREATE EXTERNAL TABLE %s " +
                         "TYPE \"%s\" " +
                         "OPTIONS (" +
                         " \"%s\" '%s'," +
@@ -170,8 +179,8 @@ public class SqlKafkaTest extends SqlTestSupport {
                 PersonSerializer.class.getCanonicalName(), PersonDeserializer.class.getCanonicalName()
         ));
 
-        executeSql(format("INSERT INTO %s (__key, name, age) VALUES (0, 'Alice', 30)", topicName));
-        executeSql(format("INSERT INTO %s (__key, name, age) VALUES (1, 'Bob', 40)", topicName));
+        sqlService.query(format("INSERT INTO %s (__key, name, age) VALUES (0, 'Alice', 30)", topicName));
+        sqlService.query(format("INSERT INTO %s (__key, name, age) VALUES (1, 'Bob', 40)", topicName));
 
         assertRowsEventuallyAnyOrder(
                 format("SELECT __key, name, age FROM %s", topicName),
@@ -276,7 +285,7 @@ public class SqlKafkaTest extends SqlTestSupport {
     }
 
     private static void assertTopic(String name, String sql, Map<Integer, String> expected) {
-        executeSql(sql);
+        sqlService.query(sql);
 
         kafkaTestSupport.assertTopicContentsEventually(name, expected, false);
     }

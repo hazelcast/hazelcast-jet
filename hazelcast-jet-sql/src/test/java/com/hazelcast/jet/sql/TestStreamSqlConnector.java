@@ -46,11 +46,13 @@ import static java.util.Collections.singletonList;
 
 public class TestStreamSqlConnector implements SqlConnector {
 
-    private static final List<ExternalField> SCHEMA = singletonList(new ExternalField("v", QueryDataType.BIGINT));
+    public static final String TYPE_NAME = "TestStream";
+
+    private static final List<ExternalField> FIELD_LIST = singletonList(new ExternalField("v", QueryDataType.BIGINT));
 
     @Override
     public String typeName() {
-        return "TestStream";
+        return TYPE_NAME;
     }
 
     @Override
@@ -67,7 +69,7 @@ public class TestStreamSqlConnector implements SqlConnector {
         if (userFields.size() > 0) {
             throw QueryException.error("Don't specify external fields, they are fixed");
         }
-        return SCHEMA;
+        return FIELD_LIST;
     }
 
     @Nonnull @Override

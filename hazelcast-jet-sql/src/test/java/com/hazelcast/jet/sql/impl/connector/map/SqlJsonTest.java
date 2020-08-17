@@ -17,7 +17,9 @@
 package com.hazelcast.jet.sql.impl.connector.map;
 
 import com.hazelcast.core.HazelcastJsonValue;
-import com.hazelcast.jet.sql.SqlTestSupport;
+import com.hazelcast.jet.sql.JetSqlTestSupport;
+import com.hazelcast.sql.SqlService;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.math.BigDecimal;
@@ -41,12 +43,20 @@ import static java.util.Collections.singletonList;
 import static org.assertj.core.api.Assertions.assertThat;
 
 // TODO: move it to IMDG when INSERTs are supported, or at least move to one of Jet connector tests ?
-public class SqlJsonTest extends SqlTestSupport {
+public class SqlJsonTest extends JetSqlTestSupport {
+
+    private static SqlService sqlService;
+
+    @BeforeClass
+    public static void setUpClass() {
+        initialize(1, null);
+        sqlService = instance().getHazelcastInstance().getSql();
+    }
 
     @Test
     public void supportsNulls() {
         String name = generateRandomName();
-        executeSql("CREATE EXTERNAL TABLE " + name + " ("
+        sqlService.query("CREATE EXTERNAL TABLE " + name + " ("
                 + "key_name VARCHAR EXTERNAL NAME \"__key.name\""
                 + ", value_name VARCHAR EXTERNAL NAME \"this.name\""
                 + ") TYPE \"" + LocalPartitionedMapConnector.TYPE_NAME + "\" "
@@ -55,7 +65,7 @@ public class SqlJsonTest extends SqlTestSupport {
                 + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + "'"
                 + ")");
 
-        executeSql("INSERT OVERWRITE " + name + " VALUES (null, null)");
+        sqlService.query("INSERT OVERWRITE " + name + " VALUES (null, null)");
 
         Map<HazelcastJsonValue, HazelcastJsonValue> map = instance().getMap(name);
         assertThat(map.get(new HazelcastJsonValue("{\"name\":null}")).toString()).isEqualTo("{\"name\":null}");
@@ -69,7 +79,7 @@ public class SqlJsonTest extends SqlTestSupport {
     @Test
     public void supportsFieldsMapping() {
         String name = generateRandomName();
-        executeSql("CREATE EXTERNAL TABLE " + name + " ("
+        sqlService.query("CREATE EXTERNAL TABLE " + name + " ("
                 + "key_name VARCHAR EXTERNAL NAME \"__key.name\""
                 + ", value_name VARCHAR EXTERNAL NAME \"this.name\""
                 + ") TYPE \"" + LocalPartitionedMapConnector.TYPE_NAME + "\" "
@@ -78,7 +88,7 @@ public class SqlJsonTest extends SqlTestSupport {
                 + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + "'"
                 + ")");
 
-        executeSql("INSERT OVERWRITE " + name + " (value_name, key_name) VALUES ('Bob', 'Alice')");
+        sqlService.query("INSERT OVERWRITE " + name + " (value_name, key_name) VALUES ('Bob', 'Alice')");
 
         Map<HazelcastJsonValue, HazelcastJsonValue> map = instance().getMap(name);
         assertThat(map.get(new HazelcastJsonValue("{\"name\":\"Alice\"}")).toString()).isEqualTo("{\"name\":\"Bob\"}");
@@ -92,7 +102,7 @@ public class SqlJsonTest extends SqlTestSupport {
     @Test
     public void supportsSchemaEvolution() {
         String name = generateRandomName();
-        executeSql("CREATE EXTERNAL TABLE " + name + " ("
+        sqlService.query("CREATE EXTERNAL TABLE " + name + " ("
                 + "name VARCHAR"
                 + ") TYPE \"" + LocalPartitionedMapConnector.TYPE_NAME + "\" "
                 + "OPTIONS ("
@@ -102,10 +112,10 @@ public class SqlJsonTest extends SqlTestSupport {
                 + ")");
 
         // insert initial record
-        executeSql("INSERT OVERWRITE " + name + " VALUES (13, 'Alice')");
+        sqlService.query("INSERT OVERWRITE " + name + " VALUES (13, 'Alice')");
 
         // alter schema
-        executeSql("CREATE OR REPLACE EXTERNAL TABLE " + name + " ("
+        sqlService.query("CREATE OR REPLACE EXTERNAL TABLE " + name + " ("
                 + "name VARCHAR"
                 + ", ssn BIGINT"
                 + ") TYPE \"" + LocalPartitionedMapConnector.TYPE_NAME + "\" "
@@ -116,7 +126,7 @@ public class SqlJsonTest extends SqlTestSupport {
                 + ")");
 
         // insert record against new schema
-        executeSql("INSERT OVERWRITE " + name + " VALUES (69, 'Bob', 123456789)");
+        sqlService.query("INSERT OVERWRITE " + name + " VALUES (69, 'Bob', 123456789)");
 
         // assert both - initial & evolved - records are correctly read
         assertRowsEventuallyAnyOrder(
@@ -131,7 +141,7 @@ public class SqlJsonTest extends SqlTestSupport {
     @Test
     public void supportsAllTypes() {
         String name = generateRandomName();
-        executeSql("CREATE EXTERNAL TABLE " + name + " ("
+        sqlService.query("CREATE EXTERNAL TABLE " + name + " ("
                 + "string VARCHAR"
                 + ", \"boolean\" BOOLEAN"
                 + ", byte TINYINT"
@@ -152,7 +162,7 @@ public class SqlJsonTest extends SqlTestSupport {
                 + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + "'"
                 + ")");
 
-        executeSql("INSERT OVERWRITE " + name + " VALUES ("
+        sqlService.query("INSERT OVERWRITE " + name + " VALUES ("
                 + "1"
                 + ", 'string'"
                 + ", true"

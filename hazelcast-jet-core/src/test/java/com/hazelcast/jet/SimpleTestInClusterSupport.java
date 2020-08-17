@@ -20,6 +20,7 @@ import com.hazelcast.core.DistributedObject;
 import com.hazelcast.jet.config.JetClientConfig;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.core.JetTestSupport;
+import com.hazelcast.sql.impl.JetSqlService;
 import com.hazelcast.test.HazelcastSerialClassRunner;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -82,7 +83,10 @@ public abstract class SimpleTestInClusterSupport extends JetTestSupport {
             o.destroy();
         }
         // clear the SQL catalog
-        getJetService(instance()).getJetSqlService().clearCatalog();
+        JetSqlService jetSqlService = getJetService(instance()).getJetSqlService();
+        if (jetSqlService != null) {
+            jetSqlService.clearCatalog();
+        }
     }
 
     @AfterClass
