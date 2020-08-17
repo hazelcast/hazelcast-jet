@@ -12,7 +12,6 @@ public class SortPrepareP<V> extends AbstractProcessor {
 
     private final FunctionEx<? super V, ? extends Long> keyFn;
     private PrefixRocksMap<Long, V> rocksMap;
-    private ResultTraverser resultTraverser;
 
     public SortPrepareP(FunctionEx<? super V, ? extends Long> keyFn) {
         this.keyFn = keyFn;
@@ -34,10 +33,7 @@ public class SortPrepareP<V> extends AbstractProcessor {
     @Override
     public boolean complete() {
         rocksMap.compact();
-        if (resultTraverser == null) {
-            resultTraverser = new ResultTraverser();
-        }
-        return emitFromTraverser(resultTraverser);
+        return emitFromTraverser(new ResultTraverser());
     }
 
     private class ResultTraverser implements Traverser<V> {
@@ -45,6 +41,9 @@ public class SortPrepareP<V> extends AbstractProcessor {
 
         @Override
         public V next() {
+            if (cursor == null) {
+                return null;
+            }
             if (!cursor.advance()) {
                 cursor.close();
                 return null;

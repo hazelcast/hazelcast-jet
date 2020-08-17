@@ -108,16 +108,6 @@ public class PrefixRocksMap<K, V> {
         }
     }
 
-    // handles the case when a cursor is created over an empty map.
-    // creates the column family with no prefix since no elements were added in the map.
-    private void open() {
-        try {
-            cfh = db.createColumnFamily(new ColumnFamilyDescriptor(serialize(name), columnFamilyOptions));
-        } catch (RocksDBException e) {
-            throw new HazelcastException("Failed to create PrefixRocksMap", e);
-        }
-    }
-
     /**
      * Adds the provided value in the list associated with the key.
      * Returns true if the write request succeeded, false if a write stall occurred.
@@ -182,9 +172,10 @@ public class PrefixRocksMap<K, V> {
      * Returns an cursor over the contents of this map. This cursor is
      * guaranteed to return all keys totally ordered.
      */
-    @Nonnull
     public Cursor cursor() {
-        if(cfh == null) open();
+        if(cfh == null) {
+            return null;
+        }
         Cursor mapIterator = new Cursor();
         iterators.add(mapIterator.iterator);
         return mapIterator;
