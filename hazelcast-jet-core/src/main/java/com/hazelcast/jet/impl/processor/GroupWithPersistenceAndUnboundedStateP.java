@@ -98,9 +98,6 @@ public class GroupWithPersistenceAndUnboundedStateP<K, A, R, OUT> extends Abstra
 
         @Override
         public Entry<K, A> next() {
-            if(cursor == null) {
-                return null;
-            }
             if (!cursor.advance()) {
                 cursor.close();
                 return null;
