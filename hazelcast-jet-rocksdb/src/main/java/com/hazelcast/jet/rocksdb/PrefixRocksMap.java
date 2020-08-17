@@ -98,11 +98,21 @@ public class PrefixRocksMap<K, V> {
     }
 
     // lazily creates the column family since the prefix is only specified once
-    // the map is actually used
+    // the map is actually used.
     private void open(K prefix) {
         try {
             cfh = db.createColumnFamily(new ColumnFamilyDescriptor(serialize(name),
                     columnFamilyOptions.useFixedLengthPrefixExtractor(serialize(prefix).length)));
+        } catch (RocksDBException e) {
+            throw new HazelcastException("Failed to create PrefixRocksMap", e);
+        }
+    }
+
+    // handles the case when a cursor is created over an empty map.
+    // creates the column family with no prefix since no elements were added in the map.
+    private void open() {
+        try {
+            cfh = db.createColumnFamily(new ColumnFamilyDescriptor(serialize(name), columnFamilyOptions));
         } catch (RocksDBException e) {
             throw new HazelcastException("Failed to create PrefixRocksMap", e);
         }
@@ -174,7 +184,7 @@ public class PrefixRocksMap<K, V> {
      */
     @Nonnull
     public Cursor cursor() {
-        assert cfh != null : "PrefixRocksMap was not opened";
+        if(cfh == null) open();
         Cursor mapIterator = new Cursor();
         iterators.add(mapIterator.iterator);
         return mapIterator;
