@@ -42,7 +42,7 @@ import static java.util.Objects.requireNonNull;
 public class JetSqlServiceImpl implements JetSqlService, ManagedService {
 
     private ExternalCatalog catalog;
-    private JetSqlBackendImpl sqlBackend;
+    private JetSqlBackend sqlBackend;
 
     @SuppressWarnings("unused") // used through reflection
     public void initJetInstance(@Nonnull JetInstance jetInstance) {
@@ -53,7 +53,7 @@ public class JetSqlServiceImpl implements JetSqlService, ManagedService {
         JetPlanExecutor planExecutor = new JetPlanExecutor(requireNonNull(jetInstance), resultConsumerRegistry, catalog);
 
         this.catalog = catalog;
-        this.sqlBackend = new JetSqlBackendImpl(nodeEngine, catalog, planExecutor);
+        this.sqlBackend = new JetSqlBackend(nodeEngine, catalog, planExecutor);
     }
 
     @Override

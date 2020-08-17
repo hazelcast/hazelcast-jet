@@ -48,7 +48,7 @@ import com.hazelcast.sql.SqlColumnMetadata;
 import com.hazelcast.sql.SqlRowMetadata;
 import com.hazelcast.sql.impl.QueryId;
 import com.hazelcast.sql.impl.QueryUtils;
-import com.hazelcast.sql.impl.calcite.JetSqlBackend;
+import com.hazelcast.sql.impl.calcite.SqlBackend;
 import com.hazelcast.sql.impl.calcite.OptimizerContext;
 import com.hazelcast.sql.impl.calcite.parse.QueryConvertResult;
 import com.hazelcast.sql.impl.calcite.parse.QueryParseResult;
@@ -85,14 +85,14 @@ import java.util.List;
 
 import static java.util.stream.Collectors.toList;
 
-public class JetSqlBackendImpl implements JetSqlBackend {
+public class JetSqlBackend implements SqlBackend {
 
     private final NodeEngine nodeEngine;
 
     private final ExternalCatalog catalog;
     private final JetPlanExecutor planExecutor;
 
-    JetSqlBackendImpl(NodeEngine nodeEngine, ExternalCatalog catalog, JetPlanExecutor planExecutor) {
+    JetSqlBackend(NodeEngine nodeEngine, ExternalCatalog catalog, JetPlanExecutor planExecutor) {
         this.nodeEngine = nodeEngine;
 
         this.catalog = catalog;
@@ -213,8 +213,8 @@ public class JetSqlBackendImpl implements JetSqlBackend {
     private SqlPlan toCreateJobPlan(QueryParseResult parseResult, OptimizerContext context) {
         SqlCreateJob node = (SqlCreateJob) parseResult.getNode();
         SqlNode source = node.dmlStatement();
-        QueryParseResult newParseResult = new QueryParseResult(source, parseResult.getParameterRowType(), false,
-                parseResult.getValidator());
+        QueryParseResult newParseResult =
+                new QueryParseResult(source, parseResult.getParameterRowType(), parseResult.getValidator(), this);
         QueryConvertResult convertedResult = context.convert(newParseResult);
         ExecutionPlan dmlPlan = toPlan(convertedResult.getRel(), context);
         return new CreateJobPlan(node.name(), node.jobConfig(), node.ifNotExists(), dmlPlan, planExecutor);
