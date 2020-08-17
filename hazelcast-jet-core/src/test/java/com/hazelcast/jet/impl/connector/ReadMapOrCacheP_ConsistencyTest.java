@@ -28,13 +28,11 @@ import com.hazelcast.jet.core.JetTestSupport;
 import com.hazelcast.jet.pipeline.BatchSource;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.test.AssertionSinks;
-import com.hazelcast.jet.test.SerialTest;
 import com.hazelcast.map.IMap;
 import com.hazelcast.test.HazelcastSerialClassRunner;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 
 import java.util.ArrayList;
@@ -55,10 +53,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 @RunWith(HazelcastSerialClassRunner.class)
-@Category(SerialTest.class)
 public class ReadMapOrCacheP_ConsistencyTest extends JetTestSupport {
 
-    private static final String MAP_NAME = "map";
     private static final int NUM_ITEMS = 100_000;
 
     private static AtomicInteger processedCount;
@@ -67,10 +63,12 @@ public class ReadMapOrCacheP_ConsistencyTest extends JetTestSupport {
 
     private List<HazelcastInstance> remoteInstances = new ArrayList<>();
     private JetInstance jet;
+    private String mapName;
 
     @Before
     public void setup() {
         jet = createJetMember();
+        mapName = randomMapName();
 
         processedCount = new AtomicInteger();
         startLatch = new CountDownLatch(1);
@@ -86,7 +84,7 @@ public class ReadMapOrCacheP_ConsistencyTest extends JetTestSupport {
 
     @Test
     public void test_addingItems_local() {
-        test_addingItems(jet.getMap(MAP_NAME), null);
+        test_addingItems(jet.getMap(mapName), null);
     }
 
     @Test
@@ -96,12 +94,12 @@ public class ReadMapOrCacheP_ConsistencyTest extends JetTestSupport {
         remoteInstances.add(hz);
 
         ClientConfig clientConfig = new ClientConfig().setClusterName(config.getClusterName());
-        test_addingItems(hz.getMap(MAP_NAME), clientConfig);
+        test_addingItems(hz.getMap(mapName), clientConfig);
     }
 
     @Test
     public void test_removingItems_local() {
-        test_removingItems(jet.getMap(MAP_NAME), null);
+        test_removingItems(jet.getMap(mapName), null);
     }
 
     @Test
@@ -111,12 +109,12 @@ public class ReadMapOrCacheP_ConsistencyTest extends JetTestSupport {
         remoteInstances.add(hz);
 
         ClientConfig clientConfig = new ClientConfig().setClusterName(config.getClusterName());
-        test_removingItems(hz.getMap(MAP_NAME), clientConfig);
+        test_removingItems(hz.getMap(mapName), clientConfig);
     }
 
     @Test
     public void test_migration_local() throws Exception {
-        test_migration(jet.getMap(MAP_NAME), null, this::createJetMember);
+        test_migration(jet.getMap(mapName), null, this::createJetMember);
     }
 
     @Test
@@ -127,7 +125,7 @@ public class ReadMapOrCacheP_ConsistencyTest extends JetTestSupport {
 
         ClientConfig clientConfig = new ClientConfig().setClusterName(config.getClusterName());
 
-        test_migration(hz.getMap(MAP_NAME), clientConfig,
+        test_migration(hz.getMap(mapName), clientConfig,
                 () -> remoteInstances.add(Hazelcast.newHazelcastInstance(config)));
     }
 
@@ -254,6 +252,6 @@ public class ReadMapOrCacheP_ConsistencyTest extends JetTestSupport {
     }
 
     private BatchSource<Entry<Integer, Integer>> mapSource(ClientConfig clientConfig) {
-        return clientConfig == null ? map(MAP_NAME) : remoteMap(MAP_NAME, clientConfig);
+        return clientConfig == null ? map(mapName) : remoteMap(mapName, clientConfig);
     }
 }
