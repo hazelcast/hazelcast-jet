@@ -99,15 +99,21 @@ public final class Processors {
         @Override
         public void writeData(ObjectDataOutput out) throws IOException {
             out.writeObject(descriptor);
-            out.writeObject(paths);
-            out.writeObject(types);
+            out.writeUTFArray(paths);
+            out.writeInt(types.length);
+            for (QueryDataType type : types) {
+                out.writeObject(type);
+            }
         }
 
         @Override
         public void readData(ObjectDataInput in) throws IOException {
             descriptor = in.readObject();
-            paths = in.readObject();
-            types = in.readObject();
+            paths = in.readUTFArray();
+            types = new QueryDataType[in.readInt()];
+            for (int i = 0; i < types.length; i++) {
+                types[i] = in.readObject();
+            }
         }
     }
 }
