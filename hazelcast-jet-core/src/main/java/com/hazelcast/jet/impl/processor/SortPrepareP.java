@@ -33,8 +33,11 @@ public class SortPrepareP<V> extends AbstractProcessor {
 
     @Override
     public boolean complete() {
-        rocksMap.compact();
+        if(rocksMap.isEmpty()) {
+            return true;
+        }
         if (resultTraverser == null) {
+            rocksMap.compact();
             resultTraverser = new ResultTraverser();
         }
         return emitFromTraverser(resultTraverser);

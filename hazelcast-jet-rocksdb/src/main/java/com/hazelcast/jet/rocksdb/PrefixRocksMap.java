@@ -206,6 +206,10 @@ public class PrefixRocksMap<K, V> {
         }
     }
 
+    public boolean isEmpty() {
+        return counter == Long.MIN_VALUE;
+    }
+
     /**
      * Releases all native handles that this map acquired.
      */
