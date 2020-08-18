@@ -59,7 +59,7 @@ public abstract class CdcSource<T> {
     private State state = new State();
     private boolean taskInit;
 
-    public CdcSource(Properties properties) { // TODO: is it ok to make it public?
+    CdcSource(Properties properties) {
         try {
             connector = newInstance(properties, CONNECTOR_CLASS_PROPERTY);
             connector.initialize(new JetConnectorContext());
