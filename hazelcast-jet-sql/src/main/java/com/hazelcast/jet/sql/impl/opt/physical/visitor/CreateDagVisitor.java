@@ -129,7 +129,7 @@ public class CreateDagVisitor {
     public Vertex onProject(ProjectPhysicalRel rel) {
         FunctionEx<Object[], Object[]> projection = ExpressionUtil.projectionFn(rel.projection());
 
-        Vertex vertex = dag.newVertex("project", mapP(projection::apply));
+        Vertex vertex = dag.newVertex("project", mapP(projection));
         connectInput(rel.getInput(), vertex, null);
         return vertex;
     }
