@@ -188,19 +188,22 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
             if (q.peek() == null) {
                 return NO_PROGRESS;
             }
-            if(q.peek() == DONE_ITEM) {
-                return DONE;
+            if (q.peek() == DONE_ITEM) {
+                conveyor.removeQueue(queueIndex);
+                continue;
             }
             if (minItem == null || comparator.compare(minItem, q.peek()) > 0) {
                 minIndex = queueIndex;
                 minItem = q.peek();
             }
         }
+        if (conveyor.liveQueueCount() == 0) {
+            return DONE;
+        }
         conveyor.queue(minIndex).poll();
         dest.test(minItem);
         return MADE_PROGRESS;
     }
-
     private boolean maybeEmitWm(long timestamp, Predicate<Object> dest) {
         if (timestamp != NO_NEW_WM) {
             boolean res = dest.test(new Watermark(timestamp));
