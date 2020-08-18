@@ -107,16 +107,28 @@ public final class EntryProcessors {
         public void writeData(ObjectDataOutput out) throws IOException {
             out.writeObject(keyDescriptor);
             out.writeObject(valueDescriptor);
-            out.writeObject(paths);
-            out.writeObject(types);
+            out.writeInt(paths.length);
+            for (QueryPath path : paths) {
+                out.writeObject(path);
+            }
+            out.writeInt(types.length);
+            for (QueryDataType type : types) {
+                out.writeObject(type);
+            }
         }
 
         @Override
         public void readData(ObjectDataInput in) throws IOException {
             keyDescriptor = in.readObject();
             valueDescriptor = in.readObject();
-            paths = in.readObject();
-            types = in.readObject();
+            paths = new QueryPath[in.readInt()];
+            for (int i = 0; i < paths.length; i++) {
+                paths[i] = in.readObject();
+            }
+            types = new QueryDataType[in.readInt()];
+            for (int i = 0; i < types.length; i++) {
+                types[i] = in.readObject();
+            }
         }
     }
 }
