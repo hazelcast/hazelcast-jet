@@ -21,6 +21,7 @@ import com.hazelcast.sql.SqlRowMetadata;
 import com.hazelcast.sql.impl.AbstractSqlResult;
 import com.hazelcast.sql.impl.QueryException;
 import com.hazelcast.sql.impl.QueryId;
+import com.hazelcast.sql.impl.ResultIterator;
 
 import javax.annotation.Nonnull;
 import java.util.Iterator;
@@ -32,7 +33,7 @@ public class JetStaticSqlResultImpl extends AbstractSqlResult {
     private final List<SqlRow> rows;
     private final SqlRowMetadata rowMetadata;
 
-    private Iterator<SqlRow> iterator;
+    private ResultIterator<SqlRow> iterator;
 
     public JetStaticSqlResultImpl(QueryId queryId, List<SqlRow> rows, SqlRowMetadata rowMetadata) {
         this.queryId = queryId;
@@ -53,9 +54,26 @@ public class JetStaticSqlResultImpl extends AbstractSqlResult {
 
     @Nonnull
     @Override
-    public Iterator<SqlRow> iterator() {
+    public ResultIterator<SqlRow> iterator() {
         if (iterator == null) {
-            iterator = rows.iterator();
+            Iterator<SqlRow> delegate = rows.iterator();
+
+            iterator = new ResultIterator<SqlRow>() {
+                @Override
+                public HasNextImmediatelyResult hasNextImmediately() {
+                    return hasNext() ? HasNextImmediatelyResult.YES : HasNextImmediatelyResult.DONE;
+                }
+
+                @Override
+                public boolean hasNext() {
+                    return delegate.hasNext();
+                }
+
+                @Override
+                public SqlRow next() {
+                    return delegate.next();
+                }
+            };
 
             return iterator;
         } else {

@@ -22,12 +22,12 @@ import com.hazelcast.sql.impl.AbstractSqlResult;
 import com.hazelcast.sql.impl.QueryException;
 import com.hazelcast.sql.impl.QueryId;
 import com.hazelcast.sql.impl.QueryUtils;
+import com.hazelcast.sql.impl.ResultIterator;
 import com.hazelcast.sql.impl.SqlRowImpl;
 import com.hazelcast.sql.impl.exec.root.RootResultConsumer;
 import com.hazelcast.sql.impl.row.Row;
 
 import javax.annotation.Nonnull;
-import java.util.Iterator;
 import java.util.NoSuchElementException;
 
 public class JetDynamicSqlResultImpl extends AbstractSqlResult {
@@ -36,7 +36,7 @@ public class JetDynamicSqlResultImpl extends AbstractSqlResult {
     private final RootResultConsumer rootResultConsumer;
     private final SqlRowMetadata rowMetadata;
 
-    private Iterator<SqlRow> iterator;
+    private ResultIterator<SqlRow> iterator;
 
     public JetDynamicSqlResultImpl(QueryId queryId, RootResultConsumer rootResultConsumer, SqlRowMetadata rowMetadata) {
         this.queryId = queryId;
@@ -55,7 +55,7 @@ public class JetDynamicSqlResultImpl extends AbstractSqlResult {
     }
 
     @Nonnull @Override
-    public Iterator<SqlRow> iterator() {
+    public ResultIterator<SqlRow> iterator() {
         if (iterator == null) {
             iterator = new RowToSqlRowIterator(rootResultConsumer.iterator());
 
@@ -80,11 +80,11 @@ public class JetDynamicSqlResultImpl extends AbstractSqlResult {
         rootResultConsumer.onError(exception);
     }
 
-    private final class RowToSqlRowIterator implements Iterator<SqlRow> {
+    private final class RowToSqlRowIterator implements ResultIterator<SqlRow> {
 
-        private final Iterator<Row> delegate;
+        private final ResultIterator<Row> delegate;
 
-        private RowToSqlRowIterator(Iterator<Row> delegate) {
+        private RowToSqlRowIterator(ResultIterator<Row> delegate) {
             this.delegate = delegate;
         }
 
@@ -92,6 +92,15 @@ public class JetDynamicSqlResultImpl extends AbstractSqlResult {
         public boolean hasNext() {
             try {
                 return delegate.hasNext();
+            } catch (Exception e) {
+                throw QueryUtils.toPublicException(e, queryId.getMemberId());
+            }
+        }
+
+        @Override
+        public HasNextImmediatelyResult hasNextImmediately() {
+            try {
+                return delegate.hasNextImmediately();
             } catch (Exception e) {
                 throw QueryUtils.toPublicException(e, queryId.getMemberId());
             }

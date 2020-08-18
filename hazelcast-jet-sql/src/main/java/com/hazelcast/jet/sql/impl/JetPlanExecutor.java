@@ -115,7 +115,7 @@ class JetPlanExecutor {
         if (plan.isInsert()) {
             consumer = null;
         } else {
-            consumer = new BlockingRootResultConsumer();
+            consumer = new BlockingRootResultConsumer(!plan.isStreaming());
             consumer.setup(() -> { });
             Object oldValue = resultConsumerRegistry.put(plan.getQueryId(), consumer);
             assert oldValue == null : oldValue;
