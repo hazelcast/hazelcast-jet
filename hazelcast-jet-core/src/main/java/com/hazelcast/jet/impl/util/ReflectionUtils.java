@@ -123,10 +123,6 @@ public final class ReflectionUtils {
         }
     }
 
-    public static <T> T newInstance(String name) {
-        return newInstance(Thread.currentThread().getContextClassLoader(), name);
-    }
-
     public static <T> T newInstance(ClassLoader classLoader, String name) {
         try {
             return ClassLoaderUtil.newInstance(classLoader, name);
