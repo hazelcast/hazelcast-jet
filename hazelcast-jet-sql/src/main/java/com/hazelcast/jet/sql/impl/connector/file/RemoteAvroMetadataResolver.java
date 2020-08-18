@@ -16,11 +16,10 @@
 
 package com.hazelcast.jet.sql.impl.connector.file;
 
-import com.hazelcast.function.BiFunctionEx;
 import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
-import com.hazelcast.jet.hadoop.impl.ReadHadoopNewApiP;
+import com.hazelcast.jet.hadoop.HadoopProcessors;
 import com.hazelcast.jet.hadoop.impl.WriteHadoopNewApiP;
 import com.hazelcast.jet.sql.impl.connector.Processors;
 import com.hazelcast.jet.sql.impl.connector.RowProjector;
@@ -48,6 +47,7 @@ import org.apache.hadoop.mapreduce.Job;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.function.BiFunction;
 
 import static com.hazelcast.jet.hadoop.impl.SerializableConfiguration.asSerializable;
 import static com.hazelcast.jet.sql.impl.connector.file.AvroMetadataResolver.paths;
@@ -137,12 +137,12 @@ final class RemoteAvroMetadataResolver {
             SupplierEx<RowProjector> projectorSupplier =
                     () -> new RowProjector(new AvroQueryTarget(), paths, types, predicate, projection);
 
-            SupplierEx<BiFunctionEx<AvroKey<GenericRecord>, NullWritable, Object[]>> projectionSupplierFn = () -> {
+            SupplierEx<BiFunction<AvroKey<GenericRecord>, NullWritable, Object[]>> projectionSupplierFn = () -> {
                 RowProjector projector = projectorSupplier.get();
                 return (key, value) -> projector.project(key.datum());
             };
 
-            return new ReadHadoopNewApiP.MetaSupplier<>(asSerializable(configuration), projectionSupplierFn);
+            return HadoopProcessors.readHadoopP(asSerializable(configuration), projectionSupplierFn);
         }
 
         @Override

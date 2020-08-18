@@ -16,11 +16,10 @@
 
 package com.hazelcast.jet.sql.impl.connector.file;
 
-import com.hazelcast.function.BiFunctionEx;
 import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
-import com.hazelcast.jet.hadoop.impl.ReadHadoopNewApiP;
+import com.hazelcast.jet.hadoop.HadoopProcessors;
 import com.hazelcast.jet.hadoop.impl.WriteHadoopNewApiP;
 import com.hazelcast.jet.sql.impl.connector.Processors;
 import com.hazelcast.jet.sql.impl.connector.RowProjector;
@@ -47,6 +46,7 @@ import java.io.InputStreamReader;
 import java.io.Reader;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BiFunction;
 
 import static com.hazelcast.function.FunctionEx.identity;
 import static com.hazelcast.jet.hadoop.impl.SerializableConfiguration.asSerializable;
@@ -145,7 +145,7 @@ final class RemoteCsvMetadataResolver implements CsvMetadataResolver {
             SupplierEx<RowProjector> projectorSupplier =
                     () -> new RowProjector(new CsvQueryTarget(indicesByNames), paths, types, predicate, projection);
 
-            SupplierEx<BiFunctionEx<LongWritable, Text, Object[]>> projectionSupplierFn = () -> {
+            SupplierEx<BiFunction<LongWritable, Text, Object[]>> projectionSupplierFn = () -> {
                 RowProjector projector = projectorSupplier.get();
                 return (position, line) -> {
                     if (position.get() == 0 && header) {
@@ -156,7 +156,7 @@ final class RemoteCsvMetadataResolver implements CsvMetadataResolver {
                 };
             };
 
-            return new ReadHadoopNewApiP.MetaSupplier<>(asSerializable(configuration), projectionSupplierFn);
+            return HadoopProcessors.readHadoopP(asSerializable(configuration), projectionSupplierFn);
         }
 
         @Override

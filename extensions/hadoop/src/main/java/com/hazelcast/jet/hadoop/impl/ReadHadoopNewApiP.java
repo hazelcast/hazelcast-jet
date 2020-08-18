@@ -18,7 +18,6 @@ package com.hazelcast.jet.hadoop.impl;
 
 import com.hazelcast.cluster.Address;
 import com.hazelcast.cluster.Member;
-import com.hazelcast.function.BiFunctionEx;
 import com.hazelcast.function.SupplierEx;
 import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.jet.Traverser;
@@ -46,6 +45,7 @@ import java.lang.reflect.Constructor;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import static com.hazelcast.jet.Traversers.traverseIterable;
@@ -65,8 +65,8 @@ public final class ReadHadoopNewApiP<K, V, R> extends AbstractProcessor {
     private final Configuration configuration;
     private final InputFormat inputFormat;
     private final Traverser<R> trav;
-    private SupplierEx<BiFunctionEx<K, V, R>> projectionSupplierFn;
-    private BiFunctionEx<K, V, R> projectionFn;
+    private final SupplierEx<BiFunction<K, V, R>> projectionSupplierFn;
+    private BiFunction<K, V, R> projectionFn;
 
     private InternalSerializationService serializationService;
     private RecordReader<K, V> reader;
@@ -75,7 +75,7 @@ public final class ReadHadoopNewApiP<K, V, R> extends AbstractProcessor {
             @Nonnull Configuration configuration,
             @Nonnull InputFormat inputFormat,
             @Nonnull List<InputSplit> splits,
-            @Nonnull SupplierEx<BiFunctionEx<K, V, R>> projectionSupplierFn
+            @Nonnull SupplierEx<BiFunction<K, V, R>> projectionSupplierFn
     ) {
         this.configuration = configuration;
         this.inputFormat = inputFormat;
@@ -93,7 +93,7 @@ public final class ReadHadoopNewApiP<K, V, R> extends AbstractProcessor {
         // record-readers return the same object for `reader.getCurrentKey()`
         // and `reader.getCurrentValue()` which is mutated for each `reader.nextKeyValue()`.
         if (configuration.getBoolean(COPY_ON_READ, true)) {
-            BiFunctionEx<K, V, R> actualProjectionFn = this.projectionFn;
+            BiFunction<K, V, R> actualProjectionFn = this.projectionFn;
             this.projectionFn = (key, value) -> {
                 R result = actualProjectionFn.apply(key, value);
                 return result == null ? null : serializationService.toObject(serializationService.toData(result));
@@ -164,12 +164,14 @@ public final class ReadHadoopNewApiP<K, V, R> extends AbstractProcessor {
          */
         @SuppressFBWarnings("SE_BAD_FIELD")
         private final Configuration configuration;
-        private final SupplierEx<BiFunctionEx<K, V, R>> projectionSupplierFn;
+        private final SupplierEx<BiFunction<K, V, R>> projectionSupplierFn;
 
         private transient Map<Address, List<IndexedInputSplit>> assigned;
 
-        public MetaSupplier(@Nonnull Configuration configuration,
-                            @Nonnull SupplierEx<BiFunctionEx<K, V, R>> projectionSupplierFn) {
+        public MetaSupplier(
+                @Nonnull Configuration configuration,
+                @Nonnull SupplierEx<BiFunction<K, V, R>> projectionSupplierFn
+        ) {
             this.configuration = configuration;
             this.projectionSupplierFn = projectionSupplierFn;
         }
@@ -205,13 +207,13 @@ public final class ReadHadoopNewApiP<K, V, R> extends AbstractProcessor {
          */
         @SuppressFBWarnings("SE_BAD_FIELD")
         private final Configuration configuration;
-        private final SupplierEx<BiFunctionEx<K, V, R>> projectionSupplierFn;
+        private final SupplierEx<BiFunction<K, V, R>> projectionSupplierFn;
         private final List<IndexedInputSplit> assignedSplits;
 
         Supplier(
                 Configuration configuration,
                 List<IndexedInputSplit> assignedSplits,
-                @Nonnull SupplierEx<BiFunctionEx<K, V, R>> projectionSupplierFn
+                @Nonnull SupplierEx<BiFunction<K, V, R>> projectionSupplierFn
         ) {
             this.configuration = configuration;
             this.projectionSupplierFn = projectionSupplierFn;
