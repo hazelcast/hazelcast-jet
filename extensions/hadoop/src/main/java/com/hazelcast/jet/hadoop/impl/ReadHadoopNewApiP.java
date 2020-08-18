@@ -66,6 +66,7 @@ public final class ReadHadoopNewApiP<K, V, R> extends AbstractProcessor {
     private final InputFormat inputFormat;
     private final Traverser<R> trav;
     private SupplierEx<BiFunctionEx<K, V, R>> projectionSupplierFn;
+    private BiFunctionEx<K, V, R> projectionFn;
 
     private InternalSerializationService serializationService;
     private RecordReader<K, V> reader;
@@ -86,17 +87,16 @@ public final class ReadHadoopNewApiP<K, V, R> extends AbstractProcessor {
     @Override
     protected void init(@Nonnull Context context) {
         serializationService = ((ProcCtx) context).serializationService();
+        projectionFn = projectionSupplierFn.get();
+
         // we clone the projection of key/value if configured so because some of the
         // record-readers return the same object for `reader.getCurrentKey()`
         // and `reader.getCurrentValue()` which is mutated for each `reader.nextKeyValue()`.
         if (configuration.getBoolean(COPY_ON_READ, true)) {
-            SupplierEx<BiFunctionEx<K, V, R>> actualProjectionSupplierFn = this.projectionSupplierFn;
-            this.projectionSupplierFn = () -> {
-                BiFunctionEx<K, V, R> actualProjectionFn = actualProjectionSupplierFn.get();
-                return (key, value) -> {
-                    R result = actualProjectionFn.apply(key, value);
-                    return result == null ? null : serializationService.toObject(serializationService.toData(result));
-                };
+            BiFunctionEx<K, V, R> actualProjectionFn = this.projectionFn;
+            this.projectionFn = (key, value) -> {
+                R result = actualProjectionFn.apply(key, value);
+                return result == null ? null : serializationService.toObject(serializationService.toData(result));
             };
         }
     }
@@ -130,7 +130,6 @@ public final class ReadHadoopNewApiP<K, V, R> extends AbstractProcessor {
 
         return () -> {
             try {
-                BiFunctionEx<K, V, R> projectionFn = projectionSupplierFn.get();
                 while (reader.nextKeyValue()) {
                     R projectedRecord = projectionFn.apply(reader.getCurrentKey(), reader.getCurrentValue());
                     if (projectedRecord != null) {
