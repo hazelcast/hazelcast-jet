@@ -22,6 +22,7 @@ import com.hazelcast.jet.sql.SqlConnector;
 import com.hazelcast.spi.impl.NodeEngine;
 
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 
@@ -41,12 +42,13 @@ public final class SqlConnectorCache {
     }
 
     private void addConnector(SqlConnector connector) {
-        if (connectors.putIfAbsent(connector.typeName(), connector) != null) {
+        if (connectors.putIfAbsent(connector.typeName().toUpperCase(Locale.ENGLISH), connector) != null) {
             throw new HazelcastException("Duplicate connector: " + connector.typeName());
         }
     }
 
     public SqlConnector forType(String type) {
+        type = type.toUpperCase(Locale.ENGLISH);
         return Objects.requireNonNull(connectors.get(type), "Unknown type: " + type);
     }
 }

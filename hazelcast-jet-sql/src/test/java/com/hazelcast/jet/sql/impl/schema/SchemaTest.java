@@ -133,6 +133,20 @@ public class SchemaTest extends JetSqlTestSupport {
                 .hasMessageContaining("Encountered \")\" at line 1");
     }
 
+    @Test
+    public void when_badType_then_fail() {
+        assertThatThrownBy(() -> sqlService.query("CREATE EXTERNAL TABLE t TYPE TooBad"))
+                .hasMessageContaining("Invalid table definition: Unknown type: TOOBAD");
+    }
+    
+    @Test
+    public void test_caseInsensitiveType() {
+        sqlService.query("CREATE EXTERNAL TABLE t1 TYPE TestStream");
+        sqlService.query("CREATE EXTERNAL TABLE t2 TYPE teststream");
+        sqlService.query("CREATE EXTERNAL TABLE t3 TYPE TESTSTREAM");
+        sqlService.query("CREATE EXTERNAL TABLE t4 TYPE tEsTsTrEaM");
+    }
+
     private static String createRandomName() {
         return "schema_" + randomString().replace('-', '_');
     }
