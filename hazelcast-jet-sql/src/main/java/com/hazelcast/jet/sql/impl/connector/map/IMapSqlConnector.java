@@ -34,7 +34,6 @@ import com.hazelcast.map.impl.MapService;
 import com.hazelcast.map.impl.MapServiceContext;
 import com.hazelcast.query.Predicates;
 import com.hazelcast.spi.impl.NodeEngine;
-import com.hazelcast.sql.impl.QueryException;
 import com.hazelcast.sql.impl.expression.Expression;
 import com.hazelcast.sql.impl.schema.ConstantTableStatistics;
 import com.hazelcast.sql.impl.schema.Table;
@@ -96,9 +95,6 @@ public class IMapSqlConnector extends EntrySqlConnector {
             @Nonnull EntryMetadata keyMetadata,
             @Nonnull EntryMetadata valueMetadata
     ) {
-        if (!tableName.equals(objectName)) {
-            throw QueryException.error("The map name must be equal to the object name");
-        }
         // TODO: deduplicate with PartitionedMapTableResolver ???
         MapService service = nodeEngine.getService(MapService.SERVICE_NAME);
         MapServiceContext context = service.getMapServiceContext();
@@ -113,6 +109,7 @@ public class IMapSqlConnector extends EntrySqlConnector {
 
         return new PartitionedMapTable(
                 schemaName,
+                tableName,
                 objectName,
                 fields,
                 new ConstantTableStatistics(estimatedRowCount),
@@ -145,7 +142,7 @@ public class IMapSqlConnector extends EntrySqlConnector {
         FunctionEx<Entry<Object, Object>, Object[]> mapProjection =
                 ExpressionUtil.projectionFn(table, predicate, projections);
 
-        String mapName = table.getName();
+        String mapName = table.getMapName();
         return dag.newVertex("map(" + mapName + ")",
                 readMapP(mapName, Predicates.alwaysTrue(), mapProjection::apply));
     }
@@ -183,7 +180,7 @@ public class IMapSqlConnector extends EntrySqlConnector {
                     return traverseIterable(result);
                 };
 
-        String mapName = table.getName();
+        String mapName = table.getMapName();
         return dag.newVertex("map-enrich-" + UuidUtil.newUnsecureUuidString(),
                 flatMapUsingServiceP(ServiceFactories.iMapService(mapName), flatMapFn));
     }
@@ -210,7 +207,7 @@ public class IMapSqlConnector extends EntrySqlConnector {
                 entryProjector(table.getKeyUpsertDescriptor(), table.getValueUpsertDescriptor(), table.getFields())
         );
 
-        String mapName = table.getName();
+        String mapName = table.getMapName();
         Vertex vEnd = dag.newVertex("map(" + mapName + ")", SinkProcessors.writeMapP(mapName));
 
         dag.edge(between(vStart, vEnd));

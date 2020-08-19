@@ -45,9 +45,4 @@ public class CdcTable extends JetTable {
     public Properties getCdcProperties() {
         return cdcProperties;
     }
-
-    @Override
-    public String toString() {
-        return getClass().getSimpleName() + "{tableName=" + getName() + '}';
-    }
 }

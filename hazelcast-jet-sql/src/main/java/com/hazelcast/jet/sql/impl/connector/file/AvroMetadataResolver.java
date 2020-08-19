@@ -102,7 +102,7 @@ interface AvroMetadataResolver {
                     break;
                 case TINYINT:
                 case SMALLINT:
-                case INT:
+                case INTEGER:
                     schema = schema.name(paths[i]).type().intType().noDefault();
                     break;
                 case BIGINT:

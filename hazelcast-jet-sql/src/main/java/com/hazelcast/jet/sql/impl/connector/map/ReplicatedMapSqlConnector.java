@@ -22,7 +22,6 @@ import com.hazelcast.jet.sql.impl.connector.EntrySqlConnector;
 import com.hazelcast.replicatedmap.impl.ReplicatedMapService;
 import com.hazelcast.replicatedmap.impl.record.ReplicatedRecordStore;
 import com.hazelcast.spi.impl.NodeEngine;
-import com.hazelcast.sql.impl.QueryException;
 import com.hazelcast.sql.impl.schema.ConstantTableStatistics;
 import com.hazelcast.sql.impl.schema.Table;
 import com.hazelcast.sql.impl.schema.TableField;
@@ -68,9 +67,6 @@ public class ReplicatedMapSqlConnector extends EntrySqlConnector {
             @Nonnull EntryMetadata keyMetadata,
             @Nonnull EntryMetadata valueMetadata
     ) {
-        if (!tableName.equals(objectName)) {
-            throw QueryException.error("The map name must be equal to the object name");
-        }
         // TODO: deduplicate with ReplicatedMapTableResolver ???
         ReplicatedMapService service = nodeEngine.getService(ReplicatedMapService.SERVICE_NAME);
         Collection<ReplicatedRecordStore> stores = service.getAllReplicatedRecordStores(objectName);
@@ -79,6 +75,7 @@ public class ReplicatedMapSqlConnector extends EntrySqlConnector {
 
         return new ReplicatedMapTable(
                 schemaName,
+                tableName,
                 objectName,
                 fields,
                 new ConstantTableStatistics(estimatedRowCount),
