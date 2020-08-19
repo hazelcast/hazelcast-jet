@@ -48,12 +48,10 @@ import com.hazelcast.jet.impl.processor.GroupWithPersistenceP;
 import com.hazelcast.jet.impl.processor.InsertWatermarksP;
 import com.hazelcast.jet.impl.processor.SessionWindowP;
 import com.hazelcast.jet.impl.processor.SlidingWindowP;
-import com.hazelcast.jet.impl.processor.SortP;
 import com.hazelcast.jet.impl.processor.SortPrepareP;
 import com.hazelcast.jet.impl.processor.TransformP;
 import com.hazelcast.jet.impl.processor.TransformStatefulP;
 import com.hazelcast.jet.impl.processor.TransformUsingServiceP;
-import com.hazelcast.jet.pipeline.GeneralStage;
 import com.hazelcast.jet.pipeline.ServiceFactory;
 
 import javax.annotation.Nonnull;
@@ -61,7 +59,6 @@ import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Function;
 import java.util.function.Supplier;
 
 import static com.hazelcast.function.FunctionEx.identity;
@@ -1148,17 +1145,6 @@ public final class Processors {
     @Nonnull
     public static <V> SupplierEx<Processor> sortPrepareP(FunctionEx<V, Long> keyFn) {
         return () -> new SortPrepareP<>(keyFn);
-    }
-
-    /**
-     * Returns a supplier of processors for a vertex that performs the global sorting phase.
-     * The processor consumes the locally sorted dataset from all cluster members
-     * and outputs the smallest item in all members.
-     * There can be only one {@link SortP} processor for each sort stage.
-     */
-    @Nonnull
-    public static SupplierEx<Processor> sortP() {
-        return SortP::new;
     }
 
     /**

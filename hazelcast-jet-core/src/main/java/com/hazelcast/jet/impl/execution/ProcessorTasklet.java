@@ -488,13 +488,10 @@ public class ProcessorTasklet implements Tasklet {
                 instreamCursor.advance();
                 continue;
             }
-            if(currInstream instanceof ConcurrentInboundEdgeStream) {
-                if(((ConcurrentInboundEdgeStream) currInstream).hasComparator()) {
-                    result = ((ConcurrentInboundEdgeStream) currInstream).drainToWithComparator(addToInboxFunction);
-                }
-                else {
-                    result = currInstream.drainTo(addToInboxFunction);
-                }
+
+            if (currInstream instanceof ConcurrentInboundEdgeStream &&
+                    ((ConcurrentInboundEdgeStream) currInstream).hasComparator()) {
+                result = ((ConcurrentInboundEdgeStream) currInstream).pollWithComparator(addToInboxFunction);
             } else {
                 result = currInstream.drainTo(addToInboxFunction);
             }

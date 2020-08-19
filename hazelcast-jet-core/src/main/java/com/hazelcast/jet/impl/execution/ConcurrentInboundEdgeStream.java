@@ -177,7 +177,7 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
         return tracker.toProgressState();
     }
 
-    public ProgressState drainToWithComparator(Predicate<Object> dest) {
+    public ProgressState pollWithComparator(Predicate<Object> dest) {
         int minIndex = 0;
         Object minItem = null;
         for (int queueIndex = 0; queueIndex < conveyor.queueCount(); queueIndex++) {
