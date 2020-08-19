@@ -55,7 +55,7 @@ public class KafkaSqlConnector extends EntrySqlConnector {
 
     public static final String TYPE_NAME = "Kafka";
 
-    public static final String TO_TOPIC_NAME = "kafka.topicName";
+    public static final String OPTION_TOPIC_NAME = "kafka.topicName";
 
     private static final Map<String, EntryMetadataResolver> METADATA_RESOLVERS = Stream.of(
             JavaEntryMetadataResolver.INSTANCE
@@ -91,10 +91,10 @@ public class KafkaSqlConnector extends EntrySqlConnector {
             @Nonnull List<ExternalField> externalFields
     ) {
         // TODO validate options
-        String topicName = options.getOrDefault(TO_TOPIC_NAME, tableName);
+        String topicName = options.getOrDefault(OPTION_TOPIC_NAME, tableName);
         Properties kafkaProperties = new Properties();
         kafkaProperties.putAll(options);
-        kafkaProperties.remove(TO_TOPIC_NAME);
+        kafkaProperties.remove(OPTION_TOPIC_NAME);
         kafkaProperties.remove(OPTION_KEY_CLASS);
         kafkaProperties.remove(OPTION_VALUE_CLASS);
 
