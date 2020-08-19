@@ -53,7 +53,7 @@ import static java.util.stream.Stream.concat;
 
 public class KafkaSqlConnector extends EntrySqlConnector {
 
-    public static final String TYPE_NAME = "com.hazelcast.Kafka";
+    public static final String TYPE_NAME = "Kafka";
 
     public static final String TO_TOPIC_NAME = "kafka.topicName";
 

@@ -52,7 +52,7 @@ import static com.hazelcast.sql.impl.type.QueryDataType.VARCHAR;
 
 public class CdcSqlConnector implements SqlConnector {
 
-    public static final String TYPE_NAME = "com.hazelcast.Cdc";
+    public static final String TYPE_NAME = "Cdc";
     public static final String OPERATION = "__operation";
 
     private static final String NAME = "name";

@@ -35,7 +35,7 @@ import static java.util.Collections.emptyList;
 
 public class FileSqlConnector implements SqlConnector {
 
-    public static final String TYPE_NAME = "com.hazelcast.File";
+    public static final String TYPE_NAME = "File";
 
     public static final String OPTION_PATH = "file.path";
     public static final String OPTION_GLOB = "file.glob";

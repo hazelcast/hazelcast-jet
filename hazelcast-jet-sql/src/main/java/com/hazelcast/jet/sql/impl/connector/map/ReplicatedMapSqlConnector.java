@@ -42,7 +42,7 @@ import static java.util.stream.Stream.concat;
 
 public class ReplicatedMapSqlConnector extends EntrySqlConnector {
 
-    public static final String TYPE_NAME = "com.hazelcast.ReplicatedMap";
+    public static final String TYPE_NAME = "ReplicatedMap";
 
     private static final Map<String, EntryMetadataResolver> METADATA_RESOLVERS = Stream.of(
             JavaEntryMetadataResolver.INSTANCE,
