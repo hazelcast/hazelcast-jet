@@ -40,7 +40,7 @@ import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 import static java.util.stream.Stream.concat;
 
-public class LocalReplicatedMapConnector extends EntrySqlConnector {
+public class ReplicatedMapSqlConnector extends EntrySqlConnector {
 
     public static final String TYPE_NAME = "com.hazelcast.ReplicatedMap";
 

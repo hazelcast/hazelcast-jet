@@ -16,7 +16,7 @@
 
 package com.hazelcast.jet.sql;
 
-import com.hazelcast.jet.sql.impl.connector.map.LocalPartitionedMapConnector;
+import com.hazelcast.jet.sql.impl.connector.map.IMapSqlConnector;
 import com.hazelcast.sql.SqlService;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -61,7 +61,7 @@ public class SqlTest extends JetSqlTestSupport {
         sqlService.query(
                 "CREATE EXTERNAL TABLE " + name + " ("
                         + "key EXTERNAL NAME \"__key\""
-                        + ") TYPE \"" + LocalPartitionedMapConnector.TYPE_NAME + "\" "
+                        + ") TYPE \"" + IMapSqlConnector.TYPE_NAME + "\" "
                         + "OPTIONS ("
                         + "\"" + OPTION_SERIALIZATION_KEY_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
                         + ", \"" + OPTION_KEY_CLASS + "\" '" + Integer.class.getName() + "'"
@@ -94,7 +94,7 @@ public class SqlTest extends JetSqlTestSupport {
         sqlService.query(
                 "CREATE EXTERNAL TABLE " + destinationName + " ("
                         + "key EXTERNAL NAME \"__key\""
-                        + ") TYPE \"" + LocalPartitionedMapConnector.TYPE_NAME + "\" "
+                        + ") TYPE \"" + IMapSqlConnector.TYPE_NAME + "\" "
                         + "OPTIONS ("
                         + "\"" + OPTION_SERIALIZATION_KEY_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
                         + ", \"" + OPTION_KEY_CLASS + "\" '" + String.class.getName() + "'"
@@ -120,7 +120,7 @@ public class SqlTest extends JetSqlTestSupport {
         sqlService.query(
                 "CREATE EXTERNAL TABLE " + name + " ("
                         + "key EXTERNAL NAME \"__key\""
-                        + ") TYPE \"" + LocalPartitionedMapConnector.TYPE_NAME + "\" "
+                        + ") TYPE \"" + IMapSqlConnector.TYPE_NAME + "\" "
                         + "OPTIONS ("
                         + "\"" + OPTION_SERIALIZATION_KEY_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
                         + ", \"" + OPTION_KEY_CLASS + "\" '" + Byte.class.getName() + "'"

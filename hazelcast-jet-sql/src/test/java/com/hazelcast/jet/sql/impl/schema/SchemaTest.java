@@ -17,7 +17,7 @@
 package com.hazelcast.jet.sql.impl.schema;
 
 import com.hazelcast.jet.sql.JetSqlTestSupport;
-import com.hazelcast.jet.sql.impl.connector.map.LocalPartitionedMapConnector;
+import com.hazelcast.jet.sql.impl.connector.map.IMapSqlConnector;
 import com.hazelcast.jet.sql.impl.schema.model.IdentifiedPerson;
 import com.hazelcast.jet.sql.impl.schema.model.Person;
 import com.hazelcast.sql.SqlException;
@@ -75,7 +75,7 @@ public class SchemaTest extends JetSqlTestSupport {
                 + "  \"__key\" INT EXTERNAL NAME \"__key\"," + System.lineSeparator()
                 + "  \"this\" VARCHAR EXTERNAL NAME \"this\"" + System.lineSeparator()
                 + ")" + System.lineSeparator()
-                + "TYPE \"" + LocalPartitionedMapConnector.TYPE_NAME + "\"" + System.lineSeparator()
+                + "TYPE \"" + IMapSqlConnector.TYPE_NAME + "\"" + System.lineSeparator()
                 + "OPTIONS (" + System.lineSeparator()
                 + "  \"" + OPTION_SERIALIZATION_KEY_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'," + System.lineSeparator()
                 + "  \"" + OPTION_KEY_CLASS + "\" '" + Integer.class.getName() + "'," + System.lineSeparator()

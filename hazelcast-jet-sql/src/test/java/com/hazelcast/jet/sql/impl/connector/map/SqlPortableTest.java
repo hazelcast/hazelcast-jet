@@ -168,7 +168,7 @@ public class SqlPortableTest extends JetSqlTestSupport {
         sqlService.query("CREATE EXTERNAL TABLE " + name + " ("
                 + "key_id INT EXTERNAL NAME \"__key.id\""
                 + ", value_id INT EXTERNAL NAME \"this.id\""
-                + ") TYPE \"" + LocalPartitionedMapConnector.TYPE_NAME + "\" "
+                + ") TYPE \"" + IMapSqlConnector.TYPE_NAME + "\" "
                 + "OPTIONS ("
                 + "\"" + OPTION_SERIALIZATION_KEY_FORMAT + "\" '" + PORTABLE_SERIALIZATION_FORMAT + "'"
                 + ", \"" + OPTION_KEY_FACTORY_ID + "\" '" + PERSON_ID_FACTORY_ID + "'"
@@ -207,7 +207,7 @@ public class SqlPortableTest extends JetSqlTestSupport {
 
         // alter schema
         sqlService.query("CREATE OR REPLACE EXTERNAL TABLE " + name + " "
-                + "TYPE \"" + LocalPartitionedMapConnector.TYPE_NAME + "\" "
+                + "TYPE \"" + IMapSqlConnector.TYPE_NAME + "\" "
                 + "OPTIONS ("
                 + "\"" + OPTION_SERIALIZATION_KEY_FORMAT + "\" '" + PORTABLE_SERIALIZATION_FORMAT + "'"
                 + ", \"" + OPTION_KEY_FACTORY_ID + "\" '" + PERSON_ID_FACTORY_ID + "'"
@@ -237,7 +237,7 @@ public class SqlPortableTest extends JetSqlTestSupport {
     public void supportsFieldsExtensions() {
         String name = generateRandomName();
         sqlService.query("CREATE OR REPLACE EXTERNAL TABLE " + name + " "
-                + "TYPE \"" + LocalPartitionedMapConnector.TYPE_NAME + "\" "
+                + "TYPE \"" + IMapSqlConnector.TYPE_NAME + "\" "
                 + "OPTIONS ( \"" + OPTION_SERIALIZATION_KEY_FORMAT + "\" '" + PORTABLE_SERIALIZATION_FORMAT + "'"
                 + ", \"" + OPTION_KEY_FACTORY_ID + "\" '" + PERSON_ID_FACTORY_ID + "'"
                 + ", \"" + OPTION_KEY_CLASS_ID + "\" '" + PERSON_ID_CLASS_ID + "'"
@@ -255,7 +255,7 @@ public class SqlPortableTest extends JetSqlTestSupport {
         // alter schema
         sqlService.query("CREATE OR REPLACE EXTERNAL TABLE " + name + " ("
                 + "ssn BIGINT"
-                + ") TYPE \"" + LocalPartitionedMapConnector.TYPE_NAME + "\" "
+                + ") TYPE \"" + IMapSqlConnector.TYPE_NAME + "\" "
                 + "OPTIONS ("
                 + "\"" + OPTION_SERIALIZATION_KEY_FORMAT + "\" '" + PORTABLE_SERIALIZATION_FORMAT + "'"
                 + ", \"" + OPTION_KEY_FACTORY_ID + "\" '" + PERSON_ID_FACTORY_ID + "'"
@@ -285,7 +285,7 @@ public class SqlPortableTest extends JetSqlTestSupport {
     public void supportsAllTypes() throws IOException {
         String name = generateRandomName();
         sqlService.query("CREATE EXTERNAL TABLE " + name + " "
-                + "TYPE \"" + LocalPartitionedMapConnector.TYPE_NAME + "\" "
+                + "TYPE \"" + IMapSqlConnector.TYPE_NAME + "\" "
                 + "OPTIONS ("
                 + "\"" + OPTION_SERIALIZATION_KEY_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
                 + ", \"" + OPTION_KEY_CLASS + "\" '" + BigInteger.class.getName() + "'"
@@ -348,7 +348,7 @@ public class SqlPortableTest extends JetSqlTestSupport {
     private static String createTableWithRandomName() {
         String name = generateRandomName();
         sqlService.query("CREATE EXTERNAL TABLE " + name + " "
-                + "TYPE \"" + LocalPartitionedMapConnector.TYPE_NAME + "\" "
+                + "TYPE \"" + IMapSqlConnector.TYPE_NAME + "\" "
                 + "OPTIONS ("
                 + "\"" + OPTION_SERIALIZATION_KEY_FORMAT + "\" '" + PORTABLE_SERIALIZATION_FORMAT + "'"
                 + ", \"" + OPTION_KEY_FACTORY_ID + "\" '" + PERSON_ID_FACTORY_ID + "'"

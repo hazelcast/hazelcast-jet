@@ -17,7 +17,7 @@
 package com.hazelcast.jet.sql;
 
 import com.hazelcast.jet.SimpleTestInClusterSupport;
-import com.hazelcast.jet.sql.impl.connector.map.LocalPartitionedMapConnector;
+import com.hazelcast.jet.sql.impl.connector.map.IMapSqlConnector;
 import com.hazelcast.map.IMap;
 import com.hazelcast.sql.SqlResult;
 import com.hazelcast.sql.SqlRow;
@@ -109,7 +109,7 @@ public abstract class JetSqlTestSupport extends SimpleTestInClusterSupport {
      * java serialization for both key and value with the given classes.
      */
     public static String javaSerializableMapDdl(String name, Class<?> keyClass, Class<?> valueClass) {
-        return "CREATE EXTERNAL TABLE " + name + " TYPE \"" + LocalPartitionedMapConnector.TYPE_NAME + "\"\n"
+        return "CREATE EXTERNAL TABLE " + name + " TYPE \"" + IMapSqlConnector.TYPE_NAME + "\"\n"
                 + "OPTIONS (\n"
                 + '"' + OPTION_SERIALIZATION_KEY_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "',\n"
                 + '"' + OPTION_KEY_CLASS + "\" '" + keyClass.getName() + "',\n"

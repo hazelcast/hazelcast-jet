@@ -20,7 +20,7 @@ import com.google.common.collect.ImmutableMap;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.instance.impl.HazelcastInstanceProxy;
 import com.hazelcast.jet.SimpleTestInClusterSupport;
-import com.hazelcast.jet.sql.impl.connector.map.LocalPartitionedMapConnector;
+import com.hazelcast.jet.sql.impl.connector.map.IMapSqlConnector;
 import com.hazelcast.spi.impl.NodeEngine;
 import com.hazelcast.sql.impl.QueryException;
 import com.hazelcast.sql.impl.schema.TableField;
@@ -182,7 +182,7 @@ public class ExternalCatalogTest extends SimpleTestInClusterSupport {
     private static ExternalTable table(String name, Class<?> keyClass, Class<?> valueClass) {
         return new ExternalTable(
                 name,
-                LocalPartitionedMapConnector.TYPE_NAME,
+                IMapSqlConnector.TYPE_NAME,
                 emptyList(),
                 ImmutableMap.of(
                         OPTION_SERIALIZATION_KEY_FORMAT, JAVA_SERIALIZATION_FORMAT,

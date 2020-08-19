@@ -14,8 +14,8 @@
 # limitations under the License.
 #
 
-com.hazelcast.jet.sql.impl.connector.map.LocalPartitionedMapConnector
-com.hazelcast.jet.sql.impl.connector.map.LocalReplicatedMapConnector
+com.hazelcast.jet.sql.impl.connector.map.IMapSqlConnector
+com.hazelcast.jet.sql.impl.connector.map.ReplicatedMapSqlConnector
 com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector
 com.hazelcast.jet.sql.impl.connector.kafka.KafkaSqlConnector
 com.hazelcast.jet.sql.impl.connector.cdc.CdcSqlConnector
