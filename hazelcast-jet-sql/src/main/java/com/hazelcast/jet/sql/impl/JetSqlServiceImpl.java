@@ -62,11 +62,6 @@ public class JetSqlServiceImpl implements JetSqlService, ManagedService {
     }
 
     @Override
-    public void clearCatalog() {
-        catalog.clear();
-    }
-
-    @Override
     public Object sqlBackend() {
         return sqlBackend;
     }
