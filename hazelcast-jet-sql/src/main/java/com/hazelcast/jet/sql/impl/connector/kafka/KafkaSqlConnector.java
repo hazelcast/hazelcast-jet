@@ -24,7 +24,6 @@ import com.hazelcast.jet.sql.impl.connector.EntryMetadata;
 import com.hazelcast.jet.sql.impl.connector.EntryMetadataResolver;
 import com.hazelcast.jet.sql.impl.connector.EntrySqlConnector;
 import com.hazelcast.jet.sql.impl.connector.map.JavaEntryMetadataResolver;
-import com.hazelcast.jet.sql.impl.schema.ExternalField;
 import com.hazelcast.spi.impl.NodeEngine;
 import com.hazelcast.sql.impl.expression.Expression;
 import com.hazelcast.sql.impl.schema.ConstantTableStatistics;
@@ -47,15 +46,11 @@ import static com.hazelcast.jet.core.EventTimePolicy.noEventTime;
 import static com.hazelcast.jet.core.processor.Processors.mapP;
 import static com.hazelcast.jet.sql.impl.connector.EntryProcessors.entryProjector;
 import static com.hazelcast.jet.sql.impl.expression.ExpressionUtil.projectionFn;
-import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
-import static java.util.stream.Stream.concat;
 
 public class KafkaSqlConnector extends EntrySqlConnector {
 
     public static final String TYPE_NAME = "Kafka";
-
-    public static final String OPTION_TOPIC_NAME = "kafka.topicName";
 
     private static final Map<String, EntryMetadataResolver> METADATA_RESOLVERS = Stream.of(
             JavaEntryMetadataResolver.INSTANCE
@@ -71,44 +66,30 @@ public class KafkaSqlConnector extends EntrySqlConnector {
         return true;
     }
 
-    @Nonnull
-    @Override
-    public List<ExternalField> resolveAndValidateFields(
-            @Nonnull NodeEngine nodeEngine,
-            @Nonnull Map<String, String> options,
-            @Nonnull List<ExternalField> userFields
-    ) {
-        return resolveSchema(userFields, options, null);
-    }
-
-    @Nonnull
-    @Override
-    public Table createTable(
+    @Nonnull @Override
+    protected Table createTableInt(
             @Nonnull NodeEngine nodeEngine,
             @Nonnull String schemaName,
             @Nonnull String tableName,
+            @Nonnull String objectName,
             @Nonnull Map<String, String> options,
-            @Nonnull List<ExternalField> externalFields
+            @Nonnull List<TableField> fields,
+            @Nonnull EntryMetadata keyMetadata,
+            @Nonnull EntryMetadata valueMetadata
     ) {
         // TODO validate options
-        String topicName = options.getOrDefault(OPTION_TOPIC_NAME, tableName);
         Properties kafkaProperties = new Properties();
         kafkaProperties.putAll(options);
-        kafkaProperties.remove(OPTION_TOPIC_NAME);
+        kafkaProperties.remove(OPTION_OBJECT_NAME);
         kafkaProperties.remove(OPTION_KEY_CLASS);
         kafkaProperties.remove(OPTION_VALUE_CLASS);
-
-        EntryMetadata keyMetadata = resolveMetadata(externalFields, options, true, null);
-        EntryMetadata valueMetadata = resolveMetadata(externalFields, options, false, null);
-        List<TableField> fields = concat(keyMetadata.getFields().stream(), valueMetadata.getFields().stream())
-                .collect(toList());
 
         return new KafkaTable(
                 this,
                 schemaName,
-                tableName,
+                objectName,
                 new ConstantTableStatistics(0),
-                topicName,
+                objectName,
                 fields,
                 keyMetadata.getUpsertTargetDescriptor(),
                 valueMetadata.getUpsertTargetDescriptor(),

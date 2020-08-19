@@ -16,14 +16,13 @@
 
 package com.hazelcast.jet.sql.impl.connector.map;
 
-import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.jet.sql.impl.connector.EntryMetadata;
 import com.hazelcast.jet.sql.impl.connector.EntryMetadataResolver;
 import com.hazelcast.jet.sql.impl.connector.EntrySqlConnector;
-import com.hazelcast.jet.sql.impl.schema.ExternalField;
 import com.hazelcast.replicatedmap.impl.ReplicatedMapService;
 import com.hazelcast.replicatedmap.impl.record.ReplicatedRecordStore;
 import com.hazelcast.spi.impl.NodeEngine;
+import com.hazelcast.sql.impl.QueryException;
 import com.hazelcast.sql.impl.schema.ConstantTableStatistics;
 import com.hazelcast.sql.impl.schema.Table;
 import com.hazelcast.sql.impl.schema.TableField;
@@ -36,9 +35,7 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
-import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
-import static java.util.stream.Stream.concat;
 
 public class ReplicatedMapSqlConnector extends EntrySqlConnector {
 
@@ -60,43 +57,29 @@ public class ReplicatedMapSqlConnector extends EntrySqlConnector {
         return false;
     }
 
-    @Nonnull
-    @Override
-    public List<ExternalField> resolveAndValidateFields(
-            @Nonnull NodeEngine nodeEngine,
-            @Nonnull Map<String, String> options,
-            @Nonnull List<ExternalField> userFields
-    ) {
-        return resolveSchema(userFields, options, (InternalSerializationService) nodeEngine.getSerializationService());
-    }
-
-    @Nonnull
-    @Override
-    public Table createTable(
+    @Nonnull @Override
+    protected Table createTableInt(
             @Nonnull NodeEngine nodeEngine,
             @Nonnull String schemaName,
-            @Nonnull String name,
+            @Nonnull String tableName,
+            @Nonnull String objectName,
             @Nonnull Map<String, String> options,
-            @Nonnull List<ExternalField> externalFields
+            @Nonnull List<TableField> fields,
+            @Nonnull EntryMetadata keyMetadata,
+            @Nonnull EntryMetadata valueMetadata
     ) {
-        String mapName = options.getOrDefault(OPTION_OBJECT_NAME, name);
-
-        InternalSerializationService ss = (InternalSerializationService) nodeEngine.getSerializationService();
-
-        EntryMetadata keyMetadata = resolveMetadata(externalFields, options, true, ss);
-        EntryMetadata valueMetadata = resolveMetadata(externalFields, options, false, ss);
-        List<TableField> fields = concat(keyMetadata.getFields().stream(), valueMetadata.getFields().stream())
-                .collect(toList());
-
+        if (!tableName.equals(objectName)) {
+            throw QueryException.error("The map name must be equal to the object name");
+        }
         // TODO: deduplicate with ReplicatedMapTableResolver ???
         ReplicatedMapService service = nodeEngine.getService(ReplicatedMapService.SERVICE_NAME);
-        Collection<ReplicatedRecordStore> stores = service.getAllReplicatedRecordStores(mapName);
+        Collection<ReplicatedRecordStore> stores = service.getAllReplicatedRecordStores(objectName);
 
         long estimatedRowCount = stores.size() * nodeEngine.getPartitionService().getPartitionCount();
 
         return new ReplicatedMapTable(
                 schemaName,
-                mapName,
+                objectName,
                 fields,
                 new ConstantTableStatistics(estimatedRowCount),
                 keyMetadata.getQueryTargetDescriptor(),

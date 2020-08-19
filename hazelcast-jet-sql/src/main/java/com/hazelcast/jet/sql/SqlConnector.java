@@ -117,7 +117,8 @@ public interface SqlConnector {
      *
      * @param nodeEngine     an instance of {@link NodeEngine}
      * @param options        connector specific options
-     * @param externalFields list of fields.
+     * @param resolvedFields list of fields as returned from {@link
+     *     #resolveAndValidateFields}
      */
     @Nonnull
     Table createTable(
@@ -125,7 +126,7 @@ public interface SqlConnector {
             @Nonnull String schemaName,
             @Nonnull String tableName,
             @Nonnull Map<String, String> options,
-            @Nonnull List<ExternalField> externalFields
+            @Nonnull List<ExternalField> resolvedFields
     );
 
     /**

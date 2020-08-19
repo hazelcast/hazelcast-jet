@@ -79,9 +79,9 @@ public class FileSqlConnector implements SqlConnector {
             @Nonnull String schemaName,
             @Nonnull String name,
             @Nonnull Map<String, String> options,
-            @Nonnull List<ExternalField> externalFields
+            @Nonnull List<ExternalField> resolvedFields
     ) {
-        return createTable(schemaName, name, options, externalFields);
+        return createTable(schemaName, name, options, resolvedFields);
     }
 
     @Nonnull

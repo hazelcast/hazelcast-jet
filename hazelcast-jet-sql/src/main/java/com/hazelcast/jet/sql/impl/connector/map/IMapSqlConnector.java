@@ -18,7 +18,6 @@ package com.hazelcast.jet.sql.impl.connector.map;
 
 import com.hazelcast.function.BiFunctionEx;
 import com.hazelcast.function.FunctionEx;
-import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.internal.util.UuidUtil;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.core.DAG;
@@ -29,13 +28,13 @@ import com.hazelcast.jet.sql.impl.connector.EntryMetadata;
 import com.hazelcast.jet.sql.impl.connector.EntryMetadataResolver;
 import com.hazelcast.jet.sql.impl.connector.EntrySqlConnector;
 import com.hazelcast.jet.sql.impl.expression.ExpressionUtil;
-import com.hazelcast.jet.sql.impl.schema.ExternalField;
 import com.hazelcast.map.IMap;
 import com.hazelcast.map.impl.MapContainer;
 import com.hazelcast.map.impl.MapService;
 import com.hazelcast.map.impl.MapServiceContext;
 import com.hazelcast.query.Predicates;
 import com.hazelcast.spi.impl.NodeEngine;
+import com.hazelcast.sql.impl.QueryException;
 import com.hazelcast.sql.impl.expression.Expression;
 import com.hazelcast.sql.impl.schema.ConstantTableStatistics;
 import com.hazelcast.sql.impl.schema.Table;
@@ -64,9 +63,7 @@ import static com.hazelcast.sql.impl.schema.map.MapTableUtils.estimatePartitione
 import static com.hazelcast.sql.impl.schema.map.MapTableUtils.getPartitionedMapDistributionField;
 import static com.hazelcast.sql.impl.schema.map.MapTableUtils.getPartitionedMapIndexes;
 import static java.util.Collections.emptyList;
-import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
-import static java.util.stream.Stream.concat;
 
 public class IMapSqlConnector extends EntrySqlConnector {
 
@@ -89,38 +86,25 @@ public class IMapSqlConnector extends EntrySqlConnector {
     }
 
     @Nonnull @Override
-    public List<ExternalField> resolveAndValidateFields(
-            @Nonnull NodeEngine nodeEngine,
-            @Nonnull Map<String, String> options,
-            @Nonnull List<ExternalField> userFields
-    ) {
-        return resolveSchema(userFields, options, (InternalSerializationService) nodeEngine.getSerializationService());
-    }
-
-    @Nonnull
-    @Override
-    public Table createTable(
+    protected Table createTableInt(
             @Nonnull NodeEngine nodeEngine,
             @Nonnull String schemaName,
-            @Nonnull String name,
+            @Nonnull String tableName,
+            @Nonnull String objectName,
             @Nonnull Map<String, String> options,
-            @Nonnull List<ExternalField> externalFields
+            @Nonnull List<TableField> fields,
+            @Nonnull EntryMetadata keyMetadata,
+            @Nonnull EntryMetadata valueMetadata
     ) {
-        String mapName = options.getOrDefault(OPTION_OBJECT_NAME, name);
-
-        InternalSerializationService ss = (InternalSerializationService) nodeEngine.getSerializationService();
-
-        EntryMetadata keyMetadata = resolveMetadata(externalFields, options, true, ss);
-        EntryMetadata valueMetadata = resolveMetadata(externalFields, options, false, ss);
-        List<TableField> fields = concat(keyMetadata.getFields().stream(), valueMetadata.getFields().stream())
-                .collect(toList());
-
+        if (!tableName.equals(objectName)) {
+            throw QueryException.error("The map name must be equal to the object name");
+        }
         // TODO: deduplicate with PartitionedMapTableResolver ???
         MapService service = nodeEngine.getService(MapService.SERVICE_NAME);
         MapServiceContext context = service.getMapServiceContext();
-        MapContainer container = context.getMapContainer(mapName);
+        MapContainer container = context.getMapContainer(objectName);
 
-        long estimatedRowCount = estimatePartitionedMapRowCount(nodeEngine, context, mapName);
+        long estimatedRowCount = estimatePartitionedMapRowCount(nodeEngine, context, objectName);
         List<MapTableIndex> indexes = container != null ? getPartitionedMapIndexes(container, fields) : emptyList();
         int distributionFieldOrdinal =
                 container != null ? getPartitionedMapDistributionField(container, context, fields) : -1;
@@ -129,7 +113,7 @@ public class IMapSqlConnector extends EntrySqlConnector {
 
         return new PartitionedMapTable(
                 schemaName,
-                mapName,
+                objectName,
                 fields,
                 new ConstantTableStatistics(estimatedRowCount),
                 keyMetadata.getQueryTargetDescriptor(),

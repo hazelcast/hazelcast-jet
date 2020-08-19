@@ -31,7 +31,7 @@ public interface EntryMetadataResolver {
 
     String supportedFormat();
 
-    List<ExternalField> resolveSchema(
+    List<ExternalField> resolveFields(
             List<ExternalField> externalFields,
             Map<String, String> options,
             boolean isKey,

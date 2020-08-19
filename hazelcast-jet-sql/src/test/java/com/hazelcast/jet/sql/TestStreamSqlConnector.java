@@ -78,11 +78,11 @@ public class TestStreamSqlConnector implements SqlConnector {
             @Nonnull String schemaName,
             @Nonnull String tableName,
             @Nonnull Map<String, String> options,
-            @Nonnull List<ExternalField> externalFields
+            @Nonnull List<ExternalField> resolvedFields
     ) {
         return new JetTable(
                 this,
-                toList(externalFields, ef -> new TableField(ef.name(), ef.type(), false)),
+                toList(resolvedFields, ef -> new TableField(ef.name(), ef.type(), false)),
                 schemaName, tableName, new ConstantTableStatistics(0)
         );
     }

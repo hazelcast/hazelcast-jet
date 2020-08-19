@@ -52,7 +52,7 @@ final class JsonEntryMetadataResolver implements EntryMetadataResolver {
     }
 
     @Override
-    public List<ExternalField> resolveSchema(
+    public List<ExternalField> resolveFields(
             List<ExternalField> externalFields,
             Map<String, String> options,
             boolean isKey,

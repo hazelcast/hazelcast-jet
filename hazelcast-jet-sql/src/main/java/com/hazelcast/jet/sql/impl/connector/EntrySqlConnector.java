@@ -19,8 +19,12 @@ package com.hazelcast.jet.sql.impl.connector;
 import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.jet.sql.SqlConnector;
 import com.hazelcast.jet.sql.impl.schema.ExternalField;
+import com.hazelcast.spi.impl.NodeEngine;
 import com.hazelcast.sql.impl.QueryException;
+import com.hazelcast.sql.impl.schema.Table;
+import com.hazelcast.sql.impl.schema.TableField;
 
+import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -29,6 +33,8 @@ import java.util.stream.Stream;
 
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
+import static java.util.stream.Collectors.toList;
+import static java.util.stream.Stream.concat;
 
 public abstract class EntrySqlConnector implements SqlConnector {
 
@@ -47,13 +53,19 @@ public abstract class EntrySqlConnector implements SqlConnector {
 
     protected abstract Map<String, EntryMetadataResolver> supportedResolvers();
 
-    protected List<ExternalField> resolveSchema(
-            List<ExternalField> externalFields,
-            Map<String, String> options,
-            InternalSerializationService serializationService
+    @Nonnull @Override
+    public List<ExternalField> resolveAndValidateFields(
+            @Nonnull NodeEngine nodeEngine,
+            @Nonnull Map<String, String> options,
+            @Nonnull List<ExternalField> userFields
     ) {
-        List<ExternalField> keyFields = resolveSchema(externalFields, options, true, serializationService);
-        List<ExternalField> valueFields = resolveSchema(externalFields, options, false, serializationService);
+        InternalSerializationService serializationService = (InternalSerializationService) nodeEngine.getSerializationService();
+        List<ExternalField> keyFields = findMetadataResolver(options, true)
+                .resolveFields(userFields, options, true, serializationService);
+        List<ExternalField> valueFields = findMetadataResolver(options, false)
+                .resolveFields(userFields, options, false, serializationService);
+
+        assert keyFields != null && valueFields != null;
 
         Map<String, ExternalField> fields = Stream.concat(keyFields.stream(), valueFields.stream())
             .collect(LinkedHashMap::new, (map, field) -> map.putIfAbsent(field.name(), field), Map::putAll);
@@ -61,37 +73,57 @@ public abstract class EntrySqlConnector implements SqlConnector {
         return new ArrayList<>(fields.values());
     }
 
-    private List<ExternalField> resolveSchema(
-            List<ExternalField> externalFields,
-            Map<String, String> options,
-            boolean isKey,
-            InternalSerializationService serializationService
+    @Nonnull @Override
+    public final Table createTable(
+            @Nonnull NodeEngine nodeEngine,
+            @Nonnull String schemaName,
+            @Nonnull String tableName,
+            @Nonnull Map<String, String> options,
+            @Nonnull List<ExternalField> resolvedFields
     ) {
-        String format = resolveFormat(options, isKey);
-        EntryMetadataResolver resolver = supportedResolvers().get(format);
-        if (resolver == null) {
-            throw QueryException.error(format("Unsupported serialization format - '%s'", format));
-        }
-        return requireNonNull(resolver.resolveSchema(externalFields, options, isKey, serializationService));
+        String objectName = options.getOrDefault(OPTION_OBJECT_NAME, tableName);
+
+        InternalSerializationService ss = (InternalSerializationService) nodeEngine.getSerializationService();
+
+        EntryMetadata keyMetadata = resolveMetadata(resolvedFields, options, true, ss);
+        EntryMetadata valueMetadata = resolveMetadata(resolvedFields, options, false, ss);
+        List<TableField> fields = concat(keyMetadata.getFields().stream(), valueMetadata.getFields().stream())
+                .collect(toList());
+
+        return createTableInt(nodeEngine, schemaName, tableName, objectName, options, fields, keyMetadata, valueMetadata);
     }
+
+    @Nonnull
+    protected abstract Table createTableInt(
+            @Nonnull NodeEngine nodeEngine,
+            @Nonnull String schemaName,
+            @Nonnull String tableName,
+            @Nonnull String objectName,
+            @Nonnull Map<String, String> options,
+            @Nonnull List<TableField> fields,
+            @Nonnull EntryMetadata keyMetadata,
+            @Nonnull EntryMetadata valueMetadata);
 
     protected EntryMetadata resolveMetadata(
-            List<ExternalField> externalFields,
+            List<ExternalField> resolvedFields,
             Map<String, String> options,
             boolean isKey,
             InternalSerializationService serializationService
     ) {
-        String format = resolveFormat(options, isKey);
-        EntryMetadataResolver resolver = requireNonNull(supportedResolvers().get(format));
-        return requireNonNull(resolver.resolveMetadata(externalFields, options, isKey, serializationService));
+        EntryMetadataResolver resolver = findMetadataResolver(options, isKey);
+        return requireNonNull(resolver.resolveMetadata(resolvedFields, options, isKey, serializationService));
     }
 
-    private static String resolveFormat(Map<String, String> options, boolean isKey) {
+    private EntryMetadataResolver findMetadataResolver(Map<String, String> options, boolean isKey) {
         String option = isKey ? OPTION_SERIALIZATION_KEY_FORMAT : OPTION_SERIALIZATION_VALUE_FORMAT;
         String format = options.get(option);
         if (format == null) {
             throw QueryException.error(format("Missing '%s' option", option));
         }
-        return format;
+        EntryMetadataResolver resolver = supportedResolvers().get(format);
+        if (resolver == null) {
+            throw QueryException.error(format("Unsupported serialization format - '%s'", format));
+        }
+        return resolver;
     }
 }

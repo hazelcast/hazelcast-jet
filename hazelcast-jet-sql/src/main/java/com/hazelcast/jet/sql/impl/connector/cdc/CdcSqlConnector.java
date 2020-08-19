@@ -96,7 +96,7 @@ public class CdcSqlConnector implements SqlConnector {
             @Nonnull String schemaName,
             @Nonnull String tableName,
             @Nonnull Map<String, String> options,
-            @Nonnull List<ExternalField> externalFields
+            @Nonnull List<ExternalField> resolvedFields
     ) {
         Properties cdcProperties = new Properties();
         cdcProperties.putAll(options);
@@ -108,7 +108,7 @@ public class CdcSqlConnector implements SqlConnector {
 
         // TODO: "database.whitelist" & "table.whitelist" in theory could be inferred <- schemaName & tableName
         return new CdcTable(this, schemaName, tableName, new ConstantTableStatistics(0),
-                toList(externalFields, ef -> new TableField(ef.name(), ef.type(), false)), cdcProperties);
+                toList(resolvedFields, ef -> new TableField(ef.name(), ef.type(), false)), cdcProperties);
     }
 
     @Override
