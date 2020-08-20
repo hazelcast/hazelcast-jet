@@ -53,7 +53,6 @@ import java.sql.ResultSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.function.Function;
 
 import static com.hazelcast.jet.Util.cacheEventToEntry;
 import static com.hazelcast.jet.Util.cachePutEvents;
@@ -128,7 +127,7 @@ public final class Sources {
     public static <T> StreamSource<T> streamFromProcessorWithWatermarks(
             @Nonnull String sourceName,
             boolean supportsNativeTimestamps,
-            @Nonnull Function<EventTimePolicy<? super T>, ProcessorMetaSupplier> metaSupplierFn
+            @Nonnull FunctionEx<EventTimePolicy<? super T>, ProcessorMetaSupplier> metaSupplierFn
     ) {
         return new StreamSourceTransform<>(sourceName, metaSupplierFn, true, supportsNativeTimestamps);
     }

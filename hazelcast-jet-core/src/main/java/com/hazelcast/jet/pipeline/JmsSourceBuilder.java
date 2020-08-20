@@ -29,7 +29,7 @@ import javax.jms.ConnectionFactory;
 import javax.jms.Message;
 import javax.jms.MessageConsumer;
 import javax.jms.Session;
-import java.util.function.Function;
+import java.io.Serializable;
 
 import static com.hazelcast.internal.util.Preconditions.checkNotNull;
 import static com.hazelcast.jet.core.processor.SourceProcessors.streamJmsQueueP;
@@ -42,7 +42,7 @@ import static java.util.Objects.requireNonNull;
  *
  * @since 3.0
  */
-public final class JmsSourceBuilder {
+public final class JmsSourceBuilder implements Serializable {
 
     private final SupplierEx<? extends ConnectionFactory> factorySupplier;
     private final boolean isTopic;
@@ -258,7 +258,7 @@ public final class JmsSourceBuilder {
         SupplierEx<? extends Connection> newConnectionFn =
                 () -> connectionFnLocal.apply(factorySupplierLocal.get());
 
-        Function<EventTimePolicy<? super T>, ProcessorMetaSupplier> metaSupplierFactory =
+        FunctionEx<EventTimePolicy<? super T>, ProcessorMetaSupplier> metaSupplierFactory =
                 policy -> isTopic
                         ? streamJmsTopicP(newConnectionFn, consumerFn, isSharedConsumer, messageIdFn, projectionFn, policy,
                                 maxGuaranteeFinal)

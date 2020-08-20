@@ -29,6 +29,7 @@ import com.hazelcast.jet.impl.pipeline.transform.BatchSourceTransform;
 import com.hazelcast.jet.impl.pipeline.transform.StreamSourceTransform;
 
 import javax.annotation.Nonnull;
+import java.io.Serializable;
 import java.util.List;
 
 import static com.hazelcast.internal.util.Preconditions.checkPositive;
@@ -52,7 +53,7 @@ import static com.hazelcast.jet.impl.util.Util.checkSerializable;
  *
  * @since 3.0
  */
-public final class SourceBuilder<C> {
+public final class SourceBuilder<C> implements Serializable {
     private final String name;
     private final FunctionEx<? super Context, ? extends C> createFn;
     private FunctionEx<? super C, Object> createSnapshotFn = ctx -> null;
@@ -68,7 +69,7 @@ public final class SourceBuilder<C> {
      *
      * @param <T> type of the emitted item
      */
-    public interface SourceBuffer<T> {
+    public interface SourceBuffer<T> extends Serializable {
 
         /**
          * Returns the number of items the buffer holds.
@@ -343,7 +344,7 @@ public final class SourceBuilder<C> {
         return new SourceBuilder<C>(name, createFn).new TimestampedStream<Void>();
     }
 
-    private abstract class Base<T> {
+    private abstract class Base<T> implements Serializable {
         private Base() {
         }
 
