@@ -820,10 +820,6 @@ public class JobCoordinationService {
                 && getInternalPartitionService().getPartitionStateManager().isInitialized();
     }
 
-//    private DAG deserializeDag(long jobId, JobConfig jobConfig, Data dagData) {
-//        ClassLoader classLoader = jetService.getJobExecutionService().getClassLoader(jobConfig, jobId);
-//        return deserializeWithCustomClassLoader(nodeEngine.getSerializationService(), classLoader, dagData);
-//    }
     private <J> J deserializeJobDefinition(long jobId, JobConfig jobConfig, Data jobDefinitionData) {
         ClassLoader classLoader = jetService.getJobExecutionService().getClassLoader(jobConfig, jobId);
         return deserializeWithCustomClassLoader(nodeEngine().getSerializationService(), classLoader, jobDefinitionData);
