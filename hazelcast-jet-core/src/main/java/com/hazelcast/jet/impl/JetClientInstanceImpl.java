@@ -25,7 +25,6 @@ import com.hazelcast.internal.serialization.SerializationService;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.config.JobConfig;
-import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.impl.client.protocol.codec.JetExistsDistributedObjectCodec;
 import com.hazelcast.jet.impl.client.protocol.codec.JetGetJobIdsByNameCodec;
 import com.hazelcast.jet.impl.client.protocol.codec.JetGetJobIdsCodec;
@@ -68,7 +67,7 @@ public class JetClientInstanceImpl extends AbstractJetInstance {
     public List<Job> getJobs() {
         return invokeRequestOnMasterAndDecodeResponse(JetGetJobIdsCodec.encodeRequest(), resp -> {
             List<Long> jobs = JetGetJobIdsCodec.decodeResponse(resp).response;
-            return toList(jobs, jobId -> new ClientJobProxy(this, jobId));
+            return toList(jobs, jobId -> new ClientJobProxy<>(this, jobId));
         });
     }
 
@@ -108,13 +107,13 @@ public class JetClientInstanceImpl extends AbstractJetInstance {
     }
 
     @Override
-    public Job newJobProxy(long jobId, DAG dag, JobConfig config) {
-        return new ClientJobProxy(this, jobId, dag, config);
+    public <J> Job newJobProxy(long jobId, J jobDefinition, JobConfig config) {
+        return new ClientJobProxy<>(this, jobId, jobDefinition, config);
     }
 
     @Override
     public Job newJobProxy(long jobId) {
-        return new ClientJobProxy(this, jobId);
+        return new ClientJobProxy<>(this, jobId);
     }
 
     @Override

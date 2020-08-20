@@ -54,7 +54,7 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 /**
  * {@link Job} proxy on client.
  */
-public class ClientJobProxy extends AbstractJobProxy<JetClientInstanceImpl> {
+public class ClientJobProxy<J> extends AbstractJobProxy<J, JetClientInstanceImpl> {
 
     private static final long RETRY_DELAY_NS = MILLISECONDS.toNanos(200);
     private static final long RETRY_TIME_NS = SECONDS.toNanos(60);
@@ -63,8 +63,8 @@ public class ClientJobProxy extends AbstractJobProxy<JetClientInstanceImpl> {
         super(client, jobId);
     }
 
-    ClientJobProxy(JetClientInstanceImpl client, long jobId, DAG dag, JobConfig config) {
-        super(client, jobId, dag, config);
+    ClientJobProxy(JetClientInstanceImpl client, long jobId, J jobDefinition, JobConfig config) {
+        super(client, jobId, jobDefinition, config);
     }
 
     @Nonnull

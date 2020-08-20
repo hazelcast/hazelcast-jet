@@ -52,14 +52,14 @@ import static com.hazelcast.jet.impl.util.Util.getJetInstance;
 /**
  * {@link Job} proxy on member.
  */
-public class JobProxy extends AbstractJobProxy<NodeEngineImpl> {
+public class JobProxy<J> extends AbstractJobProxy<J, NodeEngineImpl> {
 
     public JobProxy(NodeEngineImpl nodeEngine, long jobId) {
         super(nodeEngine, jobId);
     }
 
-    public JobProxy(NodeEngineImpl engine, long jobId, DAG dag, JobConfig config) {
-        super(engine, jobId, dag, config);
+    public JobProxy(NodeEngineImpl engine, long jobId, J jobDefinition, JobConfig config) {
+        super(engine, jobId, jobDefinition, config);
     }
 
     @Nonnull @Override

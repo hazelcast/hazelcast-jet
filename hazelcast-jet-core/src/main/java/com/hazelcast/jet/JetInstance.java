@@ -138,9 +138,7 @@ public interface JetInstance {
      *      an equal name
      */
     @Nonnull
-    default Job newJob(@Nonnull Pipeline pipeline, @Nonnull JobConfig config) {
-        return newJob(pipeline.toDag(), config.attachAll(((PipelineImpl) pipeline).attachedFiles()));
-    }
+    Job newJob(@Nonnull Pipeline pipeline, @Nonnull JobConfig config);
 
     /**
      * Creates and returns a Jet job based on the supplied DAG and job
@@ -188,9 +186,7 @@ public interface JetInstance {
      * See also {@link #newJob}.
      */
     @Nonnull
-    default Job newJobIfAbsent(@Nonnull Pipeline pipeline, @Nonnull JobConfig config) {
-        return newJobIfAbsent(pipeline.toDag(), config.attachAll(((PipelineImpl) pipeline).attachedFiles()));
-    }
+    Job newJobIfAbsent(@Nonnull Pipeline pipeline, @Nonnull JobConfig config);
 
     /**
      * Returns all submitted jobs including running and completed ones.

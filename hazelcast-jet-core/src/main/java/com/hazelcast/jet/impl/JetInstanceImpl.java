@@ -21,7 +21,6 @@ import com.hazelcast.instance.impl.HazelcastInstanceImpl;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.config.JobConfig;
-import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.impl.operation.GetJobIdsByNameOperation;
 import com.hazelcast.jet.impl.operation.GetJobIdsOperation;
 import com.hazelcast.jet.impl.util.ImdgUtil;
@@ -66,7 +65,7 @@ public class JetInstanceImpl extends AbstractJetInstance {
         try {
             return future.get()
                          .stream()
-                         .map(jobId -> new JobProxy((NodeEngineImpl) nodeEngine, jobId))
+                         .map(jobId -> new JobProxy<>((NodeEngineImpl) nodeEngine, jobId))
                          .collect(toList());
         } catch (Throwable t) {
             throw rethrow(t);
@@ -122,12 +121,12 @@ public class JetInstanceImpl extends AbstractJetInstance {
 
     @Override
     public Job newJobProxy(long jobId) {
-        return new JobProxy((NodeEngineImpl) nodeEngine, jobId);
+        return new JobProxy<>((NodeEngineImpl) nodeEngine, jobId);
     }
 
     @Override
-    public Job newJobProxy(long jobId, DAG dag, JobConfig config) {
-        return new JobProxy((NodeEngineImpl) nodeEngine, jobId, dag, config);
+    public <J> Job newJobProxy(long jobId, J jobDefinition, JobConfig config) {
+        return new JobProxy<>((NodeEngineImpl) nodeEngine, jobId, jobDefinition, config);
     }
 
     @Override

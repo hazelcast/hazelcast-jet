@@ -29,7 +29,9 @@ import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.JobNotFoundException;
 import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.impl.observer.ObservableImpl;
+import com.hazelcast.jet.impl.pipeline.PipelineImpl;
 import com.hazelcast.jet.impl.util.Util;
+import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.map.IMap;
 import com.hazelcast.replicatedmap.ReplicatedMap;
@@ -68,6 +70,13 @@ public abstract class AbstractJetInstance implements JetInstance {
     }
 
     @Nonnull @Override
+    public Job newJob(@Nonnull Pipeline pipeline, @Nonnull JobConfig config) {
+        config = config.attachAll(((PipelineImpl) pipeline).attachedFiles());
+        long jobId = uploadResourcesAndAssignId(config);
+        return newJobProxy(jobId, pipeline, config);
+    }
+
+    @Nonnull @Override
     public Job newJobIfAbsent(@Nonnull DAG dag, @Nonnull JobConfig config) {
         if (config.getName() == null) {
             return newJob(dag, config);
@@ -83,6 +92,30 @@ public abstract class AbstractJetInstance implements JetInstance {
 
                 try {
                     return newJob(dag, config);
+                } catch (JobAlreadyExistsException e) {
+                    logFine(getLogger(), "Could not submit job with duplicate name: %s, ignoring", config.getName());
+                }
+            }
+        }
+    }
+
+    @Nonnull @Override
+    public Job newJobIfAbsent(@Nonnull Pipeline pipeline, @Nonnull JobConfig config) {
+        config = config.attachAll(((PipelineImpl) pipeline).attachedFiles());
+        if (config.getName() == null) {
+            return newJob(pipeline, config);
+        } else {
+            while (true) {
+                Job job = getJob(config.getName());
+                if (job != null) {
+                    JobStatus status = job.getStatus();
+                    if (status != JobStatus.FAILED && status != JobStatus.COMPLETED) {
+                        return job;
+                    }
+                }
+
+                try {
+                    return newJob(pipeline, config);
                 } catch (JobAlreadyExistsException e) {
                     logFine(getLogger(), "Could not submit job with duplicate name: %s, ignoring", config.getName());
                 }
@@ -185,6 +218,6 @@ public abstract class AbstractJetInstance implements JetInstance {
 
     public abstract ILogger getLogger();
     public abstract Job newJobProxy(long jobId);
-    public abstract Job newJobProxy(long jobId, DAG dag, JobConfig config);
+    public abstract <J> Job newJobProxy(long jobId, J jobDefinition, JobConfig config);
     public abstract List<Long> getJobIdsByName(String name);
 }
