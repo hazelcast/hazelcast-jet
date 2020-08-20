@@ -25,53 +25,41 @@ import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.Watermark;
 import com.hazelcast.jet.impl.JetService;
+import com.hazelcast.jet.sql.impl.JetQueryResultProducer;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.DataSerializable;
 import com.hazelcast.sql.impl.QueryException;
 import com.hazelcast.sql.impl.QueryId;
-import com.hazelcast.sql.impl.exec.root.RootResultConsumer;
-import com.hazelcast.sql.impl.row.HeapRow;
-import com.hazelcast.sql.impl.row.Row;
+import com.hazelcast.sql.impl.QueryResultProducer;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 
-import static java.util.Collections.emptyList;
 import static java.util.Collections.singleton;
 
 public class RootResultConsumerSink implements Processor {
 
-    private final RootResultConsumer rootResultConsumer;
-    private List<Row> batch;
+    private final JetQueryResultProducer rootResultConsumer;
 
-    public RootResultConsumerSink(RootResultConsumer rootResultConsumer) {
-        this.rootResultConsumer = rootResultConsumer;
+    public RootResultConsumerSink(QueryResultProducer rootResultConsumer) {
+        this.rootResultConsumer = (JetQueryResultProducer) rootResultConsumer;
     }
 
     @Override
     public void process(int ordinal, @Nonnull Inbox inbox) {
-        if (batch == null) {
-            batch = new ArrayList<>(inbox.size());
-            for (Object row : inbox) {
-                batch.add(new HeapRow((Object[]) row));
-            }
-        }
-        if (rootResultConsumer.consume(batch, false)) {
-            batch = null;
-            inbox.clear();
-        }
+        rootResultConsumer.consume(inbox);
     }
 
     @Override
     public boolean complete() {
-        return rootResultConsumer.consume(emptyList(), true);
+        rootResultConsumer.done();
+        return true;
     }
 
     @Override
@@ -130,8 +118,8 @@ public class RootResultConsumerSink implements Processor {
     private static final class Supplier implements ProcessorSupplier, DataSerializable {
         private QueryId queryId;
 
-        private transient Map<QueryId, RootResultConsumer> resultConsumerRegistry;
-        private transient RootResultConsumer rootResultConsumer;
+        private transient Map<QueryId, QueryResultProducer> resultConsumerRegistry;
+        private transient QueryResultProducer rootResultConsumer;
 
         @SuppressWarnings("unused") // for deserialization
         private Supplier() { }

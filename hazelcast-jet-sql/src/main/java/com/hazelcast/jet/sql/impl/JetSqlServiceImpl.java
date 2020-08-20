@@ -26,7 +26,7 @@ import com.hazelcast.spi.impl.NodeEngine;
 import com.hazelcast.sql.SqlResult;
 import com.hazelcast.sql.impl.JetSqlService;
 import com.hazelcast.sql.impl.QueryId;
-import com.hazelcast.sql.impl.exec.root.RootResultConsumer;
+import com.hazelcast.sql.impl.QueryResultProducer;
 import com.hazelcast.sql.impl.optimizer.SqlPlan;
 import com.hazelcast.sql.impl.schema.TableResolver;
 
@@ -48,7 +48,7 @@ public class JetSqlServiceImpl implements JetSqlService, ManagedService {
     public void initJetInstance(@Nonnull JetInstance jetInstance) {
         NodeEngine nodeEngine = ((HazelcastInstanceImpl) jetInstance.getHazelcastInstance()).node.nodeEngine;
         JetService jetService = nodeEngine.getService(JetService.SERVICE_NAME);
-        Map<QueryId, RootResultConsumer> resultConsumerRegistry = jetService.getResultConsumerRegistry();
+        Map<QueryId, QueryResultProducer> resultConsumerRegistry = jetService.getResultConsumerRegistry();
         ExternalCatalog catalog = new ExternalCatalog(nodeEngine);
         JetPlanExecutor planExecutor = new JetPlanExecutor(requireNonNull(jetInstance), resultConsumerRegistry, catalog);
 

@@ -45,7 +45,7 @@ import com.hazelcast.spi.impl.operationservice.LiveOperationsTracker;
 import com.hazelcast.spi.impl.operationservice.Operation;
 import com.hazelcast.sql.impl.JetSqlService;
 import com.hazelcast.sql.impl.QueryId;
-import com.hazelcast.sql.impl.exec.root.RootResultConsumer;
+import com.hazelcast.sql.impl.QueryResultProducer;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -93,7 +93,7 @@ public class JetService implements ManagedService, MembershipAwareService, LiveO
 
     @Nullable
     private final JetSqlService jetSqlService;
-    private final ConcurrentMap<QueryId, RootResultConsumer> resultConsumerRegistry = new ConcurrentHashMap<>();
+    private final ConcurrentMap<QueryId, QueryResultProducer> resultConsumerRegistry = new ConcurrentHashMap<>();
 
     public JetService(Node node) {
         this.logger = node.getLogger(getClass());
@@ -337,7 +337,7 @@ public class JetService implements ManagedService, MembershipAwareService, LiveO
         }, "jet.ShutdownThread");
     }
 
-    public Map<QueryId, RootResultConsumer> getResultConsumerRegistry() {
+    public Map<QueryId, QueryResultProducer> getResultConsumerRegistry() {
         return resultConsumerRegistry;
     }
 }

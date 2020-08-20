@@ -21,10 +21,10 @@ import com.hazelcast.sql.SqlRowMetadata;
 import com.hazelcast.sql.impl.AbstractSqlResult;
 import com.hazelcast.sql.impl.QueryException;
 import com.hazelcast.sql.impl.QueryId;
+import com.hazelcast.sql.impl.QueryResultProducer;
 import com.hazelcast.sql.impl.QueryUtils;
 import com.hazelcast.sql.impl.ResultIterator;
 import com.hazelcast.sql.impl.SqlRowImpl;
-import com.hazelcast.sql.impl.exec.root.RootResultConsumer;
 import com.hazelcast.sql.impl.row.Row;
 
 import javax.annotation.Nonnull;
@@ -33,12 +33,12 @@ import java.util.NoSuchElementException;
 public class JetDynamicSqlResultImpl extends AbstractSqlResult {
 
     private final QueryId queryId;
-    private final RootResultConsumer rootResultConsumer;
+    private final QueryResultProducer rootResultConsumer;
     private final SqlRowMetadata rowMetadata;
 
     private ResultIterator<SqlRow> iterator;
 
-    public JetDynamicSqlResultImpl(QueryId queryId, RootResultConsumer rootResultConsumer, SqlRowMetadata rowMetadata) {
+    public JetDynamicSqlResultImpl(QueryId queryId, QueryResultProducer rootResultConsumer, SqlRowMetadata rowMetadata) {
         this.queryId = queryId;
         this.rootResultConsumer = rootResultConsumer;
         this.rowMetadata = rowMetadata;

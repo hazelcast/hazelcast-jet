@@ -33,6 +33,7 @@ import com.hazelcast.sql.SqlRow;
 import com.hazelcast.sql.SqlRowMetadata;
 import com.hazelcast.sql.impl.QueryException;
 import com.hazelcast.sql.impl.QueryId;
+import com.hazelcast.sql.impl.QueryResultProducer;
 import com.hazelcast.sql.impl.SqlResultImpl;
 import com.hazelcast.sql.impl.SqlRowImpl;
 import com.hazelcast.sql.impl.exec.root.BlockingRootResultConsumer;
@@ -48,13 +49,13 @@ import static java.util.stream.Collectors.toList;
 class JetPlanExecutor {
 
     private final JetInstance jetInstance;
-    private final Map<QueryId, RootResultConsumer> resultConsumerRegistry;
+    private final Map<QueryId, QueryResultProducer> resultConsumerRegistry;
 
     private final ExternalCatalog catalog;
 
     JetPlanExecutor(
             JetInstance jetInstance,
-            Map<QueryId, RootResultConsumer> resultConsumerRegistry,
+            Map<QueryId, QueryResultProducer> resultConsumerRegistry,
             ExternalCatalog catalog
     ) {
         this.jetInstance = jetInstance;
@@ -111,13 +112,12 @@ class JetPlanExecutor {
     }
 
     SqlResult execute(ExecutionPlan plan) {
-        RootResultConsumer consumer;
+        QueryResultProducer queryResultProducer;
         if (plan.isInsert()) {
-            consumer = null;
+            queryResultProducer = null;
         } else {
-            consumer = new BlockingRootResultConsumer(!plan.isStreaming());
-            consumer.setup(() -> { });
-            Object oldValue = resultConsumerRegistry.put(plan.getQueryId(), consumer);
+            queryResultProducer = new JetQueryResultProducer();
+            Object oldValue = resultConsumerRegistry.put(plan.getQueryId(), queryResultProducer);
             assert oldValue == null : oldValue;
         }
 
@@ -133,7 +133,7 @@ class JetPlanExecutor {
                 return SqlResultImpl.createUpdateCountResult(-1);
             }
         } else {
-            return new JetDynamicSqlResultImpl(plan.getQueryId(), consumer, plan.getRowMetadata());
+            return new JetDynamicSqlResultImpl(plan.getQueryId(), queryResultProducer, plan.getRowMetadata());
         }
     }
 }
