@@ -28,11 +28,14 @@ import com.hazelcast.jet.core.JetTestSupport;
 import com.hazelcast.jet.pipeline.BatchSource;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.test.AssertionSinks;
+import com.hazelcast.jet.test.SerialTest;
 import com.hazelcast.map.IMap;
 import com.hazelcast.test.HazelcastSerialClassRunner;
+import com.hazelcast.test.annotation.NightlyTest;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 
 import java.util.ArrayList;
@@ -53,8 +56,10 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 @RunWith(HazelcastSerialClassRunner.class)
+@Category({SerialTest.class, NightlyTest.class})
 public class ReadMapOrCacheP_ConsistencyTest extends JetTestSupport {
 
+    private static final String MAP_NAME = "map";
     private static final int NUM_ITEMS = 100_000;
 
     private static AtomicInteger processedCount;
@@ -63,12 +68,10 @@ public class ReadMapOrCacheP_ConsistencyTest extends JetTestSupport {
 
     private List<HazelcastInstance> remoteInstances = new ArrayList<>();
     private JetInstance jet;
-    private String mapName;
 
     @Before
     public void setup() {
         jet = createJetMember();
-        mapName = randomMapName();
 
         processedCount = new AtomicInteger();
         startLatch = new CountDownLatch(1);
@@ -78,60 +81,54 @@ public class ReadMapOrCacheP_ConsistencyTest extends JetTestSupport {
     @After
     public void after() {
         for (HazelcastInstance instance : remoteInstances) {
-            instance.shutdown();
+            instance.getLifecycleService().terminate();
         }
     }
 
     @Test
     public void test_addingItems_local() {
-        test_addingItems(jet.getMap(mapName), null);
+        test_addingItems(jet.getMap(MAP_NAME), null);
     }
 
     @Test
     public void test_addingItems_remote() {
-        String clusterName = UuidUtil.newUnsecureUuidString();
-
-        Config config = new Config().setClusterName(clusterName);
+        Config config = new Config().setClusterName(UuidUtil.newUnsecureUuidString());
         HazelcastInstance hz = Hazelcast.newHazelcastInstance(config);
         remoteInstances.add(hz);
 
-        ClientConfig clientConfig = new ClientConfig().setClusterName(clusterName);
-        test_addingItems(hz.getMap(mapName), clientConfig);
+        ClientConfig clientConfig = new ClientConfig().setClusterName(config.getClusterName());
+        test_addingItems(hz.getMap(MAP_NAME), clientConfig);
     }
 
     @Test
     public void test_removingItems_local() {
-        test_removingItems(jet.getMap(mapName), null);
+        test_removingItems(jet.getMap(MAP_NAME), null);
     }
 
     @Test
     public void test_removingItems_remote() {
-        String clusterName = UuidUtil.newUnsecureUuidString();
-
-        Config config = new Config().setClusterName(clusterName);
+        Config config = new Config().setClusterName(UuidUtil.newUnsecureUuidString());
         HazelcastInstance hz = Hazelcast.newHazelcastInstance(config);
         remoteInstances.add(hz);
 
-        ClientConfig clientConfig = new ClientConfig().setClusterName(clusterName);
-        test_removingItems(hz.getMap(mapName), clientConfig);
+        ClientConfig clientConfig = new ClientConfig().setClusterName(config.getClusterName());
+        test_removingItems(hz.getMap(MAP_NAME), clientConfig);
     }
 
     @Test
     public void test_migration_local() throws Exception {
-        test_migration(jet.getMap(mapName), null, this::createJetMember);
+        test_migration(jet.getMap(MAP_NAME), null, this::createJetMember);
     }
 
     @Test
     public void test_migration_remote() throws Exception {
-        String clusterName = UuidUtil.newUnsecureUuidString();
-
-        Config config = new Config().setClusterName(clusterName);
+        Config config = new Config().setClusterName(UuidUtil.newUnsecureUuidString());
         HazelcastInstance hz = Hazelcast.newHazelcastInstance(config);
         remoteInstances.add(hz);
 
-        ClientConfig clientConfig = new ClientConfig().setClusterName(clusterName);
+        ClientConfig clientConfig = new ClientConfig().setClusterName(config.getClusterName());
 
-        test_migration(hz.getMap(mapName), clientConfig,
+        test_migration(hz.getMap(MAP_NAME), clientConfig,
                 () -> remoteInstances.add(Hazelcast.newHazelcastInstance(config)));
     }
 
@@ -258,6 +255,6 @@ public class ReadMapOrCacheP_ConsistencyTest extends JetTestSupport {
     }
 
     private BatchSource<Entry<Integer, Integer>> mapSource(ClientConfig clientConfig) {
-        return clientConfig == null ? map(mapName) : remoteMap(mapName, clientConfig);
+        return clientConfig == null ? map(MAP_NAME) : remoteMap(MAP_NAME, clientConfig);
     }
 }
