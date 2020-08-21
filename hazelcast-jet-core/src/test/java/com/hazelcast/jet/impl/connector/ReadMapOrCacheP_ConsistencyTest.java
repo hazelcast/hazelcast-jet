@@ -78,7 +78,7 @@ public class ReadMapOrCacheP_ConsistencyTest extends JetTestSupport {
     @After
     public void after() {
         for (HazelcastInstance instance : remoteInstances) {
-            instance.getLifecycleService().terminate();
+            instance.shutdown();
         }
     }
 
@@ -89,11 +89,13 @@ public class ReadMapOrCacheP_ConsistencyTest extends JetTestSupport {
 
     @Test
     public void test_addingItems_remote() {
-        Config config = new Config().setClusterName(UuidUtil.newUnsecureUuidString());
+        String clusterName = UuidUtil.newUnsecureUuidString();
+
+        Config config = new Config().setClusterName(clusterName);
         HazelcastInstance hz = Hazelcast.newHazelcastInstance(config);
         remoteInstances.add(hz);
 
-        ClientConfig clientConfig = new ClientConfig().setClusterName(config.getClusterName());
+        ClientConfig clientConfig = new ClientConfig().setClusterName(clusterName);
         test_addingItems(hz.getMap(mapName), clientConfig);
     }
 
@@ -104,11 +106,13 @@ public class ReadMapOrCacheP_ConsistencyTest extends JetTestSupport {
 
     @Test
     public void test_removingItems_remote() {
-        Config config = new Config().setClusterName(UuidUtil.newUnsecureUuidString());
+        String clusterName = UuidUtil.newUnsecureUuidString();
+
+        Config config = new Config().setClusterName(clusterName);
         HazelcastInstance hz = Hazelcast.newHazelcastInstance(config);
         remoteInstances.add(hz);
 
-        ClientConfig clientConfig = new ClientConfig().setClusterName(config.getClusterName());
+        ClientConfig clientConfig = new ClientConfig().setClusterName(clusterName);
         test_removingItems(hz.getMap(mapName), clientConfig);
     }
 
@@ -119,11 +123,13 @@ public class ReadMapOrCacheP_ConsistencyTest extends JetTestSupport {
 
     @Test
     public void test_migration_remote() throws Exception {
-        Config config = new Config().setClusterName(UuidUtil.newUnsecureUuidString());
+        String clusterName = UuidUtil.newUnsecureUuidString();
+
+        Config config = new Config().setClusterName(clusterName);
         HazelcastInstance hz = Hazelcast.newHazelcastInstance(config);
         remoteInstances.add(hz);
 
-        ClientConfig clientConfig = new ClientConfig().setClusterName(config.getClusterName());
+        ClientConfig clientConfig = new ClientConfig().setClusterName(clusterName);
 
         test_migration(hz.getMap(mapName), clientConfig,
                 () -> remoteInstances.add(Hazelcast.newHazelcastInstance(config)));

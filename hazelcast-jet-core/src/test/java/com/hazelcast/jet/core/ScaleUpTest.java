@@ -122,6 +122,7 @@ public class ScaleUpTest extends JetTestSupport {
         }
         logger.info(jobs.size() + " jobs are running, adding a member");
         createJetMember(config);
+        sleepSeconds(2);
         for (Job job : jobs) {
             assertJobStatusEventually(job, RUNNING, 30);
         }
