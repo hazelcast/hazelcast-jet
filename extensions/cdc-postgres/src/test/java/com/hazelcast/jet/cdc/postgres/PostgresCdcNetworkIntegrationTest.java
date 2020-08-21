@@ -44,6 +44,7 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.containers.ToxiproxyContainer;
 
 import javax.annotation.Nonnull;
+import java.net.ServerSocket;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
@@ -88,8 +89,9 @@ public class PostgresCdcNetworkIntegrationTest extends AbstractCdcIntegrationTes
     }
 
     @Test
-    public void when_noDatabaseToConnectTo() {
-        Pipeline pipeline = initPipeline("localhost", POSTGRESQL_PORT);
+    public void when_noDatabaseToConnectTo() throws Exception {
+        int port = findRandomOpenPort();
+        Pipeline pipeline = initPipeline("localhost", port);
 
         // when job starts
         JetInstance jet = createJetMembers(2)[0];
@@ -109,7 +111,7 @@ public class PostgresCdcNetworkIntegrationTest extends AbstractCdcIntegrationTes
                     MILLISECONDS.toSeconds(2 * RECONNECT_INTERVAL_MS));
 
             // when DB starts
-            PostgreSQLContainer<?> postgres = initPostgres(null, POSTGRESQL_PORT);
+            PostgreSQLContainer<?> postgres = initPostgres(null, port);
             try {
                 // then source connects successfully
                 assertEqualsEventually(() -> jet.getMap("results").size(), 4);
@@ -161,8 +163,9 @@ public class PostgresCdcNetworkIntegrationTest extends AbstractCdcIntegrationTes
 
     @Test
     public void when_databaseShutdownOrLongDisconnectDuringSnapshotting() throws Exception {
-        PostgreSQLContainer<?> postgres = initPostgres(null, POSTGRESQL_PORT);
-        Pipeline pipeline = initPipeline(postgres.getContainerIpAddress(), POSTGRESQL_PORT);
+        int port = findRandomOpenPort();
+        PostgreSQLContainer<?> postgres = initPostgres(null, port);
+        Pipeline pipeline = initPipeline(postgres.getContainerIpAddress(), port);
         try {
             // when job starts
             JetInstance jet = createJetMembers(2)[0];
@@ -186,7 +189,7 @@ public class PostgresCdcNetworkIntegrationTest extends AbstractCdcIntegrationTes
                         .hasStackTraceContaining("Failed connecting to database");
             } else {
                 // and DB is started anew
-                postgres = initPostgres(null, POSTGRESQL_PORT);
+                postgres = initPostgres(null, port);
 
                 // then snapshotting finishes successfully
                 try {
@@ -250,8 +253,9 @@ public class PostgresCdcNetworkIntegrationTest extends AbstractCdcIntegrationTes
             return; //doesn't make sense to test this mode with this scenario
         }
 
-        PostgreSQLContainer<?> postgres = initPostgres(null, POSTGRESQL_PORT);
-        Pipeline pipeline = initPipeline(postgres.getContainerIpAddress(), POSTGRESQL_PORT);
+        int port = findRandomOpenPort();
+        PostgreSQLContainer<?> postgres = initPostgres(null, port);
+        Pipeline pipeline = initPipeline(postgres.getContainerIpAddress(), port);
         try {
             // when connector is up and transitions to binlog reading
             JetInstance jet = createJetMembers(2)[0];
@@ -277,7 +281,7 @@ public class PostgresCdcNetworkIntegrationTest extends AbstractCdcIntegrationTes
                 assertEqualsEventually(() -> jet.getMap("results").size(), 0);
 
                 // and DB is started anew
-                postgres = initPostgres(null, POSTGRESQL_PORT);
+                postgres = initPostgres(null, port);
                 insertRecords(postgres, 1005);
 
                 // and some time passes
@@ -342,7 +346,7 @@ public class PostgresCdcNetworkIntegrationTest extends AbstractCdcIntegrationTes
                 .withPassword("postgres");
         if (fixedExposedPort != null) {
             Consumer<CreateContainerCmd> cmd = e -> e.withPortBindings(
-                    new PortBinding(Ports.Binding.bindPort(fixedExposedPort), new ExposedPort(fixedExposedPort)));
+                    new PortBinding(Ports.Binding.bindPort(fixedExposedPort), new ExposedPort(POSTGRESQL_PORT)));
             postgres = postgres.withCreateContainerCmdModifier(cmd);
         }
         if (network != null) {
@@ -394,6 +398,12 @@ public class PostgresCdcNetworkIntegrationTest extends AbstractCdcIntegrationTes
             }
             statement.executeBatch();
             connection.commit();
+        }
+    }
+
+    private static int findRandomOpenPort() throws Exception {
+        try (ServerSocket socket = new ServerSocket(0)) {
+            return socket.getLocalPort();
         }
     }
 

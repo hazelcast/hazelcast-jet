@@ -42,6 +42,7 @@ import org.testcontainers.containers.MySQLContainer;
 import org.testcontainers.containers.Network;
 import org.testcontainers.containers.ToxiproxyContainer;
 
+import java.net.ServerSocket;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
@@ -88,8 +89,10 @@ public class MySqlCdcNetworkIntegrationTest extends AbstractCdcIntegrationTest {
     }
 
     @Test
-    public void when_noDatabaseToConnectTo() {
-        Pipeline pipeline = initPipeline("localhost", MYSQL_PORT);
+    public void when_noDatabaseToConnectTo() throws Exception {
+        int port = findRandomOpenPort();
+
+        Pipeline pipeline = initPipeline("localhost", port);
 
         // when job starts
         JetInstance jet = createJetMembers(2)[0];
@@ -109,7 +112,7 @@ public class MySqlCdcNetworkIntegrationTest extends AbstractCdcIntegrationTest {
                     2 * MILLISECONDS.toSeconds(RECONNECT_INTERVAL_MS));
 
             // and DB starts
-            MySQLContainer<?> mysql = initMySql(null, MYSQL_PORT);
+            MySQLContainer<?> mysql = initMySql(null, port);
             try {
                 // then source connects successfully
                 assertEqualsEventually(() -> jet.getMap("results").size(), 4);
@@ -160,8 +163,9 @@ public class MySqlCdcNetworkIntegrationTest extends AbstractCdcIntegrationTest {
 
     @Test
     public void when_databaseShutdownDuringSnapshotting() throws Exception {
-        MySQLContainer<?> mysql = initMySql(null, MYSQL_PORT);
-        Pipeline pipeline = initPipeline(mysql.getContainerIpAddress(), MYSQL_PORT);
+        int port = findRandomOpenPort();
+        MySQLContainer<?> mysql = initMySql(null, port);
+        Pipeline pipeline = initPipeline(mysql.getContainerIpAddress(), port);
         try {
             // when job starts
             JetInstance jet = createJetMembers(2)[0];
@@ -184,7 +188,7 @@ public class MySqlCdcNetworkIntegrationTest extends AbstractCdcIntegrationTest {
                         .hasStackTraceContaining("Failed connecting to database");
             } else {
                 // and DB is started anew
-                mysql = initMySql(null, MYSQL_PORT);
+                mysql = initMySql(null, port);
 
                 // then snapshotting finishes successfully
                 try {
@@ -242,8 +246,9 @@ public class MySqlCdcNetworkIntegrationTest extends AbstractCdcIntegrationTest {
 
     @Test
     public void when_databaseShutdownDuringBinlogReading() throws Exception {
-        MySQLContainer<?> mysql = initMySql(null, MYSQL_PORT);
-        Pipeline pipeline = initPipeline(mysql.getContainerIpAddress(), MYSQL_PORT);
+        int port = findRandomOpenPort();
+        MySQLContainer<?> mysql = initMySql(null, port);
+        Pipeline pipeline = initPipeline(mysql.getContainerIpAddress(), port);
         try {
             // when connector is up and transitions to binlog reading
             JetInstance jet = createJetMembers(2)[0];
@@ -269,7 +274,7 @@ public class MySqlCdcNetworkIntegrationTest extends AbstractCdcIntegrationTest {
                 assertEqualsEventually(() -> jet.getMap("results").size(), 0);
 
                 // and DB is started anew
-                mysql = initMySql(null, MYSQL_PORT);
+                mysql = initMySql(null, port);
                 insertRecords(mysql, 1005, 1006, 1007);
 
                 try {
@@ -333,7 +338,7 @@ public class MySqlCdcNetworkIntegrationTest extends AbstractCdcIntegrationTest {
                 .withPassword("mysqlpw");
         if (fixedExposedPort != null) {
             Consumer<CreateContainerCmd> cmd = e -> e.withPortBindings(
-                    new PortBinding(Ports.Binding.bindPort(fixedExposedPort), new ExposedPort(fixedExposedPort)));
+                    new PortBinding(Ports.Binding.bindPort(fixedExposedPort), new ExposedPort(MYSQL_PORT)));
             mysql = mysql.withCreateContainerCmdModifier(cmd);
         }
         if (network != null) {
@@ -364,6 +369,12 @@ public class MySqlCdcNetworkIntegrationTest extends AbstractCdcIntegrationTest {
             }
             statement.executeBatch();
             connection.commit();
+        }
+    }
+
+    private static int findRandomOpenPort() throws Exception {
+        try (ServerSocket socket = new ServerSocket(0)) {
+            return socket.getLocalPort();
         }
     }
 
