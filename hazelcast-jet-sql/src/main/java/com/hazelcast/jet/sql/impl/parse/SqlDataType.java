@@ -38,6 +38,21 @@ public class SqlDataType extends SqlIdentifier {
 
     @Override
     public void unparse(SqlWriter writer, int leftPrec, int rightPrec) {
-        writer.keyword(type.getTypeFamily().name().replace('_', ' '));
+        switch (type.getTypeFamily()) {
+            case INTEGER:
+                writer.keyword("INT");
+                break;
+
+            case INTERVAL_YEAR_MONTH:
+                writer.keyword("INTERVAL YEAR TO MONTH");
+                break;
+
+            case INTERVAL_DAY_SECOND:
+                writer.keyword("INTERVAL DAY TO SECOND");
+                break;
+
+            default:
+                writer.keyword(type.getTypeFamily().name().replace('_', ' '));
+        }
     }
 }
