@@ -31,7 +31,6 @@ import io.debezium.relational.history.DatabaseHistoryException;
 import io.debezium.relational.history.HistoryRecord;
 import org.apache.kafka.connect.connector.ConnectorContext;
 import org.apache.kafka.connect.data.Struct;
-import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.source.SourceConnector;
 import org.apache.kafka.connect.source.SourceRecord;
 import org.apache.kafka.connect.source.SourceTask;
@@ -115,13 +114,11 @@ public abstract class CdcSource<T> {
                     state.setOffset(partition, offset);
                 }
             }
-        } catch (ConnectException ce) {
-            reconnect(ce);
         } catch (InterruptedException ie) {
             logger.warning("Waiting for data interrupted");
             Thread.currentThread().interrupt();
-        } catch (Exception e) {
-            throw shutDownAndThrow(rethrow(e));
+        } catch (RuntimeException re) {
+            reconnect(re);
         }
     }
 
@@ -136,17 +133,15 @@ public abstract class CdcSource<T> {
             }
             reconnectTracker.reset();
             return true;
-        } catch (ConnectException ce) {
-            handleConnectException(ce);
-            return false;
         } catch (JetException je) {
             throw shutDownAndThrow(je);
-        } catch (Exception e) {
-            throw shutDownAndThrow(rethrow(e));
+        } catch (RuntimeException re) {
+            handleConnectException(re);
+            return false;
         }
     }
 
-    private void handleConnectException(ConnectException ce) {
+    private void handleConnectException(RuntimeException ce) {
         reconnectTracker.attemptFailed();
         if (reconnectTracker.shouldTryAgain()) {
             long waitTimeMs = reconnectTracker.getNextWaitTimeMs();
@@ -177,10 +172,10 @@ public abstract class CdcSource<T> {
         return task;
     }
 
-    private void reconnect(ConnectException ce) {
+    private void reconnect(RuntimeException re) {
         if (reconnectTracker.shouldTryAgain()) {
             logger.warning("Connection to database lost, will attempt to reconnect and retry operations from " +
-                    "scratch" + getCause(ce));
+                    "scratch" + getCause(re));
 
             destroy();
             reconnectTracker.reset();
@@ -188,7 +183,7 @@ public abstract class CdcSource<T> {
                 state = new State();
             }
         } else {
-            throw shutDownAndThrow(new JetException("Connection to database lost" + getCause(ce)));
+            throw shutDownAndThrow(new JetException("Failed connecting to database" + getCause(re)));
         }
     }
 
@@ -217,13 +212,13 @@ public abstract class CdcSource<T> {
         return t;
     }
 
-    private static String getCause(ConnectException ce) {
+    private static String getCause(Exception e) {
         StringBuilder sb = new StringBuilder();
-        if (ce.getMessage() != null) {
-            sb.append(" : ").append(ce.getMessage());
+        if (e.getMessage() != null) {
+            sb.append(" : ").append(e.getMessage());
         }
-        if (ce.getCause() != null && ce.getCause().getMessage() != null) {
-            sb.append(" : ").append(ce.getCause().getMessage());
+        if (e.getCause() != null && e.getCause().getMessage() != null) {
+            sb.append(" : ").append(e.getCause().getMessage());
         }
         return sb.toString();
     }

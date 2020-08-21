@@ -25,7 +25,6 @@ import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.cdc.AbstractCdcIntegrationTest;
 import com.hazelcast.jet.cdc.ChangeRecord;
-import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.StreamSource;
@@ -116,9 +115,8 @@ public class PostgresCdcNetworkIntegrationTest extends AbstractCdcIntegrationTes
                 assertEqualsEventually(() -> jet.getMap("results").size(), 4);
                 assertEquals(RUNNING, job.getStatus());
             } finally {
-                job.cancel();
-                postgres.stop();
-                assertJobStatusEventually(job, JobStatus.FAILED);
+                abortJob(job);
+                stopContainer(postgres);
             }
         }
     }
@@ -127,9 +125,9 @@ public class PostgresCdcNetworkIntegrationTest extends AbstractCdcIntegrationTes
     public void when_shortNetworkDisconnectDuringSnapshotting_then_connectorDoesNotNoticeAnything() throws Exception {
         try (
                 Network network = initNetwork();
-                PostgreSQLContainer<?> postgres = initPostgres(network, null);
                 ToxiproxyContainer toxiproxy = initToxiproxy(network);
         ) {
+            PostgreSQLContainer<?> postgres = initPostgres(network, null);
             ToxiproxyContainer.ContainerProxy proxy = initProxy(toxiproxy, postgres);
             Pipeline pipeline = initPipeline(proxy.getContainerIpAddress(), proxy.getProxyPort());
             // when job starts
@@ -155,8 +153,8 @@ public class PostgresCdcNetworkIntegrationTest extends AbstractCdcIntegrationTes
             try {
                 assertEqualsEventually(() -> jet.getMap("results").size(), 4);
             } finally {
-                job.cancel();
-                assertJobStatusEventually(job, JobStatus.FAILED);
+                abortJob(job);
+                stopContainer(postgres);
             }
         }
     }
@@ -177,6 +175,7 @@ public class PostgresCdcNetworkIntegrationTest extends AbstractCdcIntegrationTes
 
             // and DB is stopped
             stopContainer(postgres);
+            postgres = null;
 
             // then
             boolean neverReconnect = reconnectBehaviour.getMaxAttempts() == 0;
@@ -184,7 +183,7 @@ public class PostgresCdcNetworkIntegrationTest extends AbstractCdcIntegrationTes
                 // then job fails
                 assertThatThrownBy(job::join)
                         .hasRootCauseInstanceOf(JetException.class)
-                        .hasStackTraceContaining("Connection to database lost");
+                        .hasStackTraceContaining("Failed connecting to database");
             } else {
                 // and DB is started anew
                 postgres = initPostgres(null, POSTGRESQL_PORT);
@@ -194,12 +193,13 @@ public class PostgresCdcNetworkIntegrationTest extends AbstractCdcIntegrationTes
                     assertEqualsEventually(() -> jet.getMap("results").size(), 4);
                     assertEquals(RUNNING, job.getStatus());
                 } finally {
-                    job.cancel();
-                    assertJobStatusEventually(job, JobStatus.FAILED);
+                    abortJob(job);
                 }
             }
         } finally {
-            postgres.stop();
+            if (postgres != null) {
+                stopContainer(postgres);
+            }
         }
     }
 
@@ -207,9 +207,9 @@ public class PostgresCdcNetworkIntegrationTest extends AbstractCdcIntegrationTes
     public void when_shortConnectionLossDuringBinlogReading_then_connectorDoesNotNoticeAnything() throws Exception {
         try (
                 Network network = initNetwork();
-                PostgreSQLContainer<?> postgres = initPostgres(network, null);
                 ToxiproxyContainer toxiproxy = initToxiproxy(network);
         ) {
+            PostgreSQLContainer<?> postgres = initPostgres(network, null);
             ToxiproxyContainer.ContainerProxy proxy = initProxy(toxiproxy, postgres);
             Pipeline pipeline = initPipeline(proxy.getContainerIpAddress(), proxy.getProxyPort());
             // when connector is up and transitions to binlog reading
@@ -238,8 +238,8 @@ public class PostgresCdcNetworkIntegrationTest extends AbstractCdcIntegrationTes
                 assertEqualsEventually(() -> jet.getMap("results").size(), 7);
                 assertEquals(RUNNING, job.getStatus());
             } finally {
-                job.cancel();
-                assertJobStatusEventually(job, JobStatus.FAILED);
+                abortJob(job);
+                stopContainer(postgres);
             }
         }
     }
@@ -263,13 +263,14 @@ public class PostgresCdcNetworkIntegrationTest extends AbstractCdcIntegrationTes
 
             // and DB is stopped
             stopContainer(postgres);
+            postgres = null;
 
             boolean neverReconnect = reconnectBehaviour.getMaxAttempts() == 0;
             if (neverReconnect) {
                 // then job fails
                 assertThatThrownBy(job::join)
                         .hasRootCauseInstanceOf(JetException.class)
-                        .hasStackTraceContaining("Connection to database lost");
+                        .hasStackTraceContaining("Failed connecting to database");
             } else {
                 // and results are cleared
                 jet.getMap("results").clear();
@@ -288,12 +289,13 @@ public class PostgresCdcNetworkIntegrationTest extends AbstractCdcIntegrationTes
                     assertEqualsEventually(() -> jet.getMap("results").size(), 7);
                     assertEquals(RUNNING, job.getStatus());
                 } finally {
-                    job.cancel();
-                    assertJobStatusEventually(job, JobStatus.FAILED);
+                    abortJob(job);
                 }
             }
         } finally {
-            postgres.stop();
+            if (postgres != null) {
+                stopContainer(postgres);
+            }
         }
     }
 
@@ -318,6 +320,15 @@ public class PostgresCdcNetworkIntegrationTest extends AbstractCdcIntegrationTes
                 .map(r -> entry(r.key().toMap().get("id"), r.value().toJson()))
                 .writeTo(Sinks.map("results"));
         return pipeline;
+    }
+
+    private void abortJob(Job job) {
+        try {
+            job.cancel();
+            job.join();
+        } catch (Exception e) {
+            // ignore, cancellation exception expected
+        }
     }
 
     private static Network initNetwork() {

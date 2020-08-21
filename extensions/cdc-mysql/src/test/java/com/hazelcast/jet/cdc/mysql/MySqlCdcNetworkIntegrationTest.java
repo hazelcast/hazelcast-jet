@@ -25,12 +25,11 @@ import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.cdc.AbstractCdcIntegrationTest;
 import com.hazelcast.jet.cdc.ChangeRecord;
-import com.hazelcast.jet.core.JobStatus;
-import com.hazelcast.jet.retry.RetryStrategies;
-import com.hazelcast.jet.retry.RetryStrategy;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.StreamSource;
+import com.hazelcast.jet.retry.RetryStrategies;
+import com.hazelcast.jet.retry.RetryStrategy;
 import com.hazelcast.jet.test.SerialTest;
 import com.hazelcast.test.HazelcastSerialParametersRunnerFactory;
 import com.hazelcast.test.annotation.NightlyTest;
@@ -116,9 +115,8 @@ public class MySqlCdcNetworkIntegrationTest extends AbstractCdcIntegrationTest {
                 assertEqualsEventually(() -> jet.getMap("results").size(), 4);
                 assertEquals(RUNNING, job.getStatus());
             } finally {
-                job.cancel();
-                mysql.stop();
-                assertJobStatusEventually(job, JobStatus.FAILED);
+                abortJob(job);
+                stopContainer(mysql);
             }
         }
     }
@@ -127,9 +125,9 @@ public class MySqlCdcNetworkIntegrationTest extends AbstractCdcIntegrationTest {
     public void when_networkDisconnectDuringSnapshotting_then_jetSourceIsStuckUntilReconnect() throws Exception {
         try (
                 Network network = initNetwork();
-                MySQLContainer<?> mysql = initMySql(network, null);
                 ToxiproxyContainer toxiproxy = initToxiproxy(network);
         ) {
+            MySQLContainer<?> mysql = initMySql(network, null);
             ToxiproxyContainer.ContainerProxy proxy = initProxy(toxiproxy, mysql);
             Pipeline pipeline = initPipeline(proxy.getContainerIpAddress(), proxy.getProxyPort());
             // when job starts
@@ -154,8 +152,8 @@ public class MySqlCdcNetworkIntegrationTest extends AbstractCdcIntegrationTest {
             try {
                 assertEqualsEventually(() -> jet.getMap("results").size(), 4);
             } finally {
-                job.cancel();
-                assertJobStatusEventually(job, JobStatus.FAILED);
+                abortJob(job);
+                stopContainer(mysql);
             }
         }
     }
@@ -176,13 +174,14 @@ public class MySqlCdcNetworkIntegrationTest extends AbstractCdcIntegrationTest {
 
             // and DB is stopped
             stopContainer(mysql);
+            mysql = null;
 
             boolean neverReconnect = reconnectBehaviour.getMaxAttempts() == 0;
             if (neverReconnect) {
                 // then job fails
                 assertThatThrownBy(job::join)
                         .hasRootCauseInstanceOf(JetException.class)
-                        .hasStackTraceContaining("Connection to database lost");
+                        .hasStackTraceContaining("Failed connecting to database");
             } else {
                 // and DB is started anew
                 mysql = initMySql(null, MYSQL_PORT);
@@ -192,12 +191,13 @@ public class MySqlCdcNetworkIntegrationTest extends AbstractCdcIntegrationTest {
                     assertEqualsEventually(() -> jet.getMap("results").size(), 4);
                     assertEquals(RUNNING, job.getStatus());
                 } finally {
-                    job.cancel();
-                    assertJobStatusEventually(job, JobStatus.FAILED);
+                    abortJob(job);
                 }
             }
         } finally {
-            mysql.stop();
+            if (mysql != null) {
+                stopContainer(mysql);
+            }
         }
     }
 
@@ -205,9 +205,9 @@ public class MySqlCdcNetworkIntegrationTest extends AbstractCdcIntegrationTest {
     public void when_networkDisconnectDuringBinlogRead_then_connectorReconnectsInternally() throws Exception {
         try (
                 Network network = initNetwork();
-                MySQLContainer<?> mysql = initMySql(network, null);
                 ToxiproxyContainer toxiproxy = initToxiproxy(network);
         ) {
+            MySQLContainer<?> mysql = initMySql(network, null);
             ToxiproxyContainer.ContainerProxy proxy = initProxy(toxiproxy, mysql);
             Pipeline pipeline = initPipeline(proxy.getContainerIpAddress(), proxy.getProxyPort());
             // when connector is up and transitions to binlog reading
@@ -234,8 +234,8 @@ public class MySqlCdcNetworkIntegrationTest extends AbstractCdcIntegrationTest {
             try {
                 assertEqualsEventually(() -> jet.getMap("results").size(), 7);
             } finally {
-                job.cancel();
-                assertJobStatusEventually(job, JobStatus.FAILED);
+                abortJob(job);
+                stopContainer(mysql);
             }
         }
     }
@@ -255,13 +255,14 @@ public class MySqlCdcNetworkIntegrationTest extends AbstractCdcIntegrationTest {
 
             // and DB is stopped
             stopContainer(mysql);
+            mysql = null;
 
             boolean neverReconnect = reconnectBehaviour.getMaxAttempts() == 0;
             if (neverReconnect) {
                 // then job fails
                 assertThatThrownBy(job::join)
                         .hasRootCauseInstanceOf(JetException.class)
-                        .hasStackTraceContaining("Connection to database lost");
+                        .hasStackTraceContaining("Failed connecting to database");
             } else {
                 // and results are cleared
                 jet.getMap("results").clear();
@@ -281,12 +282,13 @@ public class MySqlCdcNetworkIntegrationTest extends AbstractCdcIntegrationTest {
                         assertEquals(RUNNING, job.getStatus());
                     }
                 } finally {
-                    job.cancel();
-                    assertJobStatusEventually(job, JobStatus.FAILED);
+                    abortJob(job);
                 }
             }
         } finally {
-            mysql.stop();
+            if (mysql != null) {
+                stopContainer(mysql);
+            }
         }
     }
 
@@ -310,6 +312,15 @@ public class MySqlCdcNetworkIntegrationTest extends AbstractCdcIntegrationTest {
                 .map(r -> entry(r.key().toMap().get("id"), r.value().toJson()))
                 .writeTo(Sinks.map("results"));
         return pipeline;
+    }
+
+    private void abortJob(Job job) {
+        try {
+            job.cancel();
+            job.join();
+        } catch (Exception e) {
+            // ignore, cancellation exception expected
+        }
     }
 
     private static Network initNetwork() {

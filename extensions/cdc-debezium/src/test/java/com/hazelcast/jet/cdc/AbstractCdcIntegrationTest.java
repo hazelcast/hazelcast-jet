@@ -128,8 +128,6 @@ public class AbstractCdcIntegrationTest extends JetTestSupport {
         String containerId = container.getContainerId();
         DockerClient dockerClient = DockerClientFactory.instance().client();
         dockerClient.stopContainerCmd(containerId).exec();
-
-        container.stop();
     }
 
 }
