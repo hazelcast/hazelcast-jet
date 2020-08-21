@@ -51,6 +51,7 @@ public class JetQueryResultProducer implements QueryResultProducer {
     @Override
     public void onError(QueryException error) {
         this.error.compareAndSet(null, error);
+        done = true;
     }
 
     public void done() {
@@ -95,6 +96,10 @@ public class JetQueryResultProducer implements QueryResultProducer {
                     return true;
                 }
                 if (done) {
+                    QueryException localError = error.get();
+                    if (localError != null) {
+                        throw new RuntimeException("The underlying job failed: " + localError.getMessage(), localError);
+                    }
                     return false;
                 }
                 idler.idle(++idleCount);

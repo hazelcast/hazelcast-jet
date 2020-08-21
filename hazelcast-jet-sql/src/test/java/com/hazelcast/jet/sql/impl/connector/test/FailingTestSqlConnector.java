@@ -14,15 +14,12 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.sql;
+package com.hazelcast.jet.sql.impl.connector.test;
 
+import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.core.DAG;
-import com.hazelcast.jet.core.EventTimePolicy;
-import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.Vertex;
-import com.hazelcast.jet.impl.pipeline.transform.StreamSourceTransform;
-import com.hazelcast.jet.pipeline.test.SimpleEvent;
-import com.hazelcast.jet.pipeline.test.TestSources;
+import com.hazelcast.jet.sql.SqlConnector;
 import com.hazelcast.jet.sql.impl.schema.ExternalField;
 import com.hazelcast.jet.sql.impl.schema.JetTable;
 import com.hazelcast.spi.impl.NodeEngine;
@@ -39,14 +36,15 @@ import javax.annotation.Nonnull;
 import java.util.List;
 import java.util.Map;
 
-import static com.hazelcast.jet.core.Edge.between;
-import static com.hazelcast.jet.core.processor.Processors.mapP;
 import static com.hazelcast.jet.impl.util.Util.toList;
 import static java.util.Collections.singletonList;
 
-public class TestStreamSqlConnector implements SqlConnector {
+/**
+ * A SQL source that fails immediately.
+ */
+public class FailingTestSqlConnector implements SqlConnector {
 
-    public static final String TYPE_NAME = "TestStream";
+    public static final String TYPE_NAME = "FailingSource";
 
     private static final List<ExternalField> FIELD_LIST = singletonList(new ExternalField("v", QueryDataType.BIGINT));
 
@@ -95,16 +93,18 @@ public class TestStreamSqlConnector implements SqlConnector {
             @Nonnull Expression<Boolean> predicate,
             @Nonnull List<Expression<?>> projection
     ) {
-        StreamSourceTransform<SimpleEvent> source = (StreamSourceTransform<SimpleEvent>) TestSources.itemStream(100);
-        ProcessorMetaSupplier pms = source.metaSupplierFn.apply(EventTimePolicy.noEventTime());
-        Vertex src = dag.newVertex("src", pms);
-        Vertex srcMap = dag.newVertex("src-map", mapP((SimpleEvent e) -> new Object[]{e.sequence()}));
-        dag.edge(between(src, srcMap).isolated());
-        return srcMap;
+        return dag.newVertex("failingSource", FailingP::new);
     }
 
     @Override
     public boolean supportsFullScanReader() {
         return true;
+    }
+
+    private static final class FailingP extends AbstractProcessor {
+        @Override
+        public boolean complete() {
+            throw new RuntimeException("mock failure");
+        }
     }
 }

@@ -147,7 +147,11 @@ public class RootResultConsumerSink implements Processor {
         public void close(@Nullable Throwable error) {
             if (rootResultConsumer != null) {
                 // make sure the consumer is closed. Most likely it already is done normally or already has an error
-                rootResultConsumer.onError(QueryException.error("Processor closed prematurely", error));
+                if (error != null) {
+                    rootResultConsumer.onError(QueryException.error(error.toString(), error));
+                } else {
+                    rootResultConsumer.onError(QueryException.error("Processor closed prematurely"));
+                }
             }
             if (resultConsumerRegistry != null) {
                 resultConsumerRegistry.remove(queryId);

@@ -18,7 +18,9 @@ package com.hazelcast.jet.sql;
 
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
-import com.hazelcast.sql.SqlQuery;
+import com.hazelcast.jet.sql.impl.connector.test.FailingTestSqlConnector;
+import com.hazelcast.jet.sql.impl.connector.test.TestBatchSqlConnector;
+import com.hazelcast.jet.sql.impl.connector.test.TestStreamSqlConnector;
 import com.hazelcast.sql.SqlResult;
 import com.hazelcast.sql.SqlRow;
 import com.hazelcast.sql.SqlService;
@@ -26,13 +28,9 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.util.BitSet;
-import java.util.Map;
-import java.util.stream.IntStream;
 
-import static com.hazelcast.function.FunctionEx.identity;
 import static com.hazelcast.jet.core.JobStatus.FAILED;
 import static com.hazelcast.jet.core.JobStatus.RUNNING;
-import static java.util.stream.Collectors.toMap;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -42,7 +40,6 @@ public class ClientSqlTest extends JetSqlTestSupport {
 
     @BeforeClass
     public static void setUpClass() {
-        // TODO currently fails on 2 members, fix it
         initialize(2, null);
     }
 
@@ -50,18 +47,17 @@ public class ClientSqlTest extends JetSqlTestSupport {
     public void test_jetJobReturnRowsToClientFrom() {
         JetInstance client = factory().newClient();
         SqlService sqlService = client.getHazelcastInstance().getSql();
-        Map<Integer, Integer> myMap = client.getMap("my_map");
-        final int itemCount = 10_000;
-        myMap.putAll(IntStream.range(0, itemCount).boxed().collect(toMap(identity(), identity())));
 
-        SqlResult result = sqlService.query("select /*+jet*/ __key, this from my_map");
-        BitSet seenValues = new BitSet(itemCount);
+        sqlService.query("CREATE EXTERNAL TABLE t TYPE " + TestBatchSqlConnector.TYPE_NAME);
+
+        SqlResult result = sqlService.query("select v from t");
+        BitSet seenValues = new BitSet(TestBatchSqlConnector.DEFAULT_ITEM_COUNT);
         for (SqlRow r : result) {
             Integer v = r.getObject(0);
             assertFalse("value already seen: " + v, seenValues.get(v));
             seenValues.set(v);
         }
-        assertEquals(itemCount, seenValues.cardinality());
+        assertEquals(TestBatchSqlConnector.DEFAULT_ITEM_COUNT, seenValues.cardinality());
     }
 
     @Test
@@ -70,8 +66,7 @@ public class ClientSqlTest extends JetSqlTestSupport {
         SqlService sqlService = client.getHazelcastInstance().getSql();
 
         sqlService.query("CREATE EXTERNAL TABLE t TYPE " + TestStreamSqlConnector.TYPE_NAME);
-        // TODO remove the cursorBufferSize, it's a workaround for client that returns only after a full page
-        sqlService.query(new SqlQuery("SELECT * FROM t").setCursorBufferSize(1));
+        sqlService.query("SELECT * FROM t");
 
         Job job = instance().getJobs().stream().filter(j -> !j.getStatus().isTerminal()).findFirst().orElse(null);
         assertNotNull("no active job found", job);
@@ -81,5 +76,15 @@ public class ClientSqlTest extends JetSqlTestSupport {
         assertJobStatusEventually(job, FAILED);
         assertThatThrownBy(() -> job.join())
                 .hasMessageContaining("QueryException: Client cannot be reached");
+    }
+
+    @Test
+    public void when_jobFails_then_clientFindsOut() {
+        JetInstance client = factory().newClient();
+        SqlService sqlService = client.getHazelcastInstance().getSql();
+
+        sqlService.query("CREATE EXTERNAL TABLE t TYPE " + FailingTestSqlConnector.TYPE_NAME);
+        assertThatThrownBy(() -> sqlService.query("SELECT * FROM t"))
+                .hasMessageContaining("mock failure");
     }
 }
