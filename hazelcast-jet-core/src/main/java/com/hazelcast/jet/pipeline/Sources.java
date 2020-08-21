@@ -69,6 +69,7 @@ import static com.hazelcast.jet.core.processor.SourceProcessors.streamMapP;
 import static com.hazelcast.jet.core.processor.SourceProcessors.streamRemoteCacheP;
 import static com.hazelcast.jet.core.processor.SourceProcessors.streamRemoteMapP;
 import static com.hazelcast.jet.core.processor.SourceProcessors.streamSocketP;
+import static com.hazelcast.jet.impl.util.ImdgUtil.asXmlString;
 import static com.hazelcast.jet.impl.util.Util.checkSerializable;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
@@ -639,8 +640,9 @@ public final class Sources {
             @Nonnull FunctionEx<? super EventJournalMapEvent<K, V>, ? extends T> projectionFn,
             @Nonnull PredicateEx<? super EventJournalMapEvent<K, V>> predicateFn
     ) {
+        String clientXml = asXmlString(clientConfig);
         return streamFromProcessorWithWatermarks("remoteMapJournalSource(" + mapName + ')',
-                false, w -> streamRemoteMapP(mapName, clientConfig, predicateFn, projectionFn, initialPos, w));
+                false, w -> streamRemoteMapP(mapName, clientXml, predicateFn, projectionFn, initialPos, w));
     }
 
     /**
@@ -831,8 +833,9 @@ public final class Sources {
             @Nonnull FunctionEx<? super EventJournalCacheEvent<K, V>, ? extends T> projectionFn,
             @Nonnull PredicateEx<? super EventJournalCacheEvent<K, V>> predicateFn
     ) {
+        String clientXml = asXmlString(clientConfig);
         return streamFromProcessorWithWatermarks("remoteCacheJournalSource(" + cacheName + ')',
-                false, w -> streamRemoteCacheP(cacheName, clientConfig, predicateFn, projectionFn, initialPos, w));
+                false, w -> streamRemoteCacheP(cacheName, clientXml, predicateFn, projectionFn, initialPos, w));
     }
 
     /**

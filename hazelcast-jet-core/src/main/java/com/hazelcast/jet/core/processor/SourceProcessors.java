@@ -71,6 +71,7 @@ import static com.hazelcast.jet.Util.cachePutEvents;
 import static com.hazelcast.jet.Util.mapEventToEntry;
 import static com.hazelcast.jet.Util.mapPutEvents;
 import static com.hazelcast.jet.impl.connector.StreamEventJournalP.streamRemoteCacheSupplier;
+import static com.hazelcast.jet.impl.util.ImdgUtil.asXmlString;
 import static com.hazelcast.jet.impl.util.Util.checkSerializable;
 
 /**
@@ -169,7 +170,8 @@ public final class SourceProcessors {
             @Nonnull JournalInitialPosition initialPos,
             @Nonnull EventTimePolicy<? super Entry<K, V>> eventTimePolicy
     ) {
-        return streamRemoteMapP(mapName, clientConfig, mapPutEvents(), mapEventToEntry(), initialPos,
+        String clientXml = asXmlString(clientConfig);
+        return streamRemoteMapP(mapName, clientXml, mapPutEvents(), mapEventToEntry(), initialPos,
                 eventTimePolicy);
     }
 
@@ -180,14 +182,14 @@ public final class SourceProcessors {
     @Nonnull
     public static <T, K, V> ProcessorMetaSupplier streamRemoteMapP(
             @Nonnull String mapName,
-            @Nonnull ClientConfig clientConfig,
+            @Nonnull String clientXml,
             @Nonnull PredicateEx<? super EventJournalMapEvent<K, V>> predicateFn,
             @Nonnull FunctionEx<? super EventJournalMapEvent<K, V>, ? extends T> projectionFn,
             @Nonnull JournalInitialPosition initialPos,
             @Nonnull EventTimePolicy<? super T> eventTimePolicy
     ) {
         return StreamEventJournalP.streamRemoteMapSupplier(
-                mapName, clientConfig, predicateFn, projectionFn, initialPos, eventTimePolicy);
+                mapName, clientXml, predicateFn, projectionFn, initialPos, eventTimePolicy);
     }
 
     /**
@@ -250,8 +252,9 @@ public final class SourceProcessors {
             @Nonnull JournalInitialPosition initialPos,
             @Nonnull EventTimePolicy<? super Entry<K, V>> eventTimePolicy
     ) {
+        String clientXml = asXmlString(clientConfig);
         return streamRemoteCacheP(
-                cacheName, clientConfig, cachePutEvents(), cacheEventToEntry(), initialPos, eventTimePolicy);
+                cacheName, clientXml, cachePutEvents(), cacheEventToEntry(), initialPos, eventTimePolicy);
     }
 
     /**
@@ -261,14 +264,14 @@ public final class SourceProcessors {
     @Nonnull
     public static <T, K, V> ProcessorMetaSupplier streamRemoteCacheP(
             @Nonnull String cacheName,
-            @Nonnull ClientConfig clientConfig,
+            @Nonnull String clientXml,
             @Nonnull PredicateEx<? super EventJournalCacheEvent<K, V>> predicateFn,
             @Nonnull FunctionEx<? super EventJournalCacheEvent<K, V>, ? extends T> projectionFn,
             @Nonnull JournalInitialPosition initialPos,
             @Nonnull EventTimePolicy<? super T> eventTimePolicy
     ) {
         return streamRemoteCacheSupplier(
-                cacheName, clientConfig, predicateFn, projectionFn, initialPos, eventTimePolicy);
+                cacheName, clientXml, predicateFn, projectionFn, initialPos, eventTimePolicy);
     }
 
     /**
