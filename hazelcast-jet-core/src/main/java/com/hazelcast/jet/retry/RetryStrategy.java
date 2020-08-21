@@ -19,13 +19,13 @@ package com.hazelcast.jet.retry;
 import java.io.Serializable;
 
 /**
- * Description of a strategy to be followed when retrying a failed generic
- * action, like connecting to a server. A typical strategy for this scenario
- * could be for example: "attempt to reconnect 3 times, wait 5 seconds between
- * each attempt, if all fail, then give up".
+ * Description of a strategy to be followed when retrying a failed action, like
+ * connecting to a server. A typical strategy for this scenario could be for
+ * example: "attempt to reconnect 3 times, wait 5 seconds between each attempt,
+ * if all of them fail, then give up".
  * <p>
  * The lifecycle of a retry strategy begins whenever its covered action fails
- * and ends in onw of two ways: either a retry of the action is a success (the
+ * and ends in one of two ways: either a retry of the action is successful (the
  * action is successfully undertaken, for example reconnect to a server
  * succeeds) or the strategy gives up (for example it had a specified maximum
  * number of retries, all of them had been attempted and none was successful).

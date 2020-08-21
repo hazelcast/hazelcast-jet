@@ -50,37 +50,36 @@ public final class PostgresCdcSources {
      * <p>
      * Behaviour of the source on connection disruptions to the database is
      * configurable and is governed by the {@link RetryStrategy} passed into
-     * {@code setReconnectBehaviour())} setting.
+     * {@code setReconnectBehaviour())}.
      * <p>
      * The default reconnect behaviour is <em>never</em>, which treats any
-     * connection failure as an unrecoverable problem and produces the failure
+     * connection failure as an unrecoverable problem and triggers the failure
      * of the source and the entire job. (How Jet handles job failures and what
      * ways there are for recovering from them, is a generic issue not discussed
      * here.)
      * <p>
-     * Other behaviour options, which specify that "retry attempts" should be
-     * made, will result in the source initiating reconnect attempts to the
-     * database, either via the Debezium connector's internal reconnect
-     * mechanisms or by restarting the whole source.
+     * Other behaviour options, which specify that retry attempts should be
+     * made, will result in the source initiating reconnects to the database, by
+     * restarting the whole source.
      * <p>
      * There is a further setting influencing reconnect behaviour, specified via
-     * the {@code setShouldStateBeResetOnReconnect()} setting. The boolean flag
-     * passed specifies what should happen to the connector's state on
-     * reconnect, if it should be kept or reset. If the state is kept, then
-     * snapshotting should not be repeated and streaming the WAL should resume
-     * at the position where it left off. If the state is reset, then the source
-     * will behave as if it were its initial start, so will do a snapshot and
-     * will start trailing the WAL where it syncs with the snapshot's end.
+     * the {@code setShouldStateBeResetOnReconnect()}. The boolean flag passed
+     * in specifies what should happen to the connector's state on reconnect,
+     * if it should be kept or reset. If the state is kept, then snapshotting
+     * should not be repeated and streaming the WAL should resume at the
+     * position where it left off. If the state is reset, then the source
+     * will behave as on its initial start, so will do a snapshot and will start
+     * trailing the WAL where it syncs with the snapshot's end.
      * <p>
      * One caveat of the restart process is that it can work correctly only as
      * long as the Postgres replication slot, which it's based on, has
      * <em>not</em> lost data. When the Postgres database cluster experiences
      * failures and the source needs to be connected to a different database
      * instance, manual intervention from an administrator might become
-     * necessary to ensure that replication slot has been re-created properly,
-     * without data loss.
+     * necessary to ensure that the replication slot has been re-created
+     * properly, without data loss.
      * <p>
-     * Unfortunetely there are unpleasant aspects of the reconnect mechanism.
+     * Unfortunately there are unpleasant aspects of the reconnect mechanism.
      * When the connection to the database fails, then the connector notices the
      * failure only after a very long delay (have measured it to 150 seconds and
      * have not found a way to configure it). If the connection recovers in the

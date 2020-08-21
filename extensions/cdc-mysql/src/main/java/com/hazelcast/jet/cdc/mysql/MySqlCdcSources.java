@@ -51,33 +51,31 @@ public final class MySqlCdcSources {
      * <p>
      * Behaviour of the source on connection disruptions to the database is
      * configurable and is governed by the {@link RetryStrategy} passed into
-     * {@code setReconnectBehaviour())} setting (as far as the underlying
-     * Debezium connector cooperates, read further for details).
+     * {@code setReconnectBehaviour())} (as far as the underlying Debezium
+     * connector cooperates, read further for details).
      * <p>
      * The default reconnect behaviour is <em>never</em>, which treats any
-     * connection failure as an unrecoverable problem and produces the failure
+     * connection failure as an unrecoverable problem and triggers the failure
      * of the source and the entire job. (How Jet handles job failures and what
      * ways there are for recovering from them, is a generic issue not discussed
      * here.)
      * <p>
-     * Other behaviour options, which specify that "retry attempts" should be
-     * made, will result in the source initiating reconnect attempts to the
-     * database, either via the Debezium connector's internal reconnect
-     * mechanisms or by restarting the whole source.
+     * Other behaviour options, which specify that retry attempts should be
+     * made, will result in the source initiating reconnects to the database,
+     * either via the Debezium connector's internal reconnect mechanisms or by
+     * restarting the whole source.
      * <p>
      * There is a further setting influencing reconnect behaviour, specified via
-     * the {@code setShouldStateBeResetOnReconnect()} setting. The boolean flag
-     * passed specifies what should happen to the connector's state on
-     * reconnect, if it should be kept or reset. If the state is kept, then
-     * snapshotting should not be repeated and streaming the binlog should
-     * resume at the position where it left off. If the state is reset, then the
-     * source will behave as if it were its initial start, so will do a snapshot
-     * and will start trailing the binlog where it syncs with the snapshot's
-     * end.
+     * {@code setShouldStateBeResetOnReconnect()}. The boolean flag passed in
+     * specifies what should happen to the connector's state on reconnect, if it
+     * should be kept or reset. If the state is kept, then snapshotting should
+     * not be repeated and streaming the binlog should resume at the position
+     * where it left off. If the state is reset, then the source will behave as
+     * on its initial start, so will do a snapshot and will start trailing the
+     * binlog where it syncs with the snapshot's end.
      * <p>
      * Depending on the lifecycle phase the source is in, however, there are
-     * some discrepancies and peculiarities in this behaviour. See what follows
-     * for details.
+     * some discrepancies and peculiarities in this behaviour.
      * <p>
      * If the connection to the database fails <em>during the snapshotting
      * phase</em> then the connector is stuck in this state until it manages to
@@ -88,7 +86,7 @@ public final class MySqlCdcSources {
      * that and react properly, but if the outage is purely at the network level,
      * then, more often than not, it's not detected.
      * <p>
-     * During the <em>binlog trailing</em> phase all connection disruptions
+     * During the <em>binlog trailing phase</em> all connection disruptions
      * will be detected, but internally not all of them are handled the same
      * way. If the database is shut down, then the connector can detect that
      * and will not handle it. It will just fail and, depending on the reconnect
@@ -98,10 +96,13 @@ public final class MySqlCdcSources {
      * source can't completely control. In such cases the {@code RetryStrategy}'s
      * {@link RetryStrategy#getIntervalFunction() IntervalFunction} will only be
      * partially taken into consideration. This is caused by the fact that
-     * the connectors retry mechanism is capable only of fixed period
-     * retrying. The fixed period that will be applied is what the
-     * {@code IntervalFunction} returns for the 1st attempt, so
-     * {@code intervalFunction.apply(1)}.
+     * the connectors retry mechanism is capable only of fixed period retrying.
+     * The fixed period that will be applied is what the {@code IntervalFunction}
+     * returns for the 1st attempt, so {@code intervalFunction.apply(1)}.
+     * <p>
+     * Just as the retry strategy is not fully taken into consideration when
+     * reconnection is handled by Debezium internal mechanics, the state reset
+     * setting is also ignored. Internal restarts will never reset the state.
      *
      * @param name name of this source, needs to be unique, will be passed to
      *             the underlying Kafka Connect source
@@ -354,24 +355,10 @@ public final class MySqlCdcSources {
 
         /**
          * Specifies how the source should behave when it detects that the
-         * backing database has been shut down (note: temporary connection
-         * disruptions will not be interpreted in this way; after simple
-         * network outages the connector will automatically reconnect,
-         * regardless of this setting).
+         * backing database has been shut down (read class javadoc for details
+         * and special cases).
          * <p>
          * Defaults to {@link RetryStrategies#never()}.
-         * <p>
-         * When reconnection is being handled by the MySQL Debezium Connector's
-         * internal mechanisms (as opposed to reconnection triggered by this
-         * Jet source), then the {@code RetryStrategy}'s
-         * {@link RetryStrategy#getIntervalFunction() IntervalFunction} is only
-         * partially taken into consideration. This is caused by the fact that
-         * the connectors retry mechanism is capable only of fixed period
-         * retrying, while the {@code IntervalFunction} can specify arbitrarily
-         * complex behaviour (variable wait times for each attempt). The fixed
-         * period that will be applied is what the {@code IntervalFunction}
-         * returns for the 1st attempt, so {@code intervalFunction.apply(1)}.
-         *
          */
         @Nonnull
         public Builder setReconnectBehaviour(RetryStrategy retryStrategy) {

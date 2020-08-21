@@ -22,8 +22,10 @@ import java.io.Serializable;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Function that can compute the wait length of each retry attempt. The input
- * is the number of the attempt, the output is the wain interval in milliseconds.
+ * Function that can compute the wait time necessary for each subsequent retry
+ * attempt. The input is the sequence number of the attempt (1 = first failed
+ * attempt, 2 = second failed attempt and so on), the output is the wait time in
+ * milliseconds.
  *
  * @since 4.3
  */
@@ -50,7 +52,7 @@ public interface IntervalFunction extends Serializable {
      * Creates an {@code IntervalFunction} which starts from the specified wait
      * interval, on the first attempt, and for each subsequent attempt uses
      * a longer interval, equal to the previous wait duration multiplied by the
-     * provided scaling factor.
+     * provided scaling factor (so for example: 1, 2, 4, 8, ...).
      */
     static IntervalFunction exponentialBackoff(long intervalValue, TimeUnit intervalUnit, double multiplier) {
         return exponentialBackoff(intervalUnit.toMillis(intervalValue), multiplier);
@@ -60,7 +62,7 @@ public interface IntervalFunction extends Serializable {
      * Creates an {@code IntervalFunction} which starts from the specified wait
      * interval, on the first attempt, and for each subsequent attempt uses
      * a longer interval, equal to the previous wait duration multiplied by the
-     * provided scaling factor.
+     * provided scaling factor (so for example: 1, 2, 4, 8, ...).
      */
     static IntervalFunction exponentialBackoff(long intervalMillis, double multiplier) {
         return IntervalFunctions.exponentialBackoff(intervalMillis, multiplier);

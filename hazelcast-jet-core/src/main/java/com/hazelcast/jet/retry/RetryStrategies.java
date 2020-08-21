@@ -41,7 +41,7 @@ public final class RetryStrategies {
     }
 
     /**
-     * Create a strategy which will indefinitely retry a failed action and will
+     * Create a strategy which will retry failed actions indefinitely and will
      * wait for a fixed amount of time between any two subsequent attempts.
      */
     public static RetryStrategy indefinitely(long intervalMillis) {
@@ -76,8 +76,7 @@ public final class RetryStrategies {
         }
 
         /**
-         * Set a function to modify the waiting interval after a failure. By default the interval
-         * stays the same.
+         * Set a function to modify the waiting interval after a failure.
          *
          * @param f Function to modify the interval after a failure
          * @return the RetryConfig.Builder
