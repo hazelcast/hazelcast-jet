@@ -65,7 +65,7 @@ public class JetInstanceImpl extends AbstractJetInstance {
         try {
             return future.get()
                          .stream()
-                         .map(jobId -> new JobProxy<>((NodeEngineImpl) nodeEngine, jobId))
+                         .map(jobId -> new JobProxy((NodeEngineImpl) nodeEngine, jobId))
                          .collect(toList());
         } catch (Throwable t) {
             throw rethrow(t);
@@ -121,12 +121,12 @@ public class JetInstanceImpl extends AbstractJetInstance {
 
     @Override
     public Job newJobProxy(long jobId) {
-        return new JobProxy<>((NodeEngineImpl) nodeEngine, jobId);
+        return new JobProxy((NodeEngineImpl) nodeEngine, jobId);
     }
 
     @Override
-    public <J> Job newJobProxy(long jobId, J jobDefinition, JobConfig config) {
-        return new JobProxy<>((NodeEngineImpl) nodeEngine, jobId, jobDefinition, config);
+    public Job newJobProxy(long jobId, Object jobDefinition, JobConfig config) {
+        return new JobProxy((NodeEngineImpl) nodeEngine, jobId, jobDefinition, config);
     }
 
     @Override

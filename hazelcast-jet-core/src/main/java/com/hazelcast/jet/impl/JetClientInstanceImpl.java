@@ -67,7 +67,7 @@ public class JetClientInstanceImpl extends AbstractJetInstance {
     public List<Job> getJobs() {
         return invokeRequestOnMasterAndDecodeResponse(JetGetJobIdsCodec.encodeRequest(), resp -> {
             List<Long> jobs = JetGetJobIdsCodec.decodeResponse(resp).response;
-            return toList(jobs, jobId -> new ClientJobProxy<>(this, jobId));
+            return toList(jobs, jobId -> new ClientJobProxy(this, jobId));
         });
     }
 
@@ -107,13 +107,13 @@ public class JetClientInstanceImpl extends AbstractJetInstance {
     }
 
     @Override
-    public <J> Job newJobProxy(long jobId, J jobDefinition, JobConfig config) {
-        return new ClientJobProxy<>(this, jobId, jobDefinition, config);
+    public Job newJobProxy(long jobId, Object jobDefinition, JobConfig config) {
+        return new ClientJobProxy(this, jobId, jobDefinition, config);
     }
 
     @Override
     public Job newJobProxy(long jobId) {
-        return new ClientJobProxy<>(this, jobId);
+        return new ClientJobProxy(this, jobId);
     }
 
     @Override

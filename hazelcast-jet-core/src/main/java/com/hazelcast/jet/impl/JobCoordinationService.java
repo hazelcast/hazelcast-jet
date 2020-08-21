@@ -201,7 +201,7 @@ public class JobCoordinationService {
                 }
 
                 int quorumSize = config.isSplitBrainProtectionEnabled() ? getQuorumSize() : 0;
-                J jobDefinition = deserializeJobDefinition(jobId, config, serializedJobDefinition);
+                Object jobDefinition = deserializeJobDefinition(jobId, config, serializedJobDefinition);
                 DAG dag;
                 Data serializedDag;
                 if (jobDefinition instanceof PipelineImpl) {

@@ -76,6 +76,7 @@ public abstract class AbstractJetInstance implements JetInstance {
         return newJobProxy(jobId, pipeline, config);
     }
 
+    // TODO: Find a way to remove the duplicate code fragment (prefer not to use downcasting).
     @Nonnull @Override
     public Job newJobIfAbsent(@Nonnull DAG dag, @Nonnull JobConfig config) {
         if (config.getName() == null) {
@@ -218,6 +219,6 @@ public abstract class AbstractJetInstance implements JetInstance {
 
     public abstract ILogger getLogger();
     public abstract Job newJobProxy(long jobId);
-    public abstract <J> Job newJobProxy(long jobId, J jobDefinition, JobConfig config);
+    public abstract Job newJobProxy(long jobId, Object jobDefinition, JobConfig config);
     public abstract List<Long> getJobIdsByName(String name);
 }
