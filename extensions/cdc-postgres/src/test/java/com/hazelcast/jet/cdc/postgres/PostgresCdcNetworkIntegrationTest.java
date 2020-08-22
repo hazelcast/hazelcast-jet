@@ -107,8 +107,7 @@ public class PostgresCdcNetworkIntegrationTest extends AbstractCdcIntegrationTes
         } else {
             // then can't connect to DB
             assertJobStatusEventually(job, RUNNING);
-            assertTrueAllTheTime(() -> assertTrue(jet.getMap("results").isEmpty()),
-                    MILLISECONDS.toSeconds(2 * RECONNECT_INTERVAL_MS));
+            assertTrue(jet.getMap("results").isEmpty());
 
             // when DB starts
             PostgreSQLContainer<?> postgres = initPostgres(null, port);

@@ -108,8 +108,7 @@ public class MySqlCdcNetworkIntegrationTest extends AbstractCdcIntegrationTest {
         } else {
             // and can't connect to DB
             assertJobStatusEventually(job, RUNNING);
-            assertTrueAllTheTime(() -> assertTrue(jet.getMap("results").isEmpty()),
-                    2 * MILLISECONDS.toSeconds(RECONNECT_INTERVAL_MS));
+            assertTrue(jet.getMap("results").isEmpty());
 
             // and DB starts
             MySQLContainer<?> mysql = initMySql(null, port);
