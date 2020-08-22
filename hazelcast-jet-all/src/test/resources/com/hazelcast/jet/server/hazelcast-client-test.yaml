@@ -18,3 +18,6 @@ hazelcast-client:
   network:
     cluster-members:
       - ${member}
+
+  client-labels:
+    - yaml-label

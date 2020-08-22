@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.impl.execution.init;
 
+import com.hazelcast.cluster.Address;
 import com.hazelcast.jet.config.EdgeConfig;
 import com.hazelcast.jet.core.Edge;
 import com.hazelcast.jet.core.Edge.RoutingPolicy;
@@ -35,9 +36,9 @@ public class EdgeDef implements IdentifiedDataSerializable {
     private int sourceOrdinal;
     private int destOrdinal;
     private int priority;
-    private boolean isDistributed;
+    private Address distributedTo;
     private RoutingPolicy routingPolicy;
-    private Partitioner partitioner;
+    private Partitioner<?> partitioner;
     private EdgeConfig config;
     private Comparator<Object> comparator;
 
@@ -54,7 +55,7 @@ public class EdgeDef implements IdentifiedDataSerializable {
         this.sourceOrdinal = edge.getSourceOrdinal();
         this.destOrdinal = edge.getDestOrdinal();
         this.priority = edge.getPriority();
-        this.isDistributed = isJobDistributed && edge.isDistributed();
+        this.distributedTo = isJobDistributed ? edge.getDistributedTo() : null;
         this.routingPolicy = edge.getRoutingPolicy();
         this.partitioner = edge.getPartitioner();
         this.config = config;
@@ -72,7 +73,7 @@ public class EdgeDef implements IdentifiedDataSerializable {
         return routingPolicy;
     }
 
-    public Partitioner partitioner() {
+    public Partitioner<?> partitioner() {
         return partitioner;
     }
 
@@ -104,8 +105,13 @@ public class EdgeDef implements IdentifiedDataSerializable {
         return priority == MasterJobContext.SNAPSHOT_RESTORE_EDGE_PRIORITY;
     }
 
-    boolean isDistributed() {
-        return isDistributed;
+    /**
+     * Note: unlike {@link Edge#getDistributedTo()}, this method always returns
+     * null if the DAG is about to be run on a single member. See {@linkplain
+     * #EdgeDef(Edge, EdgeConfig, int, boolean) constructor}.
+     */
+    Address getDistributedTo() {
+        return distributedTo;
     }
 
     Comparator<Object> getComparator() {
@@ -135,8 +141,8 @@ public class EdgeDef implements IdentifiedDataSerializable {
         out.writeInt(destOrdinal);
         out.writeInt(sourceOrdinal);
         out.writeInt(priority);
-        out.writeBoolean(isDistributed);
         out.writeObject(getComparator());
+        out.writeObject(distributedTo);
         out.writeObject(routingPolicy);
         CustomClassLoadedObject.write(out, partitioner);
         out.writeObject(config);
@@ -148,8 +154,8 @@ public class EdgeDef implements IdentifiedDataSerializable {
         destOrdinal = in.readInt();
         sourceOrdinal = in.readInt();
         priority = in.readInt();
-        isDistributed = in.readBoolean();
         comparator = in.readObject();
+        distributedTo = in.readObject();
         routingPolicy = in.readObject();
         partitioner = CustomClassLoadedObject.read(in);
         config = in.readObject();

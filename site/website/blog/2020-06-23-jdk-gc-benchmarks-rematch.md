@@ -8,9 +8,11 @@ authorImageURL: https://i.imgur.com/xuavzce.jpg
 
 This post is a part of a series:
 
-- [Part 1](/blog/2020/06/09/jdk-gc-benchmarks-part1)
-- [Part 2](/blog/2020/06/09/jdk-gc-benchmarks-part2)
+- [Part 1 (Intro and high-throughput streaming
+  benchmark)](/blog/2020/06/09/jdk-gc-benchmarks-part1)
+- [Part 2 (batch workload benchmark)](/blog/2020/06/09/jdk-gc-benchmarks-part2)
 - Part 3 (you are here)
+- [Part 4 (concurrent GC with green threads)](/blog/2020/08/05/gc-tuning-for-jet)
 
 This is a followup on Part 1 of the blog post series we started earlier
 this month, analyzing the performance of modern JVMs on workloads that
@@ -278,3 +280,7 @@ failure.
 
 The wider chart also gives better insight into the stability of G1,
 keeping itself below 20 ms all the way up to 20 M items per second.
+
+_If you enjoyed reading this post, check out Jet at
+[GitHub](https://github.com/hazelcast/hazelcast-jet) and give us a
+star!_

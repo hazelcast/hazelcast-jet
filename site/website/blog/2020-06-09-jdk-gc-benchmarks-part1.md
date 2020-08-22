@@ -9,8 +9,9 @@ authorImageURL: https://i.imgur.com/xuavzce.jpg
 This post is a part of a series:
 
 - Part 1 (you are here)
-- [Part 2](/blog/2020/06/09/jdk-gc-benchmarks-part2)
-- [Part 3](/blog/2020/06/23/jdk-gc-benchmarks-rematch)
+- [Part 2 (batch workload benchmark)](/blog/2020/06/09/jdk-gc-benchmarks-part2)
+- [Part 3 (low-latency benchmark)](/blog/2020/06/23/jdk-gc-benchmarks-rematch)
+- [Part 4 (concurrent GC with green threads)](/blog/2020/08/05/gc-tuning-for-jet)
 
 The Java runtime has been evolving more rapidly in recent years and,
 after 15 years, we finally got a new default garbage collector: the
@@ -313,3 +314,7 @@ around two minutes, its performance would improve and the latency would
 make a full recovery.
 
 Go to [Part 2: the Batch Pipeline Benchmarks](/blog/2020/06/09/jdk-gc-benchmarks-part2).
+
+_If you enjoyed reading this post, check out Jet at
+[GitHub](https://github.com/hazelcast/hazelcast-jet) and give us a
+star!_
