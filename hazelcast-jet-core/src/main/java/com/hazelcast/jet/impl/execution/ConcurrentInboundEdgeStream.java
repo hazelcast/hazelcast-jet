@@ -99,12 +99,11 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
         return priority;
     }
 
-    public boolean hasComparator() {
-        return comparator != null;
-    }
-
     @Override
     public ProgressState drainTo(Predicate<Object> dest) {
+        if (comparator != null) {
+            return drainToWithComparator(dest);
+        }
         tracker.reset();
         for (int queueIndex = 0; queueIndex < conveyor.queueCount(); queueIndex++) {
             final QueuedPipe<Object> q = conveyor.queue(queueIndex);
@@ -177,35 +176,43 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
         return tracker.toProgressState();
     }
 
-    public ProgressState pollWithComparator(Predicate<Object> dest) {
-        int minIndex = 0;
-        Object minItem = null;
-        for (int queueIndex = 0; queueIndex < conveyor.queueCount(); queueIndex++) {
-            final QueuedPipe<Object> q = conveyor.queue(queueIndex);
-            if (q == null) {
-                continue;
+    private ProgressState drainToWithComparator(Predicate<Object> dest) {
+        int batchSize = -1;
+        while (true) {
+            int minIndex = 0;
+            Object minItem = null;
+            for (int queueIndex = 0; queueIndex < conveyor.queueCount(); queueIndex++) {
+                final QueuedPipe<Object> q = conveyor.queue(queueIndex);
+                if (q == null) {
+                    continue;
+                }
+                Object headItem = q.peek();
+                if (headItem == null) {
+                    return NO_PROGRESS;
+                }
+                if (headItem == DONE_ITEM) {
+                    conveyor.removeQueue(queueIndex);
+                    continue;
+                }
+                if (minItem == null || comparator.compare(minItem, headItem) > 0) {
+                    minIndex = queueIndex;
+                    minItem = headItem;
+                }
             }
-            Object headItem = q.peek();
-            if (headItem == null) {
-                return NO_PROGRESS;
+            if (conveyor.liveQueueCount() == 0) {
+                return DONE;
             }
-            if (headItem == DONE_ITEM) {
-                conveyor.removeQueue(queueIndex);
-                continue;
+            if (batchSize == -1) {
+                batchSize = conveyor.queue(minIndex).size();
             }
-            if (minItem == null || comparator.compare(minItem, headItem) > 0) {
-                minIndex = queueIndex;
-                minItem = headItem;
+            Object polledItem = conveyor.queue(minIndex).poll();
+            assert polledItem == minItem : "polledItem != minItem";
+            boolean testResult = dest.test(minItem);
+            assert testResult : "testResult is false";
+            if (--batchSize == 0) {
+                return MADE_PROGRESS;
             }
         }
-        if (conveyor.liveQueueCount() == 0) {
-            return DONE;
-        }
-        Object polledItem = conveyor.queue(minIndex).poll();
-        assert polledItem == minItem : "polledItem != minItem";
-        boolean testResult = dest.test(minItem);
-        assert testResult : "testResult is false";
-        return MADE_PROGRESS;
     }
 
     private boolean maybeEmitWm(long timestamp, Predicate<Object> dest) {

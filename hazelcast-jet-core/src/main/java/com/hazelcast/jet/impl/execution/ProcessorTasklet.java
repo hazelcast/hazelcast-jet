@@ -489,13 +489,7 @@ public class ProcessorTasklet implements Tasklet {
                 continue;
             }
 
-            if (currInstream instanceof ConcurrentInboundEdgeStream &&
-                    ((ConcurrentInboundEdgeStream) currInstream).hasComparator()) {
-                result = ((ConcurrentInboundEdgeStream) currInstream).pollWithComparator(addToInboxFunction);
-            } else {
-                result = currInstream.drainTo(addToInboxFunction);
-            }
-
+            result = currInstream.drainTo(addToInboxFunction);
             progTracker.madeProgress(result.isMadeProgress());
 
             // check if the last drained item is special
