@@ -7,6 +7,7 @@ import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.impl.pipeline.Planner;
 import com.hazelcast.jet.impl.pipeline.Planner.PlannerVertex;
+import com.hazelcast.jet.impl.util.ObjectWithPartitionId;
 
 import java.io.Serializable;
 import java.util.Comparator;
@@ -44,6 +45,10 @@ public class SortTransform<V> extends AbstractTransform {
 
         @Override
         public int compare(Object o1, Object o2) {
+            if(o1 instanceof ObjectWithPartitionId) {
+                o1 = ((ObjectWithPartitionId) o1).getItem();
+                o2 = ((ObjectWithPartitionId) o2).getItem();
+            }
             return Long.compare(keyFn.apply((T) o1), keyFn.apply((T) o2));
         }
     }
