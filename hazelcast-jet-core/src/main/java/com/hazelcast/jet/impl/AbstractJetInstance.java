@@ -49,6 +49,7 @@ import java.util.stream.Collectors;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
 import static com.hazelcast.jet.impl.util.LoggingUtil.logFine;
+import static com.hazelcast.jet.impl.util.Util.getJetInstance;
 import static com.hazelcast.jet.impl.util.Util.toList;
 
 public abstract class AbstractJetInstance implements JetInstance {
@@ -76,11 +77,13 @@ public abstract class AbstractJetInstance implements JetInstance {
         return newJobProxy(jobId, pipeline, config);
     }
 
-    // TODO: Find a way to remove the duplicate code fragment (prefer not to use downcasting).
-    @Nonnull @Override
-    public Job newJobIfAbsent(@Nonnull DAG dag, @Nonnull JobConfig config) {
+    private Job newJobIfAbsent(@Nonnull Object jobDefinition, @Nonnull JobConfig config) {
         if (config.getName() == null) {
-            return newJob(dag, config);
+            if (jobDefinition instanceof PipelineImpl) {
+                return newJob((PipelineImpl) jobDefinition, config);
+            } else {
+                return newJob((DAG) jobDefinition, config);
+            }
         } else {
             while (true) {
                 Job job = getJob(config.getName());
@@ -90,9 +93,12 @@ public abstract class AbstractJetInstance implements JetInstance {
                         return job;
                     }
                 }
-
                 try {
-                    return newJob(dag, config);
+                    if (jobDefinition instanceof PipelineImpl) {
+                        return newJob((PipelineImpl) jobDefinition, config);
+                    } else {
+                        return newJob((DAG) jobDefinition, config);
+                    }
                 } catch (JobAlreadyExistsException e) {
                     logFine(getLogger(), "Could not submit job with duplicate name: %s, ignoring", config.getName());
                 }
@@ -101,27 +107,14 @@ public abstract class AbstractJetInstance implements JetInstance {
     }
 
     @Nonnull @Override
+    public Job newJobIfAbsent(@Nonnull DAG dag, @Nonnull JobConfig config) {
+        return newJobIfAbsent((Object) dag, config);
+    }
+
+    @Nonnull @Override
     public Job newJobIfAbsent(@Nonnull Pipeline pipeline, @Nonnull JobConfig config) {
         config = config.attachAll(((PipelineImpl) pipeline).attachedFiles());
-        if (config.getName() == null) {
-            return newJob(pipeline, config);
-        } else {
-            while (true) {
-                Job job = getJob(config.getName());
-                if (job != null) {
-                    JobStatus status = job.getStatus();
-                    if (status != JobStatus.FAILED && status != JobStatus.COMPLETED) {
-                        return job;
-                    }
-                }
-
-                try {
-                    return newJob(pipeline, config);
-                } catch (JobAlreadyExistsException e) {
-                    logFine(getLogger(), "Could not submit job with duplicate name: %s, ignoring", config.getName());
-                }
-            }
-        }
+        return newJobIfAbsent((Object) pipeline, config);
     }
 
     @Override
@@ -195,11 +188,11 @@ public abstract class AbstractJetInstance implements JetInstance {
     @Override
     public Collection<Observable<?>> getObservables() {
         return hazelcastInstance.getDistributedObjects().stream()
-                  .filter(o -> o.getServiceName().equals(RingbufferService.SERVICE_NAME))
-                  .filter(o -> o.getName().startsWith(ObservableImpl.JET_OBSERVABLE_NAME_PREFIX))
-                  .map(o -> o.getName().substring(ObservableImpl.JET_OBSERVABLE_NAME_PREFIX.length()))
-                  .map(this::getObservable)
-                  .collect(Collectors.toList());
+                                .filter(o -> o.getServiceName().equals(RingbufferService.SERVICE_NAME))
+                                .filter(o -> o.getName().startsWith(ObservableImpl.JET_OBSERVABLE_NAME_PREFIX))
+                                .map(o -> o.getName().substring(ObservableImpl.JET_OBSERVABLE_NAME_PREFIX.length()))
+                                .map(this::getObservable)
+                                .collect(Collectors.toList());
     }
 
     @Override
@@ -218,7 +211,10 @@ public abstract class AbstractJetInstance implements JetInstance {
     }
 
     public abstract ILogger getLogger();
+
     public abstract Job newJobProxy(long jobId);
+
     public abstract Job newJobProxy(long jobId, Object jobDefinition, JobConfig config);
+
     public abstract List<Long> getJobIdsByName(String name);
 }
