@@ -52,8 +52,12 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.core.JobStatus.RUNNING;
@@ -91,7 +95,7 @@ public class PostgresCdcNetworkIntegrationTest extends AbstractCdcIntegrationTes
 
     @Test
     public void when_noDatabaseToConnectTo() throws Exception {
-        int port = findOpenPortInRange(POSTGRESQL_PORT, POSTGRESQL_PORT + 1000);
+        int port = findRandomOpenPortInRange(POSTGRESQL_PORT + 100, POSTGRESQL_PORT + 1000);
         Pipeline pipeline = initPipeline("localhost", port);
 
         // when job starts
@@ -407,8 +411,13 @@ public class PostgresCdcNetworkIntegrationTest extends AbstractCdcIntegrationTes
         }
     }
 
-    private static int findOpenPortInRange(int fromInclusive, int toExclusive) throws IOException {
-        for (int port = fromInclusive; port < toExclusive; port++) {
+    private static int findRandomOpenPortInRange(int fromInclusive, int toExclusive) throws IOException {
+        List<Integer> randomizedPortsInRange = IntStream.range(fromInclusive, toExclusive)
+                .boxed()
+                .collect(Collectors.toList());
+        Collections.shuffle(randomizedPortsInRange);
+
+        for (int port : randomizedPortsInRange) {
             try {
                 ServerSocket serverSocket = new ServerSocket(port);
                 serverSocket.close();
@@ -417,6 +426,7 @@ public class PostgresCdcNetworkIntegrationTest extends AbstractCdcIntegrationTes
                 //swallow, expected
             }
         }
+
         throw new IOException("No free port in range [" + fromInclusive + ", " +  toExclusive + ")");
     }
 
