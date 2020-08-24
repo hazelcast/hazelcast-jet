@@ -44,6 +44,7 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.containers.ToxiproxyContainer;
 
 import javax.annotation.Nonnull;
+import java.io.IOException;
 import java.net.ServerSocket;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -90,7 +91,7 @@ public class PostgresCdcNetworkIntegrationTest extends AbstractCdcIntegrationTes
 
     @Test
     public void when_noDatabaseToConnectTo() throws Exception {
-        int port = findRandomOpenPort();
+        int port = findOpenPortInRange(POSTGRESQL_PORT, POSTGRESQL_PORT + 1000);
         Pipeline pipeline = initPipeline("localhost", port);
 
         // when job starts
@@ -404,6 +405,19 @@ public class PostgresCdcNetworkIntegrationTest extends AbstractCdcIntegrationTes
         try (ServerSocket socket = new ServerSocket(0)) {
             return socket.getLocalPort();
         }
+    }
+
+    private static int findOpenPortInRange(int fromInclusive, int toExclusive) throws IOException {
+        for (int port = fromInclusive; port < toExclusive; port++) {
+            try {
+                ServerSocket serverSocket = new ServerSocket(port);
+                serverSocket.close();
+                return port;
+            } catch (Exception e) {
+                //swallow, expected
+            }
+        }
+        throw new IOException("No free port in range [" + fromInclusive + ", " +  toExclusive + ")");
     }
 
 }
