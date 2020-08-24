@@ -48,21 +48,21 @@ public final class PostgresCdcSources {
      * Creates a CDC source that streams change data from a PostgreSQL database
      * to Hazelcast Jet.
      * <p>
-     * Behaviour of the source on connection disruptions to the database is
+     * Behavior of the source on connection disruptions to the database is
      * configurable and is governed by the {@link RetryStrategy} passed into
-     * {@code setReconnectBehaviour())}.
+     * {@code setReconnectBehavior())}.
      * <p>
-     * The default reconnect behaviour is <em>never</em>, which treats any
+     * The default reconnect behavior is <em>never</em>, which treats any
      * connection failure as an unrecoverable problem and triggers the failure
      * of the source and the entire job. (How Jet handles job failures and what
      * ways there are for recovering from them, is a generic issue not discussed
      * here.)
      * <p>
-     * Other behaviour options, which specify that retry attempts should be
+     * Other behavior options, which specify that retry attempts should be
      * made, will result in the source initiating reconnects to the database, by
      * restarting the whole source.
      * <p>
-     * There is a further setting influencing reconnect behaviour, specified via
+     * There is a further setting influencing reconnect behavior, specified via
      * the {@code setShouldStateBeResetOnReconnect()}. The boolean flag passed
      * in specifies what should happen to the connector's state on reconnect,
      * if it should be kept or reset. If the state is kept, then snapshotting
@@ -403,8 +403,8 @@ public final class PostgresCdcSources {
          *
          */
         @Nonnull
-        public Builder setReconnectBehaviour(RetryStrategy retryStrategy) {
-            config.setProperty(CdcSource.RECONNECT_BEHAVIOUR_PROPERTY, retryStrategy);
+        public Builder setReconnectBehavior(RetryStrategy retryStrategy) {
+            config.setProperty(CdcSource.RECONNECT_BEHAVIOR_PROPERTY, retryStrategy);
             return this;
         }
 

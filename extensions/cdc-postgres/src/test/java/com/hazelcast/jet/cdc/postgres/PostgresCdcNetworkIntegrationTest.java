@@ -72,7 +72,7 @@ public class PostgresCdcNetworkIntegrationTest extends AbstractCdcIntegrationTes
     private static final long RECONNECT_INTERVAL_MS = SECONDS.toMillis(1);
 
     @Parameter(value = 0)
-    public RetryStrategy reconnectBehaviour;
+    public RetryStrategy reconnectBehavior;
 
     @Parameter(value = 1)
     public boolean resetStateOnReconnect;
@@ -98,7 +98,7 @@ public class PostgresCdcNetworkIntegrationTest extends AbstractCdcIntegrationTes
         JetInstance jet = createJetMembers(2)[0];
         Job job = jet.newJob(pipeline);
         // then
-        boolean neverReconnect = reconnectBehaviour.getMaxAttempts() == 0;
+        boolean neverReconnect = reconnectBehavior.getMaxAttempts() == 0;
         if (neverReconnect) {
             // then job fails
             assertThatThrownBy(job::join)
@@ -181,7 +181,7 @@ public class PostgresCdcNetworkIntegrationTest extends AbstractCdcIntegrationTes
             postgres = null;
 
             // then
-            boolean neverReconnect = reconnectBehaviour.getMaxAttempts() == 0;
+            boolean neverReconnect = reconnectBehavior.getMaxAttempts() == 0;
             if (neverReconnect) {
                 // then job fails
                 assertThatThrownBy(job::join)
@@ -249,7 +249,7 @@ public class PostgresCdcNetworkIntegrationTest extends AbstractCdcIntegrationTes
 
     @Test
     public void when_databaseShutdownOrLongDisconnectDuringBinlogReading() throws Exception {
-        if (reconnectBehaviour.getMaxAttempts() < 0 && !resetStateOnReconnect) {
+        if (reconnectBehavior.getMaxAttempts() < 0 && !resetStateOnReconnect) {
             return; //doesn't make sense to test this mode with this scenario
         }
 
@@ -269,7 +269,7 @@ public class PostgresCdcNetworkIntegrationTest extends AbstractCdcIntegrationTes
             stopContainer(postgres);
             postgres = null;
 
-            boolean neverReconnect = reconnectBehaviour.getMaxAttempts() == 0;
+            boolean neverReconnect = reconnectBehavior.getMaxAttempts() == 0;
             if (neverReconnect) {
                 // then job fails
                 assertThatThrownBy(job::join)
@@ -312,7 +312,7 @@ public class PostgresCdcNetworkIntegrationTest extends AbstractCdcIntegrationTes
                 .setDatabasePassword("postgres")
                 .setDatabaseName("postgres")
                 .setTableWhitelist("inventory.customers")
-                .setReconnectBehaviour(reconnectBehaviour)
+                .setReconnectBehavior(reconnectBehavior)
                 .setShouldStateBeResetOnReconnect(resetStateOnReconnect)
                 .build();
     }

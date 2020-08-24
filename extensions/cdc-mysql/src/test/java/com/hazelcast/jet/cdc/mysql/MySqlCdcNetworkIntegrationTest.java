@@ -72,7 +72,7 @@ public class MySqlCdcNetworkIntegrationTest extends AbstractCdcIntegrationTest {
     private static final long RECONNECT_INTERVAL_MS = SECONDS.toMillis(1);
 
     @Parameter(value = 0)
-    public RetryStrategy reconnectBehaviour;
+    public RetryStrategy reconnectBehavior;
 
     @Parameter(value = 1)
     public boolean resetStateOnReconnect;
@@ -99,7 +99,7 @@ public class MySqlCdcNetworkIntegrationTest extends AbstractCdcIntegrationTest {
         JetInstance jet = createJetMembers(2)[0];
         Job job = jet.newJob(pipeline);
 
-        boolean neverReconnect = reconnectBehaviour.getMaxAttempts() == 0;
+        boolean neverReconnect = reconnectBehavior.getMaxAttempts() == 0;
         if (neverReconnect) {
             // then job fails
             assertThatThrownBy(job::join)
@@ -180,7 +180,7 @@ public class MySqlCdcNetworkIntegrationTest extends AbstractCdcIntegrationTest {
             stopContainer(mysql);
             mysql = null;
 
-            boolean neverReconnect = reconnectBehaviour.getMaxAttempts() == 0;
+            boolean neverReconnect = reconnectBehavior.getMaxAttempts() == 0;
             if (neverReconnect) {
                 // then job fails
                 assertThatThrownBy(job::join)
@@ -262,7 +262,7 @@ public class MySqlCdcNetworkIntegrationTest extends AbstractCdcIntegrationTest {
             stopContainer(mysql);
             mysql = null;
 
-            boolean neverReconnect = reconnectBehaviour.getMaxAttempts() == 0;
+            boolean neverReconnect = reconnectBehavior.getMaxAttempts() == 0;
             if (neverReconnect) {
                 // then job fails
                 assertThatThrownBy(job::join)
@@ -305,7 +305,7 @@ public class MySqlCdcNetworkIntegrationTest extends AbstractCdcIntegrationTest {
                 .setDatabasePassword("dbz")
                 .setClusterName("dbserver1").setDatabaseWhitelist("inventory")
                 .setTableWhitelist("inventory." + "customers")
-                .setReconnectBehaviour(reconnectBehaviour)
+                .setReconnectBehavior(reconnectBehavior)
                 .setShouldStateBeResetOnReconnect(resetStateOnReconnect)
                 .build();
     }

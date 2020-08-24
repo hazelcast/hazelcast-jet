@@ -55,10 +55,10 @@ public abstract class CdcSource<T> {
 
     public static final String CONNECTOR_CLASS_PROPERTY = "connector.class";
     public static final String SEQUENCE_EXTRACTOR_CLASS_PROPERTY = "sequence.extractor.class";
-    public static final String RECONNECT_BEHAVIOUR_PROPERTY = "reconnect.behaviour";
+    public static final String RECONNECT_BEHAVIOR_PROPERTY = "reconnect.behavior";
     public static final String RECONNECT_RESET_STATE_PROPERTY = "reconnect.reset.state";
 
-    public static final RetryStrategy DEFAULT_RECONNECT_BEHAVIOUR = RetryStrategies.never();
+    public static final RetryStrategy DEFAULT_RECONNECT_BEHAVIOR = RetryStrategies.never();
 
     private static final ThreadLocal<List<byte[]>> THREAD_LOCAL_HISTORY = new ThreadLocal<>();
 
@@ -279,8 +279,8 @@ public abstract class CdcSource<T> {
     }
 
     private static RetryStrategy getRetryStrategy(Properties properties) {
-        RetryStrategy strategy = (RetryStrategy) properties.get(RECONNECT_BEHAVIOUR_PROPERTY);
-        return strategy == null ? DEFAULT_RECONNECT_BEHAVIOUR : strategy;
+        RetryStrategy strategy = (RetryStrategy) properties.get(RECONNECT_BEHAVIOR_PROPERTY);
+        return strategy == null ? DEFAULT_RECONNECT_BEHAVIOR : strategy;
     }
 
     private static boolean getClearStateOnReconnect(Properties properties) {
