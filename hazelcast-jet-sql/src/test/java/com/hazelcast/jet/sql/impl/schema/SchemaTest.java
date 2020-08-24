@@ -20,7 +20,7 @@ import com.hazelcast.jet.sql.JetSqlTestSupport;
 import com.hazelcast.jet.sql.impl.connector.map.IMapSqlConnector;
 import com.hazelcast.jet.sql.impl.schema.model.IdentifiedPerson;
 import com.hazelcast.jet.sql.impl.schema.model.Person;
-import com.hazelcast.sql.SqlException;
+import com.hazelcast.sql.HazelcastSqlException;
 import com.hazelcast.sql.SqlResult;
 import com.hazelcast.sql.SqlService;
 import org.junit.BeforeClass;
@@ -53,14 +53,14 @@ public class SchemaTest extends JetSqlTestSupport {
         String name = createRandomName();
 
         // when
-        SqlResult createResult = sqlService.query(javaSerializableMapDdl(name, Integer.class, String.class));
+        SqlResult createResult = sqlService.execute(javaSerializableMapDdl(name, Integer.class, String.class));
 
         // then
         assertThat(createResult.isUpdateCount()).isTrue();
         assertThat(createResult.updateCount()).isEqualTo(-1);
 
         // when
-        SqlResult updateResult = sqlService.query("SELECT __key, this FROM public." + name);
+        SqlResult updateResult = sqlService.execute("SELECT __key, this FROM public." + name);
 
         // then
         assertThat(updateResult.isUpdateCount()).isFalse();
@@ -82,7 +82,7 @@ public class SchemaTest extends JetSqlTestSupport {
                 + "  \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'," + System.lineSeparator()
                 + "  \"" + OPTION_VALUE_CLASS + "\" '" + String.class.getName() + "'" + System.lineSeparator()
                 + ")";
-        sqlService.query(sql);
+        sqlService.execute(sql);
 
         // when
         assertRowsEventuallyAnyOrder(
@@ -95,56 +95,56 @@ public class SchemaTest extends JetSqlTestSupport {
     public void when_tableIsDeclared_then_itsDefinitionHasPrecedenceOverDiscoveredOne() {
         // given
         String name = createRandomName();
-        sqlService.query(javaSerializableMapDdl(name, Integer.class, Person.class));
+        sqlService.execute(javaSerializableMapDdl(name, Integer.class, Person.class));
 
         Map<Integer, Person> map = instance().getMap(name);
         map.put(1, new IdentifiedPerson(2, "Alice"));
 
         // when
         // then
-        assertThatThrownBy(() -> sqlService.query("SELECT id FROM " + name))
-                .isInstanceOf(SqlException.class);
+        assertThatThrownBy(() -> sqlService.execute("SELECT id FROM " + name))
+                .isInstanceOf(HazelcastSqlException.class);
     }
 
     @Test
     public void when_tableIsDropped_then_itIsNotAvailable() {
         // given
         String name = createRandomName();
-        sqlService.query(javaSerializableMapDdl(name, Integer.class, Person.class));
+        sqlService.execute(javaSerializableMapDdl(name, Integer.class, Person.class));
 
         // when
-        sqlService.query("DROP EXTERNAL TABLE " + name);
+        sqlService.execute("DROP EXTERNAL TABLE " + name);
 
         // then
-        assertThatThrownBy(() -> sqlService.query("SELECT * FROM public." + name))
-                .isInstanceOf(SqlException.class);
+        assertThatThrownBy(() -> sqlService.execute("SELECT * FROM public." + name))
+                .isInstanceOf(HazelcastSqlException.class);
     }
 
     @Test
     public void when_schemaNameUsed_then_rejected() {
         assertThatThrownBy(() ->
-                sqlService.query(javaSerializableMapDdl("schema." + createRandomName(), Long.class, Long.class)))
+                sqlService.execute(javaSerializableMapDdl("schema." + createRandomName(), Long.class, Long.class)))
                         .hasMessageContaining("Encountered \".\" at line 1, column 29");
     }
 
     @Test
     public void when_emptyColumnList_then_fail() {
-        assertThatThrownBy(() -> sqlService.query("CREATE EXTERNAL TABLE t() TYPE t"))
+        assertThatThrownBy(() -> sqlService.execute("CREATE EXTERNAL TABLE t() TYPE t"))
                 .hasMessageContaining("Encountered \")\" at line 1");
     }
 
     @Test
     public void when_badType_then_fail() {
-        assertThatThrownBy(() -> sqlService.query("CREATE EXTERNAL TABLE t TYPE TooBad"))
+        assertThatThrownBy(() -> sqlService.execute("CREATE EXTERNAL TABLE t TYPE TooBad"))
                 .hasMessageContaining("Invalid table definition: Unknown type: TOOBAD");
     }
     
     @Test
     public void test_caseInsensitiveType() {
-        sqlService.query("CREATE EXTERNAL TABLE t1 TYPE TestStream");
-        sqlService.query("CREATE EXTERNAL TABLE t2 TYPE teststream");
-        sqlService.query("CREATE EXTERNAL TABLE t3 TYPE TESTSTREAM");
-        sqlService.query("CREATE EXTERNAL TABLE t4 TYPE tEsTsTrEaM");
+        sqlService.execute("CREATE EXTERNAL TABLE t1 TYPE TestStream");
+        sqlService.execute("CREATE EXTERNAL TABLE t2 TYPE teststream");
+        sqlService.execute("CREATE EXTERNAL TABLE t3 TYPE TESTSTREAM");
+        sqlService.execute("CREATE EXTERNAL TABLE t4 TYPE tEsTsTrEaM");
     }
 
     private static String createRandomName() {

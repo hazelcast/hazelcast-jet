@@ -73,7 +73,7 @@ public class SqlKafkaTest extends JetSqlTestSupport {
     @Before
     public void before() {
         topicName = createRandomTopic();
-        sqlService.query(format("CREATE EXTERNAL TABLE %s " +
+        sqlService.execute(format("CREATE EXTERNAL TABLE %s " +
                         "TYPE \"%s\" " +
                         "OPTIONS (" +
                         " \"%s\" '%s'," +
@@ -121,7 +121,7 @@ public class SqlKafkaTest extends JetSqlTestSupport {
     @Test
     public void select_convert() {
         String topicName = createRandomTopic();
-        sqlService.query(format("CREATE EXTERNAL TABLE %s " +
+        sqlService.execute(format("CREATE EXTERNAL TABLE %s " +
                         "TYPE \"%s\" " +
                         "OPTIONS (" +
                         " \"%s\" '%s'," +
@@ -145,7 +145,7 @@ public class SqlKafkaTest extends JetSqlTestSupport {
                 StringSerializer.class.getCanonicalName(), StringDeserializer.class.getCanonicalName()
         ));
 
-        sqlService.query(format("INSERT INTO %s VALUES (12, 'a')", topicName));
+        sqlService.execute(format("INSERT INTO %s VALUES (12, 'a')", topicName));
 
         assertRowsEventuallyAnyOrder(
                 format("SELECT __key + 1, this FROM %s", topicName),
@@ -155,7 +155,7 @@ public class SqlKafkaTest extends JetSqlTestSupport {
     @Test
     public void select_pojo() {
         String topicName = createRandomTopic();
-        sqlService.query(format("CREATE EXTERNAL TABLE %s " +
+        sqlService.execute(format("CREATE EXTERNAL TABLE %s " +
                         "TYPE \"%s\" " +
                         "OPTIONS (" +
                         " \"%s\" '%s'," +
@@ -179,8 +179,8 @@ public class SqlKafkaTest extends JetSqlTestSupport {
                 PersonSerializer.class.getCanonicalName(), PersonDeserializer.class.getCanonicalName()
         ));
 
-        sqlService.query(format("INSERT INTO %s (__key, name, age) VALUES (0, 'Alice', 30)", topicName));
-        sqlService.query(format("INSERT INTO %s (__key, name, age) VALUES (1, 'Bob', 40)", topicName));
+        sqlService.execute(format("INSERT INTO %s (__key, name, age) VALUES (0, 'Alice', 30)", topicName));
+        sqlService.execute(format("INSERT INTO %s (__key, name, age) VALUES (1, 'Bob', 40)", topicName));
 
         assertRowsEventuallyAnyOrder(
                 format("SELECT __key, name, age FROM %s", topicName),
@@ -285,7 +285,7 @@ public class SqlKafkaTest extends JetSqlTestSupport {
     }
 
     private static void assertTopic(String name, String sql, Map<Integer, String> expected) {
-        sqlService.query(sql);
+        sqlService.execute(sql);
 
         kafkaTestSupport.assertTopicContentsEventually(name, expected, false);
     }

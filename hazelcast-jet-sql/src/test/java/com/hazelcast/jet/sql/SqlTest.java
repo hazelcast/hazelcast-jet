@@ -58,7 +58,7 @@ public class SqlTest extends JetSqlTestSupport {
     public void supportsCreatingMapFromFile() {
         String name = generateRandomName();
 
-        sqlService.query(
+        sqlService.execute(
                 "CREATE EXTERNAL TABLE " + name + " ("
                         + "key EXTERNAL NAME \"__key\""
                         + ") TYPE \"" + IMapSqlConnector.TYPE_NAME + "\" "
@@ -91,7 +91,7 @@ public class SqlTest extends JetSqlTestSupport {
         map.put(0, "value-0");
         map.put(1, "value-1");
 
-        sqlService.query(
+        sqlService.execute(
                 "CREATE EXTERNAL TABLE " + destinationName + " ("
                         + "key EXTERNAL NAME \"__key\""
                         + ") TYPE \"" + IMapSqlConnector.TYPE_NAME + "\" "
@@ -117,7 +117,7 @@ public class SqlTest extends JetSqlTestSupport {
     public void supportsCreatingMapFromValues() {
         String name = generateRandomName();
 
-        sqlService.query(
+        sqlService.execute(
                 "CREATE EXTERNAL TABLE " + name + " ("
                         + "key EXTERNAL NAME \"__key\""
                         + ") TYPE \"" + IMapSqlConnector.TYPE_NAME + "\" "

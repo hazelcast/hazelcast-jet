@@ -56,7 +56,7 @@ public class SqlCdcTest extends JetSqlTestSupport {
 
     @Before
     public void before() {
-        sqlService.query("CREATE EXTERNAL TABLE " + TABLE_NAME + " ( "
+        sqlService.execute("CREATE EXTERNAL TABLE " + TABLE_NAME + " ( "
                 + OPERATION + " VARCHAR, "
                 + "id INT, "
                 + "first_name VARCHAR, "

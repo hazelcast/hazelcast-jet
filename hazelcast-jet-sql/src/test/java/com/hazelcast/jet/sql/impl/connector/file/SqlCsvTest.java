@@ -55,7 +55,7 @@ public class SqlCsvTest extends JetSqlTestSupport {
         directory.deleteOnExit();
 
         String name = createRandomName();
-        sqlService.query("CREATE EXTERNAL TABLE " + name + " ("
+        sqlService.execute("CREATE EXTERNAL TABLE " + name + " ("
                 + "string VARCHAR"
                 + ", \"boolean\" BOOLEAN"
                 + ", byte TINYINT"
@@ -76,7 +76,7 @@ public class SqlCsvTest extends JetSqlTestSupport {
                 + ")"
         );
 
-        sqlService.query("INSERT INTO " + name + " VALUES ("
+        sqlService.execute("INSERT INTO " + name + " VALUES ("
                 + "'string'"
                 + ", true"
                 + ", 126"
@@ -118,7 +118,7 @@ public class SqlCsvTest extends JetSqlTestSupport {
     @Test
     public void supportsSchemaDiscovery() {
         String name = createRandomName();
-        sqlService.query("CREATE EXTERNAL TABLE " + name + " "
+        sqlService.execute("CREATE EXTERNAL TABLE " + name + " "
                 + "TYPE \"" + FileSqlConnector.TYPE_NAME + "\" "
                 + "OPTIONS ("
                 + "\"" + OPTION_SERIALIZATION_FORMAT + "\" '" + CSV_SERIALIZATION_FORMAT + "'"

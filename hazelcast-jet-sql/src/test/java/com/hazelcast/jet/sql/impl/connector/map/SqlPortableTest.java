@@ -125,7 +125,7 @@ public class SqlPortableTest extends JetSqlTestSupport {
     public void supportsNulls() throws IOException {
         String name = createTableWithRandomName();
 
-        sqlService.query("INSERT OVERWRITE " + name + " VALUES (null, null)");
+        sqlService.execute("INSERT OVERWRITE " + name + " VALUES (null, null)");
 
         Entry<Data, Data> entry = randomEntryFrom(name);
 
@@ -145,7 +145,7 @@ public class SqlPortableTest extends JetSqlTestSupport {
     public void supportsFieldsShadowing() throws IOException {
         String name = createTableWithRandomName();
 
-        sqlService.query("INSERT OVERWRITE " + name + " (id, name) VALUES (1, 'Alice')");
+        sqlService.execute("INSERT OVERWRITE " + name + " (id, name) VALUES (1, 'Alice')");
 
         Entry<Data, Data> entry = randomEntryFrom(name);
 
@@ -165,7 +165,7 @@ public class SqlPortableTest extends JetSqlTestSupport {
     @Test
     public void supportsFieldsMapping() throws IOException {
         String name = generateRandomName();
-        sqlService.query("CREATE EXTERNAL TABLE " + name + " ("
+        sqlService.execute("CREATE EXTERNAL TABLE " + name + " ("
                 + "key_id INT EXTERNAL NAME \"__key.id\""
                 + ", value_id INT EXTERNAL NAME \"this.id\""
                 + ") TYPE \"" + IMapSqlConnector.TYPE_NAME + "\" "
@@ -181,7 +181,7 @@ public class SqlPortableTest extends JetSqlTestSupport {
                 + ")"
         );
 
-        sqlService.query("INSERT OVERWRITE " + name + " (value_id, key_id, name) VALUES (2, 1, 'Alice')");
+        sqlService.execute("INSERT OVERWRITE " + name + " (value_id, key_id, name) VALUES (2, 1, 'Alice')");
 
         Entry<Data, Data> entry = randomEntryFrom(name);
 
@@ -203,10 +203,10 @@ public class SqlPortableTest extends JetSqlTestSupport {
         String name = createTableWithRandomName();
 
         // insert initial record
-        sqlService.query("INSERT OVERWRITE " + name + " VALUES (1, 'Alice')");
+        sqlService.execute("INSERT OVERWRITE " + name + " VALUES (1, 'Alice')");
 
         // alter schema
-        sqlService.query("CREATE OR REPLACE EXTERNAL TABLE " + name + " "
+        sqlService.execute("CREATE OR REPLACE EXTERNAL TABLE " + name + " "
                 + "TYPE \"" + IMapSqlConnector.TYPE_NAME + "\" "
                 + "OPTIONS ("
                 + "\"" + OPTION_SERIALIZATION_KEY_FORMAT + "\" '" + PORTABLE_SERIALIZATION_FORMAT + "'"
@@ -221,7 +221,7 @@ public class SqlPortableTest extends JetSqlTestSupport {
         );
 
         // insert record against new schema/class definition
-        sqlService.query("INSERT OVERWRITE " + name + " VALUES (2, 'Bob', 123456789)");
+        sqlService.execute("INSERT OVERWRITE " + name + " VALUES (2, 'Bob', 123456789)");
 
         // assert both - initial & evolved - records are correctly read
         assertRowsEventuallyAnyOrder(
@@ -236,7 +236,7 @@ public class SqlPortableTest extends JetSqlTestSupport {
     @Test
     public void supportsFieldsExtensions() {
         String name = generateRandomName();
-        sqlService.query("CREATE OR REPLACE EXTERNAL TABLE " + name + " "
+        sqlService.execute("CREATE OR REPLACE EXTERNAL TABLE " + name + " "
                 + "TYPE \"" + IMapSqlConnector.TYPE_NAME + "\" "
                 + "OPTIONS ( \"" + OPTION_SERIALIZATION_KEY_FORMAT + "\" '" + PORTABLE_SERIALIZATION_FORMAT + "'"
                 + ", \"" + OPTION_KEY_FACTORY_ID + "\" '" + PERSON_ID_FACTORY_ID + "'"
@@ -250,10 +250,10 @@ public class SqlPortableTest extends JetSqlTestSupport {
         );
 
         // insert initial record
-        sqlService.query("INSERT OVERWRITE " + name + " VALUES (1, 'Alice', 123456789)");
+        sqlService.execute("INSERT OVERWRITE " + name + " VALUES (1, 'Alice', 123456789)");
 
         // alter schema
-        sqlService.query("CREATE OR REPLACE EXTERNAL TABLE " + name + " ("
+        sqlService.execute("CREATE OR REPLACE EXTERNAL TABLE " + name + " ("
                 + "ssn BIGINT"
                 + ") TYPE \"" + IMapSqlConnector.TYPE_NAME + "\" "
                 + "OPTIONS ("
@@ -269,7 +269,7 @@ public class SqlPortableTest extends JetSqlTestSupport {
         );
 
         // insert record against new schema/class definition
-        sqlService.query("INSERT OVERWRITE " + name + " VALUES (2, 'Bob', null)");
+        sqlService.execute("INSERT OVERWRITE " + name + " VALUES (2, 'Bob', null)");
 
         // assert both - initial & evolved - records are correctly read
         assertRowsEventuallyAnyOrder(
@@ -284,7 +284,7 @@ public class SqlPortableTest extends JetSqlTestSupport {
     @Test
     public void supportsAllTypes() throws IOException {
         String name = generateRandomName();
-        sqlService.query("CREATE EXTERNAL TABLE " + name + " "
+        sqlService.execute("CREATE EXTERNAL TABLE " + name + " "
                 + "TYPE \"" + IMapSqlConnector.TYPE_NAME + "\" "
                 + "OPTIONS ("
                 + "\"" + OPTION_SERIALIZATION_KEY_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
@@ -296,7 +296,7 @@ public class SqlPortableTest extends JetSqlTestSupport {
                 + ")"
         );
 
-        sqlService.query("INSERT OVERWRITE " + name + " VALUES ("
+        sqlService.execute("INSERT OVERWRITE " + name + " VALUES ("
                 + "13"
                 + ", 'string'"
                 + ", 'a'"
@@ -347,7 +347,7 @@ public class SqlPortableTest extends JetSqlTestSupport {
 
     private static String createTableWithRandomName() {
         String name = generateRandomName();
-        sqlService.query("CREATE EXTERNAL TABLE " + name + " "
+        sqlService.execute("CREATE EXTERNAL TABLE " + name + " "
                 + "TYPE \"" + IMapSqlConnector.TYPE_NAME + "\" "
                 + "OPTIONS ("
                 + "\"" + OPTION_SERIALIZATION_KEY_FORMAT + "\" '" + PORTABLE_SERIALIZATION_FORMAT + "'"

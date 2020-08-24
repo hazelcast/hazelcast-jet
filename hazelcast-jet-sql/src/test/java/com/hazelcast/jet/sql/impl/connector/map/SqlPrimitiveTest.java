@@ -96,7 +96,7 @@ public class SqlPrimitiveTest extends JetSqlTestSupport {
     public void supportsFieldsMapping() {
         String name = generateRandomName();
 
-        sqlService.query("CREATE EXTERNAL TABLE " + name + " ("
+        sqlService.execute("CREATE EXTERNAL TABLE " + name + " ("
                 + "id INT EXTERNAL NAME __key"
                 + ", name VARCHAR EXTERNAL NAME this"
                 + ") TYPE \"" + IMapSqlConnector.TYPE_NAME + "\" "
@@ -119,13 +119,13 @@ public class SqlPrimitiveTest extends JetSqlTestSupport {
     public void supportsOnlyInsertOverwrite() {
         String name = createTableWithRandomName();
 
-        assertThatThrownBy(() -> sqlService.query("INSERT INTO " + name + " (__key, this) VALUES (1, '2')"))
+        assertThatThrownBy(() -> sqlService.execute("INSERT INTO " + name + " (__key, this) VALUES (1, '2')"))
                 .hasMessageContaining("Only INSERT OVERWRITE clause is supported for IMapSqlConnector");
     }
 
     private static String createTableWithRandomName() {
         String name = generateRandomName();
-        sqlService.query(javaSerializableMapDdl(name, Integer.class, String.class));
+        sqlService.execute(javaSerializableMapDdl(name, Integer.class, String.class));
         return name;
     }
 

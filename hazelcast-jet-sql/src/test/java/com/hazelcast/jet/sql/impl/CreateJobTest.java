@@ -50,17 +50,17 @@ public class CreateJobTest extends SimpleTestInClusterSupport {
 
     @Test
     public void when_streamingDmlWithoutCreateJob_then_fail() {
-        sqlService.query("CREATE EXTERNAL TABLE src TYPE TestStream");
-        sqlService.query(javaSerializableMapDdl("dest", Long.class, Long.class));
+        sqlService.execute("CREATE EXTERNAL TABLE src TYPE TestStream");
+        sqlService.execute(javaSerializableMapDdl("dest", Long.class, Long.class));
 
         exception.expectMessage("You must use CREATE JOB statement for a streaming DML query");
-        sqlService.query("INSERT OVERWRITE dest SELECT v, v FROM src");
+        sqlService.execute("INSERT OVERWRITE dest SELECT v, v FROM src");
     }
 
     @Test
     public void when_ddlStatementWithCreateJob_then_fail() {
         exception.expectMessage("Encountered \"CREATE\" at line 1, column 19");
-        sqlService.query("CREATE JOB job AS CREATE EXTERNAL TABLE src TYPE TestStream");
+        sqlService.execute("CREATE JOB job AS CREATE EXTERNAL TABLE src TYPE TestStream");
     }
 
     @Test
@@ -68,63 +68,63 @@ public class CreateJobTest extends SimpleTestInClusterSupport {
         exception.expectMessage("Encountered \"SELECT\" at line 1, column 19." + System.lineSeparator() +
                 "Was expecting:" + System.lineSeparator() +
                 "    \"INSERT\"");
-        sqlService.query("CREATE JOB job AS SELECT 42 FROM my_map");
+        sqlService.execute("CREATE JOB job AS SELECT 42 FROM my_map");
     }
 
     @Test
     public void testJobSubmitAndCancel() {
-        sqlService.query("CREATE EXTERNAL TABLE src TYPE TestStream");
-        sqlService.query(javaSerializableMapDdl("dest", Long.class, Long.class));
+        sqlService.execute("CREATE EXTERNAL TABLE src TYPE TestStream");
+        sqlService.execute(javaSerializableMapDdl("dest", Long.class, Long.class));
 
-        sqlService.query("CREATE JOB testJob AS INSERT OVERWRITE dest SELECT v, v FROM src");
+        sqlService.execute("CREATE JOB testJob AS INSERT OVERWRITE dest SELECT v, v FROM src");
 
         assertNotNull("job doesn't exist", instance().getJob("testJob"));
 
-        sqlService.query("DROP JOB testJob");
+        sqlService.execute("DROP JOB testJob");
     }
 
     @Test
     public void when_duplicateName_then_fails() {
-        sqlService.query("CREATE EXTERNAL TABLE src TYPE TestStream");
-        sqlService.query(javaSerializableMapDdl("dest", Long.class, Long.class));
+        sqlService.execute("CREATE EXTERNAL TABLE src TYPE TestStream");
+        sqlService.execute(javaSerializableMapDdl("dest", Long.class, Long.class));
 
-        sqlService.query("CREATE JOB testJob AS INSERT OVERWRITE dest SELECT v, v FROM src");
+        sqlService.execute("CREATE JOB testJob AS INSERT OVERWRITE dest SELECT v, v FROM src");
 
         assertThatThrownBy(() ->
-            sqlService.query("CREATE JOB testJob AS INSERT OVERWRITE dest SELECT v, v FROM src"))
+            sqlService.execute("CREATE JOB testJob AS INSERT OVERWRITE dest SELECT v, v FROM src"))
                 .hasMessageContaining("Another active job with equal name (testJob) exists");
     }
 
     @Test
     public void when_duplicateName_and_ifNotExists_then_secondSubmissionIgnored() {
-        sqlService.query("CREATE EXTERNAL TABLE src TYPE TestStream");
-        sqlService.query(javaSerializableMapDdl("dest", Long.class, Long.class));
+        sqlService.execute("CREATE EXTERNAL TABLE src TYPE TestStream");
+        sqlService.execute(javaSerializableMapDdl("dest", Long.class, Long.class));
 
-        sqlService.query("CREATE JOB testJob AS INSERT OVERWRITE dest SELECT v, v FROM src");
+        sqlService.execute("CREATE JOB testJob AS INSERT OVERWRITE dest SELECT v, v FROM src");
         assertEquals(1, countActiveJobs());
 
-        sqlService.query("CREATE JOB IF NOT EXISTS testJob AS INSERT OVERWRITE dest SELECT v, v FROM src");
+        sqlService.execute("CREATE JOB IF NOT EXISTS testJob AS INSERT OVERWRITE dest SELECT v, v FROM src");
         assertEquals(1, countActiveJobs());
     }
 
     @Test
     public void when_dropNonExistingJob_then_fail() {
         assertThatThrownBy(() ->
-            sqlService.query("DROP JOB nonExistingJob"))
+            sqlService.execute("DROP JOB nonExistingJob"))
                 .hasMessageContaining("Job doesn't exist or already terminated");
     }
 
     @Test
     public void when_dropNonExistingJob_and_ifExists_then_ignore() {
-        sqlService.query("DROP JOB IF EXISTS nonExistingJob");
+        sqlService.execute("DROP JOB IF EXISTS nonExistingJob");
     }
 
     @Test
     public void test_jobOptions() {
-        sqlService.query("CREATE EXTERNAL TABLE src TYPE TestStream");
-        sqlService.query(javaSerializableMapDdl("dest", Long.class, Long.class));
+        sqlService.execute("CREATE EXTERNAL TABLE src TYPE TestStream");
+        sqlService.execute(javaSerializableMapDdl("dest", Long.class, Long.class));
 
-        sqlService.query("CREATE JOB testJob " +
+        sqlService.execute("CREATE JOB testJob " +
                 "OPTIONS (" +
                 // we use non-default value for each config option
                 "processingGuarantee 'exactlyOnce'," +
@@ -150,10 +150,10 @@ public class CreateJobTest extends SimpleTestInClusterSupport {
         JetInstance client = factory().newClient();
         SqlService sqlService = client.getHazelcastInstance().getSql();
 
-        sqlService.query("CREATE EXTERNAL TABLE src TYPE TestStream");
-        sqlService.query(javaSerializableMapDdl("dest", Long.class, Long.class));
+        sqlService.execute("CREATE EXTERNAL TABLE src TYPE TestStream");
+        sqlService.execute(javaSerializableMapDdl("dest", Long.class, Long.class));
 
-        sqlService.query("CREATE JOB testJob AS INSERT OVERWRITE dest SELECT v, v FROM src");
+        sqlService.execute("CREATE JOB testJob AS INSERT OVERWRITE dest SELECT v, v FROM src");
         Job job = instance().getJob("testJob");
         assertNotNull(job);
         assertJobStatusEventually(job, RUNNING);

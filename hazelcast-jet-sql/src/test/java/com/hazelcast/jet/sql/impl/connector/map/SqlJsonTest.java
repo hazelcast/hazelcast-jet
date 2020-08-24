@@ -56,7 +56,7 @@ public class SqlJsonTest extends JetSqlTestSupport {
     @Test
     public void supportsNulls() {
         String name = generateRandomName();
-        sqlService.query("CREATE EXTERNAL TABLE " + name + " ("
+        sqlService.execute("CREATE EXTERNAL TABLE " + name + " ("
                 + "key_name VARCHAR EXTERNAL NAME \"__key.name\""
                 + ", value_name VARCHAR EXTERNAL NAME \"this.name\""
                 + ") TYPE \"" + IMapSqlConnector.TYPE_NAME + "\" "
@@ -65,7 +65,7 @@ public class SqlJsonTest extends JetSqlTestSupport {
                 + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + "'"
                 + ")");
 
-        sqlService.query("INSERT OVERWRITE " + name + " VALUES (null, null)");
+        sqlService.execute("INSERT OVERWRITE " + name + " VALUES (null, null)");
 
         Map<HazelcastJsonValue, HazelcastJsonValue> map = instance().getMap(name);
         assertThat(map.get(new HazelcastJsonValue("{\"name\":null}")).toString()).isEqualTo("{\"name\":null}");
@@ -79,7 +79,7 @@ public class SqlJsonTest extends JetSqlTestSupport {
     @Test
     public void supportsFieldsMapping() {
         String name = generateRandomName();
-        sqlService.query("CREATE EXTERNAL TABLE " + name + " ("
+        sqlService.execute("CREATE EXTERNAL TABLE " + name + " ("
                 + "key_name VARCHAR EXTERNAL NAME \"__key.name\""
                 + ", value_name VARCHAR EXTERNAL NAME \"this.name\""
                 + ") TYPE \"" + IMapSqlConnector.TYPE_NAME + "\" "
@@ -88,7 +88,7 @@ public class SqlJsonTest extends JetSqlTestSupport {
                 + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + "'"
                 + ")");
 
-        sqlService.query("INSERT OVERWRITE " + name + " (value_name, key_name) VALUES ('Bob', 'Alice')");
+        sqlService.execute("INSERT OVERWRITE " + name + " (value_name, key_name) VALUES ('Bob', 'Alice')");
 
         Map<HazelcastJsonValue, HazelcastJsonValue> map = instance().getMap(name);
         assertThat(map.get(new HazelcastJsonValue("{\"name\":\"Alice\"}")).toString()).isEqualTo("{\"name\":\"Bob\"}");
@@ -102,7 +102,7 @@ public class SqlJsonTest extends JetSqlTestSupport {
     @Test
     public void supportsSchemaEvolution() {
         String name = generateRandomName();
-        sqlService.query("CREATE EXTERNAL TABLE " + name + " ("
+        sqlService.execute("CREATE EXTERNAL TABLE " + name + " ("
                 + "name VARCHAR"
                 + ") TYPE \"" + IMapSqlConnector.TYPE_NAME + "\" "
                 + "OPTIONS ("
@@ -112,10 +112,10 @@ public class SqlJsonTest extends JetSqlTestSupport {
                 + ")");
 
         // insert initial record
-        sqlService.query("INSERT OVERWRITE " + name + " VALUES (13, 'Alice')");
+        sqlService.execute("INSERT OVERWRITE " + name + " VALUES (13, 'Alice')");
 
         // alter schema
-        sqlService.query("CREATE OR REPLACE EXTERNAL TABLE " + name + " ("
+        sqlService.execute("CREATE OR REPLACE EXTERNAL TABLE " + name + " ("
                 + "name VARCHAR"
                 + ", ssn BIGINT"
                 + ") TYPE \"" + IMapSqlConnector.TYPE_NAME + "\" "
@@ -126,7 +126,7 @@ public class SqlJsonTest extends JetSqlTestSupport {
                 + ")");
 
         // insert record against new schema
-        sqlService.query("INSERT OVERWRITE " + name + " VALUES (69, 'Bob', 123456789)");
+        sqlService.execute("INSERT OVERWRITE " + name + " VALUES (69, 'Bob', 123456789)");
 
         // assert both - initial & evolved - records are correctly read
         assertRowsEventuallyAnyOrder(
@@ -141,7 +141,7 @@ public class SqlJsonTest extends JetSqlTestSupport {
     @Test
     public void supportsAllTypes() {
         String name = generateRandomName();
-        sqlService.query("CREATE EXTERNAL TABLE " + name + " ("
+        sqlService.execute("CREATE EXTERNAL TABLE " + name + " ("
                 + "string VARCHAR"
                 + ", \"boolean\" BOOLEAN"
                 + ", byte TINYINT"
@@ -162,7 +162,7 @@ public class SqlJsonTest extends JetSqlTestSupport {
                 + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + "'"
                 + ")");
 
-        sqlService.query("INSERT OVERWRITE " + name + " VALUES ("
+        sqlService.execute("INSERT OVERWRITE " + name + " VALUES ("
                 + "1"
                 + ", 'string'"
                 + ", true"

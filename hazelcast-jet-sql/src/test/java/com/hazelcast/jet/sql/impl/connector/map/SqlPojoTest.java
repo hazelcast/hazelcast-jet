@@ -103,7 +103,7 @@ public class SqlPojoTest extends JetSqlTestSupport {
     @Test
     public void supportsFieldsMapping() {
         String name = generateRandomName();
-        sqlService.query("CREATE EXTERNAL TABLE " + name + " ("
+        sqlService.execute("CREATE EXTERNAL TABLE " + name + " ("
                 + "key_id INT EXTERNAL NAME \"__key.id\""
                 + ", value_id INT EXTERNAL NAME \"this.id\""
                 + ") TYPE \"" + IMapSqlConnector.TYPE_NAME + "\" "
@@ -132,10 +132,10 @@ public class SqlPojoTest extends JetSqlTestSupport {
         String name = createMapWithRandomName();
 
         // insert initial record
-        sqlService.query("INSERT OVERWRITE " + name + " VALUES (1, 'Alice')");
+        sqlService.execute("INSERT OVERWRITE " + name + " VALUES (1, 'Alice')");
 
         // alter schema
-        sqlService.query("CREATE OR REPLACE EXTERNAL TABLE " + name + " "
+        sqlService.execute("CREATE OR REPLACE EXTERNAL TABLE " + name + " "
                 + "TYPE \"" + IMapSqlConnector.TYPE_NAME + "\" "
                 + "OPTIONS ("
                 + "\"" + OPTION_SERIALIZATION_KEY_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
@@ -146,7 +146,7 @@ public class SqlPojoTest extends JetSqlTestSupport {
         );
 
         // insert record against new schema
-        sqlService.query("INSERT OVERWRITE " + name + " (id, name, ssn) VALUES (2, 'Bob', 123456789)");
+        sqlService.execute("INSERT OVERWRITE " + name + " (id, name, ssn) VALUES (2, 'Bob', 123456789)");
 
         // assert both - initial & evolved - records are correctly read
         assertRowsEventuallyAnyOrder(
@@ -165,7 +165,7 @@ public class SqlPojoTest extends JetSqlTestSupport {
         Map<PersonId, InsuredPerson> map = instance().getMap(name);
         map.put(new PersonId(1), new InsuredPerson(1, "Alice", 123456789L));
 
-        sqlService.query("CREATE EXTERNAL TABLE " + name + " ("
+        sqlService.execute("CREATE EXTERNAL TABLE " + name + " ("
                 + "ssn BIGINT"
                 + ") TYPE \"" + IMapSqlConnector.TYPE_NAME + "\" "
                 + "OPTIONS ("
@@ -197,7 +197,7 @@ public class SqlPojoTest extends JetSqlTestSupport {
     @Test
     public void supportsAllTypes() {
         String name = generateRandomName();
-        sqlService.query(javaSerializableMapDdl(name, BigInteger.class, AllTypesValue.class));
+        sqlService.execute(javaSerializableMapDdl(name, BigInteger.class, AllTypesValue.class));
 
         assertMapEventually(
                 name,
@@ -367,7 +367,7 @@ public class SqlPojoTest extends JetSqlTestSupport {
         String mapName = generateRandomName();
         String tableName = generateRandomName();
 
-        sqlService.query("CREATE EXTERNAL TABLE " + tableName + " TYPE \"" + IMapSqlConnector.TYPE_NAME + "\"\n"
+        sqlService.execute("CREATE EXTERNAL TABLE " + tableName + " TYPE \"" + IMapSqlConnector.TYPE_NAME + "\"\n"
                 + "OPTIONS (\n"
                 + '"' + OPTION_OBJECT_NAME + "\" '" + mapName + "',\n"
                 + '"' + OPTION_SERIALIZATION_KEY_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "',\n"
@@ -381,7 +381,7 @@ public class SqlPojoTest extends JetSqlTestSupport {
         map.put("k2", "v2");
 
         List<Entry<String, String>> actual = new ArrayList<>();
-        for (SqlRow r : sqlService.query("select * from " + tableName)) {
+        for (SqlRow r : sqlService.execute("select * from " + tableName)) {
             actual.add(Util.entry(r.getObject(0), r.getObject(1)));
         }
 
@@ -391,10 +391,10 @@ public class SqlPojoTest extends JetSqlTestSupport {
     @Test
     public void when_typeMismatch_then_fail() {
         instance().getMap("map").put(0, 0);
-        sqlService.query(javaSerializableMapDdl("map", String.class, String.class));
+        sqlService.execute(javaSerializableMapDdl("map", String.class, String.class));
 
         assertThatThrownBy(() -> {
-            for (SqlRow r : sqlService.query("select /*+jet*/ __key from map")) {
+            for (SqlRow r : sqlService.execute("select /*+jet*/ __key from map")) {
                 System.out.println(r);
             }
         })
@@ -408,7 +408,7 @@ public class SqlPojoTest extends JetSqlTestSupport {
 
     private static String createMapWithRandomName() {
         String name = generateRandomName();
-        sqlService.query(javaSerializableMapDdl(name, PersonId.class, Person.class));
+        sqlService.execute(javaSerializableMapDdl(name, PersonId.class, Person.class));
         return name;
     }
 

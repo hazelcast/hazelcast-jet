@@ -52,7 +52,7 @@ public class SqlAvroTest extends JetSqlTestSupport {
     @Test
     public void supportsNulls() {
         String name = createRandomName();
-        sqlService.query("CREATE EXTERNAL TABLE " + name + " ("
+        sqlService.execute("CREATE EXTERNAL TABLE " + name + " ("
                 + "nonExistingField VARCHAR"
                 + ") TYPE \"" + FileSqlConnector.TYPE_NAME + "\" "
                 + "OPTIONS ("
@@ -71,7 +71,7 @@ public class SqlAvroTest extends JetSqlTestSupport {
     @Test
     public void supportsFieldsMapping() {
         String name = createRandomName();
-        sqlService.query("CREATE EXTERNAL TABLE " + name + " ("
+        sqlService.execute("CREATE EXTERNAL TABLE " + name + " ("
                 + "name VARCHAR EXTERNAL NAME string"
                 + ") TYPE \"" + FileSqlConnector.TYPE_NAME + "\" "
                 + "OPTIONS ("
@@ -93,7 +93,7 @@ public class SqlAvroTest extends JetSqlTestSupport {
         directory.deleteOnExit();
 
         String name = createRandomName();
-        sqlService.query("CREATE EXTERNAL TABLE " + name + " ("
+        sqlService.execute("CREATE EXTERNAL TABLE " + name + " ("
                 + "string VARCHAR"
                 + ", \"boolean\" BOOLEAN"
                 + ", byte TINYINT"
@@ -114,7 +114,7 @@ public class SqlAvroTest extends JetSqlTestSupport {
                 + ")"
         );
 
-        sqlService.query("INSERT INTO " + name + " VALUES ("
+        sqlService.execute("INSERT INTO " + name + " VALUES ("
                 + "'string'"
                 + ", true"
                 + ", 126"
@@ -156,7 +156,7 @@ public class SqlAvroTest extends JetSqlTestSupport {
     @Test
     public void supportsSchemaDiscovery() {
         String name = createRandomName();
-        sqlService.query("CREATE EXTERNAL TABLE " + name + " "
+        sqlService.execute("CREATE EXTERNAL TABLE " + name + " "
                 + "TYPE \"" + FileSqlConnector.TYPE_NAME + "\" "
                 + "OPTIONS ( "
                 + "\"" + OPTION_SERIALIZATION_FORMAT + "\" '" + AVRO_SERIALIZATION_FORMAT + "'"

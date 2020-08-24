@@ -67,7 +67,7 @@ public class SqlJoinTest extends JetSqlTestSupport {
     public void before() {
         topicName = "k_" + randomString().replace('-', '_');
         kafkaTestSupport.createTopic(topicName, INITIAL_PARTITION_COUNT);
-        sqlService.query(format("CREATE EXTERNAL TABLE %s " +
+        sqlService.execute(format("CREATE EXTERNAL TABLE %s " +
                         "TYPE \"%s\" " +
                         "OPTIONS (" +
                         " \"%s\" '%s'," +
@@ -250,7 +250,7 @@ public class SqlJoinTest extends JetSqlTestSupport {
 
     @Test
     public void enrichment_join_fails_for_not_supported_connector() {
-        assertThatThrownBy(() -> sqlService.query(
+        assertThatThrownBy(() -> sqlService.execute(
                 format("SELECT 1 FROM %s k JOIN %s m ON m.__key = k.__key", mapName, topicName)
         )).hasCauseInstanceOf(UnsupportedOperationException.class)
           .hasMessageContaining("Nested loop reader not supported for " + KafkaSqlConnector.class.getName());
@@ -258,7 +258,7 @@ public class SqlJoinTest extends JetSqlTestSupport {
 
     private static String createMapWithRandomName() {
         String mapName = "m_" + randomString().replace('-', '_');
-        sqlService.query(javaSerializableMapDdl(mapName, Integer.class, String.class));
+        sqlService.execute(javaSerializableMapDdl(mapName, Integer.class, String.class));
         return mapName;
     }
 }
