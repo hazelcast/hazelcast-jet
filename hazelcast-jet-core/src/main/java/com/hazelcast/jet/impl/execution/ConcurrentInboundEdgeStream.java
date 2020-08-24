@@ -20,7 +20,6 @@ import com.hazelcast.internal.util.concurrent.ConcurrentConveyor;
 import com.hazelcast.internal.util.concurrent.Pipe;
 import com.hazelcast.internal.util.concurrent.QueuedPipe;
 import com.hazelcast.jet.core.Watermark;
-import com.hazelcast.jet.impl.util.ObjectWithPartitionId;
 import com.hazelcast.jet.impl.util.ProgressState;
 import com.hazelcast.jet.impl.util.ProgressTracker;
 import com.hazelcast.logging.ILogger;
@@ -188,9 +187,6 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
                     continue;
                 }
                 Object headItem = q.peek();
-                if(headItem instanceof ObjectWithPartitionId) {
-                    headItem = ((ObjectWithPartitionId) headItem).getItem();
-                }
                 if (headItem == null) {
                     return NO_PROGRESS;
                 }
