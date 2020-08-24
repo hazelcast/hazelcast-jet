@@ -108,7 +108,7 @@ public class MySqlCdcNetworkIntegrationTest extends AbstractCdcIntegrationTest {
             // then job fails
             assertThatThrownBy(job::join)
                     .hasRootCauseInstanceOf(JetException.class)
-                    .hasStackTraceContaining("Failed connecting to database");
+                    .hasStackTraceContaining("Failed to connect to database");
             assertTrue(jet.getMap("results").isEmpty());
         } else {
             // and can't connect to DB
@@ -189,7 +189,7 @@ public class MySqlCdcNetworkIntegrationTest extends AbstractCdcIntegrationTest {
                 // then job fails
                 assertThatThrownBy(job::join)
                         .hasRootCauseInstanceOf(JetException.class)
-                        .hasStackTraceContaining("Failed connecting to database");
+                        .hasStackTraceContaining("Failed to connect to database");
             } else {
                 // and DB is started anew
                 mysql = initMySql(null, port);
@@ -271,7 +271,7 @@ public class MySqlCdcNetworkIntegrationTest extends AbstractCdcIntegrationTest {
                 // then job fails
                 assertThatThrownBy(job::join)
                         .hasRootCauseInstanceOf(JetException.class)
-                        .hasStackTraceContaining("Failed connecting to database");
+                        .hasStackTraceContaining("Failed to connect to database");
             } else {
                 // and results are cleared
                 jet.getMap("results").clear();

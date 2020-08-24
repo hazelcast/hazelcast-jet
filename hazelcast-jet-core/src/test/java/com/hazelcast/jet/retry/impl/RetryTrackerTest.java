@@ -115,7 +115,7 @@ public class RetryTrackerTest {
     @Test
     public void when_constantRetryPeriod() {
         RetryStrategy strategy = RetryStrategies.custom()
-                .intervalFunction(IntervalFunction.constant(1000, MILLISECONDS))
+                .intervalFunction(IntervalFunction.constant(1000))
                 .build();
         RetryTracker tracker = new RetryTracker(strategy, timeSupplier);
         assertFalse(tracker.needsToWait());

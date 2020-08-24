@@ -107,7 +107,7 @@ public class PostgresCdcNetworkIntegrationTest extends AbstractCdcIntegrationTes
             // then job fails
             assertThatThrownBy(job::join)
                     .hasRootCauseInstanceOf(JetException.class)
-                    .hasStackTraceContaining("Failed connecting to database");
+                    .hasStackTraceContaining("Failed to connect to database");
             assertTrue(jet.getMap("results").isEmpty());
         } else {
             // then can't connect to DB
@@ -190,7 +190,7 @@ public class PostgresCdcNetworkIntegrationTest extends AbstractCdcIntegrationTes
                 // then job fails
                 assertThatThrownBy(job::join)
                         .hasRootCauseInstanceOf(JetException.class)
-                        .hasStackTraceContaining("Failed connecting to database");
+                        .hasStackTraceContaining("Failed to connect to database");
             } else {
                 // and DB is started anew
                 postgres = initPostgres(null, port);
@@ -278,7 +278,7 @@ public class PostgresCdcNetworkIntegrationTest extends AbstractCdcIntegrationTes
                 // then job fails
                 assertThatThrownBy(job::join)
                         .hasRootCauseInstanceOf(JetException.class)
-                        .hasStackTraceContaining("Failed connecting to database");
+                        .hasStackTraceContaining("Failed to connect to database");
             } else {
                 // and results are cleared
                 jet.getMap("results").clear();

@@ -19,10 +19,9 @@ package com.hazelcast.jet.retry;
 import com.hazelcast.jet.retry.impl.IntervalFunctions;
 
 import java.io.Serializable;
-import java.util.concurrent.TimeUnit;
 
 /**
- * Function that can compute the wait time necessary for each subsequent retry
+ * Function that computes the wait time necessary for each subsequent retry
  * attempt. The input is the sequence number of the attempt (1 = first failed
  * attempt, 2 = second failed attempt and so on), the output is the wait time in
  * milliseconds.
@@ -36,26 +35,8 @@ public interface IntervalFunction extends Serializable {
      * Creates an {@code IntervalFunction} which returns a fixed interval in
      * milliseconds.
      */
-    static IntervalFunction constant(long intervalValue, TimeUnit intervalUnit) {
-        return constant(intervalUnit.toMillis(intervalValue));
-    }
-
-    /**
-     * Creates an {@code IntervalFunction} which returns a fixed interval in
-     * milliseconds.
-     */
     static IntervalFunction constant(long intervalMs) {
         return IntervalFunctions.constant(intervalMs);
-    }
-
-    /**
-     * Creates an {@code IntervalFunction} which starts from the specified wait
-     * interval, on the first attempt, and for each subsequent attempt uses
-     * a longer interval, equal to the previous wait duration multiplied by the
-     * provided scaling factor (so for example: 1, 2, 4, 8, ...).
-     */
-    static IntervalFunction exponentialBackoff(long intervalValue, TimeUnit intervalUnit, double multiplier) {
-        return exponentialBackoff(intervalUnit.toMillis(intervalValue), multiplier);
     }
 
     /**

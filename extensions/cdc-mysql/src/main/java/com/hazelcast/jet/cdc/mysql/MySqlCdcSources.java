@@ -49,9 +49,9 @@ public final class MySqlCdcSources {
      * Creates a CDC source that streams change data from a MySQL database to
      * Hazelcast Jet.
      * <p>
-     * Behavior of the source on connection disruptions to the database is
-     * configurable and is governed by the {@link RetryStrategy} passed into
-     * {@code setReconnectBehavior())} (as far as the underlying Debezium
+     * You can configure how the source will behave if the database connection
+     * breaks, by passing one of the {@linkplain RetryStrategy retry strategies}
+     * to {@code setReconnectBehavior()}. (as far as the underlying Debezium
      * connector cooperates, read further for details).
      * <p>
      * The default reconnect behavior is <em>never</em>, which treats any
@@ -67,12 +67,12 @@ public final class MySqlCdcSources {
      * <p>
      * There is a further setting influencing reconnect behavior, specified via
      * {@code setShouldStateBeResetOnReconnect()}. The boolean flag passed in
-     * specifies what should happen to the connector's state on reconnect, if it
-     * should be kept or reset. If the state is kept, then snapshotting should
-     * not be repeated and streaming the binlog should resume at the position
-     * where it left off. If the state is reset, then the source will behave as
-     * on its initial start, so will do a snapshot and will start trailing the
-     * binlog where it syncs with the snapshot's end.
+     * specifies what should happen to the connector's state on reconnect,
+     * whether it should be kept or reset. If the state is kept, then
+     * snapshotting should not be repeated and streaming the binlog should
+     * resume at the position where it left off. If the state is reset, then the
+     * source will behave as on its initial start, so will do a snapshot and
+     * will start trailing the binlog where it syncs with the snapshot's end.
      * <p>
      * Depending on the lifecycle phase the source is in, however, there are
      * some discrepancies and peculiarities in this behavior.
@@ -81,10 +81,10 @@ public final class MySqlCdcSources {
      * phase</em> then the connector is stuck in this state until it manages to
      * reconnect. This, unfortunately, is the case <em>regardless of the
      * reconnect behavior specified</em> and is related to the peculiarities
-     * of the underlying Debezium connector's implementation. If the connection
+     * of the underlying implementation classes used. If the connection
      * goes down due to the database being shut down, it sometimes can detect
      * that and react properly, but if the outage is purely at the network level,
-     * then, more often than not, it's not detected.
+     * then, sometimes it's not detected.
      * <p>
      * During the <em>binlog trailing phase</em> all connection disruptions
      * will be detected, but internally not all of them are handled the same

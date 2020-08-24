@@ -48,9 +48,9 @@ public final class PostgresCdcSources {
      * Creates a CDC source that streams change data from a PostgreSQL database
      * to Hazelcast Jet.
      * <p>
-     * Behavior of the source on connection disruptions to the database is
-     * configurable and is governed by the {@link RetryStrategy} passed into
-     * {@code setReconnectBehavior())}.
+     * You can configure how the source will behave if the database connection
+     * breaks, by passing one of the {@linkplain RetryStrategy retry strategies}
+     * to {@code setReconnectBehavior()}.
      * <p>
      * The default reconnect behavior is <em>never</em>, which treats any
      * connection failure as an unrecoverable problem and triggers the failure
@@ -65,9 +65,9 @@ public final class PostgresCdcSources {
      * There is a further setting influencing reconnect behavior, specified via
      * the {@code setShouldStateBeResetOnReconnect()}. The boolean flag passed
      * in specifies what should happen to the connector's state on reconnect,
-     * if it should be kept or reset. If the state is kept, then snapshotting
-     * should not be repeated and streaming the WAL should resume at the
-     * position where it left off. If the state is reset, then the source
+     * whether it should be kept or reset. If the state is kept, then
+     * snapshotting should not be repeated and streaming the WAL should resume
+     * at the position where it left off. If the state is reset, then the source
      * will behave as on its initial start, so will do a snapshot and will start
      * trailing the WAL where it syncs with the snapshot's end.
      * <p>

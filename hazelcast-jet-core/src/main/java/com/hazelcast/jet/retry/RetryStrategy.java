@@ -41,13 +41,13 @@ public interface RetryStrategy extends Serializable {
      * any retries".
      * <p>
      * A negative value should be interpreted as "retry indefinitely, until
-     * succeeds".
+     * success".
      */
     int getMaxAttempts();
 
     /**
      * Function specifying how much time to wait before each retry attempt. Can
-     * specify constant wait times, exponential backoff, basically any
+     * specify a constant wait time, exponential backoff or any other,
      * arbitrarily complex wait strategy.
      */
     IntervalFunction getIntervalFunction();

@@ -115,7 +115,7 @@ public abstract class CdcSource<T> {
                 }
             }
         } catch (InterruptedException ie) {
-            logger.warning("Waiting for data interrupted");
+            logger.warning("Interrupted while waiting for data");
             Thread.currentThread().interrupt();
         } catch (RuntimeException re) {
             reconnect(re);
@@ -145,9 +145,9 @@ public abstract class CdcSource<T> {
         reconnectTracker.attemptFailed();
         if (reconnectTracker.shouldTryAgain()) {
             long waitTimeMs = reconnectTracker.getNextWaitTimeMs();
-            logger.warning("Initializing connector task failed, retrying in " + waitTimeMs + "ms" + getCause(ce));
+            logger.warning("Failed to initialize the connector task, retrying in " + waitTimeMs + "ms" + getCause(ce));
         } else {
-            throw shutDownAndThrow(new JetException("Failed connecting to database" + getCause(ce)));
+            throw shutDownAndThrow(new JetException("Failed to connect to database" + getCause(ce)));
         }
     }
 
@@ -183,7 +183,7 @@ public abstract class CdcSource<T> {
                 state = new State();
             }
         } else {
-            throw shutDownAndThrow(new JetException("Failed connecting to database" + getCause(re)));
+            throw shutDownAndThrow(new JetException("Failed to connect to database" + getCause(re)));
         }
     }
 
