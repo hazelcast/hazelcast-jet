@@ -104,7 +104,7 @@ public class JetSqlToRelConverter extends HazelcastSqlToRelConverter {
         RelOptTableImpl relTable = RelOptTableImpl.create(
                 catalogReader,
                 rowType,
-                asList(table.getSchemaName(), table.getName()),
+                asList(table.getSchemaName(), table.getSqlName()),
                 new HazelcastTable(table, UnknownStatistic.INSTANCE),
                 null
         );

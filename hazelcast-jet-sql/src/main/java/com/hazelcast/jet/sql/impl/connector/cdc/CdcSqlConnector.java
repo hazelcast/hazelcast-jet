@@ -127,7 +127,7 @@ public class CdcSqlConnector implements SqlConnector {
     ) {
         CdcTable table = (CdcTable) table0;
 
-        String tableName = table.getName();
+        String tableName = table.getSqlName();
         Properties properties = table.getCdcProperties();
         Vertex sourceVertex = dag.newVertex("cdc(" + tableName + ")",
                 // TODO: is it ok to use CdcSource?

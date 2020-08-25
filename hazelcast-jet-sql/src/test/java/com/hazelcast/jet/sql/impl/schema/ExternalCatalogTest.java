@@ -81,7 +81,7 @@ public class ExternalCatalogTest extends SimpleTestInClusterSupport {
                 true
                 )
         ).isInstanceOf(QueryException.class);
-        assertThat(catalog.getTables().stream().noneMatch(table -> table.getName().equals(name))).isTrue();
+        assertThat(catalog.getTables().stream().noneMatch(table -> table.getSqlName().equals(name))).isTrue();
     }
 
     @Test
@@ -195,7 +195,7 @@ public class ExternalCatalogTest extends SimpleTestInClusterSupport {
 
     private static Map<String, QueryDataType> tableFields(ExternalCatalog catalog, String tableName) {
         return catalog.getTables().stream()
-                      .filter(table -> tableName.equals(table.getName()))
+                      .filter(table -> tableName.equals(table.getSqlName()))
                       .findFirst()
                       .map(table -> table.getFields().stream().collect(toMap(TableField::getName, TableField::getType)))
                       .orElseThrow(NoSuchElementException::new);

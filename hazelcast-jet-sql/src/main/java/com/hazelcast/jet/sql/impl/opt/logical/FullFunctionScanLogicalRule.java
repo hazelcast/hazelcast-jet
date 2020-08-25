@@ -61,7 +61,7 @@ public final class FullFunctionScanLogicalRule extends ConverterRule {
         RelOptTableImpl relTable = RelOptTableImpl.create(
                 null,
                 scan.getRowType(),
-                asList(table.getTarget().getSchemaName(), table.getTarget().getName()), // TODO: catalog ???
+                asList(table.getTarget().getSchemaName(), table.getTarget().getSqlName()), // TODO: catalog ???
                 table,
                 null
         );

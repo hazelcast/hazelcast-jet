@@ -56,6 +56,6 @@ public class JetTable extends Table {
 
     @Override
     public String toString() {
-        return getClass().getSimpleName() + "[" + getSchemaName() + "." + getName() + ']';
+        return getClass().getSimpleName() + "[" + getSchemaName() + "." + getSqlName() + ']';
     }
 }
