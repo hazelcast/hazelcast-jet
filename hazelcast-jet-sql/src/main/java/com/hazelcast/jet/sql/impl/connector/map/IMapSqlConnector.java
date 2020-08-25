@@ -43,6 +43,7 @@ import com.hazelcast.sql.impl.schema.map.PartitionedMapTable;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -105,7 +106,9 @@ public class IMapSqlConnector extends EntrySqlConnector {
                 keyMetadata.getQueryTargetDescriptor(),
                 valueMetadata.getQueryTargetDescriptor(),
                 keyMetadata.getUpsertTargetDescriptor(),
-                valueMetadata.getUpsertTargetDescriptor()
+                valueMetadata.getUpsertTargetDescriptor(),
+                Collections.emptyList(),
+                false
         );
     }
 

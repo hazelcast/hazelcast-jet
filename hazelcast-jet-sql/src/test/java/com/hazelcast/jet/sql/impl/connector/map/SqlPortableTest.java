@@ -19,13 +19,13 @@ package com.hazelcast.jet.sql.impl.connector.map;
 import com.hazelcast.instance.impl.HazelcastInstanceImpl;
 import com.hazelcast.internal.serialization.Data;
 import com.hazelcast.internal.serialization.InternalSerializationService;
+import com.hazelcast.internal.serialization.impl.InternalGenericRecord;
 import com.hazelcast.jet.sql.JetSqlTestSupport;
 import com.hazelcast.map.impl.MapService;
 import com.hazelcast.map.impl.MapServiceContext;
 import com.hazelcast.map.impl.record.Record;
 import com.hazelcast.nio.serialization.ClassDefinition;
 import com.hazelcast.nio.serialization.ClassDefinitionBuilder;
-import com.hazelcast.nio.serialization.PortableReader;
 import com.hazelcast.spi.impl.NodeEngine;
 import com.hazelcast.sql.SqlService;
 import org.junit.BeforeClass;
@@ -164,10 +164,10 @@ public class SqlPortableTest extends JetSqlTestSupport {
 
         Entry<Data, Data> entry = randomEntryFrom(name);
 
-        PortableReader keyReader = serializationService.createPortableReader(entry.getKey());
+        InternalGenericRecord keyReader = serializationService.readAsInternalGenericRecord(entry.getKey());
         assertThat(keyReader.readInt("id")).isEqualTo(0);
 
-        PortableReader valueReader = serializationService.createPortableReader(entry.getValue());
+        InternalGenericRecord valueReader = serializationService.readAsInternalGenericRecord(entry.getValue());
         assertThat(valueReader.readUTF("name")).isNull();
 
         assertRowsEventuallyAnyOrder(
@@ -184,10 +184,10 @@ public class SqlPortableTest extends JetSqlTestSupport {
 
         Entry<Data, Data> entry = randomEntryFrom(name);
 
-        PortableReader keyReader = serializationService.createPortableReader(entry.getKey());
+        InternalGenericRecord keyReader = serializationService.readAsInternalGenericRecord(entry.getKey());
         assertThat(keyReader.readInt("id")).isEqualTo(1);
 
-        PortableReader valueReader = serializationService.createPortableReader(entry.getValue());
+        InternalGenericRecord valueReader = serializationService.readAsInternalGenericRecord(entry.getValue());
         assertThat(valueReader.readInt("id")).isEqualTo(0);
         assertThat(valueReader.readUTF("name")).isEqualTo("Alice");
 
@@ -220,10 +220,10 @@ public class SqlPortableTest extends JetSqlTestSupport {
 
         Entry<Data, Data> entry = randomEntryFrom(name);
 
-        PortableReader keyReader = serializationService.createPortableReader(entry.getKey());
+        InternalGenericRecord keyReader = serializationService.readAsInternalGenericRecord(entry.getKey());
         assertThat(keyReader.readInt("id")).isEqualTo(1);
 
-        PortableReader valueReader = serializationService.createPortableReader(entry.getValue());
+        InternalGenericRecord valueReader = serializationService.readAsInternalGenericRecord(entry.getValue());
         assertThat(valueReader.readInt("id")).isEqualTo(2);
         assertThat(valueReader.readUTF("name")).isEqualTo("Alice");
 
@@ -347,8 +347,8 @@ public class SqlPortableTest extends JetSqlTestSupport {
                 + ")"
         );
 
-        PortableReader allTypesReader = serializationService
-                .createPortableReader(randomEntryFrom(name).getValue());
+        InternalGenericRecord allTypesReader = serializationService
+                .readAsInternalGenericRecord(randomEntryFrom(name).getValue());
         assertThat(allTypesReader.readUTF("string")).isEqualTo("string");
         assertThat(allTypesReader.readChar("character")).isEqualTo('a');
         assertThat(allTypesReader.readBoolean("boolean")).isTrue();

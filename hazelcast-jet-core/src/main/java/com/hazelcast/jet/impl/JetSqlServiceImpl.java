@@ -14,7 +14,25 @@
  * limitations under the License.
  */
 
-/**
- * Public classes for the Jet SQL module.
- */
-package com.hazelcast.jet.sql;
+package com.hazelcast.jet.impl;
+
+import com.hazelcast.jet.JetSqlService;
+import com.hazelcast.sql.SqlResult;
+import com.hazelcast.sql.SqlService;
+import com.hazelcast.sql.SqlStatement;
+
+import javax.annotation.Nonnull;
+
+public class JetSqlServiceImpl implements JetSqlService {
+
+    private final SqlService delegate;
+
+    public JetSqlServiceImpl(SqlService delegate) {
+        this.delegate = delegate;
+    }
+
+    @Nonnull @Override
+    public SqlResult execute(@Nonnull SqlStatement statement) {
+        return delegate.execute(statement);
+    }
+}

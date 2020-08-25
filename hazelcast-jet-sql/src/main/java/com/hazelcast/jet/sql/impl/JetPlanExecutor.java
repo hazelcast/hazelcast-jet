@@ -18,7 +18,6 @@ package com.hazelcast.jet.sql.impl;
 
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
-import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.sql.impl.JetPlan.CreateExternalTablePlan;
 import com.hazelcast.jet.sql.impl.JetPlan.CreateJobPlan;
 import com.hazelcast.jet.sql.impl.JetPlan.DropExternalTablePlan;
@@ -36,8 +35,6 @@ import com.hazelcast.sql.impl.QueryId;
 import com.hazelcast.sql.impl.QueryResultProducer;
 import com.hazelcast.sql.impl.SqlResultImpl;
 import com.hazelcast.sql.impl.SqlRowImpl;
-import com.hazelcast.sql.impl.exec.root.BlockingRootResultConsumer;
-import com.hazelcast.sql.impl.exec.root.RootResultConsumer;
 import com.hazelcast.sql.impl.row.HeapRow;
 
 import java.util.List;
@@ -100,7 +97,6 @@ class JetPlanExecutor {
 
     SqlResult execute(DropJobPlan plan) {
         Job job = jetInstance.getJob(plan.getName());
-        JobStatus jobStatus = job == null ? null : job.getStatus();
         if (job == null || job.getStatus().isTerminal()) {
             if (plan.isIfExists()) {
                 return SqlResultImpl.createUpdateCountResult(-1);

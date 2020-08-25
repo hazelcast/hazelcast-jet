@@ -22,15 +22,16 @@ import com.hazelcast.internal.serialization.DataType;
 import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.internal.serialization.SerializationService;
 import com.hazelcast.internal.serialization.impl.AbstractSerializationService;
+import com.hazelcast.internal.serialization.impl.InternalGenericRecord;
 import com.hazelcast.internal.serialization.impl.SerializerAdapter;
 import com.hazelcast.internal.serialization.impl.portable.PortableContext;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.nio.serialization.HazelcastSerializationException;
-import com.hazelcast.nio.serialization.PortableReader;
 import com.hazelcast.nio.serialization.Serializer;
 import com.hazelcast.partition.PartitioningStrategy;
 
 import javax.annotation.Nullable;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -103,7 +104,7 @@ public class DelegatingSerializationService extends AbstractSerializationService
     }
 
     @Override
-    public PortableReader createPortableReader(Data data) {
+    public InternalGenericRecord readAsInternalGenericRecord(Data data) throws IOException {
         throw new UnsupportedOperationException();
     }
 

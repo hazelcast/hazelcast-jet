@@ -30,7 +30,7 @@ import com.hazelcast.jet.sql.impl.schema.ExternalField;
 import com.hazelcast.nio.serialization.ClassDefinition;
 import com.hazelcast.spi.impl.NodeEngine;
 import com.hazelcast.sql.SqlResult;
-import com.hazelcast.sql.impl.JetSqlService;
+import com.hazelcast.sql.impl.JetSqlCoreBackend;
 import com.hazelcast.sql.impl.QueryId;
 import com.hazelcast.sql.impl.QueryResultProducer;
 import com.hazelcast.sql.impl.optimizer.SqlPlan;
@@ -60,11 +60,11 @@ import static java.util.Collections.emptyList;
 import static java.util.Objects.requireNonNull;
 
 @SuppressWarnings("unused") // used through reflection
-public class JetSqlServiceImpl implements JetSqlService, ManagedService {
+public class JetSqlCoreBackendImpl implements JetSqlCoreBackend, ManagedService {
 
     private InternalSerializationService serializationService;
     private ExternalCatalog catalog;
-    private JetSqlBackend sqlBackend;
+    private com.hazelcast.jet.sql.impl.JetSqlBackend sqlBackend;
 
     @SuppressWarnings("unused") // used through reflection
     public void initJetInstance(@Nonnull JetInstance jetInstance) {
@@ -77,7 +77,7 @@ public class JetSqlServiceImpl implements JetSqlService, ManagedService {
 
         this.serializationService = hazelcastInstance.getSerializationService();
         this.catalog = catalog;
-        this.sqlBackend = new JetSqlBackend(nodeEngine, catalog, planExecutor);
+        this.sqlBackend = new com.hazelcast.jet.sql.impl.JetSqlBackend(nodeEngine, catalog, planExecutor);
     }
 
     @Override
