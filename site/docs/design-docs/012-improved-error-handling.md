@@ -65,13 +65,14 @@ no worse off than if it had failed automatically.
 
 ## Processing guarantees
 
-We should enable this feature only for jobs with processing guarantees.
-Only such jobs have mutable state. For jobs without processing
-guarantees, the pipeline definition and the job config are the only
-parts we can identify as state, and those are immutable.
+It only makes sense to enable this feature for jobs with processing
+guarantees. Only such jobs have mutable state. For jobs without
+processing guarantees, the pipeline definition and the job config are
+the only parts we can identify as state, and those are immutable. Batch
+jobs also fall into the category of immutable state jobs.
 
-Batch jobs also fall into the category of immutable state jobs so the
-feature won't be enabled for them either.
+However, nothing is to be gained from restricting the cases when this
+behaviour can be set, so we will not do so for now.
 
 ## Enterprise synergy
 
