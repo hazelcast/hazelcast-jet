@@ -40,6 +40,7 @@ public class MapRow implements Row {
     @Override
     public <T> T get(int index) {
         Object value = values.get(fieldNames.get(index));
+        // TODO: handle QueryDataTypeMismatchException and rethrow as QueryException
         return (T) fieldTypes.get(index).normalize(value); // TODO: deduplicate somehow with other types of rows ???
     }
 

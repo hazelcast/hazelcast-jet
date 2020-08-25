@@ -437,7 +437,7 @@ public class SqlPojoTest extends JetSqlTestSupport {
         sqlService.execute(javaSerializableMapDdl("map", String.class, String.class));
 
         assertThatThrownBy(() -> {
-            for (SqlRow r : sqlService.execute("select /*+jet*/ __key from map")) {
+            for (SqlRow r : sqlService.execute("select __key from map")) {
                 System.out.println(r);
             }
         })

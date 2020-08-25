@@ -49,6 +49,7 @@ class EntryRow implements Row {
     public <T> T get(int index) {
         try {
             Object value = PropertyUtils.getProperty(entry, fieldNames.get(index));
+            // TODO: handle QueryDataTypeMismatchException and rethrow as QueryException
             return (T) fieldTypes.get(index).normalize(value); // TODO: deduplicate somehow with other types of rows ???
         } catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
             throw sneakyThrow(e);
