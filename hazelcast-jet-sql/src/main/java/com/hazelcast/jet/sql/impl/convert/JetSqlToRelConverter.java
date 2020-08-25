@@ -19,8 +19,8 @@ package com.hazelcast.jet.sql.impl.convert;
 import com.hazelcast.jet.sql.impl.parse.SqlCreateExternalTable;
 import com.hazelcast.jet.sql.impl.parse.SqlTableColumn;
 import com.hazelcast.jet.sql.impl.schema.ExternalCatalog;
-import com.hazelcast.jet.sql.impl.schema.ExternalTable;
 import com.hazelcast.jet.sql.impl.schema.ExternalField;
+import com.hazelcast.jet.sql.impl.schema.ExternalTable;
 import com.hazelcast.jet.sql.impl.schema.UnknownStatistic;
 import com.hazelcast.sql.impl.calcite.HazelcastSqlToRelConverter;
 import com.hazelcast.sql.impl.calcite.SqlToQueryType;
@@ -122,4 +122,42 @@ public class JetSqlToRelConverter extends HazelcastSqlToRelConverter {
 
         return RelRoot.of(logicalTableModify, rowType, SqlKind.INSERT);
     }
+
+    /*@Override
+    protected void collectInsertTargets(
+            SqlInsert call,
+            final RexNode sourceRef,
+            final List<String> targetColumnNames,
+            List<RexNode> columnExprs) {
+
+        HazelcastTable hazelcastTable = getTargetTable(call).unwrap(HazelcastTable.class);
+        List<String> columnNames = new FilteringList(hazelcastTable);
+
+        super.collectInsertTargets(call, sourceRef, columnNames, columnExprs);
+
+        targetColumnNames.addAll(columnNames);
+    }
+
+    private static class FilteringList extends ArrayList<String> {
+
+        private final HazelcastTable hazelcastTable;
+
+        private FilteringList(HazelcastTable hazelcastTable) {
+            this.hazelcastTable = hazelcastTable;
+        }
+
+        @Override
+        public boolean add(String s) {
+            return !hazelcastTable.isHidden(s) && super.add(s);
+        }
+
+        @Override
+        public boolean addAll(Collection<? extends String> c) {
+            boolean modified = false;
+            for (String s : c) {
+                modified |= add(s);
+            }
+            return modified;
+        }
+    }*/
 }

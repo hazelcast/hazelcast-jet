@@ -16,27 +16,11 @@
 
 package com.hazelcast.jet.sql.impl.inject;
 
-import com.hazelcast.internal.serialization.InternalSerializationService;
-import com.hazelcast.nio.ObjectDataInput;
-import com.hazelcast.nio.ObjectDataOutput;
+public interface UpsertTarget {
 
-public class JsonUpsertTargetDescriptor implements UpsertTargetDescriptor {
+    UpsertInjector createInjector(String path);
 
-    public static final UpsertTargetDescriptor INSTANCE = new JsonUpsertTargetDescriptor();
+    void init();
 
-    JsonUpsertTargetDescriptor() {
-    }
-
-    @Override
-    public UpsertTarget create(InternalSerializationService serializationService) {
-        return new JsonUpsertTarget();
-    }
-
-    @Override
-    public void writeData(ObjectDataOutput out) {
-    }
-
-    @Override
-    public void readData(ObjectDataInput in) {
-    }
+    Object conclude();
 }

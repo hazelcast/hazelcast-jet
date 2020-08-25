@@ -16,9 +16,9 @@
 
 package com.hazelcast.jet.sql.impl.connector;
 
+import com.hazelcast.jet.sql.impl.inject.UpsertInjector;
+import com.hazelcast.jet.sql.impl.inject.UpsertTarget;
 import com.hazelcast.sql.impl.extract.QueryPath;
-import com.hazelcast.sql.impl.inject.UpsertInjector;
-import com.hazelcast.sql.impl.inject.UpsertTarget;
 import com.hazelcast.sql.impl.type.QueryDataType;
 
 import java.util.Map.Entry;
@@ -39,27 +39,34 @@ class EntryProjector {
             UpsertTarget keyTarget,
             UpsertTarget valueTarget,
             QueryPath[] paths,
-            QueryDataType[] types
+            QueryDataType[] types,
+            Boolean[] hiddens
     ) {
         this.keyTarget = keyTarget;
         this.valueTarget = valueTarget;
 
         this.types = types;
 
-        this.injectors = createInjectors(keyTarget, valueTarget, paths);
+        this.injectors = createInjectors(keyTarget, valueTarget, paths, hiddens);
     }
 
     private static UpsertInjector[] createInjectors(
             UpsertTarget keyTarget,
             UpsertTarget valueTarget,
-            QueryPath[] paths
+            QueryPath[] paths,
+            Boolean[] hiddens
     ) {
         UpsertInjector[] injectors = new UpsertInjector[paths.length];
         for (int i = 0; i < paths.length; i++) {
-            QueryPath path = paths[i];
-            injectors[i] = path.isKey()
-                    ? keyTarget.createInjector(path.getPath())
-                    : valueTarget.createInjector(path.getPath());
+            // support for discovered maps INSERTs...
+            if (hiddens[i]) {
+                injectors[i] = value -> { };
+            } else {
+                QueryPath path = paths[i];
+                injectors[i] = path.isKey()
+                        ? keyTarget.createInjector(path.getPath())
+                        : valueTarget.createInjector(path.getPath());
+            }
         }
         return injectors;
     }

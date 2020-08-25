@@ -106,4 +106,24 @@ public class JetSqlValidator extends HazelcastSqlValidator {
         insertNode.getSource().accept(visitor);
         return visitor.found;
     }
+
+    /*@Override
+    protected RelDataType createTargetRowType(
+            SqlValidatorTable table,
+            SqlNodeList targetColumnList,
+            boolean append) {
+        RelDataType targetRowType = super.createTargetRowType(table, targetColumnList, append);
+
+        HazelcastTable hazelcastTable = table.unwrap(HazelcastTable.class);
+        List<RelDataTypeField> originalFields = targetRowType.getFieldList();
+
+        List<RelDataTypeField> filteredFields = new ArrayList<>(originalFields.size());
+        for (RelDataTypeField field : originalFields) {
+            if (!hazelcastTable.isHidden(field.getName())) {
+                filteredFields.add(field);
+            }
+        }
+
+        return new RelRecordType(targetRowType.getStructKind(), filteredFields, targetRowType.isNullable());
+    }*/
 }

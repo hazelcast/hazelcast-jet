@@ -16,8 +16,6 @@
 
 package com.hazelcast.jet.sql.impl.inject;
 
-import com.hazelcast.sql.impl.inject.UpsertInjector;
-import com.hazelcast.sql.impl.inject.UpsertTarget;
 import com.hazelcast.sql.impl.type.QueryDataType;
 
 // TODO: can it be non-thread safe ?

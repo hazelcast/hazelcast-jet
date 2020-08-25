@@ -124,7 +124,7 @@ public class SchemaTest extends JetSqlTestSupport {
     public void when_schemaNameUsed_then_rejected() {
         assertThatThrownBy(() ->
                 sqlService.execute(javaSerializableMapDdl("schema." + createRandomName(), Long.class, Long.class)))
-                        .hasMessageContaining("Encountered \".\" at line 1, column 29");
+                .hasMessageContaining("Encountered \".\" at line 1, column 29");
     }
 
     @Test
@@ -138,7 +138,7 @@ public class SchemaTest extends JetSqlTestSupport {
         assertThatThrownBy(() -> sqlService.execute("CREATE EXTERNAL TABLE t TYPE TooBad"))
                 .hasMessageContaining("Invalid table definition: Unknown type: TOOBAD");
     }
-    
+
     @Test
     public void test_caseInsensitiveType() {
         sqlService.execute("CREATE EXTERNAL TABLE t1 TYPE TestStream");

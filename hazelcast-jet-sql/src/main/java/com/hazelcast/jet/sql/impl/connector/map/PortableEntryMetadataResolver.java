@@ -47,9 +47,9 @@ import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.OPTION_VALU
 import static com.hazelcast.jet.sql.impl.connector.ResolverUtil.lookupClassDefinition;
 
 // TODO: deduplicate with MapSampleMetadataResolver
-final class PortableEntryMetadataResolver implements EntryMetadataResolver {
+public final class PortableEntryMetadataResolver implements EntryMetadataResolver {
 
-    static final PortableEntryMetadataResolver INSTANCE = new PortableEntryMetadataResolver();
+    public static final PortableEntryMetadataResolver INSTANCE = new PortableEntryMetadataResolver();
 
     private PortableEntryMetadataResolver() {
     }
@@ -83,7 +83,7 @@ final class PortableEntryMetadataResolver implements EntryMetadataResolver {
             }
             String name = externalField == null ? entry.getKey() : externalField.name();
 
-            ExternalField field = new ExternalField(name, type, path.getFullPath());
+            ExternalField field = new ExternalField(name, type, path.toString());
 
             fields.putIfAbsent(field.name(), field);
         }
@@ -92,7 +92,7 @@ final class PortableEntryMetadataResolver implements EntryMetadataResolver {
             String name = entry.getValue().name();
             QueryDataType type = entry.getValue().type();
 
-            ExternalField field = new ExternalField(name, type, path.getFullPath());
+            ExternalField field = new ExternalField(name, type, path.toString());
 
             fields.putIfAbsent(field.name(), field);
         }

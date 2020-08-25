@@ -29,12 +29,10 @@ import com.hazelcast.sql.impl.schema.map.MapTableField;
 import com.hazelcast.sql.impl.type.QueryDataType;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Set;
 
 import static com.hazelcast.jet.sql.SqlConnector.JSON_SERIALIZATION_FORMAT;
 
@@ -70,12 +68,12 @@ final class JsonEntryMetadataResolver implements EntryMetadataResolver {
         for (Entry<QueryPath, ExternalField> entry : externalFieldsByPath.entrySet()) {
             QueryPath path = entry.getKey();
             if (path.getPath() == null) {
-                throw QueryException.error("Invalid external name '" + path.getFullPath() + "'");
+                throw QueryException.error("Invalid external name '" + path.toString() + "'");
             }
             QueryDataType type = entry.getValue().type();
             String name = entry.getValue().name();
 
-            ExternalField field = new ExternalField(name, type, path.getFullPath());
+            ExternalField field = new ExternalField(name, type, path.toString());
 
             fields.putIfAbsent(field.name(), field);
         }
@@ -94,22 +92,22 @@ final class JsonEntryMetadataResolver implements EntryMetadataResolver {
                 : extractValueFields(externalFields, name -> new QueryPath(name, false));
 
         List<TableField> fields = new ArrayList<>();
-        Set<String> pathsRequiringConversion = new HashSet<>();
+        //Set<String> pathsRequiringConversion = new HashSet<>();
         for (Entry<QueryPath, ExternalField> entry : externalFieldsByPath.entrySet()) {
             QueryPath path = entry.getKey();
             QueryDataType type = entry.getValue().type();
             String name = entry.getValue().name();
-            boolean requiresConversion = doesRequireConversion(type);
+            //boolean requiresConversion = doesRequireConversion(type);
 
-            MapTableField field = new MapTableField(name, type, false, path, requiresConversion);
+            MapTableField field = new MapTableField(name, type, false, path/*, requiresConversion*/);
 
             fields.add(field);
-            if (field.isRequiringConversion()) {
+            /*if (field.isRequiringConversion()) {
                 pathsRequiringConversion.add(field.getPath().getPath());
-            }
+            }*/
         }
         return new EntryMetadata(
-                new GenericQueryTargetDescriptor(pathsRequiringConversion),
+                new GenericQueryTargetDescriptor(/*pathsRequiringConversion*/),
                 HazelcastJsonUpsertTargetDescriptor.INSTANCE,
                 fields
         );
@@ -121,7 +119,7 @@ final class JsonEntryMetadataResolver implements EntryMetadataResolver {
             // assuming values are monomorphic
             case BIGINT:
             case VARCHAR:
-                return !type.isStatic();
+            //return !type.isStatic();
             default:
                 return true;
         }

@@ -18,7 +18,6 @@ package com.hazelcast.jet.sql;
 
 import com.hazelcast.jet.SimpleTestInClusterSupport;
 import com.hazelcast.jet.sql.impl.connector.map.IMapSqlConnector;
-import com.hazelcast.map.IMap;
 import com.hazelcast.sql.SqlResult;
 import com.hazelcast.sql.SqlRow;
 import com.hazelcast.sql.SqlService;
@@ -49,14 +48,14 @@ public abstract class JetSqlTestSupport extends SimpleTestInClusterSupport {
     /**
      * Execute a query and assert that it eventually contains the expected entries.
      *
-     * @param mapName The IMap name
-     * @param sql The query
+     * @param mapName  The IMap name
+     * @param sql      The query
      * @param expected Expected IMap contents after executing the query
      */
     public static <K, V> void assertMapEventually(String mapName, String sql, Map<K, V> expected) {
         instance().getHazelcastInstance().getSql().execute(sql);
 
-        IMap<K, V> map = instance().getMap(mapName);
+        Map<K, V> map = instance().getMap(mapName);
         assertTrueEventually(() ->
                 assertThat(new HashMap<>(map)).containsExactlyEntriesOf(expected), 20);
     }
@@ -66,7 +65,7 @@ public abstract class JetSqlTestSupport extends SimpleTestInClusterSupport {
      * expectedRows}. If there are more rows in the result, they are ignored.
      * Suitable for streaming queries that don't terminate.
      *
-     * @param sql The query
+     * @param sql          The query
      * @param expectedRows Expected rows
      */
     public static void assertRowsEventuallyAnyOrder(String sql, Collection<Row> expectedRows) {

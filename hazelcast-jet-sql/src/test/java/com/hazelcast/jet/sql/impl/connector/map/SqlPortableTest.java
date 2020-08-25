@@ -122,6 +122,41 @@ public class SqlPortableTest extends JetSqlTestSupport {
     }
 
     @Test
+    public void supportsInsertsIntoDiscoveredMap() {
+        String name = generateRandomName();
+
+        sqlService.execute("CREATE EXTERNAL TABLE " + name + " ("
+                + "id INT EXTERNAL NAME \"__key.id\""
+                + ", name VARCHAR EXTERNAL NAME \"this.name\""
+                + ") TYPE \"" + IMapSqlConnector.TYPE_NAME + "\" "
+                + "OPTIONS ("
+                + "\"" + OPTION_SERIALIZATION_KEY_FORMAT + "\" '" + PORTABLE_SERIALIZATION_FORMAT + "'"
+                + ", \"" + OPTION_KEY_FACTORY_ID + "\" '" + PERSON_ID_FACTORY_ID + "'"
+                + ", \"" + OPTION_KEY_CLASS_ID + "\" '" + PERSON_ID_CLASS_ID + "'"
+                + ", \"" + OPTION_KEY_CLASS_VERSION + "\" '" + PERSON_ID_CLASS_VERSION + "'"
+                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + PORTABLE_SERIALIZATION_FORMAT + "'"
+                + ", \"" + OPTION_VALUE_FACTORY_ID + "\" '" + PERSON_FACTORY_ID + "'"
+                + ", \"" + OPTION_VALUE_CLASS_ID + "\" '" + PERSON_CLASS_ID + "'"
+                + ", \"" + OPTION_VALUE_CLASS_VERSION + "\" '" + PERSON_CLASS_VERSION + "'"
+                + ")"
+        );
+
+        sqlService.execute("INSERT OVERWRITE " + name + " VALUES (1, 'Alice')");
+        sqlService.execute("DROP EXTERNAL TABLE " + name);
+
+        // TODO: requires explicit column list due to hidden fields...
+        sqlService.execute("INSERT OVERWRITE partitioned." + name + " (id, name) VALUES (2, 'Bob')");
+
+        assertRowsEventuallyAnyOrder(
+                "SELECT * FROM " + name,
+                asList(
+                        new Row(1, "Alice"),
+                        new Row(2, "Bob")
+                )
+        );
+    }
+
+    @Test
     public void supportsNulls() throws IOException {
         String name = createTableWithRandomName();
 
@@ -323,7 +358,7 @@ public class SqlPortableTest extends JetSqlTestSupport {
         assertThat(allTypesReader.readLong("long")).isEqualTo(9223372036854775806L);
         assertThat(allTypesReader.readFloat("float")).isEqualTo(1234567890.1F);
         assertThat(allTypesReader.readDouble("double")).isEqualTo(123451234567890.1D);
-        // TODO: assert BigDecimal/BigDecimal types when/if supported
+        // TODO: assert BigDecimal types when/if supported
         // TODO: assert temporal types when/if supported
 
         assertRowsEventuallyAnyOrder(
@@ -339,7 +374,7 @@ public class SqlPortableTest extends JetSqlTestSupport {
                         9223372036854775806L,
                         1234567890.1F,
                         123451234567890.1D
-                        // TODO: assert BigDecimal/BigDecimal types when/if supported
+                        // TODO: assert BigDecimal types when/if supported
                         // TODO: assert temporal types when/if supported
                 ))
         );

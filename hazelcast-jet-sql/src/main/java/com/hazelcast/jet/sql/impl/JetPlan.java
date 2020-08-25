@@ -22,17 +22,11 @@ import com.hazelcast.jet.sql.impl.schema.ExternalTable;
 import com.hazelcast.sql.SqlResult;
 import com.hazelcast.sql.SqlRowMetadata;
 import com.hazelcast.sql.impl.QueryId;
-import com.hazelcast.sql.impl.explain.QueryExplain;
 import com.hazelcast.sql.impl.optimizer.SqlPlan;
 
 import java.util.List;
 
 interface JetPlan extends SqlPlan {
-
-    @Override
-    default QueryExplain getExplain() {
-        throw new UnsupportedOperationException("TODO");
-    }
 
     SqlResult execute(List<Object> params, long timeout, int pageSize);
 

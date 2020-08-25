@@ -43,6 +43,8 @@ import java.util.Set;
 
 import static com.hazelcast.jet.sql.impl.parse.ParserResource.RESOURCE;
 
+// TODO: review and get in line with imdg after its freeze
+
 /**
  * Visitor that throws exceptions for unsupported SQL features.
  */
@@ -166,15 +168,15 @@ public final class UnsupportedOperationVisitor implements SqlVisitor<Void> {
         SUPPORTED_OPERATORS.add(SqlStdOperatorTable.TRUNCATE);
 
         // Strings
-        SUPPORTED_OPERATORS.add(SqlStdOperatorTable.CHAR_LENGTH);
-        SUPPORTED_OPERATORS.add(SqlStdOperatorTable.CHARACTER_LENGTH);
+        SUPPORTED_OPERATORS.add(HazelcastSqlOperatorTable.ASCII);
+        SUPPORTED_OPERATORS.add(HazelcastSqlOperatorTable.INITCAP);
+        SUPPORTED_OPERATORS.add(HazelcastSqlOperatorTable.CHAR_LENGTH);
+        SUPPORTED_OPERATORS.add(HazelcastSqlOperatorTable.CHARACTER_LENGTH);
         SUPPORTED_OPERATORS.add(HazelcastSqlOperatorTable.LENGTH);
-        SUPPORTED_OPERATORS.add(SqlStdOperatorTable.UPPER);
-        SUPPORTED_OPERATORS.add(SqlStdOperatorTable.LOWER);
-        SUPPORTED_OPERATORS.add(SqlStdOperatorTable.INITCAP);
-        SUPPORTED_OPERATORS.add(SqlStdOperatorTable.ASCII);
-        SUPPORTED_OPERATORS.add(SqlStdOperatorTable.REPLACE);
-        SUPPORTED_OPERATORS.add(SqlStdOperatorTable.SUBSTRING);
+        SUPPORTED_OPERATORS.add(HazelcastSqlOperatorTable.LOWER);
+        SUPPORTED_OPERATORS.add(HazelcastSqlOperatorTable.UPPER);
+        SUPPORTED_OPERATORS.add(HazelcastSqlOperatorTable.CONCAT);
+        SUPPORTED_OPERATORS.add(HazelcastSqlOperatorTable.SUBSTRING);
 
         // Dates
         SUPPORTED_OPERATORS.add(SqlStdOperatorTable.CURRENT_DATE);

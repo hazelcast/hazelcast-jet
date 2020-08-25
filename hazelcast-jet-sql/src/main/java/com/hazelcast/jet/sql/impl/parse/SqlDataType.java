@@ -43,13 +43,13 @@ public class SqlDataType extends SqlIdentifier {
                 writer.keyword("INT");
                 break;
 
-            case INTERVAL_YEAR_MONTH:
+           /* case INTERVAL_YEAR_MONTH:
                 writer.keyword("INTERVAL YEAR TO MONTH");
                 break;
 
             case INTERVAL_DAY_SECOND:
                 writer.keyword("INTERVAL DAY TO SECOND");
-                break;
+                break;*/
 
             default:
                 writer.keyword(type.getTypeFamily().name().replace('_', ' '));

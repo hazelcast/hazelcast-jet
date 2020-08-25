@@ -19,12 +19,10 @@ package com.hazelcast.jet.sql.impl.inject;
 import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
-import com.hazelcast.sql.impl.inject.UpsertTarget;
-import com.hazelcast.sql.impl.inject.UpsertTargetDescriptor;
 
 public class PrimitiveUpsertTargetDescriptor implements UpsertTargetDescriptor {
 
-    public static final UpsertTargetDescriptor INSTANCE = new PrimitiveUpsertTargetDescriptor();
+    public static final PrimitiveUpsertTargetDescriptor DEFAULT = new PrimitiveUpsertTargetDescriptor();
 
     PrimitiveUpsertTargetDescriptor() {
     }
@@ -40,5 +38,20 @@ public class PrimitiveUpsertTargetDescriptor implements UpsertTargetDescriptor {
 
     @Override
     public void readData(ObjectDataInput in) {
+    }
+
+    @Override
+    public String toString() {
+        return "PrimitiveUpsertTargetDescriptor{}";
+    }
+
+    @Override
+    public int hashCode() {
+        return 0;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        return obj instanceof PrimitiveUpsertTargetDescriptor;
     }
 }

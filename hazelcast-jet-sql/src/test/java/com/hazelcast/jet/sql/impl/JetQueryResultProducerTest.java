@@ -50,7 +50,7 @@ public class JetQueryResultProducerTest {
             assertInstanceOf(Row.class, iterator.next());
             semaphore.release();
             assertFalse(iterator.hasNext());
-            assertThatThrownBy(() -> iterator.next())
+            assertThatThrownBy(iterator::next)
                     .isInstanceOf(NoSuchElementException.class);
             semaphore.release();
         });
@@ -75,7 +75,7 @@ public class JetQueryResultProducerTest {
 
         p.done();
 
-        assertTrueEventually(() -> future.isDone(), 5);
+        assertTrueEventually(future::isDone, 5);
         semaphore.acquire();
 
         // called for the side-effect of throwing the exception if it happened in the thread

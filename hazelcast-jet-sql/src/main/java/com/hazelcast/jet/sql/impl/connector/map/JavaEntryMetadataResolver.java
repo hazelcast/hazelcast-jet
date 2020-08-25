@@ -93,7 +93,7 @@ public final class JavaEntryMetadataResolver implements EntryMetadataResolver {
         }
         String name = externalField == null ? (isKey ? KEY : VALUE) : externalField.name();
 
-        ExternalField field = new ExternalField(name, type, path.getFullPath());
+        ExternalField field = new ExternalField(name, type, path.toString());
 
         for (ExternalField ef : externalFieldsByPath.values()) {
             if (!field.name().equals(ef.name())) {
@@ -124,7 +124,7 @@ public final class JavaEntryMetadataResolver implements EntryMetadataResolver {
             }
             String name = externalField == null ? entry.getKey() : externalField.name();
 
-            ExternalField field = new ExternalField(name, type, path.getFullPath());
+            ExternalField field = new ExternalField(name, type, path.toString());
 
             fields.putIfAbsent(field.name(), field);
         }
@@ -133,7 +133,7 @@ public final class JavaEntryMetadataResolver implements EntryMetadataResolver {
             String name = entry.getValue().name();
             QueryDataType type = entry.getValue().type();
 
-            ExternalField field = new ExternalField(name, type, path.getFullPath());
+            ExternalField field = new ExternalField(name, type, path.toString());
 
             fields.putIfAbsent(field.name(), field);
         }
@@ -168,7 +168,7 @@ public final class JavaEntryMetadataResolver implements EntryMetadataResolver {
 
         return new EntryMetadata(
                 GenericQueryTargetDescriptor.DEFAULT,
-                PrimitiveUpsertTargetDescriptor.INSTANCE,
+                PrimitiveUpsertTargetDescriptor.DEFAULT,
                 singletonList(field)
         );
     }

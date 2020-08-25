@@ -16,8 +16,8 @@
 
 package com.hazelcast.jet.sql.impl.connector;
 
+import com.hazelcast.jet.sql.impl.inject.UpsertTargetDescriptor;
 import com.hazelcast.sql.impl.extract.QueryTargetDescriptor;
-import com.hazelcast.sql.impl.inject.UpsertTargetDescriptor;
 import com.hazelcast.sql.impl.schema.TableField;
 
 import java.util.List;

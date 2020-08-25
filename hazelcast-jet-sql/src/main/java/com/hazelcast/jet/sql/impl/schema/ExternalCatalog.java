@@ -31,7 +31,6 @@ import java.util.Map;
 import java.util.stream.Stream;
 
 import static com.hazelcast.sql.impl.QueryUtils.CATALOG;
-import static com.hazelcast.sql.impl.QueryUtils.SCHEMA_NAME_PUBLIC;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 import static java.util.Objects.requireNonNull;
@@ -41,6 +40,8 @@ public class ExternalCatalog implements TableResolver {
 
     // TODO: is it the best/right name?
     public static final String CATALOG_MAP_NAME = "__sql.catalog";
+
+    private static final String SCHEMA_NAME_PUBLIC = "public";
 
     private static final List<List<String>> SEARCH_PATHS = singletonList(asList(CATALOG, SCHEMA_NAME_PUBLIC));
 

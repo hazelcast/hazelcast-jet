@@ -17,26 +17,9 @@
 package com.hazelcast.jet.sql.impl.inject;
 
 import com.hazelcast.internal.serialization.InternalSerializationService;
-import com.hazelcast.nio.ObjectDataInput;
-import com.hazelcast.nio.ObjectDataOutput;
+import com.hazelcast.nio.serialization.DataSerializable;
 
-public class JsonUpsertTargetDescriptor implements UpsertTargetDescriptor {
+public interface UpsertTargetDescriptor extends DataSerializable {
 
-    public static final UpsertTargetDescriptor INSTANCE = new JsonUpsertTargetDescriptor();
-
-    JsonUpsertTargetDescriptor() {
-    }
-
-    @Override
-    public UpsertTarget create(InternalSerializationService serializationService) {
-        return new JsonUpsertTarget();
-    }
-
-    @Override
-    public void writeData(ObjectDataOutput out) {
-    }
-
-    @Override
-    public void readData(ObjectDataInput in) {
-    }
+    UpsertTarget create(InternalSerializationService serializationService);
 }

@@ -24,8 +24,6 @@ import com.hazelcast.nio.serialization.PortableReader;
 import com.hazelcast.nio.serialization.PortableWriter;
 import com.hazelcast.nio.serialization.VersionedPortable;
 import com.hazelcast.sql.impl.QueryException;
-import com.hazelcast.sql.impl.inject.UpsertInjector;
-import com.hazelcast.sql.impl.inject.UpsertTarget;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;

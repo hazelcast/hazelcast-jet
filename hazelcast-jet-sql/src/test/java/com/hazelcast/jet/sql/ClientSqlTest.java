@@ -74,7 +74,7 @@ public class ClientSqlTest extends JetSqlTestSupport {
 
         client.shutdown();
         assertJobStatusEventually(job, FAILED);
-        assertThatThrownBy(() -> job.join())
+        assertThatThrownBy(job::join)
                 .hasMessageContaining("QueryException: Client cannot be reached");
     }
 

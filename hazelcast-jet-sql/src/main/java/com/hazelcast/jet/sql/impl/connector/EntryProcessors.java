@@ -22,11 +22,11 @@ import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.ResettableSingletonTraverser;
 import com.hazelcast.jet.impl.execution.init.Contexts.ProcSupplierCtx;
 import com.hazelcast.jet.impl.processor.TransformP;
+import com.hazelcast.jet.sql.impl.inject.UpsertTargetDescriptor;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.DataSerializable;
 import com.hazelcast.sql.impl.extract.QueryPath;
-import com.hazelcast.sql.impl.inject.UpsertTargetDescriptor;
 import com.hazelcast.sql.impl.schema.TableField;
 import com.hazelcast.sql.impl.schema.map.MapTableField;
 import com.hazelcast.sql.impl.type.QueryDataType;
@@ -57,6 +57,7 @@ public final class EntryProcessors {
 
         private QueryPath[] paths;
         private QueryDataType[] types;
+        private Boolean[] hiddens;
 
         private transient InternalSerializationService serializationService;
 
@@ -75,6 +76,7 @@ public final class EntryProcessors {
             // TODO: get rid of casting ???
             this.paths = fields.stream().map(field -> ((MapTableField) field).getPath()).toArray(QueryPath[]::new);
             this.types = fields.stream().map(TableField::getType).toArray(QueryDataType[]::new);
+            this.hiddens = fields.stream().map(TableField::isHidden).toArray(Boolean[]::new);
         }
 
         @Override
@@ -92,7 +94,8 @@ public final class EntryProcessors {
                         keyDescriptor.create(serializationService),
                         valueDescriptor.create(serializationService),
                         paths,
-                        types
+                        types,
+                        hiddens
                 );
                 Processor processor = new TransformP<Object[], Object>(row -> {
                     traverser.accept(projector.project(row));
@@ -115,6 +118,7 @@ public final class EntryProcessors {
             for (QueryDataType type : types) {
                 out.writeObject(type);
             }
+            out.writeObject(hiddens);
         }
 
         @Override
@@ -129,6 +133,7 @@ public final class EntryProcessors {
             for (int i = 0; i < types.length; i++) {
                 types[i] = in.readObject();
             }
+            hiddens = in.readObject();
         }
     }
 }

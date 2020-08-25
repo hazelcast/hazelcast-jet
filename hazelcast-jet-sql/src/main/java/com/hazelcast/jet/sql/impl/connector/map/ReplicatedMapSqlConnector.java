@@ -19,16 +19,11 @@ package com.hazelcast.jet.sql.impl.connector.map;
 import com.hazelcast.jet.sql.impl.connector.EntryMetadata;
 import com.hazelcast.jet.sql.impl.connector.EntryMetadataResolver;
 import com.hazelcast.jet.sql.impl.connector.EntrySqlConnector;
-import com.hazelcast.replicatedmap.impl.ReplicatedMapService;
-import com.hazelcast.replicatedmap.impl.record.ReplicatedRecordStore;
 import com.hazelcast.spi.impl.NodeEngine;
-import com.hazelcast.sql.impl.schema.ConstantTableStatistics;
 import com.hazelcast.sql.impl.schema.Table;
 import com.hazelcast.sql.impl.schema.TableField;
-import com.hazelcast.sql.impl.schema.map.ReplicatedMapTable;
 
 import javax.annotation.Nonnull;
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -68,7 +63,7 @@ public class ReplicatedMapSqlConnector extends EntrySqlConnector {
             @Nonnull EntryMetadata valueMetadata
     ) {
         // TODO: deduplicate with ReplicatedMapTableResolver ???
-        ReplicatedMapService service = nodeEngine.getService(ReplicatedMapService.SERVICE_NAME);
+        /*ReplicatedMapService service = nodeEngine.getService(ReplicatedMapService.SERVICE_NAME);
         Collection<ReplicatedRecordStore> stores = service.getAllReplicatedRecordStores(objectName);
 
         long estimatedRowCount = stores.size() * nodeEngine.getPartitionService().getPartitionCount();
@@ -83,7 +78,8 @@ public class ReplicatedMapSqlConnector extends EntrySqlConnector {
                 valueMetadata.getQueryTargetDescriptor(),
                 keyMetadata.getUpsertTargetDescriptor(),
                 valueMetadata.getUpsertTargetDescriptor()
-        );
+        );*/
+        return null;
     }
 
     @Override

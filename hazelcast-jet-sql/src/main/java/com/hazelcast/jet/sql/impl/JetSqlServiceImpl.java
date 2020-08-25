@@ -17,11 +17,17 @@
 package com.hazelcast.jet.sql.impl;
 
 import com.hazelcast.instance.impl.HazelcastInstanceImpl;
+import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.internal.services.ManagedService;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.impl.JetService;
+import com.hazelcast.jet.sql.impl.connector.EntryMetadata;
+import com.hazelcast.jet.sql.impl.connector.map.JavaEntryMetadataResolver;
+import com.hazelcast.jet.sql.impl.connector.map.PortableEntryMetadataResolver;
 import com.hazelcast.jet.sql.impl.schema.ExternalCatalog;
+import com.hazelcast.jet.sql.impl.schema.ExternalField;
+import com.hazelcast.nio.serialization.ClassDefinition;
 import com.hazelcast.spi.impl.NodeEngine;
 import com.hazelcast.sql.SqlResult;
 import com.hazelcast.sql.impl.JetSqlService;
@@ -29,29 +35,47 @@ import com.hazelcast.sql.impl.QueryId;
 import com.hazelcast.sql.impl.QueryResultProducer;
 import com.hazelcast.sql.impl.optimizer.SqlPlan;
 import com.hazelcast.sql.impl.schema.TableResolver;
+import com.hazelcast.sql.impl.schema.map.JetMapMetadataResolver;
 
 import javax.annotation.Nonnull;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
+import static com.hazelcast.jet.sql.SqlConnector.JAVA_SERIALIZATION_FORMAT;
+import static com.hazelcast.jet.sql.SqlConnector.PORTABLE_SERIALIZATION_FORMAT;
+import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.OPTION_KEY_CLASS;
+import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.OPTION_KEY_CLASS_ID;
+import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.OPTION_KEY_CLASS_VERSION;
+import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.OPTION_KEY_FACTORY_ID;
+import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.OPTION_SERIALIZATION_KEY_FORMAT;
+import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.OPTION_SERIALIZATION_VALUE_FORMAT;
+import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.OPTION_VALUE_CLASS;
+import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.OPTION_VALUE_CLASS_ID;
+import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.OPTION_VALUE_CLASS_VERSION;
+import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.OPTION_VALUE_FACTORY_ID;
+import static java.util.Collections.emptyList;
 import static java.util.Objects.requireNonNull;
 
 @SuppressWarnings("unused") // used through reflection
 public class JetSqlServiceImpl implements JetSqlService, ManagedService {
 
+    private InternalSerializationService serializationService;
     private ExternalCatalog catalog;
     private JetSqlBackend sqlBackend;
 
     @SuppressWarnings("unused") // used through reflection
     public void initJetInstance(@Nonnull JetInstance jetInstance) {
-        NodeEngine nodeEngine = ((HazelcastInstanceImpl) jetInstance.getHazelcastInstance()).node.nodeEngine;
+        HazelcastInstanceImpl hazelcastInstance = (HazelcastInstanceImpl) jetInstance.getHazelcastInstance();
+        NodeEngine nodeEngine = hazelcastInstance.node.nodeEngine;
         JetService jetService = nodeEngine.getService(JetService.SERVICE_NAME);
         Map<QueryId, QueryResultProducer> resultConsumerRegistry = jetService.getResultConsumerRegistry();
         ExternalCatalog catalog = new ExternalCatalog(nodeEngine);
         JetPlanExecutor planExecutor = new JetPlanExecutor(requireNonNull(jetInstance), resultConsumerRegistry, catalog);
 
+        this.serializationService = hazelcastInstance.getSerializationService();
         this.catalog = catalog;
         this.sqlBackend = new JetSqlBackend(nodeEngine, catalog, planExecutor);
     }
@@ -59,6 +83,37 @@ public class JetSqlServiceImpl implements JetSqlService, ManagedService {
     @Override
     public List<TableResolver> tableResolvers() {
         return Collections.singletonList(catalog);
+    }
+
+    @Override
+    public JetMapMetadataResolver mapMetadataResolver() {
+        // TODO: refactor, extract to separate class
+        return new JetMapMetadataResolver() {
+
+            @Override
+            public Object resolveClass(Class<?> clazz, boolean key) {
+                Map<String, String> options = new HashMap<>();
+                options.put(key ? OPTION_SERIALIZATION_KEY_FORMAT : OPTION_SERIALIZATION_VALUE_FORMAT, JAVA_SERIALIZATION_FORMAT);
+                options.put(key ? OPTION_KEY_CLASS : OPTION_VALUE_CLASS, clazz.getName());
+
+                List<ExternalField> externalFields = JavaEntryMetadataResolver.INSTANCE.resolveFields(emptyList(), options, key, serializationService);
+                EntryMetadata metadata = JavaEntryMetadataResolver.INSTANCE.resolveMetadata(externalFields, options, key, serializationService);
+                return metadata.getUpsertTargetDescriptor();
+            }
+
+            @Override
+            public Object resolvePortable(ClassDefinition clazz, boolean key) {
+                Map<String, String> options = new HashMap<>();
+                options.put(key ? OPTION_SERIALIZATION_KEY_FORMAT : OPTION_SERIALIZATION_VALUE_FORMAT, PORTABLE_SERIALIZATION_FORMAT);
+                options.put(key ? OPTION_KEY_FACTORY_ID : OPTION_VALUE_FACTORY_ID, String.valueOf(clazz.getFactoryId()));
+                options.put(key ? OPTION_KEY_CLASS_ID : OPTION_VALUE_CLASS_ID, String.valueOf(clazz.getClassId()));
+                options.put(key ? OPTION_KEY_CLASS_VERSION : OPTION_VALUE_CLASS_VERSION, String.valueOf(clazz.getVersion()));
+
+                List<ExternalField> externalFields = PortableEntryMetadataResolver.INSTANCE.resolveFields(emptyList(), options, key, serializationService);
+                EntryMetadata metadata = PortableEntryMetadataResolver.INSTANCE.resolveMetadata(externalFields, options, key, serializationService);
+                return metadata.getUpsertTargetDescriptor();
+            }
+        };
     }
 
     @Override

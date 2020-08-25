@@ -16,9 +16,6 @@
 
 package com.hazelcast.jet.sql.impl.inject;
 
-import com.hazelcast.sql.impl.inject.UpsertInjector;
-import com.hazelcast.sql.impl.inject.UpsertTarget;
-
 // TODO: can it be non-thread safe ?
 class PrimitiveUpsertTarget implements UpsertTarget {
 

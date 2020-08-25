@@ -16,8 +16,8 @@
 
 package com.hazelcast.jet.sql.impl.connector;
 
-import com.hazelcast.sql.impl.inject.UpsertInjector;
-import com.hazelcast.sql.impl.inject.UpsertTarget;
+import com.hazelcast.jet.sql.impl.inject.UpsertInjector;
+import com.hazelcast.jet.sql.impl.inject.UpsertTarget;
 import com.hazelcast.sql.impl.type.QueryDataType;
 
 import static com.hazelcast.jet.sql.impl.type.converter.ToConverters.getToConverter;

@@ -28,8 +28,8 @@ import com.hazelcast.jet.sql.impl.connector.EntryMetadata;
 import com.hazelcast.jet.sql.impl.connector.EntryMetadataResolver;
 import com.hazelcast.jet.sql.impl.connector.EntrySqlConnector;
 import com.hazelcast.jet.sql.impl.expression.ExpressionUtil;
+import com.hazelcast.jet.sql.impl.inject.UpsertTargetDescriptor;
 import com.hazelcast.map.IMap;
-import com.hazelcast.map.impl.MapContainer;
 import com.hazelcast.map.impl.MapService;
 import com.hazelcast.map.impl.MapServiceContext;
 import com.hazelcast.query.Predicates;
@@ -38,7 +38,6 @@ import com.hazelcast.sql.impl.expression.Expression;
 import com.hazelcast.sql.impl.schema.ConstantTableStatistics;
 import com.hazelcast.sql.impl.schema.Table;
 import com.hazelcast.sql.impl.schema.TableField;
-import com.hazelcast.sql.impl.schema.map.MapTableIndex;
 import com.hazelcast.sql.impl.schema.map.PartitionedMapTable;
 
 import javax.annotation.Nonnull;
@@ -50,7 +49,6 @@ import java.util.Map.Entry;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
-import static com.hazelcast.config.InMemoryFormat.NATIVE;
 import static com.hazelcast.jet.Traversers.traverseIterable;
 import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.processor.Processors.flatMapUsingServiceP;
@@ -59,9 +57,6 @@ import static com.hazelcast.jet.sql.impl.connector.EntryProcessors.entryProjecto
 import static com.hazelcast.jet.sql.impl.expression.ExpressionUtil.joinFn;
 import static com.hazelcast.jet.sql.impl.expression.ExpressionUtil.projectionFn;
 import static com.hazelcast.sql.impl.schema.map.MapTableUtils.estimatePartitionedMapRowCount;
-import static com.hazelcast.sql.impl.schema.map.MapTableUtils.getPartitionedMapDistributionField;
-import static com.hazelcast.sql.impl.schema.map.MapTableUtils.getPartitionedMapIndexes;
-import static java.util.Collections.emptyList;
 import static java.util.stream.Collectors.toMap;
 
 public class IMapSqlConnector extends EntrySqlConnector {
@@ -98,14 +93,8 @@ public class IMapSqlConnector extends EntrySqlConnector {
         // TODO: deduplicate with PartitionedMapTableResolver ???
         MapService service = nodeEngine.getService(MapService.SERVICE_NAME);
         MapServiceContext context = service.getMapServiceContext();
-        MapContainer container = context.getMapContainer(objectName);
 
         long estimatedRowCount = estimatePartitionedMapRowCount(nodeEngine, context, objectName);
-        List<MapTableIndex> indexes = container != null ? getPartitionedMapIndexes(container, fields) : emptyList();
-        int distributionFieldOrdinal =
-                container != null ? getPartitionedMapDistributionField(container, context, fields) : -1;
-        boolean nativeMemoryEnabled = container != null && nodeEngine.getConfig().getNativeMemoryConfig().isEnabled()
-                && container.getMapConfig().getInMemoryFormat() == NATIVE;
 
         return new PartitionedMapTable(
                 schemaName,
@@ -116,10 +105,7 @@ public class IMapSqlConnector extends EntrySqlConnector {
                 keyMetadata.getQueryTargetDescriptor(),
                 valueMetadata.getQueryTargetDescriptor(),
                 keyMetadata.getUpsertTargetDescriptor(),
-                valueMetadata.getUpsertTargetDescriptor(),
-                indexes,
-                distributionFieldOrdinal,
-                nativeMemoryEnabled
+                valueMetadata.getUpsertTargetDescriptor()
         );
     }
 
@@ -204,7 +190,11 @@ public class IMapSqlConnector extends EntrySqlConnector {
 
         Vertex vStart = dag.newVertex(
                 "map-project",
-                entryProjector(table.getKeyUpsertDescriptor(), table.getValueUpsertDescriptor(), table.getFields())
+                entryProjector(
+                        (UpsertTargetDescriptor) table.getKeyJetMetadata(),
+                        (UpsertTargetDescriptor) table.getValueJetMetadata(),
+                        table.getFields()
+                )
         );
 
         String mapName = table.getMapName();

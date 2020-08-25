@@ -19,14 +19,13 @@ package com.hazelcast.jet.sql.impl.inject;
 import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
-import com.hazelcast.sql.impl.inject.UpsertTarget;
-import com.hazelcast.sql.impl.inject.UpsertTargetDescriptor;
 
 import java.io.IOException;
+import java.util.Objects;
 
 public class CsvUpsertTargetDescriptor implements UpsertTargetDescriptor {
 
-    public String delimiter;
+    private String delimiter;
 
     @SuppressWarnings("unused")
     CsvUpsertTargetDescriptor() {
@@ -49,5 +48,29 @@ public class CsvUpsertTargetDescriptor implements UpsertTargetDescriptor {
     @Override
     public void readData(ObjectDataInput in) throws IOException {
         delimiter = in.readObject();
+    }
+
+    @Override
+    public String toString() {
+        return "CsvUpsertTargetDescriptor{" +
+                "delimiter='" + delimiter + '\'' +
+                '}';
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        CsvUpsertTargetDescriptor that = (CsvUpsertTargetDescriptor) o;
+        return Objects.equals(delimiter, that.delimiter);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(delimiter);
     }
 }

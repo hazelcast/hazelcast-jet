@@ -17,8 +17,6 @@
 package com.hazelcast.jet.sql.impl.inject;
 
 import com.hazelcast.sql.impl.QueryException;
-import com.hazelcast.sql.impl.inject.UpsertInjector;
-import com.hazelcast.sql.impl.inject.UpsertTarget;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;

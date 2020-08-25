@@ -67,8 +67,8 @@ public final class ToConverters {
         converters.put(QueryDataType.TIMESTAMP_WITH_TZ_INSTANT, ToTimestampWithTzInstantConverter.INSTANCE);
         converters.put(QueryDataType.TIMESTAMP_WITH_TZ_CALENDAR, ToTimestampWithTzCalendarConverter.INSTANCE);
 
-        converters.put(QueryDataType.INTERVAL_YEAR_MONTH, new ToCanonicalConverter(QueryDataType.INTERVAL_YEAR_MONTH));
-        converters.put(QueryDataType.INTERVAL_DAY_SECOND, new ToCanonicalConverter(QueryDataType.INTERVAL_DAY_SECOND));
+        //converters.put(QueryDataType.INTERVAL_YEAR_MONTH, new ToCanonicalConverter(QueryDataType.INTERVAL_YEAR_MONTH));
+        //converters.put(QueryDataType.INTERVAL_DAY_SECOND, new ToCanonicalConverter(QueryDataType.INTERVAL_DAY_SECOND));
 
         converters.put(QueryDataType.OBJECT, new ToCanonicalConverter(QueryDataType.OBJECT));
 

@@ -19,10 +19,9 @@ package com.hazelcast.jet.sql.impl.inject;
 import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
-import com.hazelcast.sql.impl.inject.UpsertTarget;
-import com.hazelcast.sql.impl.inject.UpsertTargetDescriptor;
 
 import java.io.IOException;
+import java.util.Objects;
 
 public class PortableUpsertTargetDescriptor implements UpsertTargetDescriptor {
 
@@ -31,7 +30,7 @@ public class PortableUpsertTargetDescriptor implements UpsertTargetDescriptor {
     private int classVersion;
 
     @SuppressWarnings("unused")
-    PortableUpsertTargetDescriptor() {
+    public PortableUpsertTargetDescriptor() {
     }
 
     public PortableUpsertTargetDescriptor(int factoryId, int classId, int classVersion) {
@@ -57,5 +56,33 @@ public class PortableUpsertTargetDescriptor implements UpsertTargetDescriptor {
         factoryId = in.readInt();
         classId = in.readInt();
         classVersion = in.readInt();
+    }
+
+    @Override
+    public String toString() {
+        return "PortableUpsertTargetDescriptor{"
+                + "factoryId=" + factoryId
+                + ", classId=" + classId
+                + ", classVersion=" + classVersion
+                + '}';
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        PortableUpsertTargetDescriptor that = (PortableUpsertTargetDescriptor) o;
+        return factoryId == that.factoryId
+                && classId == that.classId
+                && classVersion == that.classVersion;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(factoryId, classId, classVersion);
     }
 }

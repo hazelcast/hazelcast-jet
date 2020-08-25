@@ -22,7 +22,6 @@ import com.hazelcast.jet.sql.impl.connector.map.IMapSqlConnector;
 import com.hazelcast.jet.sql.impl.schema.JetTable;
 import com.hazelcast.sql.impl.schema.Table;
 import com.hazelcast.sql.impl.schema.map.PartitionedMapTable;
-import com.hazelcast.sql.impl.schema.map.ReplicatedMapTable;
 
 public final class SqlConnectorUtil {
 
@@ -35,9 +34,9 @@ public final class SqlConnectorUtil {
             connector = ((JetTable) table).getSqlConnector();
         } else if (table instanceof PartitionedMapTable) {
             connector = new IMapSqlConnector();
-        } else if (table instanceof ReplicatedMapTable) {
+        } /*else if (table instanceof ReplicatedMapTable) {
             throw new UnsupportedOperationException("Jet doesn't yet support writing to a ReplicatedMap");
-        } else {
+        }*/ else {
             throw new JetException("Unknown table type: " + table.getClass());
         }
         return connector;

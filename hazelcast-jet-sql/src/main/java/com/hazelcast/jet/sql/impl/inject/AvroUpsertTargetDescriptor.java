@@ -19,14 +19,13 @@ package com.hazelcast.jet.sql.impl.inject;
 import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
-import com.hazelcast.sql.impl.inject.UpsertTarget;
-import com.hazelcast.sql.impl.inject.UpsertTargetDescriptor;
 
 import java.io.IOException;
+import java.util.Objects;
 
 public class AvroUpsertTargetDescriptor implements UpsertTargetDescriptor {
 
-    public String schema;
+    private String schema;
 
     @SuppressWarnings("unused")
     AvroUpsertTargetDescriptor() {
@@ -49,5 +48,29 @@ public class AvroUpsertTargetDescriptor implements UpsertTargetDescriptor {
     @Override
     public void readData(ObjectDataInput in) throws IOException {
         schema = in.readObject();
+    }
+
+    @Override
+    public String toString() {
+        return "AvroUpsertTargetDescriptor{" +
+                "schema='" + schema + '\'' +
+                '}';
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        AvroUpsertTargetDescriptor that = (AvroUpsertTargetDescriptor) o;
+        return Objects.equals(schema, that.schema);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(schema);
     }
 }

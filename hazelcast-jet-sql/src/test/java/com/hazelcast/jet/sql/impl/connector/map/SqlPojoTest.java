@@ -70,6 +70,49 @@ public class SqlPojoTest extends JetSqlTestSupport {
     }
 
     @Test
+    public void supportsPrimitiveInsertsIntoDiscoveredMap() {
+        String name = generateRandomName();
+
+        instance().getMap(name).put(BigInteger.valueOf(1), "Alice");
+
+        assertMapEventually(
+                name,
+                "INSERT OVERWRITE partitioned." + name + " VALUES (2, 'Bob')",
+                createMap(BigInteger.valueOf(1), "Alice", BigInteger.valueOf(2), "Bob")
+        );
+
+        assertRowsEventuallyAnyOrder(
+                "SELECT * FROM " + name,
+                asList(
+                        new Row(BigDecimal.valueOf(1), "Alice"),
+                        new Row(BigDecimal.valueOf(2), "Bob")
+                )
+        );
+    }
+
+    @Test
+    public void supportsPojoInsertsIntoDiscoveredMap() {
+        String name = generateRandomName();
+
+        instance().getMap(name).put(new PersonId(1), new Person(1, "Alice"));
+
+        assertMapEventually(
+                name,
+                // TODO: requires explicit column list due to hidden fields...
+                "INSERT OVERWRITE partitioned." + name + " (id, name) VALUES (2, 'Bob')",
+                createMap(new PersonId(1), new Person(1, "Alice"), new PersonId(2), new Person(0, "Bob"))
+        );
+
+        assertRowsEventuallyAnyOrder(
+                "SELECT * FROM " + name,
+                asList(
+                        new Row(1, "Alice"),
+                        new Row(2, "Bob")
+                )
+        );
+    }
+
+    @Test
     public void supportsNulls() {
         String name = createMapWithRandomName();
 
