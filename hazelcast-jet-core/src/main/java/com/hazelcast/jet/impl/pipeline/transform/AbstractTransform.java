@@ -18,12 +18,15 @@ package com.hazelcast.jet.impl.pipeline.transform;
 
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.core.Vertex;
+import com.hazelcast.jet.pipeline.Pipeline;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
+import static com.hazelcast.jet.core.Vertex.checkLocalParallelism;
+import static java.lang.Math.min;
 import static java.util.Collections.singletonList;
 
 public abstract class AbstractTransform implements Transform {
@@ -36,12 +39,15 @@ public abstract class AbstractTransform implements Transform {
 
     private int localParallelism = Vertex.LOCAL_PARALLELISM_USE_DEFAULT;
 
+    private boolean isLocalParallelismDetermined;
+
     private final boolean[] upstreamRebalancingFlags;
 
     private final FunctionEx<?, ?>[] upstreamPartitionKeyFns;
 
     protected AbstractTransform(@Nonnull String name, @Nonnull List<Transform> upstream) {
         this.name = name;
+        this.isLocalParallelismDetermined = false;
         // Planner updates this list to fuse the stateless transforms:
         this.upstream = new ArrayList<>(upstream);
         this.upstreamRebalancingFlags = new boolean[upstream.size()];
@@ -75,6 +81,16 @@ public abstract class AbstractTransform implements Transform {
     @Override
     public int localParallelism() {
         return localParallelism;
+    }
+
+    @Override
+    public boolean isLocalParallelismDetermined() {
+        return isLocalParallelismDetermined;
+    }
+
+    @Override
+    public void setLocalParallelismDetermined(boolean localParallelismDetermined) {
+        isLocalParallelismDetermined = localParallelismDetermined;
     }
 
     @Override
@@ -114,5 +130,24 @@ public abstract class AbstractTransform implements Transform {
             }
         }
         return false;
+    }
+
+    protected void determineLocalParallelism(int localParallelism, int preferredLocalParallelism, Pipeline.Context ctx) {
+        int defaultParallelism = ctx.defaultLocalParallelism();
+        checkLocalParallelism(preferredLocalParallelism);
+        checkLocalParallelism(localParallelism);
+        checkLocalParallelism(defaultParallelism);
+        if (localParallelism == Vertex.LOCAL_PARALLELISM_USE_DEFAULT) {
+            if (preferredLocalParallelism == Vertex.LOCAL_PARALLELISM_USE_DEFAULT) {
+                localParallelism(defaultParallelism);
+            } else {
+                if (defaultParallelism == Vertex.LOCAL_PARALLELISM_USE_DEFAULT) {
+                    localParallelism(preferredLocalParallelism);
+                } else {
+                    localParallelism(min(preferredLocalParallelism, defaultParallelism));
+                }
+            }
+        }
+        setLocalParallelismDetermined(true);
     }
 }

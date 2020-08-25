@@ -27,6 +27,7 @@ import com.hazelcast.jet.impl.pipeline.Planner.PlannerVertex;
 import com.hazelcast.jet.impl.processor.AsyncTransformUsingServiceBatchedP;
 import com.hazelcast.jet.impl.processor.AsyncTransformUsingServiceOrderedP;
 import com.hazelcast.jet.impl.processor.AsyncTransformUsingServiceUnorderedP;
+import com.hazelcast.jet.pipeline.Pipeline.Context;
 import com.hazelcast.jet.pipeline.ServiceFactory;
 
 import javax.annotation.Nonnull;
@@ -146,6 +147,11 @@ public class ProcessorTransform extends AbstractTransform {
             @Nonnull BiFunctionEx<? super S, ? super List<T>, ? extends CompletableFuture<Traverser<R>>> flatMapAsyncFn
     ) {
         return AsyncTransformUsingServiceBatchedP.supplier(serviceFactory, maxConcurrentOps, maxBatchSize, flatMapAsyncFn);
+    }
+
+    @Override
+    public void determineLocalParallelism(Context context) {
+        determineLocalParallelism(localParallelism(), processorSupplier.preferredLocalParallelism(), context);
     }
 
     @Override

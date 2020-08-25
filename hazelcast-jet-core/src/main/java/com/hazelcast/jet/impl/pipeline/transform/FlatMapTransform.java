@@ -20,6 +20,7 @@ import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.impl.pipeline.Planner;
 import com.hazelcast.jet.impl.pipeline.Planner.PlannerVertex;
+import com.hazelcast.jet.pipeline.Pipeline.Context;
 
 import javax.annotation.Nonnull;
 
@@ -41,6 +42,11 @@ public class FlatMapTransform<T, R> extends AbstractTransform {
     @Nonnull
     public FunctionEx<? super T, ? extends Traverser<? extends R>> flatMapFn() {
         return flatMapFn;
+    }
+
+    @Override
+    public void determineLocalParallelism(Context context) {
+        determineLocalParallelism(localParallelism(), -1, context);
     }
 
     @Override

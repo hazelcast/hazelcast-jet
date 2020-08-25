@@ -20,6 +20,7 @@ import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.impl.pipeline.Planner;
 import com.hazelcast.jet.impl.pipeline.Planner.PlannerVertex;
+import com.hazelcast.jet.pipeline.Pipeline.Context;
 
 import javax.annotation.Nonnull;
 import java.util.List;
@@ -47,6 +48,11 @@ public class AggregateTransform<A, R> extends AbstractTransform {
         return upstream.size() == 1
                 ? "aggregate"
                 : upstream.size() + "-way co-aggregate";
+    }
+
+    @Override
+    public void determineLocalParallelism(Context context) {
+        determineLocalParallelism(localParallelism(), -1, context);
     }
 
     @Override

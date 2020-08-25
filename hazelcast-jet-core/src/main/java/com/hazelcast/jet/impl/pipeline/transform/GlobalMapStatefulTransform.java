@@ -21,6 +21,7 @@ import com.hazelcast.jet.function.TriFunction;
 import com.hazelcast.jet.impl.pipeline.Planner;
 import com.hazelcast.jet.impl.pipeline.Planner.PlannerVertex;
 import com.hazelcast.jet.impl.util.ConstantFunctionEx;
+import com.hazelcast.jet.pipeline.Pipeline.Context;
 
 import javax.annotation.Nonnull;
 import java.util.function.Supplier;
@@ -43,6 +44,11 @@ public class GlobalMapStatefulTransform<T, S, R> extends AbstractTransform {
         this.timestampFn = timestampFn;
         this.createFn = createFn;
         this.statefulMapFn = statefulMapFn;
+    }
+
+    @Override
+    public void determineLocalParallelism(Context context) {
+        determineLocalParallelism(localParallelism(), -1, context);
     }
 
     @Override

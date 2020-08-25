@@ -20,6 +20,7 @@ import com.hazelcast.function.FunctionEx;
 import com.hazelcast.function.PredicateEx;
 import com.hazelcast.jet.impl.pipeline.Planner;
 import com.hazelcast.jet.impl.pipeline.Planner.PlannerVertex;
+import com.hazelcast.jet.pipeline.Pipeline.Context;
 
 import javax.annotation.Nonnull;
 
@@ -39,6 +40,11 @@ public class PeekTransform<T> extends AbstractTransform {
         super("peek", upstream);
         this.shouldLogFn = shouldLogFn;
         this.toStringFn = toStringFn;
+    }
+
+    @Override
+    public void determineLocalParallelism(Context context) {
+        determineLocalParallelism(localParallelism(), -1, context);
     }
 
     @Override

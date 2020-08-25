@@ -20,6 +20,7 @@ import com.hazelcast.jet.core.Edge;
 import com.hazelcast.jet.core.EventTimePolicy;
 import com.hazelcast.jet.impl.pipeline.Planner;
 import com.hazelcast.jet.impl.pipeline.Planner.PlannerVertex;
+import com.hazelcast.jet.pipeline.Pipeline.Context;
 
 import javax.annotation.Nonnull;
 
@@ -43,6 +44,11 @@ public class TimestampTransform<T> extends AbstractTransform {
     @Override
     public void localParallelism(int localParallelism) {
         throw new UnsupportedOperationException("Explicit local parallelism for addTimestamps() is not supported");
+    }
+
+    @Override
+    public void determineLocalParallelism(Context context) {
+
     }
 
     @Override

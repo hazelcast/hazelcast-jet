@@ -22,6 +22,7 @@ import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.impl.pipeline.Planner;
 import com.hazelcast.jet.impl.pipeline.Planner.PlannerVertex;
+import com.hazelcast.jet.pipeline.Pipeline.Context;
 
 import javax.annotation.Nonnull;
 import java.util.List;
@@ -58,6 +59,11 @@ public class GroupTransform<K, A, R, OUT> extends AbstractTransform {
         return upstream.size() == 1
                 ? "group-and-aggregate"
                 : upstream.size() + "-way cogroup-and-aggregate";
+    }
+
+    @Override
+    public void determineLocalParallelism(Context context) {
+
     }
 
     @Override

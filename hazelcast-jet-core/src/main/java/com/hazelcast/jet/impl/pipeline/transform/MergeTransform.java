@@ -18,6 +18,7 @@ package com.hazelcast.jet.impl.pipeline.transform;
 
 import com.hazelcast.jet.impl.pipeline.Planner;
 import com.hazelcast.jet.impl.pipeline.Planner.PlannerVertex;
+import com.hazelcast.jet.pipeline.Pipeline.Context;
 
 import javax.annotation.Nonnull;
 
@@ -29,6 +30,11 @@ public class MergeTransform<T> extends AbstractTransform {
 
     public MergeTransform(@Nonnull Transform upstream1, @Nonnull Transform upstream2) {
         super("merge", asList(upstream1, upstream2));
+    }
+
+    @Override
+    public void determineLocalParallelism(Context context) {
+        determineLocalParallelism(localParallelism(), -1, context);
     }
 
     @Override

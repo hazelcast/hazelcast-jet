@@ -19,6 +19,7 @@ package com.hazelcast.jet.impl.pipeline.transform;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.impl.pipeline.Planner;
 import com.hazelcast.jet.impl.pipeline.Planner.PlannerVertex;
+import com.hazelcast.jet.pipeline.Pipeline.Context;
 
 import javax.annotation.Nonnull;
 
@@ -39,6 +40,11 @@ public class MapTransform<T, R> extends AbstractTransform {
 
     public FunctionEx<? super T, ? extends R> mapFn() {
         return mapFn;
+    }
+
+    @Override
+    public void determineLocalParallelism(Context context) {
+        determineLocalParallelism(localParallelism(), -1, context);
     }
 
     @Override

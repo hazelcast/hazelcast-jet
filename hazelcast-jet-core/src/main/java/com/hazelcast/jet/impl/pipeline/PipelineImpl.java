@@ -103,8 +103,14 @@ public class PipelineImpl implements Pipeline {
     }
 
     @Nonnull @Override
+    public DAG toDag(Context context) {
+        return new Planner(this).createDag(context);
+    }
+
+    @Nonnull @Override
     public DAG toDag() {
-        return new Planner(this).createDag();
+        final int localParallelismUseDefault = -1;
+        return toDag(() -> localParallelismUseDefault);
     }
 
     @SuppressWarnings("rawtypes")

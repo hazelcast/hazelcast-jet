@@ -35,6 +35,7 @@ import com.hazelcast.jet.impl.pipeline.transform.TimestampTransform;
 import com.hazelcast.jet.impl.pipeline.transform.Transform;
 import com.hazelcast.jet.impl.util.LoggingUtil;
 import com.hazelcast.jet.impl.util.Util;
+import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.logging.Logger;
 
@@ -68,7 +69,7 @@ public class Planner {
 
     public final DAG dag = new DAG();
     public final Map<Transform, PlannerVertex> xform2vertex = new HashMap<>();
-
+    public Pipeline.Context context;
     private final PipelineImpl pipeline;
 
     Planner(PipelineImpl pipeline) {
@@ -76,8 +77,9 @@ public class Planner {
     }
 
     @SuppressWarnings("rawtypes")
-    DAG createDag() {
+    DAG createDag(Pipeline.Context ctx) {
         pipeline.makeNamesUnique();
+        context = ctx;
         Map<Transform, List<Transform>> adjacencyMap = pipeline.adjacencyMap();
         validateNoLeakage(adjacencyMap);
         checkTopologicalSort(adjacencyMap.entrySet());

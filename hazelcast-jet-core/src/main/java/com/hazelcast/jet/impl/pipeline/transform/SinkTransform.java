@@ -21,6 +21,7 @@ import com.hazelcast.jet.core.Partitioner;
 import com.hazelcast.jet.impl.pipeline.Planner;
 import com.hazelcast.jet.impl.pipeline.Planner.PlannerVertex;
 import com.hazelcast.jet.impl.pipeline.SinkImpl;
+import com.hazelcast.jet.pipeline.Pipeline.Context;
 
 import javax.annotation.Nonnull;
 import java.util.List;
@@ -46,6 +47,10 @@ public class SinkTransform<T> extends AbstractTransform {
         super(sink.name(), upstream);
         this.sink = sink;
         this.ordinalsToAdapt = adaptToJetEvents ? new int[] {0} : EMPTY_ORDINALS;
+    }
+
+    public void determineLocalParallelism(Context context) {
+        determineLocalParallelism(localParallelism(), sink.metaSupplier().preferredLocalParallelism(), context);
     }
 
     @Override

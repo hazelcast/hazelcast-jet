@@ -18,6 +18,7 @@ package com.hazelcast.jet.impl.pipeline.transform;
 
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.impl.pipeline.Planner;
+import com.hazelcast.jet.pipeline.Pipeline.Context;
 
 import javax.annotation.Nonnull;
 import java.io.Serializable;
@@ -56,6 +57,12 @@ public interface Transform extends Serializable {
 
     @Nonnull
     List<Transform> upstream();
+
+    boolean isLocalParallelismDetermined();
+
+    void setLocalParallelismDetermined(boolean localParallelismDetermined);
+
+    void determineLocalParallelism(Context context);
 
     void addToDag(Planner p);
 

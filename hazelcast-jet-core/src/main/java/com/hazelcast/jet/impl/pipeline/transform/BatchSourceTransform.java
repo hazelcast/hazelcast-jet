@@ -19,6 +19,7 @@ package com.hazelcast.jet.impl.pipeline.transform;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.impl.pipeline.Planner;
 import com.hazelcast.jet.pipeline.BatchSource;
+import com.hazelcast.jet.pipeline.Pipeline.Context;
 
 import javax.annotation.Nonnull;
 
@@ -42,6 +43,11 @@ public class BatchSourceTransform<T> extends AbstractTransform implements BatchS
             throw new IllegalStateException("Sink " + name() + " was already assigned to a sink stage");
         }
         isAssignedToStage = true;
+    }
+
+    @Override
+    public void determineLocalParallelism(Context context) {
+        determineLocalParallelism(localParallelism(), metaSupplier.preferredLocalParallelism(), context);
     }
 
     @Override

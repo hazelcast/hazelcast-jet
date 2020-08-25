@@ -72,7 +72,7 @@ public interface Pipeline extends Serializable {
      * from an outside source) to its downstream stages.
      *
      * @param source the definition of the source from which the stage reads data
-     * @param <T> the type of source data items
+     * @param <T>    the type of source data items
      */
     @Nonnull
     <T> StreamSourceStage<T> readFrom(@Nonnull StreamSource<? extends T> source);
@@ -101,8 +101,23 @@ public interface Pipeline extends Serializable {
     DAG toDag();
 
     /**
+     * Transforms the pipeline into a Jet DAG, which can be submitted for
+     * execution to a Jet instance.
+     */
+    @Nonnull
+    DAG toDag(Context context);
+
+    /**
      * Returns a DOT format (graphviz) representation of the Pipeline.
      */
     @Nonnull
     String toDotString();
+
+    /**
+     * Context passed to {@link #toDag()}.
+     * @since 4.3
+     */
+    interface Context {
+        int defaultLocalParallelism();
+    }
 }

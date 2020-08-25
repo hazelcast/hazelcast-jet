@@ -27,6 +27,7 @@ import com.hazelcast.jet.impl.JetEvent;
 import com.hazelcast.jet.impl.pipeline.Planner;
 import com.hazelcast.jet.impl.pipeline.Planner.PlannerVertex;
 import com.hazelcast.jet.impl.util.ConstantFunctionEx;
+import com.hazelcast.jet.pipeline.Pipeline.Context;
 import com.hazelcast.jet.pipeline.SessionWindowDefinition;
 import com.hazelcast.jet.pipeline.SlidingWindowDefinition;
 import com.hazelcast.jet.pipeline.WindowDefinition;
@@ -98,6 +99,11 @@ public class WindowAggregateTransform<A, R> extends AbstractTransform {
     @Override
     public long preferredWatermarkStride() {
         return preferredWatermarkStride(wDef);
+    }
+
+    @Override
+    public void determineLocalParallelism(Context context) {
+        determineLocalParallelism(localParallelism(), -1, context);
     }
 
     @Override

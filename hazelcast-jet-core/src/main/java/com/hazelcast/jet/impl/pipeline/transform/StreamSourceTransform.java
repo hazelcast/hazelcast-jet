@@ -22,6 +22,7 @@ import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.impl.pipeline.Planner;
 import com.hazelcast.jet.impl.pipeline.Planner.PlannerVertex;
+import com.hazelcast.jet.pipeline.Pipeline.Context;
 import com.hazelcast.jet.pipeline.StreamSource;
 
 import javax.annotation.Nonnull;
@@ -62,6 +63,13 @@ public class StreamSourceTransform<T> extends AbstractTransform implements Strea
             throw new IllegalStateException("Source " + name() + " was already assigned to a source stage");
         }
         isAssignedToStage = true;
+    }
+
+    @Override
+    public void determineLocalParallelism(Context context) {
+        final ProcessorMetaSupplier metaSupplier = metaSupplierFn
+                .apply(eventTimePolicy != null ? eventTimePolicy : noEventTime());
+        determineLocalParallelism(localParallelism(), metaSupplier.preferredLocalParallelism(), context);
     }
 
     @Override

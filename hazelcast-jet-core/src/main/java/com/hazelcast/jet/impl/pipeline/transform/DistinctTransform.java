@@ -21,6 +21,7 @@ import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.impl.pipeline.Planner;
 import com.hazelcast.jet.impl.pipeline.Planner.PlannerVertex;
+import com.hazelcast.jet.pipeline.Pipeline.Context;
 
 import java.util.HashSet;
 
@@ -36,6 +37,11 @@ public class DistinctTransform<T, K> extends AbstractTransform {
     public DistinctTransform(Transform upstream, FunctionEx<? super T, ? extends K> keyFn) {
         super("distinct", upstream);
         this.keyFn = keyFn;
+    }
+
+    @Override
+    public void determineLocalParallelism(Context context) {
+        determineLocalParallelism(localParallelism(), -1, context);
     }
 
     @Override
