@@ -308,8 +308,8 @@ In a different terminal window, unpack and navigate to the distribution
 folder with the commands below:
 
 ```bash
-tar xf hazelcast-jet-4.1.1.tar.gz
-cd hazelcast-jet-4.1.1/
+tar xf hazelcast-jet-{jet-version}.tar.gz
+cd hazelcast-jet-{jet-version}/
 ```
 
 Verify that CLI can connect to the cluster with the command below:
@@ -317,7 +317,7 @@ Verify that CLI can connect to the cluster with the command below:
 ```bash
 $ bin/jet cluster
 State: ACTIVE
-Version: 4.1.1
+Version: {jet-version}
 Size: 2
 
 ADDRESS                  UUID

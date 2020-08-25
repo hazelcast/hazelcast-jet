@@ -19,6 +19,7 @@ package com.hazelcast.jet.elastic;
 import com.hazelcast.jet.pipeline.PipelineTestSupport;
 import com.hazelcast.jet.pipeline.Sink;
 import com.hazelcast.jet.pipeline.test.TestSources;
+import com.hazelcast.test.annotation.NightlyTest;
 import org.apache.http.HttpHost;
 import org.elasticsearch.action.bulk.BulkRequest;
 import org.elasticsearch.action.index.IndexRequest;
@@ -26,27 +27,34 @@ import org.elasticsearch.action.support.WriteRequest.RefreshPolicy;
 import org.elasticsearch.client.RestClient;
 import org.elasticsearch.client.RestClientBuilder;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 import java.io.IOException;
 import java.io.Serializable;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Set;
 
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+@Category(NightlyTest.class)
 public class ElasticSinkBuilderTest extends PipelineTestSupport {
 
     @Test
     public void when_writeToFailingSink_then_shouldCloseClient() throws IOException {
+        ClientHolder.elasticClients.clear();
 
         Sink<String> elasticSink = new ElasticSinkBuilder<>()
                 .clientFn(() -> {
                     RestClientBuilder builder = spy(RestClient.builder(HttpHost.create("localhost:9200")));
                     when(builder.build()).thenAnswer(invocation -> {
                         Object result = invocation.callRealMethod();
-                        ClientHolder.elasticClient = (RestClient) spy(result);
-                        return ClientHolder.elasticClient;
+                        RestClient client = (RestClient) spy(result);
+                        ClientHolder.elasticClients.add(client);
+                        return client;
                     });
                     return builder;
                 })
@@ -63,10 +71,12 @@ public class ElasticSinkBuilderTest extends PipelineTestSupport {
             // ignore - elastic is not running
         }
 
-        verify(ClientHolder.elasticClient).close();
+        for (RestClient client : ClientHolder.elasticClients) {
+            verify(client).close();
+        }
     }
 
     static class ClientHolder implements Serializable {
-        static RestClient elasticClient;
+        static Set<RestClient> elasticClients = Collections.synchronizedSet(new HashSet<>());
     }
 }

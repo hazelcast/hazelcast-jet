@@ -8,9 +8,11 @@ authorImageURL: https://i.imgur.com/xuavzce.jpg
 
 This post is a part of a series:
 
-- [Part 1](/blog/2020/06/09/jdk-gc-benchmarks-part1)
+- [Part 1 (Intro and high-throughput streaming
+  benchmark)](/blog/2020/06/09/jdk-gc-benchmarks-part1)
 - Part 2 (you are here)
-- [Part 3](/blog/2020/06/23/jdk-gc-benchmarks-rematch)
+- [Part 3 (low-latency benchmark)](/blog/2020/06/23/jdk-gc-benchmarks-rematch)
+- [Part 4 (concurrent GC with green threads)](/blog/2020/08/05/gc-tuning-for-jet)
 
 ## Batch Pipeline Benchmark
 
@@ -216,3 +218,7 @@ sufficiently short duration that the rest of the pipeline didn't get
 stalled. The pipeline has mechanisms that dampen out short hiccups and
 as long as the GC pauses are within acceptable limits (up to some 150
 ms), the effect of GC stays local.
+
+_If you enjoyed reading this post, check out Jet at
+[GitHub](https://github.com/hazelcast/hazelcast-jet) and give us a
+star!_

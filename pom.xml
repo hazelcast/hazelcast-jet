@@ -108,7 +108,7 @@
         <jsr107.api.version>1.0.0</jsr107.api.version> <!-- JCache -->
         <jsr250.api.version>1.2</jsr250.api.version> <!-- javax.annotations -->
         <log4j.version>1.2.17</log4j.version>
-        <log4j2.version>2.12.1</log4j2.version>
+        <log4j2.version>2.13.3</log4j2.version>
         <slf4j.api.version>1.7.28</slf4j.api.version>
         <reflections.version>0.9.10</reflections.version>
         <osgi.version>4.2.0</osgi.version>
@@ -385,7 +385,7 @@
                         </goals>
                         <configuration>
                             <skip>${maven.test.skip}</skip>
-                            <forkCount>4</forkCount>
+                            <forkCount>0.5C</forkCount>
                             <includes>
                                 <include>/com/hazelcast/jet/**/**.java</include>
                             </includes>
@@ -522,6 +522,43 @@
                     <artifactId>maven-jar-plugin</artifactId>
                     <version>${maven.jar.plugin.version}</version>
                 </plugin>
+                <plugin>
+                    <groupId>org.codehaus.mojo</groupId>
+                    <artifactId>license-maven-plugin</artifactId>
+                    <version>1.19</version>
+                    <configuration>
+                        <acceptPomPackaging>true</acceptPomPackaging>
+                        <outputDirectory>src/root</outputDirectory>
+                        <fileTemplate>${project.basedir}/src/NOTICE.ftl</fileTemplate>
+                        <thirdPartyFilename>NOTICE</thirdPartyFilename>
+                        <excludedGroups>com.hazelcast</excludedGroups>
+                        <excludedScopes>test,provided</excludedScopes>
+                        <failOnBlacklist>true</failOnBlacklist>
+                        <failOnMissing>true</failOnMissing>
+                        <includedLicenses>
+                            CC0|
+                            Public Domain, per Creative Commons CC0|
+                            Apache License, Version 2.0|
+                            MIT License|
+                            Public Domain|
+                            EPL 2.0|
+                            BSD 3-Clause License|
+                            BSD 2-Clause License|
+                            The GNU General Public License, v2 with FOSS exception|
+                        </includedLicenses>
+                        <licenseMerges>
+                            <licenseMerge>
+                                Apache License, Version 2.0|
+                                Apache Software License 2.0|The Apache Software License, Version 2.0|
+                                Apache License, version 2.0|The Apache Software License, version 2.0|
+                                Apache 2|Apache 2.0|Apache-2.0|Apache License 2.0|The Apache License, Version 2.0
+                            </licenseMerge>
+                            <licenseMerge>MIT License|MIT|The MIT License|MIT license|The MIT License (MIT)</licenseMerge>
+                            <licenseMerge>BSD 2-Clause License|BSD-2-Clause</licenseMerge>
+                            <licenseMerge>BSD 3-Clause License|BSD License|BSD|BSD licence|The BSD License|3-Clause BSD License| New BSD License</licenseMerge>
+                        </licenseMerges>
+                    </configuration>
+                </plugin>
             </plugins>
         </pluginManagement>
     </build>
@@ -539,6 +576,9 @@
                                 <goals>
                                     <goal>test</goal>
                                 </goals>
+                                <configuration>
+                                    <skip combine.self="override">true</skip>
+                                </configuration>
                             </execution>
                             <execution>
                                 <id>regular-tests</id>
@@ -550,6 +590,7 @@
                                         ${argLine}
                                         -Dhazelcast.test.defaultTestTimeoutInSeconds=600
                                     </argLine>
+                                    <forkCount combine.self="override">1</forkCount>
                                     <excludedGroups combine.self="override" />
                                 </configuration>
                             </execution>
@@ -599,6 +640,41 @@
             </build>
         </profile>
         <profile>
+            <id>windows-jenkins</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>serial-tests</id>
+                                <goals>
+                                    <goal>test</goal>
+                                </goals>
+                                <configuration>
+                                    <excludedGroups combine.self="override">
+                                        com.hazelcast.jet.test.IgnoreInJenkinsOnWindows
+                                    </excludedGroups>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>regular-tests</id>
+                                <goals>
+                                    <goal>test</goal>
+                                </goals>
+                                <configuration>
+                                    <excludedGroups combine.self="override">
+                                        com.hazelcast.jet.test.IgnoreInJenkinsOnWindows
+                                    </excludedGroups>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
             <id>test-coverage</id>
             <build>
                 <plugins>
@@ -631,9 +707,12 @@
                                     <goal>test</goal>
                                 </goals>
                                 <configuration>
-                                    <argLine>@{argLine}</argLine>
+                                    <argLine>
+                                        @{argLine}
+                                        -Dhazelcast.test.defaultTestTimeoutInSeconds=600
+                                    </argLine>
                                     <excludedGroups combine.self="override">
-                                        com.hazelcast.test.annotation.SlowTest,com.hazelcast.test.annotation.NightlyTest,com.hazelcast.jet.test.IgnoredForCoverage
+                                        com.hazelcast.jet.test.IgnoredForCoverage
                                     </excludedGroups>
                                 </configuration>
                             </execution>
@@ -643,9 +722,13 @@
                                     <goal>test</goal>
                                 </goals>
                                 <configuration>
-                                    <argLine>@{argLine}</argLine>
-                                    <excludedGroups>
-                                        com.hazelcast.jet.test.SerialTest,com.hazelcast.test.annotation.SlowTest,com.hazelcast.test.annotation.NightlyTest,com.hazelcast.jet.test.IgnoredForCoverage
+                                    <argLine>
+                                        @{argLine}
+                                        -Dhazelcast.test.defaultTestTimeoutInSeconds=600
+                                    </argLine>
+                                    <forkCount combine.self="override">1</forkCount>
+                                    <excludedGroups combine.self="override">
+                                        com.hazelcast.jet.test.SerialTest,com.hazelcast.jet.test.IgnoredForCoverage
                                     </excludedGroups>
                                 </configuration>
                             </execution>
