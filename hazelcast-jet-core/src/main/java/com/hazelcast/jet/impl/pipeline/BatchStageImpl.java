@@ -84,10 +84,7 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
 
     @Nonnull @Override
     public BatchStage<T> sort(@Nonnull FunctionEx<T, Long> keyFn) {
-        if(ReflectionUtils.isClassDefined("com.hazelcast.jet.rocksdb.AbstractRocksDBStateBackend")) {
-            return attachSort(keyFn);
-        }
-        throw new JetException("Dependency on hazelcast-jet-rocksdb module was not added");
+        return attachSort(keyFn);
     }
 
     @Nonnull @Override

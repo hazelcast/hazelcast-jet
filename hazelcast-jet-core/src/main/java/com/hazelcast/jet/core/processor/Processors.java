@@ -49,6 +49,7 @@ import com.hazelcast.jet.impl.processor.InsertWatermarksP;
 import com.hazelcast.jet.impl.processor.SessionWindowP;
 import com.hazelcast.jet.impl.processor.SlidingWindowP;
 import com.hazelcast.jet.impl.processor.SortPrepareP;
+import com.hazelcast.jet.impl.processor.SortPrepareWithPersistenceP;
 import com.hazelcast.jet.impl.processor.TransformP;
 import com.hazelcast.jet.impl.processor.TransformStatefulP;
 import com.hazelcast.jet.impl.processor.TransformUsingServiceP;
@@ -58,6 +59,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map.Entry;
+import java.util.TreeMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 
@@ -1137,14 +1139,23 @@ public final class Processors {
 
     /**
      * Returns a supplier of processors for a vertex that performs the prepare phase of sorting.
-     * The processors sorts the input dataset locally at each cluster member using RocksDB
-     * state backend to prepare it for the global sorting phase.
-     * There can be only one {@link SortPrepareP} processor per cluster member for
+     * The processors sorts the input dataset locally at each cluster member using in-memory {@link TreeMap}
+     * to prepare it for the global sorting phase.
+     * There can be only one {@link SortPrepareWithPersistenceP} processor per cluster member for
      * each sort stage.
      */
     @Nonnull
     public static <V> SupplierEx<Processor> sortPrepareP(FunctionEx<V, Long> keyFn) {
         return () -> new SortPrepareP<>(keyFn);
+    }
+
+    /**
+     * Returns a variant of {@link SortPrepareP} that uses RocksDB state backend feature instead of
+     * in-memory {@link TreeMap} to perform the prepare phase of sorting.
+     */
+    @Nonnull
+    public static <V> SupplierEx<Processor> sortPrepareWithPersistenceP(FunctionEx<V, Long> keyFn) {
+        return () -> new SortPrepareWithPersistenceP<>(keyFn);
     }
 
     /**
