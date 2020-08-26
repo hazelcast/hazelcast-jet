@@ -112,7 +112,7 @@ public class Planner {
                 t.setEventTimePolicy(withFrameSize(t.getEventTimePolicy(), frameSizeGcd));
             }
         }
-        
+
         // determine exact local parallelism of the transforms
         for (Transform transform : adjacencyMap.keySet()) {
             transform.determineLocalParallelism(ctx);
