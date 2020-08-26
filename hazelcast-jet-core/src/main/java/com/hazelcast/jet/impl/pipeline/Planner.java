@@ -112,6 +112,11 @@ public class Planner {
                 t.setEventTimePolicy(withFrameSize(t.getEventTimePolicy(), frameSizeGcd));
             }
         }
+        
+        // determine exact local parallelism of the transforms
+        for (Transform transform : adjacencyMap.keySet()) {
+            transform.determineLocalParallelism(ctx);
+        }
 
         // fuse subsequent map/filter/flatMap transforms into one
         Map<Transform, List<Transform>> originalParents = new HashMap<>();
