@@ -205,6 +205,13 @@
             <classifier>tests</classifier>
         </dependency>
         <dependency>
+            <groupId>com.hazelcast</groupId>
+            <artifactId>hazelcast-sql</artifactId>
+            <version>${hazelcast.version}</version>
+            <classifier>tests</classifier>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
             <groupId>io.debezium</groupId>
             <artifactId>debezium-connector-mysql</artifactId>
             <version>1.2.1.Final</version>
@@ -214,6 +221,12 @@
             <groupId>org.testcontainers</groupId>
             <artifactId>mysql</artifactId>
             <version>1.13.0</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.googlecode.junit-toolbox</groupId>
+            <artifactId>junit-toolbox</artifactId>
+            <version>2.4</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
