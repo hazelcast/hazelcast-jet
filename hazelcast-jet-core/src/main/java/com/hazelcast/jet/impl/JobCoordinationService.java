@@ -181,7 +181,7 @@ public class JobCoordinationService {
         executionService.schedule(COORDINATOR_EXECUTOR_NAME, this::scanJobs, 0, MILLISECONDS);
     }
 
-    public <J> CompletableFuture<Void> submitJob(long jobId, Data serializedJobDefinition, Data serializedConfig) {
+    public CompletableFuture<Void> submitJob(long jobId, Data serializedJobDefinition, Data serializedConfig) {
         CompletableFuture<Void> res = new CompletableFuture<>();
         submitToCoordinatorThread(() -> {
             MasterContext masterContext;
@@ -823,7 +823,7 @@ public class JobCoordinationService {
                 && getInternalPartitionService().getPartitionStateManager().isInitialized();
     }
 
-    private <J> J deserializeJobDefinition(long jobId, JobConfig jobConfig, Data jobDefinitionData) {
+    private Object deserializeJobDefinition(long jobId, JobConfig jobConfig, Data jobDefinitionData) {
         ClassLoader classLoader = jetService.getJobExecutionService().getClassLoader(jobConfig, jobId);
         return deserializeWithCustomClassLoader(nodeEngine().getSerializationService(), classLoader, jobDefinitionData);
     }
