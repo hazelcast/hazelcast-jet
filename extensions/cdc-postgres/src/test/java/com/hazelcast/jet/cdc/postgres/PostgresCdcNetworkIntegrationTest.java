@@ -95,8 +95,12 @@ public class PostgresCdcNetworkIntegrationTest extends AbstractCdcIntegrationTes
 
     @Test
     public void when_noDatabaseToConnectTo() throws Exception {
+        PostgreSQLContainer<?> postgres = initPostgres(null, 0);
+        String containerIpAddress = postgres.getContainerIpAddress();
+        stopContainer(postgres);
+
         int port = findRandomOpenPortInRange(POSTGRESQL_PORT + 100, POSTGRESQL_PORT + 1000);
-        Pipeline pipeline = initPipeline("localhost", port);
+        Pipeline pipeline = initPipeline(containerIpAddress, port);
 
         // when job starts
         JetInstance jet = createJetMembers(2)[0];
@@ -115,7 +119,7 @@ public class PostgresCdcNetworkIntegrationTest extends AbstractCdcIntegrationTes
             assertTrue(jet.getMap("results").isEmpty());
 
             // when DB starts
-            PostgreSQLContainer<?> postgres = initPostgres(null, port);
+            postgres = initPostgres(null, port);
             try {
                 // then source connects successfully
                 assertEqualsEventually(() -> jet.getMap("results").size(), 4);
