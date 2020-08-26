@@ -39,6 +39,7 @@ import com.hazelcast.jet.impl.pipeline.transform.PartitionedProcessorTransform;
 import com.hazelcast.jet.impl.pipeline.transform.PeekTransform;
 import com.hazelcast.jet.impl.pipeline.transform.ProcessorTransform;
 import com.hazelcast.jet.impl.pipeline.transform.SinkTransform;
+import com.hazelcast.jet.impl.pipeline.transform.SortTransform;
 import com.hazelcast.jet.impl.pipeline.transform.TimestampTransform;
 import com.hazelcast.jet.impl.pipeline.transform.Transform;
 import com.hazelcast.jet.pipeline.BatchStage;
@@ -51,6 +52,7 @@ import com.hazelcast.jet.pipeline.StreamStage;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
@@ -131,6 +133,12 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
         ));
         pipelineImpl.connect(this, tsTransform);
         return new StreamStageImpl<>(tsTransform, ADAPT_TO_JET_EVENT, pipelineImpl);
+    }
+
+    @Nonnull
+    @SuppressWarnings({"unchecked"})
+    <RET> RET attachSort(Comparator<T> comparator) {
+        return (RET) attach(new SortTransform<>(this.transform, comparator), fnAdapter);
     }
 
     @Nonnull

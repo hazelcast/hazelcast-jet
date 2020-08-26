@@ -36,6 +36,7 @@ import com.hazelcast.map.IMap;
 import com.hazelcast.replicatedmap.ReplicatedMap;
 
 import javax.annotation.Nonnull;
+import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
@@ -57,22 +58,40 @@ public interface BatchStage<T> extends GeneralStage<T> {
     /**
      * {@inheritDoc}
      */
-    @Nonnull @Override
+    @Nonnull
+    @Override
     <K> BatchStageWithKey<T, K> groupingKey(@Nonnull FunctionEx<? super T, ? extends K> keyFn);
 
-    @Nonnull @Override
+    @Nonnull
+    @Override
     <K> BatchStage<T> rebalance(@Nonnull FunctionEx<? super T, ? extends K> keyFn);
 
-    @Nonnull @Override
+    @Nonnull
+    @Override
     BatchStage<T> rebalance();
 
-    @Nonnull @Override
+    /**
+     * Attaches a stage that sorts the items based on user-defined comaprator.
+     */
+    @Nonnull
+    BatchStage<T> sort(Comparator<T> comparator);
+
+    /**
+     * Attaches a stage that sorts the items based on the natural ordering of items.
+     */
+    @Nonnull
+    BatchStage<T> sort();
+
+    @Nonnull
+    @Override
     <R> BatchStage<R> map(@Nonnull FunctionEx<? super T, ? extends R> mapFn);
 
-    @Nonnull @Override
+    @Nonnull
+    @Override
     BatchStage<T> filter(@Nonnull PredicateEx<T> filterFn);
 
-    @Nonnull @Override
+    @Nonnull
+    @Override
     <R> BatchStage<R> flatMap(@Nonnull FunctionEx<? super T, ? extends Traverser<R>> flatMapFn);
 
     @Nonnull @Override

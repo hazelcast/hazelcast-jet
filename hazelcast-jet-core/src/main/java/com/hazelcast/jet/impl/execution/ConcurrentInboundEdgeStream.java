@@ -20,12 +20,14 @@ import com.hazelcast.internal.util.concurrent.ConcurrentConveyor;
 import com.hazelcast.internal.util.concurrent.Pipe;
 import com.hazelcast.internal.util.concurrent.QueuedPipe;
 import com.hazelcast.jet.core.Watermark;
+import com.hazelcast.jet.impl.util.ObjectWithPartitionId;
 import com.hazelcast.jet.impl.util.ProgressState;
 import com.hazelcast.jet.impl.util.ProgressTracker;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.logging.Logger;
 
 import java.util.BitSet;
+import java.util.Comparator;
 import java.util.function.Predicate;
 import java.util.function.ToIntFunction;
 
@@ -33,6 +35,7 @@ import static com.hazelcast.jet.impl.execution.DoneItem.DONE_ITEM;
 import static com.hazelcast.jet.impl.execution.WatermarkCoalescer.NO_NEW_WM;
 import static com.hazelcast.jet.impl.util.ProgressState.DONE;
 import static com.hazelcast.jet.impl.util.ProgressState.MADE_PROGRESS;
+import static com.hazelcast.jet.impl.util.ProgressState.NO_PROGRESS;
 import static com.hazelcast.jet.impl.util.Util.toLocalTime;
 
 /**
@@ -47,7 +50,7 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
     private final ConcurrentConveyor<Object> conveyor;
     private final ProgressTracker tracker = new ProgressTracker();
     private final ItemDetector itemDetector = new ItemDetector();
-
+    private Comparator<Object> comparator;
     private final WatermarkCoalescer watermarkCoalescer;
     private final BitSet receivedBarriers; // indicates if current snapshot is received on the queue
     private final ILogger logger;
@@ -81,6 +84,12 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
         logger.finest("Coalescing " + conveyor.queueCount() + " input queues");
     }
 
+    public ConcurrentInboundEdgeStream(ConcurrentConveyor<Object> conveyor, int ordinal, int priority,
+                                       boolean waitForAllBarriers, String debugName, Comparator<Object> comparator) {
+        this(conveyor, ordinal, priority, waitForAllBarriers, debugName);
+        this.comparator = comparator;
+    }
+
     @Override
     public int ordinal() {
         return ordinal;
@@ -93,6 +102,9 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
 
     @Override
     public ProgressState drainTo(Predicate<Object> dest) {
+        if (comparator != null) {
+            return drainToWithComparator(dest);
+        }
         tracker.reset();
         for (int queueIndex = 0; queueIndex < conveyor.queueCount(); queueIndex++) {
             final QueuedPipe<Object> q = conveyor.queue(queueIndex);
@@ -163,6 +175,51 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
             tracker.notDone();
         }
         return tracker.toProgressState();
+    }
+
+    private ProgressState drainToWithComparator(Predicate<Object> dest) {
+        int batchSize = -1;
+        while (true) {
+            int minIndex = 0;
+            Object minItem = null;
+            for (int queueIndex = 0; queueIndex < conveyor.queueCount(); queueIndex++) {
+                final QueuedPipe<Object> q = conveyor.queue(queueIndex);
+                if (q == null) {
+                    continue;
+                }
+                Object headObject = q.peek();
+                Object headItem;
+                if (headObject instanceof ObjectWithPartitionId) {
+                    headItem = ((ObjectWithPartitionId) headObject).getItem();
+                } else {
+                    headItem = headObject;
+                }
+                if (headItem == null) {
+                    return NO_PROGRESS;
+                }
+                if (headItem == DONE_ITEM) {
+                    conveyor.removeQueue(queueIndex);
+                    continue;
+                }
+                if (minItem == null || comparator.compare(minItem, headItem) > 0) {
+                    minIndex = queueIndex;
+                    minItem = headItem;
+                }
+            }
+            if (conveyor.liveQueueCount() == 0) {
+                return DONE;
+            }
+            if (batchSize == -1) {
+                batchSize = conveyor.queue(minIndex).size();
+            }
+            Object polledItem = conveyor.queue(minIndex).poll();
+            assert polledItem == minItem : "polledItem != minItem";
+            boolean testResult = dest.test(minItem);
+            assert testResult : "testResult is false";
+            if (--batchSize == 0) {
+                return MADE_PROGRESS;
+            }
+        }
     }
 
     private boolean maybeEmitWm(long timestamp, Predicate<Object> dest) {

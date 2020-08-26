@@ -22,6 +22,7 @@ import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.config.EdgeConfig;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.impl.MasterJobContext;
+import com.hazelcast.jet.impl.execution.ConcurrentInboundEdgeStream;
 import com.hazelcast.jet.impl.execution.init.CustomClassLoadedObject;
 import com.hazelcast.jet.impl.util.ConstantFunctionEx;
 import com.hazelcast.nio.ObjectDataInput;
@@ -33,6 +34,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.Serializable;
+import java.util.Comparator;
 import java.net.UnknownHostException;
 import java.util.Map;
 import java.util.Objects;
@@ -94,7 +96,7 @@ public class Edge implements IdentifiedDataSerializable {
     private Address distributedTo;
     private Partitioner<?> partitioner;
     private RoutingPolicy routingPolicy = RoutingPolicy.UNICAST;
-
+    private Comparator<Object> comparator;
     private EdgeConfig config;
 
     protected Edge() {
@@ -372,6 +374,21 @@ public class Edge implements IdentifiedDataSerializable {
     }
 
     /**
+     * Sets a comparator over this edge. The comparator is used by {@link ConcurrentInboundEdgeStream}
+     * to determine which cluster member to receive the next item from over this edge.
+     * Using this feature is only applicable if the edge is distributed.
+     */
+    public Edge monotonicOrder(Comparator<Object> comparator) {
+        this.comparator = comparator;
+        return this;
+    }
+
+    public Comparator<Object> getComparator() {
+        return comparator;
+    }
+
+
+    /**
      * Returns the {@link RoutingPolicy} in effect on the edge.
      */
     @Nonnull
@@ -568,6 +585,7 @@ public class Edge implements IdentifiedDataSerializable {
         out.writeUTF(getDestName());
         out.writeInt(getDestOrdinal());
         out.writeInt(getPriority());
+        out.writeObject(getComparator());
         out.writeObject(getDistributedTo());
         out.writeObject(getRoutingPolicy());
         CustomClassLoadedObject.write(out, getPartitioner());
@@ -582,6 +600,7 @@ public class Edge implements IdentifiedDataSerializable {
         destOrdinal = in.readInt();
         priority = in.readInt();
         distributedTo = in.readObject();
+        comparator = in.readObject();
         routingPolicy = in.readObject();
         try {
             partitioner = CustomClassLoadedObject.read(in);
