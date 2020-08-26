@@ -46,6 +46,7 @@ import com.hazelcast.jet.impl.processor.GroupP;
 import com.hazelcast.jet.impl.processor.InsertWatermarksP;
 import com.hazelcast.jet.impl.processor.SessionWindowP;
 import com.hazelcast.jet.impl.processor.SlidingWindowP;
+import com.hazelcast.jet.impl.processor.SortPrepareP;
 import com.hazelcast.jet.impl.processor.TransformP;
 import com.hazelcast.jet.impl.processor.TransformStatefulP;
 import com.hazelcast.jet.impl.processor.TransformUsingServiceP;
@@ -53,8 +54,10 @@ import com.hazelcast.jet.pipeline.ServiceFactory;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map.Entry;
+import java.util.TreeMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 
@@ -970,6 +973,18 @@ public final class Processors {
     ) {
         return TransformUsingServiceP.<C, S, T, R>supplier(serviceFactory,
                 (singletonTraverser, service, item) -> flatMapFn.apply(service, item));
+    }
+
+    /**
+     * Returns a supplier of processors for a vertex that performs the prepare phase of sorting.
+     * The processors sorts the input dataset locally at each cluster member using in-memory {@link TreeMap}
+     * to prepare it for the global sorting phase.
+     * There can be only one {@link SortPrepareP} processor per cluster member for
+     * each sort stage.
+     */
+    @Nonnull
+    public static <V> SupplierEx<Processor> sortPrepareP(Comparator<V> comparator) {
+        return () -> new SortPrepareP<>(comparator);
     }
 
     /**

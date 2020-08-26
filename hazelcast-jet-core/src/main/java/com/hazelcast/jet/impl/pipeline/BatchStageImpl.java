@@ -37,6 +37,7 @@ import com.hazelcast.jet.pipeline.JoinClause;
 import com.hazelcast.jet.pipeline.ServiceFactory;
 
 import javax.annotation.Nonnull;
+import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
@@ -82,6 +83,16 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
     @Nonnull @Override
     public BatchStage<T> rebalance() {
         return new BatchStageImpl<>(this, true);
+    }
+
+    @Nonnull @Override
+    public BatchStage<T> sort(Comparator<T> comparator) {
+        return attachSort(comparator);
+    }
+
+    @Nonnull @Override
+    public BatchStage<T> sort() {
+        return sort(null);
     }
 
     @Nonnull @Override
