@@ -1,10 +1,10 @@
 package com.hazelcast.jet.impl.processor;
 
+import com.hazelcast.function.ComparatorEx;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.core.AbstractProcessor;
 
 import javax.annotation.Nonnull;
-import java.util.Comparator;
 import java.util.Iterator;
 import java.util.TreeMap;
 
@@ -12,7 +12,7 @@ public class SortPrepareP<V> extends AbstractProcessor {
     private final TreeMap<V, Object> map;
     private ResultTraverser resultTraverser;
 
-    public SortPrepareP(Comparator<V> comparator) {
+    public SortPrepareP(ComparatorEx<V> comparator) {
         this.map = new TreeMap<>(comparator);
     }
 

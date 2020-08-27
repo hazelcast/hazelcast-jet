@@ -18,6 +18,7 @@ package com.hazelcast.jet.core.processor;
 
 import com.hazelcast.function.BiFunctionEx;
 import com.hazelcast.function.BiPredicateEx;
+import com.hazelcast.function.ComparatorEx;
 import com.hazelcast.function.ConsumerEx;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.function.PredicateEx;
@@ -54,7 +55,6 @@ import com.hazelcast.jet.pipeline.ServiceFactory;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.TreeMap;
@@ -983,7 +983,7 @@ public final class Processors {
      * each sort stage.
      */
     @Nonnull
-    public static <V> SupplierEx<Processor> sortPrepareP(Comparator<V> comparator) {
+    public static <V> SupplierEx<Processor> sortPrepareP(ComparatorEx<V> comparator) {
         return () -> new SortPrepareP<>(comparator);
     }
 

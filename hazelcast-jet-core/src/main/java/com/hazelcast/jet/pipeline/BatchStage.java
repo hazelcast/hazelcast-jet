@@ -18,6 +18,7 @@ package com.hazelcast.jet.pipeline;
 
 import com.hazelcast.function.BiFunctionEx;
 import com.hazelcast.function.BiPredicateEx;
+import com.hazelcast.function.ComparatorEx;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.function.PredicateEx;
 import com.hazelcast.function.SupplierEx;
@@ -36,7 +37,6 @@ import com.hazelcast.map.IMap;
 import com.hazelcast.replicatedmap.ReplicatedMap;
 
 import javax.annotation.Nonnull;
-import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
@@ -71,10 +71,10 @@ public interface BatchStage<T> extends GeneralStage<T> {
     BatchStage<T> rebalance();
 
     /**
-     * Attaches a stage that sorts the items based on user-defined comaprator.
+     * Attaches a stage that sorts the items based on user-defined comparator.
      */
     @Nonnull
-    BatchStage<T> sort(Comparator<T> comparator);
+    BatchStage<T> sort(ComparatorEx<T> comparator);
 
     /**
      * Attaches a stage that sorts the items based on the natural ordering of items.

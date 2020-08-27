@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.impl.execution;
 
+import com.hazelcast.function.ComparatorEx;
 import com.hazelcast.internal.util.concurrent.ConcurrentConveyor;
 import com.hazelcast.internal.util.concurrent.Pipe;
 import com.hazelcast.internal.util.concurrent.QueuedPipe;
@@ -27,7 +28,6 @@ import com.hazelcast.logging.ILogger;
 import com.hazelcast.logging.Logger;
 
 import java.util.BitSet;
-import java.util.Comparator;
 import java.util.function.Predicate;
 import java.util.function.ToIntFunction;
 
@@ -50,7 +50,7 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
     private final ConcurrentConveyor<Object> conveyor;
     private final ProgressTracker tracker = new ProgressTracker();
     private final ItemDetector itemDetector = new ItemDetector();
-    private Comparator<Object> comparator;
+    private ComparatorEx<Object> comparator;
     private final WatermarkCoalescer watermarkCoalescer;
     private final BitSet receivedBarriers; // indicates if current snapshot is received on the queue
     private final ILogger logger;
@@ -85,7 +85,7 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
     }
 
     public ConcurrentInboundEdgeStream(ConcurrentConveyor<Object> conveyor, int ordinal, int priority,
-                                       boolean waitForAllBarriers, String debugName, Comparator<Object> comparator) {
+                                       boolean waitForAllBarriers, String debugName, ComparatorEx<Object> comparator) {
         this(conveyor, ordinal, priority, waitForAllBarriers, debugName);
         this.comparator = comparator;
     }

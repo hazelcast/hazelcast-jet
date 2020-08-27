@@ -17,6 +17,7 @@
 package com.hazelcast.jet.impl.execution.init;
 
 import com.hazelcast.cluster.Address;
+import com.hazelcast.function.ComparatorEx;
 import com.hazelcast.jet.config.EdgeConfig;
 import com.hazelcast.jet.core.Edge;
 import com.hazelcast.jet.core.Edge.RoutingPolicy;
@@ -27,7 +28,6 @@ import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 
 import java.io.IOException;
-import java.util.Comparator;
 import java.util.Map;
 
 public class EdgeDef implements IdentifiedDataSerializable {
@@ -40,7 +40,7 @@ public class EdgeDef implements IdentifiedDataSerializable {
     private RoutingPolicy routingPolicy;
     private Partitioner<?> partitioner;
     private EdgeConfig config;
-    private Comparator<Object> comparator;
+    private ComparatorEx<Object> comparator;
 
     // transient fields populated and used after deserialization
     private transient String id;
@@ -118,7 +118,7 @@ public class EdgeDef implements IdentifiedDataSerializable {
         return config;
     }
 
-    Comparator<Object> getComparator() {
+    ComparatorEx<Object> getComparator() {
         return comparator;
     }
 

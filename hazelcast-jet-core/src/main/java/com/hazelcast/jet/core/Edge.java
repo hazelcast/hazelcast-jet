@@ -17,6 +17,7 @@
 package com.hazelcast.jet.core;
 
 import com.hazelcast.cluster.Address;
+import com.hazelcast.function.ComparatorEx;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.config.EdgeConfig;
@@ -34,7 +35,6 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.Serializable;
-import java.util.Comparator;
 import java.net.UnknownHostException;
 import java.util.Map;
 import java.util.Objects;
@@ -96,7 +96,7 @@ public class Edge implements IdentifiedDataSerializable {
     private Address distributedTo;
     private Partitioner<?> partitioner;
     private RoutingPolicy routingPolicy = RoutingPolicy.UNICAST;
-    private Comparator<Object> comparator;
+    private ComparatorEx<Object> comparator;
     private EdgeConfig config;
 
     protected Edge() {
@@ -378,12 +378,12 @@ public class Edge implements IdentifiedDataSerializable {
      * to determine which cluster member to receive the next item from over this edge.
      * Using this feature is only applicable if the edge is distributed.
      */
-    public Edge monotonicOrder(Comparator<Object> comparator) {
+    public Edge monotonicOrder(ComparatorEx<Object> comparator) {
         this.comparator = comparator;
         return this;
     }
 
-    public Comparator<Object> getComparator() {
+    public ComparatorEx<Object> getComparator() {
         return comparator;
     }
 
@@ -599,8 +599,8 @@ public class Edge implements IdentifiedDataSerializable {
         destName = in.readUTF();
         destOrdinal = in.readInt();
         priority = in.readInt();
-        distributedTo = in.readObject();
         comparator = in.readObject();
+        distributedTo = in.readObject();
         routingPolicy = in.readObject();
         try {
             partitioner = CustomClassLoadedObject.read(in);
