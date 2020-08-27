@@ -16,11 +16,11 @@
 
 package com.hazelcast.jet.impl.processor;
 
-import com.hazelcast.function.ComparatorEx;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.core.AbstractProcessor;
 
 import javax.annotation.Nonnull;
+import java.util.Comparator;
 import java.util.Iterator;
 import java.util.SortedSet;
 import java.util.TreeSet;
@@ -29,7 +29,7 @@ public class SortPrepareP<V> extends AbstractProcessor {
     private final SortedSet<V> set;
     private ResultTraverser resultTraverser;
 
-    public SortPrepareP(ComparatorEx<V> comparator) {
+    public SortPrepareP(Comparator<V> comparator) {
         this.set = new TreeSet<>(comparator);
     }
 
@@ -61,5 +61,4 @@ public class SortPrepareP<V> extends AbstractProcessor {
             }
         }
     }
-
 }

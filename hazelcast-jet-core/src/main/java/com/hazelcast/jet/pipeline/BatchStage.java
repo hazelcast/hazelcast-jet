@@ -58,23 +58,20 @@ public interface BatchStage<T> extends GeneralStage<T> {
     /**
      * {@inheritDoc}
      */
-    @Nonnull
-    @Override
+    @Nonnull @Override
     <K> BatchStageWithKey<T, K> groupingKey(@Nonnull FunctionEx<? super T, ? extends K> keyFn);
 
-    @Nonnull
-    @Override
+    @Nonnull @Override
     <K> BatchStage<T> rebalance(@Nonnull FunctionEx<? super T, ? extends K> keyFn);
 
-    @Nonnull
-    @Override
+    @Nonnull @Override
     BatchStage<T> rebalance();
 
     /**
      * Attaches a stage that sorts the items based on user-defined comparator.
      */
     @Nonnull
-    BatchStage<T> sort(ComparatorEx<T> comparator);
+    BatchStage<T> sort(@Nonnull ComparatorEx<T> comparator);
 
     /**
      * Attaches a stage that sorts the items based on the natural ordering of items.
@@ -82,16 +79,13 @@ public interface BatchStage<T> extends GeneralStage<T> {
     @Nonnull
     BatchStage<T> sort();
 
-    @Nonnull
-    @Override
+    @Nonnull @Override
     <R> BatchStage<R> map(@Nonnull FunctionEx<? super T, ? extends R> mapFn);
 
-    @Nonnull
-    @Override
+    @Nonnull @Override
     BatchStage<T> filter(@Nonnull PredicateEx<T> filterFn);
 
-    @Nonnull
-    @Override
+    @Nonnull @Override
     <R> BatchStage<R> flatMap(@Nonnull FunctionEx<? super T, ? extends Traverser<R>> flatMapFn);
 
     @Nonnull @Override
