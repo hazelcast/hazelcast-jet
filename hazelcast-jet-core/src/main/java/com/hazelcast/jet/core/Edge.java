@@ -374,15 +374,16 @@ public class Edge implements IdentifiedDataSerializable {
     }
 
     /**
-     * Sets a comparator over this edge. The comparator is used by {@link ConcurrentInboundEdgeStream}
+     * Sets a comparator on this edge. The comparator is used by {@link ConcurrentInboundEdgeStream}
      * to determine which cluster member to receive the next item from over this edge.
-     * Using this feature is only applicable if the edge is distributed.
      */
     public Edge monotonicOrder(ComparatorEx<Object> comparator) {
         this.comparator = comparator;
         return this;
     }
-
+    /**
+     * Returns the comparator defined on this edge.
+     **/
     public ComparatorEx<Object> getComparator() {
         return comparator;
     }
