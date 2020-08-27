@@ -69,15 +69,11 @@ public interface BatchStage<T> extends GeneralStage<T> {
 
     /**
      * Attaches a stage that sorts the items based on user-defined comparator.
+     *
+     * @since 4.3
      */
     @Nonnull
     BatchStage<T> sort(@Nonnull ComparatorEx<T> comparator);
-
-    /**
-     * Attaches a stage that sorts the items based on the natural ordering of items.
-     */
-    @Nonnull
-    BatchStage<T> sort();
 
     @Nonnull @Override
     <R> BatchStage<R> map(@Nonnull FunctionEx<? super T, ? extends R> mapFn);

@@ -20,6 +20,7 @@ import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.core.AbstractProcessor;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.SortedSet;
@@ -29,7 +30,7 @@ public class SortPrepareP<V> extends AbstractProcessor {
     private final SortedSet<V> set;
     private ResultTraverser resultTraverser;
 
-    public SortPrepareP(Comparator<V> comparator) {
+    public SortPrepareP(@Nullable Comparator<V> comparator) {
         this.set = new TreeSet<>(comparator);
     }
 

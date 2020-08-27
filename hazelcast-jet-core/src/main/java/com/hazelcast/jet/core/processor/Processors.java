@@ -981,6 +981,8 @@ public final class Processors {
      * to prepare it for the global sorting phase.
      * There can be only one {@link SortPrepareP} processor per cluster member for
      * each sort stage.
+     *
+     * @since 4.3
      */
     @Nonnull
     public static <V> SupplierEx<Processor> sortPrepareP(Comparator<V> comparator) {

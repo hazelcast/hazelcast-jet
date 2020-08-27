@@ -24,6 +24,8 @@ import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.impl.pipeline.Planner;
 import com.hazelcast.jet.impl.pipeline.Planner.PlannerVertex;
 
+import javax.annotation.Nonnull;
+
 import static com.hazelcast.function.FunctionEx.identity;
 import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.processor.Processors.sortPrepareP;
@@ -34,7 +36,7 @@ public class SortTransform<V> extends AbstractTransform {
     private static final String FIRST_STAGE_VERTEX_NAME_SUFFIX = "-prepare";
     private final ComparatorEx<V> comparator;
 
-    public SortTransform(Transform upstream, ComparatorEx<V> comparator) {
+    public SortTransform(@Nonnull Transform upstream, @Nonnull ComparatorEx<V> comparator) {
         super("sort", upstream);
         this.comparator = comparator;
     }
