@@ -16,25 +16,19 @@
 
 package com.hazelcast.jet.pipeline.test;
 
-import com.hazelcast.jet.aggregate.AggregateOperations;
 import com.hazelcast.jet.pipeline.PipelineTestSupport;
-import com.hazelcast.jet.pipeline.WindowDefinition;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
 import java.util.Arrays;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.stream.IntStream;
-import java.util.stream.LongStream;
 
 import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
 import static com.hazelcast.jet.pipeline.WindowDefinition.tumbling;
 import static com.hazelcast.jet.pipeline.test.Assertions.assertCollectedEventually;
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static java.util.stream.Collectors.toSet;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
