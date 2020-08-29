@@ -25,6 +25,7 @@ import com.hazelcast.jet.impl.pipeline.Planner;
 import com.hazelcast.jet.impl.pipeline.Planner.PlannerVertex;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 import static com.hazelcast.function.FunctionEx.identity;
 import static com.hazelcast.jet.core.Edge.between;
@@ -36,9 +37,13 @@ public class SortTransform<V> extends AbstractTransform {
     private static final String FIRST_STAGE_VERTEX_NAME_SUFFIX = "-prepare";
     private final ComparatorEx<V> comparator;
 
-    public SortTransform(@Nonnull Transform upstream, @Nonnull ComparatorEx<V> comparator) {
+    public SortTransform(@Nonnull Transform upstream, @Nullable ComparatorEx<V> comparator) {
         super("sort", upstream);
-        this.comparator = comparator;
+        if (comparator == null) {
+            this.comparator = (ComparatorEx<V>) (o1, o2) -> ((Comparable<V>) o1).compareTo(o2);
+        } else {
+            this.comparator = comparator;
+        }
     }
 
     @Override

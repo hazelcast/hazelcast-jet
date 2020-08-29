@@ -68,6 +68,14 @@ public interface BatchStage<T> extends GeneralStage<T> {
     BatchStage<T> rebalance();
 
     /**
+     * Attaches a stage that sorts items based on their natural ordering.
+     *
+     * @since 4.3
+     */
+    @Nonnull
+    BatchStage<T> sort();
+
+    /**
      * Attaches a stage that sorts the items based on user-defined comparator.
      *
      * @since 4.3
