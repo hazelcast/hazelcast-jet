@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <packaging>jar</packaging>
+    <name>hazelcast-jet-sql</name>
+    <description>SQL support for Hazelcast Jet</description>
+    <url>http://www.hazelcast.com/</url>
+
+    <artifactId>hazelcast-jet-sql</artifactId>
+
+    <parent>
+        <groupId>com.hazelcast.jet</groupId>
+        <artifactId>hazelcast-jet-root</artifactId>
+        <version>4.3-SNAPSHOT</version>
+    </parent>
+
+    <properties>
+        <relocation.root>com.hazelcast</relocation.root>
+    </properties>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <createSourcesJar>true</createSourcesJar>
+                    <shadeSourcesContent>true</shadeSourcesContent>
+                    <createDependencyReducedPom>true</createDependencyReducedPom>
+                    <artifactSet>
+                        <includes>
+                            <include>com.hazelcast.jet:hazelcast-jet-sql</include>
+                            <include>com.hazelcast:hazelcast-sql</include>
+                        </includes>
+                    </artifactSet>
+                    <relocations>
+                        <relocation>
+                            <pattern>com.</pattern>
+                            <shadedPattern>${relocation.root}.com.</shadedPattern>
+                            <excludes>
+                                <exclude>com.hazelcast.**</exclude>
+                            </excludes>
+                        </relocation>
+                        <relocation>
+                            <pattern>org.</pattern>
+                            <shadedPattern>${relocation.root}.org.</shadedPattern>
+                        </relocation>
+                    </relocations>
+                    <transformers>
+                        <transformer implementation="org.apache.maven.plugins.shade.resource.ApacheLicenseResourceTransformer"/>
+                        <transformer implementation="org.apache.maven.plugins.shade.resource.ApacheNoticeResourceTransformer"/>
+                        <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+                    </transformers>
+                    <filters>
+                        <filter>
+                            <artifact>com.hazelcast:hazelcast-sql</artifact>
+                            <excludes>
+                                <exclude>codegen/**</exclude>
+                                <!-- Replace with the one from src/main/resources for correct reflection in runtime. -->
+                                <exclude>org.codehaus.commons.compiler.properties</exclude>
+                            </excludes>
+                        </filter>
+                    </filters>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.hazelcast.jet</groupId>
+            <artifactId>hazelcast-jet-core</artifactId>
+            <version>${project.parent.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.hazelcast</groupId>
+            <artifactId>hazelcast-sql</artifactId>
+            <version>${hazelcast.version}</version>
+            <classifier>jar-with-dependencies</classifier>
+        </dependency>
+
+        <!-- TEST -->
+        <dependency>
+            <groupId>com.hazelcast.jet</groupId>
+            <artifactId>hazelcast-jet-core</artifactId>
+            <version>${project.parent.version}</version>
+            <classifier>tests</classifier>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+</project>

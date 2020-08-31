@@ -19,12 +19,8 @@ package com.hazelcast.jet.server;
 import com.hazelcast.client.config.ClientConfig;
 import com.hazelcast.client.config.XmlClientConfigBuilder;
 import com.hazelcast.client.config.YamlClientConfigBuilder;
-import com.hazelcast.client.impl.clientside.HazelcastClientInstanceImpl;
-import com.hazelcast.client.impl.management.MCClusterMetadata;
-import com.hazelcast.client.impl.spi.ClientClusterService;
 import com.hazelcast.cluster.Cluster;
 import com.hazelcast.instance.JetBuildInfo;
-import com.hazelcast.internal.util.FutureUtil;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.JetInstance;
@@ -430,14 +426,14 @@ public class JetCommandLine implements Runnable {
         targetsMixin.replace(targets);
         runWithJet(verbosity, jet -> {
             JetClientInstanceImpl client = (JetClientInstanceImpl) jet;
-            HazelcastClientInstanceImpl hazelcastClient = client.getHazelcastClient();
+            /*HazelcastClientInstanceImpl hazelcastClient = client.getHazelcastClient();
             ClientClusterService clientClusterService = hazelcastClient.getClientClusterService();
-            MCClusterMetadata clusterMetadata = FutureUtil.getValue(hazelcastClient.getManagementCenterService()
-                    .getClusterMetadata(clientClusterService.getMasterMember()));
+            MCClusterMetadata clusterMetadata = FutureUtil.getValue(hazelcastClient.getCluster().getManagementCenterService()
+                    .getClusterMetadata(clientClusterService.getMasterMember()));*/
             Cluster cluster = client.getCluster();
 
-            println("State: " + clusterMetadata.getCurrentState());
-            println("Version: " + clusterMetadata.getJetVersion());
+            /*println("State: " + clusterMetadata.getCurrentState());
+            println("Version: " + clusterMetadata.getJetVersion());*/
             println("Size: " + cluster.getMembers().size());
 
             println("");
