@@ -195,7 +195,10 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
                     headItem = headObject;
                 }
                 if (headItem == null) {
-                    return NO_PROGRESS;
+                    if(batchSize == -1) {
+                        return NO_PROGRESS;
+                    }
+                    return MADE_PROGRESS;
                 }
                 if (headItem == DONE_ITEM) {
                     conveyor.removeQueue(queueIndex);
