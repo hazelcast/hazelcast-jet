@@ -195,7 +195,7 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
                     headItem = headObject;
                 }
                 if (headItem == null) {
-                    if(batchSize == -1) {
+                    if (batchSize == -1) {
                         return NO_PROGRESS;
                     }
                     return MADE_PROGRESS;
