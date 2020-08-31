@@ -24,15 +24,20 @@ import com.hazelcast.jet.accumulator.LongAccumulator;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.DAG;
+import com.hazelcast.jet.core.Edge;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ResettableSingletonTraverser;
 import com.hazelcast.jet.core.TestProcessors;
+import com.hazelcast.jet.core.TestProcessors.NoOutputSourceP;
 import com.hazelcast.jet.core.Vertex;
+import com.hazelcast.jet.core.processor.Processors;
+import com.hazelcast.jet.impl.JobRepository;
 import com.hazelcast.jet.impl.processor.TransformP;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.test.TestSources;
 import com.hazelcast.test.HazelcastSerialClassRunner;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -42,13 +47,17 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
+import static com.hazelcast.function.FunctionEx.identity;
 import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
+import static com.hazelcast.jet.config.ProcessingGuarantee.EXACTLY_ONCE;
 import static com.hazelcast.jet.core.Edge.between;
+import static com.hazelcast.jet.core.JobStatus.RUNNING;
 import static com.hazelcast.jet.core.processor.SinkProcessors.writeListP;
 import static com.hazelcast.jet.pipeline.ServiceFactories.nonSharedService;
 import static java.util.Arrays.asList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 
 @RunWith(HazelcastSerialClassRunner.class)
@@ -60,7 +69,15 @@ public class MetricsTest extends SimpleTestInClusterSupport {
 
     @BeforeClass
     public static void beforeClass() {
-        initialize(1, new JetConfig().setProperty("hazelcast.jmx", "true"));
+        JetConfig config = new JetConfig();
+        config.setProperty("hazelcast.jmx", "true");
+        config.getHazelcastConfig().getMetricsConfig().setCollectionFrequencySeconds(1);
+        initialize(1, config);
+    }
+
+    @Before
+    public void before() {
+        TestProcessors.reset(1);
     }
 
     @Test
@@ -404,6 +421,54 @@ public class MetricsTest extends SimpleTestInClusterSupport {
             sum += attributeValue;
         }
         assertEquals(generatedItems, sum);
+    }
+
+    @Test
+    public void test_sourceSinkTag() {
+        DAG dag = new DAG();
+
+        Vertex src = dag.newVertex("src", () -> new NoOutputSourceP());
+        Vertex mid = dag.newVertex("mid", Processors.mapP(identity()));
+        Vertex sink = dag.newVertex("sink", Processors.noopP());
+
+        dag.edge(Edge.between(src, mid));
+        dag.edge(Edge.between(mid, sink));
+
+        Job job = instance().newJob(dag,
+                new JobConfig()
+                        .setProcessingGuarantee(EXACTLY_ONCE)
+                        .setSnapshotIntervalMillis(100));
+        assertJobStatusEventually(job, RUNNING);
+        JobMetrics[] metrics = {null};
+        assertTrueEventually(() -> assertNotEquals(0, (metrics[0] = job.getMetrics()).metrics().size()));
+
+        assertSourceSinkTags(metrics[0], "src", true, true, false);
+        assertSourceSinkTags(metrics[0], "mid", true, false, false);
+        assertSourceSinkTags(metrics[0], "sink", true, false, true);
+
+        // restart after a snapshot so that the job will restart from a snapshot. Check the source/sink tags afterwards.
+        waitForFirstSnapshot(new JobRepository(instance()), job.getId(), 10, true);
+        job.restart();
+
+        assertJobStatusEventually(job, RUNNING);
+        assertTrueEventually(() -> assertNotEquals(0, (metrics[0] = job.getMetrics()).metrics().size()));
+
+        assertSourceSinkTags(metrics[0], "src", false, true, false);
+        assertSourceSinkTags(metrics[0], "mid", false, false, false);
+        assertSourceSinkTags(metrics[0], "sink", false, false, true);
+    }
+
+    private void assertSourceSinkTags(JobMetrics metrics, String vertexName, boolean beforeRestart,
+                                      boolean expectedSource, boolean expectedSink) {
+        // get an arbitrary measurement for the vertex, we'll assert the tag only
+        Measurement measurement = metrics.filter(MetricTags.VERTEX, vertexName)
+                                         .get(MetricNames.EMITTED_COUNT)
+                                         .get(0);
+
+        assertEquals("vertex=" + vertexName + ", metric=" + MetricTags.SOURCE + ", beforeRestart=" + beforeRestart,
+                expectedSource ? "true" : null, measurement.tag(MetricTags.SOURCE));
+        assertEquals("vertex=" + vertexName + ", metric=" + MetricTags.SINK + ", beforeRestart=" + beforeRestart,
+                expectedSink ? "true" : null, measurement.tag(MetricTags.SINK));
     }
 
     private Job runPipeline(DAG dag) {
