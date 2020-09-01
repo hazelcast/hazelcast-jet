@@ -132,6 +132,14 @@ public abstract class AbstractTransform implements Transform {
         return false;
     }
 
+    /**
+     * Determines the local parallelism value for the transform by looking
+     * its local parallelism, preferred local parallelism, and the default
+     * local parallelism provided in Pipeline.Context object.
+     * <p>
+     * If none of them is set, returns the default local parallelism
+     * provided in Pipeline.Context object.
+     */
     protected void determineLocalParallelism(int localParallelism, int preferredLocalParallelism, Pipeline.Context ctx) {
         int defaultParallelism = ctx.defaultLocalParallelism();
         checkLocalParallelism(preferredLocalParallelism);

@@ -187,11 +187,11 @@ public abstract class AbstractJetInstance implements JetInstance {
     @Override
     public Collection<Observable<?>> getObservables() {
         return hazelcastInstance.getDistributedObjects().stream()
-                                .filter(o -> o.getServiceName().equals(RingbufferService.SERVICE_NAME))
-                                .filter(o -> o.getName().startsWith(ObservableImpl.JET_OBSERVABLE_NAME_PREFIX))
-                                .map(o -> o.getName().substring(ObservableImpl.JET_OBSERVABLE_NAME_PREFIX.length()))
-                                .map(this::getObservable)
-                                .collect(Collectors.toList());
+                  .filter(o -> o.getServiceName().equals(RingbufferService.SERVICE_NAME))
+                  .filter(o -> o.getName().startsWith(ObservableImpl.JET_OBSERVABLE_NAME_PREFIX))
+                  .map(o -> o.getName().substring(ObservableImpl.JET_OBSERVABLE_NAME_PREFIX.length()))
+                  .map(this::getObservable)
+                  .collect(Collectors.toList());
     }
 
     @Override
