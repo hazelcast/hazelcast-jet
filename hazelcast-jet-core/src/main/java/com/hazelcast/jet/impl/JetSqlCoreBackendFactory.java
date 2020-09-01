@@ -42,7 +42,7 @@ final class JetSqlCoreBackendFactory {
     }
 
     @Nullable
-    static JetSqlCoreBackend createJetSqlCoreBackend() {
+    static JetSqlCoreBackend create() {
         if (SQL_CORE_BACKEND_CLASS == null) {
             return null;
         }
