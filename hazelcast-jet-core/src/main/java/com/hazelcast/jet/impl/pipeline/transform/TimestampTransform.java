@@ -48,7 +48,7 @@ public class TimestampTransform<T> extends AbstractTransform {
 
     @Override
     public void determineLocalParallelism(Context context) {
-
+        determineLocalParallelism(localParallelism(), -1, context);
     }
 
     @Override
