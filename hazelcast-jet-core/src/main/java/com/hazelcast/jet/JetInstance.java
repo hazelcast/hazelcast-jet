@@ -263,7 +263,7 @@ public interface JetInstance {
     /**
      * Returns a service to execute distributed SQL queries.
      * <p>
-     * The service is in beta state. Behavior and API might be changed
+     * The service is in beta state. Behavior and API might change
      * in future releases. Binary compatibility is not guaranteed
      * between minor and patch releases.
      *

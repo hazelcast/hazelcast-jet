@@ -111,7 +111,7 @@ class NodeExtensionCommon {
 
         extensionServices.put(JetService.SERVICE_NAME, jetService);
 
-        JetSqlCoreBackend sqlCoreBackend = jetService.getSqlCoreBackend();
+        JetSqlCoreBackend sqlCoreBackend = JetSqlCoreBackendFactory.createJetSqlCoreBackend();
         if (sqlCoreBackend != null) {
             extensionServices.put(JetSqlCoreBackend.SERVICE_NAME, sqlCoreBackend);
         }

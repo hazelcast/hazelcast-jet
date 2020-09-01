@@ -32,12 +32,12 @@ import static java.util.Collections.emptyList;
 
 public class JetSqlCoreBackendImpl implements JetSqlCoreBackend, ManagedService {
 
-    @Override
-    public void init(NodeEngine nodeEngine, Properties properties) {
+    @SuppressWarnings("unused") // used through reflection
+    public JetSqlCoreBackendImpl() {
     }
 
-    @SuppressWarnings("unused") // used through reflection
-    public void init() {
+    @Override
+    public void init(NodeEngine nodeEngine, Properties properties) {
     }
 
     @Override
