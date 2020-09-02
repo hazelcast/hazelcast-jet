@@ -21,9 +21,10 @@ import com.hazelcast.jet.sql.impl.parse.SqlDropJob;
 import com.hazelcast.jet.sql.impl.parse.SqlOption;
 import com.hazelcast.jet.sql.impl.parse.SqlShowExternalTables;
 import com.hazelcast.sql.impl.calcite.validate.HazelcastSqlOperatorTable;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import com.hazelcast.sql.impl.calcite.validate.types.HazelcastTypeSystem;
 import org.apache.calcite.runtime.CalciteContextException;
-import org.apache.calcite.runtime.Resources;
+import org.apache.calcite.runtime.Resources.ExInst;
+import org.apache.calcite.sql.SqlBasicTypeNameSpec;
 import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlDataTypeSpec;
 import org.apache.calcite.sql.SqlDynamicParam;
@@ -35,8 +36,10 @@ import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.SqlSelect;
+import org.apache.calcite.sql.SqlUserDefinedTypeNameSpec;
 import org.apache.calcite.sql.SqlUtil;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
+import org.apache.calcite.sql.fun.SqlTrimFunction;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.util.SqlVisitor;
 import org.apache.calcite.sql.validate.SqlValidatorException;
@@ -44,14 +47,14 @@ import org.apache.calcite.sql.validate.SqlValidatorException;
 import java.util.HashSet;
 import java.util.Set;
 
-import static com.hazelcast.jet.sql.impl.parse.ParserResource.RESOURCE;
-
-// TODO: review and get in line with imdg after its freeze
+import static com.hazelcast.jet.sql.impl.validate.ValidatorResource.RESOURCE;
 
 /**
  * Visitor that throws exceptions for unsupported SQL features.
+ * </p>
+ * Mostly copy of {@link  com.hazelcast.sql.impl.calcite.parse.UnsupportedOperationVisitor}
+ * with Jet specific tweaks/extensions.
  */
-@SuppressWarnings("checkstyle:ExecutableStatementCount")
 public final class UnsupportedOperationVisitor implements SqlVisitor<Void> {
 
     public static final UnsupportedOperationVisitor INSTANCE = new UnsupportedOperationVisitor();
@@ -72,27 +75,26 @@ public final class UnsupportedOperationVisitor implements SqlVisitor<Void> {
         // of Apache Calcite.
         SUPPORTED_KINDS = new HashSet<>();
 
+        // Predicates
+        SUPPORTED_KINDS.add(SqlKind.AND);
+        SUPPORTED_KINDS.add(SqlKind.OR);
+        SUPPORTED_KINDS.add(SqlKind.NOT);
+
         // Arithmetics
         SUPPORTED_KINDS.add(SqlKind.PLUS);
         SUPPORTED_KINDS.add(SqlKind.MINUS);
         SUPPORTED_KINDS.add(SqlKind.TIMES);
         SUPPORTED_KINDS.add(SqlKind.DIVIDE);
-        SUPPORTED_KINDS.add(SqlKind.MOD);
-        SUPPORTED_KINDS.add(SqlKind.PLUS_PREFIX);
         SUPPORTED_KINDS.add(SqlKind.MINUS_PREFIX);
-
-        // Boolean logic predicates
-        SUPPORTED_KINDS.add(SqlKind.AND);
-        SUPPORTED_KINDS.add(SqlKind.OR);
-        SUPPORTED_KINDS.add(SqlKind.NOT);
+        SUPPORTED_KINDS.add(SqlKind.PLUS_PREFIX);
 
         // "IS" predicates
-        SUPPORTED_KINDS.add(SqlKind.IS_NULL);
-        SUPPORTED_KINDS.add(SqlKind.IS_NOT_NULL);
-        SUPPORTED_KINDS.add(SqlKind.IS_FALSE);
-        SUPPORTED_KINDS.add(SqlKind.IS_NOT_FALSE);
         SUPPORTED_KINDS.add(SqlKind.IS_TRUE);
         SUPPORTED_KINDS.add(SqlKind.IS_NOT_TRUE);
+        SUPPORTED_KINDS.add(SqlKind.IS_FALSE);
+        SUPPORTED_KINDS.add(SqlKind.IS_NOT_FALSE);
+        SUPPORTED_KINDS.add(SqlKind.IS_NULL);
+        SUPPORTED_KINDS.add(SqlKind.IS_NOT_NULL);
 
         // Comparisons predicates
         SUPPORTED_KINDS.add(SqlKind.EQUALS);
@@ -102,34 +104,15 @@ public final class UnsupportedOperationVisitor implements SqlVisitor<Void> {
         SUPPORTED_KINDS.add(SqlKind.GREATER_THAN_OR_EQUAL);
         SUPPORTED_KINDS.add(SqlKind.LESS_THAN_OR_EQUAL);
 
-        // Existential scalar subqueries
-        SUPPORTED_KINDS.add(SqlKind.EXISTS);
-        SUPPORTED_KINDS.add(SqlKind.SOME);
-        SUPPORTED_KINDS.add(SqlKind.ALL);
-        SUPPORTED_KINDS.add(SqlKind.IN);
-        SUPPORTED_KINDS.add(SqlKind.NOT_IN);
-
-        // Aggregates
-        SUPPORTED_KINDS.add(SqlKind.SUM);
-        SUPPORTED_KINDS.add(SqlKind.COUNT);
-        SUPPORTED_KINDS.add(SqlKind.MIN);
-        SUPPORTED_KINDS.add(SqlKind.MAX);
-        SUPPORTED_KINDS.add(SqlKind.AVG);
-        SUPPORTED_KINDS.add(SqlKind.SINGLE_VALUE);
-
         // Miscellaneous
         SUPPORTED_KINDS.add(SqlKind.AS);
-        SUPPORTED_KINDS.add(SqlKind.BETWEEN);
-        SUPPORTED_KINDS.add(SqlKind.CASE);
         SUPPORTED_KINDS.add(SqlKind.CAST);
         SUPPORTED_KINDS.add(SqlKind.CEIL);
-        SUPPORTED_KINDS.add(SqlKind.DESCENDING);
-        SUPPORTED_KINDS.add(SqlKind.EXTRACT);
         SUPPORTED_KINDS.add(SqlKind.FLOOR);
         SUPPORTED_KINDS.add(SqlKind.LIKE);
-        SUPPORTED_KINDS.add(SqlKind.POSITION);
-        SUPPORTED_KINDS.add(SqlKind.TIMESTAMP_ADD);
+        SUPPORTED_KINDS.add(SqlKind.TRIM);
 
+        // Extensions
         SUPPORTED_KINDS.add(SqlKind.CREATE_TABLE);
         SUPPORTED_KINDS.add(SqlKind.DROP_TABLE);
         SUPPORTED_KINDS.add(SqlKind.COLUMN_DECL);
@@ -144,31 +127,25 @@ public final class UnsupportedOperationVisitor implements SqlVisitor<Void> {
         // Supported operators
         SUPPORTED_OPERATORS = new HashSet<>();
 
-        // Concat
-        SUPPORTED_OPERATORS.add(SqlStdOperatorTable.CONCAT);
-
         // Math
-        SUPPORTED_OPERATORS.add(SqlStdOperatorTable.COS);
-        SUPPORTED_OPERATORS.add(SqlStdOperatorTable.SIN);
-        SUPPORTED_OPERATORS.add(SqlStdOperatorTable.TAN);
-        SUPPORTED_OPERATORS.add(SqlStdOperatorTable.COT);
-        SUPPORTED_OPERATORS.add(SqlStdOperatorTable.ACOS);
-        SUPPORTED_OPERATORS.add(SqlStdOperatorTable.ASIN);
-        SUPPORTED_OPERATORS.add(SqlStdOperatorTable.ATAN);
-        SUPPORTED_OPERATORS.add(SqlStdOperatorTable.ATAN2);
-        SUPPORTED_OPERATORS.add(SqlStdOperatorTable.SQRT);
-        SUPPORTED_OPERATORS.add(SqlStdOperatorTable.EXP);
-        SUPPORTED_OPERATORS.add(SqlStdOperatorTable.LN);
-        SUPPORTED_OPERATORS.add(SqlStdOperatorTable.LOG10);
-        SUPPORTED_OPERATORS.add(SqlStdOperatorTable.RAND);
-        SUPPORTED_OPERATORS.add(SqlStdOperatorTable.ABS);
+        SUPPORTED_OPERATORS.add(HazelcastSqlOperatorTable.COS);
+        SUPPORTED_OPERATORS.add(HazelcastSqlOperatorTable.SIN);
+        SUPPORTED_OPERATORS.add(HazelcastSqlOperatorTable.TAN);
+        SUPPORTED_OPERATORS.add(HazelcastSqlOperatorTable.COT);
+        SUPPORTED_OPERATORS.add(HazelcastSqlOperatorTable.ACOS);
+        SUPPORTED_OPERATORS.add(HazelcastSqlOperatorTable.ASIN);
+        SUPPORTED_OPERATORS.add(HazelcastSqlOperatorTable.ATAN);
+        SUPPORTED_OPERATORS.add(HazelcastSqlOperatorTable.EXP);
+        SUPPORTED_OPERATORS.add(HazelcastSqlOperatorTable.LN);
+        SUPPORTED_OPERATORS.add(HazelcastSqlOperatorTable.LOG10);
+        SUPPORTED_OPERATORS.add(HazelcastSqlOperatorTable.RAND);
+        SUPPORTED_OPERATORS.add(HazelcastSqlOperatorTable.ABS);
         SUPPORTED_OPERATORS.add(SqlStdOperatorTable.PI);
-        SUPPORTED_OPERATORS.add(SqlStdOperatorTable.SIGN);
-        SUPPORTED_OPERATORS.add(SqlStdOperatorTable.POWER);
-        SUPPORTED_OPERATORS.add(SqlStdOperatorTable.DEGREES);
-        SUPPORTED_OPERATORS.add(SqlStdOperatorTable.RADIANS);
-        SUPPORTED_OPERATORS.add(SqlStdOperatorTable.ROUND);
-        SUPPORTED_OPERATORS.add(SqlStdOperatorTable.TRUNCATE);
+        SUPPORTED_OPERATORS.add(HazelcastSqlOperatorTable.SIGN);
+        SUPPORTED_OPERATORS.add(HazelcastSqlOperatorTable.DEGREES);
+        SUPPORTED_OPERATORS.add(HazelcastSqlOperatorTable.RADIANS);
+        SUPPORTED_OPERATORS.add(HazelcastSqlOperatorTable.ROUND);
+        SUPPORTED_OPERATORS.add(HazelcastSqlOperatorTable.TRUNCATE);
 
         // Strings
         SUPPORTED_OPERATORS.add(HazelcastSqlOperatorTable.ASCII);
@@ -180,12 +157,9 @@ public final class UnsupportedOperationVisitor implements SqlVisitor<Void> {
         SUPPORTED_OPERATORS.add(HazelcastSqlOperatorTable.UPPER);
         SUPPORTED_OPERATORS.add(HazelcastSqlOperatorTable.CONCAT);
         SUPPORTED_OPERATORS.add(HazelcastSqlOperatorTable.SUBSTRING);
-
-        // Dates
-        SUPPORTED_OPERATORS.add(SqlStdOperatorTable.CURRENT_DATE);
-        SUPPORTED_OPERATORS.add(SqlStdOperatorTable.CURRENT_TIMESTAMP);
-        SUPPORTED_OPERATORS.add(SqlStdOperatorTable.LOCALTIMESTAMP);
-        SUPPORTED_OPERATORS.add(SqlStdOperatorTable.LOCALTIME);
+        SUPPORTED_OPERATORS.add(HazelcastSqlOperatorTable.LTRIM);
+        SUPPORTED_OPERATORS.add(HazelcastSqlOperatorTable.RTRIM);
+        SUPPORTED_OPERATORS.add(HazelcastSqlOperatorTable.BTRIM);
 
         // Extensions
         SUPPORTED_OPERATORS.add(SqlOption.OPERATOR);
@@ -218,25 +192,47 @@ public final class UnsupportedOperationVisitor implements SqlVisitor<Void> {
 
     @Override
     public Void visit(SqlIdentifier id) {
-        // TODO:
-        /*SqlValidatorTable table = catalogReader.getTable(id.names);
-        if (table != null) {
-            HazelcastTable hzTable = table.unwrap(HazelcastTable.class);
-            if (hzTable != null) {
-                Table target = hzTable.getTarget();
-                if (target != null && !(target instanceof JetTable)) {
-                    throw error(id, RESOURCE.custom(target.getClass().getSimpleName() + " is not supported"));
-                }
-            }
-        }*/
-
         return null;
     }
 
     @Override
     public Void visit(SqlDataTypeSpec type) {
-        // TODO: proper validation for types - do we need second (in addition to DDL) validation ?
-        return null;
+        if (type.getTypeNameSpec() instanceof SqlUserDefinedTypeNameSpec) {
+            SqlIdentifier typeName = type.getTypeName();
+
+            if (HazelcastTypeSystem.isObject(typeName) || HazelcastTypeSystem.isTimestampWithTimeZone(typeName)) {
+                return null;
+            }
+        }
+
+        if (!(type.getTypeNameSpec() instanceof SqlBasicTypeNameSpec)) {
+            throw error(type, RESOURCE.error("Complex type specifications are not supported"));
+        }
+
+        SqlTypeName typeName = SqlTypeName.get(type.getTypeName().getSimple());
+        switch (typeName) {
+            case BOOLEAN:
+            case TINYINT:
+            case SMALLINT:
+            case INTEGER:
+            case BIGINT:
+            case DECIMAL:
+            case REAL:
+            case DOUBLE:
+            case VARCHAR:
+            case DATE:
+            case TIME:
+            case TIMESTAMP:
+            case NULL:
+                return null;
+
+            case CHAR:
+                // char should be not accessible by users, we have only VARCHAR
+            case ANY:
+                // visible to users as OBJECT
+            default:
+                throw error(type, ValidatorResource.RESOURCE.notSupported(typeName.getName()));
+        }
     }
 
     @Override
@@ -244,7 +240,6 @@ public final class UnsupportedOperationVisitor implements SqlVisitor<Void> {
         return null;
     }
 
-    @SuppressWarnings("checkstyle:CyclomaticComplexity")
     @Override
     public Void visit(SqlLiteral literal) {
         SqlTypeName typeName = literal.getTypeName();
@@ -257,31 +252,24 @@ public final class UnsupportedOperationVisitor implements SqlVisitor<Void> {
             case BIGINT:
             case DECIMAL:
             case REAL:
-            case FLOAT:
             case DOUBLE:
-            case CHAR:
             case VARCHAR:
-            case DATE:
-            case TIME:
-            case TIME_WITH_LOCAL_TIME_ZONE:
-            case TIMESTAMP:
-            case TIMESTAMP_WITH_LOCAL_TIME_ZONE:
-            case INTERVAL_YEAR:
-            case INTERVAL_MONTH:
-            case INTERVAL_YEAR_MONTH:
-            case INTERVAL_DAY:
-            case INTERVAL_DAY_HOUR:
-            case INTERVAL_DAY_MINUTE:
-            case INTERVAL_DAY_SECOND:
-            case INTERVAL_HOUR:
-            case INTERVAL_HOUR_MINUTE:
-            case INTERVAL_HOUR_SECOND:
-            case INTERVAL_MINUTE:
-            case INTERVAL_MINUTE_SECOND:
-            case INTERVAL_SECOND:
-            case SYMBOL:
+                // CHAR is present here to support string literals: Calcite expects
+                // string literals to be of CHAR type, not VARCHAR. Validated type
+                // of string literals is still VARCHAR in HazelcastSqlValidator.
+            case CHAR:
+            case ANY:
             case NULL:
                 return null;
+
+            case SYMBOL:
+                Object symbolValue = literal.getValue();
+
+                if (symbolValue instanceof SqlTrimFunction.Flag) {
+                    return null;
+                }
+
+                throw error(literal, RESOURCE.error(symbolValue + " literal is not supported"));
 
             default:
                 throw error(literal, RESOURCE.error(typeName + " literals are not supported"));
@@ -293,7 +281,6 @@ public final class UnsupportedOperationVisitor implements SqlVisitor<Void> {
         return null;
     }
 
-    @SuppressWarnings("checkstyle:CyclomaticComplexity")
     private void processCall(SqlCall call) {
         SqlKind kind = call.getKind();
 
@@ -302,17 +289,8 @@ public final class UnsupportedOperationVisitor implements SqlVisitor<Void> {
         }
 
         switch (kind) {
-            case HINT:
-                // TODO: Proper validation for hints
-                break;
-
             case SELECT:
                 processSelect((SqlSelect) call);
-                break;
-
-            case SCALAR_QUERY:
-                // TODO: Perhaps we may add it to SUPPORTED_KINDS since we always decorrelate. Double-check it when working
-                //  on subqueries.
                 break;
 
             case OTHER:
@@ -325,19 +303,17 @@ public final class UnsupportedOperationVisitor implements SqlVisitor<Void> {
                 break;
 
             default:
-                throw unsupported(call, call.getKind());
+                throw unsupported(call, kind);
         }
     }
 
-    @SuppressFBWarnings(value = "UC_USELESS_VOID_METHOD", justification = "Not fully implemented yet")
-    @SuppressWarnings({"checkstyle:EmptyBlock"})
     private void processSelect(SqlSelect select) {
         if (select.hasOrderBy()) {
-            // TODO: Proper validation for ORDER BY (i.e. LIMIT/OFFSET)
+            throw unsupported(select.getOrderList(), SqlKind.ORDER_BY);
         }
 
         if (select.getGroup() != null && select.getGroup().size() > 0) {
-            // TODO: Proper validation for GROUP BY (i.e. grouping sets, etc).
+            throw unsupported(select.getGroup(), "GROUP BY");
         }
 
         if (select.getFetch() != null) {
@@ -370,10 +346,10 @@ public final class UnsupportedOperationVisitor implements SqlVisitor<Void> {
     }
 
     private CalciteContextException unsupported(SqlNode node, String name) {
-        return error(node, RESOURCE.notSupported(name));
+        return error(node, ValidatorResource.RESOURCE.notSupported(name));
     }
 
-    private CalciteContextException error(SqlNode node, Resources.ExInst<SqlValidatorException> err) {
-        return SqlUtil.newContextException(node.getParserPosition(), err);
+    private CalciteContextException error(SqlNode node, ExInst<SqlValidatorException> error) {
+        return SqlUtil.newContextException(node.getParserPosition(), error);
     }
 }
