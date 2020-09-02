@@ -25,7 +25,7 @@ import com.hazelcast.jet.sql.impl.connector.Processors;
 import com.hazelcast.jet.sql.impl.connector.RowProjector;
 import com.hazelcast.jet.sql.impl.extract.AvroQueryTarget;
 import com.hazelcast.jet.sql.impl.inject.AvroUpsertTargetDescriptor;
-import com.hazelcast.jet.sql.impl.schema.ExternalField;
+import com.hazelcast.jet.sql.impl.schema.MappingField;
 import com.hazelcast.sql.impl.expression.Expression;
 import com.hazelcast.sql.impl.schema.TableField;
 import com.hazelcast.sql.impl.type.QueryDataType;
@@ -62,8 +62,8 @@ final class RemoteAvroMetadataResolver {
     private RemoteAvroMetadataResolver() {
     }
 
-    static List<ExternalField> resolveFields(
-            List<ExternalField> userFields,
+    static List<MappingField> resolveFields(
+            List<MappingField> userFields,
             FileOptions options,
             Job job
     ) throws IOException {
@@ -95,8 +95,8 @@ final class RemoteAvroMetadataResolver {
         throw new IllegalArgumentException("No data found in '" + directory + "'");
     }
 
-    static Metadata resolveMetadata(List<ExternalField> externalFields, FileOptions options, Job job) throws IOException {
-        List<TableField> fields = toTableFields(externalFields);
+    static Metadata resolveMetadata(List<MappingField> mappingFields, FileOptions options, Job job) throws IOException {
+        List<TableField> fields = toTableFields(mappingFields);
         Schema schema = schema(fields);
 
         AvroKeyInputFormat.addInputPath(job, new Path(options.path()));

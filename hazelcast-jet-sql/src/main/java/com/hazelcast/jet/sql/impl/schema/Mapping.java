@@ -16,7 +16,7 @@
 
 package com.hazelcast.jet.sql.impl.schema;
 
-import com.hazelcast.jet.sql.impl.parse.SqlCreateExternalTable;
+import com.hazelcast.jet.sql.impl.parse.SqlCreateExternalMapping;
 import com.hazelcast.jet.sql.impl.parse.SqlOption;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
@@ -41,26 +41,26 @@ import java.util.stream.Collector;
 /**
  * User-defined table schema definition.
  */
-public class ExternalTable implements DataSerializable {
+public class Mapping implements DataSerializable {
 
     private String name;
     private String type;
-    private List<ExternalField> externalFields;
+    private List<MappingField> mappingFields;
     private Map<String, String> options;
 
     @SuppressWarnings("unused")
-    private ExternalTable() {
+    private Mapping() {
     }
 
-    public ExternalTable(
+    public Mapping(
             String name,
             String type,
-            List<ExternalField> externalFields,
+            List<MappingField> mappingFields,
             Map<String, String> options
     ) {
         Set<String> fieldNames = new HashSet<>();
         Set<String> externalFieldNames = new HashSet<>();
-        for (ExternalField field : externalFields) {
+        for (MappingField field : mappingFields) {
             if (!fieldNames.add(field.name())) {
                 throw new IllegalArgumentException("Column '" + field.name()
                         + "' specified more than once");
@@ -73,7 +73,7 @@ public class ExternalTable implements DataSerializable {
 
         this.name = name;
         this.type = type;
-        this.externalFields = externalFields;
+        this.mappingFields = mappingFields;
         this.options = options;
     }
 
@@ -85,8 +85,8 @@ public class ExternalTable implements DataSerializable {
         return type;
     }
 
-    public List<ExternalField> fields() {
-        return Collections.unmodifiableList(externalFields);
+    public List<MappingField> fields() {
+        return Collections.unmodifiableList(mappingFields);
     }
 
     public Map<String, String> options() {
@@ -100,9 +100,9 @@ public class ExternalTable implements DataSerializable {
                 SqlNodeList::add,
                 (l1, l2) -> {throw new UnsupportedOperationException();});
 
-        SqlNode ddl = new SqlCreateExternalTable(
+        SqlNode ddl = new SqlCreateExternalMapping(
                 new SqlIdentifier(name, z),
-                externalFields.stream().map(ExternalField::toSqlColumn).collect(sqlNodeListCollector),
+                mappingFields.stream().map(MappingField::toSqlColumn).collect(sqlNodeListCollector),
                 new SqlIdentifier(type, z),
                 options.entrySet().stream()
                        .sorted(Entry.comparingByKey())
@@ -124,7 +124,7 @@ public class ExternalTable implements DataSerializable {
     public void writeData(ObjectDataOutput out) throws IOException {
         out.writeUTF(name);
         out.writeUTF(type);
-        out.writeObject(externalFields);
+        out.writeObject(mappingFields);
         out.writeObject(options);
     }
 
@@ -132,7 +132,7 @@ public class ExternalTable implements DataSerializable {
     public void readData(ObjectDataInput in) throws IOException {
         name = in.readUTF();
         type = in.readUTF();
-        externalFields = in.readObject();
+        mappingFields = in.readObject();
         options = in.readObject();
     }
 }

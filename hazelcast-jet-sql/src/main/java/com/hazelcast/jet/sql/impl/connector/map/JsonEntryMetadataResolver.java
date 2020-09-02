@@ -20,7 +20,7 @@ import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.jet.sql.impl.connector.EntryMetadata;
 import com.hazelcast.jet.sql.impl.connector.EntryMetadataResolver;
 import com.hazelcast.jet.sql.impl.inject.HazelcastJsonUpsertTargetDescriptor;
-import com.hazelcast.jet.sql.impl.schema.ExternalField;
+import com.hazelcast.jet.sql.impl.schema.MappingField;
 import com.hazelcast.sql.impl.QueryException;
 import com.hazelcast.sql.impl.extract.GenericQueryTargetDescriptor;
 import com.hazelcast.sql.impl.extract.QueryPath;
@@ -50,22 +50,22 @@ final class JsonEntryMetadataResolver implements EntryMetadataResolver {
     }
 
     @Override
-    public List<ExternalField> resolveFields(
-            List<ExternalField> externalFields,
+    public List<MappingField> resolveFields(
+            List<MappingField> mappingFields,
             Map<String, String> options,
             boolean isKey,
             InternalSerializationService serializationService
     ) {
-        Map<QueryPath, ExternalField> externalFieldsByPath = isKey
-                ? extractKeyFields(externalFields)
-                : extractValueFields(externalFields, name -> new QueryPath(name, false));
+        Map<QueryPath, MappingField> externalFieldsByPath = isKey
+                ? extractKeyFields(mappingFields)
+                : extractValueFields(mappingFields, name -> new QueryPath(name, false));
 
         if (externalFieldsByPath.isEmpty()) {
             throw QueryException.error("Empty " + (isKey ? "key" : "value") + " column list");
         }
 
-        Map<String, ExternalField> fields = new LinkedHashMap<>();
-        for (Entry<QueryPath, ExternalField> entry : externalFieldsByPath.entrySet()) {
+        Map<String, MappingField> fields = new LinkedHashMap<>();
+        for (Entry<QueryPath, MappingField> entry : externalFieldsByPath.entrySet()) {
             QueryPath path = entry.getKey();
             if (path.getPath() == null) {
                 throw QueryException.error("Invalid external name '" + path.toString() + "'");
@@ -73,7 +73,7 @@ final class JsonEntryMetadataResolver implements EntryMetadataResolver {
             QueryDataType type = entry.getValue().type();
             String name = entry.getValue().name();
 
-            ExternalField field = new ExternalField(name, type, path.toString());
+            MappingField field = new MappingField(name, type, path.toString());
 
             fields.putIfAbsent(field.name(), field);
         }
@@ -82,18 +82,18 @@ final class JsonEntryMetadataResolver implements EntryMetadataResolver {
 
     @Override
     public EntryMetadata resolveMetadata(
-            List<ExternalField> externalFields,
+            List<MappingField> mappingFields,
             Map<String, String> options,
             boolean isKey,
             InternalSerializationService serializationService
     ) {
-        Map<QueryPath, ExternalField> externalFieldsByPath = isKey
-                ? extractKeyFields(externalFields)
-                : extractValueFields(externalFields, name -> new QueryPath(name, false));
+        Map<QueryPath, MappingField> externalFieldsByPath = isKey
+                ? extractKeyFields(mappingFields)
+                : extractValueFields(mappingFields, name -> new QueryPath(name, false));
 
         List<TableField> fields = new ArrayList<>();
         //Set<String> pathsRequiringConversion = new HashSet<>();
-        for (Entry<QueryPath, ExternalField> entry : externalFieldsByPath.entrySet()) {
+        for (Entry<QueryPath, MappingField> entry : externalFieldsByPath.entrySet()) {
             QueryPath path = entry.getKey();
             QueryDataType type = entry.getValue().type();
             String name = entry.getValue().name();

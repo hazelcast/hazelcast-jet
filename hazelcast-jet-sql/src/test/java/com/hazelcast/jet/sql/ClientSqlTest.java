@@ -48,7 +48,7 @@ public class ClientSqlTest extends JetSqlTestSupport {
         JetInstance client = factory().newClient();
         SqlService sqlService = client.getHazelcastInstance().getSql();
 
-        sqlService.execute("CREATE EXTERNAL TABLE t TYPE " + TestBatchSqlConnector.TYPE_NAME);
+        sqlService.execute("CREATE MAPPING t TYPE " + TestBatchSqlConnector.TYPE_NAME);
 
         SqlResult result = sqlService.execute("select v from t");
         BitSet seenValues = new BitSet(TestBatchSqlConnector.DEFAULT_ITEM_COUNT);
@@ -65,7 +65,7 @@ public class ClientSqlTest extends JetSqlTestSupport {
         JetInstance client = factory().newClient();
         SqlService sqlService = client.getHazelcastInstance().getSql();
 
-        sqlService.execute("CREATE EXTERNAL TABLE t TYPE " + TestStreamSqlConnector.TYPE_NAME);
+        sqlService.execute("CREATE MAPPING t TYPE " + TestStreamSqlConnector.TYPE_NAME);
         sqlService.execute("SELECT * FROM t");
 
         Job job = instance().getJobs().stream().filter(j -> !j.getStatus().isTerminal()).findFirst().orElse(null);
@@ -83,7 +83,7 @@ public class ClientSqlTest extends JetSqlTestSupport {
         JetInstance client = factory().newClient();
         SqlService sqlService = client.getHazelcastInstance().getSql();
 
-        sqlService.execute("CREATE EXTERNAL TABLE t TYPE " + FailingTestSqlConnector.TYPE_NAME);
+        sqlService.execute("CREATE MAPPING t TYPE " + FailingTestSqlConnector.TYPE_NAME);
         assertThatThrownBy(() -> sqlService.execute("SELECT * FROM t"))
                 .hasMessageContaining("mock failure");
     }

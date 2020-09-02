@@ -52,7 +52,7 @@ public class SqlJsonTest extends JetSqlTestSupport {
     @Test
     public void supportsNulls() {
         String name = createRandomName();
-        sqlService.execute("CREATE EXTERNAL TABLE " + name + " ("
+        sqlService.execute("CREATE MAPPING " + name + " ("
                 + "nonExistingField VARCHAR"
                 + ") TYPE \"" + FileSqlConnector.TYPE_NAME + "\" "
                 + "OPTIONS ("
@@ -71,7 +71,7 @@ public class SqlJsonTest extends JetSqlTestSupport {
     @Test
     public void supportsFieldsMapping() {
         String name = createRandomName();
-        sqlService.execute("CREATE EXTERNAL TABLE " + name + " ("
+        sqlService.execute("CREATE MAPPING " + name + " ("
                 + "name VARCHAR EXTERNAL NAME string"
                 + ") TYPE \"" + FileSqlConnector.TYPE_NAME + "\" "
                 + "OPTIONS ("
@@ -93,7 +93,7 @@ public class SqlJsonTest extends JetSqlTestSupport {
         directory.deleteOnExit();
 
         String name = createRandomName();
-        sqlService.execute("CREATE EXTERNAL TABLE " + name + " ("
+        sqlService.execute("CREATE MAPPING " + name + " ("
                 + "string VARCHAR"
                 + ", \"boolean\" BOOLEAN"
                 + ", byte TINYINT"
@@ -156,7 +156,7 @@ public class SqlJsonTest extends JetSqlTestSupport {
     @Test
     public void supportsSchemaDiscovery() {
         String name = createRandomName();
-        sqlService.execute("CREATE EXTERNAL TABLE " + name + " "
+        sqlService.execute("CREATE MAPPING " + name + " "
                 + "TYPE \"" + FileSqlConnector.TYPE_NAME + "\" "
                 + "OPTIONS ( "
                 + "\"" + OPTION_SERIALIZATION_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + "'"

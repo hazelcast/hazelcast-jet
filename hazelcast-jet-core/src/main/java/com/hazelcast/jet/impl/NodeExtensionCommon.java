@@ -108,10 +108,13 @@ class NodeExtensionCommon {
 
     Map<String, Object> createExtensionServices() {
         Map<String, Object> extensionServices = new HashMap<>();
+
         extensionServices.put(JetService.SERVICE_NAME, jetService);
-        if (jetService.getJetSqlService() != null) {
-            extensionServices.put(JetSqlCoreBackend.SERVICE_NAME, jetService.getJetSqlService());
+
+        if (jetService.getSqlCoreBackend() != null) {
+            extensionServices.put(JetSqlCoreBackend.SERVICE_NAME, jetService.getSqlCoreBackend());
         }
+
         return extensionServices;
     }
 }

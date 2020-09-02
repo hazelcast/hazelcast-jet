@@ -24,9 +24,10 @@ import com.hazelcast.spi.impl.NodeEngine;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Objects;
 
-public final class SqlConnectorCache {
+import static java.util.Objects.requireNonNull;
+
+public class SqlConnectorCache {
 
     private static final String FACTORY_ID = "com.hazelcast.sql.Connectors";
 
@@ -42,13 +43,19 @@ public final class SqlConnectorCache {
     }
 
     private void addConnector(SqlConnector connector) {
-        if (connectors.putIfAbsent(connector.typeName().toUpperCase(Locale.ENGLISH), connector) != null) {
-            throw new HazelcastException("Duplicate connector: " + connector.typeName());
+        String type = connector.typeName();
+        String canonicalType = toCanonicalType(type);
+        if (connectors.putIfAbsent(canonicalType, connector) != null) {
+            throw new HazelcastException("Duplicate connector: " + type);
         }
     }
 
     public SqlConnector forType(String type) {
-        type = type.toUpperCase(Locale.ENGLISH);
-        return Objects.requireNonNull(connectors.get(type), "Unknown type: " + type);
+        String canonicalType = toCanonicalType(type);
+        return requireNonNull(connectors.get(canonicalType), "Unknown connector type: " + type);
+    }
+
+    private static String toCanonicalType(String type) {
+        return type.toUpperCase(Locale.ENGLISH);
     }
 }

@@ -22,16 +22,16 @@ data: {
     # Example. "org.apache.calcite.sql.*", "java.util.List".
     imports: [
       "com.hazelcast.jet.sql.impl.parse.ParserResource"
-      "com.hazelcast.jet.sql.impl.parse.SqlCreateExternalTable"
+      "com.hazelcast.jet.sql.impl.parse.SqlCreateExternalMapping"
       "com.hazelcast.jet.sql.impl.parse.SqlCreateJob"
       "com.hazelcast.jet.sql.impl.parse.SqlDataType"
-      "com.hazelcast.jet.sql.impl.parse.SqlDropExternalTable"
+      "com.hazelcast.jet.sql.impl.parse.SqlDropExternalMapping"
       "com.hazelcast.jet.sql.impl.parse.SqlDropJob"
       "com.hazelcast.jet.sql.impl.parse.SqlExtendedInsert"
       "com.hazelcast.jet.sql.impl.parse.SqlExtendedInsertKeyword"
+      "com.hazelcast.jet.sql.impl.parse.SqlMappingColumn"
       "com.hazelcast.jet.sql.impl.parse.SqlOption"
-      "com.hazelcast.jet.sql.impl.parse.SqlShowExternalTables"
-      "com.hazelcast.jet.sql.impl.parse.SqlTableColumn"
+      "com.hazelcast.jet.sql.impl.parse.SqlShowExternalMappings"
       "com.hazelcast.sql.impl.QueryException"
       "com.hazelcast.sql.impl.type.QueryDataType"
       "java.util.LinkedHashMap"
@@ -46,7 +46,8 @@ data: {
       "IF"
       "JOB"
       "OVERWRITE"
-      "TABLES"
+      "MAPPING"
+      "MAPPINGS"
     ]
 
     # List of keywords from "keywords" section that are not reserved.
@@ -365,7 +366,8 @@ data: {
       # added by Hazelcast
       "JOB"
       "OVERWRITE"
-      "TABLES"
+      "MAPPING"
+      "MAPPINGS"
     ]
 
     # List of non-reserved keywords to add;
@@ -387,7 +389,7 @@ data: {
     # Return type of method implementation should be 'SqlNode'.
     # Example: SqlShowDatabases(), SqlShowTables().
     statementParserMethods: [
-      "SqlShowExternalTables()"
+      "SqlShowExternalMappings()"
       "SqlExtendedInsert()"
     ]
 
@@ -418,14 +420,14 @@ data: {
     # List of methods for parsing extensions to "CREATE [OR REPLACE]" calls.
     # Each must accept arguments "(SqlParserPos pos, boolean replace)".
     createStatementParserMethods: [
-      "SqlCreateExternalTable"
+      "SqlCreateExternalMapping"
       "SqlCreateJob"
     ]
 
     # List of methods for parsing extensions to "DROP" calls.
     # Each must accept arguments "(SqlParserPos pos)".
     dropStatementParserMethods: [
-      "SqlDropExternalTable"
+      "SqlDropExternalMapping"
       "SqlDropJob"
     ]
 

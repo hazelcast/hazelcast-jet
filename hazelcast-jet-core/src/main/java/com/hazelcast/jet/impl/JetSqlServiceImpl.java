@@ -23,11 +23,11 @@ import com.hazelcast.sql.SqlStatement;
 
 import javax.annotation.Nonnull;
 
-public class JetSqlServiceImpl implements JetSqlService {
+class JetSqlServiceImpl implements JetSqlService {
 
     private final SqlService delegate;
 
-    public JetSqlServiceImpl(SqlService delegate) {
+    JetSqlServiceImpl(SqlService delegate) {
         this.delegate = delegate;
     }
 

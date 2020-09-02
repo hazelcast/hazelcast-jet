@@ -17,7 +17,7 @@
 package com.hazelcast.jet.sql.impl.schema;
 
 import com.hazelcast.jet.sql.impl.parse.SqlDataType;
-import com.hazelcast.jet.sql.impl.parse.SqlTableColumn;
+import com.hazelcast.jet.sql.impl.parse.SqlMappingColumn;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.DataSerializable;
@@ -30,7 +30,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
-public class ExternalField implements DataSerializable {
+public class MappingField implements DataSerializable {
 
     private static final String NAME = "name";
     private static final String TYPE = "type";
@@ -42,14 +42,14 @@ public class ExternalField implements DataSerializable {
     private Map<String, Object> properties;
 
     @SuppressWarnings("unused")
-    private ExternalField() {
+    private MappingField() {
     }
 
-    public ExternalField(String name, QueryDataType type) {
+    public MappingField(String name, QueryDataType type) {
         this(name, type, null);
     }
 
-    public ExternalField(String name, QueryDataType type, String externalName) {
+    public MappingField(String name, QueryDataType type, String externalName) {
         this.properties = new HashMap<>();
         this.properties.put(NAME, Objects.requireNonNull(name));
         this.properties.put(TYPE, Objects.requireNonNull(type));
@@ -77,11 +77,11 @@ public class ExternalField implements DataSerializable {
         return (String) properties.get(EXTERNAL_NAME);
     }
 
-    public SqlTableColumn toSqlColumn() {
+    public SqlMappingColumn toSqlColumn() {
         SqlParserPos z = SqlParserPos.ZERO;
         QueryDataType type = type();
         String externalName = externalName();
-        return new SqlTableColumn(
+        return new SqlMappingColumn(
                 new SqlIdentifier(name(), z),
                 type == null ? null : new SqlDataType(type(), z),
                 externalName == null ? null : new SqlIdentifier(externalName(), z),

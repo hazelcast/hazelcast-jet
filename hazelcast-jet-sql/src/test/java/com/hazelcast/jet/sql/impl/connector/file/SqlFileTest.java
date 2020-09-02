@@ -46,7 +46,7 @@ public class SqlFileTest extends JetSqlTestSupport {
     @Before
     public void before() {
         name = createRandomName();
-        sqlService.execute("CREATE EXTERNAL TABLE " + name + " ("
+        sqlService.execute("CREATE MAPPING " + name + " ("
                 + "username VARCHAR"
                 + ", age INT"
                 + ") TYPE \"" + FileSqlConnector.TYPE_NAME + "\" "

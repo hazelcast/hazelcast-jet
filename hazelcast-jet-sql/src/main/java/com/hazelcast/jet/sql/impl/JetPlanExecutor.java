@@ -18,13 +18,13 @@ package com.hazelcast.jet.sql.impl;
 
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
-import com.hazelcast.jet.sql.impl.JetPlan.CreateExternalTablePlan;
+import com.hazelcast.jet.sql.impl.JetPlan.CreateExternalMappingPlan;
 import com.hazelcast.jet.sql.impl.JetPlan.CreateJobPlan;
-import com.hazelcast.jet.sql.impl.JetPlan.DropExternalTablePlan;
+import com.hazelcast.jet.sql.impl.JetPlan.DropExternalMappingPlan;
 import com.hazelcast.jet.sql.impl.JetPlan.DropJobPlan;
 import com.hazelcast.jet.sql.impl.JetPlan.ExecutionPlan;
-import com.hazelcast.jet.sql.impl.JetPlan.ShowExternalTablesPlan;
-import com.hazelcast.jet.sql.impl.schema.ExternalCatalog;
+import com.hazelcast.jet.sql.impl.JetPlan.ShowExternalMappingsPlan;
+import com.hazelcast.jet.sql.impl.schema.MappingCatalog;
 import com.hazelcast.sql.SqlColumnMetadata;
 import com.hazelcast.sql.SqlColumnType;
 import com.hazelcast.sql.SqlResult;
@@ -45,39 +45,37 @@ import static java.util.stream.Collectors.toList;
 
 class JetPlanExecutor {
 
+    private final MappingCatalog catalog;
     private final JetInstance jetInstance;
     private final Map<QueryId, QueryResultProducer> resultConsumerRegistry;
 
-    private final ExternalCatalog catalog;
-
     JetPlanExecutor(
+            MappingCatalog catalog,
             JetInstance jetInstance,
-            Map<QueryId, QueryResultProducer> resultConsumerRegistry,
-            ExternalCatalog catalog
+            Map<QueryId, QueryResultProducer> resultConsumerRegistry
     ) {
+        this.catalog = catalog;
         this.jetInstance = jetInstance;
         this.resultConsumerRegistry = resultConsumerRegistry;
-
-        this.catalog = catalog;
     }
 
-    SqlResult execute(CreateExternalTablePlan plan) {
-        catalog.createTable(plan.externalTable(), plan.replace(), plan.ifNotExists());
+    SqlResult execute(CreateExternalMappingPlan plan) {
+        catalog.createMapping(plan.externalTable(), plan.replace(), plan.ifNotExists());
         return SqlResultImpl.createUpdateCountResult(-1);
     }
 
-    SqlResult execute(DropExternalTablePlan plan) {
-        catalog.removeTable(plan.name(), plan.ifExists());
+    SqlResult execute(DropExternalMappingPlan plan) {
+        catalog.removeMapping(plan.name(), plan.ifExists());
         return SqlResultImpl.createUpdateCountResult(-1);
     }
 
-    SqlResult execute(@SuppressWarnings("unused") ShowExternalTablesPlan plan) {
+    SqlResult execute(@SuppressWarnings("unused") ShowExternalMappingsPlan plan) {
         SqlRowMetadata metadata = new SqlRowMetadata(asList(
                 new SqlColumnMetadata("name", SqlColumnType.VARCHAR),
                 new SqlColumnMetadata("ddl", SqlColumnType.VARCHAR)));
-        List<SqlRow> rows = catalog.getExternalTables()
-                .map(table -> new SqlRowImpl(metadata, new HeapRow(new Object[]{table.name(), table.ddl()})))
-                .collect(toList());
+        List<SqlRow> rows = catalog.getMappings()
+            .map(table -> new SqlRowImpl(metadata, new HeapRow(new Object[]{table.name(), table.ddl()})))
+            .collect(toList());
 
         return new JetStaticSqlResultImpl(
                 QueryId.create(jetInstance.getHazelcastInstance().getLocalEndpoint().getUuid()),

@@ -19,7 +19,7 @@ package com.hazelcast.jet.sql.impl.validate;
 import com.hazelcast.jet.sql.impl.parse.SqlCreateJob;
 import com.hazelcast.jet.sql.impl.parse.SqlDropJob;
 import com.hazelcast.jet.sql.impl.parse.SqlOption;
-import com.hazelcast.jet.sql.impl.parse.SqlShowExternalTables;
+import com.hazelcast.jet.sql.impl.parse.SqlShowExternalMappings;
 import com.hazelcast.sql.impl.calcite.validate.HazelcastSqlOperatorTable;
 import com.hazelcast.sql.impl.calcite.validate.types.HazelcastTypeSystem;
 import org.apache.calcite.runtime.CalciteContextException;
@@ -163,7 +163,7 @@ public final class UnsupportedOperationVisitor implements SqlVisitor<Void> {
 
         // Extensions
         SUPPORTED_OPERATORS.add(SqlOption.OPERATOR);
-        SUPPORTED_OPERATORS.add(SqlShowExternalTables.OPERATOR);
+        SUPPORTED_OPERATORS.add(SqlShowExternalMappings.OPERATOR);
         SUPPORTED_OPERATORS.add(JetSqlOperatorTable.FILE);
     }
 

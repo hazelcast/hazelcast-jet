@@ -28,11 +28,11 @@ import javax.annotation.Nonnull;
 import java.util.Collections;
 import java.util.List;
 
-public class SqlShowExternalTables extends SqlCall {
+public class SqlShowExternalMappings extends SqlCall {
 
-    public static final SqlSpecialOperator OPERATOR = new SqlSpecialOperator("SHOW EXTERNAL TABLES", SqlKind.OTHER);
+    public static final SqlSpecialOperator OPERATOR = new SqlSpecialOperator("SHOW EXTERNAL MAPPINGS", SqlKind.OTHER);
 
-    public SqlShowExternalTables(SqlParserPos pos) {
+    public SqlShowExternalMappings(SqlParserPos pos) {
         super(pos);
     }
 
@@ -50,6 +50,6 @@ public class SqlShowExternalTables extends SqlCall {
 
     @Override
     public void unparse(SqlWriter writer, int leftPrec, int rightPrec) {
-        writer.keyword("SHOW EXTERNAL TABLES");
+        writer.keyword("SHOW EXTERNAL MAPPINGS");
     }
 }

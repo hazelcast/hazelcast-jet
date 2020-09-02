@@ -18,7 +18,7 @@ package com.hazelcast.jet.sql;
 
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Vertex;
-import com.hazelcast.jet.sql.impl.schema.ExternalField;
+import com.hazelcast.jet.sql.impl.schema.MappingField;
 import com.hazelcast.spi.impl.NodeEngine;
 import com.hazelcast.sql.impl.expression.Expression;
 import com.hazelcast.sql.impl.schema.Table;
@@ -77,7 +77,7 @@ public interface SqlConnector {
 
     /**
      * Return the name of the connector as seen in the {@code TYPE} clause in
-     * the {@code CREATE EXTERNAL TABLE} command.
+     * the {@code CREATE EXTERNAL MAPPING} command.
      */
     String typeName();
 
@@ -105,10 +105,10 @@ public interface SqlConnector {
      * @return final field list, must not be empty
      */
     @Nonnull
-    List<ExternalField> resolveAndValidateFields(
+    List<MappingField> resolveAndValidateFields(
             @Nonnull NodeEngine nodeEngine,
             @Nonnull Map<String, String> options,
-            @Nonnull List<ExternalField> userFields
+            @Nonnull List<MappingField> userFields
     );
 
     /**
@@ -126,7 +126,7 @@ public interface SqlConnector {
             @Nonnull String schemaName,
             @Nonnull String tableName,
             @Nonnull Map<String, String> options,
-            @Nonnull List<ExternalField> resolvedFields
+            @Nonnull List<MappingField> resolvedFields
     );
 
     /**

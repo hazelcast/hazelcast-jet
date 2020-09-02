@@ -44,8 +44,6 @@ import com.hazelcast.spi.impl.operationservice.LiveOperations;
 import com.hazelcast.spi.impl.operationservice.LiveOperationsTracker;
 import com.hazelcast.spi.impl.operationservice.Operation;
 import com.hazelcast.sql.impl.JetSqlCoreBackend;
-import com.hazelcast.sql.impl.QueryId;
-import com.hazelcast.sql.impl.QueryResultProducer;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -53,8 +51,6 @@ import java.lang.reflect.Method;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
@@ -92,8 +88,7 @@ public class JetService implements ManagedService, MembershipAwareService, LiveO
     private final Supplier<int[]> sharedPartitionKeys = memoizeConcurrent(this::computeSharedPartitionKeys);
 
     @Nullable
-    private final JetSqlCoreBackend jetSqlCoreBackend;
-    private final ConcurrentMap<QueryId, QueryResultProducer> resultConsumerRegistry = new ConcurrentHashMap<>();
+    private final JetSqlCoreBackend sqlCoreBackend;
 
     public JetService(Node node) {
         this.logger = node.getLogger(getClass());
@@ -109,7 +104,7 @@ public class JetService implements ManagedService, MembershipAwareService, LiveO
         } catch (ReflectiveOperationException e) {
             throw new RuntimeException(e);
         }
-        this.jetSqlCoreBackend = jetSqlCoreBackend;
+        this.sqlCoreBackend = jetSqlCoreBackend;
     }
 
     // ManagedService
@@ -143,10 +138,10 @@ public class JetService implements ManagedService, MembershipAwareService, LiveO
         logger.info("Setting number of cooperative threads and default parallelism to "
                 + config.getInstanceConfig().getCooperativeThreadCount());
 
-        if (jetSqlCoreBackend != null) {
+        if (sqlCoreBackend != null) {
             try {
-                Method initJetInstanceMethod = jetSqlCoreBackend.getClass().getMethod("initJetInstance", JetInstance.class);
-                initJetInstanceMethod.invoke(jetSqlCoreBackend, jetInstance);
+                Method initJetInstanceMethod = sqlCoreBackend.getClass().getMethod("init", JetInstance.class);
+                initJetInstanceMethod.invoke(sqlCoreBackend, jetInstance);
             } catch (ReflectiveOperationException e) {
                 throw new RuntimeException(e);
             }
@@ -249,11 +244,6 @@ public class JetService implements ManagedService, MembershipAwareService, LiveO
         return jobExecutionService;
     }
 
-    @Nullable
-    public JetSqlCoreBackend getJetSqlService() {
-        return jetSqlCoreBackend;
-    }
-
     /**
      * Returns the job config or fails with {@link JobNotFoundException}
      * if the requested job is not found.
@@ -337,7 +327,8 @@ public class JetService implements ManagedService, MembershipAwareService, LiveO
         }, "jet.ShutdownThread");
     }
 
-    public Map<QueryId, QueryResultProducer> getResultConsumerRegistry() {
-        return resultConsumerRegistry;
+    @Nullable
+    JetSqlCoreBackend getSqlCoreBackend() {
+        return sqlCoreBackend;
     }
 }

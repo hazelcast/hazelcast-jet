@@ -19,7 +19,7 @@ package com.hazelcast.jet.sql.impl.connector.file;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.sql.SqlConnector;
-import com.hazelcast.jet.sql.impl.schema.ExternalField;
+import com.hazelcast.jet.sql.impl.schema.MappingField;
 import com.hazelcast.spi.impl.NodeEngine;
 import com.hazelcast.sql.impl.expression.Expression;
 import com.hazelcast.sql.impl.schema.Table;
@@ -60,15 +60,15 @@ public class FileSqlConnector implements SqlConnector {
 
     @Nonnull
     @Override
-    public List<ExternalField> resolveAndValidateFields(
+    public List<MappingField> resolveAndValidateFields(
             @Nonnull NodeEngine nodeEngine,
             @Nonnull Map<String, String> options,
-            @Nonnull List<ExternalField> userFields
+            @Nonnull List<MappingField> userFields
     ) {
         return MetadataResolver.resolveAndValidateFields(userFields, FileOptions.from(options));
     }
 
-    public static List<ExternalField> resolveAndValidateFields(@Nonnull Map<String, String> options) {
+    public static List<MappingField> resolveAndValidateFields(@Nonnull Map<String, String> options) {
         return MetadataResolver.resolveAndValidateFields(emptyList(), FileOptions.from(options));
     }
 
@@ -79,7 +79,7 @@ public class FileSqlConnector implements SqlConnector {
             @Nonnull String schemaName,
             @Nonnull String name,
             @Nonnull Map<String, String> options,
-            @Nonnull List<ExternalField> resolvedFields
+            @Nonnull List<MappingField> resolvedFields
     ) {
         return createTable(schemaName, name, options, resolvedFields);
     }
@@ -89,9 +89,9 @@ public class FileSqlConnector implements SqlConnector {
             @Nonnull String schemaName,
             @Nonnull String name,
             @Nonnull Map<String, String> options,
-            @Nonnull List<ExternalField> externalFields
+            @Nonnull List<MappingField> mappingFields
     ) {
-        Metadata metadata = resolveMetadata(externalFields, FileOptions.from(options));
+        Metadata metadata = resolveMetadata(mappingFields, FileOptions.from(options));
 
         return new FileTable(
                 INSTANCE,

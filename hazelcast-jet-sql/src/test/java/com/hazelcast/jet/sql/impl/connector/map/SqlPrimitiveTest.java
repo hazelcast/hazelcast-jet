@@ -96,7 +96,7 @@ public class SqlPrimitiveTest extends JetSqlTestSupport {
     public void supportsFieldsMapping() {
         String name = generateRandomName();
 
-        sqlService.execute("CREATE EXTERNAL TABLE " + name + " ("
+        sqlService.execute("CREATE MAPPING " + name + " ("
                 + "id INT EXTERNAL NAME __key"
                 + ", name VARCHAR EXTERNAL NAME this"
                 + ") TYPE \"" + IMapSqlConnector.TYPE_NAME + "\" "

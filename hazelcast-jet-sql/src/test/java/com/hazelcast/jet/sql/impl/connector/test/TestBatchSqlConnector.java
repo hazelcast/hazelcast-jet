@@ -22,7 +22,7 @@ import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.impl.pipeline.transform.BatchSourceTransform;
 import com.hazelcast.jet.pipeline.test.TestSources;
 import com.hazelcast.jet.sql.SqlConnector;
-import com.hazelcast.jet.sql.impl.schema.ExternalField;
+import com.hazelcast.jet.sql.impl.schema.MappingField;
 import com.hazelcast.jet.sql.impl.schema.JetTable;
 import com.hazelcast.spi.impl.NodeEngine;
 import com.hazelcast.sql.impl.QueryException;
@@ -47,7 +47,7 @@ public class TestBatchSqlConnector implements SqlConnector {
     public static final String TYPE_NAME = "TestBatch";
     public static final int DEFAULT_ITEM_COUNT = 10_000;
 
-    private static final List<ExternalField> FIELD_LIST = singletonList(new ExternalField("v", QueryDataType.BIGINT));
+    private static final List<MappingField> FIELD_LIST = singletonList(new MappingField("v", QueryDataType.BIGINT));
 
     @Override
     public String typeName() {
@@ -60,10 +60,10 @@ public class TestBatchSqlConnector implements SqlConnector {
     }
 
     @Nonnull @Override
-    public List<ExternalField> resolveAndValidateFields(
+    public List<MappingField> resolveAndValidateFields(
             @Nonnull NodeEngine nodeEngine,
             @Nonnull Map<String, String> options,
-            @Nonnull List<ExternalField> userFields
+            @Nonnull List<MappingField> userFields
     ) {
         if (userFields.size() > 0) {
             throw QueryException.error("Don't specify external fields, they are fixed");
@@ -77,7 +77,7 @@ public class TestBatchSqlConnector implements SqlConnector {
             @Nonnull String schemaName,
             @Nonnull String tableName,
             @Nonnull Map<String, String> options,
-            @Nonnull List<ExternalField> resolvedFields
+            @Nonnull List<MappingField> resolvedFields
     ) {
         return new JetTable(
                 this,

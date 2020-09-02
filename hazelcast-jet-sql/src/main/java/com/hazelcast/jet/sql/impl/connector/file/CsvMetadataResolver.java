@@ -16,7 +16,7 @@
 
 package com.hazelcast.jet.sql.impl.connector.file;
 
-import com.hazelcast.jet.sql.impl.schema.ExternalField;
+import com.hazelcast.jet.sql.impl.schema.MappingField;
 import com.hazelcast.sql.impl.QueryException;
 import com.hazelcast.sql.impl.schema.TableField;
 import com.hazelcast.sql.impl.type.QueryDataType;
@@ -32,28 +32,28 @@ import static java.util.stream.Collectors.toMap;
 
 interface CsvMetadataResolver {
 
-    static void validateFields(List<ExternalField> userFields) {
-        for (ExternalField field : userFields) {
+    static void validateFields(List<MappingField> userFields) {
+        for (MappingField field : userFields) {
             if (field.externalName() != null) {
                 throw QueryException.error("EXTERNAL NAME not supported");
             }
         }
     }
 
-    static List<ExternalField> resolveFieldsFromSample(String line, String delimiter) {
+    static List<MappingField> resolveFieldsFromSample(String line, String delimiter) {
         String[] headers = line.split(delimiter);
 
-        Map<String, ExternalField> fields = new LinkedHashMap<>();
+        Map<String, MappingField> fields = new LinkedHashMap<>();
         for (String header : headers) {
-            ExternalField field = new ExternalField(header, QueryDataType.VARCHAR);
+            MappingField field = new MappingField(header, QueryDataType.VARCHAR);
 
             fields.putIfAbsent(field.name(), field);
         }
         return new ArrayList<>(fields.values());
     }
 
-    static List<TableField> toTableFields(List<ExternalField> externalFields) {
-        return toList(externalFields, f -> new FileTableField(f.name(), f.type()));
+    static List<TableField> toTableFields(List<MappingField> mappingFields) {
+        return toList(mappingFields, f -> new FileTableField(f.name(), f.type()));
     }
 
     static Map<String, Integer> indices(List<TableField> fields) {

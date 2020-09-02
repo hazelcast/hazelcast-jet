@@ -23,10 +23,12 @@ import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.impl.JetService;
 import com.hazelcast.jet.sql.impl.connector.EntryMetadata;
+import com.hazelcast.jet.sql.impl.connector.SqlConnectorCache;
 import com.hazelcast.jet.sql.impl.connector.map.JavaEntryMetadataResolver;
 import com.hazelcast.jet.sql.impl.connector.map.PortableEntryMetadataResolver;
-import com.hazelcast.jet.sql.impl.schema.ExternalCatalog;
-import com.hazelcast.jet.sql.impl.schema.ExternalField;
+import com.hazelcast.jet.sql.impl.schema.MappingCatalog;
+import com.hazelcast.jet.sql.impl.schema.MappingField;
+import com.hazelcast.jet.sql.impl.schema.MappingStorage;
 import com.hazelcast.nio.serialization.ClassDefinition;
 import com.hazelcast.spi.impl.NodeEngine;
 import com.hazelcast.sql.SqlResult;
@@ -43,6 +45,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.concurrent.ConcurrentHashMap;
 
 import static com.hazelcast.jet.sql.SqlConnector.JAVA_SERIALIZATION_FORMAT;
 import static com.hazelcast.jet.sql.SqlConnector.PORTABLE_SERIALIZATION_FORMAT;
@@ -59,25 +62,32 @@ import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.OPTION_VALU
 import static java.util.Collections.emptyList;
 import static java.util.Objects.requireNonNull;
 
-@SuppressWarnings("unused") // used through reflection
 public class JetSqlCoreBackendImpl implements JetSqlCoreBackend, ManagedService {
 
+    private MappingCatalog catalog;
+    private JetSqlBackend sqlBackend;
+    private Map<QueryId, QueryResultProducer> resultConsumerRegistry;
     private InternalSerializationService serializationService;
-    private ExternalCatalog catalog;
-    private com.hazelcast.jet.sql.impl.JetSqlBackend sqlBackend;
 
     @SuppressWarnings("unused") // used through reflection
-    public void initJetInstance(@Nonnull JetInstance jetInstance) {
+    public void init(@Nonnull JetInstance jetInstance) {
         HazelcastInstanceImpl hazelcastInstance = (HazelcastInstanceImpl) jetInstance.getHazelcastInstance();
         NodeEngine nodeEngine = hazelcastInstance.node.nodeEngine;
-        JetService jetService = nodeEngine.getService(JetService.SERVICE_NAME);
-        Map<QueryId, QueryResultProducer> resultConsumerRegistry = jetService.getResultConsumerRegistry();
-        ExternalCatalog catalog = new ExternalCatalog(nodeEngine);
-        JetPlanExecutor planExecutor = new JetPlanExecutor(requireNonNull(jetInstance), resultConsumerRegistry, catalog);
 
-        this.serializationService = hazelcastInstance.getSerializationService();
-        this.catalog = catalog;
-        this.sqlBackend = new com.hazelcast.jet.sql.impl.JetSqlBackend(nodeEngine, catalog, planExecutor);
+        MappingStorage mappingStorage = new MappingStorage(nodeEngine);
+        SqlConnectorCache connectorCache = new SqlConnectorCache(nodeEngine);
+        MappingCatalog mappingCatalog = new MappingCatalog(nodeEngine, mappingStorage, connectorCache);
+        Map<QueryId, QueryResultProducer> resultConsumerRegistry = new ConcurrentHashMap<>();
+        JetPlanExecutor planExecutor = new JetPlanExecutor(mappingCatalog, jetInstance, resultConsumerRegistry);
+
+        this.catalog = mappingCatalog;
+        this.sqlBackend = new JetSqlBackend(nodeEngine, mappingCatalog, planExecutor);
+        this.resultConsumerRegistry = resultConsumerRegistry;
+        this.serializationService = (InternalSerializationService) nodeEngine.getSerializationService();
+    }
+
+    @Override
+    public void init(NodeEngine nodeEngine, Properties properties) {
     }
 
     @Override
@@ -96,8 +106,8 @@ public class JetSqlCoreBackendImpl implements JetSqlCoreBackend, ManagedService 
                 options.put(key ? OPTION_SERIALIZATION_KEY_FORMAT : OPTION_SERIALIZATION_VALUE_FORMAT, JAVA_SERIALIZATION_FORMAT);
                 options.put(key ? OPTION_KEY_CLASS : OPTION_VALUE_CLASS, clazz.getName());
 
-                List<ExternalField> externalFields = JavaEntryMetadataResolver.INSTANCE.resolveFields(emptyList(), options, key, serializationService);
-                EntryMetadata metadata = JavaEntryMetadataResolver.INSTANCE.resolveMetadata(externalFields, options, key, serializationService);
+                List<MappingField> mappingFields = JavaEntryMetadataResolver.INSTANCE.resolveFields(emptyList(), options, key, serializationService);
+                EntryMetadata metadata = JavaEntryMetadataResolver.INSTANCE.resolveMetadata(mappingFields, options, key, serializationService);
                 return metadata.getUpsertTargetDescriptor();
             }
 
@@ -109,8 +119,8 @@ public class JetSqlCoreBackendImpl implements JetSqlCoreBackend, ManagedService 
                 options.put(key ? OPTION_KEY_CLASS_ID : OPTION_VALUE_CLASS_ID, String.valueOf(clazz.getClassId()));
                 options.put(key ? OPTION_KEY_CLASS_VERSION : OPTION_VALUE_CLASS_VERSION, String.valueOf(clazz.getVersion()));
 
-                List<ExternalField> externalFields = PortableEntryMetadataResolver.INSTANCE.resolveFields(emptyList(), options, key, serializationService);
-                EntryMetadata metadata = PortableEntryMetadataResolver.INSTANCE.resolveMetadata(externalFields, options, key, serializationService);
+                List<MappingField> mappingFields = PortableEntryMetadataResolver.INSTANCE.resolveFields(emptyList(), options, key, serializationService);
+                EntryMetadata metadata = PortableEntryMetadataResolver.INSTANCE.resolveMetadata(mappingFields, options, key, serializationService);
                 return metadata.getUpsertTargetDescriptor();
             }
         };
@@ -127,14 +137,15 @@ public class JetSqlCoreBackendImpl implements JetSqlCoreBackend, ManagedService 
             throw new JetException("Query parameters not yet supported");
         }
         if (timeout > 0) {
-            throw new JetException("Query timeout not supported");
+            throw new JetException("Query timeout not yet supported");
         }
+        // TODO: query page size defaults to 4096
 
-        return ((JetPlan) plan).execute(params, timeout, pageSize);
+        return ((JetPlan) plan).execute();
     }
 
-    @Override
-    public void init(NodeEngine nodeEngine, Properties properties) {
+    public Map<QueryId, QueryResultProducer> getResultConsumerRegistry() {
+        return resultConsumerRegistry;
     }
 
     @Override

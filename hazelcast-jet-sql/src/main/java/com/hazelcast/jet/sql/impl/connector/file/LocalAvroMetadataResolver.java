@@ -26,7 +26,7 @@ import com.hazelcast.jet.sql.impl.connector.Processors;
 import com.hazelcast.jet.sql.impl.connector.RowProjector;
 import com.hazelcast.jet.sql.impl.extract.AvroQueryTarget;
 import com.hazelcast.jet.sql.impl.inject.AvroUpsertTargetDescriptor;
-import com.hazelcast.jet.sql.impl.schema.ExternalField;
+import com.hazelcast.jet.sql.impl.schema.MappingField;
 import com.hazelcast.sql.impl.expression.Expression;
 import com.hazelcast.sql.impl.schema.TableField;
 import com.hazelcast.sql.impl.type.QueryDataType;
@@ -60,8 +60,8 @@ final class LocalAvroMetadataResolver implements AvroMetadataResolver {
     private LocalAvroMetadataResolver() {
     }
 
-    static List<ExternalField> resolveFields(
-            List<ExternalField> userFields,
+    static List<MappingField> resolveFields(
+            List<MappingField> userFields,
             FileOptions options
     ) throws IOException {
         if (!userFields.isEmpty()) {
@@ -86,8 +86,8 @@ final class LocalAvroMetadataResolver implements AvroMetadataResolver {
         throw new IllegalArgumentException("No files matching '" + directory + "/" + glob + "' found");
     }
 
-    static Metadata resolveMetadata(List<ExternalField> externalFields, FileOptions options) {
-        List<TableField> fields = toTableFields(externalFields);
+    static Metadata resolveMetadata(List<MappingField> mappingFields, FileOptions options) {
+        List<TableField> fields = toTableFields(mappingFields);
         Schema schema = schema(fields);
 
         return new Metadata(

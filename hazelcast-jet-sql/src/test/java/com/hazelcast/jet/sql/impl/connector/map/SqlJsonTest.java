@@ -56,7 +56,7 @@ public class SqlJsonTest extends JetSqlTestSupport {
     @Test
     public void supportsNulls() {
         String name = generateRandomName();
-        sqlService.execute("CREATE EXTERNAL TABLE " + name + " ("
+        sqlService.execute("CREATE MAPPING " + name + " ("
                 + "key_name VARCHAR EXTERNAL NAME \"__key.name\""
                 + ", value_name VARCHAR EXTERNAL NAME \"this.name\""
                 + ") TYPE \"" + IMapSqlConnector.TYPE_NAME + "\" "
@@ -79,7 +79,7 @@ public class SqlJsonTest extends JetSqlTestSupport {
     @Test
     public void supportsFieldsMapping() {
         String name = generateRandomName();
-        sqlService.execute("CREATE EXTERNAL TABLE " + name + " ("
+        sqlService.execute("CREATE MAPPING " + name + " ("
                 + "key_name VARCHAR EXTERNAL NAME \"__key.name\""
                 + ", value_name VARCHAR EXTERNAL NAME \"this.name\""
                 + ") TYPE \"" + IMapSqlConnector.TYPE_NAME + "\" "
@@ -102,7 +102,7 @@ public class SqlJsonTest extends JetSqlTestSupport {
     @Test
     public void supportsSchemaEvolution() {
         String name = generateRandomName();
-        sqlService.execute("CREATE EXTERNAL TABLE " + name + " ("
+        sqlService.execute("CREATE MAPPING " + name + " ("
                 + "name VARCHAR"
                 + ") TYPE \"" + IMapSqlConnector.TYPE_NAME + "\" "
                 + "OPTIONS ("
@@ -115,7 +115,7 @@ public class SqlJsonTest extends JetSqlTestSupport {
         sqlService.execute("INSERT OVERWRITE " + name + " VALUES (13, 'Alice')");
 
         // alter schema
-        sqlService.execute("CREATE OR REPLACE EXTERNAL TABLE " + name + " ("
+        sqlService.execute("CREATE OR REPLACE MAPPING " + name + " ("
                 + "name VARCHAR"
                 + ", ssn BIGINT"
                 + ") TYPE \"" + IMapSqlConnector.TYPE_NAME + "\" "
@@ -141,7 +141,7 @@ public class SqlJsonTest extends JetSqlTestSupport {
     @Test
     public void supportsAllTypes() {
         String name = generateRandomName();
-        sqlService.execute("CREATE EXTERNAL TABLE " + name + " ("
+        sqlService.execute("CREATE MAPPING " + name + " ("
                 + "string VARCHAR"
                 + ", \"boolean\" BOOLEAN"
                 + ", byte TINYINT"

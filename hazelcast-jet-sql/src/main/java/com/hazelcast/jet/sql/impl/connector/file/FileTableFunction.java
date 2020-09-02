@@ -17,7 +17,7 @@
 package com.hazelcast.jet.sql.impl.connector.file;
 
 import com.hazelcast.internal.util.UuidUtil;
-import com.hazelcast.jet.sql.impl.schema.ExternalField;
+import com.hazelcast.jet.sql.impl.schema.MappingField;
 import com.hazelcast.jet.sql.impl.schema.JetTableFunction;
 import com.hazelcast.jet.sql.impl.schema.JetFunctionParameter;
 import com.hazelcast.jet.sql.impl.schema.UnknownStatistic;
@@ -79,7 +79,7 @@ public final class FileTableFunction implements JetTableFunction {
     @Override
     public RelDataType getRowType(RelDataTypeFactory typeFactory, List<Object> arguments) {
         Map<String, String> options = optionsFromFunctionArguments(arguments);
-        List<ExternalField> fields = FileSqlConnector.resolveAndValidateFields(options);
+        List<MappingField> fields = FileSqlConnector.resolveAndValidateFields(options);
         return createHazelcastTable(options, fields).getRowType(typeFactory);
     }
 
@@ -92,15 +92,15 @@ public final class FileTableFunction implements JetTableFunction {
     public HazelcastTable table(List<Object> arguments, RelDataType rowType) {
         Map<String, String> options = optionsFromFunctionArguments(arguments);
 
-        List<ExternalField> fields = toList(
+        List<MappingField> fields = toList(
                 rowType.getFieldList(),
-                field -> new ExternalField(field.getName(), SqlToQueryType.map(field.getType().getSqlTypeName()))
+                field -> new MappingField(field.getName(), SqlToQueryType.map(field.getType().getSqlTypeName()))
         );
 
         return createHazelcastTable(options, fields);
     }
 
-    private HazelcastTable createHazelcastTable(Map<String, String> options, List<ExternalField> fields) {
+    private HazelcastTable createHazelcastTable(Map<String, String> options, List<MappingField> fields) {
         Table table = FileSqlConnector.createTable(
                 SCHEMA_NAME_FILES,
                 randomName(),

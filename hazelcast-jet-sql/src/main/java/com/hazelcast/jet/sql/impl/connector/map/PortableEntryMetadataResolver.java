@@ -20,7 +20,7 @@ import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.jet.sql.impl.connector.EntryMetadata;
 import com.hazelcast.jet.sql.impl.connector.EntryMetadataResolver;
 import com.hazelcast.jet.sql.impl.inject.PortableUpsertTargetDescriptor;
-import com.hazelcast.jet.sql.impl.schema.ExternalField;
+import com.hazelcast.jet.sql.impl.schema.MappingField;
 import com.hazelcast.nio.serialization.ClassDefinition;
 import com.hazelcast.nio.serialization.FieldDefinition;
 import com.hazelcast.nio.serialization.FieldType;
@@ -60,39 +60,39 @@ public final class PortableEntryMetadataResolver implements EntryMetadataResolve
     }
 
     @Override
-    public List<ExternalField> resolveFields(
-            List<ExternalField> externalFields,
+    public List<MappingField> resolveFields(
+            List<MappingField> mappingFields,
             Map<String, String> options,
             boolean isKey,
             InternalSerializationService serializationService
     ) {
         ClassDefinition classDefinition = resolveClassDefinition(isKey, options, serializationService);
 
-        Map<QueryPath, ExternalField> externalFieldsByPath = isKey
-                ? extractKeyFields(externalFields)
-                : extractValueFields(externalFields, name -> new QueryPath(name, false));
+        Map<QueryPath, MappingField> externalFieldsByPath = isKey
+                ? extractKeyFields(mappingFields)
+                : extractValueFields(mappingFields, name -> new QueryPath(name, false));
 
-        Map<String, ExternalField> fields = new LinkedHashMap<>();
+        Map<String, MappingField> fields = new LinkedHashMap<>();
         for (Entry<String, FieldType> entry : resolvePortable(classDefinition).entrySet()) {
             QueryPath path = new QueryPath(entry.getKey(), isKey);
             QueryDataType type = resolvePortableType(entry.getValue());
 
-            ExternalField externalField = externalFieldsByPath.get(path);
-            if (externalField != null && !type.getTypeFamily().equals(externalField.type().getTypeFamily())) {
-                throw QueryException.error("Mismatch between declared and inferred type - '" + externalField.name() + "'");
+            MappingField mappingField = externalFieldsByPath.get(path);
+            if (mappingField != null && !type.getTypeFamily().equals(mappingField.type().getTypeFamily())) {
+                throw QueryException.error("Mismatch between declared and inferred type - '" + mappingField.name() + "'");
             }
-            String name = externalField == null ? entry.getKey() : externalField.name();
+            String name = mappingField == null ? entry.getKey() : mappingField.name();
 
-            ExternalField field = new ExternalField(name, type, path.toString());
+            MappingField field = new MappingField(name, type, path.toString());
 
             fields.putIfAbsent(field.name(), field);
         }
-        for (Entry<QueryPath, ExternalField> entry : externalFieldsByPath.entrySet()) {
+        for (Entry<QueryPath, MappingField> entry : externalFieldsByPath.entrySet()) {
             QueryPath path = entry.getKey();
             String name = entry.getValue().name();
             QueryDataType type = entry.getValue().type();
 
-            ExternalField field = new ExternalField(name, type, path.toString());
+            MappingField field = new MappingField(name, type, path.toString());
 
             fields.putIfAbsent(field.name(), field);
         }
@@ -136,19 +136,19 @@ public final class PortableEntryMetadataResolver implements EntryMetadataResolve
 
     @Override
     public EntryMetadata resolveMetadata(
-            List<ExternalField> externalFields,
+            List<MappingField> mappingFields,
             Map<String, String> options,
             boolean isKey,
             InternalSerializationService serializationService
     ) {
         ClassDefinition classDefinition = resolveClassDefinition(isKey, options, serializationService);
 
-        Map<QueryPath, ExternalField> externalFieldsByPath = isKey
-                ? extractKeyFields(externalFields)
-                : extractValueFields(externalFields, name -> new QueryPath(name, false));
+        Map<QueryPath, MappingField> externalFieldsByPath = isKey
+                ? extractKeyFields(mappingFields)
+                : extractValueFields(mappingFields, name -> new QueryPath(name, false));
 
         List<TableField> fields = new ArrayList<>();
-        for (Entry<QueryPath, ExternalField> entry : externalFieldsByPath.entrySet()) {
+        for (Entry<QueryPath, MappingField> entry : externalFieldsByPath.entrySet()) {
             QueryPath path = entry.getKey();
             QueryDataType type = entry.getValue().type();
             String name = entry.getValue().name();

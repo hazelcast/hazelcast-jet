@@ -20,7 +20,7 @@ import com.hazelcast.internal.json.Json;
 import com.hazelcast.internal.json.JsonObject;
 import com.hazelcast.internal.json.JsonObject.Member;
 import com.hazelcast.internal.json.JsonValue;
-import com.hazelcast.jet.sql.impl.schema.ExternalField;
+import com.hazelcast.jet.sql.impl.schema.MappingField;
 import com.hazelcast.sql.impl.QueryException;
 import com.hazelcast.sql.impl.schema.TableField;
 import com.hazelcast.sql.impl.type.QueryDataType;
@@ -38,8 +38,8 @@ interface JsonMetadataResolver {
      * Validates the field list. Returns a field list that has non-null
      * externalName for each field.
      */
-    static void validateFields(List<ExternalField> userFields) {
-        for (ExternalField field : userFields) {
+    static void validateFields(List<MappingField> userFields) {
+        for (MappingField field : userFields) {
             String path = field.externalName() == null ? field.name() : field.externalName();
             if (path.indexOf('.') >= 0) {
                 throw QueryException.error("Invalid field name - '" + path + "'. Nested fields are not supported.");
@@ -47,23 +47,23 @@ interface JsonMetadataResolver {
         }
     }
 
-    static List<ExternalField> resolveFieldsFromSample(String line) {
+    static List<MappingField> resolveFieldsFromSample(String line) {
         JsonObject object = Json.parse(line).asObject();
 
-        Map<String, ExternalField> fields = new LinkedHashMap<>();
+        Map<String, MappingField> fields = new LinkedHashMap<>();
         for (Member member : object) {
             String name = member.getName();
             QueryDataType type = resolveType(member.getValue());
 
-            ExternalField field = new ExternalField(name, type);
+            MappingField field = new MappingField(name, type);
 
             fields.putIfAbsent(field.name(), field);
         }
         return new ArrayList<>(fields.values());
     }
 
-    static List<TableField> toTableFields(List<ExternalField> externalFields) {
-        return toList(externalFields,
+    static List<TableField> toTableFields(List<MappingField> mappingFields) {
+        return toList(mappingFields,
                 f -> new FileTableField(f.name(), f.type(), f.externalName() == null ? f.name() : f.externalName()));
     }
 

@@ -18,7 +18,7 @@ package com.hazelcast.jet.sql.impl.connector;
 
 import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.jet.sql.SqlConnector;
-import com.hazelcast.jet.sql.impl.schema.ExternalField;
+import com.hazelcast.jet.sql.impl.schema.MappingField;
 import com.hazelcast.spi.impl.NodeEngine;
 import com.hazelcast.sql.impl.QueryException;
 import com.hazelcast.sql.impl.schema.Table;
@@ -54,21 +54,21 @@ public abstract class EntrySqlConnector implements SqlConnector {
     protected abstract Map<String, EntryMetadataResolver> supportedResolvers();
 
     @Nonnull @Override
-    public List<ExternalField> resolveAndValidateFields(
+    public List<MappingField> resolveAndValidateFields(
             @Nonnull NodeEngine nodeEngine,
             @Nonnull Map<String, String> options,
-            @Nonnull List<ExternalField> userFields
+            @Nonnull List<MappingField> userFields
     ) {
         InternalSerializationService serializationService = (InternalSerializationService) nodeEngine.getSerializationService();
-        List<ExternalField> keyFields = findMetadataResolver(options, true)
+        List<MappingField> keyFields = findMetadataResolver(options, true)
                 .resolveFields(userFields, options, true, serializationService);
-        List<ExternalField> valueFields = findMetadataResolver(options, false)
+        List<MappingField> valueFields = findMetadataResolver(options, false)
                 .resolveFields(userFields, options, false, serializationService);
 
         assert keyFields != null && valueFields != null;
 
-        Map<String, ExternalField> fields = Stream.concat(keyFields.stream(), valueFields.stream())
-            .collect(LinkedHashMap::new, (map, field) -> map.putIfAbsent(field.name(), field), Map::putAll);
+        Map<String, MappingField> fields = Stream.concat(keyFields.stream(), valueFields.stream())
+                                                 .collect(LinkedHashMap::new, (map, field) -> map.putIfAbsent(field.name(), field), Map::putAll);
 
         return new ArrayList<>(fields.values());
     }
@@ -79,7 +79,7 @@ public abstract class EntrySqlConnector implements SqlConnector {
             @Nonnull String schemaName,
             @Nonnull String tableName,
             @Nonnull Map<String, String> options,
-            @Nonnull List<ExternalField> resolvedFields
+            @Nonnull List<MappingField> resolvedFields
     ) {
         String objectName = options.getOrDefault(OPTION_OBJECT_NAME, tableName);
 
@@ -105,7 +105,7 @@ public abstract class EntrySqlConnector implements SqlConnector {
             @Nonnull EntryMetadata valueMetadata);
 
     protected EntryMetadata resolveMetadata(
-            List<ExternalField> resolvedFields,
+            List<MappingField> resolvedFields,
             Map<String, String> options,
             boolean isKey,
             InternalSerializationService serializationService

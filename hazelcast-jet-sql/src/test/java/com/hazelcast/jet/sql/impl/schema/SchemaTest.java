@@ -71,7 +71,7 @@ public class SchemaTest extends JetSqlTestSupport {
     public void when_tableIsDeclared_then_itCanBeListed() {
         // given
         String name = createRandomName();
-        String sql = "CREATE EXTERNAL TABLE \"" + name + "\" (" + System.lineSeparator()
+        String sql = "CREATE EXTERNAL MAPPING \"" + name + "\" (" + System.lineSeparator()
                 + "  \"__key\" INT EXTERNAL NAME \"__key\"," + System.lineSeparator()
                 + "  \"this\" VARCHAR EXTERNAL NAME \"this\"" + System.lineSeparator()
                 + ")" + System.lineSeparator()
@@ -86,7 +86,7 @@ public class SchemaTest extends JetSqlTestSupport {
 
         // when
         assertRowsEventuallyAnyOrder(
-                "SHOW EXTERNAL TABLES",
+                "SHOW EXTERNAL MAPPINGS",
                 singletonList(new JetSqlTestSupport.Row(name, sql))
         );
     }
@@ -113,7 +113,7 @@ public class SchemaTest extends JetSqlTestSupport {
         sqlService.execute(javaSerializableMapDdl(name, Integer.class, Person.class));
 
         // when
-        sqlService.execute("DROP EXTERNAL TABLE " + name);
+        sqlService.execute("DROP EXTERNAL MAPPING " + name);
 
         // then
         assertThatThrownBy(() -> sqlService.execute("SELECT * FROM public." + name))
@@ -124,27 +124,27 @@ public class SchemaTest extends JetSqlTestSupport {
     public void when_schemaNameUsed_then_rejected() {
         assertThatThrownBy(() ->
                 sqlService.execute(javaSerializableMapDdl("schema." + createRandomName(), Long.class, Long.class)))
-                .hasMessageContaining("Encountered \".\" at line 1, column 29");
+                .hasMessageContaining("Encountered \".\" at line 1, column 22");
     }
 
     @Test
     public void when_emptyColumnList_then_fail() {
-        assertThatThrownBy(() -> sqlService.execute("CREATE EXTERNAL TABLE t() TYPE t"))
+        assertThatThrownBy(() -> sqlService.execute("CREATE MAPPING t() TYPE t"))
                 .hasMessageContaining("Encountered \")\" at line 1");
     }
 
     @Test
     public void when_badType_then_fail() {
-        assertThatThrownBy(() -> sqlService.execute("CREATE EXTERNAL TABLE t TYPE TooBad"))
-                .hasMessageContaining("Invalid table definition: Unknown type: TOOBAD");
+        assertThatThrownBy(() -> sqlService.execute("CREATE MAPPING t TYPE TooBad"))
+                .hasMessageContaining("Unknown connector type: TooBad");
     }
 
     @Test
     public void test_caseInsensitiveType() {
-        sqlService.execute("CREATE EXTERNAL TABLE t1 TYPE TestStream");
-        sqlService.execute("CREATE EXTERNAL TABLE t2 TYPE teststream");
-        sqlService.execute("CREATE EXTERNAL TABLE t3 TYPE TESTSTREAM");
-        sqlService.execute("CREATE EXTERNAL TABLE t4 TYPE tEsTsTrEaM");
+        sqlService.execute("CREATE MAPPING t1 TYPE TestStream");
+        sqlService.execute("CREATE MAPPING t2 TYPE teststream");
+        sqlService.execute("CREATE MAPPING t3 TYPE TESTSTREAM");
+        sqlService.execute("CREATE MAPPING t4 TYPE tEsTsTrEaM");
     }
 
     private static String createRandomName() {

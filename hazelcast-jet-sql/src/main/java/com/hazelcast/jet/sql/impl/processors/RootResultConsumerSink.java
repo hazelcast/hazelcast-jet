@@ -24,11 +24,12 @@ import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.Watermark;
-import com.hazelcast.jet.impl.JetService;
 import com.hazelcast.jet.sql.impl.JetQueryResultProducer;
+import com.hazelcast.jet.sql.impl.JetSqlCoreBackendImpl;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.DataSerializable;
+import com.hazelcast.sql.impl.JetSqlCoreBackend;
 import com.hazelcast.sql.impl.QueryException;
 import com.hazelcast.sql.impl.QueryId;
 import com.hazelcast.sql.impl.QueryResultProducer;
@@ -47,7 +48,7 @@ public class RootResultConsumerSink implements Processor {
 
     private final JetQueryResultProducer rootResultConsumer;
 
-    public RootResultConsumerSink(QueryResultProducer rootResultConsumer) {
+    private RootResultConsumerSink(QueryResultProducer rootResultConsumer) {
         this.rootResultConsumer = (JetQueryResultProducer) rootResultConsumer;
     }
 
@@ -131,8 +132,8 @@ public class RootResultConsumerSink implements Processor {
         @Override
         public void init(@Nonnull Context context) {
             HazelcastInstanceImpl hzInst = (HazelcastInstanceImpl) context.jetInstance().getHazelcastInstance();
-            JetService jetService = hzInst.node.nodeEngine.getService(JetService.SERVICE_NAME);
-            resultConsumerRegistry = jetService.getResultConsumerRegistry();
+            JetSqlCoreBackendImpl jetSqlCoreBackend = hzInst.node.nodeEngine.getService(JetSqlCoreBackend.SERVICE_NAME);
+            resultConsumerRegistry = jetSqlCoreBackend.getResultConsumerRegistry();
             rootResultConsumer = resultConsumerRegistry.get(queryId);
             assert rootResultConsumer != null;
         }

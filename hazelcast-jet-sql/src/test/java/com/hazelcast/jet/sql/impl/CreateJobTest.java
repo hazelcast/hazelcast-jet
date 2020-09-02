@@ -50,7 +50,7 @@ public class CreateJobTest extends SimpleTestInClusterSupport {
 
     @Test
     public void when_streamingDmlWithoutCreateJob_then_fail() {
-        sqlService.execute("CREATE EXTERNAL TABLE src TYPE TestStream");
+        sqlService.execute("CREATE MAPPING src TYPE TestStream");
         sqlService.execute(javaSerializableMapDdl("dest", Long.class, Long.class));
 
         exception.expectMessage("You must use CREATE JOB statement for a streaming DML query");
@@ -60,7 +60,7 @@ public class CreateJobTest extends SimpleTestInClusterSupport {
     @Test
     public void when_ddlStatementWithCreateJob_then_fail() {
         exception.expectMessage("Encountered \"CREATE\" at line 1, column 19");
-        sqlService.execute("CREATE JOB job AS CREATE EXTERNAL TABLE src TYPE TestStream");
+        sqlService.execute("CREATE JOB job AS CREATE MAPPING src TYPE TestStream");
     }
 
     @Test
@@ -73,7 +73,7 @@ public class CreateJobTest extends SimpleTestInClusterSupport {
 
     @Test
     public void testJobSubmitAndCancel() {
-        sqlService.execute("CREATE EXTERNAL TABLE src TYPE TestStream");
+        sqlService.execute("CREATE MAPPING src TYPE TestStream");
         sqlService.execute(javaSerializableMapDdl("dest", Long.class, Long.class));
 
         sqlService.execute("CREATE JOB testJob AS INSERT OVERWRITE dest SELECT v, v FROM src");
@@ -85,7 +85,7 @@ public class CreateJobTest extends SimpleTestInClusterSupport {
 
     @Test
     public void when_duplicateName_then_fails() {
-        sqlService.execute("CREATE EXTERNAL TABLE src TYPE TestStream");
+        sqlService.execute("CREATE MAPPING src TYPE TestStream");
         sqlService.execute(javaSerializableMapDdl("dest", Long.class, Long.class));
 
         sqlService.execute("CREATE JOB testJob AS INSERT OVERWRITE dest SELECT v, v FROM src");
@@ -97,7 +97,7 @@ public class CreateJobTest extends SimpleTestInClusterSupport {
 
     @Test
     public void when_duplicateName_and_ifNotExists_then_secondSubmissionIgnored() {
-        sqlService.execute("CREATE EXTERNAL TABLE src TYPE TestStream");
+        sqlService.execute("CREATE MAPPING src TYPE TestStream");
         sqlService.execute(javaSerializableMapDdl("dest", Long.class, Long.class));
 
         sqlService.execute("CREATE JOB testJob AS INSERT OVERWRITE dest SELECT v, v FROM src");
@@ -121,7 +121,7 @@ public class CreateJobTest extends SimpleTestInClusterSupport {
 
     @Test
     public void test_jobOptions() {
-        sqlService.execute("CREATE EXTERNAL TABLE src TYPE TestStream");
+        sqlService.execute("CREATE MAPPING src TYPE TestStream");
         sqlService.execute(javaSerializableMapDdl("dest", Long.class, Long.class));
 
         sqlService.execute("CREATE JOB testJob " +
@@ -150,7 +150,7 @@ public class CreateJobTest extends SimpleTestInClusterSupport {
         JetInstance client = factory().newClient();
         SqlService sqlService = client.getHazelcastInstance().getSql();
 
-        sqlService.execute("CREATE EXTERNAL TABLE src TYPE TestStream");
+        sqlService.execute("CREATE MAPPING src TYPE TestStream");
         sqlService.execute(javaSerializableMapDdl("dest", Long.class, Long.class));
 
         sqlService.execute("CREATE JOB testJob AS INSERT OVERWRITE dest SELECT v, v FROM src");

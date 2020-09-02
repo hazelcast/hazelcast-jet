@@ -16,8 +16,8 @@
 
 package com.hazelcast.jet.sql.impl.parse;
 
-import com.hazelcast.sql.impl.type.QueryDataType;
-import org.apache.calcite.sql.SqlCall;
+import com.hazelcast.internal.util.Preconditions;
+import org.apache.calcite.sql.SqlDrop;
 import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlNode;
@@ -25,6 +25,8 @@ import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.SqlSpecialOperator;
 import org.apache.calcite.sql.SqlWriter;
 import org.apache.calcite.sql.parser.SqlParserPos;
+import org.apache.calcite.sql.validate.SqlValidator;
+import org.apache.calcite.sql.validate.SqlValidatorScope;
 import org.apache.calcite.util.ImmutableNullableList;
 
 import javax.annotation.Nonnull;
@@ -32,56 +34,55 @@ import java.util.List;
 
 import static java.util.Objects.requireNonNull;
 
-public class SqlTableColumn extends SqlCall {
+public class SqlDropExternalMapping extends SqlDrop {
 
     private static final SqlSpecialOperator OPERATOR =
-            new SqlSpecialOperator("COLUMN DECLARATION", SqlKind.COLUMN_DECL);
+            new SqlSpecialOperator("DROP EXTERNAL MAPPING", SqlKind.DROP_TABLE);
 
     private final SqlIdentifier name;
-    private final SqlDataType type;
-    private final SqlIdentifier externalName;
 
-    public SqlTableColumn(SqlIdentifier name, SqlDataType type, SqlIdentifier externalName, SqlParserPos pos) {
-        super(pos);
-        this.name = requireNonNull(name, "Column name should not be null");
-        this.type = requireNonNull(type, "Column type should not be null");
-        this.externalName = externalName;
+    public SqlDropExternalMapping(
+            SqlIdentifier name,
+            boolean ifExists,
+            SqlParserPos pos
+    ) {
+        super(OPERATOR, pos, ifExists);
+
+        this.name = requireNonNull(name, "Name should not be null");
+
+        Preconditions.checkTrue(name.names.size() == 1, name.toString());
     }
 
     public String name() {
-        return name.getSimple();
+        return name.toString();
     }
 
-    public QueryDataType type() {
-        return type != null ? type.type() : null;
+    public boolean ifExists() {
+        return ifExists;
     }
 
-    public String externalName() {
-        return externalName == null ? null : externalName.toString();
-    }
-
-    @Override
     @Nonnull
+    @Override
     public SqlOperator getOperator() {
         return OPERATOR;
     }
 
-    @Override
     @Nonnull
+    @Override
     public List<SqlNode> getOperandList() {
-        return ImmutableNullableList.of(name, type, externalName);
+        return ImmutableNullableList.of(name);
     }
 
     @Override
     public void unparse(SqlWriter writer, int leftPrec, int rightPrec) {
+        writer.keyword("DROP EXTERNAL MAPPING");
+        if (ifExists) {
+            writer.keyword("IF EXISTS");
+        }
         name.unparse(writer, leftPrec, rightPrec);
-        if (type != null) {
-            type.unparse(writer, leftPrec, rightPrec);
-        }
-        if (externalName != null) {
-            writer.keyword("EXTERNAL NAME");
-            externalName.unparse(writer, leftPrec, rightPrec);
-        }
+    }
+
+    @Override
+    public void validate(SqlValidator validator, SqlValidatorScope scope) {
     }
 }
-

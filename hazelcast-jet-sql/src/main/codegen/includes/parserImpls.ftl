@@ -76,9 +76,9 @@ SqlDrop SqlDropJob(Span span, boolean replace) :
 }
 
 /**
- * Parses CREATE EXTERNAL TABLE statement.
+ * Parses CREATE EXTERNAL MAPPING statement.
  */
-SqlCreate SqlCreateExternalTable(Span span, boolean replace) :
+SqlCreate SqlCreateExternalMapping(Span span, boolean replace) :
 {
     SqlParserPos startPos = span.pos();
 
@@ -89,12 +89,12 @@ SqlCreate SqlCreateExternalTable(Span span, boolean replace) :
     boolean ifNotExists = false;
 }
 {
-    <EXTERNAL> <TABLE>
+    [ <EXTERNAL> ] <MAPPING>
     [
         <IF> <NOT> <EXISTS> { ifNotExists = true; }
     ]
     name = SimpleIdentifier()
-    columns = TableColumns()
+    columns = MappingColumns()
     <TYPE>
     type = SimpleIdentifier()
     [
@@ -102,7 +102,7 @@ SqlCreate SqlCreateExternalTable(Span span, boolean replace) :
         sqlOptions = SqlOptions()
     ]
     {
-        return new SqlCreateExternalTable(
+        return new SqlCreateExternalMapping(
             name,
             columns,
             type,
@@ -114,22 +114,22 @@ SqlCreate SqlCreateExternalTable(Span span, boolean replace) :
     }
 }
 
-SqlNodeList TableColumns():
+SqlNodeList MappingColumns():
 {
     SqlParserPos pos = getPos();
 
-    SqlTableColumn column;
+    SqlMappingColumn column;
     Map<String, SqlNode> columns = new LinkedHashMap<String, SqlNode>();
 }
 {
     [
         <LPAREN> {  pos = getPos(); }
-        column = TableColumn()
+        column = MappingColumn()
         {
             columns.put(column.name(), column);
         }
         (
-            <COMMA> column = TableColumn()
+            <COMMA> column = MappingColumn()
             {
                 if (columns.putIfAbsent(column.name(), column) != null) {
                    throw SqlUtil.newContextException(getPos(), ParserResource.RESOURCE.duplicateColumn(column.name()));
@@ -143,14 +143,13 @@ SqlNodeList TableColumns():
     }
 }
 
-SqlTableColumn TableColumn() :
+SqlMappingColumn MappingColumn() :
 {
     Span span;
 
     SqlIdentifier name;
     SqlDataType type;
     SqlIdentifier externalName = null;
-
 }
 {
     name = SimpleIdentifier() { span = span(); }
@@ -164,7 +163,7 @@ SqlTableColumn TableColumn() :
         }
     ]
     {
-        return new SqlTableColumn(name, type, externalName, span.end(this));
+        return new SqlMappingColumn(name, type, externalName, span.end(this));
     }
 }
 
@@ -261,9 +260,9 @@ QueryDataType DateTimeType() :
 }
 
 /**
- * Parses DROP EXTERNAL TABLE statement.
+ * Parses DROP EXTERNAL MAPPING statement.
  */
-SqlDrop SqlDropExternalTable(Span span, boolean replace) :
+SqlDrop SqlDropExternalMapping(Span span, boolean replace) :
 {
     SqlParserPos pos = span.pos();
 
@@ -271,26 +270,26 @@ SqlDrop SqlDropExternalTable(Span span, boolean replace) :
     boolean ifExists = false;
 }
 {
-    <EXTERNAL> <TABLE>
+    [ <EXTERNAL> ] <MAPPING>
     [
         <IF> <EXISTS> { ifExists = true; }
     ]
     name = SimpleIdentifier()
     {
-        return new SqlDropExternalTable(name, ifExists, pos.plus(getPos()));
+        return new SqlDropExternalMapping(name, ifExists, pos.plus(getPos()));
     }
 }
 
 /**
-* Parses SHOW EXTERNAL TABLES statement.
+* Parses SHOW EXTERNAL MAPPINGS statement.
 */
-SqlShowExternalTables SqlShowExternalTables() :
+SqlShowExternalMappings SqlShowExternalMappings() :
 {
 }
 {
-    <SHOW> <EXTERNAL> <TABLES>
+    <SHOW> [ <EXTERNAL> ] <MAPPINGS>
     {
-        return new SqlShowExternalTables(getPos());
+        return new SqlShowExternalMappings(getPos());
     }
 }
 

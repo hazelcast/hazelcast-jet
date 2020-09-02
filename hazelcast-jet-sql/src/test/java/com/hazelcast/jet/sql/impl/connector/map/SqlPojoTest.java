@@ -146,7 +146,7 @@ public class SqlPojoTest extends JetSqlTestSupport {
     @Test
     public void supportsFieldsMapping() {
         String name = generateRandomName();
-        sqlService.execute("CREATE EXTERNAL TABLE " + name + " ("
+        sqlService.execute("CREATE MAPPING " + name + " ("
                 + "key_id INT EXTERNAL NAME \"__key.id\""
                 + ", value_id INT EXTERNAL NAME \"this.id\""
                 + ") TYPE \"" + IMapSqlConnector.TYPE_NAME + "\" "
@@ -178,7 +178,7 @@ public class SqlPojoTest extends JetSqlTestSupport {
         sqlService.execute("INSERT OVERWRITE " + name + " VALUES (1, 'Alice')");
 
         // alter schema
-        sqlService.execute("CREATE OR REPLACE EXTERNAL TABLE " + name + " "
+        sqlService.execute("CREATE OR REPLACE MAPPING " + name + " "
                 + "TYPE \"" + IMapSqlConnector.TYPE_NAME + "\" "
                 + "OPTIONS ("
                 + "\"" + OPTION_SERIALIZATION_KEY_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
@@ -208,7 +208,7 @@ public class SqlPojoTest extends JetSqlTestSupport {
         Map<PersonId, InsuredPerson> map = instance().getMap(name);
         map.put(new PersonId(1), new InsuredPerson(1, "Alice", 123456789L));
 
-        sqlService.execute("CREATE EXTERNAL TABLE " + name + " ("
+        sqlService.execute("CREATE MAPPING " + name + " ("
                 + "ssn BIGINT"
                 + ") TYPE \"" + IMapSqlConnector.TYPE_NAME + "\" "
                 + "OPTIONS ("
@@ -410,7 +410,7 @@ public class SqlPojoTest extends JetSqlTestSupport {
         String mapName = generateRandomName();
         String tableName = generateRandomName();
 
-        sqlService.execute("CREATE EXTERNAL TABLE " + tableName + " TYPE \"" + IMapSqlConnector.TYPE_NAME + "\"\n"
+        sqlService.execute("CREATE MAPPING " + tableName + " TYPE \"" + IMapSqlConnector.TYPE_NAME + "\"\n"
                 + "OPTIONS (\n"
                 + '"' + OPTION_OBJECT_NAME + "\" '" + mapName + "',\n"
                 + '"' + OPTION_SERIALIZATION_KEY_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "',\n"

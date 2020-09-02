@@ -68,7 +68,7 @@ public class SqlHadoopTest extends JetSqlTestSupport {
     @Test
     public void supportsCsv() throws IOException {
         String name = createRandomName();
-        sqlService.execute("CREATE EXTERNAL TABLE " + name + " ("
+        sqlService.execute("CREATE MAPPING " + name + " ("
                 + "id BIGINT"
                 + ", name VARCHAR"
                 + ") TYPE \"" + FileSqlConnector.TYPE_NAME + "\" "
@@ -94,7 +94,7 @@ public class SqlHadoopTest extends JetSqlTestSupport {
         store("/inferred-csv/users.csv", "id,name\n1,Alice\n2,Bob");
 
         String name = createRandomName();
-        sqlService.execute("CREATE EXTERNAL TABLE " + name + " "
+        sqlService.execute("CREATE MAPPING " + name + " "
                 + "TYPE \"" + FileSqlConnector.TYPE_NAME + "\" "
                 + "OPTIONS ("
                 + "\"" + OPTION_SERIALIZATION_FORMAT + "\" '" + CSV_SERIALIZATION_FORMAT + "'"
@@ -115,7 +115,7 @@ public class SqlHadoopTest extends JetSqlTestSupport {
     @Test
     public void supportsJson() throws IOException {
         String name = createRandomName();
-        sqlService.execute("CREATE EXTERNAL TABLE " + name + " ("
+        sqlService.execute("CREATE MAPPING " + name + " ("
                 + "id BIGINT"
                 + ", name VARCHAR"
                 + ") TYPE \"" + FileSqlConnector.TYPE_NAME + "\" "
@@ -144,7 +144,7 @@ public class SqlHadoopTest extends JetSqlTestSupport {
         );
 
         String name = createRandomName();
-        sqlService.execute("CREATE EXTERNAL TABLE " + name + " "
+        sqlService.execute("CREATE MAPPING " + name + " "
                 + "TYPE \"" + FileSqlConnector.TYPE_NAME + "\" "
                 + "OPTIONS ("
                 + "\"" + OPTION_SERIALIZATION_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + "'"
@@ -164,7 +164,7 @@ public class SqlHadoopTest extends JetSqlTestSupport {
     @Test
     public void supportsAvro() throws IOException {
         String name = createRandomName();
-        sqlService.execute("CREATE EXTERNAL TABLE " + name + " ("
+        sqlService.execute("CREATE MAPPING " + name + " ("
                 + "id BIGINT"
                 + ", name VARCHAR"
                 + ") TYPE \"" + FileSqlConnector.TYPE_NAME + "\" "
@@ -190,7 +190,7 @@ public class SqlHadoopTest extends JetSqlTestSupport {
         store("/inferred-avro/users.avro", Files.readAllBytes(Paths.get("src/test/resources/users.avro")));
 
         String name = createRandomName();
-        sqlService.execute("CREATE EXTERNAL TABLE " + name + " "
+        sqlService.execute("CREATE MAPPING " + name + " "
                 + "TYPE \"" + FileSqlConnector.TYPE_NAME + "\" "
                 + "OPTIONS ("
                 + "\"" + OPTION_SERIALIZATION_FORMAT + "\" '" + AVRO_SERIALIZATION_FORMAT + "'"

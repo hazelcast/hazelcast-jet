@@ -16,7 +16,7 @@
 
 package com.hazelcast.jet.sql.impl.connector.file;
 
-import com.hazelcast.jet.sql.impl.schema.ExternalField;
+import com.hazelcast.jet.sql.impl.schema.MappingField;
 import com.hazelcast.sql.impl.QueryException;
 import org.apache.hadoop.mapreduce.Job;
 
@@ -40,104 +40,104 @@ final class MetadataResolver {
     private MetadataResolver() {
     }
 
-    static List<ExternalField> resolveAndValidateFields(List<ExternalField> externalFields, FileOptions options) {
+    static List<MappingField> resolveAndValidateFields(List<MappingField> mappingFields, FileOptions options) {
         try {
             String path = options.path();
             if (path.startsWith(HDFS_SCHEMA)) {
                 Job job = Job.getInstance();
-                return requireNonNull(resolveRemoteFileFields(externalFields, options, job));
+                return requireNonNull(resolveRemoteFileFields(mappingFields, options, job));
             } else if (path.startsWith(S3_SCHEMA)) {
                 Job job = createS3Job(options);
-                return requireNonNull(resolveRemoteFileFields(externalFields, options, job));
+                return requireNonNull(resolveRemoteFileFields(mappingFields, options, job));
                 // adl, gs, wasbs
             } else {
-                return requireNonNull(resolveLocalFileFields(externalFields, options));
+                return requireNonNull(resolveLocalFileFields(mappingFields, options));
             }
         } catch (IOException e) {
             throw QueryException.error("Unable to resolve table metadata : " + e.getMessage(), e);
         }
     }
 
-    private static List<ExternalField> resolveLocalFileFields(
-            List<ExternalField> externalFields,
+    private static List<MappingField> resolveLocalFileFields(
+            List<MappingField> mappingFields,
             FileOptions options
     ) throws IOException {
         String format = options.format();
         switch (format) {
             case CSV_SERIALIZATION_FORMAT:
-                return LocalCsvMetadataResolver.resolveFields(externalFields, options);
+                return LocalCsvMetadataResolver.resolveFields(mappingFields, options);
             case JSON_SERIALIZATION_FORMAT:
-                return LocalJsonMetadataResolver.resolveFields(externalFields, options);
+                return LocalJsonMetadataResolver.resolveFields(mappingFields, options);
             case AVRO_SERIALIZATION_FORMAT:
-                return LocalAvroMetadataResolver.resolveFields(externalFields, options);
+                return LocalAvroMetadataResolver.resolveFields(mappingFields, options);
             default:
                 throw QueryException.error("Unsupported serialization format - '" + format + "'");
         }
     }
 
-    private static List<ExternalField> resolveRemoteFileFields(
-            List<ExternalField> externalFields,
+    private static List<MappingField> resolveRemoteFileFields(
+            List<MappingField> mappingFields,
             FileOptions options,
             Job job
     ) throws IOException {
         String format = options.format();
         switch (format) {
             case CSV_SERIALIZATION_FORMAT:
-                return RemoteCsvMetadataResolver.resolveFields(externalFields, options, job);
+                return RemoteCsvMetadataResolver.resolveFields(mappingFields, options, job);
             case JSON_SERIALIZATION_FORMAT:
-                return RemoteJsonMetadataResolver.resolveFields(externalFields, options, job);
+                return RemoteJsonMetadataResolver.resolveFields(mappingFields, options, job);
             case AVRO_SERIALIZATION_FORMAT:
-                return RemoteAvroMetadataResolver.resolveFields(externalFields, options, job);
+                return RemoteAvroMetadataResolver.resolveFields(mappingFields, options, job);
             default:
                 throw QueryException.error("Unsupported serialization format - '" + format + "'");
         }
     }
 
-    static Metadata resolveMetadata(List<ExternalField> externalFields, FileOptions options) {
+    static Metadata resolveMetadata(List<MappingField> mappingFields, FileOptions options) {
         try {
             String path = options.path();
             if (path.startsWith(HDFS_SCHEMA)) {
                 Job job = Job.getInstance();
-                return requireNonNull(resolveRemoteFileMetadata(externalFields, options, job));
+                return requireNonNull(resolveRemoteFileMetadata(mappingFields, options, job));
             } else if (path.startsWith(S3_SCHEMA)) {
                 Job job = createS3Job(options);
-                return requireNonNull(resolveRemoteFileMetadata(externalFields, options, job));
+                return requireNonNull(resolveRemoteFileMetadata(mappingFields, options, job));
                 // adl, gs, wasbs
             } else {
-                return requireNonNull(resolveLocalFileMetadata(externalFields, options));
+                return requireNonNull(resolveLocalFileMetadata(mappingFields, options));
             }
         } catch (IOException e) {
             throw QueryException.error("Unable to resolve table metadata : " + e.getMessage(), e);
         }
     }
 
-    private static Metadata resolveLocalFileMetadata(List<ExternalField> externalFields, FileOptions options) {
+    private static Metadata resolveLocalFileMetadata(List<MappingField> mappingFields, FileOptions options) {
         String format = options.format();
         switch (format) {
             case CSV_SERIALIZATION_FORMAT:
-                return LocalCsvMetadataResolver.resolveMetadata(externalFields, options);
+                return LocalCsvMetadataResolver.resolveMetadata(mappingFields, options);
             case JSON_SERIALIZATION_FORMAT:
-                return LocalJsonMetadataResolver.resolveMetadata(externalFields, options);
+                return LocalJsonMetadataResolver.resolveMetadata(mappingFields, options);
             case AVRO_SERIALIZATION_FORMAT:
-                return LocalAvroMetadataResolver.resolveMetadata(externalFields, options);
+                return LocalAvroMetadataResolver.resolveMetadata(mappingFields, options);
             default:
                 throw QueryException.error("Unsupported serialization format - '" + format + "'");
         }
     }
 
     private static Metadata resolveRemoteFileMetadata(
-            List<ExternalField> externalFields,
+            List<MappingField> mappingFields,
             FileOptions options,
             Job job
     ) throws IOException {
         String format = options.format();
         switch (format) {
             case CSV_SERIALIZATION_FORMAT:
-                return RemoteCsvMetadataResolver.resolveMetadata(externalFields, options, job);
+                return RemoteCsvMetadataResolver.resolveMetadata(mappingFields, options, job);
             case JSON_SERIALIZATION_FORMAT:
-                return RemoteJsonMetadataResolver.resolveMetadata(externalFields, options, job);
+                return RemoteJsonMetadataResolver.resolveMetadata(mappingFields, options, job);
             case AVRO_SERIALIZATION_FORMAT:
-                return RemoteAvroMetadataResolver.resolveMetadata(externalFields, options, job);
+                return RemoteAvroMetadataResolver.resolveMetadata(mappingFields, options, job);
             default:
                 throw QueryException.error("Unsupported serialization format - '" + format + "'");
         }

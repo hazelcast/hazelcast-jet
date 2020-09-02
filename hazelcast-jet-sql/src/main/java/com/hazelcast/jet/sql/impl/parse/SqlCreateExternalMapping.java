@@ -38,17 +38,17 @@ import java.util.stream.Stream;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toMap;
 
-public class SqlCreateExternalTable extends SqlCreate {
+public class SqlCreateExternalMapping extends SqlCreate {
 
     private static final SqlSpecialOperator OPERATOR =
-            new SqlSpecialOperator("CREATE EXTERNAL TABLE", SqlKind.CREATE_TABLE);
+            new SqlSpecialOperator("CREATE EXTERNAL MAPPING", SqlKind.CREATE_TABLE);
 
     private final SqlIdentifier name;
     private final SqlNodeList columns;
     private final SqlIdentifier type;
     private final SqlNodeList options;
 
-    public SqlCreateExternalTable(
+    public SqlCreateExternalMapping(
             SqlIdentifier name,
             SqlNodeList columns,
             SqlIdentifier type,
@@ -58,10 +58,12 @@ public class SqlCreateExternalTable extends SqlCreate {
             SqlParserPos pos
     ) {
         super(OPERATOR, pos, replace, ifNotExists);
+
         this.name = requireNonNull(name, "Name should not be null");
         this.columns = requireNonNull(columns, "Columns should not be null");
         this.type = requireNonNull(type, "Type should not be null");
         this.options = requireNonNull(options, "Options should not be null");
+
         Preconditions.checkTrue(name.names.size() == 1, name.toString());
     }
 
@@ -69,8 +71,8 @@ public class SqlCreateExternalTable extends SqlCreate {
         return name.toString();
     }
 
-    public Stream<SqlTableColumn> columns() {
-        return columns.getList().stream().map(node -> (SqlTableColumn) node);
+    public Stream<SqlMappingColumn> columns() {
+        return columns.getList().stream().map(node -> (SqlMappingColumn) node);
     }
 
     public String type() {
@@ -85,14 +87,14 @@ public class SqlCreateExternalTable extends SqlCreate {
         return ifNotExists;
     }
 
-    @Override
     @Nonnull
+    @Override
     public SqlOperator getOperator() {
         return OPERATOR;
     }
 
-    @Override
     @Nonnull
+    @Override
     public List<SqlNode> getOperandList() {
         return ImmutableNullableList.of(name, columns, type, options);
     }
@@ -105,7 +107,7 @@ public class SqlCreateExternalTable extends SqlCreate {
             writer.keyword("OR REPLACE");
         }
 
-        writer.keyword("EXTERNAL TABLE");
+        writer.keyword("EXTERNAL MAPPING");
 
         if (ifNotExists) {
             writer.keyword("IF NOT EXISTS");

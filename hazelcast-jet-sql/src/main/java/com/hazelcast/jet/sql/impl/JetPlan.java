@@ -18,35 +18,33 @@ package com.hazelcast.jet.sql.impl;
 
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.DAG;
-import com.hazelcast.jet.sql.impl.schema.ExternalTable;
+import com.hazelcast.jet.sql.impl.schema.Mapping;
 import com.hazelcast.sql.SqlResult;
 import com.hazelcast.sql.SqlRowMetadata;
 import com.hazelcast.sql.impl.QueryId;
 import com.hazelcast.sql.impl.optimizer.SqlPlan;
 
-import java.util.List;
-
 interface JetPlan extends SqlPlan {
 
-    SqlResult execute(List<Object> params, long timeout, int pageSize);
+    SqlResult execute();
 
-    class CreateExternalTablePlan implements JetPlan {
+    class CreateExternalMappingPlan implements JetPlan {
 
-        private final ExternalTable externalTable;
+        private final Mapping mapping;
         private final boolean replace;
         private final boolean ifNotExists;
         private final ExecutionPlan executionPlan;
 
         private final JetPlanExecutor planExecutor;
 
-        CreateExternalTablePlan(
-                ExternalTable externalTable,
+        CreateExternalMappingPlan(
+                Mapping mapping,
                 boolean replace,
                 boolean ifNotExists,
                 ExecutionPlan executionPlan,
                 JetPlanExecutor planExecutor
         ) {
-            this.externalTable = externalTable;
+            this.mapping = mapping;
             this.replace = replace;
             this.ifNotExists = ifNotExists;
             this.executionPlan = executionPlan;
@@ -55,13 +53,13 @@ interface JetPlan extends SqlPlan {
         }
 
         @Override
-        public SqlResult execute(List<Object> params, long timeout, int pageSize) {
+        public SqlResult execute() {
             SqlResult result = planExecutor.execute(this);
             return executionPlan == null ? result : planExecutor.execute(executionPlan);
         }
 
-        ExternalTable externalTable() {
-            return externalTable;
+        Mapping externalTable() {
+            return mapping;
         }
 
         boolean replace() {
@@ -73,14 +71,14 @@ interface JetPlan extends SqlPlan {
         }
     }
 
-    class DropExternalTablePlan implements JetPlan {
+    class DropExternalMappingPlan implements JetPlan {
 
         private final String name;
         private final boolean ifExists;
 
         private final JetPlanExecutor planExecutor;
 
-        DropExternalTablePlan(
+        DropExternalMappingPlan(
                 String name,
                 boolean ifExists,
                 JetPlanExecutor planExecutor
@@ -92,7 +90,7 @@ interface JetPlan extends SqlPlan {
         }
 
         @Override
-        public SqlResult execute(List<Object> params, long timeout, int pageSize) {
+        public SqlResult execute() {
             return planExecutor.execute(this);
         }
 
@@ -105,16 +103,16 @@ interface JetPlan extends SqlPlan {
         }
     }
 
-    class ShowExternalTablesPlan implements JetPlan {
+    class ShowExternalMappingsPlan implements JetPlan {
 
         private final JetPlanExecutor planExecutor;
 
-        public ShowExternalTablesPlan(JetPlanExecutor planExecutor) {
+        public ShowExternalMappingsPlan(JetPlanExecutor planExecutor) {
             this.planExecutor = planExecutor;
         }
 
         @Override
-        public SqlResult execute(List<Object> params, long timeout, int pageSize) {
+        public SqlResult execute() {
             return planExecutor.execute(this);
         }
     }
@@ -144,7 +142,7 @@ interface JetPlan extends SqlPlan {
         }
 
         @Override
-        public SqlResult execute(List<Object> params, long timeout, int pageSize) {
+        public SqlResult execute() {
             return planExecutor.execute(this);
         }
 
@@ -179,7 +177,7 @@ interface JetPlan extends SqlPlan {
         }
 
         @Override
-        public SqlResult execute(List<Object> params, long timeout, int pageSize) {
+        public SqlResult execute() {
             return planExecutor.execute(this);
         }
 
@@ -220,7 +218,7 @@ interface JetPlan extends SqlPlan {
         }
 
         @Override
-        public SqlResult execute(List<Object> params, long timeout, int pageSize) {
+        public SqlResult execute() {
             return planExecutor.execute(this);
         }
 

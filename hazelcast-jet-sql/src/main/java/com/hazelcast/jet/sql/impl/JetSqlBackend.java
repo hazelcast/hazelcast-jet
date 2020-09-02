@@ -17,12 +17,12 @@
 package com.hazelcast.jet.sql.impl;
 
 import com.hazelcast.jet.core.DAG;
-import com.hazelcast.jet.sql.impl.JetPlan.CreateExternalTablePlan;
+import com.hazelcast.jet.sql.impl.JetPlan.CreateExternalMappingPlan;
 import com.hazelcast.jet.sql.impl.JetPlan.CreateJobPlan;
-import com.hazelcast.jet.sql.impl.JetPlan.DropExternalTablePlan;
+import com.hazelcast.jet.sql.impl.JetPlan.DropExternalMappingPlan;
 import com.hazelcast.jet.sql.impl.JetPlan.DropJobPlan;
 import com.hazelcast.jet.sql.impl.JetPlan.ExecutionPlan;
-import com.hazelcast.jet.sql.impl.JetPlan.ShowExternalTablesPlan;
+import com.hazelcast.jet.sql.impl.JetPlan.ShowExternalMappingsPlan;
 import com.hazelcast.jet.sql.impl.convert.JetSqlToRelConverter;
 import com.hazelcast.jet.sql.impl.opt.OptUtils;
 import com.hazelcast.jet.sql.impl.opt.logical.LogicalRel;
@@ -31,14 +31,14 @@ import com.hazelcast.jet.sql.impl.opt.physical.JetRootRel;
 import com.hazelcast.jet.sql.impl.opt.physical.PhysicalRel;
 import com.hazelcast.jet.sql.impl.opt.physical.PhysicalRules;
 import com.hazelcast.jet.sql.impl.opt.physical.visitor.CreateDagVisitor;
-import com.hazelcast.jet.sql.impl.parse.SqlCreateExternalTable;
+import com.hazelcast.jet.sql.impl.parse.SqlCreateExternalMapping;
 import com.hazelcast.jet.sql.impl.parse.SqlCreateJob;
-import com.hazelcast.jet.sql.impl.parse.SqlDropExternalTable;
+import com.hazelcast.jet.sql.impl.parse.SqlDropExternalMapping;
 import com.hazelcast.jet.sql.impl.parse.SqlDropJob;
-import com.hazelcast.jet.sql.impl.parse.SqlShowExternalTables;
-import com.hazelcast.jet.sql.impl.schema.ExternalCatalog;
-import com.hazelcast.jet.sql.impl.schema.ExternalField;
-import com.hazelcast.jet.sql.impl.schema.ExternalTable;
+import com.hazelcast.jet.sql.impl.parse.SqlShowExternalMappings;
+import com.hazelcast.jet.sql.impl.schema.MappingCatalog;
+import com.hazelcast.jet.sql.impl.schema.MappingField;
+import com.hazelcast.jet.sql.impl.schema.Mapping;
 import com.hazelcast.jet.sql.impl.schema.JetTable;
 import com.hazelcast.jet.sql.impl.validate.JetSqlValidator;
 import com.hazelcast.jet.sql.impl.validate.UnsupportedOperationVisitor;
@@ -84,10 +84,10 @@ public class JetSqlBackend implements SqlBackend {
 
     private final NodeEngine nodeEngine;
 
-    private final ExternalCatalog catalog;
+    private final MappingCatalog catalog;
     private final JetPlanExecutor planExecutor;
 
-    JetSqlBackend(NodeEngine nodeEngine, ExternalCatalog catalog, JetPlanExecutor planExecutor) {
+    JetSqlBackend(NodeEngine nodeEngine, MappingCatalog catalog, JetPlanExecutor planExecutor) {
         this.nodeEngine = nodeEngine;
 
         this.catalog = catalog;
@@ -140,11 +140,11 @@ public class JetSqlBackend implements SqlBackend {
     ) {
         SqlNode node = parseResult.getNode();
 
-        if (node instanceof SqlCreateExternalTable) {
-            return toCreateTablePlan((SqlCreateExternalTable) node);
-        } else if (node instanceof SqlDropExternalTable) {
-            return toDropTablePlan((SqlDropExternalTable) node);
-        } else if (node instanceof SqlShowExternalTables) {
+        if (node instanceof SqlCreateExternalMapping) {
+            return toCreateTablePlan((SqlCreateExternalMapping) node);
+        } else if (node instanceof SqlDropExternalMapping) {
+            return toDropTablePlan((SqlDropExternalMapping) node);
+        } else if (node instanceof SqlShowExternalMappings) {
             return toShowTablesPlan();
         } else if (node instanceof SqlCreateJob) {
             return toCreateJobPlan(parseResult, context);
@@ -156,22 +156,22 @@ public class JetSqlBackend implements SqlBackend {
         }
     }
 
-    private SqlPlan toCreateTablePlan(SqlCreateExternalTable sqlCreateTable) {
-        List<ExternalField> externalFields = sqlCreateTable.columns()
-                .map(field -> new ExternalField(field.name(), field.type(), field.externalName()))
-                .collect(toList());
-        ExternalTable externalTable = new ExternalTable(sqlCreateTable.name(), sqlCreateTable.type(), externalFields, sqlCreateTable.options());
+    private SqlPlan toCreateTablePlan(SqlCreateExternalMapping sqlCreateTable) {
+        List<MappingField> mappingFields = sqlCreateTable.columns()
+            .map(field -> new MappingField(field.name(), field.type(), field.externalName()))
+            .collect(toList());
+        Mapping mapping = new Mapping(sqlCreateTable.name(), sqlCreateTable.type(), mappingFields, sqlCreateTable.options());
 
-        return new CreateExternalTablePlan(externalTable, sqlCreateTable.getReplace(), sqlCreateTable.ifNotExists(), null, planExecutor);
+        return new CreateExternalMappingPlan(mapping, sqlCreateTable.getReplace(), sqlCreateTable.ifNotExists(), null, planExecutor);
 
     }
 
-    private SqlPlan toDropTablePlan(SqlDropExternalTable sqlDropTable) {
-        return new DropExternalTablePlan(sqlDropTable.name(), sqlDropTable.ifExists(), planExecutor);
+    private SqlPlan toDropTablePlan(SqlDropExternalMapping sqlDropTable) {
+        return new DropExternalMappingPlan(sqlDropTable.name(), sqlDropTable.ifExists(), planExecutor);
     }
 
     private SqlPlan toShowTablesPlan() {
-        return new ShowExternalTablesPlan(planExecutor);
+        return new ShowExternalMappingsPlan(planExecutor);
     }
 
     private SqlPlan toCreateJobPlan(QueryParseResult parseResult, OptimizerContext context) {

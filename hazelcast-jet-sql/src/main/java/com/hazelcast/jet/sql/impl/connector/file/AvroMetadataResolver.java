@@ -16,7 +16,7 @@
 
 package com.hazelcast.jet.sql.impl.connector.file;
 
-import com.hazelcast.jet.sql.impl.schema.ExternalField;
+import com.hazelcast.jet.sql.impl.schema.MappingField;
 import com.hazelcast.sql.impl.QueryException;
 import com.hazelcast.sql.impl.schema.TableField;
 import com.hazelcast.sql.impl.type.QueryDataType;
@@ -33,8 +33,8 @@ import static com.hazelcast.jet.impl.util.Util.toList;
 
 interface AvroMetadataResolver {
 
-    static void validateFields(List<ExternalField> userFields) {
-        for (ExternalField field : userFields) {
+    static void validateFields(List<MappingField> userFields) {
+        for (MappingField field : userFields) {
             String path = field.externalName() == null ? field.name() : field.externalName();
             if (path.indexOf('.') >= 0) {
                 throw QueryException.error("Invalid field name - '" + path + "'. Nested fields are not supported.");
@@ -42,13 +42,13 @@ interface AvroMetadataResolver {
         }
     }
 
-    static List<ExternalField> resolveFieldsFromSchema(Schema schema) {
-        Map<String, ExternalField> fields = new LinkedHashMap<>();
+    static List<MappingField> resolveFieldsFromSchema(Schema schema) {
+        Map<String, MappingField> fields = new LinkedHashMap<>();
         for (Schema.Field avroField : schema.getFields()) {
             String name = avroField.name();
             QueryDataType type = resolveType(avroField.schema().getType());
 
-            ExternalField field = new ExternalField(name, type);
+            MappingField field = new MappingField(name, type);
 
             fields.putIfAbsent(field.name(), field);
         }
@@ -76,8 +76,8 @@ interface AvroMetadataResolver {
         }
     }
 
-    static List<TableField> toTableFields(List<ExternalField> externalFields) {
-        return toList(externalFields,
+    static List<TableField> toTableFields(List<MappingField> mappingFields) {
+        return toList(mappingFields,
                 f -> new FileTableField(f.name(), f.type(), f.externalName() == null ? f.name() : f.externalName()));
     }
 

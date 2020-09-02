@@ -19,7 +19,7 @@ package com.hazelcast.jet.sql.impl.validate;
 import com.hazelcast.jet.sql.SqlConnector;
 import com.hazelcast.jet.sql.impl.parse.SqlCreateJob;
 import com.hazelcast.jet.sql.impl.parse.SqlExtendedInsert;
-import com.hazelcast.jet.sql.impl.parse.SqlShowExternalTables;
+import com.hazelcast.jet.sql.impl.parse.SqlShowExternalMappings;
 import com.hazelcast.sql.impl.calcite.schema.HazelcastTable;
 import com.hazelcast.sql.impl.calcite.validate.HazelcastSqlValidator;
 import com.hazelcast.sql.impl.calcite.validate.types.HazelcastTypeFactory;
@@ -59,7 +59,7 @@ public class JetSqlValidator extends HazelcastSqlValidator {
             return topNode;
         }
 
-        if (topNode instanceof SqlShowExternalTables) {
+        if (topNode instanceof SqlShowExternalMappings) {
             return topNode;
         }
 

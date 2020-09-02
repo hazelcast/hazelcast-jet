@@ -55,7 +55,7 @@ public class SqlCsvTest extends JetSqlTestSupport {
         directory.deleteOnExit();
 
         String name = createRandomName();
-        sqlService.execute("CREATE EXTERNAL TABLE " + name + " ("
+        sqlService.execute("CREATE MAPPING " + name + " ("
                 + "string VARCHAR"
                 + ", \"boolean\" BOOLEAN"
                 + ", byte TINYINT"
@@ -118,7 +118,7 @@ public class SqlCsvTest extends JetSqlTestSupport {
     @Test
     public void supportsSchemaDiscovery() {
         String name = createRandomName();
-        sqlService.execute("CREATE EXTERNAL TABLE " + name + " "
+        sqlService.execute("CREATE MAPPING " + name + " "
                 + "TYPE \"" + FileSqlConnector.TYPE_NAME + "\" "
                 + "OPTIONS ("
                 + "\"" + OPTION_SERIALIZATION_FORMAT + "\" '" + CSV_SERIALIZATION_FORMAT + "'"

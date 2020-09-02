@@ -25,7 +25,7 @@ import com.hazelcast.jet.sql.impl.connector.Processors;
 import com.hazelcast.jet.sql.impl.connector.RowProjector;
 import com.hazelcast.jet.sql.impl.extract.CsvQueryTarget;
 import com.hazelcast.jet.sql.impl.inject.CsvUpsertTargetDescriptor;
-import com.hazelcast.jet.sql.impl.schema.ExternalField;
+import com.hazelcast.jet.sql.impl.schema.MappingField;
 import com.hazelcast.sql.impl.expression.Expression;
 import com.hazelcast.sql.impl.schema.TableField;
 import com.hazelcast.sql.impl.type.QueryDataType;
@@ -62,8 +62,8 @@ final class RemoteCsvMetadataResolver implements CsvMetadataResolver {
     private RemoteCsvMetadataResolver() {
     }
 
-    static List<ExternalField> resolveFields(
-            List<ExternalField> userFields,
+    static List<MappingField> resolveFields(
+            List<MappingField> userFields,
             FileOptions options,
             Job job
     ) throws IOException {
@@ -99,8 +99,8 @@ final class RemoteCsvMetadataResolver implements CsvMetadataResolver {
         throw new IllegalArgumentException("No data found in '" + directory + "'");
     }
 
-    static Metadata resolveMetadata(List<ExternalField> externalFields, FileOptions options, Job job) throws IOException {
-        List<TableField> fields = toTableFields(externalFields);
+    static Metadata resolveMetadata(List<MappingField> mappingFields, FileOptions options, Job job) throws IOException {
+        List<TableField> fields = toTableFields(mappingFields);
 
         TextInputFormat.addInputPath(job, new Path(options.path()));
         job.setInputFormatClass(TextInputFormat.class);
