@@ -51,7 +51,7 @@ public class TestSourcesTest extends PipelineTestSupport {
 
     @Test
     public void test_longStream() throws Throwable {
-        int itemsPerSecond = 250;
+        int itemsPerSecond = 50;
         int timeoutSeconds = 10;
         int numWindowResultsToWaitFor = 3;
 
@@ -125,7 +125,7 @@ public class TestSourcesTest extends PipelineTestSupport {
      */
     @Test
     public void test_itemStream_in_expected_range() throws Throwable {
-        int itemsPerSecond = 5327;
+        int itemsPerSecond = 109;
 
         p.readFrom(TestSources.itemStream(itemsPerSecond))
                 .withNativeTimestamps(0)
