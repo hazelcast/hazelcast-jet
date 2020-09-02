@@ -32,15 +32,15 @@ import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.processor.Processors.sortPrepareP;
 
 
-public class SortTransform<V> extends AbstractTransform {
+public class SortTransform<T> extends AbstractTransform {
 
     private static final String FIRST_STAGE_VERTEX_NAME_SUFFIX = "-prepare";
-    private final ComparatorEx<V> comparator;
+    private final ComparatorEx<T> comparator;
 
-    public SortTransform(@Nonnull Transform upstream, @Nullable ComparatorEx<V> comparator) {
+    public SortTransform(@Nonnull Transform upstream, @Nullable ComparatorEx<T> comparator) {
         super("sort", upstream);
         if (comparator == null) {
-            this.comparator = (ComparatorEx<V>) (o1, o2) -> ((Comparable<V>) o1).compareTo(o2);
+            this.comparator = (ComparatorEx<T>) (o1, o2) -> ((Comparable<T>) o1).compareTo(o2);
         } else {
             this.comparator = comparator;
         }

@@ -137,7 +137,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
 
     @Nonnull
     @SuppressWarnings({"unchecked"})
-    <RET> RET attachSort(@Nullable ComparatorEx<T> comparator) {
+    <RET> RET attachSort(@Nullable ComparatorEx<? extends T> comparator) {
         return (RET) attach(new SortTransform<>(this.transform, comparator), fnAdapter);
     }
 

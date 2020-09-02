@@ -23,19 +23,18 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.Comparator;
 import java.util.Iterator;
-import java.util.SortedSet;
-import java.util.TreeSet;
+import java.util.PriorityQueue;
 
 public class SortPrepareP<V> extends AbstractProcessor {
-    private final SortedSet<V> set;
+    private final PriorityQueue<V> priorityQueue;
     private ResultTraverser resultTraverser;
 
     public SortPrepareP(@Nullable Comparator<V> comparator) {
-        this.set = new TreeSet<>(comparator);
+        this.priorityQueue = new PriorityQueue<>(comparator);
     }
 
     protected boolean tryProcess0(@Nonnull Object item) {
-        set.add((V) item);
+        priorityQueue.add((V) item);
         return true;
     }
 
@@ -48,7 +47,7 @@ public class SortPrepareP<V> extends AbstractProcessor {
     }
 
     private class ResultTraverser implements Traverser<V> {
-        private final Iterator<V> iterator = set.iterator();
+        private final Iterator<V> iterator = priorityQueue.iterator();
 
         @Override
         public V next() {

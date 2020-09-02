@@ -81,7 +81,7 @@ public interface BatchStage<T> extends GeneralStage<T> {
      * @since 4.3
      */
     @Nonnull
-    BatchStage<T> sort(@Nonnull ComparatorEx<T> comparator);
+    BatchStage<T> sort(@Nonnull ComparatorEx<? extends T> comparator);
 
     @Nonnull @Override
     <R> BatchStage<R> map(@Nonnull FunctionEx<? super T, ? extends R> mapFn);
