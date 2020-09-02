@@ -133,7 +133,7 @@ public abstract class AbstractTransform implements Transform {
     }
 
     /**
-     * Determines the local parallelism value for the transform by looking
+     * Determines the local parallelism value for the transform by looking at
      * its local parallelism, preferred local parallelism, and the default
      * local parallelism provided in Pipeline.Context object.
      * <p>
