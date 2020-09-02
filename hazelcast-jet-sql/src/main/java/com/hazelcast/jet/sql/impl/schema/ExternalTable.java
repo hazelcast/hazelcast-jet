@@ -102,7 +102,7 @@ public class ExternalTable implements DataSerializable {
 
         SqlNode ddl = new SqlCreateExternalTable(
                 new SqlIdentifier(name, z),
-                externalFields.stream().map(f -> f.toSqlColumn()).collect(sqlNodeListCollector),
+                externalFields.stream().map(ExternalField::toSqlColumn).collect(sqlNodeListCollector),
                 new SqlIdentifier(type, z),
                 options.entrySet().stream()
                        .sorted(Entry.comparingByKey())
@@ -111,7 +111,6 @@ public class ExternalTable implements DataSerializable {
                                SqlLiteral.createCharString(o.getValue(), z),
                                z))
                        .collect(sqlNodeListCollector),
-                null,
                 false,
                 false,
                 z);

@@ -16,17 +16,15 @@
 
 package com.hazelcast.jet.sql.impl.validate;
 
-import org.apache.calcite.runtime.Resources;
+import org.apache.calcite.runtime.Resources.BaseMessage;
+import org.apache.calcite.runtime.Resources.ExInst;
 import org.apache.calcite.sql.validate.SqlValidatorException;
 
-/**
- * Error message resources.
- */
 interface ValidatorResource {
 
-    @Resources.BaseMessage("Only INSERT OVERWRITE clause is supported for {0}")
-    Resources.ExInst<SqlValidatorException> plainInsertNotSupported(String connectorName);
+    @BaseMessage("Only INSERT OVERWRITE clause is supported for {0}")
+    ExInst<SqlValidatorException> plainInsertNotSupported(String connectorName);
 
-    @Resources.BaseMessage("You must use CREATE JOB statement for a streaming DML query")
-    Resources.ExInst<SqlValidatorException> mustUseCreateJob();
+    @BaseMessage("You must use CREATE JOB statement for a streaming DML query")
+    ExInst<SqlValidatorException> mustUseCreateJob();
 }

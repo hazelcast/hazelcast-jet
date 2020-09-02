@@ -83,11 +83,10 @@ SqlCreate SqlCreateExternalTable(Span span, boolean replace) :
     SqlParserPos startPos = span.pos();
 
     SqlIdentifier name;
-    boolean ifNotExists = false;
     SqlNodeList columns = SqlNodeList.EMPTY;
     SqlIdentifier type;
     SqlNodeList sqlOptions = SqlNodeList.EMPTY;
-    SqlNode source = null;
+    boolean ifNotExists = false;
 }
 {
     <EXTERNAL> <TABLE>
@@ -102,17 +101,12 @@ SqlCreate SqlCreateExternalTable(Span span, boolean replace) :
         <OPTIONS>
         sqlOptions = SqlOptions()
     ]
-    [
-        <AS>
-        source = QueryOrExpr(ExprContext.ACCEPT_QUERY)
-    ]
     {
         return new SqlCreateExternalTable(
             name,
             columns,
             type,
             sqlOptions,
-            source,
             replace,
             ifNotExists,
             startPos.plus(getPos())
@@ -124,8 +118,8 @@ SqlNodeList TableColumns():
 {
     SqlParserPos pos = getPos();
 
-    Map<String, SqlNode> columns = new LinkedHashMap<String, SqlNode>();
     SqlTableColumn column;
+    Map<String, SqlNode> columns = new LinkedHashMap<String, SqlNode>();
 }
 {
     [
@@ -137,7 +131,7 @@ SqlNodeList TableColumns():
         (
             <COMMA> column = TableColumn()
             {
-                if (columns.put(column.name(), column) != null) {
+                if (columns.putIfAbsent(column.name(), column) != null) {
                    throw SqlUtil.newContextException(getPos(), ParserResource.RESOURCE.duplicateColumn(column.name()));
                 }
             }
@@ -154,17 +148,20 @@ SqlTableColumn TableColumn() :
     Span span;
 
     SqlIdentifier name;
-    SqlDataType type = null;
+    SqlDataType type;
     SqlIdentifier externalName = null;
 
 }
 {
     name = SimpleIdentifier() { span = span(); }
-    [
-        type = SqlDataType()
-    ]
+    type = SqlDataType()
     [
         <EXTERNAL> <NAME> externalName = CompoundIdentifier()
+        {
+            if (externalName.names.size() > 2) {
+                throw SqlUtil.newContextException(getPos(), ParserResource.RESOURCE.nestedField(externalName.toString()));
+            }
+        }
     ]
     {
         return new SqlTableColumn(name, type, externalName, span.end(this));
@@ -357,8 +354,8 @@ SqlNodeList SqlOptions():
 {
     Span span;
 
-    Map<String, SqlNode> sqlOptions = new LinkedHashMap<String, SqlNode>();
     SqlOption sqlOption;
+    Map<String, SqlNode> sqlOptions = new LinkedHashMap<String, SqlNode>();
 }
 {
     <LPAREN> { span = span(); }
@@ -370,7 +367,7 @@ SqlNodeList SqlOptions():
         (
             <COMMA> sqlOption = SqlOption()
             {
-                if (sqlOptions.put(sqlOption.key(), sqlOption) != null) {
+                if (sqlOptions.putIfAbsent(sqlOption.key(), sqlOption) != null) {
                     throw SqlUtil.newContextException(getPos(), ParserResource.RESOURCE.duplicateOption(sqlOption.key()));
                 }
             }

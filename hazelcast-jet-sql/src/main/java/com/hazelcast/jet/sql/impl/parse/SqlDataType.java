@@ -17,6 +17,7 @@
 package com.hazelcast.jet.sql.impl.parse;
 
 import com.hazelcast.sql.impl.type.QueryDataType;
+import com.hazelcast.sql.impl.type.QueryDataTypeFamily;
 import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlWriter;
 import org.apache.calcite.sql.parser.SqlParserPos;
@@ -38,21 +39,10 @@ public class SqlDataType extends SqlIdentifier {
 
     @Override
     public void unparse(SqlWriter writer, int leftPrec, int rightPrec) {
-        switch (type.getTypeFamily()) {
-            case INTEGER:
-                writer.keyword("INT");
-                break;
-
-           /* case INTERVAL_YEAR_MONTH:
-                writer.keyword("INTERVAL YEAR TO MONTH");
-                break;
-
-            case INTERVAL_DAY_SECOND:
-                writer.keyword("INTERVAL DAY TO SECOND");
-                break;*/
-
-            default:
-                writer.keyword(type.getTypeFamily().name().replace('_', ' '));
+        if (type.getTypeFamily() == QueryDataTypeFamily.INTEGER) {
+            writer.keyword("INT");
+        } else {
+            writer.keyword(type.getTypeFamily().name().replace('_', ' '));
         }
     }
 }

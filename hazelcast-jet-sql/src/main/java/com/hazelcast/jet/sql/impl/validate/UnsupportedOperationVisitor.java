@@ -14,9 +14,12 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.sql.impl.parse;
+package com.hazelcast.jet.sql.impl.validate;
 
-import com.hazelcast.jet.sql.impl.validate.JetSqlOperatorTable;
+import com.hazelcast.jet.sql.impl.parse.SqlCreateJob;
+import com.hazelcast.jet.sql.impl.parse.SqlDropJob;
+import com.hazelcast.jet.sql.impl.parse.SqlOption;
+import com.hazelcast.jet.sql.impl.parse.SqlShowExternalTables;
 import com.hazelcast.sql.impl.calcite.validate.HazelcastSqlOperatorTable;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.calcite.runtime.CalciteContextException;

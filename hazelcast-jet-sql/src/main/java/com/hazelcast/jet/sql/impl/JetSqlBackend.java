@@ -36,29 +36,25 @@ import com.hazelcast.jet.sql.impl.parse.SqlCreateJob;
 import com.hazelcast.jet.sql.impl.parse.SqlDropExternalTable;
 import com.hazelcast.jet.sql.impl.parse.SqlDropJob;
 import com.hazelcast.jet.sql.impl.parse.SqlShowExternalTables;
-import com.hazelcast.jet.sql.impl.parse.SqlTableColumn;
-import com.hazelcast.jet.sql.impl.parse.UnsupportedOperationVisitor;
 import com.hazelcast.jet.sql.impl.schema.ExternalCatalog;
 import com.hazelcast.jet.sql.impl.schema.ExternalField;
 import com.hazelcast.jet.sql.impl.schema.ExternalTable;
 import com.hazelcast.jet.sql.impl.schema.JetTable;
 import com.hazelcast.jet.sql.impl.validate.JetSqlValidator;
+import com.hazelcast.jet.sql.impl.validate.UnsupportedOperationVisitor;
 import com.hazelcast.spi.impl.NodeEngine;
 import com.hazelcast.sql.SqlColumnMetadata;
 import com.hazelcast.sql.SqlRowMetadata;
 import com.hazelcast.sql.impl.QueryId;
 import com.hazelcast.sql.impl.QueryUtils;
-import com.hazelcast.sql.impl.calcite.SqlBackend;
 import com.hazelcast.sql.impl.calcite.OptimizerContext;
+import com.hazelcast.sql.impl.calcite.SqlBackend;
 import com.hazelcast.sql.impl.calcite.parse.QueryConvertResult;
 import com.hazelcast.sql.impl.calcite.parse.QueryParseResult;
 import com.hazelcast.sql.impl.calcite.parser.JetSqlParser;
-import com.hazelcast.sql.impl.calcite.schema.HazelcastTable;
 import com.hazelcast.sql.impl.calcite.validate.types.HazelcastTypeFactory;
 import com.hazelcast.sql.impl.optimizer.OptimizationTask;
 import com.hazelcast.sql.impl.optimizer.SqlPlan;
-import com.hazelcast.sql.impl.schema.Table;
-import com.hazelcast.sql.impl.schema.TableField;
 import com.hazelcast.sql.impl.type.QueryDataType;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptTable.ViewExpander;
@@ -80,7 +76,6 @@ import org.apache.calcite.sql2rel.SqlToRelConverter;
 import org.apache.calcite.sql2rel.SqlToRelConverter.Config;
 
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 
 import static java.util.stream.Collectors.toList;
@@ -133,8 +128,7 @@ public class JetSqlBackend implements SqlBackend {
                 catalogReader,
                 relOptCluster,
                 sqlRexConvertletTable,
-                config,
-                catalog
+                config
         );
     }
 
@@ -147,7 +141,7 @@ public class JetSqlBackend implements SqlBackend {
         SqlNode node = parseResult.getNode();
 
         if (node instanceof SqlCreateExternalTable) {
-            return toCreateTablePlan(parseResult, context);
+            return toCreateTablePlan((SqlCreateExternalTable) node);
         } else if (node instanceof SqlDropExternalTable) {
             return toDropTablePlan((SqlDropExternalTable) node);
         } else if (node instanceof SqlShowExternalTables) {
@@ -162,44 +156,14 @@ public class JetSqlBackend implements SqlBackend {
         }
     }
 
-    private SqlPlan toCreateTablePlan(QueryParseResult parseResult, OptimizerContext context) {
-        SqlCreateExternalTable node = (SqlCreateExternalTable) parseResult.getNode();
-        SqlNode source = node.source();
-        if (source == null) {
-            List<ExternalField> externalFields = node.columns()
-                    .map(field -> new ExternalField(field.name(), field.type(), field.externalName()))
-                    .collect(toList());
-            ExternalTable externalTable = new ExternalTable(node.name(), node.type(), externalFields, node.options());
+    private SqlPlan toCreateTablePlan(SqlCreateExternalTable sqlCreateTable) {
+        List<ExternalField> externalFields = sqlCreateTable.columns()
+                .map(field -> new ExternalField(field.name(), field.type(), field.externalName()))
+                .collect(toList());
+        ExternalTable externalTable = new ExternalTable(sqlCreateTable.name(), sqlCreateTable.type(), externalFields, sqlCreateTable.options());
 
-            return new CreateExternalTablePlan(externalTable, node.getReplace(), node.ifNotExists(), null, planExecutor);
-        } else {
-            QueryConvertResult convertedResult = context.convert(parseResult);
+        return new CreateExternalTablePlan(externalTable, sqlCreateTable.getReplace(), sqlCreateTable.ifNotExists(), null, planExecutor);
 
-            // TODO: ExternalTable is already being created in JetSqlToRelConverter, any way to reuse it ???
-            List<ExternalField> externalFields = new ArrayList<>();
-            Iterator<SqlTableColumn> columns = node.columns().iterator();
-            Table table = convertedResult.getRel().getTable().unwrap(HazelcastTable.class).getTarget();
-            for (TableField field : table.getFields()) {
-                SqlTableColumn column = columns.hasNext() ? columns.next() : null;
-
-                String name = field.getName();
-                QueryDataType type = field.getType();
-                String externalName = column != null ? column.externalName() : null;
-
-                externalFields.add(new ExternalField(name, type, externalName));
-            }
-            assert !columns.hasNext() : "there are too many columns specified";
-            ExternalTable externalTable = new ExternalTable(node.name(), node.type(), externalFields, node.options());
-
-            ExecutionPlan populateTablePlan = toPlan(convertedResult.getRel(), context);
-            return new CreateExternalTablePlan(
-                    externalTable,
-                    node.getReplace(),
-                    node.ifNotExists(),
-                    populateTablePlan,
-                    planExecutor
-            );
-        }
     }
 
     private SqlPlan toDropTablePlan(SqlDropExternalTable sqlDropTable) {
