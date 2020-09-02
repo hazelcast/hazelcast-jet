@@ -32,12 +32,15 @@ public class WatermarkPolicy_withFixedLagTest {
     @Test
     public void when_outOfOrderEvents_then_monotonicWm() {
         for (int i = 0; i < 10; i++) {
-            assertEquals(i - LAG, p.reportEvent(i));
+            p.reportEvent(i);
+            assertEquals(i - LAG, p.getCurrentWatermark());
 
             // When - older events
             // Then - the same watermark
-            assertEquals(i - LAG, p.reportEvent(i - 1));
-            assertEquals(i - LAG, p.reportEvent(i - 2));
+            p.reportEvent(i - 1);
+            assertEquals(i - LAG, p.getCurrentWatermark());
+            p.reportEvent(i - 2);
+            assertEquals(i - LAG, p.getCurrentWatermark());
         }
     }
 
