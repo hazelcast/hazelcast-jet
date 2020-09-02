@@ -27,11 +27,14 @@ import kafka.utils.ZKStringSerializer$;
 import kafka.utils.ZkUtils;
 import kafka.zk.EmbeddedZookeeper;
 import org.I0Itec.zkclient.ZkClient;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.security.auth.SecurityProtocol;
+import org.apache.kafka.common.serialization.IntegerDeserializer;
 import org.apache.kafka.common.serialization.IntegerSerializer;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.common.serialization.StringSerializer;
@@ -41,6 +44,7 @@ import scala.collection.Seq;
 
 import java.io.IOException;
 import java.nio.file.Files;
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -51,7 +55,9 @@ import java.util.stream.Collectors;
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.test.HazelcastTestSupport.randomString;
 import static java.util.Collections.singleton;
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static kafka.admin.RackAwareMode.Disabled$.MODULE$;
+import static org.junit.Assert.assertEquals;
 import static scala.collection.JavaConversions.asScalaSet;
 import static scala.collection.JavaConversions.mapAsJavaMap;
 import static scala.collection.JavaConversions.mapAsScalaMap;
@@ -152,7 +158,7 @@ public class KafkaTestSupport {
         );
     }
 
-    Future<RecordMetadata> produce(String topic, Integer key, String value) {
+    public Future<RecordMetadata> produce(String topic, Integer key, String value) {
         return getProducer().send(new ProducerRecord<>(topic, key, value));
     }
 
@@ -160,7 +166,7 @@ public class KafkaTestSupport {
         return getProducer().send(new ProducerRecord<>(topic, partition, timestamp, key, value));
     }
 
-    void resetProducer() {
+    public void resetProducer() {
         this.producer = null;
     }
 
@@ -175,18 +181,38 @@ public class KafkaTestSupport {
         return producer;
     }
 
-    public KafkaConsumer<String, String> createConsumer(String... topicIds) {
+    public KafkaConsumer<Integer, String> createConsumer(String... topicIds) {
         Properties consumerProps = new Properties();
         consumerProps.setProperty("bootstrap.servers", brokerConnectionString);
         consumerProps.setProperty("group.id", randomString());
         consumerProps.setProperty("client.id", "consumer0");
-        consumerProps.setProperty("key.deserializer", StringDeserializer.class.getCanonicalName());
+        consumerProps.setProperty("key.deserializer", IntegerDeserializer.class.getCanonicalName());
         consumerProps.setProperty("value.deserializer", StringDeserializer.class.getCanonicalName());
         consumerProps.setProperty("isolation.level", "read_committed");
         // to make sure the consumer starts from the beginning of the topic
         consumerProps.setProperty("auto.offset.reset", "earliest");
-        KafkaConsumer<String, String> consumer = new KafkaConsumer<>(consumerProps);
+        KafkaConsumer<Integer, String> consumer = new KafkaConsumer<>(consumerProps);
         consumer.subscribe(Arrays.asList(topicIds));
         return consumer;
+    }
+
+    public void assertTopicContentsEventually(
+            String topic,
+            Map<Integer, String> expectedMap,
+            boolean assertPartitionEqualsKey
+    ) {
+        try (KafkaConsumer<Integer, String> consumer = createConsumer(topic)) {
+            long timeLimit = System.nanoTime() + SECONDS.toNanos(10);
+            for (int totalRecords = 0; totalRecords < expectedMap.size() && System.nanoTime() < timeLimit; ) {
+                ConsumerRecords<Integer, String> records = consumer.poll(Duration.ofMillis(100));
+                for (ConsumerRecord<Integer, String> record : records) {
+                    assertEquals("key=" + record.key(), expectedMap.get(record.key()), record.value());
+                    if (assertPartitionEqualsKey) {
+                        assertEquals(record.key().intValue(), record.partition());
+                    }
+                    totalRecords++;
+                }
+            }
+        }
     }
 }

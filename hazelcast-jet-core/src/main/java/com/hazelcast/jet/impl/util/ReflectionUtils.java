@@ -111,6 +111,10 @@ public final class ReflectionUtils {
         return toPath(name) + ".class";
     }
 
+    public static Class<?> loadClass(String name) {
+        return loadClass(Thread.currentThread().getContextClassLoader(), name);
+    }
+
     public static Class<?> loadClass(ClassLoader classLoader, String name) {
         try {
             return ClassLoaderUtil.loadClass(classLoader, name);

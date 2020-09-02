@@ -73,10 +73,11 @@ public abstract class SimpleTestInClusterSupport extends JetTestSupport {
         if (instances == null) {
             return;
         }
-        // after each test ditch all jobs and objects
+        // after each test ditch all jobs
         for (Job job : instances[0].getJobs()) {
             ditchJob(job, instances());
         }
+        // ditch all objects
         for (DistributedObject o : instances()[0].getHazelcastInstance().getDistributedObjects()) {
             o.destroy();
         }

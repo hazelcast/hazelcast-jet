@@ -31,6 +31,7 @@
     <modules>
         <module>examples</module>
         <module>extensions</module>
+        <module>hazelcast-jet-sql</module>
         <module>hazelcast-jet-all</module>
         <module>hazelcast-jet-distribution</module>
         <module>hazelcast-jet-core</module>

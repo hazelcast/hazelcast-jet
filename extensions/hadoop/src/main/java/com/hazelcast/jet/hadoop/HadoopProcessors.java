@@ -18,6 +18,7 @@ package com.hazelcast.jet.hadoop;
 
 import com.hazelcast.function.BiFunctionEx;
 import com.hazelcast.function.FunctionEx;
+import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.hadoop.impl.ReadHadoopNewApiP;
 import com.hazelcast.jet.hadoop.impl.ReadHadoopOldApiP;
@@ -29,9 +30,10 @@ import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 
 import javax.annotation.Nonnull;
+import java.util.function.BiFunction;
 
 /**
- * Static utility class with factories of Apache Hadoop Hadoop source and sink
+ * Static utility class with factories of Apache Hadoop source and sink
  * processors.
  *
  * @since 3.0
@@ -47,13 +49,33 @@ public final class HadoopProcessors {
      */
     @Nonnull
     public static <K, V, R> ProcessorMetaSupplier readHadoopP(
-            @Nonnull Configuration configuration, @Nonnull BiFunctionEx<K, V, R> projectionFn
+            @Nonnull Configuration configuration,
+            @Nonnull BiFunctionEx<K, V, R> projectionFn
     ) {
         configuration = SerializableConfiguration.asSerializable(configuration);
         if (configuration.get(MRJobConfig.INPUT_FORMAT_CLASS_ATTR) != null) {
-            return new ReadHadoopNewApiP.MetaSupplier<>(configuration, projectionFn);
+            return new ReadHadoopNewApiP.MetaSupplier<>(configuration, () -> projectionFn);
         } else {
             return new ReadHadoopOldApiP.MetaSupplier<>((JobConf) configuration, projectionFn);
+        }
+    }
+
+    /**
+     * @param projectionSupplierFn supplier of projection function. The
+     *     supplier will be used to get a projectionFn once for each parallel
+     *     processor, therefore the returned function can be stateful and will be
+     *     used from a single thread.
+     */
+    @Nonnull
+    public static <K, V, R> ProcessorMetaSupplier readHadoopP(
+            @Nonnull Configuration configuration,
+            @Nonnull SupplierEx<BiFunction<K, V, R>> projectionSupplierFn
+    ) {
+        configuration = SerializableConfiguration.asSerializable(configuration);
+        if (configuration.get(MRJobConfig.INPUT_FORMAT_CLASS_ATTR) != null) {
+            return new ReadHadoopNewApiP.MetaSupplier<>(configuration, projectionSupplierFn);
+        } else {
+            throw new RuntimeException("The old Hadoop API doesn't support projectionSupplierFn");
         }
     }
 

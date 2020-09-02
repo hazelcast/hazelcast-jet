@@ -25,7 +25,6 @@ import com.hazelcast.internal.metrics.impl.MetricsService;
 import com.hazelcast.internal.nio.Packet;
 import com.hazelcast.internal.partition.InternalPartitionService;
 import com.hazelcast.internal.serialization.InternalSerializationService;
-import com.hazelcast.jet.impl.serialization.DelegatingSerializationService;
 import com.hazelcast.internal.services.ManagedService;
 import com.hazelcast.internal.services.MembershipAwareService;
 import com.hazelcast.internal.services.MembershipServiceEvent;
@@ -36,6 +35,7 @@ import com.hazelcast.jet.core.JobNotFoundException;
 import com.hazelcast.jet.impl.execution.TaskletExecutionService;
 import com.hazelcast.jet.impl.metrics.JobMetricsPublisher;
 import com.hazelcast.jet.impl.operation.NotifyMemberShutdownOperation;
+import com.hazelcast.jet.impl.serialization.DelegatingSerializationService;
 import com.hazelcast.jet.impl.util.ExceptionUtil;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.spi.impl.NodeEngine;
@@ -43,11 +43,18 @@ import com.hazelcast.spi.impl.NodeEngineImpl;
 import com.hazelcast.spi.impl.operationservice.LiveOperations;
 import com.hazelcast.spi.impl.operationservice.LiveOperationsTracker;
 import com.hazelcast.spi.impl.operationservice.Operation;
+import com.hazelcast.sql.impl.JetSqlCoreBackend;
+import com.hazelcast.sql.impl.QueryId;
+import com.hazelcast.sql.impl.QueryResultProducer;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
@@ -69,7 +76,7 @@ public class JetService implements ManagedService, MembershipAwareService, LiveO
     private NodeEngineImpl nodeEngine;
     private final ILogger logger;
     private final LiveOperationRegistry liveOperationRegistry;
-    private final AtomicReference<CompletableFuture> shutdownFuture = new AtomicReference<>();
+    private final AtomicReference<CompletableFuture<Void>> shutdownFuture = new AtomicReference<>();
     private final Thread shutdownHookThread;
 
     private JetConfig config;
@@ -84,10 +91,25 @@ public class JetService implements ManagedService, MembershipAwareService, LiveO
 
     private final Supplier<int[]> sharedPartitionKeys = memoizeConcurrent(this::computeSharedPartitionKeys);
 
+    @Nullable
+    private final JetSqlCoreBackend jetSqlCoreBackend;
+    private final ConcurrentMap<QueryId, QueryResultProducer> resultConsumerRegistry = new ConcurrentHashMap<>();
+
     public JetService(Node node) {
         this.logger = node.getLogger(getClass());
         this.liveOperationRegistry = new LiveOperationRegistry();
         this.shutdownHookThread = shutdownHookThread(node);
+
+        JetSqlCoreBackend jetSqlCoreBackend;
+        try {
+            Class<?> jetSqlServiceClass = Class.forName("com.hazelcast.jet.sql.impl.JetSqlCoreBackendImpl");
+            jetSqlCoreBackend = (JetSqlCoreBackend) jetSqlServiceClass.newInstance();
+        } catch (ClassNotFoundException e) {
+            jetSqlCoreBackend = null;
+        } catch (ReflectiveOperationException e) {
+            throw new RuntimeException(e);
+        }
+        this.jetSqlCoreBackend = jetSqlCoreBackend;
     }
 
     // ManagedService
@@ -120,6 +142,15 @@ public class JetService implements ManagedService, MembershipAwareService, LiveO
 
         logger.info("Setting number of cooperative threads and default parallelism to "
                 + config.getInstanceConfig().getCooperativeThreadCount());
+
+        if (jetSqlCoreBackend != null) {
+            try {
+                Method initJetInstanceMethod = jetSqlCoreBackend.getClass().getMethod("initJetInstance", JetInstance.class);
+                initJetInstanceMethod.invoke(jetSqlCoreBackend, jetInstance);
+            } catch (ReflectiveOperationException e) {
+                throw new RuntimeException(e);
+            }
+        }
     }
 
     static JetConfig findJetServiceConfig(Config hzConfig) {
@@ -185,6 +216,7 @@ public class JetService implements ManagedService, MembershipAwareService, LiveO
                 .from(getNodeEngine().getSerializationService(), serializerConfigs);
     }
 
+    @SuppressWarnings("unused") // parameters are used from jet-enterprise
     public Operation createExportSnapshotOperation(long jobId, String name, boolean cancelJob) {
         throw new UnsupportedOperationException("You need Hazelcast Jet Enterprise to use this feature");
     }
@@ -215,6 +247,11 @@ public class JetService implements ManagedService, MembershipAwareService, LiveO
 
     public JobExecutionService getJobExecutionService() {
         return jobExecutionService;
+    }
+
+    @Nullable
+    public JetSqlCoreBackend getJetSqlService() {
+        return jetSqlCoreBackend;
     }
 
     /**
@@ -298,5 +335,9 @@ public class JetService implements ManagedService, MembershipAwareService, LiveO
                 jetInstance.shutdown();
             }
         }, "jet.ShutdownThread");
+    }
+
+    public Map<QueryId, QueryResultProducer> getResultConsumerRegistry() {
+        return resultConsumerRegistry;
     }
 }

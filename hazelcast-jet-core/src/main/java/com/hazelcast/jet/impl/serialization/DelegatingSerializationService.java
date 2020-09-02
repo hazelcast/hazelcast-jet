@@ -31,6 +31,7 @@ import com.hazelcast.nio.serialization.Serializer;
 import com.hazelcast.partition.PartitioningStrategy;
 
 import javax.annotation.Nullable;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -109,7 +110,7 @@ public class DelegatingSerializationService extends AbstractSerializationService
 
     @Override
     public PortableContext getPortableContext() {
-        throw new UnsupportedOperationException();
+        return delegate.getPortableContext();
     }
 
     @Override

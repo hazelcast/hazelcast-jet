@@ -40,6 +40,10 @@ import java.io.NotSerializableException;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
 import java.io.Serializable;
+import java.nio.file.DirectoryStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -48,6 +52,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -461,7 +466,27 @@ public final class Util {
      * using the given {@code mapFn}.
      */
     @Nonnull
-    public static <T, R> List<R> toList(@Nonnull Collection<T> coll, Function<? super T, ? extends R> mapFn) {
+    public static <T, R> List<R> toList(@Nonnull Collection<T> coll, @Nonnull Function<? super T, ? extends R> mapFn) {
         return coll.stream().map(mapFn).collect(Collectors.toList());
+    }
+
+    /**
+     * Scans files in the directory matching the {@code glob} and reads the
+     * first line from the first file that has a line.
+     *
+     * @return null in case there's no file that has at least a single line
+     * @throws IOException
+     */
+    @Nullable
+    public static String firstLineFromFirstFile(String directory, String glob) throws IOException {
+        try (DirectoryStream<Path> directoryStream = Files.newDirectoryStream(Paths.get(directory), glob)) {
+            for (Path path : directoryStream) { // TODO: directory check
+                Optional<String> line = Files.lines(path).findFirst();
+                if (line.isPresent()) {
+                    return line.get();
+                }
+            }
+        }
+        return null;
     }
 }

@@ -21,6 +21,7 @@ import com.hazelcast.collection.IList;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.jet.JetCacheManager;
 import com.hazelcast.jet.JetInstance;
+import com.hazelcast.jet.JetSqlService;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.JobAlreadyExistsException;
 import com.hazelcast.jet.Observable;
@@ -54,11 +55,13 @@ public abstract class AbstractJetInstance implements JetInstance {
     private final JetCacheManagerImpl cacheManager;
     private final Supplier<JobRepository> jobRepository;
     private final Map<String, Observable> observables = new ConcurrentHashMap<>();
+    private final JetSqlService jetSqlService;
 
     public AbstractJetInstance(HazelcastInstance hazelcastInstance) {
         this.hazelcastInstance = hazelcastInstance;
         this.cacheManager = new JetCacheManagerImpl(this);
         this.jobRepository = Util.memoizeConcurrent(() -> new JobRepository(this));
+        this.jetSqlService = new JetSqlServiceImpl(hazelcastInstance.getSql());
     }
 
     @Nonnull @Override
@@ -128,6 +131,11 @@ public abstract class AbstractJetInstance implements JetInstance {
     @Nonnull @Override
     public <K, V> IMap<K, V> getMap(@Nonnull String name) {
         return hazelcastInstance.getMap(name);
+    }
+
+    @Nonnull @Override
+    public JetSqlService getSql() {
+        return jetSqlService;
     }
 
     @Nonnull @Override
