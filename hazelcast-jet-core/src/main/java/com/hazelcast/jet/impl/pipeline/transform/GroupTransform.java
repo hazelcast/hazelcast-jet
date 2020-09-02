@@ -63,7 +63,7 @@ public class GroupTransform<K, A, R, OUT> extends AbstractTransform {
 
     @Override
     public void determineLocalParallelism(Context context) {
-
+        determineLocalParallelism(localParallelism(), -1, context);
     }
 
     @Override

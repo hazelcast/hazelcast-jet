@@ -96,6 +96,7 @@ public class HashJoinTransform<T0, R> extends AbstractTransform {
 
     @Override
     public void determineLocalParallelism(Context context) {
+        determineLocalParallelism(localParallelism(), -1, context);
     }
 
     //         ---------           ----------           ----------
