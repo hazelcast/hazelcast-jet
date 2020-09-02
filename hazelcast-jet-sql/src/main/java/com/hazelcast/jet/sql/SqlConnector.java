@@ -179,37 +179,6 @@ public interface SqlConnector {
     /**
      * TODO
      */
-    default boolean supportsNestedLoopReader() {
-        return false;
-    }
-
-    /**
-     * Returns a supplier for a reader that reads a set of records for the
-     * given parameters it receives on the input.
-     * <p>
-     * It's expected to return null if {@link #isStream()} returns {@code
-     * true}.
-     *
-     * @param predicate     SQL expression to filter the rows
-     * @param projection    list of field names to return
-     * @param joinPredicate A joinPredicate with positional parameters which
-     *                      will be provided at runtime as the input to
-     *                      the returned function.
-     */
-    @Nullable
-    default Vertex nestedLoopReader(
-            @Nonnull DAG dag,
-            @Nonnull Table table,
-            @Nullable Expression<Boolean> predicate,
-            @Nonnull List<Expression<?>> projection,
-            @Nonnull Expression<Boolean> joinPredicate) {
-        assert !supportsNestedLoopReader();
-        throw new UnsupportedOperationException("Nested loop reader not supported for " + getClass().getName());
-    }
-
-    /**
-     * TODO
-     */
     default boolean supportsSink() {
         return false;
     }

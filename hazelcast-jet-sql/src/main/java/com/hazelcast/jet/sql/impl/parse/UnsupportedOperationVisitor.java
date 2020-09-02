@@ -312,10 +312,6 @@ public final class UnsupportedOperationVisitor implements SqlVisitor<Void> {
                 //  on subqueries.
                 break;
 
-            case JOIN:
-                // TODO: Proper validation for JOIN (e.g. outer, theta, etc)!
-                break;
-
             case OTHER:
             case OTHER_FUNCTION:
                 processOther(call);

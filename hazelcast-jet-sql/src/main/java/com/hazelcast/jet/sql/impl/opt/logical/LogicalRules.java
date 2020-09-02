@@ -16,7 +16,6 @@
 
 package com.hazelcast.jet.sql.impl.opt.logical;
 
-import org.apache.calcite.rel.rules.FilterJoinRule.FilterIntoJoinRule;
 import org.apache.calcite.rel.rules.FilterMergeRule;
 import org.apache.calcite.rel.rules.FilterProjectTransposeRule;
 import org.apache.calcite.rel.rules.ProjectFilterTransposeRule;
@@ -48,9 +47,6 @@ public final class LogicalRules {
                 FullFunctionScanLogicalRule.INSTANCE,
                 ProjectIntoScanLogicalRule.INSTANCE,
                 FilterIntoScanLogicalRule.INSTANCE,
-
-                JoinLogicalRule.INSTANCE,
-                FilterIntoJoinRule.FILTER_ON_JOIN,
 
                 // TODO: Should we extend converter here instead (see Flink)?
                 ValuesLogicalRule.INSTANCE,

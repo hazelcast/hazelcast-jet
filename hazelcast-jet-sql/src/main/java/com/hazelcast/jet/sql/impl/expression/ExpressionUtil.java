@@ -16,7 +16,6 @@
 
 package com.hazelcast.jet.sql.impl.expression;
 
-import com.hazelcast.function.BiFunctionEx;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.sql.impl.expression.ConstantExpression;
 import com.hazelcast.sql.impl.expression.Expression;
@@ -29,7 +28,6 @@ import com.hazelcast.sql.impl.schema.TableField;
 import com.hazelcast.sql.impl.schema.map.MapTableField;
 import com.hazelcast.sql.impl.type.QueryDataType;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.stream.Collectors;
@@ -109,26 +107,6 @@ public final class ExpressionUtil {
                 result[i] = evaluate(projections.get(i), row);
             }
             return result;
-        };
-    }
-
-    public static BiFunctionEx<Object[], Object[], Object[]> joinFn(
-            Expression<Boolean> predicate
-    ) {
-        @SuppressWarnings("unchecked")
-        Expression<Boolean> predicate0 = predicate != null ? predicate
-                : (Expression<Boolean>) ConstantExpression.create(true, QueryDataType.BOOLEAN);
-
-        return (left, right) -> {
-            Object[] joined = Arrays.copyOf(left, left.length + right.length);
-            System.arraycopy(right, 0, joined, left.length, right.length);
-
-            Row row = new HeapRow(joined);
-            if (Boolean.TRUE.equals(evaluate(predicate0, row))) {
-                return joined;
-            } else {
-                return null;
-            }
         };
     }
 

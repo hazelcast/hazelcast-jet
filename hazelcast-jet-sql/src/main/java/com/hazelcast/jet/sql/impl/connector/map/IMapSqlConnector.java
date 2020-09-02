@@ -16,20 +16,15 @@
 
 package com.hazelcast.jet.sql.impl.connector.map;
 
-import com.hazelcast.function.BiFunctionEx;
 import com.hazelcast.function.FunctionEx;
-import com.hazelcast.internal.util.UuidUtil;
-import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.core.processor.SinkProcessors;
-import com.hazelcast.jet.pipeline.ServiceFactories;
 import com.hazelcast.jet.sql.impl.connector.EntryMetadata;
 import com.hazelcast.jet.sql.impl.connector.EntryMetadataResolver;
 import com.hazelcast.jet.sql.impl.connector.EntrySqlConnector;
 import com.hazelcast.jet.sql.impl.expression.ExpressionUtil;
 import com.hazelcast.jet.sql.impl.inject.UpsertTargetDescriptor;
-import com.hazelcast.map.IMap;
 import com.hazelcast.map.impl.MapService;
 import com.hazelcast.map.impl.MapServiceContext;
 import com.hazelcast.query.Predicates;
@@ -42,7 +37,6 @@ import com.hazelcast.sql.impl.schema.map.PartitionedMapTable;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -50,13 +44,9 @@ import java.util.Map.Entry;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
-import static com.hazelcast.jet.Traversers.traverseIterable;
 import static com.hazelcast.jet.core.Edge.between;
-import static com.hazelcast.jet.core.processor.Processors.flatMapUsingServiceP;
 import static com.hazelcast.jet.core.processor.SourceProcessors.readMapP;
 import static com.hazelcast.jet.sql.impl.connector.EntryProcessors.entryProjector;
-import static com.hazelcast.jet.sql.impl.expression.ExpressionUtil.joinFn;
-import static com.hazelcast.jet.sql.impl.expression.ExpressionUtil.projectionFn;
 import static com.hazelcast.sql.impl.schema.map.MapTableUtils.estimatePartitionedMapRowCount;
 import static java.util.stream.Collectors.toMap;
 
@@ -134,44 +124,6 @@ public class IMapSqlConnector extends EntrySqlConnector {
         String mapName = table.getMapName();
         return dag.newVertex("map(" + mapName + ")",
                 readMapP(mapName, Predicates.alwaysTrue(), mapProjection::apply));
-    }
-
-    @Override
-    public boolean supportsNestedLoopReader() {
-        return true;
-    }
-
-    @Nullable @Override
-    public Vertex nestedLoopReader(
-            @Nonnull DAG dag,
-            @Nonnull Table table0,
-            @Nullable Expression<Boolean> predicate,
-            @Nonnull List<Expression<?>> projections,
-            @Nonnull Expression<Boolean> joinPredicate
-    ) {
-        PartitionedMapTable table = (PartitionedMapTable) table0;
-
-        FunctionEx<Entry<Object, Object>, Object[]> mapFn = projectionFn(table, predicate, projections);
-        BiFunctionEx<Object[], Object[], Object[]> joinFn = joinFn(joinPredicate);
-        BiFunctionEx<IMap<Object, Object>, Object[], Traverser<Object[]>> flatMapFn =
-                (IMap<Object, Object> map, Object[] left) -> {
-                    List<Object[]> result = new ArrayList<>();
-                    for (Entry<Object, Object> entry : map.entrySet()) {
-                        Object[] right = mapFn.apply(entry);
-                        // TODO: support LEFT OUTER JOIN ??? connector should not be aware of type of the join though ???
-                        if (right != null) {
-                            Object[] joined = joinFn.apply(left, right);
-                            if (joined != null) {
-                                result.add(joined);
-                            }
-                        }
-                    }
-                    return traverseIterable(result);
-                };
-
-        String mapName = table.getMapName();
-        return dag.newVertex("map-enrich-" + UuidUtil.newUnsecureUuidString(),
-                flatMapUsingServiceP(ServiceFactories.iMapService(mapName), flatMapFn));
     }
 
     @Override

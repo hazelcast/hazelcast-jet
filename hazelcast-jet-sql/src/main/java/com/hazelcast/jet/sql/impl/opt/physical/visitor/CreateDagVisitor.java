@@ -27,7 +27,6 @@ import com.hazelcast.jet.sql.impl.opt.physical.FilterPhysicalRel;
 import com.hazelcast.jet.sql.impl.opt.physical.FullScanPhysicalRel;
 import com.hazelcast.jet.sql.impl.opt.physical.InsertPhysicalRel;
 import com.hazelcast.jet.sql.impl.opt.physical.JetRootRel;
-import com.hazelcast.jet.sql.impl.opt.physical.NestedLoopJoinPhysicalRel;
 import com.hazelcast.jet.sql.impl.opt.physical.PhysicalRel;
 import com.hazelcast.jet.sql.impl.opt.physical.ProjectPhysicalRel;
 import com.hazelcast.jet.sql.impl.opt.physical.ValuesPhysicalRel;
@@ -105,17 +104,6 @@ public class CreateDagVisitor {
 
         return getJetSqlConnector(table)
                 .fullScanReader(dag, table, null, rel.filter(), rel.projection());
-    }
-
-    public Vertex onNestedLoopRead(NestedLoopJoinPhysicalRel rel) {
-        FullScanPhysicalRel rightRel = (FullScanPhysicalRel) rel.getRight();
-
-        Table table = rightRel.getTableUnwrapped();
-
-        Vertex vertex = getJetSqlConnector(table)
-                .nestedLoopReader(dag, table, rightRel.filter(), rightRel.projection(), rel.condition());
-        connectInput(rel.getLeft(), vertex, null);
-        return vertex;
     }
 
     public Vertex onFilter(FilterPhysicalRel rel) {
