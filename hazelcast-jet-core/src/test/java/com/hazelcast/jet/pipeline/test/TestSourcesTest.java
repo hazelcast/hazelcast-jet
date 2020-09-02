@@ -51,7 +51,7 @@ public class TestSourcesTest extends PipelineTestSupport {
 
     @Test
     public void test_longStream() throws Throwable {
-        int itemsPerSecond = 50;
+        int itemsPerSecond = 20;
         int timeoutSeconds = 10;
         int numWindowResultsToWaitFor = 3;
 
