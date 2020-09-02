@@ -32,10 +32,14 @@
         <version>4.3-SNAPSHOT</version>
     </parent>
 
+    <properties>
+        <relocation.root>com.hazelcast</relocation.root>
+    </properties>
+
     <dependencies>
         <dependency>
             <groupId>com.hazelcast.jet</groupId>
-            <artifactId>hazelcast-jet</artifactId>
+            <artifactId>hazelcast-jet-core</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
 
@@ -193,6 +197,57 @@
 
     <build>
         <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <createSourcesJar>true</createSourcesJar>
+                    <shadeSourcesContent>true</shadeSourcesContent>
+                    <createDependencyReducedPom>true</createDependencyReducedPom>
+                    <artifactSet>
+                        <includes>
+                            <include>com.hazelcast.jet:hazelcast-jet-sql</include>
+                            <include>com.hazelcast:hazelcast-sql</include>
+                        </includes>
+                    </artifactSet>
+                    <relocations>
+                        <relocation>
+                            <pattern>com.</pattern>
+                            <shadedPattern>${relocation.root}.com.</shadedPattern>
+                            <excludes>
+                                <exclude>com.hazelcast.**</exclude>
+                            </excludes>
+                        </relocation>
+                        <relocation>
+                            <pattern>org.</pattern>
+                            <shadedPattern>${relocation.root}.org.</shadedPattern>
+                        </relocation>
+                    </relocations>
+                    <transformers>
+                        <transformer implementation="org.apache.maven.plugins.shade.resource.ApacheLicenseResourceTransformer"/>
+                        <transformer implementation="org.apache.maven.plugins.shade.resource.ApacheNoticeResourceTransformer"/>
+                        <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+                    </transformers>
+                    <filters>
+                        <filter>
+                            <artifact>com.hazelcast:hazelcast-sql</artifact>
+                            <excludes>
+                                <exclude>codegen/**</exclude>
+                                <!-- Replace with the one from src/main/resources for correct reflection in runtime. -->
+                                <exclude>org.codehaus.commons.compiler.properties</exclude>
+                            </excludes>
+                        </filter>
+                    </filters>
+                </configuration>
+            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-dependency-plugin</artifactId>

@@ -32,10 +32,9 @@ import com.hazelcast.sql.impl.schema.ConstantTableStatistics;
 import com.hazelcast.sql.impl.schema.Table;
 import com.hazelcast.sql.impl.schema.TableField;
 import com.hazelcast.sql.impl.type.QueryDataType;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 
@@ -58,11 +57,11 @@ public class TestStreamSqlConnector implements SqlConnector {
         return true;
     }
 
-    @NotNull @Override
+    @Nonnull @Override
     public List<ExternalField> resolveAndValidateFields(
             @Nonnull NodeEngine nodeEngine,
-            @NotNull Map<String, String> options,
-            @NotNull List<ExternalField> userFields
+            @Nonnull Map<String, String> options,
+            @Nonnull List<ExternalField> userFields
     ) {
         if (userFields.size() > 0) {
             throw QueryException.error("Don't specify external fields, they are fixed");
