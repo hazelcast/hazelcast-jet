@@ -98,7 +98,9 @@ public class Mapping implements DataSerializable {
         Collector<SqlNode, SqlNodeList, SqlNodeList> sqlNodeListCollector = Collector.of(
                 () -> new SqlNodeList(z),
                 SqlNodeList::add,
-                (l1, l2) -> {throw new UnsupportedOperationException();});
+                (l1, l2) -> {
+                    throw new UnsupportedOperationException();
+                });
 
         SqlNode ddl = new SqlCreateExternalMapping(
                 new SqlIdentifier(name, z),

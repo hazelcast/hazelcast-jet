@@ -59,7 +59,8 @@ public abstract class EntrySqlConnector implements SqlConnector {
             @Nonnull Map<String, String> options,
             @Nonnull List<MappingField> userFields
     ) {
-        InternalSerializationService serializationService = (InternalSerializationService) nodeEngine.getSerializationService();
+        InternalSerializationService serializationService =
+                (InternalSerializationService) nodeEngine.getSerializationService();
         List<MappingField> keyFields = findMetadataResolver(options, true)
                 .resolveFields(userFields, options, true, serializationService);
         List<MappingField> valueFields = findMetadataResolver(options, false)
@@ -68,7 +69,7 @@ public abstract class EntrySqlConnector implements SqlConnector {
         assert keyFields != null && valueFields != null;
 
         Map<String, MappingField> fields = Stream.concat(keyFields.stream(), valueFields.stream())
-                                                 .collect(LinkedHashMap::new, (map, field) -> map.putIfAbsent(field.name(), field), Map::putAll);
+            .collect(LinkedHashMap::new, (map, field) -> map.putIfAbsent(field.name(), field), Map::putAll);
 
         return new ArrayList<>(fields.values());
     }

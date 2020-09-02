@@ -33,7 +33,6 @@ interface JetPlan extends SqlPlan {
         private final Mapping mapping;
         private final boolean replace;
         private final boolean ifNotExists;
-        private final ExecutionPlan executionPlan;
 
         private final JetPlanExecutor planExecutor;
 
@@ -41,21 +40,18 @@ interface JetPlan extends SqlPlan {
                 Mapping mapping,
                 boolean replace,
                 boolean ifNotExists,
-                ExecutionPlan executionPlan,
                 JetPlanExecutor planExecutor
         ) {
             this.mapping = mapping;
             this.replace = replace;
             this.ifNotExists = ifNotExists;
-            this.executionPlan = executionPlan;
 
             this.planExecutor = planExecutor;
         }
 
         @Override
         public SqlResult execute() {
-            SqlResult result = planExecutor.execute(this);
-            return executionPlan == null ? result : planExecutor.execute(executionPlan);
+            return planExecutor.execute(this);
         }
 
         Mapping externalTable() {
@@ -107,7 +103,7 @@ interface JetPlan extends SqlPlan {
 
         private final JetPlanExecutor planExecutor;
 
-        public ShowExternalMappingsPlan(JetPlanExecutor planExecutor) {
+        ShowExternalMappingsPlan(JetPlanExecutor planExecutor) {
             this.planExecutor = planExecutor;
         }
 

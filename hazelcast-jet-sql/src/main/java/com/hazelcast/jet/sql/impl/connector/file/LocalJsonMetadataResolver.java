@@ -126,6 +126,7 @@ final class LocalJsonMetadataResolver implements JsonMetadataResolver {
         }
 
         @Override
+        @SuppressWarnings("checkstyle:MagicNumber") // TODO:
         public ProcessorMetaSupplier writeProcessor(List<TableField> fields) {
             // TODO: customizable settings
             return WriteFileP.metaSupplier(path, identity(), charset, null, 1024, true);

@@ -34,9 +34,9 @@ public final class SqlConnectorUtil {
             connector = ((JetTable) table).getSqlConnector();
         } else if (table instanceof PartitionedMapTable) {
             connector = new IMapSqlConnector();
-        } /*else if (table instanceof ReplicatedMapTable) {
-            throw new UnsupportedOperationException("Jet doesn't yet support writing to a ReplicatedMap");
-        }*/ else {
+        //} else if (table instanceof ReplicatedMapTable) {
+        //    throw new UnsupportedOperationException("Jet doesn't yet support writing to a ReplicatedMap");
+        } else {
             throw new JetException("Unknown table type: " + table.getClass());
         }
         return connector;

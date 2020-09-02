@@ -33,6 +33,7 @@ import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.OPTION_KEY_
 import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.OPTION_SERIALIZATION_KEY_FORMAT;
 import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.OPTION_SERIALIZATION_VALUE_FORMAT;
 import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.OPTION_VALUE_CLASS;
+import static java.lang.System.lineSeparator;
 import static java.util.Collections.singletonList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -71,16 +72,16 @@ public class SchemaTest extends JetSqlTestSupport {
     public void when_tableIsDeclared_then_itCanBeListed() {
         // given
         String name = createRandomName();
-        String sql = "CREATE EXTERNAL MAPPING \"" + name + "\" (" + System.lineSeparator()
-                + "  \"__key\" INT EXTERNAL NAME \"__key\"," + System.lineSeparator()
-                + "  \"this\" VARCHAR EXTERNAL NAME \"this\"" + System.lineSeparator()
-                + ")" + System.lineSeparator()
-                + "TYPE \"" + IMapSqlConnector.TYPE_NAME + "\"" + System.lineSeparator()
-                + "OPTIONS (" + System.lineSeparator()
-                + "  \"" + OPTION_SERIALIZATION_KEY_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'," + System.lineSeparator()
-                + "  \"" + OPTION_KEY_CLASS + "\" '" + Integer.class.getName() + "'," + System.lineSeparator()
-                + "  \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'," + System.lineSeparator()
-                + "  \"" + OPTION_VALUE_CLASS + "\" '" + String.class.getName() + "'" + System.lineSeparator()
+        String sql = "CREATE EXTERNAL MAPPING \"" + name + "\" (" + lineSeparator()
+                + "  \"__key\" INT EXTERNAL NAME \"__key\"," + lineSeparator()
+                + "  \"this\" VARCHAR EXTERNAL NAME \"this\"" + lineSeparator()
+                + ")" + lineSeparator()
+                + "TYPE \"" + IMapSqlConnector.TYPE_NAME + "\"" + lineSeparator()
+                + "OPTIONS (" + lineSeparator()
+                + "  \"" + OPTION_SERIALIZATION_KEY_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'," + lineSeparator()
+                + "  \"" + OPTION_KEY_CLASS + "\" '" + Integer.class.getName() + "'," + lineSeparator()
+                + "  \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'," + lineSeparator()
+                + "  \"" + OPTION_VALUE_CLASS + "\" '" + String.class.getName() + "'" + lineSeparator()
                 + ")";
         sqlService.execute(sql);
 

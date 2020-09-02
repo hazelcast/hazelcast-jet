@@ -50,19 +50,19 @@ import static java.util.Collections.singletonList;
 
 public class SqlKafkaTest extends JetSqlTestSupport {
 
+    private static final int INITIAL_PARTITION_COUNT = 4;
+
+    private static KafkaTestSupport kafkaTestSupport;
+
     private static SqlService sqlService;
+
+    private String topicName;
 
     @BeforeClass
     public static void setUpClass() {
         initialize(1, null);
         sqlService = instance().getHazelcastInstance().getSql();
     }
-
-    private static final int INITIAL_PARTITION_COUNT = 4;
-
-    private static KafkaTestSupport kafkaTestSupport;
-
-    private String topicName;
 
     @BeforeClass
     public static void beforeClass() throws IOException {

@@ -44,7 +44,7 @@ import java.util.function.Function;
 
 import static java.util.Collections.singleton;
 
-public class RootResultConsumerSink implements Processor {
+public final class RootResultConsumerSink implements Processor {
 
     private final JetQueryResultProducer rootResultConsumer;
 

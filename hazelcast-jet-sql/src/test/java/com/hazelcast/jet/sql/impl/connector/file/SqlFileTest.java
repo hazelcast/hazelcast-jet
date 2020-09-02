@@ -35,13 +35,13 @@ public class SqlFileTest extends JetSqlTestSupport {
 
     private static SqlService sqlService;
 
+    private static String name;
+
     @BeforeClass
     public static void setUpClass() {
         initialize(1, null);
         sqlService = instance().getHazelcastInstance().getSql();
     }
-
-    private static String name;
 
     @Before
     public void before() {

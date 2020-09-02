@@ -74,7 +74,7 @@ public class JetQueryResultProducer implements QueryResultProducer {
 
         private Row nextRow;
 
-        public InternalIterator() {
+        InternalIterator() {
             moveNext();
         }
 

@@ -55,6 +55,7 @@ import static com.hazelcast.jet.sql.impl.validate.ValidatorResource.RESOURCE;
  * Mostly copy of {@link  com.hazelcast.sql.impl.calcite.parse.UnsupportedOperationVisitor}
  * with Jet specific tweaks/extensions.
  */
+@SuppressWarnings("checkstyle:ExecutableStatementCount")
 public final class UnsupportedOperationVisitor implements SqlVisitor<Void> {
 
     public static final UnsupportedOperationVisitor INSTANCE = new UnsupportedOperationVisitor();

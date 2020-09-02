@@ -36,10 +36,9 @@ import com.hazelcast.jet.sql.impl.parse.SqlCreateJob;
 import com.hazelcast.jet.sql.impl.parse.SqlDropExternalMapping;
 import com.hazelcast.jet.sql.impl.parse.SqlDropJob;
 import com.hazelcast.jet.sql.impl.parse.SqlShowExternalMappings;
-import com.hazelcast.jet.sql.impl.schema.MappingCatalog;
-import com.hazelcast.jet.sql.impl.schema.MappingField;
-import com.hazelcast.jet.sql.impl.schema.Mapping;
 import com.hazelcast.jet.sql.impl.schema.JetTable;
+import com.hazelcast.jet.sql.impl.schema.Mapping;
+import com.hazelcast.jet.sql.impl.schema.MappingField;
 import com.hazelcast.jet.sql.impl.validate.JetSqlValidator;
 import com.hazelcast.jet.sql.impl.validate.UnsupportedOperationVisitor;
 import com.hazelcast.spi.impl.NodeEngine;
@@ -84,13 +83,11 @@ public class JetSqlBackend implements SqlBackend {
 
     private final NodeEngine nodeEngine;
 
-    private final MappingCatalog catalog;
     private final JetPlanExecutor planExecutor;
 
-    JetSqlBackend(NodeEngine nodeEngine, MappingCatalog catalog, JetPlanExecutor planExecutor) {
+    JetSqlBackend(NodeEngine nodeEngine, JetPlanExecutor planExecutor) {
         this.nodeEngine = nodeEngine;
 
-        this.catalog = catalog;
         this.planExecutor = planExecutor;
     }
 
@@ -158,11 +155,21 @@ public class JetSqlBackend implements SqlBackend {
 
     private SqlPlan toCreateTablePlan(SqlCreateExternalMapping sqlCreateTable) {
         List<MappingField> mappingFields = sqlCreateTable.columns()
-            .map(field -> new MappingField(field.name(), field.type(), field.externalName()))
-            .collect(toList());
-        Mapping mapping = new Mapping(sqlCreateTable.name(), sqlCreateTable.type(), mappingFields, sqlCreateTable.options());
+                .map(field -> new MappingField(field.name(), field.type(), field.externalName()))
+                .collect(toList());
+        Mapping mapping = new Mapping(
+                sqlCreateTable.name(),
+                sqlCreateTable.type(),
+                mappingFields,
+                sqlCreateTable.options()
+        );
 
-        return new CreateExternalMappingPlan(mapping, sqlCreateTable.getReplace(), sqlCreateTable.ifNotExists(), null, planExecutor);
+        return new CreateExternalMappingPlan(
+                mapping,
+                sqlCreateTable.getReplace(),
+                sqlCreateTable.ifNotExists(),
+                planExecutor
+        );
 
     }
 
