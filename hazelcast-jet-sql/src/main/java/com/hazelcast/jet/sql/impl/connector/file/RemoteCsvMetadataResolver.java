@@ -72,12 +72,12 @@ final class RemoteCsvMetadataResolver implements CsvMetadataResolver {
             return userFields;
         } else {
             // TODO: ensure options.header() == true ???
-            String line = line(options.path(), job.getConfiguration());
+            String line = line(options.path(), options.charset(), job.getConfiguration());
             return resolveFieldsFromSample(line, options.delimiter());
         }
     }
 
-    private static String line(String directory, Configuration configuration) throws IOException {
+    private static String line(String directory, String charset, Configuration configuration) throws IOException {
         Path path = new Path(directory);
         try (FileSystem filesystem = path.getFileSystem(configuration)) {
             // TODO: directory check, recursive ???
@@ -86,7 +86,7 @@ final class RemoteCsvMetadataResolver implements CsvMetadataResolver {
                 LocatedFileStatus file = filesIterator.next();
 
                 try (
-                        Reader input = new InputStreamReader(filesystem.open(file.getPath()));
+                        Reader input = new InputStreamReader(filesystem.open(file.getPath()), charset);
                         BufferedReader reader = new BufferedReader(input)
                 ) {
                     String line = reader.readLine();

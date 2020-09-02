@@ -28,7 +28,8 @@ import org.apache.calcite.sql.parser.SqlParserPos;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Objects;
+
+import static java.util.Objects.requireNonNull;
 
 public class MappingField implements DataSerializable {
 
@@ -51,8 +52,8 @@ public class MappingField implements DataSerializable {
 
     public MappingField(String name, QueryDataType type, String externalName) {
         this.properties = new HashMap<>();
-        this.properties.put(NAME, Objects.requireNonNull(name));
-        this.properties.put(TYPE, Objects.requireNonNull(type));
+        this.properties.put(NAME, requireNonNull(name));
+        this.properties.put(TYPE, requireNonNull(type));
         if (externalName != null) {
             this.properties.put(EXTERNAL_NAME, externalName);
         }
@@ -62,11 +63,11 @@ public class MappingField implements DataSerializable {
      * Column name. This is the name that is seen in SQL queries.
      */
     public String name() {
-        return Objects.requireNonNull((String) properties.get(NAME), "missing name property");
+        return requireNonNull((String) properties.get(NAME), "missing name property");
     }
 
     public QueryDataType type() {
-        return Objects.requireNonNull((QueryDataType) properties.get(TYPE), "missing type property");
+        return requireNonNull((QueryDataType) properties.get(TYPE), "missing type property");
     }
 
     /**
@@ -79,11 +80,10 @@ public class MappingField implements DataSerializable {
 
     public SqlMappingColumn toSqlColumn() {
         SqlParserPos z = SqlParserPos.ZERO;
-        QueryDataType type = type();
         String externalName = externalName();
         return new SqlMappingColumn(
                 new SqlIdentifier(name(), z),
-                type == null ? null : new SqlDataType(type(), z),
+                new SqlDataType(type(), z),
                 externalName == null ? null : new SqlIdentifier(externalName(), z),
                 z
         );

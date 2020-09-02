@@ -27,6 +27,7 @@ import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.DataSerializable;
 import com.hazelcast.sql.impl.type.QueryDataType;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 import javax.annotation.Nonnull;
 import java.io.IOException;
@@ -47,6 +48,10 @@ public final class Processors {
         return new ProjectorProcessorSupplier(descriptor, paths, types);
     }
 
+    @SuppressFBWarnings(
+            value = {"SE_BAD_FIELD", "SE_NO_SERIALVERSIONID"},
+            justification = "the class is never java-serialized"
+    )
     private static class ProjectorProcessorSupplier implements ProcessorSupplier, DataSerializable {
 
         private UpsertTargetDescriptor descriptor;

@@ -69,12 +69,12 @@ final class RemoteJsonMetadataResolver implements JsonMetadataResolver {
             validateFields(userFields);
             return userFields;
         } else {
-            String line = line(options.path(), job.getConfiguration());
+            String line = line(options.path(), options.charset(), job.getConfiguration());
             return resolveFieldsFromSample(line);
         }
     }
 
-    private static String line(String directory, Configuration configuration) throws IOException {
+    private static String line(String directory, String charset, Configuration configuration) throws IOException {
         Path path = new Path(directory);
         try (FileSystem filesystem = path.getFileSystem(configuration)) {
             // TODO: directory check, recursive ???
@@ -83,7 +83,7 @@ final class RemoteJsonMetadataResolver implements JsonMetadataResolver {
                 LocatedFileStatus file = filesIterator.next();
 
                 try (
-                        Reader input = new InputStreamReader(filesystem.open(file.getPath()));
+                        Reader input = new InputStreamReader(filesystem.open(file.getPath()), charset);
                         BufferedReader reader = new BufferedReader(input)
                 ) {
                     String line = reader.readLine();

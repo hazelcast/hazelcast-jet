@@ -33,6 +33,7 @@ import com.hazelcast.sql.impl.JetSqlCoreBackend;
 import com.hazelcast.sql.impl.QueryException;
 import com.hazelcast.sql.impl.QueryId;
 import com.hazelcast.sql.impl.QueryResultProducer;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -72,12 +73,17 @@ public final class RootResultConsumerSink implements Processor {
         return new MetaSupplier(initiatorAddress, queryId);
     }
 
+    @SuppressFBWarnings(
+            value = {"SE_BAD_FIELD", "SE_NO_SERIALVERSIONID"},
+            justification = "the class is never java-serialized"
+    )
     private static final class MetaSupplier implements ProcessorMetaSupplier, DataSerializable {
         private Address initiatorAddress;
         private QueryId queryId;
 
         @SuppressWarnings("unused") // for deserialization
-        private MetaSupplier() { }
+        private MetaSupplier() {
+        }
 
         MetaSupplier(Address initiatorAddress, QueryId queryId) {
             this.initiatorAddress = initiatorAddress;
@@ -96,7 +102,8 @@ public final class RootResultConsumerSink implements Processor {
             }
         }
 
-        @Nonnull @Override
+        @Nonnull
+        @Override
         public Function<? super Address, ? extends ProcessorSupplier> get(@Nonnull List<Address> addresses) {
             return address -> initiatorAddress.equals(address)
                     ? new Supplier(queryId)
@@ -116,14 +123,20 @@ public final class RootResultConsumerSink implements Processor {
         }
     }
 
+    @SuppressFBWarnings(
+            value = {"SE_BAD_FIELD", "SE_NO_SERIALVERSIONID"},
+            justification = "the class is never java-serialized"
+    )
     private static final class Supplier implements ProcessorSupplier, DataSerializable {
+
         private QueryId queryId;
 
         private transient Map<QueryId, QueryResultProducer> resultConsumerRegistry;
         private transient QueryResultProducer rootResultConsumer;
 
         @SuppressWarnings("unused") // for deserialization
-        private Supplier() { }
+        private Supplier() {
+        }
 
         private Supplier(QueryId queryId) {
             this.queryId = queryId;
@@ -173,5 +186,6 @@ public final class RootResultConsumerSink implements Processor {
     /**
      * A processor that throws if it receives any input.
      */
-    private static class NoInputProcessor extends AbstractProcessor { }
+    private static class NoInputProcessor extends AbstractProcessor {
+    }
 }

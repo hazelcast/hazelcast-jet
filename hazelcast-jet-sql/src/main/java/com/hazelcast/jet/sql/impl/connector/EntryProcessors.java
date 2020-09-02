@@ -30,6 +30,7 @@ import com.hazelcast.sql.impl.extract.QueryPath;
 import com.hazelcast.sql.impl.schema.TableField;
 import com.hazelcast.sql.impl.schema.map.MapTableField;
 import com.hazelcast.sql.impl.type.QueryDataType;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 import javax.annotation.Nonnull;
 import java.io.IOException;
@@ -50,6 +51,10 @@ public final class EntryProcessors {
         return new EntryProjectorProcessorSupplier(keyDescriptor, valueDescriptor, fields);
     }
 
+    @SuppressFBWarnings(
+            value = {"SE_BAD_FIELD", "SE_NO_SERIALVERSIONID"},
+            justification = "the class is never java-serialized"
+    )
     private static class EntryProjectorProcessorSupplier implements ProcessorSupplier, DataSerializable {
 
         private UpsertTargetDescriptor keyDescriptor;

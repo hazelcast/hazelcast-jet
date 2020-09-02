@@ -19,6 +19,8 @@ package com.hazelcast.jet.sql.impl.connector.file;
 import com.hazelcast.sql.impl.schema.TableField;
 import com.hazelcast.sql.impl.type.QueryDataType;
 
+import java.util.Objects;
+
 class FileTableField extends TableField {
 
     private final String path; // TODO: use something like QueryPath ???
@@ -42,5 +44,25 @@ class FileTableField extends TableField {
 
     String getPath() {
         return path;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        if (!super.equals(o)) {
+            return false;
+        }
+        FileTableField that = (FileTableField) o;
+        return Objects.equals(path, that.path);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(super.hashCode(), path);
     }
 }
