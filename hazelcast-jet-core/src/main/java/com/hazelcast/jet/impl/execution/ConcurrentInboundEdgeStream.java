@@ -156,17 +156,14 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
             if (liveQueueCount == 0) {
                 return tracker.toProgressState();
             }
-
-            if (itemDetector.item != null) {
-                // if we have received the current snapshot from all active queues, forward it
-                    assert currentBarrier != null : "currentBarrier == null";
-                    boolean res = dest.test(currentBarrier);
-                    assert res : "test result expected to be true";
-                    currentBarrier = null;
-                    receivedBarriers.clear();
-                    return MADE_PROGRESS;
-                }
+            // if we have received the current snapshot from all active queues, forward it
             if (itemDetector.item != null && receivedBarriers.cardinality() == liveQueueCount) {
+                assert currentBarrier != null : "currentBarrier == null";
+                boolean res = dest.test(currentBarrier);
+                assert res : "test result expected to be true";
+                currentBarrier = null;
+                receivedBarriers.clear();
+                return MADE_PROGRESS;
             }
         }
 
