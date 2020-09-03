@@ -84,26 +84,13 @@ public class SqlMappingTest extends JetSqlTestSupport {
         sqlService.execute(javaSerializableMapDdl(name, Integer.class, Person.class));
 
         // when
-        SqlResult dropResult = sqlService.execute("DROP EXTERNAL MAPPING " + name);
+        SqlResult dropResult = sqlService.execute("DROP MAPPING " + name);
 
         // then
         assertThat(dropResult.isUpdateCount()).isTrue();
         assertThat(dropResult.updateCount()).isEqualTo(-1);
         assertThatThrownBy(() -> sqlService.execute("SELECT * FROM public." + name))
                 .isInstanceOf(HazelcastSqlException.class);
-    }
-
-    @Test
-    public void when_schemaNameUsed_then_rejected() {
-        assertThatThrownBy(() ->
-                sqlService.execute(javaSerializableMapDdl("schema.m", Long.class, Long.class)))
-                .hasMessageContaining("Encountered \".\" at line 1, column 22");
-    }
-
-    @Test
-    public void when_emptyColumnList_then_fail() {
-        assertThatThrownBy(() -> sqlService.execute("CREATE MAPPING m() TYPE m"))
-                .hasMessageContaining("Encountered \")\" at line 1");
     }
 
     @Test
