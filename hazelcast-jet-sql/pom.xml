@@ -200,6 +200,19 @@
             <classifier>test</classifier>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>com.hazelcast</groupId>
+            <artifactId>hazelcast-sql</artifactId>
+            <version>${hazelcast.version}</version>
+            <classifier>tests</classifier>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.googlecode.junit-toolbox</groupId>
+            <artifactId>junit-toolbox</artifactId>
+            <version>2.4</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>

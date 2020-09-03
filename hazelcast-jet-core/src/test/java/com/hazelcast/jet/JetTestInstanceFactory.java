@@ -19,6 +19,7 @@ package com.hazelcast.jet;
 import com.hazelcast.client.config.ClientConfig;
 import com.hazelcast.client.test.TestHazelcastFactory;
 import com.hazelcast.cluster.Address;
+import com.hazelcast.config.Config;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.instance.impl.HazelcastInstanceImpl;
 import com.hazelcast.jet.config.JetConfig;
@@ -58,6 +59,10 @@ public class JetTestInstanceFactory {
 
     public JetInstance newMember() {
         return newMember(JetConfig.loadDefault());
+    }
+
+    public JetInstance newMember(Config config) {
+        return newMember(new JetConfig().setHazelcastConfig(config));
     }
 
     public JetInstance newMember(JetConfig config) {
