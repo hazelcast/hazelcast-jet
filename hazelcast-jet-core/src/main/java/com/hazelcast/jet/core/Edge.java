@@ -364,10 +364,25 @@ public class Edge implements IdentifiedDataSerializable {
         return this;
     }
 
+    /**
+     * Specifies that the data will travel along this edge in a monotonically
+     * ascending order according to the provided comparator. The tasklet of
+     * the destination processor will ensure it always takes the least item
+     * of all those available at the head of the input queues. Every source
+     * processor must ensure it emits the data according to the same ordering.
+     * <p>
+     * The purpose of this edge type is distributed sorting. The processors
+     * of the source vertex sort their partial data and the processor in the
+     * destination vertex maintains the sort order while consuming the data
+     * from many concurrent inputs.
+     *
+     * @since 4.3
+     */
     public <T> Edge monotonicOrder(@Nonnull ComparatorEx<T> comparator) {
         this.comparator = comparator;
         return this;
     }
+
     /**
      * Returns the instance encapsulating the partitioning strategy in effect
      * on this edge.
@@ -376,13 +391,6 @@ public class Edge implements IdentifiedDataSerializable {
     public Partitioner<?> getPartitioner() {
         return partitioner;
     }
-
-    /**
-     * Sets a comparator on this edge. The comparator is used by {@link ConcurrentInboundEdgeStream}
-     * to determine which cluster member to receive the next item from over this edge.
-     *
-     * @since 4.3
-     */
 
     /**
      * Returns the comparator defined on this edge using {@link #monotonicOrder(ComparatorEx)}.

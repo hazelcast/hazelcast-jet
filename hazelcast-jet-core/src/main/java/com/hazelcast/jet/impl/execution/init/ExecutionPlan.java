@@ -594,8 +594,9 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
         return inboundStreams;
     }
 
-    private ConcurrentInboundEdgeStream newEdgeStream(EdgeDef inEdge, ConcurrentConveyor<Object> conveyor,
-                                                      String debugName) {
+    private ConcurrentInboundEdgeStream newEdgeStream(
+            EdgeDef inEdge, ConcurrentConveyor<Object> conveyor, String debugName
+    ) {
         return new ConcurrentInboundEdgeStream(conveyor, inEdge.destOrdinal(), inEdge.priority(),
                 jobConfig.getProcessingGuarantee() == ProcessingGuarantee.EXACTLY_ONCE,
                 debugName, inEdge.getComparator());
