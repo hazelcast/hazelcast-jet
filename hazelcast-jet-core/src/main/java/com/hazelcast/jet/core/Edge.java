@@ -96,7 +96,7 @@ public class Edge implements IdentifiedDataSerializable {
     private Address distributedTo;
     private Partitioner<?> partitioner;
     private RoutingPolicy routingPolicy = RoutingPolicy.UNICAST;
-    private ComparatorEx<Object> comparator;
+    private ComparatorEx<?> comparator;
     private EdgeConfig config;
 
     protected Edge() {
@@ -364,6 +364,10 @@ public class Edge implements IdentifiedDataSerializable {
         return this;
     }
 
+    public <T> Edge monotonicOrder(@Nonnull ComparatorEx<T> comparator) {
+        this.comparator = comparator;
+        return this;
+    }
     /**
      * Returns the instance encapsulating the partitioning strategy in effect
      * on this edge.
@@ -379,10 +383,6 @@ public class Edge implements IdentifiedDataSerializable {
      *
      * @since 4.3
      */
-    public Edge monotonicOrder(@Nonnull ComparatorEx<Object> comparator) {
-        this.comparator = comparator;
-        return this;
-    }
 
     /**
      * Returns the comparator defined on this edge using {@link #monotonicOrder(ComparatorEx)}.
@@ -390,7 +390,7 @@ public class Edge implements IdentifiedDataSerializable {
      * @since 4.3
      **/
     @Nullable
-    public ComparatorEx<Object> getComparator() {
+    public ComparatorEx<?> getComparator() {
         return comparator;
     }
 

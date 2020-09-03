@@ -40,7 +40,7 @@ public class EdgeDef implements IdentifiedDataSerializable {
     private RoutingPolicy routingPolicy;
     private Partitioner<?> partitioner;
     private EdgeConfig config;
-    private ComparatorEx<Object> comparator;
+    private ComparatorEx<?> comparator;
 
     // transient fields populated and used after deserialization
     private transient String id;
@@ -118,7 +118,7 @@ public class EdgeDef implements IdentifiedDataSerializable {
         return config;
     }
 
-    ComparatorEx<Object> getComparator() {
+    ComparatorEx<?> getComparator() {
         return comparator;
     }
 

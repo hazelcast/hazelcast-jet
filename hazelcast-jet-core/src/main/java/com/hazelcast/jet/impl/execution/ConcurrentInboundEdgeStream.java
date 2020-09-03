@@ -84,10 +84,13 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
         logger.finest("Coalescing " + conveyor.queueCount() + " input queues");
     }
 
-    public ConcurrentInboundEdgeStream(ConcurrentConveyor<Object> conveyor, int ordinal, int priority,
-                                       boolean waitForAllBarriers, String debugName, ComparatorEx<Object> comparator) {
+    @SuppressWarnings("unchecked")
+    public ConcurrentInboundEdgeStream(
+            @Nonnull ConcurrentConveyor<Object> conveyor, int ordinal, int priority, boolean waitForAllBarriers,
+            @Nonnull String debugName, @Nonnull ComparatorEx<?> comparator
+    ) {
         this(conveyor, ordinal, priority, waitForAllBarriers, debugName);
-        this.comparator = comparator;
+        this.comparator = (Comparator<Object>) comparator;
     }
 
     @Override
