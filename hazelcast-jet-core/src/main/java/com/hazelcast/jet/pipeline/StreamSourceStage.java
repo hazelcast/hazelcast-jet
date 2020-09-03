@@ -49,6 +49,11 @@ public interface StreamSourceStage<T> {
      * it observes an event from the data source and assign it as the event
      * timestamp.
      * <p>
+     * With this mode the event time advances even in the absence of events. If
+     * the timestamp is extracted from the event and there are no more events,
+     * the pipeline is blocked - you can use this mode to avoid latency issues
+     * if your events are sparse.
+     * <p>
      * <strong>Note:</strong> when snapshotting is enabled to achieve fault
      * tolerance, after a restart Jet replays all the events that were already
      * processed since the last snapshot. These events will then get different
@@ -73,6 +78,19 @@ public interface StreamSourceStage<T> {
      * <p>
      * If there's no notion of native timestamps in the source, this method
      * will throw a {@link JetException}.
+     * <p>
+     * <b>Issue with sparse events</b>
+     * <p>
+     * The time progress is extracted only from new-coming events. If the
+     * events are sparse, the time will effectively stop until a newer event
+     * arrives. This causes high latency for time-sensitive operations (such as
+     * window aggregation). The time is also tracked for every source partition
+     * separately and if just one partition has sparse events, time progress in
+     * the whole job is hindered.
+     * <p>
+     * To overcome this you can either ensure there's a consistent influx of
+     * events in every partition, or you can use {@link
+     * #withIngestionTimestamps()}.
      *
      * @param allowedLag the allowed lag of a given event's timestamp behind the top
      *                   timestamp value observed so far
@@ -81,6 +99,19 @@ public interface StreamSourceStage<T> {
 
     /**
      * Declares that the source will extract timestamps from the stream items.
+     * <p>
+     * <b>Issue with sparse events</b>
+     * <p>
+     * The time progress is extracted only from new-coming events. If the
+     * events are sparse, the time will effectively stop until a newer event
+     * arrives. This causes high latency for time-sensitive operations (such as
+     * window aggregation). The time is even tracked for every source partition
+     * separately and if just one partition has sparse events, time progress in
+     * the whole job is hindered.
+     * <p>
+     * To overcome this you can either ensure there's a consistent influx of
+     * events in every partition, or you can use {@link
+     * #withIngestionTimestamps()}.
      *
      * @param timestampFn a function that returns the timestamp for each item, typically in
      *                    milliseconds
