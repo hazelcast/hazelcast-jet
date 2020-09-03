@@ -183,6 +183,7 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
     private ProgressState drainToWithComparator(Predicate<Object> dest) {
         int batchSize = -1;
         while (true) {
+        Object lastItem = null;
             int minIndex = 0;
             Object minItem = null;
             for (int queueIndex = 0; queueIndex < conveyor.queueCount(); queueIndex++) {
@@ -218,6 +219,13 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
             if (batchSize == -1) {
                 batchSize = conveyor.queue(minIndex).size();
             }
+            if (lastItem != null && comparator.compare(lastItem, minItem) > 0) {
+                throw new JetException(String.format(
+                    "Disorder on a monotonicOrder edge: received %s and then %s from the same queue",
+                        lastItem, minItem
+                ));
+            }
+            lastItem = minItem;
             Object polledItem = conveyor.queue(minIndex).poll();
             assert polledItem == minItem : "polledItem != minItem";
             boolean testResult = dest.test(minItem);
