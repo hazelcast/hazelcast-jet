@@ -31,7 +31,7 @@ import java.util.List;
 
 public class ProjectPhysicalRel extends Project implements PhysicalRel {
 
-    public ProjectPhysicalRel(
+    ProjectPhysicalRel(
             RelOptCluster cluster,
             RelTraitSet traits,
             RelNode input,

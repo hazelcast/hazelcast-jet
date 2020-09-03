@@ -25,9 +25,9 @@ import org.apache.calcite.rel.logical.LogicalTableScan;
 
 import static com.hazelcast.jet.sql.impl.opt.JetConventions.LOGICAL;
 
-public final class FullScanLogicalRule extends ConverterRule {
+final class FullScanLogicalRule extends ConverterRule {
 
-    public static final RelOptRule INSTANCE = new FullScanLogicalRule();
+    static final RelOptRule INSTANCE = new FullScanLogicalRule();
 
     private FullScanLogicalRule() {
         super(

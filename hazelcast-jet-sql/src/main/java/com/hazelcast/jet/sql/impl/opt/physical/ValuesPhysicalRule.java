@@ -26,9 +26,9 @@ import org.apache.calcite.rel.core.Values;
 import static com.hazelcast.jet.sql.impl.opt.JetConventions.LOGICAL;
 import static com.hazelcast.jet.sql.impl.opt.JetConventions.PHYSICAL;
 
-public final class ValuesPhysicalRule extends ConverterRule {
+final class ValuesPhysicalRule extends ConverterRule {
 
-    public static final RelOptRule INSTANCE = new ValuesPhysicalRule();
+    static final RelOptRule INSTANCE = new ValuesPhysicalRule();
 
     private ValuesPhysicalRule() {
         super(

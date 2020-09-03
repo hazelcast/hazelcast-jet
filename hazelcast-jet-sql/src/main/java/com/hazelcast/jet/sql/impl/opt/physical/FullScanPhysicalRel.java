@@ -35,7 +35,7 @@ import static com.hazelcast.jet.impl.util.Util.toList;
 
 public class FullScanPhysicalRel extends AbstractFullScanRel implements PhysicalRel {
 
-    public FullScanPhysicalRel(
+    FullScanPhysicalRel(
             RelOptCluster cluster,
             RelTraitSet traitSet,
             RelOptTable table,

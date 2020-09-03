@@ -24,11 +24,11 @@ import org.apache.calcite.rex.RexNode;
 
 public class FilterLogicalRel extends Filter implements LogicalRel {
 
-    public FilterLogicalRel(
-        RelOptCluster cluster,
-        RelTraitSet traits,
-        RelNode input,
-        RexNode condition
+    FilterLogicalRel(
+            RelOptCluster cluster,
+            RelTraitSet traits,
+            RelNode input,
+            RexNode condition
     ) {
         super(cluster, traits, input, condition);
     }

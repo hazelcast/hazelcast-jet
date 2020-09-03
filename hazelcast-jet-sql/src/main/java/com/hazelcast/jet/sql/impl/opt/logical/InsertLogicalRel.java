@@ -33,7 +33,7 @@ public class InsertLogicalRel extends TableModify implements LogicalRel {
 
     private static final double COST_FACTOR = .1;
 
-    public InsertLogicalRel(
+    InsertLogicalRel(
             RelOptCluster cluster,
             RelTraitSet traitSet,
             RelOptTable table,

@@ -26,9 +26,9 @@ import java.util.Collection;
 
 import static com.hazelcast.jet.sql.impl.opt.JetConventions.LOGICAL;
 
-public final class FilterPhysicalRule extends RelOptRule {
+final class FilterPhysicalRule extends RelOptRule {
 
-    public static final RelOptRule INSTANCE = new FilterPhysicalRule();
+    static final RelOptRule INSTANCE = new FilterPhysicalRule();
 
     private FilterPhysicalRule() {
         super(

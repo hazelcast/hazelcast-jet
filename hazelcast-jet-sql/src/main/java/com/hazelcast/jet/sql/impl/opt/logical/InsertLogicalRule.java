@@ -25,9 +25,9 @@ import org.apache.calcite.rel.core.TableModify;
 
 import static com.hazelcast.jet.sql.impl.opt.JetConventions.LOGICAL;
 
-public final class InsertLogicalRule extends ConverterRule {
+final class InsertLogicalRule extends ConverterRule {
 
-    public static final RelOptRule INSTANCE = new InsertLogicalRule();
+    static final RelOptRule INSTANCE = new InsertLogicalRule();
 
     private InsertLogicalRule() {
         super(

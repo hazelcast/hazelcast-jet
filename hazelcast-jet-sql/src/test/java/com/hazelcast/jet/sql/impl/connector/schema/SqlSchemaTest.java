@@ -28,7 +28,7 @@ import static java.util.Collections.singletonList;
 
 public class SqlSchemaTest extends JetSqlTestSupport {
 
-    private static final String NAME = "mapping_name";
+    private static final String NAME = randomString().replace('-', '_');
 
     private static SqlService sqlService;
 

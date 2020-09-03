@@ -31,7 +31,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 public class MappingStorageTest extends SimpleTestInClusterSupport {
 
-    private static final String MAPPING_NAME = "mapping_name";
+    private static final String MAPPING_NAME = randomString().replace('-', '_');
 
     private static final TestHazelcastInstanceFactory FACTORY = new TestHazelcastInstanceFactory();
 

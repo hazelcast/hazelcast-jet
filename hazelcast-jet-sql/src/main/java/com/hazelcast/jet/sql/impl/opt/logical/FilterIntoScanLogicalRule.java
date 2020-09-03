@@ -49,9 +49,9 @@ import java.util.List;
 
 import static java.util.Arrays.asList;
 
-public final class FilterIntoScanLogicalRule extends RelOptRule {
+final class FilterIntoScanLogicalRule extends RelOptRule {
 
-    public static final RelOptRule INSTANCE = new FilterIntoScanLogicalRule();
+    static final RelOptRule INSTANCE = new FilterIntoScanLogicalRule();
 
     private FilterIntoScanLogicalRule() {
         super(

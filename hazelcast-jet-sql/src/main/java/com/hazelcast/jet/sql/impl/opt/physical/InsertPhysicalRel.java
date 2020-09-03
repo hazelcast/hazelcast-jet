@@ -41,7 +41,7 @@ public class InsertPhysicalRel extends TableModify implements PhysicalRel {
 
     private static final double COST_FACTOR = .1;
 
-    public InsertPhysicalRel(
+    InsertPhysicalRel(
             RelOptCluster cluster,
             RelTraitSet traitSet,
             RelOptTable table,

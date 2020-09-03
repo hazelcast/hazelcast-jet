@@ -42,9 +42,9 @@ import static com.hazelcast.jet.sql.impl.expression.ExpressionUtil.evaluate;
 import static com.hazelcast.jet.sql.impl.opt.JetConventions.LOGICAL;
 import static java.util.Arrays.asList;
 
-public final class FullFunctionScanLogicalRule extends ConverterRule {
+final class FullFunctionScanLogicalRule extends ConverterRule {
 
-    public static final RelOptRule INSTANCE = new FullFunctionScanLogicalRule();
+    static final RelOptRule INSTANCE = new FullFunctionScanLogicalRule();
 
     private FullFunctionScanLogicalRule() {
         super(

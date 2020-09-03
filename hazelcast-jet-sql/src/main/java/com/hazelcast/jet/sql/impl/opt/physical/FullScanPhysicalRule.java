@@ -23,12 +23,9 @@ import org.apache.calcite.plan.RelOptRuleCall;
 
 import static com.hazelcast.jet.sql.impl.opt.JetConventions.LOGICAL;
 
-/**
- * Convert logical full scan to physical full scan.
- */
-public final class FullScanPhysicalRule extends RelOptRule {
+final class FullScanPhysicalRule extends RelOptRule {
 
-    public static final RelOptRule INSTANCE = new FullScanPhysicalRule();
+    static final RelOptRule INSTANCE = new FullScanPhysicalRule();
 
     private FullScanPhysicalRule() {
         super(

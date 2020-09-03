@@ -25,9 +25,9 @@ import org.apache.calcite.rel.logical.LogicalFilter;
 
 import static com.hazelcast.jet.sql.impl.opt.JetConventions.LOGICAL;
 
-public final class FilterLogicalRule extends ConverterRule {
+final class FilterLogicalRule extends ConverterRule {
 
-    public static final RelOptRule INSTANCE = new FilterLogicalRule();
+    static final RelOptRule INSTANCE = new FilterLogicalRule();
 
     private FilterLogicalRule() {
         super(

@@ -22,5 +22,4 @@ import org.apache.calcite.rel.RelNode;
  * Marker interface for logical relations.
  */
 public interface LogicalRel extends RelNode {
-    // No-op.
 }

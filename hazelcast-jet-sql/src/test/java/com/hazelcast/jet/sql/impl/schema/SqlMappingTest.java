@@ -32,7 +32,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public class SqlMappingTest extends JetSqlTestSupport {
 
-    private static final String MAPPING_NAME = "mapping_name";
+    private static final String MAPPING_NAME = randomString().replace('-', '_');
 
     private static SqlService sqlService;
 

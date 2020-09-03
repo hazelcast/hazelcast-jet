@@ -24,9 +24,9 @@ import org.apache.calcite.rel.RelNode;
 
 import static com.hazelcast.jet.sql.impl.opt.JetConventions.LOGICAL;
 
-public final class ProjectPhysicalRule extends RelOptRule {
+final class ProjectPhysicalRule extends RelOptRule {
 
-    public static final RelOptRule INSTANCE = new ProjectPhysicalRule();
+    static final RelOptRule INSTANCE = new ProjectPhysicalRule();
 
     private ProjectPhysicalRule() {
         super(
