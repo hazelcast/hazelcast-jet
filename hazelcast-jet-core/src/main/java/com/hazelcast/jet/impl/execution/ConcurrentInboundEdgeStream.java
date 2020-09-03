@@ -100,8 +100,8 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
         return priority;
     }
 
-    @Override
-    public ProgressState drainTo(Predicate<Object> dest) {
+    @Nonnull @Override
+    public ProgressState drainTo(@Nonnull Predicate<Object> dest) {
         if (comparator != null) {
             return drainToWithComparator(dest);
         }
