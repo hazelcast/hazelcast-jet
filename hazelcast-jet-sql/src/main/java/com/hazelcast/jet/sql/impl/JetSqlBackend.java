@@ -80,12 +80,10 @@ import static java.util.stream.Collectors.toList;
 class JetSqlBackend implements SqlBackend {
 
     private final NodeEngine nodeEngine;
-
     private final JetPlanExecutor planExecutor;
 
     JetSqlBackend(NodeEngine nodeEngine, JetPlanExecutor planExecutor) {
         this.nodeEngine = nodeEngine;
-
         this.planExecutor = planExecutor;
     }
 
@@ -166,11 +164,14 @@ class JetSqlBackend implements SqlBackend {
                 sqlCreateTable.ifNotExists(),
                 planExecutor
         );
-
     }
 
     private SqlPlan toDropTablePlan(SqlDropExternalMapping sqlDropTable) {
-        return new DropExternalMappingPlan(sqlDropTable.name(), sqlDropTable.ifExists(), planExecutor);
+        return new DropExternalMappingPlan(
+                sqlDropTable.name(),
+                sqlDropTable.ifExists(),
+                planExecutor
+        );
     }
 
     private SqlPlan toCreateJobPlan(QueryParseResult parseResult, OptimizerContext context) {
