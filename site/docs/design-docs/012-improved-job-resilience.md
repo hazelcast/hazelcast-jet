@@ -42,14 +42,12 @@ When we suspend a job due to a failure we need to notify the client that
 submitted it and give enough information to facilitate the repair of the
 underlying root cause.
 
-One possible solution would be to add a method
-`String getSuspensionCause()`, which will return `Requested by user`
-if suspended due to a user request or it will return the exception with
-stack tract as a string if the job was suspended due to an error.
+We will add a `String getSuspensionCause()` method, which will return
+`Requested by user` if suspended due to a user request, or it will
+return the exception with stack tract as a string if the job was
+suspended due to an error.
 
-If the job is not suspended, it can throw or return Job not suspended.
-
-> NOTE: I don't like this solution, under development.
+If the job is not suspended, the method will throw an exception.
 
 ## When to use
 
