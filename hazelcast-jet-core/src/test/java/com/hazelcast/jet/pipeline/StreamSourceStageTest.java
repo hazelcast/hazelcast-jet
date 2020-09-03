@@ -145,7 +145,7 @@ public class StreamSourceStageTest extends StreamSourceStageTestBase {
 
     @Test
     public void when_sparseItemsWithIngestionTimestamps_then_noExtraLatency() {
-        IList<WindowResult<Long>> sinkList = instance.getList("sinkList");
+        IList<WindowResult<Long>> sinkList = instance.getList(randomMapName());
         IMap<Integer, Integer> map = instance.getMap(randomMapName());
 
         Pipeline p = Pipeline.create();
