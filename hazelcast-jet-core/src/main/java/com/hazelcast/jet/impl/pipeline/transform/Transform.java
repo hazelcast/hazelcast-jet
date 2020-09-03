@@ -58,10 +58,6 @@ public interface Transform extends Serializable {
     @Nonnull
     List<Transform> upstream();
 
-    boolean isLocalParallelismDetermined();
-
-    void setLocalParallelismDetermined(boolean localParallelismDetermined);
-
     void determineLocalParallelism(Context context);
 
     void addToDag(Planner p);

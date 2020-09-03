@@ -39,15 +39,12 @@ public abstract class AbstractTransform implements Transform {
 
     private int localParallelism = Vertex.LOCAL_PARALLELISM_USE_DEFAULT;
 
-    private boolean isLocalParallelismDetermined;
-
     private final boolean[] upstreamRebalancingFlags;
 
     private final FunctionEx<?, ?>[] upstreamPartitionKeyFns;
 
     protected AbstractTransform(@Nonnull String name, @Nonnull List<Transform> upstream) {
         this.name = name;
-        this.isLocalParallelismDetermined = false;
         // Planner updates this list to fuse the stateless transforms:
         this.upstream = new ArrayList<>(upstream);
         this.upstreamRebalancingFlags = new boolean[upstream.size()];
@@ -81,16 +78,6 @@ public abstract class AbstractTransform implements Transform {
     @Override
     public int localParallelism() {
         return localParallelism;
-    }
-
-    @Override
-    public boolean isLocalParallelismDetermined() {
-        return isLocalParallelismDetermined;
-    }
-
-    @Override
-    public void setLocalParallelismDetermined(boolean localParallelismDetermined) {
-        isLocalParallelismDetermined = localParallelismDetermined;
     }
 
     @Override
@@ -140,12 +127,12 @@ public abstract class AbstractTransform implements Transform {
      * If none of them is set, returns the default local parallelism
      * provided in Pipeline.Context object.
      */
-    protected void determineLocalParallelism(int localParallelism, int preferredLocalParallelism, Pipeline.Context ctx) {
+    protected void determineLocalParallelism(int preferredLocalParallelism, Pipeline.Context ctx) {
         int defaultParallelism = ctx.defaultLocalParallelism();
         checkLocalParallelism(preferredLocalParallelism);
-        checkLocalParallelism(localParallelism);
+        checkLocalParallelism(localParallelism());
         checkLocalParallelism(defaultParallelism);
-        if (localParallelism == Vertex.LOCAL_PARALLELISM_USE_DEFAULT) {
+        if (localParallelism() == Vertex.LOCAL_PARALLELISM_USE_DEFAULT) {
             if (preferredLocalParallelism == Vertex.LOCAL_PARALLELISM_USE_DEFAULT) {
                 localParallelism(defaultParallelism);
             } else {
@@ -156,6 +143,5 @@ public abstract class AbstractTransform implements Transform {
                 }
             }
         }
-        setLocalParallelismDetermined(true);
     }
 }

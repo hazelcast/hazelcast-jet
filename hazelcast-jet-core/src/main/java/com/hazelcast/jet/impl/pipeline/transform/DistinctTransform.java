@@ -41,7 +41,7 @@ public class DistinctTransform<T, K> extends AbstractTransform {
 
     @Override
     public void determineLocalParallelism(Context context) {
-        determineLocalParallelism(localParallelism(), -1, context);
+        determineLocalParallelism(-1, context);
     }
 
     @Override

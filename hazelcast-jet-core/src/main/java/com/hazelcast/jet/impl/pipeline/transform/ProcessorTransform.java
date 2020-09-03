@@ -151,7 +151,7 @@ public class ProcessorTransform extends AbstractTransform {
 
     @Override
     public void determineLocalParallelism(Context context) {
-        determineLocalParallelism(localParallelism(), processorSupplier.preferredLocalParallelism(), context);
+        determineLocalParallelism(processorSupplier.preferredLocalParallelism(), context);
     }
 
     @Override

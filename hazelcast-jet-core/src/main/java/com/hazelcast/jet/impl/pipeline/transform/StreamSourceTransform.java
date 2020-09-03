@@ -69,7 +69,7 @@ public class StreamSourceTransform<T> extends AbstractTransform implements Strea
     public void determineLocalParallelism(Context context) {
         final ProcessorMetaSupplier metaSupplier = metaSupplierFn
                 .apply(eventTimePolicy != null ? eventTimePolicy : noEventTime());
-        determineLocalParallelism(localParallelism(), metaSupplier.preferredLocalParallelism(), context);
+        determineLocalParallelism(metaSupplier.preferredLocalParallelism(), context);
     }
 
     @Override

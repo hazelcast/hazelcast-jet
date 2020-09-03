@@ -50,7 +50,7 @@ public class MapStatefulTransform<T, K, S, R> extends StatefulKeyedTransformBase
 
     @Override
     public void determineLocalParallelism(Context context) {
-        determineLocalParallelism(localParallelism(), -1, context);
+        determineLocalParallelism(-1, context);
     }
 
     @Override

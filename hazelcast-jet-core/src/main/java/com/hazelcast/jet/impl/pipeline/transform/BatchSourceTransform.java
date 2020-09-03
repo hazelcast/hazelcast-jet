@@ -47,7 +47,7 @@ public class BatchSourceTransform<T> extends AbstractTransform implements BatchS
 
     @Override
     public void determineLocalParallelism(Context context) {
-        determineLocalParallelism(localParallelism(), metaSupplier.preferredLocalParallelism(), context);
+        determineLocalParallelism(metaSupplier.preferredLocalParallelism(), context);
     }
 
     @Override

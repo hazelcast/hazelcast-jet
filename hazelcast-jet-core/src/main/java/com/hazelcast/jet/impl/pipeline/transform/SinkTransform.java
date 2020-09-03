@@ -50,7 +50,7 @@ public class SinkTransform<T> extends AbstractTransform {
     }
 
     public void determineLocalParallelism(Context context) {
-        determineLocalParallelism(localParallelism(), sink.metaSupplier().preferredLocalParallelism(), context);
+        determineLocalParallelism(sink.metaSupplier().preferredLocalParallelism(), context);
     }
 
     @Override
