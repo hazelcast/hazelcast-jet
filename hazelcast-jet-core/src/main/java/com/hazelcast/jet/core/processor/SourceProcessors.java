@@ -170,8 +170,7 @@ public final class SourceProcessors {
             @Nonnull JournalInitialPosition initialPos,
             @Nonnull EventTimePolicy<? super Entry<K, V>> eventTimePolicy
     ) {
-        String clientXml = asXmlString(clientConfig);
-        return streamRemoteMapP(mapName, clientXml, mapPutEvents(), mapEventToEntry(), initialPos,
+        return streamRemoteMapP(mapName, clientConfig, mapPutEvents(), mapEventToEntry(), initialPos,
                 eventTimePolicy);
     }
 
@@ -182,12 +181,13 @@ public final class SourceProcessors {
     @Nonnull
     public static <T, K, V> ProcessorMetaSupplier streamRemoteMapP(
             @Nonnull String mapName,
-            @Nonnull String clientXml,
+            @Nonnull ClientConfig clientConfig,
             @Nonnull PredicateEx<? super EventJournalMapEvent<K, V>> predicateFn,
             @Nonnull FunctionEx<? super EventJournalMapEvent<K, V>, ? extends T> projectionFn,
             @Nonnull JournalInitialPosition initialPos,
             @Nonnull EventTimePolicy<? super T> eventTimePolicy
     ) {
+        String clientXml = asXmlString(clientConfig);
         return StreamEventJournalP.streamRemoteMapSupplier(
                 mapName, clientXml, predicateFn, projectionFn, initialPos, eventTimePolicy);
     }
@@ -252,9 +252,8 @@ public final class SourceProcessors {
             @Nonnull JournalInitialPosition initialPos,
             @Nonnull EventTimePolicy<? super Entry<K, V>> eventTimePolicy
     ) {
-        String clientXml = asXmlString(clientConfig);
         return streamRemoteCacheP(
-                cacheName, clientXml, cachePutEvents(), cacheEventToEntry(), initialPos, eventTimePolicy);
+                cacheName, clientConfig, cachePutEvents(), cacheEventToEntry(), initialPos, eventTimePolicy);
     }
 
     /**
@@ -264,12 +263,13 @@ public final class SourceProcessors {
     @Nonnull
     public static <T, K, V> ProcessorMetaSupplier streamRemoteCacheP(
             @Nonnull String cacheName,
-            @Nonnull String clientXml,
+            @Nonnull ClientConfig clientConfig,
             @Nonnull PredicateEx<? super EventJournalCacheEvent<K, V>> predicateFn,
             @Nonnull FunctionEx<? super EventJournalCacheEvent<K, V>, ? extends T> projectionFn,
             @Nonnull JournalInitialPosition initialPos,
             @Nonnull EventTimePolicy<? super T> eventTimePolicy
     ) {
+        String clientXml = asXmlString(clientConfig);
         return streamRemoteCacheSupplier(
                 cacheName, clientXml, predicateFn, projectionFn, initialPos, eventTimePolicy);
     }

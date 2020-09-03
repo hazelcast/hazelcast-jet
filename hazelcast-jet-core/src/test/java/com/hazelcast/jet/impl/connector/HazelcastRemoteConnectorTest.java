@@ -64,7 +64,6 @@ import static com.hazelcast.jet.core.processor.SourceProcessors.readRemoteCacheP
 import static com.hazelcast.jet.core.processor.SourceProcessors.readRemoteMapP;
 import static com.hazelcast.jet.core.processor.SourceProcessors.streamRemoteCacheP;
 import static com.hazelcast.jet.core.processor.SourceProcessors.streamRemoteMapP;
-import static com.hazelcast.jet.impl.util.ImdgUtil.asXmlString;
 import static com.hazelcast.jet.pipeline.JournalInitialPosition.START_FROM_OLDEST;
 import static java.util.stream.Collectors.toMap;
 import static org.junit.Assert.assertEquals;
@@ -230,9 +229,8 @@ public class HazelcastRemoteConnectorTest extends JetTestSupport {
     @Test
     public void when_streamRemoteMap_withPredicateAndProjection() {
         DAG dag = new DAG();
-        String clientXml = asXmlString(clientConfig);
         Vertex source = dag.newVertex(SOURCE_NAME, SourceProcessors.<Integer, Integer, Integer>streamRemoteMapP(
-                SOURCE_NAME, clientXml, event -> event.getKey() != 0, EventJournalMapEvent::getKey, START_FROM_OLDEST,
+                SOURCE_NAME, clientConfig, event -> event.getKey() != 0, EventJournalMapEvent::getKey, START_FROM_OLDEST,
                 eventTimePolicy(i -> i, limitingLag(0), 1, 0, 10_000)));
         Vertex sink = dag.newVertex(SINK_NAME, writeListP(SINK_NAME));
         dag.edge(between(source, sink));
@@ -268,9 +266,8 @@ public class HazelcastRemoteConnectorTest extends JetTestSupport {
     @Test
     public void when_streamRemoteCache_withPredicateAndProjection() {
         DAG dag = new DAG();
-        String clientXml = asXmlString(clientConfig);
         Vertex source = dag.newVertex(SOURCE_NAME, SourceProcessors.<Integer, Integer, Integer>streamRemoteCacheP(
-                SOURCE_NAME, clientXml, event -> !event.getKey().equals(0), EventJournalCacheEvent::getKey,
+                SOURCE_NAME, clientConfig, event -> !event.getKey().equals(0), EventJournalCacheEvent::getKey,
                 START_FROM_OLDEST,
                 eventTimePolicy(i -> i, limitingLag(0), 1, 0, 10_000)));
         Vertex sink = dag.newVertex(SINK_NAME, writeListP(SINK_NAME));
