@@ -49,7 +49,7 @@ class JetPlanExecutor {
     }
 
     SqlResult execute(CreateExternalMappingPlan plan) {
-        catalog.createMapping(plan.externalTable(), plan.replace(), plan.ifNotExists());
+        catalog.createMapping(plan.mapping(), plan.replace(), plan.ifNotExists());
         return SqlResultImpl.createUpdateCountResult(-1);
     }
 

@@ -16,7 +16,7 @@
 
 package com.hazelcast.jet.sql.impl.schema;
 
-import com.hazelcast.jet.sql.SqlConnector;
+import com.hazelcast.jet.sql.impl.connector.SqlConnector;
 import com.hazelcast.jet.sql.impl.connector.SqlConnectorCache;
 import com.hazelcast.jet.sql.impl.connector.schema.MappingColumnsTable;
 import com.hazelcast.jet.sql.impl.connector.schema.MappingsTable;

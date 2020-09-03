@@ -17,7 +17,6 @@
 package com.hazelcast.jet.sql.impl.connector;
 
 import com.hazelcast.jet.JetException;
-import com.hazelcast.jet.sql.SqlConnector;
 import com.hazelcast.jet.sql.impl.connector.map.IMapSqlConnector;
 import com.hazelcast.jet.sql.impl.schema.JetTable;
 import com.hazelcast.sql.impl.schema.Table;

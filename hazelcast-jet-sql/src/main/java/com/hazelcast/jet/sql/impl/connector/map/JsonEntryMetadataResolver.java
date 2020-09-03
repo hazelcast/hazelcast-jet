@@ -34,7 +34,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import static com.hazelcast.jet.sql.SqlConnector.JSON_SERIALIZATION_FORMAT;
+import static com.hazelcast.jet.sql.impl.connector.SqlConnector.JSON_SERIALIZATION_FORMAT;
 
 // TODO: deduplicate with MapSampleMetadataResolver
 final class JsonEntryMetadataResolver implements EntryMetadataResolver {

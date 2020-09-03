@@ -16,7 +16,7 @@
 
 package com.hazelcast.jet.sql.impl.validate;
 
-import com.hazelcast.jet.sql.SqlConnector;
+import com.hazelcast.jet.sql.impl.connector.SqlConnector;
 import com.hazelcast.jet.sql.impl.parse.SqlCreateJob;
 import com.hazelcast.jet.sql.impl.parse.SqlExtendedInsert;
 import com.hazelcast.sql.impl.calcite.schema.HazelcastTable;

@@ -23,9 +23,9 @@ import org.apache.hadoop.mapreduce.Job;
 import java.io.IOException;
 import java.util.List;
 
-import static com.hazelcast.jet.sql.SqlConnector.AVRO_SERIALIZATION_FORMAT;
-import static com.hazelcast.jet.sql.SqlConnector.CSV_SERIALIZATION_FORMAT;
-import static com.hazelcast.jet.sql.SqlConnector.JSON_SERIALIZATION_FORMAT;
+import static com.hazelcast.jet.sql.impl.connector.SqlConnector.AVRO_SERIALIZATION_FORMAT;
+import static com.hazelcast.jet.sql.impl.connector.SqlConnector.CSV_SERIALIZATION_FORMAT;
+import static com.hazelcast.jet.sql.impl.connector.SqlConnector.JSON_SERIALIZATION_FORMAT;
 import static java.util.Objects.requireNonNull;
 
 // TODO: smarter/cleaner dispatch ?

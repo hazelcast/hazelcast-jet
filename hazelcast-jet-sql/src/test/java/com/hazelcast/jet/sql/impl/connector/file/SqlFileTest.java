@@ -24,8 +24,8 @@ import org.junit.Test;
 
 import java.nio.file.Paths;
 
-import static com.hazelcast.jet.sql.SqlConnector.AVRO_SERIALIZATION_FORMAT;
-import static com.hazelcast.jet.sql.SqlConnector.OPTION_SERIALIZATION_FORMAT;
+import static com.hazelcast.jet.sql.impl.connector.SqlConnector.AVRO_SERIALIZATION_FORMAT;
+import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_SERIALIZATION_FORMAT;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 

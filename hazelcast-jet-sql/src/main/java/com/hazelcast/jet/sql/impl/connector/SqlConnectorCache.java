@@ -18,7 +18,6 @@ package com.hazelcast.jet.sql.impl.connector;
 
 import com.hazelcast.core.HazelcastException;
 import com.hazelcast.internal.util.ServiceLoader;
-import com.hazelcast.jet.sql.SqlConnector;
 import com.hazelcast.spi.impl.NodeEngine;
 
 import java.util.HashMap;

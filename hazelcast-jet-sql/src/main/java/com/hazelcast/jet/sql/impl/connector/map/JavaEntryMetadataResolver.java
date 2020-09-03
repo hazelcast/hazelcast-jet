@@ -39,7 +39,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 import static com.hazelcast.jet.impl.util.ReflectionUtils.loadClass;
-import static com.hazelcast.jet.sql.SqlConnector.JAVA_SERIALIZATION_FORMAT;
+import static com.hazelcast.jet.sql.impl.connector.SqlConnector.JAVA_SERIALIZATION_FORMAT;
 import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.OPTION_KEY_CLASS;
 import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.OPTION_VALUE_CLASS;
 import static com.hazelcast.sql.impl.extract.QueryPath.KEY;

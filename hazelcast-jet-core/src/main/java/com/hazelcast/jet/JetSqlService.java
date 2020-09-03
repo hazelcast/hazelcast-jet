@@ -37,7 +37,7 @@ import com.hazelcast.sql.SqlService;
  * The text below summarizes Hazelcast Jet SQL features. For a summary of
  * the default SQL engine features, see the {@linkplain SqlService
  * superclass} documentation.
-
+ *
  * <h1>Overview</h1>
  * <p>
  * Hazelcast Jet is able to execute distributed SQL statements over any Jet
@@ -67,7 +67,7 @@ import com.hazelcast.sql.SqlService;
  * <h3>CREATE EXTERNAL MAPPING statement</h3>
  *
  * <pre>{@code
- * CREATE [OR REPLACE] EXTERNAL MAPPING [IF NOT EXISTS] <mappingName>
+ * CREATE [OR REPLACE] [EXTERNAL] MAPPING [IF NOT EXISTS] <mappingName>
  * [
  *     (
  *         <columnName> <columnType> [EXTERNAL NAME <externalName>]
@@ -104,7 +104,7 @@ import com.hazelcast.sql.SqlService;
  *     the column name is {@code __key} or {@code this}, it is assumed to be a
  *     field of the value. See the connector specification for details.
  *
- *     <li>{@code TYPE <connectorType>: the identifier of the connector type
+ *     <li>{@code TYPE <connectorType>}: the identifier of the connector type
  *
  *     <li>{@code OPTIONS}: connector-specific options. For a list of possible
  *     options check out the connector javadoc.
@@ -120,7 +120,7 @@ import com.hazelcast.sql.SqlService;
  * (most commonly if the remote object is empty), the DDL statement will
  * fail.
  *
- * <h3>DROP EXTERNAL MAPPING statement</h3>
+ * <h3>DROP [EXTERNAL] MAPPING statement</h3>
  *
  * <pre>{@code
  * DROP EXTERNAL MAPPING [IF EXISTS] <mappingName>
@@ -131,7 +131,7 @@ import com.hazelcast.sql.SqlService;
  *     <li>{@code IF EXISTS} if the external mapping doesn't exist, do nothing;
  *     fail otherwise.
  *
- *     <li>{@code <mappingName>} the name of teh mapping
+ *     <li>{@code <mappingName>} the name of the mapping
  *
  * </ul>
  *
@@ -159,6 +159,20 @@ import com.hazelcast.sql.SqlService;
  *
  * Changes to mappings do not affect any jobs that are already running.
  * Only new jobs are affected.
+ *
+ * <h2>Information schema</h2>
+ *
+ * The information about existing mappings is available through {@code
+ * information_schema} tables.
+ * <p>
+ * Currently, 2 tables are exposed:
+ * <ul>
+ *
+ *     <li>{@code mappings} containing information about existing mappings
+ *
+ *     <li>{@code columns} containing information about mapping columns
+ *
+ * </ul>
  *
  * <h2>Custom connectors</h2>
  *

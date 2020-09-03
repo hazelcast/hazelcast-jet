@@ -54,7 +54,7 @@ interface JetPlan extends SqlPlan {
             return planExecutor.execute(this);
         }
 
-        Mapping externalTable() {
+        Mapping mapping() {
             return mapping;
         }
 
