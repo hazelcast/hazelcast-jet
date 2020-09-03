@@ -135,26 +135,6 @@ import com.hazelcast.sql.SqlService;
  *
  * </ul>
  *
- * <h3>SHOW EXTERNAL MAPPINGS statement</h3>
- *
- * {@code SHOW EXTERNAL MAPPINGS statement}
- *
- * <pre>{@code
- * SHOW EXTERNAL MAPPINGS
- * }</pre>
- *
- * Lists the mappings created using DDL. Doesn't list the implicit mappings
- * for local IMaps.
- * <p>
- * The result set has 2 columns:
- * <ul>
- *     <li>{@code name} the mapping name
- *
- *     <li>{@code ddl} the text of the DDL command that specifies the mapping.
- *     It will contain also column names, types, external names and options as
- *     they were resolved when the DDL statement was executed.
- * </ul>
- *
  * <h3>Notes</h3>
  *
  * Changes to mappings do not affect any jobs that are already running.

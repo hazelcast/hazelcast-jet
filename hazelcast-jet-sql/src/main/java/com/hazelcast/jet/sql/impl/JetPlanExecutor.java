@@ -93,13 +93,11 @@ class JetPlanExecutor {
         Job job = jetInstance.newJob(plan.getDag());
 
         if (plan.isInsert()) {
-            if (plan.isStreaming()) {
-                return SqlResultImpl.createUpdateCountResult(-1);
-            } else {
+            if (!plan.isStreaming()) {
                 job.join();
                 // TODO return real updated row count
-                return SqlResultImpl.createUpdateCountResult(-1);
             }
+            return SqlResultImpl.createUpdateCountResult(-1);
         } else {
             return new JetSqlResultImpl(plan.getQueryId(), queryResultProducer, plan.getRowMetadata());
         }
