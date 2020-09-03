@@ -77,7 +77,7 @@ import static java.util.stream.Collectors.joining;
  *
  * @since 3.0
  */
-public class DAG implements IdentifiedDataSerializable, Iterable<Vertex> {
+public class DAG implements JobDefinition, IdentifiedDataSerializable, Iterable<Vertex> {
 
     private Set<Edge> edges = new LinkedHashSet<>();
     private Map<String, Vertex> nameToVertex = new HashMap<>();

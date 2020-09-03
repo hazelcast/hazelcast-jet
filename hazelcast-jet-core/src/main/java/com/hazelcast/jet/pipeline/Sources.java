@@ -120,9 +120,11 @@ public final class Sources {
      * If you are implementing a custom source processor, be sure to check out
      * the {@link EventTimeMapper} class that will help you correctly implement
      * watermark emission.
-     *  @param sourceName user-friendly source name
+     *
+     * @param sourceName user-friendly source name
      * @param supportsNativeTimestamps true, if the processor is able to work
-     * @param metaSupplierFn factory of processor meta-suppliers
+     * @param metaSupplierFn factory of processor meta-suppliers. Since version
+     *                      4.3 this function should be Serializable.
      */
     @Nonnull
     public static <T> StreamSource<T> streamFromProcessorWithWatermarks(

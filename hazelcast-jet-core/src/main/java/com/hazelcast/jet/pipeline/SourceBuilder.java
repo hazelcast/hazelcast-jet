@@ -69,7 +69,7 @@ public final class SourceBuilder<C> implements Serializable {
      *
      * @param <T> type of the emitted item
      */
-    public interface SourceBuffer<T> extends Serializable {
+    public interface SourceBuffer<T> {
 
         /**
          * Returns the number of items the buffer holds.
