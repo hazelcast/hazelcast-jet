@@ -623,10 +623,13 @@ public class ProcessorTasklet implements Tasklet {
             descriptor = descriptor.withTag(MetricTags.SINK, "true");
         }
 
-        for (int i = 0; i < instreams.size(); i++) {
-            MetricDescriptor descWithOrdinal = descriptor.copy().withTag(MetricTags.ORDINAL, String.valueOf(i));
-            context.collect(descWithOrdinal, RECEIVED_COUNT, ProbeLevel.INFO, ProbeUnit.COUNT, receivedCounts.get(i));
-            context.collect(descWithOrdinal, RECEIVED_BATCHES, ProbeLevel.INFO, ProbeUnit.COUNT, receivedBatches.get(i));
+        if (!isSource) {
+            for (int i = 0; i < instreams.size(); i++) {
+                MetricDescriptor descWithOrdinal = descriptor.copy().withTag(MetricTags.ORDINAL, String.valueOf(i));
+                context.collect(descWithOrdinal, RECEIVED_COUNT, ProbeLevel.INFO, ProbeUnit.COUNT, receivedCounts.get(i));
+                context.collect(
+                        descWithOrdinal, RECEIVED_BATCHES, ProbeLevel.INFO, ProbeUnit.COUNT, receivedBatches.get(i));
+            }
         }
 
         for (int i = 0; i < emittedCounts.length() - (this.context.snapshottingEnabled() ? 0 : 1); i++) {
