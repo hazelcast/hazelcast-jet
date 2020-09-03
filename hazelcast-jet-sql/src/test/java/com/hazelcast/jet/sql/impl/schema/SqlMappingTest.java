@@ -52,11 +52,11 @@ public class SqlMappingTest extends JetSqlTestSupport {
         assertThat(createResult.updateCount()).isEqualTo(-1);
 
         // when
-        SqlResult updateResult = sqlService.execute("SELECT __key, this FROM public." + MAPPING_NAME);
+        SqlResult queryResult = sqlService.execute("SELECT __key, this FROM public." + MAPPING_NAME);
 
         // then
-        assertThat(updateResult.isUpdateCount()).isFalse();
-        assertThat(updateResult.iterator()).isExhausted();
+        assertThat(queryResult.isUpdateCount()).isFalse();
+        assertThat(queryResult.iterator()).isExhausted();
     }
 
     @Test
@@ -79,11 +79,11 @@ public class SqlMappingTest extends JetSqlTestSupport {
         sqlService.execute(javaSerializableMapDdl(MAPPING_NAME, Integer.class, Person.class));
 
         // when
-        SqlResult updateResult = sqlService.execute("DROP EXTERNAL MAPPING " + MAPPING_NAME);
+        SqlResult dropResult = sqlService.execute("DROP EXTERNAL MAPPING " + MAPPING_NAME);
 
         // then
-        assertThat(updateResult.isUpdateCount()).isTrue();
-        assertThat(updateResult.updateCount()).isEqualTo(-1);
+        assertThat(dropResult.isUpdateCount()).isTrue();
+        assertThat(dropResult.updateCount()).isEqualTo(-1);
         assertThatThrownBy(() -> sqlService.execute("SELECT * FROM public." + MAPPING_NAME))
                 .isInstanceOf(HazelcastSqlException.class);
     }

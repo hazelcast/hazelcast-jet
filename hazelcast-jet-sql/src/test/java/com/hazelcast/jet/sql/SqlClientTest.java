@@ -36,7 +36,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 
-public class ClientSqlTest extends JetSqlTestSupport {
+public class SqlClientTest extends JetSqlTestSupport {
 
     @BeforeClass
     public static void setUpClass() {

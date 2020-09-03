@@ -35,7 +35,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
-public class CreateJobTest extends SimpleTestInClusterSupport {
+public class SqlCreateJobTest extends SimpleTestInClusterSupport {
 
     private static SqlService sqlService;
 

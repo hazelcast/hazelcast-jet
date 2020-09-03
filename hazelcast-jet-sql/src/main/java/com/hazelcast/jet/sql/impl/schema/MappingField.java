@@ -24,6 +24,7 @@ import com.hazelcast.sql.impl.type.QueryDataType;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 import static java.util.Objects.requireNonNull;
 
@@ -82,5 +83,22 @@ public class MappingField implements DataSerializable {
     @Override
     public void readData(ObjectDataInput in) throws IOException {
         properties = in.readObject();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        MappingField that = (MappingField) o;
+        return Objects.equals(properties, that.properties);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(properties);
     }
 }
