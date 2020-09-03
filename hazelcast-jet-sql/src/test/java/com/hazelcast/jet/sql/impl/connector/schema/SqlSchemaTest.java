@@ -28,9 +28,9 @@ import static java.util.Collections.singletonList;
 
 public class SqlSchemaTest extends JetSqlTestSupport {
 
-    private static final String NAME = randomString().replace('-', '_');
-
     private static SqlService sqlService;
+
+    private String name;
 
     @BeforeClass
     public static void setUpClass() {
@@ -40,7 +40,8 @@ public class SqlSchemaTest extends JetSqlTestSupport {
 
     @Before
     public void setUp() {
-        sqlService.execute(javaSerializableMapDdl(NAME, Integer.class, String.class));
+        name = generateRandomName();
+        sqlService.execute(javaSerializableMapDdl(name, Integer.class, String.class));
     }
 
     @Test
@@ -52,7 +53,7 @@ public class SqlSchemaTest extends JetSqlTestSupport {
                         new Row(
                                 "hazelcast",
                                 "public",
-                                NAME,
+                                name,
                                 IMapSqlConnector.TYPE_NAME,
                                 "{"
                                         + "serialization.key.format=java"
@@ -69,8 +70,8 @@ public class SqlSchemaTest extends JetSqlTestSupport {
         assertRowsEventuallyInAnyOrder(
                 "SELECT * FROM information_schema.columns",
                 asList(
-                        new Row("hazelcast", "public", NAME, "__key", "0", "true", "INT"),
-                        new Row("hazelcast", "public", NAME, "this", "1", "true", "VARCHAR")
+                        new Row("hazelcast", "public", name, "__key", "0", "true", "INT"),
+                        new Row("hazelcast", "public", name, "this", "1", "true", "VARCHAR")
                 )
         );
     }
@@ -82,8 +83,12 @@ public class SqlSchemaTest extends JetSqlTestSupport {
                         + "FROM columns "
                         + "WHERE column_name = 'this'",
                 singletonList(
-                        new Row(NAME, "HAZELCAST", "this", "VARCHAR")
+                        new Row(name, "HAZELCAST", "this", "VARCHAR")
                 )
         );
+    }
+
+    private static String generateRandomName() {
+        return "schema_" + randomString().replace('-', '_');
     }
 }

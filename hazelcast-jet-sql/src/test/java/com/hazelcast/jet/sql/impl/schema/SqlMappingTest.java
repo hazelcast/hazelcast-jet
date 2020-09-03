@@ -32,8 +32,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public class SqlMappingTest extends JetSqlTestSupport {
 
-    private static final String MAPPING_NAME = randomString().replace('-', '_');
-
     private static SqlService sqlService;
 
     @BeforeClass
@@ -44,15 +42,18 @@ public class SqlMappingTest extends JetSqlTestSupport {
 
     @Test
     public void when_mappingIsDeclared_then_itIsAvailable() {
+        // given
+        String name = generateRandomName();
+
         // when
-        SqlResult createResult = sqlService.execute(javaSerializableMapDdl(MAPPING_NAME, Integer.class, String.class));
+        SqlResult createResult = sqlService.execute(javaSerializableMapDdl(name, Integer.class, String.class));
 
         // then
         assertThat(createResult.isUpdateCount()).isTrue();
         assertThat(createResult.updateCount()).isEqualTo(-1);
 
         // when
-        SqlResult queryResult = sqlService.execute("SELECT __key, this FROM public." + MAPPING_NAME);
+        SqlResult queryResult = sqlService.execute("SELECT __key, this FROM public." + name);
 
         // then
         assertThat(queryResult.isUpdateCount()).isFalse();
@@ -62,29 +63,33 @@ public class SqlMappingTest extends JetSqlTestSupport {
     @Test
     public void when_mappingIsDeclared_then_itsDefinitionHasPrecedenceOverDiscoveredOne() {
         // given
-        sqlService.execute(javaSerializableMapDdl(MAPPING_NAME, Integer.class, Person.class));
+        String name = generateRandomName();
 
-        Map<Integer, Person> map = instance().getMap(MAPPING_NAME);
+        sqlService.execute(javaSerializableMapDdl(name, Integer.class, Person.class));
+
+        Map<Integer, Person> map = instance().getMap(name);
         map.put(1, new IdentifiedPerson(2, "Alice"));
 
         // when
         // then
-        assertThatThrownBy(() -> sqlService.execute("SELECT id FROM " + MAPPING_NAME))
+        assertThatThrownBy(() -> sqlService.execute("SELECT id FROM " + name))
                 .isInstanceOf(HazelcastSqlException.class);
     }
 
     @Test
     public void when_mappingIsDropped_then_itIsNotAvailable() {
         // given
-        sqlService.execute(javaSerializableMapDdl(MAPPING_NAME, Integer.class, Person.class));
+        String name = generateRandomName();
+
+        sqlService.execute(javaSerializableMapDdl(name, Integer.class, Person.class));
 
         // when
-        SqlResult dropResult = sqlService.execute("DROP EXTERNAL MAPPING " + MAPPING_NAME);
+        SqlResult dropResult = sqlService.execute("DROP EXTERNAL MAPPING " + name);
 
         // then
         assertThat(dropResult.isUpdateCount()).isTrue();
         assertThat(dropResult.updateCount()).isEqualTo(-1);
-        assertThatThrownBy(() -> sqlService.execute("SELECT * FROM public." + MAPPING_NAME))
+        assertThatThrownBy(() -> sqlService.execute("SELECT * FROM public." + name))
                 .isInstanceOf(HazelcastSqlException.class);
     }
 
@@ -113,5 +118,9 @@ public class SqlMappingTest extends JetSqlTestSupport {
         sqlService.execute("CREATE MAPPING t2 TYPE teststream");
         sqlService.execute("CREATE MAPPING t3 TYPE TESTSTREAM");
         sqlService.execute("CREATE MAPPING t4 TYPE tEsTsTrEaM");
+    }
+
+    private static String generateRandomName() {
+        return "mapping_" + randomString().replace('-', '_');
     }
 }

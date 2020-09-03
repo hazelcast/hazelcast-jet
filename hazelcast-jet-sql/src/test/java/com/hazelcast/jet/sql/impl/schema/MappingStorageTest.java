@@ -31,8 +31,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 public class MappingStorageTest extends SimpleTestInClusterSupport {
 
-    private static final String MAPPING_NAME = randomString().replace('-', '_');
-
     private static final TestHazelcastInstanceFactory FACTORY = new TestHazelcastInstanceFactory();
 
     private static HazelcastInstance instance;
@@ -56,35 +54,43 @@ public class MappingStorageTest extends SimpleTestInClusterSupport {
 
     @Test
     public void when_put_then_isPresentInValues() {
-        storage.put(MAPPING_NAME, mapping(MAPPING_NAME, "type"));
+        String name = generateRandomName();
 
-        assertThat(storage.values().stream().filter(m -> m.name().equals(MAPPING_NAME))).isNotEmpty();
+        storage.put(name, mapping(name, "type"));
+
+        assertThat(storage.values().stream().filter(m -> m.name().equals(name))).isNotEmpty();
     }
 
     @Test
     public void when_putIfAbsent_then_doesNotOverride() {
-        assertThat(storage.putIfAbsent(MAPPING_NAME, mapping(MAPPING_NAME, "type-1"))).isTrue();
-        assertThat(storage.putIfAbsent(MAPPING_NAME, mapping(MAPPING_NAME, "type-2"))).isFalse();
+        String name = generateRandomName();
 
+        assertThat(storage.putIfAbsent(name, mapping(name, "type-1"))).isTrue();
+        assertThat(storage.putIfAbsent(name, mapping(name, "type-2"))).isFalse();
         assertThat(storage.values().stream().filter(m -> m.type().equals("type-1"))).isNotEmpty();
         assertThat(storage.values().stream().filter(m -> m.type().equals("type-2"))).isEmpty();
     }
 
     @Test
     public void when_remove_then_isNotPresentInValues() {
-        storage.put(MAPPING_NAME, mapping(MAPPING_NAME, "type"));
+        String name = generateRandomName();
 
-        assertThat(storage.remove(MAPPING_NAME)).isTrue();
+        storage.put(name, mapping(name, "type"));
 
-        assertThat(storage.values().stream().filter(m -> m.name().equals(MAPPING_NAME))).isEmpty();
+        assertThat(storage.remove(name)).isTrue();
+        assertThat(storage.values().stream().filter(m -> m.name().equals(name))).isEmpty();
     }
 
     @Test
     public void when_removeAbsentValue_then_returnsFalse() {
-        assertThat(storage.remove(MAPPING_NAME)).isFalse();
+        assertThat(storage.remove("")).isFalse();
     }
 
     private static Mapping mapping(String name, String type) {
         return new Mapping(name, type, emptyList(), emptyMap());
+    }
+
+    private static String generateRandomName() {
+        return "storage_" + randomString().replace('-', '_');
     }
 }
