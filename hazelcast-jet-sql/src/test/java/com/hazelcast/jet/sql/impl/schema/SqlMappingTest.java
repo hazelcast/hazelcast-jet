@@ -38,14 +38,14 @@ import static java.util.Collections.singletonList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-public class SchemaTest extends JetSqlTestSupport {
+public class SqlMappingTest extends JetSqlTestSupport {
 
     private static SqlService sqlService;
 
     @BeforeClass
     public static void setUpClass() {
         initialize(1, null);
-        sqlService = instance().getHazelcastInstance().getSql();
+        sqlService = instance().getSql();
     }
 
     @Test
@@ -86,7 +86,7 @@ public class SchemaTest extends JetSqlTestSupport {
         sqlService.execute(sql);
 
         // when
-        assertRowsEventuallyAnyOrder(
+        assertRowsEventuallyInAnyOrder(
                 "SHOW EXTERNAL MAPPINGS",
                 singletonList(new JetSqlTestSupport.Row(name, sql))
         );

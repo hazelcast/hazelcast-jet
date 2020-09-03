@@ -53,7 +53,7 @@ public abstract class JetSqlTestSupport extends SimpleTestInClusterSupport {
      * @param expected Expected IMap contents after executing the query
      */
     public static <K, V> void assertMapEventually(String mapName, String sql, Map<K, V> expected) {
-        instance().getHazelcastInstance().getSql().execute(sql);
+        instance().getSql().execute(sql);
 
         Map<K, V> map = instance().getMap(mapName);
         assertTrueEventually(() ->
@@ -68,8 +68,8 @@ public abstract class JetSqlTestSupport extends SimpleTestInClusterSupport {
      * @param sql          The query
      * @param expectedRows Expected rows
      */
-    public static void assertRowsEventuallyAnyOrder(String sql, Collection<Row> expectedRows) {
-        SqlService sqlService = instance().getHazelcastInstance().getSql();
+    public static void assertRowsEventuallyInAnyOrder(String sql, Collection<Row> expectedRows) {
+        SqlService sqlService = instance().getSql();
         CompletableFuture<Void> future = new CompletableFuture<>();
         Deque<Row> rows = new ArrayDeque<>();
 

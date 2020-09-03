@@ -46,7 +46,7 @@ public class SqlCsvTest extends JetSqlTestSupport {
     @BeforeClass
     public static void setUpClass() {
         initialize(1, null);
-        sqlService = instance().getHazelcastInstance().getSql();
+        sqlService = instance().getSql();
     }
 
     @Test
@@ -93,7 +93,7 @@ public class SqlCsvTest extends JetSqlTestSupport {
                 + ")"
         );
 
-        assertRowsEventuallyAnyOrder(
+        assertRowsEventuallyInAnyOrder(
                 "SELECT * FROM " + name,
                 singletonList(new Row(
                         "string"
@@ -128,7 +128,7 @@ public class SqlCsvTest extends JetSqlTestSupport {
                 + ")"
         );
 
-        assertRowsEventuallyAnyOrder(
+        assertRowsEventuallyInAnyOrder(
                 "SELECT string2, string1 FROM " + name,
                 singletonList(new Row("value2", "value1"))
         );

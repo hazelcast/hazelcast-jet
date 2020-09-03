@@ -61,7 +61,7 @@ public class SqlKafkaTest extends JetSqlTestSupport {
     @BeforeClass
     public static void setUpClass() {
         initialize(1, null);
-        sqlService = instance().getHazelcastInstance().getSql();
+        sqlService = instance().getSql();
     }
 
     @BeforeClass
@@ -147,7 +147,7 @@ public class SqlKafkaTest extends JetSqlTestSupport {
 
         sqlService.execute(format("INSERT INTO %s VALUES (12, 'a')", topicName));
 
-        assertRowsEventuallyAnyOrder(
+        assertRowsEventuallyInAnyOrder(
                 format("SELECT __key + 1, this FROM %s", topicName),
                 singletonList(new Row(BigDecimal.valueOf(13), "a")));
     }
@@ -182,7 +182,7 @@ public class SqlKafkaTest extends JetSqlTestSupport {
         sqlService.execute(format("INSERT INTO %s (__key, name, age) VALUES (0, 'Alice', 30)", topicName));
         sqlService.execute(format("INSERT INTO %s (__key, name, age) VALUES (1, 'Bob', 40)", topicName));
 
-        assertRowsEventuallyAnyOrder(
+        assertRowsEventuallyInAnyOrder(
                 format("SELECT __key, name, age FROM %s", topicName),
                 asList(
                         new Row(0, "Alice", 30),
@@ -194,7 +194,7 @@ public class SqlKafkaTest extends JetSqlTestSupport {
         kafkaTestSupport.produce(topicName, 0, "value-" + 0);
         kafkaTestSupport.produce(topicName, 1, "value-" + 1);
 
-        assertRowsEventuallyAnyOrder(
+        assertRowsEventuallyInAnyOrder(
                 format("SELECT '喷气式飞机' FROM %s", topicName),
                 asList(
                         new Row("喷气式飞机"),
@@ -206,7 +206,7 @@ public class SqlKafkaTest extends JetSqlTestSupport {
         kafkaTestSupport.produce(topicName, 0, "value-" + 0);
         kafkaTestSupport.produce(topicName, 1, "value-" + 1);
 
-        assertRowsEventuallyAnyOrder(
+        assertRowsEventuallyInAnyOrder(
                 format("SELECT this, __key FROM %s", topicName),
                 asList(
                         new Row("value-0", 0),
@@ -218,7 +218,7 @@ public class SqlKafkaTest extends JetSqlTestSupport {
         kafkaTestSupport.produce(topicName, 0, "value-" + 0);
         kafkaTestSupport.produce(topicName, 1, "value-" + 1);
 
-        assertRowsEventuallyAnyOrder(
+        assertRowsEventuallyInAnyOrder(
                 format("SELECT * FROM %s", topicName),
                 asList(
                         new Row(0, "value-0"),
@@ -231,7 +231,7 @@ public class SqlKafkaTest extends JetSqlTestSupport {
         kafkaTestSupport.produce(topicName, 1, "value-" + 1);
         kafkaTestSupport.produce(topicName, 2, "value-" + 2);
 
-        assertRowsEventuallyAnyOrder(
+        assertRowsEventuallyInAnyOrder(
                 format("SELECT this FROM %s WHERE __key=1 or this='value-0'", topicName),
                 asList(
                         new Row("value-0"),
@@ -243,7 +243,7 @@ public class SqlKafkaTest extends JetSqlTestSupport {
         kafkaTestSupport.produce(topicName, 0, "value-" + 0);
         kafkaTestSupport.produce(topicName, 1, "value-" + 1);
 
-        assertRowsEventuallyAnyOrder(
+        assertRowsEventuallyInAnyOrder(
                 format("SELECT upper(this) FROM %s WHERE this='value-1'", topicName),
                 singletonList(new Row("VALUE-1")));
     }
@@ -253,7 +253,7 @@ public class SqlKafkaTest extends JetSqlTestSupport {
         kafkaTestSupport.produce(topicName, 0, "value-" + 0);
         kafkaTestSupport.produce(topicName, 1, "value-" + 1);
 
-        assertRowsEventuallyAnyOrder(
+        assertRowsEventuallyInAnyOrder(
                 format("SELECT this FROM %s WHERE upper(this)='VALUE-1'", topicName),
                 singletonList(new Row("value-1")));
     }
@@ -263,7 +263,7 @@ public class SqlKafkaTest extends JetSqlTestSupport {
         kafkaTestSupport.produce(topicName, 0, "value-" + 0);
         kafkaTestSupport.produce(topicName, 1, "value-" + 1);
 
-        assertRowsEventuallyAnyOrder(
+        assertRowsEventuallyInAnyOrder(
                 format("SELECT this FROM (SELECT upper(this) this FROM %s) WHERE this='VALUE-1'", topicName),
                 singletonList(new Row("VALUE-1")));
     }
@@ -273,7 +273,7 @@ public class SqlKafkaTest extends JetSqlTestSupport {
         kafkaTestSupport.produce(topicName, 0, "value-" + 0);
         kafkaTestSupport.produce(topicName, 1, "value-" + 1);
 
-        assertRowsEventuallyAnyOrder(
+        assertRowsEventuallyInAnyOrder(
                 format("SELECT upper(this) FROM %s WHERE upper(this)='VALUE-1'", topicName),
                 singletonList(new Row("VALUE-1")));
     }

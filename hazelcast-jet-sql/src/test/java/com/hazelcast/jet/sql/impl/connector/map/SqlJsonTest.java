@@ -50,7 +50,7 @@ public class SqlJsonTest extends JetSqlTestSupport {
     @BeforeClass
     public static void setUpClass() {
         initialize(1, null);
-        sqlService = instance().getHazelcastInstance().getSql();
+        sqlService = instance().getSql();
     }
 
     @Test
@@ -70,7 +70,7 @@ public class SqlJsonTest extends JetSqlTestSupport {
         Map<HazelcastJsonValue, HazelcastJsonValue> map = instance().getMap(name);
         assertThat(map.get(new HazelcastJsonValue("{\"name\":null}")).toString()).isEqualTo("{\"name\":null}");
 
-        assertRowsEventuallyAnyOrder(
+        assertRowsEventuallyInAnyOrder(
                 "SELECT * FROM " + name,
                 singletonList(new Row(null, null))
         );
@@ -93,7 +93,7 @@ public class SqlJsonTest extends JetSqlTestSupport {
         Map<HazelcastJsonValue, HazelcastJsonValue> map = instance().getMap(name);
         assertThat(map.get(new HazelcastJsonValue("{\"name\":\"Alice\"}")).toString()).isEqualTo("{\"name\":\"Bob\"}");
 
-        assertRowsEventuallyAnyOrder(
+        assertRowsEventuallyInAnyOrder(
                 "SELECT * FROM " + name,
                 singletonList(new Row("Alice", "Bob"))
         );
@@ -129,7 +129,7 @@ public class SqlJsonTest extends JetSqlTestSupport {
         sqlService.execute("INSERT OVERWRITE " + name + " VALUES (69, 'Bob', 123456789)");
 
         // assert both - initial & evolved - records are correctly read
-        assertRowsEventuallyAnyOrder(
+        assertRowsEventuallyInAnyOrder(
                 "SELECT * FROM " + name,
                 asList(
                         new Row(13, "Alice", null),
@@ -179,7 +179,7 @@ public class SqlJsonTest extends JetSqlTestSupport {
                 + ", timestamp'2020-04-15 12:23:34.2'"
                 + ")");
 
-        assertRowsEventuallyAnyOrder(
+        assertRowsEventuallyInAnyOrder(
                 "SELECT * FROM " + name,
                 singletonList(new Row(
                         BigDecimal.valueOf(1),

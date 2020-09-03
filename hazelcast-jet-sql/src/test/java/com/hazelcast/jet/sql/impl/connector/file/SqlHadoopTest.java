@@ -46,7 +46,7 @@ public class SqlHadoopTest extends JetSqlTestSupport {
     @BeforeClass
     public static void setUpClass() {
         initialize(1, null);
-        sqlService = instance().getHazelcastInstance().getSql();
+        sqlService = instance().getSql();
     }
 
     @BeforeClass
@@ -80,7 +80,7 @@ public class SqlHadoopTest extends JetSqlTestSupport {
 
         sqlService.execute("INSERT INTO " + name + " VALUES (1, 'Alice'), (2, 'Bob')");
 
-        assertRowsEventuallyAnyOrder(
+        assertRowsEventuallyInAnyOrder(
                 "SELECT * FROM " + name,
                 asList(
                         new Row(1L, "Alice"),
@@ -103,7 +103,7 @@ public class SqlHadoopTest extends JetSqlTestSupport {
                 + ")"
         );
 
-        assertRowsEventuallyAnyOrder(
+        assertRowsEventuallyInAnyOrder(
                 "SELECT name, id FROM " + name,
                 asList(
                         new Row("Alice", "1")
@@ -127,7 +127,7 @@ public class SqlHadoopTest extends JetSqlTestSupport {
 
         sqlService.execute("INSERT INTO " + name + " VALUES (1, 'Alice'), (2, 'Bob')");
 
-        assertRowsEventuallyAnyOrder(
+        assertRowsEventuallyInAnyOrder(
                 "SELECT * FROM " + name,
                 asList(
                         new Row(1L, "Alice")
@@ -152,7 +152,7 @@ public class SqlHadoopTest extends JetSqlTestSupport {
                 + ")"
         );
 
-        assertRowsEventuallyAnyOrder(
+        assertRowsEventuallyInAnyOrder(
                 "SELECT name, id FROM " + name,
                 asList(
                         new Row("Alice", "1")
@@ -176,7 +176,7 @@ public class SqlHadoopTest extends JetSqlTestSupport {
 
         sqlService.execute("INSERT INTO " + name + " VALUES (1, 'Alice'), (2, 'Bob')");
 
-        assertRowsEventuallyAnyOrder(
+        assertRowsEventuallyInAnyOrder(
                 "SELECT * FROM " + name,
                 asList(
                         new Row(1L, "Alice")
@@ -198,7 +198,7 @@ public class SqlHadoopTest extends JetSqlTestSupport {
                 + ")"
         );
 
-        assertRowsEventuallyAnyOrder(
+        assertRowsEventuallyInAnyOrder(
                 "SELECT username, age FROM " + name,
                 asList(
                         new Row("User0", 0)

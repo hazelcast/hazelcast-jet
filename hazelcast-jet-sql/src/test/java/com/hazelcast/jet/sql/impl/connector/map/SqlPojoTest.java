@@ -66,7 +66,7 @@ public class SqlPojoTest extends JetSqlTestSupport {
     @BeforeClass
     public static void setUpClass() {
         initialize(1, null);
-        sqlService = instance().getHazelcastInstance().getSql();
+        sqlService = instance().getSql();
     }
 
     @Test
@@ -81,7 +81,7 @@ public class SqlPojoTest extends JetSqlTestSupport {
                 createMap(BigInteger.valueOf(1), "Alice", BigInteger.valueOf(2), "Bob")
         );
 
-        assertRowsEventuallyAnyOrder(
+        assertRowsEventuallyInAnyOrder(
                 "SELECT * FROM " + name,
                 asList(
                         new Row(BigDecimal.valueOf(1), "Alice"),
@@ -103,7 +103,7 @@ public class SqlPojoTest extends JetSqlTestSupport {
                 createMap(new PersonId(1), new Person(1, "Alice"), new PersonId(2), new Person(0, "Bob"))
         );
 
-        assertRowsEventuallyAnyOrder(
+        assertRowsEventuallyInAnyOrder(
                 "SELECT * FROM " + name,
                 asList(
                         new Row(1, "Alice"),
@@ -121,7 +121,7 @@ public class SqlPojoTest extends JetSqlTestSupport {
                 "INSERT OVERWRITE " + name + " VALUES (null, null)",
                 createMap(new PersonId(), new Person()));
 
-        assertRowsEventuallyAnyOrder(
+        assertRowsEventuallyInAnyOrder(
                 "SELECT * FROM " + name,
                 singletonList(new Row(0, null))
         );
@@ -137,7 +137,7 @@ public class SqlPojoTest extends JetSqlTestSupport {
                 createMap(new PersonId(1), new Person(0, "Alice"))
         );
 
-        assertRowsEventuallyAnyOrder(
+        assertRowsEventuallyInAnyOrder(
                 "SELECT * FROM " + name,
                 singletonList(new Row(1, "Alice"))
         );
@@ -164,7 +164,7 @@ public class SqlPojoTest extends JetSqlTestSupport {
                 createMap(new PersonId(1), new Person(2, "Alice"))
         );
 
-        assertRowsEventuallyAnyOrder(
+        assertRowsEventuallyInAnyOrder(
                 "SELECT key_id, value_id, name FROM " + name,
                 singletonList(new Row(1, 2, "Alice"))
         );
@@ -192,7 +192,7 @@ public class SqlPojoTest extends JetSqlTestSupport {
         sqlService.execute("INSERT OVERWRITE " + name + " (id, name, ssn) VALUES (2, 'Bob', 123456789)");
 
         // assert both - initial & evolved - records are correctly read
-        assertRowsEventuallyAnyOrder(
+        assertRowsEventuallyInAnyOrder(
                 "SELECT id, name, ssn FROM " + name,
                 asList(
                         new Row(1, "Alice", null),
@@ -228,7 +228,7 @@ public class SqlPojoTest extends JetSqlTestSupport {
                 )
         );
 
-        assertRowsEventuallyAnyOrder(
+        assertRowsEventuallyInAnyOrder(
                 "SELECT * FROM " + name,
                 asList(
                         new Row(1, "Alice", 123456789L),
@@ -338,7 +338,7 @@ public class SqlPojoTest extends JetSqlTestSupport {
                                      .toOffsetDateTime()
                 )));
 
-        assertRowsEventuallyAnyOrder(
+        assertRowsEventuallyInAnyOrder(
                 "SELECT"
                         + " __key"
                         + ", string"

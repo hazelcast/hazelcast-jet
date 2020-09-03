@@ -40,7 +40,7 @@ public class SqlFileTest extends JetSqlTestSupport {
     @BeforeClass
     public static void setUpClass() {
         initialize(1, null);
-        sqlService = instance().getHazelcastInstance().getSql();
+        sqlService = instance().getSql();
     }
 
     @Before
@@ -60,7 +60,7 @@ public class SqlFileTest extends JetSqlTestSupport {
 
     @Test
     public void select_unicodeConstant() {
-        assertRowsEventuallyAnyOrder(
+        assertRowsEventuallyInAnyOrder(
                 "SELECT '喷气式飞机' FROM " + name,
                 asList(
                         new Row("喷气式飞机"),
@@ -71,7 +71,7 @@ public class SqlFileTest extends JetSqlTestSupport {
 
     @Test
     public void fullScan() {
-        assertRowsEventuallyAnyOrder(
+        assertRowsEventuallyInAnyOrder(
                 "SELECT age, username FROM " + name,
                 asList(
                         new Row(0, "User0"),
@@ -82,7 +82,7 @@ public class SqlFileTest extends JetSqlTestSupport {
 
     @Test
     public void fullScan_star() {
-        assertRowsEventuallyAnyOrder(
+        assertRowsEventuallyInAnyOrder(
                 "SELECT * FROM " + name,
                 asList(
                         new Row("User0", 0),
@@ -93,7 +93,7 @@ public class SqlFileTest extends JetSqlTestSupport {
 
     @Test
     public void fullScan_filter1() {
-        assertRowsEventuallyAnyOrder(
+        assertRowsEventuallyInAnyOrder(
                 "SELECT username FROM " + name + " WHERE age=1",
                 singletonList(new Row("User1"))
         );
@@ -101,7 +101,7 @@ public class SqlFileTest extends JetSqlTestSupport {
 
     @Test
     public void fullScan_filter2() {
-        assertRowsEventuallyAnyOrder(
+        assertRowsEventuallyInAnyOrder(
                 "SELECT username FROM " + name + " WHERE age=1 or username='User0'",
                 asList(
                         new Row("User0"),
@@ -112,7 +112,7 @@ public class SqlFileTest extends JetSqlTestSupport {
 
     @Test
     public void fullScan_projection1() {
-        assertRowsEventuallyAnyOrder(
+        assertRowsEventuallyInAnyOrder(
                 "SELECT upper(username) FROM " + name + " WHERE age=1",
                 singletonList(new Row("USER1"))
         );
@@ -120,7 +120,7 @@ public class SqlFileTest extends JetSqlTestSupport {
 
     @Test
     public void fullScan_projection2() {
-        assertRowsEventuallyAnyOrder(
+        assertRowsEventuallyInAnyOrder(
                 "SELECT username FROM " + name + " WHERE upper(username)='USER1'",
                 singletonList(new Row("User1"))
         );
@@ -128,7 +128,7 @@ public class SqlFileTest extends JetSqlTestSupport {
 
     @Test
     public void fullScan_projection3() {
-        assertRowsEventuallyAnyOrder(
+        assertRowsEventuallyInAnyOrder(
                 "SELECT name FROM (SELECT upper(username) name FROM " + name + ") WHERE name='USER1'",
                 singletonList(new Row("USER1"))
         );
@@ -136,7 +136,7 @@ public class SqlFileTest extends JetSqlTestSupport {
 
     @Test
     public void fullScan_projection4() {
-        assertRowsEventuallyAnyOrder(
+        assertRowsEventuallyInAnyOrder(
                 "SELECT upper(username) FROM " + name + " WHERE upper(username)='USER1'",
                 singletonList(new Row("USER1"))
         );
@@ -144,7 +144,7 @@ public class SqlFileTest extends JetSqlTestSupport {
 
     @Test
     public void file_tableFunction() {
-        assertRowsEventuallyAnyOrder(
+        assertRowsEventuallyInAnyOrder(
                 "SELECT username, age FROM TABLE (" +
                         "FILE (format => 'avro', path => '" + RESOURCES_PATH + "', glob => 'users.avro')" +
                         ")",

@@ -30,7 +30,7 @@ public class SqlTest extends JetSqlTestSupport {
 
     @Test
     public void supportsValues() {
-        assertRowsEventuallyAnyOrder(
+        assertRowsEventuallyInAnyOrder(
                 "SELECT a - b FROM (VALUES (1, 2), (3, 5), (7, 11)) AS t (a, b) WHERE a + b > 4",
                 asList(
                         new Row((byte) -2),

@@ -46,7 +46,7 @@ public class SqlAvroTest extends JetSqlTestSupport {
     @BeforeClass
     public static void setUpClass() {
         initialize(1, null);
-        sqlService = instance().getHazelcastInstance().getSql();
+        sqlService = instance().getSql();
     }
 
     @Test
@@ -62,7 +62,7 @@ public class SqlAvroTest extends JetSqlTestSupport {
                 + ")"
         );
 
-        assertRowsEventuallyAnyOrder(
+        assertRowsEventuallyInAnyOrder(
                 "SELECT * FROM " + name,
                 singletonList(new Row((Object) null))
         );
@@ -81,7 +81,7 @@ public class SqlAvroTest extends JetSqlTestSupport {
                 + ")"
         );
 
-        assertRowsEventuallyAnyOrder(
+        assertRowsEventuallyInAnyOrder(
                 "SELECT name FROM " + name,
                 singletonList(new Row("string"))
         );
@@ -131,7 +131,7 @@ public class SqlAvroTest extends JetSqlTestSupport {
                 + ")"
         );
 
-        assertRowsEventuallyAnyOrder(
+        assertRowsEventuallyInAnyOrder(
                 "SELECT * FROM " + name,
                 singletonList(new Row(
                         "string"
@@ -165,7 +165,7 @@ public class SqlAvroTest extends JetSqlTestSupport {
                 + ")"
         );
 
-        assertRowsEventuallyAnyOrder(
+        assertRowsEventuallyInAnyOrder(
                 "SELECT string, \"boolean\", \"int\", long, \"float\", \"double\", \"null\" FROM " + name,
                 singletonList(new Row(
                         "string"
@@ -178,7 +178,7 @@ public class SqlAvroTest extends JetSqlTestSupport {
                 ))
         );
 
-        assertRowsEventuallyAnyOrder(
+        assertRowsEventuallyInAnyOrder(
                 "SELECT 1 FROM " + name + " WHERE object IS NOT NULL",
                 singletonList(new Row((byte) 1))
         );

@@ -81,7 +81,7 @@ public class SqlPortableTest extends JetSqlTestSupport {
     // reusing ClassDefinitions as schema does not change
     public static void beforeClass() {
         initialize(1, null);
-        sqlService = instance().getHazelcastInstance().getSql();
+        sqlService = instance().getSql();
 
         serializationService = ((HazelcastInstanceImpl) instance().getHazelcastInstance()).getSerializationService();
 
@@ -147,7 +147,7 @@ public class SqlPortableTest extends JetSqlTestSupport {
         // TODO: requires explicit column list due to hidden fields...
         sqlService.execute("INSERT OVERWRITE partitioned." + name + " (id, name) VALUES (2, 'Bob')");
 
-        assertRowsEventuallyAnyOrder(
+        assertRowsEventuallyInAnyOrder(
                 "SELECT * FROM " + name,
                 asList(
                         new Row(1, "Alice"),
@@ -170,7 +170,7 @@ public class SqlPortableTest extends JetSqlTestSupport {
         InternalGenericRecord valueReader = serializationService.readAsInternalGenericRecord(entry.getValue());
         assertThat(valueReader.readUTF("name")).isNull();
 
-        assertRowsEventuallyAnyOrder(
+        assertRowsEventuallyInAnyOrder(
                 "SELECT * FROM " + name,
                 singletonList(new Row(0, null))
         );
@@ -191,7 +191,7 @@ public class SqlPortableTest extends JetSqlTestSupport {
         assertThat(valueReader.readInt("id")).isEqualTo(0);
         assertThat(valueReader.readUTF("name")).isEqualTo("Alice");
 
-        assertRowsEventuallyAnyOrder(
+        assertRowsEventuallyInAnyOrder(
                 "SELECT * FROM " + name,
                 singletonList(new Row(1, "Alice"))
         );
@@ -227,7 +227,7 @@ public class SqlPortableTest extends JetSqlTestSupport {
         assertThat(valueReader.readInt("id")).isEqualTo(2);
         assertThat(valueReader.readUTF("name")).isEqualTo("Alice");
 
-        assertRowsEventuallyAnyOrder(
+        assertRowsEventuallyInAnyOrder(
                 "SELECT key_id, value_id, name FROM " + name,
                 singletonList(new Row(1, 2, "Alice"))
         );
@@ -259,7 +259,7 @@ public class SqlPortableTest extends JetSqlTestSupport {
         sqlService.execute("INSERT OVERWRITE " + name + " VALUES (2, 'Bob', 123456789)");
 
         // assert both - initial & evolved - records are correctly read
-        assertRowsEventuallyAnyOrder(
+        assertRowsEventuallyInAnyOrder(
                 "SELECT * FROM " + name,
                 asList(
                         new Row(1, "Alice", null),
@@ -307,7 +307,7 @@ public class SqlPortableTest extends JetSqlTestSupport {
         sqlService.execute("INSERT OVERWRITE " + name + " VALUES (2, 'Bob', null)");
 
         // assert both - initial & evolved - records are correctly read
-        assertRowsEventuallyAnyOrder(
+        assertRowsEventuallyInAnyOrder(
                 "SELECT * FROM " + name,
                 asList(
                         new Row(1, "Alice", 123456789L),
@@ -361,7 +361,7 @@ public class SqlPortableTest extends JetSqlTestSupport {
         // TODO: assert BigDecimal types when/if supported
         // TODO: assert temporal types when/if supported
 
-        assertRowsEventuallyAnyOrder(
+        assertRowsEventuallyInAnyOrder(
                 "SELECT * FROM " + name,
                 singletonList(new Row(
                         BigDecimal.valueOf(13),

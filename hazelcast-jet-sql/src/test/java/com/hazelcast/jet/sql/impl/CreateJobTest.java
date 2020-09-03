@@ -45,7 +45,7 @@ public class CreateJobTest extends SimpleTestInClusterSupport {
     @BeforeClass
     public static void beforeClass() {
         initialize(1, null);
-        sqlService = instance().getHazelcastInstance().getSql();
+        sqlService = instance().getSql();
     }
 
     @Test
