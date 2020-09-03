@@ -31,7 +31,6 @@ data: {
       "com.hazelcast.jet.sql.impl.parse.SqlExtendedInsertKeyword"
       "com.hazelcast.jet.sql.impl.parse.SqlMappingColumn"
       "com.hazelcast.jet.sql.impl.parse.SqlOption"
-      "com.hazelcast.jet.sql.impl.parse.SqlShowExternalMappings"
       "com.hazelcast.sql.impl.QueryException"
       "com.hazelcast.sql.impl.type.QueryDataType"
       "java.util.LinkedHashMap"
@@ -389,7 +388,6 @@ data: {
     # Return type of method implementation should be 'SqlNode'.
     # Example: SqlShowDatabases(), SqlShowTables().
     statementParserMethods: [
-      "SqlShowExternalMappings()"
       "SqlExtendedInsert()"
     ]
 

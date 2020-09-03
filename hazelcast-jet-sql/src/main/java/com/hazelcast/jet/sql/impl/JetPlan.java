@@ -99,20 +99,6 @@ interface JetPlan extends SqlPlan {
         }
     }
 
-    class ShowExternalMappingsPlan implements JetPlan {
-
-        private final JetPlanExecutor planExecutor;
-
-        ShowExternalMappingsPlan(JetPlanExecutor planExecutor) {
-            this.planExecutor = planExecutor;
-        }
-
-        @Override
-        public SqlResult execute() {
-            return planExecutor.execute(this);
-        }
-    }
-
     class CreateJobPlan implements JetPlan {
 
         private final String name;

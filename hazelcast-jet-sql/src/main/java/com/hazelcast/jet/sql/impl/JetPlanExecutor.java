@@ -23,25 +23,14 @@ import com.hazelcast.jet.sql.impl.JetPlan.CreateJobPlan;
 import com.hazelcast.jet.sql.impl.JetPlan.DropExternalMappingPlan;
 import com.hazelcast.jet.sql.impl.JetPlan.DropJobPlan;
 import com.hazelcast.jet.sql.impl.JetPlan.ExecutionPlan;
-import com.hazelcast.jet.sql.impl.JetPlan.ShowExternalMappingsPlan;
 import com.hazelcast.jet.sql.impl.schema.MappingCatalog;
-import com.hazelcast.sql.SqlColumnMetadata;
-import com.hazelcast.sql.SqlColumnType;
 import com.hazelcast.sql.SqlResult;
-import com.hazelcast.sql.SqlRow;
-import com.hazelcast.sql.SqlRowMetadata;
 import com.hazelcast.sql.impl.QueryException;
 import com.hazelcast.sql.impl.QueryId;
 import com.hazelcast.sql.impl.QueryResultProducer;
 import com.hazelcast.sql.impl.SqlResultImpl;
-import com.hazelcast.sql.impl.SqlRowImpl;
-import com.hazelcast.sql.impl.row.HeapRow;
 
-import java.util.List;
 import java.util.Map;
-
-import static java.util.Arrays.asList;
-import static java.util.stream.Collectors.toList;
 
 class JetPlanExecutor {
 
@@ -67,21 +56,6 @@ class JetPlanExecutor {
     SqlResult execute(DropExternalMappingPlan plan) {
         catalog.removeMapping(plan.name(), plan.ifExists());
         return SqlResultImpl.createUpdateCountResult(-1);
-    }
-
-    SqlResult execute(@SuppressWarnings("unused") ShowExternalMappingsPlan plan) {
-        SqlRowMetadata metadata = new SqlRowMetadata(asList(
-                new SqlColumnMetadata("name", SqlColumnType.VARCHAR),
-                new SqlColumnMetadata("ddl", SqlColumnType.VARCHAR)));
-        List<SqlRow> rows = catalog.getMappings()
-            .map(table -> new SqlRowImpl(metadata, new HeapRow(new Object[]{table.name(), table.ddl()})))
-            .collect(toList());
-
-        return new JetStaticSqlResultImpl(
-                QueryId.create(jetInstance.getHazelcastInstance().getLocalEndpoint().getUuid()),
-                rows,
-                metadata
-        );
     }
 
     SqlResult execute(CreateJobPlan plan) {
@@ -127,7 +101,7 @@ class JetPlanExecutor {
                 return SqlResultImpl.createUpdateCountResult(-1);
             }
         } else {
-            return new JetDynamicSqlResultImpl(plan.getQueryId(), queryResultProducer, plan.getRowMetadata());
+            return new JetSqlResultImpl(plan.getQueryId(), queryResultProducer, plan.getRowMetadata());
         }
     }
 }

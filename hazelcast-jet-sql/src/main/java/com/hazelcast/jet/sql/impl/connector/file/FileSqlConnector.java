@@ -107,7 +107,7 @@ public class FileSqlConnector implements SqlConnector {
         return true;
     }
 
-    @Nullable
+    @Nonnull
     @Override
     public Vertex fullScanReader(
             @Nonnull DAG dag,

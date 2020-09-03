@@ -29,6 +29,7 @@ import com.hazelcast.jet.sql.impl.schema.MappingField;
 import com.hazelcast.sql.impl.expression.Expression;
 import com.hazelcast.sql.impl.schema.TableField;
 import com.hazelcast.sql.impl.type.QueryDataType;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
@@ -74,6 +75,8 @@ final class RemoteJsonMetadataResolver implements JsonMetadataResolver {
         }
     }
 
+    @SuppressFBWarnings(value = "RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE",
+            justification = "it's a false positive since java 11: https://github.com/spotbugs/spotbugs/issues/756")
     private static String line(String directory, String charset, Configuration configuration) throws IOException {
         Path path = new Path(directory);
         try (FileSystem filesystem = path.getFileSystem(configuration)) {

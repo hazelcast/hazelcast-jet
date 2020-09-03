@@ -95,16 +95,16 @@ public class JetService implements ManagedService, MembershipAwareService, LiveO
         this.liveOperationRegistry = new LiveOperationRegistry();
         this.shutdownHookThread = shutdownHookThread(node);
 
-        JetSqlCoreBackend jetSqlCoreBackend;
+        JetSqlCoreBackend sqlCoreBackend;
         try {
             Class<?> jetSqlServiceClass = Class.forName("com.hazelcast.jet.sql.impl.JetSqlCoreBackendImpl");
-            jetSqlCoreBackend = (JetSqlCoreBackend) jetSqlServiceClass.newInstance();
+            sqlCoreBackend = (JetSqlCoreBackend) jetSqlServiceClass.newInstance();
         } catch (ClassNotFoundException e) {
-            jetSqlCoreBackend = null;
+            sqlCoreBackend = null;
         } catch (ReflectiveOperationException e) {
             throw new RuntimeException(e);
         }
-        this.sqlCoreBackend = jetSqlCoreBackend;
+        this.sqlCoreBackend = sqlCoreBackend;
     }
 
     // ManagedService

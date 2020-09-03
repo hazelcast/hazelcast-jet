@@ -17,7 +17,6 @@
 package com.hazelcast.jet.sql.impl.schema;
 
 import com.hazelcast.jet.sql.JetSqlTestSupport;
-import com.hazelcast.jet.sql.impl.connector.map.IMapSqlConnector;
 import com.hazelcast.jet.sql.impl.schema.model.IdentifiedPerson;
 import com.hazelcast.jet.sql.impl.schema.model.Person;
 import com.hazelcast.sql.HazelcastSqlException;
@@ -28,17 +27,12 @@ import org.junit.Test;
 
 import java.util.Map;
 
-import static com.hazelcast.jet.sql.SqlConnector.JAVA_SERIALIZATION_FORMAT;
-import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.OPTION_KEY_CLASS;
-import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.OPTION_SERIALIZATION_KEY_FORMAT;
-import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.OPTION_SERIALIZATION_VALUE_FORMAT;
-import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.OPTION_VALUE_CLASS;
-import static java.lang.System.lineSeparator;
-import static java.util.Collections.singletonList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public class SqlMappingTest extends JetSqlTestSupport {
+
+    private static final String MAPPING_NAME = "mapping_name";
 
     private static SqlService sqlService;
 
@@ -49,19 +43,16 @@ public class SqlMappingTest extends JetSqlTestSupport {
     }
 
     @Test
-    public void when_tableIsDeclared_then_itIsAvailable() {
-        // given
-        String name = createRandomName();
-
+    public void when_mappingIsDeclared_then_itIsAvailable() {
         // when
-        SqlResult createResult = sqlService.execute(javaSerializableMapDdl(name, Integer.class, String.class));
+        SqlResult createResult = sqlService.execute(javaSerializableMapDdl(MAPPING_NAME, Integer.class, String.class));
 
         // then
         assertThat(createResult.isUpdateCount()).isTrue();
         assertThat(createResult.updateCount()).isEqualTo(-1);
 
         // when
-        SqlResult updateResult = sqlService.execute("SELECT __key, this FROM public." + name);
+        SqlResult updateResult = sqlService.execute("SELECT __key, this FROM public." + MAPPING_NAME);
 
         // then
         assertThat(updateResult.isUpdateCount()).isFalse();
@@ -69,74 +60,50 @@ public class SqlMappingTest extends JetSqlTestSupport {
     }
 
     @Test
-    public void when_tableIsDeclared_then_itCanBeListed() {
+    public void when_mappingIsDeclared_then_itsDefinitionHasPrecedenceOverDiscoveredOne() {
         // given
-        String name = createRandomName();
-        String sql = "CREATE EXTERNAL MAPPING \"" + name + "\" (" + lineSeparator()
-                + "  \"__key\" INT EXTERNAL NAME \"__key\"," + lineSeparator()
-                + "  \"this\" VARCHAR EXTERNAL NAME \"this\"" + lineSeparator()
-                + ")" + lineSeparator()
-                + "TYPE \"" + IMapSqlConnector.TYPE_NAME + "\"" + lineSeparator()
-                + "OPTIONS (" + lineSeparator()
-                + "  \"" + OPTION_SERIALIZATION_KEY_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'," + lineSeparator()
-                + "  \"" + OPTION_KEY_CLASS + "\" '" + Integer.class.getName() + "'," + lineSeparator()
-                + "  \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'," + lineSeparator()
-                + "  \"" + OPTION_VALUE_CLASS + "\" '" + String.class.getName() + "'" + lineSeparator()
-                + ")";
-        sqlService.execute(sql);
+        sqlService.execute(javaSerializableMapDdl(MAPPING_NAME, Integer.class, Person.class));
 
-        // when
-        assertRowsEventuallyInAnyOrder(
-                "SHOW EXTERNAL MAPPINGS",
-                singletonList(new JetSqlTestSupport.Row(name, sql))
-        );
-    }
-
-    @Test
-    public void when_tableIsDeclared_then_itsDefinitionHasPrecedenceOverDiscoveredOne() {
-        // given
-        String name = createRandomName();
-        sqlService.execute(javaSerializableMapDdl(name, Integer.class, Person.class));
-
-        Map<Integer, Person> map = instance().getMap(name);
+        Map<Integer, Person> map = instance().getMap(MAPPING_NAME);
         map.put(1, new IdentifiedPerson(2, "Alice"));
 
         // when
         // then
-        assertThatThrownBy(() -> sqlService.execute("SELECT id FROM " + name))
+        assertThatThrownBy(() -> sqlService.execute("SELECT id FROM " + MAPPING_NAME))
                 .isInstanceOf(HazelcastSqlException.class);
     }
 
     @Test
-    public void when_tableIsDropped_then_itIsNotAvailable() {
+    public void when_mappingIsDropped_then_itIsNotAvailable() {
         // given
-        String name = createRandomName();
-        sqlService.execute(javaSerializableMapDdl(name, Integer.class, Person.class));
+        sqlService.execute(javaSerializableMapDdl(MAPPING_NAME, Integer.class, Person.class));
 
         // when
-        sqlService.execute("DROP EXTERNAL MAPPING " + name);
+        SqlResult updateResult = sqlService.execute("DROP EXTERNAL MAPPING " + MAPPING_NAME);
 
         // then
-        assertThatThrownBy(() -> sqlService.execute("SELECT * FROM public." + name))
+        assertThat(updateResult.isUpdateCount()).isTrue();
+        assertThat(updateResult.updateCount()).isEqualTo(-1);
+        assertThatThrownBy(() -> sqlService.execute("SELECT * FROM public." + MAPPING_NAME))
                 .isInstanceOf(HazelcastSqlException.class);
     }
 
     @Test
     public void when_schemaNameUsed_then_rejected() {
         assertThatThrownBy(() ->
-                sqlService.execute(javaSerializableMapDdl("schema." + createRandomName(), Long.class, Long.class)))
+                sqlService.execute(javaSerializableMapDdl("schema.m", Long.class, Long.class)))
                 .hasMessageContaining("Encountered \".\" at line 1, column 22");
     }
 
     @Test
     public void when_emptyColumnList_then_fail() {
-        assertThatThrownBy(() -> sqlService.execute("CREATE MAPPING t() TYPE t"))
+        assertThatThrownBy(() -> sqlService.execute("CREATE MAPPING m() TYPE m"))
                 .hasMessageContaining("Encountered \")\" at line 1");
     }
 
     @Test
     public void when_badType_then_fail() {
-        assertThatThrownBy(() -> sqlService.execute("CREATE MAPPING t TYPE TooBad"))
+        assertThatThrownBy(() -> sqlService.execute("CREATE MAPPING m TYPE TooBad"))
                 .hasMessageContaining("Unknown connector type: TooBad");
     }
 
@@ -146,9 +113,5 @@ public class SqlMappingTest extends JetSqlTestSupport {
         sqlService.execute("CREATE MAPPING t2 TYPE teststream");
         sqlService.execute("CREATE MAPPING t3 TYPE TESTSTREAM");
         sqlService.execute("CREATE MAPPING t4 TYPE tEsTsTrEaM");
-    }
-
-    private static String createRandomName() {
-        return "schema_" + randomString().replace('-', '_');
     }
 }

@@ -281,19 +281,6 @@ SqlDrop SqlDropExternalMapping(Span span, boolean replace) :
 }
 
 /**
-* Parses SHOW EXTERNAL MAPPINGS statement.
-*/
-SqlShowExternalMappings SqlShowExternalMappings() :
-{
-}
-{
-    <SHOW> [ <EXTERNAL> ] <MAPPINGS>
-    {
-        return new SqlShowExternalMappings(getPos());
-    }
-}
-
-/**
  * Parses an extended INSERT statement.
  */
 SqlExtendedInsert SqlExtendedInsert() :

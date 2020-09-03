@@ -46,7 +46,7 @@ public class ClientSqlTest extends JetSqlTestSupport {
     @Test
     public void test_jetJobReturnRowsToClientFrom() {
         JetInstance client = factory().newClient();
-        SqlService sqlService = client.getHazelcastInstance().getSql();
+        SqlService sqlService = client.getSql();
 
         sqlService.execute("CREATE MAPPING t TYPE " + TestBatchSqlConnector.TYPE_NAME);
 
@@ -63,7 +63,7 @@ public class ClientSqlTest extends JetSqlTestSupport {
     @Test
     public void when_clientDisconnects_then_jobCancelled() {
         JetInstance client = factory().newClient();
-        SqlService sqlService = client.getHazelcastInstance().getSql();
+        SqlService sqlService = client.getSql();
 
         sqlService.execute("CREATE MAPPING t TYPE " + TestStreamSqlConnector.TYPE_NAME);
         sqlService.execute("SELECT * FROM t");
@@ -81,7 +81,7 @@ public class ClientSqlTest extends JetSqlTestSupport {
     @Test
     public void when_jobFails_then_clientFindsOut() {
         JetInstance client = factory().newClient();
-        SqlService sqlService = client.getHazelcastInstance().getSql();
+        SqlService sqlService = client.getSql();
 
         sqlService.execute("CREATE MAPPING t TYPE " + FailingTestSqlConnector.TYPE_NAME);
         assertThatThrownBy(() -> sqlService.execute("SELECT * FROM t"))

@@ -162,14 +162,14 @@ public interface SqlConnector {
      * @param predicate  SQL expression to filter the rows
      * @param projection list of field names to return
      */
-    @Nullable
+    @Nonnull
     default Vertex fullScanReader(
             @Nonnull DAG dag,
             // TODO convert back to JetTable after we can read maps using IMDG code
             @Nonnull Table table,
             @Nullable String timestampField,
             // TODO: do we want to expose Expression to the user ?
-            @Nonnull Expression<Boolean> predicate,
+            @Nullable Expression<Boolean> predicate,
             @Nonnull List<Expression<?>> projection) {
         assert !supportsFullScanReader();
         throw new UnsupportedOperationException("Full scan reader not supported for " + getClass().getName());
@@ -194,7 +194,7 @@ public interface SqlConnector {
     /**
      * Returns the supplier for the sink processor.
      */
-    @Nullable
+    @Nonnull
     default Vertex sink(
             @Nonnull DAG dag,
             @Nonnull Table table) {

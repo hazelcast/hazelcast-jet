@@ -43,6 +43,7 @@ public class SqlOption extends SqlCall {
 
     public SqlOption(SqlIdentifier key, SqlNode value, SqlParserPos pos) {
         super(pos);
+
         this.key = requireNonNull(key, "Option key is missing");
         this.value = requireNonNull(value, "Option value is missing");
     }

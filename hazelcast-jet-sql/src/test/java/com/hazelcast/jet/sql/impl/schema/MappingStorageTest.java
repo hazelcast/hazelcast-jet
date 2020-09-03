@@ -58,7 +58,7 @@ public class MappingStorageTest extends SimpleTestInClusterSupport {
 
         storage.put(name, mapping(name, "type"));
 
-        assertThat(storage.values().filter(m -> m.name().equals(name))).isNotEmpty();
+        assertThat(storage.values().stream().filter(m -> m.name().equals(name))).isNotEmpty();
     }
 
     @Test
@@ -68,8 +68,8 @@ public class MappingStorageTest extends SimpleTestInClusterSupport {
         assertThat(storage.putIfAbsent(name, mapping(name, "type-1"))).isTrue();
         assertThat(storage.putIfAbsent(name, mapping(name, "type-2"))).isFalse();
 
-        assertThat(storage.values().filter(m -> m.type().equals("type-1"))).isNotEmpty();
-        assertThat(storage.values().filter(m -> m.type().equals("type-2"))).isEmpty();
+        assertThat(storage.values().stream().filter(m -> m.type().equals("type-1"))).isNotEmpty();
+        assertThat(storage.values().stream().filter(m -> m.type().equals("type-2"))).isEmpty();
     }
 
     @Test
@@ -80,7 +80,7 @@ public class MappingStorageTest extends SimpleTestInClusterSupport {
 
         assertThat(storage.remove(name)).isTrue();
 
-        assertThat(storage.values().filter(m -> m.name().equals(name))).isEmpty();
+        assertThat(storage.values().stream().filter(m -> m.name().equals(name))).isEmpty();
     }
 
     @Test

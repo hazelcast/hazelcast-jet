@@ -18,6 +18,8 @@ package com.hazelcast.jet.sql.impl.schema;
 
 import com.hazelcast.jet.sql.SqlConnector;
 import com.hazelcast.jet.sql.impl.connector.SqlConnectorCache;
+import com.hazelcast.jet.sql.impl.connector.schema.MappingColumnsTable;
+import com.hazelcast.jet.sql.impl.connector.schema.MappingsTable;
 import com.hazelcast.spi.impl.NodeEngine;
 import com.hazelcast.sql.impl.QueryException;
 import com.hazelcast.sql.impl.schema.Table;
@@ -28,18 +30,19 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Stream;
 
 import static com.hazelcast.sql.impl.QueryUtils.CATALOG;
 import static java.util.Arrays.asList;
-import static java.util.Collections.singletonList;
-import static java.util.stream.Collectors.toList;
 
 public class MappingCatalog implements TableResolver {
 
+    private static final String SCHEMA_NAME_INFORMATION_SCHEMA = "information_schema";
     private static final String SCHEMA_NAME_PUBLIC = "public";
 
-    private static final List<List<String>> SEARCH_PATHS = singletonList(asList(CATALOG, SCHEMA_NAME_PUBLIC));
+    private static final List<List<String>> SEARCH_PATHS = asList(
+            asList(CATALOG, SCHEMA_NAME_INFORMATION_SCHEMA),
+            asList(CATALOG, SCHEMA_NAME_PUBLIC)
+    );
 
     private final NodeEngine nodeEngine;
     private final MappingStorage storage;
@@ -81,11 +84,6 @@ public class MappingCatalog implements TableResolver {
         }
     }
 
-    @Nonnull
-    public Stream<Mapping> getMappings() {
-        return storage.values();
-    }
-
     public void removeMapping(String name, boolean ifExists) {
         if (!storage.remove(name) && !ifExists) {
             throw QueryException.error("'" + name + "' mapping does not exist");
@@ -100,13 +98,22 @@ public class MappingCatalog implements TableResolver {
     @Nonnull
     @Override
     public List<Table> getTables() {
-        return storage.values()
-                      .map(this::toTable)
-                      .collect(toList());
+        List<Table> tables = new ArrayList<>();
+        List<MappingDefinition> definitions = new ArrayList<>();
+        for (Mapping mapping : storage.values()) {
+            Table table = toTable(mapping);
+            MappingDefinition definition = new MappingDefinition(table, mapping.type(), mapping.options());
+
+            tables.add(table);
+            definitions.add(definition);
+        }
+        tables.add(new MappingsTable(CATALOG, SCHEMA_NAME_INFORMATION_SCHEMA, definitions));
+        tables.add(new MappingColumnsTable(CATALOG, SCHEMA_NAME_INFORMATION_SCHEMA, definitions));
+        return tables;
     }
 
-    public Table toTable(Mapping table) {
-        SqlConnector connector = connectorCache.forType(table.type());
-        return connector.createTable(nodeEngine, SCHEMA_NAME_PUBLIC, table.name(), table.options(), table.fields());
+    private Table toTable(Mapping mapping) {
+        SqlConnector connector = connectorCache.forType(mapping.type());
+        return connector.createTable(nodeEngine, SCHEMA_NAME_PUBLIC, mapping.name(), mapping.options(), mapping.fields());
     }
 }

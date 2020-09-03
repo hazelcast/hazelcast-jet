@@ -18,8 +18,8 @@ package com.hazelcast.jet.sql.impl.schema;
 
 import com.hazelcast.spi.impl.NodeEngine;
 
+import java.util.Collection;
 import java.util.Map;
-import java.util.stream.Stream;
 
 public class MappingStorage {
 
@@ -39,8 +39,8 @@ public class MappingStorage {
         return storage().putIfAbsent(name, mapping) == null;
     }
 
-    Stream<Mapping> values() {
-        return storage().values().stream();
+    Collection<Mapping> values() {
+        return storage().values();
     }
 
     boolean remove(String name) {

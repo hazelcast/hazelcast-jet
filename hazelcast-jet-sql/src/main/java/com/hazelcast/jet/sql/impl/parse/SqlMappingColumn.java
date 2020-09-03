@@ -43,6 +43,7 @@ public class SqlMappingColumn extends SqlCall {
 
     public SqlMappingColumn(SqlIdentifier name, SqlDataType type, SqlIdentifier externalName, SqlParserPos pos) {
         super(pos);
+
         this.name = requireNonNull(name, "Column name should not be null");
         this.type = requireNonNull(type, "Column type should not be null");
         this.externalName = externalName;

@@ -19,7 +19,6 @@ package com.hazelcast.jet.sql.impl.validate;
 import com.hazelcast.jet.sql.SqlConnector;
 import com.hazelcast.jet.sql.impl.parse.SqlCreateJob;
 import com.hazelcast.jet.sql.impl.parse.SqlExtendedInsert;
-import com.hazelcast.jet.sql.impl.parse.SqlShowExternalMappings;
 import com.hazelcast.sql.impl.calcite.schema.HazelcastTable;
 import com.hazelcast.sql.impl.calcite.validate.HazelcastSqlValidator;
 import com.hazelcast.sql.impl.calcite.validate.types.HazelcastTypeFactory;
@@ -56,10 +55,6 @@ public class JetSqlValidator extends HazelcastSqlValidator {
 
         if (topNode.getKind().belongsTo(SqlKind.DDL)) {
             topNode.validate(this, getEmptyScope());
-            return topNode;
-        }
-
-        if (topNode instanceof SqlShowExternalMappings) {
             return topNode;
         }
 
@@ -106,24 +101,4 @@ public class JetSqlValidator extends HazelcastSqlValidator {
         insertNode.getSource().accept(visitor);
         return visitor.found;
     }
-
-    /*@Override
-    protected RelDataType createTargetRowType(
-            SqlValidatorTable table,
-            SqlNodeList targetColumnList,
-            boolean append) {
-        RelDataType targetRowType = super.createTargetRowType(table, targetColumnList, append);
-
-        HazelcastTable hazelcastTable = table.unwrap(HazelcastTable.class);
-        List<RelDataTypeField> originalFields = targetRowType.getFieldList();
-
-        List<RelDataTypeField> filteredFields = new ArrayList<>(originalFields.size());
-        for (RelDataTypeField field : originalFields) {
-            if (!hazelcastTable.isHidden(field.getName())) {
-                filteredFields.add(field);
-            }
-        }
-
-        return new RelRecordType(targetRowType.getStructKind(), filteredFields, targetRowType.isNullable());
-    }*/
 }

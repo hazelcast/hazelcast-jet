@@ -22,7 +22,6 @@ import com.hazelcast.jet.sql.impl.JetPlan.CreateJobPlan;
 import com.hazelcast.jet.sql.impl.JetPlan.DropExternalMappingPlan;
 import com.hazelcast.jet.sql.impl.JetPlan.DropJobPlan;
 import com.hazelcast.jet.sql.impl.JetPlan.ExecutionPlan;
-import com.hazelcast.jet.sql.impl.JetPlan.ShowExternalMappingsPlan;
 import com.hazelcast.jet.sql.impl.calcite.parser.JetSqlParser;
 import com.hazelcast.jet.sql.impl.convert.JetSqlToRelConverter;
 import com.hazelcast.jet.sql.impl.opt.OptUtils;
@@ -36,7 +35,6 @@ import com.hazelcast.jet.sql.impl.parse.SqlCreateExternalMapping;
 import com.hazelcast.jet.sql.impl.parse.SqlCreateJob;
 import com.hazelcast.jet.sql.impl.parse.SqlDropExternalMapping;
 import com.hazelcast.jet.sql.impl.parse.SqlDropJob;
-import com.hazelcast.jet.sql.impl.parse.SqlShowExternalMappings;
 import com.hazelcast.jet.sql.impl.schema.JetTable;
 import com.hazelcast.jet.sql.impl.schema.Mapping;
 import com.hazelcast.jet.sql.impl.schema.MappingField;
@@ -79,7 +77,7 @@ import java.util.List;
 
 import static java.util.stream.Collectors.toList;
 
-public class JetSqlBackend implements SqlBackend {
+class JetSqlBackend implements SqlBackend {
 
     private final NodeEngine nodeEngine;
 
@@ -141,8 +139,6 @@ public class JetSqlBackend implements SqlBackend {
             return toCreateTablePlan((SqlCreateExternalMapping) node);
         } else if (node instanceof SqlDropExternalMapping) {
             return toDropTablePlan((SqlDropExternalMapping) node);
-        } else if (node instanceof SqlShowExternalMappings) {
-            return toShowTablesPlan();
         } else if (node instanceof SqlCreateJob) {
             return toCreateJobPlan(parseResult, context);
         } else if (node instanceof SqlDropJob) {
@@ -175,10 +171,6 @@ public class JetSqlBackend implements SqlBackend {
 
     private SqlPlan toDropTablePlan(SqlDropExternalMapping sqlDropTable) {
         return new DropExternalMappingPlan(sqlDropTable.name(), sqlDropTable.ifExists(), planExecutor);
-    }
-
-    private SqlPlan toShowTablesPlan() {
-        return new ShowExternalMappingsPlan(planExecutor);
     }
 
     private SqlPlan toCreateJobPlan(QueryParseResult parseResult, OptimizerContext context) {

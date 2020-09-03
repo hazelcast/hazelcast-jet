@@ -30,6 +30,7 @@ import com.hazelcast.jet.sql.impl.schema.MappingField;
 import com.hazelcast.sql.impl.expression.Expression;
 import com.hazelcast.sql.impl.schema.TableField;
 import com.hazelcast.sql.impl.type.QueryDataType;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.avro.Schema;
 import org.apache.avro.file.DataFileReader;
 import org.apache.avro.generic.GenericDatumReader;
@@ -73,6 +74,8 @@ final class LocalAvroMetadataResolver implements AvroMetadataResolver {
         }
     }
 
+    @SuppressFBWarnings(value = "RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE",
+            justification = "it's a false positive since java 11: https://github.com/spotbugs/spotbugs/issues/756")
     private static Schema findAvroSchema(String directory, String glob) throws IOException {
         try (DirectoryStream<Path> directoryStream = Files.newDirectoryStream(Paths.get(directory), glob)) {
             for (Path path : directoryStream) { // TODO: directory check

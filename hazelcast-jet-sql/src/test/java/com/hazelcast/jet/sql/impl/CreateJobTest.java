@@ -148,7 +148,7 @@ public class CreateJobTest extends SimpleTestInClusterSupport {
     @Test
     public void when_clientDisconnects_then_jobContinues() {
         JetInstance client = factory().newClient();
-        SqlService sqlService = client.getHazelcastInstance().getSql();
+        SqlService sqlService = client.getSql();
 
         sqlService.execute("CREATE MAPPING src TYPE TestStream");
         sqlService.execute(javaSerializableMapDdl("dest", Long.class, Long.class));

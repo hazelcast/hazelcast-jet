@@ -28,6 +28,7 @@ import com.hazelcast.sql.impl.schema.TableField;
 import com.hazelcast.sql.impl.schema.map.MapTableField;
 import com.hazelcast.sql.impl.type.QueryDataType;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.stream.Collectors;
@@ -108,6 +109,25 @@ public final class ExpressionUtil {
             }
             return result;
         };
+    }
+
+    public static List<Object[]> evaluate(
+            Expression<Boolean> predicate,
+            List<Expression<?>> projection,
+            List<Object[]> rows
+    ) {
+        List<Object[]> evaluatedRows = new ArrayList<>();
+        for (Object[] values : rows) {
+            Row row = new HeapRow(values);
+            if (predicate == null || Boolean.TRUE.equals(evaluate(predicate, row))) {
+                Object[] result = new Object[projection.size()];
+                for (int i = 0; i < projection.size(); i++) {
+                    result[i] = evaluate(projection.get(i), row);
+                }
+                evaluatedRows.add(result);
+            }
+        }
+        return evaluatedRows;
     }
 
     public static <T> T evaluate(Expression<T> expression, Row row) {

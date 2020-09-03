@@ -16,13 +16,13 @@
 
 package com.hazelcast.jet.sql.impl.parse;
 
+import com.hazelcast.jet.sql.impl.type.QueryDataTypeUtils;
 import com.hazelcast.sql.impl.type.QueryDataType;
-import com.hazelcast.sql.impl.type.QueryDataTypeFamily;
 import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlWriter;
 import org.apache.calcite.sql.parser.SqlParserPos;
 
-import java.util.Objects;
+import static java.util.Objects.requireNonNull;
 
 public class SqlDataType extends SqlIdentifier {
 
@@ -30,7 +30,8 @@ public class SqlDataType extends SqlIdentifier {
 
     public SqlDataType(QueryDataType type, SqlParserPos pos) {
         super(type.toString(), pos);
-        this.type = Objects.requireNonNull(type);
+
+        this.type = requireNonNull(type);
     }
 
     public QueryDataType type() {
@@ -39,10 +40,6 @@ public class SqlDataType extends SqlIdentifier {
 
     @Override
     public void unparse(SqlWriter writer, int leftPrec, int rightPrec) {
-        if (type.getTypeFamily() == QueryDataTypeFamily.INTEGER) {
-            writer.keyword("INT");
-        } else {
-            writer.keyword(type.getTypeFamily().name().replace('_', ' '));
-        }
+        writer.keyword(QueryDataTypeUtils.toString(type));
     }
 }
