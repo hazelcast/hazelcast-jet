@@ -97,6 +97,7 @@ public interface WatermarkPolicy {
      *
      * @param lag the desired difference between the top observed timestamp
      *            and the watermark
+     * @since 4.3
      */
     @Nonnull
     static SupplierEx<WatermarkPolicy> limitingRealTimeLag(long lag) {
