@@ -14,7 +14,7 @@ computational state). We want them to be as resilient as possible and
 only ever fail due to the most severe of causes.
 
 Right now any failure, like exceptions in user code, null values in
-input, and the likes, will stop the execution of a job. Moreover, not
+input and the likes, will stop the execution of a job. Moreover, not
 only does execution stop, but snapshots of the job are also deleted, so
 even if the root problem can be fixed, there is no way to recover or
 resume the failed job.
@@ -38,13 +38,13 @@ specified.
 
 ## Notifying the client
 
-When we suspend a job due to a failure we need to notify the client that
+When we suspend a job due to a failure, we need to notify the client that
 submitted it and give enough information to facilitate the repair of the
 underlying root cause.
 
 We will add a `String getSuspensionCause()` method, which will return
 `Requested by user` if suspended due to a user request, or it will
-return the exception with stack tract as a string if the job was
+return the exception with stack trace as a string if the job was
 suspended due to an error.
 
 If the job is not suspended, the method will throw an exception.
@@ -55,7 +55,7 @@ Do we always want to suspend jobs when there is a failure? It doesn't
 make sense to do it for failures that can't be remedied, but which are
 those? Hard to tell, hard to exhaust all the possibilities.
 
-Since the suspend feature will be optional and will need explicit
+Since the suspend feature will be optional and will need an explicit
 setting, it's probably ok to do it for any failure (not just some
 whitelisted ones). There is nothing to lose anyways. If the failure
 can't be remedied, then the user can just cancel the job. They will be
@@ -75,16 +75,16 @@ behaviour can be set, so we will not do so for now.
 ## Enterprise synergy
 
 Once implemented, this feature will integrate well with existing
-enterprise functionality. When Jet suspends a job, due to a failure,
+enterprise functionality. When Jet suspends a job due to a failure,
 enterprise users will be able to _export the snapshot_, fix the problem
 (alter the DAG or the input data) and resubmit the job (via the _job
 upgrade_ feature).
 
 ## Failure snapshot
 
-Ideally, when an error happens, which will be handled by suspending the
+Ideally, when an error happens which will be handled by suspending the
 job, we would prefer to make all processors take a snapshot right then
-so that we can later resume execution from the most advanced state. But
+so that we can later resume execution from the most current state. But
 this, unfortunately doesn't seem possible.
 
 Snapshots can be taken only when all processors are functioning properly
@@ -98,6 +98,6 @@ the whole computation, so I guess this is a weakness we can live with.
 This functionality should be a solution of last resort, meaning that all
 errors that can be handled without user intervention should be handled
 automatically. For example sources and sinks losing connection to
-external systems should attempt reconnection internally, back off after
+external systems should attempt to reconnect internally, back off after
 a certain number of tries, in general have their internal strategy for
 dealing with problems as much as possible.

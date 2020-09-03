@@ -93,8 +93,9 @@ public class JobExecutionRecord implements IdentifiedDataSerializable {
     }
 
     /**
-     * Describes the cause of the job being suspended, if it is, returns
-     * {@code null} otherwise.
+     * Returns the suspension cause, if the job is suspended or {@code null} if
+     * it's not suspended. The cause is always non-null if the job is
+     * suspended.
      */
     @Nullable
     public String getSuspensionCause() {

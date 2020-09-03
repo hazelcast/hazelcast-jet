@@ -174,9 +174,16 @@ public class JobConfig implements IdentifiedDataSerializable {
     }
 
     /**
-     * Sets whether Jet will only suspend the job on execution failure (so it
-     * can potentially be upgraded and resubmitted) or lets it fail completely
-     * and irrevocably.
+     * Sets what happens if the job execution fails:
+     * <ul>
+     *     <li>If enabled, the job will be suspended. It can later be {@linkplain
+     *     Job#resume() resumed} or upgraded and the computation state will be
+     *     preserved.
+     *     <li>If disabled, the job will be terminated. The state snapshots will be
+     *     deleted.
+     * </ul>
+     * <p>
+     * By default it's disabled.
      *
      * @return {@code this} instance for fluent API
      */
@@ -186,7 +193,7 @@ public class JobConfig implements IdentifiedDataSerializable {
     }
 
     /**
-     * Returns whether job will be suspended on failure, see
+     * Returns whether the job will be suspended on failure, see
      * {@link #setSuspendOnFailure(boolean)}.
      */
     public boolean isSuspendOnFailure() {

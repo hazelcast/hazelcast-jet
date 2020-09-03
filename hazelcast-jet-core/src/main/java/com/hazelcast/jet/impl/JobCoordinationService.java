@@ -423,13 +423,13 @@ public class JobCoordinationService {
     }
 
     /**
-     * Returns the reason why this job has been suspended in a human readable
+     * Returns the reason why this job has been suspended in a human-readable
      * form.
      * <p>
      * Fails with {@link JobNotFoundException} if the requested job is not found.
      * <p>
      * Fails with {@link IllegalStateException} if the requested job is not
-     * actually in a suspended state.
+     * currently in a suspended state.
      */
     public CompletableFuture<String> getJobSuspensionCause(long jobId) {
         FunctionEx<JobExecutionRecord, String> jobExecutionRecordHandler = jobExecutionRecord -> {
