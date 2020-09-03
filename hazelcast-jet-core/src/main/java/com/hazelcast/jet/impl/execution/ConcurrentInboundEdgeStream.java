@@ -63,7 +63,6 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
     // Once a terminal snapshot barrier is reached, this is always true.
     private boolean waitForAllBarriers;
     private SnapshotBarrier currentBarrier;  // next snapshot barrier to emit
-    private long numActiveQueues; // number of active queues remaining
 
     /**
      * @param waitForAllBarriers If {@code true}, a queue that had a barrier won't
@@ -81,8 +80,6 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
         this.waitForAllBarriers = waitForAllBarriers;
 
         watermarkCoalescer = WatermarkCoalescer.create(conveyor.queueCount());
-
-        numActiveQueues = conveyor.queueCount();
         receivedBarriers = new BitSet(conveyor.queueCount());
         logger = Logger.getLogger(ConcurrentInboundEdgeStream.class.getName() + "." + debugName);
         logger.finest("Coalescing " + conveyor.queueCount() + " input queues");
@@ -130,13 +127,12 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
             if (itemDetector.item == DONE_ITEM) {
                 conveyor.removeQueue(queueIndex);
                 receivedBarriers.clear(queueIndex);
-                numActiveQueues--;
                 long wmTimestamp = watermarkCoalescer.queueDone(queueIndex);
                 if (maybeEmitWm(wmTimestamp, dest)) {
                     if (logger.isFinestEnabled()) {
                         logger.finest("Queue " + queueIndex + " is done, forwarding " + new Watermark(wmTimestamp));
                     }
-                    return numActiveQueues == 0 ? DONE : MADE_PROGRESS;
+                    return conveyor.liveQueueCount() == 0 ? DONE : MADE_PROGRESS;
                 }
             } else if (itemDetector.item instanceof Watermark) {
                 long wmTimestamp = ((Watermark) itemDetector.item).timestamp();
@@ -156,13 +152,13 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
                 watermarkCoalescer.observeEvent(queueIndex);
             }
 
-            if (numActiveQueues == 0) {
+            int liveQueueCount = conveyor.liveQueueCount();
+            if (liveQueueCount == 0) {
                 return tracker.toProgressState();
             }
 
             if (itemDetector.item != null) {
                 // if we have received the current snapshot from all active queues, forward it
-                if (receivedBarriers.cardinality() == numActiveQueues) {
                     assert currentBarrier != null : "currentBarrier == null";
                     boolean res = dest.test(currentBarrier);
                     assert res : "test result expected to be true";
@@ -170,6 +166,7 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
                     receivedBarriers.clear();
                     return MADE_PROGRESS;
                 }
+            if (itemDetector.item != null && receivedBarriers.cardinality() == liveQueueCount) {
             }
         }
 
@@ -178,7 +175,7 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
             return MADE_PROGRESS;
         }
 
-        if (numActiveQueues > 0) {
+        if (conveyor.liveQueueCount() > 0) {
             tracker.notDone();
         }
         return tracker.toProgressState();
@@ -247,7 +244,7 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
 
     @Override
     public boolean isDone() {
-        return numActiveQueues == 0;
+        return conveyor.liveQueueCount() == 0;
     }
 
     /**
