@@ -46,7 +46,6 @@ data: {
       "JOB"
       "OVERWRITE"
       "MAPPING"
-      "MAPPINGS"
     ]
 
     # List of keywords from "keywords" section that are not reserved.
@@ -366,7 +365,6 @@ data: {
       "JOB"
       "OVERWRITE"
       "MAPPING"
-      "MAPPINGS"
     ]
 
     # List of non-reserved keywords to add;
