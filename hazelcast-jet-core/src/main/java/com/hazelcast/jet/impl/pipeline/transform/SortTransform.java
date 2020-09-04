@@ -37,6 +37,7 @@ public class SortTransform<T> extends AbstractTransform {
     private static final String FIRST_STAGE_VERTEX_NAME_SUFFIX = "-prepare";
     private final ComparatorEx<T> comparator;
 
+    @SuppressWarnings("unchecked")
     public SortTransform(@Nonnull Transform upstream, @Nullable ComparatorEx<T> comparator) {
         super("sort", upstream);
         if (comparator == null) {
@@ -47,12 +48,14 @@ public class SortTransform<T> extends AbstractTransform {
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public void addToDag(Planner p) {
         Vertex v1 = p.dag.newVertex(name() + FIRST_STAGE_VERTEX_NAME_SUFFIX, sortPrepareP(comparator));
         PlannerVertex pv2 = p.addVertex(this, name(), 1, ProcessorMetaSupplier
                 .forceTotalParallelismOne(ProcessorSupplier.of(Processors.mapP(identity())), name()));
         p.addEdges(this, v1);
-        p.dag.edge(between(v1, pv2.v).distributed().allToOne(name().hashCode())
+        p.dag.edge(between(v1, pv2.v).distributed()
+                                     .allToOne(name().hashCode())
                                      .monotonicOrder((ComparatorEx<Object>) comparator));
     }
 }

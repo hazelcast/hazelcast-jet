@@ -136,16 +136,15 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
     }
 
     @Nonnull
-    @SuppressWarnings({"unchecked"})
     <RET> RET attachSort(@Nullable ComparatorEx<? extends T> comparator) {
-        return (RET) attach(new SortTransform<>(this.transform, comparator), fnAdapter);
+        return attach(new SortTransform<>(this.transform, comparator), fnAdapter);
     }
 
     @Nonnull
     @SuppressWarnings({"unchecked", "rawtypes"})
     <R, RET> RET attachMap(@Nonnull FunctionEx<? super T, ? extends R> mapFn) {
         checkSerializable(mapFn, "mapFn");
-        return (RET) attach(new MapTransform("map", this.transform, fnAdapter.adaptMapFn(mapFn)), fnAdapter);
+        return attach(new MapTransform("map", this.transform, fnAdapter.adaptMapFn(mapFn)), fnAdapter);
     }
 
     @Nonnull
@@ -153,7 +152,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
     <RET> RET attachFilter(@Nonnull PredicateEx<T> filterFn) {
         checkSerializable(filterFn, "filterFn");
         PredicateEx<T> adaptedFn = (PredicateEx<T>) fnAdapter.adaptFilterFn(filterFn);
-        return (RET) attach(new MapTransform<T, T>("filter", transform, t -> adaptedFn.test(t) ? t : null), fnAdapter);
+        return attach(new MapTransform<T, T>("filter", transform, t -> adaptedFn.test(t) ? t : null), fnAdapter);
     }
 
     @Nonnull
@@ -162,7 +161,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
             @Nonnull FunctionEx<? super T, ? extends Traverser<R>> flatMapFn
     ) {
         checkSerializable(flatMapFn, "flatMapFn");
-        return (RET) attach(new FlatMapTransform("flat-map", transform, fnAdapter.adaptFlatMapFn(flatMapFn)), fnAdapter);
+        return attach(new FlatMapTransform("flat-map", transform, fnAdapter.adaptFlatMapFn(flatMapFn)), fnAdapter);
     }
 
     @Nonnull
@@ -179,7 +178,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
                 createFn,
                 fnAdapter.<S, Object, T, R>adaptStatefulMapFn((s, k, t) -> mapFn.apply(s, t))
         );
-        return (RET) attach(mapStatefulTransform, fnAdapter);
+        return attach(mapStatefulTransform, fnAdapter);
     }
 
     @Nonnull
@@ -196,7 +195,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
                 createFn,
                 fnAdapter.<S, Object, T, R>adaptStatefulFlatMapFn((s, k, t) -> flatMapFn.apply(s, t))
         );
-        return (RET) attach(mapStatefulTransform, fnAdapter);
+        return attach(mapStatefulTransform, fnAdapter);
     }
 
     @Nonnull
@@ -222,7 +221,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
                 createFn,
                 fnAdapter.adaptStatefulMapFn(mapFn),
                 onEvictFn != null ? fnAdapter.adaptOnEvictFn(onEvictFn) : null);
-        return (RET) attach(mapStatefulTransform, fnAdapter);
+        return attach(mapStatefulTransform, fnAdapter);
     }
 
     @Nonnull
@@ -248,7 +247,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
                 createFn,
                 fnAdapter.adaptStatefulFlatMapFn(flatMapFn),
                 onEvictFn != null ? fnAdapter.adaptOnEvictFlatMapFn(onEvictFn) : null);
-        return (RET) attach(flatMapStatefulTransform, fnAdapter);
+        return attach(flatMapStatefulTransform, fnAdapter);
     }
 
     @Nonnull
@@ -260,7 +259,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
         checkSerializable(mapFn, "mapFn");
         serviceFactory = moveAttachedFilesToPipeline(serviceFactory);
         BiFunctionEx adaptedMapFn = fnAdapter.adaptMapUsingServiceFn(mapFn);
-        return (RET) attach(
+        return attach(
                 mapUsingServiceTransform(transform, serviceFactory, adaptedMapFn),
                 fnAdapter);
     }
@@ -274,7 +273,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
         checkSerializable(filterFn, "filterFn");
         serviceFactory = moveAttachedFilesToPipeline(serviceFactory);
         BiPredicateEx adaptedFilterFn = fnAdapter.adaptFilterUsingServiceFn(filterFn);
-        return (RET) attach(
+        return attach(
                 filterUsingServiceTransform(transform, serviceFactory, adaptedFilterFn),
                 fnAdapter);
     }
@@ -288,7 +287,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
         checkSerializable(flatMapFn, "flatMapFn");
         serviceFactory = moveAttachedFilesToPipeline(serviceFactory);
         BiFunctionEx adaptedFlatMapFn = fnAdapter.adaptFlatMapUsingServiceFn(flatMapFn);
-        return (RET) attach(
+        return attach(
                 flatMapUsingServiceTransform(transform, serviceFactory, adaptedFlatMapFn),
                 fnAdapter);
     }
@@ -306,7 +305,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
         BiFunctionEx adaptedFlatMapFn = fnAdapter.adaptFlatMapUsingServiceAsyncFn(flatMapAsyncFn);
         ProcessorTransform processorTransform = flatMapUsingServiceAsyncTransform(
                 transform, "map", serviceFactory, maxConcurrentOps, preserveOrder, adaptedFlatMapFn);
-        return (RET) attach(processorTransform, fnAdapter);
+        return attach(processorTransform, fnAdapter);
     }
 
     @Nonnull
@@ -333,7 +332,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
 
         ProcessorTransform processorTransform = flatMapUsingServiceAsyncBatchedTransform(
                 transform, "map", serviceFactory, MAX_CONCURRENT_ASYNC_BATCHES, maxBatchSize, flattenedFn);
-        return (RET) attach(processorTransform, fnAdapter);
+        return attach(processorTransform, fnAdapter);
     }
 
     @Nonnull
@@ -348,7 +347,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
         serviceFactory = moveAttachedFilesToPipeline(serviceFactory);
         BiFunctionEx adaptedMapFn = fnAdapter.adaptMapUsingServiceFn(mapFn);
         FunctionEx adaptedPartitionKeyFn = fnAdapter.adaptKeyFn(partitionKeyFn);
-        return (RET) attach(
+        return attach(
                 mapUsingServicePartitionedTransform(transform, serviceFactory, adaptedMapFn, adaptedPartitionKeyFn),
                 fnAdapter);
     }
@@ -365,7 +364,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
         serviceFactory = moveAttachedFilesToPipeline(serviceFactory);
         BiPredicateEx adaptedFilterFn = fnAdapter.adaptFilterUsingServiceFn(filterFn);
         FunctionEx adaptedPartitionKeyFn = fnAdapter.adaptKeyFn(partitionKeyFn);
-        return (RET) attach(
+        return attach(
                 filterUsingServicePartitionedTransform(
                         transform, serviceFactory, adaptedFilterFn, adaptedPartitionKeyFn),
                 fnAdapter);
@@ -383,7 +382,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
         serviceFactory = moveAttachedFilesToPipeline(serviceFactory);
         BiFunctionEx adaptedFlatMapFn = fnAdapter.adaptFlatMapUsingServiceFn(flatMapFn);
         FunctionEx adaptedPartitionKeyFn = fnAdapter.adaptKeyFn(partitionKeyFn);
-        return (RET) attach(
+        return attach(
                 flatMapUsingServicePartitionedTransform(
                         transform, serviceFactory, adaptedFlatMapFn, adaptedPartitionKeyFn),
                 fnAdapter);
@@ -414,7 +413,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
                 adaptedFlatMapFn,
                 adaptedPartitionKeyFn
         );
-        return (RET) attach(processorTransform, fnAdapter);
+        return attach(processorTransform, fnAdapter);
     }
 
     @Nonnull
@@ -452,7 +451,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
                 flattenedFn,
                 adaptedPartitionKeyFn
         );
-        return (RET) attach(processorTransform, fnAdapter);
+        return attach(processorTransform, fnAdapter);
     }
 
     @Nonnull
@@ -539,7 +538,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
             @Nonnull FunctionEx<? super T, ? extends K> partitionKeyFn
     ) {
         FunctionEx adaptedKeyFn = fnAdapter.adaptKeyFn(partitionKeyFn);
-        return (RET) attach(
+        return attach(
                 partitionedCustomProcessorTransform(stageName, transform, procSupplier, adaptedKeyFn),
                 fnAdapter);
     }
