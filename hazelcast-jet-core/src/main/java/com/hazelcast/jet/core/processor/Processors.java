@@ -47,7 +47,7 @@ import com.hazelcast.jet.impl.processor.GroupP;
 import com.hazelcast.jet.impl.processor.InsertWatermarksP;
 import com.hazelcast.jet.impl.processor.SessionWindowP;
 import com.hazelcast.jet.impl.processor.SlidingWindowP;
-import com.hazelcast.jet.impl.processor.SortPrepareP;
+import com.hazelcast.jet.impl.processor.SortP;
 import com.hazelcast.jet.impl.processor.TransformP;
 import com.hazelcast.jet.impl.processor.TransformStatefulP;
 import com.hazelcast.jet.impl.processor.TransformUsingServiceP;
@@ -988,8 +988,8 @@ public final class Processors {
      * @since 4.3
      */
     @Nonnull
-    public static <V> SupplierEx<Processor> sortPrepareP(Comparator<V> comparator) {
-        return () -> new SortPrepareP<>(comparator);
+    public static <V> SupplierEx<Processor> sortP(Comparator<V> comparator) {
+        return () -> new SortP<>(comparator);
     }
 
     /**

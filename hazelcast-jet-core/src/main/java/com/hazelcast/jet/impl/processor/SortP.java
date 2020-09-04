@@ -24,11 +24,11 @@ import javax.annotation.Nullable;
 import java.util.Comparator;
 import java.util.PriorityQueue;
 
-public class SortPrepareP<T> extends AbstractProcessor {
+public class SortP<T> extends AbstractProcessor {
     private final PriorityQueue<T> priorityQueue;
     private final Traverser<T> resultTraverser;
 
-    public SortPrepareP(@Nullable Comparator<T> comparator) {
+    public SortP(@Nullable Comparator<T> comparator) {
         this.priorityQueue = new PriorityQueue<>(comparator);
         this.resultTraverser = priorityQueue::poll;
     }

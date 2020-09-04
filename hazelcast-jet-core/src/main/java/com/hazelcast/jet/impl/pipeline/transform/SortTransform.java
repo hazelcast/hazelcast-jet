@@ -20,7 +20,6 @@ import com.hazelcast.function.ComparatorEx;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.Vertex;
-import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.impl.pipeline.Planner;
 import com.hazelcast.jet.impl.pipeline.Planner.PlannerVertex;
 
@@ -29,12 +28,13 @@ import javax.annotation.Nullable;
 
 import static com.hazelcast.function.FunctionEx.identity;
 import static com.hazelcast.jet.core.Edge.between;
-import static com.hazelcast.jet.core.processor.Processors.sortPrepareP;
+import static com.hazelcast.jet.core.processor.Processors.mapP;
+import static com.hazelcast.jet.core.processor.Processors.sortP;
 
 
 public class SortTransform<T> extends AbstractTransform {
 
-    private static final String FIRST_STAGE_VERTEX_NAME_SUFFIX = "-prepare";
+    private static final String COLLECT_STAGE_SUFFIX = "-collect";
     private final ComparatorEx<T> comparator;
 
     @SuppressWarnings("unchecked")
@@ -50,9 +50,9 @@ public class SortTransform<T> extends AbstractTransform {
     @Override
     @SuppressWarnings("unchecked")
     public void addToDag(Planner p) {
-        Vertex v1 = p.dag.newVertex(name() + FIRST_STAGE_VERTEX_NAME_SUFFIX, sortPrepareP(comparator));
-        PlannerVertex pv2 = p.addVertex(this, name(), 1, ProcessorMetaSupplier
-                .forceTotalParallelismOne(ProcessorSupplier.of(Processors.mapP(identity())), name()));
+        Vertex v1 = p.dag.newVertex(name(), sortP(comparator));
+        PlannerVertex pv2 = p.addVertex(this, name() + COLLECT_STAGE_SUFFIX, 1, ProcessorMetaSupplier
+                .forceTotalParallelismOne(ProcessorSupplier.of(mapP(identity())), name()));
         p.addEdges(this, v1);
         p.dag.edge(between(v1, pv2.v).distributed()
                                      .allToOne(name().hashCode())
