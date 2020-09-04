@@ -20,7 +20,6 @@ import com.hazelcast.jet.Job;
 import com.hazelcast.jet.TestInClusterSupport;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.TestProcessors.MockP;
-import com.hazelcast.jet.core.TestProcessors.MockPMS;
 import com.hazelcast.jet.core.TestProcessors.MockPS;
 import com.hazelcast.jet.core.TestProcessors.NoOutputSourceP;
 import com.hazelcast.jet.core.processor.Processors;
@@ -96,18 +95,16 @@ public class SuspendExecutionOnFailureTest extends TestInClusterSupport {
     public void when_jobSuspendedDueToFailure_then_suspensionCauseDescribeProblem() {
         // Given
         DAG dag = new DAG();
-        dag.newVertex("faulty",
-                new MockPMS(() -> new MockPS(() -> new MockP().setCompleteError(MOCK_ERROR), MEMBER_COUNT)))
-                .localParallelism(1);
+        dag.newVertex("faulty", () -> new MockP().setCompleteError(MOCK_ERROR));
 
         // When
         Job job = jet().newJob(dag, jobConfig);
 
         // Then
         assertJobStatusEventually(job, JobStatus.SUSPENDED);
-        assertTrue(job.getSuspensionCause().startsWith("Execution failure:\n" +
-                "com.hazelcast.jet.JetException: Exception in ProcessorTasklet{faulty#0}: " +
-                "java.lang.AssertionError: mock error"));
+        assertTrue(job.getSuspensionCause().matches("(?s)Execution failure:\n" +
+                "com.hazelcast.jet.JetException: Exception in ProcessorTasklet\\{faulty#[0-9]*}: " +
+                "java.lang.AssertionError: mock error.*"));
 
         cancelAndJoin(job);
     }
