@@ -263,7 +263,7 @@ public class JobExecutionRecord implements IdentifiedDataSerializable {
         out.writeObject(lastSnapshotFailure);
         out.writeObject(snapshotStats);
         out.writeObject(exportedSnapshotMapName);
-        out.writeUTF(suspensionCause);
+        out.writeObject(suspensionCause);
         out.writeBoolean(executed);
         out.writeLong(timestamp.get());
     }
@@ -279,7 +279,7 @@ public class JobExecutionRecord implements IdentifiedDataSerializable {
         lastSnapshotFailure = in.readObject();
         snapshotStats = in.readObject();
         exportedSnapshotMapName = in.readObject();
-        suspensionCause = in.readUTF();
+        suspensionCause = in.readObject();
         executed = in.readBoolean();
         timestamp.set(in.readLong());
     }
