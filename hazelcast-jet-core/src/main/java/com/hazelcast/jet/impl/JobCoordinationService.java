@@ -33,6 +33,7 @@ import com.hazelcast.jet.JobAlreadyExistsException;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.DAG;
+import com.hazelcast.jet.core.JobDefinition;
 import com.hazelcast.jet.core.JobNotFoundException;
 import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.core.TopologyChangedException;
@@ -201,7 +202,7 @@ public class JobCoordinationService {
                 }
 
                 int quorumSize = config.isSplitBrainProtectionEnabled() ? getQuorumSize() : 0;
-                Object jobDefinition = deserializeJobDefinition(jobId, config, serializedJobDefinition);
+                JobDefinition jobDefinition = deserializeJobDefinition(jobId, config, serializedJobDefinition);
                 DAG dag;
                 Data serializedDag;
                 if (jobDefinition instanceof PipelineImpl) {
@@ -823,7 +824,7 @@ public class JobCoordinationService {
                 && getInternalPartitionService().getPartitionStateManager().isInitialized();
     }
 
-    private Object deserializeJobDefinition(long jobId, JobConfig jobConfig, Data jobDefinitionData) {
+    private JobDefinition deserializeJobDefinition(long jobId, JobConfig jobConfig, Data jobDefinitionData) {
         ClassLoader classLoader = jetService.getJobExecutionService().getClassLoader(jobConfig, jobId);
         return deserializeWithCustomClassLoader(nodeEngine().getSerializationService(), classLoader, jobDefinitionData);
     }
