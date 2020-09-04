@@ -102,12 +102,7 @@ public class WindowAggregateTransform<A, R> extends AbstractTransform {
     }
 
     @Override
-    public void determineLocalParallelism(Context context) {
-        determineLocalParallelism(-1, context);
-    }
-
-    @Override
-    public void addToDag(Planner p) {
+    public void addToDag(Planner p, Context context) {
         if (wDef instanceof SessionWindowDefinition) {
             addSessionWindow(p, (SessionWindowDefinition) wDef);
         } else if (aggrOp.combineFn() == null || wDef.earlyResultsPeriod() > 0) {

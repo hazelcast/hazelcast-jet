@@ -33,12 +33,7 @@ public class MergeTransform<T> extends AbstractTransform {
     }
 
     @Override
-    public void determineLocalParallelism(Context context) {
-        determineLocalParallelism(-1, context);
-    }
-
-    @Override
-    public void addToDag(Planner p) {
+    public void addToDag(Planner p, Context context) {
         PlannerVertex pv = p.addVertex(this, name(), localParallelism(), mapP(identity()));
         p.addEdges(this, pv.v);
     }

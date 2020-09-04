@@ -51,12 +51,7 @@ public class AggregateTransform<A, R> extends AbstractTransform {
     }
 
     @Override
-    public void determineLocalParallelism(Context context) {
-        determineLocalParallelism(-1, context);
-    }
-
-    @Override
-    public void addToDag(Planner p) {
+    public void addToDag(Planner p, Context context) {
         if (aggrOp.combineFn() == null) {
             addToDagSingleStage(p);
         } else {

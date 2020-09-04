@@ -94,11 +94,6 @@ public class HashJoinTransform<T0, R> extends AbstractTransform {
         this.whereNullsNotAllowed = whereNullsNotAllowed;
     }
 
-    @Override
-    public void determineLocalParallelism(Context context) {
-        determineLocalParallelism(-1, context);
-    }
-
     //         ---------           ----------           ----------
     //        | primary |         | joined-1 |         | joined-2 |
     //         ---------           ----------           ----------
@@ -123,7 +118,7 @@ public class HashJoinTransform<T0, R> extends AbstractTransform {
     //                              --------
     @Override
     @SuppressWarnings("unchecked")
-    public void addToDag(Planner p) {
+    public void addToDag(Planner p, Context context) {
         PlannerVertex primary = p.xform2vertex.get(this.upstream().get(0));
         List keyFns = toList(this.clauses, JoinClause::leftKeyFn);
 

@@ -58,9 +58,7 @@ public interface Transform extends Serializable {
     @Nonnull
     List<Transform> upstream();
 
-    void determineLocalParallelism(Context context);
-
-    void addToDag(Planner p);
+    void addToDag(Planner p, Context context);
 
     /**
      * Returns the optimal watermark stride for this windowed transform.

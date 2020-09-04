@@ -113,11 +113,6 @@ public class Planner {
             }
         }
 
-        // determine exact local parallelism of the transforms
-        for (Transform transform : adjacencyMap.keySet()) {
-            transform.determineLocalParallelism(ctx);
-        }
-
         // fuse subsequent map/filter/flatMap transforms into one
         Map<Transform, List<Transform>> originalParents = new HashMap<>();
         List<Transform> transforms = new ArrayList<>(adjacencyMap.keySet());
@@ -139,7 +134,7 @@ public class Planner {
         }
 
         for (Transform transform : transforms) {
-            transform.addToDag(this);
+            transform.addToDag(this, ctx);
         }
 
         // restore original parents

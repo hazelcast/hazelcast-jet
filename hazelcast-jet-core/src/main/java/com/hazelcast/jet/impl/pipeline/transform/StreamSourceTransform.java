@@ -66,14 +66,7 @@ public class StreamSourceTransform<T> extends AbstractTransform implements Strea
     }
 
     @Override
-    public void determineLocalParallelism(Context context) {
-        final ProcessorMetaSupplier metaSupplier = metaSupplierFn
-                .apply(eventTimePolicy != null ? eventTimePolicy : noEventTime());
-        determineLocalParallelism(metaSupplier.preferredLocalParallelism(), context);
-    }
-
-    @Override
-    public void addToDag(Planner p) {
+    public void addToDag(Planner p, Context context) {
         if (emitsWatermarks || eventTimePolicy == null) {
             // Reached when the source either emits both JetEvents and watermarks
             // or neither. In these cases we don't have to insert watermarks.
@@ -93,8 +86,9 @@ public class StreamSourceTransform<T> extends AbstractTransform implements Strea
             String v1name = name();
             Vertex v1 = p.dag.newVertex(v1name, metaSupplierFn.apply(eventTimePolicy))
                              .localParallelism(localParallelism());
+            int localParallelism = v1.determineLocalParallelism(localParallelism());
             PlannerVertex pv2 = p.addVertex(
-                    this, v1name + "-add-timestamps", localParallelism(), insertWatermarksP(eventTimePolicy)
+                    this, v1name + "-add-timestamps", localParallelism, insertWatermarksP(eventTimePolicy)
             );
             p.dag.edge(between(v1, pv2.v).isolated());
         }

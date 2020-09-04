@@ -45,12 +45,7 @@ public class FlatMapTransform<T, R> extends AbstractTransform {
     }
 
     @Override
-    public void determineLocalParallelism(Context context) {
-        determineLocalParallelism(-1, context);
-    }
-
-    @Override
-    public void addToDag(Planner p) {
+    public void addToDag(Planner p, Context context) {
         PlannerVertex pv = p.addVertex(this, name(), localParallelism(), flatMapP(flatMapFn()));
         p.addEdges(this, pv.v);
     }

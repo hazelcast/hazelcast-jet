@@ -49,13 +49,9 @@ public class SinkTransform<T> extends AbstractTransform {
         this.ordinalsToAdapt = adaptToJetEvents ? new int[] {0} : EMPTY_ORDINALS;
     }
 
-    public void determineLocalParallelism(Context context) {
-        determineLocalParallelism(sink.metaSupplier().preferredLocalParallelism(), context);
-    }
-
     @Override
     @SuppressWarnings({"rawtypes", "unchecked"})
-    public void addToDag(Planner p) {
+    public void addToDag(Planner p, Context context) {
         PlannerVertex pv = p.addVertex(this, name(), localParallelism(),
                 adaptingMetaSupplier(sink.metaSupplier(), ordinalsToAdapt));
         p.addEdges(this, pv.v, (e, ord) -> {

@@ -18,15 +18,12 @@ package com.hazelcast.jet.impl.pipeline.transform;
 
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.core.Vertex;
-import com.hazelcast.jet.pipeline.Pipeline;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
-import static com.hazelcast.jet.core.Vertex.checkLocalParallelism;
-import static java.lang.Math.min;
 import static java.util.Collections.singletonList;
 
 public abstract class AbstractTransform implements Transform {
@@ -117,31 +114,5 @@ public abstract class AbstractTransform implements Transform {
             }
         }
         return false;
-    }
-
-    /**
-     * Determines the local parallelism value for the transform by looking at
-     * its local parallelism, preferred local parallelism, and the default
-     * local parallelism provided in Pipeline.Context object.
-     * <p>
-     * If none of them is set, returns the default local parallelism
-     * provided in Pipeline.Context object.
-     */
-    protected void determineLocalParallelism(int preferredLocalParallelism, Pipeline.Context ctx) {
-        int defaultParallelism = ctx.defaultLocalParallelism();
-        checkLocalParallelism(preferredLocalParallelism);
-        checkLocalParallelism(localParallelism());
-        checkLocalParallelism(defaultParallelism);
-        if (localParallelism() == Vertex.LOCAL_PARALLELISM_USE_DEFAULT) {
-            if (preferredLocalParallelism == Vertex.LOCAL_PARALLELISM_USE_DEFAULT) {
-                localParallelism(defaultParallelism);
-            } else {
-                if (defaultParallelism == Vertex.LOCAL_PARALLELISM_USE_DEFAULT) {
-                    localParallelism(preferredLocalParallelism);
-                } else {
-                    localParallelism(min(preferredLocalParallelism, defaultParallelism));
-                }
-            }
-        }
     }
 }

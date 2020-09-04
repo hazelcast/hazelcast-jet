@@ -47,12 +47,7 @@ public class GlobalMapStatefulTransform<T, S, R> extends AbstractTransform {
     }
 
     @Override
-    public void determineLocalParallelism(Context context) {
-        determineLocalParallelism(-1, context);
-    }
-
-    @Override
-    public void addToDag(Planner p) {
+    public void addToDag(Planner p, Context context) {
         ConstantFunctionEx<T, Integer> keyFn = new ConstantFunctionEx<>(name().hashCode());
         PlannerVertex pv = p.addVertex(this, name(), 1,
                 mapStatefulP(Long.MAX_VALUE, keyFn, timestampFn, createFn, statefulMapFn, null));

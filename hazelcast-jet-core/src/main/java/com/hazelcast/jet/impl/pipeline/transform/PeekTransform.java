@@ -43,12 +43,7 @@ public class PeekTransform<T> extends AbstractTransform {
     }
 
     @Override
-    public void determineLocalParallelism(Context context) {
-        determineLocalParallelism(-1, context);
-    }
-
-    @Override
-    public void addToDag(Planner p) {
+    public void addToDag(Planner p, Context context) {
         PlannerVertex peekedPv = p.xform2vertex.get(this.upstream().get(0));
         // Peeking transform doesn't add a vertex, so point to the upstream
         // transform's vertex:
