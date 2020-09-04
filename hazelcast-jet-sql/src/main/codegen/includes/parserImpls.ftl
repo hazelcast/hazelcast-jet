@@ -96,7 +96,7 @@ SqlCreate SqlCreateExternalMapping(Span span, boolean replace) :
     name = SimpleIdentifier()
     columns = MappingColumns()
     <TYPE>
-    type = SimpleIdentifier()
+    type = CompoundIdentifier()
     [
         <OPTIONS>
         sqlOptions = SqlOptions()

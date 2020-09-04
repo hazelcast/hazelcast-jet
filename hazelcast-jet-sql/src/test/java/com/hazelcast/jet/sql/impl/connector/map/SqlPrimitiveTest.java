@@ -99,7 +99,7 @@ public class SqlPrimitiveTest extends JetSqlTestSupport {
         sqlService.execute("CREATE MAPPING " + name + " ("
                 + "id INT EXTERNAL NAME __key"
                 + ", name VARCHAR EXTERNAL NAME this"
-                + ") TYPE \"" + IMapSqlConnector.TYPE_NAME + "\" "
+                + ") TYPE " + IMapSqlConnector.TYPE_NAME + " "
                 + "OPTIONS ("
                 + OPTION_SERIALIZATION_KEY_FORMAT + " '" + JAVA_SERIALIZATION_FORMAT + "'"
                 + ", " + OPTION_KEY_CLASS + " '" + Integer.class.getName() + "'"

@@ -74,7 +74,7 @@ public class SqlKafkaTest extends JetSqlTestSupport {
     public void before() {
         topicName = createRandomTopic();
         sqlService.execute(format("CREATE MAPPING %s " +
-                        "TYPE \"%s\" " +
+                        "TYPE %s " +
                         "OPTIONS (" +
                         " %s '%s'," +
                         " %s '%s'," +
@@ -122,7 +122,7 @@ public class SqlKafkaTest extends JetSqlTestSupport {
     public void select_convert() {
         String topicName = createRandomTopic();
         sqlService.execute(format("CREATE MAPPING %s " +
-                        "TYPE \"%s\" " +
+                        "TYPE %s " +
                         "OPTIONS (" +
                         " %s '%s'," +
                         " %s '%s'," +
@@ -156,7 +156,7 @@ public class SqlKafkaTest extends JetSqlTestSupport {
     public void select_pojo() {
         String topicName = createRandomTopic();
         sqlService.execute(format("CREATE MAPPING %s " +
-                        "TYPE \"%s\" " +
+                        "TYPE %s " +
                         "OPTIONS (" +
                         " %s '%s'," +
                         " %s '%s'," +

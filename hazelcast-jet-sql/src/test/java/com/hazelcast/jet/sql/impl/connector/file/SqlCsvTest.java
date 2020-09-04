@@ -69,7 +69,7 @@ public class SqlCsvTest extends JetSqlTestSupport {
                 + ", \"date\" DATE"
                 + ", \"timestamp\" TIMESTAMP"
                 + ", offsetDateTime TIMESTAMP WITH TIME ZONE"
-                + ") TYPE \"" + FileSqlConnector.TYPE_NAME + "\" "
+                + ") TYPE " + FileSqlConnector.TYPE_NAME + " "
                 + "OPTIONS ("
                 + OPTION_SERIALIZATION_FORMAT + " '" + CSV_SERIALIZATION_FORMAT + "'"
                 + ", " + FileSqlConnector.OPTION_PATH + " '" + directory.getAbsolutePath() + "'"
@@ -119,7 +119,7 @@ public class SqlCsvTest extends JetSqlTestSupport {
     public void supportsSchemaDiscovery() {
         String name = createRandomName();
         sqlService.execute("CREATE MAPPING " + name + " "
-                + "TYPE \"" + FileSqlConnector.TYPE_NAME + "\" "
+                + "TYPE " + FileSqlConnector.TYPE_NAME + " "
                 + "OPTIONS ("
                 + OPTION_SERIALIZATION_FORMAT + " '" + CSV_SERIALIZATION_FORMAT + "'"
                 + ", " + FileSqlConnector.OPTION_PATH + " '" + RESOURCES_PATH + "'"

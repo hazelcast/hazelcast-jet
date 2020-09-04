@@ -149,7 +149,7 @@ public class SqlPojoTest extends JetSqlTestSupport {
         sqlService.execute("CREATE MAPPING " + name + " ("
                 + "key_id INT EXTERNAL NAME __key.id"
                 + ", value_id INT EXTERNAL NAME this.id"
-                + ") TYPE \"" + IMapSqlConnector.TYPE_NAME + "\" "
+                + ") TYPE " + IMapSqlConnector.TYPE_NAME + " "
                 + "OPTIONS ("
                 + OPTION_SERIALIZATION_KEY_FORMAT + " '" + JAVA_SERIALIZATION_FORMAT + "'"
                 + ", " + OPTION_KEY_CLASS + " '" + PersonId.class.getName() + "'"
@@ -179,7 +179,7 @@ public class SqlPojoTest extends JetSqlTestSupport {
 
         // alter schema
         sqlService.execute("CREATE OR REPLACE MAPPING " + name + " "
-                + "TYPE \"" + IMapSqlConnector.TYPE_NAME + "\" "
+                + "TYPE " + IMapSqlConnector.TYPE_NAME + " "
                 + "OPTIONS ("
                 + OPTION_SERIALIZATION_KEY_FORMAT + " '" + JAVA_SERIALIZATION_FORMAT + "'"
                 + ", " + OPTION_KEY_CLASS + " '" + PersonId.class.getName() + "'"
@@ -210,7 +210,7 @@ public class SqlPojoTest extends JetSqlTestSupport {
 
         sqlService.execute("CREATE MAPPING " + name + " ("
                 + "ssn BIGINT"
-                + ") TYPE \"" + IMapSqlConnector.TYPE_NAME + "\" "
+                + ") TYPE " + IMapSqlConnector.TYPE_NAME + " "
                 + "OPTIONS ("
                 + OPTION_SERIALIZATION_KEY_FORMAT + " '" + JAVA_SERIALIZATION_FORMAT + "'"
                 + ", " + OPTION_KEY_CLASS + " '" + PersonId.class.getName() + "'"
@@ -410,7 +410,7 @@ public class SqlPojoTest extends JetSqlTestSupport {
         String mapName = generateRandomName();
         String tableName = generateRandomName();
 
-        sqlService.execute("CREATE MAPPING " + tableName + " TYPE \"" + IMapSqlConnector.TYPE_NAME + "\"\n"
+        sqlService.execute("CREATE MAPPING " + tableName + " TYPE " + IMapSqlConnector.TYPE_NAME + "\n"
                 + "OPTIONS (\n"
                 + OPTION_OBJECT_NAME + " '" + mapName + "',\n"
                 + OPTION_SERIALIZATION_KEY_FORMAT + " '" + JAVA_SERIALIZATION_FORMAT + "',\n"

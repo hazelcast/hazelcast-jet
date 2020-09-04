@@ -54,7 +54,7 @@ public class SqlAvroTest extends JetSqlTestSupport {
         String name = createRandomName();
         sqlService.execute("CREATE MAPPING " + name + " ("
                 + "nonExistingField VARCHAR"
-                + ") TYPE \"" + FileSqlConnector.TYPE_NAME + "\" "
+                + ") TYPE " + FileSqlConnector.TYPE_NAME + " "
                 + "OPTIONS ("
                 + OPTION_SERIALIZATION_FORMAT + " '" + AVRO_SERIALIZATION_FORMAT + "'"
                 + ", " + FileSqlConnector.OPTION_PATH + " '" + RESOURCES_PATH + "'"
@@ -73,7 +73,7 @@ public class SqlAvroTest extends JetSqlTestSupport {
         String name = createRandomName();
         sqlService.execute("CREATE MAPPING " + name + " ("
                 + "name VARCHAR EXTERNAL NAME string"
-                + ") TYPE \"" + FileSqlConnector.TYPE_NAME + "\" "
+                + ") TYPE " + FileSqlConnector.TYPE_NAME + " "
                 + "OPTIONS ("
                 + OPTION_SERIALIZATION_FORMAT + " '" + AVRO_SERIALIZATION_FORMAT + "'"
                 + ", " + FileSqlConnector.OPTION_PATH + " '" + RESOURCES_PATH + "'"
@@ -107,7 +107,7 @@ public class SqlAvroTest extends JetSqlTestSupport {
                 + ", \"localDate\" DATE"
                 + ", \"localDateTime\" TIMESTAMP"
                 + ", offsetDateTime TIMESTAMP WITH TIME ZONE"
-                + ") TYPE \"" + FileSqlConnector.TYPE_NAME + "\" "
+                + ") TYPE " + FileSqlConnector.TYPE_NAME + " "
                 + "OPTIONS ("
                 + OPTION_SERIALIZATION_FORMAT + " '" + AVRO_SERIALIZATION_FORMAT + "'"
                 + ", " + FileSqlConnector.OPTION_PATH + " '" + directory.getAbsolutePath() + "'"
@@ -157,7 +157,7 @@ public class SqlAvroTest extends JetSqlTestSupport {
     public void supportsSchemaDiscovery() {
         String name = createRandomName();
         sqlService.execute("CREATE MAPPING " + name + " "
-                + "TYPE \"" + FileSqlConnector.TYPE_NAME + "\" "
+                + "TYPE " + FileSqlConnector.TYPE_NAME + " "
                 + "OPTIONS ( "
                 + OPTION_SERIALIZATION_FORMAT + " '" + AVRO_SERIALIZATION_FORMAT + "'"
                 + ", " + FileSqlConnector.OPTION_PATH + " '" + RESOURCES_PATH + "'"

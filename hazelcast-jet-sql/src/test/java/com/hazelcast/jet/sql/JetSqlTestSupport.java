@@ -108,7 +108,7 @@ public abstract class JetSqlTestSupport extends SimpleTestInClusterSupport {
      * java serialization for both key and value with the given classes.
      */
     public static String javaSerializableMapDdl(String name, Class<?> keyClass, Class<?> valueClass) {
-        return "CREATE MAPPING " + name + " TYPE \"" + IMapSqlConnector.TYPE_NAME + "\"\n"
+        return "CREATE MAPPING " + name + " TYPE " + IMapSqlConnector.TYPE_NAME + "\n"
                 + "OPTIONS (\n"
                 + '"' + OPTION_SERIALIZATION_KEY_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "',\n"
                 + '"' + OPTION_KEY_CLASS + "\" '" + keyClass.getName() + "',\n"

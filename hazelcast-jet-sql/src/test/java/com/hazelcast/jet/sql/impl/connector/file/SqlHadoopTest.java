@@ -71,7 +71,7 @@ public class SqlHadoopTest extends JetSqlTestSupport {
         sqlService.execute("CREATE MAPPING " + name + " ("
                 + "id BIGINT"
                 + ", name VARCHAR"
-                + ") TYPE \"" + FileSqlConnector.TYPE_NAME + "\" "
+                + ") TYPE " + FileSqlConnector.TYPE_NAME + " "
                 + "OPTIONS ("
                 + OPTION_SERIALIZATION_FORMAT + " '" + CSV_SERIALIZATION_FORMAT + "'"
                 + ", " + FileSqlConnector.OPTION_PATH + " '" + path("csv") + "'"
@@ -95,7 +95,7 @@ public class SqlHadoopTest extends JetSqlTestSupport {
 
         String name = createRandomName();
         sqlService.execute("CREATE MAPPING " + name + " "
-                + "TYPE \"" + FileSqlConnector.TYPE_NAME + "\" "
+                + "TYPE " + FileSqlConnector.TYPE_NAME + " "
                 + "OPTIONS ("
                 + OPTION_SERIALIZATION_FORMAT + " '" + CSV_SERIALIZATION_FORMAT + "'"
                 + ", " + FileSqlConnector.OPTION_PATH + " '" + path("inferred-csv") + "'"
@@ -118,7 +118,7 @@ public class SqlHadoopTest extends JetSqlTestSupport {
         sqlService.execute("CREATE MAPPING " + name + " ("
                 + "id BIGINT"
                 + ", name VARCHAR"
-                + ") TYPE \"" + FileSqlConnector.TYPE_NAME + "\" "
+                + ") TYPE " + FileSqlConnector.TYPE_NAME + " "
                 + "OPTIONS ("
                 + OPTION_SERIALIZATION_FORMAT + " '" + JSON_SERIALIZATION_FORMAT + "'"
                 + ", " + FileSqlConnector.OPTION_PATH + " '" + path("json") + "'"
@@ -145,7 +145,7 @@ public class SqlHadoopTest extends JetSqlTestSupport {
 
         String name = createRandomName();
         sqlService.execute("CREATE MAPPING " + name + " "
-                + "TYPE \"" + FileSqlConnector.TYPE_NAME + "\" "
+                + "TYPE " + FileSqlConnector.TYPE_NAME + " "
                 + "OPTIONS ("
                 + OPTION_SERIALIZATION_FORMAT + " '" + JSON_SERIALIZATION_FORMAT + "'"
                 + ", " + FileSqlConnector.OPTION_PATH + " '" + path("inferred-json") + "'"
@@ -167,7 +167,7 @@ public class SqlHadoopTest extends JetSqlTestSupport {
         sqlService.execute("CREATE MAPPING " + name + " ("
                 + "id BIGINT"
                 + ", name VARCHAR"
-                + ") TYPE \"" + FileSqlConnector.TYPE_NAME + "\" "
+                + ") TYPE " + FileSqlConnector.TYPE_NAME + " "
                 + "OPTIONS ("
                 + OPTION_SERIALIZATION_FORMAT + " '" + AVRO_SERIALIZATION_FORMAT + "'"
                 + ", " + FileSqlConnector.OPTION_PATH + " '" + path("avro") + "'"
@@ -191,7 +191,7 @@ public class SqlHadoopTest extends JetSqlTestSupport {
 
         String name = createRandomName();
         sqlService.execute("CREATE MAPPING " + name + " "
-                + "TYPE \"" + FileSqlConnector.TYPE_NAME + "\" "
+                + "TYPE " + FileSqlConnector.TYPE_NAME + " "
                 + "OPTIONS ("
                 + OPTION_SERIALIZATION_FORMAT + " '" + AVRO_SERIALIZATION_FORMAT + "'"
                 + ", " + FileSqlConnector.OPTION_PATH + " '" + path("inferred-avro") + "'"
