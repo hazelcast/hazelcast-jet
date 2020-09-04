@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.pipeline.test;
 
+import com.hazelcast.jet.datamodel.WindowResult;
 import com.hazelcast.jet.pipeline.PipelineTestSupport;
 import org.junit.Rule;
 import org.junit.Test;
@@ -29,6 +30,7 @@ import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
 import static com.hazelcast.jet.pipeline.WindowDefinition.tumbling;
 import static com.hazelcast.jet.pipeline.test.Assertions.assertCollectedEventually;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static java.util.stream.Collectors.toList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -53,16 +55,16 @@ public class TestSourcesTest extends PipelineTestSupport {
     public void test_longStream() throws Throwable {
         int itemsPerSecond = 250;
         int timeoutSeconds = 10;
-        int numWindowResultsToWaitFor = 3;
+        int numWindowResultsToWaitFor = 5;
 
         p.readFrom(TestSources.longStream(itemsPerSecond, 0))
          .withNativeTimestamps(0)
          .window(tumbling(SECONDS.toMillis(1)))
          .aggregate(counting())
-         .apply(assertCollectedEventually(timeoutSeconds, windowResults -> {
-             assertTrue("Didn't receive at least three results", windowResults.size() >= numWindowResultsToWaitFor);
-             assertTrue("Invalid items per second",
-                     windowResults.stream().skip(1).allMatch(wr -> wr.result() == itemsPerSecond));
+         .apply(assertCollectedEventually(timeoutSeconds, results -> {
+             assertTrue("Didn't receive at least three results", results.size() >= numWindowResultsToWaitFor);
+             assertTrue("Invalid items per second: " + results.stream().map(WindowResult::result).collect(toList()),
+                     results.stream().skip(2).allMatch(wr -> wr.result() == itemsPerSecond));
          }));
 
         expectedException.expectMessage(AssertionCompletedException.class.getName());
