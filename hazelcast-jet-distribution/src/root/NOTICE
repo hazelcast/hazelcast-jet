@@ -149,7 +149,7 @@ GNU General Public License, version 2 (GPL2), with the classpath exception
 GPL2 w/ CPE
   javax.ws.rs-api:2.1.1
 MIT License
-  ClassGraph:4.8.66
+  ClassGraph:4.8.69
   JOpt Simple:5.0.2
   Checker Qual:2.5.5
   Animal Sniffer Annotations:1.18
