@@ -56,14 +56,14 @@ public class SqlOption extends SqlCall {
         return ((NlsString) SqlLiteral.value(value)).getValue();
     }
 
-    @Override
     @Nonnull
+    @Override
     public SqlOperator getOperator() {
         return OPERATOR;
     }
 
-    @Override
     @Nonnull
+    @Override
     public List<SqlNode> getOperandList() {
         return ImmutableNullableList.of(key, value);
     }

@@ -31,9 +31,6 @@ public interface ParserResource {
     @BaseMessage("Column ''{0}'' specified more than once")
     ExInst<SqlValidatorException> duplicateColumn(String columnName);
 
-    @BaseMessage("Invalid external name ''{0}'', nested fields are not supported")
-    ExInst<SqlValidatorException> nestedField(String externalColumnName);
-
     @BaseMessage("Option ''{0}'' specified more than once")
     ExInst<SqlValidatorException> duplicateOption(String optionName);
 }

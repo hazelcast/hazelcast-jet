@@ -156,11 +156,6 @@ SqlMappingColumn MappingColumn() :
     type = SqlDataType()
     [
         <EXTERNAL> <NAME> externalName = CompoundIdentifier()
-        {
-            if (externalName.names.size() > 2) {
-                throw SqlUtil.newContextException(getPos(), ParserResource.RESOURCE.nestedField(externalName.toString()));
-            }
-        }
     ]
     {
         return new SqlMappingColumn(name, type, externalName, span.end(this));
@@ -260,6 +255,53 @@ QueryDataType DateTimeType() :
 }
 
 /**
+ * Parses OPTIONS.
+ */
+SqlNodeList SqlOptions():
+{
+    Span span;
+
+    SqlOption sqlOption;
+    Map<String, SqlNode> sqlOptions = new LinkedHashMap<String, SqlNode>();
+}
+{
+    <LPAREN> { span = span(); }
+    [
+        sqlOption = SqlOption()
+        {
+            sqlOptions.put(sqlOption.key(), sqlOption);
+        }
+        (
+            <COMMA> sqlOption = SqlOption()
+            {
+                if (sqlOptions.putIfAbsent(sqlOption.key(), sqlOption) != null) {
+                    throw SqlUtil.newContextException(getPos(), ParserResource.RESOURCE.duplicateOption(sqlOption.key()));
+                }
+            }
+        )*
+    ]
+    <RPAREN>
+    {
+        return new SqlNodeList(sqlOptions.values(), span.end(this));
+    }
+}
+
+SqlOption SqlOption() :
+{
+    Span span;
+
+    SqlIdentifier key;
+    SqlNode value;
+}
+{
+    key = SimpleIdentifier() { span = span(); }
+    value = StringLiteral()
+    {
+        return new SqlOption(key, value, span.end(this));
+    }
+}
+
+/**
  * Parses DROP EXTERNAL MAPPING statement.
  */
 SqlDrop SqlDropExternalMapping(Span span, boolean replace) :
@@ -330,52 +372,5 @@ SqlExtendedInsert SqlExtendedInsert() :
             columns,
             span.end(source)
         );
-    }
-}
-
-/**
- * Parses OPTIONS.
- */
-SqlNodeList SqlOptions():
-{
-    Span span;
-
-    SqlOption sqlOption;
-    Map<String, SqlNode> sqlOptions = new LinkedHashMap<String, SqlNode>();
-}
-{
-    <LPAREN> { span = span(); }
-    [
-        sqlOption = SqlOption()
-        {
-            sqlOptions.put(sqlOption.key(), sqlOption);
-        }
-        (
-            <COMMA> sqlOption = SqlOption()
-            {
-                if (sqlOptions.putIfAbsent(sqlOption.key(), sqlOption) != null) {
-                    throw SqlUtil.newContextException(getPos(), ParserResource.RESOURCE.duplicateOption(sqlOption.key()));
-                }
-            }
-        )*
-    ]
-    <RPAREN>
-    {
-        return new SqlNodeList(sqlOptions.values(), span.end(this));
-    }
-}
-
-SqlOption SqlOption() :
-{
-    Span span;
-
-    SqlIdentifier key;
-    SqlNode value;
-}
-{
-    key = SimpleIdentifier() { span = span(); }
-    value = StringLiteral()
-    {
-        return new SqlOption(key, value, span.end(this));
     }
 }

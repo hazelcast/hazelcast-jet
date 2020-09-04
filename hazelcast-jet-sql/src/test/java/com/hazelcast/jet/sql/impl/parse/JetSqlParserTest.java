@@ -49,18 +49,18 @@ public class JetSqlParserTest {
             "true, false",
             "false, true"
     })
-    public void test_parseCreateMapping(boolean replace, boolean ifNotExists) throws SqlParseException {
+    public void test_createMapping(boolean replace, boolean ifNotExists) throws SqlParseException {
         // given
         String sql = "CREATE "
                 + (replace ? "OR REPLACE " : "")
                 + "MAPPING "
                 + (ifNotExists ? "IF NOT EXISTS " : "")
                 + "mapping_name ("
-                + "  column_name INT EXTERNAL NAME \"external.name\""
+                + "column_name INT EXTERNAL NAME external.name"
                 + ")"
                 + "TYPE mapping_type "
                 + "OPTIONS("
-                + "  \"option.key\" 'option.value'"
+                + "\"option.key\" 'option.value'"
                 + ")";
 
         // when
@@ -79,11 +79,11 @@ public class JetSqlParserTest {
     }
 
     @Test
-    public void test_parseCreateExternalMapping() throws SqlParseException {
+    public void test_createExternalMapping() throws SqlParseException {
         // given
         String sql = "CREATE EXTERNAL MAPPING "
                 + "mapping_name ("
-                + "  column_name INT"
+                + "column_name INT"
                 + ")"
                 + "TYPE mapping_type";
 
@@ -95,21 +95,21 @@ public class JetSqlParserTest {
     }
 
     @Test
-    public void test_parseCreateMappingRequiresSimpleColumnName() {
+    public void test_createMappingRequiresSimpleMappingName() {
         // given
         String sql = "CREATE MAPPING "
-                + "schema.mapping_name ("
-                + "  column_name INT"
+                + "some_schema.mapping_name ("
+                + "column_name INT"
                 + ")"
                 + "TYPE mapping_type";
 
         // when
         assertThatThrownBy(() -> parse(sql))
-                .hasMessageContaining("Encountered \".\" at line 1, column 22.");
+                .hasMessageContaining("Encountered \".\" at line 1, column 27.");
     }
 
     @Test
-    public void test_parseCreateMappingRequiresColumns() {
+    public void test_createMappingRequiresColumns() {
         // given
         String sql = "CREATE MAPPING "
                 + "mapping_name ("
@@ -122,30 +122,63 @@ public class JetSqlParserTest {
     }
 
     @Test
-    public void test_parseCreateMappingRequiresColumnType() {
+    public void test_createMappingRequiresUniqueColumnName() {
         // given
         String sql = "CREATE MAPPING "
                 + "mapping_name ("
-                + "  column_name"
+                + "column_name INT"
+                + ", column_name VARCHAR"
                 + ")"
                 + "TYPE mapping_type";
 
         // when
         assertThatThrownBy(() -> parse(sql))
-                .hasMessageContaining("Encountered \")\" at line 1, column 43");
+                .hasMessageContaining("Column 'column_name' specified more than once");
     }
 
     @Test
-    public void test_parseCreateMappingRequiresType() {
+    public void test_createMappingRequiresColumnType() {
         // given
         String sql = "CREATE MAPPING "
                 + "mapping_name ("
-                + "  column_name INT"
+                + "column_name"
+                + ")"
+                + "TYPE mapping_type";
+
+        // when
+        assertThatThrownBy(() -> parse(sql))
+                .hasMessageContaining("Encountered \")\" at line 1, column 41");
+    }
+
+    @Test
+    public void test_createMappingRequiresMappingType() {
+        // given
+        String sql = "CREATE MAPPING "
+                + "mapping_name ("
+                + "column_name INT"
                 + ")";
 
         // when
         assertThatThrownBy(() -> parse(sql))
-                .hasMessageContaining("Encountered \"<EOF>\" at line 1, column 47");
+                .hasMessageContaining("Encountered \"<EOF>\" at line 1, column 45");
+    }
+
+    @Test
+    public void test_createMappingRequiresUniqueOptionKey() {
+        // given
+        String sql = "CREATE MAPPING "
+                + "mapping_name ("
+                + "column_name INT"
+                + ")"
+                + "TYPE mapping_type "
+                + "OPTIONS("
+                + "\"option.key\" 'value1'"
+                + ", \"option.key\" 'value2'"
+                + ")";
+
+        // when
+        assertThatThrownBy(() -> parse(sql))
+                .hasMessageContaining("Option 'option.key' specified more than once");
     }
 
     @Test
@@ -153,7 +186,7 @@ public class JetSqlParserTest {
             "false",
             "true"
     })
-    public void test_parseDropMapping(boolean ifExists) throws SqlParseException {
+    public void test_dropMapping(boolean ifExists) throws SqlParseException {
         // given
         String sql = "DROP MAPPING " + (ifExists ? "IF EXISTS " : "") + "mapping_name";
 
@@ -166,7 +199,7 @@ public class JetSqlParserTest {
     }
 
     @Test
-    public void test_parseDropExternalMapping() throws SqlParseException {
+    public void test_dropExternalMapping() throws SqlParseException {
         // given
         String sql = "DROP EXTERNAL MAPPING mapping_name";
 
@@ -175,6 +208,16 @@ public class JetSqlParserTest {
 
         // then
         assertThat(node).isInstanceOf(SqlDropExternalMapping.class);
+    }
+
+    @Test
+    public void test_dropMappingRequiresSimpleMappingName() {
+        // given
+        String sql = "DROP MAPPING some_schema.mapping_name";
+
+        // when
+        assertThatThrownBy(() -> parse(sql))
+                .hasMessageContaining("Encountered \".\" at line 1, column 25.");
     }
 
     private static SqlNode parse(String sql) throws SqlParseException {

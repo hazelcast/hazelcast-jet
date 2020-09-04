@@ -57,8 +57,8 @@ public class SqlJsonTest extends JetSqlTestSupport {
     public void supportsNulls() {
         String name = generateRandomName();
         sqlService.execute("CREATE MAPPING " + name + " ("
-                + "key_name VARCHAR EXTERNAL NAME \"__key.name\""
-                + ", value_name VARCHAR EXTERNAL NAME \"this.name\""
+                + "key_name VARCHAR EXTERNAL NAME __key.name"
+                + ", value_name VARCHAR EXTERNAL NAME this.name"
                 + ") TYPE \"" + IMapSqlConnector.TYPE_NAME + "\" "
                 + "OPTIONS ("
                 + "\"" + OPTION_SERIALIZATION_KEY_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + "'"
@@ -80,8 +80,8 @@ public class SqlJsonTest extends JetSqlTestSupport {
     public void supportsFieldsMapping() {
         String name = generateRandomName();
         sqlService.execute("CREATE MAPPING " + name + " ("
-                + "key_name VARCHAR EXTERNAL NAME \"__key.name\""
-                + ", value_name VARCHAR EXTERNAL NAME \"this.name\""
+                + "key_name VARCHAR EXTERNAL NAME __key.name"
+                + ", value_name VARCHAR EXTERNAL NAME this.name"
                 + ") TYPE \"" + IMapSqlConnector.TYPE_NAME + "\" "
                 + "OPTIONS ("
                 + "\"" + OPTION_SERIALIZATION_KEY_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + "'"

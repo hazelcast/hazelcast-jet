@@ -362,6 +362,7 @@ data: {
       "ZONE"
 
       # added by Hazelcast
+      "EXTERNAL"
       "JOB"
       "OVERWRITE"
       "MAPPING"

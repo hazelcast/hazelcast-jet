@@ -126,8 +126,8 @@ public class SqlPortableTest extends JetSqlTestSupport {
         String name = generateRandomName();
 
         sqlService.execute("CREATE MAPPING " + name + " ("
-                + "id INT EXTERNAL NAME \"__key.id\""
-                + ", name VARCHAR EXTERNAL NAME \"this.name\""
+                + "id INT EXTERNAL NAME __key.id"
+                + ", name VARCHAR EXTERNAL NAME this.name"
                 + ") TYPE \"" + IMapSqlConnector.TYPE_NAME + "\" "
                 + "OPTIONS ("
                 + "\"" + OPTION_SERIALIZATION_KEY_FORMAT + "\" '" + PORTABLE_SERIALIZATION_FORMAT + "'"
@@ -201,8 +201,8 @@ public class SqlPortableTest extends JetSqlTestSupport {
     public void supportsFieldsMapping() throws IOException {
         String name = generateRandomName();
         sqlService.execute("CREATE MAPPING " + name + " ("
-                + "key_id INT EXTERNAL NAME \"__key.id\""
-                + ", value_id INT EXTERNAL NAME \"this.id\""
+                + "key_id INT EXTERNAL NAME __key.id"
+                + ", value_id INT EXTERNAL NAME this.id"
                 + ") TYPE \"" + IMapSqlConnector.TYPE_NAME + "\" "
                 + "OPTIONS ("
                 + "\"" + OPTION_SERIALIZATION_KEY_FORMAT + "\" '" + PORTABLE_SERIALIZATION_FORMAT + "'"

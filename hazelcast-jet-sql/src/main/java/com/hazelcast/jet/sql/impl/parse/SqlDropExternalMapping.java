@@ -16,7 +16,6 @@
 
 package com.hazelcast.jet.sql.impl.parse;
 
-import com.hazelcast.internal.util.Preconditions;
 import org.apache.calcite.sql.SqlDrop;
 import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlKind;
@@ -49,8 +48,6 @@ public class SqlDropExternalMapping extends SqlDrop {
         super(OPERATOR, pos, ifExists);
 
         this.name = requireNonNull(name, "Name should not be null");
-
-        Preconditions.checkTrue(name.names.size() == 1, name.toString());
     }
 
     public String name() {

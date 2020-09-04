@@ -16,7 +16,6 @@
 
 package com.hazelcast.jet.sql.impl.parse;
 
-import com.hazelcast.internal.util.Preconditions;
 import org.apache.calcite.sql.SqlCreate;
 import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlKind;
@@ -63,8 +62,6 @@ public class SqlCreateExternalMapping extends SqlCreate {
         this.columns = requireNonNull(columns, "Columns should not be null");
         this.type = requireNonNull(type, "Type should not be null");
         this.options = requireNonNull(options, "Options should not be null");
-
-        Preconditions.checkTrue(name.names.size() == 1, name.toString());
     }
 
     public String name() {
