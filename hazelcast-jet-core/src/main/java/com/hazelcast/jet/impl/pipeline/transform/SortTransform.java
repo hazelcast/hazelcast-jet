@@ -35,13 +35,13 @@ import static com.hazelcast.jet.core.processor.Processors.sortP;
 public class SortTransform<T> extends AbstractTransform {
 
     private static final String COLLECT_STAGE_SUFFIX = "-collect";
-    private final ComparatorEx<T> comparator;
+    private final ComparatorEx<? super T> comparator;
 
     @SuppressWarnings("unchecked")
-    public SortTransform(@Nonnull Transform upstream, @Nullable ComparatorEx<T> comparator) {
+    public SortTransform(@Nonnull Transform upstream, @Nullable ComparatorEx<? super T> comparator) {
         super("sort", upstream);
         if (comparator == null) {
-            this.comparator = (ComparatorEx<T>) (o1, o2) -> ((Comparable<T>) o1).compareTo(o2);
+            this.comparator = (ComparatorEx<? super T>) ComparatorEx.naturalOrder();
         } else {
             this.comparator = comparator;
         }

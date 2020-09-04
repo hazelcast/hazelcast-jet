@@ -91,7 +91,7 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
     }
 
     @Nonnull @Override
-    public BatchStage<T> sort(@Nonnull ComparatorEx<? extends T> comparator) {
+    public BatchStage<T> sort(@Nonnull ComparatorEx<? super T> comparator) {
         return attachSort(comparator);
     }
 

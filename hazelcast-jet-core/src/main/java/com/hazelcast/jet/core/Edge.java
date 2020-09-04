@@ -392,7 +392,8 @@ public class Edge implements IdentifiedDataSerializable {
     }
 
     /**
-     * Returns the comparator defined on this edge using {@link #monotonicOrder(ComparatorEx)}.
+     * Returns the comparator defined on this edge using {@link
+     * #monotonicOrder(ComparatorEx)}.
      *
      * @since 4.3
      **/
