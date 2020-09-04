@@ -22,43 +22,25 @@ import com.hazelcast.jet.core.AbstractProcessor;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.Comparator;
-import java.util.Iterator;
 import java.util.PriorityQueue;
 
-public class SortPrepareP<V> extends AbstractProcessor {
-    private final PriorityQueue<V> priorityQueue;
-    private ResultTraverser resultTraverser;
+public class SortPrepareP<T> extends AbstractProcessor {
+    private final PriorityQueue<T> priorityQueue;
+    private final Traverser<T> resultTraverser;
 
-    public SortPrepareP(@Nullable Comparator<V> comparator) {
+    public SortPrepareP(@Nullable Comparator<T> comparator) {
         this.priorityQueue = new PriorityQueue<>(comparator);
+        this.resultTraverser = priorityQueue::poll;
     }
 
+    @SuppressWarnings("unchecked")
     protected boolean tryProcess0(@Nonnull Object item) {
-        priorityQueue.add((V) item);
+        priorityQueue.add((T) item);
         return true;
     }
 
     @Override
     public boolean complete() {
-        if (resultTraverser == null) {
-            resultTraverser = new ResultTraverser();
-        }
         return emitFromTraverser(resultTraverser);
-    }
-
-    private class ResultTraverser implements Traverser<V> {
-        private final Iterator<V> iterator = priorityQueue.iterator();
-
-        @Override
-        public V next() {
-            if (!iterator.hasNext()) {
-                return null;
-            }
-            try {
-                return iterator.next();
-            } finally {
-                iterator.remove();
-            }
-        }
     }
 }
