@@ -27,7 +27,7 @@ import static org.junit.Assert.assertEquals;
 public class WatermarkPolicy_withFixedLagTest {
 
     private static final long LAG = 10;
-    private WatermarkPolicy p = limitingLag(LAG).get();
+    private final WatermarkPolicy p = limitingLag(LAG).get();
 
     @Test
     public void when_outOfOrderEvents_then_monotonicWm() {

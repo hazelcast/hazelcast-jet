@@ -43,16 +43,15 @@ public interface WatermarkPolicy {
 
     /**
      * Called to report the observation of an event with the given timestamp.
-     * Returns the watermark that should be (or have been) emitted before
-     * the event.
+     * The next call to {@link #getCurrentWatermark()} should reflect this.
      *
      * @param timestamp event's timestamp
      */
     void reportEvent(long timestamp);
 
     /**
-     * Called to get the current watermark in the absence of an observed
-     * event. The watermark may advance based just on the passage of time.
+     * Called to get the current watermark. The watermark may advance based
+     * just on the passage of time.
      */
     long getCurrentWatermark();
 
