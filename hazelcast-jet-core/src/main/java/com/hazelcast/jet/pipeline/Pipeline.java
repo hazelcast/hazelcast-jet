@@ -72,7 +72,7 @@ public interface Pipeline extends Serializable {
      * from an outside source) to its downstream stages.
      *
      * @param source the definition of the source from which the stage reads data
-     * @param <T>    the type of source data items
+     * @param <T> the type of source data items
      */
     @Nonnull
     <T> StreamSourceStage<T> readFrom(@Nonnull StreamSource<? extends T> source);
@@ -105,12 +105,4 @@ public interface Pipeline extends Serializable {
      */
     @Nonnull
     String toDotString();
-
-    /**
-     * Context passed to {@link #toDag()}.
-     * @since 4.3
-     */
-    interface Context {
-        int defaultLocalParallelism();
-    }
 }

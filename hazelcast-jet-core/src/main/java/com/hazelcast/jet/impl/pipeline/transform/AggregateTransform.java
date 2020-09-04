@@ -20,7 +20,6 @@ import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.impl.pipeline.Planner;
 import com.hazelcast.jet.impl.pipeline.Planner.PlannerVertex;
-import com.hazelcast.jet.pipeline.Pipeline.Context;
 
 import javax.annotation.Nonnull;
 import java.util.List;
@@ -51,7 +50,7 @@ public class AggregateTransform<A, R> extends AbstractTransform {
     }
 
     @Override
-    public void addToDag(Planner p, Context context) {
+    public void addToDag(Planner p) {
         if (aggrOp.combineFn() == null) {
             addToDagSingleStage(p);
         } else {

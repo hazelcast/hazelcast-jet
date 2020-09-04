@@ -103,19 +103,9 @@ public class PipelineImpl implements Pipeline, JobDefinition {
         return sinkStage;
     }
 
-    @Nonnull
-    public DAG toDag(Context context) {
-        return new Planner(this).createDag(context);
-    }
-
     @Nonnull @Override
     public DAG toDag() {
-        final int localParallelismUseDefault = -1;
-        return toDag(new Context() {
-            @Override public int defaultLocalParallelism() {
-                return localParallelismUseDefault;
-            }
-        });
+        return new Planner(this).createDag();
     }
 
     @SuppressWarnings("rawtypes")

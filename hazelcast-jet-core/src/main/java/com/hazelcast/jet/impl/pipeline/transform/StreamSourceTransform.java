@@ -22,7 +22,6 @@ import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.impl.pipeline.Planner;
 import com.hazelcast.jet.impl.pipeline.Planner.PlannerVertex;
-import com.hazelcast.jet.pipeline.Pipeline.Context;
 import com.hazelcast.jet.pipeline.StreamSource;
 
 import javax.annotation.Nonnull;
@@ -66,7 +65,7 @@ public class StreamSourceTransform<T> extends AbstractTransform implements Strea
     }
 
     @Override
-    public void addToDag(Planner p, Context context) {
+    public void addToDag(Planner p) {
         if (emitsWatermarks || eventTimePolicy == null) {
             // Reached when the source either emits both JetEvents and watermarks
             // or neither. In these cases we don't have to insert watermarks.
