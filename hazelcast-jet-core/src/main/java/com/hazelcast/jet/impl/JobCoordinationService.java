@@ -361,7 +361,7 @@ public class JobCoordinationService {
                     }
                     logger.fine("Ignoring cancellation of a completed job " + idToString(jobId));
                 },
-                jobExecutionRecord -> {
+                jobRecord -> {
                     // we'll eventually learn of the job through scanning of records or from a join operation
                     throw new RetryableHazelcastException("No MasterContext found for job " + idToString(jobId) + " for "
                             + terminationMode);
@@ -417,7 +417,7 @@ public class JobCoordinationService {
                             : jobStatus;
                 },
                 JobResult::getJobStatus,
-                null,
+                jobRecord -> NOT_RUNNING,
                 jobExecutionRecord -> jobExecutionRecord.isSuspended() ? SUSPENDED : NOT_RUNNING
         );
     }
@@ -464,7 +464,7 @@ public class JobCoordinationService {
                     List<RawJobMetrics> metrics = jobRepository.getJobMetrics(jobId);
                     cf.complete(metrics != null ? metrics : emptyList());
                 },
-                record -> cf.complete(emptyList())
+                jobRecord -> cf.complete(emptyList())
         );
         return cf;
     }
@@ -488,7 +488,7 @@ public class JobCoordinationService {
                 jobResult -> {
                     throw new IllegalStateException("Job already completed");
                 },
-                jobExecutionRecord -> {
+                jobRecord -> {
                     throw new RetryableHazelcastException("Job " + idToString(jobId) + " not yet discovered");
                 }
         );
@@ -591,17 +591,22 @@ public class JobCoordinationService {
             long jobId,
             @Nonnull Consumer<MasterContext> masterContextHandler,
             @Nonnull Consumer<JobResult> jobResultHandler,
-            @Nullable Consumer<JobExecutionRecord> jobExecutionRecordHandler
+            @Nonnull Consumer<JobRecord> jobRecordHandler
     ) {
         return callWithJob(jobId,
                 toNullFunction(masterContextHandler),
                 toNullFunction(jobResultHandler),
-                toNullFunction(null),
-                toNullFunction(jobExecutionRecordHandler)
+                toNullFunction(jobRecordHandler),
+                null
         );
     }
 
-    private <T, R> Function<T, R> toNullFunction(Consumer<T> consumer) {
+    /**
+     * Returns a function that passes its argument to the given {@code
+     * consumer} and returns {@code null}.
+     */
+    @Nonnull
+    private <T, R> Function<T, R> toNullFunction(@Nonnull Consumer<T> consumer) {
         return val -> {
             consumer.accept(val);
             return null;
@@ -612,13 +617,10 @@ public class JobCoordinationService {
             long jobId,
             @Nonnull Function<MasterContext, T> masterContextHandler,
             @Nonnull Function<JobResult, T> jobResultHandler,
-            @Nullable Function<JobRecord, T> jobRecordHandler,
+            @Nonnull Function<JobRecord, T> jobRecordHandler,
             @Nullable Function<JobExecutionRecord, T> jobExecutionRecordHandler
     ) {
         assertIsMaster("Cannot do this task on non-master. jobId=" + idToString(jobId));
-        if (jobRecordHandler == null && jobExecutionRecordHandler == null) {
-            throw new IllegalArgumentException();
-        }
 
         return submitToCoordinatorThread(() -> {
             // when job is finalized, actions happen in this order:
@@ -650,7 +652,7 @@ public class JobCoordinationService {
                 return jobExecutionRecordHandler.apply(jobExRecord);
             }
             JobRecord jobRecord;
-            if (jobRecordHandler != null && (jobRecord = jobRepository.getJobRecord(jobId)) != null) {
+            if ((jobRecord = jobRepository.getJobRecord(jobId)) != null) {
                 return jobRecordHandler.apply(jobRecord);
             }
 
