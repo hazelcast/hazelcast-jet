@@ -347,7 +347,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
         serviceFactory = moveAttachedFilesToPipeline(serviceFactory);
         BiFunctionEx adaptedMapFn = fnAdapter.adaptMapUsingServiceFn(mapFn);
         FunctionEx adaptedPartitionKeyFn = fnAdapter.adaptKeyFn(partitionKeyFn);
-        return attach(
+        return (RET) attach(
                 mapUsingServicePartitionedTransform(transform, serviceFactory, adaptedMapFn, adaptedPartitionKeyFn),
                 fnAdapter);
     }
@@ -364,7 +364,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
         serviceFactory = moveAttachedFilesToPipeline(serviceFactory);
         BiPredicateEx adaptedFilterFn = fnAdapter.adaptFilterUsingServiceFn(filterFn);
         FunctionEx adaptedPartitionKeyFn = fnAdapter.adaptKeyFn(partitionKeyFn);
-        return attach(
+        return (RET) attach(
                 filterUsingServicePartitionedTransform(
                         transform, serviceFactory, adaptedFilterFn, adaptedPartitionKeyFn),
                 fnAdapter);
@@ -382,7 +382,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
         serviceFactory = moveAttachedFilesToPipeline(serviceFactory);
         BiFunctionEx adaptedFlatMapFn = fnAdapter.adaptFlatMapUsingServiceFn(flatMapFn);
         FunctionEx adaptedPartitionKeyFn = fnAdapter.adaptKeyFn(partitionKeyFn);
-        return attach(
+        return (RET) attach(
                 flatMapUsingServicePartitionedTransform(
                         transform, serviceFactory, adaptedFlatMapFn, adaptedPartitionKeyFn),
                 fnAdapter);
@@ -538,7 +538,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
             @Nonnull FunctionEx<? super T, ? extends K> partitionKeyFn
     ) {
         FunctionEx adaptedKeyFn = fnAdapter.adaptKeyFn(partitionKeyFn);
-        return attach(
+        return (RET) attach(
                 partitionedCustomProcessorTransform(stageName, transform, procSupplier, adaptedKeyFn),
                 fnAdapter);
     }
