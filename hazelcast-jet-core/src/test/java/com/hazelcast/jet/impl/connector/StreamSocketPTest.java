@@ -116,7 +116,7 @@ public class StreamSocketPTest extends JetTestSupport {
             Processor processor = supplierFrom(streamSocketP("localhost", serverSocket.getLocalPort(), UTF_16)).get();
             processor.init(outbox, context);
 
-            assertTrueEventually(() -> assertTrue(processor.complete()), 3);
+            assertTrueEventually(() -> assertTrue(processor.complete()), 10);
             for (String s : output) {
                 assertEquals(s, bucket.poll());
             }
