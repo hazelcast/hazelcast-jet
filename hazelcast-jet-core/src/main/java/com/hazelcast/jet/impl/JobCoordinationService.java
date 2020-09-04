@@ -444,10 +444,12 @@ public class JobCoordinationService {
                     JobExecutionRecord jobExecutionRecord = mc.jobExecutionRecord();
                     return jobExecutionRecordHandler.apply(jobExecutionRecord);
                 },
-                (FunctionEx<JobResult, String>) o -> {
+                jobResult -> {
                     throw new IllegalStateException("Job not suspended");
                 },
-                null,
+                jobRecord -> {
+                    throw new IllegalStateException("Job not suspended");
+                },
                 jobExecutionRecordHandler
         );
     }

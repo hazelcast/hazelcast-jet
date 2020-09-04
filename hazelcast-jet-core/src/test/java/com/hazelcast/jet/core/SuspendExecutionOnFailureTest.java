@@ -19,19 +19,17 @@ package com.hazelcast.jet.core;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.TestInClusterSupport;
 import com.hazelcast.jet.config.JobConfig;
-import com.hazelcast.jet.core.TestProcessors.ListSource;
 import com.hazelcast.jet.core.TestProcessors.MockP;
 import com.hazelcast.jet.core.TestProcessors.MockPMS;
 import com.hazelcast.jet.core.TestProcessors.MockPS;
 import com.hazelcast.jet.core.TestProcessors.NoOutputSourceP;
+import com.hazelcast.jet.core.processor.Processors;
 import org.junit.Before;
 import org.junit.Test;
 
-import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.JobStatus.COMPLETED;
 import static com.hazelcast.jet.core.JobStatus.RUNNING;
 import static com.hazelcast.jet.core.JobStatus.SUSPENDED;
-import static java.util.Collections.singletonList;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -51,7 +49,7 @@ public class SuspendExecutionOnFailureTest extends TestInClusterSupport {
     @Test
     public void when_jobRunning_then_suspensionCauseThrows() {
         // Given
-        DAG dag = new DAG().vertex(new Vertex("test", new MockPS(NoOutputSourceP::new, MEMBER_COUNT)));
+        DAG dag = new DAG().vertex(new Vertex("test", () -> new NoOutputSourceP()));
         Job job = jet().newJob(dag, jobConfig);
         assertJobStatusEventually(job, RUNNING);
 
@@ -66,20 +64,17 @@ public class SuspendExecutionOnFailureTest extends TestInClusterSupport {
     @Test
     public void when_jobCompleted_then_suspensionCauseThrows() {
         // Given
-        DAG dag = new DAG().vertex(new Vertex("test", new MockPS(NoOutputSourceP::new, MEMBER_COUNT)));
+        DAG dag = new DAG().vertex(new Vertex("test", Processors.noopP()));
         Job job = jet().newJob(dag, jobConfig);
-        assertJobStatusEventually(job, RUNNING);
 
         // When
-        NoOutputSourceP.proceedLatch.countDown();
-        assertJobStatusEventually(job, COMPLETED);
+        job.join();
+        assertEquals(job.getStatus(), COMPLETED);
 
         // Then
         assertThatThrownBy(job::getSuspensionCause)
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessage("Job not suspended");
-
-        job.join();
     }
 
     @Test
@@ -101,17 +96,16 @@ public class SuspendExecutionOnFailureTest extends TestInClusterSupport {
     public void when_jobSuspendedDueToFailure_then_suspensionCauseDescribeProblem() {
         // Given
         DAG dag = new DAG();
-        Vertex source = dag.newVertex("source", ListSource.supplier(singletonList(1)));
-        Vertex process = dag.newVertex("faulty",
-                new MockPMS(() -> new MockPS(() -> new MockP().setProcessError(MOCK_ERROR), MEMBER_COUNT)));
-        dag.edge(between(source, process));
+        dag.newVertex("faulty",
+                new MockPMS(() -> new MockPS(() -> new MockP().setCompleteError(MOCK_ERROR), MEMBER_COUNT)))
+                .localParallelism(1);
 
         // When
         Job job = jet().newJob(dag, jobConfig);
 
         // Then
         assertJobStatusEventually(job, JobStatus.SUSPENDED);
-        assertTrue(job.getSuspensionCause().startsWith("Due to failure:\n" +
+        assertTrue(job.getSuspensionCause().startsWith("Execution failure:\n" +
                 "com.hazelcast.jet.JetException: Exception in ProcessorTasklet{faulty#0}: " +
                 "java.lang.AssertionError: mock error"));
 
