@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 public class Mapping implements DataSerializable {
 
@@ -78,5 +79,25 @@ public class Mapping implements DataSerializable {
         type = in.readUTF();
         mappingFields = in.readObject();
         options = in.readObject();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        Mapping mapping = (Mapping) o;
+        return Objects.equals(name, mapping.name) &&
+                Objects.equals(type, mapping.type) &&
+                Objects.equals(mappingFields, mapping.mappingFields) &&
+                Objects.equals(options, mapping.options);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(name, type, mappingFields, options);
     }
 }
