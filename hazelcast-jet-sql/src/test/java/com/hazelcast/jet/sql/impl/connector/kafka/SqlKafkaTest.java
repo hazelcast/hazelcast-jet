@@ -39,12 +39,11 @@ import java.math.BigInteger;
 import java.util.Map;
 
 import static com.hazelcast.jet.core.TestUtil.createMap;
-import static com.hazelcast.jet.sql.impl.connector.SqlConnector.JAVA_SERIALIZATION_FORMAT;
 import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.OPTION_KEY_CLASS;
 import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.OPTION_SERIALIZATION_KEY_FORMAT;
 import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.OPTION_SERIALIZATION_VALUE_FORMAT;
 import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.OPTION_VALUE_CLASS;
-import static java.lang.String.format;
+import static com.hazelcast.jet.sql.impl.connector.SqlConnector.JAVA_SERIALIZATION_FORMAT;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 
@@ -73,29 +72,21 @@ public class SqlKafkaTest extends JetSqlTestSupport {
     @Before
     public void before() {
         topicName = createRandomTopic();
-        sqlService.execute(format("CREATE MAPPING %s " +
-                        "TYPE %s " +
-                        "OPTIONS (" +
-                        " %s '%s'," +
-                        " %s '%s'," +
-                        " \"%s\" '%s'," +
-                        " \"%s\" '%s'," +
-                        " bootstrap.servers '%s'," +
-                        " key.serializer '%s'," +
-                        " key.deserializer '%s'," +
-                        " \"value.serializer\" '%s'," +
-                        " \"value.deserializer\" '%s'," +
-                        " \"auto.offset.reset\" 'earliest'" +
-                        ")",
-                topicName, KafkaSqlConnector.TYPE_NAME,
-                OPTION_SERIALIZATION_KEY_FORMAT, JAVA_SERIALIZATION_FORMAT,
-                OPTION_KEY_CLASS, Integer.class.getName(),
-                OPTION_SERIALIZATION_VALUE_FORMAT, JAVA_SERIALIZATION_FORMAT,
-                OPTION_VALUE_CLASS, String.class.getName(),
-                kafkaTestSupport.getBrokerConnectionString(),
-                IntegerSerializer.class.getCanonicalName(), IntegerDeserializer.class.getCanonicalName(),
-                StringSerializer.class.getCanonicalName(), StringDeserializer.class.getCanonicalName()
-        ));
+        sqlService.execute("CREATE MAPPING " + topicName + " "
+                + "TYPE " + KafkaSqlConnector.TYPE_NAME + " "
+                + "OPTIONS ( "
+                + OPTION_SERIALIZATION_KEY_FORMAT + " '" + JAVA_SERIALIZATION_FORMAT
+                + "', " + OPTION_KEY_CLASS + " '" + Integer.class.getName()
+                + "', \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT
+                + "', \"" + OPTION_VALUE_CLASS + "\" '" + String.class.getName()
+                + "', bootstrap.servers '" + kafkaTestSupport.getBrokerConnectionString()
+                + "', key.serializer '" + IntegerSerializer.class.getCanonicalName()
+                + "', key.deserializer '" + IntegerDeserializer.class.getCanonicalName()
+                + "', \"value.serializer\" '" + StringSerializer.class.getCanonicalName()
+                + "', \"value.deserializer\" '" + StringDeserializer.class.getCanonicalName()
+                + "', \"auto.offset.reset\" 'earliest'"
+                + ")"
+        );
     }
 
     @AfterClass
@@ -108,82 +99,66 @@ public class SqlKafkaTest extends JetSqlTestSupport {
 
     @Test
     public void insert() {
-        assertTopic(topicName, format("INSERT INTO %s VALUES (1, 'value-1')", topicName),
+        assertTopic(topicName, "INSERT INTO " + topicName + " VALUES (1, 'value-1')",
                 createMap(1, "value-1"));
     }
 
     @Test
     public void insert_overwrite() {
-        assertTopic(topicName, format("INSERT OVERWRITE %s (this, __key) VALUES ('value-1', 1)", topicName),
+        assertTopic(topicName, "INSERT OVERWRITE " + topicName + " (this, __key) VALUES ('value-1', 1)",
                 createMap(1, "value-1"));
     }
 
     @Test
     public void select_convert() {
         String topicName = createRandomTopic();
-        sqlService.execute(format("CREATE MAPPING %s " +
-                        "TYPE %s " +
-                        "OPTIONS (" +
-                        " %s '%s'," +
-                        " %s '%s'," +
-                        " \"%s\" '%s'," +
-                        " \"%s\" '%s'," +
-                        " bootstrap.servers '%s'," +
-                        " key.serializer '%s'," +
-                        " key.deserializer '%s'," +
-                        " \"value.serializer\" '%s'," +
-                        " \"value.deserializer\" '%s'," +
-                        " \"auto.offset.reset\" 'earliest'" +
-                        ")",
-                topicName, KafkaSqlConnector.TYPE_NAME,
-                OPTION_SERIALIZATION_KEY_FORMAT, JAVA_SERIALIZATION_FORMAT,
-                OPTION_KEY_CLASS, BigInteger.class.getName(),
-                OPTION_SERIALIZATION_VALUE_FORMAT, JAVA_SERIALIZATION_FORMAT,
-                OPTION_VALUE_CLASS, String.class.getName(),
-                kafkaTestSupport.getBrokerConnectionString(),
-                BigIntegerSerializer.class.getCanonicalName(), BigIntegerDeserializer.class.getCanonicalName(),
-                StringSerializer.class.getCanonicalName(), StringDeserializer.class.getCanonicalName()
-        ));
+        sqlService.execute("CREATE MAPPING " + topicName + " "
+                + "TYPE " + KafkaSqlConnector.TYPE_NAME + " "
+                + "OPTIONS ( "
+                + OPTION_SERIALIZATION_KEY_FORMAT + " '" + JAVA_SERIALIZATION_FORMAT
+                + "', " + OPTION_KEY_CLASS + " '" + BigInteger.class.getName()
+                + "', \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT
+                + "', \"" + OPTION_VALUE_CLASS + "\" '" + String.class.getName()
+                + "', bootstrap.servers '" + kafkaTestSupport.getBrokerConnectionString()
+                + "', key.serializer '" + BigIntegerSerializer.class.getCanonicalName()
+                + "', key.deserializer '" + BigIntegerDeserializer.class.getCanonicalName()
+                + "', \"value.serializer\" '" + StringSerializer.class.getCanonicalName()
+                + "', \"value.deserializer\" '" + StringDeserializer.class.getCanonicalName()
+                + "', \"auto.offset.reset\" 'earliest'"
+                + ")"
+        );
 
-        sqlService.execute(format("INSERT INTO %s VALUES (12, 'a')", topicName));
+        sqlService.execute("INSERT INTO " + topicName + " VALUES (12, 'a')");
 
         assertRowsEventuallyInAnyOrder(
-                format("SELECT __key + 1, this FROM %s", topicName),
+                "SELECT __key + 1, this FROM " + topicName,
                 singletonList(new Row(BigDecimal.valueOf(13), "a")));
     }
 
     @Test
     public void select_pojo() {
         String topicName = createRandomTopic();
-        sqlService.execute(format("CREATE MAPPING %s " +
-                        "TYPE %s " +
-                        "OPTIONS (" +
-                        " %s '%s'," +
-                        " %s '%s'," +
-                        " \"%s\" '%s'," +
-                        " \"%s\" '%s'," +
-                        " bootstrap.servers '%s'," +
-                        " key.serializer '%s'," +
-                        " key.deserializer '%s'," +
-                        " \"value.serializer\" '%s'," +
-                        " \"value.deserializer\" '%s'," +
-                        " \"auto.offset.reset\" 'earliest'" +
-                        ")",
-                topicName, KafkaSqlConnector.TYPE_NAME,
-                OPTION_SERIALIZATION_KEY_FORMAT, JAVA_SERIALIZATION_FORMAT,
-                OPTION_KEY_CLASS, Integer.class.getName(),
-                OPTION_SERIALIZATION_VALUE_FORMAT, JAVA_SERIALIZATION_FORMAT,
-                OPTION_VALUE_CLASS, Person.class.getName(),
-                kafkaTestSupport.getBrokerConnectionString(),
-                IntegerSerializer.class.getCanonicalName(), IntegerDeserializer.class.getCanonicalName(),
-                PersonSerializer.class.getCanonicalName(), PersonDeserializer.class.getCanonicalName()
-        ));
+        sqlService.execute("CREATE MAPPING " + topicName + " "
+                + "TYPE " + KafkaSqlConnector.TYPE_NAME + " "
+                + "OPTIONS ( "
+                + OPTION_SERIALIZATION_KEY_FORMAT + " '" + JAVA_SERIALIZATION_FORMAT
+                + "', " + OPTION_KEY_CLASS + " '" + Integer.class.getName()
+                + "', \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT
+                + "', \"" + OPTION_VALUE_CLASS + "\" '" + Person.class.getName()
+                + "', bootstrap.servers '" + kafkaTestSupport.getBrokerConnectionString()
+                + "', key.serializer '" + IntegerSerializer.class.getCanonicalName()
+                + "', key.deserializer '" + IntegerDeserializer.class.getCanonicalName()
+                + "', \"value.serializer\" '" + PersonSerializer.class.getCanonicalName()
+                + "', \"value.deserializer\" '" + PersonDeserializer.class.getCanonicalName()
+                + "', \"auto.offset.reset\" 'earliest'"
+                + ")"
+        );
 
-        sqlService.execute(format("INSERT INTO %s (__key, name, age) VALUES (0, 'Alice', 30)", topicName));
-        sqlService.execute(format("INSERT INTO %s (__key, name, age) VALUES (1, 'Bob', 40)", topicName));
+        sqlService.execute("INSERT INTO " + topicName + " (__key, name, age) VALUES (0, 'Alice', 30)");
+        sqlService.execute("INSERT INTO " + topicName + " (__key, name, age) VALUES (1, 'Bob', 40)");
 
         assertRowsEventuallyInAnyOrder(
-                format("SELECT __key, name, age FROM %s", topicName),
+                "SELECT __key, name, age FROM " + topicName,
                 asList(
                         new Row(0, "Alice", 30),
                         new Row(1, "Bob", 40)));
@@ -195,7 +170,7 @@ public class SqlKafkaTest extends JetSqlTestSupport {
         kafkaTestSupport.produce(topicName, 1, "value-" + 1);
 
         assertRowsEventuallyInAnyOrder(
-                format("SELECT '喷气式飞机' FROM %s", topicName),
+                "SELECT '喷气式飞机' FROM " + topicName,
                 asList(
                         new Row("喷气式飞机"),
                         new Row("喷气式飞机")));
@@ -207,7 +182,7 @@ public class SqlKafkaTest extends JetSqlTestSupport {
         kafkaTestSupport.produce(topicName, 1, "value-" + 1);
 
         assertRowsEventuallyInAnyOrder(
-                format("SELECT this, __key FROM %s", topicName),
+                "SELECT this, __key FROM " + topicName,
                 asList(
                         new Row("value-0", 0),
                         new Row("value-1", 1)));
@@ -219,7 +194,7 @@ public class SqlKafkaTest extends JetSqlTestSupport {
         kafkaTestSupport.produce(topicName, 1, "value-" + 1);
 
         assertRowsEventuallyInAnyOrder(
-                format("SELECT * FROM %s", topicName),
+                "SELECT * FROM " + topicName,
                 asList(
                         new Row(0, "value-0"),
                         new Row(1, "value-1")));
@@ -232,7 +207,7 @@ public class SqlKafkaTest extends JetSqlTestSupport {
         kafkaTestSupport.produce(topicName, 2, "value-" + 2);
 
         assertRowsEventuallyInAnyOrder(
-                format("SELECT this FROM %s WHERE __key=1 or this='value-0'", topicName),
+                "SELECT this FROM " + topicName + " WHERE __key=1 or this='value-0'",
                 asList(
                         new Row("value-0"),
                         new Row("value-1")));
@@ -244,7 +219,7 @@ public class SqlKafkaTest extends JetSqlTestSupport {
         kafkaTestSupport.produce(topicName, 1, "value-" + 1);
 
         assertRowsEventuallyInAnyOrder(
-                format("SELECT upper(this) FROM %s WHERE this='value-1'", topicName),
+                "SELECT upper(this) FROM " + topicName + " WHERE this='value-1'",
                 singletonList(new Row("VALUE-1")));
     }
 
@@ -254,7 +229,7 @@ public class SqlKafkaTest extends JetSqlTestSupport {
         kafkaTestSupport.produce(topicName, 1, "value-" + 1);
 
         assertRowsEventuallyInAnyOrder(
-                format("SELECT this FROM %s WHERE upper(this)='VALUE-1'", topicName),
+                "SELECT this FROM " + topicName + " WHERE upper(this)='VALUE-1'",
                 singletonList(new Row("value-1")));
     }
 
@@ -264,7 +239,7 @@ public class SqlKafkaTest extends JetSqlTestSupport {
         kafkaTestSupport.produce(topicName, 1, "value-" + 1);
 
         assertRowsEventuallyInAnyOrder(
-                format("SELECT this FROM (SELECT upper(this) this FROM %s) WHERE this='VALUE-1'", topicName),
+                "SELECT this FROM (SELECT upper(this) this FROM " + topicName + ") WHERE this='VALUE-1'",
                 singletonList(new Row("VALUE-1")));
     }
 
@@ -274,7 +249,7 @@ public class SqlKafkaTest extends JetSqlTestSupport {
         kafkaTestSupport.produce(topicName, 1, "value-" + 1);
 
         assertRowsEventuallyInAnyOrder(
-                format("SELECT upper(this) FROM %s WHERE upper(this)='VALUE-1'", topicName),
+                "SELECT upper(this) FROM " + topicName + " WHERE upper(this)='VALUE-1'",
                 singletonList(new Row("VALUE-1")));
     }
 

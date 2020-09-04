@@ -58,7 +58,7 @@ public class JetSqlParserTest {
                 + "mapping_name ("
                 + "column_name INT EXTERNAL NAME external.name"
                 + ")"
-                + "TYPE mapping_type "
+                + "TYPE mapping.type "
                 + "OPTIONS("
                 + "option.key 'option.value'"
                 + ")";
@@ -68,7 +68,7 @@ public class JetSqlParserTest {
 
         // then
         assertThat(node.name()).isEqualTo("mapping_name");
-        assertThat(node.type()).isEqualTo("mapping_type");
+        assertThat(node.type()).isEqualTo("mapping.type");
         assertThat(node.columns().findFirst())
                 .isNotEmpty().get()
                 .extracting(column -> new Object[]{column.name(), column.type(), column.externalName()})
