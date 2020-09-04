@@ -28,6 +28,7 @@ import com.hazelcast.jet.Traversers;
 import com.hazelcast.jet.Util;
 import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
+import com.hazelcast.jet.core.Edge;
 import com.hazelcast.jet.core.EventTimePolicy;
 import com.hazelcast.jet.core.Inbox;
 import com.hazelcast.jet.core.Outbox;
@@ -57,7 +58,7 @@ import javax.annotation.Nullable;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map.Entry;
-import java.util.TreeMap;
+import java.util.PriorityQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 
@@ -976,11 +977,13 @@ public final class Processors {
     }
 
     /**
-     * Returns a supplier of processors for a vertex that performs the prepare phase of sorting.
-     * The processors sorts the input dataset locally at each cluster member using in-memory {@link TreeMap}
-     * to prepare it for the global sorting phase.
-     * There can be only one {@link SortPrepareP} processor per cluster member for
-     * each sort stage.
+     * Returns a supplier of processors for a vertex that sorts its input using
+     * a {@link PriorityQueue} and emits it in the {@code complete} phase.
+     * <p>
+     * The output edge of this vertex should be {@link Edge#distributed
+     * distributed} {@link Edge#monotonicOrder monotonicOrder} {@link
+     * Edge#allToOne allToOne} so it preserves the ordering when merging
+     * the data from all upstream processors.
      *
      * @since 4.3
      */
