@@ -30,7 +30,7 @@ public class MappingDefinition {
     private final String type;
     private final Map<String, String> options;
 
-    MappingDefinition(
+    public MappingDefinition(
             Table table,
             String type,
             Map<String, String> options
