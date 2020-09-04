@@ -55,7 +55,7 @@ a `SourceStreamStage` which offers just these methods:
 
 - `withIngestionTimestamps()`
   declares that the source will assign the time of ingestion as the
-  event timestamp
+  event timestamp. System-time semantics will be used.
 
 - `withoutTimestamps()`
   declares that the source stage has no timestamps. Use this if you

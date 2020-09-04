@@ -47,12 +47,11 @@ public interface StreamSourceStage<T> {
      * Declares that the source will assign the time of ingestion as the event
      * timestamp. It will call {@code System.currentTimeMillis()} at the moment
      * it observes an event from the data source and assign it as the event
-     * timestamp.
+     * timestamp. The actual time of the original event is ignored.
      * <p>
-     * With this mode the event time advances even in the absence of events. If
-     * the timestamp is extracted from the event and there are no more events,
-     * the pipeline is blocked - you can use this mode to avoid latency issues
-     * if your events are sparse.
+     * With this mode, unlike {@link #withTimestamps} or {@link
+     * #withNativeTimestamps}, the <em>sparse events issue</em> isn't present.
+     * You can use this mode to avoid the issue, but there's a caveat:
      * <p>
      * <strong>Note:</strong> when snapshotting is enabled to achieve fault
      * tolerance, after a restart Jet replays all the events that were already
