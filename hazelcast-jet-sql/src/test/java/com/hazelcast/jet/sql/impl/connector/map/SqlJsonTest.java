@@ -61,7 +61,7 @@ public class SqlJsonTest extends JetSqlTestSupport {
                 + ", value_name VARCHAR EXTERNAL NAME this.name"
                 + ") TYPE \"" + IMapSqlConnector.TYPE_NAME + "\" "
                 + "OPTIONS ("
-                + "\"" + OPTION_SERIALIZATION_KEY_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + "'"
+                + OPTION_SERIALIZATION_KEY_FORMAT + " '" + JSON_SERIALIZATION_FORMAT + "'"
                 + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + "'"
                 + ")");
 
@@ -84,7 +84,7 @@ public class SqlJsonTest extends JetSqlTestSupport {
                 + ", value_name VARCHAR EXTERNAL NAME this.name"
                 + ") TYPE \"" + IMapSqlConnector.TYPE_NAME + "\" "
                 + "OPTIONS ("
-                + "\"" + OPTION_SERIALIZATION_KEY_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + "'"
+                + OPTION_SERIALIZATION_KEY_FORMAT + " '" + JSON_SERIALIZATION_FORMAT + "'"
                 + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + "'"
                 + ")");
 
@@ -106,9 +106,9 @@ public class SqlJsonTest extends JetSqlTestSupport {
                 + "name VARCHAR"
                 + ") TYPE \"" + IMapSqlConnector.TYPE_NAME + "\" "
                 + "OPTIONS ("
-                + "\"" + OPTION_SERIALIZATION_KEY_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
-                + ", \"" + OPTION_KEY_CLASS + "\" '" + Integer.class.getName() + "', "
-                + "\"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + "'"
+                + OPTION_SERIALIZATION_KEY_FORMAT + " '" + JAVA_SERIALIZATION_FORMAT + "'"
+                + ", " + OPTION_KEY_CLASS + " '" + Integer.class.getName() + "'"
+                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + "'"
                 + ")");
 
         // insert initial record
@@ -120,8 +120,8 @@ public class SqlJsonTest extends JetSqlTestSupport {
                 + ", ssn BIGINT"
                 + ") TYPE \"" + IMapSqlConnector.TYPE_NAME + "\" "
                 + "OPTIONS ("
-                + "\"" + OPTION_SERIALIZATION_KEY_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
-                + ", \"" + OPTION_KEY_CLASS + "\" '" + Integer.class.getName() + "'"
+                + OPTION_SERIALIZATION_KEY_FORMAT + " '" + JAVA_SERIALIZATION_FORMAT + "'"
+                + ", " + OPTION_KEY_CLASS + " '" + Integer.class.getName() + "'"
                 + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + "'"
                 + ")");
 
@@ -157,8 +157,8 @@ public class SqlJsonTest extends JetSqlTestSupport {
                 + ", offsetDateTime TIMESTAMP WITH TIME ZONE"
                 + ") TYPE \"" + IMapSqlConnector.TYPE_NAME + "\" "
                 + "OPTIONS ("
-                + "\"" + OPTION_SERIALIZATION_KEY_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
-                + ", \"" + OPTION_KEY_CLASS + "\" '" + BigInteger.class.getName() + "'"
+                + OPTION_SERIALIZATION_KEY_FORMAT + " '" + JAVA_SERIALIZATION_FORMAT + "'"
+                + ", " + OPTION_KEY_CLASS + " '" + BigInteger.class.getName() + "'"
                 + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + "'"
                 + ")");
 

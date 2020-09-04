@@ -60,7 +60,7 @@ public class JetSqlParserTest {
                 + ")"
                 + "TYPE mapping_type "
                 + "OPTIONS("
-                + "\"option.key\" 'option.value'"
+                + "option.key 'option.value'"
                 + ")";
 
         // when
@@ -172,7 +172,7 @@ public class JetSqlParserTest {
                 + ")"
                 + "TYPE mapping_type "
                 + "OPTIONS("
-                + "\"option.key\" 'value1'"
+                + "option.key 'value1'"
                 + ", \"option.key\" 'value2'"
                 + ")";
 

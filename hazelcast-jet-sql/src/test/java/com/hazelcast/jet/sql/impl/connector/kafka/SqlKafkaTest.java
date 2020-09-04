@@ -76,13 +76,13 @@ public class SqlKafkaTest extends JetSqlTestSupport {
         sqlService.execute(format("CREATE MAPPING %s " +
                         "TYPE \"%s\" " +
                         "OPTIONS (" +
+                        " %s '%s'," +
+                        " %s '%s'," +
                         " \"%s\" '%s'," +
                         " \"%s\" '%s'," +
-                        " \"%s\" '%s'," +
-                        " \"%s\" '%s'," +
-                        " \"bootstrap.servers\" '%s'," +
-                        " \"key.serializer\" '%s'," +
-                        " \"key.deserializer\" '%s'," +
+                        " bootstrap.servers '%s'," +
+                        " key.serializer '%s'," +
+                        " key.deserializer '%s'," +
                         " \"value.serializer\" '%s'," +
                         " \"value.deserializer\" '%s'," +
                         " \"auto.offset.reset\" 'earliest'" +
@@ -124,13 +124,13 @@ public class SqlKafkaTest extends JetSqlTestSupport {
         sqlService.execute(format("CREATE MAPPING %s " +
                         "TYPE \"%s\" " +
                         "OPTIONS (" +
+                        " %s '%s'," +
+                        " %s '%s'," +
                         " \"%s\" '%s'," +
                         " \"%s\" '%s'," +
-                        " \"%s\" '%s'," +
-                        " \"%s\" '%s'," +
-                        " \"bootstrap.servers\" '%s'," +
-                        " \"key.serializer\" '%s'," +
-                        " \"key.deserializer\" '%s'," +
+                        " bootstrap.servers '%s'," +
+                        " key.serializer '%s'," +
+                        " key.deserializer '%s'," +
                         " \"value.serializer\" '%s'," +
                         " \"value.deserializer\" '%s'," +
                         " \"auto.offset.reset\" 'earliest'" +
@@ -158,13 +158,13 @@ public class SqlKafkaTest extends JetSqlTestSupport {
         sqlService.execute(format("CREATE MAPPING %s " +
                         "TYPE \"%s\" " +
                         "OPTIONS (" +
+                        " %s '%s'," +
+                        " %s '%s'," +
                         " \"%s\" '%s'," +
                         " \"%s\" '%s'," +
-                        " \"%s\" '%s'," +
-                        " \"%s\" '%s'," +
-                        " \"bootstrap.servers\" '%s'," +
-                        " \"key.serializer\" '%s'," +
-                        " \"key.deserializer\" '%s'," +
+                        " bootstrap.servers '%s'," +
+                        " key.serializer '%s'," +
+                        " key.deserializer '%s'," +
                         " \"value.serializer\" '%s'," +
                         " \"value.deserializer\" '%s'," +
                         " \"auto.offset.reset\" 'earliest'" +

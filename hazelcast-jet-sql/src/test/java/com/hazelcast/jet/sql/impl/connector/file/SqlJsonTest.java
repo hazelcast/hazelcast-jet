@@ -56,9 +56,9 @@ public class SqlJsonTest extends JetSqlTestSupport {
                 + "nonExistingField VARCHAR"
                 + ") TYPE \"" + FileSqlConnector.TYPE_NAME + "\" "
                 + "OPTIONS ("
-                + "\"" + OPTION_SERIALIZATION_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + "'"
-                + ", \"" + FileSqlConnector.OPTION_PATH + "\" '" + RESOURCES_PATH + "'"
-                + ", \"" + FileSqlConnector.OPTION_GLOB + "\" '" + "file.json" + "'"
+                + OPTION_SERIALIZATION_FORMAT + " '" + JSON_SERIALIZATION_FORMAT + "'"
+                + ", " + FileSqlConnector.OPTION_PATH + " '" + RESOURCES_PATH + "'"
+                + ", " + FileSqlConnector.OPTION_GLOB + " '" + "file.json" + "'"
                 + ")"
         );
 
@@ -75,9 +75,9 @@ public class SqlJsonTest extends JetSqlTestSupport {
                 + "name VARCHAR EXTERNAL NAME string"
                 + ") TYPE \"" + FileSqlConnector.TYPE_NAME + "\" "
                 + "OPTIONS ("
-                + "\"" + OPTION_SERIALIZATION_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + "'"
-                + ", \"" + FileSqlConnector.OPTION_PATH + "\" '" + RESOURCES_PATH + "'"
-                + ", \"" + FileSqlConnector.OPTION_GLOB + "\" '" + "file.json" + "'"
+                + OPTION_SERIALIZATION_FORMAT + " '" + JSON_SERIALIZATION_FORMAT + "'"
+                + ", " + FileSqlConnector.OPTION_PATH + " '" + RESOURCES_PATH + "'"
+                + ", " + FileSqlConnector.OPTION_GLOB + " '" + "file.json" + "'"
                 + ")"
         );
 
@@ -109,8 +109,8 @@ public class SqlJsonTest extends JetSqlTestSupport {
                 + ", offsetDateTime TIMESTAMP WITH TIME ZONE"
                 + ") TYPE \"" + FileSqlConnector.TYPE_NAME + "\" "
                 + "OPTIONS ("
-                + "\"" + OPTION_SERIALIZATION_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + "'"
-                + ", \"" + FileSqlConnector.OPTION_PATH + "\" '" + directory.getAbsolutePath() + "'"
+                + OPTION_SERIALIZATION_FORMAT + " '" + JSON_SERIALIZATION_FORMAT + "'"
+                + ", " + FileSqlConnector.OPTION_PATH + " '" + directory.getAbsolutePath() + "'"
                 + ")"
         );
 
@@ -159,9 +159,9 @@ public class SqlJsonTest extends JetSqlTestSupport {
         sqlService.execute("CREATE MAPPING " + name + " "
                 + "TYPE \"" + FileSqlConnector.TYPE_NAME + "\" "
                 + "OPTIONS ( "
-                + "\"" + OPTION_SERIALIZATION_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + "'"
-                + ", \"" + FileSqlConnector.OPTION_PATH + "\" '" + RESOURCES_PATH + "'"
-                + ", \"" + FileSqlConnector.OPTION_GLOB + "\" '" + "file.json" + "'"
+                + OPTION_SERIALIZATION_FORMAT + " '" + JSON_SERIALIZATION_FORMAT + "'"
+                + ", " + FileSqlConnector.OPTION_PATH + " '" + RESOURCES_PATH + "'"
+                + ", " + FileSqlConnector.OPTION_GLOB + " '" + "file.json" + "'"
                 + ")"
         );
 

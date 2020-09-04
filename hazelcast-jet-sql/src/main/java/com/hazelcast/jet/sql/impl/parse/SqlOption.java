@@ -49,7 +49,7 @@ public class SqlOption extends SqlCall {
     }
 
     public String key() {
-        return key.getSimple();
+        return key.toString();
     }
 
     public String value() {

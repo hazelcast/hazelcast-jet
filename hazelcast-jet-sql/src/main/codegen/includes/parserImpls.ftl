@@ -294,7 +294,7 @@ SqlOption SqlOption() :
     SqlNode value;
 }
 {
-    key = SimpleIdentifier() { span = span(); }
+    key = CompoundIdentifier() { span = span(); }
     value = StringLiteral()
     {
         return new SqlOption(key, value, span.end(this));
