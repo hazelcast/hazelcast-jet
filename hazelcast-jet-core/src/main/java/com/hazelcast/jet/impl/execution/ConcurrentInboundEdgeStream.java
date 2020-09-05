@@ -191,10 +191,7 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
                 if (q == null) {
                     continue;
                 }
-                Object headObject = q.peek();
-                Object headItem = headObject instanceof ObjectWithPartitionId
-                        ? ((ObjectWithPartitionId) headObject).getItem()
-                        : headObject;
+                Object headItem = unwrap(q.peek());
                 if (headItem == null) {
                     return tracker.toProgressState();
                 }
@@ -221,13 +218,19 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
                 ));
             }
             lastItem = minItem;
-            Object polledItem = conveyor.queue(minIndex).poll();
+            Object polledItem = unwrap(conveyor.queue(minIndex).poll());
             tracker.madeProgress();
             assert polledItem == minItem : "polledItem != minItem";
             boolean consumeResult = dest.test(minItem);
             assert consumeResult : "consumeResult is false";
         } while (--batchSize > 0);
         return tracker.toProgressState();
+    }
+
+    private Object unwrap(Object item) {
+        return item instanceof ObjectWithPartitionId
+                ? ((ObjectWithPartitionId) item).getItem()
+                : item;
     }
 
     private boolean maybeEmitWm(long timestamp, Predicate<Object> dest) {
