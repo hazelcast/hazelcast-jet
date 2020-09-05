@@ -995,6 +995,21 @@ public class BatchStageTest extends PipelineTestSupport {
     }
 
     @Test
+    public void sort() {
+        // Given
+        List<Integer> input = IntStream.range(0, itemCount).boxed().collect(toList());
+        List<Integer> expected = new ArrayList<>(input);
+        Collections.shuffle(input);
+
+        // When
+        BatchStage<Integer> sorted = batchStageFromList(input).sort();
+
+        // Then
+        sorted.writeTo(assertOrdered(expected));
+        execute();
+    }
+
+    @Test
     public void hashJoin() {
         // Given
         List<Integer> input = sequence(itemCount);
@@ -1338,5 +1353,4 @@ public class BatchStageTest extends PipelineTestSupport {
                 .setLocalParallelism(lp)
                 .writeTo(Sinks.noop());
     }
-
 }
