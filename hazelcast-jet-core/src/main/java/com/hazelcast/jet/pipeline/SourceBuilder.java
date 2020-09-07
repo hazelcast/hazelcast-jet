@@ -29,7 +29,6 @@ import com.hazelcast.jet.impl.pipeline.transform.BatchSourceTransform;
 import com.hazelcast.jet.impl.pipeline.transform.StreamSourceTransform;
 
 import javax.annotation.Nonnull;
-import java.io.Serializable;
 import java.util.List;
 
 import static com.hazelcast.internal.util.Preconditions.checkPositive;
@@ -53,7 +52,7 @@ import static com.hazelcast.jet.impl.util.Util.checkSerializable;
  *
  * @since 3.0
  */
-public final class SourceBuilder<C> implements Serializable {
+public final class SourceBuilder<C> {
     private final String name;
     private final FunctionEx<? super Context, ? extends C> createFn;
     private FunctionEx<? super C, Object> createSnapshotFn = ctx -> null;
@@ -344,7 +343,7 @@ public final class SourceBuilder<C> implements Serializable {
         return new SourceBuilder<C>(name, createFn).new TimestampedStream<Void>();
     }
 
-    private abstract class Base<T> implements Serializable {
+    private abstract class Base<T> {
         private Base() {
         }
 
@@ -559,11 +558,19 @@ public final class SourceBuilder<C> implements Serializable {
         @Nonnull
         public StreamSource<T> build() {
             Preconditions.checkNotNull(fillBufferFn, "fillBufferFn() wasn't called");
+
+            FunctionEx<? super Context, ? extends C> createFnLocal = createFn;
+            BiConsumerEx<? super C, ? super SourceBuffer<T>> fillBufferFnLocal = fillBufferFn;
+            FunctionEx<? super C, Object> createSnapshotFnLocal = createSnapshotFn;
+            BiConsumerEx<? super C, ? super List<Object>> restoreSnapshotFnLocal = restoreSnapshotFn;
+            ConsumerEx<? super C> destroyFnLocal = destroyFn;
+            int preferredLocalParallelismLocal = preferredLocalParallelism;
+
             return new StreamSourceTransform<>(
                     name,
                     eventTimePolicy -> convenientSourceP(
-                            createFn, fillBufferFn, createSnapshotFn, restoreSnapshotFn,
-                            destroyFn, preferredLocalParallelism, false),
+                            createFnLocal, fillBufferFnLocal, createSnapshotFnLocal, restoreSnapshotFnLocal,
+                            destroyFnLocal, preferredLocalParallelismLocal, false),
                     false, false);
         }
     }
@@ -636,10 +643,18 @@ public final class SourceBuilder<C> implements Serializable {
         @Nonnull
         public StreamSource<T> build() {
             Preconditions.checkNotNull(fillBufferFn, "fillBufferFn must be set");
+
+            FunctionEx<? super Context, ? extends C> createFnLocal = createFn;
+            BiConsumerEx<? super C, ? super TimestampedSourceBuffer<T>> fillBufferFnLocal = fillBufferFn;
+            FunctionEx<? super C, Object> createSnapshotFnLocal = createSnapshotFn;
+            BiConsumerEx<? super C, ? super List<Object>> restoreSnapshotFnLocal = restoreSnapshotFn;
+            ConsumerEx<? super C> destroyFnLocal = destroyFn;
+            int preferredLocalParallelismLocal = preferredLocalParallelism;
+
             return new StreamSourceTransform<>(
                     name,
-                    eventTimePolicy -> convenientTimestampedSourceP(createFn, fillBufferFn, eventTimePolicy,
-                            createSnapshotFn, restoreSnapshotFn, destroyFn, preferredLocalParallelism),
+                    eventTimePolicy -> convenientTimestampedSourceP(createFnLocal, fillBufferFnLocal, eventTimePolicy,
+                           createSnapshotFnLocal, restoreSnapshotFnLocal, destroyFnLocal, preferredLocalParallelismLocal),
                     true, true);
         }
     }
