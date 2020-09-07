@@ -107,7 +107,7 @@ public class JetClientInstanceImpl extends AbstractJetInstance {
     }
 
     @Override
-    public Job newJobProxy(long jobId, JobDefinition jobDefinition, JobConfig config) {
+    public Job newJobProxy(long jobId, Object jobDefinition, JobConfig config) {
         return new ClientJobProxy(this, jobId, jobDefinition, config);
     }
 

@@ -58,7 +58,7 @@ public class JobProxy extends AbstractJobProxy<NodeEngineImpl> {
         super(nodeEngine, jobId);
     }
 
-    public JobProxy(NodeEngineImpl engine, long jobId, JobDefinition jobDefinition, JobConfig config) {
+    public JobProxy(NodeEngineImpl engine, long jobId, Object jobDefinition, JobConfig config) {
         super(engine, jobId, jobDefinition, config);
     }
 

@@ -73,10 +73,10 @@ public abstract class AbstractJetInstance implements JetInstance {
     public Job newJob(@Nonnull Pipeline pipeline, @Nonnull JobConfig config) {
         config = config.attachAll(((PipelineImpl) pipeline).attachedFiles());
         long jobId = uploadResourcesAndAssignId(config);
-        return newJobProxy(jobId, (PipelineImpl) pipeline, config);
+        return newJobProxy(jobId, pipeline, config);
     }
 
-    private Job newJobInt(@Nonnull JobDefinition jobDefinition, @Nonnull JobConfig config) {
+    private Job newJobInt(@Nonnull Object jobDefinition, @Nonnull JobConfig config) {
         if (jobDefinition instanceof PipelineImpl) {
             return newJob((PipelineImpl) jobDefinition, config);
         } else {
@@ -84,7 +84,7 @@ public abstract class AbstractJetInstance implements JetInstance {
         }
     }
 
-    private Job newJobIfAbsent(@Nonnull JobDefinition jobDefinition, @Nonnull JobConfig config) {
+    private Job newJobIfAbsent(@Nonnull Object jobDefinition, @Nonnull JobConfig config) {
         if (config.getName() == null) {
             return newJobInt(jobDefinition, config);
         } else {
@@ -107,13 +107,13 @@ public abstract class AbstractJetInstance implements JetInstance {
 
     @Nonnull @Override
     public Job newJobIfAbsent(@Nonnull DAG dag, @Nonnull JobConfig config) {
-        return newJobIfAbsent((JobDefinition) dag, config);
+        return newJobIfAbsent((Object) dag, config);
     }
 
     @Nonnull @Override
     public Job newJobIfAbsent(@Nonnull Pipeline pipeline, @Nonnull JobConfig config) {
         config = config.attachAll(((PipelineImpl) pipeline).attachedFiles());
-        return newJobIfAbsent((JobDefinition) pipeline, config);
+        return newJobIfAbsent((Object) pipeline, config);
     }
 
     @Override
@@ -213,7 +213,7 @@ public abstract class AbstractJetInstance implements JetInstance {
 
     public abstract Job newJobProxy(long jobId);
 
-    public abstract Job newJobProxy(long jobId, JobDefinition jobDefinition, JobConfig config);
+    public abstract Job newJobProxy(long jobId, Object jobDefinition, JobConfig config);
 
     public abstract List<Long> getJobIdsByName(String name);
 }

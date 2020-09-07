@@ -202,7 +202,7 @@ public class JobCoordinationService {
                 }
 
                 int quorumSize = config.isSplitBrainProtectionEnabled() ? getQuorumSize() : 0;
-                JobDefinition jobDefinition = deserializeJobDefinition(jobId, config, serializedJobDefinition);
+                Object jobDefinition = deserializeJobDefinition(jobId, config, serializedJobDefinition);
                 DAG dag;
                 Data serializedDag;
                 if (jobDefinition instanceof PipelineImpl) {
@@ -855,7 +855,7 @@ public class JobCoordinationService {
                 && getInternalPartitionService().getPartitionStateManager().isInitialized();
     }
 
-    private JobDefinition deserializeJobDefinition(long jobId, JobConfig jobConfig, Data jobDefinitionData) {
+    private Object deserializeJobDefinition(long jobId, JobConfig jobConfig, Data jobDefinitionData) {
         ClassLoader classLoader = jetService.getJobExecutionService().getClassLoader(jobConfig, jobId);
         return deserializeWithCustomClassLoader(nodeEngine().getSerializationService(), classLoader, jobDefinitionData);
     }

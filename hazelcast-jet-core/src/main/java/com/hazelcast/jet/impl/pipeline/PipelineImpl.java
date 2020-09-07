@@ -17,7 +17,6 @@
 package com.hazelcast.jet.impl.pipeline;
 
 import com.hazelcast.jet.core.DAG;
-import com.hazelcast.jet.impl.JobDefinition;
 import com.hazelcast.jet.impl.pipeline.transform.AbstractTransform;
 import com.hazelcast.jet.impl.pipeline.transform.BatchSourceTransform;
 import com.hazelcast.jet.impl.pipeline.transform.SinkTransform;
@@ -52,7 +51,7 @@ import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.toList;
 
-public class PipelineImpl implements Pipeline, JobDefinition {
+public class PipelineImpl implements Pipeline {
 
     private final Map<Transform, List<Transform>> adjacencyMap = new LinkedHashMap<>();
     private final Map<String, File> attachedFiles = new HashMap<>();

@@ -131,7 +131,7 @@ public class JetInstanceImpl extends AbstractJetInstance {
     }
 
     @Override
-    public Job newJobProxy(long jobId, JobDefinition jobDefinition, JobConfig config) {
+    public Job newJobProxy(long jobId, Object jobDefinition, JobConfig config) {
         return new JobProxy((NodeEngineImpl) nodeEngine, jobId, jobDefinition, config);
     }
 
