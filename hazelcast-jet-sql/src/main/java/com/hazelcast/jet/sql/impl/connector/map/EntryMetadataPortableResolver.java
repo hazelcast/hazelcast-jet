@@ -198,7 +198,7 @@ final class EntryMetadataPortableResolver implements EntryMetadataResolver {
                 .getPortableContext()
                 .lookupClassDefinition(parseInt(factoryId), parseInt(classId), parseInt(classVersion));
         if (classDefinition == null) {
-            throw QueryException.dataException(
+            throw QueryException.error(
                     "Unable to find class definition for factoryId: " + factoryId
                             + ", classId: " + classId + ", classVersion: " + classVersion
             );

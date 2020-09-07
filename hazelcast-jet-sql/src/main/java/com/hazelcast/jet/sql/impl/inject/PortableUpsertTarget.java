@@ -53,7 +53,7 @@ class PortableUpsertTarget implements UpsertTarget {
                 .getPortableContext()
                 .lookupClassDefinition(factoryId, classId, classVersion);
         if (classDefinition == null) {
-            throw QueryException.dataException(
+            throw QueryException.error(
                     "Unable to find class definition for factoryId: " + factoryId
                             + ", classId: " + classId + ", classVersion: " + classVersion
             );
@@ -66,7 +66,7 @@ class PortableUpsertTarget implements UpsertTarget {
         int fieldIndex = classDefinition.hasField(path) ? classDefinition.getField(path).getIndex() : -1;
         return value -> {
             if (fieldIndex == -1 && value != null) {
-                throw QueryException.dataException("Unable to inject non null (" + value + ") '" + path + "'");
+                throw QueryException.error("Unable to inject non null (" + value + ") '" + path + "'");
             }
 
             if (fieldIndex > -1) {
@@ -155,7 +155,7 @@ class PortableUpsertTarget implements UpsertTarget {
                     writer.writeUTF(name, (String) value);
                     break;
                 default:
-                    throw QueryException.dataException("Unsupported type - " + type.name());
+                    throw QueryException.error("Unsupported type - " + type.name());
             }
         }
 

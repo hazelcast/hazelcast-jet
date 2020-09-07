@@ -58,7 +58,7 @@ class PojoUpsertTarget implements UpsertTarget {
         return value -> {
             if (value != null) {
                 if (method == null) {
-                    throw QueryException.dataException(
+                    throw QueryException.error(
                             "Unable to inject non null (" + value + ") '" + path + "' into " + clazz.getName()
                     );
                 }
@@ -66,7 +66,7 @@ class PojoUpsertTarget implements UpsertTarget {
                 try {
                     method.invoke(pojo, value);
                 } catch (IllegalAccessException | InvocationTargetException e) {
-                    throw QueryException.dataException(
+                    throw QueryException.error(
                             "Cannot inject field \"" + path + "\" into " + clazz.getName() + " : " + e.getMessage(), e
                     );
                 }
@@ -78,7 +78,7 @@ class PojoUpsertTarget implements UpsertTarget {
         return value -> {
             if (value != null) {
                 if (field == null) {
-                    throw QueryException.dataException(
+                    throw QueryException.error(
                             "Unable to inject non null (" + value + ") '" + path + "' into " + clazz.getName()
                     );
                 }
@@ -86,7 +86,7 @@ class PojoUpsertTarget implements UpsertTarget {
                 try {
                     field.set(pojo, value);
                 } catch (IllegalAccessException e) {
-                    throw QueryException.dataException(
+                    throw QueryException.error(
                             "Cannot inject field \"" + path + "\" into " + clazz.getName() + " : " + e.getMessage(), e
                     );
                 }
@@ -99,7 +99,7 @@ class PojoUpsertTarget implements UpsertTarget {
         try {
             pojo = clazz.newInstance();
         } catch (Exception e) {
-            throw QueryException.dataException(
+            throw QueryException.error(
                     "Unable to instantiate class \"" + clazz.getName() + "\" : " + e.getMessage(), e
             );
         }

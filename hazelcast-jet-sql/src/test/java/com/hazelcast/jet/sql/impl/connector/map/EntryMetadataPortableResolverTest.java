@@ -144,10 +144,11 @@ public class EntryMetadataPortableResolverTest {
 
         List<MappingField> fields = INSTANCE.resolveFields(
                 key,
-                singletonList(field("field2", QueryDataType.VARCHAR, "__key.field2")),
+                singletonList(field("field2", QueryDataType.VARCHAR, prefix + ".field2")),
                 options,
                 ss
         );
+
         assertThat(fields).containsExactly(
                 field("field1", QueryDataType.INT, prefix + ".field1"),
                 field("field2", QueryDataType.VARCHAR, prefix + ".field2")
