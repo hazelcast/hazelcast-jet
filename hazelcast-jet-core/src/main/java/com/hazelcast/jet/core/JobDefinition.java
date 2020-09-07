@@ -17,8 +17,10 @@
 package com.hazelcast.jet.core;
 
 /**
- * The internal interface indicates that the implementer classes
- * are used to define the Jet job to be submitted.
+ * An internal interface indicating that the implementing class can be used
+ * to define a Jet job.
+ *
+ * @since 4.3
  */
 public interface JobDefinition {
 }
