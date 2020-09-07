@@ -120,8 +120,8 @@
         <avro.version>1.8.2</avro.version>
         <scala.version>2.12</scala.version>
         <kafka.version>2.2.0</kafka.version>
-        <grpc.version>1.30.0</grpc.version>
-        <protobuf.version>3.12.2</protobuf.version>
+        <grpc.version>1.31.0</grpc.version>
+        <protobuf.version>3.13.0</protobuf.version>
         <picocli.version>3.9.0</picocli.version>
         <classgraph.version>4.8.66</classgraph.version>
         <jackson.jr.version>2.11.2</jackson.jr.version>
@@ -387,7 +387,7 @@
                         </goals>
                         <configuration>
                             <skip>${maven.test.skip}</skip>
-                            <forkCount>0.5C</forkCount>
+                            <forkCount>4</forkCount>
                             <includes>
                                 <include>/com/hazelcast/jet/**/**.java</include>
                             </includes>
