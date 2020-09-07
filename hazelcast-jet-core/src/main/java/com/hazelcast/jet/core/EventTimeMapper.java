@@ -232,13 +232,12 @@ public class EventTimeMapper<T> {
         wmPolicies[partitionIndex].reportEvent(eventTime);
         markIdleAt[partitionIndex] = now + idleTimeoutNanos;
         allAreIdle = false;
-        // use this event's time as the maximum WM. The reason is that if the event wasn't
-        // late for the previous WM and the WM policy is already beyond the event, we should
-        // not render this event late. This is common with ingestion-time processing: we use
-        // system time for the events and zero lag behind system time: without this it could
-        // easily happen that even though the event timestamps are monotonic, events could
-        // be rendered late because some time passed between assigning the event time and
-        // getting the WM from the policy.
+        // Some WM policies use the system time to determine the watermark. This
+        // opens the door to race conditions, where we first use the current time
+        // to assign the event time and then check the current time again to
+        // determine the watermark. If enough time passes between these two calls,
+        // the event would be artificially rendered late. Therefore we cap the WM
+        // to this event's timestamp, while still not allowing it to go back.
         handleNoEventInternal(now, eventTime);
     }
 
