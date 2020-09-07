@@ -28,8 +28,6 @@ import com.hazelcast.sql.impl.QueryException;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 
-import static com.hazelcast.jet.sql.impl.connector.ResolverUtil.lookupClassDefinition;
-
 // TODO: can it be non-thread safe ?
 class PortableUpsertTarget implements UpsertTarget {
 
@@ -42,6 +40,24 @@ class PortableUpsertTarget implements UpsertTarget {
             int factoryId, int classId, int classVersion
     ) {
         this.classDefinition = lookupClassDefinition(serializationService, factoryId, classId, classVersion);
+    }
+
+    private static ClassDefinition lookupClassDefinition(
+            InternalSerializationService serializationService,
+            int factoryId,
+            int classId,
+            int classVersion
+    ) {
+        ClassDefinition classDefinition = serializationService
+                .getPortableContext()
+                .lookupClassDefinition(factoryId, classId, classVersion);
+        if (classDefinition == null) {
+            throw QueryException.dataException(
+                    "Unable to find class definition for factoryId: " + factoryId
+                            + ", classId: " + classId + ", classVersion: " + classVersion
+            );
+        }
+        return classDefinition;
     }
 
     @Override

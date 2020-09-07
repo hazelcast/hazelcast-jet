@@ -17,6 +17,9 @@
 package com.hazelcast.jet.impl.util;
 
 import com.hazelcast.internal.nio.ClassLoaderUtil;
+import com.hazelcast.internal.util.BiTuple;
+import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
+import com.hazelcast.nio.serialization.Portable;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import io.github.classgraph.ClassGraph;
 import io.github.classgraph.ClassInfo;
@@ -24,14 +27,20 @@ import io.github.classgraph.ScanResult;
 
 import javax.annotation.Nonnull;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.net.URL;
 import java.util.Collection;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Stream;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
+import static java.lang.Character.toLowerCase;
+import static java.lang.Character.toUpperCase;
 import static java.util.Arrays.stream;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
@@ -39,12 +48,40 @@ import static java.util.stream.Stream.concat;
 
 public final class ReflectionUtils {
 
+    private static final String METHOD_PREFIX_GET = "get";
+    private static final String METHOD_PREFIX_IS = "is";
+    private static final String METHOD_PREFIX_SET = "set";
+
+    private static final String METHOD_GET_FACTORY_ID = "getFactoryId";
+    private static final String METHOD_GET_CLASS_ID = "getClassId";
+    private static final String METHOD_GET_CLASS_VERSION = "getVersion";
+
     private ReflectionUtils() {
     }
 
-    public static <T> T readStaticFieldOrNull(String classname, String fieldName) {
+    public static Class<?> loadClass(String name) {
+        return loadClass(Thread.currentThread().getContextClassLoader(), name);
+    }
+
+    public static Class<?> loadClass(ClassLoader classLoader, String name) {
         try {
-            Class<?> clazz = Class.forName(classname);
+            return ClassLoaderUtil.loadClass(classLoader, name);
+        } catch (ClassNotFoundException e) {
+            throw sneakyThrow(e);
+        }
+    }
+
+    public static <T> T newInstance(ClassLoader classLoader, String name) {
+        try {
+            return ClassLoaderUtil.newInstance(classLoader, name);
+        } catch (Exception e) {
+            throw sneakyThrow(e);
+        }
+    }
+
+    public static <T> T readStaticFieldOrNull(String className, String fieldName) {
+        try {
+            Class<?> clazz = Class.forName(className);
             return readStaticField(clazz, fieldName);
         } catch (ClassNotFoundException | NoSuchFieldException | IllegalAccessException | SecurityException e) {
             return null;
@@ -59,6 +96,155 @@ public final class ReflectionUtils {
             field.setAccessible(true);
         }
         return (T) field.get(null);
+    }
+
+    public static Map<String, Class<?>> extractProperties(Class<?> clazz) {
+        Map<String, Class<?>> properties = new LinkedHashMap<>();
+
+        for (Method method : clazz.getMethods()) {
+            BiTuple<String, Class<?>> property = extractProperty(clazz, method);
+            if (property == null) {
+                continue;
+            }
+            properties.putIfAbsent(property.element1(), property.element2());
+        }
+
+        Class<?> classToInspect = clazz;
+        while (classToInspect != Object.class) {
+            for (Field field : classToInspect.getDeclaredFields()) {
+                if (skipField(field)) {
+                    continue;
+                }
+                properties.putIfAbsent(field.getName(), field.getType());
+            }
+            classToInspect = classToInspect.getSuperclass();
+        }
+
+        return properties;
+    }
+
+    @SuppressWarnings({"checkstyle:CyclomaticComplexity", "checkstyle:ReturnCount", "checkstyle:NPathComplexity"})
+    private static BiTuple<String, Class<?>> extractProperty(Class<?> clazz, Method method) {
+        if (!Modifier.isPublic(method.getModifiers())) {
+            return null;
+        }
+
+        if (Modifier.isStatic(method.getModifiers())) {
+            return null;
+        }
+
+        Class<?> returnType = method.getReturnType();
+        if (returnType == void.class || returnType == Void.class) {
+            return null;
+        }
+
+        if (method.getParameterCount() != 0) {
+            return null;
+        }
+
+        if (method.getDeclaringClass() == Object.class) {
+            return null;
+        }
+
+        String methodName = method.getName();
+        if (methodName.equals(METHOD_GET_FACTORY_ID)
+                || methodName.equals(METHOD_GET_CLASS_ID)
+                || methodName.equals(METHOD_GET_CLASS_VERSION)) {
+            if (IdentifiedDataSerializable.class.isAssignableFrom(clazz) || Portable.class.isAssignableFrom(clazz)) {
+                return null;
+            }
+        }
+
+        String propertyName = extractPropertyName(method);
+        if (propertyName == null) {
+            return null;
+        }
+
+        Class<?> propertyClass = method.getReturnType();
+        if (extractSetter(clazz, propertyName, propertyClass) == null) {
+            return null;
+        }
+
+        return BiTuple.of(propertyName, propertyClass);
+    }
+
+    private static String extractPropertyName(Method method) {
+        String fieldNameWithWrongCase;
+
+        String methodName = method.getName();
+        if (methodName.startsWith(METHOD_PREFIX_GET) && methodName.length() > METHOD_PREFIX_GET.length()) {
+            fieldNameWithWrongCase = methodName.substring(METHOD_PREFIX_GET.length());
+        } else if (methodName.startsWith(METHOD_PREFIX_IS) && methodName.length() > METHOD_PREFIX_IS.length()) {
+            // Skip getters that do not return primitive boolean.
+            if (method.getReturnType() != boolean.class) {
+                return null;
+            }
+
+            fieldNameWithWrongCase = methodName.substring(METHOD_PREFIX_IS.length());
+        } else {
+            return null;
+        }
+
+        return toLowerCase(fieldNameWithWrongCase.charAt(0)) + fieldNameWithWrongCase.substring(1);
+    }
+
+    public static Method extractSetter(Class<?> clazz, String propertyName, Class<?> type) {
+        String setName = METHOD_PREFIX_SET + toUpperCase(propertyName.charAt(0)) + propertyName.substring(1);
+
+        Method method;
+        try {
+            method = clazz.getMethod(setName, type);
+        } catch (NoSuchMethodException e) {
+            return null;
+        }
+
+        if (!isSetter(method)) {
+            return null;
+        }
+
+        return method;
+    }
+
+    @SuppressWarnings("RedundantIfStatement")
+    private static boolean isSetter(Method method) {
+        if (!Modifier.isPublic(method.getModifiers())) {
+            return false;
+        }
+
+        if (Modifier.isStatic(method.getModifiers())) {
+            return false;
+        }
+
+        Class<?> returnType = method.getReturnType();
+        if (returnType != void.class && returnType != Void.class) {
+            return false;
+        }
+
+        return true;
+    }
+
+    public static Field extractField(Class<?> clazz, String fieldName) {
+        Field field;
+        try {
+            field = clazz.getDeclaredField(fieldName);
+        } catch (NoSuchFieldException e) {
+            return null;
+        }
+
+        if (skipField(field)) {
+            return null;
+        }
+
+        return field;
+    }
+
+    @SuppressWarnings("RedundantIfStatement")
+    private static boolean skipField(Field field) {
+        if (!Modifier.isPublic(field.getModifiers())) {
+            return true;
+        }
+
+        return false;
     }
 
     @Nonnull
@@ -109,26 +295,6 @@ public final class ReflectionUtils {
 
     public static String toClassResourceId(String name) {
         return toPath(name) + ".class";
-    }
-
-    public static Class<?> loadClass(String name) {
-        return loadClass(Thread.currentThread().getContextClassLoader(), name);
-    }
-
-    public static Class<?> loadClass(ClassLoader classLoader, String name) {
-        try {
-            return ClassLoaderUtil.loadClass(classLoader, name);
-        } catch (ClassNotFoundException e) {
-            throw sneakyThrow(e);
-        }
-    }
-
-    public static <T> T newInstance(ClassLoader classLoader, String name) {
-        try {
-            return ClassLoaderUtil.newInstance(classLoader, name);
-        } catch (Exception e) {
-            throw sneakyThrow(e);
-        }
     }
 
     public static final class Resources {

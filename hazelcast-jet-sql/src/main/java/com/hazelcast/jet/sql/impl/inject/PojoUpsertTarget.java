@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.sql.impl.inject;
 
+import com.hazelcast.jet.impl.util.ReflectionUtils;
 import com.hazelcast.sql.impl.QueryException;
 
 import java.lang.reflect.Field;
@@ -25,8 +26,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 import static com.hazelcast.jet.impl.util.ReflectionUtils.loadClass;
-import static com.hazelcast.jet.sql.impl.connector.ResolverUtil.extractField;
-import static com.hazelcast.jet.sql.impl.connector.ResolverUtil.extractSetter;
 import static java.util.stream.Collectors.toMap;
 
 // TODO: can it be non-thread safe ?
@@ -45,11 +44,11 @@ class PojoUpsertTarget implements UpsertTarget {
 
     @Override
     public UpsertInjector createInjector(String path) {
-        Method method = extractSetter(clazz, path, typesByPaths.get(path));
+        Method method = ReflectionUtils.extractSetter(clazz, path, typesByPaths.get(path));
         if (method != null) {
             return createMethodInjector(method, path);
         } else {
-            Field field = extractField(clazz, path);
+            Field field = ReflectionUtils.extractField(clazz, path);
             return createFieldInjector(field, path);
         }
     }

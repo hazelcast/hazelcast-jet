@@ -25,7 +25,10 @@ import org.junit.runner.RunWith;
 import java.net.URL;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
+import static com.hazelcast.jet.impl.util.ReflectionUtils.extractField;
+import static com.hazelcast.jet.impl.util.ReflectionUtils.extractProperties;
 import static java.util.stream.Collectors.toList;
 import static org.hamcrest.CoreMatchers.hasItem;
 import static org.hamcrest.CoreMatchers.notNullValue;
@@ -36,11 +39,89 @@ import static org.hamcrest.Matchers.hasToString;
 import static org.hamcrest.core.IsEqual.equalTo;
 import static org.hamcrest.core.StringContains.containsString;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThat;
 
 @RunWith(HazelcastParallelClassRunner.class)
 public class ReflectionUtilsTest {
+
+    @Test
+    public void when_loadClass_then_returnsClass() {
+        // When
+        Class<?> clazz = ReflectionUtils.loadClass(getClass().getClassLoader(), getClass().getName());
+
+        // Then
+        assertThat(clazz, equalTo(getClass()));
+    }
+
+    @Test
+    public void when_newInstance_then_returnsInstance() {
+        // When
+        OuterClass instance = ReflectionUtils.newInstance(OuterClass.class.getClassLoader(), OuterClass.class.getName());
+
+        // Then
+        assertThat(instance, notNullValue());
+    }
+
+    @Test
+    public void when_extractProperties_then_returnsMethodBasedProperties() {
+        Map<String, Class<?>> properties = extractProperties(JavaProperties.class);
+
+        assertEquals(3, properties.size());
+        assertEquals(int.class, properties.get("publicField"));
+        assertEquals(boolean.class, properties.get("booleanGetField"));
+        assertEquals(boolean.class, properties.get("booleanIsField"));
+    }
+
+    @Test
+    public void when_extractProperties_then_returnsFieldBasedProperties() {
+        Map<String, Class<?>> properties = extractProperties(JavaFields.class);
+
+        assertEquals(1, properties.size());
+        assertEquals(int.class, properties.get("publicField"));
+    }
+
+    @Test
+    public void when_extractPropertiesAndFieldsClash_then_childOneIsSelected() {
+        Map<String, Class<?>> properties = extractProperties(JavaFieldClashChild.class);
+
+        assertEquals(1, properties.size());
+        assertEquals(long.class, properties.get("field"));
+    }
+
+    @Test
+    public void when_extractPropertiesAndPropertyClashesWithField_then_methodIsSelected() {
+        Map<String, Class<?>> properties = extractProperties(JavaFieldPropertyClash.class);
+
+        assertEquals(1, properties.size());
+        assertEquals(long.class, properties.get("field"));
+    }
+
+    @Test
+    public void when_extractPublicField_then_returnsIt() {
+        assertNotNull(extractField(JavaFields.class, "publicField"));
+    }
+
+    @Test
+    public void when_extractDefaultField_then_returnsNull() {
+        assertNull(extractField(JavaFields.class, "defaultField"));
+    }
+
+    @Test
+    public void when_extractProtectedField_then_returnsNull() {
+        assertNull(extractField(JavaFields.class, "protectedField"));
+    }
+
+    @Test
+    public void when_extractPrivateField_then_returnsNull() {
+        assertNull(extractField(JavaFields.class, "privateField"));
+    }
+
+    @Test
+    public void when_extractNonExistingField_then_returnsNull() {
+        assertNull(extractField(JavaFields.class, "nonExistingField"));
+    }
 
     @Test
     public void readStaticFieldOrNull_whenClassDoesNotExist_thenReturnNull() {
@@ -111,23 +192,114 @@ public class ReflectionUtilsTest {
         return new ClassResource(clazz.getName(), url);
     }
 
+    @SuppressWarnings("unused")
+    private static class JavaProperties {
 
-    @Test
-    public void when_loadClass_then_returnsClass() {
-        // When
-        Class<?> clazz = ReflectionUtils.loadClass(getClass().getClassLoader(), getClass().getName());
+        public int getPublicField() {
+            return 0;
+        }
 
-        // Then
-        assertThat(clazz, equalTo(getClass()));
+        public void setPublicField(int i) {
+        }
+
+        int getDefaultField() {
+            return 0;
+        }
+
+        void setDefaultField(int i) {
+        }
+
+        protected int getProtectedField() {
+            return 0;
+        }
+
+        protected void setProtectedField(int i) {
+        }
+
+        private int getPrivateField() {
+            return 0;
+        }
+
+        private void setPrivateField(int i) {
+        }
+
+        public boolean isBooleanIsField() {
+            return true;
+        }
+
+        public void setBooleanIsField(boolean b) {
+        }
+
+        public boolean getBooleanGetField() {
+            return true;
+        }
+
+        public void setBooleanGetField(boolean b) {
+        }
+
+        public Boolean isBooleanNonPrimitiveField() {
+            return true;
+        }
+
+        public void setBooleanNonPrimitiveField(Boolean b) {
+        }
+
+        public void getVoidField() {
+        }
+
+        public Void getVoid() {
+            return null;
+        }
+
+        public void isVoidIntegerPrimitive() {
+        }
+
+        public Void isVoidInteger() {
+            return null;
+        }
+
+        public void isVoidPrimitive() {
+        }
+
+        public Void isVoid() {
+            return null;
+        }
+
+        public int getIntWithParameter(int parameter) {
+            return 0;
+        }
+
+        public void setIntWithParameter(int parameter) {
+        }
     }
 
-    @Test
-    public void when_newInstance_then_returnsInstance() {
-        // When
-        OuterClass instance = ReflectionUtils.newInstance(OuterClass.class.getClassLoader(), OuterClass.class.getName());
+    @SuppressWarnings("unused")
+    private static class JavaFields {
 
-        // Then
-        assertThat(instance, notNullValue());
+        public int publicField;
+        int defaultField;
+        protected int protectedField;
+        private int privateField;
+    }
+
+    private static class JavaFieldClashParent {
+        public int field;
+    }
+
+    private static class JavaFieldClashChild extends JavaFieldClashParent {
+        public long field;
+    }
+
+    @SuppressWarnings("unused")
+    private static class JavaFieldPropertyClash {
+        public int field;
+
+        public long getField() {
+            return 0L;
+        }
+
+        public void setField(long l) {
+        }
     }
 
     @SuppressWarnings("unused")

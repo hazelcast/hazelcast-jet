@@ -17,6 +17,7 @@
 package com.hazelcast.jet.sql.impl.connector;
 
 import com.hazelcast.internal.serialization.InternalSerializationService;
+import com.hazelcast.jet.impl.util.ReflectionUtils;
 import com.hazelcast.jet.sql.impl.inject.PojoUpsertTargetDescriptor;
 import com.hazelcast.jet.sql.impl.inject.PrimitiveUpsertTargetDescriptor;
 import com.hazelcast.jet.sql.impl.schema.MappingField;
@@ -118,7 +119,7 @@ public final class EntryMetadataJavaResolver implements EntryMetadataResolver {
                 : extractValueFields(userFields, name -> new QueryPath(name, false));
 
         Map<String, MappingField> fields = new LinkedHashMap<>();
-        for (Entry<String, Class<?>> entry : ResolverUtil.resolveProperties(clazz).entrySet()) {
+        for (Entry<String, Class<?>> entry : ReflectionUtils.extractProperties(clazz).entrySet()) {
             QueryPath path = new QueryPath(entry.getKey(), isKey);
             QueryDataType type = QueryDataTypeUtils.resolveTypeForClass(entry.getValue());
 
@@ -192,7 +193,7 @@ public final class EntryMetadataJavaResolver implements EntryMetadataResolver {
                 ? extractKeyFields(mappingFields)
                 : extractValueFields(mappingFields, name -> new QueryPath(name, false));
 
-        Map<String, Class<?>> typesByNames = ResolverUtil.resolveProperties(clazz);
+        Map<String, Class<?>> typesByNames = ReflectionUtils.extractProperties(clazz);
 
         List<TableField> fields = new ArrayList<>();
         Map<String, String> typeNamesByPaths = new HashMap<>();

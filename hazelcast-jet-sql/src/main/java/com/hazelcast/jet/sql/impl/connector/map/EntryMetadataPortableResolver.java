@@ -37,7 +37,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import static com.hazelcast.jet.sql.impl.connector.ResolverUtil.lookupClassDefinition;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_KEY_CLASS_ID;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_KEY_CLASS_VERSION;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_KEY_FACTORY_ID;
@@ -45,6 +44,7 @@ import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_VALUE_CLA
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_VALUE_CLASS_VERSION;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_VALUE_FACTORY_ID;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.PORTABLE_SERIALIZATION_FORMAT;
+import static java.lang.Integer.parseInt;
 
 final class EntryMetadataPortableResolver implements EntryMetadataResolver {
 
@@ -199,11 +199,15 @@ final class EntryMetadataPortableResolver implements EntryMetadataResolver {
                             + "'] option(s)");
         }
 
-        return lookupClassDefinition(
-                serializationService,
-                Integer.parseInt(factoryId),
-                Integer.parseInt(classId),
-                Integer.parseInt(classVersion)
-        );
+        ClassDefinition classDefinition = serializationService
+                .getPortableContext()
+                .lookupClassDefinition(parseInt(factoryId), parseInt(classId), parseInt(classVersion));
+        if (classDefinition == null) {
+            throw QueryException.dataException(
+                    "Unable to find class definition for factoryId: " + factoryId
+                            + ", classId: " + classId + ", classVersion: " + classVersion
+            );
+        }
+        return classDefinition;
     }
 }
