@@ -37,21 +37,20 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import static com.hazelcast.jet.sql.impl.connector.SqlConnector.PORTABLE_SERIALIZATION_FORMAT;
-import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.OPTION_KEY_CLASS_ID;
-import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.OPTION_KEY_CLASS_VERSION;
-import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.OPTION_KEY_FACTORY_ID;
-import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.OPTION_VALUE_CLASS_ID;
-import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.OPTION_VALUE_CLASS_VERSION;
-import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.OPTION_VALUE_FACTORY_ID;
 import static com.hazelcast.jet.sql.impl.connector.ResolverUtil.lookupClassDefinition;
+import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_KEY_CLASS_ID;
+import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_KEY_CLASS_VERSION;
+import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_KEY_FACTORY_ID;
+import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_VALUE_CLASS_ID;
+import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_VALUE_CLASS_VERSION;
+import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_VALUE_FACTORY_ID;
+import static com.hazelcast.jet.sql.impl.connector.SqlConnector.PORTABLE_SERIALIZATION_FORMAT;
 
-// TODO: deduplicate with MapSampleMetadataResolver
-public final class PortableEntryMetadataResolver implements EntryMetadataResolver {
+final class EntryMetadataPortableResolver implements EntryMetadataResolver {
 
-    public static final PortableEntryMetadataResolver INSTANCE = new PortableEntryMetadataResolver();
+    static final EntryMetadataPortableResolver INSTANCE = new EntryMetadataPortableResolver();
 
-    private PortableEntryMetadataResolver() {
+    private EntryMetadataPortableResolver() {
     }
 
     @Override
@@ -61,39 +60,44 @@ public final class PortableEntryMetadataResolver implements EntryMetadataResolve
 
     @Override
     public List<MappingField> resolveFields(
-            List<MappingField> mappingFields,
-            Map<String, String> options,
             boolean isKey,
+            List<MappingField> userFields,
+            Map<String, String> options,
             InternalSerializationService serializationService
     ) {
         ClassDefinition classDefinition = resolveClassDefinition(isKey, options, serializationService);
+        return resolveFields(isKey, userFields, classDefinition);
+    }
 
-        Map<QueryPath, MappingField> externalFieldsByPath = isKey
-                ? extractKeyFields(mappingFields)
-                : extractValueFields(mappingFields, name -> new QueryPath(name, false));
+    List<MappingField> resolveFields(
+            boolean isKey,
+            List<MappingField> userFields,
+            ClassDefinition clazz
+    ) {
+        Map<QueryPath, MappingField> mappingFieldsByPath = isKey
+                ? extractKeyFields(userFields)
+                : extractValueFields(userFields, name -> new QueryPath(name, false));
 
         Map<String, MappingField> fields = new LinkedHashMap<>();
-        for (Entry<String, FieldType> entry : resolvePortable(classDefinition).entrySet()) {
+        for (Entry<String, FieldType> entry : resolvePortable(clazz).entrySet()) {
             QueryPath path = new QueryPath(entry.getKey(), isKey);
             QueryDataType type = resolvePortableType(entry.getValue());
 
-            MappingField mappingField = externalFieldsByPath.get(path);
+            MappingField mappingField = mappingFieldsByPath.get(path);
             if (mappingField != null && !type.getTypeFamily().equals(mappingField.type().getTypeFamily())) {
                 throw QueryException.error("Mismatch between declared and inferred type - '" + mappingField.name() + "'");
             }
             String name = mappingField == null ? entry.getKey() : mappingField.name();
 
             MappingField field = new MappingField(name, type, path.toString());
-
             fields.putIfAbsent(field.name(), field);
         }
-        for (Entry<QueryPath, MappingField> entry : externalFieldsByPath.entrySet()) {
+        for (Entry<QueryPath, MappingField> entry : mappingFieldsByPath.entrySet()) {
             QueryPath path = entry.getKey();
             String name = entry.getValue().name();
             QueryDataType type = entry.getValue().type();
 
             MappingField field = new MappingField(name, type, path.toString());
-
             fields.putIfAbsent(field.name(), field);
         }
         return new ArrayList<>(fields.values());
@@ -109,8 +113,8 @@ public final class PortableEntryMetadataResolver implements EntryMetadataResolve
     }
 
     @SuppressWarnings("checkstyle:ReturnCount")
-    private static QueryDataType resolvePortableType(FieldType portableType) {
-        switch (portableType) {
+    private static QueryDataType resolvePortableType(FieldType type) {
+        switch (type) {
             case BOOLEAN:
                 return QueryDataType.BOOLEAN;
             case BYTE:
@@ -136,33 +140,39 @@ public final class PortableEntryMetadataResolver implements EntryMetadataResolve
 
     @Override
     public EntryMetadata resolveMetadata(
+            boolean isKey,
             List<MappingField> mappingFields,
             Map<String, String> options,
-            boolean isKey,
             InternalSerializationService serializationService
     ) {
         ClassDefinition classDefinition = resolveClassDefinition(isKey, options, serializationService);
+        return resolveMetadata(isKey, mappingFields, classDefinition);
+    }
 
-        Map<QueryPath, MappingField> externalFieldsByPath = isKey
+    EntryMetadata resolveMetadata(
+            boolean isKey,
+            List<MappingField> mappingFields,
+            ClassDefinition clazz
+    ) {
+        Map<QueryPath, MappingField> mappingFieldsByPath = isKey
                 ? extractKeyFields(mappingFields)
                 : extractValueFields(mappingFields, name -> new QueryPath(name, false));
 
         List<TableField> fields = new ArrayList<>();
-        for (Entry<QueryPath, MappingField> entry : externalFieldsByPath.entrySet()) {
+        for (Entry<QueryPath, MappingField> entry : mappingFieldsByPath.entrySet()) {
             QueryPath path = entry.getKey();
             QueryDataType type = entry.getValue().type();
             String name = entry.getValue().name();
 
             TableField field = new MapTableField(name, type, false, path);
-
             fields.add(field);
         }
         return new EntryMetadata(
                 GenericQueryTargetDescriptor.DEFAULT,
                 new PortableUpsertTargetDescriptor(
-                        classDefinition.getFactoryId(),
-                        classDefinition.getClassId(),
-                        classDefinition.getVersion()
+                        clazz.getFactoryId(),
+                        clazz.getClassId(),
+                        clazz.getVersion()
                 ),
                 fields
         );

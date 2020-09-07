@@ -44,7 +44,6 @@ public class JetSqlCoreBackendImpl implements JetSqlCoreBackend, ManagedService 
 
     private MappingCatalog catalog;
     private JetSqlBackend sqlBackend;
-    private JetMapMetadataResolver jetMapMetadataResolver;
     private Map<QueryId, QueryResultProducer> resultConsumerRegistry;
 
     @SuppressWarnings("unused") // used through reflection
@@ -60,7 +59,6 @@ public class JetSqlCoreBackendImpl implements JetSqlCoreBackend, ManagedService 
 
         this.catalog = mappingCatalog;
         this.sqlBackend = new JetSqlBackend(nodeEngine, planExecutor);
-        this.jetMapMetadataResolver = new JetMapMetadataResolverImpl(hazelcastInstance.getSerializationService());
         this.resultConsumerRegistry = resultConsumerRegistry;
     }
 
@@ -75,7 +73,7 @@ public class JetSqlCoreBackendImpl implements JetSqlCoreBackend, ManagedService 
 
     @Override
     public JetMapMetadataResolver mapMetadataResolver() {
-        return jetMapMetadataResolver;
+        return JetMapMetadataResolverImpl.INSTANCE;
     }
 
     @Override

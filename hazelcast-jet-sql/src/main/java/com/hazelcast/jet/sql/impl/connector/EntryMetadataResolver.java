@@ -26,22 +26,21 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 
-// TODO: deduplicate with MapSampleMetadataResolver
 public interface EntryMetadataResolver {
 
     String supportedFormat();
 
     List<MappingField> resolveFields(
-            List<MappingField> mappingFields,
-            Map<String, String> options,
             boolean isKey,
+            List<MappingField> userFields,
+            Map<String, String> options,
             InternalSerializationService serializationService
     );
 
     EntryMetadata resolveMetadata(
-            List<MappingField> mappingFields,
-            Map<String, String> options,
             boolean isKey,
+            List<MappingField> fields,
+            Map<String, String> options,
             InternalSerializationService serializationService
     );
 

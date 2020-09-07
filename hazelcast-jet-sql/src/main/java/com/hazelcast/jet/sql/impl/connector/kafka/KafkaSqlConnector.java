@@ -17,13 +17,15 @@
 package com.hazelcast.jet.sql.impl.connector.kafka;
 
 import com.hazelcast.function.FunctionEx;
+import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.kafka.KafkaProcessors;
 import com.hazelcast.jet.sql.impl.connector.EntryMetadata;
-import com.hazelcast.jet.sql.impl.connector.EntryMetadataResolver;
-import com.hazelcast.jet.sql.impl.connector.EntrySqlConnector;
-import com.hazelcast.jet.sql.impl.connector.map.JavaEntryMetadataResolver;
+import com.hazelcast.jet.sql.impl.connector.SqlConnector;
+import com.hazelcast.jet.sql.impl.connector.EntryMetadataJavaResolver;
+import com.hazelcast.jet.sql.impl.connector.EntryMetadataResolvers;
+import com.hazelcast.jet.sql.impl.schema.MappingField;
 import com.hazelcast.spi.impl.NodeEngine;
 import com.hazelcast.sql.impl.expression.Expression;
 import com.hazelcast.sql.impl.schema.ConstantTableStatistics;
@@ -37,8 +39,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Properties;
-import java.util.function.Function;
-import java.util.stream.Stream;
 
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.core.Edge.between;
@@ -46,15 +46,20 @@ import static com.hazelcast.jet.core.EventTimePolicy.noEventTime;
 import static com.hazelcast.jet.core.processor.Processors.mapP;
 import static com.hazelcast.jet.sql.impl.connector.EntryProcessors.entryProjector;
 import static com.hazelcast.jet.sql.impl.expression.ExpressionUtil.projectionFn;
-import static java.util.stream.Collectors.toMap;
+import static java.util.stream.Collectors.toList;
+import static java.util.stream.Stream.concat;
 
-public class KafkaSqlConnector extends EntrySqlConnector {
+public class KafkaSqlConnector implements SqlConnector {
 
     public static final String TYPE_NAME = "Kafka";
 
-    private static final Map<String, EntryMetadataResolver> METADATA_RESOLVERS = Stream.of(
-            JavaEntryMetadataResolver.INSTANCE
-    ).collect(toMap(EntryMetadataResolver::supportedFormat, Function.identity()));
+    private final EntryMetadataResolvers entryMetadataResolvers;
+
+    public KafkaSqlConnector() {
+        this.entryMetadataResolvers = new EntryMetadataResolvers(
+                EntryMetadataJavaResolver.INSTANCE
+        );
+    }
 
     @Override
     public String typeName() {
@@ -67,17 +72,31 @@ public class KafkaSqlConnector extends EntrySqlConnector {
     }
 
     @Nonnull @Override
-    protected Table createTableInt(
+    public List<MappingField> resolveAndValidateFields(
+            @Nonnull NodeEngine nodeEngine,
+            @Nonnull Map<String, String> options,
+            @Nonnull List<MappingField> userFields
+    ) {
+        return entryMetadataResolvers.resolveAndValidateFields(nodeEngine, options, userFields);
+    }
+
+    @Nonnull @Override
+    public Table createTable(
             @Nonnull NodeEngine nodeEngine,
             @Nonnull String schemaName,
             @Nonnull String tableName,
-            @Nonnull String objectName,
             @Nonnull Map<String, String> options,
-            @Nonnull List<TableField> fields,
-            @Nonnull EntryMetadata keyMetadata,
-            @Nonnull EntryMetadata valueMetadata
+            @Nonnull List<MappingField> resolvedFields
     ) {
-        // TODO validate options
+        String objectName = options.getOrDefault(OPTION_OBJECT_NAME, tableName);
+
+        InternalSerializationService ss = (InternalSerializationService) nodeEngine.getSerializationService();
+
+        EntryMetadata keyMetadata = entryMetadataResolvers.resolveMetadata(resolvedFields, options, true, ss);
+        EntryMetadata valueMetadata = entryMetadataResolvers.resolveMetadata(resolvedFields, options, false, ss);
+        List<TableField> fields = concat(keyMetadata.getFields().stream(), valueMetadata.getFields().stream())
+                .collect(toList());
+
         Properties kafkaProperties = new Properties();
         kafkaProperties.putAll(options);
         kafkaProperties.remove(OPTION_OBJECT_NAME);
@@ -102,8 +121,7 @@ public class KafkaSqlConnector extends EntrySqlConnector {
         return true;
     }
 
-    @Nullable
-    @Override
+    @Nonnull @Override
     public Vertex fullScanReader(
             @Nonnull DAG dag,
             @Nonnull Table table0,
@@ -132,8 +150,7 @@ public class KafkaSqlConnector extends EntrySqlConnector {
         return true;
     }
 
-    @Nullable
-    @Override
+    @Nonnull @Override
     public Vertex sink(
             @Nonnull DAG dag,
             @Nonnull Table jetTable
@@ -152,10 +169,5 @@ public class KafkaSqlConnector extends EntrySqlConnector {
 
         dag.edge(between(vStart, vEnd));
         return vStart;
-    }
-
-    @Override
-    protected Map<String, EntryMetadataResolver> supportedResolvers() {
-        return METADATA_RESOLVERS;
     }
 }

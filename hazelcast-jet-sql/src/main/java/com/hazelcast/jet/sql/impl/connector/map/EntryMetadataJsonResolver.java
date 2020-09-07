@@ -36,12 +36,11 @@ import java.util.Map.Entry;
 
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.JSON_SERIALIZATION_FORMAT;
 
-// TODO: deduplicate with MapSampleMetadataResolver
-final class JsonEntryMetadataResolver implements EntryMetadataResolver {
+final class EntryMetadataJsonResolver implements EntryMetadataResolver {
 
-    static final JsonEntryMetadataResolver INSTANCE = new JsonEntryMetadataResolver();
+    static final EntryMetadataJsonResolver INSTANCE = new EntryMetadataJsonResolver();
 
-    private JsonEntryMetadataResolver() {
+    private EntryMetadataJsonResolver() {
     }
 
     @Override
@@ -51,21 +50,21 @@ final class JsonEntryMetadataResolver implements EntryMetadataResolver {
 
     @Override
     public List<MappingField> resolveFields(
-            List<MappingField> mappingFields,
-            Map<String, String> options,
             boolean isKey,
+            List<MappingField> userFields,
+            Map<String, String> options,
             InternalSerializationService serializationService
     ) {
-        Map<QueryPath, MappingField> externalFieldsByPath = isKey
-                ? extractKeyFields(mappingFields)
-                : extractValueFields(mappingFields, name -> new QueryPath(name, false));
+        Map<QueryPath, MappingField> mappingFieldsByPath = isKey
+                ? extractKeyFields(userFields)
+                : extractValueFields(userFields, name -> new QueryPath(name, false));
 
-        if (externalFieldsByPath.isEmpty()) {
+        if (mappingFieldsByPath.isEmpty()) {
             throw QueryException.error("Empty " + (isKey ? "key" : "value") + " column list");
         }
 
         Map<String, MappingField> fields = new LinkedHashMap<>();
-        for (Entry<QueryPath, MappingField> entry : externalFieldsByPath.entrySet()) {
+        for (Entry<QueryPath, MappingField> entry : mappingFieldsByPath.entrySet()) {
             QueryPath path = entry.getKey();
             if (path.getPath() == null) {
                 throw QueryException.error("Invalid external name '" + path.toString() + "'");
@@ -74,7 +73,6 @@ final class JsonEntryMetadataResolver implements EntryMetadataResolver {
             String name = entry.getValue().name();
 
             MappingField field = new MappingField(name, type, path.toString());
-
             fields.putIfAbsent(field.name(), field);
         }
         return new ArrayList<>(fields.values());
@@ -82,46 +80,28 @@ final class JsonEntryMetadataResolver implements EntryMetadataResolver {
 
     @Override
     public EntryMetadata resolveMetadata(
+            boolean isKey,
             List<MappingField> mappingFields,
             Map<String, String> options,
-            boolean isKey,
             InternalSerializationService serializationService
     ) {
-        Map<QueryPath, MappingField> externalFieldsByPath = isKey
+        Map<QueryPath, MappingField> mappingFieldsByPath = isKey
                 ? extractKeyFields(mappingFields)
                 : extractValueFields(mappingFields, name -> new QueryPath(name, false));
 
         List<TableField> fields = new ArrayList<>();
-        //Set<String> pathsRequiringConversion = new HashSet<>();
-        for (Entry<QueryPath, MappingField> entry : externalFieldsByPath.entrySet()) {
+        for (Entry<QueryPath, MappingField> entry : mappingFieldsByPath.entrySet()) {
             QueryPath path = entry.getKey();
             QueryDataType type = entry.getValue().type();
             String name = entry.getValue().name();
-            //boolean requiresConversion = doesRequireConversion(type);
 
-            MapTableField field = new MapTableField(name, type, false, path/*, requiresConversion*/);
-
+            MapTableField field = new MapTableField(name, type, false, path);
             fields.add(field);
-            /*if (field.isRequiringConversion()) {
-                pathsRequiringConversion.add(field.getPath().getPath());
-            }*/
         }
         return new EntryMetadata(
-                new GenericQueryTargetDescriptor(/*pathsRequiringConversion*/),
+                new GenericQueryTargetDescriptor(),
                 HazelcastJsonUpsertTargetDescriptor.INSTANCE,
                 fields
         );
-    }
-
-    private static boolean doesRequireConversion(QueryDataType type) {
-        switch (type.getTypeFamily()) {
-            case BOOLEAN:
-            // assuming values are monomorphic
-            case BIGINT:
-            case VARCHAR:
-            //return !type.isStatic();
-            default:
-                return true;
-        }
     }
 }

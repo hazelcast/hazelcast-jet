@@ -14,12 +14,9 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.sql.impl.connector.map;
+package com.hazelcast.jet.sql.impl.connector;
 
 import com.hazelcast.internal.serialization.InternalSerializationService;
-import com.hazelcast.jet.sql.impl.connector.EntryMetadata;
-import com.hazelcast.jet.sql.impl.connector.EntryMetadataResolver;
-import com.hazelcast.jet.sql.impl.connector.ResolverUtil;
 import com.hazelcast.jet.sql.impl.inject.PojoUpsertTargetDescriptor;
 import com.hazelcast.jet.sql.impl.inject.PrimitiveUpsertTargetDescriptor;
 import com.hazelcast.jet.sql.impl.schema.MappingField;
@@ -40,19 +37,18 @@ import java.util.Map.Entry;
 
 import static com.hazelcast.jet.impl.util.ReflectionUtils.loadClass;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.JAVA_SERIALIZATION_FORMAT;
-import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.OPTION_KEY_CLASS;
-import static com.hazelcast.jet.sql.impl.connector.EntrySqlConnector.OPTION_VALUE_CLASS;
+import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_KEY_CLASS;
+import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_VALUE_CLASS;
 import static com.hazelcast.sql.impl.extract.QueryPath.KEY;
 import static com.hazelcast.sql.impl.extract.QueryPath.VALUE;
 import static com.hazelcast.sql.impl.extract.QueryPath.VALUE_PATH;
 import static java.util.Collections.singletonList;
 
-// TODO: deduplicate with MapSampleMetadataResolver
-public final class JavaEntryMetadataResolver implements EntryMetadataResolver {
+public final class EntryMetadataJavaResolver implements EntryMetadataResolver {
 
-    public static final JavaEntryMetadataResolver INSTANCE = new JavaEntryMetadataResolver();
+    public static final EntryMetadataJavaResolver INSTANCE = new EntryMetadataJavaResolver();
 
-    private JavaEntryMetadataResolver() {
+    private EntryMetadataJavaResolver() {
     }
 
     @Override
@@ -62,32 +58,40 @@ public final class JavaEntryMetadataResolver implements EntryMetadataResolver {
 
     @Override
     public List<MappingField> resolveFields(
-            List<MappingField> mappingFields,
-            Map<String, String> options,
             boolean isKey,
+            List<MappingField> userFields,
+            Map<String, String> options,
             InternalSerializationService serializationService
     ) {
         Class<?> clazz = resolveClass(isKey, options);
+        return resolveFields(isKey, userFields, clazz);
+    }
+
+    public List<MappingField> resolveFields(
+            boolean isKey,
+            List<MappingField> userFields,
+            Class<?> clazz
+    ) {
         QueryDataType type = QueryDataTypeUtils.resolveTypeForClass(clazz);
         if (type != QueryDataType.OBJECT) {
-            return resolvePrimitiveSchema(mappingFields, type, isKey);
+            return resolvePrimitiveSchema(isKey, userFields, type);
         } else {
-            return resolveObjectSchema(mappingFields, clazz, isKey);
+            return resolveObjectSchema(isKey, userFields, clazz);
         }
     }
 
     private List<MappingField> resolvePrimitiveSchema(
-            List<MappingField> mappingFields,
-            QueryDataType type,
-            boolean isKey
+            boolean isKey,
+            List<MappingField> userFields,
+            QueryDataType type
     ) {
-        Map<QueryPath, MappingField> externalFieldsByPath = isKey
-                ? extractKeyFields(mappingFields)
-                : extractValueFields(mappingFields, name -> VALUE_PATH);
+        Map<QueryPath, MappingField> mappingFieldsByPath = isKey
+                ? extractKeyFields(userFields)
+                : extractValueFields(userFields, name -> VALUE_PATH);
 
         QueryPath path = isKey ? QueryPath.KEY_PATH : QueryPath.VALUE_PATH;
 
-        MappingField mappingField = externalFieldsByPath.get(path);
+        MappingField mappingField = mappingFieldsByPath.get(path);
         if (mappingField != null && !type.getTypeFamily().equals(mappingField.type().getTypeFamily())) {
             throw QueryException.error("Mismatch between declared and inferred type - '" + mappingField.name() + "'");
         }
@@ -95,7 +99,7 @@ public final class JavaEntryMetadataResolver implements EntryMetadataResolver {
 
         MappingField field = new MappingField(name, type, path.toString());
 
-        for (MappingField ef : externalFieldsByPath.values()) {
+        for (MappingField ef : mappingFieldsByPath.values()) {
             if (!field.name().equals(ef.name())) {
                 throw QueryException.error("Unmapped field - '" + ef.name() + "'");
             }
@@ -105,36 +109,34 @@ public final class JavaEntryMetadataResolver implements EntryMetadataResolver {
     }
 
     private List<MappingField> resolveObjectSchema(
-            List<MappingField> mappingFields,
-            Class<?> clazz,
-            boolean isKey
+            boolean isKey,
+            List<MappingField> userFields,
+            Class<?> clazz
     ) {
-        Map<QueryPath, MappingField> externalFieldsByPath = isKey
-                ? extractKeyFields(mappingFields)
-                : extractValueFields(mappingFields, name -> new QueryPath(name, false));
+        Map<QueryPath, MappingField> mappingFieldsByPath = isKey
+                ? extractKeyFields(userFields)
+                : extractValueFields(userFields, name -> new QueryPath(name, false));
 
         Map<String, MappingField> fields = new LinkedHashMap<>();
-        for (Entry<String, Class<?>> entry : ResolverUtil.resolveClass(clazz).entrySet()) {
+        for (Entry<String, Class<?>> entry : ResolverUtil.resolveProperties(clazz).entrySet()) {
             QueryPath path = new QueryPath(entry.getKey(), isKey);
             QueryDataType type = QueryDataTypeUtils.resolveTypeForClass(entry.getValue());
 
-            MappingField mappingField = externalFieldsByPath.get(path);
+            MappingField mappingField = mappingFieldsByPath.get(path);
             if (mappingField != null && !type.getTypeFamily().equals(mappingField.type().getTypeFamily())) {
                 throw QueryException.error("Mismatch between declared and inferred type - '" + mappingField.name() + "'");
             }
             String name = mappingField == null ? entry.getKey() : mappingField.name();
 
             MappingField field = new MappingField(name, type, path.toString());
-
             fields.putIfAbsent(field.name(), field);
         }
-        for (Entry<QueryPath, MappingField> entry : externalFieldsByPath.entrySet()) {
+        for (Entry<QueryPath, MappingField> entry : mappingFieldsByPath.entrySet()) {
             QueryPath path = entry.getKey();
             String name = entry.getValue().name();
             QueryDataType type = entry.getValue().type();
 
             MappingField field = new MappingField(name, type, path.toString());
-
             fields.putIfAbsent(field.name(), field);
         }
         return new ArrayList<>(fields.values());
@@ -142,12 +144,20 @@ public final class JavaEntryMetadataResolver implements EntryMetadataResolver {
 
     @Override
     public EntryMetadata resolveMetadata(
+            boolean isKey,
             List<MappingField> mappingFields,
             Map<String, String> options,
-            boolean isKey,
             InternalSerializationService serializationService
     ) {
         Class<?> clazz = resolveClass(isKey, options);
+        return resolveMetadata(isKey, mappingFields, clazz);
+    }
+
+    public EntryMetadata resolveMetadata(
+            boolean isKey,
+            List<MappingField> mappingFields,
+            Class<?> clazz
+    ) {
         QueryDataType type = QueryDataTypeUtils.resolveTypeForClass(clazz);
         if (type != QueryDataType.OBJECT) {
             return resolvePrimitiveMetadata(mappingFields, isKey);
@@ -182,7 +192,7 @@ public final class JavaEntryMetadataResolver implements EntryMetadataResolver {
                 ? extractKeyFields(mappingFields)
                 : extractValueFields(mappingFields, name -> new QueryPath(name, false));
 
-        Map<String, Class<?>> typesByNames = ResolverUtil.resolveClass(clazz);
+        Map<String, Class<?>> typesByNames = ResolverUtil.resolveProperties(clazz);
 
         List<TableField> fields = new ArrayList<>();
         Map<String, String> typeNamesByPaths = new HashMap<>();
@@ -192,7 +202,6 @@ public final class JavaEntryMetadataResolver implements EntryMetadataResolver {
             String name = entry.getValue().name();
 
             TableField field = new MapTableField(name, type, false, path);
-
             fields.add(field);
             if (typesByNames.get(path.getPath()) != null) {
                 typeNamesByPaths.put(path.getPath(), typesByNames.get(path.getPath()).getName());

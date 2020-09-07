@@ -46,7 +46,7 @@ public final class ResolverUtil {
     private ResolverUtil() {
     }
 
-    public static Map<String, Class<?>> resolveClass(Class<?> clazz) {
+    public static Map<String, Class<?>> resolveProperties(Class<?> clazz) {
         Map<String, Class<?>> fields = new LinkedHashMap<>();
 
         for (Method method : clazz.getMethods()) {

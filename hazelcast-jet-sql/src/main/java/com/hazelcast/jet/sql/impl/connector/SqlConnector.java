@@ -31,9 +31,6 @@ import java.util.Map;
 /**
  * TODO
  */
-// TODO: merge with JetSqlConnector ???
-// TODO: make this class public for user connectors
-//   (TableSchemaField, Table, TableField, QueryDataType etc. need to be public then?)
 public interface SqlConnector {
 
     // TODO do these options apply to every SQL connector? Should we move them?
@@ -41,6 +38,56 @@ public interface SqlConnector {
      * TODO
      */
     String OPTION_SERIALIZATION_FORMAT = "serialization.format";
+
+    /**
+     * TODO
+     */
+    String OPTION_SERIALIZATION_KEY_FORMAT = "serialization.key.format";
+
+    /**
+     * TODO
+     */
+    String OPTION_SERIALIZATION_VALUE_FORMAT = "serialization.value.format";
+
+    /**
+     * TODO
+     */
+    String OPTION_KEY_CLASS = "serialization.key.java.class";
+
+    /**
+     * TODO
+     */
+    String OPTION_VALUE_CLASS = "serialization.value.java.class";
+
+    /**
+     * TODO
+     */
+    String OPTION_KEY_FACTORY_ID = "serialization.key.portable.factoryId";
+
+    /**
+     * TODO
+     */
+    String OPTION_KEY_CLASS_ID = "serialization.key.portable.classId";
+
+    /**
+     * TODO
+     */
+    String OPTION_KEY_CLASS_VERSION = "serialization.key.portable.classVersion";
+
+    /**
+     * TODO
+     */
+    String OPTION_VALUE_FACTORY_ID = "serialization.value.portable.factoryId";
+
+    /**
+     * TODO
+     */
+    String OPTION_VALUE_CLASS_ID = "serialization.value.portable.classId";
+
+    /**
+     * TODO
+     */
+    String OPTION_VALUE_CLASS_VERSION = "serialization.value.portable.classVersion";
 
     /**
      * TODO
@@ -87,20 +134,20 @@ public interface SqlConnector {
     boolean isStream();
 
     /**
-     *  Resolve a final field list given a field list and options from the
-     *  user. The {@code userFields} can be empty, in this case the connector
-     *  is supposed to resolve them. The returned list must not be empty.
-     *  <p>
-     *  The method is free to do any changes to the user-provided field list, but
-     *  should document the behavior to the user. Generally, it should not
-     *  remove columns, but might add some.
-     *  <p>
-     *  The returned field list will be stored in the catalog and if the user lists
-     *  the catalog, they will be visible to the user. It will be later passed
-     *  to {@link #createTable}.
+     * Resolve a final field list given a field list and options from the
+     * user. The {@code userFields} can be empty, in this case the connector
+     * is supposed to resolve them. The returned list must not be empty.
+     * <p>
+     * The method is free to do any changes to the user-provided field list, but
+     * should document the behavior to the user. Generally, it should not
+     * remove columns, but might add some.
+     * <p>
+     * The returned field list will be stored in the catalog and if the user lists
+     * the catalog, they will be visible to the user. It will be later passed
+     * to {@link #createTable}.
      *
-     * @param nodeEngine     an instance of {@link NodeEngine}
-     * @param options        user-provided options
+     * @param nodeEngine an instance of {@link NodeEngine}
+     * @param options    user-provided options
      * @param userFields user-provided list of fields, possibly empty
      * @return final field list, must not be empty
      */
@@ -118,7 +165,7 @@ public interface SqlConnector {
      * @param nodeEngine     an instance of {@link NodeEngine}
      * @param options        connector specific options
      * @param resolvedFields list of fields as returned from {@link
-     *     #resolveAndValidateFields}
+     *                       #resolveAndValidateFields}
      */
     @Nonnull
     Table createTable(
@@ -158,7 +205,7 @@ public interface SqlConnector {
      * Then the projection will be {@code {1}} and the predicate will be {@code
      * {2}=10}.
      *
-     * @param table TODO
+     * @param table      TODO
      * @param predicate  SQL expression to filter the rows
      * @param projection list of field names to return
      */
