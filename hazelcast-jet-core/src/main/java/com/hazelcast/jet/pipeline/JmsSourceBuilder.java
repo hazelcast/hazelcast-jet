@@ -29,7 +29,6 @@ import javax.jms.ConnectionFactory;
 import javax.jms.Message;
 import javax.jms.MessageConsumer;
 import javax.jms.Session;
-import java.io.Serializable;
 
 import static com.hazelcast.internal.util.Preconditions.checkNotNull;
 import static com.hazelcast.jet.core.processor.SourceProcessors.streamJmsQueueP;
@@ -42,7 +41,7 @@ import static java.util.Objects.requireNonNull;
  *
  * @since 3.0
  */
-public final class JmsSourceBuilder implements Serializable {
+public final class JmsSourceBuilder {
 
     private final SupplierEx<? extends ConnectionFactory> factorySupplier;
     private final boolean isTopic;
@@ -258,11 +257,15 @@ public final class JmsSourceBuilder implements Serializable {
         SupplierEx<? extends Connection> newConnectionFn =
                 () -> connectionFnLocal.apply(factorySupplierLocal.get());
 
+        FunctionEx<? super Session, ? extends MessageConsumer> consumerFnLocal = consumerFn;
+        boolean isSharedConsumerLocal = isSharedConsumer;
+        FunctionEx<? super Message, ?> messageIdFnLocal = messageIdFn;
+
         FunctionEx<EventTimePolicy<? super T>, ProcessorMetaSupplier> metaSupplierFactory =
-                policy -> isTopic
-                        ? streamJmsTopicP(newConnectionFn, consumerFn, isSharedConsumer, messageIdFn, projectionFn, policy,
-                                maxGuaranteeFinal)
-                        : streamJmsQueueP(newConnectionFn, consumerFn, messageIdFn, projectionFn, policy,
+                policy -> isTopicLocal
+                        ? streamJmsTopicP(newConnectionFn, consumerFnLocal, isSharedConsumerLocal, messageIdFnLocal,
+                                projectionFn, policy, maxGuaranteeFinal)
+                        : streamJmsQueueP(newConnectionFn, consumerFnLocal, messageIdFnLocal, projectionFn, policy,
                                 maxGuaranteeFinal);
         return Sources.streamFromProcessorWithWatermarks(sourceName(), true, metaSupplierFactory);
     }
