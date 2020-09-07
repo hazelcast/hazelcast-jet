@@ -30,7 +30,7 @@ public class PortableUpsertTargetDescriptor implements UpsertTargetDescriptor {
     private int classVersion;
 
     @SuppressWarnings("unused")
-    public PortableUpsertTargetDescriptor() {
+    private PortableUpsertTargetDescriptor() {
     }
 
     public PortableUpsertTargetDescriptor(int factoryId, int classId, int classVersion) {

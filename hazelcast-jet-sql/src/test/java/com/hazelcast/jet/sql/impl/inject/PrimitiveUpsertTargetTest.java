@@ -16,30 +16,21 @@
 
 package com.hazelcast.jet.sql.impl.inject;
 
-import javax.annotation.concurrent.NotThreadSafe;
+import org.junit.Test;
 
-@NotThreadSafe
-class PrimitiveUpsertTarget implements UpsertTarget {
+import static org.assertj.core.api.Assertions.assertThat;
 
-    private Object object;
+public class PrimitiveUpsertTargetTest {
 
-    PrimitiveUpsertTarget() {
-    }
+    @Test
+    public void test_set() {
+        UpsertTarget target = new PrimitiveUpsertTarget();
+        UpsertInjector injector = target.createInjector("path");
 
-    @Override
-    public UpsertInjector createInjector(String path) {
-        return value -> object = value;
-    }
+        target.init();
+        injector.set(1);
+        Object value = target.conclude();
 
-    @Override
-    public void init() {
-        object = null;
-    }
-
-    @Override
-    public Object conclude() {
-        Object object = this.object;
-        this.object = null;
-        return object;
+        assertThat(value).isEqualTo(1);
     }
 }

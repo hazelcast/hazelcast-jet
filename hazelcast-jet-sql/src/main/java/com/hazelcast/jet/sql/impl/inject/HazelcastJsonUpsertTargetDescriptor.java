@@ -22,7 +22,7 @@ import com.hazelcast.nio.ObjectDataOutput;
 
 public class HazelcastJsonUpsertTargetDescriptor implements UpsertTargetDescriptor {
 
-    public static final UpsertTargetDescriptor INSTANCE = new HazelcastJsonUpsertTargetDescriptor();
+    public static final HazelcastJsonUpsertTargetDescriptor INSTANCE = new HazelcastJsonUpsertTargetDescriptor();
 
     HazelcastJsonUpsertTargetDescriptor() {
     }
@@ -38,5 +38,20 @@ public class HazelcastJsonUpsertTargetDescriptor implements UpsertTargetDescript
 
     @Override
     public void readData(ObjectDataInput in) {
+    }
+
+    @Override
+    public String toString() {
+        return "HazelcastJsonUpsertTargetDescriptor{}";
+    }
+
+    @Override
+    public int hashCode() {
+        return 0;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        return obj instanceof HazelcastJsonUpsertTargetDescriptor;
     }
 }

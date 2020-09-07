@@ -179,7 +179,7 @@ public final class EntryMetadataJavaResolver implements EntryMetadataResolver {
 
         return new EntryMetadata(
                 GenericQueryTargetDescriptor.DEFAULT,
-                PrimitiveUpsertTargetDescriptor.DEFAULT,
+                PrimitiveUpsertTargetDescriptor.INSTANCE,
                 singletonList(field)
         );
     }

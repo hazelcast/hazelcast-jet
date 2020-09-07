@@ -29,6 +29,7 @@ import java.util.Map;
 
 import static com.hazelcast.jet.impl.util.ReflectionUtils.extractField;
 import static com.hazelcast.jet.impl.util.ReflectionUtils.extractProperties;
+import static com.hazelcast.jet.impl.util.ReflectionUtils.extractSetter;
 import static java.util.stream.Collectors.toList;
 import static org.hamcrest.CoreMatchers.hasItem;
 import static org.hamcrest.CoreMatchers.notNullValue;
@@ -96,6 +97,41 @@ public class ReflectionUtilsTest {
 
         assertEquals(1, properties.size());
         assertEquals(long.class, properties.get("field"));
+    }
+
+    @Test
+    public void when_extractPublicSetter_then_returnsIt() {
+        assertNotNull(extractSetter(JavaProperties.class, "publicField", int.class));
+    }
+
+    @Test
+    public void when_extractPublicSetterWithWrongType_then_returnsNull() {
+        assertNull(extractSetter(JavaProperties.class, "publicField", long.class));
+    }
+
+    @Test
+    public void when_extractPublicSetterWithWrongReturnType_then_returnsNull() {
+        assertNull(extractSetter(JavaProperties.class, "intWithParameter", int.class));
+    }
+
+    @Test
+    public void when_extractPublicStaticSetter_then_returnsNull() {
+        assertNull(extractSetter(JavaProperties.class, "publicStaticField", int.class));
+    }
+
+    @Test
+    public void when_extractDefaultSetter_then_returnsNull() {
+        assertNull(extractSetter(JavaProperties.class, "defaultField", int.class));
+    }
+
+    @Test
+    public void when_extractProtectedSetter_then_returnsNull() {
+        assertNull(extractSetter(JavaProperties.class, "protectedField", int.class));
+    }
+
+    @Test
+    public void when_extractPrivateSetter_then_returnsNull() {
+        assertNull(extractSetter(JavaProperties.class, "privateField", int.class));
     }
 
     @Test
@@ -195,6 +231,13 @@ public class ReflectionUtilsTest {
     @SuppressWarnings("unused")
     private static class JavaProperties {
 
+        public static int getPublicStaticField() {
+            return 0;
+        }
+
+        public static void setPublicStaticField() {
+        }
+
         public int getPublicField() {
             return 0;
         }
@@ -269,7 +312,8 @@ public class ReflectionUtilsTest {
             return 0;
         }
 
-        public void setIntWithParameter(int parameter) {
+        public int setIntWithParameter(int parameter) {
+            return 0;
         }
     }
 
@@ -277,8 +321,8 @@ public class ReflectionUtilsTest {
     private static class JavaFields {
 
         public int publicField;
-        int defaultField;
         protected int protectedField;
+        int defaultField;
         private int privateField;
     }
 

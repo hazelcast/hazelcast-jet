@@ -22,7 +22,7 @@ import com.hazelcast.nio.ObjectDataOutput;
 
 public class PrimitiveUpsertTargetDescriptor implements UpsertTargetDescriptor {
 
-    public static final PrimitiveUpsertTargetDescriptor DEFAULT = new PrimitiveUpsertTargetDescriptor();
+    public static final PrimitiveUpsertTargetDescriptor INSTANCE = new PrimitiveUpsertTargetDescriptor();
 
     PrimitiveUpsertTargetDescriptor() {
     }

@@ -25,10 +25,11 @@ import com.hazelcast.nio.serialization.PortableWriter;
 import com.hazelcast.nio.serialization.VersionedPortable;
 import com.hazelcast.sql.impl.QueryException;
 
+import javax.annotation.concurrent.NotThreadSafe;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 
-// TODO: can it be non-thread safe ?
+@NotThreadSafe
 class PortableUpsertTarget implements UpsertTarget {
 
     private final ClassDefinition classDefinition;
@@ -86,7 +87,6 @@ class PortableUpsertTarget implements UpsertTarget {
         return portable;
     }
 
-    // TODO: replace with GenericRecord when available
     private final class GenericPortable implements VersionedPortable {
 
         private final Object[] values;
@@ -124,7 +124,6 @@ class PortableUpsertTarget implements UpsertTarget {
 
         @SuppressWarnings("checkstyle:cyclomaticcomplexity")
         private void write(PortableWriter writer, FieldDefinition fieldDefinition, Object value) throws IOException {
-            // TODO: temporal data types, BigDecimal, BigInteger - extend Portable supported types set ???
             String name = fieldDefinition.getName();
             FieldType type = fieldDefinition.getType();
             switch (type) {

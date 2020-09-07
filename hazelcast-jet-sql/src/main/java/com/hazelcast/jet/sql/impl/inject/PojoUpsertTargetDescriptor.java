@@ -30,7 +30,7 @@ public class PojoUpsertTargetDescriptor implements UpsertTargetDescriptor {
     private Map<String, String> typeNamesByPaths;
 
     @SuppressWarnings("unused")
-    public PojoUpsertTargetDescriptor() {
+    private PojoUpsertTargetDescriptor() {
     }
 
     public PojoUpsertTargetDescriptor(String className, Map<String, String> typeNamesByPaths) {

@@ -19,6 +19,7 @@ package com.hazelcast.jet.sql.impl.inject;
 import com.hazelcast.jet.impl.util.ReflectionUtils;
 import com.hazelcast.sql.impl.QueryException;
 
+import javax.annotation.concurrent.NotThreadSafe;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -28,7 +29,7 @@ import java.util.Map.Entry;
 import static com.hazelcast.jet.impl.util.ReflectionUtils.loadClass;
 import static java.util.stream.Collectors.toMap;
 
-// TODO: can it be non-thread safe ?
+@NotThreadSafe
 class PojoUpsertTarget implements UpsertTarget {
 
     private final Class<?> clazz;

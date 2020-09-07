@@ -17,11 +17,52 @@
 package com.hazelcast.jet.sql.impl.inject;
 
 import com.hazelcast.core.HazelcastJsonValue;
+import com.hazelcast.internal.json.Json;
+import com.hazelcast.internal.json.JsonObject;
+import com.hazelcast.sql.impl.type.QueryDataType;
 
+import javax.annotation.concurrent.NotThreadSafe;
+
+@NotThreadSafe
 class HazelcastJsonUpsertTarget extends JsonUpsertTarget {
+
+    private JsonObject json;
+
+    HazelcastJsonUpsertTarget() {
+    }
+
+    @Override
+    public UpsertInjector createInjector(String path) {
+        return value -> {
+            if (value instanceof Boolean) {
+                json.add(path, (boolean) value);
+            } else if (value instanceof Byte) {
+                json.add(path, (byte) value);
+            } else if (value instanceof Short) {
+                json.add(path, (short) value);
+            } else if (value instanceof Integer) {
+                json.add(path, (int) value);
+            } else if (value instanceof Long) {
+                json.add(path, (long) value);
+            } else if (value instanceof Float) {
+                json.add(path, (float) value);
+            } else if (value instanceof Double) {
+                json.add(path, (double) value);
+            } else {
+                json.add(path, (String) QueryDataType.VARCHAR.convert(value));
+            }
+        };
+    }
+
+    @Override
+    public void init() {
+        json = Json.object();
+    }
 
     @Override
     public Object conclude() {
-        return new HazelcastJsonValue((String) super.conclude());
+        JsonObject json = this.json;
+        this.json = null;
+        return new HazelcastJsonValue(json.toString());
     }
 }
