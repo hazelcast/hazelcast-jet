@@ -22,6 +22,7 @@ import com.hazelcast.internal.json.JsonObject;
 import com.hazelcast.internal.util.StringUtil;
 import com.hazelcast.jet.config.EdgeConfig;
 import com.hazelcast.jet.core.Edge.RoutingPolicy;
+import com.hazelcast.jet.impl.JobDefinition;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;

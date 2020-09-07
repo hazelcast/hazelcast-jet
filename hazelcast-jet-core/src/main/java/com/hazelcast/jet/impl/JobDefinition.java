@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.core;
+package com.hazelcast.jet.impl;
 
 /**
- * An internal interface indicating that the implementing class can be used
+ * An marker interface indicating that the implementing class can be used
  * to define a Jet job.
  *
  * @since 4.3

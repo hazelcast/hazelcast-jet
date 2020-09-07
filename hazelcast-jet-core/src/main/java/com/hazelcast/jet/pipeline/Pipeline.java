@@ -96,8 +96,10 @@ public interface Pipeline extends Serializable {
     /**
      * Transforms the pipeline into a Jet DAG, which can be submitted for
      * execution to a Jet instance.
+     * @deprecated since 4.3, Jet performs this transformation on the server-side.
      */
     @Nonnull
+    @Deprecated()
     DAG toDag();
 
     /**
