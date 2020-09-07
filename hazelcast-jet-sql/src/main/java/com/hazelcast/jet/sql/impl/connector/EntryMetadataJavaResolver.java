@@ -132,12 +132,7 @@ public final class EntryMetadataJavaResolver implements EntryMetadataResolver {
             MappingField field = new MappingField(name, type, path.toString());
             fields.putIfAbsent(field.name(), field);
         }
-        for (Entry<QueryPath, MappingField> entry : mappingFieldsByPath.entrySet()) {
-            QueryPath path = entry.getKey();
-            String name = entry.getValue().name();
-            QueryDataType type = entry.getValue().type();
-
-            MappingField field = new MappingField(name, type, path.toString());
+        for (MappingField field : mappingFieldsByPath.values()) {
             fields.putIfAbsent(field.name(), field);
         }
         return new ArrayList<>(fields.values());

@@ -163,7 +163,7 @@ public class IMapSqlConnector implements SqlConnector {
         PartitionedMapTable table = (PartitionedMapTable) table0;
 
         Vertex vStart = dag.newVertex(
-                "map-project",
+                "Project(IMap" + "[" + table.getSchemaName() + "." + table.getSqlName() + "])",
                 entryProjector(
                         (UpsertTargetDescriptor) table.getKeyJetMetadata(),
                         (UpsertTargetDescriptor) table.getValueJetMetadata(),
@@ -171,8 +171,10 @@ public class IMapSqlConnector implements SqlConnector {
                 )
         );
 
-        String mapName = table.getMapName();
-        Vertex vEnd = dag.newVertex("map(" + mapName + ")", SinkProcessors.writeMapP(mapName));
+        Vertex vEnd = dag.newVertex(
+                "IMap[" + table.getSchemaName() + "." + table.getSqlName() + ']',
+                SinkProcessors.writeMapP(table.getMapName())
+        );
 
         dag.edge(between(vStart, vEnd));
         return vStart;
