@@ -54,13 +54,10 @@ public final class PostgresCdcSources {
      * <p>
      * The default reconnect behavior is <em>never</em>, which treats any
      * connection failure as an unrecoverable problem and triggers the failure
-     * of the source and the entire job. (How Jet handles job failures and what
-     * ways there are for recovering from them, is a generic issue not discussed
-     * here.)
+     * of the source and the entire job.
      * <p>
      * Other behavior options, which specify that retry attempts should be
-     * made, will result in the source initiating reconnects to the database, by
-     * restarting the whole source.
+     * made, will result in the source initiating reconnects to the database.
      * <p>
      * There is a further setting influencing reconnect behavior, specified via
      * the {@code setShouldStateBeResetOnReconnect()}. The boolean flag passed
@@ -70,24 +67,6 @@ public final class PostgresCdcSources {
      * at the position where it left off. If the state is reset, then the source
      * will behave as on its initial start, so will do a snapshot and will start
      * trailing the WAL where it syncs with the snapshot's end.
-     * <p>
-     * One caveat of the restart process is that it can work correctly only as
-     * long as the Postgres replication slot, which it's based on, has
-     * <em>not</em> lost data. When the Postgres database cluster experiences
-     * failures and the source needs to be connected to a different database
-     * instance, manual intervention from an administrator might become
-     * necessary to ensure that the replication slot has been re-created
-     * properly, without data loss.
-     * <p>
-     * Unfortunately there are unpleasant aspects of the reconnect mechanism.
-     * When the connection to the database fails, then the connector notices the
-     * failure only after a very long delay (have measured it to 150 seconds and
-     * have not found a way to configure it). If the connection recovers in the
-     * meantime, then it will resume operations like nothing had happened.
-     * If the connection goes down due to the database being shut down cleanly,
-     * the connector can detect it and react immediately, but if the outage is
-     * purely at the network level, then, more often than not, the above
-     * mentioned long delay needs to be waited out.
      *
      * @param name name of this source, needs to be unique, will be passed to
      *             the underlying Kafka Connect source

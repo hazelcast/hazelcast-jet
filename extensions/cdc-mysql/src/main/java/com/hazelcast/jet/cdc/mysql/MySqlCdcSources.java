@@ -51,19 +51,14 @@ public final class MySqlCdcSources {
      * <p>
      * You can configure how the source will behave if the database connection
      * breaks, by passing one of the {@linkplain RetryStrategy retry strategies}
-     * to {@code setReconnectBehavior()}. (as far as the underlying Debezium
-     * connector cooperates, read further for details).
+     * to {@code setReconnectBehavior()}.
      * <p>
      * The default reconnect behavior is <em>never</em>, which treats any
      * connection failure as an unrecoverable problem and triggers the failure
-     * of the source and the entire job. (How Jet handles job failures and what
-     * ways there are for recovering from them, is a generic issue not discussed
-     * here.)
+     * of the source and the entire job.
      * <p>
      * Other behavior options, which specify that retry attempts should be
-     * made, will result in the source initiating reconnects to the database,
-     * either via the Debezium connector's internal reconnect mechanisms or by
-     * restarting the whole source.
+     * made, will result in the source initiating reconnects to the database.
      * <p>
      * There is a further setting influencing reconnect behavior, specified via
      * {@code setShouldStateBeResetOnReconnect()}. The boolean flag passed in
@@ -73,36 +68,6 @@ public final class MySqlCdcSources {
      * resume at the position where it left off. If the state is reset, then the
      * source will behave as on its initial start, so will do a snapshot and
      * will start trailing the binlog where it syncs with the snapshot's end.
-     * <p>
-     * Depending on the lifecycle phase the source is in, however, there are
-     * some discrepancies and peculiarities in this behavior.
-     * <p>
-     * If the connection to the database fails <em>during the snapshotting
-     * phase</em> then the connector is stuck in this state until it manages to
-     * reconnect. This, unfortunately, is the case <em>regardless of the
-     * reconnect behavior specified</em> and is related to the peculiarities
-     * of the underlying implementation classes used. If the connection
-     * goes down due to the database being shut down, it sometimes can detect
-     * that and react properly, but if the outage is purely at the network level,
-     * then, sometimes it's not detected.
-     * <p>
-     * During the <em>binlog trailing phase</em> all connection disruptions
-     * will be detected, but internally not all of them are handled the same
-     * way. If the database is shut down, then the connector can detect that
-     * and will not handle it. It will just fail and, depending on the reconnect
-     * behavior, Jet can trigger the restarting of the source. If the outage
-     * is at the network level or a database shutdown is not detected as such,
-     * then the Debezium connector will trigger internal reconnecting, which the
-     * source can't completely control. In such cases the {@code RetryStrategy}'s
-     * {@link RetryStrategy#getIntervalFunction() IntervalFunction} will only be
-     * partially taken into consideration. This is caused by the fact that
-     * the connectors retry mechanism is capable only of fixed period retrying.
-     * The fixed period that will be applied is what the {@code IntervalFunction}
-     * returns for the 1st attempt, so {@code intervalFunction.apply(1)}.
-     * <p>
-     * Just as the retry strategy is not fully taken into consideration when
-     * reconnection is handled by Debezium internal mechanics, the state reset
-     * setting is also ignored. Internal restarts will never reset the state.
      *
      * @param name name of this source, needs to be unique, will be passed to
      *             the underlying Kafka Connect source
