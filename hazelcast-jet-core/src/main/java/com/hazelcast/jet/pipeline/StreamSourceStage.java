@@ -80,12 +80,12 @@ public interface StreamSourceStage<T> {
      * <p>
      * <b>Issue with sparse events</b>
      * <p>
-     * The time progress is extracted only from new-coming events. If the
-     * events are sparse, the time will effectively stop until a newer event
+     * Event time progresses only through the ingestion of new events. If the
+     * events are sparse, time will effectively stop until a newer event
      * arrives. This causes high latency for time-sensitive operations (such as
-     * window aggregation). The time is also tracked for every source partition
-     * separately and if just one partition has sparse events, time progress in
-     * the whole job is hindered.
+     * window aggregation). In addition, Jet tracks event time for every source
+     * partition separately, and if just one partition has sparse events, time
+     * progress in the whole job is hindered.
      * <p>
      * To overcome this you can either ensure there's a consistent influx of
      * events in every partition, or you can use {@link
@@ -101,12 +101,12 @@ public interface StreamSourceStage<T> {
      * <p>
      * <b>Issue with sparse events</b>
      * <p>
-     * The time progress is extracted only from new-coming events. If the
-     * events are sparse, the time will effectively stop until a newer event
+     * Event time progresses only through the ingestion of new events. If the
+     * events are sparse, time will effectively stop until a newer event
      * arrives. This causes high latency for time-sensitive operations (such as
-     * window aggregation). The time is even tracked for every source partition
-     * separately and if just one partition has sparse events, time progress in
-     * the whole job is hindered.
+     * window aggregation). In addition, Jet tracks event time for every source
+     * partition separately, and if just one partition has sparse events, time
+     * progress in the whole job is hindered.
      * <p>
      * To overcome this you can either ensure there's a consistent influx of
      * events in every partition, or you can use {@link
