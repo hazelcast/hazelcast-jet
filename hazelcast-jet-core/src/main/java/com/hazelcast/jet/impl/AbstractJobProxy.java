@@ -69,7 +69,7 @@ public abstract class AbstractJobProxy<T> implements Job {
         this.logger = loggingService().getLogger(Job.class);
     }
 
-    AbstractJobProxy(T container, long jobId, Object jobDefinition, JobConfig config) {
+    AbstractJobProxy(T container, long jobId, JobDefinition jobDefinition, JobConfig config) {
         this.jobId = jobId;
         this.container = container;
         this.logger = loggingService().getLogger(Job.class);
@@ -205,7 +205,7 @@ public abstract class AbstractJobProxy<T> implements Job {
         return container;
     }
 
-    private void doSubmitJob(Object jobDefinition, JobConfig config) {
+    private void doSubmitJob(JobDefinition jobDefinition, JobConfig config) {
         CompletableFuture<Void> submitFuture = new CompletableFuture<>();
         SubmitJobCallback callback = new SubmitJobCallback(submitFuture, jobDefinition, config);
         invokeSubmitJob(serializationService().toData(jobDefinition), config).whenCompleteAsync(callback);
@@ -224,10 +224,10 @@ public abstract class AbstractJobProxy<T> implements Job {
 
     private class SubmitJobCallback implements BiConsumer<Void, Throwable> {
         private final CompletableFuture<Void> future;
-        private final Object jobDefinition;
+        private final JobDefinition jobDefinition;
         private final JobConfig config;
 
-        SubmitJobCallback(CompletableFuture<Void> future, Object jobDefinition, JobConfig config) {
+        SubmitJobCallback(CompletableFuture<Void> future, JobDefinition jobDefinition, JobConfig config) {
             this.future = future;
             this.jobDefinition = jobDefinition;
             this.config = config;

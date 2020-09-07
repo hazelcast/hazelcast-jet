@@ -123,8 +123,9 @@ public final class Sources {
      *
      * @param sourceName user-friendly source name
      * @param supportsNativeTimestamps true, if the processor is able to work
-     * @param metaSupplierFn factory of processor meta-suppliers. Since version
-     *                      4.3 this function should be Serializable.
+     * @param metaSupplierFn factory of processor meta-suppliers. Since Jet
+     *                      4.3 this argument changed from Function to FunctionEx
+     *                      to support serializability.
      */
     @Nonnull
     public static <T> StreamSource<T> streamFromProcessorWithWatermarks(

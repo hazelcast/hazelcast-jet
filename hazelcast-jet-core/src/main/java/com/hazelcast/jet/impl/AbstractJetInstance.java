@@ -73,7 +73,7 @@ public abstract class AbstractJetInstance implements JetInstance {
     public Job newJob(@Nonnull Pipeline pipeline, @Nonnull JobConfig config) {
         config = config.attachAll(((PipelineImpl) pipeline).attachedFiles());
         long jobId = uploadResourcesAndAssignId(config);
-        return newJobProxy(jobId, pipeline, config);
+        return newJobProxy(jobId, (PipelineImpl) pipeline, config);
     }
 
     private Job newJobInt(@Nonnull JobDefinition jobDefinition, @Nonnull JobConfig config) {
@@ -213,7 +213,7 @@ public abstract class AbstractJetInstance implements JetInstance {
 
     public abstract Job newJobProxy(long jobId);
 
-    public abstract Job newJobProxy(long jobId, Object jobDefinition, JobConfig config);
+    public abstract Job newJobProxy(long jobId, JobDefinition jobDefinition, JobConfig config);
 
     public abstract List<Long> getJobIdsByName(String name);
 }
