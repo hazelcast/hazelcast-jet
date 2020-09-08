@@ -45,8 +45,8 @@ import java.util.Map.Entry;
 
 import static com.hazelcast.jet.core.TestUtil.createMap;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.JAVA_SERIALIZATION_FORMAT;
-import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_OBJECT_NAME;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_KEY_CLASS;
+import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_OBJECT_NAME;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_SERIALIZATION_KEY_FORMAT;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_SERIALIZATION_VALUE_FORMAT;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_VALUE_CLASS;
@@ -58,7 +58,6 @@ import static java.util.Collections.singletonList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-// TODO: move it to IMDG when INSERTs are supported, or at least move to one of Jet connector tests ?
 public class SqlPojoTest extends JetSqlTestSupport {
 
     private static SqlService sqlService;
@@ -70,28 +69,7 @@ public class SqlPojoTest extends JetSqlTestSupport {
     }
 
     @Test
-    public void supportsPrimitiveInsertsIntoDiscoveredMap() {
-        String name = generateRandomName();
-
-        instance().getMap(name).put(BigInteger.valueOf(1), "Alice");
-
-        assertMapEventually(
-                name,
-                "INSERT OVERWRITE partitioned." + name + " VALUES (2, 'Bob')",
-                createMap(BigInteger.valueOf(1), "Alice", BigInteger.valueOf(2), "Bob")
-        );
-
-        assertRowsEventuallyInAnyOrder(
-                "SELECT * FROM " + name,
-                asList(
-                        new Row(BigDecimal.valueOf(1), "Alice"),
-                        new Row(BigDecimal.valueOf(2), "Bob")
-                )
-        );
-    }
-
-    @Test
-    public void supportsPojoInsertsIntoDiscoveredMap() {
+    public void test_insertIntoDiscoveredMap() {
         String name = generateRandomName();
 
         instance().getMap(name).put(new PersonId(1), new Person(1, "Alice"));
@@ -113,8 +91,9 @@ public class SqlPojoTest extends JetSqlTestSupport {
     }
 
     @Test
-    public void supportsNulls() {
-        String name = createMapWithRandomName();
+    public void test_insertNulls() {
+        String name = generateRandomName();
+        sqlService.execute(javaSerializableMapDdl(name, PersonId.class, Person.class));
 
         assertMapEventually(
                 name,
@@ -128,8 +107,9 @@ public class SqlPojoTest extends JetSqlTestSupport {
     }
 
     @Test
-    public void supportsFieldsShadowing() {
-        String name = createMapWithRandomName();
+    public void test_fieldsShadowing() {
+        String name = generateRandomName();
+        sqlService.execute(javaSerializableMapDdl(name, PersonId.class, Person.class));
 
         assertMapEventually(
                 name,
@@ -144,7 +124,7 @@ public class SqlPojoTest extends JetSqlTestSupport {
     }
 
     @Test
-    public void supportsFieldsMapping() {
+    public void test_fieldsMapping() {
         String name = generateRandomName();
         sqlService.execute("CREATE MAPPING " + name + " ("
                 + "key_id INT EXTERNAL NAME __key.id"
@@ -171,8 +151,9 @@ public class SqlPojoTest extends JetSqlTestSupport {
     }
 
     @Test
-    public void supportsSchemaEvolution() {
-        String name = createMapWithRandomName();
+    public void test_schemaEvolution() {
+        String name = generateRandomName();
+        sqlService.execute(javaSerializableMapDdl(name, PersonId.class, Person.class));
 
         // insert initial record
         sqlService.execute("INSERT OVERWRITE " + name + " VALUES (1, 'Alice')");
@@ -202,7 +183,7 @@ public class SqlPojoTest extends JetSqlTestSupport {
     }
 
     @Test
-    public void supportsFieldsExtensions() {
+    public void test_fieldsExtensions() {
         String name = generateRandomName();
 
         Map<PersonId, InsuredPerson> map = instance().getMap(name);
@@ -238,7 +219,7 @@ public class SqlPojoTest extends JetSqlTestSupport {
     }
 
     @Test
-    public void supportsAllTypes() {
+    public void test_allTypes() {
         String name = generateRandomName();
         sqlService.execute(javaSerializableMapDdl(name, BigInteger.class, AllTypesValue.class));
 
@@ -410,13 +391,13 @@ public class SqlPojoTest extends JetSqlTestSupport {
         String mapName = generateRandomName();
         String tableName = generateRandomName();
 
-        sqlService.execute("CREATE MAPPING " + tableName + " TYPE " + IMapSqlConnector.TYPE_NAME + "\n"
-                + "OPTIONS (\n"
-                + OPTION_OBJECT_NAME + " '" + mapName + "',\n"
-                + OPTION_SERIALIZATION_KEY_FORMAT + " '" + JAVA_SERIALIZATION_FORMAT + "',\n"
-                + OPTION_KEY_CLASS + " '" + String.class.getName() + "',\n"
-                + '"' + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "',\n"
-                + '"' + OPTION_VALUE_CLASS + "\" '" + String.class.getName() + "'\n"
+        sqlService.execute("CREATE MAPPING " + tableName + " TYPE " + IMapSqlConnector.TYPE_NAME + " "
+                + "OPTIONS ("
+                + OPTION_OBJECT_NAME + " '" + mapName + "'"
+                + ", " + OPTION_SERIALIZATION_KEY_FORMAT + " '" + JAVA_SERIALIZATION_FORMAT + "'"
+                + ", " + OPTION_KEY_CLASS + " '" + String.class.getName() + "'"
+                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
+                + ", \"" + OPTION_VALUE_CLASS + "\" '" + String.class.getName() + "'"
                 + ")");
 
         IMap<String, String> map = instance().getMap(mapName);
@@ -447,12 +428,6 @@ public class SqlPojoTest extends JetSqlTestSupport {
 
     protected static ZoneOffset localOffset() {
         return systemDefault().getRules().getOffset(LocalDateTime.now());
-    }
-
-    private static String createMapWithRandomName() {
-        String name = generateRandomName();
-        sqlService.execute(javaSerializableMapDdl(name, PersonId.class, Person.class));
-        return name;
     }
 
     private static String generateRandomName() {

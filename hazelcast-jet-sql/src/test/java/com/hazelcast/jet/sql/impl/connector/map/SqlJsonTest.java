@@ -42,7 +42,6 @@ import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 import static org.assertj.core.api.Assertions.assertThat;
 
-// TODO: move it to IMDG when INSERTs are supported, or at least move to one of Jet connector tests ?
 public class SqlJsonTest extends JetSqlTestSupport {
 
     private static SqlService sqlService;
@@ -54,11 +53,11 @@ public class SqlJsonTest extends JetSqlTestSupport {
     }
 
     @Test
-    public void supportsNulls() {
+    public void test_nulls() {
         String name = generateRandomName();
         sqlService.execute("CREATE MAPPING " + name + " ("
-                + "key_name VARCHAR EXTERNAL NAME __key.name"
-                + ", value_name VARCHAR EXTERNAL NAME this.name"
+                + "id VARCHAR EXTERNAL NAME __key.id"
+                + ", name VARCHAR EXTERNAL NAME this.name"
                 + ") TYPE " + IMapSqlConnector.TYPE_NAME + " "
                 + "OPTIONS ("
                 + OPTION_SERIALIZATION_KEY_FORMAT + " '" + JSON_SERIALIZATION_FORMAT + "'"
@@ -68,7 +67,7 @@ public class SqlJsonTest extends JetSqlTestSupport {
         sqlService.execute("INSERT OVERWRITE " + name + " VALUES (null, null)");
 
         Map<HazelcastJsonValue, HazelcastJsonValue> map = instance().getMap(name);
-        assertThat(map.get(new HazelcastJsonValue("{\"name\":null}")).toString()).isEqualTo("{\"name\":null}");
+        assertThat(map.get(new HazelcastJsonValue("{\"id\":null}")).toString()).isEqualTo("{\"name\":null}");
 
         assertRowsEventuallyInAnyOrder(
                 "SELECT * FROM " + name,
@@ -77,7 +76,7 @@ public class SqlJsonTest extends JetSqlTestSupport {
     }
 
     @Test
-    public void supportsFieldsMapping() {
+    public void test_fieldsMapping() {
         String name = generateRandomName();
         sqlService.execute("CREATE MAPPING " + name + " ("
                 + "key_name VARCHAR EXTERNAL NAME __key.name"
@@ -100,7 +99,7 @@ public class SqlJsonTest extends JetSqlTestSupport {
     }
 
     @Test
-    public void supportsSchemaEvolution() {
+    public void test_schemaEvolution() {
         String name = generateRandomName();
         sqlService.execute("CREATE MAPPING " + name + " ("
                 + "name VARCHAR"
@@ -139,7 +138,7 @@ public class SqlJsonTest extends JetSqlTestSupport {
     }
 
     @Test
-    public void supportsAllTypes() {
+    public void test_allTypes() {
         String name = generateRandomName();
         sqlService.execute("CREATE MAPPING " + name + " ("
                 + "string VARCHAR"

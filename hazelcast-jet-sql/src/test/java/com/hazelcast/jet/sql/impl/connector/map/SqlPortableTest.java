@@ -41,7 +41,6 @@ import java.util.Objects;
 
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.JAVA_SERIALIZATION_FORMAT;
-import static com.hazelcast.jet.sql.impl.connector.SqlConnector.PORTABLE_SERIALIZATION_FORMAT;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_KEY_CLASS;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_KEY_CLASS_ID;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_KEY_CLASS_VERSION;
@@ -51,6 +50,7 @@ import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_SERIALIZA
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_VALUE_CLASS_ID;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_VALUE_CLASS_VERSION;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_VALUE_FACTORY_ID;
+import static com.hazelcast.jet.sql.impl.connector.SqlConnector.PORTABLE_SERIALIZATION_FORMAT;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 import static java.util.Spliterator.ORDERED;
@@ -58,7 +58,6 @@ import static java.util.Spliterators.spliteratorUnknownSize;
 import static java.util.stream.StreamSupport.stream;
 import static org.assertj.core.api.Assertions.assertThat;
 
-// TODO: move it to IMDG when INSERTs are supported, or at least move to one of Jet connector tests ?
 public class SqlPortableTest extends JetSqlTestSupport {
 
     private static SqlService sqlService;
@@ -122,9 +121,8 @@ public class SqlPortableTest extends JetSqlTestSupport {
     }
 
     @Test
-    public void supportsInsertsIntoDiscoveredMap() {
+    public void test_insertsIntoDiscoveredMap() {
         String name = generateRandomName();
-
         sqlService.execute("CREATE MAPPING " + name + " ("
                 + "id INT EXTERNAL NAME __key.id"
                 + ", name VARCHAR EXTERNAL NAME this.name"
@@ -157,8 +155,21 @@ public class SqlPortableTest extends JetSqlTestSupport {
     }
 
     @Test
-    public void supportsNulls() throws IOException {
-        String name = createTableWithRandomName();
+    public void test_nulls() throws IOException {
+        String name = generateRandomName();
+        sqlService.execute("CREATE MAPPING " + name + " "
+                + "TYPE " + IMapSqlConnector.TYPE_NAME + " "
+                + "OPTIONS ("
+                + OPTION_SERIALIZATION_KEY_FORMAT + " '" + PORTABLE_SERIALIZATION_FORMAT + "'"
+                + ", " + OPTION_KEY_FACTORY_ID + " '" + PERSON_ID_FACTORY_ID + "'"
+                + ", " + OPTION_KEY_CLASS_ID + " '" + PERSON_ID_CLASS_ID + "'"
+                + ", " + OPTION_KEY_CLASS_VERSION + " '" + PERSON_ID_CLASS_VERSION + "'"
+                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + PORTABLE_SERIALIZATION_FORMAT + "'"
+                + ", \"" + OPTION_VALUE_FACTORY_ID + "\" '" + PERSON_FACTORY_ID + "'"
+                + ", \"" + OPTION_VALUE_CLASS_ID + "\" '" + PERSON_CLASS_ID + "'"
+                + ", \"" + OPTION_VALUE_CLASS_VERSION + "\" '" + PERSON_CLASS_VERSION + "'"
+                + ")"
+        );
 
         sqlService.execute("INSERT OVERWRITE " + name + " VALUES (null, null)");
 
@@ -177,8 +188,21 @@ public class SqlPortableTest extends JetSqlTestSupport {
     }
 
     @Test
-    public void supportsFieldsShadowing() throws IOException {
-        String name = createTableWithRandomName();
+    public void test_fieldsShadowing() throws IOException {
+        String name = generateRandomName();
+        sqlService.execute("CREATE MAPPING " + name + " "
+                + "TYPE " + IMapSqlConnector.TYPE_NAME + " "
+                + "OPTIONS ("
+                + OPTION_SERIALIZATION_KEY_FORMAT + " '" + PORTABLE_SERIALIZATION_FORMAT + "'"
+                + ", " + OPTION_KEY_FACTORY_ID + " '" + PERSON_ID_FACTORY_ID + "'"
+                + ", " + OPTION_KEY_CLASS_ID + " '" + PERSON_ID_CLASS_ID + "'"
+                + ", " + OPTION_KEY_CLASS_VERSION + " '" + PERSON_ID_CLASS_VERSION + "'"
+                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + PORTABLE_SERIALIZATION_FORMAT + "'"
+                + ", \"" + OPTION_VALUE_FACTORY_ID + "\" '" + PERSON_FACTORY_ID + "'"
+                + ", \"" + OPTION_VALUE_CLASS_ID + "\" '" + PERSON_CLASS_ID + "'"
+                + ", \"" + OPTION_VALUE_CLASS_VERSION + "\" '" + PERSON_CLASS_VERSION + "'"
+                + ")"
+        );
 
         sqlService.execute("INSERT OVERWRITE " + name + " (id, name) VALUES (1, 'Alice')");
 
@@ -198,7 +222,7 @@ public class SqlPortableTest extends JetSqlTestSupport {
     }
 
     @Test
-    public void supportsFieldsMapping() throws IOException {
+    public void test_fieldsMapping() throws IOException {
         String name = generateRandomName();
         sqlService.execute("CREATE MAPPING " + name + " ("
                 + "key_id INT EXTERNAL NAME __key.id"
@@ -234,8 +258,21 @@ public class SqlPortableTest extends JetSqlTestSupport {
     }
 
     @Test
-    public void supportsSchemaEvolution() {
-        String name = createTableWithRandomName();
+    public void test_schemaEvolution() {
+        String name = generateRandomName();
+        sqlService.execute("CREATE MAPPING " + name + " "
+                + "TYPE " + IMapSqlConnector.TYPE_NAME + " "
+                + "OPTIONS ("
+                + OPTION_SERIALIZATION_KEY_FORMAT + " '" + PORTABLE_SERIALIZATION_FORMAT + "'"
+                + ", " + OPTION_KEY_FACTORY_ID + " '" + PERSON_ID_FACTORY_ID + "'"
+                + ", " + OPTION_KEY_CLASS_ID + " '" + PERSON_ID_CLASS_ID + "'"
+                + ", " + OPTION_KEY_CLASS_VERSION + " '" + PERSON_ID_CLASS_VERSION + "'"
+                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + PORTABLE_SERIALIZATION_FORMAT + "'"
+                + ", \"" + OPTION_VALUE_FACTORY_ID + "\" '" + PERSON_FACTORY_ID + "'"
+                + ", \"" + OPTION_VALUE_CLASS_ID + "\" '" + PERSON_CLASS_ID + "'"
+                + ", \"" + OPTION_VALUE_CLASS_VERSION + "\" '" + PERSON_CLASS_VERSION + "'"
+                + ")"
+        );
 
         // insert initial record
         sqlService.execute("INSERT OVERWRITE " + name + " VALUES (1, 'Alice')");
@@ -269,7 +306,7 @@ public class SqlPortableTest extends JetSqlTestSupport {
     }
 
     @Test
-    public void supportsFieldsExtensions() {
+    public void test_fieldsExtensions() {
         String name = generateRandomName();
         sqlService.execute("CREATE OR REPLACE MAPPING " + name + " "
                 + "TYPE " + IMapSqlConnector.TYPE_NAME + " "
@@ -318,7 +355,7 @@ public class SqlPortableTest extends JetSqlTestSupport {
     }
 
     @Test
-    public void supportsAllTypes() throws IOException {
+    public void test_allTypes() throws IOException {
         String name = generateRandomName();
         sqlService.execute("CREATE MAPPING " + name + " "
                 + "TYPE " + IMapSqlConnector.TYPE_NAME + " "
@@ -343,8 +380,6 @@ public class SqlPortableTest extends JetSqlTestSupport {
                 + ", 9223372036854775806"
                 + ", 1234567890.1"
                 + ", 123451234567890.1"
-                // TODO: BigDecimal types when/if supported
-                // TODO: temporal types when/if supported
                 + ")"
         );
 
@@ -359,8 +394,6 @@ public class SqlPortableTest extends JetSqlTestSupport {
         assertThat(allTypesReader.readLong("long")).isEqualTo(9223372036854775806L);
         assertThat(allTypesReader.readFloat("float")).isEqualTo(1234567890.1F);
         assertThat(allTypesReader.readDouble("double")).isEqualTo(123451234567890.1D);
-        // TODO: assert BigDecimal types when/if supported
-        // TODO: assert temporal types when/if supported
 
         assertRowsEventuallyInAnyOrder(
                 "SELECT * FROM " + name,
@@ -375,28 +408,8 @@ public class SqlPortableTest extends JetSqlTestSupport {
                         9223372036854775806L,
                         1234567890.1F,
                         123451234567890.1D
-                        // TODO: assert BigDecimal types when/if supported
-                        // TODO: assert temporal types when/if supported
                 ))
         );
-    }
-
-    private static String createTableWithRandomName() {
-        String name = generateRandomName();
-        sqlService.execute("CREATE MAPPING " + name + " "
-                + "TYPE " + IMapSqlConnector.TYPE_NAME + " "
-                + "OPTIONS ("
-                + OPTION_SERIALIZATION_KEY_FORMAT + " '" + PORTABLE_SERIALIZATION_FORMAT + "'"
-                + ", " + OPTION_KEY_FACTORY_ID + " '" + PERSON_ID_FACTORY_ID + "'"
-                + ", " + OPTION_KEY_CLASS_ID + " '" + PERSON_ID_CLASS_ID + "'"
-                + ", " + OPTION_KEY_CLASS_VERSION + " '" + PERSON_ID_CLASS_VERSION + "'"
-                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + PORTABLE_SERIALIZATION_FORMAT + "'"
-                + ", \"" + OPTION_VALUE_FACTORY_ID + "\" '" + PERSON_FACTORY_ID + "'"
-                + ", \"" + OPTION_VALUE_CLASS_ID +  "\" '" + PERSON_CLASS_ID + "'"
-                + ", \"" + OPTION_VALUE_CLASS_VERSION + "\" '" + PERSON_CLASS_VERSION + "'"
-                + ")"
-        );
-        return name;
     }
 
     private static String generateRandomName() {

@@ -23,6 +23,9 @@ import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
 
+import java.math.BigDecimal;
+import java.math.BigInteger;
+
 import static com.hazelcast.jet.core.TestUtil.createMap;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.JAVA_SERIALIZATION_FORMAT;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_KEY_CLASS;
@@ -30,9 +33,9 @@ import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_SERIALIZA
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_SERIALIZATION_VALUE_FORMAT;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_VALUE_CLASS;
 import static java.lang.String.format;
+import static java.util.Arrays.asList;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-// TODO: move it to IMDG when INSERTs are supported, or at least move to one of Jet connector tests ?
 public class SqlPrimitiveTest extends JetSqlTestSupport {
 
     private static SqlService sqlService;
@@ -44,7 +47,28 @@ public class SqlPrimitiveTest extends JetSqlTestSupport {
     }
 
     @Test
-    public void supportsInsertSelect() {
+    public void test_insertIntoDiscoveredMap() {
+        String name = generateRandomName();
+
+        instance().getMap(name).put(BigInteger.valueOf(1), "Alice");
+
+        assertMapEventually(
+                name,
+                "INSERT OVERWRITE partitioned." + name + " VALUES (2, 'Bob')",
+                createMap(BigInteger.valueOf(1), "Alice", BigInteger.valueOf(2), "Bob")
+        );
+
+        assertRowsEventuallyInAnyOrder(
+                "SELECT * FROM " + name,
+                asList(
+                        new Row(BigDecimal.valueOf(1), "Alice"),
+                        new Row(BigDecimal.valueOf(2), "Bob")
+                )
+        );
+    }
+
+    @Test
+    public void test_insertSelect() {
         String name = createTableWithRandomName();
 
         IMap<Integer, String> source = instance().getMap("source");
@@ -59,7 +83,7 @@ public class SqlPrimitiveTest extends JetSqlTestSupport {
     }
 
     @Test
-    public void supportsInsertValues() {
+    public void test_insertValues() {
         String name = createTableWithRandomName();
 
         assertMapEventually(
@@ -82,7 +106,7 @@ public class SqlPrimitiveTest extends JetSqlTestSupport {
 
     @Test
     @Ignore // TODO handle LogicalUnion ???
-    public void supportsInsertWithProject1() {
+    public void test_insertWithProject1() {
         String name = createTableWithRandomName();
 
         assertMapEventually(
@@ -93,7 +117,7 @@ public class SqlPrimitiveTest extends JetSqlTestSupport {
     }
 
     @Test
-    public void supportsFieldsMapping() {
+    public void test_fieldsMapping() {
         String name = generateRandomName();
 
         sqlService.execute("CREATE MAPPING " + name + " ("
@@ -116,7 +140,7 @@ public class SqlPrimitiveTest extends JetSqlTestSupport {
     }
 
     @Test
-    public void supportsOnlyInsertOverwrite() {
+    public void when_plainInsert_then_throws() {
         String name = createTableWithRandomName();
 
         assertThatThrownBy(() -> sqlService.execute("INSERT INTO " + name + " (__key, this) VALUES (1, '2')"))

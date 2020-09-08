@@ -43,19 +43,19 @@ public final class EntryProcessors {
     private EntryProcessors() {
     }
 
-    public static ProcessorSupplier entryProjector(
+    public static ProcessorSupplier toEntryProjector(
             UpsertTargetDescriptor keyDescriptor,
             UpsertTargetDescriptor valueDescriptor,
             List<TableField> fields
     ) {
-        return new EntryProjectorProcessorSupplier(keyDescriptor, valueDescriptor, fields);
+        return new ToEntryProjectorProcessorSupplier(keyDescriptor, valueDescriptor, fields);
     }
 
     @SuppressFBWarnings(
             value = {"SE_BAD_FIELD", "SE_NO_SERIALVERSIONID"},
             justification = "the class is never java-serialized"
     )
-    private static class EntryProjectorProcessorSupplier implements ProcessorSupplier, DataSerializable {
+    private static class ToEntryProjectorProcessorSupplier implements ProcessorSupplier, DataSerializable {
 
         private UpsertTargetDescriptor keyDescriptor;
         private UpsertTargetDescriptor valueDescriptor;
@@ -67,10 +67,10 @@ public final class EntryProcessors {
         private transient InternalSerializationService serializationService;
 
         @SuppressWarnings("unused")
-        EntryProjectorProcessorSupplier() {
+        ToEntryProjectorProcessorSupplier() {
         }
 
-        EntryProjectorProcessorSupplier(
+        ToEntryProjectorProcessorSupplier(
                 UpsertTargetDescriptor keyDescriptor,
                 UpsertTargetDescriptor valueDescriptor,
                 List<TableField> fields
@@ -78,7 +78,6 @@ public final class EntryProcessors {
             this.keyDescriptor = keyDescriptor;
             this.valueDescriptor = valueDescriptor;
 
-            // TODO: get rid of casting ???
             this.paths = fields.stream().map(field -> ((MapTableField) field).getPath()).toArray(QueryPath[]::new);
             this.types = fields.stream().map(TableField::getType).toArray(QueryDataType[]::new);
             this.hiddens = fields.stream().map(TableField::isHidden).toArray(Boolean[]::new);
