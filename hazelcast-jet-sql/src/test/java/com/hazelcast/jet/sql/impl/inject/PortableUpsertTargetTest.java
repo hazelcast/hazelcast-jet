@@ -65,26 +65,26 @@ public class PortableUpsertTargetTest {
 
         target.init();
         stringFieldInjector.set("1");
-        characterFieldInjector.set('1');
+        characterFieldInjector.set('2');
         booleanFieldInjector.set(true);
-        byteFieldInjector.set((byte) 1);
-        shortFieldInjector.set((short) 1);
-        intFieldInjector.set(1);
-        longFieldInjector.set(1L);
-        floatFieldInjector.set(1F);
-        doubleFieldInjector.set(1D);
+        byteFieldInjector.set((byte) 3);
+        shortFieldInjector.set((short) 4);
+        intFieldInjector.set(5);
+        longFieldInjector.set(6L);
+        floatFieldInjector.set(7.1F);
+        doubleFieldInjector.set(7.2D);
         Object value = target.conclude();
 
         InternalGenericRecord record = ss.readAsInternalGenericRecord(ss.toData(value));
         assertThat(record.readUTF("string")).isEqualTo("1");
-        assertThat(record.readChar("character")).isEqualTo('1');
+        assertThat(record.readChar("character")).isEqualTo('2');
         assertThat(record.readBoolean("boolean")).isEqualTo(true);
-        assertThat(record.readByte("byte")).isEqualTo((byte) 1);
-        assertThat(record.readShort("short")).isEqualTo((short) 1);
-        assertThat(record.readInt("int")).isEqualTo(1);
-        assertThat(record.readLong("long")).isEqualTo(1L);
-        assertThat(record.readFloat("float")).isEqualTo(1F);
-        assertThat(record.readDouble("double")).isEqualTo(1D);
+        assertThat(record.readByte("byte")).isEqualTo((byte) 3);
+        assertThat(record.readShort("short")).isEqualTo((short) 4);
+        assertThat(record.readInt("int")).isEqualTo(5);
+        assertThat(record.readLong("long")).isEqualTo(6L);
+        assertThat(record.readFloat("float")).isEqualTo(7.1F);
+        assertThat(record.readDouble("double")).isEqualTo(7.2D);
     }
 
     @Test

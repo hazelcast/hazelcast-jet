@@ -45,16 +45,22 @@ public class EntryMetadataResolvers {
     }
 
     public List<MappingField> resolveAndValidateFields(
-            NodeEngine nodeEngine,
+            List<MappingField> userFields,
             Map<String, String> options,
-            List<MappingField> userFields
+            NodeEngine nodeEngine
     ) {
-        InternalSerializationService serializationService =
-                (InternalSerializationService) nodeEngine.getSerializationService();
+        InternalSerializationService ss = (InternalSerializationService) nodeEngine.getSerializationService();
+
         List<MappingField> keyFields = findMetadataResolver(options, true)
-                .resolveFields(true, userFields, options, serializationService);
+                .resolveFields(true, userFields, options, ss);
+        if (keyFields.isEmpty()) {
+            throw QueryException.error("Empty key column list");
+        }
         List<MappingField> valueFields = findMetadataResolver(options, false)
-                .resolveFields(false, userFields, options, serializationService);
+                .resolveFields(false, userFields, options, ss);
+        if (valueFields.isEmpty()) {
+            throw QueryException.error("Empty value column list");
+        }
 
         Map<String, MappingField> fields = concat(keyFields.stream(), valueFields.stream())
                 .collect(LinkedHashMap::new, (map, field) -> map.putIfAbsent(field.name(), field), Map::putAll);
@@ -63,9 +69,9 @@ public class EntryMetadataResolvers {
     }
 
     public EntryMetadata resolveMetadata(
+            boolean isKey,
             List<MappingField> resolvedFields,
             Map<String, String> options,
-            boolean isKey,
             InternalSerializationService serializationService
     ) {
         EntryMetadataResolver resolver = findMetadataResolver(options, isKey);

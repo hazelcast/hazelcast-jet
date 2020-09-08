@@ -100,9 +100,9 @@ public final class EntryMetadataJavaResolver implements EntryMetadataResolver {
 
         MappingField field = new MappingField(name, type, path.toString());
 
-        for (MappingField ef : mappingFieldsByPath.values()) {
-            if (!field.name().equals(ef.name())) {
-                throw QueryException.error("Unmapped field - '" + ef.name() + "'");
+        for (MappingField mf : mappingFieldsByPath.values()) {
+            if (!field.name().equals(mf.name())) {
+                throw QueryException.error("Unmapped field - '" + mf.name() + "'");
             }
         }
 
@@ -141,12 +141,12 @@ public final class EntryMetadataJavaResolver implements EntryMetadataResolver {
     @Override
     public EntryMetadata resolveMetadata(
             boolean isKey,
-            List<MappingField> mappingFields,
+            List<MappingField> resolvedFields,
             Map<String, String> options,
             InternalSerializationService serializationService
     ) {
         Class<?> clazz = resolveClass(isKey, options);
-        return resolveMetadata(isKey, mappingFields, clazz);
+        return resolveMetadata(isKey, resolvedFields, clazz);
     }
 
     public EntryMetadata resolveMetadata(
@@ -173,9 +173,9 @@ public final class EntryMetadataJavaResolver implements EntryMetadataResolver {
         TableField field = new MapTableField(mappingField.name(), mappingField.type(), false, path);
 
         return new EntryMetadata(
+                singletonList(field),
                 GenericQueryTargetDescriptor.DEFAULT,
-                PrimitiveUpsertTargetDescriptor.INSTANCE,
-                singletonList(field)
+                PrimitiveUpsertTargetDescriptor.INSTANCE
         );
     }
 
@@ -204,9 +204,9 @@ public final class EntryMetadataJavaResolver implements EntryMetadataResolver {
             }
         }
         return new EntryMetadata(
+                fields,
                 GenericQueryTargetDescriptor.DEFAULT,
-                new PojoUpsertTargetDescriptor(clazz.getName(), typeNamesByPaths),
-                fields
+                new PojoUpsertTargetDescriptor(clazz.getName(), typeNamesByPaths)
         );
     }
 

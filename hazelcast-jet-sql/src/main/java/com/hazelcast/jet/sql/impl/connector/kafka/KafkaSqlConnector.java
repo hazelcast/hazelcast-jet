@@ -77,7 +77,7 @@ public class KafkaSqlConnector implements SqlConnector {
             @Nonnull Map<String, String> options,
             @Nonnull List<MappingField> userFields
     ) {
-        return entryMetadataResolvers.resolveAndValidateFields(nodeEngine, options, userFields);
+        return entryMetadataResolvers.resolveAndValidateFields(userFields, options, nodeEngine);
     }
 
     @Nonnull @Override
@@ -92,8 +92,8 @@ public class KafkaSqlConnector implements SqlConnector {
 
         InternalSerializationService ss = (InternalSerializationService) nodeEngine.getSerializationService();
 
-        EntryMetadata keyMetadata = entryMetadataResolvers.resolveMetadata(resolvedFields, options, true, ss);
-        EntryMetadata valueMetadata = entryMetadataResolvers.resolveMetadata(resolvedFields, options, false, ss);
+        EntryMetadata keyMetadata = entryMetadataResolvers.resolveMetadata(true, resolvedFields, options, ss);
+        EntryMetadata valueMetadata = entryMetadataResolvers.resolveMetadata(false, resolvedFields, options, ss);
         List<TableField> fields = concat(keyMetadata.getFields().stream(), valueMetadata.getFields().stream())
                 .collect(toList());
 

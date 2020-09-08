@@ -39,16 +39,16 @@ public interface EntryMetadataResolver {
 
     EntryMetadata resolveMetadata(
             boolean isKey,
-            List<MappingField> fields,
+            List<MappingField> resolvedFields,
             Map<String, String> options,
             InternalSerializationService serializationService
     );
 
     default Map<QueryPath, MappingField> extractKeyFields(
-            List<MappingField> mappingFields
+            List<MappingField> fields
     ) {
         Map<QueryPath, MappingField> keyFieldsByPath = new LinkedHashMap<>();
-        for (MappingField mappingField : mappingFields) {
+        for (MappingField mappingField : fields) {
             String externalName = mappingField.externalName();
 
             if (externalName == null
@@ -74,11 +74,11 @@ public interface EntryMetadataResolver {
     }
 
     default Map<QueryPath, MappingField> extractValueFields(
-            List<MappingField> mappingFields,
+            List<MappingField> fields,
             Function<String, QueryPath> defaultPathSupplier
     ) {
         Map<QueryPath, MappingField> valueFieldsByPath = new LinkedHashMap<>();
-        for (MappingField mappingField : mappingFields) {
+        for (MappingField mappingField : fields) {
             String externalName = mappingField.externalName();
 
             if (externalName != null

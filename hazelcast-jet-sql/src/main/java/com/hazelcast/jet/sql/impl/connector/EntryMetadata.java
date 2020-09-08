@@ -24,16 +24,22 @@ import java.util.List;
 
 public class EntryMetadata {
 
+    private final List<TableField> fields;
     private final QueryTargetDescriptor queryTargetDescriptor;
     private final UpsertTargetDescriptor upsertTargetDescriptor;
-    private final List<TableField> fields;
 
-    public EntryMetadata(QueryTargetDescriptor queryTargetDescriptor,
-                         UpsertTargetDescriptor upsertTargetDescriptor,
-                         List<TableField> fields) {
+    public EntryMetadata(
+            List<TableField> fields,
+            QueryTargetDescriptor queryTargetDescriptor,
+            UpsertTargetDescriptor upsertTargetDescriptor
+    ) {
+        this.fields = fields;
         this.queryTargetDescriptor = queryTargetDescriptor;
         this.upsertTargetDescriptor = upsertTargetDescriptor;
-        this.fields = fields;
+    }
+
+    public List<TableField> getFields() {
+        return fields;
     }
 
     public QueryTargetDescriptor getQueryTargetDescriptor() {
@@ -42,9 +48,5 @@ public class EntryMetadata {
 
     public UpsertTargetDescriptor getUpsertTargetDescriptor() {
         return upsertTargetDescriptor;
-    }
-
-    public List<TableField> getFields() {
-        return fields;
     }
 }

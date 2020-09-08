@@ -36,11 +36,11 @@ import java.util.Map.Entry;
 
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.JSON_SERIALIZATION_FORMAT;
 
-final class EntryMetadataJsonResolver implements EntryMetadataResolver {
+final class EntryMetadataHazelcastJsonResolver implements EntryMetadataResolver {
 
-    static final EntryMetadataJsonResolver INSTANCE = new EntryMetadataJsonResolver();
+    static final EntryMetadataHazelcastJsonResolver INSTANCE = new EntryMetadataHazelcastJsonResolver();
 
-    private EntryMetadataJsonResolver() {
+    private EntryMetadataHazelcastJsonResolver() {
     }
 
     @Override
@@ -59,20 +59,14 @@ final class EntryMetadataJsonResolver implements EntryMetadataResolver {
                 ? extractKeyFields(userFields)
                 : extractValueFields(userFields, name -> new QueryPath(name, false));
 
-        if (mappingFieldsByPath.isEmpty()) {
-            throw QueryException.error("Empty " + (isKey ? "key" : "value") + " column list");
-        }
-
         Map<String, MappingField> fields = new LinkedHashMap<>();
         for (Entry<QueryPath, MappingField> entry : mappingFieldsByPath.entrySet()) {
             QueryPath path = entry.getKey();
             if (path.getPath() == null) {
                 throw QueryException.error("Invalid external name '" + path.toString() + "'");
             }
-            QueryDataType type = entry.getValue().type();
-            String name = entry.getValue().name();
+            MappingField field = entry.getValue();
 
-            MappingField field = new MappingField(name, type, path.toString());
             fields.putIfAbsent(field.name(), field);
         }
         return new ArrayList<>(fields.values());
@@ -81,13 +75,13 @@ final class EntryMetadataJsonResolver implements EntryMetadataResolver {
     @Override
     public EntryMetadata resolveMetadata(
             boolean isKey,
-            List<MappingField> mappingFields,
+            List<MappingField> resolvedFields,
             Map<String, String> options,
             InternalSerializationService serializationService
     ) {
         Map<QueryPath, MappingField> mappingFieldsByPath = isKey
-                ? extractKeyFields(mappingFields)
-                : extractValueFields(mappingFields, name -> new QueryPath(name, false));
+                ? extractKeyFields(resolvedFields)
+                : extractValueFields(resolvedFields, name -> new QueryPath(name, false));
 
         List<TableField> fields = new ArrayList<>();
         for (Entry<QueryPath, MappingField> entry : mappingFieldsByPath.entrySet()) {
@@ -99,9 +93,9 @@ final class EntryMetadataJsonResolver implements EntryMetadataResolver {
             fields.add(field);
         }
         return new EntryMetadata(
+                fields,
                 new GenericQueryTargetDescriptor(),
-                HazelcastJsonUpsertTargetDescriptor.INSTANCE,
-                fields
+                HazelcastJsonUpsertTargetDescriptor.INSTANCE
         );
     }
 }

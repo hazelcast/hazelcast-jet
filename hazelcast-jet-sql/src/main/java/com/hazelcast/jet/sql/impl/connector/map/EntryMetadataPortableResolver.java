@@ -136,12 +136,12 @@ final class EntryMetadataPortableResolver implements EntryMetadataResolver {
     @Override
     public EntryMetadata resolveMetadata(
             boolean isKey,
-            List<MappingField> mappingFields,
+            List<MappingField> resolvedFields,
             Map<String, String> options,
             InternalSerializationService serializationService
     ) {
         ClassDefinition clazz = resolveClassDefinition(isKey, options, serializationService);
-        return resolveMetadata(isKey, mappingFields, clazz);
+        return resolveMetadata(isKey, resolvedFields, clazz);
     }
 
     EntryMetadata resolveMetadata(
@@ -163,13 +163,13 @@ final class EntryMetadataPortableResolver implements EntryMetadataResolver {
             fields.add(field);
         }
         return new EntryMetadata(
+                fields,
                 GenericQueryTargetDescriptor.DEFAULT,
                 new PortableUpsertTargetDescriptor(
                         clazz.getFactoryId(),
                         clazz.getClassId(),
                         clazz.getVersion()
-                ),
-                fields
+                )
         );
     }
 

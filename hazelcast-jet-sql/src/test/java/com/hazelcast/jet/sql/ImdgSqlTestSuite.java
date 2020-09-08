@@ -23,13 +23,14 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
 /**
- * A suite to run all the IMDG SQL tests with JetInstance. 
+ * A suite to run all the IMDG SQL tests with JetInstance.
  */
 @RunWith(Suite.class)
 @Suite.SuiteClasses(SqlIntegrationTestSuite.class)
 public final class ImdgSqlTestSuite {
 
-    public ImdgSqlTestSuite() { }
+    private ImdgSqlTestSuite() {
+    }
 
     @BeforeClass
     public static void beforeClass() {
