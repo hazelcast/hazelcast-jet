@@ -146,12 +146,12 @@ final class EntryMetadataPortableResolver implements EntryMetadataResolver {
 
     EntryMetadata resolveMetadata(
             boolean isKey,
-            List<MappingField> mappingFields,
+            List<MappingField> resolvedFields,
             ClassDefinition clazz
     ) {
         Map<QueryPath, MappingField> mappingFieldsByPath = isKey
-                ? extractKeyFields(mappingFields)
-                : extractValueFields(mappingFields, name -> new QueryPath(name, false));
+                ? extractKeyFields(resolvedFields)
+                : extractValueFields(resolvedFields, name -> new QueryPath(name, false));
 
         List<TableField> fields = new ArrayList<>();
         for (Entry<QueryPath, MappingField> entry : mappingFieldsByPath.entrySet()) {

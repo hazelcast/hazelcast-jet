@@ -151,21 +151,21 @@ public final class EntryMetadataJavaResolver implements EntryMetadataResolver {
 
     public EntryMetadata resolveMetadata(
             boolean isKey,
-            List<MappingField> mappingFields,
+            List<MappingField> resolvedFields,
             Class<?> clazz
     ) {
         QueryDataType type = QueryDataTypeUtils.resolveTypeForClass(clazz);
         if (type != QueryDataType.OBJECT) {
-            return resolvePrimitiveMetadata(mappingFields, isKey);
+            return resolvePrimitiveMetadata(isKey, resolvedFields);
         } else {
-            return resolveObjectMetadata(mappingFields, clazz, isKey);
+            return resolveObjectMetadata(isKey, resolvedFields, clazz);
         }
     }
 
-    private EntryMetadata resolvePrimitiveMetadata(List<MappingField> mappingFields, boolean isKey) {
+    private EntryMetadata resolvePrimitiveMetadata(boolean isKey, List<MappingField> resolvedFields) {
         Map<QueryPath, MappingField> externalFieldsByPath = isKey
-                ? extractKeyFields(mappingFields)
-                : extractValueFields(mappingFields, name -> VALUE_PATH);
+                ? extractKeyFields(resolvedFields)
+                : extractValueFields(resolvedFields, name -> VALUE_PATH);
 
         QueryPath path = isKey ? QueryPath.KEY_PATH : QueryPath.VALUE_PATH;
         MappingField mappingField = externalFieldsByPath.get(path);
@@ -180,13 +180,13 @@ public final class EntryMetadataJavaResolver implements EntryMetadataResolver {
     }
 
     private EntryMetadata resolveObjectMetadata(
-            List<MappingField> mappingFields,
-            Class<?> clazz,
-            boolean isKey
+            boolean isKey,
+            List<MappingField> resolvedFields,
+            Class<?> clazz
     ) {
         Map<QueryPath, MappingField> externalFieldsByPath = isKey
-                ? extractKeyFields(mappingFields)
-                : extractValueFields(mappingFields, name -> new QueryPath(name, false));
+                ? extractKeyFields(resolvedFields)
+                : extractValueFields(resolvedFields, name -> new QueryPath(name, false));
 
         Map<String, Class<?>> typesByNames = ReflectionUtils.extractProperties(clazz);
 

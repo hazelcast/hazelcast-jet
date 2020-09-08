@@ -60,15 +60,12 @@ public final class ToConverters {
         converters.put(QueryDataType.TIME, new ToCanonicalConverter(QueryDataType.TIME));
         converters.put(QueryDataType.DATE, new ToCanonicalConverter(QueryDataType.DATE));
         converters.put(QueryDataType.TIMESTAMP, new ToCanonicalConverter(QueryDataType.TIMESTAMP));
-        converters.put(QueryDataType.TIMESTAMP_WITH_TZ_ZONED_DATE_TIME, ToTimestampWithTzZonedDateTimeConverter.INSTANCE);
+        converters.put(QueryDataType.TIMESTAMP_WITH_TZ_ZONED_DATE_TIME, ToZonedDateTimeConverter.INSTANCE);
         converters.put(QueryDataType.TIMESTAMP_WITH_TZ_OFFSET_DATE_TIME,
                 new ToCanonicalConverter(QueryDataType.TIMESTAMP_WITH_TZ_OFFSET_DATE_TIME));
-        converters.put(QueryDataType.TIMESTAMP_WITH_TZ_DATE, ToTimestampWithTzDateConverter.INSTANCE);
-        converters.put(QueryDataType.TIMESTAMP_WITH_TZ_INSTANT, ToTimestampWithTzInstantConverter.INSTANCE);
-        converters.put(QueryDataType.TIMESTAMP_WITH_TZ_CALENDAR, ToTimestampWithTzCalendarConverter.INSTANCE);
-
-        //converters.put(QueryDataType.INTERVAL_YEAR_MONTH, new ToCanonicalConverter(QueryDataType.INTERVAL_YEAR_MONTH));
-        //converters.put(QueryDataType.INTERVAL_DAY_SECOND, new ToCanonicalConverter(QueryDataType.INTERVAL_DAY_SECOND));
+        converters.put(QueryDataType.TIMESTAMP_WITH_TZ_DATE, ToDateConverter.INSTANCE);
+        converters.put(QueryDataType.TIMESTAMP_WITH_TZ_INSTANT, ToInstantConverter.INSTANCE);
+        converters.put(QueryDataType.TIMESTAMP_WITH_TZ_CALENDAR, ToCalendarConverter.INSTANCE);
 
         converters.put(QueryDataType.OBJECT, new ToCanonicalConverter(QueryDataType.OBJECT));
 
@@ -119,11 +116,11 @@ public final class ToConverters {
         }
     }
 
-    private static final class ToTimestampWithTzDateConverter extends ToConverter {
+    private static final class ToDateConverter extends ToConverter {
 
-        private static final ToTimestampWithTzDateConverter INSTANCE = new ToTimestampWithTzDateConverter();
+        private static final ToDateConverter INSTANCE = new ToDateConverter();
 
-        private ToTimestampWithTzDateConverter() {
+        private ToDateConverter() {
             super(QueryDataType.TIMESTAMP_WITH_TZ_DATE);
         }
 
@@ -134,26 +131,26 @@ public final class ToConverters {
         }
     }
 
-    private static final class ToTimestampWithTzCalendarConverter extends ToConverter {
+    private static final class ToCalendarConverter extends ToConverter {
 
-        private static final ToTimestampWithTzCalendarConverter INSTANCE = new ToTimestampWithTzCalendarConverter();
+        private static final ToCalendarConverter INSTANCE = new ToCalendarConverter();
 
-        private ToTimestampWithTzCalendarConverter() {
+        private ToCalendarConverter() {
             super(QueryDataType.TIMESTAMP_WITH_TZ_CALENDAR);
         }
 
         @Override
         public Object from(Object canonicalValue) {
             ZonedDateTime zdt = ((OffsetDateTime) canonicalValue).toZonedDateTime();
-            return GregorianCalendar.from(zdt); // TODO: support other calendar types ?
+            return GregorianCalendar.from(zdt);
         }
     }
 
-    private static final class ToTimestampWithTzInstantConverter extends ToConverter {
+    private static final class ToInstantConverter extends ToConverter {
 
-        private static final ToTimestampWithTzInstantConverter INSTANCE = new ToTimestampWithTzInstantConverter();
+        private static final ToInstantConverter INSTANCE = new ToInstantConverter();
 
-        private ToTimestampWithTzInstantConverter() {
+        private ToInstantConverter() {
             super(QueryDataType.TIMESTAMP_WITH_TZ_INSTANT);
         }
 
@@ -163,12 +160,12 @@ public final class ToConverters {
         }
     }
 
-    private static final class ToTimestampWithTzZonedDateTimeConverter extends ToConverter {
+    private static final class ToZonedDateTimeConverter extends ToConverter {
 
-        private static final ToTimestampWithTzZonedDateTimeConverter INSTANCE =
-                new ToTimestampWithTzZonedDateTimeConverter();
+        private static final ToZonedDateTimeConverter INSTANCE =
+                new ToZonedDateTimeConverter();
 
-        private ToTimestampWithTzZonedDateTimeConverter() {
+        private ToZonedDateTimeConverter() {
             super(QueryDataType.TIMESTAMP_WITH_TZ_ZONED_DATE_TIME);
         }
 
