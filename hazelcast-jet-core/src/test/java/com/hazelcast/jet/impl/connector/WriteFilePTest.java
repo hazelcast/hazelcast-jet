@@ -32,6 +32,7 @@ import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.SourceBuilder;
 import com.hazelcast.jet.pipeline.test.TestSources;
 import com.hazelcast.test.HazelcastSerialClassRunner;
+import com.hazelcast.test.annotation.Repeat;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -103,7 +104,7 @@ public class WriteFilePTest extends SimpleTestInClusterSupport {
         IOUtil.delete(directory.toFile());
     }
 
-    @Test
+//    @Test
     public void when_localParallelismMoreThan1_then_multipleFiles() throws Exception {
         // Given
         Pipeline p = Pipeline.create();
@@ -120,7 +121,7 @@ public class WriteFilePTest extends SimpleTestInClusterSupport {
         }
     }
 
-    @Test
+//    @Test
     public void smokeTest_smallFile() throws Exception {
         // Given
         Pipeline p = buildPipeline(null, rangeIterable(0, 10));
@@ -132,7 +133,7 @@ public class WriteFilePTest extends SimpleTestInClusterSupport {
         checkFileContents(0, 10, false, false, true);
     }
 
-    @Test
+//    @Test
     public void smokeTest_bigFile() throws Exception {
         // Given
         Pipeline p = buildPipeline(null, rangeIterable(0, 100_000));
@@ -144,7 +145,7 @@ public class WriteFilePTest extends SimpleTestInClusterSupport {
         checkFileContents(0, 100_000, false, false, true);
     }
 
-    @Test
+//    @Test
     public void when_append_then_previousContentsOfFileIsKept() throws Exception {
         // Given
         Pipeline p = buildPipeline(null, rangeIterable(1, 10));
@@ -160,7 +161,7 @@ public class WriteFilePTest extends SimpleTestInClusterSupport {
         checkFileContents(0, 10, false, false, true);
     }
 
-    @Test
+//    @Test
     public void when_slowSource_then_fileFlushedAfterEachItem() {
         // Given
         int numItems = 10;
@@ -186,7 +187,7 @@ public class WriteFilePTest extends SimpleTestInClusterSupport {
         job.join();
     }
 
-    @Test
+//    @Test
     public void testCharset() throws Exception {
         // Given
         Charset charset = Charset.forName("iso-8859-2");
@@ -200,7 +201,7 @@ public class WriteFilePTest extends SimpleTestInClusterSupport {
         assertEquals(text + System.getProperty("line.separator"), new String(Files.readAllBytes(onlyFile), charset));
     }
 
-    @Test
+//    @Test
     public void test_createDirectories() {
         // Given
         Path myFile = directory.resolve("subdir1/subdir2/" + onlyFile.getFileName());
@@ -217,7 +218,7 @@ public class WriteFilePTest extends SimpleTestInClusterSupport {
         assertTrue(Files.exists(directory.resolve("subdir1/subdir2")));
     }
 
-    @Test
+//    @Test
     public void when_toStringF_then_used() throws Exception {
         // Given
         Pipeline p = Pipeline.create();
@@ -233,7 +234,7 @@ public class WriteFilePTest extends SimpleTestInClusterSupport {
         checkFileContents(0, 10, false, false, true);
     }
 
-    @Test
+//    @Test
     public void test_rollByDate() {
         int numItems = 10;
         DAG dag = new DAG();
@@ -261,7 +262,7 @@ public class WriteFilePTest extends SimpleTestInClusterSupport {
         job.join();
     }
 
-    @Test
+//    @Test
     public void test_rollByFileSize() throws Exception {
         int numItems = 10;
         DAG dag = new DAG();
@@ -291,7 +292,7 @@ public class WriteFilePTest extends SimpleTestInClusterSupport {
         job.join();
     }
 
-    @Test
+//    @Test
     public void test_JsonFile() throws IOException {
         // Given
         Pipeline p = Pipeline.create();
@@ -312,7 +313,7 @@ public class WriteFilePTest extends SimpleTestInClusterSupport {
         assertEquals(testPerson, actual);
     }
 
-    @Test
+//    @Test
     public void stressTest_noSnapshot() throws Exception {
         Pipeline p = Pipeline.create();
         p.readFrom(TestSources.items(rangeIterable(0, 10)))
@@ -328,7 +329,7 @@ public class WriteFilePTest extends SimpleTestInClusterSupport {
         checkFileContents(0, 10, false, false, true);
     }
 
-    @Test
+//    @Test
     public void stressTest_snapshots_noRestarts() throws Exception {
         DAG dag = new DAG();
         int numItems = 5;
@@ -357,16 +358,17 @@ public class WriteFilePTest extends SimpleTestInClusterSupport {
     }
 
     @Test
+    @Repeat(50)
     public void stressTest_exactlyOnce_graceful() throws Exception {
         stressTest(true, true);
     }
 
-    @Test
+//    @Test
     public void stressTest_exactlyOnce_forceful() throws Exception {
         stressTest(false, true);
     }
 
-    @Test
+//    @Test
     public void stressTest_atLeastOnce_forceful() throws Exception {
         stressTest(false, false);
     }

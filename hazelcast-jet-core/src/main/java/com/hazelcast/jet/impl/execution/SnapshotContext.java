@@ -283,8 +283,11 @@ public class SnapshotContext {
         activeSnapshotIdPhase2 = snapshotId;
         if (numPTasklets == 0) {
             // member is already done with the job and master didn't know it yet - we are immediately successful
+            logger.info("aaa startNewSnapshotPhase2, not starting phase2, numPTasklets == 0");
             return completedFuture(null);
         }
+        logger.info("aaa startNewSnapshotPhase2 started new phase 2, snapshot " + snapshotId
+                + ", phase2Future=" + phase2Future);
         phase2Future = new CompletableFuture<>();
         return phase2Future;
     }
@@ -358,6 +361,8 @@ public class SnapshotContext {
     void phase2DoneForTasklet() {
         int newRemainingTasklets = numRemainingTasklets.decrementAndGet();
         assert newRemainingTasklets >= 0 : "newRemainingTasklets=" + newRemainingTasklets;
+        logger.info("aaa phase2DoneForTasklet, snapshot " + currentSnapshotId + ", newRemainingTasklets="
+                + newRemainingTasklets);
         if (newRemainingTasklets == 0) {
             handlePhase2Done();
         }
@@ -396,6 +401,7 @@ public class SnapshotContext {
     }
 
     private synchronized void handlePhase2Done() {
+        logger.info("aaa handlePhase2Done, isCancelled=" + isCancelled + ", phase2Future=" + phase2Future);
         if (isCancelled) {
             assert phase2Future == null : "phase2Future=" + phase2Future;
             return;

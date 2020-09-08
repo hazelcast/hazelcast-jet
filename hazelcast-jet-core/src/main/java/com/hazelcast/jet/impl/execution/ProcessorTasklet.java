@@ -337,6 +337,8 @@ public class ProcessorTasklet implements Tasklet {
             case SNAPSHOT_COMMIT_FINISH__FINAL:
                 if (ssContext.isExportOnly() || processor.snapshotCommitFinish(ssContext.isLastPhase1Successful())) {
                     pendingSnapshotId2++;
+                    logger.info("aaa calling ssContext.phase2DoneForTasklet(), state=" + state
+                            + ", pendingSnapshotId2=" + pendingSnapshotId2);
                     ssContext.phase2DoneForTasklet();
                     progTracker.madeProgress();
                     switch (state) {
@@ -359,6 +361,7 @@ public class ProcessorTasklet implements Tasklet {
                 long currSnapshotId2 = ssContext.activeSnapshotIdPhase2();
                 if (currSnapshotId2 >= pendingSnapshotId2) {
                     state = SNAPSHOT_COMMIT_FINISH__FINAL;
+                    logger.info("aaa detected new phase2: " + pendingSnapshotId2 + ", proceeding to " + state);
                     stateMachineStep(); // recursion
                 }
                 return;
@@ -402,6 +405,7 @@ public class ProcessorTasklet implements Tasklet {
     private void processInbox() {
         if (ssContext.activeSnapshotIdPhase2() == pendingSnapshotId2) {
             state = SNAPSHOT_COMMIT_FINISH__PROCESS;
+            logger.info("aaa detected new phase2: " + pendingSnapshotId2 + ", proceeding to " + state);
             progTracker.madeProgress();
             return;
         }
@@ -460,6 +464,7 @@ public class ProcessorTasklet implements Tasklet {
                     + (pendingSnapshotId2 - 1) + " or " + pendingSnapshotId2;
             if (currSnapshotId2 == pendingSnapshotId2) {
                 state = SNAPSHOT_COMMIT_FINISH__COMPLETE;
+                logger.info("aaa detected new phase2: " + pendingSnapshotId2 + ", proceeding to " + state);
                 progTracker.madeProgress();
                 return;
             }
