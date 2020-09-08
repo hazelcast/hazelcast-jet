@@ -36,6 +36,7 @@ import java.util.Map;
 import static com.hazelcast.jet.sql.impl.connector.EntryMetadataJavaResolver.INSTANCE;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_KEY_CLASS;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_VALUE_CLASS;
+import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -80,6 +81,22 @@ public class EntryMetadataJavaResolverTest {
             "true, __key",
             "false, this"
     })
+    public void when_typeMismatchBetweenPrimitiveDeclaredAndSchemaField_then_throws(boolean key, String path) {
+        Map<String, String> options = ImmutableMap.of((key ? OPTION_KEY_CLASS : OPTION_VALUE_CLASS), int.class.getName());
+
+        assertThatThrownBy(() -> INSTANCE.resolveFields(
+                key,
+                singletonList(field(path, QueryDataType.VARCHAR, path)),
+                options,
+                null
+        )).isInstanceOf(QueryException.class);
+    }
+
+    @Test
+    @Parameters({
+            "true, __key",
+            "false, this"
+    })
     public void when_userDeclaresPrimitiveAdditionalField_then_throws(boolean key, String prefix) {
         Map<String, String> options = ImmutableMap.of((key ? OPTION_KEY_CLASS : OPTION_VALUE_CLASS), int.class.getName());
 
@@ -96,12 +113,12 @@ public class EntryMetadataJavaResolverTest {
             "true, __key",
             "false, this"
     })
-    public void when_typeMismatchBetweenPrimitiveDeclaredAndSchemaField_then_throws(boolean key, String path) {
+    public void when_userDeclaresPrimitiveInvalidExternalName_then_throws(boolean key, String path) {
         Map<String, String> options = ImmutableMap.of((key ? OPTION_KEY_CLASS : OPTION_VALUE_CLASS), int.class.getName());
 
         assertThatThrownBy(() -> INSTANCE.resolveFields(
                 key,
-                singletonList(field(path, QueryDataType.VARCHAR, path)),
+                singletonList(field(path, QueryDataType.INT, "invalid-path")),
                 options,
                 null
         )).isInstanceOf(QueryException.class);
@@ -194,6 +211,41 @@ public class EntryMetadataJavaResolverTest {
         assertThatThrownBy(() -> INSTANCE.resolveFields(
                 key,
                 singletonList(field("field", QueryDataType.VARCHAR, prefix + ".field")),
+                options,
+                null
+        )).isInstanceOf(QueryException.class);
+    }
+
+    @Test
+    @Parameters({
+            "true",
+            "false"
+    })
+    public void when_userDeclaresObjectInvalidExternalName_then_throws(boolean key) {
+        Map<String, String> options = ImmutableMap.of((key ? OPTION_KEY_CLASS : OPTION_VALUE_CLASS), Type.class.getName());
+
+        assertThatThrownBy(() -> INSTANCE.resolveFields(
+                key,
+                singletonList(field("field", QueryDataType.VARCHAR, "does_not_start_with_key_or_value")),
+                options,
+                null
+        )).isInstanceOf(QueryException.class);
+    }
+
+    @Test
+    @Parameters({
+            "true, __key",
+            "false, this"
+    })
+    public void when_userDeclaresObjectDuplicateExternalName_then_throws(boolean key, String prefix) {
+        Map<String, String> options = ImmutableMap.of((key ? OPTION_KEY_CLASS : OPTION_VALUE_CLASS), Type.class.getName());
+
+        assertThatThrownBy(() -> INSTANCE.resolveFields(
+                key,
+                asList(
+                        field("field1", QueryDataType.INT, prefix + ".field"),
+                        field("field2", QueryDataType.VARCHAR, prefix + ".field")
+                ),
                 options,
                 null
         )).isInstanceOf(QueryException.class);

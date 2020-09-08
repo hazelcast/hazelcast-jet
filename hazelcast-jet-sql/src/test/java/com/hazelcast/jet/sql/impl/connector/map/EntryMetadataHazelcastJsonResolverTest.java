@@ -32,6 +32,7 @@ import org.junit.runner.RunWith;
 import java.util.List;
 
 import static com.hazelcast.jet.sql.impl.connector.map.EntryMetadataHazelcastJsonResolver.INSTANCE;
+import static java.util.Arrays.asList;
 import static java.util.Collections.emptyMap;
 import static java.util.Collections.singletonList;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -65,6 +66,37 @@ public class EntryMetadataHazelcastJsonResolverTest {
         assertThatThrownBy(() -> INSTANCE.resolveFields(
                 key,
                 singletonList(field("field", QueryDataType.INT, prefix)),
+                emptyMap(),
+                null
+        )).isInstanceOf(QueryException.class);
+    }
+
+    @Test
+    @Parameters({
+            "true",
+            "false"
+    })
+    public void when_invalidExternalName_then_throws(boolean key) {
+        assertThatThrownBy(() -> INSTANCE.resolveFields(
+                key,
+                singletonList(field("field", QueryDataType.INT, "does_not_start_with_key_or_value")),
+                emptyMap(),
+                null
+        )).isInstanceOf(QueryException.class);
+    }
+
+    @Test
+    @Parameters({
+            "true, __key",
+            "false, this"
+    })
+    public void when_duplicateExternalName_then_throws(boolean key, String prefix) {
+        assertThatThrownBy(() -> INSTANCE.resolveFields(
+                key,
+                asList(
+                        field("field1", QueryDataType.INT, prefix + ".field"),
+                        field("field2", QueryDataType.VARCHAR, prefix + ".field")
+                ),
                 emptyMap(),
                 null
         )).isInstanceOf(QueryException.class);

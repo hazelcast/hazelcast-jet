@@ -20,6 +20,7 @@ import com.google.common.collect.ImmutableMap;
 import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.internal.serialization.impl.DefaultSerializationServiceBuilder;
 import com.hazelcast.jet.sql.impl.connector.EntryMetadata;
+import com.hazelcast.jet.sql.impl.connector.EntryMetadataJavaResolver;
 import com.hazelcast.jet.sql.impl.inject.PortableUpsertTargetDescriptor;
 import com.hazelcast.jet.sql.impl.schema.MappingField;
 import com.hazelcast.nio.serialization.ClassDefinition;
@@ -44,6 +45,7 @@ import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_VALUE_CLA
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_VALUE_CLASS_VERSION;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_VALUE_FACTORY_ID;
 import static com.hazelcast.jet.sql.impl.connector.map.EntryMetadataPortableResolver.INSTANCE;
+import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -176,6 +178,61 @@ public class EntryMetadataPortableResolverTest {
         assertThatThrownBy(() -> INSTANCE.resolveFields(
                 key,
                 singletonList(field("field", QueryDataType.VARCHAR, prefix + ".field")),
+                options,
+                ss
+        )).isInstanceOf(QueryException.class);
+    }
+
+    @Test
+    @Parameters({
+            "true",
+            "false"
+    })
+    public void when_invalidExternalName_then_throws(boolean key) {
+        InternalSerializationService ss = new DefaultSerializationServiceBuilder().build();
+        ClassDefinition classDefinition =
+                new ClassDefinitionBuilder(1, 2, 3)
+                        .addIntField("field")
+                        .build();
+        ss.getPortableContext().registerClassDefinition(classDefinition);
+        Map<String, String> options = ImmutableMap.of(
+                (key ? OPTION_KEY_FACTORY_ID : OPTION_VALUE_FACTORY_ID), String.valueOf(classDefinition.getFactoryId()),
+                (key ? OPTION_KEY_CLASS_ID : OPTION_VALUE_CLASS_ID), String.valueOf(classDefinition.getClassId()),
+                (key ? OPTION_KEY_CLASS_VERSION : OPTION_VALUE_CLASS_VERSION), String.valueOf(classDefinition.getVersion())
+        );
+
+        assertThatThrownBy(() -> INSTANCE.resolveFields(
+                key,
+                singletonList(field("field", QueryDataType.VARCHAR, "does_not_start_with_key_or_value")),
+                options,
+                ss
+        )).isInstanceOf(QueryException.class);
+    }
+
+    @Test
+    @Parameters({
+            "true, __key",
+            "false, this"
+    })
+    public void when_duplicateExternalName_then_throws(boolean key, String prefix) {
+        InternalSerializationService ss = new DefaultSerializationServiceBuilder().build();
+        ClassDefinition classDefinition =
+                new ClassDefinitionBuilder(1, 2, 3)
+                        .addIntField("field")
+                        .build();
+        ss.getPortableContext().registerClassDefinition(classDefinition);
+        Map<String, String> options = ImmutableMap.of(
+                (key ? OPTION_KEY_FACTORY_ID : OPTION_VALUE_FACTORY_ID), String.valueOf(classDefinition.getFactoryId()),
+                (key ? OPTION_KEY_CLASS_ID : OPTION_VALUE_CLASS_ID), String.valueOf(classDefinition.getClassId()),
+                (key ? OPTION_KEY_CLASS_VERSION : OPTION_VALUE_CLASS_VERSION), String.valueOf(classDefinition.getVersion())
+        );
+
+        assertThatThrownBy(() -> EntryMetadataJavaResolver.INSTANCE.resolveFields(
+                key,
+                asList(
+                        field("field1", QueryDataType.INT, prefix + ".field"),
+                        field("field2", QueryDataType.VARCHAR, prefix + ".field")
+                ),
                 options,
                 ss
         )).isInstanceOf(QueryException.class);
