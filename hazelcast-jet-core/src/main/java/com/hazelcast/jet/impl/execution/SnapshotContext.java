@@ -361,7 +361,7 @@ public class SnapshotContext {
     void phase2DoneForTasklet() {
         int newRemainingTasklets = numRemainingTasklets.decrementAndGet();
         assert newRemainingTasklets >= 0 : "newRemainingTasklets=" + newRemainingTasklets;
-        logger.info("aaa phase2DoneForTasklet, snapshot " + currentSnapshotId + ", newRemainingTasklets="
+        logger.info("aaa phase2DoneForTasklet, snapshot " + activeSnapshotIdPhase2 + ", newRemainingTasklets="
                 + newRemainingTasklets);
         if (newRemainingTasklets == 0) {
             handlePhase2Done();
