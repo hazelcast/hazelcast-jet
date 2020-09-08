@@ -34,6 +34,7 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.JAVA_SERIALIZATION_FORMAT;
@@ -101,6 +102,46 @@ public abstract class JetSqlTestSupport extends SimpleTestInClusterSupport {
 
         List<Row> actualRows = new ArrayList<>(rows);
         assertThat(actualRows).containsExactlyInAnyOrderElementsOf(expectedRows);
+    }
+
+    /**
+     * Execute a query and ensures the result is empty.
+     *
+     * @param sql The query
+     */
+    public static void assertEmpty(String sql) {
+        SqlService sqlService = instance().getSql();
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        AtomicInteger counter = new AtomicInteger(-1);
+
+        Thread thread = new Thread(() -> {
+            try (SqlResult result = sqlService.execute(sql)) {
+                int i = 0;
+                for (SqlRow ignored : result) {
+                    i++;
+                }
+                counter.set(i);
+                future.complete(null);
+            } catch (RuntimeException e) {
+                e.printStackTrace();
+                future.completeExceptionally(e);
+            }
+        });
+
+        thread.start();
+
+        try {
+            try {
+                future.get(10, TimeUnit.SECONDS);
+            } catch (TimeoutException e) {
+                thread.interrupt();
+                thread.join();
+            }
+        } catch (Exception e) {
+            throw sneakyThrow(e);
+        }
+
+        assertThat(counter.get()).isZero();
     }
 
     /**

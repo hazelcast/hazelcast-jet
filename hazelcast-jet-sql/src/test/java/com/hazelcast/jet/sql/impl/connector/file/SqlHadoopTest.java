@@ -37,6 +37,7 @@ import static com.hazelcast.jet.sql.impl.connector.SqlConnector.JSON_SERIALIZATI
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_SERIALIZATION_FORMAT;
 import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.OPTION_HEADER;
 import static java.util.Arrays.asList;
+import static java.util.Collections.singletonList;
 
 public class SqlHadoopTest extends JetSqlTestSupport {
 
@@ -78,14 +79,11 @@ public class SqlHadoopTest extends JetSqlTestSupport {
                 + ")"
         );
 
-        sqlService.execute("INSERT INTO " + name + " VALUES (1, 'Alice'), (2, 'Bob')");
+        sqlService.execute("INSERT INTO " + name + " VALUES (1, 'Alice')");
 
         assertRowsEventuallyInAnyOrder(
                 "SELECT * FROM " + name,
-                asList(
-                        new Row(1L, "Alice"),
-                        new Row(2L, "Bob")
-                )
+                singletonList(new Row(1L, "Alice"))
         );
     }
 
@@ -125,14 +123,11 @@ public class SqlHadoopTest extends JetSqlTestSupport {
                 + ")"
         );
 
-        sqlService.execute("INSERT INTO " + name + " VALUES (1, 'Alice'), (2, 'Bob')");
+        sqlService.execute("INSERT INTO " + name + " VALUES (1, 'Alice')");
 
         assertRowsEventuallyInAnyOrder(
                 "SELECT * FROM " + name,
-                asList(
-                        new Row(1L, "Alice")
-                        , new Row(2L, "Bob")
-                )
+                singletonList(new Row(1L, "Alice"))
         );
     }
 
@@ -174,14 +169,11 @@ public class SqlHadoopTest extends JetSqlTestSupport {
                 + ")"
         );
 
-        sqlService.execute("INSERT INTO " + name + " VALUES (1, 'Alice'), (2, 'Bob')");
+        sqlService.execute("INSERT INTO " + name + " VALUES (1, 'Alice')");
 
         assertRowsEventuallyInAnyOrder(
                 "SELECT * FROM " + name,
-                asList(
-                        new Row(1L, "Alice")
-                        , new Row(2L, "Bob")
-                )
+                singletonList(new Row(1L, "Alice"))
         );
     }
 

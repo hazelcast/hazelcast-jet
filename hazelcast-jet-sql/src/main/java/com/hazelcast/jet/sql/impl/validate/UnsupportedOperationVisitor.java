@@ -118,7 +118,6 @@ public final class UnsupportedOperationVisitor implements SqlVisitor<Void> {
         SUPPORTED_KINDS.add(SqlKind.COLUMN_DECL);
 
         SUPPORTED_KINDS.add(SqlKind.ROW);
-        SUPPORTED_KINDS.add(SqlKind.VALUES);
         SUPPORTED_KINDS.add(SqlKind.INSERT);
 
         SUPPORTED_KINDS.add(SqlKind.COLLECTION_TABLE);
@@ -288,6 +287,10 @@ public final class UnsupportedOperationVisitor implements SqlVisitor<Void> {
         }
 
         switch (kind) {
+            case VALUES:
+                processValues(call);
+                break;
+
             case SELECT:
                 processSelect((SqlSelect) call);
                 break;
@@ -303,6 +306,12 @@ public final class UnsupportedOperationVisitor implements SqlVisitor<Void> {
 
             default:
                 throw unsupported(call, kind);
+        }
+    }
+
+    private void processValues(SqlCall call) {
+        if (call.getOperandList().size() > 1) {
+            throw unsupported(call, "Multiple rows in VALUES clause");
         }
     }
 
@@ -336,7 +345,7 @@ public final class UnsupportedOperationVisitor implements SqlVisitor<Void> {
 
     private void processOtherDdl(SqlCall call) {
         if (!(call instanceof SqlCreateJob) && !(call instanceof SqlDropJob)) {
-            throw unsupported(call, "OTHER DDL class not supported: " + call.getClass().getSimpleName());
+            throw unsupported(call, "OTHER DDL class (" + call.getClass().getSimpleName() + ")");
         }
     }
 

@@ -28,7 +28,7 @@ interface ValidatorResource {
     @BaseMessage("{0}")
     ExInst<SqlValidatorException> error(String s);
 
-    @BaseMessage("{0} is not supported")
+    @BaseMessage("{0} not supported")
     ExInst<SqlValidatorException> notSupported(String name);
 
     @BaseMessage("Only INSERT OVERWRITE clause is supported for {0}")

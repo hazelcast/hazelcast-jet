@@ -19,7 +19,7 @@ package com.hazelcast.jet.sql;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import static java.util.Arrays.asList;
+import static java.util.Collections.singletonList;
 
 public class SqlTest extends JetSqlTestSupport {
 
@@ -30,12 +30,13 @@ public class SqlTest extends JetSqlTestSupport {
 
     @Test
     public void supportsValues() {
+        assertEmpty(
+                "SELECT a - b FROM (VALUES (1, 2)) AS t (a, b) WHERE a + b > 4"
+        );
+
         assertRowsEventuallyInAnyOrder(
-                "SELECT a - b FROM (VALUES (1, 2), (3, 5), (7, 11)) AS t (a, b) WHERE a + b > 4",
-                asList(
-                        new Row((byte) -2),
-                        new Row((byte) -4)
-                )
+                "SELECT a - b FROM (VALUES (7, 11)) AS t (a, b) WHERE a + b > 4",
+                singletonList(new Row((byte) -4))
         );
     }
 }

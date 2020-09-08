@@ -20,7 +20,6 @@ import com.hazelcast.jet.sql.JetSqlTestSupport;
 import com.hazelcast.map.IMap;
 import com.hazelcast.sql.SqlService;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.math.BigDecimal;
@@ -88,7 +87,12 @@ public class SqlPrimitiveTest extends JetSqlTestSupport {
 
         assertMapEventually(
                 name,
-                "INSERT OVERWRITE " + name + " (this, __key) VALUES ('2', 1), ('4', 3)",
+                "INSERT OVERWRITE " + name + " (this, __key) VALUES ('2', 1)",
+                createMap(1, "2")
+        );
+        assertMapEventually(
+                name,
+                "INSERT OVERWRITE " + name + " (this, __key) VALUES ('4', 3)",
                 createMap(1, "2", 3, "4")
         );
     }
@@ -101,18 +105,6 @@ public class SqlPrimitiveTest extends JetSqlTestSupport {
                 name,
                 "INSERT OVERWRITE " + name + " (__key, this) VALUES (CAST(0 + 1 AS INT), 2)",
                 createMap(1, "2")
-        );
-    }
-
-    @Test
-    @Ignore // TODO handle LogicalUnion ???
-    public void test_insertWithProject1() {
-        String name = createTableWithRandomName();
-
-        assertMapEventually(
-                name,
-                "INSERT OVERWRITE " + name + " (this, __key) VALUES ('2', 1), ('4', 3 + 0)",
-                createMap(1, "2", 3, "4")
         );
     }
 
