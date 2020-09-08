@@ -20,6 +20,7 @@ import com.hazelcast.jet.core.Edge;
 import com.hazelcast.jet.core.EventTimePolicy;
 import com.hazelcast.jet.impl.pipeline.Planner;
 import com.hazelcast.jet.impl.pipeline.Planner.PlannerVertex;
+import com.hazelcast.jet.pipeline.Pipeline.Context;
 
 import javax.annotation.Nonnull;
 
@@ -46,7 +47,7 @@ public class TimestampTransform<T> extends AbstractTransform {
     }
 
     @Override
-    public void addToDag(Planner p) {
+    public void addToDag(Planner p, Context context) {
         PlannerVertex upstream = p.xform2vertex.get(this.upstream().get(0));
         int localParallelism = upstream.v.determineLocalParallelism(upstream.v.getLocalParallelism());
         PlannerVertex pv = p.addVertex(

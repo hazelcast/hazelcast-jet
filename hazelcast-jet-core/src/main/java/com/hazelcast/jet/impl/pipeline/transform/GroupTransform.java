@@ -22,6 +22,7 @@ import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.impl.pipeline.Planner;
 import com.hazelcast.jet.impl.pipeline.Planner.PlannerVertex;
+import com.hazelcast.jet.pipeline.Pipeline.Context;
 
 import javax.annotation.Nonnull;
 import java.util.List;
@@ -61,11 +62,11 @@ public class GroupTransform<K, A, R, OUT> extends AbstractTransform {
     }
 
     @Override
-    public void addToDag(Planner p) {
+    public void addToDag(Planner p, Context context) {
         if (shouldRebalanceAnyInput() || aggrOp.combineFn() == null) {
-            addToDagSingleStage(p);
+            addToDagSingleStage(p, context);
         } else {
-            addToDagTwoStage(p);
+            addToDagTwoStage(p, context);
         }
     }
 
@@ -82,7 +83,7 @@ public class GroupTransform<K, A, R, OUT> extends AbstractTransform {
     //                         -----------------
     //                        | aggregateByKeyP |
     //                         -----------------
-    private void addToDagSingleStage(Planner p) {
+    private void addToDagSingleStage(Planner p, Context context) {
         PlannerVertex pv = p.addVertex(this, name(), localParallelism(),
                 aggregateByKeyP(groupKeyFns, aggrOp, mapToOutputFn));
         p.addEdges(this, pv.v, (e, ord) -> e.distributed().partitioned(groupKeyFns.get(ord)));
@@ -105,7 +106,7 @@ public class GroupTransform<K, A, R, OUT> extends AbstractTransform {
     //                         ---------------
     //                        | combineByKeyP |
     //                         ---------------
-    private void addToDagTwoStage(Planner p) {
+    private void addToDagTwoStage(Planner p, Context context) {
         List<FunctionEx<?, ? extends K>> groupKeyFns = this.groupKeyFns;
         Vertex v1 = p.dag.newVertex(name() + FIRST_STAGE_VERTEX_NAME_SUFFIX, accumulateByKeyP(groupKeyFns, aggrOp))
                 .localParallelism(localParallelism());

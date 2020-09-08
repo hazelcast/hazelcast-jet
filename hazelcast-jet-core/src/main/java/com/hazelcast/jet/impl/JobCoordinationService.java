@@ -47,6 +47,7 @@ import com.hazelcast.jet.impl.observer.WrappedThrowable;
 import com.hazelcast.jet.impl.operation.NotifyMemberShutdownOperation;
 import com.hazelcast.jet.impl.pipeline.PipelineImpl;
 import com.hazelcast.jet.impl.util.LoggingUtil;
+import com.hazelcast.jet.pipeline.Pipeline.Context;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.ringbuffer.OverflowPolicy;
 import com.hazelcast.ringbuffer.Ringbuffer;
@@ -206,7 +207,14 @@ public class JobCoordinationService {
                 DAG dag;
                 Data serializedDag;
                 if (jobDefinition instanceof PipelineImpl) {
-                    dag = ((PipelineImpl) jobDefinition).toDag();
+                    int coopThreadCount = getJetInstance(nodeEngine).getConfig()
+                                                                    .getInstanceConfig()
+                                                                    .getCooperativeThreadCount();
+                    dag = ((PipelineImpl) jobDefinition).toDag(new Context() {
+                        @Override public int defaultLocalParallelism() {
+                            return coopThreadCount;
+                        }
+                    });
                     serializedDag = nodeEngine().getSerializationService().toData(dag);
                 } else {
                     dag = (DAG) jobDefinition;
