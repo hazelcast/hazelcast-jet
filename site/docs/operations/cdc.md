@@ -325,7 +325,7 @@ For details see the
 
 There are however some discrepancies and peculiarities in the behavior.
 
-#### During snapshotting
+#### During database snapshotting
 
 If the connection to the database fails during the snapshotting phase
 then the connector is stuck in this state until the connection

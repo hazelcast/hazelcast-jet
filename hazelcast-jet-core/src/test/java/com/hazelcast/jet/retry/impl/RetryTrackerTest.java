@@ -60,7 +60,7 @@ public class RetryTrackerTest {
     }
 
     @Test
-    public void when_attemptsPositive_doNotRetry() {
+    public void when_attemptsPositive_doRetry() {
         RetryStrategy strategy = RetryStrategies.custom()
                 .maxAttempts(2)
                 .build();

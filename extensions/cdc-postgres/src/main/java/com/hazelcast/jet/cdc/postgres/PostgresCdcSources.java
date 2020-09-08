@@ -396,7 +396,8 @@ public final class PostgresCdcSources {
          * snapshot and will start trailing the binlog where it syncs with the
          * snapshot's end.
          */
-        @Nonnull Builder setShouldStateBeResetOnReconnect(boolean reset) {
+        @Nonnull
+        public Builder setShouldStateBeResetOnReconnect(boolean reset) {
             config.setProperty(CdcSource.RECONNECT_RESET_STATE_PROPERTY, reset);
             return this;
         }

@@ -68,7 +68,7 @@ public final class RetryStrategies {
         }
 
         /**
-         * Sets the maximum number of attempts
+         * Sets the maximum number of reconnect attempts.
          */
         public Builder maxAttempts(int maxAttempts) {
             this.maxAttempts = maxAttempts;
