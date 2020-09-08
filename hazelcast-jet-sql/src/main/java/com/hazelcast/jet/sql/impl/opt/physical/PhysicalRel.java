@@ -33,7 +33,7 @@ import java.util.List;
 import static java.util.stream.Collectors.toList;
 
 /**
- * Marker interface for logical relations.
+ * Marker interface for physical relations.
  */
 public interface PhysicalRel extends RelNode {
 
