@@ -33,6 +33,7 @@ public class SortP<T> extends AbstractProcessor {
         this.resultTraverser = priorityQueue::poll;
     }
 
+    @Override
     @SuppressWarnings("unchecked")
     protected boolean tryProcess0(@Nonnull Object item) {
         priorityQueue.add((T) item);

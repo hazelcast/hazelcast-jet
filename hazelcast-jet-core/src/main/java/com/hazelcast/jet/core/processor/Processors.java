@@ -988,7 +988,7 @@ public final class Processors {
      * @since 4.3
      */
     @Nonnull
-    public static <V> SupplierEx<Processor> sortP(Comparator<V> comparator) {
+    public static <T> SupplierEx<Processor> sortP(Comparator<T> comparator) {
         return () -> new SortP<>(comparator);
     }
 
