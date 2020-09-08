@@ -314,3 +314,7 @@ around two minutes, its performance would improve and the latency would
 make a full recovery.
 
 Go to [Part 2: the Batch Pipeline Benchmarks](/blog/2020/06/09/jdk-gc-benchmarks-part2).
+
+_If you enjoyed reading this post, check out Jet at
+[GitHub](https://github.com/hazelcast/hazelcast-jet) and give us a
+star!_

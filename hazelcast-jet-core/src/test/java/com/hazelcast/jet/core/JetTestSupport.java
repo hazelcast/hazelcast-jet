@@ -267,7 +267,7 @@ public abstract class JetTestSupport extends HazelcastTestSupport {
             JobExecutionRecord record = jr.getJobExecutionRecord(jobId);
             assertNotNull("jobExecutionRecord is null", record);
             snapshotId[0] = record.snapshotId();
-            assertTrue("No more snapshots produced after restart in " + timeoutSeconds + " seconds",
+            assertTrue("No more snapshots produced in " + timeoutSeconds + " seconds",
                     snapshotId[0] > originalSnapshotId);
             assertTrue("stats are 0", allowEmptySnapshot || record.snapshotStats().numBytes() > 0);
         }, timeoutSeconds);
@@ -327,13 +327,16 @@ public abstract class JetTestSupport extends HazelcastTestSupport {
             logger.warning("Failed to cancel the job and it is " + status + ", retrying. Failure: " + cancellationFailure,
                     cancellationFailure);
         }
-
         // if we got here, 10 attempts to cancel the job have failed. Cluster is in bad shape probably, shut it down
-        logger.warning(numAttempts + " attempts to cancel the job failed"
-                + (instancesToShutDown.length > 0 ? ", shutting the cluster down" : ""));
-        for (JetInstance instance : instancesToShutDown) {
-            instance.getHazelcastInstance().getLifecycleService().terminate();
+        try {
+            for (JetInstance instance : instancesToShutDown) {
+                instance.getHazelcastInstance().getLifecycleService().terminate();
+            }
+        } catch (Exception e) {
+            // ignore, proceed to throwing RuntimeException
         }
+        throw new RuntimeException(numAttempts + " attempts to cancel the job failed" +
+                (instancesToShutDown.length > 0 ? ", shut down the cluster" : ""));
     }
 
     /**
