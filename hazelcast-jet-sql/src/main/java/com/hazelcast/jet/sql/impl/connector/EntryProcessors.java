@@ -43,34 +43,34 @@ public final class EntryProcessors {
     private EntryProcessors() {
     }
 
-    public static ProcessorSupplier toEntryProjector(
+    public static ProcessorSupplier entryProjector(
             UpsertTargetDescriptor keyDescriptor,
             UpsertTargetDescriptor valueDescriptor,
             List<TableField> fields
     ) {
-        return new ToEntryProjectorProcessorSupplier(keyDescriptor, valueDescriptor, fields);
+        return new EntryProjectorProcessorSupplier(keyDescriptor, valueDescriptor, fields);
     }
 
     @SuppressFBWarnings(
             value = {"SE_BAD_FIELD", "SE_NO_SERIALVERSIONID"},
             justification = "the class is never java-serialized"
     )
-    private static class ToEntryProjectorProcessorSupplier implements ProcessorSupplier, DataSerializable {
+    private static class EntryProjectorProcessorSupplier implements ProcessorSupplier, DataSerializable {
 
         private UpsertTargetDescriptor keyDescriptor;
         private UpsertTargetDescriptor valueDescriptor;
 
         private QueryPath[] paths;
         private QueryDataType[] types;
-        private Boolean[] hiddens;
+        private Boolean[] hiddenFields;
 
         private transient InternalSerializationService serializationService;
 
         @SuppressWarnings("unused")
-        ToEntryProjectorProcessorSupplier() {
+        EntryProjectorProcessorSupplier() {
         }
 
-        ToEntryProjectorProcessorSupplier(
+        EntryProjectorProcessorSupplier(
                 UpsertTargetDescriptor keyDescriptor,
                 UpsertTargetDescriptor valueDescriptor,
                 List<TableField> fields
@@ -80,7 +80,7 @@ public final class EntryProcessors {
 
             this.paths = fields.stream().map(field -> ((MapTableField) field).getPath()).toArray(QueryPath[]::new);
             this.types = fields.stream().map(TableField::getType).toArray(QueryDataType[]::new);
-            this.hiddens = fields.stream().map(TableField::isHidden).toArray(Boolean[]::new);
+            this.hiddenFields = fields.stream().map(TableField::isHidden).toArray(Boolean[]::new);
         }
 
         @Override
@@ -99,7 +99,7 @@ public final class EntryProcessors {
                         valueDescriptor.create(serializationService),
                         paths,
                         types,
-                        hiddens
+                        hiddenFields
                 );
                 Processor processor = new TransformP<Object[], Object>(row -> {
                     traverser.accept(projector.project(row));
@@ -122,7 +122,7 @@ public final class EntryProcessors {
             for (QueryDataType type : types) {
                 out.writeObject(type);
             }
-            out.writeObject(hiddens);
+            out.writeObject(hiddenFields);
         }
 
         @Override
@@ -137,7 +137,7 @@ public final class EntryProcessors {
             for (int i = 0; i < types.length; i++) {
                 types[i] = in.readObject();
             }
-            hiddens = in.readObject();
+            hiddenFields = in.readObject();
         }
     }
 }

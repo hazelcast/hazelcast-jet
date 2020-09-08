@@ -142,7 +142,7 @@ public class SqlPortableTest extends JetSqlTestSupport {
         sqlService.execute("INSERT OVERWRITE " + name + " VALUES (1, 'Alice')");
         sqlService.execute("DROP MAPPING " + name);
 
-        // TODO: requires explicit column list due to hidden fields...
+        // requires explicit column list due to hidden fields
         sqlService.execute("INSERT OVERWRITE partitioned." + name + " (id, name) VALUES (2, 'Bob')");
 
         assertRowsEventuallyInAnyOrder(

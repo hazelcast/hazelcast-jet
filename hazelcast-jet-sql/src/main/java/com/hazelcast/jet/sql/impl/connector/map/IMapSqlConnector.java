@@ -49,7 +49,7 @@ import java.util.Map.Entry;
 
 import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.processor.SourceProcessors.readMapP;
-import static com.hazelcast.jet.sql.impl.connector.EntryProcessors.toEntryProjector;
+import static com.hazelcast.jet.sql.impl.connector.EntryProcessors.entryProjector;
 import static com.hazelcast.sql.impl.schema.map.MapTableUtils.estimatePartitionedMapRowCount;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Stream.concat;
@@ -169,7 +169,7 @@ public class IMapSqlConnector implements SqlConnector {
 
         Vertex vStart = dag.newVertex(
                 "Project(IMap" + "[" + table.getSchemaName() + "." + table.getSqlName() + "])",
-                toEntryProjector(
+                entryProjector(
                         (UpsertTargetDescriptor) table.getKeyJetMetadata(),
                         (UpsertTargetDescriptor) table.getValueJetMetadata(),
                         table.getFields()

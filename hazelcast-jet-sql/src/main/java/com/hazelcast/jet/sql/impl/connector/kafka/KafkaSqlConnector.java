@@ -44,7 +44,7 @@ import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.EventTimePolicy.noEventTime;
 import static com.hazelcast.jet.core.processor.Processors.mapP;
-import static com.hazelcast.jet.sql.impl.connector.EntryProcessors.toEntryProjector;
+import static com.hazelcast.jet.sql.impl.connector.EntryProcessors.entryProjector;
 import static com.hazelcast.jet.sql.impl.expression.ExpressionUtil.projectionFn;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Stream.concat;
@@ -159,7 +159,7 @@ public class KafkaSqlConnector implements SqlConnector {
 
         Vertex vStart = dag.newVertex(
                 "kafka-project",
-                toEntryProjector(table.getKeyUpsertDescriptor(), table.getValueUpsertDescriptor(), table.getFields())
+                entryProjector(table.getKeyUpsertDescriptor(), table.getValueUpsertDescriptor(), table.getFields())
         );
 
         String topicName = table.getTopicName();

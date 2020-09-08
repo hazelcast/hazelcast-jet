@@ -76,7 +76,7 @@ public class SqlPojoTest extends JetSqlTestSupport {
 
         assertMapEventually(
                 name,
-                // TODO: requires explicit column list due to hidden fields...
+                // requires explicit column list due to hidden fields
                 "INSERT OVERWRITE partitioned." + name + " (id, name) VALUES (2, 'Bob')",
                 createMap(new PersonId(1), new Person(1, "Alice"), new PersonId(2), new Person(0, "Bob"))
         );
