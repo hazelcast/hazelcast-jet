@@ -56,7 +56,6 @@ public class SqlPrimitiveTest extends JetSqlTestSupport {
                 "INSERT OVERWRITE partitioned." + name + " VALUES (2, 'Bob')",
                 createMap(BigInteger.valueOf(1), "Alice", BigInteger.valueOf(2), "Bob")
         );
-
         assertRowsEventuallyInAnyOrder(
                 "SELECT * FROM " + name,
                 asList(
@@ -68,7 +67,8 @@ public class SqlPrimitiveTest extends JetSqlTestSupport {
 
     @Test
     public void test_insertSelect() {
-        String name = createTableWithRandomName();
+        String name = generateRandomName();
+        sqlService.execute(javaSerializableMapDdl(name, Integer.class, String.class));
 
         IMap<Integer, String> source = instance().getMap("source");
         source.put(0, "value-0");
@@ -83,27 +83,24 @@ public class SqlPrimitiveTest extends JetSqlTestSupport {
 
     @Test
     public void test_insertValues() {
-        String name = createTableWithRandomName();
+        String name = generateRandomName();
+        sqlService.execute(javaSerializableMapDdl(name, Integer.class, String.class));
 
         assertMapEventually(
                 name,
                 "INSERT OVERWRITE " + name + " (this, __key) VALUES ('2', 1)",
                 createMap(1, "2")
         );
-        assertMapEventually(
-                name,
-                "INSERT OVERWRITE " + name + " (this, __key) VALUES ('4', 3)",
-                createMap(1, "2", 3, "4")
-        );
     }
 
     @Test
     public void supportsInsertWithProject() {
-        String name = createTableWithRandomName();
+        String name = generateRandomName();
+        sqlService.execute(javaSerializableMapDdl(name, Integer.class, String.class));
 
         assertMapEventually(
                 name,
-                "INSERT OVERWRITE " + name + " (__key, this) VALUES (CAST(0 + 1 AS INT), 2)",
+                "INSERT OVERWRITE " + name + " (this, __key) VALUES (2, CAST(0 + 1 AS INT))",
                 createMap(1, "2")
         );
     }
@@ -111,7 +108,6 @@ public class SqlPrimitiveTest extends JetSqlTestSupport {
     @Test
     public void test_fieldsMapping() {
         String name = generateRandomName();
-
         sqlService.execute("CREATE MAPPING " + name + " ("
                 + "id INT EXTERNAL NAME __key"
                 + ", name VARCHAR EXTERNAL NAME this"
@@ -126,23 +122,18 @@ public class SqlPrimitiveTest extends JetSqlTestSupport {
 
         assertMapEventually(
                 name,
-                format("INSERT OVERWRITE %s (name, id) VALUES ('value-2', 2)", name),
+                format("INSERT OVERWRITE %s (id, name) VALUES (2, 'value-2')", name),
                 createMap(2, "value-2")
         );
     }
 
     @Test
     public void when_plainInsert_then_throws() {
-        String name = createTableWithRandomName();
+        String name = generateRandomName();
+        sqlService.execute(javaSerializableMapDdl(name, Integer.class, String.class));
 
         assertThatThrownBy(() -> sqlService.execute("INSERT INTO " + name + " (__key, this) VALUES (1, '2')"))
                 .hasMessageContaining("Only INSERT OVERWRITE clause is supported for IMapSqlConnector");
-    }
-
-    private static String createTableWithRandomName() {
-        String name = generateRandomName();
-        sqlService.execute(javaSerializableMapDdl(name, Integer.class, String.class));
-        return name;
     }
 
     private static String generateRandomName() {

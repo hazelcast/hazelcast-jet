@@ -20,11 +20,11 @@ import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 
-public class HazelcastJsonUpsertTargetDescriptor implements UpsertTargetDescriptor {
+public final class HazelcastJsonUpsertTargetDescriptor implements UpsertTargetDescriptor {
 
     public static final HazelcastJsonUpsertTargetDescriptor INSTANCE = new HazelcastJsonUpsertTargetDescriptor();
 
-    HazelcastJsonUpsertTargetDescriptor() {
+    private HazelcastJsonUpsertTargetDescriptor() {
     }
 
     @Override

@@ -18,71 +18,52 @@ package com.hazelcast.jet.sql.impl.connector.map.model;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
-import java.math.BigInteger;
-import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
-import java.time.ZonedDateTime;
-import java.util.Date;
-import java.util.GregorianCalendar;
 import java.util.Objects;
 
 /**
- * A class that has a field of every supported type in SQL.
+ * A class that has a field of every supported canonical type in SQL.
  */
 @SuppressWarnings("unused") // getters-setters are used through reflection
-public final class AllTypesValue implements Serializable {
+public final class AllCanonicalTypesValue implements Serializable {
 
     private String string;
-    private char character0;
     private boolean boolean0;
     private byte byte0;
     private short short0;
     private int int0;
     private long long0;
     private BigDecimal bigDecimal;
-    private BigInteger bigInteger;
     private float float0;
     private double double0;
     private LocalTime localTime;
     private LocalDate localDate;
     private LocalDateTime localDateTime;
-    private Date date;
-    private GregorianCalendar calendar;
-    private Instant instant;
-    private ZonedDateTime zonedDateTime;
     private OffsetDateTime offsetDateTime;
 
-    public AllTypesValue() {
+    public AllCanonicalTypesValue() {
     }
 
     @SuppressWarnings({"checkstyle:ParameterNumber", "checkstyle:ExecutableStatementCount"})
-    public AllTypesValue(String string, char character0, boolean boolean0, byte byte0, short short0, int int0,
-                         long long0, BigDecimal bigDecimal, BigInteger bigInteger, float float0, double double0,
-                         LocalTime localTime, LocalDate localDate, LocalDateTime localDateTime, Date date,
-                         GregorianCalendar calendar, Instant instant, ZonedDateTime zonedDateTime,
-                         OffsetDateTime offsetDateTime
+    public AllCanonicalTypesValue(String string, boolean boolean0, byte byte0, short short0, int int0, long long0,
+                                  BigDecimal bigDecimal, float float0, double double0, LocalTime localTime,
+                                  LocalDate localDate, LocalDateTime localDateTime, OffsetDateTime offsetDateTime
     ) {
         this.string = string;
-        this.character0 = character0;
         this.boolean0 = boolean0;
         this.byte0 = byte0;
         this.short0 = short0;
         this.int0 = int0;
         this.long0 = long0;
         this.bigDecimal = bigDecimal;
-        this.bigInteger = bigInteger;
         this.float0 = float0;
         this.double0 = double0;
         this.localTime = localTime;
         this.localDate = localDate;
         this.localDateTime = localDateTime;
-        this.date = date;
-        this.calendar = calendar;
-        this.instant = instant;
-        this.zonedDateTime = zonedDateTime;
         this.offsetDateTime = offsetDateTime;
     }
 
@@ -92,14 +73,6 @@ public final class AllTypesValue implements Serializable {
 
     public void setString(String string) {
         this.string = string;
-    }
-
-    public char getCharacter0() {
-        return character0;
-    }
-
-    public void setCharacter0(char character0) {
-        this.character0 = character0;
     }
 
     public boolean isBoolean0() {
@@ -150,14 +123,6 @@ public final class AllTypesValue implements Serializable {
         this.bigDecimal = bigDecimal;
     }
 
-    public BigInteger getBigInteger() {
-        return bigInteger;
-    }
-
-    public void setBigInteger(BigInteger bigInteger) {
-        this.bigInteger = bigInteger;
-    }
-
     public float getFloat0() {
         return float0;
     }
@@ -198,38 +163,6 @@ public final class AllTypesValue implements Serializable {
         this.localDateTime = localDateTime;
     }
 
-    public Date getDate() {
-        return date;
-    }
-
-    public void setDate(Date date) {
-        this.date = date;
-    }
-
-    public GregorianCalendar getCalendar() {
-        return calendar;
-    }
-
-    public void setCalendar(GregorianCalendar calendar) {
-        this.calendar = calendar;
-    }
-
-    public Instant getInstant() {
-        return instant;
-    }
-
-    public void setInstant(Instant instant) {
-        this.instant = instant;
-    }
-
-    public ZonedDateTime getZonedDateTime() {
-        return zonedDateTime;
-    }
-
-    public void setZonedDateTime(ZonedDateTime zonedDateTime) {
-        this.zonedDateTime = zonedDateTime;
-    }
-
     public OffsetDateTime getOffsetDateTime() {
         return offsetDateTime;
     }
@@ -242,23 +175,17 @@ public final class AllTypesValue implements Serializable {
     public String toString() {
         return "AllTypesValue{" +
                 "string='" + string + '\'' +
-                ", character0=" + character0 +
                 ", boolean0=" + boolean0 +
                 ", byte0=" + byte0 +
                 ", short0=" + short0 +
                 ", int0=" + int0 +
                 ", long0=" + long0 +
                 ", bigDecimal=" + bigDecimal +
-                ", bigInteger=" + bigInteger +
                 ", float0=" + float0 +
                 ", double0=" + double0 +
                 ", localTime=" + localTime +
                 ", localDate=" + localDate +
                 ", localDateTime=" + localDateTime +
-                ", date=" + date +
-                ", calendar=" + calendar +
-                ", instant=" + instant +
-                ", zonedDateTime=" + zonedDateTime +
                 ", offsetDateTime=" + offsetDateTime +
                 '}';
     }
@@ -271,9 +198,8 @@ public final class AllTypesValue implements Serializable {
         if (o == null || getClass() != o.getClass()) {
             return false;
         }
-        AllTypesValue that = (AllTypesValue) o;
-        return character0 == that.character0 &&
-                boolean0 == that.boolean0 &&
+        AllCanonicalTypesValue that = (AllCanonicalTypesValue) o;
+        return boolean0 == that.boolean0 &&
                 byte0 == that.byte0 &&
                 short0 == that.short0 &&
                 int0 == that.int0 &&
@@ -282,37 +208,26 @@ public final class AllTypesValue implements Serializable {
                 Double.compare(that.double0, double0) == 0 &&
                 Objects.equals(string, that.string) &&
                 Objects.equals(bigDecimal, that.bigDecimal) &&
-                Objects.equals(bigInteger, that.bigInteger) &&
                 Objects.equals(localTime, that.localTime) &&
                 Objects.equals(localDate, that.localDate) &&
                 Objects.equals(localDateTime, that.localDateTime) &&
-                Objects.equals(date, that.date) &&
-                Objects.equals(calendar, that.calendar) &&
-                Objects.equals(instant, that.instant) &&
-                Objects.equals(zonedDateTime, that.zonedDateTime) &&
                 Objects.equals(offsetDateTime, that.offsetDateTime);
     }
 
     @Override
     public int hashCode() {
         return Objects.hash(string,
-                character0,
                 boolean0,
                 byte0,
                 short0,
                 int0,
                 long0,
                 bigDecimal,
-                bigInteger,
                 float0,
                 double0,
                 localTime,
                 localDate,
                 localDateTime,
-                date,
-                calendar,
-                instant,
-                zonedDateTime,
                 offsetDateTime
         );
     }

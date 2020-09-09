@@ -17,10 +17,10 @@
 package com.hazelcast.jet.sql.impl.connector.map;
 
 import com.hazelcast.jet.sql.impl.connector.EntryMetadata;
+import com.hazelcast.jet.sql.impl.extract.HazelcastJsonQueryTargetDescriptor;
 import com.hazelcast.jet.sql.impl.inject.HazelcastJsonUpsertTargetDescriptor;
 import com.hazelcast.jet.sql.impl.schema.MappingField;
 import com.hazelcast.sql.impl.QueryException;
-import com.hazelcast.sql.impl.extract.GenericQueryTargetDescriptor;
 import com.hazelcast.sql.impl.extract.QueryPath;
 import com.hazelcast.sql.impl.schema.map.MapTableField;
 import com.hazelcast.sql.impl.type.QueryDataType;
@@ -118,7 +118,7 @@ public class EntryMetadataHazelcastJsonResolverTest {
         assertThat(metadata.getFields()).containsExactly(
                 new MapTableField("field", QueryDataType.INT, false, QueryPath.create(prefix + ".field"))
         );
-        assertThat(metadata.getQueryTargetDescriptor()).isEqualTo(GenericQueryTargetDescriptor.DEFAULT);
+        assertThat(metadata.getQueryTargetDescriptor()).isEqualTo(HazelcastJsonQueryTargetDescriptor.INSTANCE);
         assertThat(metadata.getUpsertTargetDescriptor()).isEqualTo(HazelcastJsonUpsertTargetDescriptor.INSTANCE);
     }
 

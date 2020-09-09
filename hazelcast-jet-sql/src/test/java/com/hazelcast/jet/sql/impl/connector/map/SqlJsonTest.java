@@ -18,6 +18,7 @@ package com.hazelcast.jet.sql.impl.connector.map;
 
 import com.hazelcast.core.HazelcastJsonValue;
 import com.hazelcast.jet.sql.JetSqlTestSupport;
+import com.hazelcast.jet.sql.impl.connector.map.model.AllCanonicalTypesValue;
 import com.hazelcast.sql.SqlService;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -28,6 +29,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
+import java.time.ZonedDateTime;
 import java.util.Date;
 import java.util.Map;
 
@@ -38,6 +40,7 @@ import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_SERIALIZA
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_SERIALIZATION_VALUE_FORMAT;
 import static java.time.Instant.ofEpochMilli;
 import static java.time.ZoneId.systemDefault;
+import static java.time.ZoneOffset.UTC;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -56,7 +59,7 @@ public class SqlJsonTest extends JetSqlTestSupport {
     public void test_nulls() {
         String name = generateRandomName();
         sqlService.execute("CREATE MAPPING " + name + " ("
-                + "id VARCHAR EXTERNAL NAME __key.id"
+                + "id INT EXTERNAL NAME __key.id"
                 + ", name VARCHAR EXTERNAL NAME this.name"
                 + ") TYPE " + IMapSqlConnector.TYPE_NAME + " "
                 + "OPTIONS ("
@@ -139,9 +142,29 @@ public class SqlJsonTest extends JetSqlTestSupport {
 
     @Test
     public void test_allTypes() {
-        String name = generateRandomName();
-        sqlService.execute("CREATE MAPPING " + name + " ("
-                + "string VARCHAR"
+        String from = generateRandomName();
+        instance().getMap(from).put(1, new AllCanonicalTypesValue(
+                "string",
+                true,
+                (byte) 127,
+                (short) 32767,
+                2147483647,
+                9223372036854775807L,
+                new BigDecimal("9223372036854775.123"),
+                1234567890.1f,
+                123451234567890.1,
+                LocalTime.of(12, 23, 34),
+                LocalDate.of(2020, 4, 15),
+                LocalDateTime.of(2020, 4, 15, 12, 23, 34, 1_000_000),
+                ZonedDateTime.of(2020, 4, 15, 12, 23, 34, 200_000_000, UTC)
+                             .withZoneSameInstant(systemDefault())
+                             .toOffsetDateTime()
+        ));
+
+        String to = generateRandomName();
+        sqlService.execute("CREATE MAPPING " + to + " ("
+                + "id DECIMAL EXTERNAL NAME __key"
+                + ", string VARCHAR"
                 + ", \"boolean\" BOOLEAN"
                 + ", byte TINYINT"
                 + ", short SMALLINT"
@@ -161,41 +184,39 @@ public class SqlJsonTest extends JetSqlTestSupport {
                 + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + "'"
                 + ")");
 
-        sqlService.execute("INSERT OVERWRITE " + name + " VALUES ("
-                + "1"
-                + ", 'string'"
-                + ", true"
-                + ", 126"
-                + ", 32766"
-                + ", 2147483646"
-                + ", 9223372036854775806"
-                + ", 1234567890.1"
-                + ", 123451234567890.1"
-                + ", 9223372036854775.123"
-                + ", time'12:23:34'"
-                + ", date'2020-04-15'"
-                + ", timestamp'2020-04-15 12:23:34.1'"
-                + ", timestamp'2020-04-15 12:23:34.2'"
-                + ")");
+        sqlService.execute("INSERT OVERWRITE " + to + " SELECT "
+                        + "__key"
+                        + ", string "
+                        + ", boolean0 "
+                        + ", byte0 "
+                        + ", short0 "
+                        + ", int0 "
+                        + ", long0 "
+                        + ", float0 "
+                        + ", double0 "
+                        + ", bigDecimal "
+                        + ", \"localTime\" "
+                        + ", \"localDate\" "
+                        + ", \"localDateTime\" "
+                        + ", offsetDateTime"
+                + " FROM " + from);
 
         assertRowsEventuallyInAnyOrder(
-                "SELECT * FROM " + name,
+                "SELECT * FROM " + to,
                 singletonList(new Row(
                         BigDecimal.valueOf(1),
                         "string",
                         true,
-                        (byte) 126,
-                        (short) 32766,
-                        2147483646,
-                        9223372036854775806L,
+                        (byte) 127,
+                        (short) 32767,
+                        2147483647,
+                        9223372036854775807L,
                         1234567890.1f,
                         123451234567890.1,
                         new BigDecimal("9223372036854775.123"),
                         LocalTime.of(12, 23, 34),
                         LocalDate.of(2020, 4, 15),
-                        // TODO: should be LocalDateTime.of(2020, 4, 15, 12, 23, 34, 100_000_000)
-                        //  when temporal types are fixed
-                        LocalDateTime.of(2020, 4, 15, 12, 23, 34, 0),
+                        LocalDateTime.of(2020, 4, 15, 12, 23, 34, 1_000_000),
                         OffsetDateTime.ofInstant(Date.from(ofEpochMilli(1586953414200L)).toInstant(), systemDefault())
                 ))
         );

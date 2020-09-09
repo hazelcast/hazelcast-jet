@@ -20,6 +20,7 @@ import com.hazelcast.instance.impl.HazelcastInstanceImpl;
 import com.hazelcast.internal.serialization.Data;
 import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.internal.serialization.impl.InternalGenericRecord;
+import com.hazelcast.internal.serialization.impl.portable.PortableGenericRecordBuilder;
 import com.hazelcast.jet.sql.JetSqlTestSupport;
 import com.hazelcast.map.impl.MapService;
 import com.hazelcast.map.impl.MapServiceContext;
@@ -123,24 +124,23 @@ public class SqlPortableTest extends JetSqlTestSupport {
     @Test
     public void test_insertsIntoDiscoveredMap() {
         String name = generateRandomName();
-        sqlService.execute("CREATE MAPPING " + name + " ("
-                + "id INT EXTERNAL NAME __key.id"
-                + ", name VARCHAR EXTERNAL NAME this.name"
-                + ") TYPE " + IMapSqlConnector.TYPE_NAME + " "
-                + "OPTIONS ("
-                + OPTION_SERIALIZATION_KEY_FORMAT + " '" + PORTABLE_SERIALIZATION_FORMAT + "'"
-                + ", " + OPTION_KEY_FACTORY_ID + " '" + PERSON_ID_FACTORY_ID + "'"
-                + ", " + OPTION_KEY_CLASS_ID + " '" + PERSON_ID_CLASS_ID + "'"
-                + ", " + OPTION_KEY_CLASS_VERSION + " '" + PERSON_ID_CLASS_VERSION + "'"
-                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + PORTABLE_SERIALIZATION_FORMAT + "'"
-                + ", \"" + OPTION_VALUE_FACTORY_ID + "\" '" + PERSON_FACTORY_ID + "'"
-                + ", \"" + OPTION_VALUE_CLASS_ID + "\" '" + PERSON_CLASS_ID + "'"
-                + ", \"" + OPTION_VALUE_CLASS_VERSION + "\" '" + PERSON_CLASS_VERSION + "'"
-                + ")"
-        );
 
-        sqlService.execute("INSERT OVERWRITE " + name + " VALUES (1, 'Alice')");
-        sqlService.execute("DROP MAPPING " + name);
+        instance().getMap(name).put(
+                new PortableGenericRecordBuilder(
+                        new ClassDefinitionBuilder(PERSON_ID_FACTORY_ID, PERSON_ID_CLASS_ID, PERSON_ID_CLASS_VERSION)
+                                .addIntField("id")
+                                .build())
+                        .writeInt("id", 1)
+                        .build(),
+                new PortableGenericRecordBuilder(
+                        new ClassDefinitionBuilder(PERSON_FACTORY_ID, PERSON_CLASS_ID, PERSON_CLASS_VERSION)
+                                .addIntField("id")
+                                .addUTFField("name")
+                                .build())
+                        .writeInt("id", 2)
+                        .writeUTF("name", "Alice")
+                        .build()
+        );
 
         // requires explicit column list due to hidden fields
         sqlService.execute("INSERT OVERWRITE partitioned." + name + " (id, name) VALUES (2, 'Bob')");

@@ -80,7 +80,6 @@ public class SqlPojoTest extends JetSqlTestSupport {
                 "INSERT OVERWRITE partitioned." + name + " (id, name) VALUES (2, 'Bob')",
                 createMap(new PersonId(1), new Person(1, "Alice"), new PersonId(2), new Person(0, "Bob"))
         );
-
         assertRowsEventuallyInAnyOrder(
                 "SELECT * FROM " + name,
                 asList(
@@ -220,31 +219,51 @@ public class SqlPojoTest extends JetSqlTestSupport {
 
     @Test
     public void test_allTypes() {
-        String name = generateRandomName();
-        sqlService.execute(javaSerializableMapDdl(name, BigInteger.class, AllTypesValue.class));
+        String from = generateRandomName();
+        instance().getMap(from).put(1, new AllTypesValue(
+                "string",
+                'a',
+                true,
+                (byte) 127,
+                (short) 32767,
+                2147483647,
+                9223372036854775807L,
+                new BigDecimal("9223372036854775.123"),
+                new BigInteger("9223372036854775222"),
+                1234567890.1f,
+                123451234567890.1,
+                LocalTime.of(12, 23, 34),
+                LocalDate.of(2020, 4, 15),
+                LocalDateTime.of(2020, 4, 15, 12, 23, 34, 1_000_000),
+                Date.from(ofEpochMilli(1586953414200L)),
+                GregorianCalendar.from(ZonedDateTime.of(2020, 4, 15, 12, 23, 34, 300_000_000, UTC)
+                                                    .withZoneSameInstant(localOffset())),
+                ofEpochMilli(1586953414400L),
+                ZonedDateTime.of(2020, 4, 15, 12, 23, 34, 500_000_000, UTC)
+                             .withZoneSameInstant(localOffset()),
+                ZonedDateTime.of(2020, 4, 15, 12, 23, 34, 600_000_000, UTC)
+                             .withZoneSameInstant(systemDefault())
+                             .toOffsetDateTime()
+        ));
+
+        String to = generateRandomName();
+        sqlService.execute(javaSerializableMapDdl(to, BigInteger.class, AllTypesValue.class));
 
         assertMapEventually(
-                name,
-                "INSERT OVERWRITE " + name + " ("
+                to,
+                "INSERT OVERWRITE " + to + " ("
                         + "__key"
                         + ", string"
                         + ", character0"
-                        + ", character1"
                         + ", boolean0"
-                        + ", boolean1"
                         + ", byte0"
-                        + ", byte1"
                         + ", short0"
-                        + ", short1"
                         + ", int0"
-                        + ", int1"
                         + ", long0"
-                        + ", long1"
                         + ", bigDecimal"
                         + ", bigInteger"
                         + ", float0"
-                        + ", float1"
-                        + ", double0, double1"
+                        + ", double0"
                         + ", \"localTime\""
                         + ", localDate"
                         + ", localDateTime"
@@ -253,61 +272,43 @@ public class SqlPojoTest extends JetSqlTestSupport {
                         + ", instant"
                         + ", zonedDateTime"
                         + ", offsetDateTime"
-                        + ") VALUES ("
-                        + "1"
-                        + ", 'string'"
-                        + ", 'a'"
-                        + ", 'b'"
-                        + ", true"
-                        + ", false"
-                        + ", 126"
-                        + ", 127"
-                        + ", 32766"
-                        + ", 32767"
-                        + ", 2147483646"
-                        + ", 2147483647"
-                        + ", 9223372036854775806"
-                        + ", 9223372036854775807"
-                        + ", 9223372036854775.123"
-                        + ", 9223372036854775222"
-                        + ", 1234567890.1"
-                        + ", 1234567890.2"
-                        + ", 123451234567890.1"
-                        + ", 123451234567890.2"
-                        + ", time'12:23:34'"
-                        + ", date'2020-04-15'"
-                        + ", timestamp'2020-04-15 12:23:34.1'"
-                        + ", timestamp'2020-04-15 12:23:34.2'"
-                        + ", timestamp'2020-04-15 12:23:34.3'"
-                        + ", timestamp'2020-04-15 12:23:34.4'"
-                        + ", timestamp'2020-04-15 12:23:34.5'"
-                        + ", timestamp'2020-04-15 12:23:34.6'"
-                        + ")",
+                        + ") SELECT "
+                        + "__key"
+                        + ", string"
+                        + ", character0"
+                        + ", boolean0"
+                        + ", byte0"
+                        + ", short0"
+                        + ", int0"
+                        + ", long0"
+                        + ", bigDecimal"
+                        + ", bigInteger"
+                        + ", float0"
+                        + ", double0"
+                        + ", \"localTime\""
+                        + ", localDate"
+                        + ", localDateTime"
+                        + ", \"date\""
+                        + ", calendar"
+                        + ", instant"
+                        + ", zonedDateTime"
+                        + ", offsetDateTime"
+                        + " FROM " + from,
                 createMap(BigInteger.valueOf(1), new AllTypesValue(
                         "string",
                         'a',
-                        'b',
                         true,
-                        false,
-                        (byte) 126,
                         (byte) 127,
-                        (short) 32766,
                         (short) 32767,
-                        2147483646,
                         2147483647,
-                        9223372036854775806L,
                         9223372036854775807L,
                         new BigDecimal("9223372036854775.123"),
                         new BigInteger("9223372036854775222"),
                         1234567890.1f,
-                        1234567890.2f,
                         123451234567890.1,
-                        123451234567890.2,
                         LocalTime.of(12, 23, 34),
                         LocalDate.of(2020, 4, 15),
-                        // TODO: should be LocalDateTime.of(2020, 4, 15, 12, 23, 34, 100_000_000)
-                        //  when temporal types are fixed
-                        LocalDateTime.of(2020, 4, 15, 12, 23, 34, 0),
+                        LocalDateTime.of(2020, 4, 15, 12, 23, 34, 1_000_000),
                         Date.from(ofEpochMilli(1586953414200L)),
                         GregorianCalendar.from(ZonedDateTime.of(2020, 4, 15, 12, 23, 34, 300_000_000, UTC)
                                                             .withZoneSameInstant(localOffset())),
@@ -324,19 +325,15 @@ public class SqlPojoTest extends JetSqlTestSupport {
                         + " __key"
                         + ", string"
                         + ", character0"
-                        + ", character1"
                         + ", boolean0"
-                        + ", boolean1"
-                        + ", byte0, byte1"
-                        + ", short0, short1"
-                        + ", int0, int1"
-                        + ", long0, long1"
+                        + ", byte0"
+                        + ", short0"
+                        + ", int0"
+                        + ", long0"
                         + ", bigDecimal"
                         + ", bigInteger"
                         + ", float0"
-                        + ", float1"
                         + ", double0"
-                        + ", double1"
                         + ", \"localTime\""
                         + ", localDate"
                         + ", localDateTime"
@@ -345,33 +342,23 @@ public class SqlPojoTest extends JetSqlTestSupport {
                         + ", instant"
                         + ", zonedDateTime"
                         + ", offsetDateTime "
-                        + "FROM " + name,
+                        + "FROM " + to,
                 singletonList(new Row(
                         BigDecimal.valueOf(1),
                         "string",
                         "a",
-                        "b",
                         true,
-                        false,
-                        (byte) 126,
                         (byte) 127,
-                        (short) 32766,
                         (short) 32767,
-                        2147483646,
                         2147483647,
-                        9223372036854775806L,
                         9223372036854775807L,
                         new BigDecimal("9223372036854775.123"),
                         new BigDecimal("9223372036854775222"),
                         1234567890.1f,
-                        1234567890.2f,
                         123451234567890.1,
-                        123451234567890.2,
                         LocalTime.of(12, 23, 34),
                         LocalDate.of(2020, 4, 15),
-                        // TODO: should be LocalDateTime.of(2020, 4, 15, 12, 23, 34, 100_000_000)
-                        //  when temporal types are fixed
-                        LocalDateTime.of(2020, 4, 15, 12, 23, 34, 0),
+                        LocalDateTime.of(2020, 4, 15, 12, 23, 34, 1_000_000),
                         OffsetDateTime.ofInstant(Date.from(ofEpochMilli(1586953414200L)).toInstant(), systemDefault()),
                         ZonedDateTime.of(2020, 4, 15, 12, 23, 34, 300_000_000, UTC)
                                      .withZoneSameInstant(localOffset())
@@ -405,28 +392,26 @@ public class SqlPojoTest extends JetSqlTestSupport {
         map.put("k2", "v2");
 
         List<Entry<String, String>> actual = new ArrayList<>();
-        for (SqlRow r : sqlService.execute("select * from " + tableName)) {
-            actual.add(Util.entry(r.getObject(0), r.getObject(1)));
+        for (SqlRow row : sqlService.execute("SELECT * FROM " + tableName)) {
+            actual.add(Util.entry(row.getObject(0), row.getObject(1)));
         }
 
-        assertThat(actual).containsExactlyInAnyOrder(map.entrySet().stream().toArray(Entry[]::new));
+        assertThat(actual).containsExactlyInAnyOrder(map.entrySet().toArray(new Entry[0]));
     }
 
     @Test
     public void when_typeMismatch_then_fail() {
-        instance().getMap("map").put(0, 0);
-        sqlService.execute(javaSerializableMapDdl("map", String.class, String.class));
+        String name = generateRandomName();
+        instance().getMap(name).put(0, 0);
+        sqlService.execute(javaSerializableMapDdl(name, String.class, String.class));
 
-        assertThatThrownBy(() -> {
-            for (SqlRow r : sqlService.execute("select __key from map")) {
-                System.out.println(r);
-            }
-        })
-                .hasMessageContaining("Failed to extract map entry key because of type mismatch " +
+        assertThatThrownBy(
+                () -> sqlService.execute("SELECT __key FROM " + name).iterator().forEachRemaining(row -> { })
+        ).hasMessageContaining("Failed to extract map entry key because of type mismatch " +
                         "[expectedClass=java.lang.String, actualClass=java.lang.Integer]");
     }
 
-    protected static ZoneOffset localOffset() {
+    private static ZoneOffset localOffset() {
         return systemDefault().getRules().getOffset(LocalDateTime.now());
     }
 

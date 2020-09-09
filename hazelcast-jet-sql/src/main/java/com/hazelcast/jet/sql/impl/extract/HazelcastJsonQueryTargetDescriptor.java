@@ -14,22 +14,26 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.sql.impl.inject;
+package com.hazelcast.jet.sql.impl.extract;
 
 import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
+import com.hazelcast.query.impl.getters.Extractors;
+import com.hazelcast.sql.impl.extract.QueryTarget;
+import com.hazelcast.sql.impl.extract.QueryTargetDescriptor;
 
-public final class PrimitiveUpsertTargetDescriptor implements UpsertTargetDescriptor {
+// remove in favor of IMDG implementation when JSON is supported
+public final class HazelcastJsonQueryTargetDescriptor implements QueryTargetDescriptor {
 
-    public static final PrimitiveUpsertTargetDescriptor INSTANCE = new PrimitiveUpsertTargetDescriptor();
+    public static final HazelcastJsonQueryTargetDescriptor INSTANCE = new HazelcastJsonQueryTargetDescriptor();
 
-    private PrimitiveUpsertTargetDescriptor() {
+    private HazelcastJsonQueryTargetDescriptor() {
     }
 
     @Override
-    public UpsertTarget create(InternalSerializationService serializationService) {
-        return new PrimitiveUpsertTarget();
+    public QueryTarget create(InternalSerializationService serializationService, Extractors extractors, boolean isKey) {
+        return new HazelcastJsonQueryTarget(extractors, isKey);
     }
 
     @Override
@@ -42,7 +46,7 @@ public final class PrimitiveUpsertTargetDescriptor implements UpsertTargetDescri
 
     @Override
     public String toString() {
-        return "PrimitiveUpsertTargetDescriptor{}";
+        return "HazelcastJsonQueryTargetDescriptor{}";
     }
 
     @Override
@@ -52,6 +56,6 @@ public final class PrimitiveUpsertTargetDescriptor implements UpsertTargetDescri
 
     @Override
     public boolean equals(Object obj) {
-        return obj instanceof PrimitiveUpsertTargetDescriptor;
+        return obj instanceof HazelcastJsonQueryTargetDescriptor;
     }
 }

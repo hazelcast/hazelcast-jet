@@ -29,6 +29,7 @@ import java.util.Map.Entry;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 @RunWith(MockitoJUnitRunner.class)
@@ -70,5 +71,36 @@ public class EntryProjectorTest {
         verify(valueTarget).init();
         verify(keyInjector).set(1);
         verify(valueInjector).set("2");
+    }
+
+    @Test
+    public void test_projectWithHiddenFields() {
+        given(keyTarget.createInjector(null)).willReturn(keyInjector);
+        given(keyTarget.conclude()).willReturn(2);
+
+        given(valueTarget.createInjector("field2")).willReturn(valueInjector);
+        given(valueTarget.conclude()).willReturn("4");
+
+        EntryProjector projector = new EntryProjector(
+                keyTarget,
+                valueTarget,
+                new QueryPath[]{
+                        QueryPath.KEY_PATH,
+                        QueryPath.create(QueryPath.VALUE_PREFIX + "field1"),
+                        QueryPath.create(QueryPath.VALUE_PREFIX + "field2")
+                },
+                new QueryDataType[]{QueryDataType.INT, QueryDataType.VARCHAR, QueryDataType.VARCHAR},
+                new Boolean[]{false, true, false}
+        );
+
+        Entry<Object, Object> entry = projector.project(new Object[]{1, null, "2"});
+
+        assertThat(entry.getKey()).isEqualTo(2);
+        assertThat(entry.getValue()).isEqualTo("4");
+        verify(keyTarget).init();
+        verify(valueTarget).init();
+        verify(keyInjector).set(1);
+        verify(valueInjector).set("2");
+        verify(valueTarget, never()).createInjector("field1");
     }
 }

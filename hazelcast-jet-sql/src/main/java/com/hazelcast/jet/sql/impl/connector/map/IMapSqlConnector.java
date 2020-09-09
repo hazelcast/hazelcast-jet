@@ -121,7 +121,7 @@ public class IMapSqlConnector implements SqlConnector {
                 valueMetadata.getQueryTargetDescriptor(),
                 keyMetadata.getUpsertTargetDescriptor(),
                 valueMetadata.getUpsertTargetDescriptor(),
-                Collections.emptyList(), // TODO:
+                Collections.emptyList(), // TODO: fill, keep in mind that json should be excluded?
                 hd
         );
     }
