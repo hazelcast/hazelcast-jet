@@ -17,6 +17,7 @@
 package com.hazelcast.jet.sql.impl.connector.file;
 
 import com.hazelcast.jet.sql.JetSqlTestSupport;
+import com.hazelcast.jet.sql.impl.connector.map.model.AllCanonicalTypesValue;
 import com.hazelcast.sql.SqlService;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -54,8 +55,27 @@ public class SqlCsvTest extends JetSqlTestSupport {
         File directory = Files.createTempDirectory("sql-test-local-csv").toFile();
         directory.deleteOnExit();
 
-        String name = createRandomName();
-        sqlService.execute("CREATE MAPPING " + name + " ("
+        String from = createRandomName();
+        instance().getMap(from).put(1, new AllCanonicalTypesValue(
+                "string",
+                true,
+                (byte) 127,
+                (short) 32767,
+                2147483647,
+                9223372036854775807L,
+                new BigDecimal("9223372036854775.123"),
+                1234567890.1f,
+                123451234567890.1,
+                LocalTime.of(12, 23, 34),
+                LocalDate.of(2020, 7, 1),
+                LocalDateTime.of(2020, 7, 1, 12, 23, 34, 100_000_000),
+                ZonedDateTime.of(2020, 7, 1, 12, 23, 34, 200_000_000, UTC)
+                             .withZoneSameInstant(systemDefault())
+                             .toOffsetDateTime()
+        ));
+
+        String to = createRandomName();
+        sqlService.execute("CREATE MAPPING " + to + " ("
                 + "string VARCHAR"
                 + ", \"boolean\" BOOLEAN"
                 + ", byte TINYINT"
@@ -76,38 +96,37 @@ public class SqlCsvTest extends JetSqlTestSupport {
                 + ")"
         );
 
-        sqlService.execute("INSERT INTO " + name + " VALUES ("
-                + "'string'"
-                + ", true"
-                + ", 126"
-                + ", 32766"
-                + ", 2147483646"
-                + ", 9223372036854775806"
-                + ", 1234567890.1"
-                + ", 123451234567890.1"
-                + ", 9223372036854775.111"
-                + ", time'12:23:34'"
-                + ", date'2020-07-01'"
-                + ", timestamp'2020-07-01 12:23:34.1'"
-                + ", timestamp'2020-07-01 12:23:34.2'"
-                + ")"
-        );
+        sqlService.execute("INSERT OVERWRITE " + to + " SELECT "
+                + "string "
+                + ", boolean0 "
+                + ", byte0 "
+                + ", short0 "
+                + ", int0 "
+                + ", long0 "
+                + ", float0 "
+                + ", double0 "
+                + ", bigDecimal "
+                + ", \"localTime\" "
+                + ", \"localDate\" "
+                + ", \"localDateTime\" "
+                + ", offsetDateTime"
+                + " FROM " + from);
 
         assertRowsEventuallyInAnyOrder(
-                "SELECT * FROM " + name,
+                "SELECT * FROM " + to,
                 singletonList(new Row(
                         "string"
                         , true
-                        , (byte) 126
-                        , (short) 32766
-                        , 2147483646
-                        , 9223372036854775806L
+                        , (byte) 127
+                        , (short) 32767
+                        , 2147483647
+                        , 9223372036854775807L
                         , 1234567890.1F
                         , 123451234567890.1
-                        , new BigDecimal("9223372036854775.111")
+                        , new BigDecimal("9223372036854775.123")
                         , LocalTime.of(12, 23, 34)
                         , LocalDate.of(2020, 7, 1)
-                        , LocalDateTime.of(2020, 7, 1, 12, 23, 34, 0)
+                        , LocalDateTime.of(2020, 7, 1, 12, 23, 34, 100_000_000)
                         , ZonedDateTime.of(2020, 7, 1, 12, 23, 34, 200_000_000, UTC)
                                        .withZoneSameInstant(systemDefault())
                                        .toOffsetDateTime()
