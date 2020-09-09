@@ -41,11 +41,6 @@ public final class HazelcastJsonUpsertTargetDescriptor implements UpsertTargetDe
     }
 
     @Override
-    public String toString() {
-        return "HazelcastJsonUpsertTargetDescriptor{}";
-    }
-
-    @Override
     public int hashCode() {
         return 0;
     }

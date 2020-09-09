@@ -45,11 +45,6 @@ public final class HazelcastJsonQueryTargetDescriptor implements QueryTargetDesc
     }
 
     @Override
-    public String toString() {
-        return "HazelcastJsonQueryTargetDescriptor{}";
-    }
-
-    @Override
     public int hashCode() {
         return 0;
     }

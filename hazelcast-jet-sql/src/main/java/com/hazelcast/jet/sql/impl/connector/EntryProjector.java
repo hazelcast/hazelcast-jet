@@ -28,35 +28,36 @@ import static com.hazelcast.jet.sql.impl.type.converter.ToConverters.getToConver
 
 class EntryProjector {
 
-    private static final UpsertInjector DISCARDING_INJECTOR = value -> { };
+    private static final UpsertInjector DISCARDING_INJECTOR = value -> {
+    };
+
+    private final QueryDataType[] types;
 
     private final UpsertTarget keyTarget;
     private final UpsertTarget valueTarget;
 
-    private final QueryDataType[] types;
-
     private final UpsertInjector[] injectors;
 
     EntryProjector(
-            UpsertTarget keyTarget,
-            UpsertTarget valueTarget,
             QueryPath[] paths,
             QueryDataType[] types,
-            Boolean[] hiddenFields
+            Boolean[] hiddenFields,
+            UpsertTarget keyTarget,
+            UpsertTarget valueTarget
     ) {
+        this.types = types;
+
         this.keyTarget = keyTarget;
         this.valueTarget = valueTarget;
 
-        this.types = types;
-
-        this.injectors = createInjectors(keyTarget, valueTarget, paths, hiddenFields);
+        this.injectors = createInjectors(paths, hiddenFields, keyTarget, valueTarget);
     }
 
     private static UpsertInjector[] createInjectors(
-            UpsertTarget keyTarget,
-            UpsertTarget valueTarget,
             QueryPath[] paths,
-            Boolean[] hiddenFields
+            Boolean[] hiddenFields,
+            UpsertTarget keyTarget,
+            UpsertTarget valueTarget
     ) {
         UpsertInjector[] injectors = new UpsertInjector[paths.length];
         for (int i = 0; i < paths.length; i++) {

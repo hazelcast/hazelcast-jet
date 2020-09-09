@@ -29,7 +29,6 @@ import java.util.function.Function;
 
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_SERIALIZATION_KEY_FORMAT;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_SERIALIZATION_VALUE_FORMAT;
-import static java.lang.String.format;
 import static java.util.Arrays.stream;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toMap;
@@ -82,11 +81,11 @@ public class EntryMetadataResolvers {
         String option = isKey ? OPTION_SERIALIZATION_KEY_FORMAT : OPTION_SERIALIZATION_VALUE_FORMAT;
         String format = options.get(option);
         if (format == null) {
-            throw QueryException.error(format("Missing '%s' option", option));
+            throw QueryException.error("Missing '" + option + "' option");
         }
         EntryMetadataResolver resolver = resolvers.get(format);
         if (resolver == null) {
-            throw QueryException.error(format("Unsupported serialization format - '%s'", format));
+            throw QueryException.error("Unsupported serialization format - '" + format + "'");
         }
         return resolver;
     }

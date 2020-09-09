@@ -21,12 +21,24 @@ import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.internal.serialization.impl.DefaultSerializationServiceBuilder;
 import org.junit.Test;
 
+import static java.util.Collections.emptyMap;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class PojoUpsertTargetDescriptorTest {
 
     private static final InternalSerializationService SERIALIZATION_SERVICE =
             new DefaultSerializationServiceBuilder().build();
+
+    @Test
+    public void test_create() {
+        PojoUpsertTargetDescriptor descriptor = new PojoUpsertTargetDescriptor(Object.class.getName(), emptyMap());
+
+        // when
+        UpsertTarget target = descriptor.create(SERIALIZATION_SERVICE);
+
+        // then
+        assertThat(target).isInstanceOf(PojoUpsertTarget.class);
+    }
 
     @Test
     public void test_serialization() {

@@ -17,7 +17,6 @@
 package com.hazelcast.jet.sql.impl.connector.map;
 
 import com.hazelcast.jet.sql.impl.connector.EntryMetadata;
-import com.hazelcast.jet.sql.impl.connector.EntryMetadataJavaResolver;
 import com.hazelcast.jet.sql.impl.schema.MappingField;
 import com.hazelcast.nio.serialization.ClassDefinition;
 import com.hazelcast.sql.impl.schema.map.JetMapMetadataResolver;
@@ -35,15 +34,15 @@ public final class JetMapMetadataResolverImpl implements JetMapMetadataResolver 
 
     @Override
     public Object resolveClass(Class<?> clazz, boolean key) {
-        List<MappingField> mappingFields = EntryMetadataJavaResolver.INSTANCE.resolveFields(key, emptyList(), clazz);
-        EntryMetadata metadata = EntryMetadataJavaResolver.INSTANCE.resolveMetadata(key, mappingFields, clazz);
+        List<MappingField> mappingFields = MetadataJavaResolver.INSTANCE.resolveFields(key, emptyList(), clazz);
+        EntryMetadata metadata = MetadataJavaResolver.INSTANCE.resolveMetadata(key, mappingFields, clazz);
         return metadata.getUpsertTargetDescriptor();
     }
 
     @Override
     public Object resolvePortable(ClassDefinition clazz, boolean key) {
-        List<MappingField> mappingFields = EntryMetadataPortableResolver.INSTANCE.resolveFields(key, emptyList(), clazz);
-        EntryMetadata metadata = EntryMetadataPortableResolver.INSTANCE.resolveMetadata(key, mappingFields, clazz);
+        List<MappingField> mappingFields = MetadataPortableResolver.INSTANCE.resolveFields(key, emptyList(), clazz);
+        EntryMetadata metadata = MetadataPortableResolver.INSTANCE.resolveMetadata(key, mappingFields, clazz);
         return metadata.getUpsertTargetDescriptor();
     }
 }

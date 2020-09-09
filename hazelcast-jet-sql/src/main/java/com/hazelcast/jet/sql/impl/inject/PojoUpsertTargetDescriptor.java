@@ -56,14 +56,6 @@ public class PojoUpsertTargetDescriptor implements UpsertTargetDescriptor {
     }
 
     @Override
-    public String toString() {
-        return "PojoUpsertTargetDescriptor{"
-                + "className='" + className + '\''
-                + ", typeNamesByPaths=" + typeNamesByPaths
-                + '}';
-    }
-
-    @Override
     public boolean equals(Object o) {
         if (this == o) {
             return true;

@@ -36,11 +36,11 @@ import java.util.Map.Entry;
 
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.JSON_SERIALIZATION_FORMAT;
 
-final class EntryMetadataHazelcastJsonResolver implements EntryMetadataResolver {
+final class MetadataJsonResolver implements EntryMetadataResolver {
 
-    static final EntryMetadataHazelcastJsonResolver INSTANCE = new EntryMetadataHazelcastJsonResolver();
+    static final MetadataJsonResolver INSTANCE = new MetadataJsonResolver();
 
-    private EntryMetadataHazelcastJsonResolver() {
+    private MetadataJsonResolver() {
     }
 
     @Override

@@ -28,6 +28,17 @@ public class PrimitiveUpsertTargetDescriptorTest {
             new DefaultSerializationServiceBuilder().build();
 
     @Test
+    public void test_create() {
+        PrimitiveUpsertTargetDescriptor descriptor = PrimitiveUpsertTargetDescriptor.INSTANCE;
+
+        // when
+        UpsertTarget target = descriptor.create(SERIALIZATION_SERVICE);
+
+        // then
+        assertThat(target).isInstanceOf(PrimitiveUpsertTarget.class);
+    }
+
+    @Test
     public void test_serialization() {
         PrimitiveUpsertTargetDescriptor original = PrimitiveUpsertTargetDescriptor.INSTANCE;
 

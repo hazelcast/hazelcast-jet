@@ -26,61 +26,207 @@ import com.hazelcast.jet.sql.impl.inject.UpsertTargetDescriptor;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.DataSerializable;
+import com.hazelcast.query.impl.getters.Extractors;
+import com.hazelcast.sql.impl.expression.Expression;
 import com.hazelcast.sql.impl.extract.QueryPath;
-import com.hazelcast.sql.impl.schema.TableField;
-import com.hazelcast.sql.impl.schema.map.MapTableField;
+import com.hazelcast.sql.impl.extract.QueryTargetDescriptor;
 import com.hazelcast.sql.impl.type.QueryDataType;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map.Entry;
+import java.util.Objects;
 
 public final class EntryProcessors {
 
     private EntryProcessors() {
     }
 
-    public static ProcessorSupplier entryProjector(
-            UpsertTargetDescriptor keyDescriptor,
-            UpsertTargetDescriptor valueDescriptor,
-            List<TableField> fields
+    public static ProcessorSupplier rowProjector(
+            QueryPath[] paths,
+            QueryDataType[] types,
+            QueryTargetDescriptor keyDescriptor,
+            QueryTargetDescriptor valueDescriptor,
+            Expression<Boolean> predicate,
+            List<Expression<?>> projection
     ) {
-        return new EntryProjectorProcessorSupplier(keyDescriptor, valueDescriptor, fields);
+        return new RowProjectorProcessorSupplier(paths, types, keyDescriptor, valueDescriptor, predicate, projection);
+    }
+
+    public static ProcessorSupplier entryProjector(
+            QueryPath[] paths,
+            QueryDataType[] types,
+            Boolean[] hiddenFields,
+            UpsertTargetDescriptor keyDescriptor,
+            UpsertTargetDescriptor valueDescriptor
+    ) {
+        return new EntryProjectorProcessorSupplier(paths, types, hiddenFields, keyDescriptor, valueDescriptor);
     }
 
     @SuppressFBWarnings(
             value = {"SE_BAD_FIELD", "SE_NO_SERIALVERSIONID"},
             justification = "the class is never java-serialized"
     )
-    private static class EntryProjectorProcessorSupplier implements ProcessorSupplier, DataSerializable {
+    private static final class RowProjectorProcessorSupplier implements ProcessorSupplier, DataSerializable {
 
-        private UpsertTargetDescriptor keyDescriptor;
-        private UpsertTargetDescriptor valueDescriptor;
+        private QueryPath[] paths;
+        private QueryDataType[] types;
+
+        private QueryTargetDescriptor keyDescriptor;
+        private QueryTargetDescriptor valueDescriptor;
+
+        private Expression<Boolean> predicate;
+        private List<Expression<?>> projection;
+
+        private transient InternalSerializationService serializationService;
+        private transient Extractors extractors;
+
+        @SuppressWarnings("unused")
+        private RowProjectorProcessorSupplier() {
+        }
+
+        RowProjectorProcessorSupplier(
+                QueryPath[] paths,
+                QueryDataType[] types,
+                QueryTargetDescriptor keyDescriptor,
+                QueryTargetDescriptor valueDescriptor,
+                Expression<Boolean> predicate,
+                List<Expression<?>> projection
+        ) {
+            this.paths = paths;
+            this.types = types;
+
+            this.keyDescriptor = keyDescriptor;
+            this.valueDescriptor = valueDescriptor;
+
+            this.predicate = predicate;
+            this.projection = projection;
+        }
+
+        @Override
+        public void init(@Nonnull Context context) {
+            serializationService = ((ProcSupplierCtx) context).serializationService();
+            extractors = Extractors.newBuilder(serializationService).build();
+        }
+
+        @Nonnull
+        @Override
+        public Collection<? extends Processor> get(int count) {
+            List<Processor> processors = new ArrayList<>(count);
+            for (int i = 0; i < count; i++) {
+                ResettableSingletonTraverser<Object[]> traverser = new ResettableSingletonTraverser<>();
+                EntryRowProjector projector = new EntryRowProjector(
+                        paths,
+                        types,
+                        keyDescriptor.create(serializationService, extractors, true),
+                        valueDescriptor.create(serializationService, extractors, false),
+                        predicate,
+                        projection
+                );
+                Processor processor = new TransformP<Entry<Object, Object>, Object[]>(entry -> {
+                    traverser.accept(projector.project(entry));
+                    return traverser;
+                });
+                processors.add(processor);
+            }
+            return processors;
+        }
+
+        @Override
+        public void writeData(ObjectDataOutput out) throws IOException {
+            out.writeInt(paths.length);
+            for (QueryPath path : paths) {
+                out.writeObject(path);
+            }
+            out.writeInt(types.length);
+            for (QueryDataType type : types) {
+                out.writeObject(type);
+            }
+            out.writeObject(keyDescriptor);
+            out.writeObject(valueDescriptor);
+            out.writeObject(predicate);
+            out.writeObject(projection);
+        }
+
+        @Override
+        public void readData(ObjectDataInput in) throws IOException {
+            paths = new QueryPath[in.readInt()];
+            for (int i = 0; i < paths.length; i++) {
+                paths[i] = in.readObject();
+            }
+            types = new QueryDataType[in.readInt()];
+            for (int i = 0; i < types.length; i++) {
+                types[i] = in.readObject();
+            }
+            keyDescriptor = in.readObject();
+            valueDescriptor = in.readObject();
+            predicate = in.readObject();
+            projection = in.readObject();
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
+            RowProjectorProcessorSupplier that = (RowProjectorProcessorSupplier) o;
+            return Arrays.equals(paths, that.paths) &&
+                    Arrays.equals(types, that.types) &&
+                    Objects.equals(keyDescriptor, that.keyDescriptor) &&
+                    Objects.equals(valueDescriptor, that.valueDescriptor) &&
+                    Objects.equals(predicate, that.predicate) &&
+                    Objects.equals(projection, that.projection);
+        }
+
+        @Override
+        public int hashCode() {
+            int result = Objects.hash(keyDescriptor, valueDescriptor, predicate, projection);
+            result = 31 * result + Arrays.hashCode(paths);
+            result = 31 * result + Arrays.hashCode(types);
+            return result;
+        }
+    }
+
+    @SuppressFBWarnings(
+            value = {"SE_BAD_FIELD", "SE_NO_SERIALVERSIONID"},
+            justification = "the class is never java-serialized"
+    )
+    private static final class EntryProjectorProcessorSupplier implements ProcessorSupplier, DataSerializable {
 
         private QueryPath[] paths;
         private QueryDataType[] types;
         private Boolean[] hiddenFields;
 
+        private UpsertTargetDescriptor keyDescriptor;
+        private UpsertTargetDescriptor valueDescriptor;
+
         private transient InternalSerializationService serializationService;
 
         @SuppressWarnings("unused")
-        EntryProjectorProcessorSupplier() {
+        private EntryProjectorProcessorSupplier() {
         }
 
         EntryProjectorProcessorSupplier(
+                QueryPath[] paths,
+                QueryDataType[] types,
+                Boolean[] hiddenFields,
                 UpsertTargetDescriptor keyDescriptor,
-                UpsertTargetDescriptor valueDescriptor,
-                List<TableField> fields
+                UpsertTargetDescriptor valueDescriptor
         ) {
+            this.paths = paths;
+            this.types = types;
+            this.hiddenFields = hiddenFields;
+
             this.keyDescriptor = keyDescriptor;
             this.valueDescriptor = valueDescriptor;
-
-            this.paths = fields.stream().map(field -> ((MapTableField) field).getPath()).toArray(QueryPath[]::new);
-            this.types = fields.stream().map(TableField::getType).toArray(QueryDataType[]::new);
-            this.hiddenFields = fields.stream().map(TableField::isHidden).toArray(Boolean[]::new);
         }
 
         @Override
@@ -95,11 +241,11 @@ public final class EntryProcessors {
             for (int i = 0; i < count; i++) {
                 ResettableSingletonTraverser<Object> traverser = new ResettableSingletonTraverser<>();
                 EntryProjector projector = new EntryProjector(
-                        keyDescriptor.create(serializationService),
-                        valueDescriptor.create(serializationService),
                         paths,
                         types,
-                        hiddenFields
+                        hiddenFields,
+                        keyDescriptor.create(serializationService),
+                        valueDescriptor.create(serializationService)
                 );
                 Processor processor = new TransformP<Object[], Object>(row -> {
                     traverser.accept(projector.project(row));
@@ -112,8 +258,6 @@ public final class EntryProcessors {
 
         @Override
         public void writeData(ObjectDataOutput out) throws IOException {
-            out.writeObject(keyDescriptor);
-            out.writeObject(valueDescriptor);
             out.writeInt(paths.length);
             for (QueryPath path : paths) {
                 out.writeObject(path);
@@ -123,12 +267,12 @@ public final class EntryProcessors {
                 out.writeObject(type);
             }
             out.writeObject(hiddenFields);
+            out.writeObject(keyDescriptor);
+            out.writeObject(valueDescriptor);
         }
 
         @Override
         public void readData(ObjectDataInput in) throws IOException {
-            keyDescriptor = in.readObject();
-            valueDescriptor = in.readObject();
             paths = new QueryPath[in.readInt()];
             for (int i = 0; i < paths.length; i++) {
                 paths[i] = in.readObject();
@@ -138,6 +282,33 @@ public final class EntryProcessors {
                 types[i] = in.readObject();
             }
             hiddenFields = in.readObject();
+            keyDescriptor = in.readObject();
+            valueDescriptor = in.readObject();
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
+            EntryProjectorProcessorSupplier that = (EntryProjectorProcessorSupplier) o;
+            return Arrays.equals(paths, that.paths) &&
+                    Arrays.equals(types, that.types) &&
+                    Arrays.equals(hiddenFields, that.hiddenFields) &&
+                    Objects.equals(keyDescriptor, that.keyDescriptor) &&
+                    Objects.equals(valueDescriptor, that.valueDescriptor);
+        }
+
+        @Override
+        public int hashCode() {
+            int result = Objects.hash(keyDescriptor, valueDescriptor);
+            result = 31 * result + Arrays.hashCode(paths);
+            result = 31 * result + Arrays.hashCode(types);
+            result = 31 * result + Arrays.hashCode(hiddenFields);
+            return result;
         }
     }
 }

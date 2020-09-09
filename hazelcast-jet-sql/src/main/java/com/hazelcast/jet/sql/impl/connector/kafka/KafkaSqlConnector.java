@@ -16,22 +16,19 @@
 
 package com.hazelcast.jet.sql.impl.connector.kafka;
 
-import com.hazelcast.function.FunctionEx;
-import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.kafka.KafkaProcessors;
 import com.hazelcast.jet.sql.impl.connector.EntryMetadata;
-import com.hazelcast.jet.sql.impl.connector.SqlConnector;
-import com.hazelcast.jet.sql.impl.connector.EntryMetadataJavaResolver;
 import com.hazelcast.jet.sql.impl.connector.EntryMetadataResolvers;
+import com.hazelcast.jet.sql.impl.connector.EntryProcessors;
+import com.hazelcast.jet.sql.impl.connector.SqlConnector;
 import com.hazelcast.jet.sql.impl.schema.MappingField;
 import com.hazelcast.spi.impl.NodeEngine;
 import com.hazelcast.sql.impl.expression.Expression;
 import com.hazelcast.sql.impl.schema.ConstantTableStatistics;
 import com.hazelcast.sql.impl.schema.Table;
 import com.hazelcast.sql.impl.schema.TableField;
-import org.apache.kafka.clients.consumer.ConsumerRecord;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -43,9 +40,6 @@ import java.util.Properties;
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.EventTimePolicy.noEventTime;
-import static com.hazelcast.jet.core.processor.Processors.mapP;
-import static com.hazelcast.jet.sql.impl.connector.EntryProcessors.entryProjector;
-import static com.hazelcast.jet.sql.impl.expression.ExpressionUtil.projectionFn;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Stream.concat;
 
@@ -53,11 +47,11 @@ public class KafkaSqlConnector implements SqlConnector {
 
     public static final String TYPE_NAME = "Kafka";
 
-    private final EntryMetadataResolvers entryMetadataResolvers;
+    private final EntryMetadataResolvers metadataResolvers;
 
     public KafkaSqlConnector() {
-        this.entryMetadataResolvers = new EntryMetadataResolvers(
-                EntryMetadataJavaResolver.INSTANCE
+        this.metadataResolvers = new EntryMetadataResolvers(
+                MetadataJavaResolver.INSTANCE
         );
     }
 
@@ -71,16 +65,18 @@ public class KafkaSqlConnector implements SqlConnector {
         return true;
     }
 
-    @Nonnull @Override
+    @Nonnull
+    @Override
     public List<MappingField> resolveAndValidateFields(
             @Nonnull NodeEngine nodeEngine,
             @Nonnull Map<String, String> options,
             @Nonnull List<MappingField> userFields
     ) {
-        return entryMetadataResolvers.resolveAndValidateFields(userFields, options, nodeEngine);
+        return metadataResolvers.resolveAndValidateFields(userFields, options, nodeEngine);
     }
 
-    @Nonnull @Override
+    @Nonnull
+    @Override
     public Table createTable(
             @Nonnull NodeEngine nodeEngine,
             @Nonnull String schemaName,
@@ -90,29 +86,26 @@ public class KafkaSqlConnector implements SqlConnector {
     ) {
         String objectName = options.getOrDefault(OPTION_OBJECT_NAME, tableName);
 
-        InternalSerializationService ss = (InternalSerializationService) nodeEngine.getSerializationService();
-
-        EntryMetadata keyMetadata = entryMetadataResolvers.resolveMetadata(true, resolvedFields, options, ss);
-        EntryMetadata valueMetadata = entryMetadataResolvers.resolveMetadata(false, resolvedFields, options, ss);
+        EntryMetadata keyMetadata = metadataResolvers.resolveMetadata(true, resolvedFields, options, null);
+        EntryMetadata valueMetadata = metadataResolvers.resolveMetadata(false, resolvedFields, options, null);
         List<TableField> fields = concat(keyMetadata.getFields().stream(), valueMetadata.getFields().stream())
                 .collect(toList());
 
-        Properties kafkaProperties = new Properties();
-        kafkaProperties.putAll(options);
-        kafkaProperties.remove(OPTION_OBJECT_NAME);
-        kafkaProperties.remove(OPTION_KEY_CLASS);
-        kafkaProperties.remove(OPTION_VALUE_CLASS);
+        Properties properties = new Properties();
+        properties.putAll(options);
 
         return new KafkaTable(
                 this,
                 schemaName,
                 objectName,
+                fields,
                 new ConstantTableStatistics(0),
                 objectName,
-                fields,
+                properties,
+                keyMetadata.getQueryTargetDescriptor(),
                 keyMetadata.getUpsertTargetDescriptor(),
-                valueMetadata.getUpsertTargetDescriptor(),
-                kafkaProperties
+                valueMetadata.getQueryTargetDescriptor(),
+                valueMetadata.getUpsertTargetDescriptor()
         );
     }
 
@@ -121,7 +114,8 @@ public class KafkaSqlConnector implements SqlConnector {
         return true;
     }
 
-    @Nonnull @Override
+    @Nonnull
+    @Override
     public Vertex fullScanReader(
             @Nonnull DAG dag,
             @Nonnull Table table0,
@@ -131,18 +125,30 @@ public class KafkaSqlConnector implements SqlConnector {
     ) {
         KafkaTable table = (KafkaTable) table0;
 
-        String topicName = table.getTopicName();
-        Vertex sourceVertex = dag.newVertex("kafka(" + topicName + ")",
-                KafkaProcessors.streamKafkaP(table.getKafkaProperties(), FunctionEx.identity(), noEventTime(), topicName));
+        Vertex vStart = dag.newVertex(
+                table.toString(),
+                KafkaProcessors.streamKafkaP(
+                        table.kafkaProperties(),
+                        record -> entry(record.key(), record.value()),
+                        noEventTime(),
+                        table.topicName()
+                )
+        );
 
-        // TODO: use descriptors
-        FunctionEx<Entry<Object, Object>, Object[]> mapFn = projectionFn(table, predicate, projections);
-        FunctionEx<ConsumerRecord<Object, Object>, Object[]> wrapToEntryFn = record ->
-                mapFn.apply(entry(record.key(), record.value()));
-        Vertex filterProjectVertex = dag.newVertex("kafka-filter-project", mapP(wrapToEntryFn));
+        Vertex vEnd = dag.newVertex(
+                "Project(" + table.toString() + ")",
+                EntryProcessors.rowProjector(
+                        table.paths(),
+                        table.types(),
+                        table.keyQueryDescriptor(),
+                        table.valueQueryDescriptor(),
+                        predicate,
+                        projections
+                )
+        );
 
-        dag.edge(between(sourceVertex, filterProjectVertex).isolated());
-        return filterProjectVertex;
+        dag.edge(between(vStart, vEnd).isolated());
+        return vEnd;
     }
 
     @Override
@@ -150,22 +156,35 @@ public class KafkaSqlConnector implements SqlConnector {
         return true;
     }
 
-    @Nonnull @Override
+    @Nonnull
+    @Override
     public Vertex sink(
             @Nonnull DAG dag,
-            @Nonnull Table jetTable
+            @Nonnull Table table0
     ) {
-        KafkaTable table = (KafkaTable) jetTable;
+        KafkaTable table = (KafkaTable) table0;
 
         Vertex vStart = dag.newVertex(
-                "kafka-project",
-                entryProjector(table.getKeyUpsertDescriptor(), table.getValueUpsertDescriptor(), table.getFields())
+                "Project(" + table.toString() + ")",
+                EntryProcessors.entryProjector(
+                        table.paths(),
+                        table.types(),
+                        table.hiddenFields(),
+                        table.keyUpsertDescriptor(),
+                        table.valueUpsertDescriptor()
+                )
         );
 
-        String topicName = table.getTopicName();
-        Vertex vEnd = dag.newVertex("kafka(" + topicName + ')',
+        Vertex vEnd = dag.newVertex(
+                table.toString(),
                 KafkaProcessors.<Entry<Object, Object>, Object, Object>writeKafkaP(
-                        table.getKafkaProperties(), topicName, Entry::getKey, Entry::getValue, true));
+                        table.kafkaProperties(),
+                        table.topicName(),
+                        Entry::getKey,
+                        Entry::getValue,
+                        true
+                )
+        );
 
         dag.edge(between(vStart, vEnd));
         return vStart;

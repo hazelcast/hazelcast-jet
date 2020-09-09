@@ -46,11 +46,11 @@ import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_VALUE_FAC
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.PORTABLE_SERIALIZATION_FORMAT;
 import static java.lang.Integer.parseInt;
 
-final class EntryMetadataPortableResolver implements EntryMetadataResolver {
+final class MetadataPortableResolver implements EntryMetadataResolver {
 
-    static final EntryMetadataPortableResolver INSTANCE = new EntryMetadataPortableResolver();
+    static final MetadataPortableResolver INSTANCE = new MetadataPortableResolver();
 
-    private EntryMetadataPortableResolver() {
+    private MetadataPortableResolver() {
     }
 
     @Override

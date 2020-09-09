@@ -21,86 +21,70 @@ import com.hazelcast.jet.sql.impl.inject.UpsertTarget;
 import com.hazelcast.sql.impl.extract.QueryPath;
 import com.hazelcast.sql.impl.type.QueryDataType;
 import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.mockito.Mock;
-import org.mockito.junit.MockitoJUnitRunner;
 
 import java.util.Map.Entry;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
 
-@RunWith(MockitoJUnitRunner.class)
 public class EntryProjectorTest {
-
-    @Mock
-    private UpsertTarget keyTarget;
-
-    @Mock
-    private UpsertInjector keyInjector;
-
-    @Mock
-    private UpsertTarget valueTarget;
-
-    @Mock
-    private UpsertInjector valueInjector;
 
     @Test
     public void test_project() {
-        given(keyTarget.createInjector(null)).willReturn(keyInjector);
-        given(keyTarget.conclude()).willReturn(2);
-
-        given(valueTarget.createInjector(null)).willReturn(valueInjector);
-        given(valueTarget.conclude()).willReturn("4");
-
         EntryProjector projector = new EntryProjector(
-                keyTarget,
-                valueTarget,
                 new QueryPath[]{QueryPath.KEY_PATH, QueryPath.VALUE_PATH},
-                new QueryDataType[]{QueryDataType.INT, QueryDataType.VARCHAR},
-                new Boolean[]{false, false}
+                new QueryDataType[]{QueryDataType.INT, QueryDataType.INT},
+                new Boolean[]{false, false},
+                new MultiplyingTarget(),
+                new MultiplyingTarget()
         );
 
-        Entry<Object, Object> entry = projector.project(new Object[]{1, "2"});
+        Entry<Object, Object> entry = projector.project(new Object[]{1, 2});
 
         assertThat(entry.getKey()).isEqualTo(2);
-        assertThat(entry.getValue()).isEqualTo("4");
-        verify(keyTarget).init();
-        verify(valueTarget).init();
-        verify(keyInjector).set(1);
-        verify(valueInjector).set("2");
+        assertThat(entry.getValue()).isEqualTo(4);
     }
 
     @Test
-    public void test_projectWithHiddenFields() {
-        given(keyTarget.createInjector(null)).willReturn(keyInjector);
-        given(keyTarget.conclude()).willReturn(2);
-
-        given(valueTarget.createInjector("field2")).willReturn(valueInjector);
-        given(valueTarget.conclude()).willReturn("4");
-
+    public void when_fieldIsHidden_then_itIsSkipped() {
         EntryProjector projector = new EntryProjector(
-                keyTarget,
-                valueTarget,
                 new QueryPath[]{
                         QueryPath.KEY_PATH,
                         QueryPath.create(QueryPath.VALUE_PREFIX + "field1"),
                         QueryPath.create(QueryPath.VALUE_PREFIX + "field2")
                 },
-                new QueryDataType[]{QueryDataType.INT, QueryDataType.VARCHAR, QueryDataType.VARCHAR},
-                new Boolean[]{false, true, false}
+                new QueryDataType[]{QueryDataType.INT, QueryDataType.VARCHAR, QueryDataType.INT},
+                new Boolean[]{false, true, false},
+                new MultiplyingTarget(),
+                new MultiplyingTarget()
         );
 
-        Entry<Object, Object> entry = projector.project(new Object[]{1, null, "2"});
+        Entry<Object, Object> entry = projector.project(new Object[]{1, null, 2});
 
         assertThat(entry.getKey()).isEqualTo(2);
-        assertThat(entry.getValue()).isEqualTo("4");
-        verify(keyTarget).init();
-        verify(valueTarget).init();
-        verify(keyInjector).set(1);
-        verify(valueInjector).set("2");
-        verify(valueTarget, never()).createInjector("field1");
+        assertThat(entry.getValue()).isEqualTo(4);
+    }
+
+    private static final class MultiplyingTarget implements UpsertTarget {
+
+        private Object value;
+
+        private MultiplyingTarget() {
+            value = -1;
+        }
+
+        @Override
+        public UpsertInjector createInjector(String path) {
+            return value -> this.value = value;
+        }
+
+        @Override
+        public void init() {
+            value = null;
+        }
+
+        @Override
+        public Object conclude() {
+            return (int) value * 2;
+        }
     }
 }

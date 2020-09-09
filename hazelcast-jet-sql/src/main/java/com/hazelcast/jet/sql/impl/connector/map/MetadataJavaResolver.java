@@ -14,10 +14,12 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.sql.impl.connector;
+package com.hazelcast.jet.sql.impl.connector.map;
 
 import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.jet.impl.util.ReflectionUtils;
+import com.hazelcast.jet.sql.impl.connector.EntryMetadata;
+import com.hazelcast.jet.sql.impl.connector.EntryMetadataResolver;
 import com.hazelcast.jet.sql.impl.inject.PojoUpsertTargetDescriptor;
 import com.hazelcast.jet.sql.impl.inject.PrimitiveUpsertTargetDescriptor;
 import com.hazelcast.jet.sql.impl.schema.MappingField;
@@ -45,11 +47,11 @@ import static com.hazelcast.sql.impl.extract.QueryPath.VALUE;
 import static com.hazelcast.sql.impl.extract.QueryPath.VALUE_PATH;
 import static java.util.Collections.singletonList;
 
-public final class EntryMetadataJavaResolver implements EntryMetadataResolver {
+final class MetadataJavaResolver implements EntryMetadataResolver {
 
-    public static final EntryMetadataJavaResolver INSTANCE = new EntryMetadataJavaResolver();
+    public static final MetadataJavaResolver INSTANCE = new MetadataJavaResolver();
 
-    private EntryMetadataJavaResolver() {
+    private MetadataJavaResolver() {
     }
 
     @Override
@@ -68,7 +70,7 @@ public final class EntryMetadataJavaResolver implements EntryMetadataResolver {
         return resolveFields(isKey, userFields, clazz);
     }
 
-    public List<MappingField> resolveFields(
+    List<MappingField> resolveFields(
             boolean isKey,
             List<MappingField> userFields,
             Class<?> clazz
@@ -149,7 +151,7 @@ public final class EntryMetadataJavaResolver implements EntryMetadataResolver {
         return resolveMetadata(isKey, resolvedFields, clazz);
     }
 
-    public EntryMetadata resolveMetadata(
+    EntryMetadata resolveMetadata(
             boolean isKey,
             List<MappingField> resolvedFields,
             Class<?> clazz

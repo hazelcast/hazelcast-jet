@@ -31,7 +31,7 @@ import org.junit.runner.RunWith;
 
 import java.util.List;
 
-import static com.hazelcast.jet.sql.impl.connector.map.EntryMetadataHazelcastJsonResolver.INSTANCE;
+import static com.hazelcast.jet.sql.impl.connector.map.MetadataJsonResolver.INSTANCE;
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyMap;
 import static java.util.Collections.singletonList;
@@ -39,7 +39,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @RunWith(JUnitParamsRunner.class)
-public class EntryMetadataHazelcastJsonResolverTest {
+public class MetadataJsonResolverTest {
 
     @Test
     @Parameters({

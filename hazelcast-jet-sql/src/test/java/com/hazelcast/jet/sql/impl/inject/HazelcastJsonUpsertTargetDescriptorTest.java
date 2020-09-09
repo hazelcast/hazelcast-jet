@@ -28,6 +28,17 @@ public class HazelcastJsonUpsertTargetDescriptorTest {
             new DefaultSerializationServiceBuilder().build();
 
     @Test
+    public void test_create() {
+        HazelcastJsonUpsertTargetDescriptor descriptor = HazelcastJsonUpsertTargetDescriptor.INSTANCE;
+
+        // when
+        UpsertTarget target = descriptor.create(SERIALIZATION_SERVICE);
+
+        // then
+        assertThat(target).isInstanceOf(HazelcastJsonUpsertTarget.class);
+    }
+
+    @Test
     public void test_serialization() {
         HazelcastJsonUpsertTargetDescriptor original = HazelcastJsonUpsertTargetDescriptor.INSTANCE;
 

@@ -125,34 +125,8 @@ public final class ReflectionUtils {
 
     @SuppressWarnings({"checkstyle:CyclomaticComplexity", "checkstyle:ReturnCount", "checkstyle:NPathComplexity"})
     private static BiTuple<String, Class<?>> extractProperty(Class<?> clazz, Method method) {
-        if (!Modifier.isPublic(method.getModifiers())) {
+        if (!isGetter(clazz, method)) {
             return null;
-        }
-
-        if (Modifier.isStatic(method.getModifiers())) {
-            return null;
-        }
-
-        Class<?> returnType = method.getReturnType();
-        if (returnType == void.class || returnType == Void.class) {
-            return null;
-        }
-
-        if (method.getParameterCount() != 0) {
-            return null;
-        }
-
-        if (method.getDeclaringClass() == Object.class) {
-            return null;
-        }
-
-        String methodName = method.getName();
-        if (methodName.equals(METHOD_GET_FACTORY_ID)
-                || methodName.equals(METHOD_GET_CLASS_ID)
-                || methodName.equals(METHOD_GET_CLASS_VERSION)) {
-            if (IdentifiedDataSerializable.class.isAssignableFrom(clazz) || Portable.class.isAssignableFrom(clazz)) {
-                return null;
-            }
         }
 
         String propertyName = extractPropertyName(method);
@@ -186,6 +160,41 @@ public final class ReflectionUtils {
         }
 
         return toLowerCase(fieldNameWithWrongCase.charAt(0)) + fieldNameWithWrongCase.substring(1);
+    }
+
+    @SuppressWarnings("RedundantIfStatement")
+    private static boolean isGetter(Class<?> clazz, Method method) {
+        if (!Modifier.isPublic(method.getModifiers())) {
+            return false;
+        }
+
+        if (Modifier.isStatic(method.getModifiers())) {
+            return false;
+        }
+
+        Class<?> returnType = method.getReturnType();
+        if (returnType == void.class || returnType == Void.class) {
+            return false;
+        }
+
+        if (method.getParameterCount() != 0) {
+            return false;
+        }
+
+        if (method.getDeclaringClass() == Object.class) {
+            return false;
+        }
+
+        String methodName = method.getName();
+        if (methodName.equals(METHOD_GET_FACTORY_ID)
+                || methodName.equals(METHOD_GET_CLASS_ID)
+                || methodName.equals(METHOD_GET_CLASS_VERSION)) {
+            if (IdentifiedDataSerializable.class.isAssignableFrom(clazz) || Portable.class.isAssignableFrom(clazz)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     public static Method extractSetter(Class<?> clazz, String propertyName, Class<?> type) {

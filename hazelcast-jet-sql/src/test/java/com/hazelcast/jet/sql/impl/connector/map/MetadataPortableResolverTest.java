@@ -20,7 +20,6 @@ import com.google.common.collect.ImmutableMap;
 import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.internal.serialization.impl.DefaultSerializationServiceBuilder;
 import com.hazelcast.jet.sql.impl.connector.EntryMetadata;
-import com.hazelcast.jet.sql.impl.connector.EntryMetadataJavaResolver;
 import com.hazelcast.jet.sql.impl.inject.PortableUpsertTargetDescriptor;
 import com.hazelcast.jet.sql.impl.schema.MappingField;
 import com.hazelcast.nio.serialization.ClassDefinition;
@@ -44,7 +43,7 @@ import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_KEY_FACTO
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_VALUE_CLASS_ID;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_VALUE_CLASS_VERSION;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_VALUE_FACTORY_ID;
-import static com.hazelcast.jet.sql.impl.connector.map.EntryMetadataPortableResolver.INSTANCE;
+import static com.hazelcast.jet.sql.impl.connector.map.MetadataPortableResolver.INSTANCE;
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
@@ -52,7 +51,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @RunWith(JUnitParamsRunner.class)
-public class EntryMetadataPortableResolverTest {
+public class MetadataPortableResolverTest {
 
     @Test
     @Parameters({
@@ -227,7 +226,7 @@ public class EntryMetadataPortableResolverTest {
                 (key ? OPTION_KEY_CLASS_VERSION : OPTION_VALUE_CLASS_VERSION), String.valueOf(classDefinition.getVersion())
         );
 
-        assertThatThrownBy(() -> EntryMetadataJavaResolver.INSTANCE.resolveFields(
+        assertThatThrownBy(() -> MetadataJavaResolver.INSTANCE.resolveFields(
                 key,
                 asList(
                         field("field1", QueryDataType.INT, prefix + ".field"),

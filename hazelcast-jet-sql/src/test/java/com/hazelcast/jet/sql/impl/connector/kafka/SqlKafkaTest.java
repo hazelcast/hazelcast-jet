@@ -219,7 +219,7 @@ public class SqlKafkaTest extends JetSqlTestSupport {
         kafkaTestSupport.produce(topicName, 1, "value-" + 1);
 
         assertRowsEventuallyInAnyOrder(
-                "SELECT upper(this) FROM " + topicName + " WHERE this='value-1'",
+                "SELECT UPPER(this) FROM " + topicName + " WHERE this='value-1'",
                 singletonList(new Row("VALUE-1")));
     }
 
@@ -229,7 +229,7 @@ public class SqlKafkaTest extends JetSqlTestSupport {
         kafkaTestSupport.produce(topicName, 1, "value-" + 1);
 
         assertRowsEventuallyInAnyOrder(
-                "SELECT this FROM " + topicName + " WHERE upper(this)='VALUE-1'",
+                "SELECT this FROM " + topicName + " WHERE UPPER(this)='VALUE-1'",
                 singletonList(new Row("value-1")));
     }
 
@@ -239,7 +239,7 @@ public class SqlKafkaTest extends JetSqlTestSupport {
         kafkaTestSupport.produce(topicName, 1, "value-" + 1);
 
         assertRowsEventuallyInAnyOrder(
-                "SELECT this FROM (SELECT upper(this) this FROM " + topicName + ") WHERE this='VALUE-1'",
+                "SELECT this FROM (SELECT UPPER(this) this FROM " + topicName + ") WHERE this='VALUE-1'",
                 singletonList(new Row("VALUE-1")));
     }
 
@@ -249,7 +249,7 @@ public class SqlKafkaTest extends JetSqlTestSupport {
         kafkaTestSupport.produce(topicName, 1, "value-" + 1);
 
         assertRowsEventuallyInAnyOrder(
-                "SELECT upper(this) FROM " + topicName + " WHERE upper(this)='VALUE-1'",
+                "SELECT UPPER(this) FROM " + topicName + " WHERE UPPER(this)='VALUE-1'",
                 singletonList(new Row("VALUE-1")));
     }
 

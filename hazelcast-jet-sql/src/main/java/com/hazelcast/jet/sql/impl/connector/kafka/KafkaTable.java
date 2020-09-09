@@ -19,58 +19,93 @@ package com.hazelcast.jet.sql.impl.connector.kafka;
 import com.hazelcast.jet.sql.impl.connector.SqlConnector;
 import com.hazelcast.jet.sql.impl.inject.UpsertTargetDescriptor;
 import com.hazelcast.jet.sql.impl.schema.JetTable;
+import com.hazelcast.sql.impl.extract.QueryPath;
+import com.hazelcast.sql.impl.extract.QueryTargetDescriptor;
 import com.hazelcast.sql.impl.schema.TableField;
 import com.hazelcast.sql.impl.schema.TableStatistics;
+import com.hazelcast.sql.impl.type.QueryDataType;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
 
 class KafkaTable extends JetTable {
 
+    private final QueryTargetDescriptor keyQueryDescriptor;
     private final UpsertTargetDescriptor keyUpsertDescriptor;
+
+    private final QueryTargetDescriptor valueQueryDescriptor;
     private final UpsertTargetDescriptor valueUpsertDescriptor;
 
     private final String topicName;
     private final Properties kafkaProperties;
 
+    @SuppressWarnings("checkstyle:ParameterNumber")
     KafkaTable(
             SqlConnector sqlConnector,
             String schemaName,
             String name,
+            List<TableField> fields,
             TableStatistics statistics,
             String topicName,
-            List<TableField> fields,
+            Properties kafkaProperties,
+            QueryTargetDescriptor keyQueryDescriptor,
             UpsertTargetDescriptor keyUpsertDescriptor,
-            UpsertTargetDescriptor valueUpsertDescriptor,
-            Properties kafkaProperties
+            QueryTargetDescriptor valueQueryDescriptor,
+            UpsertTargetDescriptor valueUpsertDescriptor
     ) {
         super(sqlConnector, fields, schemaName, name, statistics);
 
+        this.keyQueryDescriptor = keyQueryDescriptor;
         this.keyUpsertDescriptor = keyUpsertDescriptor;
+
+        this.valueQueryDescriptor = valueQueryDescriptor;
         this.valueUpsertDescriptor = valueUpsertDescriptor;
 
         this.topicName = topicName;
         this.kafkaProperties = kafkaProperties;
     }
 
-    String getTopicName() {
+    String topicName() {
         return topicName;
     }
 
-    UpsertTargetDescriptor getKeyUpsertDescriptor() {
+    Properties kafkaProperties() {
+        return kafkaProperties;
+    }
+
+    QueryTargetDescriptor keyQueryDescriptor() {
+        return keyQueryDescriptor;
+    }
+
+    UpsertTargetDescriptor keyUpsertDescriptor() {
         return keyUpsertDescriptor;
     }
 
-    UpsertTargetDescriptor getValueUpsertDescriptor() {
+    QueryTargetDescriptor valueQueryDescriptor() {
+        return valueQueryDescriptor;
+    }
+
+    UpsertTargetDescriptor valueUpsertDescriptor() {
         return valueUpsertDescriptor;
     }
 
-    Properties getKafkaProperties() {
-        return kafkaProperties;
+    QueryPath[] paths() {
+        return getFields().stream().map(field -> ((KafkaTableField) field).getPath()).toArray(QueryPath[]::new);
+    }
+
+    QueryDataType[] types() {
+        return getFields().stream().map(TableField::getType).toArray(QueryDataType[]::new);
+    }
+
+    Boolean[] hiddenFields() {
+        Boolean[] hiddenFields = new Boolean[getFields().size()];
+        Arrays.fill(hiddenFields, Boolean.FALSE);
+        return hiddenFields;
     }
 
     @Override
     public String toString() {
-        return getClass().getSimpleName() + "{topicName=" + topicName + '}';
+        return "Kafka[" + getSchemaName() + "." + getSqlName() + "]";
     }
 }

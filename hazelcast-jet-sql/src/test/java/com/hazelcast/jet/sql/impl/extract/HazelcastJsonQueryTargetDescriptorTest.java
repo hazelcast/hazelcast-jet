@@ -18,14 +18,37 @@ package com.hazelcast.jet.sql.impl.extract;
 
 import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.internal.serialization.impl.DefaultSerializationServiceBuilder;
+import com.hazelcast.query.impl.getters.Extractors;
+import com.hazelcast.sql.impl.extract.QueryTarget;
+import junitparams.JUnitParamsRunner;
+import junitparams.Parameters;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+@RunWith(JUnitParamsRunner.class)
 public class HazelcastJsonQueryTargetDescriptorTest {
 
     private static final InternalSerializationService SERIALIZATION_SERVICE =
             new DefaultSerializationServiceBuilder().build();
+
+    @Test
+    @Parameters({
+            "true",
+            "false"
+    })
+    public void test_create(boolean key) {
+        Extractors extractors = Extractors.newBuilder(SERIALIZATION_SERVICE).build();
+
+        HazelcastJsonQueryTargetDescriptor descriptor = HazelcastJsonQueryTargetDescriptor.INSTANCE;
+
+        // when
+        QueryTarget target = descriptor.create(SERIALIZATION_SERVICE, extractors, key);
+
+        // then
+        assertThat(target).isInstanceOf(HazelcastJsonQueryTarget.class);
+    }
 
     @Test
     public void test_serialization() {

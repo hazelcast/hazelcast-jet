@@ -23,8 +23,8 @@ import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.core.processor.SinkProcessors;
 import com.hazelcast.jet.sql.impl.connector.EntryMetadata;
-import com.hazelcast.jet.sql.impl.connector.EntryMetadataJavaResolver;
 import com.hazelcast.jet.sql.impl.connector.EntryMetadataResolvers;
+import com.hazelcast.jet.sql.impl.connector.EntryProcessors;
 import com.hazelcast.jet.sql.impl.connector.SqlConnector;
 import com.hazelcast.jet.sql.impl.expression.ExpressionUtil;
 import com.hazelcast.jet.sql.impl.inject.UpsertTargetDescriptor;
@@ -35,10 +35,13 @@ import com.hazelcast.map.impl.MapServiceContext;
 import com.hazelcast.query.Predicates;
 import com.hazelcast.spi.impl.NodeEngine;
 import com.hazelcast.sql.impl.expression.Expression;
+import com.hazelcast.sql.impl.extract.QueryPath;
 import com.hazelcast.sql.impl.schema.ConstantTableStatistics;
 import com.hazelcast.sql.impl.schema.Table;
 import com.hazelcast.sql.impl.schema.TableField;
+import com.hazelcast.sql.impl.schema.map.MapTableField;
 import com.hazelcast.sql.impl.schema.map.PartitionedMapTable;
+import com.hazelcast.sql.impl.type.QueryDataType;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -49,7 +52,6 @@ import java.util.Map.Entry;
 
 import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.processor.SourceProcessors.readMapP;
-import static com.hazelcast.jet.sql.impl.connector.EntryProcessors.entryProjector;
 import static com.hazelcast.sql.impl.schema.map.MapTableUtils.estimatePartitionedMapRowCount;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Stream.concat;
@@ -58,13 +60,13 @@ public class IMapSqlConnector implements SqlConnector {
 
     public static final String TYPE_NAME = "IMap";
 
-    private final EntryMetadataResolvers entryMetadataResolvers;
+    private final EntryMetadataResolvers metadataResolvers;
 
     public IMapSqlConnector() {
-        this.entryMetadataResolvers = new EntryMetadataResolvers(
-                EntryMetadataJavaResolver.INSTANCE,
-                EntryMetadataPortableResolver.INSTANCE,
-                EntryMetadataHazelcastJsonResolver.INSTANCE
+        this.metadataResolvers = new EntryMetadataResolvers(
+                MetadataJavaResolver.INSTANCE,
+                MetadataPortableResolver.INSTANCE,
+                MetadataJsonResolver.INSTANCE
         );
     }
 
@@ -84,7 +86,7 @@ public class IMapSqlConnector implements SqlConnector {
             @Nonnull Map<String, String> options,
             @Nonnull List<MappingField> userFields
     ) {
-        return entryMetadataResolvers.resolveAndValidateFields(userFields, options, nodeEngine);
+        return metadataResolvers.resolveAndValidateFields(userFields, options, nodeEngine);
     }
 
     @Nonnull @Override
@@ -99,8 +101,8 @@ public class IMapSqlConnector implements SqlConnector {
 
         InternalSerializationService ss = (InternalSerializationService) nodeEngine.getSerializationService();
 
-        EntryMetadata keyMetadata = entryMetadataResolvers.resolveMetadata(true, resolvedFields, options, ss);
-        EntryMetadata valueMetadata = entryMetadataResolvers.resolveMetadata(false, resolvedFields, options, ss);
+        EntryMetadata keyMetadata = metadataResolvers.resolveMetadata(true, resolvedFields, options, ss);
+        EntryMetadata valueMetadata = metadataResolvers.resolveMetadata(false, resolvedFields, options, ss);
         List<TableField> fields = concat(keyMetadata.getFields().stream(), valueMetadata.getFields().stream())
                 .collect(toList());
 
@@ -167,12 +169,19 @@ public class IMapSqlConnector implements SqlConnector {
     ) {
         PartitionedMapTable table = (PartitionedMapTable) table0;
 
+        List<TableField> fields = table.getFields();
+        QueryPath[] paths = fields.stream().map(field -> ((MapTableField) field).getPath()).toArray(QueryPath[]::new);
+        QueryDataType[] types = fields.stream().map(TableField::getType).toArray(QueryDataType[]::new);
+        Boolean[] hiddenFields = fields.stream().map(TableField::isHidden).toArray(Boolean[]::new);
+
         Vertex vStart = dag.newVertex(
                 "Project(IMap" + "[" + table.getSchemaName() + "." + table.getSqlName() + "])",
-                entryProjector(
+                EntryProcessors.entryProjector(
+                        paths,
+                        types,
+                        hiddenFields,
                         (UpsertTargetDescriptor) table.getKeyJetMetadata(),
-                        (UpsertTargetDescriptor) table.getValueJetMetadata(),
-                        table.getFields()
+                        (UpsertTargetDescriptor) table.getValueJetMetadata()
                 )
         );
 

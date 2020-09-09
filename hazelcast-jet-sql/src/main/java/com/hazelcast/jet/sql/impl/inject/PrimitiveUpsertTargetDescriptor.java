@@ -41,11 +41,6 @@ public final class PrimitiveUpsertTargetDescriptor implements UpsertTargetDescri
     }
 
     @Override
-    public String toString() {
-        return "PrimitiveUpsertTargetDescriptor{}";
-    }
-
-    @Override
     public int hashCode() {
         return 0;
     }
