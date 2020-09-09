@@ -47,10 +47,12 @@ import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
 import java.util.stream.IntStream;
 import java.util.stream.LongStream;
@@ -76,6 +78,7 @@ import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 public class BatchStageTest extends PipelineTestSupport {
 
@@ -603,7 +606,7 @@ public class BatchStageTest extends PipelineTestSupport {
     }
 
     @Test
-    public void mapUsingIMapAsync() {
+    public void mapUsingIMap() {
         // Given
         List<Integer> input = sequence(itemCount);
         String prefix = "value-";
@@ -627,7 +630,7 @@ public class BatchStageTest extends PipelineTestSupport {
     }
 
     @Test
-    public void mapUsingIMapAsync_keyed() {
+    public void mapUsingIMap_keyed() {
         // Given
         List<Integer> input = sequence(itemCount);
         String prefix = "value-";
@@ -649,6 +652,22 @@ public class BatchStageTest extends PipelineTestSupport {
         assertEquals(
                 streamToString(input.stream().map(i -> entry(i, prefix + i)), formatFn),
                 streamToString(sinkStreamOfEntry(), formatFn));
+    }
+
+    @Test
+    public void test_imdgIssue17515NotFixed() throws Exception {
+        CompletableFuture<Object> f =
+                jet().getMap("map")
+                     .getAsync("key")
+                     .thenApply(v -> { throw new RuntimeException("foo"); })
+                     .toCompletableFuture();
+        try {
+            f.get(1, TimeUnit.SECONDS);
+        } catch (TimeoutException expected) {
+        } catch (ExecutionException e) {
+            fail("Issue https://github.com/hazelcast/hazelcast/issues/17515 was fixed, revert code in " +
+                    "GeneralStage.mapUsingIMap()");
+        }
     }
 
     @Test

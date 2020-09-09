@@ -663,7 +663,15 @@ public interface GeneralStage<T> extends Stage {
                 ServiceFactories.<K, V>iMapService(mapName),
                 DEFAULT_MAX_CONCURRENT_OPS,
                 DEFAULT_PRESERVE_ORDER,
-                (map, t) -> map.getAsync(lookupKeyFn.apply(t)).toCompletableFuture().thenApply(e -> mapFn.apply(t, e))
+                (map, t) -> map.getAsync(lookupKeyFn.apply(t))
+                        // Using `handle` to workaround https://github.com/hazelcast/hazelcast/issues/17515.
+                        // Revert to `thenApply` once it's fixed.
+                        .toCompletableFuture().handle((item, exc) -> {
+                            if (exc != null) {
+                                throw new RuntimeException(exc);
+                            }
+                            return mapFn.apply(t, item);
+                        })
         );
         return res.setName("mapUsingIMap");
     }
