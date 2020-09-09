@@ -27,6 +27,7 @@ import com.hazelcast.sql.impl.row.HeapRow;
 import com.hazelcast.sql.impl.row.Row;
 
 import java.util.NoSuchElementException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static com.hazelcast.sql.impl.ResultIterator.HasNextImmediatelyResult.DONE;
@@ -41,21 +42,27 @@ public class JetQueryResultProducer implements QueryResultProducer {
 
     private final OneToOneConcurrentArrayQueue<Row> queue = new OneToOneConcurrentArrayQueue<>(QUEUE_CAPACITY);
     private final AtomicReference<QueryException> error = new AtomicReference<>();
-    private volatile boolean done;
+    private final AtomicBoolean done = new AtomicBoolean();
+    private InternalIterator iterator;
 
     @Override
     public ResultIterator<Row> iterator() {
-        return new InternalIterator();
+        if (iterator != null) {
+            throw new IllegalStateException("The iterator can be requested only once");
+        }
+        iterator = new InternalIterator();
+        return iterator;
     }
 
     @Override
     public void onError(QueryException error) {
-        this.error.compareAndSet(null, error);
-        done = true;
+        if (done.compareAndSet(false, true)) {
+            this.error.compareAndSet(null, error);
+        }
     }
 
     public void done() {
-        done = true;
+        done.set(true);
     }
 
     public void consume(Inbox inbox) {
@@ -74,36 +81,27 @@ public class JetQueryResultProducer implements QueryResultProducer {
 
         private Row nextRow;
 
-        InternalIterator() {
-            moveNext();
-        }
-
-        private void moveNext() {
-            nextRow = queue.poll();
-        }
-
         @Override
         public HasNextImmediatelyResult hasNextImmediately() {
             return nextRow != null ? YES
-                    : (done ? DONE : RETRY);
+                    : (done.get() ? DONE : RETRY);
         }
 
         @Override
         public boolean hasNext() {
             long idleCount = 0;
             while (true) {
-                if (nextRow != null) {
+                if (nextRow != null || (nextRow = queue.poll()) != null) {
                     return true;
                 }
-                if (done) {
+                if (done.get()) {
                     QueryException localError = error.get();
                     if (localError != null) {
-                        throw new RuntimeException("The underlying job failed: " + localError.getMessage(), localError);
+                        throw new RuntimeException("The Jet SQL job failed: " + localError.getMessage(), localError);
                     }
                     return false;
                 }
                 idler.idle(++idleCount);
-                moveNext();
             }
         }
 
@@ -112,11 +110,10 @@ public class JetQueryResultProducer implements QueryResultProducer {
             if (!hasNext()) {
                 throw new NoSuchElementException();
             }
-
             try {
                 return nextRow;
             } finally {
-                moveNext();
+                nextRow = queue.poll();
             }
         }
     }

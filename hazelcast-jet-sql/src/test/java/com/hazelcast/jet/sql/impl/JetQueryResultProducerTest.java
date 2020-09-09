@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.sql.impl;
 
+import com.hazelcast.jet.core.JetTestSupport;
 import com.hazelcast.jet.impl.util.ArrayDequeInbox;
 import com.hazelcast.jet.impl.util.ProgressTracker;
 import com.hazelcast.sql.impl.ResultIterator;
@@ -27,32 +28,33 @@ import java.util.concurrent.Future;
 import java.util.concurrent.Semaphore;
 
 import static com.hazelcast.sql.impl.ResultIterator.HasNextImmediatelyResult.RETRY;
-import static com.hazelcast.test.HazelcastTestSupport.assertInstanceOf;
-import static com.hazelcast.test.HazelcastTestSupport.assertTrueEventually;
-import static com.hazelcast.test.HazelcastTestSupport.sleepMillis;
-import static com.hazelcast.test.HazelcastTestSupport.spawn;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-public class JetQueryResultProducerTest {
+public class JetQueryResultProducerTest extends JetTestSupport {
 
     @Test
     public void smokeTest() throws Exception {
         JetQueryResultProducer p = new JetQueryResultProducer();
         Semaphore semaphore = new Semaphore(0);
-        Future future = spawn(() -> {
-            ResultIterator<Row> iterator = p.iterator();
-            assertEquals(RETRY, iterator.hasNextImmediately());
-            semaphore.release();
-            assertTrue(iterator.hasNext());
-            assertInstanceOf(Row.class, iterator.next());
-            semaphore.release();
-            assertFalse(iterator.hasNext());
-            assertThatThrownBy(iterator::next)
-                    .isInstanceOf(NoSuchElementException.class);
-            semaphore.release();
+        Future<?> future = spawn(() -> {
+            try {
+                ResultIterator<Row> iterator = p.iterator();
+                assertEquals(RETRY, iterator.hasNextImmediately());
+                semaphore.release();
+                assertTrue(iterator.hasNext());
+                assertInstanceOf(Row.class, iterator.next());
+                semaphore.release();
+                assertFalse(iterator.hasNext());
+                assertThatThrownBy(iterator::next)
+                        .isInstanceOf(NoSuchElementException.class);
+                semaphore.release();
+            } catch (Throwable t) {
+                logger.info("", t);
+                throw t;
+            }
         });
 
         semaphore.acquire();
@@ -80,5 +82,22 @@ public class JetQueryResultProducerTest {
 
         // called for the side-effect of throwing the exception if it happened in the thread
         future.get();
+    }
+
+    @Test
+    public void when_done_then_remainingItemsIterated() {
+        JetQueryResultProducer p = new JetQueryResultProducer();
+        ArrayDequeInbox inbox = new ArrayDequeInbox(new ProgressTracker());
+        inbox.queue().add(new Object[] {1});
+        inbox.queue().add(new Object[] {2});
+        p.consume(inbox);
+        p.done();
+
+        ResultIterator<Row> iterator = p.iterator();
+        assertTrue(iterator.hasNext());
+        assertEquals(1, (int) iterator.next().get(0));
+        assertTrue(iterator.hasNext());
+        assertEquals(2, (int) iterator.next().get(0));
+        assertFalse(iterator.hasNext());
     }
 }

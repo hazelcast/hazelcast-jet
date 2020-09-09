@@ -164,6 +164,8 @@ public final class RootResultConsumerSink implements Processor {
                 if (error != null) {
                     rootResultConsumer.onError(QueryException.error(error.toString(), error));
                 } else {
+                    // The rootResultConsumer should be done now in complete() method above, setting an error should
+                    // have no effect. We try to set an error just to make it apparent if it's broken.
                     rootResultConsumer.onError(QueryException.error("Processor closed prematurely"));
                 }
             }
