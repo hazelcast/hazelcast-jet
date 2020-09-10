@@ -659,7 +659,9 @@ public class BatchStageTest extends PipelineTestSupport {
         CompletableFuture<Object> f =
                 jet().getMap("map")
                      .getAsync("key")
-                     .thenApply(v -> { throw new RuntimeException("foo"); })
+                     .thenApply(v -> {
+                         throw new RuntimeException("foo");
+                     })
                      .toCompletableFuture();
         try {
             f.get(1, TimeUnit.SECONDS);
