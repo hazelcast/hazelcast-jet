@@ -23,6 +23,9 @@ import com.hazelcast.sql.impl.extract.QueryExtractor;
 import com.hazelcast.sql.impl.extract.QueryTarget;
 import com.hazelcast.sql.impl.type.QueryDataType;
 
+import javax.annotation.concurrent.NotThreadSafe;
+
+@NotThreadSafe
 public class JsonQueryTarget implements QueryTarget {
 
     private JsonObject json;

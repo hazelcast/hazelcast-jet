@@ -77,7 +77,7 @@ public class SqlPojoTest extends JetSqlTestSupport {
 
         assertTopicEventually(
                 name,
-                "INSERT OVERWRITE " + name + " VALUES (null, null)",
+                "INSERT INTO " + name + " VALUES (null, null)",
                 createMap(new PersonId(), new Person())
         );
         assertRowsEventuallyInAnyOrder(

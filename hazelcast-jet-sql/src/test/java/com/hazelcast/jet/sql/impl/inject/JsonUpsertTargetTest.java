@@ -16,7 +16,6 @@
 
 package com.hazelcast.jet.sql.impl.inject;
 
-import com.hazelcast.core.HazelcastJsonValue;
 import org.junit.Test;
 
 import java.math.BigDecimal;
@@ -33,11 +32,11 @@ import static java.time.ZoneId.systemDefault;
 import static java.time.ZoneOffset.UTC;
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class HazelcastJsonUpsertTargetTest {
+public class JsonUpsertTargetTest {
 
     @Test
     public void test_set() {
-        UpsertTarget target = new HazelcastJsonUpsertTarget();
+        UpsertTarget target = new JsonUpsertTarget();
         UpsertInjector nullInjector = target.createInjector("null");
         UpsertInjector stringInjector = target.createInjector("string");
         UpsertInjector characterInjector = target.createInjector("character");
@@ -84,7 +83,7 @@ public class HazelcastJsonUpsertTargetTest {
         offsetDatetimeInjector.set(OffsetDateTime.of(2020, 9, 9, 12, 23, 34, 600_000_000, UTC));
         Object value = target.conclude();
 
-        assertThat(value).isEqualTo(new HazelcastJsonValue("{"
+        assertThat(value).isEqualTo("{"
                 + "\"null\":null"
                 + ",\"string\":\"a\""
                 + ",\"character\":\"b\""
@@ -108,7 +107,7 @@ public class HazelcastJsonUpsertTargetTest {
                 + ",\"zonedDateTime\":\"2020-09-09T12:23:34.500Z\""
                 + ",\"offsetDatetime\":\"2020-09-09T12:23:34.600Z\""
                 + "}"
-        ));
+        );
     }
 
     private static ZoneOffset localOffset() {

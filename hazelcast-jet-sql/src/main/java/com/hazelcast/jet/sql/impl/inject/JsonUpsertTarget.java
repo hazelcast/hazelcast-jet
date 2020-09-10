@@ -20,7 +20,9 @@ import com.hazelcast.internal.json.Json;
 import com.hazelcast.internal.json.JsonObject;
 import com.hazelcast.sql.impl.type.QueryDataType;
 
-// TODO: can it be non-thread safe ?
+import javax.annotation.concurrent.NotThreadSafe;
+
+@NotThreadSafe
 class JsonUpsertTarget implements UpsertTarget {
 
     private JsonObject json;

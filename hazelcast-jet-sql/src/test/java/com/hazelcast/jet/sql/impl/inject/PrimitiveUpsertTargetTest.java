@@ -25,7 +25,7 @@ public class PrimitiveUpsertTargetTest {
     @Test
     public void test_set() {
         UpsertTarget target = new PrimitiveUpsertTarget();
-        UpsertInjector injector = target.createInjector("path");
+        UpsertInjector injector = target.createInjector(null);
 
         target.init();
         injector.set(1);

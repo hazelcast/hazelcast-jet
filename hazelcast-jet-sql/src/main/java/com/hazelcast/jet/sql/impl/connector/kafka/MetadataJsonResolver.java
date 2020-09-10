@@ -14,18 +14,17 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.sql.impl.connector.map;
+package com.hazelcast.jet.sql.impl.connector.kafka;
 
 import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.jet.sql.impl.connector.EntryMetadata;
 import com.hazelcast.jet.sql.impl.connector.EntryMetadataResolver;
-import com.hazelcast.jet.sql.impl.extract.HazelcastJsonQueryTargetDescriptor;
-import com.hazelcast.jet.sql.impl.inject.HazelcastJsonUpsertTargetDescriptor;
+import com.hazelcast.jet.sql.impl.extract.JsonQueryTargetDescriptor;
+import com.hazelcast.jet.sql.impl.inject.JsonUpsertTargetDescriptor;
 import com.hazelcast.jet.sql.impl.schema.MappingField;
 import com.hazelcast.sql.impl.QueryException;
 import com.hazelcast.sql.impl.extract.QueryPath;
 import com.hazelcast.sql.impl.schema.TableField;
-import com.hazelcast.sql.impl.schema.map.MapTableField;
 import com.hazelcast.sql.impl.type.QueryDataType;
 
 import java.util.ArrayList;
@@ -89,13 +88,13 @@ final class MetadataJsonResolver implements EntryMetadataResolver {
             QueryDataType type = entry.getValue().type();
             String name = entry.getValue().name();
 
-            TableField field = new MapTableField(name, type, false, path);
+            TableField field = new KafkaTableField(name, type, path);
             fields.add(field);
         }
         return new EntryMetadata(
                 fields,
-                HazelcastJsonQueryTargetDescriptor.INSTANCE,
-                HazelcastJsonUpsertTargetDescriptor.INSTANCE
+                JsonQueryTargetDescriptor.INSTANCE,
+                JsonUpsertTargetDescriptor.INSTANCE
         );
     }
 }

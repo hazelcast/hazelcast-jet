@@ -14,22 +14,25 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.sql.impl.inject;
+package com.hazelcast.jet.sql.impl.extract;
 
 import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
+import com.hazelcast.query.impl.getters.Extractors;
+import com.hazelcast.sql.impl.extract.QueryTarget;
+import com.hazelcast.sql.impl.extract.QueryTargetDescriptor;
 
-public final class JsonUpsertTargetDescriptor implements UpsertTargetDescriptor {
+public final class JsonQueryTargetDescriptor implements QueryTargetDescriptor {
 
-    public static final JsonUpsertTargetDescriptor INSTANCE = new JsonUpsertTargetDescriptor();
+    public static final JsonQueryTargetDescriptor INSTANCE = new JsonQueryTargetDescriptor();
 
-    private JsonUpsertTargetDescriptor() {
+    private JsonQueryTargetDescriptor() {
     }
 
     @Override
-    public UpsertTarget create(InternalSerializationService serializationService) {
-        return new JsonUpsertTarget();
+    public QueryTarget create(InternalSerializationService serializationService, Extractors extractors, boolean isKey) {
+        return new JsonQueryTarget();
     }
 
     @Override
@@ -47,6 +50,6 @@ public final class JsonUpsertTargetDescriptor implements UpsertTargetDescriptor 
 
     @Override
     public boolean equals(Object obj) {
-        return obj instanceof JsonUpsertTargetDescriptor;
+        return obj instanceof JsonQueryTargetDescriptor;
     }
 }

@@ -31,8 +31,8 @@ import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.time.ZonedDateTime;
 import java.util.Date;
-import java.util.Map;
 
+import static com.hazelcast.jet.core.TestUtil.createMap;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.JAVA_SERIALIZATION_FORMAT;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.JSON_SERIALIZATION_FORMAT;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_KEY_CLASS;
@@ -43,7 +43,6 @@ import static java.time.ZoneId.systemDefault;
 import static java.time.ZoneOffset.UTC;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
-import static org.assertj.core.api.Assertions.assertThat;
 
 public class SqlJsonTest extends JetSqlTestSupport {
 
@@ -67,11 +66,11 @@ public class SqlJsonTest extends JetSqlTestSupport {
                 + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + "'"
                 + ")");
 
-        sqlService.execute("INSERT OVERWRITE " + name + " VALUES (null, null)");
-
-        Map<HazelcastJsonValue, HazelcastJsonValue> map = instance().getMap(name);
-        assertThat(map.get(new HazelcastJsonValue("{\"id\":null}")).toString()).isEqualTo("{\"name\":null}");
-
+        assertMapEventually(
+                name,
+                "INSERT OVERWRITE " + name + " VALUES (null, null)",
+                createMap(new HazelcastJsonValue("{\"id\":null}"), new HazelcastJsonValue("{\"name\":null}"))
+        );
         assertRowsEventuallyInAnyOrder(
                 "SELECT * FROM " + name,
                 singletonList(new Row(null, null))
@@ -90,11 +89,11 @@ public class SqlJsonTest extends JetSqlTestSupport {
                 + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + "'"
                 + ")");
 
-        sqlService.execute("INSERT OVERWRITE " + name + " (value_name, key_name) VALUES ('Bob', 'Alice')");
-
-        Map<HazelcastJsonValue, HazelcastJsonValue> map = instance().getMap(name);
-        assertThat(map.get(new HazelcastJsonValue("{\"name\":\"Alice\"}")).toString()).isEqualTo("{\"name\":\"Bob\"}");
-
+        assertMapEventually(
+                name,
+                "INSERT OVERWRITE " + name + " (value_name, key_name) VALUES ('Bob', 'Alice')",
+                createMap(new HazelcastJsonValue("{\"name\":\"Alice\"}"), new HazelcastJsonValue("{\"name\":\"Bob\"}"))
+        );
         assertRowsEventuallyInAnyOrder(
                 "SELECT * FROM " + name,
                 singletonList(new Row("Alice", "Bob"))
@@ -185,20 +184,20 @@ public class SqlJsonTest extends JetSqlTestSupport {
                 + ")");
 
         sqlService.execute("INSERT OVERWRITE " + to + " SELECT "
-                        + "__key"
-                        + ", string "
-                        + ", boolean0 "
-                        + ", byte0 "
-                        + ", short0 "
-                        + ", int0 "
-                        + ", long0 "
-                        + ", float0 "
-                        + ", double0 "
-                        + ", bigDecimal "
-                        + ", \"localTime\" "
-                        + ", \"localDate\" "
-                        + ", \"localDateTime\" "
-                        + ", offsetDateTime"
+                + "__key"
+                + ", string "
+                + ", boolean0 "
+                + ", byte0 "
+                + ", short0 "
+                + ", int0 "
+                + ", long0 "
+                + ", float0 "
+                + ", double0 "
+                + ", bigDecimal "
+                + ", \"localTime\" "
+                + ", \"localDate\" "
+                + ", \"localDateTime\" "
+                + ", offsetDateTime"
                 + " FROM " + from);
 
         assertRowsEventuallyInAnyOrder(

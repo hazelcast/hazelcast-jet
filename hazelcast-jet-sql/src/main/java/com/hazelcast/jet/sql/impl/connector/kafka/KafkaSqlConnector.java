@@ -51,7 +51,8 @@ public class KafkaSqlConnector implements SqlConnector {
 
     public KafkaSqlConnector() {
         this.metadataResolvers = new EntryMetadataResolvers(
-                MetadataJavaResolver.INSTANCE
+                MetadataJavaResolver.INSTANCE,
+                MetadataJsonResolver.INSTANCE
         );
     }
 
