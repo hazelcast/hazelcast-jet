@@ -23,6 +23,7 @@ import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.impl.pipeline.transform.StreamSourceTransform;
 import com.hazelcast.jet.pipeline.test.TestSources;
 import com.hazelcast.jet.sql.impl.connector.SqlConnector;
+import com.hazelcast.jet.sql.impl.expression.ExpressionUtil;
 import com.hazelcast.jet.sql.impl.schema.MappingField;
 import com.hazelcast.jet.sql.impl.schema.JetTable;
 import com.hazelcast.spi.impl.NodeEngine;
@@ -84,16 +85,16 @@ public class TestStreamSqlConnector implements SqlConnector {
         );
     }
 
-    @Nullable @Override
+    @Nonnull @Override
     public Vertex fullScanReader(
             @Nonnull DAG dag,
             @Nonnull Table table,
             @Nullable String timestampField,
-            @Nonnull Expression<Boolean> predicate,
+            @Nullable Expression<Boolean> predicate,
             @Nonnull List<Expression<?>> projection
     ) {
         StreamSourceTransform<Object[]> source = (StreamSourceTransform<Object[]>) TestSources.itemStream(100,
-                (timestamp, sequence) -> new Object[]{sequence});
+                (timestamp, sequence) -> ExpressionUtil.evaluate(predicate, projection, new Object[]{sequence}));
         ProcessorMetaSupplier pms = source.metaSupplierFn.apply(EventTimePolicy.noEventTime());
         return dag.newVertex("testStream", pms);
     }
