@@ -57,7 +57,7 @@ public class SqlPojoTest extends JetSqlTestSupport {
     }
 
     @Test
-    public void test_insertNulls() {
+    public void test_nulls() {
         String name = createRandomTopic();
         sqlService.execute("CREATE MAPPING " + name + " "
                 + "TYPE " + KafkaSqlConnector.TYPE_NAME + " "

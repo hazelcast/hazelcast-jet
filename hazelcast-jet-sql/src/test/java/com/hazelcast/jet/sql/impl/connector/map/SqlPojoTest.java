@@ -81,7 +81,7 @@ public class SqlPojoTest extends JetSqlTestSupport {
     }
 
     @Test
-    public void test_insertNulls() {
+    public void test_nulls() {
         String name = generateRandomName();
         sqlService.execute(javaSerializableMapDdl(name, PersonId.class, Person.class));
 
