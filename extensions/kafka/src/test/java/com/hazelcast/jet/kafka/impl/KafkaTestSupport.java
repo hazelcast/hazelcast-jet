@@ -34,6 +34,7 @@ import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.security.auth.SecurityProtocol;
+import org.apache.kafka.common.serialization.Deserializer;
 import org.apache.kafka.common.serialization.IntegerDeserializer;
 import org.apache.kafka.common.serialization.IntegerSerializer;
 import org.apache.kafka.common.serialization.StringDeserializer;
@@ -182,12 +183,20 @@ public class KafkaTestSupport {
     }
 
     public KafkaConsumer<Integer, String> createConsumer(String... topicIds) {
+        return createConsumer(IntegerDeserializer.class, StringDeserializer.class, topicIds);
+    }
+
+    public KafkaConsumer<Integer, String> createConsumer(
+            Class<? extends Deserializer<?>> keyDeserializerClass,
+            Class<? extends Deserializer<?>> valueDeserializerClass,
+            String... topicIds
+    ) {
         Properties consumerProps = new Properties();
         consumerProps.setProperty("bootstrap.servers", brokerConnectionString);
         consumerProps.setProperty("group.id", randomString());
         consumerProps.setProperty("client.id", "consumer0");
-        consumerProps.setProperty("key.deserializer", IntegerDeserializer.class.getCanonicalName());
-        consumerProps.setProperty("value.deserializer", StringDeserializer.class.getCanonicalName());
+        consumerProps.setProperty("key.deserializer", keyDeserializerClass.getCanonicalName());
+        consumerProps.setProperty("value.deserializer", valueDeserializerClass.getCanonicalName());
         consumerProps.setProperty("isolation.level", "read_committed");
         // to make sure the consumer starts from the beginning of the topic
         consumerProps.setProperty("auto.offset.reset", "earliest");
@@ -198,15 +207,31 @@ public class KafkaTestSupport {
 
     public void assertTopicContentsEventually(
             String topic,
-            Map<Integer, String> expectedMap,
+            Map<Integer, String> expected,
             boolean assertPartitionEqualsKey
     ) {
-        try (KafkaConsumer<Integer, String> consumer = createConsumer(topic)) {
+        assertTopicContentsEventually(
+                topic,
+                expected,
+                IntegerDeserializer.class,
+                StringDeserializer.class,
+                assertPartitionEqualsKey
+        );
+    }
+
+    public <K, V> void assertTopicContentsEventually(
+            String topic,
+            Map<K, V> expected,
+            Class<? extends Deserializer<K>> keyDeserializerClass,
+            Class<? extends Deserializer<V>> valueDeserializerClass,
+            boolean assertPartitionEqualsKey
+    ) {
+        try (KafkaConsumer<Integer, String> consumer = createConsumer(keyDeserializerClass, valueDeserializerClass, topic)) {
             long timeLimit = System.nanoTime() + SECONDS.toNanos(10);
-            for (int totalRecords = 0; totalRecords < expectedMap.size() && System.nanoTime() < timeLimit; ) {
+            for (int totalRecords = 0; totalRecords < expected.size() && System.nanoTime() < timeLimit; ) {
                 ConsumerRecords<Integer, String> records = consumer.poll(Duration.ofMillis(100));
                 for (ConsumerRecord<Integer, String> record : records) {
-                    assertEquals("key=" + record.key(), expectedMap.get(record.key()), record.value());
+                    assertEquals("key=" + record.key(), expected.get(record.key()), record.value());
                     if (assertPartitionEqualsKey) {
                         assertEquals(record.key().intValue(), record.partition());
                     }

@@ -25,20 +25,17 @@ import java.util.Map;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 
-public class PersonSerializer implements Serializer<Person> {
+public class PersonIdSerializer implements Serializer<PersonId> {
 
     @Override
     public void configure(Map<String, ?> configs, boolean isKey) {
     }
 
     @Override
-    public byte[] serialize(String topic, Person person) {
+    public byte[] serialize(String topic, PersonId personId) {
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         try (DataOutputStream output = new DataOutputStream(outputStream)) {
-            output.writeInt(person.getId());
-            if (person.getName() != null) {
-                output.writeUTF(person.getName());
-            }
+            output.writeInt(personId.getId());
         } catch (IOException e) {
             throw sneakyThrow(e);
         }

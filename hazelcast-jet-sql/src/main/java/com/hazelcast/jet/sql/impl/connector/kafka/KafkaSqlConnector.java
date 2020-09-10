@@ -84,7 +84,7 @@ public class KafkaSqlConnector implements SqlConnector {
             @Nonnull Map<String, String> options,
             @Nonnull List<MappingField> resolvedFields
     ) {
-        String objectName = options.getOrDefault(OPTION_OBJECT_NAME, tableName);
+        String topicName = options.getOrDefault(OPTION_OBJECT_NAME, tableName);
 
         EntryMetadata keyMetadata = metadataResolvers.resolveMetadata(true, resolvedFields, options, null);
         EntryMetadata valueMetadata = metadataResolvers.resolveMetadata(false, resolvedFields, options, null);
@@ -97,10 +97,10 @@ public class KafkaSqlConnector implements SqlConnector {
         return new KafkaTable(
                 this,
                 schemaName,
-                objectName,
+                tableName,
                 fields,
                 new ConstantTableStatistics(0),
-                objectName,
+                topicName,
                 properties,
                 keyMetadata.getQueryTargetDescriptor(),
                 keyMetadata.getUpsertTargetDescriptor(),

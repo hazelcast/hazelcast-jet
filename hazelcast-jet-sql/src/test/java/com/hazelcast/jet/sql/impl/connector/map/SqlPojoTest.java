@@ -16,14 +16,11 @@
 
 package com.hazelcast.jet.sql.impl.connector.map;
 
-import com.hazelcast.jet.Util;
 import com.hazelcast.jet.sql.JetSqlTestSupport;
 import com.hazelcast.jet.sql.impl.connector.map.model.AllTypesValue;
 import com.hazelcast.jet.sql.impl.connector.map.model.InsuredPerson;
 import com.hazelcast.jet.sql.impl.connector.map.model.Person;
 import com.hazelcast.jet.sql.impl.connector.map.model.PersonId;
-import com.hazelcast.map.IMap;
-import com.hazelcast.sql.SqlRow;
 import com.hazelcast.sql.SqlService;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -36,17 +33,13 @@ import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.GregorianCalendar;
-import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 
 import static com.hazelcast.jet.core.TestUtil.createMap;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.JAVA_SERIALIZATION_FORMAT;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_KEY_CLASS;
-import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_OBJECT_NAME;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_SERIALIZATION_KEY_FORMAT;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_SERIALIZATION_VALUE_FORMAT;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_VALUE_CLASS;
@@ -55,8 +48,6 @@ import static java.time.ZoneId.systemDefault;
 import static java.time.ZoneOffset.UTC;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public class SqlPojoTest extends JetSqlTestSupport {
 
@@ -371,44 +362,6 @@ public class SqlPojoTest extends JetSqlTestSupport {
                                      .withZoneSameInstant(systemDefault())
                                      .toOffsetDateTime()
                 )));
-    }
-
-    @Test
-    public void test_mapNameAndTableNameDifferent() {
-        String mapName = generateRandomName();
-        String tableName = generateRandomName();
-
-        sqlService.execute("CREATE MAPPING " + tableName + " TYPE " + IMapSqlConnector.TYPE_NAME + " "
-                + "OPTIONS ("
-                + OPTION_OBJECT_NAME + " '" + mapName + "'"
-                + ", " + OPTION_SERIALIZATION_KEY_FORMAT + " '" + JAVA_SERIALIZATION_FORMAT + "'"
-                + ", " + OPTION_KEY_CLASS + " '" + String.class.getName() + "'"
-                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
-                + ", \"" + OPTION_VALUE_CLASS + "\" '" + String.class.getName() + "'"
-                + ")");
-
-        IMap<String, String> map = instance().getMap(mapName);
-        map.put("k1", "v1");
-        map.put("k2", "v2");
-
-        List<Entry<String, String>> actual = new ArrayList<>();
-        for (SqlRow row : sqlService.execute("SELECT * FROM " + tableName)) {
-            actual.add(Util.entry(row.getObject(0), row.getObject(1)));
-        }
-
-        assertThat(actual).containsExactlyInAnyOrder(map.entrySet().toArray(new Entry[0]));
-    }
-
-    @Test
-    public void when_typeMismatch_then_fail() {
-        String name = generateRandomName();
-        instance().getMap(name).put(0, 0);
-        sqlService.execute(javaSerializableMapDdl(name, String.class, String.class));
-
-        assertThatThrownBy(
-                () -> sqlService.execute("SELECT __key FROM " + name).iterator().forEachRemaining(row -> { })
-        ).hasMessageContaining("Failed to extract map entry key because of type mismatch " +
-                        "[expectedClass=java.lang.String, actualClass=java.lang.Integer]");
     }
 
     private static ZoneOffset localOffset() {

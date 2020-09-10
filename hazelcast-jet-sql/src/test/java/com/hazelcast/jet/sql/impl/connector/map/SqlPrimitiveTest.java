@@ -28,6 +28,7 @@ import java.math.BigInteger;
 import static com.hazelcast.jet.core.TestUtil.createMap;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.JAVA_SERIALIZATION_FORMAT;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_KEY_CLASS;
+import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_OBJECT_NAME;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_SERIALIZATION_KEY_FORMAT;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_SERIALIZATION_VALUE_FORMAT;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_VALUE_CLASS;
@@ -94,7 +95,7 @@ public class SqlPrimitiveTest extends JetSqlTestSupport {
     }
 
     @Test
-    public void supportsInsertWithProject() {
+    public void test_insertWithProject() {
         String name = generateRandomName();
         sqlService.execute(javaSerializableMapDdl(name, Integer.class, String.class));
 
@@ -134,6 +135,45 @@ public class SqlPrimitiveTest extends JetSqlTestSupport {
 
         assertThatThrownBy(() -> sqlService.execute("INSERT INTO " + name + " (__key, this) VALUES (1, '2')"))
                 .hasMessageContaining("Only INSERT OVERWRITE clause is supported for IMapSqlConnector");
+    }
+
+    @Test
+    public void test_mapNameAndTableNameDifferent() {
+        String mapName = generateRandomName();
+        String tableName = generateRandomName();
+
+        sqlService.execute("CREATE MAPPING " + tableName + " TYPE " + IMapSqlConnector.TYPE_NAME + " "
+                + "OPTIONS ("
+                + OPTION_OBJECT_NAME + " '" + mapName + "'"
+                + ", " + OPTION_SERIALIZATION_KEY_FORMAT + " '" + JAVA_SERIALIZATION_FORMAT + "'"
+                + ", " + OPTION_KEY_CLASS + " '" + String.class.getName() + "'"
+                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
+                + ", \"" + OPTION_VALUE_CLASS + "\" '" + String.class.getName() + "'"
+                + ")");
+
+        IMap<String, String> map = instance().getMap(mapName);
+        map.put("k1", "v1");
+        map.put("k2", "v2");
+
+        assertRowsEventuallyInAnyOrder(
+                "SELECT * FROM " + tableName,
+                asList(
+                        new Row("k1", "v1"),
+                        new Row("k2", "v2")
+                )
+        );
+    }
+
+    @Test
+    public void when_typeMismatch_then_fail() {
+        String name = generateRandomName();
+        instance().getMap(name).put(0, 0);
+        sqlService.execute(javaSerializableMapDdl(name, String.class, String.class));
+
+        assertThatThrownBy(
+                () -> sqlService.execute("SELECT __key FROM " + name).iterator().forEachRemaining(row -> { })
+        ).hasMessageContaining("Failed to extract map entry key because of type mismatch " +
+                "[expectedClass=java.lang.String, actualClass=java.lang.Integer]");
     }
 
     private static String generateRandomName() {

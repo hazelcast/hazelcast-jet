@@ -16,33 +16,28 @@
 
 package com.hazelcast.jet.sql.impl.connector.kafka.model;
 
-import org.apache.kafka.common.serialization.Serializer;
+import org.apache.kafka.common.serialization.Deserializer;
 
-import java.io.ByteArrayOutputStream;
-import java.io.DataOutputStream;
+import java.io.ByteArrayInputStream;
+import java.io.DataInputStream;
 import java.io.IOException;
 import java.util.Map;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 
-public class PersonSerializer implements Serializer<Person> {
+public class PersonIdDeserializer implements Deserializer<PersonId> {
 
     @Override
     public void configure(Map<String, ?> configs, boolean isKey) {
     }
 
     @Override
-    public byte[] serialize(String topic, Person person) {
-        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-        try (DataOutputStream output = new DataOutputStream(outputStream)) {
-            output.writeInt(person.getId());
-            if (person.getName() != null) {
-                output.writeUTF(person.getName());
-            }
+    public PersonId deserialize(String topic, byte[] bytes) {
+        try (DataInputStream input = new DataInputStream(new ByteArrayInputStream(bytes))) {
+            return new PersonId(input.readInt());
         } catch (IOException e) {
             throw sneakyThrow(e);
         }
-        return outputStream.toByteArray();
     }
 
     @Override

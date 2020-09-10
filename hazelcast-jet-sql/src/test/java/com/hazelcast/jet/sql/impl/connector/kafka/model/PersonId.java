@@ -20,17 +20,15 @@ import java.io.Serializable;
 import java.util.Objects;
 
 @SuppressWarnings("unused")
-public final class Person implements Serializable {
+public final class PersonId implements Serializable {
 
     private int id;
-    private String name;
 
-    public Person() {
+    public PersonId() {
     }
 
-    public Person(int id, String name) {
+    public PersonId(int id) {
         this.id = id;
-        this.name = name;
     }
 
     public int getId() {
@@ -41,19 +39,10 @@ public final class Person implements Serializable {
         this.id = id;
     }
 
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
     @Override
     public String toString() {
-        return "Person{" +
+        return "PersonId{" +
                 "id=" + id +
-                ", name=" + name +
                 '}';
     }
 
@@ -65,13 +54,13 @@ public final class Person implements Serializable {
         if (o == null || getClass() != o.getClass()) {
             return false;
         }
-        Person person = (Person) o;
-        return id == person.id &&
-                Objects.equals(name, person.name);
+        PersonId personId = (PersonId) o;
+        return id == personId.id;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, name);
+        return Objects.hash(id);
     }
 }
+
