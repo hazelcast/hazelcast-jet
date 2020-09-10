@@ -24,7 +24,6 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.math.BigDecimal;
-import java.math.BigInteger;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -162,7 +161,7 @@ public class SqlJsonTest extends JetSqlTestSupport {
 
         String to = generateRandomName();
         sqlService.execute("CREATE MAPPING " + to + " ("
-                + "id DECIMAL EXTERNAL NAME __key"
+                + "id VARCHAR EXTERNAL NAME __key.id"
                 + ", string VARCHAR"
                 + ", \"boolean\" BOOLEAN"
                 + ", byte TINYINT"
@@ -175,11 +174,10 @@ public class SqlJsonTest extends JetSqlTestSupport {
                 + ", \"time\" TIME"
                 + ", \"date\" DATE"
                 + ", \"timestamp\" TIMESTAMP"
-                + ", offsetDateTime TIMESTAMP WITH TIME ZONE"
+                + ", timestampTz TIMESTAMP WITH TIME ZONE"
                 + ") TYPE " + IMapSqlConnector.TYPE_NAME + " "
                 + "OPTIONS ("
-                + OPTION_SERIALIZATION_KEY_FORMAT + " '" + JAVA_SERIALIZATION_FORMAT + "'"
-                + ", " + OPTION_KEY_CLASS + " '" + BigInteger.class.getName() + "'"
+                + OPTION_SERIALIZATION_KEY_FORMAT + " '" + JSON_SERIALIZATION_FORMAT + "'"
                 + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + "'"
                 + ")");
 
@@ -203,7 +201,7 @@ public class SqlJsonTest extends JetSqlTestSupport {
         assertRowsEventuallyInAnyOrder(
                 "SELECT * FROM " + to,
                 singletonList(new Row(
-                        BigDecimal.valueOf(1),
+                        "1",
                         "string",
                         true,
                         (byte) 127,

@@ -33,16 +33,12 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.io.IOException;
-import java.math.BigDecimal;
-import java.math.BigInteger;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Map.Entry;
 import java.util.Objects;
 
 import static com.hazelcast.jet.Util.entry;
-import static com.hazelcast.jet.sql.impl.connector.SqlConnector.JAVA_SERIALIZATION_FORMAT;
-import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_KEY_CLASS;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_KEY_CLASS_ID;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_KEY_CLASS_VERSION;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_KEY_FACTORY_ID;
@@ -360,8 +356,10 @@ public class SqlPortableTest extends JetSqlTestSupport {
         sqlService.execute("CREATE MAPPING " + name + " "
                 + "TYPE " + IMapSqlConnector.TYPE_NAME + " "
                 + "OPTIONS ("
-                + OPTION_SERIALIZATION_KEY_FORMAT + " '" + JAVA_SERIALIZATION_FORMAT + "'"
-                + ", " + OPTION_KEY_CLASS + " '" + BigInteger.class.getName() + "'"
+                + OPTION_SERIALIZATION_KEY_FORMAT + " '" + PORTABLE_SERIALIZATION_FORMAT + "'"
+                + ", " + OPTION_KEY_FACTORY_ID + " '" + PERSON_ID_FACTORY_ID + "'"
+                + ", " + OPTION_KEY_CLASS_ID + " '" + PERSON_ID_CLASS_ID + "'"
+                + ", " + OPTION_KEY_CLASS_VERSION + " '" + PERSON_ID_CLASS_VERSION + "'"
                 + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + PORTABLE_SERIALIZATION_FORMAT + "'"
                 + ", \"" + OPTION_VALUE_FACTORY_ID + "\" '" + ALL_TYPES_FACTORY_ID + "'"
                 + ", \"" + OPTION_VALUE_CLASS_ID + "\" '" + ALL_TYPES_CLASS_ID + "'"
@@ -398,7 +396,7 @@ public class SqlPortableTest extends JetSqlTestSupport {
         assertRowsEventuallyInAnyOrder(
                 "SELECT * FROM " + name,
                 singletonList(new Row(
-                        BigDecimal.valueOf(13),
+                        13,
                         "string",
                         "a",
                         true,
