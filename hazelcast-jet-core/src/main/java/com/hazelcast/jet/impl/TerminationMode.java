@@ -16,6 +16,8 @@
 
 package com.hazelcast.jet.impl;
 
+import com.hazelcast.jet.Job;
+
 import javax.annotation.CheckReturnValue;
 
 import static com.hazelcast.jet.impl.TerminationMode.ActionAfterTerminate.RESTART;
@@ -32,6 +34,7 @@ public enum TerminationMode {
     SUSPEND_FORCEFUL(false, SUSPEND),
 
     // terminate and complete the job
+    /** Used to implement {@link Job#cancelAndExportSnapshot} in enterprise */
     CANCEL_GRACEFUL(true, ActionAfterTerminate.CANCEL),
     CANCEL_FORCEFUL(false, ActionAfterTerminate.CANCEL);
 
