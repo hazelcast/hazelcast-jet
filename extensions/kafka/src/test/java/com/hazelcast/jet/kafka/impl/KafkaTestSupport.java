@@ -186,9 +186,9 @@ public class KafkaTestSupport {
         return createConsumer(IntegerDeserializer.class, StringDeserializer.class, topicIds);
     }
 
-    public KafkaConsumer<Integer, String> createConsumer(
-            Class<? extends Deserializer<?>> keyDeserializerClass,
-            Class<? extends Deserializer<?>> valueDeserializerClass,
+    public <K, V> KafkaConsumer<K, V> createConsumer(
+            Class<? extends Deserializer<K>> keyDeserializerClass,
+            Class<? extends Deserializer<V>> valueDeserializerClass,
             String... topicIds
     ) {
         Properties consumerProps = new Properties();
@@ -200,7 +200,7 @@ public class KafkaTestSupport {
         consumerProps.setProperty("isolation.level", "read_committed");
         // to make sure the consumer starts from the beginning of the topic
         consumerProps.setProperty("auto.offset.reset", "earliest");
-        KafkaConsumer<Integer, String> consumer = new KafkaConsumer<>(consumerProps);
+        KafkaConsumer<K, V> consumer = new KafkaConsumer<>(consumerProps);
         consumer.subscribe(Arrays.asList(topicIds));
         return consumer;
     }
@@ -210,27 +210,7 @@ public class KafkaTestSupport {
             Map<Integer, String> expected,
             boolean assertPartitionEqualsKey
     ) {
-        assertTopicContentsEventually(
-                topic,
-                expected,
-                IntegerDeserializer.class,
-                StringDeserializer.class,
-                assertPartitionEqualsKey
-        );
-    }
-
-    public <K, V> void assertTopicContentsEventually(
-            String topic,
-            Map<K, V> expected,
-            Class<? extends Deserializer<K>> keyDeserializerClass,
-            Class<? extends Deserializer<V>> valueDeserializerClass,
-            boolean assertPartitionEqualsKey
-    ) {
-        try (KafkaConsumer<Integer, String> consumer = createConsumer(
-                keyDeserializerClass,
-                valueDeserializerClass,
-                topic
-        )) {
+        try (KafkaConsumer<Integer, String> consumer = createConsumer(topic)) {
             long timeLimit = System.nanoTime() + SECONDS.toNanos(10);
             for (int totalRecords = 0; totalRecords < expected.size() && System.nanoTime() < timeLimit; ) {
                 ConsumerRecords<Integer, String> records = consumer.poll(Duration.ofMillis(100));
@@ -239,6 +219,28 @@ public class KafkaTestSupport {
                     if (assertPartitionEqualsKey) {
                         assertEquals(record.key().intValue(), record.partition());
                     }
+                    totalRecords++;
+                }
+            }
+        }
+    }
+
+    public <K, V> void assertTopicContentsEventually(
+            String topic,
+            Map<K, V> expected,
+            Class<? extends Deserializer<K>> keyDeserializerClass,
+            Class<? extends Deserializer<V>> valueDeserializerClass
+    ) {
+        try (KafkaConsumer<K, V> consumer = createConsumer(
+                keyDeserializerClass,
+                valueDeserializerClass,
+                topic
+        )) {
+            long timeLimit = System.nanoTime() + SECONDS.toNanos(10);
+            for (int totalRecords = 0; totalRecords < expected.size() && System.nanoTime() < timeLimit; ) {
+                ConsumerRecords<K, V> records = consumer.poll(Duration.ofMillis(100));
+                for (ConsumerRecord<K, V> record : records) {
+                    assertEquals("key=" + record.key(), expected.get(record.key()), record.value());
                     totalRecords++;
                 }
             }

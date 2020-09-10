@@ -161,8 +161,7 @@ public class SqlPojoTest extends JetSqlTestSupport {
                 name,
                 expected,
                 PersonIdDeserializer.class,
-                PersonDeserializer.class,
-                false
+                PersonDeserializer.class
         );
     }
 }
