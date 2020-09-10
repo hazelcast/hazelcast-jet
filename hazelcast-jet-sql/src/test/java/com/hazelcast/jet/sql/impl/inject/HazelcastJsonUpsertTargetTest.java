@@ -20,16 +20,11 @@ import com.hazelcast.core.HazelcastJsonValue;
 import org.junit.Test;
 
 import java.math.BigDecimal;
-import java.math.BigInteger;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
-import java.util.Date;
-import java.util.GregorianCalendar;
 
-import static java.time.ZoneId.systemDefault;
 import static java.time.ZoneOffset.UTC;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -40,7 +35,6 @@ public class HazelcastJsonUpsertTargetTest {
         UpsertTarget target = new HazelcastJsonUpsertTarget();
         UpsertInjector nullInjector = target.createInjector("null");
         UpsertInjector stringInjector = target.createInjector("string");
-        UpsertInjector characterInjector = target.createInjector("character");
         UpsertInjector booleanInjector = target.createInjector("boolean");
         UpsertInjector byteInjector = target.createInjector("byte");
         UpsertInjector shortInjector = target.createInjector("short");
@@ -48,21 +42,15 @@ public class HazelcastJsonUpsertTargetTest {
         UpsertInjector longInjector = target.createInjector("long");
         UpsertInjector floatInjector = target.createInjector("float");
         UpsertInjector doubleInjector = target.createInjector("double");
-        UpsertInjector bigDecimalInjector = target.createInjector("bigDecimal");
-        UpsertInjector bigIntegerInjector = target.createInjector("bigInteger");
-        UpsertInjector localTimeInjector = target.createInjector("localTime");
-        UpsertInjector localDateInjector = target.createInjector("localDate");
-        UpsertInjector localDateTimeInjector = target.createInjector("localDateTime");
+        UpsertInjector decimalInjector = target.createInjector("decimal");
+        UpsertInjector timeInjector = target.createInjector("time");
         UpsertInjector dateInjector = target.createInjector("date");
-        UpsertInjector calendarInjector = target.createInjector("calendar");
-        UpsertInjector instantInjector = target.createInjector("instant");
-        UpsertInjector zonedDatetimeInjector = target.createInjector("zonedDateTime");
-        UpsertInjector offsetDatetimeInjector = target.createInjector("offsetDatetime");
+        UpsertInjector timestampInjector = target.createInjector("timestamp");
+        UpsertInjector timestampTzInjector = target.createInjector("timestampTz");
 
         target.init();
         nullInjector.set(null);
         stringInjector.set("string");
-        characterInjector.set('a');
         booleanInjector.set(true);
         byteInjector.set((byte) 127);
         shortInjector.set((short) 32767);
@@ -70,23 +58,16 @@ public class HazelcastJsonUpsertTargetTest {
         longInjector.set(9223372036854775807L);
         floatInjector.set(1234567890.1F);
         doubleInjector.set(123451234567890.1D);
-        bigDecimalInjector.set(new BigDecimal("9223372036854775.123"));
-        bigIntegerInjector.set(new BigInteger("9223372036854775222"));
-        localTimeInjector.set(LocalTime.of(12, 23, 34));
-        localDateInjector.set(LocalDate.of(2020, 9, 9));
-        localDateTimeInjector.set(LocalDateTime.of(2020, 9, 9, 12, 23, 34, 100_000_000));
-        dateInjector.set(Date.from(OffsetDateTime.of(2020, 9, 9, 12, 23, 34, 200_000_000, UTC).toInstant()));
-        calendarInjector.set(GregorianCalendar.from(OffsetDateTime.of(2020, 9, 9, 12, 23, 34, 300_000_000, UTC)
-                                                                  .toZonedDateTime()));
-        instantInjector.set(OffsetDateTime.of(2020, 9, 9, 12, 23, 34, 400_000_000, UTC).toInstant());
-        zonedDatetimeInjector.set(OffsetDateTime.of(2020, 9, 9, 12, 23, 34, 500_000_000, UTC).toZonedDateTime());
-        offsetDatetimeInjector.set(OffsetDateTime.of(2020, 9, 9, 12, 23, 34, 600_000_000, UTC));
+        decimalInjector.set(new BigDecimal("9223372036854775.123"));
+        timeInjector.set(LocalTime.of(12, 23, 34));
+        dateInjector.set(LocalDate.of(2020, 9, 9));
+        timestampInjector.set(LocalDateTime.of(2020, 9, 9, 12, 23, 34, 100_000_000));
+        timestampTzInjector.set(OffsetDateTime.of(2020, 9, 9, 12, 23, 34, 200_000_000, UTC));
         Object hazelcastJson = target.conclude();
 
         assertThat(hazelcastJson).isEqualTo(new HazelcastJsonValue("{"
                 + "\"null\":null"
                 + ",\"string\":\"string\""
-                + ",\"character\":\"a\""
                 + ",\"boolean\":true"
                 + ",\"byte\":127"
                 + ",\"short\":32767"
@@ -94,23 +75,12 @@ public class HazelcastJsonUpsertTargetTest {
                 + ",\"long\":9223372036854775807"
                 + ",\"float\":1.23456794E9"
                 + ",\"double\":1.234512345678901E14"
-                + ",\"bigDecimal\":\"9223372036854775.123\""
-                + ",\"bigInteger\":\"9223372036854775222\""
-                + ",\"localTime\":\"12:23:34\""
-                + ",\"localDate\":\"2020-09-09\""
-                + ",\"localDateTime\":\"2020-09-09T12:23:34.100\""
-                + ",\"date\":\"" + OffsetDateTime.of(2020, 9, 9, 12, 23, 34, 200_000_000, UTC)
-                                                 .atZoneSameInstant(localOffset()) + "\""
-                + ",\"calendar\":\"2020-09-09T12:23:34.300Z\""
-                + ",\"instant\":\"" + OffsetDateTime.of(2020, 9, 9, 12, 23, 34, 400_000_000, UTC)
-                                                    .atZoneSameInstant(localOffset()) + "\""
-                + ",\"zonedDateTime\":\"2020-09-09T12:23:34.500Z\""
-                + ",\"offsetDatetime\":\"2020-09-09T12:23:34.600Z\""
+                + ",\"decimal\":\"9223372036854775.123\""
+                + ",\"time\":\"12:23:34\""
+                + ",\"date\":\"2020-09-09\""
+                + ",\"timestamp\":\"2020-09-09T12:23:34.100\""
+                + ",\"timestampTz\":\"2020-09-09T12:23:34.200Z\""
                 + "}"
         ));
-    }
-
-    private static ZoneOffset localOffset() {
-        return systemDefault().getRules().getOffset(LocalDateTime.now());
     }
 }
