@@ -288,7 +288,6 @@ public final class UnsupportedOperationVisitor implements SqlVisitor<Void> {
 
         switch (kind) {
             case VALUES:
-                processValues(call);
                 break;
 
             case SELECT:
@@ -306,12 +305,6 @@ public final class UnsupportedOperationVisitor implements SqlVisitor<Void> {
 
             default:
                 throw unsupported(call, kind);
-        }
-    }
-
-    private void processValues(SqlCall call) {
-        if (call.getOperandList().size() > 1) {
-            throw unsupported(call, "Multiple rows in VALUES clause");
         }
     }
 

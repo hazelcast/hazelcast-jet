@@ -17,12 +17,14 @@
 package com.hazelcast.jet.sql;
 
 import com.hazelcast.jet.sql.impl.connector.test.TestBatchSqlConnector;
+import com.hazelcast.map.IMap;
 import com.hazelcast.sql.SqlService;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
+import static org.junit.Assert.assertEquals;
 
 public class SqlTest extends JetSqlTestSupport {
 
@@ -44,6 +46,25 @@ public class SqlTest extends JetSqlTestSupport {
                 "SELECT a - b FROM (VALUES (7, 11)) AS t (a, b) WHERE a + b > 4",
                 singletonList(new Row((byte) -4))
         );
+    }
+
+    @Test
+    public void test_multipleValues_select() {
+        assertRowsEventuallyInAnyOrder(
+                "SELECT * FROM (VALUES (1), (2))",
+                asList(new Row((byte) 1), new Row((byte) 2))
+        );
+    }
+
+    @Test
+    public void test_multipleValues_insert() {
+        sqlService.execute(javaSerializableMapDdl("m", Integer.class, Integer.class));
+        sqlService.execute("INSERT OVERWRITE m(__key, this) VALUES (1, 1), (2, 2)");
+
+        IMap<Integer, Integer> map = instance().getMap("m");
+        assertEquals(2, map.size());
+        assertEquals(1, (int) map.get(1));
+        assertEquals(2, (int) map.get(2));
     }
 
     @Test
