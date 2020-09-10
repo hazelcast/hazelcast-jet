@@ -39,9 +39,9 @@ public class PojoUpsertTargetTest {
         target.init();
         intFieldInjector.set(1);
         stringFieldInjector.set("2");
-        Object value = target.conclude();
+        Object pojo = target.conclude();
 
-        assertThat(value).isEqualTo(new Pojo(1, "2"));
+        assertThat(pojo).isEqualTo(new Pojo(1, "2"));
     }
 
     @Test
@@ -66,9 +66,9 @@ public class PojoUpsertTargetTest {
 
         target.init();
         injector.set(null);
-        Object value = target.conclude();
+        Object pojo = target.conclude();
 
-        assertThat(value).isNotNull();
+        assertThat(pojo).isNotNull();
     }
 
     @SuppressWarnings("unused")

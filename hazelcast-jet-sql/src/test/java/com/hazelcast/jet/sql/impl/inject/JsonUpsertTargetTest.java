@@ -56,56 +56,55 @@ public class JsonUpsertTargetTest {
         UpsertInjector calendarInjector = target.createInjector("calendar");
         UpsertInjector instantInjector = target.createInjector("instant");
         UpsertInjector zonedDatetimeInjector = target.createInjector("zonedDateTime");
-        UpsertInjector offsetDatetimeInjector = target.createInjector("offsetDatetime");
+        UpsertInjector offsetDateTimeInjector = target.createInjector("offsetDateTime");
 
         target.init();
         nullInjector.set(null);
-        stringInjector.set("a");
-        characterInjector.set('b');
+        stringInjector.set("string");
+        characterInjector.set('a');
         booleanInjector.set(true);
-        byteInjector.set((byte) 1);
-        shortInjector.set((short) 2);
-        intInjector.set(3);
-        longInjector.set(4L);
-        floatInjector.set(5.1F);
-        doubleInjector.set(5.2D);
-        bigDecimalInjector.set(new BigDecimal("6.1"));
-        bigIntegerInjector.set(new BigInteger("7"));
+        byteInjector.set((byte) 127);
+        shortInjector.set((short) 32767);
+        intInjector.set(2147483647);
+        longInjector.set(9223372036854775807L);
+        floatInjector.set(1234567890.1F);
+        doubleInjector.set(123451234567890.1D);
+        bigDecimalInjector.set(new BigDecimal("9223372036854775.123"));
+        bigIntegerInjector.set(new BigInteger("9223372036854775222"));
         localTimeInjector.set(LocalTime.of(12, 23, 34));
         localDateInjector.set(LocalDate.of(2020, 9, 9));
         localDateTimeInjector.set(LocalDateTime.of(2020, 9, 9, 12, 23, 34, 100_000_000));
         dateInjector.set(Date.from(OffsetDateTime.of(2020, 9, 9, 12, 23, 34, 200_000_000, UTC).toInstant()));
-        calendarInjector.set(
-                GregorianCalendar.from(OffsetDateTime.of(2020, 9, 9, 12, 23, 34, 300_000_000, UTC).toZonedDateTime())
-        );
+        calendarInjector.set(GregorianCalendar.from(OffsetDateTime.of(2020, 9, 9, 12, 23, 34, 300_000_000, UTC)
+                                                                  .toZonedDateTime()));
         instantInjector.set(OffsetDateTime.of(2020, 9, 9, 12, 23, 34, 400_000_000, UTC).toInstant());
         zonedDatetimeInjector.set(OffsetDateTime.of(2020, 9, 9, 12, 23, 34, 500_000_000, UTC).toZonedDateTime());
-        offsetDatetimeInjector.set(OffsetDateTime.of(2020, 9, 9, 12, 23, 34, 600_000_000, UTC));
-        Object value = target.conclude();
+        offsetDateTimeInjector.set(OffsetDateTime.of(2020, 9, 9, 12, 23, 34, 600_000_000, UTC));
+        Object json = target.conclude();
 
-        assertThat(value).isEqualTo("{"
+        assertThat(json).isEqualTo("{"
                 + "\"null\":null"
-                + ",\"string\":\"a\""
-                + ",\"character\":\"b\""
+                + ",\"string\":\"string\""
+                + ",\"character\":\"a\""
                 + ",\"boolean\":true"
-                + ",\"byte\":1"
-                + ",\"short\":2"
-                + ",\"int\":3"
-                + ",\"long\":4"
-                + ",\"float\":5.1"
-                + ",\"double\":5.2"
-                + ",\"bigDecimal\":\"6.1\""
-                + ",\"bigInteger\":\"7\""
+                + ",\"byte\":127"
+                + ",\"short\":32767"
+                + ",\"int\":2147483647"
+                + ",\"long\":9223372036854775807"
+                + ",\"float\":1.23456794E9"
+                + ",\"double\":1.234512345678901E14"
+                + ",\"bigDecimal\":\"9223372036854775.123\""
+                + ",\"bigInteger\":\"9223372036854775222\""
                 + ",\"localTime\":\"12:23:34\""
                 + ",\"localDate\":\"2020-09-09\""
                 + ",\"localDateTime\":\"2020-09-09T12:23:34.100\""
-                + ",\"date\":\"" +
-                OffsetDateTime.of(2020, 9, 9, 12, 23, 34, 200_000_000, UTC).atZoneSameInstant(localOffset()) + "\""
+                + ",\"date\":\"" + OffsetDateTime.of(2020, 9, 9, 12, 23, 34, 200_000_000, UTC)
+                                                 .atZoneSameInstant(localOffset()) + "\""
                 + ",\"calendar\":\"2020-09-09T12:23:34.300Z\""
-                + ",\"instant\":\"" +
-                OffsetDateTime.of(2020, 9, 9, 12, 23, 34, 400_000_000, UTC).atZoneSameInstant(localOffset()) + "\""
+                + ",\"instant\":\"" + OffsetDateTime.of(2020, 9, 9, 12, 23, 34, 400_000_000, UTC)
+                                                    .atZoneSameInstant(localOffset()) + "\""
                 + ",\"zonedDateTime\":\"2020-09-09T12:23:34.500Z\""
-                + ",\"offsetDatetime\":\"2020-09-09T12:23:34.600Z\""
+                + ",\"offsetDateTime\":\"2020-09-09T12:23:34.600Z\""
                 + "}"
         );
     }

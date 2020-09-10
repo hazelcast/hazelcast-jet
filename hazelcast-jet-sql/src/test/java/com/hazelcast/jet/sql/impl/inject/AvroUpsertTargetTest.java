@@ -16,7 +16,9 @@
 
 package com.hazelcast.jet.sql.impl.inject;
 
-import com.hazelcast.core.HazelcastJsonValue;
+import org.apache.avro.Schema;
+import org.apache.avro.SchemaBuilder;
+import org.apache.avro.generic.GenericRecordBuilder;
 import org.junit.Test;
 
 import java.math.BigDecimal;
@@ -33,11 +35,35 @@ import static java.time.ZoneId.systemDefault;
 import static java.time.ZoneOffset.UTC;
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class HazelcastJsonUpsertTargetTest {
+public class AvroUpsertTargetTest {
 
     @Test
     public void test_set() {
-        UpsertTarget target = new HazelcastJsonUpsertTarget();
+        Schema schema = SchemaBuilder.record("name")
+                                     .fields()
+                                     .name("null").type().nullable().record("nested").fields().endRecord().noDefault()
+                                     .name("string").type().stringType().noDefault()
+                                     .name("character").type().stringType().noDefault()
+                                     .name("boolean").type().booleanType().noDefault()
+                                     .name("byte").type().intType().noDefault()
+                                     .name("short").type().intType().noDefault()
+                                     .name("int").type().intType().noDefault()
+                                     .name("long").type().longType().noDefault()
+                                     .name("float").type().floatType().noDefault()
+                                     .name("double").type().doubleType().noDefault()
+                                     .name("bigDecimal").type().stringType().noDefault()
+                                     .name("bigInteger").type().stringType().noDefault()
+                                     .name("localTime").type().stringType().noDefault()
+                                     .name("localDate").type().stringType().noDefault()
+                                     .name("localDateTime").type().stringType().noDefault()
+                                     .name("date").type().stringType().noDefault()
+                                     .name("calendar").type().stringType().noDefault()
+                                     .name("instant").type().stringType().noDefault()
+                                     .name("zonedDateTime").type().stringType().noDefault()
+                                     .name("offsetDateTime").type().stringType().noDefault()
+                                     .endRecord();
+
+        UpsertTarget target = new AvroUpsertTarget(schema.toString());
         UpsertInjector nullInjector = target.createInjector("null");
         UpsertInjector stringInjector = target.createInjector("string");
         UpsertInjector characterInjector = target.createInjector("character");
@@ -57,7 +83,7 @@ public class HazelcastJsonUpsertTargetTest {
         UpsertInjector calendarInjector = target.createInjector("calendar");
         UpsertInjector instantInjector = target.createInjector("instant");
         UpsertInjector zonedDatetimeInjector = target.createInjector("zonedDateTime");
-        UpsertInjector offsetDatetimeInjector = target.createInjector("offsetDatetime");
+        UpsertInjector offsetDatetimeInjector = target.createInjector("offsetDateTime");
 
         target.init();
         nullInjector.set(null);
@@ -76,38 +102,41 @@ public class HazelcastJsonUpsertTargetTest {
         localDateInjector.set(LocalDate.of(2020, 9, 9));
         localDateTimeInjector.set(LocalDateTime.of(2020, 9, 9, 12, 23, 34, 100_000_000));
         dateInjector.set(Date.from(OffsetDateTime.of(2020, 9, 9, 12, 23, 34, 200_000_000, UTC).toInstant()));
-        calendarInjector.set(GregorianCalendar.from(OffsetDateTime.of(2020, 9, 9, 12, 23, 34, 300_000_000, UTC)
-                                                                  .toZonedDateTime()));
+        calendarInjector.set(
+                GregorianCalendar.from(OffsetDateTime.of(2020, 9, 9, 12, 23, 34, 300_000_000, UTC).toZonedDateTime())
+        );
         instantInjector.set(OffsetDateTime.of(2020, 9, 9, 12, 23, 34, 400_000_000, UTC).toInstant());
         zonedDatetimeInjector.set(OffsetDateTime.of(2020, 9, 9, 12, 23, 34, 500_000_000, UTC).toZonedDateTime());
         offsetDatetimeInjector.set(OffsetDateTime.of(2020, 9, 9, 12, 23, 34, 600_000_000, UTC));
-        Object hazelcastJson = target.conclude();
+        Object record = target.conclude();
 
-        assertThat(hazelcastJson).isEqualTo(new HazelcastJsonValue("{"
-                + "\"null\":null"
-                + ",\"string\":\"string\""
-                + ",\"character\":\"a\""
-                + ",\"boolean\":true"
-                + ",\"byte\":127"
-                + ",\"short\":32767"
-                + ",\"int\":2147483647"
-                + ",\"long\":9223372036854775807"
-                + ",\"float\":1.23456794E9"
-                + ",\"double\":1.234512345678901E14"
-                + ",\"bigDecimal\":\"9223372036854775.123\""
-                + ",\"bigInteger\":\"9223372036854775222\""
-                + ",\"localTime\":\"12:23:34\""
-                + ",\"localDate\":\"2020-09-09\""
-                + ",\"localDateTime\":\"2020-09-09T12:23:34.100\""
-                + ",\"date\":\"" + OffsetDateTime.of(2020, 9, 9, 12, 23, 34, 200_000_000, UTC)
-                                                 .atZoneSameInstant(localOffset()) + "\""
-                + ",\"calendar\":\"2020-09-09T12:23:34.300Z\""
-                + ",\"instant\":\"" + OffsetDateTime.of(2020, 9, 9, 12, 23, 34, 400_000_000, UTC)
-                                                    .atZoneSameInstant(localOffset()) + "\""
-                + ",\"zonedDateTime\":\"2020-09-09T12:23:34.500Z\""
-                + ",\"offsetDatetime\":\"2020-09-09T12:23:34.600Z\""
-                + "}"
-        ));
+        assertThat(record).isEqualTo(new GenericRecordBuilder(schema)
+                .set("null", null)
+                .set("string", "string")
+                .set("character", "a")
+                .set("boolean", true)
+                .set("byte", (byte) 127)
+                .set("short", (short) 32767)
+                .set("int", 2147483647)
+                .set("long", 9223372036854775807L)
+                .set("float", 1234567890.1F)
+                .set("double", 123451234567890.1D)
+                .set("bigDecimal", "9223372036854775.123")
+                .set("bigInteger", "9223372036854775222")
+                .set("localTime", "12:23:34")
+                .set("localDate", "2020-09-09")
+                .set("localDateTime", "2020-09-09T12:23:34.100")
+                .set("date", OffsetDateTime.of(2020, 9, 9, 12, 23, 34, 200_000_000, UTC)
+                                           .atZoneSameInstant(localOffset())
+                                           .toString())
+                .set("calendar", "2020-09-09T12:23:34.300Z")
+                .set("instant", OffsetDateTime.of(2020, 9, 9, 12, 23, 34, 400_000_000, UTC)
+                                              .atZoneSameInstant(localOffset())
+                                              .toString())
+                .set("zonedDateTime", "2020-09-09T12:23:34.500Z")
+                .set("offsetDateTime", "2020-09-09T12:23:34.600Z")
+                .build()
+        );
     }
 
     private static ZoneOffset localOffset() {

@@ -94,7 +94,7 @@ interface AvroMetadataResolver {
         String[] paths = paths(fields);
         QueryDataType[] types = types(fields);
 
-        FieldAssembler<Schema> schema = SchemaBuilder.record("name").namespace("namespace").fields(); // TODO:
+        FieldAssembler<Schema> schema = SchemaBuilder.record("name")/*.namespace("namespace")*/.fields(); // TODO:
         for (int i = 0; i < fields.size(); i++) {
             switch (types[i].getTypeFamily()) {
                 case BOOLEAN:

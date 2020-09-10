@@ -23,12 +23,12 @@ import com.hazelcast.nio.ObjectDataOutput;
 import java.io.IOException;
 import java.util.Objects;
 
-public class AvroUpsertTargetDescriptor implements UpsertTargetDescriptor {
+public final class AvroUpsertTargetDescriptor implements UpsertTargetDescriptor {
 
     private String schema;
 
     @SuppressWarnings("unused")
-    AvroUpsertTargetDescriptor() {
+    private AvroUpsertTargetDescriptor() {
     }
 
     public AvroUpsertTargetDescriptor(String schema) {
@@ -48,13 +48,6 @@ public class AvroUpsertTargetDescriptor implements UpsertTargetDescriptor {
     @Override
     public void readData(ObjectDataInput in) throws IOException {
         schema = in.readObject();
-    }
-
-    @Override
-    public String toString() {
-        return "AvroUpsertTargetDescriptor{" +
-                "schema='" + schema + '\'' +
-                '}';
     }
 
     @Override

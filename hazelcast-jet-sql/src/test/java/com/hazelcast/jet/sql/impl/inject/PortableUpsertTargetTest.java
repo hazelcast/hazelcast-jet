@@ -34,7 +34,6 @@ public class PortableUpsertTargetTest {
     @Test
     public void test_set() throws IOException {
         InternalSerializationService ss = new DefaultSerializationServiceBuilder().build();
-
         ClassDefinition classDefinition =
                 new ClassDefinitionBuilder(1, 2, 3)
                         .addUTFField("string")
@@ -73,9 +72,9 @@ public class PortableUpsertTargetTest {
         longFieldInjector.set(6L);
         floatFieldInjector.set(7.1F);
         doubleFieldInjector.set(7.2D);
-        Object value = target.conclude();
+        Object portable = target.conclude();
 
-        InternalGenericRecord record = ss.readAsInternalGenericRecord(ss.toData(value));
+        InternalGenericRecord record = ss.readAsInternalGenericRecord(ss.toData(portable));
         assertThat(record.readUTF("string")).isEqualTo("1");
         assertThat(record.readChar("character")).isEqualTo('2');
         assertThat(record.readBoolean("boolean")).isEqualTo(true);
@@ -123,9 +122,9 @@ public class PortableUpsertTargetTest {
 
         target.init();
         injector.set(null);
-        Object value = target.conclude();
+        Object portable = target.conclude();
 
-        InternalGenericRecord record = ss.readAsInternalGenericRecord(ss.toData(value));
+        InternalGenericRecord record = ss.readAsInternalGenericRecord(ss.toData(portable));
         assertThat(record).isNotNull();
     }
 }

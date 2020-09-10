@@ -29,8 +29,8 @@ public class PrimitiveUpsertTargetTest {
 
         target.init();
         injector.set(1);
-        Object value = target.conclude();
+        Object object = target.conclude();
 
-        assertThat(value).isEqualTo(1);
+        assertThat(object).isEqualTo(1);
     }
 }

@@ -21,7 +21,9 @@ import org.apache.avro.Schema;
 import org.apache.avro.Schema.Type;
 import org.apache.avro.generic.GenericRecordBuilder;
 
-// TODO: can it be non-thread safe ?
+import javax.annotation.concurrent.NotThreadSafe;
+
+@NotThreadSafe
 class AvroUpsertTarget implements UpsertTarget {
 
     private final Schema schema;
