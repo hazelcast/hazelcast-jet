@@ -154,7 +154,7 @@ public class SqlPojoTest extends JetSqlTestSupport {
         return topicName;
     }
 
-    private static <K, V> void assertTopicEventually(String name, String sql, Map<PersonId, Person> expected) {
+    private static void assertTopicEventually(String name, String sql, Map<PersonId, Person> expected) {
         sqlService.execute(sql);
 
         kafkaTestSupport.assertTopicContentsEventually(
