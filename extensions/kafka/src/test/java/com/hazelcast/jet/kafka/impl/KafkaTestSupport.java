@@ -226,7 +226,11 @@ public class KafkaTestSupport {
             Class<? extends Deserializer<V>> valueDeserializerClass,
             boolean assertPartitionEqualsKey
     ) {
-        try (KafkaConsumer<Integer, String> consumer = createConsumer(keyDeserializerClass, valueDeserializerClass, topic)) {
+        try (KafkaConsumer<Integer, String> consumer = createConsumer(
+                keyDeserializerClass,
+                valueDeserializerClass,
+                topic
+        )) {
             long timeLimit = System.nanoTime() + SECONDS.toNanos(10);
             for (int totalRecords = 0; totalRecords < expected.size() && System.nanoTime() < timeLimit; ) {
                 ConsumerRecords<Integer, String> records = consumer.poll(Duration.ofMillis(100));
