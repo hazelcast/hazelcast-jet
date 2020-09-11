@@ -30,12 +30,12 @@ import com.hazelcast.jet.sql.impl.opt.physical.JetRootRel;
 import com.hazelcast.jet.sql.impl.opt.physical.PhysicalRel;
 import com.hazelcast.jet.sql.impl.opt.physical.ProjectPhysicalRel;
 import com.hazelcast.jet.sql.impl.opt.physical.ValuesPhysicalRel;
+import com.hazelcast.sql.impl.calcite.opt.physical.visitor.RexToExpression;
 import com.hazelcast.sql.impl.calcite.schema.HazelcastTable;
+import com.hazelcast.sql.impl.expression.Expression;
 import com.hazelcast.sql.impl.schema.Table;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rex.RexLiteral;
-import org.apache.calcite.util.ConversionUtil;
-import org.apache.calcite.util.NlsString;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -58,28 +58,22 @@ public class CreateDagVisitor {
     }
 
     public Vertex onValues(ValuesPhysicalRel rel) {
-        List<Object[]> items = new ArrayList<>(rel.getTuples().size());
+        List<Object[]> rows = new ArrayList<>(rel.getTuples().size());
         for (List<RexLiteral> tuple : rel.getTuples()) {
             Object[] result = new Object[tuple.size()];
             for (int i = 0; i < tuple.size(); i++) {
                 RexLiteral literal = tuple.get(i);
-
-                Comparable<?> value = literal.getValue();
-                if (value instanceof NlsString) {
-                    NlsString nlsString = (NlsString) value;
-                    assert nlsString.getCharset().name().equals(ConversionUtil.NATIVE_UTF16_CHARSET_NAME);
-                    value = nlsString.getValue();
-                }
-
+                Expression<?> expression = RexToExpression.convertLiteral(literal);
+                Object value = expression.eval(null, null);
                 result[i] = rel.schema().getType(i).convert(value);
             }
-            items.add(result);
+            rows.add(result);
         }
 
         return dag.newVertex("values-src", convenientSourceP(
                 pCtx -> null,
                 (ignored, buf) -> {
-                    items.forEach(buf::add);
+                    rows.forEach(buf::add);
                     buf.close();
                 },
                 ctx -> null,

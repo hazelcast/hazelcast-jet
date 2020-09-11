@@ -46,6 +46,9 @@ public class SqlTest extends JetSqlTestSupport {
                 "SELECT a - b FROM (VALUES (7, 11)) AS t (a, b) WHERE a + b > 4",
                 singletonList(new Row((byte) -4))
         );
+
+        assertRowsEventuallyInAnyOrder("SELECT * FROM (VALUES('a'))",
+                singletonList(new Row("a")));
     }
 
     @Test
