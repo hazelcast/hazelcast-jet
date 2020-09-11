@@ -25,6 +25,7 @@ import com.hazelcast.jet.sql.impl.connector.kafka.model.PersonIdDeserializer;
 import com.hazelcast.jet.sql.impl.connector.kafka.model.PersonIdSerializer;
 import com.hazelcast.jet.sql.impl.connector.kafka.model.PersonSerializer;
 import com.hazelcast.sql.SqlService;
+import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -54,6 +55,11 @@ public class SqlPojoTest extends JetSqlTestSupport {
 
         kafkaTestSupport = new KafkaTestSupport();
         kafkaTestSupport.createKafkaCluster();
+    }
+
+    @AfterClass
+    public static void tearDownClass() {
+        kafkaTestSupport.shutdownKafkaCluster();
     }
 
     @Test

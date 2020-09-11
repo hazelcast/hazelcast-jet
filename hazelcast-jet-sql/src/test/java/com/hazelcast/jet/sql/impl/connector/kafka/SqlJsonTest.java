@@ -23,6 +23,7 @@ import com.hazelcast.sql.SqlService;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.connect.json.JsonDeserializer;
 import org.apache.kafka.connect.json.JsonSerializer;
+import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -61,6 +62,11 @@ public class SqlJsonTest extends JetSqlTestSupport {
 
         kafkaTestSupport = new KafkaTestSupport();
         kafkaTestSupport.createKafkaCluster();
+    }
+
+    @AfterClass
+    public static void tearDownClass() {
+        kafkaTestSupport.shutdownKafkaCluster();
     }
 
     @Test

@@ -24,6 +24,7 @@ import org.apache.kafka.common.serialization.IntegerDeserializer;
 import org.apache.kafka.common.serialization.IntegerSerializer;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.common.serialization.StringSerializer;
+import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -54,6 +55,11 @@ public class SqlPrimitiveTest extends JetSqlTestSupport {
 
         kafkaTestSupport = new KafkaTestSupport();
         kafkaTestSupport.createKafkaCluster();
+    }
+
+    @AfterClass
+    public static void tearDownClass() {
+        kafkaTestSupport.shutdownKafkaCluster();
     }
 
     @Test
