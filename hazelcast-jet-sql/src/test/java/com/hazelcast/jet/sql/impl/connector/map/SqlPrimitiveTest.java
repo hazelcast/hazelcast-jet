@@ -34,6 +34,7 @@ import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_SERIALIZA
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_VALUE_CLASS;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
+import static java.util.Collections.singletonList;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public class SqlPrimitiveTest extends JetSqlTestSupport {
@@ -80,6 +81,13 @@ public class SqlPrimitiveTest extends JetSqlTestSupport {
                 "INSERT OVERWRITE " + name + " SELECT * FROM " + source.getName(),
                 createMap(0, "value-0", 1, "value-1")
         );
+        assertRowsEventuallyInAnyOrder(
+                "SELECT * FROM " + name,
+                asList(
+                        new Row(0, "value-0"),
+                        new Row(1, "value-1")
+                )
+        );
     }
 
     @Test
@@ -92,6 +100,10 @@ public class SqlPrimitiveTest extends JetSqlTestSupport {
                 "INSERT OVERWRITE " + name + " (this, __key) VALUES ('2', 1)",
                 createMap(1, "2")
         );
+        assertRowsEventuallyInAnyOrder(
+                "SELECT * FROM " + name,
+                singletonList(new Row(1, "2"))
+        );
     }
 
     @Test
@@ -103,6 +115,10 @@ public class SqlPrimitiveTest extends JetSqlTestSupport {
                 name,
                 "INSERT OVERWRITE " + name + " (this, __key) VALUES (2, CAST(0 + 1 AS INT))",
                 createMap(1, "2")
+        );
+        assertRowsEventuallyInAnyOrder(
+                "SELECT * FROM " + name,
+                singletonList(new Row(1, "2"))
         );
     }
 
@@ -125,6 +141,10 @@ public class SqlPrimitiveTest extends JetSqlTestSupport {
                 name,
                 format("INSERT OVERWRITE %s (id, name) VALUES (2, 'value-2')", name),
                 createMap(2, "value-2")
+        );
+        assertRowsEventuallyInAnyOrder(
+                "SELECT * FROM " + name,
+                singletonList(new Row(2, "value-2"))
         );
     }
 
@@ -163,6 +183,13 @@ public class SqlPrimitiveTest extends JetSqlTestSupport {
                         new Row("k2", "v2")
                 )
         );
+        assertRowsEventuallyInAnyOrder(
+                "SELECT * FROM " + tableName,
+                asList(
+                        new Row("k1", "v1"),
+                        new Row("k2", "v2")
+                )
+        );
     }
 
     @Test
@@ -172,7 +199,8 @@ public class SqlPrimitiveTest extends JetSqlTestSupport {
         sqlService.execute(javaSerializableMapDdl(name, String.class, String.class));
 
         assertThatThrownBy(
-                () -> sqlService.execute("SELECT __key FROM " + name).iterator().forEachRemaining(row -> { })
+                () -> sqlService.execute("SELECT __key FROM " + name).iterator().forEachRemaining(row -> {
+                })
         ).hasMessageContaining("Failed to extract map entry key because of type mismatch " +
                 "[expectedClass=java.lang.String, actualClass=java.lang.Integer]");
     }

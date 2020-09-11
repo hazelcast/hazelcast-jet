@@ -39,6 +39,7 @@ import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_SERIALIZA
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_SERIALIZATION_VALUE_FORMAT;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_VALUE_CLASS;
 import static java.util.Arrays.asList;
+import static java.util.Collections.singletonList;
 
 public class SqlPrimitiveTest extends JetSqlTestSupport {
 
@@ -90,6 +91,10 @@ public class SqlPrimitiveTest extends JetSqlTestSupport {
                 "INSERT INTO " + name + " SELECT * FROM " + source.getName(),
                 createMap(0, "value-0", 1, "value-1")
         );
+        assertRowsEventuallyInAnyOrder(
+                "SELECT * FROM " + name,
+                asList(new Row(0, "value-0"), new Row(1, "value-1"))
+        );
     }
 
     @Test
@@ -115,6 +120,10 @@ public class SqlPrimitiveTest extends JetSqlTestSupport {
                 name,
                 "INSERT INTO " + name + " (__key, this) VALUES (1, '2')",
                 createMap(1, "2")
+        );
+        assertRowsEventuallyInAnyOrder(
+                "SELECT * FROM " + name,
+                singletonList(new Row(1, "2"))
         );
     }
 
@@ -142,6 +151,40 @@ public class SqlPrimitiveTest extends JetSqlTestSupport {
                 "INSERT OVERWRITE " + name + " (this, __key) VALUES ('2', 1)",
                 createMap(1, "2")
         );
+        assertRowsEventuallyInAnyOrder(
+                "SELECT * FROM " + name,
+                singletonList(new Row(1, "2"))
+        );
+    }
+
+    @Test
+    public void test_insertNulls() {
+        String name = createRandomTopic();
+        sqlService.execute("CREATE MAPPING " + name + " "
+                + "TYPE " + KafkaSqlConnector.TYPE_NAME + " "
+                + "OPTIONS ( "
+                + OPTION_SERIALIZATION_KEY_FORMAT + " '" + JAVA_SERIALIZATION_FORMAT + "'"
+                + ", " + OPTION_KEY_CLASS + " '" + Integer.class.getName() + "'"
+                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
+                + ", \"" + OPTION_VALUE_CLASS + "\" '" + String.class.getName() + "'"
+                + ", bootstrap.servers '" + kafkaTestSupport.getBrokerConnectionString() + "'"
+                + ", key.serializer '" + IntegerSerializer.class.getCanonicalName() + "'"
+                + ", key.deserializer '" + IntegerDeserializer.class.getCanonicalName() + "'"
+                + ", \"value.serializer\" '" + StringSerializer.class.getCanonicalName() + "'"
+                + ", \"value.deserializer\" '" + StringDeserializer.class.getCanonicalName() + "'"
+                + ", \"auto.offset.reset\" 'earliest'"
+                + ")"
+        );
+
+        assertTopicEventually(
+                name,
+                "INSERT INTO " + name + " VALUES (null, null)",
+                createMap(null, null)
+        );
+        assertRowsEventuallyInAnyOrder(
+                "SELECT * FROM " + name,
+                singletonList(new Row(null, null))
+        );
     }
 
     @Test
@@ -167,6 +210,10 @@ public class SqlPrimitiveTest extends JetSqlTestSupport {
                 name,
                 "INSERT INTO " + name + " (this, __key) VALUES (2, CAST(0 + 1 AS INT))",
                 createMap(1, "2")
+        );
+        assertRowsEventuallyInAnyOrder(
+                "SELECT * FROM " + name,
+                singletonList(new Row(1, "2"))
         );
     }
 
@@ -195,6 +242,10 @@ public class SqlPrimitiveTest extends JetSqlTestSupport {
                 name,
                 "INSERT INTO " + name + " (id, name) VALUES (2, 'value-2')",
                 createMap(2, "value-2")
+        );
+        assertRowsEventuallyInAnyOrder(
+                "SELECT * FROM " + name,
+                singletonList(new Row(2, "value-2"))
         );
     }
 
@@ -229,6 +280,10 @@ public class SqlPrimitiveTest extends JetSqlTestSupport {
                         new Row(1, "Alice"),
                         new Row(2, "Bob")
                 )
+        );
+        assertRowsEventuallyInAnyOrder(
+                "SELECT * FROM " + tableName,
+                asList(new Row(1, "Alice"), new Row(2, "Bob"))
         );
     }
 
