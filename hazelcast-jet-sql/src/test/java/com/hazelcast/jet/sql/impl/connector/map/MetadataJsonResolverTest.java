@@ -59,20 +59,6 @@ public class MetadataJsonResolverTest {
 
     @Test
     @Parameters({
-            "true, __key",
-            "false, this"
-    })
-    public void when_invalidExternalName_then_throws(boolean key, String prefix) {
-        assertThatThrownBy(() -> INSTANCE.resolveFields(
-                key,
-                singletonList(field("field", QueryDataType.INT, prefix)),
-                emptyMap(),
-                null
-        )).isInstanceOf(QueryException.class);
-    }
-
-    @Test
-    @Parameters({
             "true",
             "false"
     })

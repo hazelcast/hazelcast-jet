@@ -33,8 +33,19 @@
     </parent>
 
     <properties>
+        <confluent.version>4.1.0</confluent.version>
         <relocation.root>com.hazelcast</relocation.root>
     </properties>
+
+    <repositories>
+        <repository>
+            <id>confluent</id>
+            <url>https://packages.confluent.io/maven/</url>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </repository>
+    </repositories>
 
     <dependencies>
         <dependency>
@@ -56,6 +67,60 @@
             <version>${project.parent.version}</version>
             <optional>true</optional>
         </dependency>
+
+        <!-- KAFKA -->
+        <dependency>
+            <groupId>com.hazelcast.jet</groupId>
+            <artifactId>hazelcast-jet-kafka</artifactId>
+            <version>${project.parent.version}</version>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.kafka</groupId>
+            <artifactId>kafka_${scala.version}</artifactId>
+            <version>${kafka.version}</version>
+            <optional>true</optional>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-log4j12</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.kafka</groupId>
+            <artifactId>kafka-clients</artifactId>
+            <version>${kafka.version}</version>
+            <optional>true</optional>
+        </dependency>
+        <!-- Json -->
+        <dependency>
+            <groupId>org.apache.kafka</groupId>
+            <artifactId>connect-json</artifactId>
+            <version>${kafka.version}</version>
+            <optional>true</optional>
+        </dependency>
+        <!-- Avro -->
+        <dependency>
+            <groupId>io.confluent</groupId>
+            <artifactId>kafka-schema-registry</artifactId>
+            <version>${confluent.version}</version>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>io.confluent</groupId>
+            <artifactId>kafka-avro-serializer</artifactId>
+            <version>${confluent.version}</version>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>log4j</groupId>
+            <artifactId>log4j</artifactId>
+            <version>1.2.17</version>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- FILE -->
         <dependency>
             <groupId>org.apache.avro</groupId>
             <artifactId>avro-mapred</artifactId>
@@ -130,25 +195,6 @@
             <optional>true</optional>
         </dependency>
 
-        <dependency>
-            <groupId>com.hazelcast.jet</groupId>
-            <artifactId>hazelcast-jet-kafka</artifactId>
-            <version>${project.parent.version}</version>
-            <optional>true</optional>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.kafka</groupId>
-            <artifactId>kafka-clients</artifactId>
-            <version>${kafka.version}</version>
-            <optional>true</optional>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.kafka</groupId>
-            <artifactId>connect-json</artifactId>
-            <version>${kafka.version}</version>
-            <optional>true</optional>
-        </dependency>
-
         <!-- TODO: should not be needed -->
         <dependency>
             <groupId>commons-beanutils</groupId>
@@ -198,12 +244,6 @@
             <artifactId>hazelcast-jet-kafka</artifactId>
             <version>${project.parent.version}</version>
             <classifier>tests</classifier>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.kafka</groupId>
-            <artifactId>kafka_${scala.version}</artifactId>
-            <version>${kafka.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>

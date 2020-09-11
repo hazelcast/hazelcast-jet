@@ -88,8 +88,8 @@ public class SqlPojoTest extends JetSqlTestSupport {
         assertMapEventually(
                 name,
                 "INSERT OVERWRITE " + name + " VALUES (null, null)",
-                createMap(new PersonId(), new Person()));
-
+                createMap(new PersonId(), new Person())
+        );
         assertRowsEventuallyInAnyOrder(
                 "SELECT * FROM " + name,
                 singletonList(new Row(0, null))
@@ -133,7 +133,6 @@ public class SqlPojoTest extends JetSqlTestSupport {
                 "INSERT OVERWRITE " + name + " (value_id, key_id, name) VALUES (2, 1, 'Alice')",
                 createMap(new PersonId(1), new Person(2, "Alice"))
         );
-
         assertRowsEventuallyInAnyOrder(
                 "SELECT key_id, value_id, name FROM " + name,
                 singletonList(new Row(1, 2, "Alice"))
@@ -198,7 +197,6 @@ public class SqlPojoTest extends JetSqlTestSupport {
                         new PersonId(2), new Person(0, "Bob")
                 )
         );
-
         assertRowsEventuallyInAnyOrder(
                 "SELECT * FROM " + name,
                 asList(

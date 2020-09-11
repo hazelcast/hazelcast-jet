@@ -16,19 +16,26 @@
 
 package com.hazelcast.jet.sql.impl.connector.kafka;
 
+import com.google.common.collect.ImmutableMap;
 import com.hazelcast.jet.kafka.impl.KafkaTestSupport;
 import com.hazelcast.jet.sql.JetSqlTestSupport;
 import com.hazelcast.jet.sql.impl.connector.kafka.model.AllCanonicalTypesValue;
 import com.hazelcast.sql.SqlService;
-import org.apache.kafka.common.serialization.StringDeserializer;
-import org.apache.kafka.connect.json.JsonDeserializer;
-import org.apache.kafka.connect.json.JsonSerializer;
+import io.confluent.kafka.schemaregistry.rest.SchemaRegistryConfig;
+import io.confluent.kafka.schemaregistry.rest.SchemaRegistryRestApplication;
+import io.confluent.kafka.serializers.KafkaAvroDeserializer;
+import io.confluent.kafka.serializers.KafkaAvroSerializer;
+import org.apache.avro.Schema;
+import org.apache.avro.SchemaBuilder;
+import org.apache.avro.generic.GenericRecordBuilder;
+import org.eclipse.jetty.server.Server;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.net.ServerSocket;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -36,9 +43,10 @@ import java.time.OffsetDateTime;
 import java.time.ZonedDateTime;
 import java.util.Date;
 import java.util.Map;
+import java.util.Properties;
 
 import static com.hazelcast.jet.core.TestUtil.createMap;
-import static com.hazelcast.jet.sql.impl.connector.SqlConnector.JSON_SERIALIZATION_FORMAT;
+import static com.hazelcast.jet.sql.impl.connector.SqlConnector.AVRO_SERIALIZATION_FORMAT;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_SERIALIZATION_KEY_FORMAT;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_SERIALIZATION_VALUE_FORMAT;
 import static java.time.Instant.ofEpochMilli;
@@ -47,25 +55,35 @@ import static java.time.ZoneOffset.UTC;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 
-public class SqlJsonTest extends JetSqlTestSupport {
+public class SqlAvroTest extends JetSqlTestSupport {
 
     private static final int INITIAL_PARTITION_COUNT = 4;
 
     private static KafkaTestSupport kafkaTestSupport;
+    private static Server schemaRegistry;
 
     private static SqlService sqlService;
 
     @BeforeClass
-    public static void setUpClass() throws IOException {
+    public static void setUpClass() throws Exception {
         initialize(1, null);
         sqlService = instance().getSql();
 
         kafkaTestSupport = new KafkaTestSupport();
         kafkaTestSupport.createKafkaCluster();
+
+        Properties properties = new Properties();
+        properties.put("listeners", "http://0.0.0.0:" + randomPort());
+        properties.put("kafkastore.connection.url", kafkaTestSupport.getZookeeperConnectionString());
+        SchemaRegistryConfig config = new SchemaRegistryConfig(properties);
+        SchemaRegistryRestApplication schemaRegistryApplication = new SchemaRegistryRestApplication(config);
+        schemaRegistry = schemaRegistryApplication.createServer();
+        schemaRegistry.start();
     }
 
     @AfterClass
-    public static void tearDownClass() {
+    public static void tearDownClass() throws Exception {
+        schemaRegistry.stop();
         kafkaTestSupport.shutdownKafkaCluster();
     }
 
@@ -77,13 +95,14 @@ public class SqlJsonTest extends JetSqlTestSupport {
                 + ", name VARCHAR EXTERNAL NAME this.name"
                 + ") TYPE " + KafkaSqlConnector.TYPE_NAME + " "
                 + "OPTIONS ( "
-                + OPTION_SERIALIZATION_KEY_FORMAT + " '" + JSON_SERIALIZATION_FORMAT + "'"
-                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + "'"
+                + OPTION_SERIALIZATION_KEY_FORMAT + " '" + AVRO_SERIALIZATION_FORMAT + "'"
+                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + AVRO_SERIALIZATION_FORMAT + "'"
                 + ", bootstrap.servers '" + kafkaTestSupport.getBrokerConnectionString() + "'"
-                + ", key.serializer '" + JsonSerializer.class.getCanonicalName() + "'"
-                + ", key.deserializer '" + JsonDeserializer.class.getCanonicalName() + "'"
-                + ", \"value.serializer\" '" + JsonSerializer.class.getCanonicalName() + "'"
-                + ", \"value.deserializer\" '" + JsonDeserializer.class.getCanonicalName() + "'"
+                + ", schema.registry.url '" + schemaRegistry.getURI() + "'"
+                + ", key.serializer '" + KafkaAvroSerializer.class.getCanonicalName() + "'"
+                + ", key.deserializer '" + KafkaAvroDeserializer.class.getCanonicalName() + "'"
+                + ", \"value.serializer\" '" + KafkaAvroSerializer.class.getCanonicalName() + "'"
+                + ", \"value.deserializer\" '" + KafkaAvroDeserializer.class.getCanonicalName() + "'"
                 + ", \"auto.offset.reset\" 'earliest'"
                 + ")"
         );
@@ -91,7 +110,10 @@ public class SqlJsonTest extends JetSqlTestSupport {
         assertTopicEventually(
                 name,
                 "INSERT INTO " + name + " VALUES (null, null)",
-                createMap("{\"id\":null}", "{\"name\":null}")
+                createMap(
+                        new GenericRecordBuilder(intSchema("id")).build(),
+                        new GenericRecordBuilder(stringSchema("name")).set("name", null).build()
+                )
         );
         assertRowsEventuallyInAnyOrder(
                 "SELECT * FROM " + name,
@@ -107,13 +129,14 @@ public class SqlJsonTest extends JetSqlTestSupport {
                 + ", value_name VARCHAR EXTERNAL NAME this.name"
                 + ") TYPE " + KafkaSqlConnector.TYPE_NAME + " "
                 + "OPTIONS ( "
-                + OPTION_SERIALIZATION_KEY_FORMAT + " '" + JSON_SERIALIZATION_FORMAT + "'"
-                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + "'"
+                + OPTION_SERIALIZATION_KEY_FORMAT + " '" + AVRO_SERIALIZATION_FORMAT + "'"
+                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + AVRO_SERIALIZATION_FORMAT + "'"
                 + ", bootstrap.servers '" + kafkaTestSupport.getBrokerConnectionString() + "'"
-                + ", key.serializer '" + JsonSerializer.class.getCanonicalName() + "'"
-                + ", key.deserializer '" + JsonDeserializer.class.getCanonicalName() + "'"
-                + ", \"value.serializer\" '" + JsonSerializer.class.getCanonicalName() + "'"
-                + ", \"value.deserializer\" '" + JsonDeserializer.class.getCanonicalName() + "'"
+                + ", schema.registry.url '" + schemaRegistry.getURI() + "'"
+                + ", key.serializer '" + KafkaAvroSerializer.class.getCanonicalName() + "'"
+                + ", key.deserializer '" + KafkaAvroDeserializer.class.getCanonicalName() + "'"
+                + ", \"value.serializer\" '" + KafkaAvroSerializer.class.getCanonicalName() + "'"
+                + ", \"value.deserializer\" '" + KafkaAvroDeserializer.class.getCanonicalName() + "'"
                 + ", \"auto.offset.reset\" 'earliest'"
                 + ")"
         );
@@ -121,7 +144,10 @@ public class SqlJsonTest extends JetSqlTestSupport {
         assertTopicEventually(
                 name,
                 "INSERT INTO " + name + " (value_name, key_name) VALUES ('Bob', 'Alice')",
-                createMap("{\"name\":\"Alice\"}", "{\"name\":\"Bob\"}")
+                createMap(
+                        new GenericRecordBuilder(stringSchema("name")).set("name", "Alice").build(),
+                        new GenericRecordBuilder(stringSchema("name")).set("name", "Bob").build()
+                )
         );
         assertRowsEventuallyInAnyOrder(
                 "SELECT * FROM " + name,
@@ -137,13 +163,14 @@ public class SqlJsonTest extends JetSqlTestSupport {
                 + ", name VARCHAR"
                 + ") TYPE " + KafkaSqlConnector.TYPE_NAME + " "
                 + "OPTIONS ( "
-                + OPTION_SERIALIZATION_KEY_FORMAT + " '" + JSON_SERIALIZATION_FORMAT + "'"
-                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + "'"
+                + OPTION_SERIALIZATION_KEY_FORMAT + " '" + AVRO_SERIALIZATION_FORMAT + "'"
+                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + AVRO_SERIALIZATION_FORMAT + "'"
                 + ", bootstrap.servers '" + kafkaTestSupport.getBrokerConnectionString() + "'"
-                + ", key.serializer '" + JsonSerializer.class.getCanonicalName() + "'"
-                + ", key.deserializer '" + JsonDeserializer.class.getCanonicalName() + "'"
-                + ", \"value.serializer\" '" + JsonSerializer.class.getCanonicalName() + "'"
-                + ", \"value.deserializer\" '" + JsonDeserializer.class.getCanonicalName() + "'"
+                + ", schema.registry.url '" + schemaRegistry.getURI() + "'"
+                + ", key.serializer '" + KafkaAvroSerializer.class.getCanonicalName() + "'"
+                + ", key.deserializer '" + KafkaAvroDeserializer.class.getCanonicalName() + "'"
+                + ", \"value.serializer\" '" + KafkaAvroSerializer.class.getCanonicalName() + "'"
+                + ", \"value.deserializer\" '" + KafkaAvroDeserializer.class.getCanonicalName() + "'"
                 + ", \"auto.offset.reset\" 'earliest'"
                 + ")"
         );
@@ -158,13 +185,14 @@ public class SqlJsonTest extends JetSqlTestSupport {
                 + ", ssn BIGINT"
                 + ") TYPE " + KafkaSqlConnector.TYPE_NAME + " "
                 + "OPTIONS ( "
-                + OPTION_SERIALIZATION_KEY_FORMAT + " '" + JSON_SERIALIZATION_FORMAT + "'"
-                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + "'"
+                + OPTION_SERIALIZATION_KEY_FORMAT + " '" + AVRO_SERIALIZATION_FORMAT + "'"
+                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + AVRO_SERIALIZATION_FORMAT + "'"
                 + ", bootstrap.servers '" + kafkaTestSupport.getBrokerConnectionString() + "'"
-                + ", key.serializer '" + JsonSerializer.class.getCanonicalName() + "'"
-                + ", key.deserializer '" + JsonDeserializer.class.getCanonicalName() + "'"
-                + ", \"value.serializer\" '" + JsonSerializer.class.getCanonicalName() + "'"
-                + ", \"value.deserializer\" '" + JsonDeserializer.class.getCanonicalName() + "'"
+                + ", schema.registry.url '" + schemaRegistry.getURI() + "'"
+                + ", key.serializer '" + KafkaAvroSerializer.class.getCanonicalName() + "'"
+                + ", key.deserializer '" + KafkaAvroDeserializer.class.getCanonicalName() + "'"
+                + ", \"value.serializer\" '" + KafkaAvroSerializer.class.getCanonicalName() + "'"
+                + ", \"value.deserializer\" '" + KafkaAvroDeserializer.class.getCanonicalName() + "'"
                 + ", \"auto.offset.reset\" 'earliest'"
                 + ")"
         );
@@ -192,9 +220,7 @@ public class SqlJsonTest extends JetSqlTestSupport {
                 (short) 32767,
                 2147483647,
                 9223372036854775807L,
-                1234567890.1f,
-                123451234567890.1,
-                new BigDecimal("9223372036854775.123"),
+                1234567890.1f, 123451234567890.1, new BigDecimal("9223372036854775.123"),
                 LocalTime.of(12, 23, 34),
                 LocalDate.of(2020, 4, 15),
                 LocalDateTime.of(2020, 4, 15, 12, 23, 34, 1_000_000),
@@ -221,13 +247,14 @@ public class SqlJsonTest extends JetSqlTestSupport {
                 + ", timestampTz TIMESTAMP WITH TIME ZONE"
                 + ") TYPE " + KafkaSqlConnector.TYPE_NAME + " "
                 + "OPTIONS ( "
-                + OPTION_SERIALIZATION_KEY_FORMAT + " '" + JSON_SERIALIZATION_FORMAT + "'"
-                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + "'"
+                + OPTION_SERIALIZATION_KEY_FORMAT + " '" + AVRO_SERIALIZATION_FORMAT + "'"
+                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + AVRO_SERIALIZATION_FORMAT + "'"
                 + ", bootstrap.servers '" + kafkaTestSupport.getBrokerConnectionString() + "'"
-                + ", key.serializer '" + JsonSerializer.class.getCanonicalName() + "'"
-                + ", key.deserializer '" + JsonDeserializer.class.getCanonicalName() + "'"
-                + ", \"value.serializer\" '" + JsonSerializer.class.getCanonicalName() + "'"
-                + ", \"value.deserializer\" '" + JsonDeserializer.class.getCanonicalName() + "'"
+                + ", schema.registry.url '" + schemaRegistry.getURI() + "'"
+                + ", key.serializer '" + KafkaAvroSerializer.class.getCanonicalName() + "'"
+                + ", key.deserializer '" + KafkaAvroDeserializer.class.getCanonicalName() + "'"
+                + ", \"value.serializer\" '" + KafkaAvroSerializer.class.getCanonicalName() + "'"
+                + ", \"value.deserializer\" '" + KafkaAvroDeserializer.class.getCanonicalName() + "'"
                 + ", \"auto.offset.reset\" 'earliest'"
                 + ")"
         );
@@ -281,14 +308,35 @@ public class SqlJsonTest extends JetSqlTestSupport {
         return topicName;
     }
 
-    private static void assertTopicEventually(String name, String sql, Map<String, String> expected) {
+    private static void assertTopicEventually(String name, String sql, Map<Object, Object> expected) {
         sqlService.execute(sql);
 
         kafkaTestSupport.assertTopicContentsEventually(
                 name,
                 expected,
-                StringDeserializer.class,
-                StringDeserializer.class
+                KafkaAvroDeserializer.class,
+                KafkaAvroDeserializer.class,
+                ImmutableMap.of("schema.registry.url", schemaRegistry.getURI().toString())
         );
+    }
+
+    private static Schema intSchema(String fieldName) {
+        return SchemaBuilder.record("jet.sql")
+                            .fields()
+                            .name(fieldName).type().unionOf().nullType().and().intType().endUnion().nullDefault()
+                            .endRecord();
+    }
+
+    private static Schema stringSchema(String fieldName) {
+        return SchemaBuilder.record("jet.sql")
+                            .fields()
+                            .name(fieldName).type().nullable().stringType().stringDefault(null)
+                            .endRecord();
+    }
+
+    private static int randomPort() throws IOException {
+        try (ServerSocket server = new ServerSocket(0)) {
+            return server.getLocalPort();
+        }
     }
 }

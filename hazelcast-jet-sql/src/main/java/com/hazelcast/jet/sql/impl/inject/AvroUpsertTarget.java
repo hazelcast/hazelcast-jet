@@ -18,7 +18,6 @@ package com.hazelcast.jet.sql.impl.inject;
 
 import com.hazelcast.sql.impl.type.QueryDataType;
 import org.apache.avro.Schema;
-import org.apache.avro.Schema.Type;
 import org.apache.avro.generic.GenericRecordBuilder;
 
 import javax.annotation.concurrent.NotThreadSafe;
@@ -36,19 +35,24 @@ class AvroUpsertTarget implements UpsertTarget {
 
     @Override
     public UpsertInjector createInjector(String path) {
-        if (schema.getField(path).schema().getType().equals(Type.BOOLEAN)) {
-            return value -> record.set(path, value);
-        } else if (schema.getField(path).schema().getType().equals(Type.INT)) {
-            return value -> record.set(path, value);
-        } else if (schema.getField(path).schema().getType().equals(Type.LONG)) {
-            return value -> record.set(path, value);
-        } else if (schema.getField(path).schema().getType().equals(Type.FLOAT)) {
-            return value -> record.set(path, value);
-        } else if (schema.getField(path).schema().getType().equals(Type.DOUBLE)) {
-            return value -> record.set(path, value);
-        } else {
-            return value -> record.set(path, QueryDataType.VARCHAR.convert(value));
-        }
+        return value -> {
+            if (value == null) {
+                record.set(path, null);
+            } else if (value instanceof Byte) {
+                record.set(path, ((Byte) value).intValue());
+            } else if (value instanceof Short) {
+                record.set(path, ((Short) value).intValue());
+            } else if (value instanceof Boolean
+                    || value instanceof Integer
+                    || value instanceof Long
+                    || value instanceof Float
+                    || value instanceof Double
+            ) {
+                record.set(path, value);
+            } else {
+                record.set(path, QueryDataType.VARCHAR.convert(value));
+            }
+        };
     }
 
     @Override

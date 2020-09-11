@@ -33,12 +33,15 @@ public class AvroQueryTarget implements QueryTarget {
 
     @Override
     public QueryExtractor createExtractor(String path, QueryDataType type) {
-        return () -> {
-            Object value = record.get(path);
-            if (value instanceof Utf8) {
-                value = ((Utf8) value).toString();
-            }
-            return type.convert(value);
-        };
+        return () -> type.convert(extractValue(record, path));
+    }
+
+    private static Object extractValue(GenericRecord record, String path) {
+        Object value = record.get(path);
+        if (value instanceof Utf8) {
+            return ((Utf8) value).toString();
+        } else {
+            return value;
+        }
     }
 }

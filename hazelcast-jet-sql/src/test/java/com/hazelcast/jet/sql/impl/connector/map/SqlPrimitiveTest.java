@@ -149,7 +149,8 @@ public class SqlPrimitiveTest extends JetSqlTestSupport {
                 + ", " + OPTION_KEY_CLASS + " '" + String.class.getName() + "'"
                 + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
                 + ", \"" + OPTION_VALUE_CLASS + "\" '" + String.class.getName() + "'"
-                + ")");
+                + ")"
+        );
 
         IMap<String, String> map = instance().getMap(mapName);
         map.put("k1", "v1");

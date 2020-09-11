@@ -148,7 +148,8 @@ public class SqlAvroTest extends JetSqlTestSupport {
                 + ", \"localDate\" "
                 + ", \"localDateTime\" "
                 + ", offsetDateTime"
-                + " FROM " + from);
+                + " FROM " + from
+        );
 
         assertRowsEventuallyInAnyOrder(
                 "SELECT * FROM " + to,

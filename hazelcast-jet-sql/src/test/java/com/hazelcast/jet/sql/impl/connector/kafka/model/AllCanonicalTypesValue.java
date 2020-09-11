@@ -36,9 +36,9 @@ public final class AllCanonicalTypesValue implements Serializable {
     private short short0;
     private int int0;
     private long long0;
-    private BigDecimal bigDecimal;
     private float float0;
     private double double0;
+    private BigDecimal bigDecimal;
     private LocalTime localTime;
     private LocalDate localDate;
     private LocalDateTime localDateTime;
@@ -49,7 +49,7 @@ public final class AllCanonicalTypesValue implements Serializable {
 
     @SuppressWarnings({"checkstyle:ParameterNumber", "checkstyle:ExecutableStatementCount"})
     public AllCanonicalTypesValue(String string, boolean boolean0, byte byte0, short short0, int int0, long long0,
-                                  BigDecimal bigDecimal, float float0, double double0, LocalTime localTime,
+                                  float float0, double double0, BigDecimal bigDecimal, LocalTime localTime,
                                   LocalDate localDate, LocalDateTime localDateTime, OffsetDateTime offsetDateTime
     ) {
         this.string = string;
@@ -58,9 +58,9 @@ public final class AllCanonicalTypesValue implements Serializable {
         this.short0 = short0;
         this.int0 = int0;
         this.long0 = long0;
-        this.bigDecimal = bigDecimal;
         this.float0 = float0;
         this.double0 = double0;
+        this.bigDecimal = bigDecimal;
         this.localTime = localTime;
         this.localDate = localDate;
         this.localDateTime = localDateTime;
@@ -115,14 +115,6 @@ public final class AllCanonicalTypesValue implements Serializable {
         this.long0 = long0;
     }
 
-    public BigDecimal getBigDecimal() {
-        return bigDecimal;
-    }
-
-    public void setBigDecimal(BigDecimal bigDecimal) {
-        this.bigDecimal = bigDecimal;
-    }
-
     public float getFloat0() {
         return float0;
     }
@@ -137,6 +129,14 @@ public final class AllCanonicalTypesValue implements Serializable {
 
     public void setDouble0(double double0) {
         this.double0 = double0;
+    }
+
+    public BigDecimal getBigDecimal() {
+        return bigDecimal;
+    }
+
+    public void setBigDecimal(BigDecimal bigDecimal) {
+        this.bigDecimal = bigDecimal;
     }
 
     public LocalTime getLocalTime() {
@@ -180,9 +180,9 @@ public final class AllCanonicalTypesValue implements Serializable {
                 ", short0=" + short0 +
                 ", int0=" + int0 +
                 ", long0=" + long0 +
-                ", bigDecimal=" + bigDecimal +
                 ", float0=" + float0 +
                 ", double0=" + double0 +
+                ", bigDecimal=" + bigDecimal +
                 ", localTime=" + localTime +
                 ", localDate=" + localDate +
                 ", localDateTime=" + localDateTime +
@@ -222,9 +222,9 @@ public final class AllCanonicalTypesValue implements Serializable {
                 short0,
                 int0,
                 long0,
-                bigDecimal,
                 float0,
                 double0,
+                bigDecimal,
                 localTime,
                 localDate,
                 localDateTime,

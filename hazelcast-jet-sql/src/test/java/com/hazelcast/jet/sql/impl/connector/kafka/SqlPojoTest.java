@@ -18,6 +18,9 @@ package com.hazelcast.jet.sql.impl.connector.kafka;
 
 import com.hazelcast.jet.kafka.impl.KafkaTestSupport;
 import com.hazelcast.jet.sql.JetSqlTestSupport;
+import com.hazelcast.jet.sql.impl.connector.kafka.model.AllCanonicalTypesValue;
+import com.hazelcast.jet.sql.impl.connector.kafka.model.AllCanonicalTypesValueDeserializer;
+import com.hazelcast.jet.sql.impl.connector.kafka.model.AllCanonicalTypesValueSerializer;
 import com.hazelcast.jet.sql.impl.connector.kafka.model.Person;
 import com.hazelcast.jet.sql.impl.connector.kafka.model.PersonDeserializer;
 import com.hazelcast.jet.sql.impl.connector.kafka.model.PersonId;
@@ -30,6 +33,13 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.OffsetDateTime;
+import java.time.ZonedDateTime;
+import java.util.Date;
 import java.util.Map;
 
 import static com.hazelcast.jet.core.TestUtil.createMap;
@@ -38,6 +48,9 @@ import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_KEY_CLASS
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_SERIALIZATION_KEY_FORMAT;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_SERIALIZATION_VALUE_FORMAT;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_VALUE_CLASS;
+import static java.time.Instant.ofEpochMilli;
+import static java.time.ZoneId.systemDefault;
+import static java.time.ZoneOffset.UTC;
 import static java.util.Collections.singletonList;
 
 public class SqlPojoTest extends JetSqlTestSupport {
@@ -152,6 +165,117 @@ public class SqlPojoTest extends JetSqlTestSupport {
                 "SELECT  key_id, value_id, name FROM " + name,
                 singletonList(new Row(1, 2, "Alice"))
         );
+    }
+
+    @Test
+    public void test_allTypes() {
+        String from = generateRandomName();
+        instance().getMap(from).put(1, new AllCanonicalTypesValue(
+                "string",
+                true,
+                (byte) 127,
+                (short) 32767,
+                2147483647,
+                9223372036854775807L,
+                1234567890.1f,
+                123451234567890.1,
+                new BigDecimal("9223372036854775.123"),
+                LocalTime.of(12, 23, 34),
+                LocalDate.of(2020, 4, 15),
+                LocalDateTime.of(2020, 4, 15, 12, 23, 34, 1_000_000),
+                ZonedDateTime.of(2020, 4, 15, 12, 23, 34, 200_000_000, UTC)
+                             .withZoneSameInstant(systemDefault())
+                             .toOffsetDateTime()
+        ));
+
+        String to = createRandomTopic();
+        sqlService.execute("CREATE MAPPING " + to + " "
+                + " TYPE " + KafkaSqlConnector.TYPE_NAME + " "
+                + "OPTIONS ( "
+                + OPTION_SERIALIZATION_KEY_FORMAT + " '" + JAVA_SERIALIZATION_FORMAT + "'"
+                + ", " + OPTION_KEY_CLASS + " '" + PersonId.class.getName() + "'"
+                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
+                + ", \"" + OPTION_VALUE_CLASS + "\" '" + AllCanonicalTypesValue.class.getName() + "'"
+                + ", bootstrap.servers '" + kafkaTestSupport.getBrokerConnectionString() + "'"
+                + ", key.serializer '" + PersonIdSerializer.class.getCanonicalName() + "'"
+                + ", key.deserializer '" + PersonIdDeserializer.class.getCanonicalName() + "'"
+                + ", \"value.serializer\" '" + AllCanonicalTypesValueSerializer.class.getCanonicalName() + "'"
+                + ", \"value.deserializer\" '" + AllCanonicalTypesValueDeserializer.class.getCanonicalName() + "'"
+                + ", \"auto.offset.reset\" 'earliest'"
+                + ")"
+        );
+
+        sqlService.execute("INSERT INTO " + to + "("
+                + "id"
+                + ", string"
+                + ", boolean0"
+                + ", byte0"
+                + ", short0"
+                + ", int0"
+                + ", long0"
+                + ", float0"
+                + ", double0"
+                + ", bigDecimal"
+                + ", \"localTime\""
+                + ", localDate"
+                + ", localDateTime"
+                + ", offsetDateTime"
+                + ") SELECT "
+                + "__key"
+                + ", string "
+                + ", boolean0 "
+                + ", byte0 "
+                + ", short0 "
+                + ", int0 "
+                + ", long0 "
+                + ", float0 "
+                + ", double0 "
+                + ", bigDecimal "
+                + ", \"localTime\" "
+                + ", \"localDate\" "
+                + ", \"localDateTime\" "
+                + ", offsetDateTime"
+                + " FROM " + from
+        );
+
+        assertRowsEventuallyInAnyOrder(
+                "SELECT "
+                        + "id"
+                        + ", string"
+                        + ", boolean0"
+                        + ", byte0"
+                        + ", short0"
+                        + ", int0"
+                        + ", long0"
+                        + ", float0"
+                        + ", double0"
+                        + ", bigDecimal"
+                        + ", \"localTime\""
+                        + ", localDate"
+                        + ", localDateTime"
+                        + ", offsetDateTime"
+                        + " FROM " + to,
+                singletonList(new Row(
+                        1,
+                        "string",
+                        true,
+                        (byte) 127,
+                        (short) 32767,
+                        2147483647,
+                        9223372036854775807L,
+                        1234567890.1f,
+                        123451234567890.1,
+                        new BigDecimal("9223372036854775.123"),
+                        LocalTime.of(12, 23, 34),
+                        LocalDate.of(2020, 4, 15),
+                        LocalDateTime.of(2020, 4, 15, 12, 23, 34, 1_000_000),
+                        OffsetDateTime.ofInstant(Date.from(ofEpochMilli(1586953414200L)).toInstant(), systemDefault())
+                ))
+        );
+    }
+
+    private static String generateRandomName() {
+        return "pojo_" + randomString().replace('-', '_');
     }
 
     private static String createRandomTopic() {
