@@ -667,6 +667,7 @@ public class BatchStageTest extends PipelineTestSupport {
             f.get(1, TimeUnit.SECONDS);
         } catch (TimeoutException expected) {
         } catch (ExecutionException e) {
+            logger.info("", e);
             fail("Issue https://github.com/hazelcast/hazelcast/issues/17515 was fixed, revert code in " +
                     "GeneralStage.mapUsingIMap()");
         }
