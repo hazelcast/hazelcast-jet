@@ -55,12 +55,12 @@ public class JsonQueryTarget implements QueryTarget {
             return null;
         } else if (value.isBoolean()) {
             return value.asBoolean();
-        } else if (value.isNumber()) {
-            if (value.toString().contains(".")) {
-                return value.asDouble();
-            } else {
-                return value.asLong();
-            }
+        } else if (value.isInt()) {
+            return value.asInt();
+        } else if (value.isLong()) {
+            return value.asLong();
+        } else if (value.isFloat() || value.isDouble()) {
+            return value.asDouble();
         } else if (value.isTextual()) {
             return value.asText();
         } else {
