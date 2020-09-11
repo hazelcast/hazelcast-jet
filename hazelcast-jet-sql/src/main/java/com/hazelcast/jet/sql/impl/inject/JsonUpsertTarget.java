@@ -16,8 +16,8 @@
 
 package com.hazelcast.jet.sql.impl.inject;
 
-import com.hazelcast.internal.json.Json;
-import com.hazelcast.internal.json.JsonObject;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.hazelcast.sql.impl.type.QueryDataType;
 
 import javax.annotation.concurrent.NotThreadSafe;
@@ -25,7 +25,9 @@ import javax.annotation.concurrent.NotThreadSafe;
 @NotThreadSafe
 class JsonUpsertTarget implements UpsertTarget {
 
-    private JsonObject json;
+    private static final ObjectMapper MAPPER = new ObjectMapper();
+
+    private ObjectNode json;
 
     JsonUpsertTarget() {
     }
@@ -33,35 +35,37 @@ class JsonUpsertTarget implements UpsertTarget {
     @Override
     public UpsertInjector createInjector(String path) {
         return value -> {
-            if (value instanceof Boolean) {
-                json.add(path, (boolean) value);
+            if (value == null) {
+                json.putNull(path);
+            } else if (value instanceof Boolean) {
+                json.put(path, (boolean) value);
             } else if (value instanceof Byte) {
-                json.add(path, (byte) value);
+                json.put(path, (byte) value);
             } else if (value instanceof Short) {
-                json.add(path, (short) value);
+                json.put(path, (short) value);
             } else if (value instanceof Integer) {
-                json.add(path, (int) value);
+                json.put(path, (int) value);
             } else if (value instanceof Long) {
-                json.add(path, (long) value);
+                json.put(path, (long) value);
             } else if (value instanceof Float) {
-                json.add(path, (float) value);
+                json.put(path, (float) value);
             } else if (value instanceof Double) {
-                json.add(path, (double) value);
+                json.put(path, (double) value);
             } else {
-                json.add(path, (String) QueryDataType.VARCHAR.convert(value));
+                json.put(path, (String) QueryDataType.VARCHAR.convert(value));
             }
         };
     }
 
     @Override
     public void init() {
-        json = Json.object();
+        json = MAPPER.createObjectNode();
     }
 
     @Override
     public Object conclude() {
-        JsonObject json = this.json;
+        ObjectNode json = this.json;
         this.json = null;
-        return json.toString();
+        return json;
     }
 }

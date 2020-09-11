@@ -21,7 +21,8 @@ import com.hazelcast.jet.sql.JetSqlTestSupport;
 import com.hazelcast.jet.sql.impl.connector.kafka.model.AllCanonicalTypesValue;
 import com.hazelcast.sql.SqlService;
 import org.apache.kafka.common.serialization.StringDeserializer;
-import org.apache.kafka.common.serialization.StringSerializer;
+import org.apache.kafka.connect.json.JsonDeserializer;
+import org.apache.kafka.connect.json.JsonSerializer;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -73,10 +74,10 @@ public class SqlJsonTest extends JetSqlTestSupport {
                 + OPTION_SERIALIZATION_KEY_FORMAT + " '" + JSON_SERIALIZATION_FORMAT + "'"
                 + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + "'"
                 + ", bootstrap.servers '" + kafkaTestSupport.getBrokerConnectionString() + "'"
-                + ", key.serializer '" + StringSerializer.class.getCanonicalName() + "'"
-                + ", key.deserializer '" + StringDeserializer.class.getCanonicalName() + "'"
-                + ", \"value.serializer\" '" + StringSerializer.class.getCanonicalName() + "'"
-                + ", \"value.deserializer\" '" + StringDeserializer.class.getCanonicalName() + "'"
+                + ", key.serializer '" + JsonSerializer.class.getCanonicalName() + "'"
+                + ", key.deserializer '" + JsonDeserializer.class.getCanonicalName() + "'"
+                + ", \"value.serializer\" '" + JsonSerializer.class.getCanonicalName() + "'"
+                + ", \"value.deserializer\" '" + JsonDeserializer.class.getCanonicalName() + "'"
                 + ", \"auto.offset.reset\" 'earliest'"
                 + ")"
         );
@@ -103,10 +104,10 @@ public class SqlJsonTest extends JetSqlTestSupport {
                 + OPTION_SERIALIZATION_KEY_FORMAT + " '" + JSON_SERIALIZATION_FORMAT + "'"
                 + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + "'"
                 + ", bootstrap.servers '" + kafkaTestSupport.getBrokerConnectionString() + "'"
-                + ", key.serializer '" + StringSerializer.class.getCanonicalName() + "'"
-                + ", key.deserializer '" + StringDeserializer.class.getCanonicalName() + "'"
-                + ", \"value.serializer\" '" + StringSerializer.class.getCanonicalName() + "'"
-                + ", \"value.deserializer\" '" + StringDeserializer.class.getCanonicalName() + "'"
+                + ", key.serializer '" + JsonSerializer.class.getCanonicalName() + "'"
+                + ", key.deserializer '" + JsonDeserializer.class.getCanonicalName() + "'"
+                + ", \"value.serializer\" '" + JsonSerializer.class.getCanonicalName() + "'"
+                + ", \"value.deserializer\" '" + JsonDeserializer.class.getCanonicalName() + "'"
                 + ", \"auto.offset.reset\" 'earliest'"
                 + ")"
         );
@@ -133,10 +134,10 @@ public class SqlJsonTest extends JetSqlTestSupport {
                 + OPTION_SERIALIZATION_KEY_FORMAT + " '" + JSON_SERIALIZATION_FORMAT + "'"
                 + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + "'"
                 + ", bootstrap.servers '" + kafkaTestSupport.getBrokerConnectionString() + "'"
-                + ", key.serializer '" + StringSerializer.class.getCanonicalName() + "'"
-                + ", key.deserializer '" + StringDeserializer.class.getCanonicalName() + "'"
-                + ", \"value.serializer\" '" + StringSerializer.class.getCanonicalName() + "'"
-                + ", \"value.deserializer\" '" + StringDeserializer.class.getCanonicalName() + "'"
+                + ", key.serializer '" + JsonSerializer.class.getCanonicalName() + "'"
+                + ", key.deserializer '" + JsonDeserializer.class.getCanonicalName() + "'"
+                + ", \"value.serializer\" '" + JsonSerializer.class.getCanonicalName() + "'"
+                + ", \"value.deserializer\" '" + JsonDeserializer.class.getCanonicalName() + "'"
                 + ", \"auto.offset.reset\" 'earliest'"
                 + ")"
         );
@@ -154,10 +155,10 @@ public class SqlJsonTest extends JetSqlTestSupport {
                 + OPTION_SERIALIZATION_KEY_FORMAT + " '" + JSON_SERIALIZATION_FORMAT + "'"
                 + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + "'"
                 + ", bootstrap.servers '" + kafkaTestSupport.getBrokerConnectionString() + "'"
-                + ", key.serializer '" + StringSerializer.class.getCanonicalName() + "'"
-                + ", key.deserializer '" + StringDeserializer.class.getCanonicalName() + "'"
-                + ", \"value.serializer\" '" + StringSerializer.class.getCanonicalName() + "'"
-                + ", \"value.deserializer\" '" + StringDeserializer.class.getCanonicalName() + "'"
+                + ", key.serializer '" + JsonSerializer.class.getCanonicalName() + "'"
+                + ", key.deserializer '" + JsonDeserializer.class.getCanonicalName() + "'"
+                + ", \"value.serializer\" '" + JsonSerializer.class.getCanonicalName() + "'"
+                + ", \"value.deserializer\" '" + JsonDeserializer.class.getCanonicalName() + "'"
                 + ", \"auto.offset.reset\" 'earliest'"
                 + ")"
         );
@@ -217,10 +218,10 @@ public class SqlJsonTest extends JetSqlTestSupport {
                 + OPTION_SERIALIZATION_KEY_FORMAT + " '" + JSON_SERIALIZATION_FORMAT + "'"
                 + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + "'"
                 + ", bootstrap.servers '" + kafkaTestSupport.getBrokerConnectionString() + "'"
-                + ", key.serializer '" + StringSerializer.class.getCanonicalName() + "'"
-                + ", key.deserializer '" + StringDeserializer.class.getCanonicalName() + "'"
-                + ", \"value.serializer\" '" + StringSerializer.class.getCanonicalName() + "'"
-                + ", \"value.deserializer\" '" + StringDeserializer.class.getCanonicalName() + "'"
+                + ", key.serializer '" + JsonSerializer.class.getCanonicalName() + "'"
+                + ", key.deserializer '" + JsonDeserializer.class.getCanonicalName() + "'"
+                + ", \"value.serializer\" '" + JsonSerializer.class.getCanonicalName() + "'"
+                + ", \"value.deserializer\" '" + JsonDeserializer.class.getCanonicalName() + "'"
                 + ", \"auto.offset.reset\" 'earliest'"
                 + ")"
         );

@@ -16,10 +16,15 @@
 
 package com.hazelcast.jet.sql.impl.extract;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hazelcast.sql.impl.extract.QueryExtractor;
 import com.hazelcast.sql.impl.extract.QueryTarget;
+import junitparams.JUnitParamsRunner;
+import junitparams.Parameters;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -43,10 +48,33 @@ import static com.hazelcast.sql.impl.type.QueryDataType.VARCHAR;
 import static java.time.ZoneOffset.UTC;
 import static org.assertj.core.api.Assertions.assertThat;
 
+@RunWith(JUnitParamsRunner.class)
 public class JsonQueryTargetTest {
 
+    @SuppressWarnings("unused")
+    private Object[] values() throws IOException {
+        String json = "{"
+                + " \"null\": null"
+                + ", \"string\": \"string\""
+                + ", \"boolean\": true"
+                + ", \"byte\": 127"
+                + ", \"short\": 32767"
+                + ", \"int\": 2147483647"
+                + ", \"long\": 9223372036854775807"
+                + ", \"float\": 1234567890.1"
+                + ", \"double\": 123451234567890.1"
+                + ", \"decimal\": \"9223372036854775.123\""
+                + ", \"time\": \"12:23:34\""
+                + ", \"date\": \"2020-09-09\""
+                + ", \"timestamp\": \"2020-09-09T12:23:34.1\""
+                + ", \"timestampTz\": \"2020-09-09T12:23:34.2Z\""
+                + "}";
+        return new Object[]{new Object[]{json}, new Object[]{new ObjectMapper().readTree(json)}};
+    }
+
     @Test
-    public void test_get() {
+    @Parameters(method = "values")
+    public void test_get(Object value) {
         QueryTarget target = new JsonQueryTarget();
         QueryExtractor nonExistingExtractor = target.createExtractor("nonExisting", OBJECT);
         QueryExtractor nullExtractor = target.createExtractor("null", OBJECT);
@@ -64,23 +92,7 @@ public class JsonQueryTargetTest {
         QueryExtractor timestampExtractor = target.createExtractor("timestamp", TIMESTAMP);
         QueryExtractor timestampTzExtractor = target.createExtractor("timestampTz", TIMESTAMP_WITH_TZ_OFFSET_DATE_TIME);
 
-        target.setTarget("{"
-                + " \"null\": null"
-                + ", \"string\": \"string\""
-                + ", \"boolean\": true"
-                + ", \"byte\": 127"
-                + ", \"short\": 32767"
-                + ", \"int\": 2147483647"
-                + ", \"long\": 9223372036854775807"
-                + ", \"float\": 1234567890.1"
-                + ", \"double\": 123451234567890.1"
-                + ", \"decimal\": \"9223372036854775.123\""
-                + ", \"time\": \"12:23:34\""
-                + ", \"date\": \"2020-09-09\""
-                + ", \"timestamp\": \"2020-09-09T12:23:34.1\""
-                + ", \"timestampTz\": \"2020-09-09T12:23:34.2Z\""
-                + "}"
-        );
+        target.setTarget(value);
 
         assertThat(nonExistingExtractor.get()).isNull();
         assertThat(nullExtractor.get()).isNull();

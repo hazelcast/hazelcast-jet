@@ -39,7 +39,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Stream;
 
-import static com.hazelcast.function.FunctionEx.identity;
 import static com.hazelcast.jet.impl.util.Util.firstLineFromFirstFile;
 import static com.hazelcast.jet.sql.impl.connector.file.JsonMetadataResolver.paths;
 import static com.hazelcast.jet.sql.impl.connector.file.JsonMetadataResolver.resolveFieldsFromSample;
@@ -129,7 +128,7 @@ final class LocalJsonMetadataResolver implements JsonMetadataResolver {
         @SuppressWarnings("checkstyle:MagicNumber") // TODO:
         public ProcessorMetaSupplier writeProcessor(List<TableField> fields) {
             // TODO: customizable settings
-            return WriteFileP.metaSupplier(path, identity(), charset, null, 1024, true);
+            return WriteFileP.metaSupplier(path, Object::toString, charset, null, 1024, true);
         }
     }
 }

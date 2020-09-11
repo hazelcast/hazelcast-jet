@@ -16,23 +16,32 @@
 
 package com.hazelcast.jet.sql.impl.extract;
 
-import com.hazelcast.internal.json.Json;
-import com.hazelcast.internal.json.JsonObject;
-import com.hazelcast.internal.json.JsonValue;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.hazelcast.sql.impl.extract.QueryExtractor;
 import com.hazelcast.sql.impl.extract.QueryTarget;
 import com.hazelcast.sql.impl.type.QueryDataType;
 
 import javax.annotation.concurrent.NotThreadSafe;
+import java.io.IOException;
+
+import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 
 @NotThreadSafe
 public class JsonQueryTarget implements QueryTarget {
 
-    private JsonObject json;
+    private static final ObjectMapper MAPPER = new ObjectMapper();
+
+    private ObjectNode json;
 
     @Override
     public void setTarget(Object target) {
-        json = Json.parse((String) target).asObject();
+        try {
+            json = (ObjectNode) (target instanceof ObjectNode ? target : MAPPER.readTree((String) target));
+        } catch (IOException e) {
+            throw sneakyThrow(e);
+        }
     }
 
     @Override
@@ -40,8 +49,8 @@ public class JsonQueryTarget implements QueryTarget {
         return () -> type.convert(extractValue(json, path));
     }
 
-    private static Object extractValue(JsonObject json, String path) {
-        JsonValue value = json.get(path);
+    private static Object extractValue(JsonNode json, String path) {
+        JsonNode value = json.get(path);
         if (value == null || value.isNull()) {
             return null;
         } else if (value.isBoolean()) {
@@ -52,8 +61,8 @@ public class JsonQueryTarget implements QueryTarget {
             } else {
                 return value.asLong();
             }
-        } else if (value.isString()) {
-            return value.asString();
+        } else if (value.isTextual()) {
+            return value.asText();
         } else {
             return value;
         }
