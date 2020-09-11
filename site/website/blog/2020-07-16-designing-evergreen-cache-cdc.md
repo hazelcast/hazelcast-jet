@@ -205,16 +205,14 @@ data, depending on the underlying disk technology.
 
 [Hazelcast Jet](https://jet-start.sh/) is a distributed stream
 processing framework built on Hazelcast and combines a cache with
-fault-tolerant data processing.
-It has sources and sinks to integrate with several file, messaging and
-database systems (such as Amazon S3, Kafka, message brokers and
-relational databases).
+fault-tolerant data processing. It has sources and sinks to integrate
+with various file-, messaging- and database systems (such as Amazon S3,
+Kafka, message brokers and relational databases).
 
 Jet also provides a Debezium module where it can process change events
 directly from the database and write them to its distributed key-value
-store.
-This avoids having to write the intermediate messages to Kafka and then
-read again to be written to a separate cache.
+store. This avoids having to write the intermediate messages to Kafka
+and then read again to be written to a separate cache.
 
 ## Putting it all together
 
@@ -270,28 +268,26 @@ The pipeline definition is quite straightforward:
 ```java
 pipeline.readFrom(source)                                       //1
         .withoutTimestamps()
-        .map(r -> {
-            Person person = r.value().toObject(Person.class);   //2
-            return Util.entry(person.id, person);               //3
-        })
-        .writeTo(Sinks.remoteMap(                               //4
-                "entities",                                     //5
-                new CustomClientConfig(env.get("CACHE_HOST"))   //6
+        .writeTo(CdcSinks.remoteMap(                            //2
+                "entities",                                     //3
+                new CustomClientConfig(env.get("CACHE_HOST")),  //4
+                r -> r.key().toMap().get("id"),                 //5
+                r -> r.value().toObject(Person.class)           //6
         ));
 ```
 
-1. Get a stream of Jet `ChangeRecord`
+1. Get a stream of Jet `ChangeRecord` items
 
-2. Convert `ChangeRecord` to a regular `Person` POJO
+2. Create the sink to write to, a remote map
 
-3. Wrap `Person` objects into `Map.Entry`s keyed by ID
+3. Name of the remote map
 
-4. Create the sink to write to, a remote map
+4. Client configuration so it can connect to the right host, cluster
+and instance
 
-5. Name of the remote map
+5. Provide mapping from `ChangeRecord` to cache key
 
-6. Client configuration so it can connect to the right host, cluster
-  and instance
+6. Provide mapping from `ChangeRecord` to cache value (`Person` POJO)
 
 ```java
 public class CustomClientConfig extends ClientConfig {
