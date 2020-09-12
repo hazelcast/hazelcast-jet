@@ -96,6 +96,16 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
     }
 
     @Nonnull @Override
+    public BatchStage<T> partialSort(long maxSize) {
+        return attachPartialSort(null, maxSize);
+    }
+
+    @Nonnull @Override
+    public BatchStage<T> partialSort(@Nonnull ComparatorEx<? super T> comparator, long maxSize) {
+        return attachPartialSort(comparator, maxSize);
+    }
+
+    @Nonnull @Override
     public <R> BatchStage<R> map(@Nonnull FunctionEx<? super T, ? extends R> mapFn) {
         return attachMap(mapFn);
     }

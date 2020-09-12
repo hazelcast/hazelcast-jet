@@ -1010,6 +1010,21 @@ public class BatchStageTest extends PipelineTestSupport {
     }
 
     @Test
+    public void partialSort() {
+        // Given
+        List<Integer> input = IntStream.range(0, itemCount).boxed().collect(toList());
+        List<Integer> expected = new ArrayList<>(input).subList(0, itemCount / 2);
+        Collections.shuffle(input);
+
+        // When
+        BatchStage<Integer> sorted = batchStageFromList(input).partialSort(itemCount / 2);
+
+        // Then
+        sorted.writeTo(assertOrdered(expected));
+        execute();
+    }
+
+    @Test
     public void hashJoin() {
         // Given
         List<Integer> input = sequence(itemCount);

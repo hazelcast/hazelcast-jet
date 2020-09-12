@@ -137,7 +137,12 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
 
     @Nonnull
     <RET> RET attachSort(@Nullable ComparatorEx<? super T> comparator) {
-        return attach(new SortTransform<>(this.transform, comparator), fnAdapter);
+        return attach(new SortTransform<>(this.transform, comparator, null), fnAdapter);
+    }
+
+    @Nonnull
+    <RET> RET attachPartialSort(@Nullable ComparatorEx<? super T> comparator, long maxSize) {
+        return attach(new SortTransform<>(this.transform, comparator, maxSize), fnAdapter);
     }
 
     @Nonnull

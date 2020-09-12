@@ -29,6 +29,7 @@ import com.hazelcast.logging.ILogger;
 import com.hazelcast.logging.Logger;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.BitSet;
 import java.util.Comparator;
 import java.util.function.Predicate;
@@ -56,6 +57,7 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
     private final WatermarkCoalescer watermarkCoalescer;
     private final BitSet receivedBarriers; // indicates if current snapshot is received on the queue
     private final ILogger logger;
+    private long maxSize = -1;
 
     // Tells whether we are operating in exactly-once or at-least-once mode.
     // In other words, whether a barrier from all queues must be present before
@@ -88,10 +90,13 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
     @SuppressWarnings("unchecked")
     public ConcurrentInboundEdgeStream(
             @Nonnull ConcurrentConveyor<Object> conveyor, int ordinal, int priority, boolean waitForAllBarriers,
-            @Nonnull String debugName, @Nonnull ComparatorEx<?> comparator
+            @Nonnull String debugName, @Nonnull ComparatorEx<?> comparator, @Nullable Long maxSize
     ) {
         this(conveyor, ordinal, priority, waitForAllBarriers, debugName);
         this.comparator = (Comparator<Object>) comparator;
+        if (maxSize != null) {
+            this.maxSize = maxSize;
+        }
     }
 
     @Override
@@ -184,6 +189,10 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
         int batchSize = -1;
         Object lastItem = null;
         do {
+            if (maxSize == 0) {
+                tracker.done();
+                return tracker.toProgressState();
+            }
             int minIndex = 0;
             Object minItem = null;
             for (int queueIndex = 0; queueIndex < conveyor.queueCount(); queueIndex++) {
@@ -220,6 +229,9 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
             lastItem = minItem;
             Object polledItem = unwrap(conveyor.queue(minIndex).poll());
             tracker.madeProgress();
+            if (maxSize > 0) {
+                maxSize--;
+            }
             assert polledItem == minItem : "polledItem != minItem";
             boolean consumeResult = dest.test(minItem);
             assert consumeResult : "consumeResult is false";

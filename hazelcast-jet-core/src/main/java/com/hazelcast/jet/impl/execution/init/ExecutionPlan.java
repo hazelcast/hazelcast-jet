@@ -604,7 +604,7 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
     ) {
         return new ConcurrentInboundEdgeStream(conveyor, inEdge.destOrdinal(), inEdge.priority(),
                 jobConfig.getProcessingGuarantee() == ProcessingGuarantee.EXACTLY_ONCE,
-                debugName, inEdge.getComparator());
+                debugName, inEdge.getComparator(), inEdge.getMaxSize());
     }
 
     public List<Processor> getProcessors() {
