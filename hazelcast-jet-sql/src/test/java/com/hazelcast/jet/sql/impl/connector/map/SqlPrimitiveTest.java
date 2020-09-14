@@ -179,13 +179,6 @@ public class SqlPrimitiveTest extends JetSqlTestSupport {
                         new Row("k2", "v2")
                 )
         );
-        assertRowsEventuallyInAnyOrder(
-                "SELECT * FROM " + tableName,
-                asList(
-                        new Row("k1", "v1"),
-                        new Row("k2", "v2")
-                )
-        );
     }
 
     @Test
