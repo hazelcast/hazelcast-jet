@@ -16,6 +16,8 @@
 
 package com.hazelcast.jet.sql.impl.parse;
 
+import com.hazelcast.sql.impl.QueryException;
+import com.hazelcast.sql.impl.SqlErrorCode;
 import org.apache.calcite.sql.SqlCreate;
 import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlKind;
@@ -34,6 +36,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
 
+import static com.hazelcast.jet.sql.impl.schema.MappingCatalog.SCHEMA_NAME_PUBLIC;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toMap;
 
@@ -57,7 +60,10 @@ public class SqlCreateExternalMapping extends SqlCreate {
             SqlParserPos pos
     ) {
         super(OPERATOR, pos, replace, ifNotExists);
-
+        if (name.names.size() == 2 && !SCHEMA_NAME_PUBLIC.equals(name.names.get(0)) || name.names.size() > 2) {
+            throw QueryException.error(SqlErrorCode.PARSING,
+                    "The mapping must be created in the \"public\" (the default) schema");
+        }
         this.name = requireNonNull(name, "Name should not be null");
         this.columns = requireNonNull(columns, "Columns should not be null");
         this.type = requireNonNull(type, "Type should not be null");

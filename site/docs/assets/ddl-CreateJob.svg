@@ -1,0 +1,65 @@
+<!--
+Created using https://bottlecaps.de/rr/ui?
+
+CreateJob ::= 'CREATE' 'JOB' ('IF' 'NOT' 'EXISTS')? JobName Options? 'AS' QuerySpec
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="841" height="69">
+    <defs>
+        <style type="text/css">
+            @namespace "http://www.w3.org/2000/svg";
+            .line                 {fill: none; stroke: #453700; stroke-width: 1;}
+            .bold-line            {stroke: #141000; shape-rendering: crispEdges; stroke-width: 2;}
+            .thin-line            {stroke: #1F1800; shape-rendering: crispEdges}
+            .filled               {fill: #453700; stroke: none;}
+            text.terminal         {font-family: Verdana, Sans-serif;
+            font-size: 12px;
+            fill: #141000;
+            font-weight: bold;
+            }
+            text.nonterminal      {font-family: Verdana, Sans-serif;
+            font-size: 12px;
+            fill: #1A1400;
+            font-weight: normal;
+            }
+            text.regexp           {font-family: Verdana, Sans-serif;
+            font-size: 12px;
+            fill: #1F1800;
+            font-weight: normal;
+            }
+            rect, circle, polygon {fill: #453700; stroke: #453700;}
+            rect.terminal         {fill: #FFF5CC; stroke: #453700; stroke-width: 1;}
+            rect.nonterminal      {fill: #FFF9E3; stroke: #453700; stroke-width: 1;}
+            rect.text             {fill: none; stroke: none;}
+            polygon.regexp        {fill: #FFFCEF; stroke: #453700; stroke-width: 1;}
+        </style>
+    </defs>
+    <polygon points="9 17 1 13 1 21"/>
+    <polygon points="17 17 9 13 9 21"/>
+    <rect x="31" y="3" width="72" height="32" rx="10"/>
+    <rect x="29" y="1" width="72" height="32" class="terminal" rx="10"/>
+    <text class="terminal" x="39" y="21">CREATE</text>
+    <rect x="123" y="3" width="46" height="32" rx="10"/>
+    <rect x="121" y="1" width="46" height="32" class="terminal" rx="10"/>
+    <text class="terminal" x="131" y="21">JOB</text>
+    <rect x="209" y="35" width="34" height="32" rx="10"/>
+    <rect x="207" y="33" width="34" height="32" class="terminal" rx="10"/>
+    <text class="terminal" x="217" y="53">IF</text>
+    <rect x="263" y="35" width="48" height="32" rx="10"/>
+    <rect x="261" y="33" width="48" height="32" class="terminal" rx="10"/>
+    <text class="terminal" x="271" y="53">NOT</text>
+    <rect x="331" y="35" width="70" height="32" rx="10"/>
+    <rect x="329" y="33" width="70" height="32" class="terminal" rx="10"/>
+    <text class="terminal" x="339" y="53">EXISTS</text><a xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="#JobName" xlink:title="JobName">
+    <rect x="441" y="3" width="78" height="32"/>
+    <rect x="439" y="1" width="78" height="32" class="nonterminal"/>
+    <text class="nonterminal" x="449" y="21">JobName</text></a><a xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="#Options" xlink:title="Options">
+    <rect x="559" y="35" width="68" height="32"/>
+    <rect x="557" y="33" width="68" height="32" class="nonterminal"/>
+    <text class="nonterminal" x="567" y="53">Options</text></a><rect x="667" y="3" width="38" height="32" rx="10"/>
+    <rect x="665" y="1" width="38" height="32" class="terminal" rx="10"/>
+    <text class="terminal" x="675" y="21">AS</text><a xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="#QuerySpec" xlink:title="QuerySpec">
+    <rect x="725" y="3" width="88" height="32"/>
+    <rect x="723" y="1" width="88" height="32" class="nonterminal"/>
+    <text class="nonterminal" x="733" y="21">QuerySpec</text></a><svg:path xmlns:svg="http://www.w3.org/2000/svg" class="line" d="m17 17 h2 m0 0 h10 m72 0 h10 m0 0 h10 m46 0 h10 m20 0 h10 m0 0 h202 m-232 0 h20 m212 0 h20 m-252 0 q10 0 10 10 m232 0 q0 -10 10 -10 m-242 10 v12 m232 0 v-12 m-232 12 q0 10 10 10 m212 0 q10 0 10 -10 m-222 10 h10 m34 0 h10 m0 0 h10 m48 0 h10 m0 0 h10 m70 0 h10 m20 -32 h10 m78 0 h10 m20 0 h10 m0 0 h78 m-108 0 h20 m88 0 h20 m-128 0 q10 0 10 10 m108 0 q0 -10 10 -10 m-118 10 v12 m108 0 v-12 m-108 12 q0 10 10 10 m88 0 q10 0 10 -10 m-98 10 h10 m68 0 h10 m20 -32 h10 m38 0 h10 m0 0 h10 m88 0 h10 m3 0 h-3"/>
+    <polygon points="831 17 839 13 839 21"/>
+    <polygon points="831 17 823 13 823 21"/></svg>

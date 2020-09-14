@@ -36,8 +36,8 @@ import static java.util.Arrays.asList;
 
 public class MappingCatalog implements TableResolver {
 
-    private static final String SCHEMA_NAME_INFORMATION_SCHEMA = "information_schema";
-    private static final String SCHEMA_NAME_PUBLIC = "public";
+    public static final String SCHEMA_NAME_PUBLIC = "public";
+    public static final String SCHEMA_NAME_INFORMATION_SCHEMA = "information_schema";
 
     private static final List<List<String>> SEARCH_PATHS = asList(
             asList(CATALOG, SCHEMA_NAME_INFORMATION_SCHEMA),

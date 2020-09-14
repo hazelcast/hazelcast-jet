@@ -93,10 +93,10 @@ SqlCreate SqlCreateExternalMapping(Span span, boolean replace) :
     [
         <IF> <NOT> <EXISTS> { ifNotExists = true; }
     ]
-    name = SimpleIdentifier()
+    name = CompoundIdentifier()
     columns = MappingColumns()
     <TYPE>
-    type = CompoundIdentifier()
+    type = SimpleIdentifier()
     [
         <OPTIONS>
         sqlOptions = SqlOptions()
@@ -155,7 +155,7 @@ SqlMappingColumn MappingColumn() :
     name = SimpleIdentifier() { span = span(); }
     type = SqlDataType()
     [
-        <EXTERNAL> <NAME> externalName = CompoundIdentifier()
+        <EXTERNAL> <NAME> externalName = SimpleIdentifier()
     ]
     {
         return new SqlMappingColumn(name, type, externalName, span.end(this));
@@ -269,7 +269,7 @@ SqlDrop SqlDropExternalMapping(Span span, boolean replace) :
     [
         <IF> <EXISTS> { ifExists = true; }
     ]
-    name = SimpleIdentifier()
+    name = CompoundIdentifier()
     {
         return new SqlDropExternalMapping(name, ifExists, pos.plus(getPos()));
     }
@@ -315,7 +315,7 @@ SqlOption SqlOption() :
     SqlNode value;
 }
 {
-    key = CompoundIdentifier() { span = span(); }
+    key = SimpleIdentifier() { span = span(); }
     value = StringLiteral()
     {
         return new SqlOption(key, value, span.end(this));

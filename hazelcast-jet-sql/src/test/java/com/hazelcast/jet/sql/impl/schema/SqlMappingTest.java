@@ -27,6 +27,7 @@ import org.junit.Test;
 
 import java.util.Map;
 
+import static java.util.Collections.singletonList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -105,6 +106,46 @@ public class SqlMappingTest extends JetSqlTestSupport {
         sqlService.execute("CREATE MAPPING t2 TYPE teststream");
         sqlService.execute("CREATE MAPPING t3 TYPE TESTSTREAM");
         sqlService.execute("CREATE MAPPING t4 TYPE tEsTsTrEaM");
+    }
+
+    @Test
+    public void test_mappingWithExplicitExternalKeyword() {
+        sqlService.execute("CREATE EXTERNAL MAPPING t TYPE TestStream");
+        sqlService.execute("DROP EXTERNAL MAPPING t");
+    }
+
+    @Test
+    public void when_nonPublicSchema_then_fail() {
+        assertThatThrownBy(() -> sqlService.execute("CREATE MAPPING foo_schema.t TYPE TestStream"))
+                .hasMessageContaining("The mapping must be created in the \"public\" (the default) schema");
+    }
+
+    @Test
+    public void test_explicitPublicSchema() {
+        sqlService.execute("CREATE MAPPING public.t TYPE TestStream");
+        sqlService.execute("DROP MAPPING public.t");
+    }
+
+    @Test
+    public void when_compoundIdentifierForType_then_fail() {
+        assertThatThrownBy(() -> sqlService.execute("CREATE MAPPING t TYPE foo.bar.TestStream"))
+                .hasMessageContaining("Encountered \".\" at line 1, column 26");
+    }
+
+    @Test
+    public void when_compoundIdentifierForOption_then_fail() {
+        assertThatThrownBy(() -> sqlService.execute("CREATE MAPPING t TYPE TestStream OPTIONS (foo.bar.option 'value')"))
+                .hasMessageContaining("Encountered \".\" at line 1, column 46");
+    }
+
+    @Test
+    public void when_dropFromPartitionedSchema_then_fail() {
+        instance().getMap("my_map").put(42, 43);
+        // check that we can query that table
+        assertRowsEventuallyInAnyOrder("SELECT * FROM partitioned.my_map", singletonList(new Row(42, 43)));
+        assertThatThrownBy(() -> sqlService.execute("DROP MAPPING partitioned.my_map"))
+                // TODO a better message would be "You can't delete from 'partitioned' schema", but this is good enough
+                .hasMessageContaining("'partitioned.my_map' mapping does not exist");
     }
 
     private static String generateRandomName() {
