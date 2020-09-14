@@ -367,8 +367,9 @@ public class Edge implements IdentifiedDataSerializable {
      * Specifies that the data will travel along this edge in a monotonically
      * ascending order according to the provided comparator. The tasklet of
      * the destination processor will ensure it always takes the least item
-     * of all those available at the head of the input queues. Every source
-     * processor must ensure it emits the data according to the same ordering.
+     * of all those available at the head of the input queues. For this
+     * behavior to be useful, every upstream processor must ensure it emits the
+     * data according to the same ordering.
      * <p>
      * The purpose of this edge type is distributed sorting. The processors
      * of the source vertex sort their partial data and the processor in the
