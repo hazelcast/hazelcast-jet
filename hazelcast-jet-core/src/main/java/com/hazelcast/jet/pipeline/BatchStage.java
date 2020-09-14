@@ -69,7 +69,6 @@ public interface BatchStage<T> extends GeneralStage<T> {
 
     /**
      * Attaches a stage that sorts the input items according to their natural order.
-     * Sorting is only available for batch use cases.
      * <p>
      * Sample usage:
      * <pre>{@code
@@ -86,14 +85,13 @@ public interface BatchStage<T> extends GeneralStage<T> {
     /**
      * Attaches a stage that sorts the input items according to the supplied
      * comparator.
-     * Sorting is only available for batch use cases.
      * <p>
      * Sample usage:
      * <pre>{@code
-     * items.sort(ComparatorEx::reverseOrder)
+     * trades.sort(Trade::ticker)
      * }</pre>
      *
-     * @param comparator the user provided comparator that will be used for sorting.
+     * @param comparator the user-provided comparator that will be used for sorting.
      * @return the newly attached stage
      * @since 4.3
      */
