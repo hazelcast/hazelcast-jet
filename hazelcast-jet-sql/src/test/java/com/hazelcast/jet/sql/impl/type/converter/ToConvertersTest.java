@@ -22,8 +22,6 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.time.Instant;
 import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
-import java.util.Calendar;
 import java.util.Date;
 import java.util.GregorianCalendar;
 
@@ -34,6 +32,7 @@ import static com.hazelcast.sql.impl.type.QueryDataType.TIMESTAMP_WITH_TZ_DATE;
 import static com.hazelcast.sql.impl.type.QueryDataType.TIMESTAMP_WITH_TZ_INSTANT;
 import static com.hazelcast.sql.impl.type.QueryDataType.TIMESTAMP_WITH_TZ_ZONED_DATE_TIME;
 import static com.hazelcast.sql.impl.type.QueryDataType.VARCHAR_CHARACTER;
+import static java.time.ZoneOffset.UTC;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class ToConvertersTest {
@@ -54,16 +53,16 @@ public class ToConvertersTest {
 
     @Test
     public void test_dateConversion() {
-        OffsetDateTime time = OffsetDateTime.of(2020, 9, 8, 11, 4, 0, 123, ZoneOffset.UTC);
+        OffsetDateTime time = OffsetDateTime.of(2020, 9, 8, 11, 4, 0, 123, UTC);
 
         Object converted = getToConverter(TIMESTAMP_WITH_TZ_DATE).convert(time);
 
-        assertThat(converted).isEqualTo(new Date(120, Calendar.SEPTEMBER, 8, 13, 4, 0));
+        assertThat(converted).isEqualTo(Date.from(OffsetDateTime.of(2020, 9, 8, 11, 4, 0, 123, UTC).toInstant()));
     }
 
     @Test
     public void test_calendarConversion() {
-        OffsetDateTime time = OffsetDateTime.of(2020, 9, 8, 11, 4, 0, 0, ZoneOffset.UTC);
+        OffsetDateTime time = OffsetDateTime.of(2020, 9, 8, 11, 4, 0, 0, UTC);
 
         Object converted = getToConverter(TIMESTAMP_WITH_TZ_CALENDAR).convert(time);
 
@@ -72,7 +71,7 @@ public class ToConvertersTest {
 
     @Test
     public void test_instantConversion() {
-        OffsetDateTime time = OffsetDateTime.of(2020, 9, 8, 11, 4, 0, 0, ZoneOffset.UTC);
+        OffsetDateTime time = OffsetDateTime.of(2020, 9, 8, 11, 4, 0, 0, UTC);
 
         Object converted = getToConverter(TIMESTAMP_WITH_TZ_INSTANT).convert(time);
 
@@ -81,7 +80,7 @@ public class ToConvertersTest {
 
     @Test
     public void test_zonedDateTimeConversion() {
-        OffsetDateTime time = OffsetDateTime.of(2020, 9, 8, 11, 4, 0, 0, ZoneOffset.UTC);
+        OffsetDateTime time = OffsetDateTime.of(2020, 9, 8, 11, 4, 0, 0, UTC);
 
         Object converted = getToConverter(TIMESTAMP_WITH_TZ_ZONED_DATE_TIME).convert(time);
 
