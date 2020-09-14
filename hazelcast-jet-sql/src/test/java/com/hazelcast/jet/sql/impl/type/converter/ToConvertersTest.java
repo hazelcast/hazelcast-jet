@@ -57,7 +57,7 @@ public class ToConvertersTest {
 
         Object converted = getToConverter(TIMESTAMP_WITH_TZ_DATE).convert(time);
 
-        assertThat(converted).isEqualTo(Date.from(OffsetDateTime.of(2020, 9, 8, 11, 4, 0, 123, UTC).toInstant()));
+        assertThat(converted).isEqualTo(Date.from(time.toInstant()));
     }
 
     @Test
