@@ -18,7 +18,7 @@ package com.hazelcast.jet.sql.impl.connector.map;
 
 import com.hazelcast.core.HazelcastJsonValue;
 import com.hazelcast.jet.sql.JetSqlTestSupport;
-import com.hazelcast.jet.sql.impl.connector.map.model.AllCanonicalTypesValue;
+import com.hazelcast.jet.sql.impl.connector.test.AllTypesSqlConnector;
 import com.hazelcast.sql.SqlService;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -27,9 +27,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.time.OffsetDateTime;
 import java.time.ZonedDateTime;
-import java.util.Date;
 
 import static com.hazelcast.jet.core.TestUtil.createMap;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.JAVA_SERIALIZATION_FORMAT;
@@ -37,7 +35,6 @@ import static com.hazelcast.jet.sql.impl.connector.SqlConnector.JSON_SERIALIZATI
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_KEY_CLASS;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_SERIALIZATION_KEY_FORMAT;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_SERIALIZATION_VALUE_FORMAT;
-import static java.time.Instant.ofEpochMilli;
 import static java.time.ZoneId.systemDefault;
 import static java.time.ZoneOffset.UTC;
 import static java.util.Arrays.asList;
@@ -139,25 +136,12 @@ public class SqlJsonTest extends JetSqlTestSupport {
     }
 
     @Test
+    @SuppressWarnings("checkstyle:LineLength")
     public void test_allTypes() {
         String from = generateRandomName();
-        instance().getMap(from).put(1, new AllCanonicalTypesValue(
-                "string",
-                true,
-                (byte) 127,
-                (short) 32767,
-                2147483647,
-                9223372036854775807L,
-                new BigDecimal("9223372036854775.123"),
-                1234567890.1f,
-                123451234567890.1,
-                LocalTime.of(12, 23, 34),
-                LocalDate.of(2020, 4, 15),
-                LocalDateTime.of(2020, 4, 15, 12, 23, 34, 1_000_000),
-                ZonedDateTime.of(2020, 4, 15, 12, 23, 34, 200_000_000, UTC)
-                             .withZoneSameInstant(systemDefault())
-                             .toOffsetDateTime()
-        ));
+        sqlService.execute("CREATE MAPPING " + from + ' '
+                + "TYPE " + AllTypesSqlConnector.TYPE_NAME
+        );
 
         String to = generateRandomName();
         sqlService.execute("CREATE MAPPING " + to + " ("
@@ -182,21 +166,22 @@ public class SqlJsonTest extends JetSqlTestSupport {
                 + ")");
 
         sqlService.execute("SINK INTO " + to + " SELECT "
-                + "__key"
-                + ", string "
-                + ", boolean0 "
-                + ", byte0 "
-                + ", short0 "
-                + ", int0 "
-                + ", long0 "
-                + ", float0 "
-                + ", double0 "
-                + ", bigDecimal "
-                + ", \"localTime\" "
-                + ", \"localDate\" "
-                + ", \"localDateTime\" "
-                + ", offsetDateTime"
-                + " FROM " + from);
+                + "1"
+                + ", string"
+                + ", \"boolean\""
+                + ", byte"
+                + ", short"
+                + ", \"int\""
+                + ", long"
+                + ", \"float\""
+                + ", \"double\""
+                + ", \"decimal\""
+                + ", \"time\""
+                + ", \"date\""
+                + ", \"timestamp\""
+                + ", \"timestampTz\""
+                + " FROM " + from
+        );
 
         assertRowsEventuallyInAnyOrder(
                 "SELECT * FROM " + to,
@@ -214,7 +199,7 @@ public class SqlJsonTest extends JetSqlTestSupport {
                         LocalTime.of(12, 23, 34),
                         LocalDate.of(2020, 4, 15),
                         LocalDateTime.of(2020, 4, 15, 12, 23, 34, 1_000_000),
-                        OffsetDateTime.ofInstant(Date.from(ofEpochMilli(1586953414200L)).toInstant(), systemDefault())
+                        ZonedDateTime.of(2020, 4, 15, 12, 23, 34, 200_000_000, UTC).withZoneSameInstant(systemDefault()).toOffsetDateTime()
                 ))
         );
     }

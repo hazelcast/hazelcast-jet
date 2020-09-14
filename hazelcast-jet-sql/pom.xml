@@ -195,13 +195,6 @@
             <optional>true</optional>
         </dependency>
 
-        <!-- TODO: should not be needed -->
-        <dependency>
-            <groupId>commons-beanutils</groupId>
-            <artifactId>commons-beanutils-core</artifactId>
-            <version>1.8.3</version>
-        </dependency>
-
         <!-- TEST -->
         <dependency>
             <groupId>pl.pragmatists</groupId>

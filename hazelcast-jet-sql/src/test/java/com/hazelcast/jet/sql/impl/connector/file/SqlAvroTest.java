@@ -17,7 +17,7 @@
 package com.hazelcast.jet.sql.impl.connector.file;
 
 import com.hazelcast.jet.sql.JetSqlTestSupport;
-import com.hazelcast.jet.sql.impl.connector.file.model.AllCanonicalTypesValue;
+import com.hazelcast.jet.sql.impl.connector.test.AllTypesSqlConnector;
 import com.hazelcast.sql.SqlService;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -89,28 +89,15 @@ public class SqlAvroTest extends JetSqlTestSupport {
     }
 
     @Test
+    @SuppressWarnings("checkstyle:LineLength")
     public void supportsAllTypes() throws IOException {
         File directory = Files.createTempDirectory("sql-test-local-avro").toFile();
         directory.deleteOnExit();
 
         String from = createRandomName();
-        instance().getMap(from).put(1, new AllCanonicalTypesValue(
-                "string",
-                true,
-                (byte) 127,
-                (short) 32767,
-                2147483647,
-                9223372036854775807L,
-                new BigDecimal("9223372036854775.123"),
-                1234567890.1f,
-                123451234567890.1,
-                LocalTime.of(12, 23, 34),
-                LocalDate.of(2020, 7, 1),
-                LocalDateTime.of(2020, 7, 1, 12, 23, 34, 100_000_000),
-                ZonedDateTime.of(2020, 7, 1, 12, 23, 34, 200_000_000, UTC)
-                             .withZoneSameInstant(systemDefault())
-                             .toOffsetDateTime()
-        ));
+        sqlService.execute("CREATE MAPPING " + from + ' '
+                + "TYPE " + AllTypesSqlConnector.TYPE_NAME
+        );
 
         String to = createRandomName();
         sqlService.execute("CREATE MAPPING " + to + " ("
@@ -122,11 +109,11 @@ public class SqlAvroTest extends JetSqlTestSupport {
                 + ", long BIGINT"
                 + ", \"float\" REAL"
                 + ", \"double\" DOUBLE"
-                + ", \"bigDecimal\" DECIMAL"
-                + ", \"localTime\" TIME"
-                + ", \"localDate\" DATE"
-                + ", \"localDateTime\" TIMESTAMP"
-                + ", offsetDateTime TIMESTAMP WITH TIME ZONE"
+                + ", \"decimal\" DECIMAL"
+                + ", \"time\" TIME"
+                + ", \"date\" DATE"
+                + ", \"timestamp\" TIMESTAMP"
+                + ", timestampTz TIMESTAMP WITH TIME ZONE"
                 + ") TYPE " + FileSqlConnector.TYPE_NAME + " "
                 + "OPTIONS ("
                 + OPTION_SERIALIZATION_FORMAT + " '" + AVRO_SERIALIZATION_FORMAT + "'"
@@ -135,40 +122,38 @@ public class SqlAvroTest extends JetSqlTestSupport {
         );
 
         sqlService.execute("INSERT INTO " + to + " SELECT "
-                + "string "
-                + ", boolean0 "
-                + ", byte0 "
-                + ", short0 "
-                + ", int0 "
-                + ", long0 "
-                + ", float0 "
-                + ", double0 "
-                + ", bigDecimal "
-                + ", \"localTime\" "
-                + ", \"localDate\" "
-                + ", \"localDateTime\" "
-                + ", offsetDateTime"
+                + "string"
+                + ", \"boolean\""
+                + ", byte"
+                + ", short"
+                + ", \"int\""
+                + ", long"
+                + ", \"float\""
+                + ", \"double\""
+                + ", \"decimal\""
+                + ", \"time\""
+                + ", \"date\""
+                + ", \"timestamp\""
+                + ", \"timestampTz\""
                 + " FROM " + from
         );
 
         assertRowsEventuallyInAnyOrder(
                 "SELECT * FROM " + to,
                 singletonList(new Row(
-                        "string"
-                        , true
-                        , (byte) 127
-                        , (short) 32767
-                        , 2147483647
-                        , 9223372036854775807L
-                        , 1234567890.1F
-                        , 123451234567890.1
-                        , new BigDecimal("9223372036854775.123")
-                        , LocalTime.of(12, 23, 34)
-                        , LocalDate.of(2020, 7, 1)
-                        , LocalDateTime.of(2020, 7, 1, 12, 23, 34, 100_000_000)
-                        , ZonedDateTime.of(2020, 7, 1, 12, 23, 34, 200_000_000, UTC)
-                                       .withZoneSameInstant(systemDefault())
-                                       .toOffsetDateTime()
+                        "string",
+                        true,
+                        (byte) 127,
+                        (short) 32767,
+                        2147483647,
+                        9223372036854775807L,
+                        1234567890.1f,
+                        123451234567890.1,
+                        new BigDecimal("9223372036854775.123"),
+                        LocalTime.of(12, 23, 34),
+                        LocalDate.of(2020, 4, 15),
+                        LocalDateTime.of(2020, 4, 15, 12, 23, 34, 1_000_000),
+                        ZonedDateTime.of(2020, 4, 15, 12, 23, 34, 200_000_000, UTC).withZoneSameInstant(systemDefault()).toOffsetDateTime()
                 ))
         );
     }

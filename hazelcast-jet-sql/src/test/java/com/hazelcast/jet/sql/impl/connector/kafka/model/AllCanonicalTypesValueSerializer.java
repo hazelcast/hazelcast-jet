@@ -43,11 +43,11 @@ public class AllCanonicalTypesValueSerializer implements Serializer<AllCanonical
             output.writeLong(allTypes.getLong0());
             output.writeFloat(allTypes.getFloat0());
             output.writeDouble(allTypes.getDouble0());
-            output.writeUTF(allTypes.getBigDecimal().toString());
-            output.writeUTF(allTypes.getLocalTime().toString());
-            output.writeUTF(allTypes.getLocalDate().toString());
-            output.writeUTF(allTypes.getLocalDateTime().toString());
-            output.writeUTF(allTypes.getOffsetDateTime().toString());
+            output.writeUTF(allTypes.getDecimal().toString());
+            output.writeUTF(allTypes.getTime().toString());
+            output.writeUTF(allTypes.getDate().toString());
+            output.writeUTF(allTypes.getTimestamp().toString());
+            output.writeUTF(allTypes.getTimestampTz().toString());
         } catch (IOException e) {
             throw sneakyThrow(e);
         }

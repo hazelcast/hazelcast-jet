@@ -21,6 +21,7 @@ import com.hazelcast.jet.sql.impl.connector.map.model.AllTypesValue;
 import com.hazelcast.jet.sql.impl.connector.map.model.InsuredPerson;
 import com.hazelcast.jet.sql.impl.connector.map.model.Person;
 import com.hazelcast.jet.sql.impl.connector.map.model.PersonId;
+import com.hazelcast.jet.sql.impl.connector.test.AllTypesSqlConnector;
 import com.hazelcast.sql.SqlService;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -31,13 +32,13 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.Map;
 
 import static com.hazelcast.jet.core.TestUtil.createMap;
+import static com.hazelcast.jet.sql.TimeUtil.localOffset;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.JAVA_SERIALIZATION_FORMAT;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_KEY_CLASS;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_SERIALIZATION_KEY_FORMAT;
@@ -207,33 +208,12 @@ public class SqlPojoTest extends JetSqlTestSupport {
     }
 
     @Test
+    @SuppressWarnings("checkstyle:LineLength")
     public void test_allTypes() {
         String from = generateRandomName();
-        instance().getMap(from).put(1, new AllTypesValue(
-                "string",
-                'a',
-                true,
-                (byte) 127,
-                (short) 32767,
-                2147483647,
-                9223372036854775807L,
-                new BigDecimal("9223372036854775.123"),
-                new BigInteger("9223372036854775222"),
-                1234567890.1f,
-                123451234567890.1,
-                LocalTime.of(12, 23, 34),
-                LocalDate.of(2020, 4, 15),
-                LocalDateTime.of(2020, 4, 15, 12, 23, 34, 1_000_000),
-                Date.from(ofEpochMilli(1586953414200L)),
-                GregorianCalendar.from(ZonedDateTime.of(2020, 4, 15, 12, 23, 34, 300_000_000, UTC)
-                                                    .withZoneSameInstant(localOffset())),
-                ofEpochMilli(1586953414400L),
-                ZonedDateTime.of(2020, 4, 15, 12, 23, 34, 500_000_000, UTC)
-                             .withZoneSameInstant(localOffset()),
-                ZonedDateTime.of(2020, 4, 15, 12, 23, 34, 600_000_000, UTC)
-                             .withZoneSameInstant(systemDefault())
-                             .toOffsetDateTime()
-        ));
+        sqlService.execute("CREATE MAPPING " + from + ' '
+                + "TYPE " + AllTypesSqlConnector.TYPE_NAME
+        );
 
         String to = generateRandomName();
         sqlService.execute(javaSerializableMapDdl(to, BigInteger.class, AllTypesValue.class));
@@ -249,10 +229,10 @@ public class SqlPojoTest extends JetSqlTestSupport {
                         + ", short0"
                         + ", int0"
                         + ", long0"
-                        + ", bigDecimal"
-                        + ", bigInteger"
                         + ", float0"
                         + ", double0"
+                        + ", bigDecimal"
+                        + ", bigInteger"
                         + ", \"localTime\""
                         + ", localDate"
                         + ", localDateTime"
@@ -262,51 +242,45 @@ public class SqlPojoTest extends JetSqlTestSupport {
                         + ", zonedDateTime"
                         + ", offsetDateTime"
                         + ") SELECT "
-                        + "__key"
+                        + "CAST(1 AS DECIMAL)"
                         + ", string"
-                        + ", character0"
-                        + ", boolean0"
-                        + ", byte0"
-                        + ", short0"
-                        + ", int0"
-                        + ", long0"
-                        + ", bigDecimal"
-                        + ", bigInteger"
-                        + ", float0"
-                        + ", double0"
-                        + ", \"localTime\""
-                        + ", localDate"
-                        + ", localDateTime"
+                        + ", SUBSTRING(string, 1, 1)"
+                        + ", \"boolean\""
+                        + ", byte"
+                        + ", short"
+                        + ", \"int\""
+                        + ", long"
+                        + ", \"float\""
+                        + ", \"double\""
+                        + ", \"decimal\""
+                        + ", \"decimal\""
+                        + ", \"time\""
                         + ", \"date\""
-                        + ", calendar"
-                        + ", instant"
-                        + ", zonedDateTime"
-                        + ", offsetDateTime"
+                        + ", \"timestamp\""
+                        + ", \"timestampTz\""
+                        + ", \"timestampTz\""
+                        + ", \"timestampTz\""
+                        + ", \"timestampTz\""
+                        + ", \"timestampTz\""
                         + " FROM " + from,
                 createMap(BigInteger.valueOf(1), new AllTypesValue(
                         "string",
-                        'a',
+                        's',
                         true,
                         (byte) 127,
                         (short) 32767,
                         2147483647,
                         9223372036854775807L,
-                        new BigDecimal("9223372036854775.123"),
-                        new BigInteger("9223372036854775222"),
-                        1234567890.1f,
-                        123451234567890.1,
+                        1234567890.1f, 123451234567890.1, new BigDecimal("9223372036854775.123"),
+                        new BigInteger("9223372036854775"),
                         LocalTime.of(12, 23, 34),
                         LocalDate.of(2020, 4, 15),
                         LocalDateTime.of(2020, 4, 15, 12, 23, 34, 1_000_000),
                         Date.from(ofEpochMilli(1586953414200L)),
-                        GregorianCalendar.from(ZonedDateTime.of(2020, 4, 15, 12, 23, 34, 300_000_000, UTC)
-                                                            .withZoneSameInstant(localOffset())),
-                        ofEpochMilli(1586953414400L),
-                        ZonedDateTime.of(2020, 4, 15, 12, 23, 34, 500_000_000, UTC)
-                                     .withZoneSameInstant(localOffset()),
-                        ZonedDateTime.of(2020, 4, 15, 12, 23, 34, 600_000_000, UTC)
-                                     .withZoneSameInstant(systemDefault())
-                                     .toOffsetDateTime()
+                        GregorianCalendar.from(ZonedDateTime.of(2020, 4, 15, 12, 23, 34, 200_000_000, UTC).withZoneSameInstant(localOffset())),
+                        ofEpochMilli(1586953414200L),
+                        ZonedDateTime.of(2020, 4, 15, 12, 23, 34, 200_000_000, UTC).withZoneSameInstant(localOffset()),
+                        ZonedDateTime.of(2020, 4, 15, 12, 23, 34, 200_000_000, UTC).withZoneSameInstant(systemDefault()).toOffsetDateTime()
                 )));
 
         assertRowsEventuallyInAnyOrder(
@@ -335,35 +309,25 @@ public class SqlPojoTest extends JetSqlTestSupport {
                 singletonList(new Row(
                         BigDecimal.valueOf(1),
                         "string",
-                        "a",
+                        "s",
                         true,
                         (byte) 127,
                         (short) 32767,
                         2147483647,
                         9223372036854775807L,
                         new BigDecimal("9223372036854775.123"),
-                        new BigDecimal("9223372036854775222"),
+                        new BigDecimal("9223372036854775"),
                         1234567890.1f,
                         123451234567890.1,
                         LocalTime.of(12, 23, 34),
                         LocalDate.of(2020, 4, 15),
                         LocalDateTime.of(2020, 4, 15, 12, 23, 34, 1_000_000),
                         OffsetDateTime.ofInstant(Date.from(ofEpochMilli(1586953414200L)).toInstant(), systemDefault()),
-                        ZonedDateTime.of(2020, 4, 15, 12, 23, 34, 300_000_000, UTC)
-                                     .withZoneSameInstant(localOffset())
-                                     .toOffsetDateTime(),
-                        OffsetDateTime.ofInstant(ofEpochMilli(1586953414400L), systemDefault()),
-                        ZonedDateTime.of(2020, 4, 15, 12, 23, 34, 500_000_000, UTC)
-                                     .withZoneSameInstant(localOffset())
-                                     .toOffsetDateTime(),
-                        ZonedDateTime.of(2020, 4, 15, 12, 23, 34, 600_000_000, UTC)
-                                     .withZoneSameInstant(systemDefault())
-                                     .toOffsetDateTime()
+                        ZonedDateTime.of(2020, 4, 15, 12, 23, 34, 200_000_000, UTC).withZoneSameInstant(localOffset()).toOffsetDateTime(),
+                        OffsetDateTime.ofInstant(ofEpochMilli(1586953414200L), systemDefault()),
+                        ZonedDateTime.of(2020, 4, 15, 12, 23, 34, 200_000_000, UTC).withZoneSameInstant(localOffset()).toOffsetDateTime(),
+                        ZonedDateTime.of(2020, 4, 15, 12, 23, 34, 200_000_000, UTC).withZoneSameInstant(systemDefault()).toOffsetDateTime()
                 )));
-    }
-
-    private static ZoneOffset localOffset() {
-        return systemDefault().getRules().getOffset(LocalDateTime.now());
     }
 
     private static String generateRandomName() {

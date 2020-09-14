@@ -17,7 +17,6 @@
 package com.hazelcast.jet.sql.impl.connector.map;
 
 import com.hazelcast.config.InMemoryFormat;
-import com.hazelcast.function.FunctionEx;
 import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Vertex;
@@ -26,15 +25,12 @@ import com.hazelcast.jet.sql.impl.connector.EntryMetadata;
 import com.hazelcast.jet.sql.impl.connector.EntryMetadataResolvers;
 import com.hazelcast.jet.sql.impl.connector.EntryProcessors;
 import com.hazelcast.jet.sql.impl.connector.SqlConnector;
-import com.hazelcast.jet.sql.impl.expression.ExpressionUtil;
 import com.hazelcast.jet.sql.impl.inject.UpsertTargetDescriptor;
 import com.hazelcast.jet.sql.impl.schema.MappingField;
 import com.hazelcast.map.impl.MapContainer;
 import com.hazelcast.map.impl.MapService;
 import com.hazelcast.map.impl.MapServiceContext;
-import com.hazelcast.query.Predicates;
 import com.hazelcast.spi.impl.NodeEngine;
-import com.hazelcast.sql.impl.expression.Expression;
 import com.hazelcast.sql.impl.extract.QueryPath;
 import com.hazelcast.sql.impl.schema.ConstantTableStatistics;
 import com.hazelcast.sql.impl.schema.Table;
@@ -44,14 +40,11 @@ import com.hazelcast.sql.impl.schema.map.PartitionedMapTable;
 import com.hazelcast.sql.impl.type.QueryDataType;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 
 import static com.hazelcast.jet.core.Edge.between;
-import static com.hazelcast.jet.core.processor.SourceProcessors.readMapP;
 import static com.hazelcast.sql.impl.schema.map.MapTableUtils.estimatePartitionedMapRowCount;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Stream.concat;
@@ -123,33 +116,9 @@ public class IMapSqlConnector implements SqlConnector {
                 valueMetadata.getQueryTargetDescriptor(),
                 keyMetadata.getUpsertTargetDescriptor(),
                 valueMetadata.getUpsertTargetDescriptor(),
-                Collections.emptyList(), // TODO: fill, keep in mind that json should be excluded?
+                Collections.emptyList(),
                 hd
         );
-    }
-
-    @Override
-    public boolean supportsFullScanReader() {
-        return true;
-    }
-
-    // TODO remove this method in favor of imdg implementation
-    @Nonnull @Override
-    public Vertex fullScanReader(
-            @Nonnull DAG dag,
-            @Nonnull Table table0,
-            @Nullable String timestampField,
-            @Nullable Expression<Boolean> predicate,
-            @Nonnull List<Expression<?>> projections
-    ) {
-        PartitionedMapTable table = (PartitionedMapTable) table0;
-
-        FunctionEx<Entry<Object, Object>, Object[]> mapProjection =
-                ExpressionUtil.projectionFn(table, predicate, projections);
-
-        String mapName = table.getMapName();
-        return dag.newVertex("map(" + mapName + ")",
-                readMapP(mapName, Predicates.alwaysTrue(), mapProjection::apply));
     }
 
     @Override

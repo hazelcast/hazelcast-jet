@@ -101,6 +101,6 @@ public class TestStreamSqlConnector implements SqlConnector {
         StreamSourceTransform<Object[]> source = (StreamSourceTransform<Object[]>) TestSources.itemStream(100,
                 (timestamp, sequence) -> ExpressionUtil.evaluate(predicate, projection, new Object[]{sequence}));
         ProcessorMetaSupplier pms = source.metaSupplierFn.apply(EventTimePolicy.noEventTime());
-        return dag.newVertex("testStream", pms);
+        return dag.newVertex("TestStream[" + table.getSchemaName() + "." + table.getSqlName() + ']', pms);
     }
 }

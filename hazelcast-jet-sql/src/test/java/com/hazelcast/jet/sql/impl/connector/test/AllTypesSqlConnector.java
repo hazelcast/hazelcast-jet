@@ -27,7 +27,6 @@ import com.hazelcast.jet.sql.impl.expression.ExpressionUtil;
 import com.hazelcast.jet.sql.impl.schema.JetTable;
 import com.hazelcast.jet.sql.impl.schema.MappingField;
 import com.hazelcast.spi.impl.NodeEngine;
-import com.hazelcast.sql.SqlService;
 import com.hazelcast.sql.impl.QueryException;
 import com.hazelcast.sql.impl.expression.Expression;
 import com.hazelcast.sql.impl.schema.ConstantTableStatistics;
@@ -37,35 +36,61 @@ import com.hazelcast.sql.impl.type.QueryDataType;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 import static com.hazelcast.jet.impl.util.Util.toList;
+import static java.time.ZoneId.systemDefault;
+import static java.time.ZoneOffset.UTC;
+import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 
 /**
- * A test batch-data connector. It emits rows with single column named "v"
- * with INT type. It emits {@value #DEFAULT_ITEM_COUNT} items by default,
- * or the number of items can be customized using the {@value
- * #OPTION_ITEM_COUNT} option in DDL. The rows contain the sequence {@code
- * 0 .. itemCount}.
+ * A SQL source yielding a single row with all supported types.
  */
-public class TestBatchSqlConnector implements SqlConnector {
+public class AllTypesSqlConnector implements SqlConnector {
 
-    public static final String TYPE_NAME = "TestBatch";
-    public static final int DEFAULT_ITEM_COUNT = 10_000;
-    public static final String OPTION_ITEM_COUNT = "itemCount";
+    public static final String TYPE_NAME = "AllTypes";
 
-    private static final List<MappingField> FIELD_LIST = singletonList(new MappingField("v", QueryDataType.INT));
+    private static final List<MappingField> FIELD_LIST = asList(
+            new MappingField("string", QueryDataType.VARCHAR),
+            new MappingField("boolean", QueryDataType.BOOLEAN),
+            new MappingField("byte", QueryDataType.TINYINT),
+            new MappingField("short", QueryDataType.SMALLINT),
+            new MappingField("int", QueryDataType.INT),
+            new MappingField("long", QueryDataType.BIGINT),
+            new MappingField("float", QueryDataType.REAL),
+            new MappingField("double", QueryDataType.DOUBLE),
+            new MappingField("decimal", QueryDataType.DECIMAL),
+            new MappingField("time", QueryDataType.TIME),
+            new MappingField("date", QueryDataType.DATE),
+            new MappingField("timestamp", QueryDataType.TIMESTAMP),
+            new MappingField("timestampTz", QueryDataType.TIMESTAMP_WITH_TZ_OFFSET_DATE_TIME)
+
+    );
     private static final List<TableField> FIELD_LIST2 = toList(FIELD_LIST, f -> new TableField(f.name(), f.type(), false));
 
-    public static void create(SqlService sqlService, String tableName, int itemCount) {
-        sqlService.execute("CREATE MAPPING " + tableName + " TYPE " + TYPE_NAME
-                + " OPTIONS (\"itemCount\" '" + itemCount + "')");
-    }
+    @SuppressWarnings("checkstyle:LineLength")
+    private static final Object[] VALUES = new Object[]{
+            "string",
+            true,
+            (byte) 127,
+            (short) 32767,
+            2147483647,
+            9223372036854775807L,
+            1234567890.1f,
+            123451234567890.1,
+            new BigDecimal("9223372036854775.123"),
+            LocalTime.of(12, 23, 34),
+            LocalDate.of(2020, 4, 15),
+            LocalDateTime.of(2020, 4, 15, 12, 23, 34, 1_000_000),
+            ZonedDateTime.of(2020, 4, 15, 12, 23, 34, 200_000_000, UTC).withZoneSameInstant(systemDefault()).toOffsetDateTime()
+    };
 
     @Override
     public String typeName() {
@@ -77,7 +102,8 @@ public class TestBatchSqlConnector implements SqlConnector {
         return false;
     }
 
-    @Nonnull @Override
+    @Nonnull
+    @Override
     public List<MappingField> resolveAndValidateFields(
             @Nonnull NodeEngine nodeEngine,
             @Nonnull Map<String, String> options,
@@ -89,7 +115,8 @@ public class TestBatchSqlConnector implements SqlConnector {
         return FIELD_LIST;
     }
 
-    @Nonnull @Override
+    @Nonnull
+    @Override
     public Table createTable(
             @Nonnull NodeEngine nodeEngine,
             @Nonnull String schemaName,
@@ -97,8 +124,7 @@ public class TestBatchSqlConnector implements SqlConnector {
             @Nonnull Map<String, String> options,
             @Nonnull List<MappingField> resolvedFields
     ) {
-        int itemCount = Integer.parseInt(options.getOrDefault(OPTION_ITEM_COUNT, "" + DEFAULT_ITEM_COUNT));
-        return new TestBatchTable(this, schemaName, tableName, itemCount);
+        return new AllTypesTable(this, schemaName, tableName);
     }
 
     @Override
@@ -106,7 +132,8 @@ public class TestBatchSqlConnector implements SqlConnector {
         return true;
     }
 
-    @Nonnull @Override
+    @Nonnull
+    @Override
     public Vertex fullScanReader(
             @Nonnull DAG dag,
             @Nonnull Table table,
@@ -114,34 +141,25 @@ public class TestBatchSqlConnector implements SqlConnector {
             @Nullable Expression<Boolean> predicate,
             @Nonnull List<Expression<?>> projection
     ) {
-        int itemCount = ((TestBatchTable) table).itemCount;
-        List<Object[]> items = IntStream
-                .range(0, itemCount)
-                .mapToObj(i -> ExpressionUtil.evaluate(predicate, projection, new Object[] {i}))
-                .filter(Objects::nonNull)
-                .collect(Collectors.toList());
-        BatchSource<Object[]> source = TestSources.items(items);
+        Object[] row = ExpressionUtil.evaluate(predicate, projection, VALUES);
+        BatchSource<Object[]> source = TestSources.items(singletonList(row));
         ProcessorMetaSupplier pms = ((BatchSourceTransform<Object[]>) source).metaSupplier;
         return dag.newVertex(table.toString(), pms);
     }
 
-    public static class TestBatchTable extends JetTable {
+    public static class AllTypesTable extends JetTable {
 
-        private final int itemCount;
-
-        public TestBatchTable(
+        public AllTypesTable(
                 @Nonnull SqlConnector sqlConnector,
                 @Nonnull String schemaName,
-                @Nonnull String name,
-                int itemCount
+                @Nonnull String name
         ) {
-            super(sqlConnector, FIELD_LIST2, schemaName, name, new ConstantTableStatistics(itemCount));
-            this.itemCount = itemCount;
+            super(sqlConnector, FIELD_LIST2, schemaName, name, new ConstantTableStatistics(1));
         }
 
         @Override
         public String toString() {
-            return "TestBatch" + "[" + getSchemaName() + "." + getSqlName() + "])";
+            return "AllTypes" + "[" + getSchemaName() + "." + getSqlName() + "])";
         }
     }
 }

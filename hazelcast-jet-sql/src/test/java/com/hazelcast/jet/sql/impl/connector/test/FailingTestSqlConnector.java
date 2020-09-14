@@ -97,7 +97,7 @@ public class FailingTestSqlConnector implements SqlConnector {
             @Nullable Expression<Boolean> predicate,
             @Nonnull List<Expression<?>> projection
     ) {
-        return dag.newVertex("failingSource", FailingP::new);
+        return dag.newVertex("FailingSource[" + table.getSchemaName() + "." + table.getSqlName() + ']', FailingP::new);
     }
 
     private static final class FailingP extends AbstractProcessor {

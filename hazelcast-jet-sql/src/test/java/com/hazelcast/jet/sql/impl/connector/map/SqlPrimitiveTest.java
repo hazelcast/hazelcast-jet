@@ -17,6 +17,7 @@
 package com.hazelcast.jet.sql.impl.connector.map;
 
 import com.hazelcast.jet.sql.JetSqlTestSupport;
+import com.hazelcast.jet.sql.impl.connector.test.TestBatchSqlConnector;
 import com.hazelcast.map.IMap;
 import com.hazelcast.sql.SqlService;
 import org.junit.BeforeClass;
@@ -72,13 +73,17 @@ public class SqlPrimitiveTest extends JetSqlTestSupport {
         String name = generateRandomName();
         sqlService.execute(javaSerializableMapDdl(name, Integer.class, String.class));
 
-        IMap<Integer, String> source = instance().getMap("source");
-        source.put(0, "value-0");
-        source.put(1, "value-1");
+        String from = generateRandomName();
+        sqlService.execute("CREATE MAPPING " + from + " "
+                + "TYPE " + TestBatchSqlConnector.TYPE_NAME + " "
+                + "OPTIONS ("
+                + "itemCount '2'"
+                + ")"
+        );
 
         assertMapEventually(
                 name,
-                "SINK INTO " + name + " SELECT * FROM " + source.getName(),
+                "SINK INTO " + name + " SELECT v, 'value-' || v FROM " + from,
                 createMap(0, "value-0", 1, "value-1")
         );
         assertRowsEventuallyInAnyOrder(

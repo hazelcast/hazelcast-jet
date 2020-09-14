@@ -36,21 +36,21 @@ public final class AllCanonicalTypesValue implements Serializable {
     private short short0;
     private int int0;
     private long long0;
-    private BigDecimal bigDecimal;
     private float float0;
     private double double0;
-    private LocalTime localTime;
-    private LocalDate localDate;
-    private LocalDateTime localDateTime;
-    private OffsetDateTime offsetDateTime;
+    private BigDecimal decimal;
+    private LocalTime time;
+    private LocalDate date;
+    private LocalDateTime timestamp;
+    private OffsetDateTime timestampTz;
 
     public AllCanonicalTypesValue() {
     }
 
     @SuppressWarnings({"checkstyle:ParameterNumber", "checkstyle:ExecutableStatementCount"})
     public AllCanonicalTypesValue(String string, boolean boolean0, byte byte0, short short0, int int0, long long0,
-                                  BigDecimal bigDecimal, float float0, double double0, LocalTime localTime,
-                                  LocalDate localDate, LocalDateTime localDateTime, OffsetDateTime offsetDateTime
+                                  float float0, double double0, BigDecimal decimal, LocalTime time, LocalDate date,
+                                  LocalDateTime timestamp, OffsetDateTime timestampTz
     ) {
         this.string = string;
         this.boolean0 = boolean0;
@@ -58,13 +58,13 @@ public final class AllCanonicalTypesValue implements Serializable {
         this.short0 = short0;
         this.int0 = int0;
         this.long0 = long0;
-        this.bigDecimal = bigDecimal;
         this.float0 = float0;
         this.double0 = double0;
-        this.localTime = localTime;
-        this.localDate = localDate;
-        this.localDateTime = localDateTime;
-        this.offsetDateTime = offsetDateTime;
+        this.decimal = decimal;
+        this.time = time;
+        this.date = date;
+        this.timestamp = timestamp;
+        this.timestampTz = timestampTz;
     }
 
     public String getString() {
@@ -115,20 +115,20 @@ public final class AllCanonicalTypesValue implements Serializable {
         this.long0 = long0;
     }
 
-    public BigDecimal getBigDecimal() {
-        return bigDecimal;
-    }
-
-    public void setBigDecimal(BigDecimal bigDecimal) {
-        this.bigDecimal = bigDecimal;
-    }
-
     public float getFloat0() {
         return float0;
     }
 
     public void setFloat0(float float0) {
         this.float0 = float0;
+    }
+
+    public BigDecimal getDecimal() {
+        return decimal;
+    }
+
+    public void setDecimal(BigDecimal decimal) {
+        this.decimal = decimal;
     }
 
     public double getDouble0() {
@@ -139,36 +139,36 @@ public final class AllCanonicalTypesValue implements Serializable {
         this.double0 = double0;
     }
 
-    public LocalTime getLocalTime() {
-        return localTime;
+    public LocalTime getTime() {
+        return time;
     }
 
-    public void setLocalTime(LocalTime localTime) {
-        this.localTime = localTime;
+    public void setTime(LocalTime time) {
+        this.time = time;
     }
 
-    public LocalDate getLocalDate() {
-        return localDate;
+    public LocalDate getDate() {
+        return date;
     }
 
-    public void setLocalDate(LocalDate localDate) {
-        this.localDate = localDate;
+    public void setDate(LocalDate date) {
+        this.date = date;
     }
 
-    public LocalDateTime getLocalDateTime() {
-        return localDateTime;
+    public LocalDateTime getTimestamp() {
+        return timestamp;
     }
 
-    public void setLocalDateTime(LocalDateTime localDateTime) {
-        this.localDateTime = localDateTime;
+    public void setTimestamp(LocalDateTime timestamp) {
+        this.timestamp = timestamp;
     }
 
-    public OffsetDateTime getOffsetDateTime() {
-        return offsetDateTime;
+    public OffsetDateTime getTimestampTz() {
+        return timestampTz;
     }
 
-    public void setOffsetDateTime(OffsetDateTime offsetDateTime) {
-        this.offsetDateTime = offsetDateTime;
+    public void setTimestampTz(OffsetDateTime timestampTz) {
+        this.timestampTz = timestampTz;
     }
 
     @Override
@@ -180,13 +180,13 @@ public final class AllCanonicalTypesValue implements Serializable {
                 ", short0=" + short0 +
                 ", int0=" + int0 +
                 ", long0=" + long0 +
-                ", bigDecimal=" + bigDecimal +
                 ", float0=" + float0 +
                 ", double0=" + double0 +
-                ", localTime=" + localTime +
-                ", localDate=" + localDate +
-                ", localDateTime=" + localDateTime +
-                ", offsetDateTime=" + offsetDateTime +
+                ", decimal=" + decimal +
+                ", time=" + time +
+                ", date=" + date +
+                ", timestamp=" + timestamp +
+                ", timestampTz=" + timestampTz +
                 '}';
     }
 
@@ -207,11 +207,11 @@ public final class AllCanonicalTypesValue implements Serializable {
                 Float.compare(that.float0, float0) == 0 &&
                 Double.compare(that.double0, double0) == 0 &&
                 Objects.equals(string, that.string) &&
-                Objects.equals(bigDecimal, that.bigDecimal) &&
-                Objects.equals(localTime, that.localTime) &&
-                Objects.equals(localDate, that.localDate) &&
-                Objects.equals(localDateTime, that.localDateTime) &&
-                Objects.equals(offsetDateTime, that.offsetDateTime);
+                Objects.equals(decimal, that.decimal) &&
+                Objects.equals(time, that.time) &&
+                Objects.equals(date, that.date) &&
+                Objects.equals(timestamp, that.timestamp) &&
+                Objects.equals(timestampTz, that.timestampTz);
     }
 
     @Override
@@ -222,13 +222,13 @@ public final class AllCanonicalTypesValue implements Serializable {
                 short0,
                 int0,
                 long0,
-                bigDecimal,
                 float0,
                 double0,
-                localTime,
-                localDate,
-                localDateTime,
-                offsetDateTime
+                decimal,
+                time,
+                date,
+                timestamp,
+                timestampTz
         );
     }
 }

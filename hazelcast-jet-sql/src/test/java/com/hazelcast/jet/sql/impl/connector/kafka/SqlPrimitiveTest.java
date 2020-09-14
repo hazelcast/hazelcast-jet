@@ -18,7 +18,7 @@ package com.hazelcast.jet.sql.impl.connector.kafka;
 
 import com.hazelcast.jet.kafka.impl.KafkaTestSupport;
 import com.hazelcast.jet.sql.JetSqlTestSupport;
-import com.hazelcast.map.IMap;
+import com.hazelcast.jet.sql.impl.connector.test.TestBatchSqlConnector;
 import com.hazelcast.sql.SqlService;
 import org.apache.kafka.common.serialization.IntegerDeserializer;
 import org.apache.kafka.common.serialization.IntegerSerializer;
@@ -82,13 +82,17 @@ public class SqlPrimitiveTest extends JetSqlTestSupport {
                 + ")"
         );
 
-        IMap<Integer, String> source = instance().getMap("source");
-        source.put(0, "value-0");
-        source.put(1, "value-1");
+        String from = generateRandomName();
+        sqlService.execute("CREATE MAPPING " + from + " "
+                + "TYPE " + TestBatchSqlConnector.TYPE_NAME + " "
+                + "OPTIONS ("
+                + "itemCount '2'"
+                + ")"
+        );
 
         assertTopicEventually(
                 name,
-                "INSERT INTO " + name + " SELECT * FROM " + source.getName(),
+                "INSERT INTO " + name + " SELECT v, 'value-' || v FROM " + from,
                 createMap(0, "value-0", 1, "value-1")
         );
         assertRowsEventuallyInAnyOrder(

@@ -42,10 +42,10 @@ public final class AllTypesValue implements Serializable {
     private short short0;
     private int int0;
     private long long0;
-    private BigDecimal bigDecimal;
-    private BigInteger bigInteger;
     private float float0;
     private double double0;
+    private BigDecimal bigDecimal;
+    private BigInteger bigInteger;
     private LocalTime localTime;
     private LocalDate localDate;
     private LocalDateTime localDateTime;
@@ -60,7 +60,7 @@ public final class AllTypesValue implements Serializable {
 
     @SuppressWarnings({"checkstyle:ParameterNumber", "checkstyle:ExecutableStatementCount"})
     public AllTypesValue(String string, char character0, boolean boolean0, byte byte0, short short0, int int0,
-                         long long0, BigDecimal bigDecimal, BigInteger bigInteger, float float0, double double0,
+                         long long0, float float0, double double0, BigDecimal bigDecimal, BigInteger bigInteger,
                          LocalTime localTime, LocalDate localDate, LocalDateTime localDateTime, Date date,
                          GregorianCalendar calendar, Instant instant, ZonedDateTime zonedDateTime,
                          OffsetDateTime offsetDateTime
@@ -72,10 +72,10 @@ public final class AllTypesValue implements Serializable {
         this.short0 = short0;
         this.int0 = int0;
         this.long0 = long0;
-        this.bigDecimal = bigDecimal;
-        this.bigInteger = bigInteger;
         this.float0 = float0;
         this.double0 = double0;
+        this.bigDecimal = bigDecimal;
+        this.bigInteger = bigInteger;
         this.localTime = localTime;
         this.localDate = localDate;
         this.localDateTime = localDateTime;
@@ -142,22 +142,6 @@ public final class AllTypesValue implements Serializable {
         this.long0 = long0;
     }
 
-    public BigDecimal getBigDecimal() {
-        return bigDecimal;
-    }
-
-    public void setBigDecimal(BigDecimal bigDecimal) {
-        this.bigDecimal = bigDecimal;
-    }
-
-    public BigInteger getBigInteger() {
-        return bigInteger;
-    }
-
-    public void setBigInteger(BigInteger bigInteger) {
-        this.bigInteger = bigInteger;
-    }
-
     public float getFloat0() {
         return float0;
     }
@@ -172,6 +156,22 @@ public final class AllTypesValue implements Serializable {
 
     public void setDouble0(double double0) {
         this.double0 = double0;
+    }
+
+    public BigDecimal getBigDecimal() {
+        return bigDecimal;
+    }
+
+    public void setBigDecimal(BigDecimal bigDecimal) {
+        this.bigDecimal = bigDecimal;
+    }
+
+    public BigInteger getBigInteger() {
+        return bigInteger;
+    }
+
+    public void setBigInteger(BigInteger bigInteger) {
+        this.bigInteger = bigInteger;
     }
 
     public LocalTime getLocalTime() {
@@ -248,10 +248,10 @@ public final class AllTypesValue implements Serializable {
                 ", short0=" + short0 +
                 ", int0=" + int0 +
                 ", long0=" + long0 +
-                ", bigDecimal=" + bigDecimal +
-                ", bigInteger=" + bigInteger +
                 ", float0=" + float0 +
                 ", double0=" + double0 +
+                ", bigDecimal=" + bigDecimal +
+                ", bigInteger=" + bigInteger +
                 ", localTime=" + localTime +
                 ", localDate=" + localDate +
                 ", localDateTime=" + localDateTime +
@@ -302,10 +302,10 @@ public final class AllTypesValue implements Serializable {
                 short0,
                 int0,
                 long0,
-                bigDecimal,
-                bigInteger,
                 float0,
                 double0,
+                bigDecimal,
+                bigInteger,
                 localTime,
                 localDate,
                 localDateTime,

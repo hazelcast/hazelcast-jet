@@ -17,25 +17,15 @@
 package com.hazelcast.jet.sql.impl.expression;
 
 import com.hazelcast.function.FunctionEx;
-import com.hazelcast.sql.impl.expression.ConstantExpression;
 import com.hazelcast.sql.impl.expression.Expression;
 import com.hazelcast.sql.impl.expression.ExpressionEvalContext;
-import com.hazelcast.sql.impl.extract.QueryPath;
 import com.hazelcast.sql.impl.row.HeapRow;
 import com.hazelcast.sql.impl.row.Row;
-import com.hazelcast.sql.impl.schema.Table;
-import com.hazelcast.sql.impl.schema.TableField;
-import com.hazelcast.sql.impl.schema.map.MapTableField;
-import com.hazelcast.sql.impl.type.QueryDataType;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map.Entry;
-import java.util.stream.Collectors;
-
-import static com.hazelcast.jet.impl.util.Util.toList;
 
 public final class ExpressionUtil {
 
@@ -63,48 +53,6 @@ public final class ExpressionUtil {
     ) {
         return values -> {
             Row row = new HeapRow(values);
-            Object[] result = new Object[projections.size()];
-            for (int i = 0; i < projections.size(); i++) {
-                result[i] = evaluate(projections.get(i), row);
-            }
-            return result;
-        };
-    }
-
-    /**
-     * Creates a function to project {@code Entry<Object, Object>} from the
-     * source into {@code Object[]} that represents a row. The function
-     * evaluates the predicate and returns null if it didn't pass. Then it evaluates
-     * all the projections
-     */
-    @Deprecated // TODO: use descriptors/targets
-    public static FunctionEx<Entry<Object, Object>, Object[]> projectionFn(
-            Table table,
-            Expression<Boolean> predicate,
-            List<Expression<?>> projections
-    ) {
-        List<String> fieldNames = table.getFields().stream()
-                .map(field -> {
-                    // TODO: get rid of casting ???
-                    QueryPath path = ((MapTableField) field).getPath();
-                    if (path.isKey()) {
-                        return path.getPath() == null ? "key" : "key." + path.getPath();
-                    } else {
-                        return path.getPath() == null ? "value" : "value." + path.getPath();
-                    }
-                }).collect(Collectors.toList());
-        List<QueryDataType> fieldTypes = toList(table.getFields(), TableField::getType);
-
-        @SuppressWarnings("unchecked")
-        Expression<Boolean> predicate0 = predicate != null ? predicate
-                : (Expression<Boolean>) ConstantExpression.create(true, QueryDataType.BOOLEAN);
-
-        return entry -> {
-            // TODO: use something like MapScanRow ???
-            Row row = new EntryRow(fieldNames, fieldTypes, entry);
-            if (!Boolean.TRUE.equals(evaluate(predicate0, row))) {
-                return null;
-            }
             Object[] result = new Object[projections.size()];
             for (int i = 0; i < projections.size(); i++) {
                 result[i] = evaluate(projections.get(i), row);
