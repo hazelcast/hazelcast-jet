@@ -72,15 +72,15 @@ public class SqlJsonTest extends JetSqlTestSupport {
         sqlService.execute("CREATE MAPPING " + name + " ("
                 + "id INT EXTERNAL NAME __key.id"
                 + ", name VARCHAR EXTERNAL NAME this.name"
-                + ") TYPE " + KafkaSqlConnector.TYPE_NAME + " "
+                + ") TYPE " + KafkaSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ( "
-                + OPTION_SERIALIZATION_KEY_FORMAT + " '" + JSON_SERIALIZATION_FORMAT + "'"
-                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + "'"
-                + ", bootstrap.servers '" + kafkaTestSupport.getBrokerConnectionString() + "'"
-                + ", key.serializer '" + JsonSerializer.class.getCanonicalName() + "'"
-                + ", key.deserializer '" + JsonDeserializer.class.getCanonicalName() + "'"
-                + ", \"value.serializer\" '" + JsonSerializer.class.getCanonicalName() + "'"
-                + ", \"value.deserializer\" '" + JsonDeserializer.class.getCanonicalName() + "'"
+                + OPTION_SERIALIZATION_KEY_FORMAT + " '" + JSON_SERIALIZATION_FORMAT + '\''
+                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + '\''
+                + ", bootstrap.servers '" + kafkaTestSupport.getBrokerConnectionString() + '\''
+                + ", key.serializer '" + JsonSerializer.class.getCanonicalName() + '\''
+                + ", key.deserializer '" + JsonDeserializer.class.getCanonicalName() + '\''
+                + ", \"value.serializer\" '" + JsonSerializer.class.getCanonicalName() + '\''
+                + ", \"value.deserializer\" '" + JsonDeserializer.class.getCanonicalName() + '\''
                 + ", \"auto.offset.reset\" 'earliest'"
                 + ")"
         );
@@ -102,15 +102,15 @@ public class SqlJsonTest extends JetSqlTestSupport {
         sqlService.execute("CREATE MAPPING " + name + " ("
                 + "key_name VARCHAR EXTERNAL NAME __key.name"
                 + ", value_name VARCHAR EXTERNAL NAME this.name"
-                + ") TYPE " + KafkaSqlConnector.TYPE_NAME + " "
+                + ") TYPE " + KafkaSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ( "
-                + OPTION_SERIALIZATION_KEY_FORMAT + " '" + JSON_SERIALIZATION_FORMAT + "'"
-                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + "'"
-                + ", bootstrap.servers '" + kafkaTestSupport.getBrokerConnectionString() + "'"
-                + ", key.serializer '" + JsonSerializer.class.getCanonicalName() + "'"
-                + ", key.deserializer '" + JsonDeserializer.class.getCanonicalName() + "'"
-                + ", \"value.serializer\" '" + JsonSerializer.class.getCanonicalName() + "'"
-                + ", \"value.deserializer\" '" + JsonDeserializer.class.getCanonicalName() + "'"
+                + OPTION_SERIALIZATION_KEY_FORMAT + " '" + JSON_SERIALIZATION_FORMAT + '\''
+                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + '\''
+                + ", bootstrap.servers '" + kafkaTestSupport.getBrokerConnectionString() + '\''
+                + ", key.serializer '" + JsonSerializer.class.getCanonicalName() + '\''
+                + ", key.deserializer '" + JsonDeserializer.class.getCanonicalName() + '\''
+                + ", \"value.serializer\" '" + JsonSerializer.class.getCanonicalName() + '\''
+                + ", \"value.deserializer\" '" + JsonDeserializer.class.getCanonicalName() + '\''
                 + ", \"auto.offset.reset\" 'earliest'"
                 + ")"
         );
@@ -132,15 +132,15 @@ public class SqlJsonTest extends JetSqlTestSupport {
         sqlService.execute("CREATE MAPPING " + name + " ("
                 + "id INT EXTERNAL NAME __key.id"
                 + ", name VARCHAR"
-                + ") TYPE " + KafkaSqlConnector.TYPE_NAME + " "
+                + ") TYPE " + KafkaSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ( "
-                + OPTION_SERIALIZATION_KEY_FORMAT + " '" + JSON_SERIALIZATION_FORMAT + "'"
-                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + "'"
-                + ", bootstrap.servers '" + kafkaTestSupport.getBrokerConnectionString() + "'"
-                + ", key.serializer '" + JsonSerializer.class.getCanonicalName() + "'"
-                + ", key.deserializer '" + JsonDeserializer.class.getCanonicalName() + "'"
-                + ", \"value.serializer\" '" + JsonSerializer.class.getCanonicalName() + "'"
-                + ", \"value.deserializer\" '" + JsonDeserializer.class.getCanonicalName() + "'"
+                + OPTION_SERIALIZATION_KEY_FORMAT + " '" + JSON_SERIALIZATION_FORMAT + '\''
+                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + '\''
+                + ", bootstrap.servers '" + kafkaTestSupport.getBrokerConnectionString() + '\''
+                + ", key.serializer '" + JsonSerializer.class.getCanonicalName() + '\''
+                + ", key.deserializer '" + JsonDeserializer.class.getCanonicalName() + '\''
+                + ", \"value.serializer\" '" + JsonSerializer.class.getCanonicalName() + '\''
+                + ", \"value.deserializer\" '" + JsonDeserializer.class.getCanonicalName() + '\''
                 + ", \"auto.offset.reset\" 'earliest'"
                 + ")"
         );
@@ -153,15 +153,15 @@ public class SqlJsonTest extends JetSqlTestSupport {
                 + "id INT EXTERNAL NAME __key.id"
                 + ", name VARCHAR"
                 + ", ssn BIGINT"
-                + ") TYPE " + KafkaSqlConnector.TYPE_NAME + " "
+                + ") TYPE " + KafkaSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ( "
-                + OPTION_SERIALIZATION_KEY_FORMAT + " '" + JSON_SERIALIZATION_FORMAT + "'"
-                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + "'"
-                + ", bootstrap.servers '" + kafkaTestSupport.getBrokerConnectionString() + "'"
-                + ", key.serializer '" + JsonSerializer.class.getCanonicalName() + "'"
-                + ", key.deserializer '" + JsonDeserializer.class.getCanonicalName() + "'"
-                + ", \"value.serializer\" '" + JsonSerializer.class.getCanonicalName() + "'"
-                + ", \"value.deserializer\" '" + JsonDeserializer.class.getCanonicalName() + "'"
+                + OPTION_SERIALIZATION_KEY_FORMAT + " '" + JSON_SERIALIZATION_FORMAT + '\''
+                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + '\''
+                + ", bootstrap.servers '" + kafkaTestSupport.getBrokerConnectionString() + '\''
+                + ", key.serializer '" + JsonSerializer.class.getCanonicalName() + '\''
+                + ", key.deserializer '" + JsonDeserializer.class.getCanonicalName() + '\''
+                + ", \"value.serializer\" '" + JsonSerializer.class.getCanonicalName() + '\''
+                + ", \"value.deserializer\" '" + JsonDeserializer.class.getCanonicalName() + '\''
                 + ", \"auto.offset.reset\" 'earliest'"
                 + ")"
         );
@@ -203,15 +203,15 @@ public class SqlJsonTest extends JetSqlTestSupport {
                 + ", \"date\" DATE"
                 + ", \"timestamp\" TIMESTAMP"
                 + ", timestampTz TIMESTAMP WITH TIME ZONE"
-                + ") TYPE " + KafkaSqlConnector.TYPE_NAME + " "
+                + ") TYPE " + KafkaSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ( "
-                + OPTION_SERIALIZATION_KEY_FORMAT + " '" + JSON_SERIALIZATION_FORMAT + "'"
-                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + "'"
-                + ", bootstrap.servers '" + kafkaTestSupport.getBrokerConnectionString() + "'"
-                + ", key.serializer '" + JsonSerializer.class.getCanonicalName() + "'"
-                + ", key.deserializer '" + JsonDeserializer.class.getCanonicalName() + "'"
-                + ", \"value.serializer\" '" + JsonSerializer.class.getCanonicalName() + "'"
-                + ", \"value.deserializer\" '" + JsonDeserializer.class.getCanonicalName() + "'"
+                + OPTION_SERIALIZATION_KEY_FORMAT + " '" + JSON_SERIALIZATION_FORMAT + '\''
+                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + '\''
+                + ", bootstrap.servers '" + kafkaTestSupport.getBrokerConnectionString() + '\''
+                + ", key.serializer '" + JsonSerializer.class.getCanonicalName() + '\''
+                + ", key.deserializer '" + JsonDeserializer.class.getCanonicalName() + '\''
+                + ", \"value.serializer\" '" + JsonSerializer.class.getCanonicalName() + '\''
+                + ", \"value.deserializer\" '" + JsonDeserializer.class.getCanonicalName() + '\''
                 + ", \"auto.offset.reset\" 'earliest'"
                 + ")"
         );

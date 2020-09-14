@@ -70,7 +70,7 @@ public class CreateDagVisitor {
             rows.add(result);
         }
 
-        return dag.newVertex("values-src", convenientSourceP(
+        return dag.newVertex("Values", convenientSourceP(
                 pCtx -> null,
                 (ignored, buf) -> {
                     rows.forEach(buf::add);
@@ -103,7 +103,7 @@ public class CreateDagVisitor {
     public Vertex onFilter(FilterPhysicalRel rel) {
         FunctionEx<Object[], Object[]> filter = ExpressionUtil.filterFn(rel.filter());
 
-        Vertex vertex = dag.newVertex("filter", mapP(filter::apply));
+        Vertex vertex = dag.newVertex("Filter", mapP(filter::apply));
         connectInput(rel.getInput(), vertex, null);
         return vertex;
     }
@@ -111,7 +111,7 @@ public class CreateDagVisitor {
     public Vertex onProject(ProjectPhysicalRel rel) {
         FunctionEx<Object[], Object[]> projection = ExpressionUtil.projectionFn(rel.projection());
 
-        Vertex vertex = dag.newVertex("project", mapP(projection));
+        Vertex vertex = dag.newVertex("Project", mapP(projection));
         connectInput(rel.getInput(), vertex, null);
         return vertex;
     }

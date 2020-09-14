@@ -66,25 +66,25 @@ public class SqlPrimitiveTest extends JetSqlTestSupport {
     @Test
     public void test_insertSelect() {
         String name = createRandomTopic();
-        sqlService.execute("CREATE MAPPING " + name + " "
-                + "TYPE " + KafkaSqlConnector.TYPE_NAME + " "
+        sqlService.execute("CREATE MAPPING " + name + ' '
+                + "TYPE " + KafkaSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ( "
-                + OPTION_SERIALIZATION_KEY_FORMAT + " '" + JAVA_SERIALIZATION_FORMAT + "'"
-                + ", " + OPTION_KEY_CLASS + " '" + Integer.class.getName() + "'"
-                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
-                + ", \"" + OPTION_VALUE_CLASS + "\" '" + String.class.getName() + "'"
-                + ", bootstrap.servers '" + kafkaTestSupport.getBrokerConnectionString() + "'"
-                + ", key.serializer '" + IntegerSerializer.class.getCanonicalName() + "'"
-                + ", key.deserializer '" + IntegerDeserializer.class.getCanonicalName() + "'"
-                + ", \"value.serializer\" '" + StringSerializer.class.getCanonicalName() + "'"
-                + ", \"value.deserializer\" '" + StringDeserializer.class.getCanonicalName() + "'"
+                + OPTION_SERIALIZATION_KEY_FORMAT + " '" + JAVA_SERIALIZATION_FORMAT + '\''
+                + ", " + OPTION_KEY_CLASS + " '" + Integer.class.getName() + '\''
+                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + '\''
+                + ", \"" + OPTION_VALUE_CLASS + "\" '" + String.class.getName() + '\''
+                + ", bootstrap.servers '" + kafkaTestSupport.getBrokerConnectionString() + '\''
+                + ", key.serializer '" + IntegerSerializer.class.getCanonicalName() + '\''
+                + ", key.deserializer '" + IntegerDeserializer.class.getCanonicalName() + '\''
+                + ", \"value.serializer\" '" + StringSerializer.class.getCanonicalName() + '\''
+                + ", \"value.deserializer\" '" + StringDeserializer.class.getCanonicalName() + '\''
                 + ", \"auto.offset.reset\" 'earliest'"
                 + ")"
         );
 
         String from = generateRandomName();
-        sqlService.execute("CREATE MAPPING " + from + " "
-                + "TYPE " + TestBatchSqlConnector.TYPE_NAME + " "
+        sqlService.execute("CREATE MAPPING " + from + ' '
+                + "TYPE " + TestBatchSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ("
                 + "itemCount '2'"
                 + ")"
@@ -104,18 +104,18 @@ public class SqlPrimitiveTest extends JetSqlTestSupport {
     @Test
     public void test_insertValues() {
         String name = createRandomTopic();
-        sqlService.execute("CREATE MAPPING " + name + " "
-                + "TYPE " + KafkaSqlConnector.TYPE_NAME + " "
+        sqlService.execute("CREATE MAPPING " + name + ' '
+                + "TYPE " + KafkaSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ( "
-                + OPTION_SERIALIZATION_KEY_FORMAT + " '" + JAVA_SERIALIZATION_FORMAT + "'"
-                + ", " + OPTION_KEY_CLASS + " '" + Integer.class.getName() + "'"
-                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
-                + ", \"" + OPTION_VALUE_CLASS + "\" '" + String.class.getName() + "'"
-                + ", bootstrap.servers '" + kafkaTestSupport.getBrokerConnectionString() + "'"
-                + ", key.serializer '" + IntegerSerializer.class.getCanonicalName() + "'"
-                + ", key.deserializer '" + IntegerDeserializer.class.getCanonicalName() + "'"
-                + ", \"value.serializer\" '" + StringSerializer.class.getCanonicalName() + "'"
-                + ", \"value.deserializer\" '" + StringDeserializer.class.getCanonicalName() + "'"
+                + OPTION_SERIALIZATION_KEY_FORMAT + " '" + JAVA_SERIALIZATION_FORMAT + '\''
+                + ", " + OPTION_KEY_CLASS + " '" + Integer.class.getName() + '\''
+                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + '\''
+                + ", \"" + OPTION_VALUE_CLASS + "\" '" + String.class.getName() + '\''
+                + ", bootstrap.servers '" + kafkaTestSupport.getBrokerConnectionString() + '\''
+                + ", key.serializer '" + IntegerSerializer.class.getCanonicalName() + '\''
+                + ", key.deserializer '" + IntegerDeserializer.class.getCanonicalName() + '\''
+                + ", \"value.serializer\" '" + StringSerializer.class.getCanonicalName() + '\''
+                + ", \"value.deserializer\" '" + StringDeserializer.class.getCanonicalName() + '\''
                 + ", \"auto.offset.reset\" 'earliest'"
                 + ")"
         );
@@ -134,18 +134,18 @@ public class SqlPrimitiveTest extends JetSqlTestSupport {
     @Test
     public void test_insertSink() {
         String name = createRandomTopic();
-        sqlService.execute("CREATE MAPPING " + name + " "
-                + "TYPE " + KafkaSqlConnector.TYPE_NAME + " "
+        sqlService.execute("CREATE MAPPING " + name + ' '
+                + "TYPE " + KafkaSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ( "
-                + OPTION_SERIALIZATION_KEY_FORMAT + " '" + JAVA_SERIALIZATION_FORMAT + "'"
-                + ", " + OPTION_KEY_CLASS + " '" + Integer.class.getName() + "'"
-                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
-                + ", \"" + OPTION_VALUE_CLASS + "\" '" + String.class.getName() + "'"
-                + ", bootstrap.servers '" + kafkaTestSupport.getBrokerConnectionString() + "'"
-                + ", key.serializer '" + IntegerSerializer.class.getCanonicalName() + "'"
-                + ", key.deserializer '" + IntegerDeserializer.class.getCanonicalName() + "'"
-                + ", \"value.serializer\" '" + StringSerializer.class.getCanonicalName() + "'"
-                + ", \"value.deserializer\" '" + StringDeserializer.class.getCanonicalName() + "'"
+                + OPTION_SERIALIZATION_KEY_FORMAT + " '" + JAVA_SERIALIZATION_FORMAT + '\''
+                + ", " + OPTION_KEY_CLASS + " '" + Integer.class.getName() + '\''
+                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + '\''
+                + ", \"" + OPTION_VALUE_CLASS + "\" '" + String.class.getName() + '\''
+                + ", bootstrap.servers '" + kafkaTestSupport.getBrokerConnectionString() + '\''
+                + ", key.serializer '" + IntegerSerializer.class.getCanonicalName() + '\''
+                + ", key.deserializer '" + IntegerDeserializer.class.getCanonicalName() + '\''
+                + ", \"value.serializer\" '" + StringSerializer.class.getCanonicalName() + '\''
+                + ", \"value.deserializer\" '" + StringDeserializer.class.getCanonicalName() + '\''
                 + ", \"auto.offset.reset\" 'earliest'"
                 + ")"
         );
@@ -164,18 +164,18 @@ public class SqlPrimitiveTest extends JetSqlTestSupport {
     @Test
     public void test_insertNulls() {
         String name = createRandomTopic();
-        sqlService.execute("CREATE MAPPING " + name + " "
-                + "TYPE " + KafkaSqlConnector.TYPE_NAME + " "
+        sqlService.execute("CREATE MAPPING " + name + ' '
+                + "TYPE " + KafkaSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ( "
-                + OPTION_SERIALIZATION_KEY_FORMAT + " '" + JAVA_SERIALIZATION_FORMAT + "'"
-                + ", " + OPTION_KEY_CLASS + " '" + Integer.class.getName() + "'"
-                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
-                + ", \"" + OPTION_VALUE_CLASS + "\" '" + String.class.getName() + "'"
-                + ", bootstrap.servers '" + kafkaTestSupport.getBrokerConnectionString() + "'"
-                + ", key.serializer '" + IntegerSerializer.class.getCanonicalName() + "'"
-                + ", key.deserializer '" + IntegerDeserializer.class.getCanonicalName() + "'"
-                + ", \"value.serializer\" '" + StringSerializer.class.getCanonicalName() + "'"
-                + ", \"value.deserializer\" '" + StringDeserializer.class.getCanonicalName() + "'"
+                + OPTION_SERIALIZATION_KEY_FORMAT + " '" + JAVA_SERIALIZATION_FORMAT + '\''
+                + ", " + OPTION_KEY_CLASS + " '" + Integer.class.getName() + '\''
+                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + '\''
+                + ", \"" + OPTION_VALUE_CLASS + "\" '" + String.class.getName() + '\''
+                + ", bootstrap.servers '" + kafkaTestSupport.getBrokerConnectionString() + '\''
+                + ", key.serializer '" + IntegerSerializer.class.getCanonicalName() + '\''
+                + ", key.deserializer '" + IntegerDeserializer.class.getCanonicalName() + '\''
+                + ", \"value.serializer\" '" + StringSerializer.class.getCanonicalName() + '\''
+                + ", \"value.deserializer\" '" + StringDeserializer.class.getCanonicalName() + '\''
                 + ", \"auto.offset.reset\" 'earliest'"
                 + ")"
         );
@@ -194,18 +194,18 @@ public class SqlPrimitiveTest extends JetSqlTestSupport {
     @Test
     public void test_insertWithProject() {
         String name = createRandomTopic();
-        sqlService.execute("CREATE MAPPING " + name + " "
-                + "TYPE " + KafkaSqlConnector.TYPE_NAME + " "
+        sqlService.execute("CREATE MAPPING " + name + ' '
+                + "TYPE " + KafkaSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ( "
-                + OPTION_SERIALIZATION_KEY_FORMAT + " '" + JAVA_SERIALIZATION_FORMAT + "'"
-                + ", " + OPTION_KEY_CLASS + " '" + Integer.class.getName() + "'"
-                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
-                + ", \"" + OPTION_VALUE_CLASS + "\" '" + String.class.getName() + "'"
-                + ", bootstrap.servers '" + kafkaTestSupport.getBrokerConnectionString() + "'"
-                + ", key.serializer '" + IntegerSerializer.class.getCanonicalName() + "'"
-                + ", key.deserializer '" + IntegerDeserializer.class.getCanonicalName() + "'"
-                + ", \"value.serializer\" '" + StringSerializer.class.getCanonicalName() + "'"
-                + ", \"value.deserializer\" '" + StringDeserializer.class.getCanonicalName() + "'"
+                + OPTION_SERIALIZATION_KEY_FORMAT + " '" + JAVA_SERIALIZATION_FORMAT + '\''
+                + ", " + OPTION_KEY_CLASS + " '" + Integer.class.getName() + '\''
+                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + '\''
+                + ", \"" + OPTION_VALUE_CLASS + "\" '" + String.class.getName() + '\''
+                + ", bootstrap.servers '" + kafkaTestSupport.getBrokerConnectionString() + '\''
+                + ", key.serializer '" + IntegerSerializer.class.getCanonicalName() + '\''
+                + ", key.deserializer '" + IntegerDeserializer.class.getCanonicalName() + '\''
+                + ", \"value.serializer\" '" + StringSerializer.class.getCanonicalName() + '\''
+                + ", \"value.deserializer\" '" + StringDeserializer.class.getCanonicalName() + '\''
                 + ", \"auto.offset.reset\" 'earliest'"
                 + ")"
         );
@@ -227,17 +227,17 @@ public class SqlPrimitiveTest extends JetSqlTestSupport {
         sqlService.execute("CREATE MAPPING " + name + " ("
                 + "id INT EXTERNAL NAME __key"
                 + ", name VARCHAR EXTERNAL NAME this"
-                + ") TYPE " + KafkaSqlConnector.TYPE_NAME + " "
+                + ") TYPE " + KafkaSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ( "
-                + OPTION_SERIALIZATION_KEY_FORMAT + " '" + JAVA_SERIALIZATION_FORMAT + "'"
-                + ", " + OPTION_KEY_CLASS + " '" + Integer.class.getName() + "'"
-                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
-                + ", \"" + OPTION_VALUE_CLASS + "\" '" + String.class.getName() + "'"
-                + ", bootstrap.servers '" + kafkaTestSupport.getBrokerConnectionString() + "'"
-                + ", key.serializer '" + IntegerSerializer.class.getCanonicalName() + "'"
-                + ", key.deserializer '" + IntegerDeserializer.class.getCanonicalName() + "'"
-                + ", \"value.serializer\" '" + StringSerializer.class.getCanonicalName() + "'"
-                + ", \"value.deserializer\" '" + StringDeserializer.class.getCanonicalName() + "'"
+                + OPTION_SERIALIZATION_KEY_FORMAT + " '" + JAVA_SERIALIZATION_FORMAT + '\''
+                + ", " + OPTION_KEY_CLASS + " '" + Integer.class.getName() + '\''
+                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + '\''
+                + ", \"" + OPTION_VALUE_CLASS + "\" '" + String.class.getName() + '\''
+                + ", bootstrap.servers '" + kafkaTestSupport.getBrokerConnectionString() + '\''
+                + ", key.serializer '" + IntegerSerializer.class.getCanonicalName() + '\''
+                + ", key.deserializer '" + IntegerDeserializer.class.getCanonicalName() + '\''
+                + ", \"value.serializer\" '" + StringSerializer.class.getCanonicalName() + '\''
+                + ", \"value.deserializer\" '" + StringDeserializer.class.getCanonicalName() + '\''
                 + ", \"auto.offset.reset\" 'earliest'"
                 + ")"
         );
@@ -258,19 +258,19 @@ public class SqlPrimitiveTest extends JetSqlTestSupport {
         String topicName = createRandomTopic();
         String tableName = generateRandomName();
 
-        sqlService.execute("CREATE MAPPING " + tableName + " "
-                + "TYPE " + KafkaSqlConnector.TYPE_NAME + " "
+        sqlService.execute("CREATE MAPPING " + tableName + ' '
+                + "TYPE " + KafkaSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ( "
-                + OPTION_OBJECT_NAME + " '" + topicName + "'"
-                + ", " + OPTION_SERIALIZATION_KEY_FORMAT + " '" + JAVA_SERIALIZATION_FORMAT + "'"
-                + ", " + OPTION_KEY_CLASS + " '" + Integer.class.getName() + "'"
-                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
-                + ", \"" + OPTION_VALUE_CLASS + "\" '" + String.class.getName() + "'"
-                + ", bootstrap.servers '" + kafkaTestSupport.getBrokerConnectionString() + "'"
-                + ", key.serializer '" + IntegerSerializer.class.getCanonicalName() + "'"
-                + ", key.deserializer '" + IntegerDeserializer.class.getCanonicalName() + "'"
-                + ", \"value.serializer\" '" + StringSerializer.class.getCanonicalName() + "'"
-                + ", \"value.deserializer\" '" + StringDeserializer.class.getCanonicalName() + "'"
+                + OPTION_OBJECT_NAME + " '" + topicName + '\''
+                + ", " + OPTION_SERIALIZATION_KEY_FORMAT + " '" + JAVA_SERIALIZATION_FORMAT + '\''
+                + ", " + OPTION_KEY_CLASS + " '" + Integer.class.getName() + '\''
+                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + '\''
+                + ", \"" + OPTION_VALUE_CLASS + "\" '" + String.class.getName() + '\''
+                + ", bootstrap.servers '" + kafkaTestSupport.getBrokerConnectionString() + '\''
+                + ", key.serializer '" + IntegerSerializer.class.getCanonicalName() + '\''
+                + ", key.deserializer '" + IntegerDeserializer.class.getCanonicalName() + '\''
+                + ", \"value.serializer\" '" + StringSerializer.class.getCanonicalName() + '\''
+                + ", \"value.deserializer\" '" + StringDeserializer.class.getCanonicalName() + '\''
                 + ", \"auto.offset.reset\" 'earliest'"
                 + ")"
         );

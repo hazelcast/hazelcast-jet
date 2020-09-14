@@ -74,8 +74,8 @@ public class SqlPrimitiveTest extends JetSqlTestSupport {
         sqlService.execute(javaSerializableMapDdl(name, Integer.class, String.class));
 
         String from = generateRandomName();
-        sqlService.execute("CREATE MAPPING " + from + " "
-                + "TYPE " + TestBatchSqlConnector.TYPE_NAME + " "
+        sqlService.execute("CREATE MAPPING " + from + ' '
+                + "TYPE " + TestBatchSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ("
                 + "itemCount '2'"
                 + ")"
@@ -133,12 +133,12 @@ public class SqlPrimitiveTest extends JetSqlTestSupport {
         sqlService.execute("CREATE MAPPING " + name + " ("
                 + "id INT EXTERNAL NAME __key"
                 + ", name VARCHAR EXTERNAL NAME this"
-                + ") TYPE " + IMapSqlConnector.TYPE_NAME + " "
+                + ") TYPE " + IMapSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ("
-                + OPTION_SERIALIZATION_KEY_FORMAT + " '" + JAVA_SERIALIZATION_FORMAT + "'"
-                + ", " + OPTION_KEY_CLASS + " '" + Integer.class.getName() + "'"
-                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
-                + ", \"" + OPTION_VALUE_CLASS + "\" '" + String.class.getName() + "'"
+                + OPTION_SERIALIZATION_KEY_FORMAT + " '" + JAVA_SERIALIZATION_FORMAT + '\''
+                + ", " + OPTION_KEY_CLASS + " '" + Integer.class.getName() + '\''
+                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + '\''
+                + ", \"" + OPTION_VALUE_CLASS + "\" '" + String.class.getName() + '\''
                 + ")"
         );
 
@@ -158,13 +158,13 @@ public class SqlPrimitiveTest extends JetSqlTestSupport {
         String mapName = generateRandomName();
         String tableName = generateRandomName();
 
-        sqlService.execute("CREATE MAPPING " + tableName + " TYPE " + IMapSqlConnector.TYPE_NAME + " "
+        sqlService.execute("CREATE MAPPING " + tableName + " TYPE " + IMapSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ("
-                + OPTION_OBJECT_NAME + " '" + mapName + "'"
-                + ", " + OPTION_SERIALIZATION_KEY_FORMAT + " '" + JAVA_SERIALIZATION_FORMAT + "'"
-                + ", " + OPTION_KEY_CLASS + " '" + String.class.getName() + "'"
-                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
-                + ", \"" + OPTION_VALUE_CLASS + "\" '" + String.class.getName() + "'"
+                + OPTION_OBJECT_NAME + " '" + mapName + '\''
+                + ", " + OPTION_SERIALIZATION_KEY_FORMAT + " '" + JAVA_SERIALIZATION_FORMAT + '\''
+                + ", " + OPTION_KEY_CLASS + " '" + String.class.getName() + '\''
+                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + '\''
+                + ", \"" + OPTION_VALUE_CLASS + "\" '" + String.class.getName() + '\''
                 + ")"
         );
 

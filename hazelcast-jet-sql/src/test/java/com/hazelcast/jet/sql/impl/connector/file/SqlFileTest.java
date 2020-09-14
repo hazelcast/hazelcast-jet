@@ -49,11 +49,11 @@ public class SqlFileTest extends JetSqlTestSupport {
         sqlService.execute("CREATE MAPPING " + name + " ("
                 + "username VARCHAR"
                 + ", age INT"
-                + ") TYPE " + FileSqlConnector.TYPE_NAME + " "
+                + ") TYPE " + FileSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ("
-                + OPTION_SERIALIZATION_FORMAT + " '" + AVRO_SERIALIZATION_FORMAT + "'"
-                + ", " + FileSqlConnector.OPTION_PATH + " '" + RESOURCES_PATH + "'"
-                + ", " + FileSqlConnector.OPTION_GLOB + " '" + "users.avro" + "'"
+                + OPTION_SERIALIZATION_FORMAT + " '" + AVRO_SERIALIZATION_FORMAT + '\''
+                + ", " + FileSqlConnector.OPTION_PATH + " '" + RESOURCES_PATH + '\''
+                + ", " + FileSqlConnector.OPTION_GLOB + " '" + "users.avro" + '\''
                 + ")"
         );
     }

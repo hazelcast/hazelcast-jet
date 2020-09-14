@@ -120,12 +120,12 @@ public class SqlPojoTest extends JetSqlTestSupport {
         sqlService.execute("CREATE MAPPING " + name + " ("
                 + "key_id INT EXTERNAL NAME __key.id"
                 + ", value_id INT EXTERNAL NAME this.id"
-                + ") TYPE " + IMapSqlConnector.TYPE_NAME + " "
+                + ") TYPE " + IMapSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ("
-                + OPTION_SERIALIZATION_KEY_FORMAT + " '" + JAVA_SERIALIZATION_FORMAT + "'"
-                + ", " + OPTION_KEY_CLASS + " '" + PersonId.class.getName() + "'"
-                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
-                + ", \"" + OPTION_VALUE_CLASS + "\" '" + Person.class.getName() + "'"
+                + OPTION_SERIALIZATION_KEY_FORMAT + " '" + JAVA_SERIALIZATION_FORMAT + '\''
+                + ", " + OPTION_KEY_CLASS + " '" + PersonId.class.getName() + '\''
+                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + '\''
+                + ", \"" + OPTION_VALUE_CLASS + "\" '" + Person.class.getName() + '\''
                 + ")"
         );
 
@@ -149,13 +149,13 @@ public class SqlPojoTest extends JetSqlTestSupport {
         sqlService.execute("SINK INTO " + name + " VALUES (1, 'Alice')");
 
         // alter schema
-        sqlService.execute("CREATE OR REPLACE MAPPING " + name + " "
-                + "TYPE " + IMapSqlConnector.TYPE_NAME + " "
+        sqlService.execute("CREATE OR REPLACE MAPPING " + name + ' '
+                + "TYPE " + IMapSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ("
-                + OPTION_SERIALIZATION_KEY_FORMAT + " '" + JAVA_SERIALIZATION_FORMAT + "'"
-                + ", " + OPTION_KEY_CLASS + " '" + PersonId.class.getName() + "'"
-                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
-                + ", \"" + OPTION_VALUE_CLASS + "\" '" + InsuredPerson.class.getName() + "'"
+                + OPTION_SERIALIZATION_KEY_FORMAT + " '" + JAVA_SERIALIZATION_FORMAT + '\''
+                + ", " + OPTION_KEY_CLASS + " '" + PersonId.class.getName() + '\''
+                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + '\''
+                + ", \"" + OPTION_VALUE_CLASS + "\" '" + InsuredPerson.class.getName() + '\''
                 + ")"
         );
 
@@ -181,12 +181,12 @@ public class SqlPojoTest extends JetSqlTestSupport {
 
         sqlService.execute("CREATE MAPPING " + name + " ("
                 + "ssn BIGINT"
-                + ") TYPE " + IMapSqlConnector.TYPE_NAME + " "
+                + ") TYPE " + IMapSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ("
-                + OPTION_SERIALIZATION_KEY_FORMAT + " '" + JAVA_SERIALIZATION_FORMAT + "'"
-                + ", " + OPTION_KEY_CLASS + " '" + PersonId.class.getName() + "'"
-                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "'"
-                + ", \"" + OPTION_VALUE_CLASS + "\" '" + Person.class.getName() + "'"
+                + OPTION_SERIALIZATION_KEY_FORMAT + " '" + JAVA_SERIALIZATION_FORMAT + '\''
+                + ", " + OPTION_KEY_CLASS + " '" + PersonId.class.getName() + '\''
+                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + '\''
+                + ", \"" + OPTION_VALUE_CLASS + "\" '" + Person.class.getName() + '\''
                 + ")"
         );
 

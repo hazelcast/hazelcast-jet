@@ -56,10 +56,10 @@ public class SqlJsonTest extends JetSqlTestSupport {
         sqlService.execute("CREATE MAPPING " + name + " ("
                 + "id INT EXTERNAL NAME __key.id"
                 + ", name VARCHAR EXTERNAL NAME this.name"
-                + ") TYPE " + IMapSqlConnector.TYPE_NAME + " "
+                + ") TYPE " + IMapSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ("
-                + OPTION_SERIALIZATION_KEY_FORMAT + " '" + JSON_SERIALIZATION_FORMAT + "'"
-                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + "'"
+                + OPTION_SERIALIZATION_KEY_FORMAT + " '" + JSON_SERIALIZATION_FORMAT + '\''
+                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + '\''
                 + ")");
 
         assertMapEventually(
@@ -79,10 +79,10 @@ public class SqlJsonTest extends JetSqlTestSupport {
         sqlService.execute("CREATE MAPPING " + name + " ("
                 + "key_name VARCHAR EXTERNAL NAME __key.name"
                 + ", value_name VARCHAR EXTERNAL NAME this.name"
-                + ") TYPE " + IMapSqlConnector.TYPE_NAME + " "
+                + ") TYPE " + IMapSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ("
-                + OPTION_SERIALIZATION_KEY_FORMAT + " '" + JSON_SERIALIZATION_FORMAT + "'"
-                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + "'"
+                + OPTION_SERIALIZATION_KEY_FORMAT + " '" + JSON_SERIALIZATION_FORMAT + '\''
+                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + '\''
                 + ")");
 
         assertMapEventually(
@@ -101,11 +101,11 @@ public class SqlJsonTest extends JetSqlTestSupport {
         String name = generateRandomName();
         sqlService.execute("CREATE MAPPING " + name + " ("
                 + "name VARCHAR"
-                + ") TYPE " + IMapSqlConnector.TYPE_NAME + " "
+                + ") TYPE " + IMapSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ("
-                + OPTION_SERIALIZATION_KEY_FORMAT + " '" + JAVA_SERIALIZATION_FORMAT + "'"
-                + ", " + OPTION_KEY_CLASS + " '" + Integer.class.getName() + "'"
-                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + "'"
+                + OPTION_SERIALIZATION_KEY_FORMAT + " '" + JAVA_SERIALIZATION_FORMAT + '\''
+                + ", " + OPTION_KEY_CLASS + " '" + Integer.class.getName() + '\''
+                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + '\''
                 + ")");
 
         // insert initial record
@@ -115,11 +115,11 @@ public class SqlJsonTest extends JetSqlTestSupport {
         sqlService.execute("CREATE OR REPLACE MAPPING " + name + " ("
                 + "name VARCHAR"
                 + ", ssn BIGINT"
-                + ") TYPE " + IMapSqlConnector.TYPE_NAME + " "
+                + ") TYPE " + IMapSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ("
-                + OPTION_SERIALIZATION_KEY_FORMAT + " '" + JAVA_SERIALIZATION_FORMAT + "'"
-                + ", " + OPTION_KEY_CLASS + " '" + Integer.class.getName() + "'"
-                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + "'"
+                + OPTION_SERIALIZATION_KEY_FORMAT + " '" + JAVA_SERIALIZATION_FORMAT + '\''
+                + ", " + OPTION_KEY_CLASS + " '" + Integer.class.getName() + '\''
+                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + '\''
                 + ")");
 
         // insert record against new schema
@@ -159,10 +159,10 @@ public class SqlJsonTest extends JetSqlTestSupport {
                 + ", \"date\" DATE"
                 + ", \"timestamp\" TIMESTAMP"
                 + ", timestampTz TIMESTAMP WITH TIME ZONE"
-                + ") TYPE " + IMapSqlConnector.TYPE_NAME + " "
+                + ") TYPE " + IMapSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ("
-                + OPTION_SERIALIZATION_KEY_FORMAT + " '" + JSON_SERIALIZATION_FORMAT + "'"
-                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + "'"
+                + OPTION_SERIALIZATION_KEY_FORMAT + " '" + JSON_SERIALIZATION_FORMAT + '\''
+                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + '\''
                 + ")");
 
         sqlService.execute("SINK INTO " + to + " SELECT "

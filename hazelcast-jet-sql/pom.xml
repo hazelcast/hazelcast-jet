@@ -226,13 +226,6 @@
         </dependency>
 
         <dependency>
-            <groupId>org.apache.hadoop</groupId>
-            <artifactId>hadoop-minicluster</artifactId>
-            <version>${hadoop.version}</version>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
             <groupId>com.hazelcast.jet</groupId>
             <artifactId>hazelcast-jet-kafka</artifactId>
             <version>${project.parent.version}</version>
@@ -251,6 +244,13 @@
             <artifactId>kafka-clients</artifactId>
             <version>${kafka.version}</version>
             <classifier>test</classifier>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-minicluster</artifactId>
+            <version>${hadoop.version}</version>
             <scope>test</scope>
         </dependency>
     </dependencies>

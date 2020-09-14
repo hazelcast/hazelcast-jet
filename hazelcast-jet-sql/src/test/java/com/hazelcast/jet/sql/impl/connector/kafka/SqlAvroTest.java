@@ -90,16 +90,16 @@ public class SqlAvroTest extends JetSqlTestSupport {
         sqlService.execute("CREATE MAPPING " + name + " ("
                 + "id INT EXTERNAL NAME __key.id"
                 + ", name VARCHAR EXTERNAL NAME this.name"
-                + ") TYPE " + KafkaSqlConnector.TYPE_NAME + " "
+                + ") TYPE " + KafkaSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ( "
-                + OPTION_SERIALIZATION_KEY_FORMAT + " '" + AVRO_SERIALIZATION_FORMAT + "'"
-                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + AVRO_SERIALIZATION_FORMAT + "'"
-                + ", bootstrap.servers '" + kafkaTestSupport.getBrokerConnectionString() + "'"
-                + ", schema.registry.url '" + schemaRegistry.getURI() + "'"
-                + ", key.serializer '" + KafkaAvroSerializer.class.getCanonicalName() + "'"
-                + ", key.deserializer '" + KafkaAvroDeserializer.class.getCanonicalName() + "'"
-                + ", \"value.serializer\" '" + KafkaAvroSerializer.class.getCanonicalName() + "'"
-                + ", \"value.deserializer\" '" + KafkaAvroDeserializer.class.getCanonicalName() + "'"
+                + OPTION_SERIALIZATION_KEY_FORMAT + " '" + AVRO_SERIALIZATION_FORMAT + '\''
+                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + AVRO_SERIALIZATION_FORMAT + '\''
+                + ", bootstrap.servers '" + kafkaTestSupport.getBrokerConnectionString() + '\''
+                + ", schema.registry.url '" + schemaRegistry.getURI() + '\''
+                + ", key.serializer '" + KafkaAvroSerializer.class.getCanonicalName() + '\''
+                + ", key.deserializer '" + KafkaAvroDeserializer.class.getCanonicalName() + '\''
+                + ", \"value.serializer\" '" + KafkaAvroSerializer.class.getCanonicalName() + '\''
+                + ", \"value.deserializer\" '" + KafkaAvroDeserializer.class.getCanonicalName() + '\''
                 + ", \"auto.offset.reset\" 'earliest'"
                 + ")"
         );
@@ -124,16 +124,16 @@ public class SqlAvroTest extends JetSqlTestSupport {
         sqlService.execute("CREATE MAPPING " + name + " ("
                 + "key_name VARCHAR EXTERNAL NAME __key.name"
                 + ", value_name VARCHAR EXTERNAL NAME this.name"
-                + ") TYPE " + KafkaSqlConnector.TYPE_NAME + " "
+                + ") TYPE " + KafkaSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ( "
-                + OPTION_SERIALIZATION_KEY_FORMAT + " '" + AVRO_SERIALIZATION_FORMAT + "'"
-                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + AVRO_SERIALIZATION_FORMAT + "'"
-                + ", bootstrap.servers '" + kafkaTestSupport.getBrokerConnectionString() + "'"
-                + ", schema.registry.url '" + schemaRegistry.getURI() + "'"
-                + ", key.serializer '" + KafkaAvroSerializer.class.getCanonicalName() + "'"
-                + ", key.deserializer '" + KafkaAvroDeserializer.class.getCanonicalName() + "'"
-                + ", \"value.serializer\" '" + KafkaAvroSerializer.class.getCanonicalName() + "'"
-                + ", \"value.deserializer\" '" + KafkaAvroDeserializer.class.getCanonicalName() + "'"
+                + OPTION_SERIALIZATION_KEY_FORMAT + " '" + AVRO_SERIALIZATION_FORMAT + '\''
+                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + AVRO_SERIALIZATION_FORMAT + '\''
+                + ", bootstrap.servers '" + kafkaTestSupport.getBrokerConnectionString() + '\''
+                + ", schema.registry.url '" + schemaRegistry.getURI() + '\''
+                + ", key.serializer '" + KafkaAvroSerializer.class.getCanonicalName() + '\''
+                + ", key.deserializer '" + KafkaAvroDeserializer.class.getCanonicalName() + '\''
+                + ", \"value.serializer\" '" + KafkaAvroSerializer.class.getCanonicalName() + '\''
+                + ", \"value.deserializer\" '" + KafkaAvroDeserializer.class.getCanonicalName() + '\''
                 + ", \"auto.offset.reset\" 'earliest'"
                 + ")"
         );
@@ -158,16 +158,16 @@ public class SqlAvroTest extends JetSqlTestSupport {
         sqlService.execute("CREATE MAPPING " + name + " ("
                 + "id INT EXTERNAL NAME __key.id"
                 + ", name VARCHAR"
-                + ") TYPE " + KafkaSqlConnector.TYPE_NAME + " "
+                + ") TYPE " + KafkaSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ( "
-                + OPTION_SERIALIZATION_KEY_FORMAT + " '" + AVRO_SERIALIZATION_FORMAT + "'"
-                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + AVRO_SERIALIZATION_FORMAT + "'"
-                + ", bootstrap.servers '" + kafkaTestSupport.getBrokerConnectionString() + "'"
-                + ", schema.registry.url '" + schemaRegistry.getURI() + "'"
-                + ", key.serializer '" + KafkaAvroSerializer.class.getCanonicalName() + "'"
-                + ", key.deserializer '" + KafkaAvroDeserializer.class.getCanonicalName() + "'"
-                + ", \"value.serializer\" '" + KafkaAvroSerializer.class.getCanonicalName() + "'"
-                + ", \"value.deserializer\" '" + KafkaAvroDeserializer.class.getCanonicalName() + "'"
+                + OPTION_SERIALIZATION_KEY_FORMAT + " '" + AVRO_SERIALIZATION_FORMAT + '\''
+                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + AVRO_SERIALIZATION_FORMAT + '\''
+                + ", bootstrap.servers '" + kafkaTestSupport.getBrokerConnectionString() + '\''
+                + ", schema.registry.url '" + schemaRegistry.getURI() + '\''
+                + ", key.serializer '" + KafkaAvroSerializer.class.getCanonicalName() + '\''
+                + ", key.deserializer '" + KafkaAvroDeserializer.class.getCanonicalName() + '\''
+                + ", \"value.serializer\" '" + KafkaAvroSerializer.class.getCanonicalName() + '\''
+                + ", \"value.deserializer\" '" + KafkaAvroDeserializer.class.getCanonicalName() + '\''
                 + ", \"auto.offset.reset\" 'earliest'"
                 + ")"
         );
@@ -180,16 +180,16 @@ public class SqlAvroTest extends JetSqlTestSupport {
                 + "id INT EXTERNAL NAME __key.id"
                 + ", name VARCHAR"
                 + ", ssn BIGINT"
-                + ") TYPE " + KafkaSqlConnector.TYPE_NAME + " "
+                + ") TYPE " + KafkaSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ( "
-                + OPTION_SERIALIZATION_KEY_FORMAT + " '" + AVRO_SERIALIZATION_FORMAT + "'"
-                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + AVRO_SERIALIZATION_FORMAT + "'"
-                + ", bootstrap.servers '" + kafkaTestSupport.getBrokerConnectionString() + "'"
-                + ", schema.registry.url '" + schemaRegistry.getURI() + "'"
-                + ", key.serializer '" + KafkaAvroSerializer.class.getCanonicalName() + "'"
-                + ", key.deserializer '" + KafkaAvroDeserializer.class.getCanonicalName() + "'"
-                + ", \"value.serializer\" '" + KafkaAvroSerializer.class.getCanonicalName() + "'"
-                + ", \"value.deserializer\" '" + KafkaAvroDeserializer.class.getCanonicalName() + "'"
+                + OPTION_SERIALIZATION_KEY_FORMAT + " '" + AVRO_SERIALIZATION_FORMAT + '\''
+                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + AVRO_SERIALIZATION_FORMAT + '\''
+                + ", bootstrap.servers '" + kafkaTestSupport.getBrokerConnectionString() + '\''
+                + ", schema.registry.url '" + schemaRegistry.getURI() + '\''
+                + ", key.serializer '" + KafkaAvroSerializer.class.getCanonicalName() + '\''
+                + ", key.deserializer '" + KafkaAvroDeserializer.class.getCanonicalName() + '\''
+                + ", \"value.serializer\" '" + KafkaAvroSerializer.class.getCanonicalName() + '\''
+                + ", \"value.deserializer\" '" + KafkaAvroDeserializer.class.getCanonicalName() + '\''
                 + ", \"auto.offset.reset\" 'earliest'"
                 + ")"
         );
@@ -231,16 +231,16 @@ public class SqlAvroTest extends JetSqlTestSupport {
                 + ", \"date\" DATE"
                 + ", \"timestamp\" TIMESTAMP"
                 + ", timestampTz TIMESTAMP WITH TIME ZONE"
-                + ") TYPE " + KafkaSqlConnector.TYPE_NAME + " "
+                + ") TYPE " + KafkaSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ( "
-                + OPTION_SERIALIZATION_KEY_FORMAT + " '" + AVRO_SERIALIZATION_FORMAT + "'"
-                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + AVRO_SERIALIZATION_FORMAT + "'"
-                + ", bootstrap.servers '" + kafkaTestSupport.getBrokerConnectionString() + "'"
-                + ", schema.registry.url '" + schemaRegistry.getURI() + "'"
-                + ", key.serializer '" + KafkaAvroSerializer.class.getCanonicalName() + "'"
-                + ", key.deserializer '" + KafkaAvroDeserializer.class.getCanonicalName() + "'"
-                + ", \"value.serializer\" '" + KafkaAvroSerializer.class.getCanonicalName() + "'"
-                + ", \"value.deserializer\" '" + KafkaAvroDeserializer.class.getCanonicalName() + "'"
+                + OPTION_SERIALIZATION_KEY_FORMAT + " '" + AVRO_SERIALIZATION_FORMAT + '\''
+                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + AVRO_SERIALIZATION_FORMAT + '\''
+                + ", bootstrap.servers '" + kafkaTestSupport.getBrokerConnectionString() + '\''
+                + ", schema.registry.url '" + schemaRegistry.getURI() + '\''
+                + ", key.serializer '" + KafkaAvroSerializer.class.getCanonicalName() + '\''
+                + ", key.deserializer '" + KafkaAvroDeserializer.class.getCanonicalName() + '\''
+                + ", \"value.serializer\" '" + KafkaAvroSerializer.class.getCanonicalName() + '\''
+                + ", \"value.deserializer\" '" + KafkaAvroDeserializer.class.getCanonicalName() + '\''
                 + ", \"auto.offset.reset\" 'earliest'"
                 + ")"
         );
