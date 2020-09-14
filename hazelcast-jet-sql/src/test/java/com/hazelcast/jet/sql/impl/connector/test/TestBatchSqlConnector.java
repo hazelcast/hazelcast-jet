@@ -101,6 +101,11 @@ public class TestBatchSqlConnector implements SqlConnector {
         return new TestBatchTable(this, schemaName, tableName, itemCount);
     }
 
+    @Override
+    public boolean supportsFullScanReader() {
+        return true;
+    }
+
     @Nonnull @Override
     public Vertex fullScanReader(
             @Nonnull DAG dag,
@@ -118,11 +123,6 @@ public class TestBatchSqlConnector implements SqlConnector {
         BatchSource<Object[]> source = TestSources.items(items);
         ProcessorMetaSupplier pms = ((BatchSourceTransform<Object[]>) source).metaSupplier;
         return dag.newVertex("testBatch", pms);
-    }
-
-    @Override
-    public boolean supportsFullScanReader() {
-        return true;
     }
 
     public static class TestBatchTable extends JetTable {

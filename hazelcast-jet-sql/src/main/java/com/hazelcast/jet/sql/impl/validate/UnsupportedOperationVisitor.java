@@ -118,6 +118,7 @@ public final class UnsupportedOperationVisitor implements SqlVisitor<Void> {
         SUPPORTED_KINDS.add(SqlKind.COLUMN_DECL);
 
         SUPPORTED_KINDS.add(SqlKind.ROW);
+        SUPPORTED_KINDS.add(SqlKind.VALUES);
         SUPPORTED_KINDS.add(SqlKind.INSERT);
 
         SUPPORTED_KINDS.add(SqlKind.COLLECTION_TABLE);
@@ -287,9 +288,6 @@ public final class UnsupportedOperationVisitor implements SqlVisitor<Void> {
         }
 
         switch (kind) {
-            case VALUES:
-                break;
-
             case SELECT:
                 processSelect((SqlSelect) call);
                 break;

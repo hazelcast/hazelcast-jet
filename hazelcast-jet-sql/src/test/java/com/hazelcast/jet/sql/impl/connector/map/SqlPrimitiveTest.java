@@ -55,7 +55,7 @@ public class SqlPrimitiveTest extends JetSqlTestSupport {
 
         assertMapEventually(
                 name,
-                "INSERT OVERWRITE partitioned." + name + " VALUES (2, 'Bob')",
+                "SINK INTO partitioned." + name + " VALUES (2, 'Bob')",
                 createMap(BigInteger.valueOf(1), "Alice", BigInteger.valueOf(2), "Bob")
         );
         assertRowsEventuallyInAnyOrder(
@@ -78,7 +78,7 @@ public class SqlPrimitiveTest extends JetSqlTestSupport {
 
         assertMapEventually(
                 name,
-                "INSERT OVERWRITE " + name + " SELECT * FROM " + source.getName(),
+                "SINK INTO " + name + " SELECT * FROM " + source.getName(),
                 createMap(0, "value-0", 1, "value-1")
         );
         assertRowsEventuallyInAnyOrder(
@@ -97,7 +97,7 @@ public class SqlPrimitiveTest extends JetSqlTestSupport {
 
         assertMapEventually(
                 name,
-                "INSERT OVERWRITE " + name + " (this, __key) VALUES ('2', 1)",
+                "SINK INTO " + name + " (this, __key) VALUES ('2', 1)",
                 createMap(1, "2")
         );
         assertRowsEventuallyInAnyOrder(
@@ -113,7 +113,7 @@ public class SqlPrimitiveTest extends JetSqlTestSupport {
 
         assertMapEventually(
                 name,
-                "INSERT OVERWRITE " + name + " (this, __key) VALUES (2, CAST(0 + 1 AS INT))",
+                "SINK INTO " + name + " (this, __key) VALUES (2, CAST(0 + 1 AS INT))",
                 createMap(1, "2")
         );
         assertRowsEventuallyInAnyOrder(
@@ -139,22 +139,13 @@ public class SqlPrimitiveTest extends JetSqlTestSupport {
 
         assertMapEventually(
                 name,
-                format("INSERT OVERWRITE %s (id, name) VALUES (2, 'value-2')", name),
+                format("SINK INTO %s (id, name) VALUES (2, 'value-2')", name),
                 createMap(2, "value-2")
         );
         assertRowsEventuallyInAnyOrder(
                 "SELECT * FROM " + name,
                 singletonList(new Row(2, "value-2"))
         );
-    }
-
-    @Test
-    public void when_plainInsert_then_throws() {
-        String name = generateRandomName();
-        sqlService.execute(javaSerializableMapDdl(name, Integer.class, String.class));
-
-        assertThatThrownBy(() -> sqlService.execute("INSERT INTO " + name + " (__key, this) VALUES (1, '2')"))
-                .hasMessageContaining("Only INSERT OVERWRITE clause is supported for IMapSqlConnector");
     }
 
     @Test
@@ -193,16 +184,23 @@ public class SqlPrimitiveTest extends JetSqlTestSupport {
     }
 
     @Test
+    public void when_insertInto_then_throws() {
+        String name = generateRandomName();
+        sqlService.execute(javaSerializableMapDdl(name, Integer.class, String.class));
+
+        assertThatThrownBy(() -> sqlService.execute("INSERT INTO " + name + " (__key, this) VALUES (1, '2')"))
+                .hasMessageContaining("INSERT INTO clause is not supported for IMap");
+    }
+
+    @Test
     public void when_typeMismatch_then_fail() {
         String name = generateRandomName();
         instance().getMap(name).put(0, 0);
         sqlService.execute(javaSerializableMapDdl(name, String.class, String.class));
 
-        assertThatThrownBy(
-                () -> sqlService.execute("SELECT __key FROM " + name).iterator().forEachRemaining(row -> {
-                })
-        ).hasMessageContaining("Failed to extract map entry key because of type mismatch " +
-                "[expectedClass=java.lang.String, actualClass=java.lang.Integer]");
+        assertThatThrownBy(() -> sqlService.execute("SELECT __key FROM " + name).iterator().forEachRemaining(row -> { }))
+                .hasMessageContaining("Failed to extract map entry key because of type mismatch " +
+                        "[expectedClass=java.lang.String, actualClass=java.lang.Integer]");
     }
 
     private static String generateRandomName() {

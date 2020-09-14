@@ -54,7 +54,7 @@ public class SqlCreateJobTest extends SimpleTestInClusterSupport {
         sqlService.execute(javaSerializableMapDdl("dest", Long.class, Long.class));
 
         exception.expectMessage("You must use CREATE JOB statement for a streaming DML query");
-        sqlService.execute("INSERT OVERWRITE dest SELECT v, v FROM src");
+        sqlService.execute("SINK INTO dest SELECT v, v FROM src");
     }
 
     @Test
@@ -66,8 +66,9 @@ public class SqlCreateJobTest extends SimpleTestInClusterSupport {
     @Test
     public void when_dqlStatementWithCreateJob_then_fail() {
         exception.expectMessage("Encountered \"SELECT\" at line 1, column 19." + System.lineSeparator() +
-                "Was expecting:" + System.lineSeparator() +
-                "    \"INSERT\"");
+                "Was expecting one of:" + System.lineSeparator() +
+                "    \"INSERT\" ..." + System.lineSeparator() +
+                "    \"SINK\" ...");
         sqlService.execute("CREATE JOB job AS SELECT 42 FROM my_map");
     }
 
@@ -76,7 +77,7 @@ public class SqlCreateJobTest extends SimpleTestInClusterSupport {
         sqlService.execute("CREATE MAPPING src TYPE TestStream");
         sqlService.execute(javaSerializableMapDdl("dest", Long.class, Long.class));
 
-        sqlService.execute("CREATE JOB testJob AS INSERT OVERWRITE dest SELECT v, v FROM src");
+        sqlService.execute("CREATE JOB testJob AS SINK INTO dest SELECT v, v FROM src");
 
         assertNotNull("job doesn't exist", instance().getJob("testJob"));
 
@@ -88,10 +89,10 @@ public class SqlCreateJobTest extends SimpleTestInClusterSupport {
         sqlService.execute("CREATE MAPPING src TYPE TestStream");
         sqlService.execute(javaSerializableMapDdl("dest", Long.class, Long.class));
 
-        sqlService.execute("CREATE JOB testJob AS INSERT OVERWRITE dest SELECT v, v FROM src");
+        sqlService.execute("CREATE JOB testJob AS SINK INTO dest SELECT v, v FROM src");
 
         assertThatThrownBy(() ->
-            sqlService.execute("CREATE JOB testJob AS INSERT OVERWRITE dest SELECT v, v FROM src"))
+                sqlService.execute("CREATE JOB testJob AS SINK INTO dest SELECT v, v FROM src"))
                 .hasMessageContaining("Another active job with equal name (testJob) exists");
     }
 
@@ -100,17 +101,17 @@ public class SqlCreateJobTest extends SimpleTestInClusterSupport {
         sqlService.execute("CREATE MAPPING src TYPE TestStream");
         sqlService.execute(javaSerializableMapDdl("dest", Long.class, Long.class));
 
-        sqlService.execute("CREATE JOB testJob AS INSERT OVERWRITE dest SELECT v, v FROM src");
+        sqlService.execute("CREATE JOB testJob AS SINK INTO dest SELECT v, v FROM src");
         assertEquals(1, countActiveJobs());
 
-        sqlService.execute("CREATE JOB IF NOT EXISTS testJob AS INSERT OVERWRITE dest SELECT v, v FROM src");
+        sqlService.execute("CREATE JOB IF NOT EXISTS testJob AS SINK INTO dest SELECT v, v FROM src");
         assertEquals(1, countActiveJobs());
     }
 
     @Test
     public void when_dropNonExistingJob_then_fail() {
         assertThatThrownBy(() ->
-            sqlService.execute("DROP JOB nonExistingJob"))
+                sqlService.execute("DROP JOB nonExistingJob"))
                 .hasMessageContaining("Job doesn't exist or already terminated");
     }
 
@@ -133,7 +134,7 @@ public class SqlCreateJobTest extends SimpleTestInClusterSupport {
                 "splitBrainProtectionEnabled 'true'," +
                 "metricsEnabled 'false'," +
                 "initialSnapshotName 'fooSnapshot')" +
-                "AS INSERT OVERWRITE dest SELECT v, v FROM src");
+                "AS SINK INTO dest SELECT v, v FROM src");
 
         JobConfig config = instance().getJob("testJob").getConfig();
 
@@ -153,7 +154,7 @@ public class SqlCreateJobTest extends SimpleTestInClusterSupport {
         sqlService.execute("CREATE MAPPING src TYPE TestStream");
         sqlService.execute(javaSerializableMapDdl("dest", Long.class, Long.class));
 
-        sqlService.execute("CREATE JOB testJob AS INSERT OVERWRITE dest SELECT v, v FROM src");
+        sqlService.execute("CREATE JOB testJob AS SINK INTO dest SELECT v, v FROM src");
         Job job = instance().getJob("testJob");
         assertNotNull(job);
         assertJobStatusEventually(job, RUNNING);

@@ -24,21 +24,18 @@ import com.hazelcast.sql.impl.schema.map.PartitionedMapTable;
 
 public final class SqlConnectorUtil {
 
-    private SqlConnectorUtil() { }
+    private SqlConnectorUtil() {
+    }
 
-    // TODO: should not be needed ???
     public static SqlConnector getJetSqlConnector(Table table) {
         SqlConnector connector;
         if (table instanceof JetTable) {
             connector = ((JetTable) table).getSqlConnector();
         } else if (table instanceof PartitionedMapTable) {
             connector = new IMapSqlConnector();
-        //} else if (table instanceof ReplicatedMapTable) {
-        //    throw new UnsupportedOperationException("Jet doesn't yet support writing to a ReplicatedMap");
         } else {
             throw new JetException("Unknown table type: " + table.getClass());
         }
         return connector;
     }
-
 }

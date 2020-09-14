@@ -23,6 +23,7 @@ import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
 import org.apache.calcite.avatica.util.Casing;
 import org.apache.calcite.avatica.util.Quoting;
+import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.calcite.sql.parser.SqlParser;
@@ -30,6 +31,8 @@ import org.apache.calcite.sql.parser.SqlParser.Config;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import static java.util.Arrays.asList;
+import static java.util.Collections.singletonList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -218,6 +221,62 @@ public class JetSqlParserTest {
         // when
         assertThatThrownBy(() -> parse(sql))
                 .hasMessageContaining("Encountered \".\" at line 1, column 25.");
+    }
+
+    @Test
+    public void test_sinkIntoWithValues() throws SqlParseException {
+        // given
+        String sql = "SINK INTO partitioned.t (id, name) VALUES (1, '1')";
+
+        // when
+        SqlExtendedInsert node = (SqlExtendedInsert) parse(sql);
+
+        // then
+        assertThat(node.tableNames()).isEqualTo(asList("partitioned", "t"));
+        assertThat(node.getSource().getKind()).isEqualTo(SqlKind.VALUES);
+        assertThat(node.getTargetColumnList()).hasSize(2);
+    }
+
+    @Test
+    public void test_sinkIntoWithSelect() throws SqlParseException {
+        // given
+        String sql = "SINK INTO t SELECT * FROM s";
+
+        // when
+        SqlExtendedInsert node = (SqlExtendedInsert) parse(sql);
+
+        // then
+        assertThat(node.tableNames()).isEqualTo(singletonList("t"));
+        assertThat(node.getSource().getKind()).isEqualTo(SqlKind.SELECT);
+        assertThat(node.getTargetColumnList()).isNullOrEmpty();
+    }
+
+    @Test
+    public void test_insertIntoWithValues() throws SqlParseException {
+        // given
+        String sql = "INSERT INTO partitioned.t (id, name) VALUES (1, '1')";
+
+        // when
+        SqlExtendedInsert node = (SqlExtendedInsert) parse(sql);
+
+        // then
+        assertThat(node.tableNames()).isEqualTo(asList("partitioned", "t"));
+        assertThat(node.getSource().getKind()).isEqualTo(SqlKind.VALUES);
+        assertThat(node.getTargetColumnList()).hasSize(2);
+    }
+
+    @Test
+    public void test_insertIntoWithSelect() throws SqlParseException {
+        // given
+        String sql = "INSERT INTO t SELECT * FROM s";
+
+        // when
+        SqlExtendedInsert node = (SqlExtendedInsert) parse(sql);
+
+        // then
+        assertThat(node.tableNames()).isEqualTo(singletonList("t"));
+        assertThat(node.getSource().getKind()).isEqualTo(SqlKind.SELECT);
+        assertThat(node.getTargetColumnList()).isNullOrEmpty();
     }
 
     private static SqlNode parse(String sql) throws SqlParseException {

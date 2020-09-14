@@ -40,6 +40,7 @@ import com.hazelcast.jet.sql.impl.schema.Mapping;
 import com.hazelcast.jet.sql.impl.schema.MappingField;
 import com.hazelcast.jet.sql.impl.validate.JetSqlValidator;
 import com.hazelcast.jet.sql.impl.validate.UnsupportedOperationVisitor;
+import com.hazelcast.logging.ILogger;
 import com.hazelcast.spi.impl.NodeEngine;
 import com.hazelcast.sql.SqlColumnMetadata;
 import com.hazelcast.sql.SqlRowMetadata;
@@ -82,9 +83,13 @@ class JetSqlBackend implements SqlBackend {
     private final NodeEngine nodeEngine;
     private final JetPlanExecutor planExecutor;
 
+    private final ILogger logger;
+
     JetSqlBackend(NodeEngine nodeEngine, JetPlanExecutor planExecutor) {
         this.nodeEngine = nodeEngine;
         this.planExecutor = planExecutor;
+
+        this.logger = nodeEngine.getLogger(getClass());
     }
 
     @Override
@@ -189,11 +194,11 @@ class JetSqlBackend implements SqlBackend {
     }
 
     private ExecutionPlan toPlan(RelNode inputRel, OptimizerContext context) {
-        System.out.println("before logical opt:\n" + RelOptUtil.toString(inputRel));
+        logger.fine("Before logical opt:\n" + RelOptUtil.toString(inputRel));
         LogicalRel logicalRel = optimizeLogical(context, inputRel);
-        System.out.println("after logical opt:\n" + RelOptUtil.toString(logicalRel));
+        logger.fine("After logical opt:\n" + RelOptUtil.toString(logicalRel));
         PhysicalRel physicalRel = optimizePhysical(context, logicalRel);
-        System.out.println("after physical opt:\n" + RelOptUtil.toString(physicalRel));
+        logger.fine("After physical opt:\n" + RelOptUtil.toString(physicalRel));
 
         // add a root sink if the current root is not TableModify
         QueryId queryId;
@@ -242,8 +247,11 @@ class JetSqlBackend implements SqlBackend {
      * @return Optimized logical tree.
      */
     private LogicalRel optimizeLogical(OptimizerContext context, RelNode rel) {
-        return (LogicalRel) context.optimize(rel, LogicalRules.getRuleSet(),
-                OptUtils.toLogicalConvention(rel.getTraitSet()));
+        return (LogicalRel) context.optimize(
+                rel,
+                LogicalRules.getRuleSet(),
+                OptUtils.toLogicalConvention(rel.getTraitSet())
+        );
     }
 
     /**
@@ -254,8 +262,11 @@ class JetSqlBackend implements SqlBackend {
      * @return Optimized physical tree.
      */
     private PhysicalRel optimizePhysical(OptimizerContext context, RelNode rel) {
-        return (PhysicalRel) context.optimize(rel, PhysicalRules.getRuleSet(),
-                OptUtils.toPhysicalConvention(rel.getTraitSet()));
+        return (PhysicalRel) context.optimize(
+                rel,
+                PhysicalRules.getRuleSet(),
+                OptUtils.toPhysicalConvention(rel.getTraitSet())
+        );
     }
 
     private DAG createDag(PhysicalRel physicalRel) {

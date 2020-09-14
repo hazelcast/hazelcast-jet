@@ -158,6 +158,11 @@ public class KafkaSqlConnector implements SqlConnector {
         return true;
     }
 
+    @Override
+    public boolean supportsInsert() {
+        return true;
+    }
+
     @Nonnull
     @Override
     public Vertex sink(

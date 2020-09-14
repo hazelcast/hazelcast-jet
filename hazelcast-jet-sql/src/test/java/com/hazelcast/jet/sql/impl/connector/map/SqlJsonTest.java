@@ -67,7 +67,7 @@ public class SqlJsonTest extends JetSqlTestSupport {
 
         assertMapEventually(
                 name,
-                "INSERT OVERWRITE " + name + " VALUES (null, null)",
+                "SINK INTO " + name + " VALUES (null, null)",
                 createMap(new HazelcastJsonValue("{\"id\":null}"), new HazelcastJsonValue("{\"name\":null}"))
         );
         assertRowsEventuallyInAnyOrder(
@@ -90,7 +90,7 @@ public class SqlJsonTest extends JetSqlTestSupport {
 
         assertMapEventually(
                 name,
-                "INSERT OVERWRITE " + name + " (value_name, key_name) VALUES ('Bob', 'Alice')",
+                "SINK INTO " + name + " (value_name, key_name) VALUES ('Bob', 'Alice')",
                 createMap(new HazelcastJsonValue("{\"name\":\"Alice\"}"), new HazelcastJsonValue("{\"name\":\"Bob\"}"))
         );
         assertRowsEventuallyInAnyOrder(
@@ -112,7 +112,7 @@ public class SqlJsonTest extends JetSqlTestSupport {
                 + ")");
 
         // insert initial record
-        sqlService.execute("INSERT OVERWRITE " + name + " VALUES (13, 'Alice')");
+        sqlService.execute("SINK INTO " + name + " VALUES (13, 'Alice')");
 
         // alter schema
         sqlService.execute("CREATE OR REPLACE MAPPING " + name + " ("
@@ -126,7 +126,7 @@ public class SqlJsonTest extends JetSqlTestSupport {
                 + ")");
 
         // insert record against new schema
-        sqlService.execute("INSERT OVERWRITE " + name + " VALUES (69, 'Bob', 123456789)");
+        sqlService.execute("SINK INTO " + name + " VALUES (69, 'Bob', 123456789)");
 
         // assert both - initial & evolved - records are correctly read
         assertRowsEventuallyInAnyOrder(
@@ -181,7 +181,7 @@ public class SqlJsonTest extends JetSqlTestSupport {
                 + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + "'"
                 + ")");
 
-        sqlService.execute("INSERT OVERWRITE " + to + " SELECT "
+        sqlService.execute("SINK INTO " + to + " SELECT "
                 + "__key"
                 + ", string "
                 + ", boolean0 "

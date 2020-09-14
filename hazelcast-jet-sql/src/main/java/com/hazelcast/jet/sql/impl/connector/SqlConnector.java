@@ -217,7 +217,8 @@ public interface SqlConnector {
             @Nullable String timestampField,
             // TODO: do we want to expose Expression to the user ?
             @Nullable Expression<Boolean> predicate,
-            @Nonnull List<Expression<?>> projection) {
+            @Nonnull List<Expression<?>> projection
+    ) {
         assert !supportsFullScanReader();
         throw new UnsupportedOperationException("Full scan reader not supported for " + getClass().getName());
 
@@ -233,9 +234,8 @@ public interface SqlConnector {
     /**
      * TODO
      */
-    // TODO: naming ...
-    default boolean supportsPlainInserts() {
-        return supportsSink();
+    default boolean supportsInsert() {
+        return false;
     }
 
     /**
@@ -244,7 +244,8 @@ public interface SqlConnector {
     @Nonnull
     default Vertex sink(
             @Nonnull DAG dag,
-            @Nonnull Table table) {
+            @Nonnull Table table
+    ) {
         assert !supportsSink();
         throw new UnsupportedOperationException("Sink not supported for " + getClass().getName());
     }

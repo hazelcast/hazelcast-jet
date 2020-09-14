@@ -128,7 +128,7 @@ public class SqlPrimitiveTest extends JetSqlTestSupport {
     }
 
     @Test
-    public void test_insertOverwrite() {
+    public void test_insertSink() {
         String name = createRandomTopic();
         sqlService.execute("CREATE MAPPING " + name + " "
                 + "TYPE " + KafkaSqlConnector.TYPE_NAME + " "
@@ -148,7 +148,7 @@ public class SqlPrimitiveTest extends JetSqlTestSupport {
 
         assertTopicEventually(
                 name,
-                "INSERT OVERWRITE " + name + " (this, __key) VALUES ('2', 1)",
+                "SINK INTO " + name + " (this, __key) VALUES ('2', 1)",
                 createMap(1, "2")
         );
         assertRowsEventuallyInAnyOrder(

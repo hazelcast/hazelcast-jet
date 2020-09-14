@@ -85,6 +85,11 @@ public class TestStreamSqlConnector implements SqlConnector {
         );
     }
 
+    @Override
+    public boolean supportsFullScanReader() {
+        return true;
+    }
+
     @Nonnull @Override
     public Vertex fullScanReader(
             @Nonnull DAG dag,
@@ -97,10 +102,5 @@ public class TestStreamSqlConnector implements SqlConnector {
                 (timestamp, sequence) -> ExpressionUtil.evaluate(predicate, projection, new Object[]{sequence}));
         ProcessorMetaSupplier pms = source.metaSupplierFn.apply(EventTimePolicy.noEventTime());
         return dag.newVertex("testStream", pms);
-    }
-
-    @Override
-    public boolean supportsFullScanReader() {
-        return true;
     }
 }

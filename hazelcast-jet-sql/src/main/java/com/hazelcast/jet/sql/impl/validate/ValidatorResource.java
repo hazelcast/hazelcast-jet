@@ -31,9 +31,6 @@ interface ValidatorResource {
     @BaseMessage("{0} not supported")
     ExInst<SqlValidatorException> notSupported(String name);
 
-    @BaseMessage("Only INSERT OVERWRITE clause is supported for {0}")
-    ExInst<SqlValidatorException> plainInsertNotSupported(String connectorName);
-
     @BaseMessage("You must use CREATE JOB statement for a streaming DML query")
     ExInst<SqlValidatorException> mustUseCreateJob();
 }

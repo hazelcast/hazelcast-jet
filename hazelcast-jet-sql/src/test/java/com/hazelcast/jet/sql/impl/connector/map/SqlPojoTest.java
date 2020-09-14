@@ -68,7 +68,7 @@ public class SqlPojoTest extends JetSqlTestSupport {
         assertMapEventually(
                 name,
                 // requires explicit column list due to hidden fields
-                "INSERT OVERWRITE partitioned." + name + " (id, name) VALUES (2, 'Bob')",
+                "SINK INTO partitioned." + name + " (id, name) VALUES (2, 'Bob')",
                 createMap(new PersonId(1), new Person(1, "Alice"), new PersonId(2), new Person(0, "Bob"))
         );
         assertRowsEventuallyInAnyOrder(
@@ -87,7 +87,7 @@ public class SqlPojoTest extends JetSqlTestSupport {
 
         assertMapEventually(
                 name,
-                "INSERT OVERWRITE " + name + " VALUES (null, null)",
+                "SINK INTO " + name + " VALUES (null, null)",
                 createMap(new PersonId(), new Person())
         );
         assertRowsEventuallyInAnyOrder(
@@ -103,7 +103,7 @@ public class SqlPojoTest extends JetSqlTestSupport {
 
         assertMapEventually(
                 name,
-                "INSERT OVERWRITE " + name + " (id, name) VALUES (1, 'Alice')",
+                "SINK INTO " + name + " (id, name) VALUES (1, 'Alice')",
                 createMap(new PersonId(1), new Person(0, "Alice"))
         );
 
@@ -130,7 +130,7 @@ public class SqlPojoTest extends JetSqlTestSupport {
 
         assertMapEventually(
                 name,
-                "INSERT OVERWRITE " + name + " (value_id, key_id, name) VALUES (2, 1, 'Alice')",
+                "SINK INTO " + name + " (value_id, key_id, name) VALUES (2, 1, 'Alice')",
                 createMap(new PersonId(1), new Person(2, "Alice"))
         );
         assertRowsEventuallyInAnyOrder(
@@ -145,7 +145,7 @@ public class SqlPojoTest extends JetSqlTestSupport {
         sqlService.execute(javaSerializableMapDdl(name, PersonId.class, Person.class));
 
         // insert initial record
-        sqlService.execute("INSERT OVERWRITE " + name + " VALUES (1, 'Alice')");
+        sqlService.execute("SINK INTO " + name + " VALUES (1, 'Alice')");
 
         // alter schema
         sqlService.execute("CREATE OR REPLACE MAPPING " + name + " "
@@ -159,7 +159,7 @@ public class SqlPojoTest extends JetSqlTestSupport {
         );
 
         // insert record against new schema
-        sqlService.execute("INSERT OVERWRITE " + name + " (id, name, ssn) VALUES (2, 'Bob', 123456789)");
+        sqlService.execute("SINK INTO " + name + " (id, name, ssn) VALUES (2, 'Bob', 123456789)");
 
         // assert both - initial & evolved - records are correctly read
         assertRowsEventuallyInAnyOrder(
@@ -191,7 +191,7 @@ public class SqlPojoTest extends JetSqlTestSupport {
 
         assertMapEventually(
                 name,
-                "INSERT OVERWRITE " + name + " (id, name, ssn) VALUES (2, 'Bob', null)",
+                "SINK INTO " + name + " (id, name, ssn) VALUES (2, 'Bob', null)",
                 createMap(
                         new PersonId(1), new InsuredPerson(1, "Alice", 123456789L),
                         new PersonId(2), new Person(0, "Bob")
@@ -240,7 +240,7 @@ public class SqlPojoTest extends JetSqlTestSupport {
 
         assertMapEventually(
                 to,
-                "INSERT OVERWRITE " + to + " ("
+                "SINK INTO " + to + " ("
                         + "__key"
                         + ", string"
                         + ", character0"

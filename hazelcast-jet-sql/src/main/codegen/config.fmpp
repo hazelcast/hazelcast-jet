@@ -28,7 +28,6 @@ data: {
       "com.hazelcast.jet.sql.impl.parse.SqlDropExternalMapping"
       "com.hazelcast.jet.sql.impl.parse.SqlDropJob"
       "com.hazelcast.jet.sql.impl.parse.SqlExtendedInsert"
-      "com.hazelcast.jet.sql.impl.parse.SqlExtendedInsertKeyword"
       "com.hazelcast.jet.sql.impl.parse.SqlMappingColumn"
       "com.hazelcast.jet.sql.impl.parse.SqlOption"
       "com.hazelcast.sql.impl.QueryException"
@@ -44,8 +43,8 @@ data: {
     keywords: [
       "IF"
       "JOB"
-      "OVERWRITE"
       "MAPPING"
+      "SINK"
     ]
 
     # List of keywords from "keywords" section that are not reserved.
@@ -364,8 +363,8 @@ data: {
       # added by Hazelcast
       "EXTERNAL"
       "JOB"
-      "OVERWRITE"
       "MAPPING"
+      "SINK"
     ]
 
     # List of non-reserved keywords to add;

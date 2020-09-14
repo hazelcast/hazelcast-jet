@@ -33,4 +33,10 @@ public interface ParserResource {
 
     @BaseMessage("Option ''{0}'' specified more than once")
     ExInst<SqlValidatorException> duplicateOption(String optionName);
+
+    @BaseMessage("SINK INTO clause is not supported for {0}")
+    ExInst<SqlValidatorException> sinkIntoNotSupported(String connectorName);
+
+    @BaseMessage("INSERT INTO clause is not supported for {0}")
+    ExInst<SqlValidatorException> insertIntoNotSupported(String connectorName);
 }

@@ -96,7 +96,7 @@ public class SqlCsvTest extends JetSqlTestSupport {
                 + ")"
         );
 
-        sqlService.execute("INSERT OVERWRITE " + to + " SELECT "
+        sqlService.execute("INSERT INTO " + to + " SELECT "
                 + "string "
                 + ", boolean0 "
                 + ", byte0 "

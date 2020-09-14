@@ -20,8 +20,8 @@ import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.sql.impl.connector.SqlConnector;
-import com.hazelcast.jet.sql.impl.schema.MappingField;
 import com.hazelcast.jet.sql.impl.schema.JetTable;
+import com.hazelcast.jet.sql.impl.schema.MappingField;
 import com.hazelcast.spi.impl.NodeEngine;
 import com.hazelcast.sql.impl.QueryException;
 import com.hazelcast.sql.impl.expression.Expression;
@@ -84,20 +84,20 @@ public class FailingTestSqlConnector implements SqlConnector {
         );
     }
 
-    @Nullable @Override
+    @Override
+    public boolean supportsFullScanReader() {
+        return true;
+    }
+
+    @Nonnull @Override
     public Vertex fullScanReader(
             @Nonnull DAG dag,
             @Nonnull Table table,
             @Nullable String timestampField,
-            @Nonnull Expression<Boolean> predicate,
+            @Nullable Expression<Boolean> predicate,
             @Nonnull List<Expression<?>> projection
     ) {
         return dag.newVertex("failingSource", FailingP::new);
-    }
-
-    @Override
-    public boolean supportsFullScanReader() {
-        return true;
     }
 
     private static final class FailingP extends AbstractProcessor {

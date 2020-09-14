@@ -139,7 +139,7 @@ public class SqlPortableTest extends JetSqlTestSupport {
         );
 
         // requires explicit column list due to hidden fields
-        sqlService.execute("INSERT OVERWRITE partitioned." + name + " (id, name) VALUES (2, 'Bob')");
+        sqlService.execute("SINK INTO partitioned." + name + " (id, name) VALUES (2, 'Bob')");
 
         assertRowsEventuallyInAnyOrder(
                 "SELECT * FROM " + name,
@@ -167,7 +167,7 @@ public class SqlPortableTest extends JetSqlTestSupport {
                 + ")"
         );
 
-        sqlService.execute("INSERT OVERWRITE " + name + " VALUES (null, null)");
+        sqlService.execute("SINK INTO " + name + " VALUES (null, null)");
 
         Entry<Data, Data> entry = randomEntryFrom(name);
 
@@ -200,7 +200,7 @@ public class SqlPortableTest extends JetSqlTestSupport {
                 + ")"
         );
 
-        sqlService.execute("INSERT OVERWRITE " + name + " (id, name) VALUES (1, 'Alice')");
+        sqlService.execute("SINK INTO " + name + " (id, name) VALUES (1, 'Alice')");
 
         Entry<Data, Data> entry = randomEntryFrom(name);
 
@@ -236,7 +236,7 @@ public class SqlPortableTest extends JetSqlTestSupport {
                 + ")"
         );
 
-        sqlService.execute("INSERT OVERWRITE " + name + " (value_id, key_id, name) VALUES (2, 1, 'Alice')");
+        sqlService.execute("SINK INTO " + name + " (value_id, key_id, name) VALUES (2, 1, 'Alice')");
 
         Entry<Data, Data> entry = randomEntryFrom(name);
 
@@ -271,7 +271,7 @@ public class SqlPortableTest extends JetSqlTestSupport {
         );
 
         // insert initial record
-        sqlService.execute("INSERT OVERWRITE " + name + " VALUES (1, 'Alice')");
+        sqlService.execute("SINK INTO " + name + " VALUES (1, 'Alice')");
 
         // alter schema
         sqlService.execute("CREATE OR REPLACE MAPPING " + name + " "
@@ -289,7 +289,7 @@ public class SqlPortableTest extends JetSqlTestSupport {
         );
 
         // insert record against new schema/class definition
-        sqlService.execute("INSERT OVERWRITE " + name + " VALUES (2, 'Bob', 123456789)");
+        sqlService.execute("SINK INTO " + name + " VALUES (2, 'Bob', 123456789)");
 
         // assert both - initial & evolved - records are correctly read
         assertRowsEventuallyInAnyOrder(
@@ -319,7 +319,7 @@ public class SqlPortableTest extends JetSqlTestSupport {
         );
 
         // insert initial record
-        sqlService.execute("INSERT OVERWRITE " + name + " VALUES (1, 'Alice', 123456789)");
+        sqlService.execute("SINK INTO " + name + " VALUES (1, 'Alice', 123456789)");
 
         // alter schema
         sqlService.execute("CREATE OR REPLACE MAPPING " + name + " ("
@@ -338,7 +338,7 @@ public class SqlPortableTest extends JetSqlTestSupport {
         );
 
         // insert record against new schema/class definition
-        sqlService.execute("INSERT OVERWRITE " + name + " VALUES (2, 'Bob', null)");
+        sqlService.execute("SINK INTO " + name + " VALUES (2, 'Bob', null)");
 
         // assert both - initial & evolved - records are correctly read
         assertRowsEventuallyInAnyOrder(
@@ -367,7 +367,7 @@ public class SqlPortableTest extends JetSqlTestSupport {
                 + ")"
         );
 
-        sqlService.execute("INSERT OVERWRITE " + name + " VALUES ("
+        sqlService.execute("SINK INTO " + name + " VALUES ("
                 + "13"
                 + ", 'string'"
                 + ", 'a'"

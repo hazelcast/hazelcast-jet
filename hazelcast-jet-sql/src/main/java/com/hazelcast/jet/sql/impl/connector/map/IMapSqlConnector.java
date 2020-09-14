@@ -158,7 +158,7 @@ public class IMapSqlConnector implements SqlConnector {
     }
 
     @Override
-    public boolean supportsPlainInserts() {
+    public boolean supportsInsert() {
         return false;
     }
 

@@ -18,12 +18,11 @@ package com.hazelcast.jet.sql.impl.validate;
 
 import com.hazelcast.jet.sql.impl.connector.SqlConnector;
 import com.hazelcast.jet.sql.impl.parse.SqlCreateJob;
-import com.hazelcast.jet.sql.impl.parse.SqlExtendedInsert;
 import com.hazelcast.sql.impl.calcite.schema.HazelcastTable;
 import com.hazelcast.sql.impl.calcite.validate.HazelcastSqlValidator;
 import com.hazelcast.sql.impl.calcite.validate.types.HazelcastTypeFactory;
-import org.apache.calcite.runtime.Resources;
 import org.apache.calcite.sql.SqlIdentifier;
+import org.apache.calcite.sql.SqlInsert;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.util.SqlBasicVisitor;
@@ -32,10 +31,9 @@ import org.apache.calcite.sql.validate.SqlValidatorCatalogReader;
 import org.apache.calcite.sql.validate.SqlValidatorTable;
 
 import static com.hazelcast.jet.sql.impl.connector.SqlConnectorUtil.getJetSqlConnector;
+import static com.hazelcast.jet.sql.impl.validate.ValidatorResource.RESOURCE;
 
 public class JetSqlValidator extends HazelcastSqlValidator {
-
-    private static final ValidatorResource RESOURCES = Resources.create(ValidatorResource.class);
 
     private boolean isCreateJob;
 
@@ -60,16 +58,9 @@ public class JetSqlValidator extends HazelcastSqlValidator {
 
         SqlNode validated = super.validate(topNode);
 
-        if (validated instanceof SqlExtendedInsert) {
-            if (!isCreateJob && isInsertFormStreamingSource((SqlExtendedInsert) validated)) {
-                throw newValidationError(topNode, RESOURCES.mustUseCreateJob());
-            }
-            SqlExtendedInsert insert = ((SqlExtendedInsert) validated);
-            HazelcastTable table = getCatalogReader().getTable(insert.tableNames()).unwrap(HazelcastTable.class);
-            SqlConnector connector = getJetSqlConnector(table.getTarget());
-            if (!insert.isOverwrite() && !connector.supportsPlainInserts()) {
-                throw newValidationError(insert,
-                        RESOURCES.plainInsertNotSupported(connector.getClass().getSimpleName()));
+        if (validated instanceof SqlInsert) {
+            if (!isCreateJob && isInsertFromStreamingSource((SqlInsert) validated)) {
+                throw newValidationError(topNode, RESOURCE.mustUseCreateJob());
             }
         }
         return validated;
@@ -79,7 +70,7 @@ public class JetSqlValidator extends HazelcastSqlValidator {
      * Goes over all the referenced tables in the source query of the insert
      * statement and returns true if any of it is a streaming connector.
      */
-    private boolean isInsertFormStreamingSource(SqlExtendedInsert insertNode) {
+    private boolean isInsertFromStreamingSource(SqlInsert insert) {
         class FindStreamingTablesVisitor extends SqlBasicVisitor<Void> {
             boolean found;
 
@@ -98,7 +89,7 @@ public class JetSqlValidator extends HazelcastSqlValidator {
         }
 
         FindStreamingTablesVisitor visitor = new FindStreamingTablesVisitor();
-        insertNode.getSource().accept(visitor);
+        insert.getSource().accept(visitor);
         return visitor.found;
     }
 }

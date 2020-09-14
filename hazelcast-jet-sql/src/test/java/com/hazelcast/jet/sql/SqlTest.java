@@ -62,7 +62,7 @@ public class SqlTest extends JetSqlTestSupport {
     @Test
     public void test_multipleValues_insert() {
         sqlService.execute(javaSerializableMapDdl("m", Integer.class, Integer.class));
-        sqlService.execute("INSERT OVERWRITE m(__key, this) VALUES (1, 1), (2, 2)");
+        sqlService.execute("SINK INTO m(__key, this) VALUES (1, 1), (2, 2)");
 
         IMap<Integer, Integer> map = instance().getMap("m");
         assertEquals(2, map.size());

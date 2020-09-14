@@ -126,6 +126,11 @@ public class FileSqlConnector implements SqlConnector {
         return true;
     }
 
+    @Override
+    public boolean supportsInsert() {
+        return true;
+    }
+
     @Nonnull
     @Override
     public Vertex sink(@Nonnull DAG dag, @Nonnull Table table0) {

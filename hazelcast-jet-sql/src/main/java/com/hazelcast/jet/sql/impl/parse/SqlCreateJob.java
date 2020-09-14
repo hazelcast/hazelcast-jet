@@ -21,6 +21,7 @@ import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.sql.impl.QueryException;
 import org.apache.calcite.sql.SqlCreate;
 import org.apache.calcite.sql.SqlIdentifier;
+import org.apache.calcite.sql.SqlInsert;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
@@ -47,7 +48,7 @@ public class SqlCreateJob extends SqlCreate {
 
     private final SqlIdentifier name;
     private final SqlNodeList options;
-    private final SqlNode dmlStatement;
+    private final SqlInsert sqlInsert;
 
     private final JobConfig jobConfig = new JobConfig();
 
@@ -55,7 +56,7 @@ public class SqlCreateJob extends SqlCreate {
     public SqlCreateJob(
             SqlIdentifier name,
             SqlNodeList options,
-            SqlExtendedInsert dmlStatement,
+            SqlInsert sqlInsert,
             boolean replace,
             boolean ifNotExists,
             SqlParserPos pos
@@ -64,7 +65,7 @@ public class SqlCreateJob extends SqlCreate {
         assert !replace;
         this.name = requireNonNull(name, "Name should not be null");
         this.options = requireNonNull(options, "Options should not be null");
-        this.dmlStatement = requireNonNull(dmlStatement, "A DML statement is mandatory");
+        this.sqlInsert = requireNonNull(sqlInsert, "A DML statement is mandatory");
         Preconditions.checkTrue(name.names.size() == 1, name.toString());
 
         jobConfig.setName(name.toString());
@@ -128,13 +129,12 @@ public class SqlCreateJob extends SqlCreate {
     }
 
     public SqlNode dmlStatement() {
-        return dmlStatement;
+        return sqlInsert;
     }
 
     public boolean ifNotExists() {
         return ifNotExists;
     }
-
 
     @Override
     @Nonnull
@@ -145,7 +145,7 @@ public class SqlCreateJob extends SqlCreate {
     @Override
     @Nonnull
     public List<SqlNode> getOperandList() {
-        return ImmutableNullableList.of(name, options, dmlStatement);
+        return ImmutableNullableList.of(name, options, sqlInsert);
     }
 
     @Override
@@ -168,10 +168,10 @@ public class SqlCreateJob extends SqlCreate {
             writer.endList(withFrame);
         }
 
-        if (dmlStatement != null) {
+        if (sqlInsert != null) {
             writer.newlineAndIndent();
             writer.keyword("AS");
-            dmlStatement.unparse(writer, leftPrec, rightPrec);
+            sqlInsert.unparse(writer, leftPrec, rightPrec);
         }
     }
 
@@ -183,10 +183,8 @@ public class SqlCreateJob extends SqlCreate {
 
     @Override
     public void validate(SqlValidator validator, SqlValidatorScope scope) {
-        if (dmlStatement != null) {
-            validator.validate(dmlStatement);
+        validator.validate(sqlInsert);
 
-            // TODO validate that it's a DML statement
-        }
+        // TODO validate that it's a DML statement
     }
 }

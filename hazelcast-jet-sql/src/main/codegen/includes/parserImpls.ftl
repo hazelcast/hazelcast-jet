@@ -24,7 +24,7 @@ SqlCreate SqlCreateJob(Span span, boolean replace) :
     SqlIdentifier name;
     boolean ifNotExists = false;
     SqlNodeList sqlOptions = SqlNodeList.EMPTY;
-    SqlExtendedInsert dmlStatement = null;
+    SqlInsert sqlInsert = null;
 
     if (replace) {
         throw SqlUtil.newContextException(getPos(), ParserResource.RESOURCE.notSupported("OR REPLACE", "CREATE JOB"));
@@ -41,12 +41,12 @@ SqlCreate SqlCreateJob(Span span, boolean replace) :
         sqlOptions = SqlOptions()
     ]
     <AS>
-    dmlStatement = SqlExtendedInsert()
+    sqlInsert = SqlExtendedInsert()
     {
         return new SqlCreateJob(
             name,
             sqlOptions,
-            dmlStatement,
+            sqlInsert,
             replace,
             ifNotExists,
             startPos.plus(getPos())
@@ -255,6 +255,27 @@ QueryDataType DateTimeType() :
 }
 
 /**
+ * Parses DROP EXTERNAL MAPPING statement.
+ */
+SqlDrop SqlDropExternalMapping(Span span, boolean replace) :
+{
+    SqlParserPos pos = span.pos();
+
+    SqlIdentifier name;
+    boolean ifExists = false;
+}
+{
+    [ <EXTERNAL> ] <MAPPING>
+    [
+        <IF> <EXISTS> { ifExists = true; }
+    ]
+    name = SimpleIdentifier()
+    {
+        return new SqlDropExternalMapping(name, ifExists, pos.plus(getPos()));
+    }
+}
+
+/**
  * Parses OPTIONS.
  */
 SqlNodeList SqlOptions():
@@ -302,32 +323,12 @@ SqlOption SqlOption() :
 }
 
 /**
- * Parses DROP EXTERNAL MAPPING statement.
+ * Parses INSERT/SINK INTO statement.
  */
-SqlDrop SqlDropExternalMapping(Span span, boolean replace) :
-{
-    SqlParserPos pos = span.pos();
-
-    SqlIdentifier name;
-    boolean ifExists = false;
-}
-{
-    [ <EXTERNAL> ] <MAPPING>
-    [
-        <IF> <EXISTS> { ifExists = true; }
-    ]
-    name = SimpleIdentifier()
-    {
-        return new SqlDropExternalMapping(name, ifExists, pos.plus(getPos()));
-    }
-}
-
-/**
- * Parses an extended INSERT statement.
- */
-SqlExtendedInsert SqlExtendedInsert() :
+SqlInsert SqlExtendedInsert() :
 {
     Span span;
+
     SqlNode table;
     SqlNode source;
     List<SqlLiteral> keywords = new ArrayList<SqlLiteral>();
@@ -337,15 +338,14 @@ SqlExtendedInsert SqlExtendedInsert() :
     SqlNodeList columns = null;
 }
 {
-    <INSERT>
     (
-        <INTO>
+        <INSERT>
     |
-        <OVERWRITE> {
-            extendedKeywords.add(SqlExtendedInsertKeyword.OVERWRITE.symbol(getPos()));
+        <SINK> {
+            extendedKeywords.add(SqlExtendedInsert.Keyword.SINK.symbol(getPos()));
         }
     )
-    { span = span(); }
+    <INTO> { span = span(); }
     SqlInsertKeywords(keywords) {
         keywordList = new SqlNodeList(keywords, span.addAll(keywords).pos());
         extendedKeywordList = new SqlNodeList(extendedKeywords, span.addAll(extendedKeywords).pos());
