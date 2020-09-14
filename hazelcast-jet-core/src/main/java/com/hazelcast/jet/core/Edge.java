@@ -96,7 +96,6 @@ public class Edge implements IdentifiedDataSerializable {
     private Partitioner<?> partitioner;
     private RoutingPolicy routingPolicy = RoutingPolicy.UNICAST;
     private ComparatorEx<?> comparator;
-    private Long maxSize;
     private EdgeConfig config;
 
     protected Edge() {
@@ -383,11 +382,6 @@ public class Edge implements IdentifiedDataSerializable {
         return this;
     }
 
-    public Edge limited(Long maxSize) {
-        this.maxSize = maxSize;
-        return this;
-    }
-
     /**
      * Returns the instance encapsulating the partitioning strategy in effect
      * on this edge.
@@ -406,11 +400,6 @@ public class Edge implements IdentifiedDataSerializable {
     @Nullable
     public ComparatorEx<?> getComparator() {
         return comparator;
-    }
-
-    @Nullable
-    public Long getMaxSize() {
-        return maxSize;
     }
 
     /**
@@ -611,7 +600,6 @@ public class Edge implements IdentifiedDataSerializable {
         out.writeInt(getDestOrdinal());
         out.writeInt(getPriority());
         out.writeObject(getComparator());
-        out.writeObject(getMaxSize());
         out.writeObject(getDistributedTo());
         out.writeObject(getRoutingPolicy());
         CustomClassLoadedObject.write(out, getPartitioner());
@@ -626,7 +614,6 @@ public class Edge implements IdentifiedDataSerializable {
         destOrdinal = in.readInt();
         priority = in.readInt();
         comparator = in.readObject();
-        maxSize = in.readObject();
         distributedTo = in.readObject();
         routingPolicy = in.readObject();
         try {

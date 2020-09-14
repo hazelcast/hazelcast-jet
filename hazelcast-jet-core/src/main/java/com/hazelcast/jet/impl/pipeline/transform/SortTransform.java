@@ -36,20 +36,15 @@ public class SortTransform<T> extends AbstractTransform {
 
     private static final String COLLECT_STAGE_SUFFIX = "-collect";
     private final ComparatorEx<? super T> comparator;
-    private final Long maxSize;
 
     @SuppressWarnings("unchecked")
-    public SortTransform(@Nonnull Transform upstream,
-                         @Nullable ComparatorEx<? super T> comparator,
-                         @Nullable Long maxSize
-    ) {
+    public SortTransform(@Nonnull Transform upstream, @Nullable ComparatorEx<? super T> comparator) {
         super("sort", upstream);
         if (comparator == null) {
             this.comparator = (ComparatorEx<? super T>) ComparatorEx.naturalOrder();
         } else {
             this.comparator = comparator;
         }
-        this.maxSize = maxSize;
     }
 
     @Override
@@ -60,7 +55,6 @@ public class SortTransform<T> extends AbstractTransform {
         p.addEdges(this, v1);
         p.dag.edge(between(v1, pv2.v).distributed()
                                      .allToOne(name())
-                                     .monotonicOrder(comparator)
-                                     .limited(maxSize));
+                                     .monotonicOrder(comparator));
     }
 }

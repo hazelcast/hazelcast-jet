@@ -100,11 +100,6 @@ public interface BatchStage<T> extends GeneralStage<T> {
     @Nonnull
     BatchStage<T> sort(@Nonnull ComparatorEx<? super T> comparator);
 
-    @Nonnull
-    BatchStage<T> partialSort(long size);
-
-    BatchStage<T> partialSort(@Nonnull ComparatorEx<? super T> comparator, long maxSize);
-
     @Nonnull @Override
     <R> BatchStage<R> map(@Nonnull FunctionEx<? super T, ? extends R> mapFn);
 
