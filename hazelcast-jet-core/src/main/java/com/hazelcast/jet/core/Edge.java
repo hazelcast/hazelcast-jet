@@ -96,7 +96,7 @@ public class Edge implements IdentifiedDataSerializable {
     private Partitioner<?> partitioner;
     private RoutingPolicy routingPolicy = RoutingPolicy.UNICAST;
     private ComparatorEx<?> comparator;
-    private Long maxSize;
+    private Long limited;
     private EdgeConfig config;
 
     protected Edge() {
@@ -383,8 +383,15 @@ public class Edge implements IdentifiedDataSerializable {
         return this;
     }
 
-    public Edge limited(Long maxSize) {
-        this.maxSize = maxSize;
+    /**
+     * Specifies a limit on the number of items allowed to travel over this edge.
+     * This edge type is currently only meant to be specified if the edge is a {@link #monotonicOrder} edge
+     * since the purpose of this edge is implementing partial sorting.
+     *
+     * @since 4.3
+     */
+    public Edge limited(Long limit) {
+        this.limited = limit;
         return this;
     }
 
@@ -408,9 +415,14 @@ public class Edge implements IdentifiedDataSerializable {
         return comparator;
     }
 
+    /**
+     * Returns the maximum number of items allowed to travel over this edge.
+     *
+     * @since 4.3
+     */
     @Nullable
-    public Long getMaxSize() {
-        return maxSize;
+    public Long getLimit() {
+        return limited;
     }
 
     /**
@@ -611,7 +623,7 @@ public class Edge implements IdentifiedDataSerializable {
         out.writeInt(getDestOrdinal());
         out.writeInt(getPriority());
         out.writeObject(getComparator());
-        out.writeObject(getMaxSize());
+        out.writeObject(getLimit());
         out.writeObject(getDistributedTo());
         out.writeObject(getRoutingPolicy());
         CustomClassLoadedObject.write(out, getPartitioner());
@@ -626,7 +638,7 @@ public class Edge implements IdentifiedDataSerializable {
         destOrdinal = in.readInt();
         priority = in.readInt();
         comparator = in.readObject();
-        maxSize = in.readObject();
+        limited = in.readObject();
         distributedTo = in.readObject();
         routingPolicy = in.readObject();
         try {
