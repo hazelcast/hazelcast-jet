@@ -57,7 +57,7 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
     private final WatermarkCoalescer watermarkCoalescer;
     private final BitSet receivedBarriers; // indicates if current snapshot is received on the queue
     private final ILogger logger;
-    private long limit = -1;
+    private long maxSize = -1;
 
     // Tells whether we are operating in exactly-once or at-least-once mode.
     // In other words, whether a barrier from all queues must be present before
@@ -90,12 +90,12 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
     @SuppressWarnings("unchecked")
     public ConcurrentInboundEdgeStream(
             @Nonnull ConcurrentConveyor<Object> conveyor, int ordinal, int priority, boolean waitForAllBarriers,
-            @Nonnull String debugName, @Nonnull ComparatorEx<?> comparator, @Nullable Long limit
+            @Nonnull String debugName, @Nonnull ComparatorEx<?> comparator, @Nullable Long maxSize
     ) {
         this(conveyor, ordinal, priority, waitForAllBarriers, debugName);
         this.comparator = (Comparator<Object>) comparator;
-        if (limit != null) {
-            this.limit = limit;
+        if (maxSize != null) {
+            this.maxSize = maxSize;
         }
     }
 
@@ -189,7 +189,7 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
         int batchSize = -1;
         Object lastItem = null;
         do {
-            if (limit == 0) {
+            if (maxSize == 0) {
                 tracker.done();
                 return tracker.toProgressState();
             }
@@ -229,8 +229,8 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
             lastItem = minItem;
             Object polledItem = unwrap(conveyor.queue(minIndex).poll());
             tracker.madeProgress();
-            if (limit > 0) {
-                limit--;
+            if (maxSize > 0) {
+                maxSize--;
             }
             assert polledItem == minItem : "polledItem != minItem";
             boolean consumeResult = dest.test(minItem);

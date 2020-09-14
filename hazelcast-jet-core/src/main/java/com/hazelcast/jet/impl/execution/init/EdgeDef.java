@@ -41,7 +41,7 @@ public class EdgeDef implements IdentifiedDataSerializable {
     private Partitioner<?> partitioner;
     private EdgeConfig config;
     private ComparatorEx<?> comparator;
-    private Long limit;
+    private Long maxSize;
 
     // transient fields populated and used after deserialization
     private transient String id;
@@ -61,7 +61,7 @@ public class EdgeDef implements IdentifiedDataSerializable {
         this.partitioner = edge.getPartitioner();
         this.config = config;
         this.comparator = edge.getComparator();
-        this.limit = edge.getLimit();
+        this.maxSize = edge.getMaxSize();
     }
 
     void initTransientFields(Map<Integer, VertexDef> vMap, VertexDef nearVertex, boolean isOutbound) {
@@ -124,8 +124,8 @@ public class EdgeDef implements IdentifiedDataSerializable {
         return comparator;
     }
 
-    Long getLimit() {
-        return limit;
+    Long getMaxSize() {
+        return maxSize;
     }
 
     // IdentifiedDataSerializable implementation
@@ -147,7 +147,7 @@ public class EdgeDef implements IdentifiedDataSerializable {
         out.writeInt(sourceOrdinal);
         out.writeInt(priority);
         out.writeObject(comparator);
-        out.writeObject(limit);
+        out.writeObject(maxSize);
         out.writeObject(distributedTo);
         out.writeObject(routingPolicy);
         CustomClassLoadedObject.write(out, partitioner);
@@ -161,7 +161,7 @@ public class EdgeDef implements IdentifiedDataSerializable {
         sourceOrdinal = in.readInt();
         priority = in.readInt();
         comparator = in.readObject();
-        limit = in.readObject();
+        maxSize = in.readObject();
         distributedTo = in.readObject();
         routingPolicy = in.readObject();
         partitioner = CustomClassLoadedObject.read(in);
