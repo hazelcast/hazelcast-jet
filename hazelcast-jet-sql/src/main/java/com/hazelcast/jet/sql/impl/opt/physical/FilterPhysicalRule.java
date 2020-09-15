@@ -39,19 +39,19 @@ final class FilterPhysicalRule extends RelOptRule {
 
     @Override
     public void onMatch(RelOptRuleCall call) {
-        FilterLogicalRel filter = call.rel(0);
-        RelNode input = filter.getInput();
+        FilterLogicalRel logicalFilter = call.rel(0);
+        RelNode input = logicalFilter.getInput();
 
         RelNode convertedInput = OptUtils.toPhysicalInput(input);
         Collection<RelNode> transformedInputs = OptUtils.getPhysicalRelsFromSubset(convertedInput);
         for (RelNode transformedInput : transformedInputs) {
-            FilterPhysicalRel newFilter = new FilterPhysicalRel(
-                    filter.getCluster(),
+            FilterPhysicalRel rel = new FilterPhysicalRel(
+                    logicalFilter.getCluster(),
                     transformedInput.getTraitSet(),
                     transformedInput,
-                    filter.getCondition()
+                    logicalFilter.getCondition()
             );
-            call.transformTo(newFilter);
+            call.transformTo(rel);
         }
     }
 }

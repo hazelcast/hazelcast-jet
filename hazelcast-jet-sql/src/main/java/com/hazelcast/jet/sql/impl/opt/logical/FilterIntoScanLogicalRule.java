@@ -61,28 +61,27 @@ final class FilterIntoScanLogicalRule extends RelOptRule {
     }
 
     @Override
-    // TODO: can it be simplified ???
     public void onMatch(RelOptRuleCall call) {
         Filter filter = call.rel(0);
         TableScan scan = call.rel(1);
 
         HazelcastTable table = OptUtils.getHazelcastTable(scan);
 
+        RexNode filterCondition = filter.getCondition();
+
         List<RexNode> projection = scan instanceof FullScanLogicalRel
                 ? ((FullScanLogicalRel) scan).getProjection()
                 : null;
 
-        RexNode existingCondition = table.getFilter();
-
-        RexNode condition = filter.getCondition();
-
         RexNode convertedCondition = projection == null
-                ? RexUtil.apply(Mappings.source(table.getProjects(), table.getOriginalFieldCount()), condition)
-                : RexUtil.apply(new ProjectFieldVisitor(projection), new RexNode[]{condition})[0];
-        if (existingCondition != null) {
+                ? RexUtil.apply(Mappings.source(table.getProjects(), table.getOriginalFieldCount()), filterCondition)
+                : RexUtil.apply(new ProjectFieldVisitor(projection), new RexNode[]{filterCondition})[0];
+
+        RexNode tableFilter = table.getFilter();
+        if (tableFilter != null) {
             convertedCondition = RexUtil.composeConjunction(
                     scan.getCluster().getRexBuilder(),
-                    asList(existingCondition, convertedCondition),
+                    asList(tableFilter, convertedCondition),
                     true
             );
         }

@@ -16,20 +16,15 @@
 
 package com.hazelcast.jet.sql.impl.opt;
 
-import com.hazelcast.sql.impl.calcite.opt.cost.Cost;
-import com.hazelcast.sql.impl.calcite.opt.cost.CostUtils;
 import com.hazelcast.sql.impl.calcite.schema.HazelcastSchemaUtils;
 import com.hazelcast.sql.impl.calcite.schema.HazelcastTable;
 import com.hazelcast.sql.impl.schema.Table;
 import com.hazelcast.sql.impl.schema.TableField;
 import org.apache.calcite.plan.RelOptCluster;
-import org.apache.calcite.plan.RelOptCost;
-import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.RelWriter;
 import org.apache.calcite.rel.core.TableScan;
-import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexInputRef;
@@ -55,7 +50,7 @@ public abstract class AbstractFullScanRel extends TableScan {
 
         this.projection = projection != null
                 ? projection
-                : projection(getTable().unwrap(HazelcastTable.class), cluster.getTypeFactory());
+                : projection(table.unwrap(HazelcastTable.class), cluster.getTypeFactory());
     }
 
     private static List<RexNode> projection(HazelcastTable table, RelDataTypeFactory typeFactory) {
@@ -72,29 +67,16 @@ public abstract class AbstractFullScanRel extends TableScan {
         return projection;
     }
 
-    public List<RexNode> getProjection() {
-        return projection;
+    public Table getTableUnwrapped() {
+        return getTable().unwrap(HazelcastTable.class).getTarget();
     }
 
     public RexNode getFilter() {
         return getTable().unwrap(HazelcastTable.class).getFilter();
     }
 
-    /**
-     * @return Unwrapped Hazelcast table.
-     */
-    public Table getTableUnwrapped() {
-        return getTable().unwrap(HazelcastTable.class).getTarget();
-    }
-
-    @Override
-    public final double estimateRowCount(RelMetadataQuery mq) {
-        double rowCount = super.estimateRowCount(mq); // TODO not a real row count?
-        if (getFilter() != null) {
-            double selectivity = mq.getSelectivity(this, getFilter()); // TODO verify this works
-            rowCount = rowCount * selectivity;
-        }
-        return rowCount;
+    public List<RexNode> getProjection() {
+        return projection;
     }
 
     @Override
@@ -113,30 +95,5 @@ public abstract class AbstractFullScanRel extends TableScan {
     public RelWriter explainTerms(RelWriter pw) {
         return super.explainTerms(pw)
                     .item("projection", projection);
-    }
-
-    @Override
-    public RelOptCost computeSelfCost(RelOptPlanner planner, RelMetadataQuery mq) {
-        // 1. Get cost of the scan itself. For replicated map cost is multiplied by the number of nodes.
-        Cost scanCost = (Cost) super.computeSelfCost(planner, mq);
-
-        // 2. Get cost of the project taking in count filter and number of expressions. Project never produces IO.
-        double filterRowCount = scanCost.getRowsInternal();
-
-        RexNode filter = getFilter();
-        if (filter != null) {
-            double filterSelectivity = mq.getSelectivity(this, filter);
-            filterRowCount = filterRowCount * filterSelectivity;
-        }
-
-        int expressionCount = getProjection().size();
-        double projectCpu = CostUtils.adjustCpuForConstrainedScan(filterRowCount * expressionCount);
-
-        // 3. Finally, return sum of both scan and project.
-        return planner.getCostFactory().makeCost(
-                filterRowCount,
-                scanCost.getCpuInternal() + projectCpu,
-                scanCost.getNetworkInternal()
-        );
     }
 }

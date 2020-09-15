@@ -30,13 +30,11 @@ public final class LogicalRules {
     }
 
     public static RuleSet getRuleSet() {
-        // TODO: Use HEP instead?
         return RuleSets.ofList(
                 FilterLogicalRule.INSTANCE,
                 FilterMergeRule.INSTANCE,
 
                 ProjectLogicalRule.INSTANCE,
-                // TODO: https://jira.apache.org/jira/browse/CALCITE-2223
                 ProjectMergeRule.INSTANCE,
                 ProjectRemoveRule.INSTANCE,
 
@@ -48,13 +46,8 @@ public final class LogicalRules {
                 ProjectIntoScanLogicalRule.INSTANCE,
                 FilterIntoScanLogicalRule.INSTANCE,
 
-                // TODO: Should we extend converter here instead (see Flink)?
                 ValuesLogicalRule.INSTANCE,
-
                 InsertLogicalRule.INSTANCE
-
-                // TODO: Transitive closures:
-                //  (a.a=b.b) AND (a=1) -> (a.a=b.b) AND (a=1) AND (b=1) -> pushdown to two tables, not one
         );
     }
 }

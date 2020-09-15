@@ -39,12 +39,11 @@ final class FilterLogicalRule extends ConverterRule {
     @Override
     public RelNode convert(RelNode rel) {
         LogicalFilter filter = (LogicalFilter) rel;
-        RelNode input = filter.getInput();
 
         return new FilterLogicalRel(
                 filter.getCluster(),
                 OptUtils.toLogicalConvention(filter.getTraitSet()),
-                OptUtils.toLogicalInput(input),
+                OptUtils.toLogicalInput(filter.getInput()),
                 filter.getCondition()
         );
     }

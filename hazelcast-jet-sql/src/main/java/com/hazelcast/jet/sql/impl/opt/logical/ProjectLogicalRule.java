@@ -26,9 +26,9 @@ import org.apache.calcite.rel.logical.LogicalProject;
 
 import static com.hazelcast.jet.sql.impl.opt.JetConventions.LOGICAL;
 
-public final class ProjectLogicalRule extends ConverterRule {
+final class ProjectLogicalRule extends ConverterRule {
 
-    public static final RelOptRule INSTANCE = new ProjectLogicalRule();
+    static final RelOptRule INSTANCE = new ProjectLogicalRule();
 
     private ProjectLogicalRule() {
         super(
@@ -40,12 +40,11 @@ public final class ProjectLogicalRule extends ConverterRule {
     @Override
     public RelNode convert(RelNode rel) {
         Project project = (Project) rel;
-        RelNode input = project.getInput();
 
         return new ProjectLogicalRel(
                 project.getCluster(),
                 OptUtils.toLogicalConvention(project.getTraitSet()),
-                OptUtils.toLogicalInput(input),
+                OptUtils.toLogicalInput(project.getInput()),
                 project.getProjects(),
                 project.getRowType()
         );

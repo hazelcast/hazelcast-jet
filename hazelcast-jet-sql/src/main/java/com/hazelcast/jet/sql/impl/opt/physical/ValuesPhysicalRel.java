@@ -60,7 +60,6 @@ public class ValuesPhysicalRel extends Values implements PhysicalRel {
 
     @Override
     public RelNode copy(RelTraitSet traitSet, List<RelNode> inputs) {
-        assert inputs.isEmpty();
-        return new ValuesPhysicalRel(getCluster(), rowType, tuples, traitSet);
+        return new ValuesPhysicalRel(getCluster(), getRowType(), getTuples(), traitSet);
     }
 }

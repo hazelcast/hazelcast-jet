@@ -32,6 +32,7 @@ public class JetRootRel extends AbstractRootRel implements PhysicalRel {
 
     public JetRootRel(RelNode input, Address initiatorAddress, QueryId queryId) {
         super(input.getCluster(), RelTraitSet.createEmpty(), input);
+
         this.initiatorAddress = initiatorAddress;
         this.queryId = queryId;
     }

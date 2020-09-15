@@ -40,15 +40,13 @@ final class ProjectPhysicalRule extends RelOptRule {
         ProjectLogicalRel logicalProject = call.rel(0);
         RelNode input = logicalProject.getInput();
 
-        // TODO: isn't it too simple?
-        ProjectPhysicalRel newProject = new ProjectPhysicalRel(
+        ProjectPhysicalRel rel = new ProjectPhysicalRel(
                 logicalProject.getCluster(),
                 OptUtils.toPhysicalConvention(input.getTraitSet()),
                 OptUtils.toPhysicalInput(input),
                 logicalProject.getProjects(),
                 logicalProject.getRowType()
         );
-
-        call.transformTo(newProject);
+        call.transformTo(rel);
     }
 }

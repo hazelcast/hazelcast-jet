@@ -39,18 +39,18 @@ final class InsertPhysicalRule extends ConverterRule {
 
     @Override
     public RelNode convert(RelNode rel) {
-        InsertLogicalRel tableModify = (InsertLogicalRel) rel;
+        InsertLogicalRel logicalTableModify = (InsertLogicalRel) rel;
 
         return new InsertPhysicalRel(
-                tableModify.getCluster(),
-                OptUtils.toPhysicalConvention(tableModify.getTraitSet()),
-                tableModify.getTable(),
-                tableModify.getCatalogReader(),
-                OptUtils.toPhysicalInput(tableModify.getInput()),
-                tableModify.getOperation(),
-                tableModify.getUpdateColumnList(),
-                tableModify.getSourceExpressionList(),
-                tableModify.isFlattened()
+                logicalTableModify.getCluster(),
+                OptUtils.toPhysicalConvention(logicalTableModify.getTraitSet()),
+                logicalTableModify.getTable(),
+                logicalTableModify.getCatalogReader(),
+                OptUtils.toPhysicalInput(logicalTableModify.getInput()),
+                logicalTableModify.getOperation(),
+                logicalTableModify.getUpdateColumnList(),
+                logicalTableModify.getSourceExpressionList(),
+                logicalTableModify.isFlattened()
         );
     }
 }

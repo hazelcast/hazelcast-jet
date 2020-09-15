@@ -36,13 +36,14 @@ final class FullScanPhysicalRule extends RelOptRule {
 
     @Override
     public void onMatch(RelOptRuleCall call) {
-        FullScanLogicalRel scan = call.rel(0);
+        FullScanLogicalRel logicalScan = call.rel(0);
 
-        call.transformTo(new FullScanPhysicalRel(
-                scan.getCluster(),
-                OptUtils.toPhysicalConvention(scan.getTraitSet()),
-                scan.getTable(),
-                scan.getProjection()
-        ));
+        FullScanPhysicalRel rel = new FullScanPhysicalRel(
+                logicalScan.getCluster(),
+                OptUtils.toPhysicalConvention(logicalScan.getTraitSet()),
+                logicalScan.getTable(),
+                logicalScan.getProjection()
+        );
+        call.transformTo(rel);
     }
 }

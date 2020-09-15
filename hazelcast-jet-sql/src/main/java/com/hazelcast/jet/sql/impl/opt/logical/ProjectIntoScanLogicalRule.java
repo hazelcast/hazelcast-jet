@@ -40,9 +40,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
-public final class ProjectIntoScanLogicalRule extends RelOptRule {
+final class ProjectIntoScanLogicalRule extends RelOptRule {
 
-    public static final RelOptRule INSTANCE = new ProjectIntoScanLogicalRule();
+    static final RelOptRule INSTANCE = new ProjectIntoScanLogicalRule();
 
     private ProjectIntoScanLogicalRule() {
         super(
@@ -52,7 +52,6 @@ public final class ProjectIntoScanLogicalRule extends RelOptRule {
     }
 
     @Override
-    // TODO: can it be simplified ???
     public void onMatch(RelOptRuleCall call) {
         Project project = call.rel(0);
         TableScan scan = call.rel(1);

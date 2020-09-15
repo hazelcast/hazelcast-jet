@@ -23,14 +23,11 @@ import com.hazelcast.sql.impl.plan.node.PlanNodeSchema;
 import com.hazelcast.sql.impl.schema.Table;
 import com.hazelcast.sql.impl.schema.TableField;
 import org.apache.calcite.plan.RelOptCluster;
-import org.apache.calcite.plan.RelOptCost;
-import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.prepare.Prepare;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.TableModify;
-import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rex.RexNode;
 
 import java.util.List;
@@ -38,8 +35,6 @@ import java.util.List;
 import static com.hazelcast.jet.impl.util.Util.toList;
 
 public class InsertPhysicalRel extends TableModify implements PhysicalRel {
-
-    private static final double COST_FACTOR = .1;
 
     InsertPhysicalRel(
             RelOptCluster cluster,
@@ -65,11 +60,6 @@ public class InsertPhysicalRel extends TableModify implements PhysicalRel {
     @Override
     public Vertex visit(CreateDagVisitor visitor) {
         return visitor.onInsert(this);
-    }
-
-    @Override
-    public RelOptCost computeSelfCost(RelOptPlanner planner, RelMetadataQuery mq) {
-        return super.computeSelfCost(planner, mq).multiplyBy(COST_FACTOR);
     }
 
     @Override

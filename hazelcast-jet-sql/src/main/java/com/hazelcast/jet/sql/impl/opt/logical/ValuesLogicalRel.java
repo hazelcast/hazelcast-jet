@@ -39,7 +39,6 @@ public class ValuesLogicalRel extends LogicalValues implements LogicalRel {
 
     @Override
     public RelNode copy(RelTraitSet traitSet, List<RelNode> inputs) {
-        assert inputs.isEmpty();
-        return new ValuesLogicalRel(getCluster(), rowType, tuples, traitSet);
+        return new ValuesLogicalRel(getCluster(), getRowType(), getTuples(), traitSet);
     }
 }

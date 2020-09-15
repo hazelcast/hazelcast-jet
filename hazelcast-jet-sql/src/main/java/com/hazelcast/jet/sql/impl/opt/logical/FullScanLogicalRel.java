@@ -38,6 +38,6 @@ public class FullScanLogicalRel extends AbstractFullScanRel implements LogicalRe
 
     @Override
     public final RelNode copy(RelTraitSet traitSet, List<RelNode> inputs) {
-        return new FullScanLogicalRel(getCluster(), traitSet, table, getProjection());
+        return new FullScanLogicalRel(getCluster(), traitSet, getTable(), getProjection());
     }
 }

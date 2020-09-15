@@ -37,10 +37,8 @@ import static java.util.stream.Collectors.toList;
  */
 public interface PhysicalRel extends RelNode {
 
-    // TODO: moved to PlanNode as part of CreateDagVisitor ???
     PlanNodeSchema schema();
 
-    // TODO: moved to PlanNode as part of CreateDagVisitor ???
     @SuppressWarnings("unchecked")
     default Expression<Boolean> filter(PlanNodeFieldTypeProvider schema, RexNode node) {
         if (node == null) {
@@ -51,7 +49,6 @@ public interface PhysicalRel extends RelNode {
         return (Expression<Boolean>) node.accept(converter);
     }
 
-    // TODO: moved to PlanNode as part of CreateDagVisitor ???
     default List<Expression<?>> project(PlanNodeFieldTypeProvider schema, List<RexNode> nodes) {
         // TODO: pass actual parameter metadata
         RexToExpressionVisitor converter = new RexToExpressionVisitor(schema, new QueryParameterMetadata());
