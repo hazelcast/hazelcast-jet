@@ -19,6 +19,7 @@ package com.hazelcast.jet.sql.impl;
 import com.hazelcast.jet.core.JetTestSupport;
 import com.hazelcast.jet.impl.util.ArrayDequeInbox;
 import com.hazelcast.jet.impl.util.ProgressTracker;
+import com.hazelcast.sql.impl.QueryException;
 import com.hazelcast.sql.impl.ResultIterator;
 import com.hazelcast.sql.impl.row.Row;
 import org.junit.Test;
@@ -26,9 +27,12 @@ import org.junit.Test;
 import java.util.NoSuchElementException;
 import java.util.concurrent.Future;
 import java.util.concurrent.Semaphore;
-import java.util.concurrent.TimeUnit;
 
 import static com.hazelcast.sql.impl.ResultIterator.HasNextResult.TIMEOUT;
+import static com.hazelcast.sql.impl.ResultIterator.HasNextResult.YES;
+import static java.util.concurrent.TimeUnit.DAYS;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -36,14 +40,16 @@ import static org.junit.Assert.assertTrue;
 
 public class JetQueryResultProducerTest extends JetTestSupport {
 
+    private final JetQueryResultProducer p = new JetQueryResultProducer();
+    private final ResultIterator<Row> iterator = p.iterator();
+    private final ArrayDequeInbox inbox = new ArrayDequeInbox(new ProgressTracker());
+
     @Test
     public void smokeTest() throws Exception {
-        JetQueryResultProducer p = new JetQueryResultProducer();
         Semaphore semaphore = new Semaphore(0);
         Future<?> future = spawn(() -> {
             try {
-                ResultIterator<Row> iterator = p.iterator();
-                assertEquals(TIMEOUT, iterator.hasNext(0, TimeUnit.SECONDS));
+                assertEquals(TIMEOUT, iterator.hasNext(0, SECONDS));
                 semaphore.release();
                 assertTrue(iterator.hasNext());
                 assertInstanceOf(Row.class, iterator.next());
@@ -65,7 +71,6 @@ public class JetQueryResultProducerTest extends JetTestSupport {
         sleepMillis(50);
         assertEquals(0, semaphore.availablePermits());
 
-        ArrayDequeInbox inbox = new ArrayDequeInbox(new ProgressTracker());
         inbox.queue().add(new Object[0]);
         p.consume(inbox);
 
@@ -87,18 +92,97 @@ public class JetQueryResultProducerTest extends JetTestSupport {
 
     @Test
     public void when_done_then_remainingItemsIterated() {
-        JetQueryResultProducer p = new JetQueryResultProducer();
-        ArrayDequeInbox inbox = new ArrayDequeInbox(new ProgressTracker());
         inbox.queue().add(new Object[] {1});
         inbox.queue().add(new Object[] {2});
         p.consume(inbox);
         p.done();
 
-        ResultIterator<Row> iterator = p.iterator();
         assertTrue(iterator.hasNext());
         assertEquals(1, (int) iterator.next().get(0));
         assertTrue(iterator.hasNext());
         assertEquals(2, (int) iterator.next().get(0));
         assertFalse(iterator.hasNext());
+    }
+
+    @Test
+    public void when_doneWhileWaiting_then_throw_async() {
+        assertEquals(TIMEOUT, iterator.hasNext(0, SECONDS));
+        p.onError(QueryException.error("mock error"));
+        assertThatThrownBy(() -> iterator.hasNext(0, SECONDS))
+                .hasMessageContaining("mock error");
+    }
+
+    @Test
+    public void when_doneWhileWaiting_then_throw_sync() throws Exception {
+        Future<?> future = spawn(() -> {
+            assertThatThrownBy(() -> iterator.hasNext(1, DAYS))
+                    .hasMessageContaining("mock error");
+        });
+        sleepMillis(50); // sleep so that the thread starts blocking in `hasNext`
+        p.onError(QueryException.error("mock error"));
+        future.get();
+    }
+
+    @Test
+    public void when_nextItemWhileWaiting_then_hasNextReturns() throws Exception {
+        Future<?> future = spawn(() -> {
+            assertEquals(YES, iterator.hasNext(1, DAYS));
+            assertEquals(42, (int) iterator.next().get(0));
+        });
+        sleepMillis(50); // sleep so that the thread starts blocking in `hasNext`
+
+        inbox.queue().add(new Object[]{42});
+        p.consume(inbox);
+        assertEquals(0, inbox.size());
+        future.get();
+    }
+
+    @Test
+    public void when_noNextItem_then_timeoutElapses() {
+        long start = System.nanoTime();
+        iterator.hasNext(500, MILLISECONDS);
+        long elapsed = MILLISECONDS.toNanos(System.nanoTime() - start);
+        assertTrue("elapsed=" + elapsed, elapsed >= 500);
+    }
+
+    @Test
+    public void when_iteratorRequestedTheSecondTime_then_fail() {
+        assertThatThrownBy(() -> p.iterator())
+                .hasMessageContaining("can be requested only once");
+    }
+
+    @Test
+    public void when_onErrorAfterDone_then_ignored() {
+        p.onError(QueryException.error("error1"));
+        p.onError(QueryException.error("error2"));
+
+        assertThatThrownBy(() -> iterator.hasNext())
+                .hasMessageContaining("error1");
+    }
+
+    @Test
+    public void when_onErrorCalledTwice_then_secondIgnored() {
+        p.done();
+        p.onError(QueryException.error("error2"));
+
+        assertFalse(iterator.hasNext());
+    }
+
+    @Test
+    public void when_doneCalledTwice_then_secondIgnored() {
+        p.done();
+        p.done();
+
+        assertFalse(iterator.hasNext());
+    }
+
+    @Test
+    public void when_queueCapacityExceeded_then_inboxNotConsumed() {
+        int numExcessItems = 2;
+        for (int i = 0; i < JetQueryResultProducer.QUEUE_CAPACITY + numExcessItems; i++) {
+            inbox.queue().add(new Object[0]);
+        }
+        p.consume(inbox);
+        assertEquals(2, inbox.size());
     }
 }

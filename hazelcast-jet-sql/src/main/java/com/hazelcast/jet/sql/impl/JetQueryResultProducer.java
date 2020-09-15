@@ -39,7 +39,7 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 public class JetQueryResultProducer implements QueryResultProducer {
 
-    private static final int QUEUE_CAPACITY = 4096;
+    static final int QUEUE_CAPACITY = 4096;
 
     private final OneToOneConcurrentArrayQueue<Row> queue = new OneToOneConcurrentArrayQueue<>(QUEUE_CAPACITY);
     private final AtomicReference<QueryException> error = new AtomicReference<>();
@@ -84,26 +84,15 @@ public class JetQueryResultProducer implements QueryResultProducer {
 
         @Override
         public HasNextResult hasNext(long timeout, TimeUnit timeUnit) {
-            return nextRow != null ? YES
-                    : (done.get() ? DONE : TIMEOUT);
+            return nextRow != null || (nextRow = queue.poll()) != null ? YES
+                    : isDone() ? DONE
+                    : timeout == 0 ? TIMEOUT
+                    : hasNextWait(System.nanoTime() + timeUnit.toNanos(timeout));
         }
 
         @Override
         public boolean hasNext() {
-            long idleCount = 0;
-            while (true) {
-                if (nextRow != null || (nextRow = queue.poll()) != null) {
-                    return true;
-                }
-                if (done.get()) {
-                    QueryException localError = error.get();
-                    if (localError != null) {
-                        throw new RuntimeException("The Jet SQL job failed: " + localError.getMessage(), localError);
-                    }
-                    return false;
-                }
-                idler.idle(++idleCount);
-            }
+            return hasNextWait(Long.MAX_VALUE) == YES;
         }
 
         @Override
@@ -116,6 +105,38 @@ public class JetQueryResultProducer implements QueryResultProducer {
             } finally {
                 nextRow = queue.poll();
             }
+        }
+
+        private HasNextResult hasNextWait(long endTimeNanos) {
+            long idleCount = 0;
+            do {
+                if (nextRow != null || (nextRow = queue.poll()) != null) {
+                    return YES;
+                }
+                if (isDone()) {
+                    return DONE;
+                }
+                idler.idle(++idleCount);
+            } while (System.nanoTime() < endTimeNanos);
+            return TIMEOUT;
+        }
+
+        /**
+         * Returns:<ul>
+         *     <li>true, if done
+         *     <li>false, if not done
+         *     <li>throws exception, if done with error
+         * </ul>
+         */
+        private boolean isDone() {
+            if (done.get()) {
+                QueryException localError = error.get();
+                if (localError != null) {
+                    throw new RuntimeException("The Jet SQL job failed: " + localError.getMessage(), localError);
+                }
+                return true;
+            }
+            return false;
         }
     }
 }
