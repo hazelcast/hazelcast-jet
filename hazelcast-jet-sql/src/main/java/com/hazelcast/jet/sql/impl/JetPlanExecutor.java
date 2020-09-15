@@ -80,25 +80,22 @@ class JetPlanExecutor {
     }
 
     SqlResult execute(ExecutionPlan plan) {
-        QueryResultProducer queryResultProducer;
         if (plan.isInsert()) {
-            queryResultProducer = null;
-        } else {
-            queryResultProducer = new JetQueryResultProducer();
-            Object oldValue = resultConsumerRegistry.put(plan.getQueryId(), queryResultProducer);
-            assert oldValue == null : oldValue;
-        }
+            Job job = jetInstance.newJob(plan.getDag());
 
-        // submit the job
-        Job job = jetInstance.newJob(plan.getDag());
-
-        if (plan.isInsert()) {
             if (!plan.isStreaming()) {
                 job.join();
                 // TODO return real updated row count
             }
+
             return SqlResultImpl.createUpdateCountResult(-1);
         } else {
+            QueryResultProducer queryResultProducer = new JetQueryResultProducer();
+            Object oldValue = resultConsumerRegistry.put(plan.getQueryId(), queryResultProducer);
+            assert oldValue == null : oldValue;
+
+            jetInstance.newJob(plan.getDag());
+
             return new JetSqlResultImpl(plan.getQueryId(), queryResultProducer, plan.getRowMetadata());
         }
     }

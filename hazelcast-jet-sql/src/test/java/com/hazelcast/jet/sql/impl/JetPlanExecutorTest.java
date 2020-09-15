@@ -17,11 +17,17 @@
 package com.hazelcast.jet.sql.impl;
 
 import com.hazelcast.jet.JetInstance;
+import com.hazelcast.jet.Job;
+import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.sql.impl.JetPlan.CreateExternalMappingPlan;
 import com.hazelcast.jet.sql.impl.JetPlan.DropExternalMappingPlan;
+import com.hazelcast.jet.sql.impl.JetPlan.ExecutionPlan;
 import com.hazelcast.jet.sql.impl.schema.Mapping;
 import com.hazelcast.jet.sql.impl.schema.MappingCatalog;
+import com.hazelcast.sql.SqlColumnMetadata;
+import com.hazelcast.sql.SqlColumnType;
 import com.hazelcast.sql.SqlResult;
+import com.hazelcast.sql.SqlRowMetadata;
 import com.hazelcast.sql.impl.QueryId;
 import com.hazelcast.sql.impl.QueryResultProducer;
 import junitparams.JUnitParamsRunner;
@@ -34,11 +40,17 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 import java.util.Map;
+import java.util.UUID;
 
 import static java.util.Collections.emptyList;
 import static java.util.Collections.emptyMap;
+import static java.util.Collections.singletonList;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isA;
+import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyZeroInteractions;
 
 @RunWith(JUnitParamsRunner.class)
 public class JetPlanExecutorTest {
@@ -54,6 +66,12 @@ public class JetPlanExecutorTest {
 
     @Mock
     private Map<QueryId, QueryResultProducer> resultConsumerRegistry;
+
+    @Mock
+    private DAG dag;
+
+    @Mock
+    private Job job;
 
     @Before
     public void setUp() {
@@ -98,7 +116,66 @@ public class JetPlanExecutorTest {
         verify(catalog).removeMapping(name, ifExists);
     }
 
+    @Test
+    public void test_execution() {
+        // given
+        QueryId queryId = QueryId.create(UUID.randomUUID());
+        SqlRowMetadata rowMetadata = rowMetadata();
+        ExecutionPlan plan = new ExecutionPlan(dag, false, false, queryId, rowMetadata, planExecutor);
+
+        given(jetInstance.newJob(dag)).willReturn(job);
+
+        // when
+        SqlResult result = planExecutor.execute(plan);
+
+        // then
+        assertThat(result.isUpdateCount()).isFalse();
+        assertThat(result.getRowMetadata()).isEqualTo(rowMetadata);
+        verify(resultConsumerRegistry).put(eq(queryId), isA(QueryResultProducer.class));
+        verifyZeroInteractions(job);
+    }
+
+    @Test
+    public void test_insertExecution() {
+        // given
+        QueryId queryId = QueryId.create(UUID.randomUUID());
+        SqlRowMetadata rowMetadata = rowMetadata();
+        ExecutionPlan plan = new ExecutionPlan(dag, false, true, queryId, rowMetadata, planExecutor);
+
+        given(jetInstance.newJob(dag)).willReturn(job);
+
+        // when
+        SqlResult result = planExecutor.execute(plan);
+
+        // then
+        assertThat(result.isUpdateCount()).isTrue();
+        assertThat(result.updateCount()).isEqualTo(-1);
+        verify(job).join();
+    }
+
+    @Test
+    public void test_streamingInsertExecution() {
+        // given
+        QueryId queryId = QueryId.create(UUID.randomUUID());
+        SqlRowMetadata rowMetadata = rowMetadata();
+        ExecutionPlan plan = new ExecutionPlan(dag, true, true, queryId, rowMetadata, planExecutor);
+
+        given(jetInstance.newJob(dag)).willReturn(job);
+
+        // when
+        SqlResult result = planExecutor.execute(plan);
+
+        // then
+        assertThat(result.isUpdateCount()).isTrue();
+        assertThat(result.updateCount()).isEqualTo(-1);
+        verifyZeroInteractions(job);
+    }
+
     private static Mapping mapping() {
         return new Mapping("name", "type", emptyList(), emptyMap());
+    }
+
+    private static SqlRowMetadata rowMetadata() {
+        return new SqlRowMetadata(singletonList(new SqlColumnMetadata("field", SqlColumnType.OBJECT)));
     }
 }

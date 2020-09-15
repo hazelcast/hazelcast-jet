@@ -170,25 +170,29 @@ class JetSqlBackend implements SqlBackend {
     }
 
     private SqlPlan toDropTablePlan(SqlDropExternalMapping sqlDropTable) {
-        return new DropExternalMappingPlan(
-                sqlDropTable.name(),
-                sqlDropTable.ifExists(),
+        return new DropExternalMappingPlan(sqlDropTable.name(), sqlDropTable.ifExists(), planExecutor);
+    }
+
+    private SqlPlan toCreateJobPlan(QueryParseResult parseResult, OptimizerContext context) {
+        SqlCreateJob sqlCreateJob = (SqlCreateJob) parseResult.getNode();
+        SqlNode source = sqlCreateJob.dmlStatement();
+
+        QueryParseResult dmlParseResult =
+                new QueryParseResult(source, parseResult.getParameterRowType(), parseResult.getValidator(), this);
+        QueryConvertResult dmlConvertedResult = context.convert(dmlParseResult);
+        ExecutionPlan dmlPlan = toPlan(dmlConvertedResult.getRel(), dmlConvertedResult.getFieldNames(), context);
+
+        return new CreateJobPlan(
+                sqlCreateJob.name(),
+                sqlCreateJob.jobConfig(),
+                sqlCreateJob.ifNotExists(),
+                dmlPlan,
                 planExecutor
         );
     }
 
-    private SqlPlan toCreateJobPlan(QueryParseResult parseResult, OptimizerContext context) {
-        SqlCreateJob node = (SqlCreateJob) parseResult.getNode();
-        SqlNode source = node.dmlStatement();
-        QueryParseResult newParseResult =
-                new QueryParseResult(source, parseResult.getParameterRowType(), parseResult.getValidator(), this);
-        QueryConvertResult convertedResult = context.convert(newParseResult);
-        ExecutionPlan dmlPlan = toPlan(convertedResult.getRel(), convertedResult.getFieldNames(), context);
-        return new CreateJobPlan(node.name(), node.jobConfig(), node.ifNotExists(), dmlPlan, planExecutor);
-    }
-
-    private SqlPlan toDropJobPlan(SqlDropJob node) {
-        return new DropJobPlan(node.name(), node.ifExists(), planExecutor);
+    private SqlPlan toDropJobPlan(SqlDropJob sqlDropJob) {
+        return new DropJobPlan(sqlDropJob.name(), sqlDropJob.ifExists(), planExecutor);
     }
 
     private ExecutionPlan toPlan(RelNode rel, List<String> fieldNames, OptimizerContext context) {
@@ -201,18 +205,17 @@ class JetSqlBackend implements SqlBackend {
         boolean isStreaming = containsStreamSource(rel);
         boolean isInsert = physicalRel instanceof TableModify;
 
-        SqlRowMetadata rowMetadata = createRowMetadata(fieldNames, physicalRel.schema().getTypes());
-
-        // add a root sink if the current root is not TableModify
         QueryId queryId;
+        DAG dag;
         if (isInsert) {
             queryId = null;
+            dag = createDag(physicalRel);
         } else {
             queryId = QueryId.create(nodeEngine.getLocalMember().getUuid());
-            physicalRel = new JetRootRel(physicalRel, nodeEngine.getThisAddress(), queryId);
+            dag = createDag(new JetRootRel(physicalRel, nodeEngine.getThisAddress(), queryId));
         }
 
-        DAG dag = createDag(physicalRel);
+        SqlRowMetadata rowMetadata = createRowMetadata(fieldNames, physicalRel.schema().getTypes());
 
         return new ExecutionPlan(dag, isStreaming, isInsert, queryId, rowMetadata, planExecutor);
     }
@@ -270,13 +273,10 @@ class JetSqlBackend implements SqlBackend {
         assert columnNames.size() == columnTypes.size();
 
         List<SqlColumnMetadata> columns = new ArrayList<>(columnNames.size());
-
         for (int i = 0; i < columnNames.size(); i++) {
             SqlColumnMetadata column = QueryUtils.getColumnMetadata(columnNames.get(i), columnTypes.get(i));
-
             columns.add(column);
         }
-
         return new SqlRowMetadata(columns);
     }
 
