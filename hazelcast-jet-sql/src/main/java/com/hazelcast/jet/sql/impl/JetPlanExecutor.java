@@ -85,7 +85,6 @@ class JetPlanExecutor {
 
             if (!plan.isStreaming()) {
                 job.join();
-                // TODO return real updated row count
             }
 
             return SqlResultImpl.createUpdateCountResult(-1);
