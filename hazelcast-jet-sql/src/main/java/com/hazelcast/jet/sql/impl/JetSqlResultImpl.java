@@ -29,6 +29,7 @@ import com.hazelcast.sql.impl.row.Row;
 
 import javax.annotation.Nonnull;
 import java.util.NoSuchElementException;
+import java.util.concurrent.TimeUnit;
 
 class JetSqlResultImpl extends AbstractSqlResult {
 
@@ -76,7 +77,7 @@ class JetSqlResultImpl extends AbstractSqlResult {
     }
 
     @Override
-    public void closeOnError(QueryException exception) {
+    public void close(QueryException exception) {
         rootResultConsumer.onError(exception);
     }
 
@@ -98,9 +99,9 @@ class JetSqlResultImpl extends AbstractSqlResult {
         }
 
         @Override
-        public HasNextImmediatelyResult hasNextImmediately() {
+        public HasNextResult hasNext(long timeout, TimeUnit timeUnit) {
             try {
-                return delegate.hasNextImmediately();
+                return delegate.hasNext(timeout, timeUnit);
             } catch (Exception e) {
                 throw QueryUtils.toPublicException(e, queryId.getMemberId());
             }

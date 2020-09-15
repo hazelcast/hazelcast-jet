@@ -27,12 +27,13 @@ import com.hazelcast.sql.impl.row.HeapRow;
 import com.hazelcast.sql.impl.row.Row;
 
 import java.util.NoSuchElementException;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static com.hazelcast.sql.impl.ResultIterator.HasNextImmediatelyResult.DONE;
-import static com.hazelcast.sql.impl.ResultIterator.HasNextImmediatelyResult.RETRY;
-import static com.hazelcast.sql.impl.ResultIterator.HasNextImmediatelyResult.YES;
+import static com.hazelcast.sql.impl.ResultIterator.HasNextResult.DONE;
+import static com.hazelcast.sql.impl.ResultIterator.HasNextResult.TIMEOUT;
+import static com.hazelcast.sql.impl.ResultIterator.HasNextResult.YES;
 import static java.util.concurrent.TimeUnit.MICROSECONDS;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
@@ -82,9 +83,9 @@ public class JetQueryResultProducer implements QueryResultProducer {
         private Row nextRow;
 
         @Override
-        public HasNextImmediatelyResult hasNextImmediately() {
+        public HasNextResult hasNext(long timeout, TimeUnit timeUnit) {
             return nextRow != null ? YES
-                    : (done.get() ? DONE : RETRY);
+                    : (done.get() ? DONE : TIMEOUT);
         }
 
         @Override

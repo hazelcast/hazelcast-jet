@@ -26,8 +26,9 @@ import org.junit.Test;
 import java.util.NoSuchElementException;
 import java.util.concurrent.Future;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
 
-import static com.hazelcast.sql.impl.ResultIterator.HasNextImmediatelyResult.RETRY;
+import static com.hazelcast.sql.impl.ResultIterator.HasNextResult.TIMEOUT;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -42,7 +43,7 @@ public class JetQueryResultProducerTest extends JetTestSupport {
         Future<?> future = spawn(() -> {
             try {
                 ResultIterator<Row> iterator = p.iterator();
-                assertEquals(RETRY, iterator.hasNextImmediately());
+                assertEquals(TIMEOUT, iterator.hasNext(0, TimeUnit.SECONDS));
                 semaphore.release();
                 assertTrue(iterator.hasNext());
                 assertInstanceOf(Row.class, iterator.next());
