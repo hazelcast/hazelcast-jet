@@ -18,22 +18,27 @@ package com.hazelcast.jet.sql.impl.opt;
 
 import com.hazelcast.sql.impl.calcite.schema.HazelcastRelOptTable;
 import com.hazelcast.sql.impl.calcite.schema.HazelcastTable;
+import com.hazelcast.sql.impl.schema.Table;
+import com.hazelcast.sql.impl.schema.TableField;
+import com.hazelcast.sql.impl.type.QueryDataType;
 import org.apache.calcite.plan.Convention;
 import org.apache.calcite.plan.ConventionTraitDef;
 import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelOptRuleOperand;
+import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.plan.RelTrait;
 import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.plan.volcano.RelSubset;
 import org.apache.calcite.prepare.RelOptTableImpl;
 import org.apache.calcite.rel.RelNode;
-import org.apache.calcite.rel.core.TableScan;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
+import java.util.List;
 import java.util.Set;
 
 import static com.hazelcast.jet.sql.impl.opt.JetConventions.LOGICAL;
@@ -121,11 +126,11 @@ public final class OptUtils {
     /**
      * Convert the given input into logical input.
      *
-     * @param input Original input.
+     * @param rel Original input.
      * @return Logical input.
      */
-    public static RelNode toLogicalInput(RelNode input) {
-        return convert(input, toLogicalConvention(input.getTraitSet()));
+    public static RelNode toLogicalInput(RelNode rel) {
+        return convert(rel, toLogicalConvention(rel.getTraitSet()));
     }
 
     /**
@@ -141,15 +146,27 @@ public final class OptUtils {
     /**
      * Convert the given input into physical input.
      *
-     * @param input Original input.
+     * @param rel Original input.
      * @return Logical input.
      */
-    public static RelNode toPhysicalInput(RelNode input) {
-        return convert(input, toPhysicalConvention(input.getTraitSet()));
+    public static RelNode toPhysicalInput(RelNode rel) {
+        return convert(rel, toPhysicalConvention(rel.getTraitSet()));
     }
 
-    public static HazelcastTable getHazelcastTable(TableScan scan) {
-        HazelcastTable table = scan.getTable().unwrap(HazelcastTable.class);
+    public static List<QueryDataType> getFieldTypes(RelOptTable relTable) {
+        Table table = relTable.unwrap(HazelcastTable.class).getTarget();
+
+        List<QueryDataType> fieldTypes = new ArrayList<>();
+        for (TableField field : table.getFields()) {
+            if (!field.isHidden()) {
+                fieldTypes.add(field.getType());
+            }
+        }
+        return fieldTypes;
+    }
+
+    public static HazelcastTable getHazelcastTable(RelNode rel) {
+        HazelcastTable table = rel.getTable().unwrap(HazelcastTable.class);
 
         assert table != null;
 

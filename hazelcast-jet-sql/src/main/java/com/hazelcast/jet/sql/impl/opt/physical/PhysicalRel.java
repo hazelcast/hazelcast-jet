@@ -44,13 +44,13 @@ public interface PhysicalRel extends RelNode {
         if (node == null) {
             return null;
         }
-        // TODO: pass actual parameter metadata
+        // TODO: pass actual parameter metadata, see JetSqlCoreBackendImpl#execute
         RexToExpressionVisitor converter = new RexToExpressionVisitor(schema, new QueryParameterMetadata());
         return (Expression<Boolean>) node.accept(converter);
     }
 
     default List<Expression<?>> project(PlanNodeFieldTypeProvider schema, List<RexNode> nodes) {
-        // TODO: pass actual parameter metadata
+        // TODO: pass actual parameter metadata, see JetSqlCoreBackendImpl#execute
         RexToExpressionVisitor converter = new RexToExpressionVisitor(schema, new QueryParameterMetadata());
         return nodes.stream()
                     .map(node -> (Expression<?>) node.accept(converter))

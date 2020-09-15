@@ -169,9 +169,7 @@ public class SqlPojoTest extends JetSqlTestSupport {
     @SuppressWarnings("checkstyle:LineLength")
     public void test_allTypes() {
         String from = generateRandomName();
-        sqlService.execute("CREATE MAPPING " + from + ' '
-                + "TYPE " + AllTypesSqlConnector.TYPE_NAME
-        );
+        AllTypesSqlConnector.create(sqlService, from);
 
         String to = createRandomTopic();
         sqlService.execute("CREATE MAPPING " + to + ' '

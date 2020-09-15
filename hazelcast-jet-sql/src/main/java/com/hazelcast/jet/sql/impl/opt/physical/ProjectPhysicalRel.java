@@ -20,6 +20,7 @@ import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.sql.impl.opt.physical.visitor.CreateDagVisitor;
 import com.hazelcast.sql.impl.expression.Expression;
 import com.hazelcast.sql.impl.plan.node.PlanNodeSchema;
+import com.hazelcast.sql.impl.type.QueryDataType;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.RelNode;
@@ -28,6 +29,8 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexNode;
 
 import java.util.List;
+
+import static com.hazelcast.jet.impl.util.Util.toList;
 
 public class ProjectPhysicalRel extends Project implements PhysicalRel {
 
@@ -42,12 +45,13 @@ public class ProjectPhysicalRel extends Project implements PhysicalRel {
     }
 
     public List<Expression<?>> projection() {
-        return project(schema(), getProjects());
+        return project(((PhysicalRel) getInput()).schema(), getProjects());
     }
 
     @Override
     public PlanNodeSchema schema() {
-        return ((PhysicalRel) getInput()).schema();
+        List<QueryDataType> fieldTypes = toList(projection(), Expression::getType);
+        return new PlanNodeSchema(fieldTypes);
     }
 
     @Override

@@ -57,9 +57,7 @@ public class SqlCsvTest extends JetSqlTestSupport {
         directory.deleteOnExit();
 
         String from = createRandomName();
-        sqlService.execute("CREATE MAPPING " + from + ' '
-                + "TYPE " + AllTypesSqlConnector.TYPE_NAME
-        );
+        AllTypesSqlConnector.create(sqlService, from);
 
         String to = createRandomName();
         sqlService.execute("CREATE MAPPING " + to + " ("

@@ -27,6 +27,7 @@ import com.hazelcast.jet.sql.impl.expression.ExpressionUtil;
 import com.hazelcast.jet.sql.impl.schema.JetTable;
 import com.hazelcast.jet.sql.impl.schema.MappingField;
 import com.hazelcast.spi.impl.NodeEngine;
+import com.hazelcast.sql.SqlService;
 import com.hazelcast.sql.impl.QueryException;
 import com.hazelcast.sql.impl.expression.Expression;
 import com.hazelcast.sql.impl.schema.ConstantTableStatistics;
@@ -91,6 +92,12 @@ public class AllTypesSqlConnector implements SqlConnector {
             LocalDateTime.of(2020, 4, 15, 12, 23, 34, 1_000_000),
             ZonedDateTime.of(2020, 4, 15, 12, 23, 34, 200_000_000, UTC).withZoneSameInstant(systemDefault()).toOffsetDateTime()
     };
+
+    public static void create(SqlService sqlService, String tableName) {
+        sqlService.execute("CREATE MAPPING " + tableName + ' '
+                + "TYPE " + AllTypesSqlConnector.TYPE_NAME
+        );
+    }
 
     @Override
     public String typeName() {

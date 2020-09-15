@@ -18,10 +18,10 @@ package com.hazelcast.jet.sql.impl.opt.physical;
 
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.sql.impl.opt.AbstractFullScanRel;
+import com.hazelcast.jet.sql.impl.opt.OptUtils;
 import com.hazelcast.jet.sql.impl.opt.physical.visitor.CreateDagVisitor;
 import com.hazelcast.sql.impl.expression.Expression;
 import com.hazelcast.sql.impl.plan.node.PlanNodeSchema;
-import com.hazelcast.sql.impl.schema.TableField;
 import com.hazelcast.sql.impl.type.QueryDataType;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptTable;
@@ -45,12 +45,12 @@ public class FullScanPhysicalRel extends AbstractFullScanRel implements Physical
     }
 
     public Expression<Boolean> filter() {
-        PlanNodeSchema schema = new PlanNodeSchema(toList(getTableUnwrapped().getFields(), TableField::getType));
+        PlanNodeSchema schema = new PlanNodeSchema(OptUtils.getFieldTypes(getTable()));
         return filter(schema, getFilter());
     }
 
     public List<Expression<?>> projection() {
-        PlanNodeSchema schema = new PlanNodeSchema(toList(getTableUnwrapped().getFields(), TableField::getType));
+        PlanNodeSchema schema = new PlanNodeSchema(OptUtils.getFieldTypes(getTable()));
         return project(schema, getProjection());
     }
 

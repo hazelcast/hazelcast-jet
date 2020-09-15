@@ -62,8 +62,6 @@ import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelVisitor;
 import org.apache.calcite.rel.core.TableModify;
 import org.apache.calcite.rel.core.TableScan;
-import org.apache.calcite.rel.type.RelDataType;
-import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.parser.SqlParserImplFactory;
 import org.apache.calcite.sql.util.SqlVisitor;
@@ -148,7 +146,7 @@ class JetSqlBackend implements SqlBackend {
             return toDropJobPlan((SqlDropJob) node);
         } else {
             QueryConvertResult convertResult = context.convert(parseResult);
-            return toPlan(convertResult.getRel(), context);
+            return toPlan(convertResult.getRel(), convertResult.getFieldNames(), context);
         }
     }
 
@@ -185,7 +183,7 @@ class JetSqlBackend implements SqlBackend {
         QueryParseResult newParseResult =
                 new QueryParseResult(source, parseResult.getParameterRowType(), parseResult.getValidator(), this);
         QueryConvertResult convertedResult = context.convert(newParseResult);
-        ExecutionPlan dmlPlan = toPlan(convertedResult.getRel(), context);
+        ExecutionPlan dmlPlan = toPlan(convertedResult.getRel(), convertedResult.getFieldNames(), context);
         return new CreateJobPlan(node.name(), node.jobConfig(), node.ifNotExists(), dmlPlan, planExecutor);
     }
 
@@ -193,16 +191,20 @@ class JetSqlBackend implements SqlBackend {
         return new DropJobPlan(node.name(), node.ifExists(), planExecutor);
     }
 
-    private ExecutionPlan toPlan(RelNode inputRel, OptimizerContext context) {
-        logger.fine("Before logical opt:\n" + RelOptUtil.toString(inputRel));
-        LogicalRel logicalRel = optimizeLogical(context, inputRel);
+    private ExecutionPlan toPlan(RelNode rel, List<String> fieldNames, OptimizerContext context) {
+        logger.fine("Before logical opt:\n" + RelOptUtil.toString(rel));
+        LogicalRel logicalRel = optimizeLogical(context, rel);
         logger.fine("After logical opt:\n" + RelOptUtil.toString(logicalRel));
         PhysicalRel physicalRel = optimizePhysical(context, logicalRel);
         logger.fine("After physical opt:\n" + RelOptUtil.toString(physicalRel));
 
+        boolean isStreaming = containsStreamSource(rel);
+        boolean isInsert = physicalRel instanceof TableModify;
+
+        SqlRowMetadata rowMetadata = createRowMetadata(fieldNames, physicalRel.schema().getTypes());
+
         // add a root sink if the current root is not TableModify
         QueryId queryId;
-        boolean isInsert = physicalRel instanceof TableModify;
         if (isInsert) {
             queryId = null;
         } else {
@@ -210,34 +212,9 @@ class JetSqlBackend implements SqlBackend {
             physicalRel = new JetRootRel(physicalRel, nodeEngine.getThisAddress(), queryId);
         }
 
-        // check whether any table is a stream
-        boolean[] isStreamRead = {false};
-        RelVisitor findStreamScanVisitor = new RelVisitor() {
-            @Override
-            public void visit(RelNode node, int ordinal, RelNode parent) {
-                if (node instanceof TableScan) {
-                    JetTable jetTable = node.getTable().unwrap(JetTable.class);
-                    if (jetTable != null && jetTable.isStream()) {
-                        isStreamRead[0] = true;
-                    }
-                }
-            }
-        };
-        findStreamScanVisitor.go(inputRel);
-
         DAG dag = createDag(physicalRel);
 
-        RelDataType rootRowType = physicalRel.getRowType();
-        List<SqlColumnMetadata> columns = new ArrayList<>(rootRowType.getFieldCount());
-
-        for (RelDataTypeField field : rootRowType.getFieldList()) {
-            // TODO real type
-            columns.add(QueryUtils.getColumnMetadata(field.getName(), QueryDataType.OBJECT));
-        }
-
-        SqlRowMetadata rowMetadata = new SqlRowMetadata(columns);
-
-        return new ExecutionPlan(dag, isStreamRead[0], isInsert, queryId, rowMetadata, planExecutor);
+        return new ExecutionPlan(dag, isStreaming, isInsert, queryId, rowMetadata, planExecutor);
     }
 
     /**
@@ -267,6 +244,40 @@ class JetSqlBackend implements SqlBackend {
                 PhysicalRules.getRuleSet(),
                 OptUtils.toPhysicalConvention(rel.getTraitSet())
         );
+    }
+
+    /**
+     * Goes over all tables of the rel and returns true if any of it is a stream source.
+     */
+    private boolean containsStreamSource(RelNode rel) {
+        boolean[] containsStreamSource = {false};
+        RelVisitor findStreamSourceVisitor = new RelVisitor() {
+            @Override
+            public void visit(RelNode node, int ordinal, RelNode parent) {
+                if (node instanceof TableScan) {
+                    JetTable jetTable = node.getTable().unwrap(JetTable.class);
+                    if (jetTable != null && jetTable.isStream()) {
+                        containsStreamSource[0] = true;
+                    }
+                }
+            }
+        };
+        findStreamSourceVisitor.go(rel);
+        return containsStreamSource[0];
+    }
+
+    private SqlRowMetadata createRowMetadata(List<String> columnNames, List<QueryDataType> columnTypes) {
+        assert columnNames.size() == columnTypes.size();
+
+        List<SqlColumnMetadata> columns = new ArrayList<>(columnNames.size());
+
+        for (int i = 0; i < columnNames.size(); i++) {
+            SqlColumnMetadata column = QueryUtils.getColumnMetadata(columnNames.get(i), columnTypes.get(i));
+
+            columns.add(column);
+        }
+
+        return new SqlRowMetadata(columns);
     }
 
     private DAG createDag(PhysicalRel physicalRel) {

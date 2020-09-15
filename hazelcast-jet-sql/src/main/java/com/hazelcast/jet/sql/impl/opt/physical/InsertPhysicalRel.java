@@ -17,11 +17,9 @@
 package com.hazelcast.jet.sql.impl.opt.physical;
 
 import com.hazelcast.jet.core.Vertex;
+import com.hazelcast.jet.sql.impl.opt.OptUtils;
 import com.hazelcast.jet.sql.impl.opt.physical.visitor.CreateDagVisitor;
-import com.hazelcast.sql.impl.calcite.schema.HazelcastTable;
 import com.hazelcast.sql.impl.plan.node.PlanNodeSchema;
-import com.hazelcast.sql.impl.schema.Table;
-import com.hazelcast.sql.impl.schema.TableField;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.plan.RelTraitSet;
@@ -31,8 +29,6 @@ import org.apache.calcite.rel.core.TableModify;
 import org.apache.calcite.rex.RexNode;
 
 import java.util.List;
-
-import static com.hazelcast.jet.impl.util.Util.toList;
 
 public class InsertPhysicalRel extends TableModify implements PhysicalRel {
 
@@ -53,8 +49,7 @@ public class InsertPhysicalRel extends TableModify implements PhysicalRel {
 
     @Override
     public PlanNodeSchema schema() {
-        Table table = getTable().unwrap(HazelcastTable.class).getTarget();
-        return new PlanNodeSchema(toList(table.getFields(), TableField::getType));
+        return new PlanNodeSchema(OptUtils.getFieldTypes(getTable()));
     }
 
     @Override

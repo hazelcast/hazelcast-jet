@@ -16,14 +16,18 @@
 
 package com.hazelcast.jet.sql;
 
+import com.hazelcast.jet.sql.impl.connector.test.AllTypesSqlConnector;
 import com.hazelcast.jet.sql.impl.connector.test.TestBatchSqlConnector;
 import com.hazelcast.map.IMap;
+import com.hazelcast.sql.SqlColumnType;
+import com.hazelcast.sql.SqlResult;
 import com.hazelcast.sql.SqlService;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 
 public class SqlTest extends JetSqlTestSupport {
@@ -78,7 +82,9 @@ public class SqlTest extends JetSqlTestSupport {
                 "SELECT '喷气式飞机' FROM t",
                 asList(
                         new Row("喷气式飞机"),
-                        new Row("喷气式飞机")));
+                        new Row("喷气式飞机")
+                )
+        );
     }
 
     @Test
@@ -89,7 +95,9 @@ public class SqlTest extends JetSqlTestSupport {
                 "SELECT v FROM t",
                 asList(
                         new Row(0),
-                        new Row(1)));
+                        new Row(1)
+                )
+        );
     }
 
     @Test
@@ -100,7 +108,9 @@ public class SqlTest extends JetSqlTestSupport {
                 "SELECT * FROM t",
                 asList(
                         new Row(0),
-                        new Row(1)));
+                        new Row(1)
+                )
+        );
     }
 
     @Test
@@ -111,7 +121,9 @@ public class SqlTest extends JetSqlTestSupport {
                 "SELECT v FROM t WHERE v=0 OR v=1",
                 asList(
                         new Row(0),
-                        new Row(1)));
+                        new Row(1)
+                )
+        );
     }
 
     @Test
@@ -129,7 +141,8 @@ public class SqlTest extends JetSqlTestSupport {
 
         assertRowsEventuallyInAnyOrder(
                 "SELECT v FROM t WHERE v+v=2",
-                singletonList(new Row(1)));
+                singletonList(new Row(1))
+        );
     }
 
     @Test
@@ -138,7 +151,8 @@ public class SqlTest extends JetSqlTestSupport {
 
         assertRowsEventuallyInAnyOrder(
                 "SELECT v2 FROM (SELECT v+v v2 FROM t) WHERE v2=2",
-                singletonList(new Row(2L)));
+                singletonList(new Row(2L))
+        );
     }
 
     @Test
@@ -147,6 +161,53 @@ public class SqlTest extends JetSqlTestSupport {
 
         assertRowsEventuallyInAnyOrder(
                 "SELECT v+v FROM t WHERE v+v=2",
-                singletonList(new Row(2L)));
+                singletonList(new Row(2L))
+        );
+    }
+
+    @Test
+    public void test_queryMetadata() {
+        AllTypesSqlConnector.create(sqlService, "t");
+
+        SqlResult result = sqlService.execute("SELECT * FROM t");
+
+        assertThat(result.isUpdateCount()).isFalse();
+        assertThat(result.getRowMetadata().getColumnCount()).isEqualTo(13);
+        assertThat(result.getRowMetadata().getColumn(0).getName()).isEqualTo("string");
+        assertThat(result.getRowMetadata().getColumn(0).getType()).isEqualTo(SqlColumnType.VARCHAR);
+        assertThat(result.getRowMetadata().getColumn(1).getName()).isEqualTo("boolean");
+        assertThat(result.getRowMetadata().getColumn(1).getType()).isEqualTo(SqlColumnType.BOOLEAN);
+        assertThat(result.getRowMetadata().getColumn(2).getName()).isEqualTo("byte");
+        assertThat(result.getRowMetadata().getColumn(2).getType()).isEqualTo(SqlColumnType.TINYINT);
+        assertThat(result.getRowMetadata().getColumn(3).getName()).isEqualTo("short");
+        assertThat(result.getRowMetadata().getColumn(3).getType()).isEqualTo(SqlColumnType.SMALLINT);
+        assertThat(result.getRowMetadata().getColumn(4).getName()).isEqualTo("int");
+        assertThat(result.getRowMetadata().getColumn(4).getType()).isEqualTo(SqlColumnType.INTEGER);
+        assertThat(result.getRowMetadata().getColumn(5).getName()).isEqualTo("long");
+        assertThat(result.getRowMetadata().getColumn(5).getType()).isEqualTo(SqlColumnType.BIGINT);
+        assertThat(result.getRowMetadata().getColumn(6).getName()).isEqualTo("float");
+        assertThat(result.getRowMetadata().getColumn(6).getType()).isEqualTo(SqlColumnType.REAL);
+        assertThat(result.getRowMetadata().getColumn(7).getName()).isEqualTo("double");
+        assertThat(result.getRowMetadata().getColumn(7).getType()).isEqualTo(SqlColumnType.DOUBLE);
+        assertThat(result.getRowMetadata().getColumn(8).getName()).isEqualTo("decimal");
+        assertThat(result.getRowMetadata().getColumn(8).getType()).isEqualTo(SqlColumnType.DECIMAL);
+        assertThat(result.getRowMetadata().getColumn(9).getName()).isEqualTo("time");
+        assertThat(result.getRowMetadata().getColumn(9).getType()).isEqualTo(SqlColumnType.TIME);
+        assertThat(result.getRowMetadata().getColumn(10).getName()).isEqualTo("date");
+        assertThat(result.getRowMetadata().getColumn(10).getType()).isEqualTo(SqlColumnType.DATE);
+        assertThat(result.getRowMetadata().getColumn(11).getName()).isEqualTo("timestamp");
+        assertThat(result.getRowMetadata().getColumn(11).getType()).isEqualTo(SqlColumnType.TIMESTAMP);
+        assertThat(result.getRowMetadata().getColumn(12).getName()).isEqualTo("timestampTz");
+        assertThat(result.getRowMetadata().getColumn(12).getType()).isEqualTo(SqlColumnType.TIMESTAMP_WITH_TIME_ZONE);
+    }
+
+    @Test
+    public void test_sinkMetadata() {
+        sqlService.execute(javaSerializableMapDdl("m", Integer.class, Integer.class));
+
+        SqlResult result = sqlService.execute("SINK INTO m(__key, this) VALUES (1, 1), (2, 2)");
+
+        assertThat(result.isUpdateCount()).isTrue();
+        assertThat(result.updateCount()).isEqualTo(-1);
     }
 }
