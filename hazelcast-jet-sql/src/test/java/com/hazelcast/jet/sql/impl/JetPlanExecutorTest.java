@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.sql.impl;
 
+import com.hazelcast.internal.util.UuidUtil;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.core.DAG;
@@ -40,7 +41,6 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 import java.util.Map;
-import java.util.UUID;
 
 import static java.util.Collections.emptyList;
 import static java.util.Collections.emptyMap;
@@ -119,7 +119,7 @@ public class JetPlanExecutorTest {
     @Test
     public void test_execution() {
         // given
-        QueryId queryId = QueryId.create(UUID.randomUUID());
+        QueryId queryId = QueryId.create(UuidUtil.newSecureUUID());
         SqlRowMetadata rowMetadata = rowMetadata();
         ExecutionPlan plan = new ExecutionPlan(dag, false, false, queryId, rowMetadata, planExecutor);
 
@@ -138,7 +138,7 @@ public class JetPlanExecutorTest {
     @Test
     public void test_insertExecution() {
         // given
-        QueryId queryId = QueryId.create(UUID.randomUUID());
+        QueryId queryId = QueryId.create(UuidUtil.newSecureUUID());
         SqlRowMetadata rowMetadata = rowMetadata();
         ExecutionPlan plan = new ExecutionPlan(dag, false, true, queryId, rowMetadata, planExecutor);
 
@@ -156,7 +156,7 @@ public class JetPlanExecutorTest {
     @Test
     public void test_streamingInsertExecution() {
         // given
-        QueryId queryId = QueryId.create(UUID.randomUUID());
+        QueryId queryId = QueryId.create(UuidUtil.newSecureUUID());
         SqlRowMetadata rowMetadata = rowMetadata();
         ExecutionPlan plan = new ExecutionPlan(dag, true, true, queryId, rowMetadata, planExecutor);
 
