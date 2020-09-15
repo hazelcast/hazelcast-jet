@@ -109,36 +109,6 @@ public class SqlMappingTest extends JetSqlTestSupport {
     }
 
     @Test
-    public void test_mappingWithExplicitExternalKeyword() {
-        sqlService.execute("CREATE EXTERNAL MAPPING t TYPE TestStream");
-        sqlService.execute("DROP EXTERNAL MAPPING t");
-    }
-
-    @Test
-    public void when_nonPublicSchema_then_fail() {
-        assertThatThrownBy(() -> sqlService.execute("CREATE MAPPING foo_schema.t TYPE TestStream"))
-                .hasMessageContaining("The mapping must be created in the \"public\" (the default) schema");
-    }
-
-    @Test
-    public void test_explicitPublicSchema() {
-        sqlService.execute("CREATE MAPPING public.t TYPE TestStream");
-        sqlService.execute("DROP MAPPING public.t");
-    }
-
-    @Test
-    public void when_compoundIdentifierForType_then_fail() {
-        assertThatThrownBy(() -> sqlService.execute("CREATE MAPPING t TYPE foo.bar.TestStream"))
-                .hasMessageContaining("Encountered \".\" at line 1, column 26");
-    }
-
-    @Test
-    public void when_compoundIdentifierForOption_then_fail() {
-        assertThatThrownBy(() -> sqlService.execute("CREATE MAPPING t TYPE TestStream OPTIONS (foo.bar.option 'value')"))
-                .hasMessageContaining("Encountered \".\" at line 1, column 46");
-    }
-
-    @Test
     public void when_dropFromPartitionedSchema_then_fail() {
         instance().getMap("my_map").put(42, 43);
         // check that we can query that table

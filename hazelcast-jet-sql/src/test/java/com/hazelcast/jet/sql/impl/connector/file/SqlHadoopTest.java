@@ -74,8 +74,8 @@ public class SqlHadoopTest extends JetSqlTestSupport {
                 + ", name VARCHAR"
                 + ") TYPE " + FileSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ("
-                + OPTION_SERIALIZATION_FORMAT + " '" + CSV_SERIALIZATION_FORMAT + '\''
-                + ", " + FileSqlConnector.OPTION_PATH + " '" + path("csv") + '\''
+                + '"' + OPTION_SERIALIZATION_FORMAT + "\" '" + CSV_SERIALIZATION_FORMAT + '\''
+                + ", \"" + FileSqlConnector.OPTION_PATH + "\" '" + path("csv") + '\''
                 + ")"
         );
 
@@ -95,9 +95,9 @@ public class SqlHadoopTest extends JetSqlTestSupport {
         sqlService.execute("CREATE MAPPING " + name + ' '
                 + "TYPE " + FileSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ("
-                + OPTION_SERIALIZATION_FORMAT + " '" + CSV_SERIALIZATION_FORMAT + '\''
-                + ", " + FileSqlConnector.OPTION_PATH + " '" + path("inferred-csv") + '\''
-                + ", " + OPTION_HEADER + " '" + Boolean.TRUE + '\''
+                + '"' + OPTION_SERIALIZATION_FORMAT + "\" '" + CSV_SERIALIZATION_FORMAT + '\''
+                + ", \"" + FileSqlConnector.OPTION_PATH + "\" '" + path("inferred-csv") + '\''
+                + ", \"" + OPTION_HEADER + "\" '" + Boolean.TRUE + '\''
                 + ")"
         );
 
@@ -118,8 +118,8 @@ public class SqlHadoopTest extends JetSqlTestSupport {
                 + ", name VARCHAR"
                 + ") TYPE " + FileSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ("
-                + OPTION_SERIALIZATION_FORMAT + " '" + JSON_SERIALIZATION_FORMAT + '\''
-                + ", " + FileSqlConnector.OPTION_PATH + " '" + path("json") + '\''
+                + '"' + OPTION_SERIALIZATION_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + '\''
+                + ", \"" + FileSqlConnector.OPTION_PATH + "\" '" + path("json") + '\''
                 + ")"
         );
 
@@ -142,8 +142,8 @@ public class SqlHadoopTest extends JetSqlTestSupport {
         sqlService.execute("CREATE MAPPING " + name + ' '
                 + "TYPE " + FileSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ("
-                + OPTION_SERIALIZATION_FORMAT + " '" + JSON_SERIALIZATION_FORMAT + '\''
-                + ", " + FileSqlConnector.OPTION_PATH + " '" + path("inferred-json") + '\''
+                + '"' + OPTION_SERIALIZATION_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + '\''
+                + ", \"" + FileSqlConnector.OPTION_PATH + "\" '" + path("inferred-json") + '\''
                 + ")"
         );
 
@@ -164,8 +164,8 @@ public class SqlHadoopTest extends JetSqlTestSupport {
                 + ", name VARCHAR"
                 + ") TYPE " + FileSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ("
-                + OPTION_SERIALIZATION_FORMAT + " '" + AVRO_SERIALIZATION_FORMAT + '\''
-                + ", " + FileSqlConnector.OPTION_PATH + " '" + path("avro") + '\''
+                + '"' + OPTION_SERIALIZATION_FORMAT + "\" '" + AVRO_SERIALIZATION_FORMAT + '\''
+                + ", \"" + FileSqlConnector.OPTION_PATH + "\" '" + path("avro") + '\''
                 + ")"
         );
 
@@ -185,8 +185,8 @@ public class SqlHadoopTest extends JetSqlTestSupport {
         sqlService.execute("CREATE MAPPING " + name + ' '
                 + "TYPE " + FileSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ("
-                + OPTION_SERIALIZATION_FORMAT + " '" + AVRO_SERIALIZATION_FORMAT + '\''
-                + ", " + FileSqlConnector.OPTION_PATH + " '" + path("inferred-avro") + '\''
+                + '"' + OPTION_SERIALIZATION_FORMAT + "\" '" + AVRO_SERIALIZATION_FORMAT + '\''
+                + ", \"" + FileSqlConnector.OPTION_PATH + "\" '" + path("inferred-avro") + '\''
                 + ")"
         );
 

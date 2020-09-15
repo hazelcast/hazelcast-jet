@@ -54,11 +54,11 @@ public class SqlJsonTest extends JetSqlTestSupport {
     public void test_nulls() {
         String name = generateRandomName();
         sqlService.execute("CREATE MAPPING " + name + " ("
-                + "id INT EXTERNAL NAME __key.id"
-                + ", name VARCHAR EXTERNAL NAME this.name"
+                + "id INT EXTERNAL NAME \"__key.id\""
+                + ", name VARCHAR EXTERNAL NAME \"this.name\""
                 + ") TYPE " + IMapSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ("
-                + OPTION_SERIALIZATION_KEY_FORMAT + " '" + JSON_SERIALIZATION_FORMAT + '\''
+                + '"' + OPTION_SERIALIZATION_KEY_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + '\''
                 + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + '\''
                 + ")");
 
@@ -77,11 +77,11 @@ public class SqlJsonTest extends JetSqlTestSupport {
     public void test_fieldsMapping() {
         String name = generateRandomName();
         sqlService.execute("CREATE MAPPING " + name + " ("
-                + "key_name VARCHAR EXTERNAL NAME __key.name"
-                + ", value_name VARCHAR EXTERNAL NAME this.name"
+                + "key_name VARCHAR EXTERNAL NAME \"__key.name\""
+                + ", value_name VARCHAR EXTERNAL NAME \"this.name\""
                 + ") TYPE " + IMapSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ("
-                + OPTION_SERIALIZATION_KEY_FORMAT + " '" + JSON_SERIALIZATION_FORMAT + '\''
+                + '"' + OPTION_SERIALIZATION_KEY_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + '\''
                 + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + '\''
                 + ")");
 
@@ -103,8 +103,8 @@ public class SqlJsonTest extends JetSqlTestSupport {
                 + "name VARCHAR"
                 + ") TYPE " + IMapSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ("
-                + OPTION_SERIALIZATION_KEY_FORMAT + " '" + JAVA_SERIALIZATION_FORMAT + '\''
-                + ", " + OPTION_KEY_CLASS + " '" + Integer.class.getName() + '\''
+                + '"' + OPTION_SERIALIZATION_KEY_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + '\''
+                + ", \"" + OPTION_KEY_CLASS + "\" '" + Integer.class.getName() + '\''
                 + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + '\''
                 + ")");
 
@@ -117,10 +117,11 @@ public class SqlJsonTest extends JetSqlTestSupport {
                 + ", ssn BIGINT"
                 + ") TYPE " + IMapSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ("
-                + OPTION_SERIALIZATION_KEY_FORMAT + " '" + JAVA_SERIALIZATION_FORMAT + '\''
-                + ", " + OPTION_KEY_CLASS + " '" + Integer.class.getName() + '\''
+                + '"' + OPTION_SERIALIZATION_KEY_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + '\''
+                + ", \"" + OPTION_KEY_CLASS + "\" '" + Integer.class.getName() + '\''
                 + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + '\''
-                + ")");
+                + ")"
+        );
 
         // insert record against new schema
         sqlService.execute("SINK INTO " + name + " VALUES (69, 'Bob', 123456789)");
@@ -145,7 +146,7 @@ public class SqlJsonTest extends JetSqlTestSupport {
 
         String to = generateRandomName();
         sqlService.execute("CREATE MAPPING " + to + " ("
-                + "id VARCHAR EXTERNAL NAME __key.id"
+                + "id VARCHAR EXTERNAL NAME \"__key.id\""
                 + ", string VARCHAR"
                 + ", \"boolean\" BOOLEAN"
                 + ", byte TINYINT"
@@ -161,7 +162,7 @@ public class SqlJsonTest extends JetSqlTestSupport {
                 + ", timestampTz TIMESTAMP WITH TIME ZONE"
                 + ") TYPE " + IMapSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ("
-                + OPTION_SERIALIZATION_KEY_FORMAT + " '" + JSON_SERIALIZATION_FORMAT + '\''
+                + '"' + OPTION_SERIALIZATION_KEY_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + '\''
                 + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + '\''
                 + ")");
 

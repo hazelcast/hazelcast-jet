@@ -57,9 +57,9 @@ public class SqlAvroTest extends JetSqlTestSupport {
                 + "nonExistingField VARCHAR"
                 + ") TYPE " + FileSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ("
-                + OPTION_SERIALIZATION_FORMAT + " '" + AVRO_SERIALIZATION_FORMAT + '\''
-                + ", " + FileSqlConnector.OPTION_PATH + " '" + RESOURCES_PATH + '\''
-                + ", " + FileSqlConnector.OPTION_GLOB + " '" + "file.avro" + '\''
+                + " \"" + OPTION_SERIALIZATION_FORMAT + "\" '" + AVRO_SERIALIZATION_FORMAT + '\''
+                + ", \"" + FileSqlConnector.OPTION_PATH + "\" '" + RESOURCES_PATH + '\''
+                + ", \"" + FileSqlConnector.OPTION_GLOB + "\" '" + "file.avro" + '\''
                 + ")"
         );
 
@@ -76,9 +76,9 @@ public class SqlAvroTest extends JetSqlTestSupport {
                 + "name VARCHAR EXTERNAL NAME string"
                 + ") TYPE " + FileSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ("
-                + OPTION_SERIALIZATION_FORMAT + " '" + AVRO_SERIALIZATION_FORMAT + '\''
-                + ", " + FileSqlConnector.OPTION_PATH + " '" + RESOURCES_PATH + '\''
-                + ", " + FileSqlConnector.OPTION_GLOB + " '" + "file.avro" + '\''
+                + '"' +  OPTION_SERIALIZATION_FORMAT + "\" '" + AVRO_SERIALIZATION_FORMAT + '\''
+                + ", \"" + FileSqlConnector.OPTION_PATH + "\" '" + RESOURCES_PATH + '\''
+                + ", \"" + FileSqlConnector.OPTION_GLOB + "\" '" + "file.avro" + '\''
                 + ")"
         );
 
@@ -116,8 +116,8 @@ public class SqlAvroTest extends JetSqlTestSupport {
                 + ", timestampTz TIMESTAMP WITH TIME ZONE"
                 + ") TYPE " + FileSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ("
-                + OPTION_SERIALIZATION_FORMAT + " '" + AVRO_SERIALIZATION_FORMAT + '\''
-                + ", " + FileSqlConnector.OPTION_PATH + " '" + directory.getAbsolutePath() + '\''
+                + '"' +  OPTION_SERIALIZATION_FORMAT + "\" '" + AVRO_SERIALIZATION_FORMAT + '\''
+                + ", \"" + FileSqlConnector.OPTION_PATH + "\" '" + directory.getAbsolutePath() + '\''
                 + ")"
         );
 
@@ -164,9 +164,9 @@ public class SqlAvroTest extends JetSqlTestSupport {
         sqlService.execute("CREATE MAPPING " + name + ' '
                 + "TYPE " + FileSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ( "
-                + OPTION_SERIALIZATION_FORMAT + " '" + AVRO_SERIALIZATION_FORMAT + '\''
-                + ", " + FileSqlConnector.OPTION_PATH + " '" + RESOURCES_PATH + '\''
-                + ", " + FileSqlConnector.OPTION_GLOB + " '" + "file.avro" + '\''
+                + '"' +  OPTION_SERIALIZATION_FORMAT + "\" '" + AVRO_SERIALIZATION_FORMAT + '\''
+                + ", \"" + FileSqlConnector.OPTION_PATH + "\" '" + RESOURCES_PATH + '\''
+                + ", \"" + FileSqlConnector.OPTION_GLOB + "\" '" + "file.avro" + '\''
                 + ")"
         );
 

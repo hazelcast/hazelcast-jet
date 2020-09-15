@@ -135,8 +135,8 @@ public class SqlPrimitiveTest extends JetSqlTestSupport {
                 + ", name VARCHAR EXTERNAL NAME this"
                 + ") TYPE " + IMapSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ("
-                + OPTION_SERIALIZATION_KEY_FORMAT + " '" + JAVA_SERIALIZATION_FORMAT + '\''
-                + ", " + OPTION_KEY_CLASS + " '" + Integer.class.getName() + '\''
+                + '"' + OPTION_SERIALIZATION_KEY_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + '\''
+                + ", \"" + OPTION_KEY_CLASS + "\" '" + Integer.class.getName() + '\''
                 + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + '\''
                 + ", \"" + OPTION_VALUE_CLASS + "\" '" + String.class.getName() + '\''
                 + ")"
@@ -160,9 +160,9 @@ public class SqlPrimitiveTest extends JetSqlTestSupport {
 
         sqlService.execute("CREATE MAPPING " + tableName + " TYPE " + IMapSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ("
-                + OPTION_OBJECT_NAME + " '" + mapName + '\''
-                + ", " + OPTION_SERIALIZATION_KEY_FORMAT + " '" + JAVA_SERIALIZATION_FORMAT + '\''
-                + ", " + OPTION_KEY_CLASS + " '" + String.class.getName() + '\''
+                + '"' + OPTION_OBJECT_NAME + "\" '" + mapName + '\''
+                + ", \"" + OPTION_SERIALIZATION_KEY_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + '\''
+                + ", \"" + OPTION_KEY_CLASS + "\" '" + String.class.getName() + '\''
                 + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + '\''
                 + ", \"" + OPTION_VALUE_CLASS + "\" '" + String.class.getName() + '\''
                 + ")"

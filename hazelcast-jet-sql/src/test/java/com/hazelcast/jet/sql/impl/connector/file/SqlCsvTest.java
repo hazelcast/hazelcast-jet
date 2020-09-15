@@ -78,8 +78,8 @@ public class SqlCsvTest extends JetSqlTestSupport {
                 + ", timestampTz TIMESTAMP WITH TIME ZONE"
                 + ") TYPE " + FileSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ("
-                + OPTION_SERIALIZATION_FORMAT + " '" + CSV_SERIALIZATION_FORMAT + '\''
-                + ", " + FileSqlConnector.OPTION_PATH + " '" + directory.getAbsolutePath() + '\''
+                + '"' +  OPTION_SERIALIZATION_FORMAT + "\" '" + CSV_SERIALIZATION_FORMAT + '\''
+                + ", \"" + FileSqlConnector.OPTION_PATH + "\" '" + directory.getAbsolutePath() + '\''
                 + ")"
         );
 
@@ -126,10 +126,10 @@ public class SqlCsvTest extends JetSqlTestSupport {
         sqlService.execute("CREATE MAPPING " + name + ' '
                 + "TYPE " + FileSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ("
-                + OPTION_SERIALIZATION_FORMAT + " '" + CSV_SERIALIZATION_FORMAT + '\''
-                + ", " + FileSqlConnector.OPTION_PATH + " '" + RESOURCES_PATH + '\''
-                + ", " + FileSqlConnector.OPTION_GLOB + " '" + "file.csv" + '\''
-                + ", " + FileSqlConnector.OPTION_HEADER + " '" + Boolean.TRUE + '\''
+                + '"' +  OPTION_SERIALIZATION_FORMAT + "\" '" + CSV_SERIALIZATION_FORMAT + '\''
+                + ", \"" + FileSqlConnector.OPTION_PATH + "\" '" + RESOURCES_PATH + '\''
+                + ", \"" + FileSqlConnector.OPTION_GLOB + "\" '" + "file.csv" + '\''
+                + ", \"" + FileSqlConnector.OPTION_HEADER + "\" '" + Boolean.TRUE + '\''
                 + ")"
         );
 
