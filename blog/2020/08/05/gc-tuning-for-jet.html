@@ -127,15 +127,15 @@ be a concurrent GC thread, we can configure Jet to use one thread less:</p>
 do any context switching. We did give up one entire CPU core just for
 GC, reducing the CPU capacity available to Jet, but we allowed
 background GC to run truly concurrently to the Jet tasks. In low-latency
-scenarios, <strong>the application doesn't need 100% CPU, but it needs its
-share of the CPU 100% of the time.</strong></p>
+scenarios, <em>the application doesn't need 100% CPU, but it needs its
+share of the CPU 100% of the time.</em></p>
 <p>We went to see if this setup really makes the difference we hope for,
 and found it indeed had a drammatic impact on the latency with both
 garbage collectors we tested (G1 and ZGC). The most important outcome
 was that we were now able to push G1 below the 10 ms line. Since G1 is
 stable across a wide range of throughputs, we immediately got it to
-perform within 10 ms at <strong>double the throughput than in the previous
-round</strong>.</p>
+perform within 10 ms at <em>double the throughput than in the previous
+round</em>.</p>
 <h2><a class="anchor" aria-hidden="true" id="the-setup"></a><a href="#the-setup" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>The Setup</h2>
 <p>Based on the expectations set by the previous benchmark, we focused on
 the ZGC and G1 collectors and the latest pre-release of Java 15. Our
@@ -180,9 +180,9 @@ a solid 25% improvement.</p>
 <p>The effect on G1 is sort of dual to the above: while the G1 already had
 great throughput but fell just short of making it below the 10 ms line,
 in this round its latency improved across the board, up to 40% at
-places. The best news: <strong>the maximum throughput at which a single
+places. The best news: <em>the maximum throughput at which a single
 Hazelcast Jet node maintains 99.99% latency within 10 ms now lies at 20
-million items per second</strong>, a 250% boost!</p>
+million items per second</em>, a 250% boost!</p>
 <p><img src="/blog/assets/2020-08-05-latency-1m.png" alt="Latency on c5.4xlarge, 1 M Events per Second"></p>
 <h2><a class="anchor" aria-hidden="true" id="upgrading-to-10-m-input-events-per-second"></a><a href="#upgrading-to-10-m-input-events-per-second" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Upgrading to 10 M Input Events per Second</h2>
 <p>Encouraged by this strong result, we dreamed up a scenario like this: we
