@@ -75,7 +75,7 @@ cluster change depending on these two settings.
 
 |Auto-Scaling Setting|Processing Guarantee Setting|Member Added|Member Removed|
 |------------|--------------------|------------|--------------|
-|enabled (default)    |any setting|restart after a delay|restart immediately|
+|enabled (default)    |any setting|restart after a [delay](configuration#list-of-configuration-options)|restart immediately|
 |disabled     |none|keep job running on old members|fail job|
 |disabled     |at-least-once or exactly-once|keep job running on old members|suspend job|
 
