@@ -205,14 +205,16 @@ data, depending on the underlying disk technology.
 
 [Hazelcast Jet](https://jet-start.sh/) is a distributed stream
 processing framework built on Hazelcast and combines a cache with
-fault-tolerant data processing. It has sources and sinks to integrate
+fault-tolerant data processing.
+It has sources and sinks to integrate
 with various file, messaging and database systems (such as Amazon S3,
 Kafka, message brokers and relational databases).
 
 Jet also provides a Debezium module where it can process change events
 directly from the database and write them to its distributed key-value
-store. This avoids having to write the intermediate messages to Kafka
-and then read again to be written to a separate cache.
+store.
+This avoids having to write the intermediate messages to Kafka and then
+read again to be written to a separate cache.
 
 ## Putting it all together
 
@@ -278,7 +280,7 @@ pipeline.readFrom(source)                                       //1
 
 1. Get a stream of Jet `ChangeRecord` items
 
-2. Create the sink to write to, a remote map
+2. Create the sink to write to a remote map
 
 3. Name of the remote map
 
