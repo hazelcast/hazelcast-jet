@@ -206,7 +206,7 @@ data, depending on the underlying disk technology.
 [Hazelcast Jet](https://jet-start.sh/) is a distributed stream
 processing framework built on Hazelcast and combines a cache with
 fault-tolerant data processing. It has sources and sinks to integrate
-with various file-, messaging- and database systems (such as Amazon S3,
+with various file, messaging and database systems (such as Amazon S3,
 Kafka, message brokers and relational databases).
 
 Jet also provides a Debezium module where it can process change events
@@ -285,9 +285,11 @@ pipeline.readFrom(source)                                       //1
 4. Client configuration so it can connect to the right host, cluster
 and instance
 
-5. Provide mapping from `ChangeRecord` to cache key
+5. Provide a mapping function to extract the cache key from the
+`ChangeRecord`
 
-6. Provide mapping from `ChangeRecord` to cache value (`Person` POJO)
+6. Provide a mapping function to extract the cache value (`Person` POJO)
+from the `ChangeRecord`
 
 ```java
 public class CustomClientConfig extends ClientConfig {
