@@ -18,17 +18,17 @@ package com.hazelcast.jet.sql;
 
 import com.hazelcast.jet.sql.impl.connector.test.AllTypesSqlConnector;
 import com.hazelcast.jet.sql.impl.connector.test.TestBatchSqlConnector;
-import com.hazelcast.map.IMap;
 import com.hazelcast.sql.SqlColumnType;
 import com.hazelcast.sql.SqlResult;
 import com.hazelcast.sql.SqlService;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 
+import static com.hazelcast.jet.core.TestUtil.createMap;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertEquals;
 
 public class SqlTest extends JetSqlTestSupport {
 
@@ -66,16 +66,16 @@ public class SqlTest extends JetSqlTestSupport {
     @Test
     public void test_multipleValues_insert() {
         sqlService.execute(javaSerializableMapDdl("m", Integer.class, Integer.class));
-        sqlService.execute("SINK INTO m(__key, this) VALUES (1, 1), (2, 2)");
 
-        IMap<Integer, Integer> map = instance().getMap("m");
-        assertEquals(2, map.size());
-        assertEquals(1, (int) map.get(1));
-        assertEquals(2, (int) map.get(2));
+        assertMapEventually(
+                "m",
+                "SINK INTO m(__key, this) VALUES (1, 1), (2, 2)",
+                createMap(1, 1, 2, 2)
+        );
     }
 
     @Test
-    public void test_unicodeConstant() {
+    public void test_projectWithoutInputReferences() {
         TestBatchSqlConnector.create(sqlService, "t", 2);
 
         assertRowsEventuallyInAnyOrder(
@@ -88,20 +88,7 @@ public class SqlTest extends JetSqlTestSupport {
     }
 
     @Test
-    public void test_fullScan() {
-        TestBatchSqlConnector.create(sqlService, "t", 2);
-
-        assertRowsEventuallyInAnyOrder(
-                "SELECT v FROM t",
-                asList(
-                        new Row(0),
-                        new Row(1)
-                )
-        );
-    }
-
-    @Test
-    public void test_fullScanStar() {
+    public void test_starProject() {
         TestBatchSqlConnector.create(sqlService, "t", 2);
 
         assertRowsEventuallyInAnyOrder(
@@ -114,11 +101,11 @@ public class SqlTest extends JetSqlTestSupport {
     }
 
     @Test
-    public void test_fullScanFilter() {
-        TestBatchSqlConnector.create(sqlService, "t", 3);
+    public void test_starProjectProject() {
+        TestBatchSqlConnector.create(sqlService, "t", 2);
 
         assertRowsEventuallyInAnyOrder(
-                "SELECT v FROM t WHERE v=0 OR v=1",
+                "SELECT * FROM (SELECT * FROM t)",
                 asList(
                         new Row(0),
                         new Row(1)
@@ -127,41 +114,432 @@ public class SqlTest extends JetSqlTestSupport {
     }
 
     @Test
-    public void test_fullScanProjection1() {
+    @Ignore // TODO https://github.com/hazelcast/hazelcast/issues/17554
+    public void test_starProjectFilterProjectFilter() {
         TestBatchSqlConnector.create(sqlService, "t", 2);
 
         assertRowsEventuallyInAnyOrder(
-                "SELECT v + v FROM t WHERE v=1",
-                singletonList(new Row(2L)));
-    }
-
-    @Test
-    public void test_fullScanProjection2() {
-        TestBatchSqlConnector.create(sqlService, "t", 2);
-
-        assertRowsEventuallyInAnyOrder(
-                "SELECT v FROM t WHERE v+v=2",
-                singletonList(new Row(1))
+                "SELECT * FROM (SELECT * FROM t WHERE 0 = 0) WHERE 1 = 1",
+                asList(
+                        new Row(0),
+                        new Row(1)
+                )
         );
     }
 
     @Test
-    public void fullScan_projection3() {
+    public void test_starProjectFilterExpressionProjectFilter() {
         TestBatchSqlConnector.create(sqlService, "t", 2);
 
         assertRowsEventuallyInAnyOrder(
-                "SELECT v2 FROM (SELECT v+v v2 FROM t) WHERE v2=2",
-                singletonList(new Row(2L))
+                "SELECT * FROM (SELECT * FROM t WHERE 0 = 0) WHERE 2 - 1 = 1",
+                asList(
+                        new Row(0),
+                        new Row(1)
+                )
         );
     }
 
     @Test
-    public void test_fullScanProjection4() {
+    public void test_project() {
         TestBatchSqlConnector.create(sqlService, "t", 2);
 
         assertRowsEventuallyInAnyOrder(
-                "SELECT v+v FROM t WHERE v+v=2",
-                singletonList(new Row(2L))
+                "SELECT v, v FROM t",
+                asList(
+                        new Row(0, 0),
+                        new Row(1, 1)
+                )
+        );
+    }
+
+    @Test
+    public void test_projectProject() {
+        TestBatchSqlConnector.create(sqlService, "t", 2);
+
+        assertRowsEventuallyInAnyOrder(
+                "SELECT f2, f1 FROM (SELECT v f1, v f2 FROM t)",
+                asList(
+                        new Row(0, 0),
+                        new Row(1, 1)
+                )
+        );
+    }
+
+    @Test
+    public void test_projectExpression() {
+        TestBatchSqlConnector.create(sqlService, "t", 2);
+
+        assertRowsEventuallyInAnyOrder(
+                "SELECT v + 1, v * v FROM t",
+                asList(
+                        new Row(1L, 0L),
+                        new Row(2L, 1L)
+                )
+        );
+    }
+
+    @Test
+    public void test_projectFilter() {
+        TestBatchSqlConnector.create(sqlService, "t", 3);
+
+        assertRowsEventuallyInAnyOrder(
+                "SELECT v, v FROM t WHERE v = 1 OR v = 2",
+                asList(
+                        new Row(1, 1),
+                        new Row(2, 2)
+                )
+        );
+    }
+
+    @Test
+    public void test_projectFilterExpression() {
+        TestBatchSqlConnector.create(sqlService, "t", 3);
+
+        assertRowsEventuallyInAnyOrder(
+                "SELECT v, v FROM t WHERE v + v > 1",
+                asList(
+                        new Row(1, 1),
+                        new Row(2, 2)
+                )
+        );
+    }
+
+    @Test
+    public void test_projectExpressionFilter() {
+        TestBatchSqlConnector.create(sqlService, "t", 3);
+
+        assertRowsEventuallyInAnyOrder(
+                "SELECT v + 1, v + v FROM t WHERE v >= 1",
+                asList(
+                        new Row(2L, 2L),
+                        new Row(3L, 4L)
+                )
+        );
+    }
+
+    @Test
+    public void test_projectExpressionFilterExpression() {
+        TestBatchSqlConnector.create(sqlService, "t", 3);
+
+        assertRowsEventuallyInAnyOrder(
+                "SELECT v + 1, v + v FROM t WHERE v + v > 1",
+                asList(
+                        new Row(2L, 2L),
+                        new Row(3L, 4L)
+                )
+        );
+    }
+
+    @Test
+    public void test_projectProjectExpression() {
+        TestBatchSqlConnector.create(sqlService, "t", 2);
+
+        assertRowsEventuallyInAnyOrder(
+                "SELECT f2, f1 FROM (SELECT v f1, v + v f2 FROM t)",
+                asList(
+                        new Row(0L, 0),
+                        new Row(2L, 1)
+                )
+        );
+    }
+
+    @Test
+    public void test_projectExpressionProject() {
+        TestBatchSqlConnector.create(sqlService, "t", 2);
+
+        assertRowsEventuallyInAnyOrder(
+                "SELECT f1 + f2 FROM (SELECT v f1, v f2 FROM t)",
+                asList(
+                        new Row(0L),
+                        new Row(2L)
+                )
+        );
+    }
+
+    @Test
+    public void test_projectExpressionProjectExpression() {
+        TestBatchSqlConnector.create(sqlService, "t", 2);
+
+        assertRowsEventuallyInAnyOrder(
+                "SELECT f1 + f2 FROM (SELECT v f1, v + v f2 FROM t)",
+                asList(
+                        new Row(0L),
+                        new Row(3L)
+                )
+        );
+    }
+
+    @Test
+    public void test_projectProjectFilter() {
+        TestBatchSqlConnector.create(sqlService, "t", 3);
+
+        assertRowsEventuallyInAnyOrder(
+                "SELECT f2, f1 FROM (SELECT v f1, v f2 FROM t WHERE v >= 1)",
+                asList(
+                        new Row(1, 1),
+                        new Row(2, 2)
+                )
+        );
+    }
+
+    @Test
+    public void test_projectProjectFilterExpression() {
+        TestBatchSqlConnector.create(sqlService, "t", 3);
+
+        assertRowsEventuallyInAnyOrder(
+                "SELECT f2, f1 FROM (SELECT v f1, v f2 FROM t WHERE v + v > 1)",
+                asList(
+                        new Row(1, 1),
+                        new Row(2, 2)
+                )
+        );
+    }
+
+    @Test
+    public void test_projectProjectExpressionFilter() {
+        TestBatchSqlConnector.create(sqlService, "t", 3);
+
+        assertRowsEventuallyInAnyOrder(
+                "SELECT f2, f1 FROM (SELECT v f1, v + v f2 FROM t WHERE v >= 1)",
+                asList(
+                        new Row(2L, 1),
+                        new Row(4L, 2)
+                )
+        );
+    }
+
+    @Test
+    public void test_projectProjectExpressionFilterExpression() {
+        TestBatchSqlConnector.create(sqlService, "t", 3);
+
+        assertRowsEventuallyInAnyOrder(
+                "SELECT f2, f1 FROM (SELECT v f1, v + v f2 FROM t WHERE v + v > 1)",
+                asList(
+                        new Row(2L, 1),
+                        new Row(4L, 2)
+                )
+        );
+    }
+
+    @Test
+    public void test_projectExpressionProjectFilter() {
+        TestBatchSqlConnector.create(sqlService, "t", 3);
+
+        assertRowsEventuallyInAnyOrder(
+                "SELECT f1 + f2 FROM (SELECT v f1, v f2 FROM t WHERE v >= 1)",
+                asList(
+                        new Row(2L),
+                        new Row(4L)
+                )
+        );
+    }
+
+    @Test
+    public void test_projectExpressionProjectFilterExpression() {
+        TestBatchSqlConnector.create(sqlService, "t", 3);
+
+        assertRowsEventuallyInAnyOrder(
+                "SELECT f1 + f2 FROM (SELECT v f1, v f2 FROM t WHERE v + v > 1)",
+                asList(
+                        new Row(2L),
+                        new Row(4L)
+                )
+        );
+    }
+
+    @Test
+    public void test_projectExpressionProjectExpressionFilter() {
+        TestBatchSqlConnector.create(sqlService, "t", 3);
+
+        assertRowsEventuallyInAnyOrder(
+                "SELECT f1 + f2 FROM (SELECT v f1, v + v f2 FROM t WHERE v >= 1)",
+                asList(
+                        new Row(3L),
+                        new Row(6L)
+                )
+        );
+    }
+
+    @Test
+    public void test_projectExpressionProjectExpressionFilterExpression() {
+        TestBatchSqlConnector.create(sqlService, "t", 3);
+
+        assertRowsEventuallyInAnyOrder(
+                "SELECT f1 + f2 FROM (SELECT v f1, v + v f2 FROM t WHERE v + v > 1)",
+                asList(
+                        new Row(3L),
+                        new Row(6L)
+                )
+        );
+    }
+
+    @Test
+    public void test_projectFilterProject() {
+        TestBatchSqlConnector.create(sqlService, "t", 3);
+
+        assertRowsEventuallyInAnyOrder(
+                "SELECT f2, f1 FROM (SELECT v f1, v f2 FROM t) WHERE f2 >= 1",
+                asList(
+                        new Row(1, 1),
+                        new Row(2, 2)
+                )
+        );
+    }
+
+    @Test
+    public void test_projectFilterExpressionProject() {
+        TestBatchSqlConnector.create(sqlService, "t", 3);
+
+        assertRowsEventuallyInAnyOrder(
+                "SELECT f2, f1 FROM (SELECT v f1, v f2 FROM t) WHERE f1 + f2 > 1",
+                asList(
+                        new Row(1, 1),
+                        new Row(2, 2)
+                )
+        );
+    }
+
+    @Test
+    public void test_projectFilterProjectExpression() {
+        TestBatchSqlConnector.create(sqlService, "t", 3);
+
+        assertRowsEventuallyInAnyOrder(
+                "SELECT f2, f1 FROM (SELECT v f1, v + v f2 FROM t) WHERE f1 >= 1",
+                asList(
+                        new Row(2L, 1),
+                        new Row(4L, 2)
+                )
+        );
+    }
+
+    @Test
+    public void test_projectFilterExpressionProjectExpression() {
+        TestBatchSqlConnector.create(sqlService, "t", 3);
+
+        assertRowsEventuallyInAnyOrder(
+                "SELECT f2, f1 FROM (SELECT v f1, v + v f2 FROM t) WHERE f1 + f2 > 2",
+                asList(
+                        new Row(2L, 1),
+                        new Row(4L, 2)
+                )
+        );
+    }
+
+    @Test
+    public void test_projectExpressionFilterProject() {
+        TestBatchSqlConnector.create(sqlService, "t", 3);
+
+        assertRowsEventuallyInAnyOrder(
+                "SELECT f1 + f2 FROM (SELECT v f1, v f2 FROM t) WHERE f2 >= 1",
+                asList(
+                        new Row(2L),
+                        new Row(4L)
+                )
+        );
+    }
+
+    @Test
+    public void test_projectExpressionFilterExpressionProject() {
+        TestBatchSqlConnector.create(sqlService, "t", 3);
+
+        assertRowsEventuallyInAnyOrder(
+                "SELECT f1 + f2 FROM (SELECT v f1, v f2 FROM t) WHERE f1 + f2 > 1",
+                asList(
+                        new Row(2L),
+                        new Row(4L)
+                )
+        );
+    }
+
+    @Test
+    public void test_projectExpressionFilterProjectExpression() {
+        TestBatchSqlConnector.create(sqlService, "t", 3);
+
+        assertRowsEventuallyInAnyOrder(
+                "SELECT f1 + f2 FROM (SELECT v f1, v + v f2 FROM t) WHERE f1 >= 1",
+                asList(
+                        new Row(3L),
+                        new Row(6L)
+                )
+        );
+    }
+
+    @Test
+    public void test_projectExpressionFilterExpressionProjectExpression() {
+        TestBatchSqlConnector.create(sqlService, "t", 3);
+
+        assertRowsEventuallyInAnyOrder(
+                "SELECT f1 + f2 FROM (SELECT v f1, v + v f2 FROM t) WHERE f1 + f2 > 1",
+                asList(
+                        new Row(3L),
+                        new Row(6L)
+                )
+        );
+    }
+
+    @Test
+    public void test_projectFilterProjectFilter() {
+        TestBatchSqlConnector.create(sqlService, "t", 4);
+
+        assertRowsEventuallyInAnyOrder(
+                "SELECT f2, f1 FROM (SELECT v f1, v f2 FROM t WHERE v >= 1) WHERE f2 < 3",
+                asList(
+                        new Row(1, 1),
+                        new Row(2, 2)
+                )
+        );
+    }
+
+    @Test
+    public void test_projectFilterProjectExpressionFilter() {
+        TestBatchSqlConnector.create(sqlService, "t", 4);
+
+        assertRowsEventuallyInAnyOrder(
+                "SELECT f1 FROM (SELECT v f1, v + v f2 FROM t WHERE v >= 1) WHERE f2 < 6",
+                asList(
+                        new Row(1),
+                        new Row(2)
+                )
+        );
+    }
+
+    @Test
+    public void test_projectExpressionFilterProjectFilter() {
+        TestBatchSqlConnector.create(sqlService, "t", 4);
+
+        assertRowsEventuallyInAnyOrder(
+                "SELECT f1 + f2 FROM (SELECT v f1, v f2 FROM t WHERE v >= 1) WHERE f2 < 3",
+                asList(
+                        new Row(2L),
+                        new Row(4L)
+                )
+        );
+    }
+
+    @Test
+    public void test_projectExpressionFilterProjectExpressionFilter() {
+        TestBatchSqlConnector.create(sqlService, "t", 4);
+
+        assertRowsEventuallyInAnyOrder(
+                "SELECT f1 + f2 FROM (SELECT v f1, v + v f2 FROM t WHERE v >= 1) WHERE f2 < 6",
+                asList(
+                        new Row(3L),
+                        new Row(6L)
+                )
+        );
+    }
+
+    @Test
+    public void test_projectExpressionFilterExpressionProjectExpressionFilterExpression() {
+        TestBatchSqlConnector.create(sqlService, "t", 4);
+
+        assertRowsEventuallyInAnyOrder(
+                "SELECT f1 + f2 FROM (SELECT v f1, v + v f2 FROM t WHERE v + v > 1) WHERE f1 + f2 < 9",
+                asList(
+                        new Row(3L),
+                        new Row(6L)
+                )
         );
     }
 
