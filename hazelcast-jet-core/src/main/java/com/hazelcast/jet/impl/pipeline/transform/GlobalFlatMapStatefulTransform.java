@@ -49,8 +49,9 @@ public class GlobalFlatMapStatefulTransform<T, S, R> extends AbstractTransform {
 
     @Override
     public void addToDag(Planner p, Context context) {
+        determinedLocalParallelism(1);
         ConstantFunctionEx<T, Integer> keyFn = new ConstantFunctionEx<>(name().hashCode());
-        PlannerVertex pv = p.addVertex(this, name(), 1,
+        PlannerVertex pv = p.addVertex(this, name(), determinedLocalParallelism(),
                 flatMapStatefulP(Long.MAX_VALUE, keyFn, timestampFn, createFn, statefulFlatMapFn, null));
         p.addEdges(this, pv.v, edge -> edge.partitioned(keyFn).distributed());
     }

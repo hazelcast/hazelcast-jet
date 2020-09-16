@@ -70,9 +70,10 @@ public class StreamSourceTransform<T> extends AbstractTransform implements Strea
         if (emitsWatermarks || eventTimePolicy == null) {
             // Reached when the source either emits both JetEvents and watermarks
             // or neither. In these cases we don't have to insert watermarks.
-            p.addVertex(this, name(), localParallelism(),
-                    metaSupplierFn.apply(eventTimePolicy != null ? eventTimePolicy : noEventTime())
-            );
+            final ProcessorMetaSupplier metaSupplier =
+                    metaSupplierFn.apply(eventTimePolicy != null ? eventTimePolicy : noEventTime());
+            determineLocalParallelism(metaSupplier.preferredLocalParallelism(), context, false);
+            p.addVertex(this, name(), determinedLocalParallelism(), metaSupplier);
         } else {
             //                  ------------
             //                 |  sourceP   |
@@ -84,11 +85,12 @@ public class StreamSourceTransform<T> extends AbstractTransform implements Strea
             //                 |  insertWmP  |
             //                  -------------
             String v1name = name();
-            Vertex v1 = p.dag.newVertex(v1name, metaSupplierFn.apply(eventTimePolicy))
-                             .localParallelism(localParallelism());
-            int localParallelism = v1.determineLocalParallelism(localParallelism());
+            final ProcessorMetaSupplier metaSupplier = metaSupplierFn.apply(eventTimePolicy);
+            determineLocalParallelism(metaSupplier.preferredLocalParallelism(), context, false);
+            Vertex v1 = p.dag.newVertex(v1name, metaSupplier)
+                             .localParallelism(determinedLocalParallelism());
             PlannerVertex pv2 = p.addVertex(
-                    this, v1name + "-add-timestamps", localParallelism, insertWatermarksP(eventTimePolicy)
+                    this, v1name + "-add-timestamps", determinedLocalParallelism(), insertWatermarksP(eventTimePolicy)
             );
             p.dag.edge(between(v1, pv2.v).isolated());
         }

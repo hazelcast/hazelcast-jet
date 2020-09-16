@@ -42,9 +42,10 @@ public class DistinctTransform<T, K> extends AbstractTransform {
     @Override
     public void addToDag(Planner p, Context context) {
         String vertexName = name();
+        determineLocalParallelism(-1, context, false);
         Vertex v1 = p.dag.newVertex(vertexName + FIRST_STAGE_VERTEX_NAME_SUFFIX, distinctP(keyFn))
-                         .localParallelism(localParallelism());
-        PlannerVertex pv2 = p.addVertex(this, vertexName, localParallelism(), distinctP(keyFn));
+                         .localParallelism(determinedLocalParallelism());
+        PlannerVertex pv2 = p.addVertex(this, vertexName, determinedLocalParallelism(), distinctP(keyFn));
         p.addEdges(this, v1, (e, ord) -> e.partitioned(keyFn, HASH_CODE));
         p.dag.edge(between(v1, pv2.v).distributed().partitioned(keyFn));
     }

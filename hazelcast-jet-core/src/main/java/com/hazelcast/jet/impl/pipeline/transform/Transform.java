@@ -47,6 +47,10 @@ public interface Transform extends Serializable {
 
     void localParallelism(int localParallelism);
 
+    int determinedLocalParallelism();
+
+    void determinedLocalParallelism(int determinedLocalParallelism);
+
     void setRebalanceInput(int ordinal, boolean value);
 
     void setPartitionKeyFnForInput(int ordinal, FunctionEx<?, ?> keyFn);

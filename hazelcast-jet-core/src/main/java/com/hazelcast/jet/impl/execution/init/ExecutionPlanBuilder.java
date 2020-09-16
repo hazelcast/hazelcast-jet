@@ -58,7 +58,6 @@ public final class ExecutionPlanBuilder {
             JobConfig jobConfig, long lastSnapshotId
     ) {
         final JetInstance instance = getJetInstance(nodeEngine);
-        final int defaultParallelism = instance.getConfig().getInstanceConfig().getCooperativeThreadCount();
         final Collection<MemberInfo> members = new HashSet<>(membersView.size());
         final Address[] partitionOwners = new Address[nodeEngine.getPartitionService().getPartitionCount()];
         initPartitionOwnersAndMembers(nodeEngine, membersView, members, partitionOwners);
@@ -77,7 +76,7 @@ public final class ExecutionPlanBuilder {
             final Vertex vertex = dag.getVertex(entry.getKey());
             final ProcessorMetaSupplier metaSupplier = vertex.getMetaSupplier();
             final int vertexId = entry.getValue();
-            final int localParallelism = vertex.determineLocalParallelism(defaultParallelism);
+            final int localParallelism = vertex.getLocalParallelism();
             final int totalParallelism = localParallelism * clusterSize;
             final List<EdgeDef> inbound = toEdgeDefs(dag.getInboundEdges(vertex.getName()), defaultEdgeConfig,
                     e -> vertexIdMap.get(e.getSourceName()), isJobDistributed);

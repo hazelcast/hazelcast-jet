@@ -70,16 +70,14 @@ public class Planner {
     public final DAG dag = new DAG();
     public final Map<Transform, PlannerVertex> xform2vertex = new HashMap<>();
     private final PipelineImpl pipeline;
-    private Context context;
 
     Planner(PipelineImpl pipeline) {
         this.pipeline = pipeline;
     }
 
     @SuppressWarnings("rawtypes")
-    DAG createDag(Context ctx) {
+    DAG createDag(Context context) {
         pipeline.makeNamesUnique();
-        context = ctx;
 
         Map<Transform, List<Transform>> adjacencyMap = pipeline.adjacencyMap();
         validateNoLeakage(adjacencyMap);
@@ -134,7 +132,7 @@ public class Planner {
         }
 
         for (Transform transform : transforms) {
-            transform.addToDag(this, ctx);
+            transform.addToDag(this, context);
         }
 
         // restore original parents
