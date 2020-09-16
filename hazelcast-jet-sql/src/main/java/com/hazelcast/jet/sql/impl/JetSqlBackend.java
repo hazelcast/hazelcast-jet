@@ -17,6 +17,7 @@
 package com.hazelcast.jet.sql.impl;
 
 import com.hazelcast.jet.core.DAG;
+import com.hazelcast.jet.sql.impl.JetPlan.AlterJobPlan;
 import com.hazelcast.jet.sql.impl.JetPlan.CreateExternalMappingPlan;
 import com.hazelcast.jet.sql.impl.JetPlan.CreateJobPlan;
 import com.hazelcast.jet.sql.impl.JetPlan.DropExternalMappingPlan;
@@ -31,6 +32,7 @@ import com.hazelcast.jet.sql.impl.opt.physical.JetRootRel;
 import com.hazelcast.jet.sql.impl.opt.physical.PhysicalRel;
 import com.hazelcast.jet.sql.impl.opt.physical.PhysicalRules;
 import com.hazelcast.jet.sql.impl.opt.physical.visitor.CreateDagVisitor;
+import com.hazelcast.jet.sql.impl.parse.SqlAlterJob;
 import com.hazelcast.jet.sql.impl.parse.SqlCreateExternalMapping;
 import com.hazelcast.jet.sql.impl.parse.SqlCreateJob;
 import com.hazelcast.jet.sql.impl.parse.SqlDropExternalMapping;
@@ -142,6 +144,8 @@ class JetSqlBackend implements SqlBackend {
             return toDropTablePlan((SqlDropExternalMapping) node);
         } else if (node instanceof SqlCreateJob) {
             return toCreateJobPlan(parseResult, context);
+        } else if (node instanceof SqlAlterJob) {
+            return toAlterJobPlan((SqlAlterJob) node);
         } else if (node instanceof SqlDropJob) {
             return toDropJobPlan((SqlDropJob) node);
         } else {
@@ -189,6 +193,10 @@ class JetSqlBackend implements SqlBackend {
                 dmlPlan,
                 planExecutor
         );
+    }
+
+    private SqlPlan toAlterJobPlan(SqlAlterJob sqlAlterJob) {
+        return new AlterJobPlan(sqlAlterJob.name(), sqlAlterJob.getOperation(), planExecutor);
     }
 
     private SqlPlan toDropJobPlan(SqlDropJob sqlDropJob) {

@@ -22,6 +22,7 @@ data: {
     # Example. "org.apache.calcite.sql.*", "java.util.List".
     imports: [
       "com.hazelcast.jet.sql.impl.parse.ParserResource"
+      "com.hazelcast.jet.sql.impl.parse.SqlAlterJob"
       "com.hazelcast.jet.sql.impl.parse.SqlCreateExternalMapping"
       "com.hazelcast.jet.sql.impl.parse.SqlCreateJob"
       "com.hazelcast.jet.sql.impl.parse.SqlDataType"
@@ -45,6 +46,8 @@ data: {
       "JOB"
       "MAPPING"
       "SINK"
+      "SUSPEND"
+      "RESUME"
     ]
 
     # List of keywords from "keywords" section that are not reserved.
@@ -365,6 +368,8 @@ data: {
       "JOB"
       "MAPPING"
       "SINK"
+      "SUSPEND"
+      "RESUME"
     ]
 
     # List of non-reserved keywords to add;
@@ -386,6 +391,7 @@ data: {
     # Return type of method implementation should be 'SqlNode'.
     # Example: SqlShowDatabases(), SqlShowTables().
     statementParserMethods: [
+      "SqlAlterJob()"
       "SqlExtendedInsert()"
     ]
 

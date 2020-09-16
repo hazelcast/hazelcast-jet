@@ -28,6 +28,7 @@ import org.junit.rules.ExpectedException;
 
 import static com.hazelcast.jet.config.ProcessingGuarantee.EXACTLY_ONCE;
 import static com.hazelcast.jet.core.JobStatus.RUNNING;
+import static com.hazelcast.jet.core.JobStatus.SUSPENDED;
 import static com.hazelcast.jet.sql.JetSqlTestSupport.javaSerializableMapDdl;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.Assert.assertEquals;
@@ -35,7 +36,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
-public class SqlCreateJobTest extends SimpleTestInClusterSupport {
+public class SqlJobManagementTest extends SimpleTestInClusterSupport {
 
     private static SqlService sqlService;
 
@@ -165,6 +166,38 @@ public class SqlCreateJobTest extends SimpleTestInClusterSupport {
 
         // Then
         assertEquals(RUNNING, job.getStatus());
+    }
+
+    @Test
+    public void test_suspendResume() {
+        sqlService.execute("CREATE MAPPING src TYPE TestStream");
+        sqlService.execute(javaSerializableMapDdl("dest", Long.class, Long.class));
+
+        sqlService.execute("CREATE JOB testJob AS SINK INTO dest SELECT v, v FROM src");
+
+        Job job = instance().getJob("testJob");
+        long executionId = assertJobRunningEventually(instance(), job, null);
+
+        sqlService.execute("ALTER JOB testJob SUSPEND");
+        assertJobStatusEventually(job, SUSPENDED);
+
+        sqlService.execute("ALTER JOB testJob RESUME");
+        executionId = assertJobRunningEventually(instance(), job, executionId);
+
+        sqlService.execute("ALTER JOB testJob RESTART");
+        assertJobRunningEventually(instance(), job, executionId);
+    }
+
+    @Test
+    public void when_suspendResumeNonExistingJob_then_fail() {
+        assertThatThrownBy(() -> sqlService.execute("ALTER JOB foo SUSPEND"))
+                .hasMessageContaining("The job 'foo' doesn't exist");
+
+        assertThatThrownBy(() -> sqlService.execute("ALTER JOB foo RESUME"))
+                .hasMessageContaining("The job 'foo' doesn't exist");
+
+        assertThatThrownBy(() -> sqlService.execute("ALTER JOB foo RESTART"))
+                .hasMessageContaining("The job 'foo' doesn't exist");
     }
 
     private long countActiveJobs() {

@@ -18,6 +18,7 @@ package com.hazelcast.jet.sql.impl;
 
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.DAG;
+import com.hazelcast.jet.sql.impl.parse.SqlAlterJob.AlterJobOperation;
 import com.hazelcast.jet.sql.impl.schema.Mapping;
 import com.hazelcast.sql.SqlResult;
 import com.hazelcast.sql.SqlRowMetadata;
@@ -101,7 +102,7 @@ interface JetPlan extends SqlPlan {
 
     class CreateJobPlan implements JetPlan {
 
-        private final String name;
+        private final String jobName;
         private final JobConfig jobConfig;
         private final boolean ifNotExists;
         private final ExecutionPlan executionPlan;
@@ -109,13 +110,13 @@ interface JetPlan extends SqlPlan {
         private final JetPlanExecutor planExecutor;
 
         CreateJobPlan(
-                String name,
+                String jobName,
                 JobConfig jobConfig,
                 boolean ifNotExists,
                 ExecutionPlan executionPlan,
                 JetPlanExecutor planExecutor
         ) {
-            this.name = name;
+            this.jobName = jobName;
             this.jobConfig = jobConfig;
             this.ifNotExists = ifNotExists;
             this.executionPlan = executionPlan;
@@ -128,8 +129,8 @@ interface JetPlan extends SqlPlan {
             return planExecutor.execute(this);
         }
 
-        public String getName() {
-            return name;
+        public String getJobName() {
+            return jobName;
         }
 
         public JobConfig getJobConfig() {
@@ -145,15 +146,42 @@ interface JetPlan extends SqlPlan {
         }
     }
 
+    class AlterJobPlan implements JetPlan {
+
+        private final String jobName;
+        private final AlterJobOperation operation;
+
+        private final JetPlanExecutor planExecutor;
+
+        AlterJobPlan(String jobName, AlterJobOperation operation, JetPlanExecutor planExecutor) {
+            this.jobName = jobName;
+            this.operation = operation;
+            this.planExecutor = planExecutor;
+        }
+
+        @Override
+        public SqlResult execute() {
+            return planExecutor.execute(this);
+        }
+
+        public String getJobName() {
+            return jobName;
+        }
+
+        public AlterJobOperation getOperation() {
+            return operation;
+        }
+    }
+
     class DropJobPlan implements JetPlan {
 
-        private final String name;
+        private final String jobName;
         private final boolean ifExists;
 
         private final JetPlanExecutor planExecutor;
 
-        DropJobPlan(String name, boolean ifExists, JetPlanExecutor planExecutor) {
-            this.name = name;
+        DropJobPlan(String jobName, boolean ifExists, JetPlanExecutor planExecutor) {
+            this.jobName = jobName;
             this.ifExists = ifExists;
             this.planExecutor = planExecutor;
         }
@@ -163,8 +191,8 @@ interface JetPlan extends SqlPlan {
             return planExecutor.execute(this);
         }
 
-        public String getName() {
-            return name;
+        public String getJobName() {
+            return jobName;
         }
 
         public boolean isIfExists() {

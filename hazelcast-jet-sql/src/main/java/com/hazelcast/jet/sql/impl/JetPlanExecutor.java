@@ -18,6 +18,7 @@ package com.hazelcast.jet.sql.impl;
 
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
+import com.hazelcast.jet.sql.impl.JetPlan.AlterJobPlan;
 import com.hazelcast.jet.sql.impl.JetPlan.CreateExternalMappingPlan;
 import com.hazelcast.jet.sql.impl.JetPlan.CreateJobPlan;
 import com.hazelcast.jet.sql.impl.JetPlan.DropExternalMappingPlan;
@@ -67,13 +68,34 @@ class JetPlanExecutor {
         return SqlResultImpl.createUpdateCountResult(-1);
     }
 
+    SqlResult execute(AlterJobPlan plan) {
+        Job job = jetInstance.getJob(plan.getJobName());
+        if (job == null) {
+            throw QueryException.error("The job '" + plan.getJobName() + "' doesn't exist");
+        }
+        switch (plan.getOperation()) {
+            case SUSPEND:
+                job.suspend();
+                break;
+
+            case RESUME:
+                job.resume();
+                break;
+
+            case RESTART:
+                job.restart();
+                break;
+        }
+        return SqlResultImpl.createUpdateCountResult(0);
+    }
+
     SqlResult execute(DropJobPlan plan) {
-        Job job = jetInstance.getJob(plan.getName());
+        Job job = jetInstance.getJob(plan.getJobName());
         if (job == null || job.getStatus().isTerminal()) {
             if (plan.isIfExists()) {
                 return SqlResultImpl.createUpdateCountResult(-1);
             }
-            throw QueryException.error("Job doesn't exist or already terminated: " + plan.getName());
+            throw QueryException.error("Job doesn't exist or already terminated: " + plan.getJobName());
         }
         job.cancel();
         return SqlResultImpl.createUpdateCountResult(-1);

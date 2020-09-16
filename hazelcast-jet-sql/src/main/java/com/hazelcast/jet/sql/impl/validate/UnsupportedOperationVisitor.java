@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.sql.impl.validate;
 
+import com.hazelcast.jet.sql.impl.parse.SqlAlterJob;
 import com.hazelcast.jet.sql.impl.parse.SqlCreateJob;
 import com.hazelcast.jet.sql.impl.parse.SqlDropJob;
 import com.hazelcast.jet.sql.impl.parse.SqlOption;
@@ -335,7 +336,10 @@ public final class UnsupportedOperationVisitor implements SqlVisitor<Void> {
     }
 
     private void processOtherDdl(SqlCall call) {
-        if (!(call instanceof SqlCreateJob) && !(call instanceof SqlDropJob)) {
+        if (!(call instanceof SqlCreateJob)
+                && !(call instanceof SqlDropJob)
+                && !(call instanceof SqlAlterJob)
+        ) {
             throw unsupported(call, "OTHER DDL class (" + call.getClass().getSimpleName() + ")");
         }
     }

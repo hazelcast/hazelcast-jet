@@ -76,6 +76,37 @@ SqlDrop SqlDropJob(Span span, boolean replace) :
 }
 
 /**
+ * Parses ALTER JOB statement.
+ */
+SqlAlterJob SqlAlterJob() :
+{
+    SqlParserPos pos = getPos();
+
+    SqlIdentifier name;
+    SqlAlterJob.AlterJobOperation operation;
+}
+{
+    <ALTER> <JOB>
+    name = SimpleIdentifier()
+    (
+        <SUSPEND> {
+            operation = SqlAlterJob.AlterJobOperation.SUSPEND;
+        }
+    |
+        <RESUME> {
+            operation = SqlAlterJob.AlterJobOperation.RESUME;
+        }
+    |
+        <RESTART> {
+            operation = SqlAlterJob.AlterJobOperation.RESTART;
+        }
+    )
+    {
+        return new SqlAlterJob(name, operation, pos.plus(getPos()));
+    }
+}
+
+/**
  * Parses CREATE EXTERNAL MAPPING statement.
  */
 SqlCreate SqlCreateExternalMapping(Span span, boolean replace) :
