@@ -1,4 +1,3 @@
-
 /*
  * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
