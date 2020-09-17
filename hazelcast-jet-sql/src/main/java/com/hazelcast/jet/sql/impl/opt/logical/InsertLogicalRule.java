@@ -22,6 +22,7 @@ import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.convert.ConverterRule;
 import org.apache.calcite.rel.core.TableModify;
+import org.apache.calcite.rel.logical.LogicalTableModify;
 
 import static com.hazelcast.jet.sql.impl.opt.JetConventions.LOGICAL;
 
@@ -31,7 +32,7 @@ final class InsertLogicalRule extends ConverterRule {
 
     private InsertLogicalRule() {
         super(
-                TableModify.class, TableModify::isInsert, Convention.NONE, LOGICAL,
+                LogicalTableModify.class, TableModify::isInsert, Convention.NONE, LOGICAL,
                 InsertLogicalRule.class.getSimpleName()
         );
     }
