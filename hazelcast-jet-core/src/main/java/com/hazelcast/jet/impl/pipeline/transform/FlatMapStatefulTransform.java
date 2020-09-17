@@ -51,7 +51,8 @@ public class FlatMapStatefulTransform<T, K, S, R> extends StatefulKeyedTransform
 
     @Override
     public void addToDag(Planner p, Context context) {
-        PlannerVertex pv = p.addVertex(this, name(), localParallelism(),
+        determineLocalParallelism(-1, context, true);
+        PlannerVertex pv = p.addVertex(this, name(), determinedLocalParallelism(),
                 flatMapStatefulP(ttl, keyFn, timestampFn, createFn, statefulFlatMapFn, onEvictFn));
         p.addEdges(this, pv.v, edge -> edge.partitioned(keyFn).distributed());
     }

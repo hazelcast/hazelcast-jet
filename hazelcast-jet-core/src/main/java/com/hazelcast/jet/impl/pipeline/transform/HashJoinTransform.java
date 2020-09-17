@@ -119,6 +119,8 @@ public class HashJoinTransform<T0, R> extends AbstractTransform {
     @Override
     @SuppressWarnings("unchecked")
     public void addToDag(Planner p, Context context) {
+        // TODO: Need to be considered more carefully
+        determineLocalParallelism(-1, context, false);
         PlannerVertex primary = p.xform2vertex.get(this.upstream().get(0));
         List keyFns = toList(this.clauses, JoinClause::leftKeyFn);
 
@@ -129,7 +131,7 @@ public class HashJoinTransform<T0, R> extends AbstractTransform {
         // must be extracted to variable, probably because of serialization bug
         BiFunctionEx<List<Tag>, Object[], ItemsByTag> tupleToItems = tupleToItemsByTag(whereNullsNotAllowed);
 
-        Vertex joiner = p.addVertex(this, name() + "-joiner", localParallelism(),
+        Vertex joiner = p.addVertex(this, name() + "-joiner", determinedLocalParallelism(),
                 () -> new HashJoinP<>(keyFns, tags, mapToOutputBiFn, mapToOutputTriFn, tupleToItems)).v;
         Edge edgeToJoiner = from(primary.v, primary.nextAvailableOrdinal()).to(joiner, 0);
         applyRebalancing(edgeToJoiner, this);

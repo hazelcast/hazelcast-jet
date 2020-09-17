@@ -34,7 +34,9 @@ public class MergeTransform<T> extends AbstractTransform {
 
     @Override
     public void addToDag(Planner p, Context context) {
-        PlannerVertex pv = p.addVertex(this, name(), localParallelism(), mapP(identity()));
+        // TODO: Need to be considered more carefully
+        determineLocalParallelism(-1, context, false);
+        PlannerVertex pv = p.addVertex(this, name(), determinedLocalParallelism(), mapP(identity()));
         p.addEdges(this, pv.v);
     }
 }

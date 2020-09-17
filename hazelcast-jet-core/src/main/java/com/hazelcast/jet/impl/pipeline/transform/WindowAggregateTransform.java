@@ -103,6 +103,7 @@ public class WindowAggregateTransform<A, R> extends AbstractTransform {
 
     @Override
     public void addToDag(Planner p, Context context) {
+        // TODO: Need to be considered more carefully
         if (wDef instanceof SessionWindowDefinition) {
             addSessionWindow(p, (SessionWindowDefinition) wDef);
         } else if (aggrOp.combineFn() == null || wDef.earlyResultsPeriod() > 0) {
@@ -186,7 +187,7 @@ public class WindowAggregateTransform<A, R> extends AbstractTransform {
     //            | aggregateToSessionWindowP | local parallelism = 1
     //             ---------------------------
     private void addSessionWindow(Planner p, SessionWindowDefinition wDef) {
-        PlannerVertex pv = p.addVertex(this, name(), 1,
+        PlannerVertex pv = p.addVertex(this, name(), determinedLocalParallelism(),
                 aggregateToSessionWindowP(
                         wDef.sessionTimeout(),
                         wDef.earlyResultsPeriod(),

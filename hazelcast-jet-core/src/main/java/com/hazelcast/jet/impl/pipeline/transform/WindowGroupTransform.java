@@ -84,6 +84,7 @@ public class WindowGroupTransform<K, R> extends AbstractTransform {
 
     @Override
     public void addToDag(Planner p, Context context) {
+        // TODO: Need to be considered more carefully
         if (wDef instanceof SessionWindowDefinition) {
             addSessionWindow(p, (SessionWindowDefinition) wDef);
         } else if (aggrOp.combineFn() == null || wDef.earlyResultsPeriod() > 0 || shouldRebalanceAnyInput()) {

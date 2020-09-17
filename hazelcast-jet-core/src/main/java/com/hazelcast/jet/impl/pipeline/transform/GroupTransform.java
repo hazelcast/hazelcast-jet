@@ -63,6 +63,7 @@ public class GroupTransform<K, A, R, OUT> extends AbstractTransform {
 
     @Override
     public void addToDag(Planner p, Context context) {
+        determineLocalParallelism(-1, context, true);
         if (shouldRebalanceAnyInput() || aggrOp.combineFn() == null) {
             addToDagSingleStage(p);
         } else {
@@ -109,8 +110,8 @@ public class GroupTransform<K, A, R, OUT> extends AbstractTransform {
     private void addToDagTwoStage(Planner p) {
         List<FunctionEx<?, ? extends K>> groupKeyFns = this.groupKeyFns;
         Vertex v1 = p.dag.newVertex(name() + FIRST_STAGE_VERTEX_NAME_SUFFIX, accumulateByKeyP(groupKeyFns, aggrOp))
-                .localParallelism(localParallelism());
-        PlannerVertex pv2 = p.addVertex(this, name(), localParallelism(),
+                .localParallelism(determinedLocalParallelism());
+        PlannerVertex pv2 = p.addVertex(this, name(), determinedLocalParallelism(),
                 combineByKeyP(aggrOp, mapToOutputFn));
         p.addEdges(this, v1, (e, ord) -> e.partitioned(groupKeyFns.get(ord), HASH_CODE));
         p.dag.edge(between(v1, pv2.v).distributed().partitioned(entryKey()));

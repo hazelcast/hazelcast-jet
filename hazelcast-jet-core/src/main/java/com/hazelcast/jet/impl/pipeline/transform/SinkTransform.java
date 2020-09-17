@@ -52,7 +52,8 @@ public class SinkTransform<T> extends AbstractTransform {
     @Override
     @SuppressWarnings({"rawtypes", "unchecked"})
     public void addToDag(Planner p, Context context) {
-        PlannerVertex pv = p.addVertex(this, name(), localParallelism(),
+        determineLocalParallelism(sink.metaSupplier().preferredLocalParallelism(), context, true);
+        PlannerVertex pv = p.addVertex(this, name(), determinedLocalParallelism(),
                 adaptingMetaSupplier(sink.metaSupplier(), ordinalsToAdapt));
         p.addEdges(this, pv.v, (e, ord) -> {
             // note: have to use an all-to-one edge for the assertion sink.

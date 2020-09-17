@@ -50,7 +50,8 @@ public class MapStatefulTransform<T, K, S, R> extends StatefulKeyedTransformBase
 
     @Override
     public void addToDag(Planner p, Context context) {
-        PlannerVertex pv = p.addVertex(this, name(), localParallelism(),
+        determineLocalParallelism(-1, context, true);
+        PlannerVertex pv = p.addVertex(this, name(), determinedLocalParallelism(),
                 mapStatefulP(ttl, keyFn, timestampFn, createFn, statefulMapFn, onEvictFn));
         p.addEdges(this, pv.v, edge -> edge.partitioned(keyFn).distributed());
     }
