@@ -20,8 +20,10 @@ import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.sql.impl.JetPlan.AlterJobPlan;
 import com.hazelcast.jet.sql.impl.JetPlan.CreateExternalMappingPlan;
 import com.hazelcast.jet.sql.impl.JetPlan.CreateJobPlan;
+import com.hazelcast.jet.sql.impl.JetPlan.CreateSnapshotPlan;
 import com.hazelcast.jet.sql.impl.JetPlan.DropExternalMappingPlan;
 import com.hazelcast.jet.sql.impl.JetPlan.DropJobPlan;
+import com.hazelcast.jet.sql.impl.JetPlan.DropSnapshotPlan;
 import com.hazelcast.jet.sql.impl.JetPlan.ExecutionPlan;
 import com.hazelcast.jet.sql.impl.calcite.parser.JetSqlParser;
 import com.hazelcast.jet.sql.impl.convert.JetSqlToRelConverter;
@@ -33,10 +35,12 @@ import com.hazelcast.jet.sql.impl.opt.physical.PhysicalRel;
 import com.hazelcast.jet.sql.impl.opt.physical.PhysicalRules;
 import com.hazelcast.jet.sql.impl.opt.physical.visitor.CreateDagVisitor;
 import com.hazelcast.jet.sql.impl.parse.SqlAlterJob;
-import com.hazelcast.jet.sql.impl.parse.SqlCreateExternalMapping;
 import com.hazelcast.jet.sql.impl.parse.SqlCreateJob;
-import com.hazelcast.jet.sql.impl.parse.SqlDropExternalMapping;
+import com.hazelcast.jet.sql.impl.parse.SqlCreateMapping;
+import com.hazelcast.jet.sql.impl.parse.SqlCreateSnapshot;
 import com.hazelcast.jet.sql.impl.parse.SqlDropJob;
+import com.hazelcast.jet.sql.impl.parse.SqlDropMapping;
+import com.hazelcast.jet.sql.impl.parse.SqlDropSnapshot;
 import com.hazelcast.jet.sql.impl.schema.JetTable;
 import com.hazelcast.jet.sql.impl.schema.Mapping;
 import com.hazelcast.jet.sql.impl.schema.MappingField;
@@ -138,23 +142,27 @@ class JetSqlBackend implements SqlBackend {
     ) {
         SqlNode node = parseResult.getNode();
 
-        if (node instanceof SqlCreateExternalMapping) {
-            return toCreateTablePlan((SqlCreateExternalMapping) node);
-        } else if (node instanceof SqlDropExternalMapping) {
-            return toDropTablePlan((SqlDropExternalMapping) node);
+        if (node instanceof SqlCreateMapping) {
+            return toCreateTablePlan((SqlCreateMapping) node);
+        } else if (node instanceof SqlDropMapping) {
+            return toDropTablePlan((SqlDropMapping) node);
         } else if (node instanceof SqlCreateJob) {
             return toCreateJobPlan(parseResult, context);
         } else if (node instanceof SqlAlterJob) {
             return toAlterJobPlan((SqlAlterJob) node);
         } else if (node instanceof SqlDropJob) {
             return toDropJobPlan((SqlDropJob) node);
+        } else if (node instanceof SqlCreateSnapshot) {
+            return toCreateSnapshotPlan((SqlCreateSnapshot) node);
+        } else if (node instanceof SqlDropSnapshot) {
+            return toDropSnapshotPlan((SqlDropSnapshot) node);
         } else {
             QueryConvertResult convertResult = context.convert(parseResult);
             return toPlan(convertResult.getRel(), convertResult.getFieldNames(), context);
         }
     }
 
-    private SqlPlan toCreateTablePlan(SqlCreateExternalMapping sqlCreateTable) {
+    private SqlPlan toCreateTablePlan(SqlCreateMapping sqlCreateTable) {
         List<MappingField> mappingFields = sqlCreateTable.columns()
                 .map(field -> new MappingField(field.name(), field.type(), field.externalName()))
                 .collect(toList());
@@ -173,7 +181,7 @@ class JetSqlBackend implements SqlBackend {
         );
     }
 
-    private SqlPlan toDropTablePlan(SqlDropExternalMapping sqlDropTable) {
+    private SqlPlan toDropTablePlan(SqlDropMapping sqlDropTable) {
         return new DropExternalMappingPlan(sqlDropTable.name(), sqlDropTable.ifExists(), planExecutor);
     }
 
@@ -200,7 +208,15 @@ class JetSqlBackend implements SqlBackend {
     }
 
     private SqlPlan toDropJobPlan(SqlDropJob sqlDropJob) {
-        return new DropJobPlan(sqlDropJob.name(), sqlDropJob.ifExists(), planExecutor);
+        return new DropJobPlan(sqlDropJob.name(), sqlDropJob.ifExists(), sqlDropJob.withSnapshotName(), planExecutor);
+    }
+
+    private SqlPlan toCreateSnapshotPlan(SqlCreateSnapshot sqlNode) {
+        return new CreateSnapshotPlan(sqlNode.getSnapshotName(), sqlNode.getJobName(), planExecutor);
+    }
+
+    private SqlPlan toDropSnapshotPlan(SqlDropSnapshot sqlNode) {
+        return new DropSnapshotPlan(sqlNode.getSnapshotName(), sqlNode.isIfExists(), planExecutor);
     }
 
     private ExecutionPlan toPlan(RelNode rel, List<String> fieldNames, OptimizerContext context) {

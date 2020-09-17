@@ -30,11 +30,9 @@ interface JetPlan extends SqlPlan {
     SqlResult execute();
 
     class CreateExternalMappingPlan implements JetPlan {
-
         private final Mapping mapping;
         private final boolean replace;
         private final boolean ifNotExists;
-
         private final JetPlanExecutor planExecutor;
 
         CreateExternalMappingPlan(
@@ -46,7 +44,6 @@ interface JetPlan extends SqlPlan {
             this.mapping = mapping;
             this.replace = replace;
             this.ifNotExists = ifNotExists;
-
             this.planExecutor = planExecutor;
         }
 
@@ -69,10 +66,8 @@ interface JetPlan extends SqlPlan {
     }
 
     class DropExternalMappingPlan implements JetPlan {
-
         private final String name;
         private final boolean ifExists;
-
         private final JetPlanExecutor planExecutor;
 
         DropExternalMappingPlan(
@@ -82,7 +77,6 @@ interface JetPlan extends SqlPlan {
         ) {
             this.name = name;
             this.ifExists = ifExists;
-
             this.planExecutor = planExecutor;
         }
 
@@ -101,12 +95,10 @@ interface JetPlan extends SqlPlan {
     }
 
     class CreateJobPlan implements JetPlan {
-
         private final String jobName;
         private final JobConfig jobConfig;
         private final boolean ifNotExists;
         private final ExecutionPlan executionPlan;
-
         private final JetPlanExecutor planExecutor;
 
         CreateJobPlan(
@@ -120,7 +112,6 @@ interface JetPlan extends SqlPlan {
             this.jobConfig = jobConfig;
             this.ifNotExists = ifNotExists;
             this.executionPlan = executionPlan;
-
             this.planExecutor = planExecutor;
         }
 
@@ -147,10 +138,8 @@ interface JetPlan extends SqlPlan {
     }
 
     class AlterJobPlan implements JetPlan {
-
         private final String jobName;
         private final AlterJobOperation operation;
-
         private final JetPlanExecutor planExecutor;
 
         AlterJobPlan(String jobName, AlterJobOperation operation, JetPlanExecutor planExecutor) {
@@ -174,15 +163,15 @@ interface JetPlan extends SqlPlan {
     }
 
     class DropJobPlan implements JetPlan {
-
         private final String jobName;
         private final boolean ifExists;
-
+        private final String withSnapshotName;
         private final JetPlanExecutor planExecutor;
 
-        DropJobPlan(String jobName, boolean ifExists, JetPlanExecutor planExecutor) {
+        DropJobPlan(String jobName, boolean ifExists, String withSnapshotName, JetPlanExecutor planExecutor) {
             this.jobName = jobName;
             this.ifExists = ifExists;
+            this.withSnapshotName = withSnapshotName;
             this.planExecutor = planExecutor;
         }
 
@@ -198,16 +187,68 @@ interface JetPlan extends SqlPlan {
         public boolean isIfExists() {
             return ifExists;
         }
+
+        public String getWithSnapshotName() {
+            return withSnapshotName;
+        }
+    }
+
+    class CreateSnapshotPlan implements JetPlan {
+        private final String snapshotName;
+        private final String jobName;
+        private final JetPlanExecutor planExecutor;
+
+        public CreateSnapshotPlan(String snapshotName, String jobName, JetPlanExecutor planExecutor) {
+            this.snapshotName = snapshotName;
+            this.jobName = jobName;
+            this.planExecutor = planExecutor;
+        }
+
+        @Override
+        public SqlResult execute() {
+            return planExecutor.execute(this);
+        }
+
+        public String getSnapshotName() {
+            return snapshotName;
+        }
+
+        public String getJobName() {
+            return jobName;
+        }
+    }
+
+    class DropSnapshotPlan implements JetPlan {
+        private final String snapshotName;
+        private final boolean ifExists;
+        private final JetPlanExecutor planExecutor;
+
+        public DropSnapshotPlan(String snapshotName, boolean ifExists, JetPlanExecutor planExecutor) {
+            this.snapshotName = snapshotName;
+            this.ifExists = ifExists;
+            this.planExecutor = planExecutor;
+        }
+
+        @Override
+        public SqlResult execute() {
+            return planExecutor.execute(this);
+        }
+
+        public String getSnapshotName() {
+            return snapshotName;
+        }
+
+        public boolean isIfExists() {
+            return ifExists;
+        }
     }
 
     class ExecutionPlan implements JetPlan {
-
         private final DAG dag;
         private final boolean isStreaming;
         private final boolean isInsert;
         private final QueryId queryId;
         private final SqlRowMetadata rowMetadata;
-
         private final JetPlanExecutor planExecutor;
 
         ExecutionPlan(
@@ -223,7 +264,6 @@ interface JetPlan extends SqlPlan {
             this.isInsert = isInsert;
             this.queryId = queryId;
             this.rowMetadata = rowMetadata;
-
             this.planExecutor = planExecutor;
         }
 

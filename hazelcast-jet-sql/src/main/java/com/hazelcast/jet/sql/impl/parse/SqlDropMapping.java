@@ -33,14 +33,14 @@ import java.util.List;
 
 import static java.util.Objects.requireNonNull;
 
-public class SqlDropExternalMapping extends SqlDrop {
+public class SqlDropMapping extends SqlDrop {
 
     private static final SqlSpecialOperator OPERATOR =
             new SqlSpecialOperator("DROP EXTERNAL MAPPING", SqlKind.DROP_TABLE);
 
     private final SqlIdentifier name;
 
-    public SqlDropExternalMapping(
+    public SqlDropMapping(
             SqlIdentifier name,
             boolean ifExists,
             SqlParserPos pos

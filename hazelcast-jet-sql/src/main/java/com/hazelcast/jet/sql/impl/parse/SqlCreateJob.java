@@ -62,7 +62,9 @@ public class SqlCreateJob extends SqlCreate {
             SqlParserPos pos
     ) {
         super(OPERATOR, pos, replace, ifNotExists);
-        assert !replace;
+        if (replace) {
+            throw QueryException.error("The OR REPLACE option not supported for CREATE JOB");
+        }
         this.name = requireNonNull(name, "Name should not be null");
         this.options = requireNonNull(options, "Options should not be null");
         this.sqlInsert = requireNonNull(sqlInsert, "A DML statement is mandatory");

@@ -74,6 +74,12 @@ public class SqlJobManagementTest extends SimpleTestInClusterSupport {
     }
 
     @Test
+    public void when_createOrReplaceJob_then_fail() {
+        assertThatThrownBy(() -> sqlService.execute("CREATE OR REPLACE JOB fooJob AS INSERT INTO t1 SELECT FROM t2"))
+                .hasMessageContaining("OR REPLACE is not supported with CREATE JOB");
+    }
+
+    @Test
     public void testJobSubmitAndCancel() {
         sqlService.execute("CREATE MAPPING src TYPE TestStream");
         sqlService.execute(javaSerializableMapDdl("dest", Long.class, Long.class));
@@ -198,6 +204,34 @@ public class SqlJobManagementTest extends SimpleTestInClusterSupport {
 
         assertThatThrownBy(() -> sqlService.execute("ALTER JOB foo RESTART"))
                 .hasMessageContaining("The job 'foo' doesn't exist");
+    }
+
+    @Test
+    public void when_snapshotExport_then_failNotEnterprise() {
+        sqlService.execute("CREATE MAPPING src TYPE TestStream");
+        sqlService.execute(javaSerializableMapDdl("dest", Long.class, Long.class));
+
+        sqlService.execute("CREATE JOB testJob AS SINK INTO dest SELECT v, v FROM src");
+
+        assertThatThrownBy(() -> sqlService.execute("CREATE SNAPSHOT mySnapshot FOR JOB testJob"))
+                .hasMessageContaining("You need Hazelcast Jet Enterprise to use this feature");
+    }
+
+    @Test
+    public void when_snapshotExport_jobDoesNotExist_then_fail() {
+        assertThatThrownBy(() -> sqlService.execute("CREATE SNAPSHOT mySnapshot FOR JOB nonExistentJob"))
+                .hasMessageContaining("The job 'nonExistentJob' doesn't exist");
+    }
+
+    @Test
+    public void when_dropJobWithSnapshot_then_failNotEnterprise() {
+        sqlService.execute("CREATE MAPPING src TYPE TestStream");
+        sqlService.execute(javaSerializableMapDdl("dest", Long.class, Long.class));
+
+        sqlService.execute("CREATE JOB testJob AS SINK INTO dest SELECT v, v FROM src");
+
+        assertThatThrownBy(() -> sqlService.execute("DROP JOB testJob WITH SNAPSHOT mySnapshot"))
+                .hasMessageContaining("You need Hazelcast Jet Enterprise to use this feature");
     }
 
     private long countActiveJobs() {
