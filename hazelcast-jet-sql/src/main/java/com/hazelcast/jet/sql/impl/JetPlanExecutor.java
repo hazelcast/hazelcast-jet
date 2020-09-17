@@ -18,11 +18,14 @@ package com.hazelcast.jet.sql.impl;
 
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
+import com.hazelcast.jet.JobStateSnapshot;
 import com.hazelcast.jet.sql.impl.JetPlan.AlterJobPlan;
 import com.hazelcast.jet.sql.impl.JetPlan.CreateExternalMappingPlan;
 import com.hazelcast.jet.sql.impl.JetPlan.CreateJobPlan;
+import com.hazelcast.jet.sql.impl.JetPlan.CreateSnapshotPlan;
 import com.hazelcast.jet.sql.impl.JetPlan.DropExternalMappingPlan;
 import com.hazelcast.jet.sql.impl.JetPlan.DropJobPlan;
+import com.hazelcast.jet.sql.impl.JetPlan.DropSnapshotPlan;
 import com.hazelcast.jet.sql.impl.JetPlan.ExecutionPlan;
 import com.hazelcast.jet.sql.impl.schema.MappingCatalog;
 import com.hazelcast.sql.SqlResult;
@@ -99,8 +102,33 @@ class JetPlanExecutor {
             }
             throw QueryException.error("Job doesn't exist or already terminated: " + plan.getJobName());
         }
-        job.cancel();
+        if (plan.getWithSnapshotName() != null) {
+            job.cancelAndExportSnapshot(plan.getWithSnapshotName());
+        } else {
+            job.cancel();
+        }
         return SqlResultImpl.createUpdateCountResult(-1);
+    }
+
+    SqlResult execute(CreateSnapshotPlan plan) {
+        Job job = jetInstance.getJob(plan.getJobName());
+        if (job == null) {
+            throw QueryException.error("The job '" + plan.getJobName() + "' doesn't exist");
+        }
+        job.exportSnapshot(plan.getSnapshotName());
+        return SqlResultImpl.createUpdateCountResult(0);
+    }
+
+    SqlResult execute(DropSnapshotPlan plan) {
+        JobStateSnapshot snapshot = jetInstance.getJobStateSnapshot(plan.getSnapshotName());
+        if (snapshot == null) {
+            if (plan.isIfExists()) {
+                return SqlResultImpl.createUpdateCountResult(0);
+            }
+            throw QueryException.error("The snapshot doesnt exist: " + plan.getSnapshotName());
+        }
+        snapshot.destroy();
+        return SqlResultImpl.createUpdateCountResult(0);
     }
 
     SqlResult execute(ExecutionPlan plan) {

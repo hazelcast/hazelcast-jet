@@ -17,7 +17,7 @@
 package com.hazelcast.jet.sql.impl.parse;
 
 import com.hazelcast.internal.util.Preconditions;
-import org.apache.calcite.sql.SqlDrop;
+import org.apache.calcite.sql.SqlCreate;
 import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlNode;
@@ -30,58 +30,56 @@ import org.apache.calcite.sql.validate.SqlValidatorScope;
 import org.apache.calcite.util.ImmutableNullableList;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import java.util.List;
 
 import static java.util.Objects.requireNonNull;
 
-public class SqlDropJob extends SqlDrop {
+public class SqlCreateSnapshot extends SqlCreate {
 
     private static final SqlSpecialOperator OPERATOR =
-            new SqlSpecialOperator("DROP JOB", SqlKind.OTHER_DDL);
+            new SqlSpecialOperator("CREATE SNAPSHOT", SqlKind.OTHER_DDL);
 
-    private final SqlIdentifier name;
-    private final SqlIdentifier withSnapshotName;
+    private final SqlIdentifier snapshotName;
+    private final SqlIdentifier jobName;
 
-    public SqlDropJob(SqlIdentifier name, boolean ifExists, SqlIdentifier withSnapshotName, SqlParserPos pos) {
-        super(OPERATOR, pos, ifExists);
-        Preconditions.checkTrue(name.names.size() == 1, name.toString());
-        Preconditions.checkTrue(withSnapshotName == null || withSnapshotName.names.size() == 1, "" + withSnapshotName);
-
-        this.name = requireNonNull(name, "Name should not be null");
-        this.withSnapshotName = withSnapshotName;
+    public SqlCreateSnapshot(
+            SqlIdentifier snapshotName,
+            SqlIdentifier jobName,
+            SqlParserPos pos
+    ) {
+        super(OPERATOR, pos, true, false);
+        this.snapshotName = requireNonNull(snapshotName, "Snapshot name must not be null");
+        this.jobName = requireNonNull(jobName, "Job name must not be null");
+        Preconditions.checkTrue(snapshotName.names.size() == 1, snapshotName.toString());
+        Preconditions.checkTrue(jobName.names.size() == 1, jobName.toString());
     }
 
-    public String name() {
-        return name.toString();
+    public String getSnapshotName() {
+        return snapshotName.toString();
     }
 
-    public boolean ifExists() {
-        return ifExists;
+    public String getJobName() {
+        return jobName.toString();
     }
 
-    @Nullable
-    public String withSnapshotName() {
-        return withSnapshotName != null ? withSnapshotName.toString() : null;
-    }
-
-    @Override @Nonnull
+    @Override
+    @Nonnull
     public SqlOperator getOperator() {
         return OPERATOR;
     }
 
-    @Override @Nonnull
+    @Override
+    @Nonnull
     public List<SqlNode> getOperandList() {
-        return ImmutableNullableList.of(name);
+        return ImmutableNullableList.of(snapshotName, jobName);
     }
 
     @Override
     public void unparse(SqlWriter writer, int leftPrec, int rightPrec) {
-        writer.keyword("DROP JOB");
-        if (ifExists) {
-            writer.keyword("IF EXISTS");
-        }
-        name.unparse(writer, leftPrec, rightPrec);
+        writer.keyword("CREATE SNAPSHOT");
+        snapshotName.unparse(writer, leftPrec, rightPrec);
+        writer.keyword("FOR JOB");
+        jobName.unparse(writer, leftPrec, rightPrec);
     }
 
     @Override

@@ -63,6 +63,7 @@ SqlDrop SqlDropJob(Span span, boolean replace) :
 
     SqlIdentifier name;
     boolean ifExists = false;
+    SqlIdentifier withSnapshotName = null;
 }
 {
     <JOB>
@@ -70,8 +71,12 @@ SqlDrop SqlDropJob(Span span, boolean replace) :
         <IF> <EXISTS> { ifExists = true; }
     ]
     name = SimpleIdentifier()
+    [
+        <WITH> <SNAPSHOT>
+        withSnapshotName = SimpleIdentifier()
+    ]
     {
-        return new SqlDropJob(name, ifExists, pos.plus(getPos()));
+        return new SqlDropJob(name, ifExists, withSnapshotName, pos.plus(getPos()));
     }
 }
 
@@ -109,7 +114,7 @@ SqlAlterJob SqlAlterJob() :
 /**
  * Parses CREATE EXTERNAL MAPPING statement.
  */
-SqlCreate SqlCreateExternalMapping(Span span, boolean replace) :
+SqlCreate SqlCreateMapping(Span span, boolean replace) :
 {
     SqlParserPos startPos = span.pos();
 
@@ -133,7 +138,7 @@ SqlCreate SqlCreateExternalMapping(Span span, boolean replace) :
         sqlOptions = SqlOptions()
     ]
     {
-        return new SqlCreateExternalMapping(
+        return new SqlCreateMapping(
             name,
             columns,
             type,
@@ -288,7 +293,7 @@ QueryDataType DateTimeType() :
 /**
  * Parses DROP EXTERNAL MAPPING statement.
  */
-SqlDrop SqlDropExternalMapping(Span span, boolean replace) :
+SqlDrop SqlDropMapping(Span span, boolean replace) :
 {
     SqlParserPos pos = span.pos();
 
@@ -302,7 +307,7 @@ SqlDrop SqlDropExternalMapping(Span span, boolean replace) :
     ]
     name = CompoundIdentifier()
     {
-        return new SqlDropExternalMapping(name, ifExists, pos.plus(getPos()));
+        return new SqlDropMapping(name, ifExists, pos.plus(getPos()));
     }
 }
 
@@ -350,6 +355,50 @@ SqlOption SqlOption() :
     value = StringLiteral()
     {
         return new SqlOption(key, value, span.end(this));
+    }
+}
+
+/**
+ * Parses CREATE SNAPSHOT statement
+ */
+SqlCreate SqlCreateSnapshot(Span span, boolean replace) :
+{
+    SqlParserPos startPos = span.pos();
+    SqlIdentifier snapshotName;
+    SqlIdentifier jobName;
+}
+{
+    <SNAPSHOT>
+    snapshotName = SimpleIdentifier()
+    <FOR> <JOB>
+    jobName = SimpleIdentifier()
+    {
+        return new SqlCreateSnapshot(
+            snapshotName,
+            jobName,
+            startPos.plus(getPos())
+        );
+    }
+}
+
+/**
+ * Parses DROP SNAPSHOT statement
+ */
+SqlDrop SqlDropSnapshot(Span span, boolean replace) :
+{
+    SqlParserPos pos = span.pos();
+
+    SqlIdentifier name;
+    boolean ifExists = false;
+}
+{
+    <SNAPSHOT>
+    [
+        <IF> <EXISTS> { ifExists = true; }
+    ]
+    name = SimpleIdentifier()
+    {
+        return new SqlDropSnapshot(name, ifExists, pos.plus(getPos()));
     }
 }
 

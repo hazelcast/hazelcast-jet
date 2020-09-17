@@ -19,9 +19,9 @@ package com.hazelcast.jet.sql.impl;
 import com.google.common.collect.ImmutableMap;
 import com.hazelcast.jet.sql.impl.JetPlan.CreateExternalMappingPlan;
 import com.hazelcast.jet.sql.impl.JetPlan.DropExternalMappingPlan;
-import com.hazelcast.jet.sql.impl.parse.SqlCreateExternalMapping;
+import com.hazelcast.jet.sql.impl.parse.SqlCreateMapping;
 import com.hazelcast.jet.sql.impl.parse.SqlDataType;
-import com.hazelcast.jet.sql.impl.parse.SqlDropExternalMapping;
+import com.hazelcast.jet.sql.impl.parse.SqlDropMapping;
 import com.hazelcast.jet.sql.impl.parse.SqlMappingColumn;
 import com.hazelcast.jet.sql.impl.parse.SqlOption;
 import com.hazelcast.jet.sql.impl.schema.MappingField;
@@ -71,7 +71,7 @@ public class JetSqlBackendTest {
     })
     public void test_createExternalMappingPlan(boolean replace, boolean ifNotExists) {
         // given
-        SqlCreateExternalMapping node = new SqlCreateExternalMapping(
+        SqlCreateMapping node = new SqlCreateMapping(
                 identifier("mapping_name"),
                 nodeList(column("column_name", INT, "external_column_name")),
                 identifier("mapping_type"),
@@ -102,7 +102,7 @@ public class JetSqlBackendTest {
     })
     public void test_removeExternalMappingPlan(boolean ifExists) {
         // given
-        SqlDropExternalMapping node = new SqlDropExternalMapping(
+        SqlDropMapping node = new SqlDropMapping(
                 identifier("mapping_name"),
                 ifExists,
                 SqlParserPos.ZERO

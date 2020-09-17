@@ -67,7 +67,7 @@ public class JetSqlParserTest {
                 + ")";
 
         // when
-        SqlCreateExternalMapping node = (SqlCreateExternalMapping) parse(sql);
+        SqlCreateMapping node = (SqlCreateMapping) parse(sql);
 
         // then
         assertThat(node.name()).isEqualTo("mapping_name");
@@ -92,7 +92,7 @@ public class JetSqlParserTest {
         SqlNode node = parse(sql);
 
         // then
-        assertThat(node).isInstanceOf(SqlCreateExternalMapping.class);
+        assertThat(node).isInstanceOf(SqlCreateMapping.class);
     }
 
     @Test
@@ -103,7 +103,7 @@ public class JetSqlParserTest {
                 + "TYPE mapping_type";
 
         // when
-        SqlCreateExternalMapping node = (SqlCreateExternalMapping) parse(sql);
+        SqlCreateMapping node = (SqlCreateMapping) parse(sql);
 
         // then
         assertThat(node.name()).isEqualTo("public.mapping_name");
@@ -229,7 +229,7 @@ public class JetSqlParserTest {
         String sql = "DROP MAPPING " + (ifExists ? "IF EXISTS " : "") + "mapping_name";
 
         // when
-        SqlDropExternalMapping node = (SqlDropExternalMapping) parse(sql);
+        SqlDropMapping node = (SqlDropMapping) parse(sql);
 
         // then
         assertThat(node.name()).isEqualTo("mapping_name");
@@ -245,7 +245,7 @@ public class JetSqlParserTest {
         SqlNode node = parse(sql);
 
         // then
-        assertThat(node).isInstanceOf(SqlDropExternalMapping.class);
+        assertThat(node).isInstanceOf(SqlDropMapping.class);
     }
 
     @Test
@@ -254,7 +254,7 @@ public class JetSqlParserTest {
         String sql = "DROP MAPPING some_schema.mapping_name";
 
         // when
-        SqlDropExternalMapping node = (SqlDropExternalMapping) parse(sql);
+        SqlDropMapping node = (SqlDropMapping) parse(sql);
 
         // then
         assertThat(node.name()).isEqualTo("some_schema.mapping_name");

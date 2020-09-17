@@ -18,7 +18,9 @@ package com.hazelcast.jet.sql.impl.validate;
 
 import com.hazelcast.jet.sql.impl.parse.SqlAlterJob;
 import com.hazelcast.jet.sql.impl.parse.SqlCreateJob;
+import com.hazelcast.jet.sql.impl.parse.SqlCreateSnapshot;
 import com.hazelcast.jet.sql.impl.parse.SqlDropJob;
+import com.hazelcast.jet.sql.impl.parse.SqlDropSnapshot;
 import com.hazelcast.jet.sql.impl.parse.SqlOption;
 import com.hazelcast.sql.impl.calcite.validate.HazelcastSqlOperatorTable;
 import com.hazelcast.sql.impl.calcite.validate.types.HazelcastTypeSystem;
@@ -339,6 +341,8 @@ public final class UnsupportedOperationVisitor implements SqlVisitor<Void> {
         if (!(call instanceof SqlCreateJob)
                 && !(call instanceof SqlDropJob)
                 && !(call instanceof SqlAlterJob)
+                && !(call instanceof SqlCreateSnapshot)
+                && !(call instanceof SqlDropSnapshot)
         ) {
             throw unsupported(call, "OTHER DDL class (" + call.getClass().getSimpleName() + ")");
         }

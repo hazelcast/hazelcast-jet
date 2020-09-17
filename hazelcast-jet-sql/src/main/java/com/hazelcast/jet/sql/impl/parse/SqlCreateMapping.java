@@ -40,7 +40,7 @@ import static com.hazelcast.jet.sql.impl.schema.MappingCatalog.SCHEMA_NAME_PUBLI
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toMap;
 
-public class SqlCreateExternalMapping extends SqlCreate {
+public class SqlCreateMapping extends SqlCreate {
 
     private static final SqlSpecialOperator OPERATOR =
             new SqlSpecialOperator("CREATE EXTERNAL MAPPING", SqlKind.CREATE_TABLE);
@@ -50,7 +50,7 @@ public class SqlCreateExternalMapping extends SqlCreate {
     private final SqlIdentifier type;
     private final SqlNodeList options;
 
-    public SqlCreateExternalMapping(
+    public SqlCreateMapping(
             SqlIdentifier name,
             SqlNodeList columns,
             SqlIdentifier type,
