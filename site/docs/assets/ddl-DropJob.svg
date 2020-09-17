@@ -1,10 +1,10 @@
 <!--
 Created using https://bottlecaps.de/rr/ui?
 
-DropJob ::= 'DROP' 'JOB' ('IF' 'EXISTS')? JobName
+DropJob  ::= 'DROP' 'JOB' ('IF' 'EXISTS')? JobName ('WITH' 'SNAPSHOT' SnapshotName)?
 
 -->
-<svg xmlns="http://www.w3.org/2000/svg" width="465" height="69">
+<svg xmlns="http://www.w3.org/2000/svg" width="835" height="69">
     <defs>
         <style type="text/css">
             @namespace "http://www.w3.org/2000/svg";
@@ -50,6 +50,14 @@ DropJob ::= 'DROP' 'JOB' ('IF' 'EXISTS')? JobName
     <text class="terminal" x="257" y="53">EXISTS</text><a xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="#JobName" xlink:title="JobName">
     <rect x="359" y="3" width="78" height="32"/>
     <rect x="357" y="1" width="78" height="32" class="nonterminal"/>
-    <text class="nonterminal" x="367" y="21">JobName</text></a><svg:path xmlns:svg="http://www.w3.org/2000/svg" class="line" d="m17 17 h2 m0 0 h10 m58 0 h10 m0 0 h10 m46 0 h10 m20 0 h10 m0 0 h134 m-164 0 h20 m144 0 h20 m-184 0 q10 0 10 10 m164 0 q0 -10 10 -10 m-174 10 v12 m164 0 v-12 m-164 12 q0 10 10 10 m144 0 q10 0 10 -10 m-154 10 h10 m34 0 h10 m0 0 h10 m70 0 h10 m20 -32 h10 m78 0 h10 m3 0 h-3"/>
-    <polygon points="455 17 463 13 463 21"/>
-    <polygon points="455 17 447 13 447 21"/></svg>
+    <text class="nonterminal" x="367" y="21">JobName</text></a><rect x="477" y="35" width="58" height="32" rx="10"/>
+    <rect x="475" y="33" width="58" height="32" class="terminal" rx="10"/>
+    <text class="terminal" x="485" y="53">WITH</text>
+    <rect x="555" y="35" width="96" height="32" rx="10"/>
+    <rect x="553" y="33" width="96" height="32" class="terminal" rx="10"/>
+    <text class="terminal" x="563" y="53">SNAPSHOT</text><a xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="#SnapshotName" xlink:title="SnapshotName">
+    <rect x="671" y="35" width="116" height="32"/>
+    <rect x="669" y="33" width="116" height="32" class="nonterminal"/>
+    <text class="nonterminal" x="679" y="53">SnapshotName</text></a><svg:path xmlns:svg="http://www.w3.org/2000/svg" class="line" d="m17 17 h2 m0 0 h10 m58 0 h10 m0 0 h10 m46 0 h10 m20 0 h10 m0 0 h134 m-164 0 h20 m144 0 h20 m-184 0 q10 0 10 10 m164 0 q0 -10 10 -10 m-174 10 v12 m164 0 v-12 m-164 12 q0 10 10 10 m144 0 q10 0 10 -10 m-154 10 h10 m34 0 h10 m0 0 h10 m70 0 h10 m20 -32 h10 m78 0 h10 m20 0 h10 m0 0 h320 m-350 0 h20 m330 0 h20 m-370 0 q10 0 10 10 m350 0 q0 -10 10 -10 m-360 10 v12 m350 0 v-12 m-350 12 q0 10 10 10 m330 0 q10 0 10 -10 m-340 10 h10 m58 0 h10 m0 0 h10 m96 0 h10 m0 0 h10 m116 0 h10 m23 -32 h-3"/>
+    <polygon points="825 17 833 13 833 21"/>
+    <polygon points="825 17 817 13 817 21"/></svg>

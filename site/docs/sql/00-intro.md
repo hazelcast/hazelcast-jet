@@ -1,6 +1,6 @@
 ---
 title: SQL Introduction
-description: The Hazelcast Jet SQL service documentation.
+description: Introduction to Hazelcast Jet SQL features.
 ---
 
 The service is in beta state. Behavior and API might change in future
@@ -41,3 +41,26 @@ In the first release we support a very limited set of features,
 essentially only reading and writing from/to the above connectors and
 projection + filtering. Currently these are unsupported: joins,
 grouping, aggregation. We plan to support these in the future.
+
+## API to Execute SQL
+
+To submit a query, use:
+
+```java
+JetInstance inst = ...;
+try (SqlResult result = inst.getSql().execute("SELECT ...")) {
+    for (SqlRow row : result) {
+        // Process the row.
+    }
+}
+
+```
+
+If your statement doesn't return rows, you can avoid the
+try-with-resources clause:
+
+```java
+inst.getSql().execute("CREATE MAPPING ...");
+```
+
+Hazelcast doesn't currently support JDBC (it's planned for the future).

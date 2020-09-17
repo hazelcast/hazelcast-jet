@@ -1,5 +1,6 @@
 ---
 title: DDL syntax
+description: DDL commands for Hazelcast Jet SQL
 ---
 
 ## CREATE, DROP EXTERNAL MAPPING
@@ -60,11 +61,11 @@ already running, only new jobs are affected.
 
 - `OptionName`, `OptionValue`: a connector-specific option. For a list
   of possible options check out the connector javadoc. The `OptionName`
-  is a SQL identifier: must be enclosed in double quotes if it contains
-  special characters like the period (`.`), dash (`-`) etc. The
-  `OptionValue` is a regular SQL string.
+  is a SQL identifier: it must be enclosed in double quotes if it
+  contains special characters like the period (`.`), dash (`-`) etc. The
+  `OptionValue` is a regular SQL string enclosed in apostrophes.
 
-## Auto-resolving of columns
+#### Auto-resolving of columns
 
 The `ColumnList` is optional. If it is omitted, Jet will connect to the
 remote system and try to resolve the columns in a connector-specific
@@ -72,6 +73,36 @@ way. For example, Jet can read a random message from a Kafka topic and
 determine the column list from it. If Jet fails to resolve the columns
 (most commonly if the remote object is empty), the DDL statement will
 fail.
+
+#### Example Without a Column List and Options
+
+```sql
+CREATE MAPPING my_table
+TYPE IMap
+```
+
+As specified for the IMap connector, in this case the column list and
+serialization options are automatically discovered from existing data in
+the map.
+
+#### A Full Example
+
+In this example the field list and options are explicit.
+
+```sql
+CREATE MAPPING my_table(
+    keyField1 INT EXTERNAL NAME "__key.field1",
+    keyField2 VARCHAR EXTERNAL NAME "__key.field2",
+    valueField BIGINT EXTERNAL NAME this
+)
+TYPE IMap
+OPTIONS (
+    "serialization.key.format" 'java',
+    "serialization.key.java.class" 'com.example.KeyClass'
+    "serialization.value.format" 'java',
+    "serialization.value.java.class" 'com.example.ValueClass'
+)
+```
 
 ### DROP MAPPING Syntax
 
@@ -85,45 +116,22 @@ fail.
 
 - `MappingName`: the name of the mapping
 
-## CREATE/DROP JOB
-
-Creates a job from a query that is not tied to the client session. When
-you submit an INSERT query, its lifecycle is tied to the client session:
-if the client disconnects, the query is cancelled, even though it
-doesn't deliver results to the client.
-
-If you want to submit a statement that is independent from the client
-session, use the `CREATE JOB` command. Such a query will return quickly
-and the job will run on the cluster. It can also be configured to be
-fault tolerant.
-
-**CreateJob ::=**
-![CREATE JOB syntax](/docs/assets/ddl-CreateJob.svg)
-
-**Options ::=**
-![Options syntax](/docs/assets/ddl-Options.svg)
-
-**DropJob ::=**
-![DROP JOB syntax](/docs/assets/ddl-DropJob.svg)
-
-- `JobName`: a unique name identifying the job.
-
-- `QuerySpec`: the query to run by the job. It must not return rows to
-  the client, that is it must not start with `SELECT`. Currently we
-  support `INSERT INTO` or `SINK INTO` queries.
-
-- `OptionName`, `OptionValue`: TODO
-
 ## Information Schema
 
-The information about existing mappings is available through {@code
-information_schema} tables.
+The information about existing mappings is available through
+`information_schema` tables.
 
-Currently, 2 tables are exposed:
+Currently, two tables are exposed:
 
-- `mappings` containing information about existing mappings
+- `mappings`: contains information about existing mappings
 
-- `columns` containing information about mapping columns
+- `columns`: contains information about mapping columns
+
+To query the information schema, use:
+
+```sql
+SELECT * FROM information_schema.mappings
+```
 
 ## Custom connectors
 
