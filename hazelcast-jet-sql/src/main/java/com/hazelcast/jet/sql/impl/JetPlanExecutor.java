@@ -20,11 +20,11 @@ import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.JobStateSnapshot;
 import com.hazelcast.jet.sql.impl.JetPlan.AlterJobPlan;
-import com.hazelcast.jet.sql.impl.JetPlan.CreateExternalMappingPlan;
 import com.hazelcast.jet.sql.impl.JetPlan.CreateJobPlan;
+import com.hazelcast.jet.sql.impl.JetPlan.CreateMappingPlan;
 import com.hazelcast.jet.sql.impl.JetPlan.CreateSnapshotPlan;
-import com.hazelcast.jet.sql.impl.JetPlan.DropExternalMappingPlan;
 import com.hazelcast.jet.sql.impl.JetPlan.DropJobPlan;
+import com.hazelcast.jet.sql.impl.JetPlan.DropMappingPlan;
 import com.hazelcast.jet.sql.impl.JetPlan.DropSnapshotPlan;
 import com.hazelcast.jet.sql.impl.JetPlan.ExecutionPlan;
 import com.hazelcast.jet.sql.impl.schema.MappingCatalog;
@@ -52,12 +52,12 @@ class JetPlanExecutor {
         this.resultConsumerRegistry = resultConsumerRegistry;
     }
 
-    SqlResult execute(CreateExternalMappingPlan plan) {
+    SqlResult execute(CreateMappingPlan plan) {
         catalog.createMapping(plan.mapping(), plan.replace(), plan.ifNotExists());
         return SqlResultImpl.createUpdateCountResult(-1);
     }
 
-    SqlResult execute(DropExternalMappingPlan plan) {
+    SqlResult execute(DropMappingPlan plan) {
         catalog.removeMapping(plan.name(), plan.ifExists());
         return SqlResultImpl.createUpdateCountResult(-1);
     }

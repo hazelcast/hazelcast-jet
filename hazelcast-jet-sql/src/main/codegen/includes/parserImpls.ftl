@@ -15,103 +15,6 @@
 -->
 
 /**
- * Parses CREATE JOB statement.
- */
-SqlCreate SqlCreateJob(Span span, boolean replace) :
-{
-    SqlParserPos startPos = span.pos();
-
-    SqlIdentifier name;
-    boolean ifNotExists = false;
-    SqlNodeList sqlOptions = SqlNodeList.EMPTY;
-    SqlInsert sqlInsert = null;
-
-    if (replace) {
-        throw SqlUtil.newContextException(getPos(), ParserResource.RESOURCE.notSupported("OR REPLACE", "CREATE JOB"));
-    }
-}
-{
-    <JOB>
-    [
-        <IF> <NOT> <EXISTS> { ifNotExists = true; }
-    ]
-    name = SimpleIdentifier()
-    [
-        <OPTIONS>
-        sqlOptions = SqlOptions()
-    ]
-    <AS>
-    sqlInsert = SqlExtendedInsert()
-    {
-        return new SqlCreateJob(
-            name,
-            sqlOptions,
-            sqlInsert,
-            replace,
-            ifNotExists,
-            startPos.plus(getPos())
-        );
-    }
-}
-
-/**
- * Parses DROP JOB statement.
- */
-SqlDrop SqlDropJob(Span span, boolean replace) :
-{
-    SqlParserPos pos = span.pos();
-
-    SqlIdentifier name;
-    boolean ifExists = false;
-    SqlIdentifier withSnapshotName = null;
-}
-{
-    <JOB>
-    [
-        <IF> <EXISTS> { ifExists = true; }
-    ]
-    name = SimpleIdentifier()
-    [
-        <WITH> <SNAPSHOT>
-        withSnapshotName = SimpleIdentifier()
-    ]
-    {
-        return new SqlDropJob(name, ifExists, withSnapshotName, pos.plus(getPos()));
-    }
-}
-
-/**
- * Parses ALTER JOB statement.
- */
-SqlAlterJob SqlAlterJob() :
-{
-    SqlParserPos pos = getPos();
-
-    SqlIdentifier name;
-    SqlAlterJob.AlterJobOperation operation;
-}
-{
-    <ALTER> <JOB>
-    name = SimpleIdentifier()
-    (
-        <SUSPEND> {
-            operation = SqlAlterJob.AlterJobOperation.SUSPEND;
-        }
-    |
-        <RESUME> {
-            operation = SqlAlterJob.AlterJobOperation.RESUME;
-        }
-    |
-        <RESTART> {
-            operation = SqlAlterJob.AlterJobOperation.RESTART;
-        }
-    )
-    {
-        return new SqlAlterJob(name, operation, pos.plus(getPos()));
-    }
-}
-
-/**
  * Parses CREATE EXTERNAL MAPPING statement.
  */
 SqlCreate SqlCreateMapping(Span span, boolean replace) :
@@ -312,49 +215,99 @@ SqlDrop SqlDropMapping(Span span, boolean replace) :
 }
 
 /**
- * Parses OPTIONS.
+ * Parses CREATE JOB statement.
  */
-SqlNodeList SqlOptions():
+SqlCreate SqlCreateJob(Span span, boolean replace) :
 {
-    Span span;
+    SqlParserPos startPos = span.pos();
 
-    SqlOption sqlOption;
-    Map<String, SqlNode> sqlOptions = new LinkedHashMap<String, SqlNode>();
+    SqlIdentifier name;
+    boolean ifNotExists = false;
+    SqlNodeList sqlOptions = SqlNodeList.EMPTY;
+    SqlInsert sqlInsert = null;
+
+    if (replace) {
+        throw SqlUtil.newContextException(getPos(), ParserResource.RESOURCE.notSupported("OR REPLACE", "CREATE JOB"));
+    }
 }
 {
-    <LPAREN> { span = span(); }
+    <JOB>
     [
-        sqlOption = SqlOption()
-        {
-            sqlOptions.put(sqlOption.key(), sqlOption);
-        }
-        (
-            <COMMA> sqlOption = SqlOption()
-            {
-                if (sqlOptions.putIfAbsent(sqlOption.key(), sqlOption) != null) {
-                    throw SqlUtil.newContextException(getPos(), ParserResource.RESOURCE.duplicateOption(sqlOption.key()));
-                }
-            }
-        )*
+        <IF> <NOT> <EXISTS> { ifNotExists = true; }
     ]
-    <RPAREN>
+    name = SimpleIdentifier()
+    [
+        <OPTIONS>
+        sqlOptions = SqlOptions()
+    ]
+    <AS>
+    sqlInsert = SqlExtendedInsert()
     {
-        return new SqlNodeList(sqlOptions.values(), span.end(this));
+        return new SqlCreateJob(
+            name,
+            sqlOptions,
+            sqlInsert,
+            replace,
+            ifNotExists,
+            startPos.plus(getPos())
+        );
     }
 }
 
-SqlOption SqlOption() :
+/**
+ * Parses ALTER JOB statement.
+ */
+SqlAlterJob SqlAlterJob() :
 {
-    Span span;
+    SqlParserPos pos = getPos();
 
-    SqlIdentifier key;
-    SqlNode value;
+    SqlIdentifier name;
+    SqlAlterJob.AlterJobOperation operation;
 }
 {
-    key = SimpleIdentifier() { span = span(); }
-    value = StringLiteral()
+    <ALTER> <JOB>
+    name = SimpleIdentifier()
+    (
+        <SUSPEND> {
+            operation = SqlAlterJob.AlterJobOperation.SUSPEND;
+        }
+    |
+        <RESUME> {
+            operation = SqlAlterJob.AlterJobOperation.RESUME;
+        }
+    |
+        <RESTART> {
+            operation = SqlAlterJob.AlterJobOperation.RESTART;
+        }
+    )
     {
-        return new SqlOption(key, value, span.end(this));
+        return new SqlAlterJob(name, operation, pos.plus(getPos()));
+    }
+}
+
+/**
+ * Parses DROP JOB statement.
+ */
+SqlDrop SqlDropJob(Span span, boolean replace) :
+{
+    SqlParserPos pos = span.pos();
+
+    SqlIdentifier name;
+    boolean ifExists = false;
+    SqlIdentifier withSnapshotName = null;
+}
+{
+    <JOB>
+    [
+        <IF> <EXISTS> { ifExists = true; }
+    ]
+    name = SimpleIdentifier()
+    [
+        <WITH> <SNAPSHOT>
+        withSnapshotName = SimpleIdentifier()
+    ]
+    {
+        return new SqlDropJob(name, ifExists, withSnapshotName, pos.plus(getPos()));
     }
 }
 
@@ -399,6 +352,53 @@ SqlDrop SqlDropSnapshot(Span span, boolean replace) :
     name = SimpleIdentifier()
     {
         return new SqlDropSnapshot(name, ifExists, pos.plus(getPos()));
+    }
+}
+
+/**
+ * Parses OPTIONS.
+ */
+SqlNodeList SqlOptions():
+{
+    Span span;
+
+    SqlOption sqlOption;
+    Map<String, SqlNode> sqlOptions = new LinkedHashMap<String, SqlNode>();
+}
+{
+    <LPAREN> { span = span(); }
+    [
+        sqlOption = SqlOption()
+        {
+            sqlOptions.put(sqlOption.key(), sqlOption);
+        }
+        (
+            <COMMA> sqlOption = SqlOption()
+            {
+                if (sqlOptions.putIfAbsent(sqlOption.key(), sqlOption) != null) {
+                    throw SqlUtil.newContextException(getPos(), ParserResource.RESOURCE.duplicateOption(sqlOption.key()));
+                }
+            }
+        )*
+    ]
+    <RPAREN>
+    {
+        return new SqlNodeList(sqlOptions.values(), span.end(this));
+    }
+}
+
+SqlOption SqlOption() :
+{
+    Span span;
+
+    SqlIdentifier key;
+    SqlNode value;
+}
+{
+    key = SimpleIdentifier() { span = span(); }
+    value = StringLiteral()
+    {
+        return new SqlOption(key, value, span.end(this));
     }
 }
 

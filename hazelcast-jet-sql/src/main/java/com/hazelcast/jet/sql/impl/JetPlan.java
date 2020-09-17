@@ -29,13 +29,13 @@ interface JetPlan extends SqlPlan {
 
     SqlResult execute();
 
-    class CreateExternalMappingPlan implements JetPlan {
+    class CreateMappingPlan implements JetPlan {
         private final Mapping mapping;
         private final boolean replace;
         private final boolean ifNotExists;
         private final JetPlanExecutor planExecutor;
 
-        CreateExternalMappingPlan(
+        CreateMappingPlan(
                 Mapping mapping,
                 boolean replace,
                 boolean ifNotExists,
@@ -65,12 +65,12 @@ interface JetPlan extends SqlPlan {
         }
     }
 
-    class DropExternalMappingPlan implements JetPlan {
+    class DropMappingPlan implements JetPlan {
         private final String name;
         private final boolean ifExists;
         private final JetPlanExecutor planExecutor;
 
-        DropExternalMappingPlan(
+        DropMappingPlan(
                 String name,
                 boolean ifExists,
                 JetPlanExecutor planExecutor
@@ -198,7 +198,7 @@ interface JetPlan extends SqlPlan {
         private final String jobName;
         private final JetPlanExecutor planExecutor;
 
-        public CreateSnapshotPlan(String snapshotName, String jobName, JetPlanExecutor planExecutor) {
+        CreateSnapshotPlan(String snapshotName, String jobName, JetPlanExecutor planExecutor) {
             this.snapshotName = snapshotName;
             this.jobName = jobName;
             this.planExecutor = planExecutor;
@@ -223,7 +223,7 @@ interface JetPlan extends SqlPlan {
         private final boolean ifExists;
         private final JetPlanExecutor planExecutor;
 
-        public DropSnapshotPlan(String snapshotName, boolean ifExists, JetPlanExecutor planExecutor) {
+        DropSnapshotPlan(String snapshotName, boolean ifExists, JetPlanExecutor planExecutor) {
             this.snapshotName = snapshotName;
             this.ifExists = ifExists;
             this.planExecutor = planExecutor;

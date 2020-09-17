@@ -17,8 +17,8 @@
 package com.hazelcast.jet.sql.impl;
 
 import com.google.common.collect.ImmutableMap;
-import com.hazelcast.jet.sql.impl.JetPlan.CreateExternalMappingPlan;
-import com.hazelcast.jet.sql.impl.JetPlan.DropExternalMappingPlan;
+import com.hazelcast.jet.sql.impl.JetPlan.CreateMappingPlan;
+import com.hazelcast.jet.sql.impl.JetPlan.DropMappingPlan;
 import com.hazelcast.jet.sql.impl.parse.SqlCreateMapping;
 import com.hazelcast.jet.sql.impl.parse.SqlDataType;
 import com.hazelcast.jet.sql.impl.parse.SqlDropMapping;
@@ -83,7 +83,7 @@ public class JetSqlBackendTest {
         QueryParseResult parseResult = new QueryParseResult(node, null, null, null);
 
         // when
-        CreateExternalMappingPlan plan = (CreateExternalMappingPlan) sqlBackend.createPlan(null, parseResult, null);
+        CreateMappingPlan plan = (CreateMappingPlan) sqlBackend.createPlan(null, parseResult, null);
 
         // then
         assertThat(plan.mapping().name()).isEqualTo("mapping_name");
@@ -110,7 +110,7 @@ public class JetSqlBackendTest {
         QueryParseResult parseResult = new QueryParseResult(node, null, null, null);
 
         // when
-        DropExternalMappingPlan plan = (DropExternalMappingPlan) sqlBackend.createPlan(null, parseResult, null);
+        DropMappingPlan plan = (DropMappingPlan) sqlBackend.createPlan(null, parseResult, null);
 
         // then
         assertThat(plan.name()).isEqualTo("mapping_name");

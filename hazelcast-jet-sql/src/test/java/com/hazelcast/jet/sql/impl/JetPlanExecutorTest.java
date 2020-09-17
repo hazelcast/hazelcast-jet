@@ -20,8 +20,8 @@ import com.hazelcast.internal.util.UuidUtil;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.core.DAG;
-import com.hazelcast.jet.sql.impl.JetPlan.CreateExternalMappingPlan;
-import com.hazelcast.jet.sql.impl.JetPlan.DropExternalMappingPlan;
+import com.hazelcast.jet.sql.impl.JetPlan.CreateMappingPlan;
+import com.hazelcast.jet.sql.impl.JetPlan.DropMappingPlan;
 import com.hazelcast.jet.sql.impl.JetPlan.ExecutionPlan;
 import com.hazelcast.jet.sql.impl.schema.Mapping;
 import com.hazelcast.jet.sql.impl.schema.MappingCatalog;
@@ -86,7 +86,7 @@ public class JetPlanExecutorTest {
     public void test_createExternalMappingExecution(boolean replace, boolean ifNotExists) {
         // given
         Mapping mapping = mapping();
-        CreateExternalMappingPlan plan = new CreateExternalMappingPlan(mapping, replace, ifNotExists, planExecutor);
+        CreateMappingPlan plan = new CreateMappingPlan(mapping, replace, ifNotExists, planExecutor);
 
         // when
         SqlResult result = planExecutor.execute(plan);
@@ -105,7 +105,7 @@ public class JetPlanExecutorTest {
     public void test_dropExternalMappingExecution(boolean ifExists) {
         // given
         String name = "name";
-        DropExternalMappingPlan plan = new DropExternalMappingPlan(name, ifExists, planExecutor);
+        DropMappingPlan plan = new DropMappingPlan(name, ifExists, planExecutor);
 
         // when
         SqlResult result = planExecutor.execute(plan);
