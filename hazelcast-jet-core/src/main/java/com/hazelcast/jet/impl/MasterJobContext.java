@@ -93,6 +93,7 @@ import static com.hazelcast.jet.impl.SnapshotValidator.validateSnapshot;
 import static com.hazelcast.jet.impl.TerminationMode.ActionAfterTerminate.RESTART;
 import static com.hazelcast.jet.impl.TerminationMode.ActionAfterTerminate.SUSPEND;
 import static com.hazelcast.jet.impl.TerminationMode.CANCEL_FORCEFUL;
+import static com.hazelcast.jet.impl.TerminationMode.CANCEL_GRACEFUL;
 import static com.hazelcast.jet.impl.TerminationMode.RESTART_GRACEFUL;
 import static com.hazelcast.jet.impl.execution.init.CustomClassLoadedObject.deserializeWithCustomClassLoader;
 import static com.hazelcast.jet.impl.execution.init.ExecutionPlanBuilder.createExecutionPlans;
@@ -299,8 +300,9 @@ public class MasterJobContext {
             @SuppressWarnings("SameParameterValue") boolean allowWhileExportingSnapshot
     ) {
         mc.coordinationService().assertOnCoordinatorThread();
-        // Switch graceful method to forceful if we don't do snapshots
-        if (mc.jobConfig().getProcessingGuarantee() == NONE) {
+        // Switch graceful method to forceful if we don't do snapshots, except for graceful
+        // cancellation, which is allowed even if not snapshotting.
+        if (mc.jobConfig().getProcessingGuarantee() == NONE && mode != CANCEL_GRACEFUL) {
             mode = mode.withoutTerminalSnapshot();
         }
 
@@ -338,7 +340,7 @@ public class MasterJobContext {
             mc.unlock();
         }
 
-        if (localStatus == SUSPENDED) {
+        if (localStatus == SUSPENDED || localStatus == SUSPENDED_EXPORTING_SNAPSHOT) {
             try {
                 mc.coordinationService().completeJob(mc, new CancellationException()).get();
             } catch (Exception e) {
@@ -521,7 +523,7 @@ public class MasterJobContext {
             logger.fine(opName + " of " + mc.jobIdString() + " terminated after a terminal snapshot");
             TerminationMode mode = requestedTerminationMode;
             assert mode != null && mode.isWithTerminalSnapshot() : "mode=" + mode;
-            return new JobTerminateRequestedException(mode);
+            return mode == CANCEL_GRACEFUL ? new CancellationException() : new JobTerminateRequestedException(mode);
         }
 
         // If all exceptions are of certain type, treat it as TopologyChangedException
@@ -614,10 +616,6 @@ public class MasterJobContext {
                 }
                 completeVertices(failure);
 
-                // reset state for the next execution
-                boolean wasCancelled = isCancelled();
-                requestedTerminationMode = null;
-                executionFailureCallback = null;
                 ActionAfterTerminate terminationModeAction = failure instanceof JobTerminateRequestedException
                         ? ((JobTerminateRequestedException) failure).mode().actionAfterTerminate() : null;
                 mc.snapshotContext().onExecutionTerminated();
@@ -626,20 +624,20 @@ public class MasterJobContext {
                 if (terminationModeAction == RESTART) {
                     mc.setJobStatus(NOT_RUNNING);
                     nonSynchronizedAction = () -> mc.coordinationService().restartJob(mc.jobId());
-                } else if (!wasCancelled && isRestartableException(failure) && mc.jobConfig().isAutoScaling()) {
+                } else if (!isCancelled() && isRestartableException(failure) && mc.jobConfig().isAutoScaling()) {
                     // if restart is due to a failure, schedule a restart after a delay
                     scheduleRestart();
                     nonSynchronizedAction = NO_OP;
                 } else if (terminationModeAction == SUSPEND
                         || isRestartableException(failure)
-                        && !wasCancelled
+                        && !isCancelled()
                         && !mc.jobConfig().isAutoScaling()
                         && mc.jobConfig().getProcessingGuarantee() != NONE
                 ) {
                     mc.setJobStatus(SUSPENDED);
                     mc.jobExecutionRecord().setSuspended("Requested by user");
                     nonSynchronizedAction = () -> mc.writeJobExecutionRecord(false);
-                } else if (failure != null && !wasCancelled && mc.jobConfig().isSuspendOnFailure()) {
+                } else if (failure != null && !isCancelled() && mc.jobConfig().isSuspendOnFailure()) {
                     mc.setJobStatus(SUSPENDED);
                     mc.jobExecutionRecord().setSuspended("Execution failure:\n" +
                             ExceptionUtil.stackTraceToString(failure));
@@ -650,19 +648,22 @@ public class MasterJobContext {
                         logger.fine("Cancelling job " + mc.jobIdString() + " locally: member (local or remote) reset. " +
                                 "We don't delete job metadata: job will restart on majority cluster");
                         setFinalResult(new CancellationException());
-                        return;
+                    } else {
+                        mc.coordinationService()
+                          .completeJob(mc, failure)
+                          .whenComplete(withTryCatch(logger, (r, f) -> {
+                              if (f != null) {
+                                  logger.warning("Completion of " + mc.jobIdString() + " failed", f);
+                              } else {
+                                  setFinalResult(failure);
+                              }
+                          }));
                     }
-                    mc.coordinationService()
-                      .completeJob(mc, failure)
-                      .whenComplete(withTryCatch(logger, (r, f) -> {
-                          if (f != null) {
-                              logger.warning("Completion of " + mc.jobIdString() + " failed", f);
-                          } else {
-                              setFinalResult(failure);
-                          }
-                      }));
                     nonSynchronizedAction = NO_OP;
                 }
+                // reset the state for the next execution
+                requestedTerminationMode = null;
+                executionFailureCallback = null;
             } finally {
                 mc.unlock();
             }

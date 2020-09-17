@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.impl.pipeline.transform;
 
+import com.hazelcast.function.SupplierEx;
 import com.hazelcast.function.ToLongFunctionEx;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.function.TriFunction;
@@ -25,20 +26,19 @@ import com.hazelcast.jet.impl.util.ConstantFunctionEx;
 import com.hazelcast.jet.pipeline.Pipeline.Context;
 
 import javax.annotation.Nonnull;
-import java.util.function.Supplier;
 
 import static com.hazelcast.jet.core.processor.Processors.flatMapStatefulP;
 
 public class GlobalFlatMapStatefulTransform<T, S, R> extends AbstractTransform {
 
     private final ToLongFunctionEx<? super T> timestampFn;
-    private final Supplier<? extends S> createFn;
+    private final SupplierEx<? extends S> createFn;
     private final TriFunction<? super S, Object, ? super T, ? extends Traverser<R>> statefulFlatMapFn;
 
     public GlobalFlatMapStatefulTransform(
             @Nonnull Transform upstream,
             @Nonnull ToLongFunctionEx<? super T> timestampFn,
-            @Nonnull Supplier<? extends S> createFn,
+            @Nonnull SupplierEx<? extends S> createFn,
             @Nonnull TriFunction<? super S, Object, ? super T, ? extends Traverser<R>> statefulFlatMapFn
     ) {
         super("flatmap-stateful-global", upstream);

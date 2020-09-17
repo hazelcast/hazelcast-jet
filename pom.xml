@@ -72,7 +72,7 @@
         <timestamp>${maven.build.timestamp}</timestamp>
 
         <!-- Main IMDG dependency -->
-        <hazelcast.version>4.0.2</hazelcast.version>
+        <hazelcast.version>4.0.3-SNAPSHOT</hazelcast.version>
         <!-- Dependencies on IMDG modules: must be the same versions IMDG depends on! -->
         <hazelcast.aws.version>3.1</hazelcast.aws.version>
         <hazelcast.kubernetes.version>2.0.1</hazelcast.kubernetes.version>
@@ -548,14 +548,15 @@
                         </includedLicenses>
                         <licenseMerges>
                             <licenseMerge>
-                                Apache License, Version 2.0|
+                                Apache License, Version 2.0|Apache License v2.0|
                                 Apache Software License 2.0|The Apache Software License, Version 2.0|
                                 Apache License, version 2.0|The Apache Software License, version 2.0|
                                 Apache 2|Apache 2.0|Apache-2.0|Apache License 2.0|The Apache License, Version 2.0
                             </licenseMerge>
-                            <licenseMerge>MIT License|MIT|The MIT License|MIT license|The MIT License (MIT)</licenseMerge>
                             <licenseMerge>BSD 2-Clause License|BSD-2-Clause</licenseMerge>
                             <licenseMerge>BSD 3-Clause License|BSD License|BSD|BSD licence|The BSD License|3-Clause BSD License| New BSD License</licenseMerge>
+                            <licenseMerge>CC0|CC0 1.0 Universal License</licenseMerge>
+                            <licenseMerge>MIT License|MIT|The MIT License|MIT license|The MIT License (MIT)</licenseMerge>
                         </licenseMerges>
                     </configuration>
                 </plugin>
