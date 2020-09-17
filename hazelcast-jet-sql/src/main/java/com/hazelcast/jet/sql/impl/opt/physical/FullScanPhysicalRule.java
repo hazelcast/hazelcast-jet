@@ -41,8 +41,7 @@ final class FullScanPhysicalRule extends RelOptRule {
         FullScanPhysicalRel rel = new FullScanPhysicalRel(
                 logicalScan.getCluster(),
                 OptUtils.toPhysicalConvention(logicalScan.getTraitSet()),
-                logicalScan.getTable(),
-                logicalScan.getProjection()
+                logicalScan.getTable()
         );
         call.transformTo(rel);
     }

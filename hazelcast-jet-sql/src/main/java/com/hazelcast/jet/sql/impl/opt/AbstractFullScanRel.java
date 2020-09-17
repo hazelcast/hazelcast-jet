@@ -23,7 +23,6 @@ import com.hazelcast.sql.impl.schema.TableField;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.plan.RelTraitSet;
-import org.apache.calcite.rel.RelWriter;
 import org.apache.calcite.rel.core.TableScan;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
@@ -38,33 +37,12 @@ import java.util.List;
  */
 public abstract class AbstractFullScanRel extends TableScan {
 
-    private final List<RexNode> projection;
-
     protected AbstractFullScanRel(
             RelOptCluster cluster,
             RelTraitSet traitSet,
-            RelOptTable table,
-            List<RexNode> projection
+            RelOptTable table
     ) {
         super(cluster, traitSet, table);
-
-        this.projection = projection != null
-                ? projection
-                : projection(table.unwrap(HazelcastTable.class), cluster.getTypeFactory());
-    }
-
-    private static List<RexNode> projection(HazelcastTable table, RelDataTypeFactory typeFactory) {
-        List<Integer> projects = table.getProjects();
-
-        List<RexNode> projection = new ArrayList<>(projects.size());
-        for (Integer index : projects) {
-            TableField field = table.getTarget().getField(index);
-
-            RelDataType relDataType = HazelcastSchemaUtils.convert(field, typeFactory);
-
-            projection.add(new RexInputRef(index, relDataType));
-        }
-        return projection;
     }
 
     public Table getTableUnwrapped() {
@@ -76,6 +54,18 @@ public abstract class AbstractFullScanRel extends TableScan {
     }
 
     public List<RexNode> getProjection() {
+        HazelcastTable table = getTable().unwrap(HazelcastTable.class);
+
+        List<Integer> projects = table.getProjects();
+
+        List<RexNode> projection = new ArrayList<>(projects.size());
+        for (Integer index : projects) {
+            TableField field = table.getTarget().getField(index);
+
+            RelDataType relDataType = HazelcastSchemaUtils.convert(field, getCluster().getTypeFactory());
+
+            projection.add(new RexInputRef(index, relDataType));
+        }
         return projection;
     }
 
@@ -89,11 +79,5 @@ public abstract class AbstractFullScanRel extends TableScan {
         }
 
         return builder.build();
-    }
-
-    @Override
-    public RelWriter explainTerms(RelWriter pw) {
-        return super.explainTerms(pw)
-                    .item("projection", projection);
     }
 }

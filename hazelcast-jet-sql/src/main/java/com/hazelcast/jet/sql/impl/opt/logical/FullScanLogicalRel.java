@@ -21,7 +21,6 @@ import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.RelNode;
-import org.apache.calcite.rex.RexNode;
 
 import java.util.List;
 
@@ -30,14 +29,13 @@ public class FullScanLogicalRel extends AbstractFullScanRel implements LogicalRe
     FullScanLogicalRel(
             RelOptCluster cluster,
             RelTraitSet traitSet,
-            RelOptTable table,
-            List<RexNode> projection
+            RelOptTable table
     ) {
-        super(cluster, traitSet, table, projection);
+        super(cluster, traitSet, table);
     }
 
     @Override
     public final RelNode copy(RelTraitSet traitSet, List<RelNode> inputs) {
-        return new FullScanLogicalRel(getCluster(), traitSet, getTable(), getProjection());
+        return new FullScanLogicalRel(getCluster(), traitSet, getTable());
     }
 }

@@ -31,6 +31,8 @@ import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.plan.volcano.RelSubset;
 import org.apache.calcite.prepare.RelOptTableImpl;
 import org.apache.calcite.rel.RelNode;
+import org.apache.calcite.rel.core.TableScan;
+import org.apache.calcite.rel.logical.LogicalTableScan;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 
 import java.util.ArrayList;
@@ -174,19 +176,31 @@ public final class OptUtils {
         return table;
     }
 
+    public static LogicalTableScan createLogicalScanWithNewTable(
+            TableScan originalScan,
+            HazelcastTable newHazelcastTable
+    ) {
+        HazelcastRelOptTable originalRelTable = (HazelcastRelOptTable) originalScan.getTable();
+        HazelcastRelOptTable newTable = createRelTable(
+                originalRelTable,
+                newHazelcastTable,
+                originalScan.getCluster().getTypeFactory()
+        );
+        return LogicalTableScan.create(originalScan.getCluster(), newTable, originalScan.getHints());
+    }
+
     public static HazelcastRelOptTable createRelTable(
             HazelcastRelOptTable originalRelTable,
-            HazelcastTable convertedHazelcastTable,
+            HazelcastTable newHazelcastTable,
             RelDataTypeFactory typeFactory
     ) {
         RelOptTableImpl newTable = RelOptTableImpl.create(
                 originalRelTable.getRelOptSchema(),
-                convertedHazelcastTable.getRowType(typeFactory),
+                newHazelcastTable.getRowType(typeFactory),
                 originalRelTable.getDelegate().getQualifiedName(),
-                convertedHazelcastTable,
+                newHazelcastTable,
                 null
         );
-
         return new HazelcastRelOptTable(newTable);
     }
 

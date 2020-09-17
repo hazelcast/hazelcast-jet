@@ -70,8 +70,7 @@ final class FullFunctionScanLogicalRule extends ConverterRule {
         return new FullScanLogicalRel(
                 scan.getCluster(),
                 OptUtils.toLogicalConvention(scan.getTraitSet()),
-                hazelcastRelTable,
-                null
+                hazelcastRelTable
         );
     }
 

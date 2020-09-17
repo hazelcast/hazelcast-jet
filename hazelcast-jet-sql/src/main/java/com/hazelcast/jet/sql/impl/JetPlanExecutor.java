@@ -85,6 +85,8 @@ class JetPlanExecutor {
             case RESTART:
                 job.restart();
                 break;
+
+            default:
         }
         return SqlResultImpl.createUpdateCountResult(0);
     }

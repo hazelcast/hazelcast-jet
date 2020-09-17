@@ -19,8 +19,10 @@ package com.hazelcast.jet.sql.impl.opt.logical;
 import org.apache.calcite.rel.rules.FilterMergeRule;
 import org.apache.calcite.rel.rules.FilterProjectTransposeRule;
 import org.apache.calcite.rel.rules.ProjectFilterTransposeRule;
+import org.apache.calcite.rel.rules.ProjectJoinTransposeRule;
 import org.apache.calcite.rel.rules.ProjectMergeRule;
 import org.apache.calcite.rel.rules.ProjectRemoveRule;
+import org.apache.calcite.rel.rules.PruneEmptyRules;
 import org.apache.calcite.tools.RuleSet;
 import org.apache.calcite.tools.RuleSets;
 
@@ -31,22 +33,30 @@ public final class LogicalRules {
 
     public static RuleSet getRuleSet() {
         return RuleSets.ofList(
+                // Filter rules.
                 FilterLogicalRule.INSTANCE,
                 FilterMergeRule.INSTANCE,
+                FilterProjectTransposeRule.INSTANCE,
+                FilterIntoScanLogicalRule.INSTANCE,
 
+                // Project rules
                 ProjectLogicalRule.INSTANCE,
                 ProjectMergeRule.INSTANCE,
                 ProjectRemoveRule.INSTANCE,
-
-                FilterProjectTransposeRule.INSTANCE,
                 ProjectFilterTransposeRule.INSTANCE,
+                ProjectJoinTransposeRule.INSTANCE,
+                ProjectIntoScanLogicalRule.INSTANCE,
 
+                // Scan rules
                 FullScanLogicalRule.INSTANCE,
                 FullFunctionScanLogicalRule.INSTANCE,
-                ProjectIntoScanLogicalRule.INSTANCE,
-                FilterIntoScanLogicalRule.INSTANCE,
 
+                // Value rules
                 ValuesLogicalRule.INSTANCE,
+                PruneEmptyRules.PROJECT_INSTANCE,
+                PruneEmptyRules.FILTER_INSTANCE,
+
+                // Insert rules
                 InsertLogicalRule.INSTANCE
         );
     }

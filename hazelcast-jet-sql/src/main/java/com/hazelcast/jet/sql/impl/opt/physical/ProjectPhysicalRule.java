@@ -22,6 +22,8 @@ import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelOptRuleCall;
 import org.apache.calcite.rel.RelNode;
 
+import java.util.Collection;
+
 import static com.hazelcast.jet.sql.impl.opt.JetConventions.LOGICAL;
 
 final class ProjectPhysicalRule extends RelOptRule {
@@ -40,13 +42,17 @@ final class ProjectPhysicalRule extends RelOptRule {
         ProjectLogicalRel logicalProject = call.rel(0);
         RelNode input = logicalProject.getInput();
 
-        ProjectPhysicalRel rel = new ProjectPhysicalRel(
-                logicalProject.getCluster(),
-                OptUtils.toPhysicalConvention(input.getTraitSet()),
-                OptUtils.toPhysicalInput(input),
-                logicalProject.getProjects(),
-                logicalProject.getRowType()
-        );
-        call.transformTo(rel);
+        RelNode convertedInput = OptUtils.toPhysicalInput(input);
+        Collection<RelNode> transformedInputs = OptUtils.getPhysicalRelsFromSubset(convertedInput);
+        for (RelNode transformedInput : transformedInputs) {
+            ProjectPhysicalRel rel = new ProjectPhysicalRel(
+                    logicalProject.getCluster(),
+                    transformedInput.getTraitSet(),
+                    transformedInput,
+                    logicalProject.getProjects(),
+                    logicalProject.getRowType()
+            );
+            call.transformTo(rel);
+        }
     }
 }
