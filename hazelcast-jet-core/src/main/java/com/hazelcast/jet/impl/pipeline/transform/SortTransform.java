@@ -22,6 +22,7 @@ import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.impl.pipeline.Planner;
 import com.hazelcast.jet.impl.pipeline.Planner.PlannerVertex;
+import com.hazelcast.jet.pipeline.Pipeline.Context;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -48,10 +49,11 @@ public class SortTransform<T> extends AbstractTransform {
     }
 
     @Override
-    public void addToDag(Planner p) {
+    public void addToDag(Planner p, Context context) {
+        determinedLocalParallelism(1);
         Vertex v1 = p.dag.newVertex(name(), sortP(comparator));
-        PlannerVertex pv2 = p.addVertex(this, name() + COLLECT_STAGE_SUFFIX, 1, ProcessorMetaSupplier
-                .forceTotalParallelismOne(ProcessorSupplier.of(mapP(identity())), name()));
+        PlannerVertex pv2 = p.addVertex(this, name() + COLLECT_STAGE_SUFFIX, determinedLocalParallelism(),
+                ProcessorMetaSupplier.forceTotalParallelismOne(ProcessorSupplier.of(mapP(identity())), name()));
         p.addEdges(this, v1);
         p.dag.edge(between(v1, pv2.v).distributed()
                                      .allToOne(name())
