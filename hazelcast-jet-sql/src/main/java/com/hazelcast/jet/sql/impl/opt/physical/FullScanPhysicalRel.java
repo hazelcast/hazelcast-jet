@@ -17,22 +17,29 @@
 package com.hazelcast.jet.sql.impl.opt.physical;
 
 import com.hazelcast.jet.core.Vertex;
-import com.hazelcast.jet.sql.impl.opt.AbstractFullScanRel;
 import com.hazelcast.jet.sql.impl.opt.OptUtils;
 import com.hazelcast.jet.sql.impl.opt.physical.visitor.CreateDagVisitor;
+import com.hazelcast.sql.impl.calcite.schema.HazelcastSchemaUtils;
+import com.hazelcast.sql.impl.calcite.schema.HazelcastTable;
 import com.hazelcast.sql.impl.expression.Expression;
 import com.hazelcast.sql.impl.plan.node.PlanNodeSchema;
+import com.hazelcast.sql.impl.schema.TableField;
 import com.hazelcast.sql.impl.type.QueryDataType;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.RelNode;
+import org.apache.calcite.rel.core.TableScan;
+import org.apache.calcite.rel.type.RelDataType;
+import org.apache.calcite.rex.RexInputRef;
+import org.apache.calcite.rex.RexNode;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import static com.hazelcast.jet.impl.util.Util.toList;
 
-public class FullScanPhysicalRel extends AbstractFullScanRel implements PhysicalRel {
+public class FullScanPhysicalRel extends TableScan implements PhysicalRel {
 
     FullScanPhysicalRel(
             RelOptCluster cluster,
@@ -44,12 +51,23 @@ public class FullScanPhysicalRel extends AbstractFullScanRel implements Physical
 
     public Expression<Boolean> filter() {
         PlanNodeSchema schema = new PlanNodeSchema(OptUtils.getFieldTypes(getTable()));
-        return filter(schema, getFilter());
+        RexNode filter = getTable().unwrap(HazelcastTable.class).getFilter();
+        return filter(schema, filter);
     }
 
     public List<Expression<?>> projection() {
         PlanNodeSchema schema = new PlanNodeSchema(OptUtils.getFieldTypes(getTable()));
-        return project(schema, getProjection());
+
+        HazelcastTable table = getTable().unwrap(HazelcastTable.class);
+        List<Integer> projects = table.getProjects();
+        List<RexNode> projection = new ArrayList<>(projects.size());
+        for (Integer index : projects) {
+            TableField field = table.getTarget().getField(index);
+            RelDataType relDataType = HazelcastSchemaUtils.convert(field, getCluster().getTypeFactory());
+            projection.add(new RexInputRef(index, relDataType));
+        }
+
+        return project(schema, projection);
     }
 
     @Override
