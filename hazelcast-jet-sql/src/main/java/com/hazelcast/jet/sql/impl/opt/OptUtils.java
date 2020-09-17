@@ -189,7 +189,7 @@ public final class OptUtils {
         return LogicalTableScan.create(originalScan.getCluster(), newTable, originalScan.getHints());
     }
 
-    public static HazelcastRelOptTable createRelTable(
+    private static HazelcastRelOptTable createRelTable(
             HazelcastRelOptTable originalRelTable,
             HazelcastTable newHazelcastTable,
             RelDataTypeFactory typeFactory

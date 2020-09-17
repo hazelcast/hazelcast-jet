@@ -18,14 +18,12 @@ package com.hazelcast.jet.sql.impl.opt;
 
 import com.hazelcast.sql.impl.calcite.schema.HazelcastSchemaUtils;
 import com.hazelcast.sql.impl.calcite.schema.HazelcastTable;
-import com.hazelcast.sql.impl.schema.Table;
 import com.hazelcast.sql.impl.schema.TableField;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.core.TableScan;
 import org.apache.calcite.rel.type.RelDataType;
-import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexNode;
 
@@ -43,10 +41,6 @@ public abstract class AbstractFullScanRel extends TableScan {
             RelOptTable table
     ) {
         super(cluster, traitSet, table);
-    }
-
-    public Table getTableUnwrapped() {
-        return getTable().unwrap(HazelcastTable.class).getTarget();
     }
 
     public RexNode getFilter() {
@@ -67,17 +61,5 @@ public abstract class AbstractFullScanRel extends TableScan {
             projection.add(new RexInputRef(index, relDataType));
         }
         return projection;
-    }
-
-    @Override
-    public final RelDataType deriveRowType() {
-        RelDataTypeFactory.Builder builder = getCluster().getTypeFactory().builder();
-
-        for (int i = 0; i < getProjection().size(); i++) {
-            RexNode project = getProjection().get(i);
-            builder.add("$" + i, project.getType());
-        }
-
-        return builder.build();
     }
 }
