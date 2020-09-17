@@ -66,17 +66,17 @@
 which is distinct from the submitter. Jet offers several ways to manage
 the job after it's been submitted to the cluster.</p>
 <h2><a class="anchor" aria-hidden="true" id="submitting-jobs"></a><a href="#submitting-jobs" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Submitting Jobs</h2>
-<p>You can submit jobs to a cluster using the <code>jet submit</code> command
-and packaging the job as a JAR:</p>
+<p>You can submit jobs to a cluster using the <code>submit</code> command and
+packaging the job as a JAR:</p>
 <pre><code class="hljs css language-bash">$ bin/jet submit -n hello-world examples/hello-world.jar arg1 arg2
 Submitting JAR <span class="hljs-string">'examples/hello-world.jar'</span> with arguments [arg1, arg2]
 Using job name <span class="hljs-string">'hello-world'</span>
 </code></pre>
-<p>For a full guide on submitting jobs, see the relevant section in
+<p>For a full guide on submitting jobs, see the relevant section in the
 <a href="../api/submitting-jobs">Programming Guide</a>.</p>
 <h2><a class="anchor" aria-hidden="true" id="listing-jobs"></a><a href="#listing-jobs" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Listing Jobs</h2>
-<p>You can use the Jet command line to get a list of all running jobs
-in the cluster:</p>
+<p>Use the <code>list-jobs</code> command to get a list of all jobs running in the
+cluster:</p>
 <pre><code class="hljs css language-bash">$ bin/jet list-jobs
 ID                  STATUS             SUBMISSION TIME         NAME
 0401-9f77-b9c0-0001 RUNNING            2020-03-07T15:59:49.234 hello-world
@@ -88,72 +88,69 @@ ID                  STATUS             SUBMISSION TIME         NAME
 0402-de21-7f00-0001 FAILED             2020-03-08T15:12:04.893 hello-world
 </code></pre>
 <h2><a class="anchor" aria-hidden="true" id="cancelling-jobs"></a><a href="#cancelling-jobs" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Cancelling Jobs</h2>
-<p>A streaming Jet job will run indefinitely until cancelled. You can cancel
-a job as follows:</p>
-<pre><code class="hljs css language-bash">bin/jet cancel &lt;job_name_or_id&gt;
-</code></pre>
+<p>Only a batch job may complete successfully; a streaming Jet job runs
+indefinitely until cancelled. You can cancel a job using the <code>cancel &lt;job_name_or_id&gt;</code> command:</p>
 <pre><code class="hljs css language-bash">$ bin/jet cancel hello-world
 Cancelling job id=0402-de21-7f00-0001, name=hello-world, submissionTime=2020-03-08T15:12:04.893
 Job cancelled.
 </code></pre>
 <p>Once a job is cancelled, the snapshot for the job is lost and the job
-can't be resumed. Cancelled jobs will have the &quot;failed&quot; status. Only
-batch jobs are able to complete successfully.</p>
+can't be resumed. Cancelled jobs will have the &quot;failed&quot; status.</p>
 <h2><a class="anchor" aria-hidden="true" id="auto-scaling"></a><a href="#auto-scaling" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Auto-scaling</h2>
-<p>Jet jobs by default auto-scale when a new node is added or removed from
-the cluster. The way Jet scales jobs is by restarting the job after a
-change in the cluster. You can find an in-depth explanation of Jet's
-fault tolerance design in the <a href="../architecture/fault-tolerance">Architecture</a>
-section.</p>
-<p>In general, when auto-scaling is off and a new node is added to a cluster
-the job will keep running on the previous nodes but not on the new node
-without any restarts.</p>
+<p>By default, Jet jobs scale up and down automatically when you add or
+remove a cluster node. To rescale a job, Jet must restart it. You can
+find an in-depth explanation of Jet's fault tolerance design in the
+<a href="../architecture/fault-tolerance">Architecture</a> section.</p>
+<p>When auto-scaling is off and you add a new node to a cluster, the job
+will keep running on the previous nodes but not on the new one. However,
+if the job restarts for whatever reason, Jet will automatically scale it
+to the whole cluster.</p>
 <p>The exact behavior of what happens when a node joins or leaves depends
 on whether a job is configured with a processing guarantee and with
-auto-scaling. The table below shows the behavior of the job during a
+auto-scaling. The table below shows the behavior of a job after a
 cluster change depending on these two settings.</p>
 <table>
 <thead>
 <tr><th>Auto-Scaling Setting</th><th>Processing Guarantee Setting</th><th>Member Added</th><th>Member Removed</th></tr>
 </thead>
 <tbody>
-<tr><td>enabled (default)</td><td>any setting</td><td>restart after day</td><td>restart immediately</td></tr>
+<tr><td>enabled (default)</td><td>any setting</td><td>restart after a <a href="configuration#list-of-configuration-options">delay</a></td><td>restart immediately</td></tr>
 <tr><td>disabled</td><td>none</td><td>keep job running on old members</td><td>fail job</td></tr>
 <tr><td>disabled</td><td>at-least-once or exactly-once</td><td>keep job running on old members</td><td>suspend job</td></tr>
 </tbody>
 </table>
 <h2><a class="anchor" aria-hidden="true" id="suspending-and-resuming"></a><a href="#suspending-and-resuming" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Suspending and Resuming</h2>
-<p>Jet supports manually suspending and resuming of streaming jobs in a fault-tolerant
-way. The Job must be configured with <a href="../api/submitting-jobs#setting-processing-guarantees">a processing guarantee</a>.</p>
-<p>When a job is suspended, all the metadata about the job is still kept
-in the cluster. A snapshot of the job computational state is taken during
-a suspend operation and then on a resume the job is gracefully started
+<p>Jet supports manually suspending and resuming a streaming job in a
+fault-tolerant way. The job must be configured with <a href="../api/submitting-jobs#setting-processing-guarantees">a processing
+guarantee</a>.</p>
+<p>When a job is suspended, all the metadata about the job is still kept in
+the cluster. A snapshot of the job computational state is taken during a
+suspend operation and then on a resume the job is gracefully started
 from the same snapshot.</p>
 <p>Suspending and resuming can be useful for example when you need to
-perform maintenance on a data source or sink without disrupting a running
-job.</p>
-<p>Use the <code>jet</code> command line to suspend or resume jobs as below:</p>
-<pre><code class="hljs css language-text">bin/jet suspend <job_name_or_id>
-</code></pre>
+perform maintenance on a data source or sink without disrupting a
+running job.</p>
+<p>Use the <code>suspend &lt;job_name_or_id&gt;</code> and <code>resume &lt;job_name_or_id&gt;</code>
+commands to suspend and resume jobs:</p>
 <pre><code class="hljs css language-text">$ bin/jet suspend hello-world
 Suspending job id=0401-9f77-b9c0-0001, name=hello-world, submissionTime=2020-03-07T15:59:49.234...
 Job suspended.
-</code></pre>
-<pre><code class="hljs css language-text">bin/jet resume <job_name_or_id>
 </code></pre>
 <pre><code class="hljs css language-bash">$ bin/jet resume hello-world
 Resuming job id=0401-9f77-b9c0-0001, name=hello-world, submissionTime=2020-03-07T15:59:49.234...
 Job resumed.
 </code></pre>
+<p>You can also configure a job to be suspended automatically if its
+execution fails (see
+`<a href="/javadoc/4.3-SNAPSHOT/com/hazelcast/jet/config/JobConfig.html#setSuspendOnFailure(boolean)">JobConfig.setSuspendOnFailure</a>).</p>
 <h2><a class="anchor" aria-hidden="true" id="restarting"></a><a href="#restarting" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Restarting</h2>
 <p>It's also possible to simply restart a job without suspending and
 resuming in one atomic action. This can be useful when you want to have
-finer grained control on when the job should be scaled. For example,
-if you have auto-scaling off and are adding 3 nodes to a cluster you
-can manually restart at the desired point to have the jobs utilizing
-all of the new nodes:</p>
-<pre><code class="hljs css language-bash">bin/jet restart &lt;job_name_or_id&gt;
-</code></pre>
+finer grained control on when the job should be scaled. For example, if
+you have auto-scaling off and are adding 3 nodes to a cluster you can
+manually restart at the desired point to have the jobs utilizing all of
+the new nodes. This can be achieved with the <code>restart &lt;job_name_or_id&gt;</code>
+command, just as in the other examples above.</p>
 </span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/docs/next/operations/gc-concerns"><span class="arrow-prev">← </span><span>Concerns Related to GC</span></a><a class="docs-next button" href="/docs/next/operations/docker"><span>Running With Docker</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#submitting-jobs">Submitting Jobs</a></li><li><a href="#listing-jobs">Listing Jobs</a></li><li><a href="#cancelling-jobs">Cancelling Jobs</a></li><li><a href="#auto-scaling">Auto-scaling</a></li><li><a href="#suspending-and-resuming">Suspending and Resuming</a></li><li><a href="#restarting">Restarting</a></li></ul></nav></div><footer class="nav-footer" id="footer"><section class="sitemap"><div style="text-align:left"><a href="/" class="nav-home"><img src="/img/logo-light.svg" alt="Hazelcast Jet" width="200" height="40"/></a><div style="margin-left:12px"><a class="github-button" href="https://github.com/hazelcast/hazelcast-jet" data-icon="octicon-star" data-count-href="/facebook/docusaurus/stargazers" data-show-count="true" data-count-aria-label="# stargazers on GitHub" aria-label="Star this project on GitHub">Star On GitHub</a></div></div><div><h5>Docs</h5><a href="/docs/get-started/intro">Get Started</a><a href="/docs/concepts/dag">Concepts</a><a href="/docs/tutorials/kafka">Tutorials</a><a href="/docs/architecture/distributed-computing">Architecture</a><a href="/docs/operations/installation">Operations Guide</a><a href="/docs/enterprise">Enterprise Edition</a></div><div><h5>Community</h5><a href="https://groups.google.com/forum/#!forum/hazelcast-jet" target="_blank" rel="noreferrer noopener">Google Groups</a><a href="http://stackoverflow.com/questions/tagged/hazelcast-jet" target="_blank" rel="noreferrer noopener">Stack Overflow</a><a href="https://slack.hazelcast.com">Slack</a></div><div><h5>Latest From the Blog</h5><a href="/blog/2020/08/05/gc-tuning-for-jet">Sub-10 ms Latency in Java: Concurrent GC with Green Threads</a><a href="/blog/2020/07/16/designing-evergreen-cache-cdc">Designing an Evergreen Cache with Change Data Capture</a><a href="/blog/2020/07/14/jet-42-is-released">Jet 4.2 is Released</a><a href="/blog/2020/06/23/jdk-gc-benchmarks-rematch">The Low-Latency Rematch: Performance of Modern Java on Data-Heavy Workloads</a><a href="/blog/2020/06/09/jdk-gc-benchmarks-part2">Performance of Modern Java on Data-Heavy Workloads, Part 2</a></div><div><h5>More</h5><a href="https://github.com/hazelcast/hazelcast-jet">GitHub Project</a><a href="http://hazelcast.com/company/careers/">Work at Hazelcast</a><a href="/license">License</a></div></section><section class="copyright">Copyright © 2020 Hazelcast Inc.</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
                 document.addEventListener('keyup', function(e) {
                   if (e.target !== document.body) {
