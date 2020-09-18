@@ -79,7 +79,7 @@ the Debezium source is being used. For example:
   events
 * JSON parsing, including mapping to Objects, based on [Jackson
   jr](https://github.com/FasterXML/jackson-jr), to simplify how parts
-  of- or even entire Debezium events can be interpreted
+  of - or even entire Debezium events can be interpreted
 
 For an example look at this sample from our [CDC
 tutorial](https://jet-start.sh/docs/tutorials/cdc#6-define-jet-job). All
