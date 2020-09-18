@@ -138,8 +138,9 @@ public class Networking {
             output.writeInt(executionContexts.size());
             for (Entry<Long, ExecutionContext> entry : executionContexts.entrySet()) {
                 output.writeLong(entry.getKey()); // executionId
-                output.writeInt(entry.getValue().receiverMap().values().stream().mapToInt(Map::size).sum());
-                for (Entry<Integer, Map<Integer, Map<Address, ReceiverTasklet>>> e : entry.getValue().receiverMap().entrySet()) {
+                Map<Integer, Map<Integer, Map<Address, ReceiverTasklet>>> receiverMap = entry.getValue().receiverMap();
+                output.writeInt(receiverMap.values().stream().mapToInt(Map::size).sum());
+                for (Entry<Integer, Map<Integer, Map<Address, ReceiverTasklet>>> e : receiverMap.entrySet()) {
                     for (Entry<Integer, Map<Address, ReceiverTasklet>> mapEntry : e.getValue().entrySet()) {
                         output.writeInt(e.getKey());
                         output.writeInt(mapEntry.getKey());
