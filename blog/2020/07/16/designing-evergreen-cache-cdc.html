@@ -225,7 +225,7 @@ data, depending on the underlying disk technology.</p>
 <p><a href="https://jet-start.sh/">Hazelcast Jet</a> is a distributed stream
 processing framework built on Hazelcast and combines a cache with
 fault-tolerant data processing.
-It has sources and sinks to integrate with several file, messaging and
+It has sources and sinks to integrate with various file, messaging and
 database systems (such as Amazon S3, Kafka, message brokers and
 relational databases).</p>
 <p>Jet also provides a Debezium module where it can process change events
@@ -275,23 +275,23 @@ the cache when data is updated</p></li>
 <p>The pipeline definition is quite straightforward:</p>
 <pre><code class="hljs css language-java">pipeline<span class="token punctuation">.</span><span class="token function">readFrom</span><span class="token punctuation">(</span>source<span class="token punctuation">)</span>                                       <span class="token comment">//1</span>
         <span class="token punctuation">.</span><span class="token function">withoutTimestamps</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
-        <span class="token punctuation">.</span><span class="token function">map</span><span class="token punctuation">(</span>r <span class="token operator">-></span> <span class="token punctuation">{</span>
-            <span class="token class-name">Person</span> person <span class="token operator">=</span> r<span class="token punctuation">.</span><span class="token function">value</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">toObject</span><span class="token punctuation">(</span><span class="token class-name">Person</span><span class="token punctuation">.</span><span class="token keyword">class</span><span class="token punctuation">)</span><span class="token punctuation">;</span>   <span class="token comment">//2</span>
-            <span class="token keyword">return</span> <span class="token class-name">Util</span><span class="token punctuation">.</span><span class="token function">entry</span><span class="token punctuation">(</span>person<span class="token punctuation">.</span>id<span class="token punctuation">,</span> person<span class="token punctuation">)</span><span class="token punctuation">;</span>               <span class="token comment">//3</span>
-        <span class="token punctuation">}</span><span class="token punctuation">)</span>
-        <span class="token punctuation">.</span><span class="token function">writeTo</span><span class="token punctuation">(</span><span class="token class-name">Sinks</span><span class="token punctuation">.</span><span class="token function">remoteMap</span><span class="token punctuation">(</span>                               <span class="token comment">//4</span>
-                <span class="token string">"entities"</span><span class="token punctuation">,</span>                                     <span class="token comment">//5</span>
-                <span class="token keyword">new</span> <span class="token class-name">CustomClientConfig</span><span class="token punctuation">(</span>env<span class="token punctuation">.</span><span class="token function">get</span><span class="token punctuation">(</span><span class="token string">"CACHE_HOST"</span><span class="token punctuation">)</span><span class="token punctuation">)</span>   <span class="token comment">//6</span>
+        <span class="token punctuation">.</span><span class="token function">writeTo</span><span class="token punctuation">(</span><span class="token class-name">CdcSinks</span><span class="token punctuation">.</span><span class="token function">remoteMap</span><span class="token punctuation">(</span>                            <span class="token comment">//2</span>
+                <span class="token string">"entities"</span><span class="token punctuation">,</span>                                     <span class="token comment">//3</span>
+                <span class="token keyword">new</span> <span class="token class-name">CustomClientConfig</span><span class="token punctuation">(</span>env<span class="token punctuation">.</span><span class="token function">get</span><span class="token punctuation">(</span><span class="token string">"CACHE_HOST"</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">,</span>  <span class="token comment">//4</span>
+                r <span class="token operator">-></span> r<span class="token punctuation">.</span><span class="token function">key</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">toMap</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">get</span><span class="token punctuation">(</span><span class="token string">"id"</span><span class="token punctuation">)</span><span class="token punctuation">,</span>                 <span class="token comment">//5</span>
+                r <span class="token operator">-></span> r<span class="token punctuation">.</span><span class="token function">value</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">toObject</span><span class="token punctuation">(</span><span class="token class-name">Person</span><span class="token punctuation">.</span><span class="token keyword">class</span><span class="token punctuation">)</span>           <span class="token comment">//6</span>
         <span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
 </code></pre>
 <ol>
-<li><p>Get a stream of Jet <code>ChangeRecord</code></p></li>
-<li><p>Convert <code>ChangeRecord</code> to a regular <code>Person</code> POJO</p></li>
-<li><p>Wrap <code>Person</code> objects into <code>Map.Entry</code>s keyed by ID</p></li>
-<li><p>Create the sink to write to, a remote map</p></li>
+<li><p>Get a stream of Jet <code>ChangeRecord</code> items</p></li>
+<li><p>Create the sink to write to a remote map</p></li>
 <li><p>Name of the remote map</p></li>
 <li><p>Client configuration so it can connect to the right host, cluster
 and instance</p></li>
+<li><p>Provide a mapping function to extract the cache key from the
+<code>ChangeRecord</code></p></li>
+<li><p>Provide a mapping function to extract the cache value (<code>Person</code> POJO)
+from the <code>ChangeRecord</code></p></li>
 </ol>
 <pre><code class="hljs css language-java"><span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">CustomClientConfig</span> <span class="token keyword">extends</span> <span class="token class-name">ClientConfig</span> <span class="token punctuation">{</span>
 
