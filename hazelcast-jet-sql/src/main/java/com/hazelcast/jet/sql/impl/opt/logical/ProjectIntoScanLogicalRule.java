@@ -75,7 +75,8 @@ final class ProjectIntoScanLogicalRule extends RelOptRule {
 
     private ProjectIntoScanLogicalRule() {
         super(
-                operand(Project.class, operand(TableScan.class, any())), RelFactories.LOGICAL_BUILDER,
+                operand(Project.class, operand(TableScan.class, any())),
+                RelFactories.LOGICAL_BUILDER,
                 ProjectIntoScanLogicalRule.class.getSimpleName()
         );
     }
@@ -103,7 +104,7 @@ final class ProjectIntoScanLogicalRule extends RelOptRule {
      */
     private static void processSimple(RelOptRuleCall call, Mappings.TargetMapping mapping, TableScan scan) {
         // Get columns defined in the original TableScan.
-        HazelcastTable originalTable = OptUtils.getHazelcastTable(scan);
+        HazelcastTable originalTable = OptUtils.extractHazelcastTable(scan);
 
         List<Integer> originalProjects = originalTable.getProjects();
 
@@ -114,7 +115,7 @@ final class ProjectIntoScanLogicalRule extends RelOptRule {
         List<Integer> newProjects = Mappings.apply((Mapping) mapping, originalProjects);
 
         // Construct the new TableScan with adjusted columns.
-        LogicalTableScan newScan = OptUtils.createLogicalScanWithNewTable(
+        LogicalTableScan newScan = OptUtils.createLogicalScan(
                 scan,
                 originalTable.withProject(newProjects)
         );
@@ -131,7 +132,7 @@ final class ProjectIntoScanLogicalRule extends RelOptRule {
      * @param scan    Scan.
      */
     private void processComplex(RelOptRuleCall call, Project project, TableScan scan) {
-        HazelcastTable originalTable = OptUtils.getHazelcastTable(scan);
+        HazelcastTable originalTable = OptUtils.extractHazelcastTable(scan);
 
         // Map projected field references to real scan fields.
         ProjectFieldVisitor projectFieldVisitor = new ProjectFieldVisitor(originalTable.getProjects());
@@ -151,7 +152,7 @@ final class ProjectIntoScanLogicalRule extends RelOptRule {
         }
 
         // Create the new TableScan that do not return unused columns.
-        LogicalTableScan newScan = OptUtils.createLogicalScanWithNewTable(
+        LogicalTableScan newScan = OptUtils.createLogicalScan(
                 scan,
                 originalTable.withProject(newScanProjects)
         );

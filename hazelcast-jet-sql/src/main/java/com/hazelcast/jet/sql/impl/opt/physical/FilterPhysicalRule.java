@@ -32,7 +32,7 @@ final class FilterPhysicalRule extends RelOptRule {
 
     private FilterPhysicalRule() {
         super(
-                OptUtils.parentChild(FilterLogicalRel.class, RelNode.class, LOGICAL),
+                operand(FilterLogicalRel.class, LOGICAL, some(operand(RelNode.class, any()))),
                 FilterPhysicalRule.class.getSimpleName()
         );
     }
@@ -43,7 +43,7 @@ final class FilterPhysicalRule extends RelOptRule {
         RelNode input = logicalFilter.getInput();
 
         RelNode convertedInput = OptUtils.toPhysicalInput(input);
-        Collection<RelNode> transformedInputs = OptUtils.getPhysicalRelsFromSubset(convertedInput);
+        Collection<RelNode> transformedInputs = OptUtils.extractPhysicalRelsFromSubset(convertedInput);
         for (RelNode transformedInput : transformedInputs) {
             FilterPhysicalRel rel = new FilterPhysicalRel(
                     logicalFilter.getCluster(),

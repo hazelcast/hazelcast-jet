@@ -53,7 +53,8 @@ final class FilterIntoScanLogicalRule extends RelOptRule {
 
     private FilterIntoScanLogicalRule() {
         super(
-                operand(LogicalFilter.class, operand(LogicalTableScan.class, any())), RelFactories.LOGICAL_BUILDER,
+                operand(LogicalFilter.class, operand(LogicalTableScan.class, any())),
+                RelFactories.LOGICAL_BUILDER,
                 FilterIntoScanLogicalRule.class.getSimpleName()
         );
     }
@@ -63,7 +64,7 @@ final class FilterIntoScanLogicalRule extends RelOptRule {
         Filter filter = call.rel(0);
         TableScan scan = call.rel(1);
 
-        HazelcastTable originalTable = OptUtils.getHazelcastTable(scan);
+        HazelcastTable originalTable = OptUtils.extractHazelcastTable(scan);
 
         // Remap the condition to the original TableScan columns.
         RexNode newCondition = remapCondition(originalTable, filter.getCondition());
@@ -80,7 +81,7 @@ final class FilterIntoScanLogicalRule extends RelOptRule {
         }
 
         // Create a scan with a new filter.
-        LogicalTableScan newScan = OptUtils.createLogicalScanWithNewTable(
+        LogicalTableScan newScan = OptUtils.createLogicalScan(
                 scan,
                 originalTable.withFilter(newCondition)
         );

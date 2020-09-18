@@ -67,7 +67,7 @@ public final class ExpressionUtil {
     @Nonnull
     public static List<Object[]> evaluate(
             @Nullable Expression<Boolean> predicate,
-            @Nonnull List<Expression<?>> projection,
+            @Nullable List<Expression<?>> projection,
             @Nonnull List<Object[]> rows
     ) {
         List<Object[]> evaluatedRows = new ArrayList<>();
@@ -87,18 +87,24 @@ public final class ExpressionUtil {
     @Nullable
     public static Object[] evaluate(
             @Nullable Expression<Boolean> predicate,
-            @Nonnull List<Expression<?>> projection,
-            @Nonnull Object[] arrayRow
+            @Nullable List<Expression<?>> projection,
+            @Nonnull Object[] values
     ) {
-        Row row = new HeapRow(arrayRow);
-        if (predicate == null || Boolean.TRUE.equals(evaluate(predicate, row))) {
-            Object[] result = new Object[projection.size()];
-            for (int i = 0; i < projection.size(); i++) {
-                result[i] = evaluate(projection.get(i), row);
-            }
-            return result;
+        Row row = new HeapRow(values);
+
+        if (predicate != null && !Boolean.TRUE.equals(evaluate(predicate, row))) {
+            return null;
         }
-        return null;
+
+        if (projection == null) {
+            return values;
+        }
+
+        Object[] result = new Object[projection.size()];
+        for (int i = 0; i < projection.size(); i++) {
+            result[i] = evaluate(projection.get(i), row);
+        }
+        return result;
     }
 
     public static <T> T evaluate(Expression<T> expression, Row row) {

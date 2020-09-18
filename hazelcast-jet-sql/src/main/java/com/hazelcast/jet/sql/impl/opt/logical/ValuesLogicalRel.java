@@ -16,29 +16,53 @@
 
 package com.hazelcast.jet.sql.impl.opt.logical;
 
-import com.google.common.collect.ImmutableList;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelTraitSet;
+import org.apache.calcite.rel.AbstractRelNode;
 import org.apache.calcite.rel.RelNode;
-import org.apache.calcite.rel.logical.LogicalValues;
+import org.apache.calcite.rel.RelWriter;
 import org.apache.calcite.rel.type.RelDataType;
-import org.apache.calcite.rex.RexLiteral;
 
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
-public class ValuesLogicalRel extends LogicalValues implements LogicalRel {
+import static java.util.stream.Collectors.joining;
+
+public class ValuesLogicalRel extends AbstractRelNode implements LogicalRel {
+
+    private final RelDataType rowType;
+    private final List<Object[]> values;
 
     ValuesLogicalRel(
             RelOptCluster cluster,
+            RelTraitSet traits,
             RelDataType rowType,
-            ImmutableList<ImmutableList<RexLiteral>> tuples,
-            RelTraitSet traitSet
+            List<Object[]> values
     ) {
-        super(cluster, traitSet, rowType, tuples);
+        super(cluster, traits);
+
+        this.rowType = rowType;
+        this.values = Collections.unmodifiableList(values);
+    }
+
+    public List<Object[]> values() {
+        return values;
+    }
+
+    @Override
+    protected RelDataType deriveRowType() {
+        return rowType;
+    }
+
+    @Override
+    public RelWriter explainTerms(RelWriter pw) {
+        return super.explainTerms(pw)
+                    .item("values", values.stream().map(Arrays::toString).collect(joining(", ")));
     }
 
     @Override
     public RelNode copy(RelTraitSet traitSet, List<RelNode> inputs) {
-        return new ValuesLogicalRel(getCluster(), getRowType(), getTuples(), traitSet);
+        return new ValuesLogicalRel(getCluster(), traitSet, rowType, values);
     }
 }

@@ -50,15 +50,18 @@ public class FullScanPhysicalRel extends TableScan implements PhysicalRel {
     }
 
     public Expression<Boolean> filter() {
-        PlanNodeSchema schema = new PlanNodeSchema(OptUtils.getFieldTypes(getTable()));
+        PlanNodeSchema schema = new PlanNodeSchema(OptUtils.extractFieldTypes(getTable()));
+
         RexNode filter = getTable().unwrap(HazelcastTable.class).getFilter();
+
         return filter(schema, filter);
     }
 
     public List<Expression<?>> projection() {
-        PlanNodeSchema schema = new PlanNodeSchema(OptUtils.getFieldTypes(getTable()));
+        PlanNodeSchema schema = new PlanNodeSchema(OptUtils.extractFieldTypes(getTable()));
 
         HazelcastTable table = getTable().unwrap(HazelcastTable.class);
+
         List<Integer> projects = table.getProjects();
         List<RexNode> projection = new ArrayList<>(projects.size());
         for (Integer index : projects) {

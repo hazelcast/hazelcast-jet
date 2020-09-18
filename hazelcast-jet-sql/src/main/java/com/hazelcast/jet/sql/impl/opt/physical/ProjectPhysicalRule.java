@@ -32,7 +32,7 @@ final class ProjectPhysicalRule extends RelOptRule {
 
     private ProjectPhysicalRule() {
         super(
-                OptUtils.parentChild(ProjectLogicalRel.class, RelNode.class, LOGICAL),
+                operand(ProjectLogicalRel.class, LOGICAL, some(operand(RelNode.class, any()))),
                 ProjectPhysicalRule.class.getSimpleName()
         );
     }
@@ -43,7 +43,7 @@ final class ProjectPhysicalRule extends RelOptRule {
         RelNode input = logicalProject.getInput();
 
         RelNode convertedInput = OptUtils.toPhysicalInput(input);
-        Collection<RelNode> transformedInputs = OptUtils.getPhysicalRelsFromSubset(convertedInput);
+        Collection<RelNode> transformedInputs = OptUtils.extractPhysicalRelsFromSubset(convertedInput);
         for (RelNode transformedInput : transformedInputs) {
             ProjectPhysicalRel rel = new ProjectPhysicalRel(
                     logicalProject.getCluster(),

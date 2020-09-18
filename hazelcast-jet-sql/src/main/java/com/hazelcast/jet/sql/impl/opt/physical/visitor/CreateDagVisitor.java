@@ -30,15 +30,11 @@ import com.hazelcast.jet.sql.impl.opt.physical.JetRootRel;
 import com.hazelcast.jet.sql.impl.opt.physical.PhysicalRel;
 import com.hazelcast.jet.sql.impl.opt.physical.ProjectPhysicalRel;
 import com.hazelcast.jet.sql.impl.opt.physical.ValuesPhysicalRel;
-import com.hazelcast.sql.impl.calcite.opt.physical.visitor.RexToExpression;
 import com.hazelcast.sql.impl.calcite.schema.HazelcastTable;
-import com.hazelcast.sql.impl.expression.Expression;
 import com.hazelcast.sql.impl.schema.Table;
 import org.apache.calcite.rel.RelNode;
-import org.apache.calcite.rex.RexLiteral;
 
 import javax.annotation.Nullable;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 
@@ -58,23 +54,13 @@ public class CreateDagVisitor {
     }
 
     public Vertex onValues(ValuesPhysicalRel rel) {
-        List<Object[]> rows = new ArrayList<>(rel.getTuples().size());
-        for (List<RexLiteral> tuple : rel.getTuples()) {
-            Object[] result = new Object[tuple.size()];
-            for (int i = 0; i < tuple.size(); i++) {
-                RexLiteral literal = tuple.get(i);
-                Expression<?> expression = RexToExpression.convertLiteral(literal);
-                Object value = expression.eval(null, null);
-                result[i] = rel.schema().getType(i).convert(value);
-            }
-            rows.add(result);
-        }
+        List<Object[]> values = rel.values();
 
         return dag.newVertex("Values", convenientSourceP(
                 pCtx -> null,
-                (ignored, buf) -> {
-                    rows.forEach(buf::add);
-                    buf.close();
+                (ignored, buffer) -> {
+                    values.forEach(buffer::add);
+                    buffer.close();
                 },
                 ctx -> null,
                 (ctx, states) -> {

@@ -21,7 +21,6 @@ import com.hazelcast.jet.sql.impl.opt.logical.ValuesLogicalRel;
 import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.convert.ConverterRule;
-import org.apache.calcite.rel.core.Values;
 
 import static com.hazelcast.jet.sql.impl.opt.JetConventions.LOGICAL;
 import static com.hazelcast.jet.sql.impl.opt.JetConventions.PHYSICAL;
@@ -39,13 +38,13 @@ final class ValuesPhysicalRule extends ConverterRule {
 
     @Override
     public RelNode convert(RelNode rel) {
-        Values values = (Values) rel;
+        ValuesLogicalRel values = (ValuesLogicalRel) rel;
 
         return new ValuesPhysicalRel(
                 values.getCluster(),
+                OptUtils.toPhysicalConvention(values.getTraitSet()),
                 values.getRowType(),
-                values.getTuples(),
-                OptUtils.toPhysicalConvention(values.getTraitSet())
+                values.values()
         );
     }
 }

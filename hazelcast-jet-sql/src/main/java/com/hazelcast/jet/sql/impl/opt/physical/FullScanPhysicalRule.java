@@ -29,7 +29,7 @@ final class FullScanPhysicalRule extends RelOptRule {
 
     private FullScanPhysicalRule() {
         super(
-                OptUtils.single(FullScanLogicalRel.class, LOGICAL),
+                operand(FullScanLogicalRel.class, LOGICAL, any()),
                 FullScanPhysicalRule.class.getSimpleName()
         );
     }

@@ -49,7 +49,7 @@ public class InsertPhysicalRel extends TableModify implements PhysicalRel {
 
     @Override
     public PlanNodeSchema schema() {
-        return new PlanNodeSchema(OptUtils.getFieldTypes(getTable()));
+        return new PlanNodeSchema(OptUtils.extractFieldTypes(getTable()));
     }
 
     @Override

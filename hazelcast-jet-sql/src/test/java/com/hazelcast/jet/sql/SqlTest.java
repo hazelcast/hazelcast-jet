@@ -41,35 +41,78 @@ public class SqlTest extends JetSqlTestSupport {
     }
 
     @Test
-    public void test_values() {
-        assertEmpty(
-                "SELECT a - b FROM (VALUES (1, 2)) AS t (a, b) WHERE a + b > 4"
-        );
-
+    public void test_valuesSelect() {
         assertRowsEventuallyInAnyOrder(
-                "SELECT a - b FROM (VALUES (7, 11)) AS t (a, b) WHERE a + b > 4",
-                singletonList(new Row((byte) -4))
-        );
-
-        assertRowsEventuallyInAnyOrder("SELECT * FROM (VALUES('a'))",
-                singletonList(new Row("a")));
-    }
-
-    @Test
-    public void test_multipleValues_select() {
-        assertRowsEventuallyInAnyOrder(
-                "SELECT * FROM (VALUES (1), (2))",
-                asList(new Row((byte) 1), new Row((byte) 2))
+                "SELECT * FROM (VALUES ('a'))",
+                singletonList(new Row("a"))
         );
     }
 
     @Test
-    public void test_multipleValues_insert() {
+    public void test_valuesSelectExpression() {
+        assertRowsEventuallyInAnyOrder(
+                "SELECT * FROM (VALUES (0 + 1), (1 + 2), (CAST ('5' AS TINYINT)))",
+                asList(new Row((byte) 1), new Row((byte) 3), new Row((byte) 5))
+        );
+    }
+
+    @Test
+    public void test_valuesSelectFilter() {
+        assertRowsEventuallyInAnyOrder(
+                "SELECT a - b FROM (VALUES (1, 2), (3, 5), (7, 11)) AS t (a, b) WHERE a > 1",
+                asList(
+                        new Row((byte) -2),
+                        new Row((byte) -4)
+                )
+        );
+    }
+
+    @Test
+    public void test_valuesSelectFilterExpression() {
+        assertRowsEventuallyInAnyOrder(
+                "SELECT a - b FROM ("
+                        + "VALUES (1, 2), (3, 5), (7, 11)"
+                        + ") AS t (a, b) "
+                        + "WHERE a + b + 0 + CAST('1' AS TINYINT) > 4",
+                asList(
+                        new Row((byte) -2),
+                        new Row((byte) -4)
+                )
+        );
+    }
+
+    @Test
+    public void test_valuesSelectExpressionFilterExpression() {
+        assertRowsEventuallyInAnyOrder(
+                "SELECT a - b FROM ("
+                        + "VALUES (1, 1 + 1), (3, 5), (CAST('7' AS TINYINT), 11)"
+                        + ") AS t (a, b) "
+                        + "WHERE a + b + 0 + CAST('1' AS TINYINT) > 4",
+                asList(
+                        new Row((byte) -2),
+                        new Row((byte) -4)
+                )
+        );
+    }
+
+    @Test
+    public void test_valuesInsert() {
         sqlService.execute(javaSerializableMapDdl("m", Integer.class, Integer.class));
 
         assertMapEventually(
                 "m",
                 "SINK INTO m(__key, this) VALUES (1, 1), (2, 2)",
+                createMap(1, 1, 2, 2)
+        );
+    }
+
+    @Test
+    public void test_valuesInsertExpression() {
+        sqlService.execute(javaSerializableMapDdl("m", Integer.class, Integer.class));
+
+        assertMapEventually(
+                "m",
+                "SINK INTO m(__key, this) VALUES (CAST(1 AS INTEGER), CAST(1 + 0 AS INTEGER)), (2, 2)",
                 createMap(1, 1, 2, 2)
         );
     }

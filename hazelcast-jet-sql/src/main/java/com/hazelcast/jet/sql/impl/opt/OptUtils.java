@@ -16,15 +16,15 @@
 
 package com.hazelcast.jet.sql.impl.opt;
 
+import com.hazelcast.sql.impl.calcite.SqlToQueryType;
+import com.hazelcast.sql.impl.calcite.opt.physical.visitor.RexToExpression;
 import com.hazelcast.sql.impl.calcite.schema.HazelcastRelOptTable;
 import com.hazelcast.sql.impl.calcite.schema.HazelcastTable;
+import com.hazelcast.sql.impl.expression.Expression;
 import com.hazelcast.sql.impl.schema.Table;
 import com.hazelcast.sql.impl.schema.TableField;
 import com.hazelcast.sql.impl.type.QueryDataType;
-import org.apache.calcite.plan.Convention;
 import org.apache.calcite.plan.ConventionTraitDef;
-import org.apache.calcite.plan.RelOptRule;
-import org.apache.calcite.plan.RelOptRuleOperand;
 import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.plan.RelTrait;
 import org.apache.calcite.plan.RelTraitSet;
@@ -32,8 +32,11 @@ import org.apache.calcite.plan.volcano.RelSubset;
 import org.apache.calcite.prepare.RelOptTableImpl;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.TableScan;
+import org.apache.calcite.rel.core.Values;
 import org.apache.calcite.rel.logical.LogicalTableScan;
+import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
+import org.apache.calcite.rex.RexLiteral;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -43,6 +46,7 @@ import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Set;
 
+import static com.hazelcast.jet.impl.util.Util.toList;
 import static com.hazelcast.jet.sql.impl.opt.JetConventions.LOGICAL;
 import static com.hazelcast.jet.sql.impl.opt.JetConventions.PHYSICAL;
 import static org.apache.calcite.plan.RelOptRule.convert;
@@ -53,66 +57,6 @@ import static org.apache.calcite.plan.RelOptRule.convert;
 public final class OptUtils {
 
     private OptUtils() {
-    }
-
-    /**
-     * Get operand matching a single node.
-     *
-     * @param cls        Node class.
-     * @param convention Convention.
-     * @return Operand.
-     */
-    public static <R extends RelNode> RelOptRuleOperand single(Class<R> cls, Convention convention) {
-        return RelOptRule.operand(cls, convention, RelOptRule.any());
-    }
-
-    /**
-     * Get operand matching a node with specific child node.
-     *
-     * @param cls        Node class.
-     * @param childCls   Child node class.
-     * @param convention Convention.
-     * @return Operand.
-     */
-    public static <R1 extends RelNode, R2 extends RelNode> RelOptRuleOperand parentChild(
-            Class<R1> cls,
-            Class<R2> childCls, Convention convention
-    ) {
-        RelOptRuleOperand childOperand = RelOptRule.operand(childCls, RelOptRule.any());
-
-        return RelOptRule.operand(cls, convention, RelOptRule.some(childOperand));
-    }
-
-    /**
-     * Get operand matching a node with specific pair of child nodes.
-     *
-     * @param cls        Node class.
-     * @param childCls1  Child node class 1.
-     * @param childCls2  Child node class 2.
-     * @param convention Convention.
-     * @return Operand.
-     */
-    public static <R1 extends RelNode, R2 extends RelNode, R3 extends RelNode> RelOptRuleOperand parentChildChild(
-            Class<R1> cls,
-            Class<R2> childCls1,
-            Class<R3> childCls2,
-            Convention convention
-    ) {
-        RelOptRuleOperand childOperand1 = RelOptRule.operand(childCls1, RelOptRule.any());
-        RelOptRuleOperand childOperand2 = RelOptRule.operand(childCls2, RelOptRule.any());
-
-        return RelOptRule.operand(cls, convention, RelOptRule.some(childOperand1, childOperand2));
-    }
-
-    /**
-     * Add a single trait to the trait set.
-     *
-     * @param traitSet Original trait set.
-     * @param trait    Trait to add.
-     * @return Resulting trait set.
-     */
-    public static RelTraitSet traitPlus(RelTraitSet traitSet, RelTrait trait) {
-        return traitSet.plus(trait).simplify();
     }
 
     /**
@@ -155,7 +99,26 @@ public final class OptUtils {
         return convert(rel, toPhysicalConvention(rel.getTraitSet()));
     }
 
-    public static List<QueryDataType> getFieldTypes(RelOptTable relTable) {
+    /**
+     * Add a single trait to the trait set.
+     *
+     * @param traitSet Original trait set.
+     * @param trait    Trait to add.
+     * @return Resulting trait set.
+     */
+    public static RelTraitSet traitPlus(RelTraitSet traitSet, RelTrait trait) {
+        return traitSet.plus(trait).simplify();
+    }
+
+    public static HazelcastTable extractHazelcastTable(RelNode rel) {
+        HazelcastTable table = rel.getTable().unwrap(HazelcastTable.class);
+
+        assert table != null;
+
+        return table;
+    }
+
+    public static List<QueryDataType> extractFieldTypes(RelOptTable relTable) {
         Table table = relTable.unwrap(HazelcastTable.class).getTarget();
 
         List<QueryDataType> fieldTypes = new ArrayList<>();
@@ -168,15 +131,53 @@ public final class OptUtils {
         return fieldTypes;
     }
 
-    public static HazelcastTable getHazelcastTable(RelNode rel) {
-        HazelcastTable table = rel.getTable().unwrap(HazelcastTable.class);
-
-        assert table != null;
-
-        return table;
+    public static List<QueryDataType> extractFieldTypes(RelDataType rowType) {
+        return toList(
+                rowType.getFieldList(),
+                field -> SqlToQueryType.map(field.getType().getSqlTypeName())
+        );
     }
 
-    public static LogicalTableScan createLogicalScanWithNewTable(
+    public static Collection<RelNode> extractPhysicalRelsFromSubset(RelNode node) {
+        if (node instanceof RelSubset) {
+            RelSubset subset = (RelSubset) node;
+
+            Set<RelTraitSet> traitSets = new HashSet<>();
+            Set<RelNode> result = Collections.newSetFromMap(new IdentityHashMap<>());
+            for (RelNode rel : subset.getRelList()) {
+                if (!isPhysical(rel)) {
+                    continue;
+                }
+
+                if (traitSets.add(rel.getTraitSet())) {
+                    result.add(convert(node, rel.getTraitSet()));
+                }
+            }
+            return result;
+        } else {
+            return Collections.emptyList();
+        }
+    }
+
+    private static boolean isPhysical(RelNode rel) {
+        return rel.getTraitSet().getTrait(ConventionTraitDef.INSTANCE).equals(JetConventions.PHYSICAL);
+    }
+
+    public static Collection<RelNode> extractRelsFromSubset(RelNode node) {
+        if (node instanceof RelSubset) {
+            RelSubset subset = (RelSubset) node;
+
+            Set<RelNode> result = Collections.newSetFromMap(new IdentityHashMap<>());
+            for (RelNode rel : subset.getRels()) {
+                result.add(rel);
+            }
+            return result;
+        } else {
+            return Collections.emptyList();
+        }
+    }
+
+    public static LogicalTableScan createLogicalScan(
             TableScan originalScan,
             HazelcastTable newHazelcastTable
     ) {
@@ -204,31 +205,19 @@ public final class OptUtils {
         return new HazelcastRelOptTable(newTable);
     }
 
-    public static Collection<RelNode> getPhysicalRelsFromSubset(RelNode subset) {
-        if (subset instanceof RelSubset) {
-            RelSubset subset0 = (RelSubset) subset;
+    public static List<Object[]> reduce(Values values) {
+        List<Object[]> rows = new ArrayList<>(values.getTuples().size());
+        for (List<RexLiteral> tuple : values.getTuples()) {
 
-            Set<RelTraitSet> traitSets = new HashSet<>();
-
-            Set<RelNode> res = Collections.newSetFromMap(new IdentityHashMap<>());
-
-            for (RelNode rel : subset0.getRelList()) {
-                if (!isPhysical(rel)) {
-                    continue;
-                }
-
-                if (traitSets.add(rel.getTraitSet())) {
-                    res.add(convert(subset, rel.getTraitSet()));
-                }
+            Object[] result = new Object[tuple.size()];
+            for (int i = 0; i < tuple.size(); i++) {
+                RexLiteral literal = tuple.get(i);
+                Expression<?> expression = RexToExpression.convertLiteral(literal);
+                Object value = expression.eval(null, null);
+                result[i] = value;
             }
-
-            return res;
-        } else {
-            return Collections.emptyList();
+            rows.add(result);
         }
-    }
-
-    private static boolean isPhysical(RelNode rel) {
-        return rel.getTraitSet().getTrait(ConventionTraitDef.INSTANCE).equals(JetConventions.PHYSICAL);
+        return rows;
     }
 }

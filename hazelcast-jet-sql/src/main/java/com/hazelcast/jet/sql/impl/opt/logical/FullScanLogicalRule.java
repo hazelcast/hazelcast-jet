@@ -21,6 +21,7 @@ import org.apache.calcite.plan.Convention;
 import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.convert.ConverterRule;
+import org.apache.calcite.rel.core.TableScan;
 import org.apache.calcite.rel.logical.LogicalTableScan;
 
 import static com.hazelcast.jet.sql.impl.opt.JetConventions.LOGICAL;
@@ -38,7 +39,7 @@ final class FullScanLogicalRule extends ConverterRule {
 
     @Override
     public RelNode convert(RelNode rel) {
-        LogicalTableScan scan = (LogicalTableScan) rel;
+        TableScan scan = (LogicalTableScan) rel;
 
         return new FullScanLogicalRel(
                 scan.getCluster(),
