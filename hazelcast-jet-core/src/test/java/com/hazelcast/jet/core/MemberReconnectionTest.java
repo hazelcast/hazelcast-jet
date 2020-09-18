@@ -19,6 +19,7 @@ package com.hazelcast.jet.core;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
+import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.core.TestProcessors.MockP;
 import com.hazelcast.jet.impl.util.ImdgUtil;
 import com.hazelcast.test.HazelcastSerialClassRunner;
@@ -35,8 +36,11 @@ public class MemberReconnectionTest extends JetTestSupport {
     @Test
     public void when_connectionDropped_then_detectedInReceiverTaskletAndFails() {
         // we use real-network instances, closing the mock connection doesn't cause them to reconnect
-        JetInstance inst1 = Jet.newJetInstance();
-        JetInstance inst2 = Jet.newJetInstance();
+        JetConfig config = new JetConfig();
+        config.getHazelcastConfig().setClusterName(randomName());
+
+        JetInstance inst1 = Jet.newJetInstance(config);
+        JetInstance inst2 = Jet.newJetInstance(config);
 
         try {
             DAG dag = new DAG();
