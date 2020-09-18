@@ -46,6 +46,8 @@ import static java.util.Collections.emptyList;
 import static java.util.Collections.emptyMap;
 import static java.util.Collections.singletonList;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.BDDMockito.given;
@@ -92,8 +94,7 @@ public class JetPlanExecutorTest {
         SqlResult result = planExecutor.execute(plan);
 
         // then
-        assertThat(result.isUpdateCount()).isTrue();
-        assertThat(result.updateCount()).isEqualTo(-1);
+        assertThat(result.updateCount()).isEqualTo(0);
         verify(catalog).createMapping(mapping, replace, ifNotExists);
     }
 
@@ -111,8 +112,7 @@ public class JetPlanExecutorTest {
         SqlResult result = planExecutor.execute(plan);
 
         // then
-        assertThat(result.isUpdateCount()).isTrue();
-        assertThat(result.updateCount()).isEqualTo(-1);
+        assertThat(result.updateCount()).isEqualTo(0);
         verify(catalog).removeMapping(name, ifExists);
     }
 
@@ -129,7 +129,7 @@ public class JetPlanExecutorTest {
         SqlResult result = planExecutor.execute(plan);
 
         // then
-        assertThat(result.isUpdateCount()).isFalse();
+        assertEquals(-1, result.updateCount());
         assertThat(result.getRowMetadata()).isEqualTo(rowMetadata);
         verify(resultConsumerRegistry).put(eq(queryId), isA(QueryResultProducer.class));
         verifyZeroInteractions(job);
@@ -148,13 +148,12 @@ public class JetPlanExecutorTest {
         SqlResult result = planExecutor.execute(plan);
 
         // then
-        assertThat(result.isUpdateCount()).isTrue();
-        assertThat(result.updateCount()).isEqualTo(-1);
+        assertThat(result.updateCount()).isEqualTo(0);
         verify(job).join();
     }
 
     @Test
-    public void test_streamingInsertExecution() {
+    public void when_streamingInsertExecution_then_fail() {
         // given
         QueryId queryId = QueryId.create(UuidUtil.newSecureUUID());
         SqlRowMetadata rowMetadata = rowMetadata();
@@ -162,12 +161,10 @@ public class JetPlanExecutorTest {
 
         given(jetInstance.newJob(dag)).willReturn(job);
 
-        // when
-        SqlResult result = planExecutor.execute(plan);
+        // when, then
+        assertThatThrownBy(() -> planExecutor.execute(plan))
+                .hasMessageContaining("Cannot execute a streaming DML statement without a CREATE JOB command");
 
-        // then
-        assertThat(result.isUpdateCount()).isTrue();
-        assertThat(result.updateCount()).isEqualTo(-1);
         verifyZeroInteractions(job);
     }
 

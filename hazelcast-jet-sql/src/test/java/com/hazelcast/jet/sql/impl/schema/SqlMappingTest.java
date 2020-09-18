@@ -30,6 +30,7 @@ import java.util.Map;
 import static java.util.Collections.singletonList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.Assert.assertEquals;
 
 public class SqlMappingTest extends JetSqlTestSupport {
 
@@ -50,14 +51,13 @@ public class SqlMappingTest extends JetSqlTestSupport {
         SqlResult createResult = sqlService.execute(javaSerializableMapDdl(name, Integer.class, String.class));
 
         // then
-        assertThat(createResult.isUpdateCount()).isTrue();
-        assertThat(createResult.updateCount()).isEqualTo(-1);
+        assertThat(createResult.updateCount()).isEqualTo(0);
 
         // when
         SqlResult queryResult = sqlService.execute("SELECT __key, this FROM public." + name);
 
         // then
-        assertThat(queryResult.isUpdateCount()).isFalse();
+        assertEquals(-1, queryResult.updateCount());
         assertThat(queryResult.iterator()).isExhausted();
     }
 
@@ -88,8 +88,7 @@ public class SqlMappingTest extends JetSqlTestSupport {
         SqlResult dropResult = sqlService.execute("DROP MAPPING " + name);
 
         // then
-        assertThat(dropResult.isUpdateCount()).isTrue();
-        assertThat(dropResult.updateCount()).isEqualTo(-1);
+        assertThat(dropResult.updateCount()).isEqualTo(0);
         assertThatThrownBy(() -> sqlService.execute("SELECT * FROM public." + name))
                 .isInstanceOf(HazelcastSqlException.class);
     }

@@ -54,12 +54,12 @@ class JetPlanExecutor {
 
     SqlResult execute(CreateMappingPlan plan) {
         catalog.createMapping(plan.mapping(), plan.replace(), plan.ifNotExists());
-        return SqlResultImpl.createUpdateCountResult(-1);
+        return SqlResultImpl.createUpdateCountResult(0);
     }
 
     SqlResult execute(DropMappingPlan plan) {
         catalog.removeMapping(plan.name(), plan.ifExists());
-        return SqlResultImpl.createUpdateCountResult(-1);
+        return SqlResultImpl.createUpdateCountResult(0);
     }
 
     SqlResult execute(CreateJobPlan plan) {
@@ -68,7 +68,7 @@ class JetPlanExecutor {
         } else {
             jetInstance.newJob(plan.getExecutionPlan().getDag(), plan.getJobConfig());
         }
-        return SqlResultImpl.createUpdateCountResult(-1);
+        return SqlResultImpl.createUpdateCountResult(0);
     }
 
     SqlResult execute(AlterJobPlan plan) {
@@ -98,7 +98,7 @@ class JetPlanExecutor {
         Job job = jetInstance.getJob(plan.getJobName());
         if (job == null || job.getStatus().isTerminal()) {
             if (plan.isIfExists()) {
-                return SqlResultImpl.createUpdateCountResult(-1);
+                return SqlResultImpl.createUpdateCountResult(0);
             }
             throw QueryException.error("Job doesn't exist or already terminated: " + plan.getJobName());
         }
@@ -107,7 +107,7 @@ class JetPlanExecutor {
         } else {
             job.cancel();
         }
-        return SqlResultImpl.createUpdateCountResult(-1);
+        return SqlResultImpl.createUpdateCountResult(0);
     }
 
     SqlResult execute(CreateSnapshotPlan plan) {
@@ -133,13 +133,15 @@ class JetPlanExecutor {
 
     SqlResult execute(ExecutionPlan plan) {
         if (plan.isInsert()) {
-            Job job = jetInstance.newJob(plan.getDag());
-
-            if (!plan.isStreaming()) {
-                job.join();
+            if (plan.isStreaming()) {
+                // TODO [viliam] add test for this situation
+                throw QueryException.error("Cannot execute a streaming DML statement without a CREATE JOB command");
             }
 
-            return SqlResultImpl.createUpdateCountResult(-1);
+            Job job = jetInstance.newJob(plan.getDag());
+            job.join();
+
+            return SqlResultImpl.createUpdateCountResult(0);
         } else {
             QueryResultProducer queryResultProducer = new JetQueryResultProducer();
             Object oldValue = resultConsumerRegistry.put(plan.getQueryId(), queryResultProducer);

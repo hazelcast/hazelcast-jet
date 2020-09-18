@@ -67,13 +67,8 @@ class JetSqlResultImpl extends AbstractSqlResult {
     }
 
     @Override
-    public boolean isUpdateCount() {
-        return false;
-    }
-
-    @Override
     public long updateCount() {
-        throw new IllegalStateException("This result doesn't contain update count");
+        return -1;
     }
 
     @Override

@@ -592,7 +592,7 @@ public class SqlTest extends JetSqlTestSupport {
 
         SqlResult result = sqlService.execute("SELECT * FROM t");
 
-        assertThat(result.isUpdateCount()).isFalse();
+        assertEquals(-1, result.updateCount());
         assertThat(result.getRowMetadata().getColumnCount()).isEqualTo(13);
         assertThat(result.getRowMetadata().getColumn(0).getName()).isEqualTo("string");
         assertThat(result.getRowMetadata().getColumn(0).getType()).isEqualTo(SqlColumnType.VARCHAR);
@@ -628,7 +628,6 @@ public class SqlTest extends JetSqlTestSupport {
 
         SqlResult result = sqlService.execute("SINK INTO m(__key, this) VALUES (1, 1), (2, 2)");
 
-        assertThat(result.isUpdateCount()).isTrue();
-        assertThat(result.updateCount()).isEqualTo(-1);
+        assertThat(result.updateCount()).isEqualTo(0);
     }
 }
