@@ -51,7 +51,7 @@ public class SqlTest extends JetSqlTestSupport {
     @Test
     public void test_valuesSelectExpression() {
         assertRowsEventuallyInAnyOrder(
-                "SELECT * FROM (VALUES (0 + 1), (1 + 2), (CAST ('5' AS TINYINT)))",
+                "SELECT * FROM (VALUES (1), (1 + 2), (CAST ('5' AS TINYINT)))",
                 asList(new Row((byte) 1), new Row((byte) 3), new Row((byte) 5))
         );
     }
