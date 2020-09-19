@@ -47,7 +47,6 @@ import static java.util.Collections.emptyMap;
 import static java.util.Collections.singletonList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.BDDMockito.given;
@@ -129,7 +128,7 @@ public class JetPlanExecutorTest {
         SqlResult result = planExecutor.execute(plan);
 
         // then
-        assertEquals(-1, result.updateCount());
+        assertThat(result.updateCount()).isEqualTo(-1);
         assertThat(result.getRowMetadata()).isEqualTo(rowMetadata);
         verify(resultConsumerRegistry).put(eq(queryId), isA(QueryResultProducer.class));
         verifyZeroInteractions(job);

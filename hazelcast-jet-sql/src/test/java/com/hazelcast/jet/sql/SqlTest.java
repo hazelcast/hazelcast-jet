@@ -592,7 +592,7 @@ public class SqlTest extends JetSqlTestSupport {
 
         SqlResult result = sqlService.execute("SELECT * FROM t");
 
-        assertEquals(-1, result.updateCount());
+        assertThat(result.updateCount()).isEqualTo(-1);
         assertThat(result.getRowMetadata().getColumnCount()).isEqualTo(13);
         assertThat(result.getRowMetadata().getColumn(0).getName()).isEqualTo("string");
         assertThat(result.getRowMetadata().getColumn(0).getType()).isEqualTo(SqlColumnType.VARCHAR);

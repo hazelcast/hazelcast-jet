@@ -30,7 +30,6 @@ import java.util.Map;
 import static java.util.Collections.singletonList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.junit.Assert.assertEquals;
 
 public class SqlMappingTest extends JetSqlTestSupport {
 
@@ -57,7 +56,7 @@ public class SqlMappingTest extends JetSqlTestSupport {
         SqlResult queryResult = sqlService.execute("SELECT __key, this FROM public." + name);
 
         // then
-        assertEquals(-1, queryResult.updateCount());
+        assertThat(queryResult.updateCount()).isEqualTo(-1);
         assertThat(queryResult.iterator()).isExhausted();
     }
 
