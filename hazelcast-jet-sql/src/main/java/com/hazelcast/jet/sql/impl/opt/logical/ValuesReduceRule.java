@@ -16,12 +16,14 @@
 
 package com.hazelcast.jet.sql.impl.opt.logical;
 
+import com.google.common.collect.ImmutableList;
 import com.hazelcast.jet.sql.impl.expression.ExpressionUtil;
 import com.hazelcast.jet.sql.impl.opt.OptUtils;
 import com.hazelcast.sql.impl.QueryParameterMetadata;
 import com.hazelcast.sql.impl.calcite.opt.physical.visitor.RexToExpressionVisitor;
 import com.hazelcast.sql.impl.expression.Expression;
 import com.hazelcast.sql.impl.plan.node.PlanNodeSchema;
+import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelOptRuleCall;
 import org.apache.calcite.plan.RelOptRuleOperand;
@@ -33,6 +35,10 @@ import org.apache.calcite.rel.logical.LogicalFilter;
 import org.apache.calcite.rel.logical.LogicalProject;
 import org.apache.calcite.rel.logical.LogicalValues;
 import org.apache.calcite.rel.type.RelDataType;
+import org.apache.calcite.rel.type.RelDataTypeFactory;
+import org.apache.calcite.rel.type.RelDataTypeField;
+import org.apache.calcite.rex.RexBuilder;
+import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.tools.RelBuilderFactory;
 
 import java.util.List;
@@ -117,14 +123,39 @@ abstract class ValuesReduceRule extends RelOptRule {
 
         assert rowType != null;
 
-        List<Object[]> rows = ExpressionUtil.evaluate(predicate, projection, OptUtils.reduce(values));
+        List<Object[]> rows = ExpressionUtil.evaluate(predicate, projection, OptUtils.convert(values));
+        ImmutableList<ImmutableList<RexLiteral>> tuples = toTuples(rows, rowType.getFieldList(), values.getCluster());
 
-        ValuesLogicalRel rel = new ValuesLogicalRel(
+        LogicalValues rel = LogicalValues.create(
                 values.getCluster(),
-                values.getTraitSet(),
                 rowType,
-                rows
+                tuples
         );
         call.transformTo(rel);
+    }
+
+    private static ImmutableList<ImmutableList<RexLiteral>> toTuples(
+            List<Object[]> rows,
+            List<RelDataTypeField> fields,
+            RelOptCluster cluster
+    ) {
+        RelDataTypeFactory typeFactory = cluster.getTypeFactory();
+        RexBuilder rexBuilder = cluster.getRexBuilder();
+
+        ImmutableList.Builder<ImmutableList<RexLiteral>> tuplesBuilder = new ImmutableList.Builder<>();
+        for (Object[] row : rows) {
+            ImmutableList.Builder<RexLiteral> tupleBuilder = new ImmutableList.Builder<>();
+            for (int i = 0; i < row.length; i++) {
+                assert row.length == fields.size();
+
+                RelDataType relDataType = typeFactory.createTypeWithNullability(fields.get(i).getType(), false);
+                RexLiteral literal = (RexLiteral) rexBuilder.makeLiteral(row[i], relDataType, false);
+                tupleBuilder.add(literal);
+            }
+            ImmutableList<RexLiteral> tuple = tupleBuilder.build();
+
+            tuplesBuilder.add(tuple);
+        }
+        return tuplesBuilder.build();
     }
 }

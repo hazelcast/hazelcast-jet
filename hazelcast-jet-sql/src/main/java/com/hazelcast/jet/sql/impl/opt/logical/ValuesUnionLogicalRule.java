@@ -22,6 +22,7 @@ import org.apache.calcite.plan.RelOptRuleCall;
 import org.apache.calcite.rel.core.RelFactories;
 import org.apache.calcite.rel.core.Union;
 import org.apache.calcite.rel.logical.LogicalUnion;
+import org.apache.calcite.rel.logical.LogicalValues;
 
 import java.util.List;
 
@@ -33,7 +34,7 @@ final class ValuesUnionLogicalRule extends RelOptRule {
 
     private ValuesUnionLogicalRule() {
         super(
-                operand(LogicalUnion.class, unordered(operand(ValuesLogicalRel.class, none()))),
+                operand(LogicalUnion.class, unordered(operand(LogicalValues.class, none()))),
                 RelFactories.LOGICAL_BUILDER,
                 ValuesUnionLogicalRule.class.getSimpleName()
         );
@@ -57,9 +58,9 @@ final class ValuesUnionLogicalRule extends RelOptRule {
     private static List<Object[]> extractValues(Union union) {
         return union.getInputs().stream()
                     .flatMap(input -> OptUtils.extractRelsFromSubset(input).stream())
-                    .filter(input -> input instanceof ValuesLogicalRel)
-                    .map(input -> (ValuesLogicalRel) input)
-                    .flatMap(values -> values.values().stream())
+                    .filter(input -> input instanceof LogicalValues)
+                    .map(input -> (LogicalValues) input)
+                    .flatMap(values -> OptUtils.convert(values).stream())
                     .collect(toList());
     }
 }

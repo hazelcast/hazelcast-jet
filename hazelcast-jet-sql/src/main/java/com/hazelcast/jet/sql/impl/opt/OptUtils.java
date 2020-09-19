@@ -25,6 +25,7 @@ import com.hazelcast.sql.impl.schema.Table;
 import com.hazelcast.sql.impl.schema.TableField;
 import com.hazelcast.sql.impl.type.QueryDataType;
 import org.apache.calcite.plan.ConventionTraitDef;
+import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.plan.RelTrait;
 import org.apache.calcite.plan.RelTraitSet;
@@ -76,7 +77,7 @@ public final class OptUtils {
      * @return Logical input.
      */
     public static RelNode toLogicalInput(RelNode rel) {
-        return convert(rel, toLogicalConvention(rel.getTraitSet()));
+        return RelOptRule.convert(rel, toLogicalConvention(rel.getTraitSet()));
     }
 
     /**
@@ -96,7 +97,7 @@ public final class OptUtils {
      * @return Logical input.
      */
     public static RelNode toPhysicalInput(RelNode rel) {
-        return convert(rel, toPhysicalConvention(rel.getTraitSet()));
+        return RelOptRule.convert(rel, toPhysicalConvention(rel.getTraitSet()));
     }
 
     /**
@@ -150,7 +151,7 @@ public final class OptUtils {
                 }
 
                 if (traitSets.add(rel.getTraitSet())) {
-                    result.add(convert(node, rel.getTraitSet()));
+                    result.add(RelOptRule.convert(node, rel.getTraitSet()));
                 }
             }
             return result;
@@ -205,7 +206,7 @@ public final class OptUtils {
         return new HazelcastRelOptTable(newTable);
     }
 
-    public static List<Object[]> reduce(Values values) {
+    public static List<Object[]> convert(Values values) {
         List<Object[]> rows = new ArrayList<>(values.getTuples().size());
         for (List<RexLiteral> tuple : values.getTuples()) {
 
