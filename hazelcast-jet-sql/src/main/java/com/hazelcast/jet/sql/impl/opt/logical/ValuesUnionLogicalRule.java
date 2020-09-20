@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.sql.impl.opt.logical;
 
+import com.google.common.collect.ImmutableList;
 import com.hazelcast.jet.sql.impl.opt.OptUtils;
 import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelOptRuleCall;
@@ -23,9 +24,9 @@ import org.apache.calcite.rel.core.RelFactories;
 import org.apache.calcite.rel.core.Union;
 import org.apache.calcite.rel.logical.LogicalUnion;
 import org.apache.calcite.rel.logical.LogicalValues;
+import org.apache.calcite.rex.RexLiteral;
 
-import java.util.List;
-
+import static java.util.stream.Collectors.collectingAndThen;
 import static java.util.stream.Collectors.toList;
 
 final class ValuesUnionLogicalRule extends RelOptRule {
@@ -44,23 +45,23 @@ final class ValuesUnionLogicalRule extends RelOptRule {
     public void onMatch(RelOptRuleCall call) {
         Union union = call.rel(0);
 
-        List<Object[]> values = extractValues(union);
+        ImmutableList<ImmutableList<RexLiteral>> tuples = extractTuples(union);
 
         ValuesLogicalRel rel = new ValuesLogicalRel(
                 union.getCluster(),
                 OptUtils.toLogicalConvention(union.getTraitSet()),
                 union.getRowType(),
-                values
+                tuples
         );
         call.transformTo(rel);
     }
 
-    private static List<Object[]> extractValues(Union union) {
+    private static ImmutableList<ImmutableList<RexLiteral>> extractTuples(Union union) {
         return union.getInputs().stream()
                     .flatMap(input -> OptUtils.extractRelsFromSubset(input).stream())
                     .filter(input -> input instanceof LogicalValues)
                     .map(input -> (LogicalValues) input)
-                    .flatMap(values -> OptUtils.convert(values).stream())
-                    .collect(toList());
+                    .flatMap(values -> values.getTuples().stream())
+                    .collect(collectingAndThen(toList(), ImmutableList::copyOf));
     }
 }

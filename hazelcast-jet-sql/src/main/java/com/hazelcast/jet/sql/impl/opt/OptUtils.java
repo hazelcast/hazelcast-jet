@@ -50,7 +50,6 @@ import java.util.Set;
 import static com.hazelcast.jet.impl.util.Util.toList;
 import static com.hazelcast.jet.sql.impl.opt.JetConventions.LOGICAL;
 import static com.hazelcast.jet.sql.impl.opt.JetConventions.PHYSICAL;
-import static org.apache.calcite.plan.RelOptRule.convert;
 
 /**
  * Static utility classes for rules.
@@ -216,6 +215,24 @@ public final class OptUtils {
                 Expression<?> expression = RexToExpression.convertLiteral(literal);
                 Object value = expression.eval(null, null);
                 result[i] = value;
+            }
+            rows.add(result);
+        }
+        return rows;
+    }
+
+    public static List<Object[]> convert(Values values, RelDataType rowType) {
+        List<QueryDataType> types = extractFieldTypes(rowType);
+
+        List<Object[]> rows = new ArrayList<>(values.getTuples().size());
+        for (List<RexLiteral> tuple : values.getTuples()) {
+
+            Object[] result = new Object[tuple.size()];
+            for (int i = 0; i < tuple.size(); i++) {
+                RexLiteral literal = tuple.get(i);
+                Expression<?> expression = RexToExpression.convertLiteral(literal);
+                Object value = expression.eval(null, null);
+                result[i] = types.get(i).convert(value);
             }
             rows.add(result);
         }
