@@ -58,8 +58,9 @@ public final class AggregateOperationBuilder<A> {
      * primitive. Also selects the fixed-arity variant of the aggregate
      * operation.
      * <p>
-     * This method is synonymous with {@link #andAccumulate0(BiConsumerEx)},
-     * but makes more sense when defining a simple, arity-1 aggregate operation.
+     * This method is synonymous with {@link #andAccumulate0(BiConsumerEx)
+     * andAccumulate0()}, but makes more sense when defining a simple, arity-1
+     * aggregate operation.
      *
      * @param accumulateFn the {@code accumulate} primitive, parameters are
      *              {@code (accumulator, item)}
@@ -73,9 +74,9 @@ public final class AggregateOperationBuilder<A> {
     }
 
     /**
-     * Registers the {@link AggregateOperation1#accumulateFn()} primitive for
-     * stream-0. Also selects the fixed-arity variant of the aggregate
-     * operation.
+     * Registers the {@link AggregateOperation1#accumulateFn() accumulate}
+     * primitive for stream-0. Also selects the fixed-arity variant of the
+     * aggregate operation.
      *
      * @param accumulateFn0 the {@code accumulate} primitive for stream-0
      * @param <T0> the expected type of item in stream-0
