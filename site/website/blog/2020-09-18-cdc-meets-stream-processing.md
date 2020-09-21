@@ -8,11 +8,15 @@ authorImageURL: https://www.itdays.ro/public/images/speakers-big/Jozsef_Bartok.j
 
 ## Introduction
 
-Hazelcast Jet is a distributed, lightweight stream processing framework.
-It allows you to write modern Java code that focuses purely on data
-transformation while it does all the heavy lifting of getting the data
-flowing and computation running across a cluster of nodes. Jet stores
-computational state in [fault-tolerant, distributed in-memory
+*Change Data Capture* (CDC) refers to the process of *observing
+changes made to a database* and extracting them in a form usable by
+other systems, for the purposes of replication, analysis and many more.
+
+*Hazelcast Jet* is a distributed, lightweight stream processing
+framework. It allows you to write modern Java code that focuses purely
+on data transformation while it does all the heavy lifting of getting
+the data flowing and computation running across a cluster of nodes. Jet
+stores computational state in [fault-tolerant, distributed in-memory
 storage](https://jet-start.sh/docs/api/data-structures), allowing
 thousands of concurrent users granular and fast access to your data
 without breaking a sweat.
@@ -46,16 +50,15 @@ is a good enough abstraction that we were able to mimic it for Debezium.
 We are aware that Debezium also offers an *embedded mode* for
 applications not interested in fault-tolerance guarantees such as
 exactly-once processing and resilience, but since Jet does not have a
-“dumbed down”version (even as full-blown is light enough to be
+“dumbed down” version (even as full-blown is light enough to be
 embedded), we quickly discarded this approach.
 
 So, first, we added generic support for Kafka Connect sources to Jet,
 which should be a valuable feature even outside the scope of CDC. Then
-we’ve used Debezium to build a Kafka Connect source for Jet. Well…
-“build” might be overstating it. Debezium already is a Kafka Connect
-source. We just had to make sure that Jet’s specific fault-tolerance
-mechanisms will interact with it properly, through the Kafka Connect
-API.
+we used Debezium to build a Kafka Connect source for Jet. Well…“build”
+might be overstating it. Debezium already is a Kafka Connect source. We
+just had to make sure that Jet’s specific fault-tolerance mechanisms
+will interact with it properly, through the Kafka Connect API.
 
 ## Synergy
 
@@ -100,7 +103,6 @@ StreamSource<ChangeRecord> source = MySqlCdcSources.mysql("source")
 Pipeline pipeline = Pipeline.create();
 pipeline.readFrom(source)
         .withoutTimestamps()
-        .peek()
         .writeTo(CdcSinks.map("customers",
                 r -> r.key().toMap().get("id"),
                 r -> r.value().toObject(Customer.class).toString()));
@@ -108,12 +110,6 @@ pipeline.readFrom(source)
 JobConfig cfg = new JobConfig().setName("mysql-monitor");
 Jet.bootstrappedInstance().newJob(pipeline, cfg);
 ```
-
-One last service that Jet aims to add to Debezium’s value is performance
-benchmarks. We want to measure both the performance impact of enabling
-CDC on specific databases and the event throughput. This work is still
-ongoing, we still have to publish our exact testing methodology, but the
-results obtained so far are available [here](https://jet-start.sh/docs/next/design-docs/005-cdc-sources#performance).
 
 ## Architecture
 
@@ -132,10 +128,10 @@ our [documentation on the
 topic](https://jet-start.sh/docs/next/architecture/fault-tolerance).
 
 Extending this functionality umbrella to cover Debezium has been
-surprisingly simple. All that was really needed was to add Debezium’s
+surprisingly simple. All we had to do was to add Debezium’s
 source offset to Jet’s snapshots. This way, whenever Jet needs to
-execute a recovery, it can also pass the recovered offset to Debezium,
-which in turn is able to resume the data flow from that offset.
+execute a recovery, it passes the recovered offset to Debezium,
+which in turn resumes the data flow from that offset.
 
 One other thing we did and might be worth mentioning is that the Jet
 integration also makes use of Debezium’s [new record state
@@ -167,12 +163,13 @@ combination of the two should have no impediments in your own projects.
 At the moment of writing the Jet-Debezium integration is fully finished
 only for MySQL and Postgres databases and has been [released in version
 4.2](https://jet-start.sh/blog/2020/07/14/jet-42-is-released) of Jet.
-When we will cover further connectors and if we will extend existing
+Further work on covering more connectors and extending current
 ones (for example by adding handling for database schema changes),
-remains to be seen.
+has not yet been scheduled.
 
 The functionality provided by Debezium, the ability to allow modern
 processing of legacy data is a great fit to Jet’s ability to carry out
 that processing efficiently. The combination of the two has the
-potential to become much more than the sum of their parts. I’m very much
-looking forward to finding out what this merger can lead to. Stay tuned!
+potential to become much more than the sum of their parts. I very much
+look forward to finding out what this integration can lead to. Stay
+tuned!
