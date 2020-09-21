@@ -143,9 +143,9 @@ class JetSqlBackend implements SqlBackend {
         SqlNode node = parseResult.getNode();
 
         if (node instanceof SqlCreateMapping) {
-            return toCreateTablePlan((SqlCreateMapping) node);
+            return toCreateMappingPlan((SqlCreateMapping) node);
         } else if (node instanceof SqlDropMapping) {
-            return toDropTablePlan((SqlDropMapping) node);
+            return toDropMappingPlan((SqlDropMapping) node);
         } else if (node instanceof SqlCreateJob) {
             return toCreateJobPlan(parseResult, context);
         } else if (node instanceof SqlAlterJob) {
@@ -162,7 +162,7 @@ class JetSqlBackend implements SqlBackend {
         }
     }
 
-    private SqlPlan toCreateTablePlan(SqlCreateMapping sqlCreateTable) {
+    private SqlPlan toCreateMappingPlan(SqlCreateMapping sqlCreateTable) {
         List<MappingField> mappingFields = sqlCreateTable.columns()
                 .map(field -> new MappingField(field.name(), field.type(), field.externalName()))
                 .collect(toList());
@@ -181,7 +181,7 @@ class JetSqlBackend implements SqlBackend {
         );
     }
 
-    private SqlPlan toDropTablePlan(SqlDropMapping sqlDropTable) {
+    private SqlPlan toDropMappingPlan(SqlDropMapping sqlDropTable) {
         return new DropMappingPlan(sqlDropTable.name(), sqlDropTable.ifExists(), planExecutor);
     }
 

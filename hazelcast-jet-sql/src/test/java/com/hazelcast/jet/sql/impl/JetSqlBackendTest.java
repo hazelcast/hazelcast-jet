@@ -69,7 +69,7 @@ public class JetSqlBackendTest {
             "true, false",
             "false, true"
     })
-    public void test_createExternalMappingPlan(boolean replace, boolean ifNotExists) {
+    public void test_createMappingPlan(boolean replace, boolean ifNotExists) {
         // given
         SqlCreateMapping node = new SqlCreateMapping(
                 identifier("mapping_name"),
@@ -100,7 +100,7 @@ public class JetSqlBackendTest {
             "true",
             "false"
     })
-    public void test_removeExternalMappingPlan(boolean ifExists) {
+    public void test_removeMappingPlan(boolean ifExists) {
         // given
         SqlDropMapping node = new SqlDropMapping(
                 identifier("mapping_name"),

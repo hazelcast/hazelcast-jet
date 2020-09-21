@@ -84,7 +84,7 @@ public class JetPlanExecutorTest {
             "true, false",
             "false, true"
     })
-    public void test_createExternalMappingExecution(boolean replace, boolean ifNotExists) {
+    public void test_createMappingExecution(boolean replace, boolean ifNotExists) {
         // given
         Mapping mapping = mapping();
         CreateMappingPlan plan = new CreateMappingPlan(mapping, replace, ifNotExists, planExecutor);
@@ -102,7 +102,7 @@ public class JetPlanExecutorTest {
             "true",
             "false"
     })
-    public void test_dropExternalMappingExecution(boolean ifExists) {
+    public void test_dropMappingExecution(boolean ifExists) {
         // given
         String name = "name";
         DropMappingPlan plan = new DropMappingPlan(name, ifExists, planExecutor);
