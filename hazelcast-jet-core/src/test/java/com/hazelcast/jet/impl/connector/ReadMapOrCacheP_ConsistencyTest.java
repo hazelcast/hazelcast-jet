@@ -17,6 +17,8 @@
 package com.hazelcast.jet.impl.connector;
 
 import com.hazelcast.client.config.ClientConfig;
+import com.hazelcast.cluster.Address;
+import com.hazelcast.cluster.Member;
 import com.hazelcast.config.Config;
 import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.HazelcastInstance;
@@ -66,7 +68,7 @@ public class ReadMapOrCacheP_ConsistencyTest extends JetTestSupport {
     private static CountDownLatch startLatch;
     private static CountDownLatch proceedLatch;
 
-    private List<HazelcastInstance> remoteInstances = new ArrayList<>();
+    private final List<HazelcastInstance> remoteInstances = new ArrayList<>();
     private JetInstance jet;
 
     @Before
@@ -96,8 +98,8 @@ public class ReadMapOrCacheP_ConsistencyTest extends JetTestSupport {
         HazelcastInstance hz = Hazelcast.newHazelcastInstance(config);
         remoteInstances.add(hz);
 
-        ClientConfig clientConfig = new ClientConfig().setClusterName(config.getClusterName());
-        test_addingItems(hz.getMap(MAP_NAME), clientConfig);
+
+        test_addingItems(hz.getMap(MAP_NAME), clientConfig(hz));
     }
 
     @Test
@@ -111,8 +113,7 @@ public class ReadMapOrCacheP_ConsistencyTest extends JetTestSupport {
         HazelcastInstance hz = Hazelcast.newHazelcastInstance(config);
         remoteInstances.add(hz);
 
-        ClientConfig clientConfig = new ClientConfig().setClusterName(config.getClusterName());
-        test_removingItems(hz.getMap(MAP_NAME), clientConfig);
+        test_removingItems(hz.getMap(MAP_NAME), clientConfig(hz));
     }
 
     @Test
@@ -126,9 +127,7 @@ public class ReadMapOrCacheP_ConsistencyTest extends JetTestSupport {
         HazelcastInstance hz = Hazelcast.newHazelcastInstance(config);
         remoteInstances.add(hz);
 
-        ClientConfig clientConfig = new ClientConfig().setClusterName(config.getClusterName());
-
-        test_migration(hz.getMap(MAP_NAME), clientConfig,
+        test_migration(hz.getMap(MAP_NAME), clientConfig(hz),
                 () -> remoteInstances.add(Hazelcast.newHazelcastInstance(config)));
     }
 
@@ -143,25 +142,25 @@ public class ReadMapOrCacheP_ConsistencyTest extends JetTestSupport {
 
         Pipeline p = Pipeline.create();
         p.readFrom(mapSource(clientConfig))
-         .map(o -> {
-             proceedLatch.await();
-             // apply some gentle backpressure
-             if (processedCount.incrementAndGet() % 128 == 0) {
-                 Thread.sleep(10);
-             }
-             return o.getKey();
-         })
-         .setLocalParallelism(1)
-         .writeTo(AssertionSinks.assertCollected(list -> {
-             // check no duplicates
-             Set<Integer> collected = new HashSet<>(list);
-             assertEquals("there were duplicates", list.size(), collected.size());
+                .map(o -> {
+                    proceedLatch.await();
+                    // apply some gentle backpressure
+                    if (processedCount.incrementAndGet() % 128 == 0) {
+                        Thread.sleep(10);
+                    }
+                    return o.getKey();
+                })
+                .setLocalParallelism(1)
+                .writeTo(AssertionSinks.assertCollected(list -> {
+                    // check no duplicates
+                    Set<Integer> collected = new HashSet<>(list);
+                    assertEquals("there were duplicates", list.size(), collected.size());
 
-             // we should still have the items we didn't remove
-             for (int i = 0; i < remainingItemCount; i++) {
-                 assertTrue("key " + i + " was missing", collected.contains(i));
-             }
-         }));
+                    // we should still have the items we didn't remove
+                    for (int i = 0; i < remainingItemCount; i++) {
+                        assertTrue("key " + i + " was missing", collected.contains(i));
+                    }
+                }));
 
         Job job = jet.newJob(p);
 
@@ -183,25 +182,25 @@ public class ReadMapOrCacheP_ConsistencyTest extends JetTestSupport {
 
         Pipeline p = Pipeline.create();
         p.readFrom(mapSource(clientConfig))
-         .map(o -> {
-             proceedLatch.await();
-             // apply some gentle backpressure
-             if (processedCount.incrementAndGet() % 128 == 0) {
-                 Thread.sleep(10);
-             }
-             return o.getKey();
-         })
-         .setLocalParallelism(1)
-         .writeTo(AssertionSinks.assertCollected(list -> {
-             // check no duplicates
-             Set<Integer> collected = new HashSet<>(list);
-             assertEquals("there were duplicates", list.size(), collected.size());
+                .map(o -> {
+                    proceedLatch.await();
+                    // apply some gentle backpressure
+                    if (processedCount.incrementAndGet() % 128 == 0) {
+                        Thread.sleep(10);
+                    }
+                    return o.getKey();
+                })
+                .setLocalParallelism(1)
+                .writeTo(AssertionSinks.assertCollected(list -> {
+                    // check no duplicates
+                    Set<Integer> collected = new HashSet<>(list);
+                    assertEquals("there were duplicates", list.size(), collected.size());
 
-             // check all initial items before iteration started
-             for (int i = 0; i < initialItemCount; i++) {
-                 assertTrue("key " + i + " was missing", collected.contains(i));
-             }
-         }));
+                    // check all initial items before iteration started
+                    for (int i = 0; i < initialItemCount; i++) {
+                        assertTrue("key " + i + " was missing", collected.contains(i));
+                    }
+                }));
 
         Job job = jet.newJob(p);
 
@@ -227,20 +226,20 @@ public class ReadMapOrCacheP_ConsistencyTest extends JetTestSupport {
         int initialProcessingLimit = 1024;
         Pipeline p = Pipeline.create();
         p.readFrom(mapSource(clientConfig))
-         .map(o -> {
-             // process first 1024 items, then wait for migration
-             int count = processedCount.incrementAndGet();
-             if (count == initialProcessingLimit) {
-                 // signal to start new node
-                 startLatch.countDown();
-             } else if (count > initialProcessingLimit) {
-                 // wait for migration to complete
-                 proceedLatch.await();
-             }
-             return o.getKey();
-         })
-         .setLocalParallelism(1)
-         .writeTo(AssertionSinks.assertAnyOrder(IntStream.range(0, NUM_ITEMS).boxed().collect(toList())));
+                .map(o -> {
+                    // process first 1024 items, then wait for migration
+                    int count = processedCount.incrementAndGet();
+                    if (count == initialProcessingLimit) {
+                        // signal to start new node
+                        startLatch.countDown();
+                    } else if (count > initialProcessingLimit) {
+                        // wait for migration to complete
+                        proceedLatch.await();
+                    }
+                    return o.getKey();
+                })
+                .setLocalParallelism(1)
+                .writeTo(AssertionSinks.assertAnyOrder(IntStream.range(0, NUM_ITEMS).boxed().collect(toList())));
 
         Job job = jet.newJob(p, new JobConfig().setAutoScaling(false));
 
@@ -256,5 +255,16 @@ public class ReadMapOrCacheP_ConsistencyTest extends JetTestSupport {
 
     private BatchSource<Entry<Integer, Integer>> mapSource(ClientConfig clientConfig) {
         return clientConfig == null ? map(MAP_NAME) : remoteMap(MAP_NAME, clientConfig);
+    }
+
+    private ClientConfig clientConfig(HazelcastInstance instance) {
+        Member member = instance.getCluster().getLocalMember();
+        Address address = member.getAddress();
+        String hostPort = address.getHost() + ":" + address.getPort();
+
+        ClientConfig clientConfig = new ClientConfig().setClusterName(instance.getConfig().getClusterName());
+        clientConfig.getNetworkConfig().addAddress(hostPort);
+
+        return clientConfig;
     }
 }
