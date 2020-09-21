@@ -55,7 +55,7 @@ embedded), we quickly discarded this approach.
 
 So, first, we added generic support for Kafka Connect sources to Jet,
 which should be a valuable feature even outside the scope of CDC. Then
-we used Debezium to build a Kafka Connect source for Jet. Well…“build”
+we used Debezium to build a Kafka Connect source for Jet. Well… “build”
 might be overstating it. Debezium already is a Kafka Connect source. We
 just had to make sure that Jet’s specific fault-tolerance mechanisms
 will interact with it properly, through the Kafka Connect API.
