@@ -81,7 +81,7 @@ public abstract class JetSqlTestSupport extends SimpleTestInClusterSupport {
                     rows.add(new Row(result.getRowMetadata().getColumnCount(), iterator.next()));
                 }
                 future.complete(null);
-            } catch (RuntimeException e) {
+            } catch (Throwable e) {
                 e.printStackTrace();
                 future.completeExceptionally(e);
             }

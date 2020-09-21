@@ -26,6 +26,7 @@ import com.hazelcast.sql.impl.schema.TableField;
 import com.hazelcast.sql.impl.type.QueryDataType;
 import org.apache.calcite.plan.ConventionTraitDef;
 import org.apache.calcite.plan.RelOptRule;
+import org.apache.calcite.plan.RelOptRuleOperand;
 import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.plan.RelTrait;
 import org.apache.calcite.plan.RelTraitSet;
@@ -39,6 +40,7 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexLiteral;
 
+import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -163,18 +165,35 @@ public final class OptUtils {
         return rel.getTraitSet().getTrait(ConventionTraitDef.INSTANCE).equals(JetConventions.PHYSICAL);
     }
 
-    public static Collection<RelNode> extractRelsFromSubset(RelNode node) {
+    /**
+     * If the {@code node} is a {@link RelSubset}, finds the subset matching
+     * the {@code operandPredicate}. If multiple or no matches are found,
+     * throws an error.
+     * <p>
+     * If the {@code node} isn't a {@code RelSubset}, check that it matches the
+     * predicate and returns it.
+     */
+    @SuppressWarnings("unchecked")
+    @Nonnull
+    public static <T> T findMatchingRel(RelNode node, RelOptRuleOperand operandPredicate) {
         if (node instanceof RelSubset) {
-            RelSubset subset = (RelSubset) node;
-
-            Set<RelNode> result = Collections.newSetFromMap(new IdentityHashMap<>());
-            for (RelNode rel : subset.getRels()) {
-                result.add(rel);
+            RelNode res = null;
+            for (RelNode rel : ((RelSubset) node).getRels()) {
+                if (operandPredicate.matches(rel)) {
+                    if (res != null) {
+                        throw new RuntimeException("multiple matches found");
+                    }
+                    res = rel;
+                }
             }
-            return result;
-        } else {
-            return Collections.emptyList();
+            if (res != null) {
+                return (T) res;
+            }
+        } else if (operandPredicate.matches(node)) {
+            return (T) node;
         }
+
+        throw new RuntimeException("expected rel not found: " + node);
     }
 
     public static LogicalTableScan createLogicalScan(

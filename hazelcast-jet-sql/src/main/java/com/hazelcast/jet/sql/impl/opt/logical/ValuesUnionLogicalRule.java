@@ -20,6 +20,7 @@ import com.google.common.collect.ImmutableList;
 import com.hazelcast.jet.sql.impl.opt.OptUtils;
 import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelOptRuleCall;
+import org.apache.calcite.plan.RelOptRuleOperand;
 import org.apache.calcite.rel.core.RelFactories;
 import org.apache.calcite.rel.core.Union;
 import org.apache.calcite.rel.logical.LogicalUnion;
@@ -31,11 +32,13 @@ import static java.util.stream.Collectors.toList;
 
 final class ValuesUnionLogicalRule extends RelOptRule {
 
+    private static final RelOptRuleOperand CHILD_OPERAND = operand(LogicalValues.class, none());
+
     static final RelOptRule INSTANCE = new ValuesUnionLogicalRule();
 
     private ValuesUnionLogicalRule() {
         super(
-                operand(LogicalUnion.class, unordered(operand(LogicalValues.class, none()))),
+                operand(LogicalUnion.class, unordered(CHILD_OPERAND)),
                 RelFactories.LOGICAL_BUILDER,
                 ValuesUnionLogicalRule.class.getSimpleName()
         );
@@ -57,9 +60,7 @@ final class ValuesUnionLogicalRule extends RelOptRule {
 
     private static ImmutableList<ImmutableList<RexLiteral>> extractTuples(Union union) {
         return union.getInputs().stream()
-                    .flatMap(input -> OptUtils.extractRelsFromSubset(input).stream())
-                    .filter(input -> input instanceof LogicalValues)
-                    .map(input -> (LogicalValues) input)
+                    .map(input -> OptUtils.<LogicalValues>findMatchingRel(input, CHILD_OPERAND))
                     .flatMap(values -> values.getTuples().stream())
                     .collect(collectingAndThen(toList(), ImmutableList::copyOf));
     }
