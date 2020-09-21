@@ -50,7 +50,7 @@ public class SqlClientTest extends JetSqlTestSupport {
 
         sqlService.execute("CREATE MAPPING t TYPE " + TestBatchSqlConnector.TYPE_NAME);
 
-        SqlResult result = sqlService.execute("select v from t");
+        SqlResult result = sqlService.execute("SELECT v FROM t");
         BitSet seenValues = new BitSet(TestBatchSqlConnector.DEFAULT_ITEM_COUNT);
         for (SqlRow r : result) {
             Integer v = r.getObject(0);
