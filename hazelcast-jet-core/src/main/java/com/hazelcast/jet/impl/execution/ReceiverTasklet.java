@@ -70,9 +70,6 @@ public class ReceiverTasklet implements Tasklet {
      * correspondence between a compressed seq unit and bytes is defined by the
      * constant {@link #COMPRESSED_SEQ_UNIT_LOG2}.
      * <p>
-     * The receiver tasklet keeps an array of receive window sizes, one for each
-     * sender.
-     * <p>
      * This constant specifies the initial size of the receive window. The
      * window is constantly adapted according to the actual data flow through
      * the receiver tasklet.
@@ -80,8 +77,8 @@ public class ReceiverTasklet implements Tasklet {
     static final int INITIAL_RECEIVE_WINDOW_COMPRESSED = 800;
 
     /**
-     * Receive Window converges towards the amount of data processed per flow-control
-     * period multiplied by this number.
+     * The Receive Window converges towards the amount of data processed per
+     * flow-control period multiplied by this number.
      */
     private final int rwinMultiplier;
     private final double flowControlPeriodNs;
