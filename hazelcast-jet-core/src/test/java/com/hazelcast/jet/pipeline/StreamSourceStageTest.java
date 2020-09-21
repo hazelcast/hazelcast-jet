@@ -27,6 +27,7 @@ import com.hazelcast.jet.datamodel.WindowResult;
 import com.hazelcast.map.EventJournalMapEvent;
 import com.hazelcast.map.IMap;
 import com.hazelcast.test.HazelcastSerialClassRunner;
+import com.hazelcast.test.annotation.NightlyTest;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -34,6 +35,7 @@ import org.junit.runner.RunWith;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Map.Entry;
+import org.junit.experimental.categories.Category;
 
 import static com.hazelcast.function.PredicateEx.alwaysTrue;
 import static com.hazelcast.jet.core.processor.Processors.noopP;
@@ -161,6 +163,29 @@ public class StreamSourceStageTest extends StreamSourceStageTestBase {
         assertTrueEventually(() -> assertEquals(1, sinkList.size()), 10);
         map.put(4, 4);
         assertTrueEventually(() -> assertEquals(2, sinkList.size()), 10);
+
+        job.cancel();
+    }
+
+    @Test
+    @Category(NightlyTest.class)
+    public void when_sparseItemsWithIngestionTimestamps_then_windowIsNotEmittedTooEarly() {
+        IList<WindowResult<Long>> sinkList = instance.getList(randomMapName());
+        IMap<Integer, Integer> map = instance.getMap(randomMapName());
+
+        Pipeline p = Pipeline.create();
+        p.readFrom(Sources.mapJournal(map, START_FROM_OLDEST))
+         .withIngestionTimestamps()
+         .window(WindowDefinition.session(15_000))
+         .aggregate(AggregateOperations.counting())
+         .writeTo(Sinks.list(sinkList));
+
+        Job job = instance.newJob(p);
+        assertEquals(0, sinkList.size());
+        map.put(5, 5);
+
+        assertTrueAllTheTime(() -> assertEquals(0, sinkList.size()), 10);
+        assertTrueEventually(() -> assertEquals(1, sinkList.size()), 30);
 
         job.cancel();
     }
