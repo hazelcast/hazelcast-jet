@@ -155,6 +155,7 @@ public abstract class AbstractTransform implements Transform {
 
         if (shouldMatchUpstreamParallelism && upstreamParallelism != Vertex.LOCAL_PARALLELISM_USE_DEFAULT) {
             determinedLocalParallelism(upstreamParallelism);
+            return;
         }
 
         if (localParallelism() == Vertex.LOCAL_PARALLELISM_USE_DEFAULT) {

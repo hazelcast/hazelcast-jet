@@ -22,6 +22,7 @@ import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.Traversers;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Edge;
+import com.hazelcast.jet.core.Edge.RoutingPolicy;
 import com.hazelcast.jet.core.EventTimePolicy;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
@@ -260,9 +261,9 @@ public class Planner {
         for (Transform fromTransform : transform.upstream()) {
             PlannerVertex fromPv = xform2vertex.get(fromTransform);
             Edge edge = from(fromPv.v, fromPv.nextAvailableOrdinal()).to(toVertex, destOrdinal);
-            applyRebalancing(edge, transform);
             dag.edge(edge);
             configureEdgeFn.accept(edge, destOrdinal);
+            applyRebalancing(edge, transform);
             destOrdinal++;
         }
     }
@@ -276,6 +277,8 @@ public class Planner {
         FunctionEx<?, ?> keyFn = toTransform.partitionKeyFnForInput(destOrdinal);
         if (keyFn != null) {
             edge.partitioned(keyFn);
+        } else if (edge.getRoutingPolicy() == RoutingPolicy.ISOLATED) {
+            edge.unicast();
         }
     }
 
