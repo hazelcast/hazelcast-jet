@@ -47,9 +47,8 @@ final class ValuesUnionLogicalRule extends RelOptRule {
 
         ImmutableList<ImmutableList<RexLiteral>> tuples = extractTuples(union);
 
-        ValuesLogicalRel rel = new ValuesLogicalRel(
+        LogicalValues rel = LogicalValues.create(
                 union.getCluster(),
-                OptUtils.toLogicalConvention(union.getTraitSet()),
                 union.getRowType(),
                 tuples
         );
