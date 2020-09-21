@@ -22,7 +22,6 @@ import com.hazelcast.sql.SqlColumnType;
 import com.hazelcast.sql.SqlResult;
 import com.hazelcast.sql.SqlService;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import static com.hazelcast.jet.core.TestUtil.createMap;
@@ -157,7 +156,6 @@ public class SqlTest extends JetSqlTestSupport {
     }
 
     @Test
-    @Ignore // TODO https://github.com/hazelcast/hazelcast/issues/17554
     public void test_starProjectFilterProjectFilter() {
         TestBatchSqlConnector.create(sqlService, "t", 2);
 
