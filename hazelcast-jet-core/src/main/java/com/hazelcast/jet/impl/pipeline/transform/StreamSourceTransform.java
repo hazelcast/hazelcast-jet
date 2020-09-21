@@ -22,7 +22,7 @@ import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.impl.pipeline.Planner;
 import com.hazelcast.jet.impl.pipeline.Planner.PlannerVertex;
-import com.hazelcast.jet.pipeline.Pipeline.Context;
+import com.hazelcast.jet.impl.pipeline.PipelineImpl.Context;
 import com.hazelcast.jet.pipeline.StreamSource;
 
 import javax.annotation.Nonnull;

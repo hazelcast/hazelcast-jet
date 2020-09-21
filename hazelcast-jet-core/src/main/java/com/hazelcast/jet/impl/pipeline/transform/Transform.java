@@ -18,7 +18,8 @@ package com.hazelcast.jet.impl.pipeline.transform;
 
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.impl.pipeline.Planner;
-import com.hazelcast.jet.pipeline.Pipeline.Context;
+import com.hazelcast.jet.impl.pipeline.PipelineImpl.Context;
+
 
 import javax.annotation.Nonnull;
 import java.io.Serializable;

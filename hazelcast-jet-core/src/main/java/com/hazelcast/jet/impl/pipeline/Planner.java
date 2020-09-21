@@ -36,7 +36,7 @@ import com.hazelcast.jet.impl.pipeline.transform.TimestampTransform;
 import com.hazelcast.jet.impl.pipeline.transform.Transform;
 import com.hazelcast.jet.impl.util.LoggingUtil;
 import com.hazelcast.jet.impl.util.Util;
-import com.hazelcast.jet.pipeline.Pipeline.Context;
+import com.hazelcast.jet.impl.pipeline.PipelineImpl.Context;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.logging.Logger;
 

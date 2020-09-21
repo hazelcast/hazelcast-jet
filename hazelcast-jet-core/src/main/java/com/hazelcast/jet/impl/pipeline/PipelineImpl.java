@@ -221,4 +221,11 @@ public class PipelineImpl implements Pipeline {
         List<Transform> prev = adjacencyMap.putIfAbsent(stage, new ArrayList<>());
         assert prev == null : "Double registration of a Stage with this Pipeline: " + stage;
     }
+
+    /**
+     * Context passed to {@link #toDag(Context)}.
+     */
+    public interface Context {
+        int defaultLocalParallelism();
+    }
 }

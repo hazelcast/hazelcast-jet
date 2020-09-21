@@ -19,7 +19,7 @@ package com.hazelcast.jet.impl.pipeline.transform;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.impl.pipeline.Planner;
 import com.hazelcast.jet.pipeline.BatchSource;
-import com.hazelcast.jet.pipeline.Pipeline.Context;
+import com.hazelcast.jet.impl.pipeline.PipelineImpl.Context;
 
 import javax.annotation.Nonnull;
 

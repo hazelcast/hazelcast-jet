@@ -18,7 +18,7 @@ package com.hazelcast.jet.impl.pipeline.transform;
 
 import com.hazelcast.jet.impl.pipeline.Planner;
 import com.hazelcast.jet.impl.pipeline.Planner.PlannerVertex;
-import com.hazelcast.jet.pipeline.Pipeline.Context;
+import com.hazelcast.jet.impl.pipeline.PipelineImpl.Context;
 
 import javax.annotation.Nonnull;
 

@@ -27,7 +27,7 @@ import com.hazelcast.jet.impl.pipeline.Planner.PlannerVertex;
 import com.hazelcast.jet.impl.processor.AsyncTransformUsingServiceBatchedP;
 import com.hazelcast.jet.impl.processor.AsyncTransformUsingServiceOrderedP;
 import com.hazelcast.jet.impl.processor.AsyncTransformUsingServiceUnorderedP;
-import com.hazelcast.jet.pipeline.Pipeline.Context;
+import com.hazelcast.jet.impl.pipeline.PipelineImpl.Context;
 import com.hazelcast.jet.pipeline.ServiceFactory;
 
 import javax.annotation.Nonnull;

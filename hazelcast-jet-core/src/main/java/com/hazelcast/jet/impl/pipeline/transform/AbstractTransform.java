@@ -18,7 +18,7 @@ package com.hazelcast.jet.impl.pipeline.transform;
 
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.core.Vertex;
-import com.hazelcast.jet.pipeline.Pipeline.Context;
+import com.hazelcast.jet.impl.pipeline.PipelineImpl.Context;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
@@ -137,7 +137,7 @@ public abstract class AbstractTransform implements Transform {
      * local parallelism provided in Pipeline.Context object.
      * <p>
      * If none of them is set, returns the default local parallelism
-     * provided in Pipeline.Context object.
+     * provided in PipelineImpl.Context object.
      */
     protected void determineLocalParallelism(int preferredLocalParallelism, Context context,
                                              boolean shouldMatchUpstreamParallelism) {
