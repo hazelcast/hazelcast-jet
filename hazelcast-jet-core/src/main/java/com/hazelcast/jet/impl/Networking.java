@@ -136,15 +136,21 @@ public class Networking {
             boolean hasData = false;
             Map<Long, ExecutionContext> executionContexts = jobExecutionService.getExecutionContextsFor(member);
             output.writeInt(executionContexts.size());
-            for (Entry<Long, ExecutionContext> entry : executionContexts.entrySet()) {
-                output.writeLong(entry.getKey()); // executionId
-                Map<Integer, Map<Integer, Map<Address, ReceiverTasklet>>> receiverMap = entry.getValue().receiverMap();
+            for (Entry<Long, ExecutionContext> executionIdAndCtx : executionContexts.entrySet()) {
+                output.writeLong(executionIdAndCtx.getKey());
+                // dest vertex id --> dest ordinal --> sender addr --> receiver tasklet
+                Map<Integer, Map<Integer, Map<Address, ReceiverTasklet>>> receiverMap =
+                        executionIdAndCtx.getValue().receiverMap();
                 output.writeInt(receiverMap.values().stream().mapToInt(Map::size).sum());
-                for (Entry<Integer, Map<Integer, Map<Address, ReceiverTasklet>>> e : receiverMap.entrySet()) {
-                    for (Entry<Integer, Map<Address, ReceiverTasklet>> mapEntry : e.getValue().entrySet()) {
-                        output.writeInt(e.getKey());
-                        output.writeInt(mapEntry.getKey());
-                        ReceiverTasklet receiverTasklet = mapEntry.getValue().get(member);
+                for (Entry<Integer, Map<Integer, Map<Address, ReceiverTasklet>>> e1 : receiverMap.entrySet()) {
+                    int vertexId = e1.getKey();
+                    Map<Integer, Map<Address, ReceiverTasklet>> ordinalToMemberToTasklet = e1.getValue();
+                    for (Entry<Integer, Map<Address, ReceiverTasklet>> e2 : ordinalToMemberToTasklet.entrySet()) {
+                        int ordinal = e2.getKey();
+                        Map<Address, ReceiverTasklet> memberToTasklet = e2.getValue();
+                        output.writeInt(vertexId);
+                        output.writeInt(ordinal);
+                        ReceiverTasklet receiverTasklet = memberToTasklet.get(member);
                         output.writeInt(receiverTasklet.updateAndGetSendSeqLimitCompressed(expectedConnection));
                         hasData = true;
                     }
