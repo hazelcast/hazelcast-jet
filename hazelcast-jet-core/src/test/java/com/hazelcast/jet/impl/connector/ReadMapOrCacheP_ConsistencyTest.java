@@ -142,25 +142,25 @@ public class ReadMapOrCacheP_ConsistencyTest extends JetTestSupport {
 
         Pipeline p = Pipeline.create();
         p.readFrom(mapSource(clientConfig))
-                .map(o -> {
-                    proceedLatch.await();
-                    // apply some gentle backpressure
-                    if (processedCount.incrementAndGet() % 128 == 0) {
-                        Thread.sleep(10);
-                    }
-                    return o.getKey();
-                })
-                .setLocalParallelism(1)
-                .writeTo(AssertionSinks.assertCollected(list -> {
-                    // check no duplicates
-                    Set<Integer> collected = new HashSet<>(list);
-                    assertEquals("there were duplicates", list.size(), collected.size());
+         .map(o -> {
+             proceedLatch.await();
+             // apply some gentle backpressure
+             if (processedCount.incrementAndGet() % 128 == 0) {
+                 Thread.sleep(10);
+             }
+             return o.getKey();
+         })
+         .setLocalParallelism(1)
+         .writeTo(AssertionSinks.assertCollected(list -> {
+             // check no duplicates
+             Set<Integer> collected = new HashSet<>(list);
+             assertEquals("there were duplicates", list.size(), collected.size());
 
-                    // we should still have the items we didn't remove
-                    for (int i = 0; i < remainingItemCount; i++) {
-                        assertTrue("key " + i + " was missing", collected.contains(i));
-                    }
-                }));
+             // we should still have the items we didn't remove
+             for (int i = 0; i < remainingItemCount; i++) {
+                 assertTrue("key " + i + " was missing", collected.contains(i));
+             }
+         }));
 
         Job job = jet.newJob(p);
 
@@ -182,25 +182,25 @@ public class ReadMapOrCacheP_ConsistencyTest extends JetTestSupport {
 
         Pipeline p = Pipeline.create();
         p.readFrom(mapSource(clientConfig))
-                .map(o -> {
-                    proceedLatch.await();
-                    // apply some gentle backpressure
-                    if (processedCount.incrementAndGet() % 128 == 0) {
-                        Thread.sleep(10);
-                    }
-                    return o.getKey();
-                })
-                .setLocalParallelism(1)
-                .writeTo(AssertionSinks.assertCollected(list -> {
-                    // check no duplicates
-                    Set<Integer> collected = new HashSet<>(list);
-                    assertEquals("there were duplicates", list.size(), collected.size());
+         .map(o -> {
+             proceedLatch.await();
+             // apply some gentle backpressure
+             if (processedCount.incrementAndGet() % 128 == 0) {
+                 Thread.sleep(10);
+             }
+             return o.getKey();
+         })
+         .setLocalParallelism(1)
+         .writeTo(AssertionSinks.assertCollected(list -> {
+             // check no duplicates
+             Set<Integer> collected = new HashSet<>(list);
+             assertEquals("there were duplicates", list.size(), collected.size());
 
-                    // check all initial items before iteration started
-                    for (int i = 0; i < initialItemCount; i++) {
-                        assertTrue("key " + i + " was missing", collected.contains(i));
-                    }
-                }));
+             // check all initial items before iteration started
+             for (int i = 0; i < initialItemCount; i++) {
+                 assertTrue("key " + i + " was missing", collected.contains(i));
+             }
+         }));
 
         Job job = jet.newJob(p);
 
@@ -226,20 +226,20 @@ public class ReadMapOrCacheP_ConsistencyTest extends JetTestSupport {
         int initialProcessingLimit = 1024;
         Pipeline p = Pipeline.create();
         p.readFrom(mapSource(clientConfig))
-                .map(o -> {
-                    // process first 1024 items, then wait for migration
-                    int count = processedCount.incrementAndGet();
-                    if (count == initialProcessingLimit) {
-                        // signal to start new node
-                        startLatch.countDown();
-                    } else if (count > initialProcessingLimit) {
-                        // wait for migration to complete
-                        proceedLatch.await();
-                    }
-                    return o.getKey();
-                })
-                .setLocalParallelism(1)
-                .writeTo(AssertionSinks.assertAnyOrder(IntStream.range(0, NUM_ITEMS).boxed().collect(toList())));
+         .map(o -> {
+             // process first 1024 items, then wait for migration
+             int count = processedCount.incrementAndGet();
+             if (count == initialProcessingLimit) {
+                 // signal to start new node
+                 startLatch.countDown();
+             } else if (count > initialProcessingLimit) {
+                 // wait for migration to complete
+                 proceedLatch.await();
+             }
+             return o.getKey();
+         })
+         .setLocalParallelism(1)
+         .writeTo(AssertionSinks.assertAnyOrder(IntStream.range(0, NUM_ITEMS).boxed().collect(toList())));
 
         Job job = jet.newJob(p, new JobConfig().setAutoScaling(false));
 
