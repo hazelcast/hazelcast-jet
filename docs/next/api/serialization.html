@@ -174,17 +174,14 @@ src<span class="token punctuation">.</span><span class="token function">mapUsing
         <span class="token punctuation">(</span>formatter<span class="token punctuation">,</span> tstamp<span class="token punctuation">)</span> <span class="token operator">-></span> formatter<span class="token punctuation">.</span><span class="token function">format</span><span class="token punctuation">(</span><span class="token class-name">Instant</span><span class="token punctuation">.</span><span class="token function">ofEpochMilli</span><span class="token punctuation">(</span>tstamp<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
 </code></pre>
 <h2><a class="anchor" aria-hidden="true" id="serialization-of-data-types"></a><a href="#serialization-of-data-types" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Serialization of Data Types</h2>
-<p>Hazelcast Jet closely integrates with Hazelcast IMDG exposing many of
-its features to Jet users. In particular, you can use IMDG data
-structure as Jet <code>Source</code> and/or <code>Sink</code>. Objects retrieved from and
-stored in those have to be serializable.</p>
-<p>Another case which might require serializable objects is sending
-computation results between nodes such as in a grouping operation.
-Hazelcast Jet tries to minimize network traffic as much as possible,
-nonetheless different parts of a <a href="/docs/next/concepts/dag">DAG</a> can reside on
-separate cluster members. To catch serialization issues early on, we
-recommend using a 2-member local Jet cluster for development and
-testing.</p>
+<p>Hazelcast Jet closely integrates with Hazelcast IMDG, exposing many of
+its features to Jet users. In particular, you can use an IMDG data
+structure as a Jet <code>Source</code> and/or <code>Sink</code>. The objects you store in them
+must be serializable.</p>
+<p>Another case that requires serializable objects is sending computation
+results between nodes, for example when grouping by key. To catch
+serialization issues early on, we recommend using a 2-member local Jet
+cluster for development and testing.</p>
 <p>Currently, Hazelcast Jet supports 4 interfaces to serialize custom
 types:</p>
 <ul>
@@ -200,15 +197,15 @@ deciding which interface to use in your applications.</p>
 <tr><th style="text-align:center">Serialization interface</th><th style="text-align:left">Advantages</th><th style="text-align:left">Drawbacks</th></tr>
 </thead>
 <tbody>
-<tr><td style="text-align:center">Serializable</td><td style="text-align:left">Easy to start with, requires no implementation or registration</td><td style="text-align:left">CPU intensive and space inefficient</td></tr>
-<tr><td style="text-align:center">Externalizable</td><td style="text-align:left">Faster and more space efficient than Serializable, but no registration required</td><td style="text-align:left">CPU intensive, space inefficient and requires implementation</td></tr>
-<tr><td style="text-align:center">Portable</td><td style="text-align:left">Faster and more space efficient than java standard interfaces. Supports versioningSupports partial deserialization</td><td style="text-align:left">Requires implementation and factory registration during cluster setup</td></tr>
-<tr><td style="text-align:center">StreamSerializer</td><td style="text-align:left">The fastest and lightest out of supported interfaces</td><td style="text-align:left">Requires implementation and registration during cluster setup</td></tr>
+<tr><td style="text-align:center">Serializable</td><td style="text-align:left">Easy to start with, does not require implementation or registration</td><td style="text-align:left">CPU intensive and space inefficient</td></tr>
+<tr><td style="text-align:center">Externalizable</td><td style="text-align:left">Does not require registration, faster and more space efficient than Serializable</td><td style="text-align:left">CPU intensive, space inefficient and requires implementation</td></tr>
+<tr><td style="text-align:center">Portable</td><td style="text-align:left">Faster and more space efficient than Serializable. Supports versioning and partial deserialization</td><td style="text-align:left">Requires implementation and registration</td></tr>
+<tr><td style="text-align:center">StreamSerializer</td><td style="text-align:left">Fastest and lightest</td><td style="text-align:left">Requires implementation and registration</td></tr>
 </tbody>
 </table>
 <p>Below you can find rough performance numbers you can expect when
-employing each of those strategies. A straightforward benchmark which
-continuously serializes and then deserializes very simple object:</p>
+employing each of those strategies. A straightforward benchmark that
+continuously serializes and then deserializes this simple object:</p>
 <pre><code class="hljs css language-java"><span class="token keyword">class</span> <span class="token class-name">Person</span> <span class="token punctuation">{</span>
     <span class="token keyword">private</span> <span class="token class-name">String</span> firstName<span class="token punctuation">;</span>
     <span class="token keyword">private</span> <span class="token class-name">String</span> lastName<span class="token punctuation">;</span>
@@ -216,7 +213,7 @@ continuously serializes and then deserializes very simple object:</p>
     <span class="token keyword">private</span> <span class="token keyword">float</span> height<span class="token punctuation">;</span>
 <span class="token punctuation">}</span>
 </code></pre>
-<p>counting the total throughput, yields following results:</p>
+<p>yields following throughputs:</p>
 <pre><code class="hljs css language-text"># Processor: Intel(R) Core(TM) i7-4700HQ CPU @ 2.40GHz
 # VM version: JDK 13, OpenJDK 64-Bit Server VM, 13+33
 
@@ -226,8 +223,7 @@ SerializationBenchmark.externalizable thrpt    3  0.846 ± 0.057  ops/us
 SerializationBenchmark.portable       thrpt    3  1.171 ± 0.539  ops/us
 SerializationBenchmark.stream         thrpt    3  4.828 ± 1.227  ops/us
 </code></pre>
-<p>The very same object instantiated with sample data will also be encoded
-with different number of bytes depending on used strategy:</p>
+<p>Here are the sizes of the serialized form by each serializer:</p>
 <pre><code class="hljs css language-text">Strategy                                        Number of Bytes  Overhead %
 java.io.Serializable                                        162         523
 java.io.Externalizable                                       87         234
@@ -266,6 +262,9 @@ mechanism. Here is a sample implementation for a <code>Person</code> class:</p>
     <span class="token punctuation">}</span>
 <span class="token punctuation">}</span>
 </code></pre>
+<p>The type ID you use must be unique across all the serializers you
+register for a job, and additionally it must not clash with any
+global serializers you registered with the Hazelcast Jet cluster.</p>
 <h2><a class="anchor" aria-hidden="true" id="register-a-serializer-for-a-single-jet-job"></a><a href="#register-a-serializer-for-a-single-jet-job" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Register a Serializer for a Single Jet Job</h2>
 <p>You can register a serializer in a Jet job's configuration object:</p>
 <pre><code class="hljs css language-java"><span class="token keyword">new</span> <span class="token class-name">JobConfig</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
