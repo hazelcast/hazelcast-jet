@@ -6,7 +6,7 @@
 
               ga('create', 'UA-158279495-1', 'auto');
               ga('send', 'pageview');
-            </script><link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Ubuntu:300,400,500,600"/><link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,500,600,700,800"/><script type="text/javascript" src="https://buttons.github.io/buttons.js"></script><script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.0/clipboard.min.js"></script><script type="text/javascript" src="/js/code-block-buttons.js"></script><script type="text/javascript" src="https://plausible.io/js/plausible.js" async="" defer="" data-domain="jet-start.sh"></script><script src="/js/scrollSpy.js"></script><link rel="stylesheet" href="/css/prism.css"/><link rel="stylesheet" href="/css/main.css"/><script src="/js/codetabs.js"></script></head><body class="blog"><div class="fixedHeaderContainer"><div class="headerWrapper wrapper"><header><a href="/"><img class="logo" src="/img/logo-dark.svg" alt="Hazelcast Jet"/></a><a href="/versions"><h3>4.2</h3></a><div class="navigationWrapper navigationSlider"><nav class="slidingNav"><ul class="nav-site nav-site-internal"><li class=""><a href="/docs/get-started/intro" target="_self">Docs</a></li><li class=""><a href="/download" target="_self">Download</a></li><li class=""><a href="/demos" target="_self">Demos</a></li><li class=""><a href="https://github.com/hazelcast/hazelcast-jet" target="_self">GitHub</a></li><li class=""><a href="https://slack.hazelcast.com/" target="_self">Community</a></li><li class="siteNavGroupActive siteNavItemActive"><a href="/blog/" target="_self">Blog</a></li><li class="navSearchWrapper reactNavSearchWrapper"><input type="text" id="search_input_react" placeholder="Search" title="Search"/></li></ul></nav></div></header></div></div><div class="navPusher"><div class="docMainWrapper wrapper"><div class="docsNavContainer" id="docsNav"><nav class="toc"><div class="toggleNav"><section class="navWrapper wrapper"><div class="navBreadcrumb wrapper"><div class="navToggle" id="navToggler"><div class="hamburger-menu"><div class="line1"></div><div class="line2"></div><div class="line3"></div></div></div><h2><i>›</i><span>All posts</span></h2><div class="tocToggler" id="tocToggler"><i class="icon-toc"></i></div></div><div class="navGroups"><div class="navGroup"><h3 class="navGroupCategoryTitle">All posts</h3><ul class=""><li class="navListItem"><a class="navItem" href="/blog/2020/08/05/gc-tuning-for-jet">Sub-10 ms Latency in Java: Concurrent GC with Green Threads</a></li><li class="navListItem"><a class="navItem" href="/blog/2020/07/16/designing-evergreen-cache-cdc">Designing an Evergreen Cache with Change Data Capture</a></li><li class="navListItem"><a class="navItem" href="/blog/2020/07/14/jet-42-is-released">Jet 4.2 is Released</a></li><li class="navListItem"><a class="navItem" href="/blog/2020/06/23/jdk-gc-benchmarks-rematch">The Low-Latency Rematch: Performance of Modern Java on Data-Heavy Workloads</a></li><li class="navListItem"><a class="navItem" href="/blog/2020/06/09/jdk-gc-benchmarks-part2">Performance of Modern Java on Data-Heavy Workloads, Part 2</a></li><li class="navListItem"><a class="navItem" href="/blog/2020/06/09/jdk-gc-benchmarks-part1">Performance of Modern Java on Data-Heavy Workloads, Part 1</a></li><li class="navListItem"><a class="navItem" href="/blog/2020/05/25/grcp">Processing 10M queries / second on a single node using Jet and gRPC</a></li><li class="navListItem"><a class="navItem" href="/blog/2020/05/18/spark-jet">How Hazelcast Jet Compares to Apache Spark</a></li><li class="navListItem"><a class="navItem" href="/blog/2020/04/29/jet-41-is-released">Jet 4.1 is Released</a></li><li class="navListItem"><a class="navItem" href="/blog/2020/04/01/upgrading-to-jet-40">Upgrading to Jet 4.0</a></li><li class="navListItem"><a class="navItem" href="/blog/2020/03/30/ml-inference">Machine Learning Inference at Scale</a></li><li class="navListItem"><a class="navItem" href="/blog/2020/03/02/jet-40-is-released">Jet 4.0 is Released</a></li><li class="navListItem"><a class="navItem" href="/blog/2020/02/20/transactional-processors">Transactional connectors in Hazelcast Jet</a></li><li class="navListItem"><a class="navItem" href="/blog/2020/01/28/new-website">Announcing New Documentation Website</a></li><li class="navListItem"><a class="navItem" href="/blog/2019/11/12/stream-deduplication">Stream Deduplication with Hazelcast Jet</a></li></ul></div></div></section></div><script>
+            </script><link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Ubuntu:300,400,500,600"/><link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,500,600,700,800"/><script type="text/javascript" src="https://buttons.github.io/buttons.js"></script><script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.0/clipboard.min.js"></script><script type="text/javascript" src="/js/code-block-buttons.js"></script><script type="text/javascript" src="https://plausible.io/js/plausible.js" async="" defer="" data-domain="jet-start.sh"></script><script src="/js/scrollSpy.js"></script><link rel="stylesheet" href="/css/prism.css"/><link rel="stylesheet" href="/css/main.css"/><script src="/js/codetabs.js"></script></head><body class="blog"><div class="fixedHeaderContainer"><div class="headerWrapper wrapper"><header><a href="/"><img class="logo" src="/img/logo-dark.svg" alt="Hazelcast Jet"/></a><a href="/versions"><h3>4.2</h3></a><div class="navigationWrapper navigationSlider"><nav class="slidingNav"><ul class="nav-site nav-site-internal"><li class=""><a href="/docs/get-started/intro" target="_self">Docs</a></li><li class=""><a href="/download" target="_self">Download</a></li><li class=""><a href="/demos" target="_self">Demos</a></li><li class=""><a href="https://github.com/hazelcast/hazelcast-jet" target="_self">GitHub</a></li><li class=""><a href="https://slack.hazelcast.com/" target="_self">Community</a></li><li class="siteNavGroupActive siteNavItemActive"><a href="/blog/" target="_self">Blog</a></li><li class="navSearchWrapper reactNavSearchWrapper"><input type="text" id="search_input_react" placeholder="Search" title="Search"/></li></ul></nav></div></header></div></div><div class="navPusher"><div class="docMainWrapper wrapper"><div class="docsNavContainer" id="docsNav"><nav class="toc"><div class="toggleNav"><section class="navWrapper wrapper"><div class="navBreadcrumb wrapper"><div class="navToggle" id="navToggler"><div class="hamburger-menu"><div class="line1"></div><div class="line2"></div><div class="line3"></div></div></div><h2><i>›</i><span>All posts</span></h2><div class="tocToggler" id="tocToggler"><i class="icon-toc"></i></div></div><div class="navGroups"><div class="navGroup"><h3 class="navGroupCategoryTitle">All posts</h3><ul class=""><li class="navListItem"><a class="navItem" href="/blog/2020/09/18/cdc-meets-stream-processing">Change Data Capture meets Stream Processing</a></li><li class="navListItem"><a class="navItem" href="/blog/2020/08/05/gc-tuning-for-jet">Sub-10 ms Latency in Java: Concurrent GC with Green Threads</a></li><li class="navListItem"><a class="navItem" href="/blog/2020/07/16/designing-evergreen-cache-cdc">Designing an Evergreen Cache with Change Data Capture</a></li><li class="navListItem"><a class="navItem" href="/blog/2020/07/14/jet-42-is-released">Jet 4.2 is Released</a></li><li class="navListItem"><a class="navItem" href="/blog/2020/06/23/jdk-gc-benchmarks-rematch">The Low-Latency Rematch: Performance of Modern Java on Data-Heavy Workloads</a></li><li class="navListItem"><a class="navItem" href="/blog/2020/06/09/jdk-gc-benchmarks-part2">Performance of Modern Java on Data-Heavy Workloads, Part 2</a></li><li class="navListItem"><a class="navItem" href="/blog/2020/06/09/jdk-gc-benchmarks-part1">Performance of Modern Java on Data-Heavy Workloads, Part 1</a></li><li class="navListItem"><a class="navItem" href="/blog/2020/05/25/grcp">Processing 10M queries / second on a single node using Jet and gRPC</a></li><li class="navListItem"><a class="navItem" href="/blog/2020/05/18/spark-jet">How Hazelcast Jet Compares to Apache Spark</a></li><li class="navListItem"><a class="navItem" href="/blog/2020/04/29/jet-41-is-released">Jet 4.1 is Released</a></li><li class="navListItem"><a class="navItem" href="/blog/2020/04/01/upgrading-to-jet-40">Upgrading to Jet 4.0</a></li><li class="navListItem"><a class="navItem" href="/blog/2020/03/30/ml-inference">Machine Learning Inference at Scale</a></li><li class="navListItem"><a class="navItem" href="/blog/2020/03/02/jet-40-is-released">Jet 4.0 is Released</a></li><li class="navListItem"><a class="navItem" href="/blog/2020/02/20/transactional-processors">Transactional connectors in Hazelcast Jet</a></li><li class="navListItem"><a class="navItem" href="/blog/2020/01/28/new-website">Announcing New Documentation Website</a></li><li class="navListItem"><a class="navItem" href="/blog/2019/11/12/stream-deduplication">Stream Deduplication with Hazelcast Jet</a></li></ul></div></div></section></div><script>
             var coll = document.getElementsByClassName('collapsible');
             var checkActiveCategory = true;
             for (var i = 0; i < coll.length; i++) {
@@ -62,7 +62,148 @@
                 };
               }
             });
-        </script></nav></div><div class="container mainContainer postContainer blogContainer"><div class="wrapper"><div class="posts"><div class="post"><header class="postHeader"><h1 class="postHeaderTitle"><a href="/blog/2020/08/05/gc-tuning-for-jet">Sub-10 ms Latency in Java: Concurrent GC with Green Threads</a></h1><p class="post-meta">August 5, 2020</p><div class="authorBlock"><p class="post-authorName"><a href="https://twitter.com/mtopolnik" target="_blank" rel="noreferrer noopener">Marko Topolnik</a></p><div class="authorPhoto"><a href="https://twitter.com/mtopolnik" target="_blank" rel="noreferrer noopener"><img src="https://i.imgur.com/xuavzce.jpg" alt="Marko Topolnik"/></a></div></div></header><article class="post-content"><div><span><p>This post is a part of a series:</p>
+        </script></nav></div><div class="container mainContainer postContainer blogContainer"><div class="wrapper"><div class="posts"><div class="post"><header class="postHeader"><h1 class="postHeaderTitle"><a href="/blog/2020/09/18/cdc-meets-stream-processing">Change Data Capture meets Stream Processing</a></h1><p class="post-meta">September 18, 2020</p><div class="authorBlock"><p class="post-authorName"><a href="https://www.linkedin.com/in/bjozsef/" target="_blank" rel="noreferrer noopener">Bartók József</a></p><div class="authorPhoto"><a href="https://www.linkedin.com/in/bjozsef/" target="_blank" rel="noreferrer noopener"><img src="https://www.itdays.ro/public/images/speakers-big/Jozsef_Bartok.jpg" alt="Bartók József"/></a></div></div></header><article class="post-content"><div><span><h2><a class="anchor" aria-hidden="true" id="introduction"></a><a href="#introduction" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Introduction</h2>
+<p><em>Change Data Capture</em> (CDC) refers to the process of <em>observing
+changes made to a database</em> and extracting them in a form usable by
+other systems, for the purposes of replication, analysis and many more.</p>
+<p><em>Hazelcast Jet</em> is a distributed, lightweight stream processing
+framework. It allows you to write modern Java code that focuses purely
+on data transformation while it does all the heavy lifting of getting
+the data flowing and computation running across a cluster of nodes. Jet
+stores computational state in <a href="https://jet-start.sh/docs/api/data-structures">fault-tolerant, distributed in-memory
+storage</a>, allowing
+thousands of concurrent users granular and fast access to your data
+without breaking a sweat.</p>
+<p>While stream processing is a natural solution for providing insight into
+many big-data workloads, it’s a relatively new evolution over its
+predecessor - offline batch processing. Utilizing stream processing
+effectively requires re-architecting existing systems to event-driven
+architectures and introducing several new components. This process is
+not always straightforward and also requires a shift in mindset.</p>
+<p>In this context, the functionality provided by change data capture
+technologies, for which Debezium is one of the, if not THE best
+open-source alternative, is a godsend. To be able to ingest data from
+relational databases, without affecting the applications that use them,
+changes the game for streaming systems. It becomes possible to safely
+extend old systems with all kinds of new functionality: real-time
+analytics, complex event processing, anomaly &amp; fraud detection and so
+on.</p>
+<h2><a class="anchor" aria-hidden="true" id="integration"></a><a href="#integration" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Integration</h2>
+<p>When we first considered integrating Debezium into Jet, the most
+important decisions were centered around the fact that Debezium is
+designed to be deployed via Apache <a href="https://kafka.apache.org/documentation/#connect">Kafka
+Connect</a>, which then
+takes care of <em>fault tolerance</em> and <em>scalability</em>. Fortunately, Jet is
+fully capable of providing these crucial services. Also, Kafka Connect
+is a good enough abstraction that we were able to mimic it for Debezium.</p>
+<p>We are aware that Debezium also offers an <em>embedded mode</em> for
+applications not interested in fault-tolerance guarantees such as
+exactly-once processing and resilience, but since Jet does not have a
+“dumbed down” version (even as full-blown is light enough to be
+embedded), we quickly discarded this approach.</p>
+<p>So, first, we added generic support for Kafka Connect sources to Jet,
+which should be a valuable feature even outside the scope of CDC. Then
+we used Debezium to build a Kafka Connect source for Jet. Well… “build”
+might be overstating it. Debezium already is a Kafka Connect source. We
+just had to make sure that Jet’s specific fault-tolerance mechanisms
+will interact with it properly, through the Kafka Connect API.</p>
+<h2><a class="anchor" aria-hidden="true" id="synergy"></a><a href="#synergy" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Synergy</h2>
+<p>One immediate benefit that Jet offers to Debezium users is eliminating
+the need for <em>external services</em>. No Zookeeper, no Kafka needed. When
+using Debezium through Jet, the latter takes care of the whole lifecycle
+and fault tolerance of all the components involved. The setup is greatly
+simplified.</p>
+<p>Then, obviously, there is the <em>stream processing capability</em>, because
+that’s what Jet does. Not only do you get access to the data, but you
+also have the toolbox to process it, extract whatever insights you need
+from it.</p>
+<p>In addition, Jet also aims to offer <em>further convenience</em> wrappers when
+the Debezium source is being used. For example:</p>
+<ul>
+<li>builders for the most common configuration properties to make setting
+up Debezium for some specific DB as simple as possible</li>
+<li>standard Java interfaces to give structure to the complex Debezium
+events</li>
+<li>JSON parsing, including mapping to Objects, based on <a href="https://github.com/FasterXML/jackson-jr">Jackson
+jr</a>, to simplify how parts
+of - or even entire Debezium events can be interpreted</li>
+</ul>
+<p>For an example look at this sample from our <a href="https://jet-start.sh/docs/tutorials/cdc#6-define-jet-job">CDC
+tutorial</a>. All
+the code you would need to build an in-memory replica of your MySQL
+database table would be something like:</p>
+<pre><code class="hljs css language-java"><span class="token class-name">StreamSource</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">ChangeRecord</span><span class="token punctuation">></span></span> source <span class="token operator">=</span> <span class="token class-name">MySqlCdcSources</span><span class="token punctuation">.</span><span class="token function">mysql</span><span class="token punctuation">(</span><span class="token string">"source"</span><span class="token punctuation">)</span>
+        <span class="token punctuation">.</span><span class="token function">setDatabaseAddress</span><span class="token punctuation">(</span><span class="token string">"127.0.0.1"</span><span class="token punctuation">)</span>
+        <span class="token punctuation">.</span><span class="token function">setDatabasePort</span><span class="token punctuation">(</span><span class="token number">3306</span><span class="token punctuation">)</span>
+        <span class="token punctuation">.</span><span class="token function">setDatabaseUser</span><span class="token punctuation">(</span><span class="token string">"debezium"</span><span class="token punctuation">)</span>
+        <span class="token punctuation">.</span><span class="token function">setDatabasePassword</span><span class="token punctuation">(</span><span class="token string">"dbz"</span><span class="token punctuation">)</span>
+        <span class="token punctuation">.</span><span class="token function">setClusterName</span><span class="token punctuation">(</span><span class="token string">"dbserver1"</span><span class="token punctuation">)</span>
+        <span class="token punctuation">.</span><span class="token function">setDatabaseWhitelist</span><span class="token punctuation">(</span><span class="token string">"inventory"</span><span class="token punctuation">)</span>
+        <span class="token punctuation">.</span><span class="token function">setTableWhitelist</span><span class="token punctuation">(</span><span class="token string">"inventory.customers"</span><span class="token punctuation">)</span>
+        <span class="token punctuation">.</span><span class="token function">build</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token class-name">Pipeline</span> pipeline <span class="token operator">=</span> <span class="token class-name">Pipeline</span><span class="token punctuation">.</span><span class="token function">create</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+pipeline<span class="token punctuation">.</span><span class="token function">readFrom</span><span class="token punctuation">(</span>source<span class="token punctuation">)</span>
+        <span class="token punctuation">.</span><span class="token function">withoutTimestamps</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+        <span class="token punctuation">.</span><span class="token function">writeTo</span><span class="token punctuation">(</span><span class="token class-name">CdcSinks</span><span class="token punctuation">.</span><span class="token function">map</span><span class="token punctuation">(</span><span class="token string">"customers"</span><span class="token punctuation">,</span>
+                r <span class="token operator">-></span> r<span class="token punctuation">.</span><span class="token function">key</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">toMap</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">get</span><span class="token punctuation">(</span><span class="token string">"id"</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+                r <span class="token operator">-></span> r<span class="token punctuation">.</span><span class="token function">value</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">toObject</span><span class="token punctuation">(</span><span class="token class-name">Customer</span><span class="token punctuation">.</span><span class="token keyword">class</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">toString</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token class-name">JobConfig</span> cfg <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">JobConfig</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">setName</span><span class="token punctuation">(</span><span class="token string">"mysql-monitor"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token class-name">Jet</span><span class="token punctuation">.</span><span class="token function">bootstrappedInstance</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">newJob</span><span class="token punctuation">(</span>pipeline<span class="token punctuation">,</span> cfg<span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<h2><a class="anchor" aria-hidden="true" id="architecture"></a><a href="#architecture" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Architecture</h2>
+<p>I have stated above that when Debezium is integrated into Jet, the
+latter takes on the role of service-provider as far as fault tolerance
+and scalability are concerned.</p>
+<p>Jet doesn't delegate its cluster management and fault tolerance concerns
+to an outside system like ZooKeeper. It reuses the groundwork
+implemented for Hazelcast IMDG: cluster management and the IMap, and
+adds its own implementation of Chandy-Lamport distributed snapshots. If
+a cluster member fails, Jet will restart the job on the remaining
+members, restore the state of processing from the last snapshot, and
+then seamlessly continue from that point. For further details, consult
+our <a href="https://jet-start.sh/docs/next/architecture/fault-tolerance">documentation on the
+topic</a>.</p>
+<p>Extending this functionality umbrella to cover Debezium has been
+surprisingly simple. All we had to do was to add Debezium’s
+source offset to Jet’s snapshots. This way, whenever Jet needs to
+execute a recovery, it passes the recovered offset to Debezium,
+which in turn resumes the data flow from that offset.</p>
+<p>One other thing we did and might be worth mentioning is that the Jet
+integration also makes use of Debezium’s <a href="https://debezium.io/documentation/reference/1.2/configuration/event-flattening.html">new record state
+extraction</a>
+SMT (Simple Message Transformation), for the purpose of message
+structure simplification. With this transformation in effect, only the
+&quot;after&quot; structure of the Debezium event envelope is processed by Jet.
+However, whether this is a good idea or not, only time will tell. I
+personally think that if and when we will start covering schema changes
+more, we might end up re-enabling the full Debezium event content.</p>
+<h2><a class="anchor" aria-hidden="true" id="examples"></a><a href="#examples" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Examples</h2>
+<p>The simplest example of using the Jet-Debezium integration would be our
+<a href="https://jet-start.sh/docs/next/tutorials/cdc">CDC tutorial</a> that I’ve
+already mentioned above. A more involved one can be seen in my
+colleague’s, Nicolas Fränkel’s <a href="https://jet-start.sh/blog/2020/07/16/designing-evergreen-cache-cdc">blog
+post</a>.</p>
+<h2><a class="anchor" aria-hidden="true" id="license"></a><a href="#license" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>License</h2>
+<p>The Jet - Debezium integration is currently provided under the <a href="https://www.apache.org/licenses/LICENSE-2.0.txt">Apache
+License, Version 2</a>,
+just like most of Jet and Debezium, so making full usage of the
+combination of the two should have no impediments in your own projects.</p>
+<h2><a class="anchor" aria-hidden="true" id="looking-ahead"></a><a href="#looking-ahead" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Looking ahead</h2>
+<p>At the moment of writing the Jet-Debezium integration is fully finished
+only for MySQL and Postgres databases and has been <a href="https://jet-start.sh/blog/2020/07/14/jet-42-is-released">released in version
+4.2</a> of Jet.
+Further work on covering more connectors and extending current
+ones (for example by adding handling for database schema changes),
+has not yet been scheduled.</p>
+<p>The functionality provided by Debezium, the ability to allow modern
+processing of legacy data is a great fit to Jet’s ability to carry out
+that processing efficiently. The combination of the two has the
+potential to become much more than the sum of their parts. I very much
+look forward to finding out what this integration can lead to. Stay
+tuned!</p>
+</span></div></article></div><div class="post"><header class="postHeader"><h1 class="postHeaderTitle"><a href="/blog/2020/08/05/gc-tuning-for-jet">Sub-10 ms Latency in Java: Concurrent GC with Green Threads</a></h1><p class="post-meta">August 5, 2020</p><div class="authorBlock"><p class="post-authorName"><a href="https://twitter.com/mtopolnik" target="_blank" rel="noreferrer noopener">Marko Topolnik</a></p><div class="authorPhoto"><a href="https://twitter.com/mtopolnik" target="_blank" rel="noreferrer noopener"><img src="https://i.imgur.com/xuavzce.jpg" alt="Marko Topolnik"/></a></div></div></header><article class="post-content"><div><span><p>This post is a part of a series:</p>
 <ul>
 <li><a href="/blog/2020/06/09/jdk-gc-benchmarks-part1">Part 1 (Intro and high-throughput streaming
 benchmark)</a></li>
@@ -2049,197 +2190,7 @@ default to disabled (#2104)</li>
 number of concurrent service calls per processor. Before: 256; now: 4.
 (#2204)</li>
 </ul>
-</span></div></article></div><div class="post"><header class="postHeader"><h1 class="postHeaderTitle"><a href="/blog/2020/04/01/upgrading-to-jet-40">Upgrading to Jet 4.0</a></h1><p class="post-meta">April 1, 2020</p><div class="authorBlock"><p class="post-authorName"><a href="https://www.linkedin.com/in/bjozsef/" target="_blank" rel="noreferrer noopener">Bartok Jozsef</a></p><div class="authorPhoto"><a href="https://www.linkedin.com/in/bjozsef/" target="_blank" rel="noreferrer noopener"><img src="https://www.itdays.ro/public/images/speakers-big/Jozsef_Bartok.jpg" alt="Bartok Jozsef"/></a></div></div></header><article class="post-content"><div><span><p>As we have announce earlier <a href="/blog/2020/03/02/jet-40-is-released">Jet 4.0 is out</a>!
-In this blog post we aim to give you the lower level details needed for
-migrating from older versions.</p>
-<p>Jet 4.0 is a major version release. According to the semantic versioning
-we apply, this means that in version 4.0 some of the API has changed in
-a breaking way and code written for 3.x may no longer compile against
-it.</p>
-<h2><a class="anchor" aria-hidden="true" id="jet-on-imdg-40"></a><a href="#jet-on-imdg-40" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Jet on IMDG 4.0</h2>
-<p>Jet 4.0 uses IMDG 4.0, which is also a major release with its own
-breaking changes. For details see <a href="https://docs.hazelcast.org/docs/rn/index.html#4-0">IMDG Release Notes</a>
-and <a href="https://docs.hazelcast.org/docs/4.0/manual/html-single/#migration-guides">IMDG Migration Guides</a>.</p>
-<p>The most important changes we made and which have affected Jet too are
-as follows:</p>
-<ul>
-<li><p>We renamed many packages and moved classes around. For details see the
-<a href="https://docs.hazelcast.org/docs/rn/index.html#4-0">IMDG Release Notes</a>.
-The most obvious change is that many classes that used to be in the
-general <code>com.hazelcast.core</code> package are now in specific packages like
-<code>com.hazelcast.map</code> or <code>com.hazelcast.collection</code>.</p></li>
-<li><p><code>com.hazelcast.jet.function</code>, the package containing serializable
-variants of <code>java.util.function</code>, is now merged into
-<code>com.hazelcast.function</code>: <code>BiConsumerEx</code>, <code>BiFunctionEx</code>,
-<code>BinaryOperatorEx</code>, <code>BiPredicateEx</code>, <code>ComparatorEx</code>, <code>ComparatorsEx</code>,
-<code>ConsumerEx</code>, <code>FunctionEx</code>, <code>Functions</code>, <code>PredicateEx</code>, <code>SupplierEx</code>,
-<code>ToDoubleFunctionEx</code>, <code>ToIntFunctionEx</code>, <code>ToLongFunctionEx</code>.</p></li>
-<li><p><code>EntryProcessor</code> and several other classes and methods received a
-cleanup of their type parameters. See the <a href="https://docs.hazelcast.org/docs/4.0/manual/html-single/#introducing-lambda-friendly-interfaces">relevant section</a>
-in the IMDG Migration Guide.</p></li>
-<li><p>The term &quot;group&quot; in configuration was replaced with &quot;cluster&quot;. See the
-code snippet below for an example. This changes a Jet Command Line
-parameter as well (<code>-g/--groupName</code> renamed to <code>-n/--cluster-name</code>).</p>
-<pre><code class="hljs css language-java">clientConfig<span class="token punctuation">.</span><span class="token function">setClusterName</span><span class="token punctuation">(</span><span class="token string">"cluster_name"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
-<span class="token comment">//clientConfig.getGroupConfig().setName("cluster_name")</span>
-</code></pre></li>
-<li><p><code>EventJournalConfig</code> moved from the top-level Config class to data
-structure-specific configs (<code>MapConfig</code>, <code>CacheConfig</code>):</p>
-<pre><code class="hljs css language-java">config<span class="token punctuation">.</span><span class="token function">getMapConfig</span><span class="token punctuation">(</span><span class="token string">"map_name"</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">getEventJournalConfig</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
-<span class="token comment">//config.getMapEventJournalConfig("map_name")</span>
-</code></pre></li>
-<li><p><code>ICompletableFuture</code> was removed and replaced with the JDK-standard
-<code>CompletionStage</code>. This affects the return type of async methods. See
-the <a href="https://docs.hazelcast.org/docs/4.0/manual/html-single/#removal-of-icompletablefuture">relevant section</a>
-in the IMDG Migration Guide.</p></li>
-</ul>
-<h2><a class="anchor" aria-hidden="true" id="jet-api-changes"></a><a href="#jet-api-changes" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Jet API Changes</h2>
-<p>We made multiple breaking changes in Jet’s own APIs too:</p>
-<ul>
-<li><p><code>IMapJet</code>, <code>ICacheJet</code> and <code>IListJet</code>, which used to be Jet-specific
-wrappers around IMDG’s standard <code>IMap</code>, <code>ICache</code> and <code>IList</code>, were
-removed. The methods that used to return these types now return the
-standard ones.</p></li>
-<li><p>Renamed <code>Pipeline.drawFrom</code> to <code>Pipeline.readFrom</code> and
-<code>GeneralStage.drainTo</code> to <code>GeneralStage.writeTo</code>:</p>
-<pre><code class="hljs css language-java">pipeline<span class="token punctuation">.</span><span class="token function">readFrom</span><span class="token punctuation">(</span><span class="token class-name">TestSources</span><span class="token punctuation">.</span><span class="token function">items</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">,</span> <span class="token number">2</span><span class="token punctuation">,</span> <span class="token number">3</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">writeTo</span><span class="token punctuation">(</span><span class="token class-name">Sinks</span><span class="token punctuation">.</span><span class="token function">logger</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
-<span class="token comment">//pipeline.drawFrom(TestSources.items(1, 2, 3)).drainTo(Sinks.logger());</span>
-</code></pre></li>
-<li><p><code>ContextFactory</code> was renamed to <code>ServiceFactory</code> and we added support
-for instance-wide initialization. createFn now takes
-<code>ProcessorSupplier.Context</code> instead of just <code>JetInstance</code>. We also
-added convenience methods in <code>ServiceFactories</code> to simplify
-constructing the common variants:</p>
-<pre><code class="hljs css language-java"><span class="token class-name">ServiceFactories</span><span class="token punctuation">.</span><span class="token function">sharedService</span><span class="token punctuation">(</span>ctx <span class="token operator">-></span> <span class="token class-name">Executors</span><span class="token punctuation">.</span><span class="token function">newFixedThreadPool</span><span class="token punctuation">(</span><span class="token number">8</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token class-name">ExecutorService</span><span class="token operator">::</span><span class="token function">shutdown</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
-<span class="token comment">//ContextFactory.withCreateFn(jet -> Executors.newFixedThreadPool(8)).withLocalSharing();</span>
-
-<span class="token class-name">ServiceFactories</span><span class="token punctuation">.</span><span class="token function">nonSharedService</span><span class="token punctuation">(</span>ctx <span class="token operator">-></span> <span class="token class-name">DateTimeFormatter</span><span class="token punctuation">.</span><span class="token function">ofPattern</span><span class="token punctuation">(</span><span class="token string">"HH:mm:ss.SSS"</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token class-name">ConsumerEx</span><span class="token punctuation">.</span><span class="token function">noop</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
-<span class="token comment">//ContextFactory.withCreateFn(jet -> DateTimeFormatter.ofPattern("HH:mm:ss.SSS"))</span>
-</code></pre></li>
-<li><p><code>map/filter/flatMapUsingContext</code> was renamed to
-<code>map/filter/flatMapUsingService</code>:</p>
-<pre><code class="hljs css language-java">pipeline<span class="token punctuation">.</span><span class="token function">readFrom</span><span class="token punctuation">(</span><span class="token class-name">TestSources</span><span class="token punctuation">.</span><span class="token function">items</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">,</span> <span class="token number">2</span><span class="token punctuation">,</span> <span class="token number">3</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
-        <span class="token punctuation">.</span><span class="token function">filterUsingService</span><span class="token punctuation">(</span>
-                <span class="token class-name">ServiceFactories</span><span class="token punctuation">.</span><span class="token function">sharedService</span><span class="token punctuation">(</span>pctx <span class="token operator">-></span> <span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
-                <span class="token punctuation">(</span>svc<span class="token punctuation">,</span> i<span class="token punctuation">)</span> <span class="token operator">-></span> i <span class="token operator">%</span> <span class="token number">2</span> <span class="token operator">==</span> svc<span class="token punctuation">)</span>
-        <span class="token punctuation">.</span><span class="token function">writeTo</span><span class="token punctuation">(</span><span class="token class-name">Sinks</span><span class="token punctuation">.</span><span class="token function">logger</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
-
-<span class="token comment">/*
-pipeline.drawFrom(TestSources.items(1, 2, 3))
-        .filterUsingContext(
-                ContextFactory.withCreateFn(i -> 1),
-                (ctx, i) -> i % 2 == ctx)
-        .drainTo(Sinks.logger());
-*/</span>
-</code></pre></li>
-<li><p><code>filterUsingServiceAsync</code> has been removed. Usages can be replaced
-with <code>mapUsingServiceAsync</code>, which behaves like a filter if it returns
-a <code>null</code> future or the returned future contains a <code>null</code> result:</p>
-<pre><code class="hljs css language-java">stage<span class="token punctuation">.</span><span class="token function">mapUsingServiceAsync</span><span class="token punctuation">(</span>serviceFactory<span class="token punctuation">,</span>
-        <span class="token punctuation">(</span>executor<span class="token punctuation">,</span> item<span class="token punctuation">)</span> <span class="token operator">-></span> <span class="token punctuation">{</span>
-            <span class="token class-name">CompletableFuture</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">Long</span><span class="token punctuation">></span></span> f <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">CompletableFuture</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token punctuation">></span></span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
-            executor<span class="token punctuation">.</span><span class="token function">submit</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">-></span> f<span class="token punctuation">.</span><span class="token function">complete</span><span class="token punctuation">(</span>item <span class="token operator">%</span> <span class="token number">2</span> <span class="token operator">==</span> <span class="token number">0</span> <span class="token operator">?</span> item <span class="token operator">:</span> <span class="token keyword">null</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
-            <span class="token keyword">return</span> f<span class="token punctuation">;</span>
-        <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
-<span class="token comment">/*
-stage.filterUsingServiceAsync(serviceFactory,
-        (executor, item) -> {
-            CompletableFuture&lt;Boolean> f = new CompletableFuture&lt;>();
-            executor.submit(() -> f.complete(item % 2 == 0));
-            return f;
-        });
-*/</span>
-</code></pre></li>
-<li><p><code>flatMapUsingServiceAsync</code> has been removed. Usages can be replaced
-with <code>mapUsingServiceAsync</code> followed by non-async <code>flatMap</code>:</p>
-<pre><code class="hljs css language-java">stage<span class="token punctuation">.</span><span class="token function">mapUsingServiceAsync</span><span class="token punctuation">(</span>serviceFactory<span class="token punctuation">,</span>
-        <span class="token punctuation">(</span>executor<span class="token punctuation">,</span> item<span class="token punctuation">)</span> <span class="token operator">-></span> <span class="token punctuation">{</span>
-            <span class="token class-name">CompletableFuture</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">List</span><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">></span><span class="token punctuation">></span></span> f <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">CompletableFuture</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token punctuation">></span></span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
-            executor<span class="token punctuation">.</span><span class="token function">submit</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">-></span> f<span class="token punctuation">.</span><span class="token function">complete</span><span class="token punctuation">(</span><span class="token class-name">Arrays</span><span class="token punctuation">.</span><span class="token function">asList</span><span class="token punctuation">(</span>item <span class="token operator">+</span> <span class="token string">"-1"</span><span class="token punctuation">,</span> item <span class="token operator">+</span> <span class="token string">"-2"</span><span class="token punctuation">,</span> item <span class="token operator">+</span> <span class="token string">"-3"</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
-            <span class="token keyword">return</span> f<span class="token punctuation">;</span>
-        <span class="token punctuation">}</span><span class="token punctuation">)</span>
-        <span class="token punctuation">.</span><span class="token function">flatMap</span><span class="token punctuation">(</span><span class="token class-name">Traversers</span><span class="token operator">::</span><span class="token function">traverseIterable</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
-<span class="token comment">/*
-stage.flatMapUsingServiceAsync(serviceFactory,
-        (executor, item) -> {
-            CompletableFuture&lt;Traverser&lt;String>> f = new CompletableFuture&lt;>();
-            executor.submit(() -> f.complete(traverseItems(item + "-1", item + "-2", item + "-3")));
-            return f;
-        })
-*/</span>
-</code></pre></li>
-<li><p>The methods <code>withMaxPendingCallsPerProcessor(int)</code> and
-<code>withUnorderedAsyncResponses()</code> were removed from <code>ServiceFactory</code>.
-These properties are relevant only in the context of asynchronous
-operations and were used in conjunction with
-<code>GeneralStage.mapUsingServiceAsync(…​)</code>. In Jet 4.0 the
-<code>GeneralStage.mapUsingServiceAsync(…​)</code> method has a new variant with
-explicit parameters for the above settings:</p>
-<pre><code class="hljs css language-java">stage<span class="token punctuation">.</span><span class="token function">mapUsingServiceAsync</span><span class="token punctuation">(</span>
-        <span class="token class-name">ServiceFactories</span><span class="token punctuation">.</span><span class="token function">sharedService</span><span class="token punctuation">(</span>ctx <span class="token operator">-></span> <span class="token class-name">Executors</span><span class="token punctuation">.</span><span class="token function">newFixedThreadPool</span><span class="token punctuation">(</span><span class="token number">8</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
-        <span class="token number">2</span><span class="token punctuation">,</span>
-        <span class="token boolean">false</span><span class="token punctuation">,</span>
-        <span class="token punctuation">(</span>exec<span class="token punctuation">,</span> task<span class="token punctuation">)</span> <span class="token operator">-></span> <span class="token class-name">CompletableFuture</span><span class="token punctuation">.</span><span class="token function">supplyAsync</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">-></span> task<span class="token punctuation">,</span> exec<span class="token punctuation">)</span>
-<span class="token punctuation">)</span><span class="token punctuation">;</span>
-
-<span class="token comment">/*
-stage.mapUsingContextAsync(
-        ContextFactory.withCreateFn(jet -> Executors.newFixedThreadPool(8))
-                .withMaxPendingCallsPerProcessor(2)
-                .withUnorderedAsyncResponses(),
-        (exec, task) -> CompletableFuture.supplyAsync(() -> task, exec)
-);
-*/</span>
-</code></pre></li>
-<li><p><code>com.hazelcast.jet.pipeline.Sinks#mapWithEntryProcessor</code> got a new
-signature in order to accommodate the improved <code>EntryProcessor</code>, which
-became more lambda-friendly in IMDG (see the <a href="https://docs.hazelcast.org/docs/4.0/manual/html-single/#introducing-lambda-friendly-interfaces">relevant section</a>
-in the IMDG Migration Guide). The return type of <code>EntryProcessor</code> is
-now an explicit parameter in <code>mapWithEntryProcessor</code>'s method
-signature:</p>
-<pre><code class="hljs css language-java"><span class="token class-name">FunctionEx</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">Map</span><span class="token punctuation">.</span><span class="token class-name">Entry</span><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">,</span> <span class="token class-name">Integer</span><span class="token punctuation">></span><span class="token punctuation">,</span> <span class="token class-name">EntryProcessor</span><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">,</span> <span class="token class-name">Integer</span><span class="token punctuation">,</span> <span class="token class-name">Void</span><span class="token punctuation">></span><span class="token punctuation">></span></span> entryProcFn <span class="token operator">=</span>
-        entry <span class="token operator">-></span>
-                <span class="token punctuation">(</span><span class="token class-name">EntryProcessor</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">,</span> <span class="token class-name">Integer</span><span class="token punctuation">,</span> <span class="token class-name">Void</span><span class="token punctuation">></span></span><span class="token punctuation">)</span> e <span class="token operator">-></span> <span class="token punctuation">{</span>
-                    e<span class="token punctuation">.</span><span class="token function">setValue</span><span class="token punctuation">(</span>e<span class="token punctuation">.</span><span class="token function">getValue</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">==</span> <span class="token keyword">null</span> <span class="token operator">?</span> <span class="token number">1</span> <span class="token operator">:</span> e<span class="token punctuation">.</span><span class="token function">getValue</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">+</span> <span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
-                    <span class="token keyword">return</span> <span class="token keyword">null</span><span class="token punctuation">;</span>
-                <span class="token punctuation">}</span><span class="token punctuation">;</span>
-<span class="token class-name">Sinks</span><span class="token punctuation">.</span><span class="token function">mapWithEntryProcessor</span><span class="token punctuation">(</span>map<span class="token punctuation">,</span> <span class="token class-name">Map</span><span class="token punctuation">.</span><span class="token class-name">Entry</span><span class="token operator">::</span><span class="token function">getKey</span><span class="token punctuation">,</span> entryProcFn<span class="token punctuation">)</span><span class="token punctuation">;</span>
-
-<span class="token comment">/*
-FunctionEx&lt;Map.Entry&lt;String, Integer>, EntryProcessor&lt;String, Integer>> entryProcFn =
-        entry ->
-                (EntryProcessor&lt;String, Integer>) e -> {
-                    e.setValue(e.getValue() == null ? 1 : e.getValue() + 1);
-                    return null;
-                };
-Sinks.mapWithEntryProcessor(map, Map.Entry::getKey, entryProcFn);
-*/</span>
-</code></pre></li>
-<li><p>HDFS source and sink methods are now <code>Hadoop.inputFormat</code> and
-<code>Hadoop.outputFormat</code>.</p></li>
-<li><p><code>MetricsConfig</code> is no longer part of <code>JetConfig</code>, but resides in the
-IMDG <code>Config</code> class:</p>
-<pre><code class="hljs css language-java">jetConfig<span class="token punctuation">.</span><span class="token function">getHazelcastConfig</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">getMetricsConfig</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">setCollectionFrequencySeconds</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
-<span class="token comment">//jetConfig.getMetricsConfig().setCollectionIntervalSeconds(1);</span>
-</code></pre></li>
-<li><p><code>Traverser</code> type got a slight change in the <code>flatMap</code> lambda’s generic
-type wildcards. This change shouldn’t affect anything in practice.</p></li>
-<li><p>In sources and sinks we changed the method signatures so that the
-lambda becomes the last parameter, where applicable.</p></li>
-<li><p><code>JetBootstrap.getInstance()</code> moved to <code>Jet.bootstrappedInstance()</code> and
-now it automatically creates an isolated local instance when not
-running through <code>jet submit</code>. If used from <code>jet submit</code>, the behaviour
-remains the same.</p></li>
-<li><p><code>JobConfig.addResource(…​</code>) is now <code>addClasspathResource(…​</code>).</p></li>
-<li><p><code>ResourceType</code>, <code>ResourceConfig</code> and <code>JobConfig.getResourceConfigs()</code>
-are now labeled as private API and we discourage their direct usage.
-We also renamed <code>ResourceType.REGULAR_FILE</code> to <code>ResourceType.FILE</code>,
-but this is now an internal change.</p></li>
-</ul>
-<h2><a class="anchor" aria-hidden="true" id="further-help"></a><a href="#further-help" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Further help</h2>
-<p>In case you encounter any difficulties with migrating to Jet 4.0 feel
-free to <a href="https://gitter.im/hazelcast/hazelcast-jet">contact us any time</a>.</p>
-</span></div></article></div><div class="docs-prevnext"><a class="docs-next" href="/blog/page2/">Next →</a></div></div></div></div></div><footer class="nav-footer" id="footer"><section class="sitemap"><div style="text-align:left"><a href="/" class="nav-home"><img src="/img/logo-light.svg" alt="Hazelcast Jet" width="200" height="40"/></a><div style="margin-left:12px"><a class="github-button" href="https://github.com/hazelcast/hazelcast-jet" data-icon="octicon-star" data-count-href="/facebook/docusaurus/stargazers" data-show-count="true" data-count-aria-label="# stargazers on GitHub" aria-label="Star this project on GitHub">Star On GitHub</a></div></div><div><h5>Docs</h5><a href="/docs/get-started/intro">Get Started</a><a href="/docs/concepts/dag">Concepts</a><a href="/docs/tutorials/kafka">Tutorials</a><a href="/docs/architecture/distributed-computing">Architecture</a><a href="/docs/operations/installation">Operations Guide</a><a href="/docs/enterprise">Enterprise Edition</a></div><div><h5>Community</h5><a href="https://groups.google.com/forum/#!forum/hazelcast-jet" target="_blank" rel="noreferrer noopener">Google Groups</a><a href="http://stackoverflow.com/questions/tagged/hazelcast-jet" target="_blank" rel="noreferrer noopener">Stack Overflow</a><a href="https://slack.hazelcast.com">Slack</a></div><div><h5>Latest From the Blog</h5><a href="/blog/2020/08/05/gc-tuning-for-jet">Sub-10 ms Latency in Java: Concurrent GC with Green Threads</a><a href="/blog/2020/07/16/designing-evergreen-cache-cdc">Designing an Evergreen Cache with Change Data Capture</a><a href="/blog/2020/07/14/jet-42-is-released">Jet 4.2 is Released</a><a href="/blog/2020/06/23/jdk-gc-benchmarks-rematch">The Low-Latency Rematch: Performance of Modern Java on Data-Heavy Workloads</a><a href="/blog/2020/06/09/jdk-gc-benchmarks-part2">Performance of Modern Java on Data-Heavy Workloads, Part 2</a></div><div><h5>More</h5><a href="https://github.com/hazelcast/hazelcast-jet">GitHub Project</a><a href="http://hazelcast.com/company/careers/">Work at Hazelcast</a><a href="/license">License</a></div></section><section class="copyright">Copyright © 2020 Hazelcast Inc.</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
+</span></div></article></div><div class="docs-prevnext"><a class="docs-next" href="/blog/page2/">Next →</a></div></div></div></div></div><footer class="nav-footer" id="footer"><section class="sitemap"><div style="text-align:left"><a href="/" class="nav-home"><img src="/img/logo-light.svg" alt="Hazelcast Jet" width="200" height="40"/></a><div style="margin-left:12px"><a class="github-button" href="https://github.com/hazelcast/hazelcast-jet" data-icon="octicon-star" data-count-href="/facebook/docusaurus/stargazers" data-show-count="true" data-count-aria-label="# stargazers on GitHub" aria-label="Star this project on GitHub">Star On GitHub</a></div></div><div><h5>Docs</h5><a href="/docs/get-started/intro">Get Started</a><a href="/docs/concepts/dag">Concepts</a><a href="/docs/tutorials/kafka">Tutorials</a><a href="/docs/architecture/distributed-computing">Architecture</a><a href="/docs/operations/installation">Operations Guide</a><a href="/docs/enterprise">Enterprise Edition</a></div><div><h5>Community</h5><a href="https://groups.google.com/forum/#!forum/hazelcast-jet" target="_blank" rel="noreferrer noopener">Google Groups</a><a href="http://stackoverflow.com/questions/tagged/hazelcast-jet" target="_blank" rel="noreferrer noopener">Stack Overflow</a><a href="https://slack.hazelcast.com">Slack</a></div><div><h5>Latest From the Blog</h5><a href="/blog/2020/09/18/cdc-meets-stream-processing">Change Data Capture meets Stream Processing</a><a href="/blog/2020/08/05/gc-tuning-for-jet">Sub-10 ms Latency in Java: Concurrent GC with Green Threads</a><a href="/blog/2020/07/16/designing-evergreen-cache-cdc">Designing an Evergreen Cache with Change Data Capture</a><a href="/blog/2020/07/14/jet-42-is-released">Jet 4.2 is Released</a><a href="/blog/2020/06/23/jdk-gc-benchmarks-rematch">The Low-Latency Rematch: Performance of Modern Java on Data-Heavy Workloads</a></div><div><h5>More</h5><a href="https://github.com/hazelcast/hazelcast-jet">GitHub Project</a><a href="http://hazelcast.com/company/careers/">Work at Hazelcast</a><a href="/license">License</a></div></section><section class="copyright">Copyright © 2020 Hazelcast Inc.</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
                 document.addEventListener('keyup', function(e) {
                   if (e.target !== document.body) {
                     return;

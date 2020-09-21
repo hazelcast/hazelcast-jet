@@ -1,0 +1,225 @@
+<!DOCTYPE html><html lang="en"><head><meta charSet="utf-8"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><title>Change Data Capture meets Stream Processing · Hazelcast Jet</title><meta name="viewport" content="width=device-width"/><meta name="generator" content="Docusaurus"/><meta name="description" content="## Introduction"/><meta name="docsearch:language" content="en"/><meta property="og:title" content="Change Data Capture meets Stream Processing · Hazelcast Jet"/><meta property="og:type" content="website"/><meta property="og:url" content="https://jet-start.sh/blog/2020/09/18/cdc-meets-stream-processing"/><meta property="og:description" content="## Introduction"/><meta property="og:image" content="https://jet-start.sh/img/Hazelcast-Jet-Logo-Blue_Dark.jpg"/><meta name="twitter:card" content="summary"/><meta name="twitter:image" content="https://jet-start.sh/img/Hazelcast-Jet-Logo-Blue_Dark.jpg"/><link rel="shortcut icon" href="/img/favicon.png"/><link rel="stylesheet" href="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.css"/><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/default.min.css"/><link rel="alternate" type="application/atom+xml" href="https://jet-start.sh/blog/atom.xml" title="Hazelcast Jet Blog ATOM Feed"/><link rel="alternate" type="application/rss+xml" href="https://jet-start.sh/blog/feed.xml" title="Hazelcast Jet Blog RSS Feed"/><script>
+              (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+              (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+              m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+              })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+              ga('create', 'UA-158279495-1', 'auto');
+              ga('send', 'pageview');
+            </script><link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Ubuntu:300,400,500,600"/><link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,500,600,700,800"/><script type="text/javascript" src="https://buttons.github.io/buttons.js"></script><script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.0/clipboard.min.js"></script><script type="text/javascript" src="/js/code-block-buttons.js"></script><script type="text/javascript" src="https://plausible.io/js/plausible.js" async="" defer="" data-domain="jet-start.sh"></script><script src="/js/scrollSpy.js"></script><link rel="stylesheet" href="/css/prism.css"/><link rel="stylesheet" href="/css/main.css"/><script src="/js/codetabs.js"></script></head><body class="sideNavVisible separateOnPageNav"><div class="fixedHeaderContainer"><div class="headerWrapper wrapper"><header><a href="/"><img class="logo" src="/img/logo-dark.svg" alt="Hazelcast Jet"/></a><a href="/versions"><h3>4.2</h3></a><div class="navigationWrapper navigationSlider"><nav class="slidingNav"><ul class="nav-site nav-site-internal"><li class=""><a href="/docs/get-started/intro" target="_self">Docs</a></li><li class=""><a href="/download" target="_self">Download</a></li><li class=""><a href="/demos" target="_self">Demos</a></li><li class=""><a href="https://github.com/hazelcast/hazelcast-jet" target="_self">GitHub</a></li><li class=""><a href="https://slack.hazelcast.com/" target="_self">Community</a></li><li class="siteNavGroupActive"><a href="/blog/" target="_self">Blog</a></li><li class="navSearchWrapper reactNavSearchWrapper"><input type="text" id="search_input_react" placeholder="Search" title="Search"/></li></ul></nav></div></header></div></div><div class="navPusher"><div class="docMainWrapper wrapper"><div class="docsNavContainer" id="docsNav"><nav class="toc"><div class="toggleNav"><section class="navWrapper wrapper"><div class="navBreadcrumb wrapper"><div class="navToggle" id="navToggler"><div class="hamburger-menu"><div class="line1"></div><div class="line2"></div><div class="line3"></div></div></div><h2><i>›</i><span>All posts</span></h2><div class="tocToggler" id="tocToggler"><i class="icon-toc"></i></div></div><div class="navGroups"><div class="navGroup"><h3 class="navGroupCategoryTitle">All posts</h3><ul class=""><li class="navListItem navListItemActive"><a class="navItem" href="/blog/2020/09/18/cdc-meets-stream-processing">Change Data Capture meets Stream Processing</a></li><li class="navListItem"><a class="navItem" href="/blog/2020/08/05/gc-tuning-for-jet">Sub-10 ms Latency in Java: Concurrent GC with Green Threads</a></li><li class="navListItem"><a class="navItem" href="/blog/2020/07/16/designing-evergreen-cache-cdc">Designing an Evergreen Cache with Change Data Capture</a></li><li class="navListItem"><a class="navItem" href="/blog/2020/07/14/jet-42-is-released">Jet 4.2 is Released</a></li><li class="navListItem"><a class="navItem" href="/blog/2020/06/23/jdk-gc-benchmarks-rematch">The Low-Latency Rematch: Performance of Modern Java on Data-Heavy Workloads</a></li><li class="navListItem"><a class="navItem" href="/blog/2020/06/09/jdk-gc-benchmarks-part2">Performance of Modern Java on Data-Heavy Workloads, Part 2</a></li><li class="navListItem"><a class="navItem" href="/blog/2020/06/09/jdk-gc-benchmarks-part1">Performance of Modern Java on Data-Heavy Workloads, Part 1</a></li><li class="navListItem"><a class="navItem" href="/blog/2020/05/25/grcp">Processing 10M queries / second on a single node using Jet and gRPC</a></li><li class="navListItem"><a class="navItem" href="/blog/2020/05/18/spark-jet">How Hazelcast Jet Compares to Apache Spark</a></li><li class="navListItem"><a class="navItem" href="/blog/2020/04/29/jet-41-is-released">Jet 4.1 is Released</a></li><li class="navListItem"><a class="navItem" href="/blog/2020/04/01/upgrading-to-jet-40">Upgrading to Jet 4.0</a></li><li class="navListItem"><a class="navItem" href="/blog/2020/03/30/ml-inference">Machine Learning Inference at Scale</a></li><li class="navListItem"><a class="navItem" href="/blog/2020/03/02/jet-40-is-released">Jet 4.0 is Released</a></li><li class="navListItem"><a class="navItem" href="/blog/2020/02/20/transactional-processors">Transactional connectors in Hazelcast Jet</a></li><li class="navListItem"><a class="navItem" href="/blog/2020/01/28/new-website">Announcing New Documentation Website</a></li><li class="navListItem"><a class="navItem" href="/blog/2019/11/12/stream-deduplication">Stream Deduplication with Hazelcast Jet</a></li></ul></div></div></section></div><script>
+            var coll = document.getElementsByClassName('collapsible');
+            var checkActiveCategory = true;
+            for (var i = 0; i < coll.length; i++) {
+              var links = coll[i].nextElementSibling.getElementsByTagName('*');
+              if (checkActiveCategory){
+                for (var j = 0; j < links.length; j++) {
+                  if (links[j].classList.contains('navListItemActive')){
+                    coll[i].nextElementSibling.classList.toggle('hide');
+                    coll[i].childNodes[1].classList.toggle('rotate');
+                    checkActiveCategory = false;
+                    break;
+                  }
+                }
+              }
+
+              coll[i].addEventListener('click', function() {
+                var arrow = this.childNodes[1];
+                arrow.classList.toggle('rotate');
+                var content = this.nextElementSibling;
+                content.classList.toggle('hide');
+              });
+            }
+
+            document.addEventListener('DOMContentLoaded', function() {
+              createToggler('#navToggler', '#docsNav', 'docsSliderActive');
+              createToggler('#tocToggler', 'body', 'tocActive');
+
+              var headings = document.querySelector('.toc-headings');
+              headings && headings.addEventListener('click', function(event) {
+                var el = event.target;
+                while(el !== headings){
+                  if (el.tagName === 'A') {
+                    document.body.classList.remove('tocActive');
+                    break;
+                  } else{
+                    el = el.parentNode;
+                  }
+                }
+              }, false);
+
+              function createToggler(togglerSelector, targetSelector, className) {
+                var toggler = document.querySelector(togglerSelector);
+                var target = document.querySelector(targetSelector);
+
+                if (!toggler) {
+                  return;
+                }
+
+                toggler.onclick = function(event) {
+                  event.preventDefault();
+
+                  target.classList.toggle(className);
+                };
+              }
+            });
+        </script></nav></div><div class="container mainContainer postContainer blogContainer"><div class="wrapper"><div class="lonePost"><div class="post"><header class="postHeader"><h1 class="postHeaderTitle"><a href="/blog/2020/09/18/cdc-meets-stream-processing">Change Data Capture meets Stream Processing</a></h1><p class="post-meta">September 18, 2020</p><div class="authorBlock"><p class="post-authorName"><a href="https://www.linkedin.com/in/bjozsef/" target="_blank" rel="noreferrer noopener">Bartók József</a></p><div class="authorPhoto"><a href="https://www.linkedin.com/in/bjozsef/" target="_blank" rel="noreferrer noopener"><img src="https://www.itdays.ro/public/images/speakers-big/Jozsef_Bartok.jpg" alt="Bartók József"/></a></div></div></header><div><span><h2><a class="anchor" aria-hidden="true" id="introduction"></a><a href="#introduction" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Introduction</h2>
+<p><em>Change Data Capture</em> (CDC) refers to the process of <em>observing
+changes made to a database</em> and extracting them in a form usable by
+other systems, for the purposes of replication, analysis and many more.</p>
+<p><em>Hazelcast Jet</em> is a distributed, lightweight stream processing
+framework. It allows you to write modern Java code that focuses purely
+on data transformation while it does all the heavy lifting of getting
+the data flowing and computation running across a cluster of nodes. Jet
+stores computational state in <a href="https://jet-start.sh/docs/api/data-structures">fault-tolerant, distributed in-memory
+storage</a>, allowing
+thousands of concurrent users granular and fast access to your data
+without breaking a sweat.</p>
+<p>While stream processing is a natural solution for providing insight into
+many big-data workloads, it’s a relatively new evolution over its
+predecessor - offline batch processing. Utilizing stream processing
+effectively requires re-architecting existing systems to event-driven
+architectures and introducing several new components. This process is
+not always straightforward and also requires a shift in mindset.</p>
+<p>In this context, the functionality provided by change data capture
+technologies, for which Debezium is one of the, if not THE best
+open-source alternative, is a godsend. To be able to ingest data from
+relational databases, without affecting the applications that use them,
+changes the game for streaming systems. It becomes possible to safely
+extend old systems with all kinds of new functionality: real-time
+analytics, complex event processing, anomaly &amp; fraud detection and so
+on.</p>
+<h2><a class="anchor" aria-hidden="true" id="integration"></a><a href="#integration" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Integration</h2>
+<p>When we first considered integrating Debezium into Jet, the most
+important decisions were centered around the fact that Debezium is
+designed to be deployed via Apache <a href="https://kafka.apache.org/documentation/#connect">Kafka
+Connect</a>, which then
+takes care of <em>fault tolerance</em> and <em>scalability</em>. Fortunately, Jet is
+fully capable of providing these crucial services. Also, Kafka Connect
+is a good enough abstraction that we were able to mimic it for Debezium.</p>
+<p>We are aware that Debezium also offers an <em>embedded mode</em> for
+applications not interested in fault-tolerance guarantees such as
+exactly-once processing and resilience, but since Jet does not have a
+“dumbed down” version (even as full-blown is light enough to be
+embedded), we quickly discarded this approach.</p>
+<p>So, first, we added generic support for Kafka Connect sources to Jet,
+which should be a valuable feature even outside the scope of CDC. Then
+we used Debezium to build a Kafka Connect source for Jet. Well… “build”
+might be overstating it. Debezium already is a Kafka Connect source. We
+just had to make sure that Jet’s specific fault-tolerance mechanisms
+will interact with it properly, through the Kafka Connect API.</p>
+<h2><a class="anchor" aria-hidden="true" id="synergy"></a><a href="#synergy" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Synergy</h2>
+<p>One immediate benefit that Jet offers to Debezium users is eliminating
+the need for <em>external services</em>. No Zookeeper, no Kafka needed. When
+using Debezium through Jet, the latter takes care of the whole lifecycle
+and fault tolerance of all the components involved. The setup is greatly
+simplified.</p>
+<p>Then, obviously, there is the <em>stream processing capability</em>, because
+that’s what Jet does. Not only do you get access to the data, but you
+also have the toolbox to process it, extract whatever insights you need
+from it.</p>
+<p>In addition, Jet also aims to offer <em>further convenience</em> wrappers when
+the Debezium source is being used. For example:</p>
+<ul>
+<li>builders for the most common configuration properties to make setting
+up Debezium for some specific DB as simple as possible</li>
+<li>standard Java interfaces to give structure to the complex Debezium
+events</li>
+<li>JSON parsing, including mapping to Objects, based on <a href="https://github.com/FasterXML/jackson-jr">Jackson
+jr</a>, to simplify how parts
+of - or even entire Debezium events can be interpreted</li>
+</ul>
+<p>For an example look at this sample from our <a href="https://jet-start.sh/docs/tutorials/cdc#6-define-jet-job">CDC
+tutorial</a>. All
+the code you would need to build an in-memory replica of your MySQL
+database table would be something like:</p>
+<pre><code class="hljs css language-java"><span class="token class-name">StreamSource</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">ChangeRecord</span><span class="token punctuation">></span></span> source <span class="token operator">=</span> <span class="token class-name">MySqlCdcSources</span><span class="token punctuation">.</span><span class="token function">mysql</span><span class="token punctuation">(</span><span class="token string">"source"</span><span class="token punctuation">)</span>
+        <span class="token punctuation">.</span><span class="token function">setDatabaseAddress</span><span class="token punctuation">(</span><span class="token string">"127.0.0.1"</span><span class="token punctuation">)</span>
+        <span class="token punctuation">.</span><span class="token function">setDatabasePort</span><span class="token punctuation">(</span><span class="token number">3306</span><span class="token punctuation">)</span>
+        <span class="token punctuation">.</span><span class="token function">setDatabaseUser</span><span class="token punctuation">(</span><span class="token string">"debezium"</span><span class="token punctuation">)</span>
+        <span class="token punctuation">.</span><span class="token function">setDatabasePassword</span><span class="token punctuation">(</span><span class="token string">"dbz"</span><span class="token punctuation">)</span>
+        <span class="token punctuation">.</span><span class="token function">setClusterName</span><span class="token punctuation">(</span><span class="token string">"dbserver1"</span><span class="token punctuation">)</span>
+        <span class="token punctuation">.</span><span class="token function">setDatabaseWhitelist</span><span class="token punctuation">(</span><span class="token string">"inventory"</span><span class="token punctuation">)</span>
+        <span class="token punctuation">.</span><span class="token function">setTableWhitelist</span><span class="token punctuation">(</span><span class="token string">"inventory.customers"</span><span class="token punctuation">)</span>
+        <span class="token punctuation">.</span><span class="token function">build</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token class-name">Pipeline</span> pipeline <span class="token operator">=</span> <span class="token class-name">Pipeline</span><span class="token punctuation">.</span><span class="token function">create</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+pipeline<span class="token punctuation">.</span><span class="token function">readFrom</span><span class="token punctuation">(</span>source<span class="token punctuation">)</span>
+        <span class="token punctuation">.</span><span class="token function">withoutTimestamps</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+        <span class="token punctuation">.</span><span class="token function">writeTo</span><span class="token punctuation">(</span><span class="token class-name">CdcSinks</span><span class="token punctuation">.</span><span class="token function">map</span><span class="token punctuation">(</span><span class="token string">"customers"</span><span class="token punctuation">,</span>
+                r <span class="token operator">-></span> r<span class="token punctuation">.</span><span class="token function">key</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">toMap</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">get</span><span class="token punctuation">(</span><span class="token string">"id"</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+                r <span class="token operator">-></span> r<span class="token punctuation">.</span><span class="token function">value</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">toObject</span><span class="token punctuation">(</span><span class="token class-name">Customer</span><span class="token punctuation">.</span><span class="token keyword">class</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">toString</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token class-name">JobConfig</span> cfg <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">JobConfig</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">setName</span><span class="token punctuation">(</span><span class="token string">"mysql-monitor"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token class-name">Jet</span><span class="token punctuation">.</span><span class="token function">bootstrappedInstance</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">newJob</span><span class="token punctuation">(</span>pipeline<span class="token punctuation">,</span> cfg<span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<h2><a class="anchor" aria-hidden="true" id="architecture"></a><a href="#architecture" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Architecture</h2>
+<p>I have stated above that when Debezium is integrated into Jet, the
+latter takes on the role of service-provider as far as fault tolerance
+and scalability are concerned.</p>
+<p>Jet doesn't delegate its cluster management and fault tolerance concerns
+to an outside system like ZooKeeper. It reuses the groundwork
+implemented for Hazelcast IMDG: cluster management and the IMap, and
+adds its own implementation of Chandy-Lamport distributed snapshots. If
+a cluster member fails, Jet will restart the job on the remaining
+members, restore the state of processing from the last snapshot, and
+then seamlessly continue from that point. For further details, consult
+our <a href="https://jet-start.sh/docs/next/architecture/fault-tolerance">documentation on the
+topic</a>.</p>
+<p>Extending this functionality umbrella to cover Debezium has been
+surprisingly simple. All we had to do was to add Debezium’s
+source offset to Jet’s snapshots. This way, whenever Jet needs to
+execute a recovery, it passes the recovered offset to Debezium,
+which in turn resumes the data flow from that offset.</p>
+<p>One other thing we did and might be worth mentioning is that the Jet
+integration also makes use of Debezium’s <a href="https://debezium.io/documentation/reference/1.2/configuration/event-flattening.html">new record state
+extraction</a>
+SMT (Simple Message Transformation), for the purpose of message
+structure simplification. With this transformation in effect, only the
+&quot;after&quot; structure of the Debezium event envelope is processed by Jet.
+However, whether this is a good idea or not, only time will tell. I
+personally think that if and when we will start covering schema changes
+more, we might end up re-enabling the full Debezium event content.</p>
+<h2><a class="anchor" aria-hidden="true" id="examples"></a><a href="#examples" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Examples</h2>
+<p>The simplest example of using the Jet-Debezium integration would be our
+<a href="https://jet-start.sh/docs/next/tutorials/cdc">CDC tutorial</a> that I’ve
+already mentioned above. A more involved one can be seen in my
+colleague’s, Nicolas Fränkel’s <a href="https://jet-start.sh/blog/2020/07/16/designing-evergreen-cache-cdc">blog
+post</a>.</p>
+<h2><a class="anchor" aria-hidden="true" id="license"></a><a href="#license" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>License</h2>
+<p>The Jet - Debezium integration is currently provided under the <a href="https://www.apache.org/licenses/LICENSE-2.0.txt">Apache
+License, Version 2</a>,
+just like most of Jet and Debezium, so making full usage of the
+combination of the two should have no impediments in your own projects.</p>
+<h2><a class="anchor" aria-hidden="true" id="looking-ahead"></a><a href="#looking-ahead" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Looking ahead</h2>
+<p>At the moment of writing the Jet-Debezium integration is fully finished
+only for MySQL and Postgres databases and has been <a href="https://jet-start.sh/blog/2020/07/14/jet-42-is-released">released in version
+4.2</a> of Jet.
+Further work on covering more connectors and extending current
+ones (for example by adding handling for database schema changes),
+has not yet been scheduled.</p>
+<p>The functionality provided by Debezium, the ability to allow modern
+processing of legacy data is a great fit to Jet’s ability to carry out
+that processing efficiently. The combination of the two has the
+potential to become much more than the sum of their parts. I very much
+look forward to finding out what this integration can lead to. Stay
+tuned!</p>
+</span></div></div><div class="blogSocialSection"></div></div><div class="blog-recent"><a class="button" href="/blog/">Recent posts</a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#introduction">Introduction</a></li><li><a href="#integration">Integration</a></li><li><a href="#synergy">Synergy</a></li><li><a href="#architecture">Architecture</a></li><li><a href="#examples">Examples</a></li><li><a href="#license">License</a></li><li><a href="#looking-ahead">Looking ahead</a></li></ul></nav></div><footer class="nav-footer" id="footer"><section class="sitemap"><div style="text-align:left"><a href="/" class="nav-home"><img src="/img/logo-light.svg" alt="Hazelcast Jet" width="200" height="40"/></a><div style="margin-left:12px"><a class="github-button" href="https://github.com/hazelcast/hazelcast-jet" data-icon="octicon-star" data-count-href="/facebook/docusaurus/stargazers" data-show-count="true" data-count-aria-label="# stargazers on GitHub" aria-label="Star this project on GitHub">Star On GitHub</a></div></div><div><h5>Docs</h5><a href="/docs/get-started/intro">Get Started</a><a href="/docs/concepts/dag">Concepts</a><a href="/docs/tutorials/kafka">Tutorials</a><a href="/docs/architecture/distributed-computing">Architecture</a><a href="/docs/operations/installation">Operations Guide</a><a href="/docs/enterprise">Enterprise Edition</a></div><div><h5>Community</h5><a href="https://groups.google.com/forum/#!forum/hazelcast-jet" target="_blank" rel="noreferrer noopener">Google Groups</a><a href="http://stackoverflow.com/questions/tagged/hazelcast-jet" target="_blank" rel="noreferrer noopener">Stack Overflow</a><a href="https://slack.hazelcast.com">Slack</a></div><div><h5>Latest From the Blog</h5><a href="/blog/2020/09/18/cdc-meets-stream-processing">Change Data Capture meets Stream Processing</a><a href="/blog/2020/08/05/gc-tuning-for-jet">Sub-10 ms Latency in Java: Concurrent GC with Green Threads</a><a href="/blog/2020/07/16/designing-evergreen-cache-cdc">Designing an Evergreen Cache with Change Data Capture</a><a href="/blog/2020/07/14/jet-42-is-released">Jet 4.2 is Released</a><a href="/blog/2020/06/23/jdk-gc-benchmarks-rematch">The Low-Latency Rematch: Performance of Modern Java on Data-Heavy Workloads</a></div><div><h5>More</h5><a href="https://github.com/hazelcast/hazelcast-jet">GitHub Project</a><a href="http://hazelcast.com/company/careers/">Work at Hazelcast</a><a href="/license">License</a></div></section><section class="copyright">Copyright © 2020 Hazelcast Inc.</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
+                document.addEventListener('keyup', function(e) {
+                  if (e.target !== document.body) {
+                    return;
+                  }
+                  // keyCode for '/' (slash)
+                  if (e.keyCode === 191) {
+                    const search = document.getElementById('search_input_react');
+                    search && search.focus();
+                  }
+                });
+              </script><script>
+              var search = docsearch({
+                
+                apiKey: '79d1e4941621b9fd761d279d4d19ed69',
+                indexName: 'hazelcast-jet',
+                inputSelector: '#search_input_react',
+                algoliaOptions: {"facetFilters":["language:en","version:4.2"]}
+              });
+            </script></body></html>

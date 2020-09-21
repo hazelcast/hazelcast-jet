@@ -4,7 +4,7 @@
         <title>Hazelcast Jet Blog</title>
         <link>https://jet-start.sh/blog</link>
         <description>The best place to stay up-to-date with the latest Hazelcast Jet news and events.</description>
-        <lastBuildDate>Wed, 05 Aug 2020 06:00:00 GMT</lastBuildDate>
+        <lastBuildDate>Fri, 18 Sep 2020 06:00:00 GMT</lastBuildDate>
         <docs>https://validator.w3.org/feed/docs/rss2.html</docs>
         <generator>https://github.com/jpmonette/feed</generator>
         <image>
@@ -13,6 +13,13 @@
             <link>https://jet-start.sh/blog</link>
         </image>
         <copyright>Copyright © 2020 Hazelcast Inc.</copyright>
+        <item>
+            <title><![CDATA[Change Data Capture meets Stream Processing]]></title>
+            <link>https://jet-start.sh/blog/2020/09/18/cdc-meets-stream-processing.html</link>
+            <guid>https://jet-start.sh/blog/2020/09/18/cdc-meets-stream-processing.html</guid>
+            <pubDate>Fri, 18 Sep 2020 06:00:00 GMT</pubDate>
+            <description><![CDATA[<h2><a class="anchor" aria-hidden="true" id="introduction"></a><a href="#introduction" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewbox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"/></svg></a>Introduction</h2> <p><em>Change Data Capture</em> (CDC) refers to the process of <em>observing changes made to a database</em> and extracting them in a form usable by other systems, for the purposes of replication, analysis and many more.</p> <p><em>Hazelcast Jet</em> is a distributed, light...</p>]]></description>
+        </item>
         <item>
             <title><![CDATA[Sub-10 ms Latency in Java: Concurrent GC with Green Threads]]></title>
             <link>https://jet-start.sh/blog/2020/08/05/gc-tuning-for-jet.html</link>
