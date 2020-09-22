@@ -1,5 +1,5 @@
 ---
-title: Performance of Modern Java on Data-Heavy Workloads, Part 1
+title: Data-Heavy Workloads on Modern Java, Part 1
 description: Results of extensive testing of Hazelcast Jet with various combinations of JDK version and GC
 author: Marko Topolnik
 authorURL: https://twitter.com/mtopolnik
