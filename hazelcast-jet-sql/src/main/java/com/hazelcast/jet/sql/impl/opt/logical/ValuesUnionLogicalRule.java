@@ -32,9 +32,14 @@ import static java.util.stream.Collectors.toList;
 
 final class ValuesUnionLogicalRule extends RelOptRule {
 
-    private static final RelOptRuleOperand CHILD_OPERAND = operand(LogicalValues.class, none());
+    static final RelOptRule INSTANCE;
 
-    static final RelOptRule INSTANCE = new ValuesUnionLogicalRule();
+    private static final RelOptRuleOperand CHILD_OPERAND;
+
+    static {
+        CHILD_OPERAND = operand(LogicalValues.class, none());
+        INSTANCE = new ValuesUnionLogicalRule();
+    }
 
     private ValuesUnionLogicalRule() {
         super(
