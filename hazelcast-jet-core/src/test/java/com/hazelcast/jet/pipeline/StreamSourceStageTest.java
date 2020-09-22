@@ -30,12 +30,12 @@ import com.hazelcast.test.HazelcastSerialClassRunner;
 import com.hazelcast.test.annotation.NightlyTest;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Map.Entry;
-import org.junit.experimental.categories.Category;
 
 import static com.hazelcast.function.PredicateEx.alwaysTrue;
 import static com.hazelcast.jet.core.processor.Processors.noopP;
@@ -43,7 +43,9 @@ import static com.hazelcast.jet.pipeline.JournalInitialPosition.START_FROM_OLDES
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
 import static java.util.Objects.requireNonNull;
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 @RunWith(HazelcastSerialClassRunner.class)
 public class StreamSourceStageTest extends StreamSourceStageTestBase {
@@ -180,13 +182,12 @@ public class StreamSourceStageTest extends StreamSourceStageTestBase {
          .aggregate(AggregateOperations.counting())
          .writeTo(Sinks.list(sinkList));
 
+        long start = System.nanoTime();
         Job job = instance.newJob(p);
         assertEquals(0, sinkList.size());
         map.put(5, 5);
-
-        assertTrueAllTheTime(() -> assertEquals(0, sinkList.size()), 10);
         assertTrueEventually(() -> assertEquals(1, sinkList.size()), 30);
-
+        assertTrue(System.nanoTime() - start > SECONDS.toNanos(15));
         job.cancel();
     }
 
