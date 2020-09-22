@@ -69,6 +69,7 @@ abstract class S3TestBase extends JetTestSupport {
     }
 
     void testSink(String bucketName, String prefix, int itemCount, String payload) {
+        final long timeoutSeconds = 30;
         IMap<Integer, String> map = jet.getMap("map");
 
         for (int i = 0; i < itemCount; i++) {
@@ -82,9 +83,9 @@ abstract class S3TestBase extends JetTestSupport {
         jet.newJob(p).join();
 
         try (S3Client client = clientSupplier().get()) {
-            assertTrueEventually(() -> {
+            assertTrueEventuallyAndSuppressExceptions(() -> {
                 long lineCount = client
-                        .listObjects(req -> req.bucket(bucketName).prefix(prefix))
+                        .listObjectsV2(req -> req.bucket(bucketName).prefix(prefix))
                         .contents()
                         .stream()
                         .map(o -> client.getObject(req -> req.bucket(bucketName).key(o.key()), toInputStream()))
@@ -92,7 +93,7 @@ abstract class S3TestBase extends JetTestSupport {
                         .peek(line -> assertEquals(payload, line))
                         .count();
                 assertEquals(itemCount, lineCount);
-            });
+            }, timeoutSeconds);
         }
     }
 

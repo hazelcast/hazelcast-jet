@@ -24,7 +24,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.model.ListObjectsRequest;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
 import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
 import software.amazon.awssdk.services.s3.model.S3Object;
 
@@ -41,7 +41,7 @@ public class S3SinkTest extends S3TestBase {
     public void deleteObjects() {
         S3Client client = clientSupplier().get();
         List<ObjectIdentifier> identifiers = client
-                .listObjects(ListObjectsRequest.builder().bucket(bucketName).build())
+                .listObjectsV2(ListObjectsV2Request.builder().bucket(bucketName).build())
                 .contents()
                 .stream()
                 .map(S3Object::key)
