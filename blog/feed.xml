@@ -42,21 +42,21 @@
             <description><![CDATA[<p>Jet 4.2 is finally here! Here's an overview of what's new:</p> <h2><a class="anchor" aria-hidden="true" id="change-data-capture-support-for-mysql-and-postgresql"></a><a href="#change-data-capture-support-for-mysql-and-postgresql" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewbox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"/></svg></a>Change Data Capture Support for MySQL and PostgreSQL</h2> <p>Previously, Jet has had support for <a href="https://debezium.io/">Debezium</a> as a contrib package. We're happy to announce that we've made several improvements to this pa...</p>]]></description>
         </item>
         <item>
-            <title><![CDATA[The Low-Latency Rematch: Performance of Modern Java on Data-Heavy Workloads]]></title>
+            <title><![CDATA[Performance of Modern Java on Data-Heavy Workloads: The Low-Latency Rematch]]></title>
             <link>https://jet-start.sh/blog/2020/06/23/jdk-gc-benchmarks-rematch.html</link>
             <guid>https://jet-start.sh/blog/2020/06/23/jdk-gc-benchmarks-rematch.html</guid>
             <pubDate>Tue, 23 Jun 2020 06:00:00 GMT</pubDate>
             <description><![CDATA[<p>This post is a part of a series:</p> <ul> <li><a href="/blog/2020/06/09/jdk-gc-benchmarks-part1">Part 1 (Intro and high-throughput streaming benchmark)</a></li> <li><a href="/blog/2020/06/09/jdk-gc-benchmarks-part2">Part 2 (batch workload benchmark)</a></li> <li>Part 3 (you are here)</li> <li><a href="/blog/2020/08/05/gc-tuning-for-jet">Part 4 (concurrent GC with green threads)</a></li> </ul> <p>This is a followup on Part 1 of the blog post series we starte...</p>]]></description>
         </item>
         <item>
-            <title><![CDATA[Performance of Modern Java on Data-Heavy Workloads, Part 2]]></title>
+            <title><![CDATA[Performance of Modern Java on Data-Heavy Workloads: Batch Processing]]></title>
             <link>https://jet-start.sh/blog/2020/06/09/jdk-gc-benchmarks-part2.html</link>
             <guid>https://jet-start.sh/blog/2020/06/09/jdk-gc-benchmarks-part2.html</guid>
             <pubDate>Tue, 09 Jun 2020 06:00:00 GMT</pubDate>
             <description><![CDATA[<p>This post is a part of a series:</p> <ul> <li><a href="/blog/2020/06/09/jdk-gc-benchmarks-part1">Part 1 (Intro and high-throughput streaming benchmark)</a></li> <li>Part 2 (you are here)</li> <li><a href="/blog/2020/06/23/jdk-gc-benchmarks-rematch">Part 3 (low-latency benchmark)</a></li> <li><a href="/blog/2020/08/05/gc-tuning-for-jet">Part 4 (concurrent GC with green threads)</a></li> </ul> <h2><a class="anchor" aria-hidden="true" id="batch-pipeline-benchmark"></a><a href="#batch-pipeline-benchmark" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewbox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"/></svg></a>Batch Pipeline Benchmark</h2> <p>A batch pipeline processes a finite amou...</p>]]></description>
         </item>
         <item>
-            <title><![CDATA[Performance of Modern Java on Data-Heavy Workloads, Part 1]]></title>
+            <title><![CDATA[Performance of Modern Java on Data-Heavy Workloads: Real-Time Streaming]]></title>
             <link>https://jet-start.sh/blog/2020/06/09/jdk-gc-benchmarks-part1.html</link>
             <guid>https://jet-start.sh/blog/2020/06/09/jdk-gc-benchmarks-part1.html</guid>
             <pubDate>Tue, 09 Jun 2020 06:00:00 GMT</pubDate>

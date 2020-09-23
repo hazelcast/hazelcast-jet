@@ -53,7 +53,7 @@
         </author>
     </entry>
     <entry>
-        <title type="html"><![CDATA[The Low-Latency Rematch: Performance of Modern Java on Data-Heavy Workloads]]></title>
+        <title type="html"><![CDATA[Performance of Modern Java on Data-Heavy Workloads: The Low-Latency Rematch]]></title>
         <id>https://jet-start.sh/blog/2020/06/23/jdk-gc-benchmarks-rematch.html</id>
         <link href="https://jet-start.sh/blog/2020/06/23/jdk-gc-benchmarks-rematch.html"/>
         <updated>2020-06-23T06:00:00.000Z</updated>
@@ -64,7 +64,7 @@
         </author>
     </entry>
     <entry>
-        <title type="html"><![CDATA[Performance of Modern Java on Data-Heavy Workloads, Part 2]]></title>
+        <title type="html"><![CDATA[Performance of Modern Java on Data-Heavy Workloads: Batch Processing]]></title>
         <id>https://jet-start.sh/blog/2020/06/09/jdk-gc-benchmarks-part2.html</id>
         <link href="https://jet-start.sh/blog/2020/06/09/jdk-gc-benchmarks-part2.html"/>
         <updated>2020-06-09T06:00:00.000Z</updated>
@@ -75,7 +75,7 @@
         </author>
     </entry>
     <entry>
-        <title type="html"><![CDATA[Performance of Modern Java on Data-Heavy Workloads, Part 1]]></title>
+        <title type="html"><![CDATA[Performance of Modern Java on Data-Heavy Workloads: Real-Time Streaming]]></title>
         <id>https://jet-start.sh/blog/2020/06/09/jdk-gc-benchmarks-part1.html</id>
         <link href="https://jet-start.sh/blog/2020/06/09/jdk-gc-benchmarks-part1.html"/>
         <updated>2020-06-09T06:00:00.000Z</updated>
