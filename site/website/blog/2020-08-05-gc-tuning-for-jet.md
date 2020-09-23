@@ -1,5 +1,5 @@
 ---
-title: Data-Heavy Workloads on Modern Java, Sub-10ms Latency
+title: Sub-10 ms Latency in Java: Concurrent GC with Green Threads
 description: Hazelcast Jet's green threads allow it to dedicate some CPU cores to GC and win big on latency
 author: Marko Topolnik
 authorURL: https://twitter.com/mtopolnik
