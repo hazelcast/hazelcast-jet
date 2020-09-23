@@ -102,6 +102,10 @@ public class PostgresCdcNetworkIntegrationTest extends AbstractCdcIntegrationTes
 
     @Before
     public void before() {
+        //disable Testcontainer's automatic resource manager
+        //containers are cleaned up explicitly
+        //automatic resource manager is just an extra thing that can break
+        //(have had problems with it not being cleaned up properly itself)
         environmentVariables.set("TESTCONTAINERS_RYUK_DISABLED", "true");
         assertEquals("true", System.getenv("TESTCONTAINERS_RYUK_DISABLED"));
     }
