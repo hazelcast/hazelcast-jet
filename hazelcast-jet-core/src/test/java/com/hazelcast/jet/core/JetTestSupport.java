@@ -69,12 +69,15 @@ public abstract class JetTestSupport extends HazelcastTestSupport {
     @ClassRule
     public static Timeout globalTimeout = Timeout.seconds(15 * 60);
 
+    private static final ILogger SUPPORT_LOGGER = Logger.getLogger(JetTestSupport.class);
+
     protected ILogger logger = Logger.getLogger(getClass());
     private JetTestInstanceFactory instanceFactory;
 
     @After
     public void shutdownFactory() throws Exception {
         if (instanceFactory != null) {
+            SUPPORT_LOGGER.info("Terminating instanceFactory in JetTestSupport.@After");
             spawn(() -> instanceFactory.terminateAll())
                     .get(1, TimeUnit.MINUTES);
         }
@@ -237,7 +240,7 @@ public abstract class JetTestSupport extends HazelcastTestSupport {
             try {
                 r.runEx();
             } catch (Throwable e) {
-                logger.warning("Spawned Runnable failed", e);
+                SUPPORT_LOGGER.warning("Spawned Runnable failed", e);
             }
         });
     }
@@ -256,7 +259,7 @@ public abstract class JetTestSupport extends HazelcastTestSupport {
             assertTrue("stats are 0", allowEmptySnapshot || record.snapshotStats().numBytes() > 0);
             snapshotId[0] = record.snapshotId();
         }, timeoutSeconds);
-        logger.info("First snapshot found (id=" + snapshotId[0] + ")");
+        SUPPORT_LOGGER.info("First snapshot found (id=" + snapshotId[0] + ")");
     }
 
     public void waitForNextSnapshot(JobRepository jr, long jobId, int timeoutSeconds, boolean allowEmptySnapshot) {
@@ -272,7 +275,7 @@ public abstract class JetTestSupport extends HazelcastTestSupport {
                     snapshotId[0] > originalSnapshotId);
             assertTrue("stats are 0", allowEmptySnapshot || record.snapshotStats().numBytes() > 0);
         }, timeoutSeconds);
-        logger.info("Next snapshot found after " + NANOSECONDS.toMillis(System.nanoTime() - start) + " ms (id="
+        SUPPORT_LOGGER.info("Next snapshot found after " + NANOSECONDS.toMillis(System.nanoTime() - start) + " ms (id="
                 + snapshotId[0] + ", previous id=" + originalSnapshotId + ")");
     }
 
@@ -307,7 +310,7 @@ public abstract class JetTestSupport extends HazelcastTestSupport {
                     return;
                 }
             } catch (Exception e) {
-                logger.warning("Failure to read job status: " + e, e);
+                SUPPORT_LOGGER.warning("Failure to read job status: " + e, e);
             }
 
             Exception cancellationFailure;
@@ -325,8 +328,8 @@ public abstract class JetTestSupport extends HazelcastTestSupport {
             }
 
             sleepMillis(500);
-            logger.warning("Failed to cancel the job and it is " + status + ", retrying. Failure: " + cancellationFailure,
-                    cancellationFailure);
+            SUPPORT_LOGGER.warning("Failed to cancel the job and it is " + status + ", retrying. Failure: "
+                            + cancellationFailure, cancellationFailure);
         }
         // if we got here, 10 attempts to cancel the job have failed. Cluster is in bad shape probably, shut it down
         try {
