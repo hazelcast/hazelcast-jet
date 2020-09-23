@@ -364,21 +364,25 @@ public class Edge implements IdentifiedDataSerializable {
     }
 
     /**
-     * Specifies that the data will travel along this edge in a monotonically
-     * ascending order according to the provided comparator. The tasklet of
-     * the destination processor will ensure it always takes the least item
-     * of all those available at the head of the input queues. For this
-     * behavior to be useful, every upstream processor must ensure it emits the
-     * data according to the same ordering.
+     * Specifies that the items received by each destination processor will be
+     * composed by merge-sorting the sorted streams of input items. For this
+     * behavior to be applicable, every upstream processor must ensure it emits
+     * the data according to the given ordering.
      * <p>
-     * The purpose of this edge type is distributed sorting. The processors
-     * of the source vertex sort their partial data and the processor in the
-     * destination vertex maintains the sort order while consuming the data
-     * from many concurrent inputs.
+     * The use case for this edge type is merging of sorted streams. The
+     * processors of the source vertex sort their partial data and the
+     * processor in the destination vertex merges the sorted streams while
+     * consuming the data from many concurrent inputs.
+     * <p>
+     * The job will fail if item disorder is detected in the output of some processor
+     * <p>
+     * The implementation currently doesn't handle watermarks or barriers: if
+     * the source processors emit watermarks or you add a processing guarantee,
+     * the job will fail at runtime.
      *
      * @since 4.3
      */
-    public <T> Edge monotonicOrder(@Nonnull ComparatorEx<T> comparator) {
+    public Edge monotonicOrder(@Nonnull ComparatorEx<?> comparator) {
         this.comparator = comparator;
         return this;
     }
@@ -399,7 +403,7 @@ public class Edge implements IdentifiedDataSerializable {
      * @since 4.3
      **/
     @Nullable
-    public ComparatorEx<?> getComparator() {
+    public ComparatorEx<?> getMonotonicOrderComparator() {
         return comparator;
     }
 
@@ -600,7 +604,7 @@ public class Edge implements IdentifiedDataSerializable {
         out.writeUTF(getDestName());
         out.writeInt(getDestOrdinal());
         out.writeInt(getPriority());
-        out.writeObject(getComparator());
+        out.writeObject(getMonotonicOrderComparator());
         out.writeObject(getDistributedTo());
         out.writeObject(getRoutingPolicy());
         CustomClassLoadedObject.write(out, getPartitioner());
