@@ -31,6 +31,8 @@ import software.amazon.awssdk.services.s3.model.S3Object;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import static java.util.concurrent.TimeUnit.SECONDS;
+
 @Category(NightlyTest.class)
 public class S3SinkTest extends S3TestBase {
 
@@ -50,6 +52,13 @@ public class S3SinkTest extends S3TestBase {
 
         if (!identifiers.isEmpty()) {
             client.deleteObjects(b -> b.bucket(bucketName).delete(d -> d.objects(identifiers)));
+        }
+
+        int sleepMillis = 250;
+        long deadline = System.currentTimeMillis() + SECONDS.toMillis(3);
+        while (client.listObjectsV2(ListObjectsV2Request.builder().bucket(bucketName).build()).keyCount() != 0
+                && System.currentTimeMillis() < deadline) {
+            sleepMillis(sleepMillis);
         }
     }
 
