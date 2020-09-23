@@ -41,7 +41,6 @@ import org.junit.runners.Parameterized.Parameters;
 import org.testcontainers.containers.MySQLContainer;
 import org.testcontainers.containers.Network;
 import org.testcontainers.containers.ToxiproxyContainer;
-import org.testcontainers.shaded.com.google.common.base.Throwables;
 
 import java.io.IOException;
 import java.net.ServerSocket;
@@ -65,6 +64,7 @@ import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.core.JobStatus.RUNNING;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -421,9 +421,9 @@ public class MySqlCdcNetworkIntegrationTest extends AbstractCdcIntegrationTest {
             }
         } catch (ExecutionException ee) {
             //job completed exceptionally, as expected, we check the details of it
-            Throwable rootCause = Throwables.getRootCause(ee);
-            assertEquals(JetException.class, rootCause.getClass());
-            assertTrue(rootCause.getMessage().startsWith("Failed to connect to database"));
+            assertThat(ee)
+                    .hasRootCauseInstanceOf(JetException.class)
+                    .hasStackTraceContaining("Failed to connect to database");
         }
     }
 
