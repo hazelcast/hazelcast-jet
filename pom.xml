@@ -387,10 +387,10 @@
                             <skip>${maven.test.skip}</skip>
                             <forkCount>4</forkCount>
                             <includes>
-                                <include>/com/hazelcast/jet/**/**.java</include>
+                                <include>/com/hazelcast/jet/**/MemberReconnectionStressTest.java</include>
                             </includes>
                             <excludedGroups>
-                                com.hazelcast.jet.test.SerialTest,com.hazelcast.test.annotation.SlowTest,com.hazelcast.test.annotation.NightlyTest
+
                             </excludedGroups>
                             <failIfNoSpecifiedTests>false</failIfNoSpecifiedTests>
                         </configuration>
