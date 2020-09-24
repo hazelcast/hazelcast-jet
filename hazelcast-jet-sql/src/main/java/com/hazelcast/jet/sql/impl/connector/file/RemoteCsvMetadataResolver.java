@@ -141,7 +141,7 @@ final class RemoteCsvMetadataResolver implements CsvMetadataResolver {
             QueryDataType[] types = types(fields);
 
             SupplierEx<RowProjector> projectorSupplier =
-                    () -> new RowProjector(new CsvQueryTarget(indicesByNames), paths, types, predicate, projection);
+                    () -> new RowProjector(paths, types, new CsvQueryTarget(indicesByNames), predicate, projection);
 
             SupplierEx<BiFunction<LongWritable, Text, Object[]>> projectionSupplierFn = () -> {
                 RowProjector projector = projectorSupplier.get();

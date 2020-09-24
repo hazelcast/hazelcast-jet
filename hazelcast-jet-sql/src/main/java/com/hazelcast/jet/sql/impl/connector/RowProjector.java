@@ -37,9 +37,9 @@ public class RowProjector implements Row {
 
     @SuppressWarnings("unchecked")
     public RowProjector(
-            QueryTarget target,
             String[] paths,
             QueryDataType[] types,
+            QueryTarget target,
             Expression<Boolean> predicate,
             List<Expression<?>> projection
     ) {

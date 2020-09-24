@@ -129,7 +129,7 @@ final class RemoteJsonMetadataResolver implements JsonMetadataResolver {
             QueryDataType[] types = types(fields);
 
             SupplierEx<RowProjector> projectorSupplier =
-                    () -> new RowProjector(new JsonQueryTarget(), paths, types, predicate, projection);
+                    () -> new RowProjector(paths, types, new JsonQueryTarget(), predicate, projection);
 
             SupplierEx<BiFunction<LongWritable, Text, Object[]>> projectionSupplierFn = () -> {
                 RowProjector projector = projectorSupplier.get();

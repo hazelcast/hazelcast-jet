@@ -102,7 +102,7 @@ final class LocalJsonMetadataResolver implements JsonMetadataResolver {
             QueryDataType[] types = types(fields);
 
             SupplierEx<RowProjector> projectorSupplier =
-                    () -> new RowProjector(new JsonQueryTarget(), paths, types, predicate, projection);
+                    () -> new RowProjector(paths, types, new JsonQueryTarget(), predicate, projection);
 
             FunctionEx<? super Path, ? extends Stream<Object[]>> readFileFn = path -> {
                 RowProjector projector = projectorSupplier.get();

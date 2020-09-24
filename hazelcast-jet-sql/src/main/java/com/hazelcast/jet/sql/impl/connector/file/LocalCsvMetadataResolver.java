@@ -121,7 +121,7 @@ final class LocalCsvMetadataResolver implements CsvMetadataResolver {
             QueryDataType[] types = types(fields);
 
             SupplierEx<RowProjector> projectorSupplier =
-                    () -> new RowProjector(new CsvQueryTarget(indicesByNames), paths, types, predicate, projection);
+                    () -> new RowProjector(paths, types, new CsvQueryTarget(indicesByNames), predicate, projection);
 
             FunctionEx<? super Path, ? extends Stream<Object[]>> readFileFn = path -> {
                 RowProjector projector = projectorSupplier.get();

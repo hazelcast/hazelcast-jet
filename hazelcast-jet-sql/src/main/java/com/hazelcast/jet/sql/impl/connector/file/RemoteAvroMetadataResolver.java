@@ -131,7 +131,7 @@ final class RemoteAvroMetadataResolver {
             QueryDataType[] types = types(fields);
 
             SupplierEx<RowProjector> projectorSupplier =
-                    () -> new RowProjector(new AvroQueryTarget(), paths, types, predicate, projection);
+                    () -> new RowProjector(paths, types, new AvroQueryTarget(), predicate, projection);
 
             SupplierEx<BiFunction<AvroKey<GenericRecord>, NullWritable, Object[]>> projectionSupplierFn = () -> {
                 RowProjector projector = projectorSupplier.get();

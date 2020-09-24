@@ -118,7 +118,7 @@ final class LocalAvroMetadataResolver implements AvroMetadataResolver {
             QueryDataType[] types = types(fields);
 
             SupplierEx<RowProjector> projectorSupplier =
-                    () -> new RowProjector(new AvroQueryTarget(), paths, types, predicate, projection);
+                    () -> new RowProjector(paths, types, new AvroQueryTarget(), predicate, projection);
 
             FunctionEx<? super Path, ? extends Stream<Object[]>> readFileFn = path -> {
                 RowProjector projector = projectorSupplier.get();
