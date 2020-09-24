@@ -609,7 +609,8 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
             // each tasklet has one input conveyor per edge
             final ConcurrentConveyor<Object> conveyor = localConveyorMap.get(inEdge.edgeId())[localProcessorIdx];
             inboundStreams.add(newEdgeStream(inEdge, conveyor,
-                    "inputTo:" + inEdge.destVertex().name() + '#' + globalProcessorIdx, inEdge.getMonotonicOrderComparator()));
+                    "inputTo:" + inEdge.destVertex().name() + '#' + globalProcessorIdx,
+                    inEdge.getMonotonicOrderComparator()));
         }
         return inboundStreams;
     }

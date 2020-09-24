@@ -56,6 +56,16 @@ public abstract class ConcurrentInboundEdgeStream implements InboundEdgeStream {
     private final ProgressTracker tracker = new ProgressTracker();
     private final ILogger logger;
 
+    private ConcurrentInboundEdgeStream(
+            @Nonnull ConcurrentConveyor<Object> conveyor, int ordinal, int priority, @Nonnull String debugName) {
+        this.conveyor = conveyor;
+        this.ordinal = ordinal;
+        this.priority = priority;
+
+        logger = Logger.getLogger(ConcurrentInboundEdgeStream.class.getName() + "." + debugName);
+        logger.finest("Coalescing " + conveyor.queueCount() + " input queues");
+    }
+
     /**
      * @param waitForAllBarriers If {@code true}, a queue that had a barrier won't
      *          be drained until the same barrier is received from all other
@@ -77,6 +87,42 @@ public abstract class ConcurrentInboundEdgeStream implements InboundEdgeStream {
         }
     }
 
+    @Override
+    public int ordinal() {
+        return ordinal;
+    }
+
+    @Override
+    public int priority() {
+        return priority;
+    }
+
+    @Override
+    public boolean isDone() {
+        return conveyor.liveQueueCount() == 0;
+    }
+
+    @Override
+    public int sizes() {
+        return conveyorSum(QueuedPipe::size);
+    }
+
+    @Override
+    public int capacities() {
+        return conveyorSum(QueuedPipe::capacity);
+    }
+
+    private int conveyorSum(ToIntFunction<QueuedPipe<Object>> toIntF) {
+        int sum = 0;
+        for (int queueIndex = 0; queueIndex < conveyor.queueCount(); queueIndex++) {
+            final QueuedPipe<Object> q = conveyor.queue(queueIndex);
+            if (q != null) {
+                sum += toIntF.applyAsInt(q);
+            }
+        }
+        return sum;
+    }
+
     /**
      * An implementation that drains the full contents of each queue once into
      * the dest, while handling watermarks & barriers.
@@ -92,7 +138,7 @@ public abstract class ConcurrentInboundEdgeStream implements InboundEdgeStream {
         private boolean waitForAllBarriers;
         private SnapshotBarrier currentBarrier;  // next snapshot barrier to emit
 
-        public RoundRobinDrain(
+        RoundRobinDrain(
                 @Nonnull ConcurrentConveyor<Object> conveyor,
                 int ordinal,
                 int priority,
@@ -129,7 +175,8 @@ public abstract class ConcurrentInboundEdgeStream implements InboundEdgeStream {
                     long wmTimestamp = watermarkCoalescer.queueDone(queueIndex);
                     if (maybeEmitWm(wmTimestamp, dest)) {
                         if (super.logger.isFinestEnabled()) {
-                            super.logger.finest("Queue " + queueIndex + " is done, forwarding " + new Watermark(wmTimestamp));
+                            super.logger.finest("Queue " + queueIndex + " is done, forwarding "
+                                    + new Watermark(wmTimestamp));
                         }
                         return super.conveyor.liveQueueCount() == 0 ? DONE : MADE_PROGRESS;
                     }
@@ -224,6 +271,31 @@ public abstract class ConcurrentInboundEdgeStream implements InboundEdgeStream {
         public long coalescedWm() {
             return watermarkCoalescer.coalescedWm();
         }
+
+        /**
+         * Drains a concurrent conveyor's queue while watching for {@link Watermark}s
+         * and {@link SnapshotBarrier}s.
+         * When encountering either of them it prevents draining more items.
+         */
+        private static final class ItemDetector implements Predicate<Object> {
+            Predicate<Object> dest;
+            BroadcastItem item;
+
+            void reset(Predicate<Object> newDest) {
+                dest = newDest;
+                item = null;
+            }
+
+            @Override
+            public boolean test(Object o) {
+                if (o instanceof Watermark || o instanceof SnapshotBarrier || o == DONE_ITEM) {
+                    assert item == null : "Received multiple special items without a call to reset(): " + item;
+                    item = (BroadcastItem) o;
+                    return false;
+                }
+                return dest.test(o);
+            }
+        }
     }
 
     /**
@@ -240,7 +312,7 @@ public abstract class ConcurrentInboundEdgeStream implements InboundEdgeStream {
         private final List<QueuedPipe<Object>> queues;
 
         @SuppressWarnings("unchecked")
-        public MergeSortDrain(
+        MergeSortDrain(
                 @Nonnull ConcurrentConveyor<Object> conveyor,
                 int ordinal,
                 int priority,
@@ -302,7 +374,8 @@ public abstract class ConcurrentInboundEdgeStream implements InboundEdgeStream {
                 }
                 // return the item
                 drainedItems.get(lastMinIndex).remove();
-                assert lastItem == null || comparator.compare(lastItem, minItem) <= 0 : "Disorder on a monotonicOrder edge";
+                assert lastItem == null || comparator.compare(lastItem, minItem) <= 0 :
+                        "Disorder on a monotonicOrder edge";
                 lastItem = minItem;
                 boolean consumeResult = dest.test(lastItem);
                 assert consumeResult : "consumeResult is false";
@@ -323,76 +396,5 @@ public abstract class ConcurrentInboundEdgeStream implements InboundEdgeStream {
         public boolean isDone() {
             return queues.isEmpty();
         }
-    }
-
-    private ConcurrentInboundEdgeStream(
-            @Nonnull ConcurrentConveyor<Object> conveyor, int ordinal, int priority, @Nonnull String debugName) {
-        this.conveyor = conveyor;
-        this.ordinal = ordinal;
-        this.priority = priority;
-
-        logger = Logger.getLogger(ConcurrentInboundEdgeStream.class.getName() + "." + debugName);
-        logger.finest("Coalescing " + conveyor.queueCount() + " input queues");
-    }
-
-    @Override
-    public int ordinal() {
-        return ordinal;
-    }
-
-    @Override
-    public int priority() {
-        return priority;
-    }
-
-    @Override
-    public boolean isDone() {
-        return conveyor.liveQueueCount() == 0;
-    }
-
-    /**
-     * Drains a concurrent conveyor's queue while watching for {@link Watermark}s
-     * and {@link SnapshotBarrier}s.
-     * When encountering either of them it prevents draining more items.
-     */
-    private static final class ItemDetector implements Predicate<Object> {
-        Predicate<Object> dest;
-        BroadcastItem item;
-
-        void reset(Predicate<Object> newDest) {
-            dest = newDest;
-            item = null;
-        }
-
-        @Override
-        public boolean test(Object o) {
-            if (o instanceof Watermark || o instanceof SnapshotBarrier || o == DONE_ITEM) {
-                assert item == null : "Received multiple special items without a call to reset(): " + item;
-                item = (BroadcastItem) o;
-                return false;
-            }
-            return dest.test(o);
-        }
-    }
-
-    @Override
-    public int sizes() {
-        return conveyorSum(QueuedPipe::size);
-    }
-
-    @Override
-    public int capacities() {
-        return conveyorSum(QueuedPipe::capacity);
-    }
-
-    private int conveyorSum(ToIntFunction<QueuedPipe<Object>> toIntF) {
-        int sum = 0;
-        for (int queueIndex = 0; queueIndex < conveyor.queueCount(); queueIndex++) {
-            final QueuedPipe<Object> q = conveyor.queue(queueIndex);
-            if (q != null) {
-                sum += toIntF.applyAsInt(q);
-            }
-        }
-        return sum;
     }
 }
