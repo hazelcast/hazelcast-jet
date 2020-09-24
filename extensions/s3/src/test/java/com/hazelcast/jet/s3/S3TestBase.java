@@ -31,6 +31,7 @@ import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.NoSuchBucketException;
+import software.amazon.awssdk.services.s3.model.S3Exception;
 import software.amazon.awssdk.services.s3.model.S3Object;
 
 import java.io.BufferedReader;
@@ -90,7 +91,7 @@ abstract class S3TestBase extends JetTestSupport {
                         .listObjectsV2(req -> req.bucket(bucketName).prefix(prefix))
                         .contents()
                         .stream()
-                        .flatMap(o -> S3ObjectToLines(o, client, bucketName))
+                        .flatMap(o -> s3ObjectToLines(o, client, bucketName))
                         .peek(line -> assertEquals(payload, line))
                         .count();
                 assertEquals(itemCount, lineCount);
@@ -170,19 +171,13 @@ abstract class S3TestBase extends JetTestSupport {
         }
     }
 
-    Stream<String> S3ObjectToLines(S3Object o, S3Client client, String bucketName) {
+    Stream<String> s3ObjectToLines(S3Object o, S3Client client, String bucketName) {
         try {
             ResponseInputStream<GetObjectResponse> is = client.getObject(req -> req.bucket(bucketName).key(o.key()), toInputStream());
-            try (BufferedReader reader = new BufferedReader(new InputStreamReader(is, CHARSET))) {
-                // materialize the stream, since we can't read it afterwards
-                return reader.lines().collect(Collectors.toList()).stream();
-            } catch (IOException e) {
-                throw new AssertionError("Error reading file ", e);
-            }
-        } catch (NoSuchBucketException e) {
+            return inputStreamToLines(is);
+        } catch (S3Exception e) {
             logger.warning("S3 side is having eventual consistency issue that it could not" +
-                    " find the key that is listed before. We ignore this issue.");
-            e.printStackTrace();
+                    " find the key that is listed before. We ignore this issue.", e);
         }
         return Stream.empty();
     }

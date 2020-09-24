@@ -25,6 +25,7 @@ import org.junit.experimental.categories.Category;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Response;
 import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
 import software.amazon.awssdk.services.s3.model.S3Object;
 
@@ -43,8 +44,7 @@ public class S3SinkTest extends S3TestBase {
     @After
     public void deleteObjects() {
         S3Client client = clientSupplier().get();
-        List<ObjectIdentifier> identifiers = client
-                .listObjectsV2(ListObjectsV2Request.builder().bucket(bucketName).build())
+        List<ObjectIdentifier> identifiers = listObjects(client)
                 .contents()
                 .stream()
                 .map(S3Object::key)
@@ -58,8 +58,7 @@ public class S3SinkTest extends S3TestBase {
         int sleepMillis = (int) (SECONDS.toMillis(WAIT_AFTER_CLEANUP_IN_SECS) / 10);
         long deadline = System.currentTimeMillis() + SECONDS.toMillis(WAIT_AFTER_CLEANUP_IN_SECS);
         int keyCount;
-        while ((keyCount = client.listObjectsV2(ListObjectsV2Request
-                .builder().bucket(bucketName).build()).keyCount()) != 0 && System.currentTimeMillis() < deadline) {
+        while ((keyCount = listObjects(client).keyCount()) != 0 && System.currentTimeMillis() < deadline) {
 
             logger.info("After sending the object cleanup request to S3, the bucket, " + bucketName
                     + ", still has " + keyCount + " keys.");
@@ -72,6 +71,11 @@ public class S3SinkTest extends S3TestBase {
                     "At our last check, keyCount was " + keyCount +
                     "\n We finished waiting because of the timeout.");
         }
+    }
+
+    private ListObjectsV2Response listObjects(S3Client client) {
+        return client.listObjectsV2(ListObjectsV2Request
+                .builder().bucket(bucketName).build());
     }
 
     @Test
