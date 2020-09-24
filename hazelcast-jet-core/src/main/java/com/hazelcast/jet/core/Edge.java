@@ -364,17 +364,12 @@ public class Edge implements IdentifiedDataSerializable {
     }
 
     /**
-     * Specifies that the items received by each destination processor will be
-     * composed by merge-sorting the sorted streams of input items. For this
-     * behavior to be applicable, every upstream processor must ensure it emits
-     * the data according to the given ordering.
-     * <p>
-     * The use case for this edge type is merging of sorted streams. The
-     * processors of the source vertex sort their partial data and the
-     * processor in the destination vertex merges the sorted streams while
-     * consuming the data from many concurrent inputs.
-     * <p>
-     * The job will fail if item disorder is detected in the output of some processor
+     * Specifies that the data traveling on this edge is ordered according to
+     * the provided comparator. The edge maintains this property when merging
+     * the data coming from different upstream processors, so that the
+     * receiving processor observes them in the proper order. Every upstream
+     * processor must emit the data in the same order because the edge doesn't
+     * sort, it only prevents reordering while receiving.
      * <p>
      * The implementation currently doesn't handle watermarks or barriers: if
      * the source processors emit watermarks or you add a processing guarantee,
