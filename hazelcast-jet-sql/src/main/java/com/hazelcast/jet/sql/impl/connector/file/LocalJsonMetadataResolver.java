@@ -19,13 +19,9 @@ package com.hazelcast.jet.sql.impl.connector.file;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
-import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.impl.connector.ReadFilesP;
-import com.hazelcast.jet.impl.connector.WriteFileP;
-import com.hazelcast.jet.sql.impl.connector.Processors;
 import com.hazelcast.jet.sql.impl.connector.RowProjector;
 import com.hazelcast.jet.sql.impl.extract.JsonQueryTarget;
-import com.hazelcast.jet.sql.impl.inject.JsonUpsertTargetDescriptor;
 import com.hazelcast.jet.sql.impl.schema.MappingField;
 import com.hazelcast.sql.impl.expression.Expression;
 import com.hazelcast.sql.impl.schema.TableField;
@@ -117,18 +113,6 @@ final class LocalJsonMetadataResolver implements JsonMetadataResolver {
             };
 
             return ReadFilesP.metaSupplier(path, glob, sharedFileSystem, readFileFn);
-        }
-
-        @Override
-        public ProcessorSupplier projectorProcessor(List<TableField> fields) {
-            return Processors.projector(JsonUpsertTargetDescriptor.INSTANCE, paths(fields), types(fields));
-        }
-
-        @Override
-        @SuppressWarnings("checkstyle:MagicNumber") // TODO:
-        public ProcessorMetaSupplier writeProcessor(List<TableField> fields) {
-            // TODO: customizable settings
-            return WriteFileP.metaSupplier(path, Object::toString, charset, null, 1024, true);
         }
     }
 }

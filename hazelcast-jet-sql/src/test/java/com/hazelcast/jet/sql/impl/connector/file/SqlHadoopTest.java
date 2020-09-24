@@ -67,7 +67,9 @@ public class SqlHadoopTest extends JetSqlTestSupport {
     }
 
     @Test
-    public void supportsCsv() throws IOException {
+    public void test_csv() throws IOException {
+        store("/csv/file.csv", "1,Alice\n2,Bob");
+
         String name = createRandomName();
         sqlService.execute("CREATE MAPPING " + name + " ("
                 + "id BIGINT"
@@ -79,24 +81,25 @@ public class SqlHadoopTest extends JetSqlTestSupport {
                 + ")"
         );
 
-        sqlService.execute("INSERT INTO " + name + " VALUES (1, 'Alice')");
-
         assertRowsEventuallyInAnyOrder(
-                "SELECT * FROM " + name,
-                singletonList(new Row(1L, "Alice"))
+                "SELECT name, id FROM " + name,
+                asList(
+                        new Row("Alice", 1L)
+                        , new Row("Bob", 2L)
+                )
         );
     }
 
     @Test
-    public void supportsCsvSchemaDiscovery() throws IOException {
-        store("/inferred-csv/users.csv", "id,name\n1,Alice\n2,Bob");
+    public void test_csvSchemaDiscovery() throws IOException {
+        store("/discovered-csv/file.csv", "id,name\n1,Alice\n2,Bob");
 
         String name = createRandomName();
         sqlService.execute("CREATE MAPPING " + name + ' '
                 + "TYPE " + FileSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ("
                 + '"' + OPTION_SERIALIZATION_FORMAT + "\" '" + CSV_SERIALIZATION_FORMAT + '\''
-                + ", \"" + FileSqlConnector.OPTION_PATH + "\" '" + path("inferred-csv") + '\''
+                + ", \"" + FileSqlConnector.OPTION_PATH + "\" '" + path("discovered-csv") + '\''
                 + ", \"" + OPTION_HEADER + "\" '" + Boolean.TRUE + '\''
                 + ")"
         );
@@ -111,7 +114,9 @@ public class SqlHadoopTest extends JetSqlTestSupport {
     }
 
     @Test
-    public void supportsJson() throws IOException {
+    public void test_json() throws IOException {
+        store("/json/file.json", "{\"id\": 1, \"name\": \"Alice\"}\n{\"id\": 2, \"name\": \"Bob\"}");
+
         String name = createRandomName();
         sqlService.execute("CREATE MAPPING " + name + " ("
                 + "id BIGINT"
@@ -123,45 +128,45 @@ public class SqlHadoopTest extends JetSqlTestSupport {
                 + ")"
         );
 
-        sqlService.execute("INSERT INTO " + name + " VALUES (1, 'Alice')");
-
         assertRowsEventuallyInAnyOrder(
-                "SELECT * FROM " + name,
-                singletonList(new Row(1L, "Alice"))
+                "SELECT name, id FROM " + name,
+                asList(
+                        new Row("Alice", 1L)
+                        , new Row("Bob", 2L)
+                )
         );
     }
 
     @Test
-    public void supportsJsonSchemaDiscovery() throws IOException {
-        store("/inferred-json/users.csv",
-                "{\"id\": \"1\", \"name\": \"Alice\"}\n"
-                        + "{\"id\": \"2\", \"name\": \"Bob\"}"
-        );
+    public void test_jsonSchemaDiscovery() throws IOException {
+        store("/discovered-json/file.json", "{\"id\": 1, \"name\": \"Alice\"}\n{\"id\": 2, \"name\": \"Bob\"}");
 
         String name = createRandomName();
         sqlService.execute("CREATE MAPPING " + name + ' '
                 + "TYPE " + FileSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ("
                 + '"' + OPTION_SERIALIZATION_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + '\''
-                + ", \"" + FileSqlConnector.OPTION_PATH + "\" '" + path("inferred-json") + '\''
+                + ", \"" + FileSqlConnector.OPTION_PATH + "\" '" + path("discovered-json") + '\''
                 + ")"
         );
 
         assertRowsEventuallyInAnyOrder(
                 "SELECT name, id FROM " + name,
                 asList(
-                        new Row("Alice", "1")
-                        , new Row("Bob", "2")
+                        new Row("Alice", 1)
+                        , new Row("Bob", 2)
                 )
         );
     }
 
     @Test
-    public void supportsAvro() throws IOException {
+    public void test_avro() throws IOException {
+        store("/avro/file.avro", Files.readAllBytes(Paths.get("src/test/resources/file.avro")));
+
         String name = createRandomName();
         sqlService.execute("CREATE MAPPING " + name + " ("
-                + "id BIGINT"
-                + ", name VARCHAR"
+                + "id BIGINT EXTERNAL NAME long"
+                + ", name VARCHAR EXTERNAL NAME string"
                 + ") TYPE " + FileSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ("
                 + '"' + OPTION_SERIALIZATION_FORMAT + "\" '" + AVRO_SERIALIZATION_FORMAT + '\''
@@ -169,33 +174,28 @@ public class SqlHadoopTest extends JetSqlTestSupport {
                 + ")"
         );
 
-        sqlService.execute("INSERT INTO " + name + " VALUES (1, 'Alice')");
-
         assertRowsEventuallyInAnyOrder(
                 "SELECT * FROM " + name,
-                singletonList(new Row(1L, "Alice"))
+                singletonList(new Row(9223372036854775807L, "string"))
         );
     }
 
     @Test
-    public void supportsAvroSchemaDiscovery() throws IOException {
-        store("/inferred-avro/users.avro", Files.readAllBytes(Paths.get("src/test/resources/users.avro")));
+    public void test_avroSchemaDiscovery() throws IOException {
+        store("/discovered-avro/file.avro", Files.readAllBytes(Paths.get("src/test/resources/file.avro")));
 
         String name = createRandomName();
         sqlService.execute("CREATE MAPPING " + name + ' '
                 + "TYPE " + FileSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ("
                 + '"' + OPTION_SERIALIZATION_FORMAT + "\" '" + AVRO_SERIALIZATION_FORMAT + '\''
-                + ", \"" + FileSqlConnector.OPTION_PATH + "\" '" + path("inferred-avro") + '\''
+                + ", \"" + FileSqlConnector.OPTION_PATH + "\" '" + path("discovered-avro") + '\''
                 + ")"
         );
 
         assertRowsEventuallyInAnyOrder(
-                "SELECT username, age FROM " + name,
-                asList(
-                        new Row("User0", 0)
-                        , new Row("User1", 1)
-                )
+                "SELECT byte, string FROM " + name,
+                singletonList(new Row(127, "string"))
         );
     }
 

@@ -17,9 +17,9 @@
 package com.hazelcast.jet.sql.impl.connector.file;
 
 import com.hazelcast.internal.util.UuidUtil;
-import com.hazelcast.jet.sql.impl.schema.MappingField;
-import com.hazelcast.jet.sql.impl.schema.JetTableFunction;
 import com.hazelcast.jet.sql.impl.schema.JetFunctionParameter;
+import com.hazelcast.jet.sql.impl.schema.JetTableFunction;
+import com.hazelcast.jet.sql.impl.schema.MappingField;
 import com.hazelcast.jet.sql.impl.schema.UnknownStatistic;
 import com.hazelcast.sql.impl.calcite.SqlToQueryType;
 import com.hazelcast.sql.impl.calcite.schema.HazelcastTable;
@@ -45,6 +45,7 @@ import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.OPTION_
 import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.OPTION_S3_SECRET_KEY;
 import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.OPTION_SHARED_FILE_SYSTEM;
 import static java.util.Arrays.asList;
+import static java.util.Collections.emptyList;
 
 public final class FileTableFunction implements JetTableFunction {
 
@@ -79,7 +80,7 @@ public final class FileTableFunction implements JetTableFunction {
     @Override
     public RelDataType getRowType(RelDataTypeFactory typeFactory, List<Object> arguments) {
         Map<String, String> options = optionsFromFunctionArguments(arguments);
-        List<MappingField> fields = FileSqlConnector.resolveAndValidateFields(options);
+        List<MappingField> fields = FileSqlConnector.resolveAndValidateFields(options, emptyList());
         return createHazelcastTable(options, fields).getRowType(typeFactory);
     }
 

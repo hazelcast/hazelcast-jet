@@ -60,8 +60,7 @@ public class HazelcastJsonQueryTargetTest {
     private Object[] values() {
         HazelcastJsonValue json = new HazelcastJsonValue(
                 "{"
-                        + "\"null\":null"
-                        + ", \"string\": \"string\""
+                        + "\"string\": \"string\""
                         + ", \"boolean\": true"
                         + ", \"byte\": 127"
                         + ", \"short\": 32767"
@@ -74,6 +73,8 @@ public class HazelcastJsonQueryTargetTest {
                         + ", \"date\": \"2020-09-09\""
                         + ", \"timestamp\": \"2020-09-09T12:23:34.1\""
                         + ", \"timestampTz\": \"2020-09-09T12:23:34.2Z\""
+                        + ", \"null\": null"
+                        + ", \"object\": {}"
                         + "}"
         );
         return new Object[]{new Object[]{json}, new Object[]{SERIALIZATION_SERVICE.toData(json)}};
@@ -86,7 +87,6 @@ public class HazelcastJsonQueryTargetTest {
 
         QueryTarget target = new HazelcastJsonQueryTarget(extractors, true);
         QueryExtractor nonExistingExtractor = target.createExtractor("nonExisting", OBJECT);
-        QueryExtractor nullExtractor = target.createExtractor("null", OBJECT);
         QueryExtractor stringExtractor = target.createExtractor("string", VARCHAR);
         QueryExtractor booleanExtractor = target.createExtractor("boolean", BOOLEAN);
         QueryExtractor byteExtractor = target.createExtractor("byte", TINYINT);
@@ -100,11 +100,12 @@ public class HazelcastJsonQueryTargetTest {
         QueryExtractor dateExtractor = target.createExtractor("date", DATE);
         QueryExtractor timestampExtractor = target.createExtractor("timestamp", TIMESTAMP);
         QueryExtractor timestampZoneExtractor = target.createExtractor("timestampTz", TIMESTAMP_WITH_TZ_OFFSET_DATE_TIME);
+        QueryExtractor nullExtractor = target.createExtractor("null", OBJECT);
+        QueryExtractor objectExtractor = target.createExtractor("object", OBJECT);
 
         target.setTarget(value);
 
         assertThat(nonExistingExtractor.get()).isNull();
-        assertThat(nullExtractor.get()).isNull();
         assertThat(stringExtractor.get()).isEqualTo("string");
         assertThat(booleanExtractor.get()).isEqualTo(true);
         assertThat(byteExtractor.get()).isEqualTo((byte) 127);
@@ -118,5 +119,7 @@ public class HazelcastJsonQueryTargetTest {
         assertThat(dateExtractor.get()).isEqualTo(LocalDate.of(2020, 9, 9));
         assertThat(timestampExtractor.get()).isEqualTo(LocalDateTime.of(2020, 9, 9, 12, 23, 34, 100_000_000));
         assertThat(timestampZoneExtractor.get()).isEqualTo(OffsetDateTime.of(2020, 9, 9, 12, 23, 34, 200_000_000, UTC));
+        assertThat(nullExtractor.get()).isNull();
+        assertThat(objectExtractor.get()).isNotNull();
     }
 }

@@ -18,13 +18,9 @@ package com.hazelcast.jet.sql.impl.connector.file;
 
 import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
-import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.hadoop.HadoopProcessors;
-import com.hazelcast.jet.hadoop.impl.WriteHadoopNewApiP;
-import com.hazelcast.jet.sql.impl.connector.Processors;
 import com.hazelcast.jet.sql.impl.connector.RowProjector;
 import com.hazelcast.jet.sql.impl.extract.CsvQueryTarget;
-import com.hazelcast.jet.sql.impl.inject.CsvUpsertTargetDescriptor;
 import com.hazelcast.jet.sql.impl.schema.MappingField;
 import com.hazelcast.sql.impl.expression.Expression;
 import com.hazelcast.sql.impl.schema.TableField;
@@ -49,7 +45,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.BiFunction;
 
-import static com.hazelcast.function.FunctionEx.identity;
 import static com.hazelcast.jet.hadoop.impl.SerializableConfiguration.asSerializable;
 import static com.hazelcast.jet.sql.impl.connector.file.CsvMetadataResolver.indices;
 import static com.hazelcast.jet.sql.impl.connector.file.CsvMetadataResolver.paths;
@@ -160,16 +155,6 @@ final class RemoteCsvMetadataResolver implements CsvMetadataResolver {
             };
 
             return HadoopProcessors.readHadoopP(asSerializable(configuration), projectionSupplierFn);
-        }
-
-        @Override
-        public ProcessorSupplier projectorProcessor(List<TableField> fields) {
-            return Processors.projector(new CsvUpsertTargetDescriptor(delimiter), paths(fields), types(fields));
-        }
-
-        @Override
-        public ProcessorMetaSupplier writeProcessor(List<TableField> fields) {
-            return new WriteHadoopNewApiP.MetaSupplier<>(asSerializable(configuration), o -> null, identity());
         }
     }
 }

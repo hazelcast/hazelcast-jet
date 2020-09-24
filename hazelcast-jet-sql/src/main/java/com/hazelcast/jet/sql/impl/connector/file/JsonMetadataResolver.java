@@ -16,23 +16,27 @@
 
 package com.hazelcast.jet.sql.impl.connector.file;
 
-import com.hazelcast.internal.json.Json;
-import com.hazelcast.internal.json.JsonObject;
-import com.hazelcast.internal.json.JsonObject.Member;
-import com.hazelcast.internal.json.JsonValue;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.hazelcast.jet.sql.impl.schema.MappingField;
 import com.hazelcast.sql.impl.QueryException;
 import com.hazelcast.sql.impl.schema.TableField;
 import com.hazelcast.sql.impl.type.QueryDataType;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 
+import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 import static com.hazelcast.jet.impl.util.Util.toList;
 
 interface JsonMetadataResolver {
+
+    ObjectMapper MAPPER = new ObjectMapper(); // TODO
 
     /**
      * Validates the field list. Returns a field list that has non-null
@@ -48,12 +52,20 @@ interface JsonMetadataResolver {
     }
 
     static List<MappingField> resolveFieldsFromSample(String line) {
-        JsonObject object = Json.parse(line).asObject();
+        ObjectNode object;
+        try {
+            object = (ObjectNode) MAPPER.readTree(line);
+        } catch (Exception e) {
+            throw sneakyThrow(e);
+        }
 
         Map<String, MappingField> fields = new LinkedHashMap<>();
-        for (Member member : object) {
-            String name = member.getName();
-            QueryDataType type = resolveType(member.getValue());
+        Iterator<Entry<String, JsonNode>> iterator = object.fields();
+        while (iterator.hasNext()) {
+            Entry<String, JsonNode> entry = iterator.next();
+
+            String name = entry.getKey();
+            QueryDataType type = resolveType(entry.getValue());
 
             MappingField field = new MappingField(name, type);
 
@@ -67,12 +79,18 @@ interface JsonMetadataResolver {
                 f -> new FileTableField(f.name(), f.type(), f.externalName() == null ? f.name() : f.externalName()));
     }
 
-    static QueryDataType resolveType(JsonValue value) {
-        if (value.isBoolean()) {
+    static QueryDataType resolveType(JsonNode value) {
+        if (value == null || value.isNull()) {
+            return QueryDataType.NULL;
+        } else if (value.isBoolean()) {
             return QueryDataType.BOOLEAN;
-        } else if (value.isNumber()) {
+        } else if (value.isInt()) {
+            return QueryDataType.INT;
+        } else if (value.isLong()) {
+            return QueryDataType.BIGINT;
+        } else if (value.isFloat() || value.isDouble()) {
             return QueryDataType.DOUBLE;
-        } else if (value.isString()) {
+        } else if (value.isTextual()) {
             return QueryDataType.VARCHAR;
         } else {
             return QueryDataType.OBJECT;

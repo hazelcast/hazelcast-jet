@@ -17,7 +17,6 @@
 package com.hazelcast.jet.sql.impl.connector.file;
 
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
-import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.sql.impl.connector.SqlConnector;
 import com.hazelcast.jet.sql.impl.schema.JetTable;
 import com.hazelcast.sql.impl.expression.Expression;
@@ -46,11 +45,8 @@ class FileTable extends JetTable {
         return targetDescriptor.readProcessor(getFields(), predicate, projection);
     }
 
-    ProcessorSupplier projectionProcessor() {
-        return targetDescriptor.projectorProcessor(getFields());
-    }
-
-    ProcessorMetaSupplier writeProcessor() {
-        return targetDescriptor.writeProcessor(getFields());
+    @Override
+    public String toString() {
+        return "File[" + getSchemaName() + "." + getSqlName() + "]";
     }
 }

@@ -29,9 +29,7 @@ import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 
-import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.sql.impl.connector.file.MetadataResolver.resolveMetadata;
-import static java.util.Collections.emptyList;
 
 public class FileSqlConnector implements SqlConnector {
 
@@ -65,11 +63,15 @@ public class FileSqlConnector implements SqlConnector {
             @Nonnull Map<String, String> options,
             @Nonnull List<MappingField> userFields
     ) {
-        return MetadataResolver.resolveAndValidateFields(userFields, FileOptions.from(options));
+        return resolveAndValidateFields(options, userFields);
     }
 
-    public static List<MappingField> resolveAndValidateFields(@Nonnull Map<String, String> options) {
-        return MetadataResolver.resolveAndValidateFields(emptyList(), FileOptions.from(options));
+    @Nonnull
+    static List<MappingField> resolveAndValidateFields(
+            @Nonnull Map<String, String> options,
+            @Nonnull List<MappingField> userFields
+    ) {
+        return MetadataResolver.resolveAndValidateFields(userFields, FileOptions.from(options));
     }
 
     @Nonnull
@@ -85,7 +87,7 @@ public class FileSqlConnector implements SqlConnector {
     }
 
     @Nonnull
-    public static Table createTable(
+    static Table createTable(
             @Nonnull String schemaName,
             @Nonnull String name,
             @Nonnull Map<String, String> options,
@@ -119,27 +121,5 @@ public class FileSqlConnector implements SqlConnector {
         FileTable table = (FileTable) table0;
 
         return dag.newVertex(table.toString(), table.readProcessor(predicate, projection));
-    }
-
-    @Override
-    public boolean supportsSink() {
-        return true;
-    }
-
-    @Override
-    public boolean supportsInsert() {
-        return true;
-    }
-
-    @Nonnull
-    @Override
-    public Vertex sink(@Nonnull DAG dag, @Nonnull Table table0) {
-        FileTable table = (FileTable) table0;
-
-        Vertex vStart = dag.newVertex("Project(" + table + ")", table.projectionProcessor());
-        Vertex vEnd = dag.newVertex(table.toString(), table.writeProcessor());
-
-        dag.edge(between(vStart, vEnd));
-        return vStart;
     }
 }

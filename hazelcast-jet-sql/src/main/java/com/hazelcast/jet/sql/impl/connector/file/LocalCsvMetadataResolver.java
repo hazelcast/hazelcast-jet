@@ -19,13 +19,9 @@ package com.hazelcast.jet.sql.impl.connector.file;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
-import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.impl.connector.ReadFilesP;
-import com.hazelcast.jet.impl.connector.WriteFileP;
-import com.hazelcast.jet.sql.impl.connector.Processors;
 import com.hazelcast.jet.sql.impl.connector.RowProjector;
 import com.hazelcast.jet.sql.impl.extract.CsvQueryTarget;
-import com.hazelcast.jet.sql.impl.inject.CsvUpsertTargetDescriptor;
 import com.hazelcast.jet.sql.impl.schema.MappingField;
 import com.hazelcast.sql.impl.expression.Expression;
 import com.hazelcast.sql.impl.schema.TableField;
@@ -40,7 +36,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Stream;
 
-import static com.hazelcast.function.FunctionEx.identity;
 import static com.hazelcast.jet.impl.util.Util.firstLineFromFirstFile;
 import static com.hazelcast.jet.sql.impl.connector.file.CsvMetadataResolver.indices;
 import static com.hazelcast.jet.sql.impl.connector.file.CsvMetadataResolver.paths;
@@ -139,18 +134,6 @@ final class LocalCsvMetadataResolver implements CsvMetadataResolver {
             };
 
             return ReadFilesP.metaSupplier(path, glob, sharedFileSystem, readFileFn);
-        }
-
-        @Override
-        public ProcessorSupplier projectorProcessor(List<TableField> fields) {
-            return Processors.projector(new CsvUpsertTargetDescriptor(delimiter), paths(fields), types(fields));
-        }
-
-        @Override
-        @SuppressWarnings("checkstyle:MagicNumber") // TODO:
-        public ProcessorMetaSupplier writeProcessor(List<TableField> fields) {
-            // TODO: customizable settings
-            return WriteFileP.metaSupplier(path, identity(), charset, null, 1024, true);
         }
     }
 }

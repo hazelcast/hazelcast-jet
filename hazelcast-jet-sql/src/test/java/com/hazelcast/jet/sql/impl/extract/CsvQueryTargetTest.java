@@ -16,20 +16,17 @@
 
 package com.hazelcast.jet.sql.impl.extract;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableMap;
 import com.hazelcast.sql.impl.extract.QueryExtractor;
 import com.hazelcast.sql.impl.extract.QueryTarget;
-import junitparams.JUnitParamsRunner;
-import junitparams.Parameters;
 import org.junit.Test;
-import org.junit.runner.RunWith;
 
-import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
+import java.util.Map;
 
 import static com.hazelcast.sql.impl.type.QueryDataType.BIGINT;
 import static com.hazelcast.sql.impl.type.QueryDataType.BOOLEAN;
@@ -48,35 +45,27 @@ import static com.hazelcast.sql.impl.type.QueryDataType.VARCHAR;
 import static java.time.ZoneOffset.UTC;
 import static org.assertj.core.api.Assertions.assertThat;
 
-@RunWith(JUnitParamsRunner.class)
-public class JsonQueryTargetTest {
-
-    @SuppressWarnings("unused")
-    private Object[] values() throws IOException {
-        String json = "{"
-                + "\"string\": \"string\""
-                + ", \"boolean\": true"
-                + ", \"byte\": 127"
-                + ", \"short\": 32767"
-                + ", \"int\": 2147483647"
-                + ", \"long\": 9223372036854775807"
-                + ", \"float\": 1234567890.1"
-                + ", \"double\": 123451234567890.1"
-                + ", \"decimal\": \"9223372036854775.123\""
-                + ", \"time\": \"12:23:34\""
-                + ", \"date\": \"2020-09-09\""
-                + ", \"timestamp\": \"2020-09-09T12:23:34.1\""
-                + ", \"timestampTz\": \"2020-09-09T12:23:34.2Z\""
-                + ", \"null\": null"
-                + ", \"object\": {}"
-                + "}";
-        return new Object[]{new Object[]{json}, new Object[]{new ObjectMapper().readTree(json)}};
-    }
+public class CsvQueryTargetTest {
 
     @Test
-    @Parameters(method = "values")
-    public void test_get(Object value) {
-        QueryTarget target = new JsonQueryTarget();
+    public void test_get() {
+        Map<String, Integer> indicesByNames = ImmutableMap.<String, Integer>builder()
+                .put("string", 0)
+                .put("boolean", 1)
+                .put("byte", 2)
+                .put("short", 3)
+                .put("int", 4)
+                .put("long", 5)
+                .put("float", 6)
+                .put("double", 7)
+                .put("decimal", 8)
+                .put("time", 9)
+                .put("date", 10)
+                .put("timestamp", 11)
+                .put("timestampTz", 12)
+                .build();
+
+        QueryTarget target = new CsvQueryTarget(indicesByNames);
         QueryExtractor nonExistingExtractor = target.createExtractor("nonExisting", OBJECT);
         QueryExtractor stringExtractor = target.createExtractor("string", VARCHAR);
         QueryExtractor booleanExtractor = target.createExtractor("boolean", BOOLEAN);
@@ -91,10 +80,22 @@ public class JsonQueryTargetTest {
         QueryExtractor dateExtractor = target.createExtractor("date", DATE);
         QueryExtractor timestampExtractor = target.createExtractor("timestamp", TIMESTAMP);
         QueryExtractor timestampTzExtractor = target.createExtractor("timestampTz", TIMESTAMP_WITH_TZ_OFFSET_DATE_TIME);
-        QueryExtractor nullExtractor = target.createExtractor("null", OBJECT);
-        QueryExtractor objectExtractor = target.createExtractor("object", OBJECT);
 
-        target.setTarget(value);
+        target.setTarget(new String[]{
+                "string"
+                , "true"
+                , "127"
+                , "32767"
+                , "2147483647"
+                , "9223372036854775807"
+                , "1234567890.1"
+                , "123451234567890.1"
+                , "9223372036854775.123"
+                , "12:23:34"
+                , "2020-09-09"
+                , "2020-09-09T12:23:34.100"
+                , "2020-09-09T12:23:34.200Z"
+        });
 
         assertThat(nonExistingExtractor.get()).isNull();
         assertThat(stringExtractor.get()).isEqualTo("string");
@@ -110,7 +111,5 @@ public class JsonQueryTargetTest {
         assertThat(dateExtractor.get()).isEqualTo(LocalDate.of(2020, 9, 9));
         assertThat(timestampExtractor.get()).isEqualTo(LocalDateTime.of(2020, 9, 9, 12, 23, 34, 100_000_000));
         assertThat(timestampTzExtractor.get()).isEqualTo(OffsetDateTime.of(2020, 9, 9, 12, 23, 34, 200_000_000, UTC));
-        assertThat(nullExtractor.get()).isNull();
-        assertThat(objectExtractor.get()).isNotNull();
     }
 }

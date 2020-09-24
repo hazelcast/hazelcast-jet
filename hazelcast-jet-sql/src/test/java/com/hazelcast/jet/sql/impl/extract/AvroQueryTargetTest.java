@@ -52,7 +52,6 @@ public class AvroQueryTargetTest {
     public void test_get() {
         QueryTarget target = new AvroQueryTarget();
         QueryExtractor nonExistingExtractor = target.createExtractor("nonExisting", OBJECT);
-        QueryExtractor nullExtractor = target.createExtractor("null", OBJECT);
         QueryExtractor stringExtractor = target.createExtractor("string", VARCHAR);
         QueryExtractor booleanExtractor = target.createExtractor("boolean", BOOLEAN);
         QueryExtractor byteExtractor = target.createExtractor("byte", TINYINT);
@@ -66,10 +65,11 @@ public class AvroQueryTargetTest {
         QueryExtractor dateExtractor = target.createExtractor("date", DATE);
         QueryExtractor timestampExtractor = target.createExtractor("timestamp", TIMESTAMP);
         QueryExtractor timestampTzExtractor = target.createExtractor("timestampTz", TIMESTAMP_WITH_TZ_OFFSET_DATE_TIME);
+        QueryExtractor nullExtractor = target.createExtractor("null", OBJECT);
+        QueryExtractor objectExtractor = target.createExtractor("object", OBJECT);
 
         Schema schema = SchemaBuilder.record("name")
                                      .fields()
-                                     .name("null").type().nullable().record("nested").fields().endRecord().noDefault()
                                      .name("string").type().stringType().noDefault()
                                      .name("boolean").type().booleanType().noDefault()
                                      .name("byte").type().intType().noDefault()
@@ -83,10 +83,11 @@ public class AvroQueryTargetTest {
                                      .name("date").type().stringType().noDefault()
                                      .name("timestamp").type().stringType().noDefault()
                                      .name("timestampTz").type().stringType().noDefault()
+                                     .name("null").type().nullable().record("nul").fields().endRecord().noDefault()
+                                     .name("object").type().record("object").fields().endRecord().noDefault()
                                      .endRecord();
 
         target.setTarget(new GenericRecordBuilder(schema)
-                .set("null", null)
                 .set("string", "string")
                 .set("boolean", true)
                 .set("byte", (byte) 127)
@@ -100,11 +101,12 @@ public class AvroQueryTargetTest {
                 .set("date", "2020-09-09")
                 .set("timestamp", "2020-09-09T12:23:34.1")
                 .set("timestampTz", "2020-09-09T12:23:34.2Z")
+                .set("null", null)
+                .set("object", new GenericRecordBuilder(SchemaBuilder.record("name").fields().endRecord()).build())
                 .build()
         );
 
         assertThat(nonExistingExtractor.get()).isNull();
-        assertThat(nullExtractor.get()).isNull();
         assertThat(stringExtractor.get()).isEqualTo("string");
         assertThat(booleanExtractor.get()).isEqualTo(true);
         assertThat(byteExtractor.get()).isEqualTo((byte) 127);
@@ -118,5 +120,7 @@ public class AvroQueryTargetTest {
         assertThat(dateExtractor.get()).isEqualTo(LocalDate.of(2020, 9, 9));
         assertThat(timestampExtractor.get()).isEqualTo(LocalDateTime.of(2020, 9, 9, 12, 23, 34, 100_000_000));
         assertThat(timestampTzExtractor.get()).isEqualTo(OffsetDateTime.of(2020, 9, 9, 12, 23, 34, 200_000_000, UTC));
+        assertThat(nullExtractor.get()).isNull();
+        assertThat(objectExtractor.get()).isNotNull();
     }
 }

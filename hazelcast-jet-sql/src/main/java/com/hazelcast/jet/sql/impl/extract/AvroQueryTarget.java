@@ -22,6 +22,9 @@ import com.hazelcast.sql.impl.type.QueryDataType;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.util.Utf8;
 
+import javax.annotation.concurrent.NotThreadSafe;
+
+@NotThreadSafe
 public class AvroQueryTarget implements QueryTarget {
 
     private GenericRecord record;

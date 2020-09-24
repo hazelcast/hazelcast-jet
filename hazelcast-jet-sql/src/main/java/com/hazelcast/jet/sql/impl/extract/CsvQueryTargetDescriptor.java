@@ -14,47 +14,44 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.sql.impl.inject;
+package com.hazelcast.jet.sql.impl.extract;
 
 import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
+import com.hazelcast.query.impl.getters.Extractors;
+import com.hazelcast.sql.impl.extract.QueryTarget;
+import com.hazelcast.sql.impl.extract.QueryTargetDescriptor;
 
 import java.io.IOException;
+import java.util.Map;
 import java.util.Objects;
 
-public class CsvUpsertTargetDescriptor implements UpsertTargetDescriptor {
+public final class CsvQueryTargetDescriptor implements QueryTargetDescriptor {
 
-    private String delimiter;
+    private Map<String, Integer> indicesByNames;
 
     @SuppressWarnings("unused")
-    CsvUpsertTargetDescriptor() {
+    private CsvQueryTargetDescriptor() {
     }
 
-    public CsvUpsertTargetDescriptor(String delimiter) {
-        this.delimiter = delimiter;
+    public CsvQueryTargetDescriptor(Map<String, Integer> indicesByNames) {
+        this.indicesByNames = indicesByNames;
     }
 
     @Override
-    public UpsertTarget create(InternalSerializationService serializationService) {
-        return new CsvUpsertTarget(delimiter);
+    public QueryTarget create(InternalSerializationService serializationService, Extractors extractors, boolean isKey) {
+        return new CsvQueryTarget(indicesByNames);
     }
 
     @Override
     public void writeData(ObjectDataOutput out) throws IOException {
-        out.writeObject(delimiter);
+        out.writeObject(indicesByNames);
     }
 
     @Override
     public void readData(ObjectDataInput in) throws IOException {
-        delimiter = in.readObject();
-    }
-
-    @Override
-    public String toString() {
-        return "CsvUpsertTargetDescriptor{" +
-                "delimiter='" + delimiter + '\'' +
-                '}';
+        indicesByNames = in.readObject();
     }
 
     @Override
@@ -65,12 +62,12 @@ public class CsvUpsertTargetDescriptor implements UpsertTargetDescriptor {
         if (o == null || getClass() != o.getClass()) {
             return false;
         }
-        CsvUpsertTargetDescriptor that = (CsvUpsertTargetDescriptor) o;
-        return Objects.equals(delimiter, that.delimiter);
+        CsvQueryTargetDescriptor that = (CsvQueryTargetDescriptor) o;
+        return Objects.equals(indicesByNames, that.indicesByNames);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(delimiter);
+        return Objects.hash(indicesByNames);
     }
 }

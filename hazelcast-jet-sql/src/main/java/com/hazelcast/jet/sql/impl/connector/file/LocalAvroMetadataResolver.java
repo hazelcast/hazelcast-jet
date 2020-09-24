@@ -18,14 +18,10 @@ package com.hazelcast.jet.sql.impl.connector.file;
 
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.function.SupplierEx;
-import com.hazelcast.jet.avro.AvroProcessors;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
-import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.impl.connector.ReadFilesP;
-import com.hazelcast.jet.sql.impl.connector.Processors;
 import com.hazelcast.jet.sql.impl.connector.RowProjector;
 import com.hazelcast.jet.sql.impl.extract.AvroQueryTarget;
-import com.hazelcast.jet.sql.impl.inject.AvroUpsertTargetDescriptor;
 import com.hazelcast.jet.sql.impl.schema.MappingField;
 import com.hazelcast.sql.impl.expression.Expression;
 import com.hazelcast.sql.impl.schema.TableField;
@@ -34,7 +30,6 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.avro.Schema;
 import org.apache.avro.file.DataFileReader;
 import org.apache.avro.generic.GenericDatumReader;
-import org.apache.avro.generic.GenericDatumWriter;
 import org.apache.avro.generic.GenericRecord;
 
 import java.io.File;
@@ -51,7 +46,6 @@ import java.util.stream.StreamSupport;
 import static com.hazelcast.jet.impl.util.Util.uncheckRun;
 import static com.hazelcast.jet.sql.impl.connector.file.AvroMetadataResolver.paths;
 import static com.hazelcast.jet.sql.impl.connector.file.AvroMetadataResolver.resolveFieldsFromSchema;
-import static com.hazelcast.jet.sql.impl.connector.file.AvroMetadataResolver.schema;
 import static com.hazelcast.jet.sql.impl.connector.file.AvroMetadataResolver.toTableFields;
 import static com.hazelcast.jet.sql.impl.connector.file.AvroMetadataResolver.types;
 import static com.hazelcast.jet.sql.impl.connector.file.AvroMetadataResolver.validateFields;
@@ -91,10 +85,9 @@ final class LocalAvroMetadataResolver implements AvroMetadataResolver {
 
     static Metadata resolveMetadata(List<MappingField> mappingFields, FileOptions options) {
         List<TableField> fields = toTableFields(mappingFields);
-        Schema schema = schema(fields);
 
         return new Metadata(
-                new AvroTargetDescriptor(options.path(), options.glob(), options.sharedFileSystem(), schema),
+                new AvroTargetDescriptor(options.path(), options.glob(), options.sharedFileSystem()),
                 fields
         );
     }
@@ -104,18 +97,15 @@ final class LocalAvroMetadataResolver implements AvroMetadataResolver {
         private final String path;
         private final String glob;
         private final boolean sharedFileSystem;
-        private final Schema schema;
 
         private AvroTargetDescriptor(
                 String path,
                 String glob,
-                boolean sharedFileSystem,
-                Schema schema
+                boolean sharedFileSystem
         ) {
             this.path = path;
             this.glob = glob;
             this.sharedFileSystem = sharedFileSystem;
-            this.schema = schema;
         }
 
         @Override
@@ -141,16 +131,6 @@ final class LocalAvroMetadataResolver implements AvroMetadataResolver {
             };
 
             return ReadFilesP.metaSupplier(path, glob, sharedFileSystem, readFileFn);
-        }
-
-        @Override
-        public ProcessorSupplier projectorProcessor(List<TableField> fields) {
-            return Processors.projector(new AvroUpsertTargetDescriptor(schema.toString()), paths(fields), types(fields));
-        }
-
-        @Override
-        public ProcessorMetaSupplier writeProcessor(List<TableField> fields) {
-            return AvroProcessors.writeFilesP(path, schema, GenericDatumWriter::new);
         }
     }
 }

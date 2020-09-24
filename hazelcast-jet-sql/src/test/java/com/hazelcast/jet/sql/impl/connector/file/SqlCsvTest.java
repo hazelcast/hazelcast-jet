@@ -17,24 +17,19 @@
 package com.hazelcast.jet.sql.impl.connector.file;
 
 import com.hazelcast.jet.sql.JetSqlTestSupport;
-import com.hazelcast.jet.sql.impl.connector.test.AllTypesSqlConnector;
 import com.hazelcast.sql.SqlService;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import java.io.File;
-import java.io.IOException;
 import java.math.BigDecimal;
-import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.time.ZonedDateTime;
+import java.time.OffsetDateTime;
 
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.CSV_SERIALIZATION_FORMAT;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_SERIALIZATION_FORMAT;
-import static java.time.ZoneId.systemDefault;
 import static java.time.ZoneOffset.UTC;
 import static java.util.Collections.singletonList;
 
@@ -51,16 +46,9 @@ public class SqlCsvTest extends JetSqlTestSupport {
     }
 
     @Test
-    @SuppressWarnings("checkstyle:LineLength")
-    public void supportsAllTypes() throws IOException {
-        File directory = Files.createTempDirectory("sql-test-local-csv").toFile();
-        directory.deleteOnExit();
-
-        String from = createRandomName();
-        AllTypesSqlConnector.create(sqlService, from);
-
-        String to = createRandomName();
-        sqlService.execute("CREATE MAPPING " + to + " ("
+    public void test_allTypes() {
+        String name = generateRandomName();
+        sqlService.execute("CREATE MAPPING " + name + " ("
                 + "string VARCHAR"
                 + ", \"boolean\" BOOLEAN"
                 + ", byte TINYINT"
@@ -75,56 +63,8 @@ public class SqlCsvTest extends JetSqlTestSupport {
                 + ", \"timestamp\" TIMESTAMP"
                 + ", timestampTz TIMESTAMP WITH TIME ZONE"
                 + ") TYPE " + FileSqlConnector.TYPE_NAME + ' '
-                + "OPTIONS ("
-                + '"' +  OPTION_SERIALIZATION_FORMAT + "\" '" + CSV_SERIALIZATION_FORMAT + '\''
-                + ", \"" + FileSqlConnector.OPTION_PATH + "\" '" + directory.getAbsolutePath() + '\''
-                + ")"
-        );
-
-        sqlService.execute("INSERT INTO " + to + " SELECT "
-                + "string"
-                + ", \"boolean\""
-                + ", byte"
-                + ", short"
-                + ", \"int\""
-                + ", long"
-                + ", \"float\""
-                + ", \"double\""
-                + ", \"decimal\""
-                + ", \"time\""
-                + ", \"date\""
-                + ", \"timestamp\""
-                + ", \"timestampTz\""
-                + " FROM " + from
-        );
-
-        assertRowsEventuallyInAnyOrder(
-                "SELECT * FROM " + to,
-                singletonList(new Row(
-                        "string",
-                        true,
-                        (byte) 127,
-                        (short) 32767,
-                        2147483647,
-                        9223372036854775807L,
-                        1234567890.1f,
-                        123451234567890.1,
-                        new BigDecimal("9223372036854775.123"),
-                        LocalTime.of(12, 23, 34),
-                        LocalDate.of(2020, 4, 15),
-                        LocalDateTime.of(2020, 4, 15, 12, 23, 34, 1_000_000),
-                        ZonedDateTime.of(2020, 4, 15, 12, 23, 34, 200_000_000, UTC).withZoneSameInstant(systemDefault()).toOffsetDateTime()
-                ))
-        );
-    }
-
-    @Test
-    public void supportsSchemaDiscovery() {
-        String name = createRandomName();
-        sqlService.execute("CREATE MAPPING " + name + ' '
-                + "TYPE " + FileSqlConnector.TYPE_NAME + ' '
-                + "OPTIONS ("
-                + '"' +  OPTION_SERIALIZATION_FORMAT + "\" '" + CSV_SERIALIZATION_FORMAT + '\''
+                + "OPTIONS ( "
+                + '"' + OPTION_SERIALIZATION_FORMAT + "\" '" + CSV_SERIALIZATION_FORMAT + '\''
                 + ", \"" + FileSqlConnector.OPTION_PATH + "\" '" + RESOURCES_PATH + '\''
                 + ", \"" + FileSqlConnector.OPTION_GLOB + "\" '" + "file.csv" + '\''
                 + ", \"" + FileSqlConnector.OPTION_HEADER + "\" '" + Boolean.TRUE + '\''
@@ -132,12 +72,111 @@ public class SqlCsvTest extends JetSqlTestSupport {
         );
 
         assertRowsEventuallyInAnyOrder(
-                "SELECT string2, string1 FROM " + name,
-                singletonList(new Row("value2", "value1"))
+                "SELECT * FROM " + name,
+                singletonList(new Row(
+                        "string",
+                        true,
+                        (byte) 127,
+                        (short) 32767,
+                        2147483647,
+                        9223372036854775807L,
+                        1234567890.1F,
+                        123451234567890.1D,
+                        new BigDecimal("9223372036854775.123"),
+                        LocalTime.of(12, 23, 34),
+                        LocalDate.of(2020, 4, 15),
+                        LocalDateTime.of(2020, 4, 15, 12, 23, 34, 1_000_000),
+                        OffsetDateTime.of(2020, 4, 15, 12, 23, 34, 200_000_000, UTC)
+                ))
         );
     }
 
-    private static String createRandomName() {
+    @Test
+    public void test_schemaDiscovery() {
+        String name = generateRandomName();
+        sqlService.execute("CREATE MAPPING " + name + ' '
+                + "TYPE " + FileSqlConnector.TYPE_NAME + ' '
+                + "OPTIONS ( "
+                + '"' + OPTION_SERIALIZATION_FORMAT + "\" '" + CSV_SERIALIZATION_FORMAT + '\''
+                + ", \"" + FileSqlConnector.OPTION_PATH + "\" '" + RESOURCES_PATH + '\''
+                + ", \"" + FileSqlConnector.OPTION_GLOB + "\" '" + "file.csv" + '\''
+                + ", \"" + FileSqlConnector.OPTION_HEADER + "\" '" + Boolean.TRUE + '\''
+                + ")"
+        );
+
+        assertRowsEventuallyInAnyOrder(
+                "SELECT "
+                        + "string"
+                        + ", \"boolean\""
+                        + ", byte"
+                        + ", short"
+                        + ", \"int\""
+                        + ", long"
+                        + ", \"float\""
+                        + ", \"double\""
+                        + ", \"decimal\""
+                        + ", \"time\""
+                        + ", \"date\""
+                        + ", \"timestamp\""
+                        + ", \"timestampTz\""
+                        + " FROM " + name,
+                singletonList(new Row(
+                        "string",
+                        "true",
+                        "127",
+                        "32767",
+                        "2147483647",
+                        "9223372036854775807",
+                        "1234567890.1",
+                        "123451234567890.1",
+                        "9223372036854775.123",
+                        "12:23:34",
+                        "2020-04-15",
+                        "2020-04-15T12:23:34.001",
+                        "2020-04-15T12:23:34.200Z"
+                ))
+        );
+    }
+
+    @Test
+    public void test_tableFunction() {
+        assertRowsEventuallyInAnyOrder(
+                "SELECT "
+                        + "string"
+                        + ", \"boolean\""
+                        + ", byte"
+                        + ", short"
+                        + ", \"int\""
+                        + ", long"
+                        + ", \"float\""
+                        + ", \"double\""
+                        + ", \"decimal\""
+                        + ", \"time\""
+                        + ", \"date\""
+                        + ", \"timestamp\""
+                        + ", \"timestampTz\""
+                        + " FROM TABLE (" +
+                        "FILE (format => 'csv', path => '" + RESOURCES_PATH + "', glob => 'file.csv', header => true)" +
+                        ")",
+                singletonList(new Row(
+                        "string",
+                        "true",
+                        "127",
+                        "32767",
+                        "2147483647",
+                        "9223372036854775807",
+                        "1234567890.1",
+                        "123451234567890.1",
+                        "9223372036854775.123",
+                        "12:23:34",
+                        "2020-04-15",
+                        "2020-04-15T12:23:34.001",
+                        "2020-04-15T12:23:34.200Z"
+                ))
+        );
+    }
+
+    private static String generateRandomName() {
         return "csv_" + randomString().replace('-', '_');
     }
 }

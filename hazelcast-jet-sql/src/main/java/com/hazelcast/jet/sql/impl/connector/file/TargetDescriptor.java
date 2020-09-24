@@ -17,7 +17,6 @@
 package com.hazelcast.jet.sql.impl.connector.file;
 
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
-import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.sql.impl.expression.Expression;
 import com.hazelcast.sql.impl.schema.TableField;
 
@@ -30,8 +29,4 @@ interface TargetDescriptor {
             Expression<Boolean> predicate,
             List<Expression<?>> projection
     );
-
-    ProcessorSupplier projectorProcessor(List<TableField> fields);
-
-    ProcessorMetaSupplier writeProcessor(List<TableField> fields);
 }

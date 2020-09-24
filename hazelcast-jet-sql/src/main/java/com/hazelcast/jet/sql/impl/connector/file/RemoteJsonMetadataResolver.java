@@ -18,13 +18,9 @@ package com.hazelcast.jet.sql.impl.connector.file;
 
 import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
-import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.hadoop.HadoopProcessors;
-import com.hazelcast.jet.hadoop.impl.WriteHadoopNewApiP;
-import com.hazelcast.jet.sql.impl.connector.Processors;
 import com.hazelcast.jet.sql.impl.connector.RowProjector;
 import com.hazelcast.jet.sql.impl.extract.JsonQueryTarget;
-import com.hazelcast.jet.sql.impl.inject.JsonUpsertTargetDescriptor;
 import com.hazelcast.jet.sql.impl.schema.MappingField;
 import com.hazelcast.sql.impl.expression.Expression;
 import com.hazelcast.sql.impl.schema.TableField;
@@ -48,7 +44,6 @@ import java.io.Reader;
 import java.util.List;
 import java.util.function.BiFunction;
 
-import static com.hazelcast.function.FunctionEx.identity;
 import static com.hazelcast.jet.hadoop.impl.SerializableConfiguration.asSerializable;
 import static com.hazelcast.jet.sql.impl.connector.file.JsonMetadataResolver.paths;
 import static com.hazelcast.jet.sql.impl.connector.file.JsonMetadataResolver.resolveFieldsFromSample;
@@ -142,16 +137,6 @@ final class RemoteJsonMetadataResolver implements JsonMetadataResolver {
             };
 
             return HadoopProcessors.readHadoopP(asSerializable(configuration), projectionSupplierFn);
-        }
-
-        @Override
-        public ProcessorSupplier projectorProcessor(List<TableField> fields) {
-            return Processors.projector(JsonUpsertTargetDescriptor.INSTANCE, paths(fields), types(fields));
-        }
-
-        @Override
-        public ProcessorMetaSupplier writeProcessor(List<TableField> fields) {
-            return new WriteHadoopNewApiP.MetaSupplier<>(asSerializable(configuration), o -> null, identity());
         }
     }
 }

@@ -17,24 +17,19 @@
 package com.hazelcast.jet.sql.impl.connector.file;
 
 import com.hazelcast.jet.sql.JetSqlTestSupport;
-import com.hazelcast.jet.sql.impl.connector.test.AllTypesSqlConnector;
 import com.hazelcast.sql.SqlService;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import java.io.File;
-import java.io.IOException;
 import java.math.BigDecimal;
-import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.time.ZonedDateTime;
+import java.time.OffsetDateTime;
 
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.JSON_SERIALIZATION_FORMAT;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_SERIALIZATION_FORMAT;
-import static java.time.ZoneId.systemDefault;
 import static java.time.ZoneOffset.UTC;
 import static java.util.Collections.singletonList;
 
@@ -51,8 +46,8 @@ public class SqlJsonTest extends JetSqlTestSupport {
     }
 
     @Test
-    public void supportsNulls() {
-        String name = createRandomName();
+    public void test_nulls() {
+        String name = generateRandomName();
         sqlService.execute("CREATE MAPPING " + name + " ("
                 + "nonExistingField VARCHAR"
                 + ") TYPE " + FileSqlConnector.TYPE_NAME + ' '
@@ -70,10 +65,11 @@ public class SqlJsonTest extends JetSqlTestSupport {
     }
 
     @Test
-    public void supportsFieldsMapping() {
-        String name = createRandomName();
+    public void test_fieldsMapping() {
+        String name = generateRandomName();
         sqlService.execute("CREATE MAPPING " + name + " ("
-                + "name VARCHAR EXTERNAL NAME string"
+                + "id TINYINT EXTERNAL NAME byte"
+                + ", name VARCHAR EXTERNAL NAME string"
                 + ") TYPE " + FileSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ("
                 + '"' + OPTION_SERIALIZATION_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + '\''
@@ -83,22 +79,15 @@ public class SqlJsonTest extends JetSqlTestSupport {
         );
 
         assertRowsEventuallyInAnyOrder(
-                "SELECT name FROM " + name,
-                singletonList(new Row("string"))
+                "SELECT id, name FROM " + name,
+                singletonList(new Row((byte) 127, "string"))
         );
     }
 
     @Test
-    @SuppressWarnings("checkstyle:LineLength")
-    public void supportsAllTypes() throws IOException {
-        File directory = Files.createTempDirectory("sql-test-local-json").toFile();
-        directory.deleteOnExit();
-
-        String from = createRandomName();
-        AllTypesSqlConnector.create(sqlService, from);
-
-        String to = createRandomName();
-        sqlService.execute("CREATE MAPPING " + to + " ("
+    public void test_allTypes() {
+        String name = generateRandomName();
+        sqlService.execute("CREATE MAPPING " + name + " ("
                 + "string VARCHAR"
                 + ", \"boolean\" BOOLEAN"
                 + ", byte TINYINT"
@@ -113,31 +102,15 @@ public class SqlJsonTest extends JetSqlTestSupport {
                 + ", \"timestamp\" TIMESTAMP"
                 + ", timestampTz TIMESTAMP WITH TIME ZONE"
                 + ") TYPE " + FileSqlConnector.TYPE_NAME + ' '
-                + "OPTIONS ("
+                + "OPTIONS ( "
                 + '"' + OPTION_SERIALIZATION_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + '\''
-                + ", \"" + FileSqlConnector.OPTION_PATH + "\" '" + directory.getAbsolutePath() + '\''
+                + ", \"" + FileSqlConnector.OPTION_PATH + "\" '" + RESOURCES_PATH + '\''
+                + ", \"" + FileSqlConnector.OPTION_GLOB + "\" '" + "file.json" + '\''
                 + ")"
         );
 
-        sqlService.execute("INSERT INTO " + to + " SELECT "
-                + "string"
-                + ", \"boolean\""
-                + ", byte"
-                + ", short"
-                + ", \"int\""
-                + ", long"
-                + ", \"float\""
-                + ", \"double\""
-                + ", \"decimal\""
-                + ", \"time\""
-                + ", \"date\""
-                + ", \"timestamp\""
-                + ", \"timestampTz\""
-                + " FROM " + from
-        );
-
         assertRowsEventuallyInAnyOrder(
-                "SELECT * FROM " + to,
+                "SELECT * FROM " + name,
                 singletonList(new Row(
                         "string",
                         true,
@@ -145,20 +118,20 @@ public class SqlJsonTest extends JetSqlTestSupport {
                         (short) 32767,
                         2147483647,
                         9223372036854775807L,
-                        1234567890.1f,
-                        123451234567890.1,
+                        1234567890.1F,
+                        123451234567890.1D,
                         new BigDecimal("9223372036854775.123"),
                         LocalTime.of(12, 23, 34),
                         LocalDate.of(2020, 4, 15),
                         LocalDateTime.of(2020, 4, 15, 12, 23, 34, 1_000_000),
-                        ZonedDateTime.of(2020, 4, 15, 12, 23, 34, 200_000_000, UTC).withZoneSameInstant(systemDefault()).toOffsetDateTime()
+                        OffsetDateTime.of(2020, 4, 15, 12, 23, 34, 200_000_000, UTC)
                 ))
         );
     }
 
     @Test
-    public void supportsSchemaDiscovery() {
-        String name = createRandomName();
+    public void test_schemaDiscovery() {
+        String name = generateRandomName();
         sqlService.execute("CREATE MAPPING " + name + ' '
                 + "TYPE " + FileSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ( "
@@ -169,23 +142,86 @@ public class SqlJsonTest extends JetSqlTestSupport {
         );
 
         assertRowsEventuallyInAnyOrder(
-                "SELECT string, \"boolean\", long, \"double\", \"null\" FROM " + name,
+                "SELECT "
+                        + "string"
+                        + ", \"boolean\""
+                        + ", byte"
+                        + ", short"
+                        + ", \"int\""
+                        + ", long"
+                        + ", \"float\""
+                        + ", \"double\""
+                        + ", \"decimal\""
+                        + ", \"time\""
+                        + ", \"date\""
+                        + ", \"timestamp\""
+                        + ", \"timestampTz\""
+                        + ", \"null\""
+                        + ", object IS NOT NULL"
+                        + " FROM " + name,
                 singletonList(new Row(
-                        "string"
-                        , true
-                        , 123456789.0
-                        , 123456789.1
-                        , null
+                        "string",
+                        true,
+                        127,
+                        32767,
+                        2147483647,
+                        9223372036854775807L,
+                        1234567890.1D,
+                        123451234567890.1D,
+                        "9223372036854775.123",
+                        "12:23:34",
+                        "2020-04-15",
+                        "2020-04-15T12:23:34.001",
+                        "2020-04-15T12:23:34.200Z",
+                        null,
+                        true
                 ))
-        );
-
-        assertRowsEventuallyInAnyOrder(
-                "SELECT 1 FROM " + name + " WHERE object IS NOT NULL",
-                singletonList(new Row((byte) 1))
         );
     }
 
-    private static String createRandomName() {
+    @Test
+    public void test_tableFunction() {
+        assertRowsEventuallyInAnyOrder(
+                "SELECT "
+                        + "string"
+                        + ", \"boolean\""
+                        + ", byte"
+                        + ", short"
+                        + ", \"int\""
+                        + ", long"
+                        + ", \"float\""
+                        + ", \"double\""
+                        + ", \"decimal\""
+                        + ", \"time\""
+                        + ", \"date\""
+                        + ", \"timestamp\""
+                        + ", \"timestampTz\""
+                        + ", \"null\""
+                        + ", object IS NOT NULL"
+                        + " FROM TABLE (" +
+                        "FILE (format => 'json', path => '" + RESOURCES_PATH + "', glob => 'file.json')" +
+                        ")",
+                singletonList(new Row(
+                        "string",
+                        true,
+                        127,
+                        32767,
+                        2147483647,
+                        9223372036854775807L,
+                        1234567890.1D,
+                        123451234567890.1D,
+                        "9223372036854775.123",
+                        "12:23:34",
+                        "2020-04-15",
+                        "2020-04-15T12:23:34.001",
+                        "2020-04-15T12:23:34.200Z",
+                        null,
+                        true
+                ))
+        );
+    }
+
+    private static String generateRandomName() {
         return "json_" + randomString().replace('-', '_');
     }
 }

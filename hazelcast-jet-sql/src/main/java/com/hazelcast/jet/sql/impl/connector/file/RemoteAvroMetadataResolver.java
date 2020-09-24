@@ -18,13 +18,9 @@ package com.hazelcast.jet.sql.impl.connector.file;
 
 import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
-import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.hadoop.HadoopProcessors;
-import com.hazelcast.jet.hadoop.impl.WriteHadoopNewApiP;
-import com.hazelcast.jet.sql.impl.connector.Processors;
 import com.hazelcast.jet.sql.impl.connector.RowProjector;
 import com.hazelcast.jet.sql.impl.extract.AvroQueryTarget;
-import com.hazelcast.jet.sql.impl.inject.AvroUpsertTargetDescriptor;
 import com.hazelcast.jet.sql.impl.schema.MappingField;
 import com.hazelcast.sql.impl.expression.Expression;
 import com.hazelcast.sql.impl.schema.TableField;
@@ -110,21 +106,18 @@ final class RemoteAvroMetadataResolver {
         AvroJob.setOutputKeySchema(job, schema);
 
         return new Metadata(
-                new AvroTargetDescriptor(schema, job.getConfiguration()),
+                new AvroTargetDescriptor(job.getConfiguration()),
                 fields
         );
     }
 
     private static final class AvroTargetDescriptor implements TargetDescriptor {
 
-        private final Schema schema;
         private final Configuration configuration;
 
         private AvroTargetDescriptor(
-                Schema schema,
                 Configuration configuration
         ) {
-            this.schema = schema;
             this.configuration = configuration;
         }
 
@@ -146,16 +139,6 @@ final class RemoteAvroMetadataResolver {
             };
 
             return HadoopProcessors.readHadoopP(asSerializable(configuration), projectionSupplierFn);
-        }
-
-        @Override
-        public ProcessorSupplier projectorProcessor(List<TableField> fields) {
-            return Processors.projector(new AvroUpsertTargetDescriptor(schema.toString()), paths(fields), types(fields));
-        }
-
-        @Override
-        public ProcessorMetaSupplier writeProcessor(List<TableField> fields) {
-            return new WriteHadoopNewApiP.MetaSupplier<>(asSerializable(configuration), AvroKey::new, row -> null);
         }
     }
 }

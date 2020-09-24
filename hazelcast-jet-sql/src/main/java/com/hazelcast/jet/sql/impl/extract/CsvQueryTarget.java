@@ -20,8 +20,10 @@ import com.hazelcast.sql.impl.extract.QueryExtractor;
 import com.hazelcast.sql.impl.extract.QueryTarget;
 import com.hazelcast.sql.impl.type.QueryDataType;
 
+import javax.annotation.concurrent.NotThreadSafe;
 import java.util.Map;
 
+@NotThreadSafe
 public class CsvQueryTarget implements QueryTarget {
 
     private final Map<String, Integer> indicesByNames;
@@ -39,7 +41,11 @@ public class CsvQueryTarget implements QueryTarget {
 
     @Override
     public QueryExtractor createExtractor(String name, QueryDataType type) {
-        int index = indicesByNames.get(name);
-        return () -> type.convert(line[index]);
+        Integer index = indicesByNames.get(name);
+        if (index == null) {
+            return () -> null;
+        } else {
+            return () -> type.convert(line[index]);
+        }
     }
 }
