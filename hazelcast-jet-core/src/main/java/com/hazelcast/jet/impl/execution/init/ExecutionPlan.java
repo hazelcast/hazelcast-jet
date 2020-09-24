@@ -407,7 +407,7 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
                 final ConcurrentConveyor<Object> conveyor = createConveyorArray(
                         1, edge.sourceVertex().localParallelism(), edge.getConfig().getQueueSize())[0];
                 @SuppressWarnings("unchecked")
-                ComparatorEx<Object> origComparator = (ComparatorEx<Object>) edge.getMonotonicOrderComparator();
+                ComparatorEx<Object> origComparator = (ComparatorEx<Object>) edge.getOrderComparator();
                 ComparatorEx<ObjectWithPartitionId> adaptedComparator = origComparator == null ? null
                         : (l, r) -> origComparator.compare(l.getItem(), r.getItem());
 
@@ -609,8 +609,7 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
             // each tasklet has one input conveyor per edge
             final ConcurrentConveyor<Object> conveyor = localConveyorMap.get(inEdge.edgeId())[localProcessorIdx];
             inboundStreams.add(newEdgeStream(inEdge, conveyor,
-                    "inputTo:" + inEdge.destVertex().name() + '#' + globalProcessorIdx,
-                    inEdge.getMonotonicOrderComparator()));
+                    "inputTo:" + inEdge.destVertex().name() + '#' + globalProcessorIdx, inEdge.getOrderComparator()));
         }
         return inboundStreams;
     }

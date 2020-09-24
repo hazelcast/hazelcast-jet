@@ -118,7 +118,7 @@ public class EdgeDef implements IdentifiedDataSerializable {
         return config;
     }
 
-    ComparatorEx<?> getMonotonicOrderComparator() {
+    ComparatorEx<?> getOrderComparator() {
         return comparator;
     }
 
