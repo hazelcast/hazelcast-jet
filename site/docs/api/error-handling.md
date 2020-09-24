@@ -6,11 +6,11 @@ description: Ways of coping with unexpected error in Hazelcast Jet.
 There is unavoidable risk in running Jet jobs. They ingest data from
 external sources, the correctness and consistency of which can't be
 guaranteed. The processing they perform includes the running of user
-code, which is written by humans and, as such, is unavoidably imperfect.
+code, which is unavoidably imperfect.
 
 So even if we assume no bugs in the Jet framework itself, errors can and
 will happen. What options Jet offers for dealing with them is the topic
-of the next sections.
+of the sections below.
 
 ## Scope
 
@@ -28,13 +28,12 @@ interesting part.
 
 Before we dig deeper, let's list some typical error one might encounter:
 
-* *corrupt data*: ex. user-provided code is parsing JSON lines, but some
-  of them are incorrectly formatted
-* *bugs in user code*: ex. user provided filtering lambda throws a
+* *corrupt data*: e.g., user-provided code is parsing JSON lines, but
+  some of them are incorrectly formatted
+* *bugs in user code*: e.g., a user-provided filtering lambda throws a
   `NullPointerException` for certain input
 * *connection to external services lost*: Jet sink writing into an
-  `IMap` loses connection to the remote Hazelcast cluster hosting the
-  data
+  `IMap` loses connection to the remote Hazelcast cluster hosting it
 
 ## Specific Solutions
 
@@ -66,8 +65,8 @@ automatically whenever they lose connection to the databases they
 monitor, so for intermittent network failures, their owner jobs don't
 need to fail.
 
-For further such specific failure handling options, consult the Javadoc
-of Jet's various [sources and sinks](sources-sinks).
+To see the failure handling options of a given [source or
+sink](sources-sinks), consult its Javadoc.
 
 ## Generic Solutions
 
@@ -81,9 +80,9 @@ processing guarantee configured, the pipeline definition and the job
 config are the only parts we can identify as state, and those are
 immutable.
 
-Batch jobs also fall into the category of immutable state jobs.
+Batch jobs also fall into the category of jobs with immutable state.
 
-One option for dealing with failure in immutable state jobs is simply
+One option for dealing with failure in immutable-state jobs is simply
 restarting them (once the cause of the failure has been addressed).
 Restarted streaming jobs lacking mutable state can just resume
 processing the input data flow from the current point in time, batch
@@ -91,46 +90,47 @@ jobs can be re-run from the beginning.
 
 ### Processing Guarantees
 
-Jobs with mutable state, the ones that have [processing
-guarantees](../architecture/fault-tolerance#processing-guarantee-is-a-shared-concern)
+Jobs with mutable state, those with a [processing
+guarantee](../architecture/fault-tolerance#processing-guarantee-is-a-shared-concern)
 set, achieve their fault tolerance by periodically saving [recovery
 snapshots](../architecture/fault-tolerance#distributed-snapshot). When
-such jobs fail, not only does their execution stop, but also their
-snapshots get deleted. This makes it impossible to resume them without
+such a job fails, not only does its execution stop, but also its
+snapshots get deleted. This makes it impossible to resume it without
 loss.
 
-To cope with this situation, starting from Jet 4.3, jobs can be
-configured to be only suspended when failures occur, instead of having
-them fail completely. For details see
+To cope with this situation, you can configure a job to be suspended in
+the case of a failure, instead of failing completely. For details see
 [`JobConfig.setSuspendOnFailure`](/javadoc/{jet-version}/com/hazelcast/jet/config/JobConfig.html#setSuspendOnFailure(boolean)).
-Note: to preserve behavior from older versions, this configuration
-option is not the default, so it must be enabled explicitly.
 
-Having them in a suspended state preserves their snapshots and makes
-resumptions possible, once the root cause of the failure has been
-addressed.
+Note: this option was introduced in Hazelcast Jet 4.3. In order to
+preserve the behavior from older versions, it is not the default, so it
+must be enabled explicitly.
 
-In the open-source version of Jet this scenario is limited to
-fixing the input data by some external means and then simply [resuming
-the job](../operations/job-management#restarting) via the client API.
+A job in the suspended state has preserved its snapshot, and you can
+resume it without loss once you have addressed the root cause of the
+failure.
 
-Enterprise users of Jet have the added option of [job upgrades](../enterprise/job-update).
-They can:
+In the open-source version of Jet this scenario is limited to fixing the
+input data by some external means and then simply [resuming the
+job](../operations/job-management#restarting) via the client API.
+
+The Enterprise version of Jet  has the added option of [job
+upgrades](../enterprise/job-update). In that case you can:
 
 * export the latest snapshot
-* update their pipeline, if needed, for example, to cope with unexpected
+* update the pipeline, if needed, for example, to cope with unexpected
   data
-* resubmit a new job based on the exported snapshot and the updated pipeline
+* resubmit a new job based on the exported snapshot and the updated
+  pipeline
 
 One caveat of the suspend-on-failure feature is that the latest snapshot
 is not a "failure snapshot." Jet can't take a full snapshot right at the
 moment of the failure, because its processors can produce accurate
-snapshots only when in a healthy state. So the latest snapshot we will
-have available will be whatever has been saved at the last periodic
-snapshotting phase. But even so, the recovery procedure should preserve
-at-least-once guarantees.
+snapshots only when in a healthy state. Instead Jet simply keeps the
+latest periodic snapshot it created. Even so, the recovery procedure
+preserves the at-least-once guarantee.
 
-More information on the topic can also be found in the feature's design
+You can find more information on the topic in the feature's design
 document, for example, how clients that have submitted the job can
 [discover if it got suspended this
 way](../design-docs/012-improved-job-resilience#notifying-the-client).
