@@ -50,10 +50,10 @@ import static com.hazelcast.jet.impl.util.Util.toLocalTime;
  */
 public abstract class ConcurrentInboundEdgeStream implements InboundEdgeStream {
 
+    final ProgressTracker tracker = new ProgressTracker();
     private final ConcurrentConveyor<Object> conveyor;
     private final int ordinal;
     private final int priority;
-    private final ProgressTracker tracker = new ProgressTracker();
     private final ILogger logger;
 
     private ConcurrentInboundEdgeStream(
@@ -83,7 +83,7 @@ public abstract class ConcurrentInboundEdgeStream implements InboundEdgeStream {
         if (comparator == null) {
             return new RoundRobinDrain(conveyor, ordinal, priority, debugName, waitForAllBarriers);
         } else {
-            return new MergeSortDrain(conveyor, ordinal, priority, debugName, comparator);
+            return new OrderedDrain(conveyor, ordinal, priority, debugName, comparator);
         }
     }
 
@@ -154,7 +154,7 @@ public abstract class ConcurrentInboundEdgeStream implements InboundEdgeStream {
 
         @Nonnull @Override
         public ProgressState drainTo(@Nonnull Predicate<Object> dest) {
-            super.tracker.reset();
+            tracker.reset();
             for (int queueIndex = 0; queueIndex < super.conveyor.queueCount(); queueIndex++) {
                 final QueuedPipe<Object> q = super.conveyor.queue(queueIndex);
                 if (q == null) {
@@ -167,7 +167,7 @@ public abstract class ConcurrentInboundEdgeStream implements InboundEdgeStream {
                 }
 
                 ProgressState result = drainQueue(q, dest);
-                super.tracker.mergeWith(result);
+                tracker.mergeWith(result);
 
                 if (itemDetector.item == DONE_ITEM) {
                     super.conveyor.removeQueue(queueIndex);
@@ -200,7 +200,7 @@ public abstract class ConcurrentInboundEdgeStream implements InboundEdgeStream {
 
                 int liveQueueCount = super.conveyor.liveQueueCount();
                 if (liveQueueCount == 0) {
-                    return super.tracker.toProgressState();
+                    return tracker.toProgressState();
                 }
                 // if we have received the current snapshot from all active queues, forward it
                 if (itemDetector.item != null && receivedBarriers.cardinality() == liveQueueCount) {
@@ -219,9 +219,9 @@ public abstract class ConcurrentInboundEdgeStream implements InboundEdgeStream {
             }
 
             if (super.conveyor.liveQueueCount() > 0) {
-                super.tracker.notDone();
+                tracker.notDone();
             }
-            return super.tracker.toProgressState();
+            return tracker.toProgressState();
         }
 
         /**
@@ -303,16 +303,16 @@ public abstract class ConcurrentInboundEdgeStream implements InboundEdgeStream {
      * the inputs into one output stream, preserving the order. Currently
      * doesn't handle watermarks or barriers.
      */
-    private static final class MergeSortDrain extends ConcurrentInboundEdgeStream {
+    private static final class OrderedDrain extends ConcurrentInboundEdgeStream {
         private final Comparator<Object> comparator;
 
-        private List<ArrayDeque<Object>> drainedItems;
+        private final List<QueuedPipe<Object>> queues;
+        private final List<ArrayDeque<Object>> drainedItems;
         private Object lastItem;
         private int lastMinIndex;
-        private final List<QueuedPipe<Object>> queues;
 
         @SuppressWarnings("unchecked")
-        MergeSortDrain(
+        OrderedDrain(
                 @Nonnull ConcurrentConveyor<Object> conveyor,
                 int ordinal,
                 int priority,
@@ -333,8 +333,8 @@ public abstract class ConcurrentInboundEdgeStream implements InboundEdgeStream {
 
         @Nonnull @Override
         public ProgressState drainTo(@Nonnull Predicate<Object> dest) {
-            super.tracker.reset();
-            super.tracker.notDone();
+            tracker.reset();
+            tracker.notDone();
 
             // drain queues that are fully consumed
             for (int i = 0; i < queues.size(); i++) {
@@ -351,16 +351,16 @@ public abstract class ConcurrentInboundEdgeStream implements InboundEdgeStream {
                     Object item = drainedItems.get(i).peek();
                     if (item == null) {
                         // this queue doesn't have data and isn't done, we can't proceed
-                        return super.tracker.toProgressState();
+                        return tracker.toProgressState();
                     }
-                    super.tracker.madeProgress();
+                    tracker.madeProgress();
                     if (item == DONE_ITEM) {
                         // queue is done, try again with it removed
                         queues.remove(i);
                         drainedItems.remove(i);
                         if (queues.isEmpty()) {
-                            super.tracker.done();
-                            return super.tracker.toProgressState();
+                            tracker.done();
+                            return tracker.toProgressState();
                         }
                         continue outer;
                     }
