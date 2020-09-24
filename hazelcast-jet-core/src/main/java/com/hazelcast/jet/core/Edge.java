@@ -382,7 +382,7 @@ public class Edge implements IdentifiedDataSerializable {
      *
      * @since 4.3
      */
-    public Edge monotonicOrder(@Nonnull ComparatorEx<?> comparator) {
+    public Edge ordered(@Nonnull ComparatorEx<?> comparator) {
         this.comparator = comparator;
         return this;
     }
@@ -398,12 +398,12 @@ public class Edge implements IdentifiedDataSerializable {
 
     /**
      * Returns the comparator defined on this edge using {@link
-     * #monotonicOrder(ComparatorEx)}.
+     * #ordered(ComparatorEx)}.
      *
      * @since 4.3
      **/
     @Nullable
-    public ComparatorEx<?> getMonotonicOrderComparator() {
+    public ComparatorEx<?> getOrderComparator() {
         return comparator;
     }
 
@@ -604,7 +604,7 @@ public class Edge implements IdentifiedDataSerializable {
         out.writeUTF(getDestName());
         out.writeInt(getDestOrdinal());
         out.writeInt(getPriority());
-        out.writeObject(getMonotonicOrderComparator());
+        out.writeObject(getOrderComparator());
         out.writeObject(getDistributedTo());
         out.writeObject(getRoutingPolicy());
         CustomClassLoadedObject.write(out, getPartitioner());

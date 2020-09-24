@@ -43,7 +43,7 @@ import static org.junit.Assert.assertEquals;
 
 @Category(ParallelJVMTest.class)
 @RunWith(HazelcastSerialClassRunner.class)
-public class ConcurrentInboundEdgeStream_MergeSortDrainTest {
+public class ConcurrentInboundEdgeStream_OrderedDrainTest {
 
     private static final Object senderGone = new Object();
 

@@ -55,6 +55,6 @@ public class SortTransform<T> extends AbstractTransform {
         p.addEdges(this, v1);
         p.dag.edge(between(v1, pv2.v).distributed()
                                      .allToOne(name())
-                                     .monotonicOrder(comparator));
+                                     .ordered(comparator));
     }
 }
