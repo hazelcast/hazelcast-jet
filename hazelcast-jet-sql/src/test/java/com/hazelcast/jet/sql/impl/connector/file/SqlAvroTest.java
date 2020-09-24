@@ -198,9 +198,9 @@ public class SqlAvroTest extends JetSqlTestSupport {
                         + ", \"timestampTz\""
                         + ", \"null\""
                         + ", object IS NOT NULL"
-                        + " FROM TABLE (" +
-                        "FILE (format => 'avro', path => '" + RESOURCES_PATH + "', glob => 'file.avro')" +
-                        ")",
+                        + " FROM TABLE ("
+                        + "FILE (format => 'avro', path => '" + RESOURCES_PATH + "', glob => 'file.avro')"
+                        + ")",
                 singletonList(new Row(
                         "string",
                         true,

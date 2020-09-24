@@ -28,14 +28,21 @@ import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.OffsetDateTime;
 
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.AVRO_SERIALIZATION_FORMAT;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.CSV_SERIALIZATION_FORMAT;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.JSON_SERIALIZATION_FORMAT;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_SERIALIZATION_FORMAT;
+import static com.hazelcast.jet.sql.impl.connector.SqlConnector.PARQUET_SERIALIZATION_FORMAT;
 import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.OPTION_HEADER;
+import static java.time.ZoneOffset.UTC;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 
@@ -70,7 +77,7 @@ public class SqlHadoopTest extends JetSqlTestSupport {
     public void test_csv() throws IOException {
         store("/csv/file.csv", "1,Alice\n2,Bob");
 
-        String name = createRandomName();
+        String name = generateRandomName();
         sqlService.execute("CREATE MAPPING " + name + " ("
                 + "id BIGINT"
                 + ", name VARCHAR"
@@ -94,7 +101,7 @@ public class SqlHadoopTest extends JetSqlTestSupport {
     public void test_csvSchemaDiscovery() throws IOException {
         store("/discovered-csv/file.csv", "id,name\n1,Alice\n2,Bob");
 
-        String name = createRandomName();
+        String name = generateRandomName();
         sqlService.execute("CREATE MAPPING " + name + ' '
                 + "TYPE " + FileSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ("
@@ -117,7 +124,7 @@ public class SqlHadoopTest extends JetSqlTestSupport {
     public void test_json() throws IOException {
         store("/json/file.json", "{\"id\": 1, \"name\": \"Alice\"}\n{\"id\": 2, \"name\": \"Bob\"}");
 
-        String name = createRandomName();
+        String name = generateRandomName();
         sqlService.execute("CREATE MAPPING " + name + " ("
                 + "id BIGINT"
                 + ", name VARCHAR"
@@ -141,7 +148,7 @@ public class SqlHadoopTest extends JetSqlTestSupport {
     public void test_jsonSchemaDiscovery() throws IOException {
         store("/discovered-json/file.json", "{\"id\": 1, \"name\": \"Alice\"}\n{\"id\": 2, \"name\": \"Bob\"}");
 
-        String name = createRandomName();
+        String name = generateRandomName();
         sqlService.execute("CREATE MAPPING " + name + ' '
                 + "TYPE " + FileSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ("
@@ -163,7 +170,7 @@ public class SqlHadoopTest extends JetSqlTestSupport {
     public void test_avro() throws IOException {
         store("/avro/file.avro", Files.readAllBytes(Paths.get("src/test/resources/file.avro")));
 
-        String name = createRandomName();
+        String name = generateRandomName();
         sqlService.execute("CREATE MAPPING " + name + " ("
                 + "id BIGINT EXTERNAL NAME long"
                 + ", name VARCHAR EXTERNAL NAME string"
@@ -184,7 +191,7 @@ public class SqlHadoopTest extends JetSqlTestSupport {
     public void test_avroSchemaDiscovery() throws IOException {
         store("/discovered-avro/file.avro", Files.readAllBytes(Paths.get("src/test/resources/file.avro")));
 
-        String name = createRandomName();
+        String name = generateRandomName();
         sqlService.execute("CREATE MAPPING " + name + ' '
                 + "TYPE " + FileSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ("
@@ -196,6 +203,180 @@ public class SqlHadoopTest extends JetSqlTestSupport {
         assertRowsEventuallyInAnyOrder(
                 "SELECT byte, string FROM " + name,
                 singletonList(new Row(127, "string"))
+        );
+    }
+
+    @Test
+    public void test_parquet_nulls() throws IOException {
+        store("/parquet-nulls/file.parquet", Files.readAllBytes(Paths.get("src/test/resources/file.parquet")));
+
+        String name = generateRandomName();
+        sqlService.execute("CREATE MAPPING " + name + " ("
+                + "nonExistingField VARCHAR"
+                + ") TYPE " + FileSqlConnector.TYPE_NAME + ' '
+                + "OPTIONS ("
+                + '"' + OPTION_SERIALIZATION_FORMAT + "\" '" + PARQUET_SERIALIZATION_FORMAT + '\''
+                + ", \"" + FileSqlConnector.OPTION_PATH + "\" '" + path("parquet-nulls") + '\''
+                + ")"
+        );
+
+        assertRowsEventuallyInAnyOrder(
+                "SELECT * FROM " + name,
+                singletonList(new Row((Object) null))
+        );
+    }
+
+    @Test
+    public void test_parquet_fieldsMapping() throws IOException {
+        store("/parquet-fields-mapping/file.parquet", Files.readAllBytes(Paths.get("src/test/resources/file.parquet")));
+
+        String name = generateRandomName();
+        sqlService.execute("CREATE MAPPING " + name + " ("
+                + "id TINYINT EXTERNAL NAME byte"
+                + ", name VARCHAR EXTERNAL NAME string"
+                + ") TYPE " + FileSqlConnector.TYPE_NAME + ' '
+                + "OPTIONS ("
+                + '"' + OPTION_SERIALIZATION_FORMAT + "\" '" + PARQUET_SERIALIZATION_FORMAT + '\''
+                + ", \"" + FileSqlConnector.OPTION_PATH + "\" '" + path("parquet-fields-mapping") + '\''
+                + ")"
+        );
+
+        assertRowsEventuallyInAnyOrder(
+                "SELECT id, name FROM " + name,
+                singletonList(new Row((byte) 127, "string"))
+        );
+    }
+
+    @Test
+    public void test_parquet_allTypes() throws IOException {
+        store("/parquet-all-types/file.parquet", Files.readAllBytes(Paths.get("src/test/resources/file.parquet")));
+
+        String name = generateRandomName();
+        sqlService.execute("CREATE MAPPING " + name + " ("
+                + "string VARCHAR"
+                + ", \"boolean\" BOOLEAN"
+                + ", byte TINYINT"
+                + ", short SMALLINT"
+                + ", \"int\" INT"
+                + ", long BIGINT"
+                + ", \"float\" REAL"
+                + ", \"double\" DOUBLE"
+                + ", \"decimal\" DECIMAL"
+                + ", \"time\" TIME"
+                + ", \"date\" DATE"
+                + ", \"timestamp\" TIMESTAMP"
+                + ", timestampTz TIMESTAMP WITH TIME ZONE"
+                + ") TYPE " + FileSqlConnector.TYPE_NAME + ' '
+                + "OPTIONS ( "
+                + '"' + OPTION_SERIALIZATION_FORMAT + "\" '" + PARQUET_SERIALIZATION_FORMAT + '\''
+                + ", \"" + FileSqlConnector.OPTION_PATH + "\" '" + path("parquet-all-types") + '\''
+                + ")"
+        );
+
+        assertRowsEventuallyInAnyOrder(
+                "SELECT * FROM " + name,
+                singletonList(new Row(
+                        "string",
+                        true,
+                        (byte) 127,
+                        (short) 32767,
+                        2147483647,
+                        9223372036854775807L,
+                        1234567890.1F,
+                        123451234567890.1D,
+                        new BigDecimal("9223372036854775.123"),
+                        LocalTime.of(12, 23, 34),
+                        LocalDate.of(2020, 4, 15),
+                        LocalDateTime.of(2020, 4, 15, 12, 23, 34, 1_000_000),
+                        OffsetDateTime.of(2020, 4, 15, 12, 23, 34, 200_000_000, UTC)
+                ))
+        );
+    }
+
+    @Test
+    public void test_parquet_schemaDiscovery() throws IOException {
+        store("/parquet-schema-discovery/file.parquet", Files.readAllBytes(Paths.get("src/test/resources/file.parquet")));
+
+        String name = generateRandomName();
+        sqlService.execute("CREATE MAPPING " + name + ' '
+                + "TYPE " + FileSqlConnector.TYPE_NAME + ' '
+                + "OPTIONS ( "
+                + '"' + OPTION_SERIALIZATION_FORMAT + "\" '" + PARQUET_SERIALIZATION_FORMAT + '\''
+                + ", \"" + FileSqlConnector.OPTION_PATH + "\" '" + path("parquet-schema-discovery") + '\''
+                + ")"
+        );
+
+        assertRowsEventuallyInAnyOrder(
+                "SELECT "
+                        + "string"
+                        + ", \"boolean\""
+                        + ", byte"
+                        + ", short"
+                        + ", \"int\""
+                        + ", long"
+                        + ", \"float\""
+                        + ", \"double\""
+                        + ", \"decimal\""
+                        + ", \"time\""
+                        + ", \"date\""
+                        + ", \"timestamp\""
+                        + ", \"timestampTz\""
+                        + " FROM " + name,
+                singletonList(new Row(
+                        "string",
+                        true,
+                        127,
+                        32767,
+                        2147483647,
+                        9223372036854775807L,
+                        1234567890.1F,
+                        123451234567890.1D,
+                        "9223372036854775.123",
+                        "12:23:34",
+                        "2020-04-15",
+                        "2020-04-15T12:23:34.001",
+                        "2020-04-15T12:23:34.200Z"
+                ))
+        );
+    }
+
+    @Test
+    public void test_parquet_tableFunction() throws IOException {
+        store("/parquet-table-function/file.parquet", Files.readAllBytes(Paths.get("src/test/resources/file.parquet")));
+
+        assertRowsEventuallyInAnyOrder(
+                "SELECT "
+                        + "string"
+                        + ", \"boolean\""
+                        + ", byte"
+                        + ", short"
+                        + ", \"int\""
+                        + ", long"
+                        + ", \"float\""
+                        + ", \"double\""
+                        + ", \"decimal\""
+                        + ", \"time\""
+                        + ", \"date\""
+                        + ", \"timestamp\""
+                        + ", \"timestampTz\""
+                        + " FROM TABLE ("
+                        + "FILE (format => 'parquet', path => '" + path("parquet-table-function") + "')"
+                        + ")",
+                singletonList(new Row(
+                        "string",
+                        true,
+                        127,
+                        32767,
+                        2147483647,
+                        9223372036854775807L,
+                        1234567890.1F,
+                        123451234567890.1D,
+                        "9223372036854775.123",
+                        "12:23:34",
+                        "2020-04-15",
+                        "2020-04-15T12:23:34.001",
+                        "2020-04-15T12:23:34.200Z"
+                ))
         );
     }
 
@@ -215,7 +396,7 @@ public class SqlHadoopTest extends JetSqlTestSupport {
         }
     }
 
-    private static String createRandomName() {
+    private static String generateRandomName() {
         return "hadoop_" + randomString().replace('-', '_');
     }
 }

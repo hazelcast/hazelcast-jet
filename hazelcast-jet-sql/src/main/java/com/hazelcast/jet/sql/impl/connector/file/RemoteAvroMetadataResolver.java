@@ -31,9 +31,7 @@ import org.apache.avro.file.DataFileStream;
 import org.apache.avro.generic.GenericDatumReader;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.mapred.AvroKey;
-import org.apache.avro.mapreduce.AvroJob;
 import org.apache.avro.mapreduce.AvroKeyInputFormat;
-import org.apache.avro.mapreduce.AvroKeyOutputFormat;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
@@ -49,12 +47,11 @@ import java.util.function.BiFunction;
 import static com.hazelcast.jet.hadoop.impl.SerializableConfiguration.asSerializable;
 import static com.hazelcast.jet.sql.impl.connector.file.AvroMetadataResolver.paths;
 import static com.hazelcast.jet.sql.impl.connector.file.AvroMetadataResolver.resolveFieldsFromSchema;
-import static com.hazelcast.jet.sql.impl.connector.file.AvroMetadataResolver.schema;
 import static com.hazelcast.jet.sql.impl.connector.file.AvroMetadataResolver.toTableFields;
 import static com.hazelcast.jet.sql.impl.connector.file.AvroMetadataResolver.types;
 import static com.hazelcast.jet.sql.impl.connector.file.AvroMetadataResolver.validateFields;
 
-final class RemoteAvroMetadataResolver {
+final class RemoteAvroMetadataResolver implements AvroMetadataResolver {
 
     private RemoteAvroMetadataResolver() {
     }
@@ -96,14 +93,9 @@ final class RemoteAvroMetadataResolver {
 
     static Metadata resolveMetadata(List<MappingField> mappingFields, FileOptions options, Job job) throws IOException {
         List<TableField> fields = toTableFields(mappingFields);
-        Schema schema = schema(fields);
 
         AvroKeyInputFormat.addInputPath(job, new Path(options.path()));
         job.setInputFormatClass(AvroKeyInputFormat.class);
-
-        job.setOutputFormatClass(AvroKeyOutputFormat.class);
-        AvroKeyOutputFormat.setOutputPath(job, new Path(options.path()));
-        AvroJob.setOutputKeySchema(job, schema);
 
         return new Metadata(
                 new AvroTargetDescriptor(job.getConfiguration()),

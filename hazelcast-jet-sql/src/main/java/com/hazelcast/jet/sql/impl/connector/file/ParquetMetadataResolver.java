@@ -29,7 +29,7 @@ import java.util.Map;
 
 import static com.hazelcast.jet.impl.util.Util.toList;
 
-interface AvroMetadataResolver {
+interface ParquetMetadataResolver {
 
     static void validateFields(List<MappingField> userFields) {
         for (MappingField field : userFields) {

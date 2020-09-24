@@ -115,6 +115,11 @@ public interface SqlConnector {
     String AVRO_SERIALIZATION_FORMAT = "avro";
 
     /**
+     * TODO
+     */
+    String PARQUET_SERIALIZATION_FORMAT = "parquet";
+
+    /**
      * A key in the table options (TO).
      * <p>
      * Specifies the accessed object name. If missing, the external table name

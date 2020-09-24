@@ -34,6 +34,7 @@
 
     <properties>
         <confluent.version>4.1.0</confluent.version>
+        <parquet.version>1.10.1</parquet.version>
         <relocation.root>com.hazelcast</relocation.root>
     </properties>
 
@@ -120,11 +121,17 @@
             <optional>true</optional>
         </dependency>
 
-        <!-- FILE -->
+        <!-- FILE --> <!-- TODO: cleanup after File works -->
         <dependency>
             <groupId>org.apache.avro</groupId>
             <artifactId>avro-mapred</artifactId>
             <version>${avro.version}</version>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.parquet</groupId>
+            <artifactId>parquet-avro</artifactId>
+            <version>${parquet.version}</version>
             <optional>true</optional>
         </dependency>
 

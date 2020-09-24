@@ -20,39 +20,39 @@ import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.hadoop.HadoopProcessors;
 import com.hazelcast.jet.sql.impl.connector.RowProjector;
-import com.hazelcast.jet.sql.impl.extract.JsonQueryTarget;
+import com.hazelcast.jet.sql.impl.extract.AvroQueryTarget;
 import com.hazelcast.jet.sql.impl.schema.MappingField;
 import com.hazelcast.sql.impl.expression.Expression;
 import com.hazelcast.sql.impl.schema.TableField;
 import com.hazelcast.sql.impl.type.QueryDataType;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import org.apache.avro.Schema;
+import org.apache.avro.generic.GenericRecord;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
-import org.apache.hadoop.io.LongWritable;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
-import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
+import org.apache.parquet.avro.AvroParquetInputFormat;
+import org.apache.parquet.avro.AvroParquetReader;
+import org.apache.parquet.hadoop.ParquetReader;
+import org.apache.parquet.hadoop.util.HadoopInputFile;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.Reader;
 import java.util.List;
 import java.util.function.BiFunction;
 
 import static com.hazelcast.jet.hadoop.impl.SerializableConfiguration.asSerializable;
-import static com.hazelcast.jet.sql.impl.connector.file.JsonMetadataResolver.paths;
-import static com.hazelcast.jet.sql.impl.connector.file.JsonMetadataResolver.resolveFieldsFromSample;
-import static com.hazelcast.jet.sql.impl.connector.file.JsonMetadataResolver.toTableFields;
-import static com.hazelcast.jet.sql.impl.connector.file.JsonMetadataResolver.types;
-import static com.hazelcast.jet.sql.impl.connector.file.JsonMetadataResolver.validateFields;
+import static com.hazelcast.jet.sql.impl.connector.file.ParquetMetadataResolver.paths;
+import static com.hazelcast.jet.sql.impl.connector.file.ParquetMetadataResolver.resolveFieldsFromSchema;
+import static com.hazelcast.jet.sql.impl.connector.file.ParquetMetadataResolver.toTableFields;
+import static com.hazelcast.jet.sql.impl.connector.file.ParquetMetadataResolver.types;
+import static com.hazelcast.jet.sql.impl.connector.file.ParquetMetadataResolver.validateFields;
 
-final class RemoteJsonMetadataResolver implements JsonMetadataResolver {
+final class RemoteParquetMetadataResolver implements ParquetMetadataResolver {
 
-    private RemoteJsonMetadataResolver() {
+    private RemoteParquetMetadataResolver() {
     }
 
     static List<MappingField> resolveFields(
@@ -64,28 +64,29 @@ final class RemoteJsonMetadataResolver implements JsonMetadataResolver {
             validateFields(userFields);
             return userFields;
         } else {
-            String line = line(options.path(), options.charset(), job.getConfiguration());
-            return resolveFieldsFromSample(line);
+            Schema schema = findParquetSchema(options.path(), job.getConfiguration());
+            return resolveFieldsFromSchema(schema);
         }
     }
 
     @SuppressFBWarnings(value = "RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE",
             justification = "it's a false positive since java 11: https://github.com/spotbugs/spotbugs/issues/756")
-    private static String line(String directory, String charset, Configuration configuration) throws IOException {
+    private static Schema findParquetSchema(String directory, Configuration configuration) throws IOException {
         Path path = new Path(directory);
         try (FileSystem filesystem = path.getFileSystem(configuration)) {
             // TODO: directory check, recursive ???
             RemoteIterator<LocatedFileStatus> filesIterator = filesystem.listFiles(path, false);
-            while (filesIterator.hasNext()) {
+            if (filesIterator.hasNext()) {
                 LocatedFileStatus file = filesIterator.next();
 
                 try (
-                        Reader input = new InputStreamReader(filesystem.open(file.getPath()), charset);
-                        BufferedReader reader = new BufferedReader(input)
+                        ParquetReader<GenericRecord> reader = AvroParquetReader
+                                .<GenericRecord>builder(HadoopInputFile.fromPath(file.getPath(), configuration))
+                                .build()
                 ) {
-                    String line = reader.readLine();
-                    if (line != null) {
-                        return line;
+                    GenericRecord record = reader.read();
+                    if (record != null) {
+                        return record.getSchema();
                     }
                 }
             }
@@ -96,20 +97,20 @@ final class RemoteJsonMetadataResolver implements JsonMetadataResolver {
     static Metadata resolveMetadata(List<MappingField> mappingFields, FileOptions options, Job job) throws IOException {
         List<TableField> fields = toTableFields(mappingFields);
 
-        TextInputFormat.addInputPath(job, new Path(options.path()));
-        job.setInputFormatClass(TextInputFormat.class);
+        AvroParquetInputFormat.addInputPath(job, new Path(options.path()));
+        job.setInputFormatClass(AvroParquetInputFormat.class);
 
         return new Metadata(
-                new JsonTargetDescriptor(job.getConfiguration()),
+                new ParquetTargetDescriptor(job.getConfiguration()),
                 fields
         );
     }
 
-    private static final class JsonTargetDescriptor implements TargetDescriptor {
+    private static final class ParquetTargetDescriptor implements TargetDescriptor {
 
         private final Configuration configuration;
 
-        private JsonTargetDescriptor(
+        private ParquetTargetDescriptor(
                 Configuration configuration
         ) {
             this.configuration = configuration;
@@ -125,11 +126,11 @@ final class RemoteJsonMetadataResolver implements JsonMetadataResolver {
             QueryDataType[] types = types(fields);
 
             SupplierEx<RowProjector> projectorSupplier =
-                    () -> new RowProjector(paths, types, new JsonQueryTarget(), predicate, projection);
+                    () -> new RowProjector(paths, types, new AvroQueryTarget(), predicate, projection);
 
-            SupplierEx<BiFunction<LongWritable, Text, Object[]>> projectionSupplierFn = () -> {
+            SupplierEx<BiFunction<String, GenericRecord, Object[]>> projectionSupplierFn = () -> {
                 RowProjector projector = projectorSupplier.get();
-                return (position, line) -> projector.project(line.toString());
+                return (key, value) -> projector.project(value);
             };
 
             return HadoopProcessors.readHadoopP(asSerializable(configuration), projectionSupplierFn);

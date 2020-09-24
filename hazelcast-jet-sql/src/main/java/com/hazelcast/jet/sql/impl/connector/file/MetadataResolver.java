@@ -26,6 +26,7 @@ import java.util.List;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.AVRO_SERIALIZATION_FORMAT;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.CSV_SERIALIZATION_FORMAT;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.JSON_SERIALIZATION_FORMAT;
+import static com.hazelcast.jet.sql.impl.connector.SqlConnector.PARQUET_SERIALIZATION_FORMAT;
 import static java.util.Objects.requireNonNull;
 
 // TODO: smarter/cleaner dispatch ?
@@ -88,6 +89,8 @@ final class MetadataResolver {
                 return RemoteJsonMetadataResolver.resolveFields(mappingFields, options, job);
             case AVRO_SERIALIZATION_FORMAT:
                 return RemoteAvroMetadataResolver.resolveFields(mappingFields, options, job);
+            case PARQUET_SERIALIZATION_FORMAT:
+                return RemoteParquetMetadataResolver.resolveFields(mappingFields, options, job);
             default:
                 throw QueryException.error("Unsupported serialization format - '" + format + "'");
         }
@@ -138,6 +141,8 @@ final class MetadataResolver {
                 return RemoteJsonMetadataResolver.resolveMetadata(mappingFields, options, job);
             case AVRO_SERIALIZATION_FORMAT:
                 return RemoteAvroMetadataResolver.resolveMetadata(mappingFields, options, job);
+            case PARQUET_SERIALIZATION_FORMAT:
+                return RemoteParquetMetadataResolver.resolveMetadata(mappingFields, options, job);
             default:
                 throw QueryException.error("Unsupported serialization format - '" + format + "'");
         }

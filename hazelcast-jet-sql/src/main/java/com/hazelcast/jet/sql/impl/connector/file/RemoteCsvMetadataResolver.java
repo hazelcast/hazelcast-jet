@@ -35,7 +35,6 @@ import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
-import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -102,9 +101,6 @@ final class RemoteCsvMetadataResolver implements CsvMetadataResolver {
 
         TextInputFormat.addInputPath(job, new Path(options.path()));
         job.setInputFormatClass(TextInputFormat.class);
-
-        job.setOutputFormatClass(TextOutputFormat.class);
-        TextOutputFormat.setOutputPath(job, new Path(options.path()));
 
         return new Metadata(
                 new CsvTargetDescriptor(options.delimiter(), options.header(), job.getConfiguration()),

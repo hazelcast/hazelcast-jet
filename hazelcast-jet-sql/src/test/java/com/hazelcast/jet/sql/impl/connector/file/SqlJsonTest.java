@@ -198,9 +198,9 @@ public class SqlJsonTest extends JetSqlTestSupport {
                         + ", \"timestampTz\""
                         + ", \"null\""
                         + ", object IS NOT NULL"
-                        + " FROM TABLE (" +
-                        "FILE (format => 'json', path => '" + RESOURCES_PATH + "', glob => 'file.json')" +
-                        ")",
+                        + " FROM TABLE ("
+                        + "FILE (format => 'json', path => '" + RESOURCES_PATH + "', glob => 'file.json')"
+                        + ")",
                 singletonList(new Row(
                         "string",
                         true,
