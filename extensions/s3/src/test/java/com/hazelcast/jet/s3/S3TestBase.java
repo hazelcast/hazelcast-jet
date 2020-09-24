@@ -173,7 +173,8 @@ abstract class S3TestBase extends JetTestSupport {
 
     Stream<String> s3ObjectToLines(S3Object o, S3Client client, String bucketName) {
         try {
-            ResponseInputStream<GetObjectResponse> is = client.getObject(req -> req.bucket(bucketName).key(o.key()), toInputStream());
+            ResponseInputStream<GetObjectResponse> is = client
+                    .getObject(req -> req.bucket(bucketName).key(o.key()), toInputStream());
             return inputStreamToLines(is);
         } catch (S3Exception e) {
             logger.warning("S3 side is having eventual consistency issue that it could not" +
