@@ -27,8 +27,11 @@ import com.hazelcast.jet.pipeline.test.Assertions;
 import com.hazelcast.jet.pipeline.test.TestSources;
 import com.hazelcast.map.IMap;
 import org.junit.Before;
+import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.NoSuchBucketException;
+import software.amazon.awssdk.services.s3.model.S3Object;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -69,7 +72,6 @@ abstract class S3TestBase extends JetTestSupport {
     }
 
     void testSink(String bucketName, String prefix, int itemCount, String payload) {
-        final long timeoutSeconds = 30;
         IMap<Integer, String> map = jet.getMap("map");
 
         for (int i = 0; i < itemCount; i++) {
@@ -83,17 +85,16 @@ abstract class S3TestBase extends JetTestSupport {
         jet.newJob(p).join();
 
         try (S3Client client = clientSupplier().get()) {
-            assertTrueEventuallyAndSuppressExceptions(() -> {
+            assertTrueEventually(() -> {
                 long lineCount = client
                         .listObjectsV2(req -> req.bucket(bucketName).prefix(prefix))
                         .contents()
                         .stream()
-                        .map(o -> client.getObject(req -> req.bucket(bucketName).key(o.key()), toInputStream()))
-                        .flatMap(this::inputStreamToLines)
+                        .flatMap(o -> S3ObjectToLines(o, client, bucketName))
                         .peek(line -> assertEquals(payload, line))
                         .count();
                 assertEquals(itemCount, lineCount);
-            }, timeoutSeconds);
+            });
         }
     }
 
@@ -167,6 +168,23 @@ abstract class S3TestBase extends JetTestSupport {
             client.deleteBucket(b -> b.bucket(bucket));
         } catch (NoSuchBucketException ignored) {
         }
+    }
+
+    Stream<String> S3ObjectToLines(S3Object o, S3Client client, String bucketName) {
+        try {
+            ResponseInputStream<GetObjectResponse> is = client.getObject(req -> req.bucket(bucketName).key(o.key()), toInputStream());
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(is, CHARSET))) {
+                // materialize the stream, since we can't read it afterwards
+                return reader.lines().collect(Collectors.toList()).stream();
+            } catch (IOException e) {
+                throw new AssertionError("Error reading file ", e);
+            }
+        } catch (NoSuchBucketException e) {
+            logger.warning("S3 side is having eventual consistency issue that it could not" +
+                    " find the key that is listed before. We ignore this issue.");
+            e.printStackTrace();
+        }
+        return Stream.empty();
     }
 
     Stream<String> inputStreamToLines(InputStream is) {

@@ -35,7 +35,6 @@ import com.hazelcast.logging.ILogger;
 import com.hazelcast.logging.Logger;
 import com.hazelcast.map.IMap;
 import com.hazelcast.spi.impl.NodeEngineImpl;
-import com.hazelcast.test.AssertTask;
 import com.hazelcast.test.HazelcastTestSupport;
 import org.junit.After;
 import org.junit.ClassRule;
@@ -53,11 +52,9 @@ import java.util.concurrent.CancellationException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
-import static com.hazelcast.internal.util.ExceptionUtil.rethrow;
 import static com.hazelcast.jet.Util.idToString;
 import static com.hazelcast.jet.core.JobStatus.RUNNING;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
-import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -201,54 +198,6 @@ public abstract class JetTestSupport extends HazelcastTestSupport {
     public static void assertClusterSizeEventually(int size, JetInstance jetInstance) {
         HazelcastTestSupport.assertClusterSizeEventually(size, jetInstance.getHazelcastInstance());
     }
-
-    public static void assertTrueEventuallyAndSuppressExceptions(String message, AssertTask task, long timeoutSeconds) {
-        AssertionError error = null;
-        Exception suppressed = null;
-        // we are going to check five times a second
-        int sleepMillis = 200;
-        long iterations = timeoutSeconds * 5;
-        long deadline = System.currentTimeMillis() + SECONDS.toMillis(timeoutSeconds);
-        for (int i = 0; i < iterations && System.currentTimeMillis() < deadline; i++) {
-            try {
-                try {
-                    task.run();
-                } catch (Exception e) {
-                    throw rethrow(e);
-                }
-                return;
-            } catch (AssertionError e) {
-                error = e;
-            } catch (Exception e) {
-                if (suppressed != null) {
-                    e.addSuppressed(suppressed);
-                }
-                suppressed = e;
-            }
-            sleepMillis(sleepMillis);
-        }
-        if (error != null) {
-            if (suppressed != null) {
-                error.addSuppressed(suppressed);
-            }
-            throw error;
-        }
-        fail("assertTrueEventuallyAndSuppressExceptions() failed without AssertionError! " + message);
-    }
-
-    public static void assertTrueEventuallyAndSuppressExceptions(AssertTask task, long timeoutSeconds) {
-        assertTrueEventuallyAndSuppressExceptions(null, task, timeoutSeconds);
-    }
-
-
-    public static void assertTrueEventuallyAndSuppressExceptions(String message, AssertTask task) {
-        assertTrueEventuallyAndSuppressExceptions(message, task, ASSERT_TRUE_EVENTUALLY_TIMEOUT);
-    }
-
-    public static void assertTrueEventuallyAndSuppressExceptions(AssertTask task) {
-        assertTrueEventuallyAndSuppressExceptions(null, task, ASSERT_TRUE_EVENTUALLY_TIMEOUT);
-    }
-
 
     public static JetService getJetService(JetInstance jetInstance) {
         return getNodeEngineImpl(jetInstance).getService(JetService.SERVICE_NAME);

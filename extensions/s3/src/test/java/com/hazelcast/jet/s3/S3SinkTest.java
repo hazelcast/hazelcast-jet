@@ -36,6 +36,7 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 @Category(NightlyTest.class)
 public class S3SinkTest extends S3TestBase {
 
+    private static final int WAIT_AFTER_CLEANUP_IN_SECS = 5;
     private static String bucketName = "jet-s3-connector-test-bucket-sink";
 
     @Before
@@ -54,11 +55,22 @@ public class S3SinkTest extends S3TestBase {
             client.deleteObjects(b -> b.bucket(bucketName).delete(d -> d.objects(identifiers)));
         }
 
-        int sleepMillis = 250;
-        long deadline = System.currentTimeMillis() + SECONDS.toMillis(3);
-        while (client.listObjectsV2(ListObjectsV2Request.builder().bucket(bucketName).build()).keyCount() != 0
-                && System.currentTimeMillis() < deadline) {
+        int sleepMillis = (int) (SECONDS.toMillis(WAIT_AFTER_CLEANUP_IN_SECS) / 10);
+        long deadline = System.currentTimeMillis() + SECONDS.toMillis(WAIT_AFTER_CLEANUP_IN_SECS);
+        int keyCount;
+        while ((keyCount = client.listObjectsV2(ListObjectsV2Request
+                .builder().bucket(bucketName).build()).keyCount()) != 0 && System.currentTimeMillis() < deadline) {
+
+            logger.info("After sending the object cleanup request to S3, the bucket, " + bucketName
+                    + ", still has " + keyCount + " keys.");
             sleepMillis(sleepMillis);
+        }
+        if (keyCount == 0) {
+            logger.info("We finished waiting because we observe that the keys were deleted.");
+        } else {
+            logger.warning("There may still be keys in the bucket that are not deleted.\n" +
+                    "At our last check, keyCount was " + keyCount +
+                    "\n We finished waiting because of the timeout.");
         }
     }
 
