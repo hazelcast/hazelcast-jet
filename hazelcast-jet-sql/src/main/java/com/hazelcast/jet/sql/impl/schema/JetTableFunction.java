@@ -39,14 +39,12 @@ import static com.hazelcast.jet.impl.util.Util.toList;
 public interface JetTableFunction extends TableFunction {
 
     default HazelcastTable toTable(FunctionRelDataType rowType) {
-        Map<String, String> options = rowType.options();
-
         List<MappingField> fields = toList(
                 rowType.getFieldList(),
                 field -> new MappingField(field.getName(), SqlToQueryType.map(field.getType().getSqlTypeName()))
         );
 
-        return table(options, fields);
+        return table(rowType.options(), fields);
     }
 
     HazelcastTable table(Map<String, String> options, List<MappingField> fields);

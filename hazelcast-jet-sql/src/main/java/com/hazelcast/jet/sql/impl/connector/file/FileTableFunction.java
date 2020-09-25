@@ -26,15 +26,12 @@ import com.hazelcast.sql.impl.schema.Table;
 import com.hazelcast.sql.impl.type.QueryDataType;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
-import org.apache.calcite.rel.type.RelRecordType;
 import org.apache.calcite.schema.FunctionParameter;
-import org.apache.calcite.util.NlsString;
 
 import java.lang.reflect.Type;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.AVRO_SERIALIZATION_FORMAT;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.CSV_SERIALIZATION_FORMAT;
@@ -50,7 +47,7 @@ import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.OPTION_
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
 
-public class FileTableFunction implements JetTableFunction {
+public final class FileTableFunction implements JetTableFunction {
 
     //private static final String OPTION_OPTIONS = "options";
 
@@ -106,35 +103,23 @@ public class FileTableFunction implements JetTableFunction {
         Map<String, String> options = optionsFromFunctionArguments(arguments);
 
         List<MappingField> fields = FileSqlConnector.resolveAndValidateFields(options, emptyList());
-        RelRecordType rowType = (RelRecordType) table(options, fields).getRowType(typeFactory);
+        RelDataType relType = table(options, fields).getRowType(typeFactory);
 
-        return new FunctionRelDataType(rowType, options);
+        return new FunctionRelDataType(relType, options);
     }
 
     /**
      * Takes a list of function arguments and converts it to equivalent options
      * that would be used if the file was declared using DDL.
      */
-    @SuppressWarnings("unchecked")
     private Map<String, String> optionsFromFunctionArguments(List<Object> arguments) {
         assert arguments.size() == parameters.size();
 
         Map<String, String> options = new HashMap<>();
         options.put(OPTION_SERIALIZATION_FORMAT, format);
         for (int i = 0; i < arguments.size(); i++) {
-            Object argument = arguments.get(i);
-            if (argument instanceof Map) {
-                for (Entry<Object, Object> entry : ((Map<Object, Object>) argument).entrySet()) {
-                    if (entry.getKey() instanceof NlsString) {
-                        String key = ((NlsString) entry.getKey()).getValue();
-                        String value = (String) QueryDataType.VARCHAR.convert(entry.getValue());
-                        options.putIfAbsent(key, value);
-                    }
-                }
-            } else if (argument != null) {
-                String key = parameters.get(i).getName();
-                String value = (String) QueryDataType.VARCHAR.convert(arguments.get(i));
-                options.put(key, value);
+            if (arguments.get(i) != null) {
+                options.put(parameters.get(i).getName(), (String) arguments.get(i));
             }
         }
         return options;

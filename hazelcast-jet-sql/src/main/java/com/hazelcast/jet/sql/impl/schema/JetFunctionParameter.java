@@ -36,10 +36,6 @@ public class JetFunctionParameter implements FunctionParameter {
         this.required = required;
     }
 
-    public QueryDataType type() {
-        return type;
-    }
-
     @Override
     public int getOrdinal() {
         return ordinal;

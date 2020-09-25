@@ -17,8 +17,8 @@
 package com.hazelcast.jet.sql.impl.validate;
 
 import com.hazelcast.jet.sql.impl.connector.file.FileTableFunction;
-import com.hazelcast.jet.sql.impl.schema.JetFunctionParameter;
 import com.hazelcast.sql.impl.calcite.validate.types.HazelcastTypeFactory;
+import com.hazelcast.sql.impl.type.QueryDataType;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.schema.FunctionParameter;
@@ -107,7 +107,7 @@ public final class JetSqlOperatorTable extends ReflectiveSqlOperatorTable {
         super.lookupOperatorOverloads(name, category, syntax, operators, SqlNameMatchers.withCaseSensitive(false));
     }
 
-    private static class JetSqlUserDefinedTableFunction extends SqlUserDefinedTableFunction {
+    private static final class JetSqlUserDefinedTableFunction extends SqlUserDefinedTableFunction {
 
         private JetSqlUserDefinedTableFunction(
                 SqlIdentifier opName,
@@ -133,44 +133,41 @@ public final class JetSqlOperatorTable extends ReflectiveSqlOperatorTable {
         ) {
             assert parameters.size() == operands.size();
 
-            List<Object> arguments = new ArrayList<>(operands.size());
+            List<Object> arguments = new ArrayList<>(parameters.size());
             for (int i = 0; i < parameters.size(); i++) {
                 SqlNode operand = operands.get(i);
-                JetFunctionParameter parameter = (JetFunctionParameter) parameters.get(i);
+                FunctionParameter parameter = parameters.get(i);
                 try {
-                    Object value = getValue(operands.get(i));
-                    Object converted = parameter.type().convert(value);
-                    arguments.add(converted);
+                    Object value = toValue(operand);
+                    arguments.add(value);
                 } catch (NonLiteralException e) {
                     throw new IllegalArgumentException("All arguments of call to function "
                             + name + " should be literal. Actual argument #"
                             + parameter.getOrdinal() + " (" + parameter.getName()
-                            + ") is not literal: " + operand);
+                            + ") is not literal: " + operand
+                    );
                 }
             }
             return arguments;
         }
 
-        private static Object getValue(SqlNode node) {
-            switch (node.getKind()) {
-                case ARRAY_VALUE_CONSTRUCTOR:
-                case MAP_VALUE_CONSTRUCTOR:
-                    throw new IllegalArgumentException("unexpected SQL kind: " + node.getKind());
-                case CAST:
-                    return getValue(((SqlCall) node).operand(0));
-                default:
-                    if (SqlUtil.isNullLiteral(node, true)) {
-                        return null;
-                    }
-                    if (SqlUtil.isLiteral(node)) {
-                        Object value = ((SqlLiteral) node).getValue();
-                        return value instanceof NlsString ? ((NlsString) value).getValue() : value;
-                    }
-                    if (node.getKind() == SqlKind.DEFAULT) {
-                        return null;
-                    }
-                    throw new NonLiteralException();
+        private static Object toValue(SqlNode node) {
+            if (node.getKind() == SqlKind.CAST) {
+                return toValue(((SqlCall) node).operand(0));
             }
+            if (SqlUtil.isNullLiteral(node, true)) {
+                return null;
+            }
+            if (SqlUtil.isLiteral(node)) {
+                Object value = ((SqlLiteral) node).getValue();
+                return value instanceof NlsString
+                        ? ((NlsString) value).getValue()
+                        : QueryDataType.VARCHAR.convert(value);
+            }
+            if (node.getKind() == SqlKind.DEFAULT) {
+                return null;
+            }
+            throw new NonLiteralException();
         }
 
         private static class NonLiteralException extends RuntimeException {
