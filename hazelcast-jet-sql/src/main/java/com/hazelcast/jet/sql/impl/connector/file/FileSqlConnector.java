@@ -29,8 +29,6 @@ import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 
-import static com.hazelcast.jet.sql.impl.connector.file.MetadataResolver.resolveMetadata;
-
 public class FileSqlConnector implements SqlConnector {
 
     public static final String TYPE_NAME = "File";
@@ -91,9 +89,9 @@ public class FileSqlConnector implements SqlConnector {
             @Nonnull String schemaName,
             @Nonnull String name,
             @Nonnull Map<String, String> options,
-            @Nonnull List<MappingField> mappingFields
+            @Nonnull List<MappingField> resolvedFields
     ) {
-        Metadata metadata = resolveMetadata(mappingFields, FileOptions.from(options));
+        Metadata metadata = MetadataResolver.resolveMetadata(resolvedFields, FileOptions.from(options));
 
         return new FileTable(
                 INSTANCE,

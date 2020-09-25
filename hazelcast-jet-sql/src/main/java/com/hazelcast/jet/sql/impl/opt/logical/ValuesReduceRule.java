@@ -19,8 +19,6 @@ package com.hazelcast.jet.sql.impl.opt.logical;
 import com.google.common.collect.ImmutableList;
 import com.hazelcast.jet.sql.impl.expression.ExpressionUtil;
 import com.hazelcast.jet.sql.impl.opt.OptUtils;
-import com.hazelcast.sql.impl.QueryParameterMetadata;
-import com.hazelcast.sql.impl.calcite.opt.physical.visitor.RexToExpressionVisitor;
 import com.hazelcast.sql.impl.expression.Expression;
 import com.hazelcast.sql.impl.plan.node.PlanNodeSchema;
 import org.apache.calcite.plan.RelOptCluster;
@@ -39,6 +37,7 @@ import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexLiteral;
+import org.apache.calcite.rex.RexVisitor;
 import org.apache.calcite.tools.RelBuilderFactory;
 
 import java.util.List;
@@ -104,9 +103,8 @@ abstract class ValuesReduceRule extends RelOptRule {
             Filter filter,
             Values values
     ) {
-        PlanNodeSchema schema = new PlanNodeSchema(OptUtils.extractFieldTypes(values.getRowType()));
-        // TODO: pass actual parameter metadata, see JetSqlCoreBackendImpl#execute
-        RexToExpressionVisitor converter = new RexToExpressionVisitor(schema, new QueryParameterMetadata());
+        PlanNodeSchema schema = OptUtils.schema(values.getRowType());
+        RexVisitor<Expression<?>> converter = OptUtils.converter(schema);
 
         RelDataType rowType = null;
 

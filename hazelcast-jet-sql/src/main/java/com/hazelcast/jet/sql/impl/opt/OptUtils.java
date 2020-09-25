@@ -16,17 +16,25 @@
 
 package com.hazelcast.jet.sql.impl.opt;
 
+import com.google.common.collect.ImmutableList;
+import com.hazelcast.jet.sql.impl.schema.JetTable;
+import com.hazelcast.sql.impl.QueryParameterMetadata;
 import com.hazelcast.sql.impl.calcite.SqlToQueryType;
 import com.hazelcast.sql.impl.calcite.opt.physical.visitor.RexToExpression;
+import com.hazelcast.sql.impl.calcite.opt.physical.visitor.RexToExpressionVisitor;
 import com.hazelcast.sql.impl.calcite.schema.HazelcastRelOptTable;
 import com.hazelcast.sql.impl.calcite.schema.HazelcastTable;
 import com.hazelcast.sql.impl.expression.Expression;
+import com.hazelcast.sql.impl.plan.node.PlanNodeFieldTypeProvider;
+import com.hazelcast.sql.impl.plan.node.PlanNodeSchema;
 import com.hazelcast.sql.impl.schema.Table;
 import com.hazelcast.sql.impl.schema.TableField;
 import com.hazelcast.sql.impl.type.QueryDataType;
 import org.apache.calcite.plan.ConventionTraitDef;
+import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelOptRuleOperand;
+import org.apache.calcite.plan.RelOptSchema;
 import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.plan.RelTrait;
 import org.apache.calcite.plan.RelTraitSet;
@@ -39,6 +47,7 @@ import org.apache.calcite.rel.logical.LogicalTableScan;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexLiteral;
+import org.apache.calcite.rex.RexVisitor;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
@@ -120,26 +129,6 @@ public final class OptUtils {
         return table;
     }
 
-    public static List<QueryDataType> extractFieldTypes(RelOptTable relTable) {
-        Table table = relTable.unwrap(HazelcastTable.class).getTarget();
-
-        List<QueryDataType> fieldTypes = new ArrayList<>();
-        for (TableField field : table.getFields()) {
-            // support for discovered maps inserts
-            if (!field.isHidden()) {
-                fieldTypes.add(field.getType());
-            }
-        }
-        return fieldTypes;
-    }
-
-    public static List<QueryDataType> extractFieldTypes(RelDataType rowType) {
-        return toList(
-                rowType.getFieldList(),
-                field -> SqlToQueryType.map(field.getType().getSqlTypeName())
-        );
-    }
-
     public static Collection<RelNode> extractPhysicalRelsFromSubset(RelNode node) {
         if (node instanceof RelSubset) {
             RelSubset subset = (RelSubset) node;
@@ -197,31 +186,74 @@ public final class OptUtils {
     }
 
     public static LogicalTableScan createLogicalScan(
-            TableScan originalScan,
-            HazelcastTable newHazelcastTable
+            RelOptCluster cluster,
+            HazelcastTable hazelcastTable
     ) {
-        HazelcastRelOptTable originalRelTable = (HazelcastRelOptTable) originalScan.getTable();
-        HazelcastRelOptTable newTable = createRelTable(
-                originalRelTable,
-                newHazelcastTable,
-                originalScan.getCluster().getTypeFactory()
+        JetTable table = hazelcastTable.getTarget();
+
+        HazelcastRelOptTable relTable = createRelTable(
+                null,
+                table.getQualifiedName(),
+                hazelcastTable,
+                cluster.getTypeFactory()
         );
-        return LogicalTableScan.create(originalScan.getCluster(), newTable, originalScan.getHints());
+        return LogicalTableScan.create(cluster, relTable, ImmutableList.of());
+    }
+
+    public static LogicalTableScan createLogicalScan(
+            TableScan originalScan,
+            HazelcastTable hazelcastTable
+    ) {
+        RelOptCluster cluster = originalScan.getCluster();
+        HazelcastRelOptTable originalRelTable = (HazelcastRelOptTable) originalScan.getTable();
+
+        HazelcastRelOptTable relTable = createRelTable(
+                originalRelTable.getRelOptSchema(),
+                originalRelTable.getDelegate().getQualifiedName(),
+                hazelcastTable,
+                cluster.getTypeFactory()
+        );
+        return LogicalTableScan.create(cluster, relTable, originalScan.getHints());
     }
 
     private static HazelcastRelOptTable createRelTable(
-            HazelcastRelOptTable originalRelTable,
-            HazelcastTable newHazelcastTable,
+            RelOptSchema relOptSchema,
+            List<String> names,
+            HazelcastTable hazelcastTable,
             RelDataTypeFactory typeFactory
     ) {
-        RelOptTableImpl newTable = RelOptTableImpl.create(
-                originalRelTable.getRelOptSchema(),
-                newHazelcastTable.getRowType(typeFactory),
-                originalRelTable.getDelegate().getQualifiedName(),
-                newHazelcastTable,
+        RelDataType rowType = hazelcastTable.getRowType(typeFactory);
+
+        RelOptTableImpl relTable = RelOptTableImpl.create(
+                relOptSchema,
+                rowType,
+                names,
+                hazelcastTable,
                 null
         );
-        return new HazelcastRelOptTable(newTable);
+        return new HazelcastRelOptTable(relTable);
+    }
+
+    public static PlanNodeSchema schema(RelOptTable relTable) {
+        Table table = relTable.unwrap(HazelcastTable.class).getTarget();
+
+        List<QueryDataType> fieldTypes = new ArrayList<>();
+        for (TableField field : table.getFields()) {
+            // support for discovered maps inserts
+            if (!field.isHidden()) {
+                fieldTypes.add(field.getType());
+            }
+        }
+        return new PlanNodeSchema(fieldTypes);
+    }
+
+    public static PlanNodeSchema schema(RelDataType relType) {
+        return new PlanNodeSchema(extractFieldTypes(relType));
+    }
+
+    public static RexVisitor<Expression<?>> converter(PlanNodeFieldTypeProvider schema) {
+        // TODO: pass actual parameter metadata, see JetSqlCoreBackendImpl#execute
+        return new RexToExpressionVisitor(schema, new QueryParameterMetadata());
     }
 
     public static List<Object[]> convert(Values values) {
@@ -256,5 +288,12 @@ public final class OptUtils {
             rows.add(result);
         }
         return rows;
+    }
+
+    private static List<QueryDataType> extractFieldTypes(RelDataType relType) {
+        return toList(
+                relType.getFieldList(),
+                field -> SqlToQueryType.map(field.getType().getSqlTypeName())
+        );
     }
 }

@@ -21,7 +21,6 @@ import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.sql.impl.opt.OptUtils;
 import com.hazelcast.jet.sql.impl.opt.physical.visitor.CreateDagVisitor;
 import com.hazelcast.sql.impl.plan.node.PlanNodeSchema;
-import com.hazelcast.sql.impl.type.QueryDataType;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.RelNode;
@@ -48,8 +47,7 @@ public class ValuesPhysicalRel extends Values implements PhysicalRel {
 
     @Override
     public PlanNodeSchema schema() {
-        List<QueryDataType> fieldTypes = OptUtils.extractFieldTypes(getRowType());
-        return new PlanNodeSchema(fieldTypes);
+        return OptUtils.schema(getRowType());
     }
 
     @Override

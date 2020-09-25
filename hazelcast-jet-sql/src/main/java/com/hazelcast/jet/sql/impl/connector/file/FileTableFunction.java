@@ -21,7 +21,6 @@ import com.hazelcast.jet.sql.impl.schema.JetFunctionParameter;
 import com.hazelcast.jet.sql.impl.schema.JetTableFunction;
 import com.hazelcast.jet.sql.impl.schema.MappingField;
 import com.hazelcast.jet.sql.impl.schema.UnknownStatistic;
-import com.hazelcast.sql.impl.calcite.SqlToQueryType;
 import com.hazelcast.sql.impl.calcite.schema.HazelcastTable;
 import com.hazelcast.sql.impl.schema.Table;
 import org.apache.calcite.rel.type.RelDataType;
@@ -34,7 +33,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static com.hazelcast.jet.impl.util.Util.toList;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_SERIALIZATION_FORMAT;
 import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.OPTION_CHARSET;
 import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.OPTION_DELIMITER;
@@ -56,6 +54,7 @@ public final class FileTableFunction implements JetTableFunction {
     private static final List<Pair<String, FunctionParameter>> PARAMETERS = asList(
             Pair.of(OPTION_SERIALIZATION_FORMAT, new JetFunctionParameter(0, "format", String.class, true)),
             Pair.of(OPTION_PATH, new JetFunctionParameter(1, "path", String.class, true)),
+
             Pair.of(OPTION_GLOB, new JetFunctionParameter(2, "glob", String.class, false)),
             Pair.of(OPTION_SHARED_FILE_SYSTEM, new JetFunctionParameter(3, "sharedFileSystem", Boolean.class, false)),
             Pair.of(OPTION_CHARSET, new JetFunctionParameter(4, "charset", String.class, false)),
@@ -81,7 +80,7 @@ public final class FileTableFunction implements JetTableFunction {
     public RelDataType getRowType(RelDataTypeFactory typeFactory, List<Object> arguments) {
         Map<String, String> options = optionsFromFunctionArguments(arguments);
         List<MappingField> fields = FileSqlConnector.resolveAndValidateFields(options, emptyList());
-        return createHazelcastTable(options, fields).getRowType(typeFactory);
+        return table(options, fields).getRowType(typeFactory);
     }
 
     @Override
@@ -90,18 +89,12 @@ public final class FileTableFunction implements JetTableFunction {
     }
 
     @Override
-    public HazelcastTable table(List<Object> arguments, RelDataType rowType) {
+    public HazelcastTable table(List<Object> arguments, List<MappingField> fields) {
         Map<String, String> options = optionsFromFunctionArguments(arguments);
-
-        List<MappingField> fields = toList(
-                rowType.getFieldList(),
-                field -> new MappingField(field.getName(), SqlToQueryType.map(field.getType().getSqlTypeName()))
-        );
-
-        return createHazelcastTable(options, fields);
+        return table(options, fields);
     }
 
-    private HazelcastTable createHazelcastTable(Map<String, String> options, List<MappingField> fields) {
+    private HazelcastTable table(Map<String, String> options, List<MappingField> fields) {
         Table table = FileSqlConnector.createTable(
                 SCHEMA_NAME_FILES,
                 randomName(),
@@ -119,7 +112,7 @@ public final class FileTableFunction implements JetTableFunction {
         Map<String, String> options = new HashMap<>();
         for (int i = 0; i < PARAMETERS.size(); i++) {
             if (arguments.get(i) != null) {
-                options.put(PARAMETERS.get(i).left, arguments.get(i).toString());
+                options.put(PARAMETERS.get(i).left, arguments.get(i).toString()); // TODO QDT::convert ???
             }
         }
         return options;
