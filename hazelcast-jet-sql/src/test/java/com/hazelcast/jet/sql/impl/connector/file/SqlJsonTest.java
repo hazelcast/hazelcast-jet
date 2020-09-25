@@ -199,7 +199,7 @@ public class SqlJsonTest extends JetSqlTestSupport {
                         + ", \"null\""
                         + ", object IS NOT NULL"
                         + " FROM TABLE ("
-                        + "FILE (format => 'json', path => '" + RESOURCES_PATH + "', glob => 'file.json')"
+                        + "JSON_FILE ('" + RESOURCES_PATH + "', 'file.json')"
                         + ")",
                 singletonList(new Row(
                         "string",

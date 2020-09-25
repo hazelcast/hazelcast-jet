@@ -17,40 +17,47 @@
 package com.hazelcast.jet.sql.impl.validate;
 
 import com.hazelcast.jet.sql.impl.connector.file.FileTableFunction;
+import com.hazelcast.jet.sql.impl.schema.JetFunctionParameter;
 import com.hazelcast.sql.impl.calcite.validate.types.HazelcastTypeFactory;
-import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
-import org.apache.calcite.rel.type.RelDataTypeFactoryImpl;
 import org.apache.calcite.schema.FunctionParameter;
 import org.apache.calcite.schema.TableFunction;
+import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlIdentifier;
+import org.apache.calcite.sql.SqlKind;
+import org.apache.calcite.sql.SqlLiteral;
+import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.SqlSyntax;
+import org.apache.calcite.sql.SqlUtil;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.FamilyOperandTypeChecker;
 import org.apache.calcite.sql.type.InferTypes;
 import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.sql.type.ReturnTypes;
+import org.apache.calcite.sql.type.SqlOperandTypeChecker;
+import org.apache.calcite.sql.type.SqlOperandTypeInference;
+import org.apache.calcite.sql.type.SqlReturnTypeInference;
 import org.apache.calcite.sql.type.SqlTypeFamily;
-import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.util.ReflectiveSqlOperatorTable;
 import org.apache.calcite.sql.validate.SqlNameMatcher;
 import org.apache.calcite.sql.validate.SqlNameMatchers;
 import org.apache.calcite.sql.validate.SqlUserDefinedTableFunction;
+import org.apache.calcite.util.NlsString;
 import org.apache.calcite.util.Util;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
-import java.util.stream.Collectors;
 
 public final class JetSqlOperatorTable extends ReflectiveSqlOperatorTable {
 
-    @SuppressWarnings("unused")
-    public static final SqlFunction FILE = from(FileTableFunction.INSTANCE, "FILE");
+    public static final SqlFunction CSV_FILE = from(FileTableFunction.CSV, "CSV_FILE");
+    public static final SqlFunction JSON_FILE = from(FileTableFunction.JSON, "JSON_FILE");
+    public static final SqlFunction AVRO_FILE = from(FileTableFunction.AVRO, "AVRO_FILE");
+    public static final SqlFunction PARQUET_FILE = from(FileTableFunction.PARQUET, "PARQUET_FILE");
 
     private static final JetSqlOperatorTable INSTANCE = new JetSqlOperatorTable();
 
@@ -58,59 +65,115 @@ public final class JetSqlOperatorTable extends ReflectiveSqlOperatorTable {
         INSTANCE.init();
     }
 
-    private JetSqlOperatorTable() { }
+    private JetSqlOperatorTable() {
+    }
 
     public static JetSqlOperatorTable instance() {
         return INSTANCE;
     }
 
-    @SuppressWarnings("SameParameterValue")
     private static SqlFunction from(TableFunction function, String name) {
         RelDataTypeFactory typeFactory = HazelcastTypeFactory.INSTANCE;
 
-        List<RelDataType> argTypes = new ArrayList<>();
-        List<SqlTypeFamily> typeFamilies = new ArrayList<>();
+        List<RelDataType> types = new ArrayList<>();
+        List<SqlTypeFamily> families = new ArrayList<>();
         for (FunctionParameter parameter : function.getParameters()) {
             RelDataType type = parameter.getType(typeFactory);
 
-            argTypes.add(type);
-            typeFamilies.add(Util.first(type.getSqlTypeName().getFamily(), SqlTypeFamily.ANY));
+            types.add(type);
+            families.add(Util.first(type.getSqlTypeName().getFamily(), SqlTypeFamily.ANY));
         }
         FamilyOperandTypeChecker typeChecker =
-                OperandTypes.family(typeFamilies, index -> function.getParameters().get(index).isOptional());
-        List<RelDataType> paramTypes = toSql(argTypes, typeFactory);
+                OperandTypes.family(families, index -> function.getParameters().get(index).isOptional());
 
-        return new SqlUserDefinedTableFunction(
+        return new JetSqlUserDefinedTableFunction(
                 new SqlIdentifier(name, SqlParserPos.ZERO),
                 ReturnTypes.CURSOR,
-                InferTypes.explicit(argTypes),
+                InferTypes.explicit(types),
                 typeChecker,
-                paramTypes,
+                types,
                 function
         );
     }
 
-    private static List<RelDataType> toSql(Collection<RelDataType> types, RelDataTypeFactory typeFactory) {
-        return types.stream().map(type -> toSql(type, typeFactory)).collect(Collectors.toList());
-    }
-
-    private static RelDataType toSql(RelDataType type, RelDataTypeFactory typeFactory) {
-        if (type instanceof RelDataTypeFactoryImpl.JavaType
-                && ((RelDataTypeFactoryImpl.JavaType) type).getJavaClass() == Object.class) {
-            return typeFactory.createTypeWithNullability(typeFactory.createSqlType(SqlTypeName.ANY), true);
-        } else {
-            return JavaTypeFactoryImpl.toSql(typeFactory, type);
-        }
-    }
-
     @Override
     public void lookupOperatorOverloads(
-            SqlIdentifier opName,
+            SqlIdentifier name,
             SqlFunctionCategory category,
             SqlSyntax syntax,
-            List<SqlOperator> operatorList,
+            List<SqlOperator> operators,
             SqlNameMatcher nameMatcher
     ) {
-        super.lookupOperatorOverloads(opName, category, syntax, operatorList, SqlNameMatchers.withCaseSensitive(false));
+        super.lookupOperatorOverloads(name, category, syntax, operators, SqlNameMatchers.withCaseSensitive(false));
+    }
+
+    private static class JetSqlUserDefinedTableFunction extends SqlUserDefinedTableFunction {
+
+        private JetSqlUserDefinedTableFunction(
+                SqlIdentifier opName,
+                SqlReturnTypeInference returnTypeInference,
+                SqlOperandTypeInference operandTypeInference,
+                SqlOperandTypeChecker operandTypeChecker,
+                List<RelDataType> paramTypes,
+                TableFunction function
+        ) {
+            super(opName, returnTypeInference, operandTypeInference, operandTypeChecker, paramTypes, function);
+        }
+
+        @Override
+        public RelDataType getRowType(RelDataTypeFactory typeFactory, List<SqlNode> operands) {
+            List<Object> arguments = convertArguments(getNameAsId(), getFunction().getParameters(), operands);
+            return getFunction().getRowType(typeFactory, arguments);
+        }
+
+        private static List<Object> convertArguments(
+                SqlIdentifier name,
+                List<FunctionParameter> parameters,
+                List<SqlNode> operands
+        ) {
+            assert parameters.size() == operands.size();
+
+            List<Object> arguments = new ArrayList<>(operands.size());
+            for (int i = 0; i < parameters.size(); i++) {
+                SqlNode operand = operands.get(i);
+                JetFunctionParameter parameter = (JetFunctionParameter) parameters.get(i);
+                try {
+                    Object value = getValue(operands.get(i));
+                    Object converted = parameter.type().convert(value);
+                    arguments.add(converted);
+                } catch (NonLiteralException e) {
+                    throw new IllegalArgumentException("All arguments of call to function "
+                            + name + " should be literal. Actual argument #"
+                            + parameter.getOrdinal() + " (" + parameter.getName()
+                            + ") is not literal: " + operand);
+                }
+            }
+            return arguments;
+        }
+
+        private static Object getValue(SqlNode node) {
+            switch (node.getKind()) {
+                case ARRAY_VALUE_CONSTRUCTOR:
+                case MAP_VALUE_CONSTRUCTOR:
+                    throw new IllegalArgumentException("unexpected SQL kind: " + node.getKind());
+                case CAST:
+                    return getValue(((SqlCall) node).operand(0));
+                default:
+                    if (SqlUtil.isNullLiteral(node, true)) {
+                        return null;
+                    }
+                    if (SqlUtil.isLiteral(node)) {
+                        Object value = ((SqlLiteral) node).getValue();
+                        return value instanceof NlsString ? ((NlsString) value).getValue() : value;
+                    }
+                    if (node.getKind() == SqlKind.DEFAULT) {
+                        return null;
+                    }
+                    throw new NonLiteralException();
+            }
+        }
+
+        private static class NonLiteralException extends RuntimeException {
+        }
     }
 }

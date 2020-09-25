@@ -33,14 +33,15 @@ public class FileSqlConnector implements SqlConnector {
 
     public static final String TYPE_NAME = "File";
 
-    public static final String OPTION_PATH = "file.path";
-    public static final String OPTION_GLOB = "file.glob";
-    public static final String OPTION_SHARED_FILE_SYSTEM = "file.sharedFileSystem";
-    public static final String OPTION_CHARSET = "file.charset";
-    public static final String OPTION_HEADER = "file.header";
-    public static final String OPTION_DELIMITER = "file.delimiter";
-    public static final String OPTION_S3_ACCESS_KEY = "file.s3a.access.key";
-    public static final String OPTION_S3_SECRET_KEY = "file.s3a.secret.key";
+    public static final String OPTION_PATH = "path";
+    public static final String OPTION_GLOB = "glob";
+    public static final String OPTION_SHARED_FILE_SYSTEM = "sharedFileSystem";
+    public static final String OPTION_CHARSET = "charset";
+    public static final String OPTION_HEADER = "header";
+    public static final String OPTION_DELIMITER = "delimiter";
+
+    //public static final String OPTION_S3_ACCESS_KEY = "file.s3a.access.key";
+    //public static final String OPTION_S3_SECRET_KEY = "file.s3a.secret.key";
 
     static final FileSqlConnector INSTANCE = new FileSqlConnector();
 

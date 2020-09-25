@@ -166,7 +166,10 @@ public final class UnsupportedOperationVisitor implements SqlVisitor<Void> {
 
         // Extensions
         SUPPORTED_OPERATORS.add(SqlOption.OPERATOR);
-        SUPPORTED_OPERATORS.add(JetSqlOperatorTable.FILE);
+        SUPPORTED_OPERATORS.add(JetSqlOperatorTable.CSV_FILE);
+        SUPPORTED_OPERATORS.add(JetSqlOperatorTable.JSON_FILE);
+        SUPPORTED_OPERATORS.add(JetSqlOperatorTable.AVRO_FILE);
+        SUPPORTED_OPERATORS.add(JetSqlOperatorTable.PARQUET_FILE);
     }
 
     private UnsupportedOperationVisitor() {

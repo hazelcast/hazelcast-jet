@@ -35,8 +35,8 @@ final class MetadataResolver {
     private static final String HDFS_SCHEMA = "hdfs://";
 
     private static final String S3_SCHEMA = "s3a://";
-    private static final String S3_ACCESS_KEY = "fs.s3a.access.key";
-    private static final String S3_SECRET_KEY = "fs.s3a.secret.key";
+    //private static final String S3_ACCESS_KEY = "fs.s3a.access.key";
+    //private static final String S3_SECRET_KEY = "fs.s3a.secret.key";
 
     private MetadataResolver() {
     }
@@ -150,8 +150,8 @@ final class MetadataResolver {
 
     private static Job createS3Job(FileOptions options) throws IOException {
         Job job = Job.getInstance();
-        job.getConfiguration().set(S3_ACCESS_KEY, options.s3AccessKey());
-        job.getConfiguration().set(S3_SECRET_KEY, options.s3SecretKey());
+        //job.getConfiguration().set(S3_ACCESS_KEY, options.s3AccessKey());
+        //job.getConfiguration().set(S3_SECRET_KEY, options.s3SecretKey());
         return job;
     }
 }

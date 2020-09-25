@@ -37,57 +37,57 @@ public interface SqlConnector {
     /**
      * TODO
      */
-    String OPTION_SERIALIZATION_FORMAT = "serialization.format";
+    String OPTION_SERIALIZATION_FORMAT = "format";
 
     /**
      * TODO
      */
-    String OPTION_SERIALIZATION_KEY_FORMAT = "serialization.key.format";
+    String OPTION_SERIALIZATION_KEY_FORMAT = "keyFormat";
 
     /**
      * TODO
      */
-    String OPTION_SERIALIZATION_VALUE_FORMAT = "serialization.value.format";
+    String OPTION_SERIALIZATION_VALUE_FORMAT = "valueFormat";
 
     /**
      * TODO
      */
-    String OPTION_KEY_CLASS = "serialization.key.java.class";
+    String OPTION_KEY_CLASS = "keyJavaClass";
 
     /**
      * TODO
      */
-    String OPTION_VALUE_CLASS = "serialization.value.java.class";
+    String OPTION_VALUE_CLASS = "valueJavaClass";
 
     /**
      * TODO
      */
-    String OPTION_KEY_FACTORY_ID = "serialization.key.portable.factoryId";
+    String OPTION_KEY_FACTORY_ID = "keyPortableFactoryId";
 
     /**
      * TODO
      */
-    String OPTION_KEY_CLASS_ID = "serialization.key.portable.classId";
+    String OPTION_KEY_CLASS_ID = "keyPortableClassId";
 
     /**
      * TODO
      */
-    String OPTION_KEY_CLASS_VERSION = "serialization.key.portable.classVersion";
+    String OPTION_KEY_CLASS_VERSION = "keyPortableClassVersion";
 
     /**
      * TODO
      */
-    String OPTION_VALUE_FACTORY_ID = "serialization.value.portable.factoryId";
+    String OPTION_VALUE_FACTORY_ID = "valuePortableFactoryId";
 
     /**
      * TODO
      */
-    String OPTION_VALUE_CLASS_ID = "serialization.value.portable.classId";
+    String OPTION_VALUE_CLASS_ID = "valuePortableClassId";
 
     /**
      * TODO
      */
-    String OPTION_VALUE_CLASS_VERSION = "serialization.value.portable.classVersion";
+    String OPTION_VALUE_CLASS_VERSION = "valuePortableClassVersion";
 
     /**
      * TODO

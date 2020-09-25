@@ -360,7 +360,7 @@ public class SqlHadoopTest extends JetSqlTestSupport {
                         + ", \"timestamp\""
                         + ", \"timestampTz\""
                         + " FROM TABLE ("
-                        + "FILE (format => 'parquet', path => '" + path("parquet-table-function") + "')"
+                        + "PARQUET_FILE ('" + path("parquet-table-function") + "')"
                         + ")",
                 singletonList(new Row(
                         "string",

@@ -56,10 +56,10 @@ public class SqlSchemaTest extends JetSqlTestSupport {
                                 name,
                                 IMapSqlConnector.TYPE_NAME,
                                 "{"
-                                        + "serialization.key.format=java"
-                                        + ", serialization.key.java.class=java.lang.Integer"
-                                        + ", serialization.value.format=java"
-                                        + ", serialization.value.java.class=java.lang.String"
+                                        + "keyFormat=java"
+                                        + ", keyJavaClass=java.lang.Integer"
+                                        + ", valueFormat=java"
+                                        + ", valueJavaClass=java.lang.String"
                                         + "}")
                 )
         );

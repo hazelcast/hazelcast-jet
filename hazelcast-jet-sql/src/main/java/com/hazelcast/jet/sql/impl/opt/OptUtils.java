@@ -58,9 +58,9 @@ import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Set;
 
-import static com.hazelcast.jet.impl.util.Util.toList;
 import static com.hazelcast.jet.sql.impl.opt.JetConventions.LOGICAL;
 import static com.hazelcast.jet.sql.impl.opt.JetConventions.PHYSICAL;
+import static java.util.Arrays.asList;
 
 /**
  * Static utility classes for rules.
@@ -247,8 +247,8 @@ public final class OptUtils {
         return new PlanNodeSchema(fieldTypes);
     }
 
-    public static PlanNodeSchema schema(RelDataType relType) {
-        return new PlanNodeSchema(extractFieldTypes(relType));
+    public static PlanNodeSchema schema(RelDataType rowType) {
+        return new PlanNodeSchema(extractFieldTypes(rowType));
     }
 
     public static RexVisitor<Expression<?>> converter(PlanNodeFieldTypeProvider schema) {
@@ -290,10 +290,7 @@ public final class OptUtils {
         return rows;
     }
 
-    private static List<QueryDataType> extractFieldTypes(RelDataType relType) {
-        return toList(
-                relType.getFieldList(),
-                field -> SqlToQueryType.map(field.getType().getSqlTypeName())
-        );
+    private static List<QueryDataType> extractFieldTypes(RelDataType rowType) {
+        return asList(SqlToQueryType.mapRowType(rowType));
     }
 }

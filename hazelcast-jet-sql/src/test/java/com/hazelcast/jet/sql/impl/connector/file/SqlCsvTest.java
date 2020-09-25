@@ -156,7 +156,11 @@ public class SqlCsvTest extends JetSqlTestSupport {
                         + ", \"timestamp\""
                         + ", \"timestampTz\""
                         + " FROM TABLE ("
-                        + "FILE (format => 'csv', path => '" + RESOURCES_PATH + "', glob => 'file.csv', header => true)"
+                        + "csv_file ("
+                        + "path => '" + RESOURCES_PATH + "'"
+                        + ", glob => 'file.csv'"
+                        + ", header => true"
+                        + ")"
                         + ")",
                 singletonList(new Row(
                         "string",

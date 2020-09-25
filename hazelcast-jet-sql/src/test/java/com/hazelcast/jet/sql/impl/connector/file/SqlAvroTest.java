@@ -199,7 +199,7 @@ public class SqlAvroTest extends JetSqlTestSupport {
                         + ", \"null\""
                         + ", object IS NOT NULL"
                         + " FROM TABLE ("
-                        + "FILE (format => 'avro', path => '" + RESOURCES_PATH + "', glob => 'file.avro')"
+                        + "AVRO_FILE ('" + RESOURCES_PATH + "', 'file.avro')"
                         + ")",
                 singletonList(new Row(
                         "string",

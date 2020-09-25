@@ -26,8 +26,8 @@ import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.OPTION_
 import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.OPTION_GLOB;
 import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.OPTION_HEADER;
 import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.OPTION_PATH;
-import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.OPTION_S3_ACCESS_KEY;
-import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.OPTION_S3_SECRET_KEY;
+//import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.OPTION_S3_ACCESS_KEY;
+//import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.OPTION_S3_SECRET_KEY;
 import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.OPTION_SHARED_FILE_SYSTEM;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
@@ -78,7 +78,7 @@ final class FileOptions {
         return Boolean.parseBoolean(options.getOrDefault(OPTION_HEADER, "false"));
     }
 
-    String s3AccessKey() {
+    /*String s3AccessKey() {
         String value = options.get(OPTION_S3_ACCESS_KEY);
         if (value == null) {
             throw QueryException.error("Missing '" + OPTION_S3_ACCESS_KEY + "' option");
@@ -92,5 +92,5 @@ final class FileOptions {
             throw QueryException.error("Missing '" + OPTION_S3_SECRET_KEY + "' option");
         }
         return value;
-    }
+    }*/
 }

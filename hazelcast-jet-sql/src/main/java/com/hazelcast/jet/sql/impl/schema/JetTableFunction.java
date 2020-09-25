@@ -16,58 +16,168 @@
 
 package com.hazelcast.jet.sql.impl.schema;
 
-import com.hazelcast.jet.sql.impl.opt.OptUtils;
 import com.hazelcast.sql.impl.calcite.SqlToQueryType;
 import com.hazelcast.sql.impl.calcite.schema.HazelcastTable;
-import com.hazelcast.sql.impl.expression.Expression;
-import com.hazelcast.sql.impl.plan.node.PlanNodeSchema;
-import com.hazelcast.sql.impl.row.EmptyRow;
-import com.hazelcast.sql.impl.type.QueryDataType;
 import org.apache.calcite.rel.type.RelDataType;
-import org.apache.calcite.rel.type.RelDataTypeFactory;
-import org.apache.calcite.rex.RexCall;
-import org.apache.calcite.rex.RexNode;
-import org.apache.calcite.rex.RexVisitor;
+import org.apache.calcite.rel.type.RelDataTypeComparability;
+import org.apache.calcite.rel.type.RelDataTypeFamily;
+import org.apache.calcite.rel.type.RelDataTypeField;
+import org.apache.calcite.rel.type.RelDataTypePrecedenceList;
+import org.apache.calcite.rel.type.StructKind;
 import org.apache.calcite.schema.TableFunction;
-import org.apache.calcite.sql.fun.SqlStdOperatorTable;
+import org.apache.calcite.sql.SqlCollation;
+import org.apache.calcite.sql.SqlIdentifier;
+import org.apache.calcite.sql.SqlIntervalQualifier;
+import org.apache.calcite.sql.type.SqlTypeName;
 
-import java.util.ArrayList;
+import java.nio.charset.Charset;
 import java.util.List;
+import java.util.Map;
 
 import static com.hazelcast.jet.impl.util.Util.toList;
-import static com.hazelcast.jet.sql.impl.expression.ExpressionUtil.evaluate;
 
 public interface JetTableFunction extends TableFunction {
 
-    default HazelcastTable toTable(
-            RelDataType rowType,
-            List<RexNode> operands,
-            RelDataTypeFactory typeFactory
-    ) {
-        List<QueryDataType> argumentTypes = toList(
-                getParameters(),
-                parameter -> SqlToQueryType.map(parameter.getType(typeFactory).getSqlTypeName())
-        );
-        PlanNodeSchema argumentSchema = new PlanNodeSchema(argumentTypes);
-        RexVisitor<Expression<?>> argumentConverter = OptUtils.converter(argumentSchema);
-
-        List<Object> arguments = new ArrayList<>();
-        for (RexNode operand : operands) {
-            // TODO: implement DEFAULT handling
-            if (operand instanceof RexCall && ((RexCall) operand).getOperator() == SqlStdOperatorTable.DEFAULT) {
-                arguments.add(null);
-            } else {
-                arguments.add(evaluate(operand.accept(argumentConverter), EmptyRow.INSTANCE));
-            }
-        }
+    default HazelcastTable toTable(FunctionRelDataType rowType) {
+        Map<String, String> options = rowType.options();
 
         List<MappingField> fields = toList(
                 rowType.getFieldList(),
                 field -> new MappingField(field.getName(), SqlToQueryType.map(field.getType().getSqlTypeName()))
         );
 
-        return table(arguments, fields);
+        return table(options, fields);
     }
 
-    HazelcastTable table(List<Object> arguments, List<MappingField> fields);
+    HazelcastTable table(Map<String, String> options, List<MappingField> fields);
+
+    class FunctionRelDataType implements RelDataType {
+
+        private final RelDataType delegate;
+        private final Map<String, String> options;
+
+        public FunctionRelDataType(RelDataType delegate, Map<String, String> options) {
+            this.delegate = delegate;
+            this.options = options;
+        }
+
+        protected Map<String, String> options() {
+            return options;
+        }
+
+        @Override
+        public boolean isStruct() {
+            return delegate.isStruct();
+        }
+
+        @Override
+        public List<RelDataTypeField> getFieldList() {
+            return delegate.getFieldList();
+        }
+
+        @Override
+        public List<String> getFieldNames() {
+            return delegate.getFieldNames();
+        }
+
+        @Override
+        public int getFieldCount() {
+            return delegate.getFieldCount();
+        }
+
+        @Override
+        public StructKind getStructKind() {
+            return delegate.getStructKind();
+        }
+
+        @Override
+        public RelDataTypeField getField(String fieldName, boolean caseSensitive, boolean elideRecord) {
+            return delegate.getField(fieldName, caseSensitive, elideRecord);
+        }
+
+        @Override
+        public boolean isNullable() {
+            return delegate.isNullable();
+        }
+
+        @Override
+        public RelDataType getComponentType() {
+            return delegate.getComponentType();
+        }
+
+        @Override
+        public RelDataType getKeyType() {
+            return delegate.getKeyType();
+        }
+
+        @Override
+        public RelDataType getValueType() {
+            return delegate.getValueType();
+        }
+
+        @Override
+        public Charset getCharset() {
+            return delegate.getCharset();
+        }
+
+        @Override
+        public SqlCollation getCollation() {
+            return delegate.getCollation();
+        }
+
+        @Override
+        public SqlIntervalQualifier getIntervalQualifier() {
+            return delegate.getIntervalQualifier();
+        }
+
+        @Override
+        public int getPrecision() {
+            return delegate.getPrecision();
+        }
+
+        @Override
+        public int getScale() {
+            return delegate.getScale();
+        }
+
+        @Override
+        public SqlTypeName getSqlTypeName() {
+            return delegate.getSqlTypeName();
+        }
+
+        @Override
+        public SqlIdentifier getSqlIdentifier() {
+            return delegate.getSqlIdentifier();
+        }
+
+        @Override
+        public String toString() {
+            return delegate.toString();
+        }
+
+        @Override
+        public String getFullTypeString() {
+            return delegate.getFullTypeString();
+        }
+
+        @Override
+        public RelDataTypeFamily getFamily() {
+            return delegate.getFamily();
+        }
+
+        @Override
+        public RelDataTypePrecedenceList getPrecedenceList() {
+            return delegate.getPrecedenceList();
+        }
+
+        @Override
+        public RelDataTypeComparability getComparability() {
+            return delegate.getComparability();
+        }
+
+        @Override
+        public boolean isDynamicStruct() {
+            return delegate.isDynamicStruct();
+        }
+    }
 }

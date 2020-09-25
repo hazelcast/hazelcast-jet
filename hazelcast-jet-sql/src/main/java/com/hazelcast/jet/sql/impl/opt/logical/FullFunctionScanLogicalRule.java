@@ -18,19 +18,15 @@ package com.hazelcast.jet.sql.impl.opt.logical;
 
 import com.hazelcast.jet.sql.impl.opt.OptUtils;
 import com.hazelcast.jet.sql.impl.schema.JetTableFunction;
+import com.hazelcast.jet.sql.impl.schema.JetTableFunction.FunctionRelDataType;
 import com.hazelcast.sql.impl.calcite.schema.HazelcastTable;
 import org.apache.calcite.plan.Convention;
 import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.convert.ConverterRule;
 import org.apache.calcite.rel.logical.LogicalTableFunctionScan;
-import org.apache.calcite.rel.type.RelDataType;
-import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexCall;
-import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.validate.SqlUserDefinedTableFunction;
-
-import java.util.List;
 
 final class FullFunctionScanLogicalRule extends ConverterRule {
 
@@ -51,12 +47,8 @@ final class FullFunctionScanLogicalRule extends ConverterRule {
     }
 
     private static HazelcastTable extractTable(LogicalTableFunctionScan scan) {
-        RelDataType rowType = scan.getRowType();
-        List<RexNode> operands = ((RexCall) scan.getCall()).getOperands();
-        RelDataTypeFactory typeFactory = scan.getCluster().getTypeFactory();
-
         JetTableFunction function = extractFunction(scan);
-        return function.toTable(rowType, operands, typeFactory);
+        return function.toTable(((FunctionRelDataType) scan.getRowType()));
     }
 
     private static JetTableFunction extractFunction(LogicalTableFunctionScan scan) {

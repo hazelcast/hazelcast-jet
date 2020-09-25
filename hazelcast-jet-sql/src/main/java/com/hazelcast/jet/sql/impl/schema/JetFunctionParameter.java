@@ -16,6 +16,8 @@
 
 package com.hazelcast.jet.sql.impl.schema;
 
+import com.hazelcast.sql.impl.calcite.SqlToQueryType;
+import com.hazelcast.sql.impl.type.QueryDataType;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.schema.FunctionParameter;
@@ -24,14 +26,18 @@ public class JetFunctionParameter implements FunctionParameter {
 
     private final int ordinal;
     private final String name;
-    private final Class<?> type;
+    private final QueryDataType type;
     private final boolean required;
 
-    public JetFunctionParameter(int ordinal, String name, Class<?> type, boolean required) {
+    public JetFunctionParameter(int ordinal, String name, QueryDataType type, boolean required) {
         this.ordinal = ordinal;
         this.name = name;
         this.type = type;
         this.required = required;
+    }
+
+    public QueryDataType type() {
+        return type;
     }
 
     @Override
@@ -46,7 +52,7 @@ public class JetFunctionParameter implements FunctionParameter {
 
     @Override
     public RelDataType getType(RelDataTypeFactory typeFactory) {
-        return typeFactory.createJavaType(type);
+        return typeFactory.createSqlType(SqlToQueryType.map(type.getTypeFamily()));
     }
 
     @Override
