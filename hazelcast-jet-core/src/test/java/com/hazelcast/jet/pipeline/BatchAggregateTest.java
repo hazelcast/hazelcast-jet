@@ -43,6 +43,7 @@ import static com.hazelcast.jet.aggregate.AggregateOperations.coAggregateOperati
 import static com.hazelcast.jet.datamodel.ItemsByTag.itemsByTag;
 import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
 import static com.hazelcast.jet.datamodel.Tuple3.tuple3;
+import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.summingLong;
@@ -80,6 +81,20 @@ public class BatchAggregateTest extends PipelineTestSupport {
         execute();
         assertEquals(
                 singletonList(input.stream().mapToLong(i -> i).sum()),
+                new ArrayList<>(sinkList)
+        );
+    }
+
+    @Test
+    public void when_aggregateZeroItems_then_producesOutput() {
+        // When
+        BatchStage<Long> aggregated = batchStageFromList(emptyList()).aggregate(SUMMING);
+
+        // Then
+        aggregated.writeTo(sink);
+        execute();
+        assertEquals(
+                singletonList(0L),
                 new ArrayList<>(sinkList)
         );
     }
