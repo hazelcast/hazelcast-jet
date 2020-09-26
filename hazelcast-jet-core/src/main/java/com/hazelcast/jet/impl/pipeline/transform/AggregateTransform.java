@@ -26,12 +26,10 @@ import com.hazelcast.jet.impl.pipeline.Planner.PlannerVertex;
 import javax.annotation.Nonnull;
 import java.util.List;
 
-import static com.hazelcast.function.FunctionEx.identity;
 import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.processor.Processors.accumulateP;
 import static com.hazelcast.jet.core.processor.Processors.aggregateP;
 import static com.hazelcast.jet.core.processor.Processors.combineP;
-import static com.hazelcast.jet.core.processor.Processors.mapP;
 
 public class AggregateTransform<A, R> extends AbstractTransform {
     public static final String FIRST_STAGE_VERTEX_NAME_SUFFIX = "-prepare";
