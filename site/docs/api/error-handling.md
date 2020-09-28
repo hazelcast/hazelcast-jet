@@ -6,8 +6,8 @@ description: Ways of coping with unexpected error in Hazelcast Jet.
 Jet may experience errors on multiple levels:
 
 * on the *cluster level*: nodes can be removed from or added to the
-  cluster at any given time, due to, for example, internal errors, loss
-  of networking, or even scheduled maintenance
+  cluster at any given time, due to, for example, internal errors or
+  loss of networking
 * on the *integration* level: a variety of I/O errors, e.g., network or
   remote service failures
 * on the *job* level:
