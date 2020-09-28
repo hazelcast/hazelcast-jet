@@ -36,10 +36,12 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.stream.Collector;
 
+import static com.hazelcast.function.ComparatorEx.comparingInt;
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.aggregate.AggregateOperations.aggregateOperation2;
 import static com.hazelcast.jet.aggregate.AggregateOperations.aggregateOperation3;
 import static com.hazelcast.jet.aggregate.AggregateOperations.coAggregateOperationBuilder;
+import static com.hazelcast.jet.aggregate.AggregateOperations.maxBy;
 import static com.hazelcast.jet.datamodel.ItemsByTag.itemsByTag;
 import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
 import static com.hazelcast.jet.datamodel.Tuple3.tuple3;
@@ -95,6 +97,20 @@ public class BatchAggregateTest extends PipelineTestSupport {
         execute();
         assertEquals(
                 singletonList(0L),
+                new ArrayList<>(sinkList)
+        );
+    }
+
+    @Test
+    public void when_maxOfZeroItems_then_producesNoOutput() {
+        // When
+        BatchStage<Integer> aggregated = batchStageFromList(emptyList()).aggregate(maxBy(comparingInt(i -> i)));
+
+        // Then
+        aggregated.writeTo(sink);
+        execute();
+        assertEquals(
+                emptyList(),
                 new ArrayList<>(sinkList)
         );
     }
