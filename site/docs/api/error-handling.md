@@ -3,42 +3,40 @@ title: Error Handling Strategies
 description: Ways of coping with unexpected error in Hazelcast Jet.
 ---
 
-There is unavoidable risk in running Jet jobs. They ingest data from
-external sources, the correctness and consistency of which can't be
-guaranteed. The processing they perform includes the running of user
-code, which is unavoidably imperfect.
+Jet may experience errors on multiple levels:
 
-So even if we assume no bugs in the Jet framework itself, errors can and
-will happen. What options Jet offers for dealing with them is the topic
-of the sections below.
+* on the *cluster level*: nodes can be removed from or added to the
+  cluster at any given time, due to, for example, internal errors, loss
+  of networking, or even scheduled maintenance
+* on the *integration* level: a variety of I/O errors, e.g., network or
+  remote service failures
+* on the *job* level:
+  * *input data errors* (e.g., unexpected null values, out-of-range
+    dates, malformed JSON documents)
+  * *coding error* (e.g., filtering lambdas throwing
+    `NullPointerException`, stateful mapping code containing memory
+    leaks)
 
-## Scope
+The following sections discuss options and best practices you can use on
+all these levels (except the cluster level, which we cover in the
+section on [fault tolerance](../architecture/fault-tolerance)).
 
-A Jet cluster, at any given time, is running an arbitrary number of
-independent jobs in parallel. These jobs do not interact in any way, and
-the failure of one should not lead to any consequences for any other.
-When considering error handling, the basic unit of discussion will be
-the job, mainly what happens with it once it encounters a problem.
+## Integration Level
 
-The default way Jet reacts to an error is to fail the job that has
-produced it, but what one can do with such a failed job afterward is the
-interesting part.
+### Sources & Sinks
 
-## Types of Errors
+Sources and Sinks are Jet's points of contact with external data stores.
+Their various types have specific characteristics which enable error
+handling strategies only applicable to them.
 
-Before we dig deeper, let's list some typical error one might encounter:
+For example, our [Change Data Capture
+sources](sources-sinks#change-data-capture-cdc) can attempt to reconnect
+automatically whenever they lose connection to the databases they
+monitor, so for intermittent network failures, their owner jobs don't
+need to fail.
 
-* *input data errors*: unexpected input data, e.g. unexpected null
-  value, out-of-range date (`0000-00-00`) or malformed JSON document
-* *coding errors*: e.g., a user-provided filtering lambda throws a
-  `NullPointerException` for certain input or stateful mapping code
-  contains memory leaks
-* *I/O errors*: network errors or remote service failures
-
-## Specific Solutions
-
-Some concrete types of error have solutions specifically tailored to
-address them.
+To see the failure handling options of a given [source or
+sink](sources-sinks), consult its Javadoc.
 
 ### In-Memory Data Structures
 
@@ -54,25 +52,18 @@ further details and configuration options, read the [relevant section in
 the Hazelcast
 manual](https://docs.hazelcast.org/docs/latest/manual/html-single/#handling-failures).
 
-### Individual Sources & Sinks
+## Job Level
 
-Sources and Sinks are Jet's points of contact with external data stores.
-Their various types have specific characteristics that enable error
-handling strategies applicable only to them.
+The primary way of dealing with errors at the job level in Jet is to
+make the jobs themselves independent of each other. In a Jet cluster,
+there is an arbitrary number of independent jobs running in parallel.
+Jet ensures that these jobs do not interact in any way, and one's
+failure does not lead to any consequences for the others.
 
-For example, our [Change Data Capture
-sources](sources-sinks#change-data-capture-cdc) can attempt to reconnect
-automatically whenever they lose connection to the databases they
-monitor, so for intermittent network failures, their owner jobs don't
-need to fail.
-
-To see the failure handling options of a given [source or
-sink](sources-sinks), consult its Javadoc.
-
-## Generic Solutions
-
-In Jet we also have generic options for dealing with random errors
-affecting our jobs.
+The concern of error handling becomes: what happens to a job once it
+encounters a problem. By default, Jet fails a job that has thrown an
+error, but what one can do with such a failed job afterward is the
+interesting part.
 
 ### Jobs Without Mutable State
 
@@ -81,21 +72,24 @@ processing guarantee configured, the pipeline definition and the job
 config are the only parts we can identify as state, and those are
 immutable.
 
-Batch jobs also fall into the category of jobs with immutable state.
-
 One option for dealing with failure in immutable-state jobs is simply
 restarting them (once the cause of the failure has been addressed).
 Restarted streaming jobs lacking mutable state can just resume
-processing the input data flow from the current point in time, batch
-jobs can be re-run from the beginning.
+processing the input data flow from the current point in time.
+
+Batch jobs don't strictly fall into this immutable-state category, but
+the generic, reliable way of dealing with their error in Jet right now
+is also restarting them from the beginning and having them completely
+reprocess their input.
 
 ### Processing Guarantees
 
-Jobs with mutable state, those with a [processing
+Streaming jobs with mutable state, those with a [processing
 guarantee](../architecture/fault-tolerance#processing-guarantee-is-a-shared-concern)
-set, achieve fault tolerance by periodically saving [recovery
+set, achieve fault tolerance (cluster level error handling, in terms
+of this guide) by periodically saving [recovery
 snapshots](../architecture/fault-tolerance#distributed-snapshot). When
-such a job fails, not only does its execution stop, but also its
+such a job fails, not only does its execution stop but also its
 snapshots get deleted. This makes it impossible to resume it without
 loss.
 
