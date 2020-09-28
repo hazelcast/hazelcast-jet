@@ -30,8 +30,8 @@ import java.util.Objects;
  * @since 3.0
  */
 public final class Tuple2<E0, E1> implements Map.Entry<E0, E1> {
-    private E0 f0;
-    private E1 f1;
+    private final E0 f0;
+    private final E1 f1;
 
     /**
      * Constructs a new 2-tuple with the supplied values.

@@ -29,9 +29,9 @@ import java.util.Objects;
  * @since 3.0
  */
 public final class Tuple3<E0, E1, E2> {
-    private E0 f0;
-    private E1 f1;
-    private E2 f2;
+    private final E0 f0;
+    private final E1 f1;
+    private final E2 f2;
 
     /**
      * Constructs a new 3-tuple with the supplied values.
