@@ -76,6 +76,7 @@ public final class Tuple3<E0, E1, E2> {
     }
 
     @Override
+    @SuppressWarnings("rawtypes")
     public boolean equals(Object obj) {
         final Tuple3 that;
         return this == obj

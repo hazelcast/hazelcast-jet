@@ -83,6 +83,7 @@ public final class Tuple2<E0, E1> implements Map.Entry<E0, E1> {
     }
 
     @Override
+    @SuppressWarnings("rawtypes")
     public boolean equals(Object obj) {
         final Tuple2 that;
         return this == obj

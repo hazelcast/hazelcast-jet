@@ -47,7 +47,7 @@ public final class ItemsByTag {
      * populated with these pairs.
      */
     @Nonnull
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({ "unchecked", "rawtypes" })
     public static ItemsByTag itemsByTag(@Nonnull Object... tagsAndVals) {
         ItemsByTag ibt = new ItemsByTag();
         for (int i = 0; i < tagsAndVals.length;) {
