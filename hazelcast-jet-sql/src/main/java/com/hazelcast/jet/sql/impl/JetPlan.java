@@ -24,10 +24,15 @@ import com.hazelcast.sql.SqlResult;
 import com.hazelcast.sql.SqlRowMetadata;
 import com.hazelcast.sql.impl.QueryId;
 import com.hazelcast.sql.impl.optimizer.SqlPlan;
+import com.hazelcast.sql.impl.security.SqlSecurityContext;
 
 interface JetPlan extends SqlPlan {
 
     SqlResult execute();
+
+    default void checkPermissions(SqlSecurityContext context) {
+        // TODO: implement
+    }
 
     class CreateMappingPlan implements JetPlan {
         private final Mapping mapping;

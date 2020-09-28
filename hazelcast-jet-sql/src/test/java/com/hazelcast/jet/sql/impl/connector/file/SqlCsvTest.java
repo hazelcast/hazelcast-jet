@@ -159,7 +159,7 @@ public class SqlCsvTest extends JetSqlTestSupport {
                         + "csv_file ("
                         + "path => '" + RESOURCES_PATH + "'"
                         + ", glob => 'file.csv'"
-                        + ", header => true"
+                        + ", header => 'true'"
                         + ")"
                         + ")",
                 singletonList(new Row(

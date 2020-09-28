@@ -21,18 +21,22 @@ import com.hazelcast.sql.impl.type.QueryDataType;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.schema.FunctionParameter;
+import org.apache.calcite.sql.type.SqlTypeName;
 
-public class JetFunctionParameter implements FunctionParameter {
+public class JetTableFunctionParameter implements FunctionParameter {
+
+    // supporting just string parameters for now
+    // allowing other types requires at least proper validation
+    // if/when implemented, consider using it in SqlOption as well
+    private static final SqlTypeName TYPE = SqlToQueryType.map(QueryDataType.VARCHAR.getTypeFamily());
 
     private final int ordinal;
     private final String name;
-    private final QueryDataType type;
     private final boolean required;
 
-    public JetFunctionParameter(int ordinal, String name, QueryDataType type, boolean required) {
+    public JetTableFunctionParameter(int ordinal, String name, boolean required) {
         this.ordinal = ordinal;
         this.name = name;
-        this.type = type;
         this.required = required;
     }
 
@@ -48,7 +52,7 @@ public class JetFunctionParameter implements FunctionParameter {
 
     @Override
     public RelDataType getType(RelDataTypeFactory typeFactory) {
-        return typeFactory.createSqlType(SqlToQueryType.map(type.getTypeFamily()));
+        return typeFactory.createSqlType(TYPE);
     }
 
     @Override

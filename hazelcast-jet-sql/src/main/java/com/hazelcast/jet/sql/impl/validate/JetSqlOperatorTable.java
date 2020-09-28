@@ -17,13 +17,12 @@
 package com.hazelcast.jet.sql.impl.validate;
 
 import com.hazelcast.jet.sql.impl.connector.file.FileTableFunction;
+import com.hazelcast.sql.impl.QueryException;
 import com.hazelcast.sql.impl.calcite.validate.types.HazelcastTypeFactory;
-import com.hazelcast.sql.impl.type.QueryDataType;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.schema.FunctionParameter;
 import org.apache.calcite.schema.TableFunction;
-import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlIdentifier;
@@ -52,6 +51,8 @@ import org.apache.calcite.util.Util;
 import java.util.ArrayList;
 import java.util.List;
 
+import static org.apache.calcite.sql.type.SqlTypeFamily.CHARACTER;
+
 public final class JetSqlOperatorTable extends ReflectiveSqlOperatorTable {
 
     public static final SqlFunction CSV_FILE = from(FileTableFunction.CSV, "CSV_FILE");
@@ -68,17 +69,18 @@ public final class JetSqlOperatorTable extends ReflectiveSqlOperatorTable {
     private JetSqlOperatorTable() {
     }
 
-    public static JetSqlOperatorTable instance() {
+    static JetSqlOperatorTable instance() {
         return INSTANCE;
     }
 
-    private static SqlFunction from(TableFunction function, String name) {
+    static SqlUserDefinedTableFunction from(TableFunction function, String name) {
         RelDataTypeFactory typeFactory = HazelcastTypeFactory.INSTANCE;
 
         List<RelDataType> types = new ArrayList<>();
         List<SqlTypeFamily> families = new ArrayList<>();
         for (FunctionParameter parameter : function.getParameters()) {
             RelDataType type = parameter.getType(typeFactory);
+            assert type.getSqlTypeName().getFamily() == CHARACTER;
 
             types.add(type);
             families.add(Util.first(type.getSqlTypeName().getFamily(), SqlTypeFamily.ANY));
@@ -122,11 +124,11 @@ public final class JetSqlOperatorTable extends ReflectiveSqlOperatorTable {
 
         @Override
         public RelDataType getRowType(RelDataTypeFactory typeFactory, List<SqlNode> operands) {
-            List<Object> arguments = convertArguments(getNameAsId(), getFunction().getParameters(), operands);
+            List<Object> arguments = toArguments(getNameAsId(), getFunction().getParameters(), operands);
             return getFunction().getRowType(typeFactory, arguments);
         }
 
-        private static List<Object> convertArguments(
+        private static List<Object> toArguments(
                 SqlIdentifier name,
                 List<FunctionParameter> parameters,
                 List<SqlNode> operands
@@ -137,37 +139,35 @@ public final class JetSqlOperatorTable extends ReflectiveSqlOperatorTable {
             for (int i = 0; i < parameters.size(); i++) {
                 SqlNode operand = operands.get(i);
                 FunctionParameter parameter = parameters.get(i);
-                try {
-                    Object value = toValue(operand);
-                    arguments.add(value);
-                } catch (NonLiteralException e) {
-                    throw new IllegalArgumentException("All arguments of call to function "
-                            + name + " should be literal. Actual argument #"
-                            + parameter.getOrdinal() + " (" + parameter.getName()
-                            + ") is not literal: " + operand
-                    );
-                }
+                Object value = extractValue(name, parameter, operand);
+                arguments.add(value);
             }
             return arguments;
         }
 
-        private static Object toValue(SqlNode node) {
-            if (node.getKind() == SqlKind.CAST) {
-                return toValue(((SqlCall) node).operand(0));
+        private static Object extractValue(
+                SqlIdentifier name,
+                FunctionParameter parameter,
+                SqlNode node
+        ) {
+            if (node.getKind() == SqlKind.DEFAULT) {
+                return null;
             }
             if (SqlUtil.isNullLiteral(node, true)) {
                 return null;
             }
             if (SqlUtil.isLiteral(node)) {
                 Object value = ((SqlLiteral) node).getValue();
-                return value instanceof NlsString
-                        ? ((NlsString) value).getValue()
-                        : QueryDataType.VARCHAR.convert(value);
+                if (value instanceof NlsString) {
+                    return ((NlsString) value).getValue();
+                }
             }
-            if (node.getKind() == SqlKind.DEFAULT) {
-                return null;
-            }
-            throw new NonLiteralException();
+
+            throw QueryException.error("All arguments of call to function "
+                    + name + " should be VARCHAR literals. Actual argument #"
+                    + parameter.getOrdinal() + " (" + parameter.getName()
+                    + ") is not VARCHAR literal: " + node
+            );
         }
 
         private static class NonLiteralException extends RuntimeException {

@@ -16,10 +16,10 @@
 
 package com.hazelcast.jet.sql.impl.schema;
 
-import com.hazelcast.sql.impl.calcite.SqlToQueryType;
 import com.hazelcast.sql.impl.calcite.schema.HazelcastTable;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeComparability;
+import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rel.type.RelDataTypeFamily;
 import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.rel.type.RelDataTypePrecedenceList;
@@ -32,35 +32,35 @@ import org.apache.calcite.sql.type.SqlTypeName;
 
 import java.nio.charset.Charset;
 import java.util.List;
-import java.util.Map;
 
-import static com.hazelcast.jet.impl.util.Util.toList;
+public abstract class JetTableFunction implements TableFunction {
 
-public interface JetTableFunction extends TableFunction {
+    @Override
+    public final RelDataType getRowType(RelDataTypeFactory typeFactory, List<Object> arguments) {
+        HazelcastTable table = toTable(arguments);
+        RelDataType rowType = table.getRowType(typeFactory);
 
-    default HazelcastTable toTable(FunctionRelDataType rowType) {
-        List<MappingField> fields = toList(
-                rowType.getFieldList(),
-                field -> new MappingField(field.getName(), SqlToQueryType.map(field.getType().getSqlTypeName()))
-        );
-
-        return table(rowType.options(), fields);
+        return new JetFunctionRelDataType(table, rowType);
     }
 
-    HazelcastTable table(Map<String, String> options, List<MappingField> fields);
+    protected abstract HazelcastTable toTable(List<Object> arguments);
 
-    class FunctionRelDataType implements RelDataType {
+    public HazelcastTable toTable(RelDataType rowType) {
+        return ((JetFunctionRelDataType) rowType).table();
+    }
 
+    private static final class JetFunctionRelDataType implements RelDataType {
+
+        private final HazelcastTable table;
         private final RelDataType delegate;
-        private final Map<String, String> options;
 
-        public FunctionRelDataType(RelDataType delegate, Map<String, String> options) {
+        private JetFunctionRelDataType(HazelcastTable table, RelDataType delegate) {
             this.delegate = delegate;
-            this.options = options;
+            this.table = table;
         }
 
-        protected Map<String, String> options() {
-            return options;
+        private HazelcastTable table() {
+            return table;
         }
 
         @Override

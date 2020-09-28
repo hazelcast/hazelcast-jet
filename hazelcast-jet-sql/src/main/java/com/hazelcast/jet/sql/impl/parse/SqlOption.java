@@ -52,6 +52,9 @@ public class SqlOption extends SqlCall {
         return key.toString();
     }
 
+    // supporting just string parameters for now
+    // allowing other types requires at least proper validation
+    // if/when implemented, consider using it in JetTableFunctionParameter as well
     public String value() {
         return ((NlsString) SqlLiteral.value(value)).getValue();
     }

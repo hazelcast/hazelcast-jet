@@ -18,7 +18,6 @@ package com.hazelcast.jet.sql.impl.opt.logical;
 
 import com.hazelcast.jet.sql.impl.opt.OptUtils;
 import com.hazelcast.jet.sql.impl.schema.JetTableFunction;
-import com.hazelcast.jet.sql.impl.schema.JetTableFunction.FunctionRelDataType;
 import com.hazelcast.sql.impl.calcite.schema.HazelcastTable;
 import org.apache.calcite.plan.Convention;
 import org.apache.calcite.plan.RelOptRule;
@@ -48,7 +47,7 @@ final class FullFunctionScanLogicalRule extends ConverterRule {
 
     private static HazelcastTable extractTable(LogicalTableFunctionScan scan) {
         JetTableFunction function = extractFunction(scan);
-        return function.toTable(((FunctionRelDataType) scan.getRowType()));
+        return function.toTable(scan.getRowType());
     }
 
     private static JetTableFunction extractFunction(LogicalTableFunctionScan scan) {
