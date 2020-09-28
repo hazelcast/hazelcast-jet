@@ -221,7 +221,9 @@ public final class Processors {
      * Returns a supplier of processors for a vertex that performs the provided
      * aggregate operation on all the items it receives. After exhausting all
      * its input, it emits a single item of type {@code R} &mdash; the result of
-     * the aggregate operation.
+     * the aggregate operation's {@link AggregateOperation#finishFn() finish}
+     * primitive. The primitive may return {@code null}, in that case the vertex
+     * will not produce any output.
      * <p>
      * Since the input to this vertex must be bounded, its primary use case are
      * batch jobs.
@@ -272,7 +274,8 @@ public final class Processors {
      * #accumulateP} vertex and combines their state into a single
      * accumulator. After exhausting all its input, it emits a single result
      * of type {@code R} &mdash; the result of applying the {@code finish}
-     * primitive to the combined accumulator.
+     * primitive to the combined accumulator. The primitive may return {@code
+     * null}, in that case the vertex will not produce any output.
      * <p>
      * Since the input to this vertex must be bounded, its primary use case is
      * batch jobs.

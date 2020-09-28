@@ -1794,8 +1794,8 @@ public final class AggregateOperations {
      * calls.
      * <p>
      * Using {@code IMap} aggregations can be desirable when you want to make
-     * use of {@linkplain IMap#addIndex indices} when doing aggregations
-     * and want to use the Jet aggregations API instead of writing a custom
+     * use of {@linkplain IMap#addIndex indices} when doing aggregations and
+     * want to use the Jet aggregations API instead of writing a custom
      * {@link Aggregator}.
      * <p>
      * For example, the following aggregation can be used to group people by
