@@ -28,12 +28,12 @@ interesting part.
 
 Before we dig deeper, let's list some typical error one might encounter:
 
-* *corrupt data*: e.g., user-provided code is parsing JSON lines, but
-  some of them are incorrectly formatted
-* *bugs in user code*: e.g., a user-provided filtering lambda throws a
-  `NullPointerException` for certain input
-* *connection to external services lost*: Jet sink writing into an
-  `IMap` loses connection to the remote Hazelcast cluster hosting it
+* *input data errors*: unexpected input data, e.g. unexpected null
+  value, out-of-range date (`0000-00-00`) or malformed JSON document
+* *coding errors*: e.g., a user-provided filtering lambda throws a
+  `NullPointerException` for certain input or stateful mapping code
+  contains memory leaks
+* *I/O errors*: network errors or remote service failures
 
 ## Specific Solutions
 
@@ -44,13 +44,14 @@ address them.
 
 Jet comes out of the box with some [in-memory distributed data
 structures](data-structures) which can be used as a data source or a
-sink. This are hosted by Hazelcast clusters, which can be the same as
+sink. These are hosted by Hazelcast clusters, which can be the same as
 the one Jet runs on or separate, remote ones.
 
-In this case, all error handling (for example, communications failures
-with the remote cluster, but not just) is handled transparently to Jet,
-by the Hazelcast cluster itself. For further details and configuration
-options, read the [relevant section in the Hazelcast
+In this case, a large portion of error handling (for example,
+communications failures with the remote cluster, but not just those) is
+handled transparently to Jet, by the Hazelcast cluster itself. For
+further details and configuration options, read the [relevant section in
+the Hazelcast
 manual](https://docs.hazelcast.org/docs/latest/manual/html-single/#handling-failures).
 
 ### Individual Sources & Sinks
@@ -92,7 +93,7 @@ jobs can be re-run from the beginning.
 
 Jobs with mutable state, those with a [processing
 guarantee](../architecture/fault-tolerance#processing-guarantee-is-a-shared-concern)
-set, achieve their fault tolerance by periodically saving [recovery
+set, achieve fault tolerance by periodically saving [recovery
 snapshots](../architecture/fault-tolerance#distributed-snapshot). When
 such a job fails, not only does its execution stop, but also its
 snapshots get deleted. This makes it impossible to resume it without
@@ -100,7 +101,9 @@ loss.
 
 To cope with this situation, you can configure a job to be suspended in
 the case of a failure, instead of failing completely. For details see
-[`JobConfig.setSuspendOnFailure`](/javadoc/{jet-version}/com/hazelcast/jet/config/JobConfig.html#setSuspendOnFailure(boolean)).
+[`JobConfig.setSuspendOnFailure`](/javadoc/{jet-version}/com/hazelcast/jet/config/JobConfig.html#setSuspendOnFailure(boolean))
+and
+[`Job.getSuspensionCause`](/javadoc/{jet-version}/com/hazelcast/jet/Job.html#getSuspensionCause()).
 
 Note: this option was introduced in Hazelcast Jet 4.3. In order to
 preserve the behavior from older versions, it is not the default, so it
@@ -126,11 +129,6 @@ upgrades](../enterprise/job-update). In that case you can:
 One caveat of the suspend-on-failure feature is that the latest snapshot
 is not a "failure snapshot." Jet can't take a full snapshot right at the
 moment of the failure, because its processors can produce accurate
-snapshots only when in a healthy state. Instead Jet simply keeps the
+snapshots only when in a healthy state. Instead, Jet simply keeps the
 latest periodic snapshot it created. Even so, the recovery procedure
 preserves the at-least-once guarantee.
-
-You can find more information on the topic in the feature's design
-document, for example, how clients that have submitted the job can
-[discover if it got suspended this
-way](../design-docs/012-improved-job-resilience#notifying-the-client).
