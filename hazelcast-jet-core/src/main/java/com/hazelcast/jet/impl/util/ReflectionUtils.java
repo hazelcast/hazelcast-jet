@@ -26,6 +26,7 @@ import io.github.classgraph.ClassInfo;
 import io.github.classgraph.ScanResult;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -111,7 +112,7 @@ public final class ReflectionUtils {
 
         Class<?> classToInspect = clazz;
         while (classToInspect != Object.class) {
-            for (Field field : classToInspect.getDeclaredFields()) {
+            for (Field field : classToInspect.getFields()) {
                 if (skipField(field)) {
                     continue;
                 }
@@ -135,7 +136,7 @@ public final class ReflectionUtils {
         }
 
         Class<?> propertyClass = method.getReturnType();
-        if (extractSetter(clazz, propertyName, propertyClass) == null) {
+        if (findSetter(clazz, propertyName, propertyClass) == null) {
             return null;
         }
 
@@ -197,12 +198,13 @@ public final class ReflectionUtils {
         return true;
     }
 
-    public static Method extractSetter(Class<?> clazz, String propertyName, Class<?> type) {
-        String setName = METHOD_PREFIX_SET + toUpperCase(propertyName.charAt(0)) + propertyName.substring(1);
+    @Nullable
+    public static Method findSetter(@Nonnull Class<?> clazz, @Nonnull String propertyName, @Nonnull Class<?> type) {
+        String setterName = METHOD_PREFIX_SET + toUpperCase(propertyName.charAt(0)) + propertyName.substring(1);
 
         Method method;
         try {
-            method = clazz.getMethod(setName, type);
+            method = clazz.getMethod(setterName, type);
         } catch (NoSuchMethodException e) {
             return null;
         }
@@ -232,10 +234,10 @@ public final class ReflectionUtils {
         return true;
     }
 
-    public static Field extractField(Class<?> clazz, String fieldName) {
+    public static Field findField(Class<?> clazz, String fieldName) {
         Field field;
         try {
-            field = clazz.getDeclaredField(fieldName);
+            field = clazz.getField(fieldName);
         } catch (NoSuchFieldException e) {
             return null;
         }
@@ -249,7 +251,7 @@ public final class ReflectionUtils {
 
     @SuppressWarnings("RedundantIfStatement")
     private static boolean skipField(Field field) {
-        if (!Modifier.isPublic(field.getModifiers())) {
+        if (!Modifier.isPublic(field.getModifiers()) || Modifier.isStatic(field.getModifiers())) {
             return true;
         }
 

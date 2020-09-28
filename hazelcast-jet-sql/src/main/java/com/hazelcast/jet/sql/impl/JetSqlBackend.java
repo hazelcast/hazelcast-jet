@@ -231,15 +231,17 @@ class JetSqlBackend implements SqlBackend {
 
         QueryId queryId;
         DAG dag;
+        SqlRowMetadata rowMetadata;
         if (isInsert) {
             queryId = null;
             dag = createDag(physicalRel);
+            rowMetadata = null;
         } else {
             queryId = QueryId.create(nodeEngine.getLocalMember().getUuid());
             dag = createDag(new JetRootRel(physicalRel, nodeEngine.getThisAddress(), queryId));
+            rowMetadata = createRowMetadata(fieldNames, physicalRel.schema().getTypes());
         }
 
-        SqlRowMetadata rowMetadata = createRowMetadata(fieldNames, physicalRel.schema().getTypes());
 
         return new ExecutionPlan(dag, isStreaming, isInsert, queryId, rowMetadata, planExecutor);
     }

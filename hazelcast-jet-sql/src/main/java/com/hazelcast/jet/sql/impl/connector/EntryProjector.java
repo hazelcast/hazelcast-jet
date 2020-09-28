@@ -28,8 +28,7 @@ import static com.hazelcast.jet.sql.impl.type.converter.ToConverters.getToConver
 
 class EntryProjector {
 
-    private static final UpsertInjector DISCARDING_INJECTOR = value -> {
-    };
+    private static final UpsertInjector DISCARDING_INJECTOR = value -> { };
 
     private final QueryDataType[] types;
 

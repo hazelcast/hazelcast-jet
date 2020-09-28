@@ -432,16 +432,7 @@ SqlInsert SqlExtendedInsert() :
     }
     table = CompoundIdentifier()
     [
-        LOOKAHEAD(2)
-        { Pair<SqlNodeList, SqlNodeList> p; }
-        p = ParenthesizedCompoundIdentifierList() {
-            if (p.right.size() > 0) {
-                table = extend(table, p.right);
-            }
-            if (p.left.size() > 0) {
-                columns = p.left;
-            }
-        }
+        columns = ParenthesizedSimpleIdentifierList()
     ]
     source = QueryOrExpr(ExprContext.ACCEPT_QUERY) {
         return new SqlExtendedInsert(

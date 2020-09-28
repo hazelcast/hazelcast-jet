@@ -27,9 +27,9 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
-import static com.hazelcast.jet.impl.util.ReflectionUtils.extractField;
+import static com.hazelcast.jet.impl.util.ReflectionUtils.findField;
 import static com.hazelcast.jet.impl.util.ReflectionUtils.extractProperties;
-import static com.hazelcast.jet.impl.util.ReflectionUtils.extractSetter;
+import static com.hazelcast.jet.impl.util.ReflectionUtils.findSetter;
 import static java.util.stream.Collectors.toList;
 import static org.hamcrest.CoreMatchers.hasItem;
 import static org.hamcrest.CoreMatchers.notNullValue;
@@ -101,62 +101,62 @@ public class ReflectionUtilsTest {
 
     @Test
     public void when_extractPublicSetter_then_returnsIt() {
-        assertNotNull(extractSetter(JavaProperties.class, "publicField", int.class));
+        assertNotNull(findSetter(JavaProperties.class, "publicField", int.class));
     }
 
     @Test
     public void when_extractPublicSetterWithWrongType_then_returnsNull() {
-        assertNull(extractSetter(JavaProperties.class, "publicField", long.class));
+        assertNull(findSetter(JavaProperties.class, "publicField", long.class));
     }
 
     @Test
     public void when_extractPublicSetterWithWrongReturnType_then_returnsNull() {
-        assertNull(extractSetter(JavaProperties.class, "intWithParameter", int.class));
+        assertNull(findSetter(JavaProperties.class, "intWithParameter", int.class));
     }
 
     @Test
     public void when_extractPublicStaticSetter_then_returnsNull() {
-        assertNull(extractSetter(JavaProperties.class, "publicStaticField", int.class));
+        assertNull(findSetter(JavaProperties.class, "publicStaticField", int.class));
     }
 
     @Test
     public void when_extractDefaultSetter_then_returnsNull() {
-        assertNull(extractSetter(JavaProperties.class, "defaultField", int.class));
+        assertNull(findSetter(JavaProperties.class, "defaultField", int.class));
     }
 
     @Test
     public void when_extractProtectedSetter_then_returnsNull() {
-        assertNull(extractSetter(JavaProperties.class, "protectedField", int.class));
+        assertNull(findSetter(JavaProperties.class, "protectedField", int.class));
     }
 
     @Test
     public void when_extractPrivateSetter_then_returnsNull() {
-        assertNull(extractSetter(JavaProperties.class, "privateField", int.class));
+        assertNull(findSetter(JavaProperties.class, "privateField", int.class));
     }
 
     @Test
     public void when_extractPublicField_then_returnsIt() {
-        assertNotNull(extractField(JavaFields.class, "publicField"));
+        assertNotNull(findField(JavaFields.class, "publicField"));
     }
 
     @Test
     public void when_extractDefaultField_then_returnsNull() {
-        assertNull(extractField(JavaFields.class, "defaultField"));
+        assertNull(findField(JavaFields.class, "defaultField"));
     }
 
     @Test
     public void when_extractProtectedField_then_returnsNull() {
-        assertNull(extractField(JavaFields.class, "protectedField"));
+        assertNull(findField(JavaFields.class, "protectedField"));
     }
 
     @Test
     public void when_extractPrivateField_then_returnsNull() {
-        assertNull(extractField(JavaFields.class, "privateField"));
+        assertNull(findField(JavaFields.class, "privateField"));
     }
 
     @Test
     public void when_extractNonExistingField_then_returnsNull() {
-        assertNull(extractField(JavaFields.class, "nonExistingField"));
+        assertNull(findField(JavaFields.class, "nonExistingField"));
     }
 
     @Test
@@ -324,6 +324,7 @@ public class ReflectionUtilsTest {
         protected int protectedField;
         int defaultField;
         private int privateField;
+        public static int staticField;
     }
 
     private static class JavaFieldClashParent {

@@ -19,6 +19,7 @@ package com.hazelcast.jet.sql.impl.inject;
 import com.hazelcast.jet.impl.util.ReflectionUtils;
 import com.hazelcast.sql.impl.QueryException;
 
+import javax.annotation.Nonnull;
 import javax.annotation.concurrent.NotThreadSafe;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
@@ -45,51 +46,53 @@ class PojoUpsertTarget implements UpsertTarget {
 
     @Override
     public UpsertInjector createInjector(String path) {
-        Method method = ReflectionUtils.extractSetter(clazz, path, typesByPaths.get(path));
+        Method method = ReflectionUtils.findSetter(clazz, path, typesByPaths.get(path));
         if (method != null) {
-            return createMethodInjector(method, path);
+            return createMethodInjector(method);
         } else {
-            Field field = ReflectionUtils.extractField(clazz, path);
-            return createFieldInjector(field, path);
+            Field field = ReflectionUtils.findField(clazz, path);
+            if (field != null) {
+                return createFieldInjector(field);
+            } else {
+                return createFailingInjector(path);
+            }
         }
     }
 
-    private UpsertInjector createMethodInjector(Method method, String path) {
+    private UpsertInjector createMethodInjector(@Nonnull Method method) {
         return value -> {
-            if (value != null) {
-                if (method == null) {
-                    throw QueryException.error(
-                            "Unable to inject non null (" + value + ") '" + path + "' into " + clazz.getName()
-                    );
-                }
-
-                try {
-                    method.invoke(pojo, value);
-                } catch (IllegalAccessException | InvocationTargetException e) {
-                    throw QueryException.error(
-                            "Cannot inject field \"" + path + "\" into " + clazz.getName() + " : " + e.getMessage(), e
-                    );
-                }
+            if (value == null && method.getParameterTypes()[0].isPrimitive()) {
+                throw QueryException.error("Cannot pass NULL to a method with a primitive argument");
+            }
+            try {
+                method.invoke(pojo, value);
+            } catch (IllegalAccessException | InvocationTargetException e) {
+                throw QueryException.error("Invocation of " + method.getClass().getName() + "." + method.getName()
+                        + "() failed: " + e, e);
             }
         };
     }
 
-    private UpsertInjector createFieldInjector(Field field, String path) {
+    private UpsertInjector createFieldInjector(@Nonnull Field field) {
+        return value -> {
+            if (field.getType().isPrimitive() && value == null) {
+                throw QueryException.error("Cannot set NULL to a primitive field");
+            }
+            try {
+                field.set(pojo, value);
+            } catch (IllegalAccessException e) {
+                throw QueryException.error("Failed to set field " + field.getClass().getName() + "." + field.getName()
+                        + ": " + e, e);
+            }
+        };
+    }
+
+    @Nonnull
+    private UpsertInjector createFailingInjector(String path) {
         return value -> {
             if (value != null) {
-                if (field == null) {
-                    throw QueryException.error(
-                            "Unable to inject non null (" + value + ") '" + path + "' into " + clazz.getName()
-                    );
-                }
-
-                try {
-                    field.set(pojo, value);
-                } catch (IllegalAccessException e) {
-                    throw QueryException.error(
-                            "Cannot inject field \"" + path + "\" into " + clazz.getName() + " : " + e.getMessage(), e
-                    );
-                }
+                throw QueryException.error("Cannot set field \"" + path + "\" of class " + clazz.getName()
+                        + ": no set-method or public field available");
             }
         };
     }

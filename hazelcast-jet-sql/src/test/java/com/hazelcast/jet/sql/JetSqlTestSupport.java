@@ -21,6 +21,7 @@ import com.hazelcast.jet.sql.impl.connector.map.IMapSqlConnector;
 import com.hazelcast.sql.SqlResult;
 import com.hazelcast.sql.SqlRow;
 import com.hazelcast.sql.SqlService;
+import com.hazelcast.test.HazelcastTestSupport;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -156,6 +157,12 @@ public abstract class JetSqlTestSupport extends SimpleTestInClusterSupport {
                 + '"' + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "',\n"
                 + '"' + OPTION_VALUE_CLASS + "\" '" + valueClass.getName() + "'\n"
                 + ")";
+    }
+
+    public static String randomMapName() {
+        // Prefix the name with some letters and remove dashes so that it doesn't start with
+        // a number and is a valid SQL identifier.
+        return "map" + HazelcastTestSupport.randomMapName().replace('-', '_');
     }
 
     /**
