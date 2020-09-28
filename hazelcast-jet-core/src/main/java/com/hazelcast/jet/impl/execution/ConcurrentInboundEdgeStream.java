@@ -49,9 +49,9 @@ import static com.hazelcast.jet.impl.util.Util.toLocalTime;
  * conveyor has as many 1-to-1 concurrent queues as there are upstream
  * tasklets contributing to it.
  */
-public abstract class ConcurrentInboundEdgeStream {
+public final class ConcurrentInboundEdgeStream {
 
-    // Prevent subclassing
+    // Prevents instantiation
     private ConcurrentInboundEdgeStream() {
     }
 
