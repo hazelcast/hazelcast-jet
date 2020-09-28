@@ -23,7 +23,7 @@ import java.util.Objects;
 
 class FileTableField extends TableField {
 
-    private final String path; // TODO: use something like QueryPath ???
+    private final String path;
 
     FileTableField(
             String name,

@@ -34,6 +34,7 @@ import org.apache.calcite.sql.SqlLiteral;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.fun.SqlArrayValueConstructor;
 import org.apache.calcite.sql.fun.SqlMapValueConstructor;
+import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.validate.SqlUserDefinedTableFunction;
 import org.junit.Before;
@@ -91,6 +92,7 @@ public class JetSqlOperatorTableTest {
     @SuppressWarnings("unused")
     private Object[] validNodes() {
         return new Object[]{
+                new Object[]{new SqlBasicCall(SqlStdOperatorTable.DEFAULT, new SqlNode[0], ZERO), null},
                 new Object[]{SqlLiteral.createNull(ZERO), null},
                 new Object[]{SqlLiteral.createCharString("string", ZERO), "string"},
         };

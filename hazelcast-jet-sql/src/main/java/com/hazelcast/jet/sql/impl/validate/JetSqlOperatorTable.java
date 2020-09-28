@@ -169,8 +169,5 @@ public final class JetSqlOperatorTable extends ReflectiveSqlOperatorTable {
                     + ") is not VARCHAR literal: " + node
             );
         }
-
-        private static class NonLiteralException extends RuntimeException {
-        }
     }
 }
