@@ -1047,7 +1047,7 @@ public final class AggregateOperations {
      * @see #groupingBy(FunctionEx, AggregateOperation1)
      * @see #toMap(FunctionEx, FunctionEx)
      */
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({ "rawtypes", "unchecked" })
     public static <T, K, R, A, M extends Map<K, R>> AggregateOperation1<T, Map<K, A>, M> groupingBy(
             FunctionEx<? super T, ? extends K> keyFn,
             SupplierEx<M> createMapFn,
@@ -1149,13 +1149,14 @@ public final class AggregateOperations {
         checkSerializable(deductAccValueFn, "deductAccValueFn");
 
         // workaround for spotbugs issue: https://github.com/spotbugs/spotbugs/issues/552
+        @SuppressWarnings("UnnecessaryLocalVariable")
         BinaryOperatorEx<A> deductFn = deductAccValueFn;
         return AggregateOperation
                 .withCreate(() -> new MutableReference<>(emptyAccValue))
                 .andAccumulate((MutableReference<A> a, T t) ->
                         a.set(combineAccValuesFn.apply(a.get(), toAccValueFn.apply(t))))
                 .andCombine((a, b) -> a.set(combineAccValuesFn.apply(a.get(), b.get())))
-                .andDeduct(deductAccValueFn != null
+                .andDeduct(deductFn != null
                         ? (a, b) -> a.set(deductFn.apply(a.get(), b.get()))
                         : null)
                 .andExportFinish(MutableReference::get);
@@ -1793,7 +1794,7 @@ public final class AggregateOperations {
      * calls.
      * <p>
      * Using {@code IMap} aggregations can be desirable when you want to make
-     * use of {@linkplain IMap#addIndex(String, boolean) indices} when doing aggregations
+     * use of {@linkplain IMap#addIndex indices} when doing aggregations
      * and want to use the Jet aggregations API instead of writing a custom
      * {@link Aggregator}.
      * <p>
