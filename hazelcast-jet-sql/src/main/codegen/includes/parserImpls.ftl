@@ -432,6 +432,7 @@ SqlInsert SqlExtendedInsert() :
     }
     table = CompoundIdentifier()
     [
+        LOOKAHEAD(2)
         columns = ParenthesizedSimpleIdentifierList()
     ]
     source = QueryOrExpr(ExprContext.ACCEPT_QUERY) {

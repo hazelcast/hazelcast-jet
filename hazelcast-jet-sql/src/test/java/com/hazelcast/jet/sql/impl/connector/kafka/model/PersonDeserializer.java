@@ -35,8 +35,10 @@ public class PersonDeserializer implements Deserializer<Person> {
     public Person deserialize(String topic, byte[] bytes) {
         try (DataInputStream input = new DataInputStream(new ByteArrayInputStream(bytes))) {
             Person person = new Person();
-            person.setId(input.readInt());
-            if (input.available() > 0) {
+            if (input.readBoolean()) {
+                person.setId(input.readInt());
+            }
+            if (input.readBoolean()) {
                 person.setName(input.readUTF());
             }
             return person;

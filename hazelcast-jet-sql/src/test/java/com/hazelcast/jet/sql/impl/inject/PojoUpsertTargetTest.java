@@ -31,17 +31,47 @@ public class PojoUpsertTargetTest {
     public void test_set() {
         UpsertTarget target = new PojoUpsertTarget(
                 Pojo.class.getName(),
-                ImmutableMap.of("intField", int.class.getName(), "stringField", String.class.getName())
+                ImmutableMap.of(
+                        "intField", int.class.getName(),
+                        "longField", long.class.getName(),
+                        "stringField", String.class.getName()
+                )
         );
         UpsertInjector intFieldInjector = target.createInjector("intField");
+        UpsertInjector longFieldInjector = target.createInjector("longField");
         UpsertInjector stringFieldInjector = target.createInjector("stringField");
 
         target.init();
         intFieldInjector.set(1);
-        stringFieldInjector.set("2");
+        longFieldInjector.set(2L);
+        stringFieldInjector.set("3");
         Object pojo = target.conclude();
 
-        assertThat(pojo).isEqualTo(new Pojo(1, "2"));
+        assertThat(pojo).isEqualTo(new Pojo(1, 2L, "3"));
+    }
+
+    @Test
+    public void when_injectNullValueWithPrimitiveField_then_throws() {
+        UpsertTarget target = new PojoUpsertTarget(
+                Pojo.class.getName(),
+                ImmutableMap.of("intField", int.class.getName())
+        );
+        UpsertInjector injector = target.createInjector("intField");
+
+        target.init();
+        assertThatThrownBy(() -> injector.set(null)).isInstanceOf(QueryException.class);
+    }
+
+    @Test
+    public void when_injectNullValueWithPrimitiveSetter_then_throws() {
+        UpsertTarget target = new PojoUpsertTarget(
+                Pojo.class.getName(),
+                ImmutableMap.of("longField", long.class.getName())
+        );
+        UpsertInjector injector = target.createInjector("longField");
+
+        target.init();
+        assertThatThrownBy(() -> injector.set(null)).isInstanceOf(QueryException.class);
     }
 
     @Test
@@ -74,23 +104,33 @@ public class PojoUpsertTargetTest {
     @SuppressWarnings("unused")
     private static final class Pojo {
 
-        public String stringField;
-        private int intField;
+        public int intField;
+        private long longField;
+        private String stringField;
 
         Pojo() {
         }
 
-        private Pojo(int intField, String stringField) {
+        private Pojo(int intField, long longField, String stringField) {
             this.intField = intField;
+            this.longField = longField;
             this.stringField = stringField;
         }
 
-        public int getIntField() {
-            return intField;
+        public long getLongField() {
+            return longField;
         }
 
-        public void setIntField(int intField) {
-            this.intField = intField;
+        public void setLongField(long longField) {
+            this.longField = longField;
+        }
+
+        public String getStringField() {
+            return stringField;
+        }
+
+        public void setStringField(String stringField) {
+            this.stringField = stringField;
         }
 
         @Override
@@ -103,12 +143,13 @@ public class PojoUpsertTargetTest {
             }
             Pojo pojo = (Pojo) o;
             return intField == pojo.intField &&
+                    longField == pojo.longField &&
                     Objects.equals(stringField, pojo.stringField);
         }
 
         @Override
         public int hashCode() {
-            return Objects.hash(intField, stringField);
+            return Objects.hash(intField, longField, stringField);
         }
     }
 }

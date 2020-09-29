@@ -75,7 +75,7 @@ class PojoUpsertTarget implements UpsertTarget {
 
     private UpsertInjector createFieldInjector(@Nonnull Field field) {
         return value -> {
-            if (field.getType().isPrimitive() && value == null) {
+            if (value == null && field.getType().isPrimitive()) {
                 throw QueryException.error("Cannot set NULL to a primitive field");
             }
             try {

@@ -22,7 +22,7 @@ import java.util.Objects;
 @SuppressWarnings("unused")
 public final class PersonId implements Serializable {
 
-    private int id;
+    private Integer id;
 
     public PersonId() {
     }
@@ -31,11 +31,11 @@ public final class PersonId implements Serializable {
         this.id = id;
     }
 
-    public int getId() {
+    public Integer getId() {
         return id;
     }
 
-    public void setId(int id) {
+    public void setId(Integer id) {
         this.id = id;
     }
 
@@ -55,7 +55,7 @@ public final class PersonId implements Serializable {
             return false;
         }
         PersonId personId = (PersonId) o;
-        return id == personId.id;
+        return Objects.equals(id, personId.id);
     }
 
     @Override

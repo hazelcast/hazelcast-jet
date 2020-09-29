@@ -27,8 +27,8 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
-import static com.hazelcast.jet.impl.util.ReflectionUtils.findField;
 import static com.hazelcast.jet.impl.util.ReflectionUtils.extractProperties;
+import static com.hazelcast.jet.impl.util.ReflectionUtils.findField;
 import static com.hazelcast.jet.impl.util.ReflectionUtils.findSetter;
 import static java.util.stream.Collectors.toList;
 import static org.hamcrest.CoreMatchers.hasItem;
@@ -63,6 +63,30 @@ public class ReflectionUtilsTest {
 
         // Then
         assertThat(instance, notNullValue());
+    }
+
+    @Test
+    public void readStaticFieldOrNull_whenClassDoesNotExist_thenReturnNull() {
+        Object field = ReflectionUtils.readStaticFieldOrNull("foo.bar.nonExistingClass", "field");
+        assertNull(field);
+    }
+
+    @Test
+    public void readStaticFieldOrNull_whenFieldDoesNotExist_thenReturnNull() {
+        Object field = ReflectionUtils.readStaticFieldOrNull(MyClass.class.getName(), "nonExistingField");
+        assertNull(field);
+    }
+
+    @Test
+    public void readStaticFieldOrNull_readFromPrivateField() {
+        String field = ReflectionUtils.readStaticFieldOrNull(MyClass.class.getName(), "staticPrivateField");
+        assertEquals("staticPrivateFieldContent", field);
+    }
+
+    @Test
+    public void readStaticFieldOrNull_readFromPublicField() {
+        String field = ReflectionUtils.readStaticFieldOrNull(MyClass.class.getName(), "staticPublicField");
+        assertEquals("staticPublicFieldContent", field);
     }
 
     @Test
@@ -155,32 +179,13 @@ public class ReflectionUtilsTest {
     }
 
     @Test
+    public void when_extractPublicStaticField_then_returnsNull() {
+        assertNull(findField(JavaFields.class, "publicStaticField"));
+    }
+
+    @Test
     public void when_extractNonExistingField_then_returnsNull() {
         assertNull(findField(JavaFields.class, "nonExistingField"));
-    }
-
-    @Test
-    public void readStaticFieldOrNull_whenClassDoesNotExist_thenReturnNull() {
-        Object field = ReflectionUtils.readStaticFieldOrNull("foo.bar.nonExistingClass", "field");
-        assertNull(field);
-    }
-
-    @Test
-    public void readStaticFieldOrNull_whenFieldDoesNotExist_thenReturnNull() {
-        Object field = ReflectionUtils.readStaticFieldOrNull(MyClass.class.getName(), "nonExistingField");
-        assertNull(field);
-    }
-
-    @Test
-    public void readStaticFieldOrNull_readFromPrivateField() {
-        String field = ReflectionUtils.readStaticFieldOrNull(MyClass.class.getName(), "staticPrivateField");
-        assertEquals("staticPrivateFieldContent", field);
-    }
-
-    @Test
-    public void readStaticFieldOrNull_readFromPublicField() {
-        String field = ReflectionUtils.readStaticFieldOrNull(MyClass.class.getName(), "staticPublicField");
-        assertEquals("staticPublicFieldContent", field);
     }
 
     @Test
@@ -320,11 +325,11 @@ public class ReflectionUtilsTest {
     @SuppressWarnings("unused")
     private static class JavaFields {
 
+        public static int publicStaticField;
         public int publicField;
         protected int protectedField;
         int defaultField;
         private int privateField;
-        public static int staticField;
     }
 
     private static class JavaFieldClashParent {

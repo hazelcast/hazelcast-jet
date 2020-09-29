@@ -22,15 +22,10 @@ import com.hazelcast.jet.sql.impl.connector.map.model.InsuredPerson;
 import com.hazelcast.jet.sql.impl.connector.map.model.Person;
 import com.hazelcast.jet.sql.impl.connector.map.model.PersonId;
 import com.hazelcast.jet.sql.impl.connector.test.AllTypesSqlConnector;
-import com.hazelcast.nio.ObjectDataInput;
-import com.hazelcast.nio.ObjectDataOutput;
-import com.hazelcast.nio.serialization.DataSerializable;
-import com.hazelcast.sql.HazelcastSqlException;
 import com.hazelcast.sql.SqlService;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import java.io.IOException;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -55,7 +50,6 @@ import static java.time.ZoneId.systemDefault;
 import static java.time.ZoneOffset.UTC;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public class SqlPojoTest extends JetSqlTestSupport {
 
@@ -70,14 +64,13 @@ public class SqlPojoTest extends JetSqlTestSupport {
 
     @Test
     public void test_insertIntoDiscoveredMap() {
-
         instance().getMap(mapName).put(new PersonId(1), new Person(1, "Alice"));
 
         assertMapEventually(
                 mapName,
                 // requires explicit column list due to hidden fields
                 "SINK INTO partitioned." + mapName + " (id, name) VALUES (2, 'Bob')",
-                createMap(new PersonId(1), new Person(1, "Alice"), new PersonId(2), new Person(0, "Bob"))
+                createMap(new PersonId(1), new Person(1, "Alice"), new PersonId(2), new Person(null, "Bob"))
         );
         assertRowsEventuallyInAnyOrder(
                 "SELECT * FROM " + mapName,
@@ -91,11 +84,17 @@ public class SqlPojoTest extends JetSqlTestSupport {
     @Test
     public void test_nulls() {
         String name = randomMapName();
-        sqlService.execute(javaSerializableMapDdl(name, PersonId.class, String.class));
+        sqlService.execute(javaSerializableMapDdl(name, PersonId.class, Person.class));
 
-        assertThatThrownBy(() -> sqlService.execute("SINK INTO " + name + "(id) VALUES (null)"))
-                .isInstanceOf(HazelcastSqlException.class)
-                .hasMessageContaining("Cannot pass NULL to a method with a primitive argument");
+        assertMapEventually(
+                name,
+                "SINK INTO " + name + " VALUES (null, null)",
+                createMap(new PersonId(), new Person())
+        );
+        assertRowsEventuallyInAnyOrder(
+                "SELECT * FROM " + name,
+                singletonList(new Row(null, null))
+        );
     }
 
     @Test
@@ -106,7 +105,7 @@ public class SqlPojoTest extends JetSqlTestSupport {
         assertMapEventually(
                 name,
                 "SINK INTO " + name + " (id, name) VALUES (1, 'Alice')",
-                createMap(new PersonId(1), new Person(0, "Alice"))
+                createMap(new PersonId(1), new Person(null, "Alice"))
         );
 
         assertRowsEventuallyInAnyOrder(
@@ -196,7 +195,7 @@ public class SqlPojoTest extends JetSqlTestSupport {
                 "SINK INTO " + name + " (id, name, ssn) VALUES (2, 'Bob', null)",
                 createMap(
                         new PersonId(1), new InsuredPerson(1, "Alice", 123456789L),
-                        new PersonId(2), new Person(0, "Bob")
+                        new PersonId(2), new Person(null, "Bob")
                 )
         );
         assertRowsEventuallyInAnyOrder(
@@ -338,49 +337,20 @@ public class SqlPojoTest extends JetSqlTestSupport {
         // field. One could expect that the field will be left alone. On the other hand, we can say that all mapped fields
         // are always overwritten: if they're not present, we'll write null. We don't support DEFAULT values yet, but
         // it behaves as if the DEFAULT was null.
-        sqlService.execute(javaSerializableMapDdl(mapName, Integer.class, ClassInitialValue_JavaSerializable.class));
+        sqlService.execute(javaSerializableMapDdl(mapName, Integer.class, ClassInitialValue.class));
         sqlService.execute("SINK INTO " + mapName + "(__key) VALUES (1)");
         assertRowsEventuallyInAnyOrder("SELECT * FROM " + mapName, singletonList(new Row(1, null)));
     }
 
     @Test
     public void when_fieldWithInitialValueAssignedNull_then_isNull() {
-        sqlService.execute(javaSerializableMapDdl(mapName, Integer.class, ClassInitialValue_JavaSerializable.class));
+        sqlService.execute(javaSerializableMapDdl(mapName, Integer.class, ClassInitialValue.class));
         sqlService.execute("SINK INTO " + mapName + "(__key, field) VALUES (1, null)");
         assertRowsEventuallyInAnyOrder("SELECT * FROM " + mapName, singletonList(new Row(1, null)));
     }
 
-    public static class ClassInitialValue_JavaSerializable implements Serializable {
-        private Integer field = 42;
+    public static class ClassInitialValue implements Serializable {
 
-        public Integer getField() {
-            return field;
-        }
-
-        public void setField(Integer field) {
-            this.field = field;
-        }
-    }
-
-    public static class ClassInitialValue_DataSerializable implements DataSerializable {
-        private Integer field = 42;
-
-        public Integer getField() {
-            return field;
-        }
-
-        public void setField(Integer field) {
-            this.field = field;
-        }
-
-        @Override
-        public void writeData(ObjectDataOutput out) throws IOException {
-            out.writeInt(field);
-        }
-
-        @Override
-        public void readData(ObjectDataInput in) throws IOException {
-            field = in.readInt();
-        }
+        public Integer field = 42;
     }
 }

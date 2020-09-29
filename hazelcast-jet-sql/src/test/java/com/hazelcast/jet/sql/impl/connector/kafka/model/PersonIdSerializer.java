@@ -35,7 +35,12 @@ public class PersonIdSerializer implements Serializer<PersonId> {
     public byte[] serialize(String topic, PersonId personId) {
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         try (DataOutputStream output = new DataOutputStream(outputStream)) {
-            output.writeInt(personId.getId());
+            if (personId.getId() == null) {
+                output.writeBoolean(false);
+            } else {
+                output.writeBoolean(true);
+                output.writeInt(personId.getId());
+            }
         } catch (IOException e) {
             throw sneakyThrow(e);
         }

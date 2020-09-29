@@ -28,10 +28,7 @@ import com.hazelcast.jet.sql.impl.connector.kafka.model.PersonIdDeserializer;
 import com.hazelcast.jet.sql.impl.connector.kafka.model.PersonIdSerializer;
 import com.hazelcast.jet.sql.impl.connector.kafka.model.PersonSerializer;
 import com.hazelcast.jet.sql.impl.connector.test.AllTypesSqlConnector;
-import com.hazelcast.sql.HazelcastSqlException;
 import com.hazelcast.sql.SqlService;
-import org.apache.kafka.common.serialization.StringDeserializer;
-import org.apache.kafka.common.serialization.StringSerializer;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -53,7 +50,6 @@ import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_VALUE_CLA
 import static java.time.ZoneId.systemDefault;
 import static java.time.ZoneOffset.UTC;
 import static java.util.Collections.singletonList;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public class SqlPojoTest extends JetSqlTestSupport {
 
@@ -86,19 +82,25 @@ public class SqlPojoTest extends JetSqlTestSupport {
                 + '"' + OPTION_SERIALIZATION_KEY_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + '\''
                 + ", \"" + OPTION_KEY_CLASS + "\" '" + PersonId.class.getName() + '\''
                 + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + '\''
-                + ", \"" + OPTION_VALUE_CLASS + "\" '" + String.class.getName() + '\''
+                + ", \"" + OPTION_VALUE_CLASS + "\" '" + Person.class.getName() + '\''
                 + ", \"bootstrap.servers\" '" + kafkaTestSupport.getBrokerConnectionString() + '\''
                 + ", \"key.serializer\" '" + PersonIdSerializer.class.getCanonicalName() + '\''
                 + ", \"key.deserializer\" '" + PersonIdDeserializer.class.getCanonicalName() + '\''
-                + ", \"value.serializer\" '" + StringSerializer.class.getCanonicalName() + '\''
-                + ", \"value.deserializer\" '" + StringDeserializer.class.getCanonicalName() + '\''
+                + ", \"value.serializer\" '" + PersonSerializer.class.getCanonicalName() + '\''
+                + ", \"value.deserializer\" '" + PersonDeserializer.class.getCanonicalName() + '\''
                 + ", \"auto.offset.reset\" 'earliest'"
                 + ")"
         );
 
-        assertThatThrownBy(() -> sqlService.execute("SINK INTO " + name + "(id) VALUES (null)"))
-                .isInstanceOf(HazelcastSqlException.class)
-                .hasMessageContaining("Cannot pass NULL to a method with a primitive argument");
+        assertTopicEventually(
+                name,
+                "INSERT INTO " + name + " VALUES (null, null)",
+                createMap(new PersonId(), new Person())
+        );
+        assertRowsEventuallyInAnyOrder(
+                "SELECT * FROM " + name,
+                singletonList(new Row(null, null))
+        );
     }
 
     @Test
@@ -123,7 +125,7 @@ public class SqlPojoTest extends JetSqlTestSupport {
         assertTopicEventually(
                 name,
                 "INSERT INTO " + name + " VALUES (1, 'Alice')",
-                createMap(new PersonId(1), new Person(0, "Alice"))
+                createMap(new PersonId(1), new Person(null, "Alice"))
         );
         assertRowsEventuallyInAnyOrder(
                 "SELECT * FROM " + name,

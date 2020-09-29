@@ -34,7 +34,11 @@ public class PersonIdDeserializer implements Deserializer<PersonId> {
     @Override
     public PersonId deserialize(String topic, byte[] bytes) {
         try (DataInputStream input = new DataInputStream(new ByteArrayInputStream(bytes))) {
-            return new PersonId(input.readInt());
+            PersonId personId = new PersonId();
+            if (input.readBoolean()) {
+                personId.setId(input.readInt());
+            }
+            return personId;
         } catch (IOException e) {
             throw sneakyThrow(e);
         }

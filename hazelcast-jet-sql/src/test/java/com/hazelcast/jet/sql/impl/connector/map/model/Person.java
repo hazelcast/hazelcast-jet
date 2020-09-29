@@ -22,22 +22,22 @@ import java.util.Objects;
 @SuppressWarnings("unused")
 public class Person implements Serializable {
 
-    private int id;
+    private Integer id;
     private String name;
 
     public Person() {
     }
 
-    public Person(int id, String name) {
+    public Person(Integer id, String name) {
         this.id = id;
         this.name = name;
     }
 
-    public int getId() {
+    public Integer getId() {
         return id;
     }
 
-    public void setId(int id) {
+    public void setId(Integer id) {
         this.id = id;
     }
 
@@ -66,7 +66,7 @@ public class Person implements Serializable {
             return false;
         }
         Person person = (Person) o;
-        return id == person.id &&
+        return Objects.equals(id, person.id) &&
                 Objects.equals(name, person.name);
     }
 
