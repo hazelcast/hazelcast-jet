@@ -171,16 +171,20 @@ public final class AggregateOperations {
      * BatchStage<Person> youngestPerson =
      *         people.aggregate(minBy(ComparatorEx.comparing(Person::age)));
      * }</pre>
-     * any one to return and may choose a different one each time.
      * <strong>NOTE:</strong> if this aggregate operation doesn't observe any
      * items, its result will be {@code null}. Since the non-keyed {@link
      * BatchStage#aggregate} emits just the naked aggregation result, and since
      * a {@code null} cannot travel through a Jet pipeline, you will not get
      * any output in that case.
      * <p>
+     * If several items tie for the least one, this aggregate operation will
+     * choose any one to return and may choose a different one each time.
      * <p>
      * <em>Implementation note:</em> this aggregate operation does not
      * implement the {@link AggregateOperation1#deductFn() deduct} primitive.
+     * This has performance implications for <a
+     * href="https://jet-start.sh/docs/architecture/sliding-window">sliding
+     * window aggregation</a>.
      *
      * @param comparator comparator to compare the items
      * @param <T> type of the input item
@@ -209,10 +213,14 @@ public final class AggregateOperations {
      * a {@code null} cannot travel through a Jet pipeline, you will not get
      * any output in that case.
      * <p>
+     * If several items tie for the greatest one, this aggregate operation will
      * choose any one to return and may choose a different one each time.
      * <p>
      * <em>Implementation note:</em> this aggregate operation does not
      * implement the {@link AggregateOperation1#deductFn() deduct} primitive.
+     * This has performance implications for <a
+     * href="https://jet-start.sh/docs/architecture/sliding-window">sliding
+     * window aggregation</a>.
      *
      * @param comparator comparator to compare the items
      * @param <T> type of the input item
@@ -250,6 +258,9 @@ public final class AggregateOperations {
      * }</pre>
      * <em>Implementation note:</em> this aggregate operation does not
      * implement the {@link AggregateOperation1#deductFn() deduct} primitive.
+     * This has performance implications for <a
+     * href="https://jet-start.sh/docs/architecture/sliding-window">sliding
+     * window aggregation</a>.
      *
      * @param n number of top items to find
      * @param comparator compares the items
@@ -300,6 +311,9 @@ public final class AggregateOperations {
      * }</pre>
      * <em>Implementation note:</em> this aggregate operation does not
      * implement the {@link AggregateOperation1#deductFn() deduct} primitive.
+     * This has performance implications for <a
+     * href="https://jet-start.sh/docs/architecture/sliding-window">sliding
+     * window aggregation</a>.
      *
      * @param n number of bottom items to find
      * @param comparator compares the items
