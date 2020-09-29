@@ -17,6 +17,7 @@
 package com.hazelcast.jet.sql.impl.expression;
 
 import com.hazelcast.function.FunctionEx;
+import com.hazelcast.function.PredicateEx;
 import com.hazelcast.sql.impl.expression.Expression;
 import com.hazelcast.sql.impl.expression.ExpressionEvalContext;
 import com.hazelcast.sql.impl.row.HeapRow;
@@ -36,15 +37,12 @@ public final class ExpressionUtil {
     private ExpressionUtil() {
     }
 
-    public static FunctionEx<Object[], Object[]> filterFn(
+    public static PredicateEx<Object[]> filterFn(
             Expression<Boolean> predicate
     ) {
         return values -> {
             Row row = new HeapRow(values);
-            if (!Boolean.TRUE.equals(evaluate(predicate, row))) {
-                return null;
-            }
-            return values;
+            return Boolean.TRUE.equals(evaluate(predicate, row));
         };
     }
 

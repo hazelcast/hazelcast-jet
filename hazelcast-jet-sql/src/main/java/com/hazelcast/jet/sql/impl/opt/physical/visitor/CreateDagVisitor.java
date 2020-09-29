@@ -19,6 +19,7 @@ package com.hazelcast.jet.sql.impl.opt.physical.visitor;
 import com.hazelcast.cluster.Address;
 import com.hazelcast.function.ConsumerEx;
 import com.hazelcast.function.FunctionEx;
+import com.hazelcast.function.PredicateEx;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Edge;
 import com.hazelcast.jet.core.Vertex;
@@ -39,6 +40,7 @@ import java.util.List;
 import java.util.function.Consumer;
 
 import static com.hazelcast.jet.core.Edge.between;
+import static com.hazelcast.jet.core.processor.Processors.filterP;
 import static com.hazelcast.jet.core.processor.Processors.mapP;
 import static com.hazelcast.jet.core.processor.SourceProcessors.convenientSourceP;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnectorUtil.getJetSqlConnector;
@@ -87,9 +89,9 @@ public class CreateDagVisitor {
     }
 
     public Vertex onFilter(FilterPhysicalRel rel) {
-        FunctionEx<Object[], Object[]> filter = ExpressionUtil.filterFn(rel.filter());
+        PredicateEx<Object[]> filter = ExpressionUtil.filterFn(rel.filter());
 
-        Vertex vertex = dag.newVertex("Filter", mapP(filter::apply));
+        Vertex vertex = dag.newVertex("Filter", filterP(filter::test));
         connectInput(rel.getInput(), vertex, null);
         return vertex;
     }
