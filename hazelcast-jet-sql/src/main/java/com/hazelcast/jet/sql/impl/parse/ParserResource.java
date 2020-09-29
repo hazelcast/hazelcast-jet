@@ -25,7 +25,7 @@ public interface ParserResource {
 
     ParserResource RESOURCE = Resources.create(ParserResource.class);
 
-    @BaseMessage("{0} is not supported with {1}")
+    @BaseMessage("{0} is not supported for {1}")
     ExInst<SqlValidatorException> notSupported(String option, String statement);
 
     @BaseMessage("Column ''{0}'' specified more than once")

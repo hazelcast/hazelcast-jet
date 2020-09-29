@@ -76,7 +76,7 @@ public class SqlJobManagementTest extends SimpleTestInClusterSupport {
     @Test
     public void when_createOrReplaceJob_then_fail() {
         assertThatThrownBy(() -> sqlService.execute("CREATE OR REPLACE JOB fooJob AS INSERT INTO t1 SELECT FROM t2"))
-                .hasMessageContaining("OR REPLACE is not supported with CREATE JOB");
+                .hasMessageContaining("OR REPLACE is not supported for CREATE JOB");
     }
 
     @Test

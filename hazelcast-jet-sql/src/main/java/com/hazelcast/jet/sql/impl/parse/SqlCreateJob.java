@@ -62,12 +62,11 @@ public class SqlCreateJob extends SqlCreate {
             SqlParserPos pos
     ) {
         super(OPERATOR, pos, replace, ifNotExists);
-        if (replace) {
-            throw QueryException.error("The OR REPLACE option not supported for CREATE JOB");
-        }
+
         this.name = requireNonNull(name, "Name should not be null");
         this.options = requireNonNull(options, "Options should not be null");
         this.sqlInsert = requireNonNull(sqlInsert, "A DML statement is mandatory");
+
         Preconditions.checkTrue(name.names.size() == 1, name.toString());
 
         jobConfig.setName(name.toString());
@@ -138,14 +137,12 @@ public class SqlCreateJob extends SqlCreate {
         return ifNotExists;
     }
 
-    @Override
-    @Nonnull
+    @Override @Nonnull
     public SqlOperator getOperator() {
         return OPERATOR;
     }
 
-    @Override
-    @Nonnull
+    @Override @Nonnull
     public List<SqlNode> getOperandList() {
         return ImmutableNullableList.of(name, options, sqlInsert);
     }
@@ -186,7 +183,5 @@ public class SqlCreateJob extends SqlCreate {
     @Override
     public void validate(SqlValidator validator, SqlValidatorScope scope) {
         validator.validate(sqlInsert);
-
-        // TODO validate that it's a DML statement
     }
 }

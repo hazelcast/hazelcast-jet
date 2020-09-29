@@ -44,8 +44,10 @@ public class SqlDropSnapshot extends SqlDrop {
 
     public SqlDropSnapshot(SqlIdentifier snapshotName, boolean ifExists, SqlParserPos pos) {
         super(OPERATOR, pos, true);
+
         this.snapshotName = requireNonNull(snapshotName, "Snapshot name must not be null");
         this.ifExists = ifExists;
+
         Preconditions.checkTrue(snapshotName.names.size() == 1, snapshotName.toString());
     }
 

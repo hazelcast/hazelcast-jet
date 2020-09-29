@@ -45,11 +45,12 @@ public class SqlDropJob extends SqlDrop {
 
     public SqlDropJob(SqlIdentifier name, boolean ifExists, SqlIdentifier withSnapshotName, SqlParserPos pos) {
         super(OPERATOR, pos, ifExists);
-        Preconditions.checkTrue(name.names.size() == 1, name.toString());
-        Preconditions.checkTrue(withSnapshotName == null || withSnapshotName.names.size() == 1, "" + withSnapshotName);
 
         this.name = requireNonNull(name, "Name should not be null");
         this.withSnapshotName = withSnapshotName;
+
+        Preconditions.checkTrue(name.names.size() == 1, name.toString());
+        Preconditions.checkTrue(withSnapshotName == null || withSnapshotName.names.size() == 1, "" + withSnapshotName);
     }
 
     public String name() {

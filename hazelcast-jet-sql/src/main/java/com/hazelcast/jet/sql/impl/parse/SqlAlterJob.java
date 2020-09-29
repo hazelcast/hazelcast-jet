@@ -44,13 +44,19 @@ public class SqlAlterJob extends SqlAlter {
 
     public SqlAlterJob(SqlIdentifier name, AlterJobOperation operation, SqlParserPos pos) {
         super(pos, "JOB");
+
         this.name = requireNonNull(name, "Name must not be null");
-        this.operation = operation;
+        this.operation = requireNonNull(operation, "Operation must not be null");
+
         Preconditions.checkTrue(name.names.size() == 1, name.toString());
     }
 
     public String name() {
         return name.toString();
+    }
+
+    public AlterJobOperation getOperation() {
+        return operation;
     }
 
     @Override @Nonnull
@@ -71,10 +77,6 @@ public class SqlAlterJob extends SqlAlter {
 
     @Override
     public void validate(SqlValidator validator, SqlValidatorScope scope) {
-    }
-
-    public AlterJobOperation getOperation() {
-        return operation;
     }
 
     public enum AlterJobOperation {
