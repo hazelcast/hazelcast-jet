@@ -19,6 +19,8 @@ package com.hazelcast.jet.sql.impl.parse;
 import com.google.common.collect.ImmutableList;
 import com.hazelcast.jet.sql.impl.connector.SqlConnector;
 import com.hazelcast.sql.impl.calcite.schema.HazelcastTable;
+import org.apache.calcite.rel.type.RelDataType;
+import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlInsert;
 import org.apache.calcite.sql.SqlLiteral;
@@ -29,12 +31,16 @@ import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.validate.SqlValidator;
 import org.apache.calcite.sql.validate.SqlValidatorScope;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import static com.hazelcast.jet.sql.impl.connector.SqlConnectorUtil.getJetSqlConnector;
 import static com.hazelcast.jet.sql.impl.parse.ParserResource.RESOURCE;
 
 public class SqlExtendedInsert extends SqlInsert {
 
     private final SqlNodeList extendedKeywords;
+    private SqlNodeList overrideColumnList;
 
     public SqlExtendedInsert(
             SqlNode table,
@@ -72,10 +78,27 @@ public class SqlExtendedInsert extends SqlInsert {
     }
 
     @Override
+    public SqlNodeList getTargetColumnList() {
+        return overrideColumnList != null ? overrideColumnList
+                : super.getTargetColumnList();
+    }
+
+    @Override
     public void validate(SqlValidator validator, SqlValidatorScope scope) {
+        HazelcastTable table = validator.getCatalogReader().getTable(tableNames()).unwrap(HazelcastTable.class);
+        if (getTargetColumnList() == null) {
+            RelDataType rowType = table.getRowType(validator.getTypeFactory());
+            List<SqlNode> columnListWithoutHidden = new ArrayList<>();
+            for (RelDataTypeField f : rowType.getFieldList()) {
+                if (!table.isHidden(f.getName())) {
+                    columnListWithoutHidden.add(new SqlIdentifier(f.getName(), SqlParserPos.ZERO));
+                }
+            }
+            overrideColumnList = new SqlNodeList(columnListWithoutHidden, SqlParserPos.ZERO);
+        }
+
         super.validate(validator, scope);
 
-        HazelcastTable table = validator.getCatalogReader().getTable(tableNames()).unwrap(HazelcastTable.class);
         SqlConnector connector = getJetSqlConnector(table.getTarget());
         if (isSink()) {
             if (!connector.supportsSink()) {

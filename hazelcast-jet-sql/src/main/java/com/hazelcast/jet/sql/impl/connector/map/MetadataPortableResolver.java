@@ -183,7 +183,7 @@ final class MetadataPortableResolver implements EntryMetadataResolver {
         String classIdProperty = isKey ? OPTION_KEY_CLASS_ID : OPTION_VALUE_CLASS_ID;
         String classId = options.get(classIdProperty);
         String classVersionProperty = isKey ? OPTION_KEY_CLASS_VERSION : OPTION_VALUE_CLASS_VERSION;
-        String classVersion = options.get(classVersionProperty);
+        String classVersion = options.getOrDefault(classVersionProperty, "0");
 
         if (factoryId == null || classId == null || classVersion == null) {
             throw QueryException.error(

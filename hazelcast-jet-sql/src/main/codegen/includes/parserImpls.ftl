@@ -224,7 +224,7 @@ SqlCreate SqlCreateJob(Span span, boolean replace) :
     SqlIdentifier name;
     boolean ifNotExists = false;
     SqlNodeList sqlOptions = SqlNodeList.EMPTY;
-    SqlInsert sqlInsert = null;
+    SqlExtendedInsert sqlInsert = null;
 
     if (replace) {
         throw SqlUtil.newContextException(getPos(), ParserResource.RESOURCE.notSupported("OR REPLACE", "CREATE JOB"));
@@ -247,7 +247,6 @@ SqlCreate SqlCreateJob(Span span, boolean replace) :
             name,
             sqlOptions,
             sqlInsert,
-            replace,
             ifNotExists,
             startPos.plus(getPos())
         );
@@ -405,7 +404,7 @@ SqlOption SqlOption() :
 /**
  * Parses INSERT/SINK INTO statement.
  */
-SqlInsert SqlExtendedInsert() :
+SqlExtendedInsert SqlExtendedInsert() :
 {
     Span span;
 

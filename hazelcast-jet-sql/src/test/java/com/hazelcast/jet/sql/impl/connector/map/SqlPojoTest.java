@@ -68,8 +68,7 @@ public class SqlPojoTest extends SqlTestSupport {
 
         assertMapEventually(
                 mapName,
-                // requires explicit column list due to hidden fields
-                "SINK INTO partitioned." + mapName + " (id, name) VALUES (2, 'Bob')",
+                "SINK INTO partitioned." + mapName + " VALUES (2, 'Bob')",
                 createMap(new PersonId(1), new Person(1, "Alice"), new PersonId(2), new Person(null, "Bob"))
         );
         assertRowsEventuallyInAnyOrder(

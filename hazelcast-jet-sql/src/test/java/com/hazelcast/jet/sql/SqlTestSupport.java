@@ -162,7 +162,7 @@ public abstract class SqlTestSupport extends SimpleTestInClusterSupport {
     public static String randomMapName() {
         // Prefix the name with some letters and remove dashes so that it doesn't start with
         // a number and is a valid SQL identifier.
-        return "map" + HazelcastTestSupport.randomMapName().replace('-', '_');
+        return "map_" + HazelcastTestSupport.randomMapName().replace('-', '_');
     }
 
     /**

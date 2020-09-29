@@ -21,7 +21,6 @@ import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.sql.impl.QueryException;
 import org.apache.calcite.sql.SqlCreate;
 import org.apache.calcite.sql.SqlIdentifier;
-import org.apache.calcite.sql.SqlInsert;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
@@ -48,7 +47,7 @@ public class SqlCreateJob extends SqlCreate {
 
     private final SqlIdentifier name;
     private final SqlNodeList options;
-    private final SqlInsert sqlInsert;
+    private final SqlExtendedInsert sqlInsert;
 
     private final JobConfig jobConfig = new JobConfig();
 
@@ -56,12 +55,11 @@ public class SqlCreateJob extends SqlCreate {
     public SqlCreateJob(
             SqlIdentifier name,
             SqlNodeList options,
-            SqlInsert sqlInsert,
-            boolean replace,
+            SqlExtendedInsert sqlInsert,
             boolean ifNotExists,
             SqlParserPos pos
     ) {
-        super(OPERATOR, pos, replace, ifNotExists);
+        super(OPERATOR, pos, false, ifNotExists);
 
         this.name = requireNonNull(name, "Name should not be null");
         this.options = requireNonNull(options, "Options should not be null");
@@ -129,7 +127,7 @@ public class SqlCreateJob extends SqlCreate {
         return jobConfig;
     }
 
-    public SqlNode dmlStatement() {
+    public SqlExtendedInsert dmlStatement() {
         return sqlInsert;
     }
 
@@ -167,11 +165,9 @@ public class SqlCreateJob extends SqlCreate {
             writer.endList(withFrame);
         }
 
-        if (sqlInsert != null) {
-            writer.newlineAndIndent();
-            writer.keyword("AS");
-            sqlInsert.unparse(writer, leftPrec, rightPrec);
-        }
+        writer.newlineAndIndent();
+        writer.keyword("AS");
+        sqlInsert.unparse(writer, leftPrec, rightPrec);
     }
 
     private void printIndent(SqlWriter writer) {
