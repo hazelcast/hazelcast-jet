@@ -57,7 +57,7 @@ public class JetTable extends Table {
 
     @Override
     public final PlanObjectKey getObjectKey() {
-        // TODO correctly support the plan cache
+        // we don't support plan caching as of now
         return null;
     }
 

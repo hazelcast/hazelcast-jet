@@ -229,21 +229,15 @@ class JetSqlBackend implements SqlBackend {
         boolean isStreaming = containsStreamSource(rel);
         boolean isInsert = physicalRel instanceof TableModify;
 
-        QueryId queryId;
-        DAG dag;
-        SqlRowMetadata rowMetadata;
         if (isInsert) {
-            queryId = null;
-            dag = createDag(physicalRel);
-            rowMetadata = null;
+            DAG dag = createDag(physicalRel);
+            return new ExecutionPlan(dag, isStreaming, true, null, null, planExecutor);
         } else {
-            queryId = QueryId.create(nodeEngine.getLocalMember().getUuid());
-            dag = createDag(new JetRootRel(physicalRel, nodeEngine.getThisAddress(), queryId));
-            rowMetadata = createRowMetadata(fieldNames, physicalRel.schema().getTypes());
+            QueryId queryId = QueryId.create(nodeEngine.getLocalMember().getUuid());
+            DAG dag = createDag(new JetRootRel(physicalRel, nodeEngine.getThisAddress(), queryId));
+            SqlRowMetadata rowMetadata = createRowMetadata(fieldNames, physicalRel.schema().getTypes());
+            return new ExecutionPlan(dag, isStreaming, false, queryId, rowMetadata, planExecutor);
         }
-
-
-        return new ExecutionPlan(dag, isStreaming, isInsert, queryId, rowMetadata, planExecutor);
     }
 
     /**
