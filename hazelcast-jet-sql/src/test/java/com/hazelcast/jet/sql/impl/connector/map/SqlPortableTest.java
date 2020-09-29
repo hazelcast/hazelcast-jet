@@ -21,7 +21,7 @@ import com.hazelcast.internal.serialization.Data;
 import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.internal.serialization.impl.InternalGenericRecord;
 import com.hazelcast.internal.serialization.impl.portable.PortableGenericRecordBuilder;
-import com.hazelcast.jet.sql.JetSqlTestSupport;
+import com.hazelcast.jet.sql.SqlTestSupport;
 import com.hazelcast.map.impl.MapService;
 import com.hazelcast.map.impl.MapServiceContext;
 import com.hazelcast.map.impl.record.Record;
@@ -55,7 +55,7 @@ import static java.util.Spliterators.spliteratorUnknownSize;
 import static java.util.stream.StreamSupport.stream;
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class SqlPortableTest extends JetSqlTestSupport {
+public class SqlPortableTest extends SqlTestSupport {
 
     private static SqlService sqlService;
 

@@ -29,7 +29,7 @@ import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class SqlTest extends JetSqlTestSupport {
+public class SqlFilterProjectTest extends SqlTestSupport {
 
     private static SqlService sqlService;
 

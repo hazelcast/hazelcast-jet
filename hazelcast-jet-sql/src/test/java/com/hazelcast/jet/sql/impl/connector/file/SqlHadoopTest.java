@@ -16,7 +16,7 @@
 
 package com.hazelcast.jet.sql.impl.connector.file;
 
-import com.hazelcast.jet.sql.JetSqlTestSupport;
+import com.hazelcast.jet.sql.SqlTestSupport;
 import com.hazelcast.sql.SqlService;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -46,7 +46,7 @@ import static java.time.ZoneOffset.UTC;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 
-public class SqlHadoopTest extends JetSqlTestSupport {
+public class SqlHadoopTest extends SqlTestSupport {
 
     private static MiniDFSCluster cluster;
     private static SqlService sqlService;

@@ -16,7 +16,7 @@
 
 package com.hazelcast.jet.sql.impl.connector.file;
 
-import com.hazelcast.jet.sql.JetSqlTestSupport;
+import com.hazelcast.jet.sql.SqlTestSupport;
 import com.hazelcast.sql.SqlService;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -33,7 +33,7 @@ import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_SERIALIZA
 import static java.time.ZoneOffset.UTC;
 import static java.util.Collections.singletonList;
 
-public class SqlCsvTest extends JetSqlTestSupport {
+public class SqlCsvTest extends SqlTestSupport {
 
     private static final String RESOURCES_PATH = Paths.get("src/test/resources").toFile().getAbsolutePath();
 

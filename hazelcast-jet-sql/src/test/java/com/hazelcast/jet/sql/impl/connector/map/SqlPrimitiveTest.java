@@ -16,7 +16,7 @@
 
 package com.hazelcast.jet.sql.impl.connector.map;
 
-import com.hazelcast.jet.sql.JetSqlTestSupport;
+import com.hazelcast.jet.sql.SqlTestSupport;
 import com.hazelcast.jet.sql.impl.connector.test.TestBatchSqlConnector;
 import com.hazelcast.map.IMap;
 import com.hazelcast.sql.SqlService;
@@ -38,7 +38,7 @@ import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-public class SqlPrimitiveTest extends JetSqlTestSupport {
+public class SqlPrimitiveTest extends SqlTestSupport {
 
     private static SqlService sqlService;
 

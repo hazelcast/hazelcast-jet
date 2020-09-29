@@ -18,7 +18,7 @@ package com.hazelcast.jet.sql.impl.connector.kafka;
 
 import com.google.common.collect.ImmutableMap;
 import com.hazelcast.jet.kafka.impl.KafkaTestSupport;
-import com.hazelcast.jet.sql.JetSqlTestSupport;
+import com.hazelcast.jet.sql.SqlTestSupport;
 import com.hazelcast.jet.sql.impl.connector.test.AllTypesSqlConnector;
 import com.hazelcast.sql.SqlService;
 import io.confluent.kafka.schemaregistry.rest.SchemaRegistryConfig;
@@ -52,7 +52,7 @@ import static java.time.ZoneOffset.UTC;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 
-public class SqlAvroTest extends JetSqlTestSupport {
+public class SqlAvroTest extends SqlTestSupport {
 
     private static final int INITIAL_PARTITION_COUNT = 4;
 

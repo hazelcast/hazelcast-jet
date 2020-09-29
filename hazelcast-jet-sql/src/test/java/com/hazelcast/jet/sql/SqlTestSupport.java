@@ -45,7 +45,7 @@ import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_SERIALIZA
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_VALUE_CLASS;
 import static org.assertj.core.api.Assertions.assertThat;
 
-public abstract class JetSqlTestSupport extends SimpleTestInClusterSupport {
+public abstract class SqlTestSupport extends SimpleTestInClusterSupport {
 
     /**
      * Execute a query and assert that it eventually contains the expected entries.

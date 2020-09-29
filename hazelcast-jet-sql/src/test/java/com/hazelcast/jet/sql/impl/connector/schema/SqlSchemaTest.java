@@ -16,7 +16,7 @@
 
 package com.hazelcast.jet.sql.impl.connector.schema;
 
-import com.hazelcast.jet.sql.JetSqlTestSupport;
+import com.hazelcast.jet.sql.SqlTestSupport;
 import com.hazelcast.jet.sql.impl.connector.map.IMapSqlConnector;
 import com.hazelcast.sql.SqlService;
 import org.junit.Before;
@@ -26,7 +26,7 @@ import org.junit.Test;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 
-public class SqlSchemaTest extends JetSqlTestSupport {
+public class SqlSchemaTest extends SqlTestSupport {
 
     private static SqlService sqlService;
 

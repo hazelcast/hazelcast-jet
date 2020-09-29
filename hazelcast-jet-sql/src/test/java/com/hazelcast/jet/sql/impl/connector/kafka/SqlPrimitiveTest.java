@@ -17,7 +17,7 @@
 package com.hazelcast.jet.sql.impl.connector.kafka;
 
 import com.hazelcast.jet.kafka.impl.KafkaTestSupport;
-import com.hazelcast.jet.sql.JetSqlTestSupport;
+import com.hazelcast.jet.sql.SqlTestSupport;
 import com.hazelcast.jet.sql.impl.connector.test.TestBatchSqlConnector;
 import com.hazelcast.sql.SqlService;
 import org.apache.kafka.common.serialization.IntegerDeserializer;
@@ -41,7 +41,7 @@ import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_VALUE_CLA
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 
-public class SqlPrimitiveTest extends JetSqlTestSupport {
+public class SqlPrimitiveTest extends SqlTestSupport {
 
     private static final int INITIAL_PARTITION_COUNT = 4;
 

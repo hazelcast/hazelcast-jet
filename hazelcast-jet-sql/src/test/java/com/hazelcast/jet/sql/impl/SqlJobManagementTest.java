@@ -29,7 +29,7 @@ import org.junit.rules.ExpectedException;
 import static com.hazelcast.jet.config.ProcessingGuarantee.EXACTLY_ONCE;
 import static com.hazelcast.jet.core.JobStatus.RUNNING;
 import static com.hazelcast.jet.core.JobStatus.SUSPENDED;
-import static com.hazelcast.jet.sql.JetSqlTestSupport.javaSerializableMapDdl;
+import static com.hazelcast.jet.sql.SqlTestSupport.javaSerializableMapDdl;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
