@@ -23,6 +23,42 @@ To expand an issue number into a full GitHub link, use this template:
 
 https://github.com/hazelcast/hazelcast-jet/issues/<issue number>
 
+
+** Hazelcast Jet 4.3 **
+
+Members of the open source community that appear in these release notes:
+
+@guenter-hesse
+@MohamedMandouh
+
+Thank you for your valuable contributions!
+
+
+1. New Features
+
+[pipeline-api] [014] @MohamedMandouh implemented distributed sorting: `BatchStage.sort()` (#2469, #2544)
+[core] [012] Added `JobConfig.suspendOnFailure`: suspend a job on exception instead of cancelling it (#2411)
+
+
+2. Enhancements
+
+[core] @guenter-hesse contributed a test source to benchmark Jet's throughput and latency (#2382)
+[core] [013] Avoid problem where low event rate would stall progress of a processing time-based pipeline (#2485, #2514)
+
+
+3. Fixes
+
+[core] Fixed a bug where a non-keyed aggregating stage would produce no output when no input (#2560, #2567)
+
+
+4. Breaking Changes
+
+[pipeline-api] Breaking signature change to `Sources.streamFromProcessorWithWatermarks()`
+[pipeline-api] Deprecated `Pipeline.toDag()`, made `Pipeline` and all its components `Serializable`.
+[core-api] Breaking signature change to `StreamEventJournalP`, methods `streamRemoteMapSupplier()`
+  and `streamRemoteCacheSupplier`
+
+
 ** Hazelcast Jet 4.2 **
 
 Members of the open source community that appear in these release notes:
@@ -69,6 +105,7 @@ Thank you for your valuable contributions!
   operator can be used instead (#2149)
 [jet-cli] Deprecated --address and --cluster-name options from command-line as --targets
   should now be used instead. (#2276)
+
 
 ** Hazelcast Jet 4.1.1 **
 

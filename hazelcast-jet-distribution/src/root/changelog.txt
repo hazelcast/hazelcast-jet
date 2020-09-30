@@ -1,3 +1,16 @@
+** Hazelcast Jet 4.3 **
+
+* @MohamedMandouh implemented distributed sorting: `BatchStage.sort()`.
+* @guenter-hesse added a high-throughput source with precisely controlled timing, to
+  be used to benchmark Jet's throughput and latency.
+* We added the ability for Jet to suspend an unbounded, fault-tolerant job
+  when it fails due to an exception in the pipeline code. This allows you
+  to diagnose the problem, remove its cause, and resume the pipeline without
+  data loss.
+* We improved the behavior of streaming pipelines based on processing time: a low
+  event rate in any partition of the source used to stall the progress, now the
+  watermark advances even without events.
+
 ** Hazelcast Jet 4.2 **
 
 * We added Change Data Capture (CDC) support for PostgreSQL and MySql. New
@@ -38,7 +51,6 @@
 * We added the `innerHashJoin` transform that achieves an inner join
   directly instead of requiring custom code in the `mapToOutputFn`. Credit
   for this one goes to @TomaszGaweda.
-
 
 ** Hazelcast Jet 4.0 **
 
