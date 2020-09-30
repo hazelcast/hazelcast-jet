@@ -83,12 +83,7 @@ public class SqlPrimitiveTest extends SqlTestSupport {
         );
 
         String from = generateRandomName();
-        sqlService.execute("CREATE MAPPING " + from + ' '
-                + "TYPE " + TestBatchSqlConnector.TYPE_NAME + ' '
-                + "OPTIONS ("
-                + "itemCount '2'"
-                + ")"
-        );
+        TestBatchSqlConnector.create(sqlService, from, 2);
 
         assertTopicEventually(
                 name,
