@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.sql.impl.connector.schema;
+package com.hazelcast.jet.sql.impl.connector.infoschema;
 
 import com.hazelcast.jet.sql.impl.schema.JetTable;
 import com.hazelcast.sql.impl.schema.TableField;
@@ -22,15 +22,18 @@ import com.hazelcast.sql.impl.schema.TableStatistics;
 
 import java.util.List;
 
-public abstract class SchemaTable extends JetTable {
+/**
+ * A table in the {@code information_schema}.
+ */
+public abstract class InfoSchemaTable extends JetTable {
 
-    public SchemaTable(
+    public InfoSchemaTable(
             List<TableField> fields,
             String schemaName,
             String name,
             TableStatistics statistics
     ) {
-        super(SchemaConnector.INSTANCE, fields, schemaName, name, statistics);
+        super(InfoSchemaConnector.INSTANCE, fields, schemaName, name, statistics);
     }
 
     protected abstract List<Object[]> rows();

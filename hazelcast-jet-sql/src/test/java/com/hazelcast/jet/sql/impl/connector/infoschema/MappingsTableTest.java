@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.sql.impl.connector.schema;
+package com.hazelcast.jet.sql.impl.connector.infoschema;
 
 import com.google.common.collect.ImmutableMap;
 import com.hazelcast.jet.sql.impl.schema.JetTable;

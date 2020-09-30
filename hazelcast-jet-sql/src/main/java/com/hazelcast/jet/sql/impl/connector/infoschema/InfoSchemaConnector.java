@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.sql.impl.connector.schema;
+package com.hazelcast.jet.sql.impl.connector.infoschema;
 
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.Traversers;
@@ -35,11 +35,14 @@ import java.util.Map;
 
 import static com.hazelcast.jet.core.ProcessorMetaSupplier.preferLocalParallelismOne;
 
-final class SchemaConnector implements SqlConnector {
+/**
+ * A connector for tables in the {@code information_schema}.
+ */
+final class InfoSchemaConnector implements SqlConnector {
 
-    public static final SchemaConnector INSTANCE = new SchemaConnector();
+    public static final InfoSchemaConnector INSTANCE = new InfoSchemaConnector();
 
-    private SchemaConnector() {
+    private InfoSchemaConnector() {
     }
 
     @Override
@@ -88,7 +91,7 @@ final class SchemaConnector implements SqlConnector {
             @Nullable Expression<Boolean> predicate,
             @Nonnull List<Expression<?>> projection
     ) {
-        SchemaTable table = (SchemaTable) table0;
+        InfoSchemaTable table = (InfoSchemaTable) table0;
 
         List<Object[]> rows = ExpressionUtil.evaluate(predicate, projection, table.rows());
 

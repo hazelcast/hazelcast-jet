@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.sql.impl.connector.schema;
+package com.hazelcast.jet.sql.impl.connector.infoschema;
 
 import com.hazelcast.jet.sql.SqlTestSupport;
 import com.hazelcast.jet.sql.impl.connector.map.IMapSqlConnector;
@@ -26,11 +26,14 @@ import org.junit.Test;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 
-public class SqlSchemaTest extends SqlTestSupport {
+/**
+ * Tests for the {@code information_schema}.
+ */
+public class SqlInfoSchemaTest extends SqlTestSupport {
 
     private static SqlService sqlService;
 
-    private String name;
+    private final String name = randomMapName();
 
     @BeforeClass
     public static void setUpClass() {
@@ -40,7 +43,6 @@ public class SqlSchemaTest extends SqlTestSupport {
 
     @Before
     public void setUp() {
-        name = generateRandomName();
         sqlService.execute(javaSerializableMapDdl(name, Integer.class, String.class));
     }
 
@@ -86,9 +88,5 @@ public class SqlSchemaTest extends SqlTestSupport {
                         new Row(name, "HAZELCAST", "this", "VARCHAR")
                 )
         );
-    }
-
-    private static String generateRandomName() {
-        return "schema_" + randomString().replace('-', '_');
     }
 }

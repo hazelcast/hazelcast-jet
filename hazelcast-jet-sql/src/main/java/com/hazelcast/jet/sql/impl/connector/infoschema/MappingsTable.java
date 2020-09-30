@@ -14,10 +14,9 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.sql.impl.connector.schema;
+package com.hazelcast.jet.sql.impl.connector.infoschema;
 
 import com.hazelcast.jet.sql.impl.schema.MappingDefinition;
-import com.hazelcast.jet.sql.impl.type.QueryDataTypeUtils;
 import com.hazelcast.sql.impl.schema.ConstantTableStatistics;
 import com.hazelcast.sql.impl.schema.TableField;
 import com.hazelcast.sql.impl.type.QueryDataType;
@@ -27,24 +26,25 @@ import java.util.List;
 
 import static java.util.Arrays.asList;
 
-public class MappingColumnsTable extends SchemaTable {
+/**
+ * Table object for the {@code information_schema.mappings} table.
+ */
+public class MappingsTable extends InfoSchemaTable {
 
-    private static final String NAME = "columns";
+    private static final String NAME = "mappings";
 
     private static final List<TableField> FIELDS = asList(
             new TableField("mapping_catalog", QueryDataType.VARCHAR, false),
             new TableField("mapping_schema", QueryDataType.VARCHAR, false),
             new TableField("mapping_name", QueryDataType.VARCHAR, false),
-            new TableField("column_name", QueryDataType.VARCHAR, false),
-            new TableField("ordinal_position", QueryDataType.VARCHAR, false),
-            new TableField("is_nullable", QueryDataType.VARCHAR, false),
-            new TableField("data_type", QueryDataType.VARCHAR, false)
+            new TableField("mapping_type", QueryDataType.VARCHAR, false),
+            new TableField("mapping_options", QueryDataType.VARCHAR, false)
     );
 
     private final String catalog;
     private final List<MappingDefinition> definitions;
 
-    public MappingColumnsTable(
+    public MappingsTable(
             String catalog,
             String schemaName,
             List<MappingDefinition> definitions
@@ -53,7 +53,7 @@ public class MappingColumnsTable extends SchemaTable {
                 FIELDS,
                 schemaName,
                 NAME,
-                new ConstantTableStatistics(definitions.size() * FIELDS.size())
+                new ConstantTableStatistics(definitions.size())
         );
 
         this.catalog = catalog;
@@ -64,23 +64,15 @@ public class MappingColumnsTable extends SchemaTable {
     protected List<Object[]> rows() {
         List<Object[]> rows = new ArrayList<>(definitions.size());
         for (MappingDefinition definition : definitions) {
-            List<TableField> fields = definition.fields();
-            for (int i = 0; i < fields.size(); i++) {
-                TableField field = fields.get(i);
-                Object[] row = new Object[]{
-                        catalog,
-                        definition.schema(),
-                        definition.name(),
-                        field.getName(),
-                        String.valueOf(i),
-                        String.valueOf(true),
-                        QueryDataTypeUtils.toString(field.getType())
-                };
-                rows.add(row);
-            }
+            Object[] row = new Object[]{
+                    catalog,
+                    definition.schema(),
+                    definition.name(),
+                    definition.type(),
+                    definition.options()
+            };
+            rows.add(row);
         }
         return rows;
     }
-
-
 }
