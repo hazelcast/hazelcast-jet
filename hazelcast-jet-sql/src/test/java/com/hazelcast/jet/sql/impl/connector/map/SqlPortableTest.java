@@ -138,8 +138,7 @@ public class SqlPortableTest extends SqlTestSupport {
                         .build()
         );
 
-        // requires explicit column list due to hidden fields
-        sqlService.execute("SINK INTO partitioned." + name + " (id, name) VALUES (2, 'Bob')");
+        sqlService.execute("SINK INTO partitioned." + name + " VALUES (2, 'Bob')");
 
         assertRowsEventuallyInAnyOrder(
                 "SELECT * FROM " + name,
