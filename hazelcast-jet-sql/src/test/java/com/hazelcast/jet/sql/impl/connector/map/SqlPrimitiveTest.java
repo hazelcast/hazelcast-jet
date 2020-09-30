@@ -27,11 +27,11 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 
 import static com.hazelcast.jet.core.TestUtil.createMap;
-import static com.hazelcast.jet.sql.impl.connector.SqlConnector.JAVA_SERIALIZATION_FORMAT;
+import static com.hazelcast.jet.sql.impl.connector.SqlConnector.JAVA_FORMAT;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_KEY_CLASS;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_OBJECT_NAME;
-import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_SERIALIZATION_KEY_FORMAT;
-import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_SERIALIZATION_VALUE_FORMAT;
+import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_KEY_FORMAT;
+import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_VALUE_FORMAT;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_VALUE_CLASS;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
@@ -135,9 +135,9 @@ public class SqlPrimitiveTest extends SqlTestSupport {
                 + ", name VARCHAR EXTERNAL NAME this"
                 + ") TYPE " + IMapSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ("
-                + '"' + OPTION_SERIALIZATION_KEY_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + '\''
+                + '"' + OPTION_KEY_FORMAT + "\" '" + JAVA_FORMAT + '\''
                 + ", \"" + OPTION_KEY_CLASS + "\" '" + Integer.class.getName() + '\''
-                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + '\''
+                + ", \"" + OPTION_VALUE_FORMAT + "\" '" + JAVA_FORMAT + '\''
                 + ", \"" + OPTION_VALUE_CLASS + "\" '" + String.class.getName() + '\''
                 + ")"
         );
@@ -161,9 +161,9 @@ public class SqlPrimitiveTest extends SqlTestSupport {
         sqlService.execute("CREATE MAPPING " + tableName + " TYPE " + IMapSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ("
                 + '"' + OPTION_OBJECT_NAME + "\" '" + mapName + '\''
-                + ", \"" + OPTION_SERIALIZATION_KEY_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + '\''
+                + ", \"" + OPTION_KEY_FORMAT + "\" '" + JAVA_FORMAT + '\''
                 + ", \"" + OPTION_KEY_CLASS + "\" '" + String.class.getName() + '\''
-                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + '\''
+                + ", \"" + OPTION_VALUE_FORMAT + "\" '" + JAVA_FORMAT + '\''
                 + ", \"" + OPTION_VALUE_CLASS + "\" '" + String.class.getName() + '\''
                 + ")"
         );

@@ -38,10 +38,10 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
-import static com.hazelcast.jet.sql.impl.connector.SqlConnector.JAVA_SERIALIZATION_FORMAT;
+import static com.hazelcast.jet.sql.impl.connector.SqlConnector.JAVA_FORMAT;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_KEY_CLASS;
-import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_SERIALIZATION_KEY_FORMAT;
-import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_SERIALIZATION_VALUE_FORMAT;
+import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_KEY_FORMAT;
+import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_VALUE_FORMAT;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_VALUE_CLASS;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -152,9 +152,9 @@ public abstract class SqlTestSupport extends SimpleTestInClusterSupport {
     public static String javaSerializableMapDdl(String name, Class<?> keyClass, Class<?> valueClass) {
         return "CREATE MAPPING " + name + " TYPE " + IMapSqlConnector.TYPE_NAME + "\n"
                 + "OPTIONS (\n"
-                + '"' + OPTION_SERIALIZATION_KEY_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "',\n"
+                + '"' + OPTION_KEY_FORMAT + "\" '" + JAVA_FORMAT + "',\n"
                 + '"' + OPTION_KEY_CLASS + "\" '" + keyClass.getName() + "',\n"
-                + '"' + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + "',\n"
+                + '"' + OPTION_VALUE_FORMAT + "\" '" + JAVA_FORMAT + "',\n"
                 + '"' + OPTION_VALUE_CLASS + "\" '" + valueClass.getName() + "'\n"
                 + ")";
     }

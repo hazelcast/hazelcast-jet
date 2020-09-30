@@ -38,7 +38,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 import static com.hazelcast.jet.impl.util.ReflectionUtils.loadClass;
-import static com.hazelcast.jet.sql.impl.connector.SqlConnector.JAVA_SERIALIZATION_FORMAT;
+import static com.hazelcast.jet.sql.impl.connector.SqlConnector.JAVA_FORMAT;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_KEY_CLASS;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_VALUE_CLASS;
 import static com.hazelcast.sql.impl.extract.QueryPath.KEY;
@@ -55,7 +55,7 @@ final class MetadataJavaResolver implements EntryMetadataResolver {
 
     @Override
     public String supportedFormat() {
-        return JAVA_SERIALIZATION_FORMAT;
+        return JAVA_FORMAT;
     }
 
     @Override

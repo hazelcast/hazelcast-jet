@@ -37,17 +37,17 @@ public interface SqlConnector {
     /**
      * TODO
      */
-    String OPTION_SERIALIZATION_FORMAT = "format";
+    String OPTION_FORMAT = "format";
 
     /**
      * TODO
      */
-    String OPTION_SERIALIZATION_KEY_FORMAT = "keyFormat";
+    String OPTION_KEY_FORMAT = "keyFormat";
 
     /**
      * TODO
      */
-    String OPTION_SERIALIZATION_VALUE_FORMAT = "valueFormat";
+    String OPTION_VALUE_FORMAT = "valueFormat";
 
     /**
      * TODO
@@ -92,32 +92,32 @@ public interface SqlConnector {
     /**
      * TODO
      */
-    String JAVA_SERIALIZATION_FORMAT = "java";
+    String JAVA_FORMAT = "java";
 
     /**
      * TODO
      */
-    String PORTABLE_SERIALIZATION_FORMAT = "portable";
+    String PORTABLE_FORMAT = "portable";
 
     /**
      * TODO
      */
-    String JSON_SERIALIZATION_FORMAT = "json";
+    String JSON_FORMAT = "json";
 
     /**
      * TODO
      */
-    String CSV_SERIALIZATION_FORMAT = "csv";
+    String CSV_FORMAT = "csv";
 
     /**
      * TODO
      */
-    String AVRO_SERIALIZATION_FORMAT = "avro";
+    String AVRO_FORMAT = "avro";
 
     /**
      * TODO
      */
-    String PARQUET_SERIALIZATION_FORMAT = "parquet";
+    String PARQUET_FORMAT = "parquet";
 
     /**
      * A key in the table options (TO).

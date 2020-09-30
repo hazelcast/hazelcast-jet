@@ -33,7 +33,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import static com.hazelcast.jet.sql.impl.connector.SqlConnector.JSON_SERIALIZATION_FORMAT;
+import static com.hazelcast.jet.sql.impl.connector.SqlConnector.JSON_FORMAT;
 
 final class MetadataJsonResolver implements EntryMetadataResolver {
 
@@ -44,7 +44,7 @@ final class MetadataJsonResolver implements EntryMetadataResolver {
 
     @Override
     public String supportedFormat() {
-        return JSON_SERIALIZATION_FORMAT;
+        return JSON_FORMAT;
     }
 
     @Override

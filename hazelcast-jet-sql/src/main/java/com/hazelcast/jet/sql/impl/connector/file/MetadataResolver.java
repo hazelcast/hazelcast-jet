@@ -23,10 +23,10 @@ import org.apache.hadoop.mapreduce.Job;
 import java.io.IOException;
 import java.util.List;
 
-import static com.hazelcast.jet.sql.impl.connector.SqlConnector.AVRO_SERIALIZATION_FORMAT;
-import static com.hazelcast.jet.sql.impl.connector.SqlConnector.CSV_SERIALIZATION_FORMAT;
-import static com.hazelcast.jet.sql.impl.connector.SqlConnector.JSON_SERIALIZATION_FORMAT;
-import static com.hazelcast.jet.sql.impl.connector.SqlConnector.PARQUET_SERIALIZATION_FORMAT;
+import static com.hazelcast.jet.sql.impl.connector.SqlConnector.AVRO_FORMAT;
+import static com.hazelcast.jet.sql.impl.connector.SqlConnector.CSV_FORMAT;
+import static com.hazelcast.jet.sql.impl.connector.SqlConnector.JSON_FORMAT;
+import static com.hazelcast.jet.sql.impl.connector.SqlConnector.PARQUET_FORMAT;
 import static java.util.Objects.requireNonNull;
 
 // TODO: smarter/cleaner dispatch ?
@@ -65,11 +65,11 @@ final class MetadataResolver {
     ) throws IOException {
         String format = options.format();
         switch (format) {
-            case CSV_SERIALIZATION_FORMAT:
+            case CSV_FORMAT:
                 return LocalCsvMetadataResolver.resolveFields(mappingFields, options);
-            case JSON_SERIALIZATION_FORMAT:
+            case JSON_FORMAT:
                 return LocalJsonMetadataResolver.resolveFields(mappingFields, options);
-            case AVRO_SERIALIZATION_FORMAT:
+            case AVRO_FORMAT:
                 return LocalAvroMetadataResolver.resolveFields(mappingFields, options);
             default:
                 throw QueryException.error("Unsupported serialization format - '" + format + "'");
@@ -83,13 +83,13 @@ final class MetadataResolver {
     ) throws IOException {
         String format = options.format();
         switch (format) {
-            case CSV_SERIALIZATION_FORMAT:
+            case CSV_FORMAT:
                 return RemoteCsvMetadataResolver.resolveFields(mappingFields, options, job);
-            case JSON_SERIALIZATION_FORMAT:
+            case JSON_FORMAT:
                 return RemoteJsonMetadataResolver.resolveFields(mappingFields, options, job);
-            case AVRO_SERIALIZATION_FORMAT:
+            case AVRO_FORMAT:
                 return RemoteAvroMetadataResolver.resolveFields(mappingFields, options, job);
-            case PARQUET_SERIALIZATION_FORMAT:
+            case PARQUET_FORMAT:
                 return RemoteParquetMetadataResolver.resolveFields(mappingFields, options, job);
             default:
                 throw QueryException.error("Unsupported serialization format - '" + format + "'");
@@ -117,11 +117,11 @@ final class MetadataResolver {
     private static Metadata resolveLocalFileMetadata(List<MappingField> mappingFields, FileOptions options) {
         String format = options.format();
         switch (format) {
-            case CSV_SERIALIZATION_FORMAT:
+            case CSV_FORMAT:
                 return LocalCsvMetadataResolver.resolveMetadata(mappingFields, options);
-            case JSON_SERIALIZATION_FORMAT:
+            case JSON_FORMAT:
                 return LocalJsonMetadataResolver.resolveMetadata(mappingFields, options);
-            case AVRO_SERIALIZATION_FORMAT:
+            case AVRO_FORMAT:
                 return LocalAvroMetadataResolver.resolveMetadata(mappingFields, options);
             default:
                 throw QueryException.error("Unsupported serialization format - '" + format + "'");
@@ -135,13 +135,13 @@ final class MetadataResolver {
     ) throws IOException {
         String format = options.format();
         switch (format) {
-            case CSV_SERIALIZATION_FORMAT:
+            case CSV_FORMAT:
                 return RemoteCsvMetadataResolver.resolveMetadata(mappingFields, options, job);
-            case JSON_SERIALIZATION_FORMAT:
+            case JSON_FORMAT:
                 return RemoteJsonMetadataResolver.resolveMetadata(mappingFields, options, job);
-            case AVRO_SERIALIZATION_FORMAT:
+            case AVRO_FORMAT:
                 return RemoteAvroMetadataResolver.resolveMetadata(mappingFields, options, job);
-            case PARQUET_SERIALIZATION_FORMAT:
+            case PARQUET_FORMAT:
                 return RemoteParquetMetadataResolver.resolveMetadata(mappingFields, options, job);
             default:
                 throw QueryException.error("Unsupported serialization format - '" + format + "'");

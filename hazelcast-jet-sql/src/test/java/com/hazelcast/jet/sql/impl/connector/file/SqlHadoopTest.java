@@ -36,11 +36,11 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
 
-import static com.hazelcast.jet.sql.impl.connector.SqlConnector.AVRO_SERIALIZATION_FORMAT;
-import static com.hazelcast.jet.sql.impl.connector.SqlConnector.CSV_SERIALIZATION_FORMAT;
-import static com.hazelcast.jet.sql.impl.connector.SqlConnector.JSON_SERIALIZATION_FORMAT;
-import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_SERIALIZATION_FORMAT;
-import static com.hazelcast.jet.sql.impl.connector.SqlConnector.PARQUET_SERIALIZATION_FORMAT;
+import static com.hazelcast.jet.sql.impl.connector.SqlConnector.AVRO_FORMAT;
+import static com.hazelcast.jet.sql.impl.connector.SqlConnector.CSV_FORMAT;
+import static com.hazelcast.jet.sql.impl.connector.SqlConnector.JSON_FORMAT;
+import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_FORMAT;
+import static com.hazelcast.jet.sql.impl.connector.SqlConnector.PARQUET_FORMAT;
 import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.OPTION_HEADER;
 import static java.time.ZoneOffset.UTC;
 import static java.util.Arrays.asList;
@@ -83,7 +83,7 @@ public class SqlHadoopTest extends SqlTestSupport {
                 + ", name VARCHAR"
                 + ") TYPE " + FileSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ("
-                + '"' + OPTION_SERIALIZATION_FORMAT + "\" '" + CSV_SERIALIZATION_FORMAT + '\''
+                + '"' + OPTION_FORMAT + "\" '" + CSV_FORMAT + '\''
                 + ", \"" + FileSqlConnector.OPTION_PATH + "\" '" + path("csv") + '\''
                 + ")"
         );
@@ -105,7 +105,7 @@ public class SqlHadoopTest extends SqlTestSupport {
         sqlService.execute("CREATE MAPPING " + name + ' '
                 + "TYPE " + FileSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ("
-                + '"' + OPTION_SERIALIZATION_FORMAT + "\" '" + CSV_SERIALIZATION_FORMAT + '\''
+                + '"' + OPTION_FORMAT + "\" '" + CSV_FORMAT + '\''
                 + ", \"" + FileSqlConnector.OPTION_PATH + "\" '" + path("discovered-csv") + '\''
                 + ", \"" + OPTION_HEADER + "\" '" + Boolean.TRUE + '\''
                 + ")"
@@ -130,7 +130,7 @@ public class SqlHadoopTest extends SqlTestSupport {
                 + ", name VARCHAR"
                 + ") TYPE " + FileSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ("
-                + '"' + OPTION_SERIALIZATION_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + '\''
+                + '"' + OPTION_FORMAT + "\" '" + JSON_FORMAT + '\''
                 + ", \"" + FileSqlConnector.OPTION_PATH + "\" '" + path("json") + '\''
                 + ")"
         );
@@ -152,7 +152,7 @@ public class SqlHadoopTest extends SqlTestSupport {
         sqlService.execute("CREATE MAPPING " + name + ' '
                 + "TYPE " + FileSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ("
-                + '"' + OPTION_SERIALIZATION_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + '\''
+                + '"' + OPTION_FORMAT + "\" '" + JSON_FORMAT + '\''
                 + ", \"" + FileSqlConnector.OPTION_PATH + "\" '" + path("discovered-json") + '\''
                 + ")"
         );
@@ -176,7 +176,7 @@ public class SqlHadoopTest extends SqlTestSupport {
                 + ", name VARCHAR EXTERNAL NAME string"
                 + ") TYPE " + FileSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ("
-                + '"' + OPTION_SERIALIZATION_FORMAT + "\" '" + AVRO_SERIALIZATION_FORMAT + '\''
+                + '"' + OPTION_FORMAT + "\" '" + AVRO_FORMAT + '\''
                 + ", \"" + FileSqlConnector.OPTION_PATH + "\" '" + path("avro") + '\''
                 + ")"
         );
@@ -195,7 +195,7 @@ public class SqlHadoopTest extends SqlTestSupport {
         sqlService.execute("CREATE MAPPING " + name + ' '
                 + "TYPE " + FileSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ("
-                + '"' + OPTION_SERIALIZATION_FORMAT + "\" '" + AVRO_SERIALIZATION_FORMAT + '\''
+                + '"' + OPTION_FORMAT + "\" '" + AVRO_FORMAT + '\''
                 + ", \"" + FileSqlConnector.OPTION_PATH + "\" '" + path("discovered-avro") + '\''
                 + ")"
         );
@@ -215,7 +215,7 @@ public class SqlHadoopTest extends SqlTestSupport {
                 + "nonExistingField VARCHAR"
                 + ") TYPE " + FileSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ("
-                + '"' + OPTION_SERIALIZATION_FORMAT + "\" '" + PARQUET_SERIALIZATION_FORMAT + '\''
+                + '"' + OPTION_FORMAT + "\" '" + PARQUET_FORMAT + '\''
                 + ", \"" + FileSqlConnector.OPTION_PATH + "\" '" + path("parquet-nulls") + '\''
                 + ")"
         );
@@ -236,7 +236,7 @@ public class SqlHadoopTest extends SqlTestSupport {
                 + ", name VARCHAR EXTERNAL NAME string"
                 + ") TYPE " + FileSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ("
-                + '"' + OPTION_SERIALIZATION_FORMAT + "\" '" + PARQUET_SERIALIZATION_FORMAT + '\''
+                + '"' + OPTION_FORMAT + "\" '" + PARQUET_FORMAT + '\''
                 + ", \"" + FileSqlConnector.OPTION_PATH + "\" '" + path("parquet-fields-mapping") + '\''
                 + ")"
         );
@@ -268,7 +268,7 @@ public class SqlHadoopTest extends SqlTestSupport {
                 + ", timestampTz TIMESTAMP WITH TIME ZONE"
                 + ") TYPE " + FileSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ( "
-                + '"' + OPTION_SERIALIZATION_FORMAT + "\" '" + PARQUET_SERIALIZATION_FORMAT + '\''
+                + '"' + OPTION_FORMAT + "\" '" + PARQUET_FORMAT + '\''
                 + ", \"" + FileSqlConnector.OPTION_PATH + "\" '" + path("parquet-all-types") + '\''
                 + ")"
         );
@@ -301,7 +301,7 @@ public class SqlHadoopTest extends SqlTestSupport {
         sqlService.execute("CREATE MAPPING " + name + ' '
                 + "TYPE " + FileSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ( "
-                + '"' + OPTION_SERIALIZATION_FORMAT + "\" '" + PARQUET_SERIALIZATION_FORMAT + '\''
+                + '"' + OPTION_FORMAT + "\" '" + PARQUET_FORMAT + '\''
                 + ", \"" + FileSqlConnector.OPTION_PATH + "\" '" + path("parquet-schema-discovery") + '\''
                 + ")"
         );

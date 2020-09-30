@@ -20,7 +20,7 @@ import com.hazelcast.sql.impl.QueryException;
 
 import java.util.Map;
 
-import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_SERIALIZATION_FORMAT;
+import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_FORMAT;
 import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.OPTION_CHARSET;
 import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.OPTION_DELIMITER;
 import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.OPTION_GLOB;
@@ -36,8 +36,8 @@ final class FileOptions {
     private final Map<String, String> options;
 
     private FileOptions(Map<String, String> options) {
-        if (options.get(OPTION_SERIALIZATION_FORMAT) == null) {
-            throw QueryException.error("Missing '" + OPTION_SERIALIZATION_FORMAT + "' option");
+        if (options.get(OPTION_FORMAT) == null) {
+            throw QueryException.error("Missing '" + OPTION_FORMAT + "' option");
         }
         if (options.get(OPTION_PATH) == null) {
             throw QueryException.error("Missing '" + OPTION_PATH + "' option");
@@ -51,7 +51,7 @@ final class FileOptions {
     }
 
     String format() {
-        return options.get(OPTION_SERIALIZATION_FORMAT);
+        return options.get(OPTION_FORMAT);
     }
 
     String path() {

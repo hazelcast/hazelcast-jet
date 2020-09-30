@@ -27,8 +27,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 
-import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_SERIALIZATION_KEY_FORMAT;
-import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_SERIALIZATION_VALUE_FORMAT;
+import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_KEY_FORMAT;
+import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_VALUE_FORMAT;
 import static java.util.Arrays.stream;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toMap;
@@ -78,7 +78,7 @@ public class EntryMetadataResolvers {
     }
 
     private EntryMetadataResolver findMetadataResolver(Map<String, String> options, boolean isKey) {
-        String option = isKey ? OPTION_SERIALIZATION_KEY_FORMAT : OPTION_SERIALIZATION_VALUE_FORMAT;
+        String option = isKey ? OPTION_KEY_FORMAT : OPTION_VALUE_FORMAT;
         String format = options.get(option);
         if (format == null) {
             throw QueryException.error("Missing '" + option + "' option");

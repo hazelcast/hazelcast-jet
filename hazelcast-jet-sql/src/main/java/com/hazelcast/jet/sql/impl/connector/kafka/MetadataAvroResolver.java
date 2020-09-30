@@ -36,7 +36,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import static com.hazelcast.jet.sql.impl.connector.SqlConnector.AVRO_SERIALIZATION_FORMAT;
+import static com.hazelcast.jet.sql.impl.connector.SqlConnector.AVRO_FORMAT;
 
 final class MetadataAvroResolver implements EntryMetadataResolver {
 
@@ -47,7 +47,7 @@ final class MetadataAvroResolver implements EntryMetadataResolver {
 
     @Override
     public String supportedFormat() {
-        return AVRO_SERIALIZATION_FORMAT;
+        return AVRO_FORMAT;
     }
 
     @Override

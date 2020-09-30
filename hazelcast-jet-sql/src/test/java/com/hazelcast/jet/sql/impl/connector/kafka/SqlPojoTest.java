@@ -42,10 +42,10 @@ import java.time.ZonedDateTime;
 import java.util.Map;
 
 import static com.hazelcast.jet.core.TestUtil.createMap;
-import static com.hazelcast.jet.sql.impl.connector.SqlConnector.JAVA_SERIALIZATION_FORMAT;
+import static com.hazelcast.jet.sql.impl.connector.SqlConnector.JAVA_FORMAT;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_KEY_CLASS;
-import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_SERIALIZATION_KEY_FORMAT;
-import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_SERIALIZATION_VALUE_FORMAT;
+import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_KEY_FORMAT;
+import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_VALUE_FORMAT;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_VALUE_CLASS;
 import static java.time.ZoneId.systemDefault;
 import static java.time.ZoneOffset.UTC;
@@ -79,9 +79,9 @@ public class SqlPojoTest extends SqlTestSupport {
         sqlService.execute("CREATE MAPPING " + name + ' '
                 + "TYPE " + KafkaSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ( "
-                + '"' + OPTION_SERIALIZATION_KEY_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + '\''
+                + '"' + OPTION_KEY_FORMAT + "\" '" + JAVA_FORMAT + '\''
                 + ", \"" + OPTION_KEY_CLASS + "\" '" + PersonId.class.getName() + '\''
-                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + '\''
+                + ", \"" + OPTION_VALUE_FORMAT + "\" '" + JAVA_FORMAT + '\''
                 + ", \"" + OPTION_VALUE_CLASS + "\" '" + Person.class.getName() + '\''
                 + ", \"bootstrap.servers\" '" + kafkaTestSupport.getBrokerConnectionString() + '\''
                 + ", \"key.serializer\" '" + PersonIdSerializer.class.getCanonicalName() + '\''
@@ -109,9 +109,9 @@ public class SqlPojoTest extends SqlTestSupport {
         sqlService.execute("CREATE MAPPING " + name + ' '
                 + "TYPE " + KafkaSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ( "
-                + '"' + OPTION_SERIALIZATION_KEY_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + '\''
+                + '"' + OPTION_KEY_FORMAT + "\" '" + JAVA_FORMAT + '\''
                 + ", \"" + OPTION_KEY_CLASS + "\" '" + PersonId.class.getName() + '\''
-                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + '\''
+                + ", \"" + OPTION_VALUE_FORMAT + "\" '" + JAVA_FORMAT + '\''
                 + ", \"" + OPTION_VALUE_CLASS + "\" '" + Person.class.getName() + '\''
                 + ", \"bootstrap.servers\" '" + kafkaTestSupport.getBrokerConnectionString() + '\''
                 + ", \"key.serializer\" '" + PersonIdSerializer.class.getCanonicalName() + '\''
@@ -141,9 +141,9 @@ public class SqlPojoTest extends SqlTestSupport {
                 + ", value_id INT EXTERNAL NAME \"this.id\""
                 + ") TYPE " + KafkaSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ( "
-                + '"' + OPTION_SERIALIZATION_KEY_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + '\''
+                + '"' + OPTION_KEY_FORMAT + "\" '" + JAVA_FORMAT + '\''
                 + ", \"" + OPTION_KEY_CLASS + "\" '" + PersonId.class.getName() + '\''
-                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + '\''
+                + ", \"" + OPTION_VALUE_FORMAT + "\" '" + JAVA_FORMAT + '\''
                 + ", \"" + OPTION_VALUE_CLASS + "\" '" + Person.class.getName() + '\''
                 + ", \"bootstrap.servers\" '" + kafkaTestSupport.getBrokerConnectionString() + '\''
                 + ", \"key.serializer\" '" + PersonIdSerializer.class.getCanonicalName() + '\''
@@ -175,9 +175,9 @@ public class SqlPojoTest extends SqlTestSupport {
         sqlService.execute("CREATE MAPPING " + to + ' '
                 + " TYPE " + KafkaSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ( "
-                + '"' + OPTION_SERIALIZATION_KEY_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + '\''
+                + '"' + OPTION_KEY_FORMAT + "\" '" + JAVA_FORMAT + '\''
                 + ", \"" + OPTION_KEY_CLASS + "\" '" + PersonId.class.getName() + '\''
-                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + '\''
+                + ", \"" + OPTION_VALUE_FORMAT + "\" '" + JAVA_FORMAT + '\''
                 + ", \"" + OPTION_VALUE_CLASS + "\" '" + AllCanonicalTypesValue.class.getName() + '\''
                 + ", \"bootstrap.servers\" '" + kafkaTestSupport.getBrokerConnectionString() + '\''
                 + ", \"key.serializer\" '" + PersonIdSerializer.class.getCanonicalName() + '\''

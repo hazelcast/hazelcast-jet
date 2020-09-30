@@ -30,11 +30,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static com.hazelcast.jet.sql.impl.connector.SqlConnector.AVRO_SERIALIZATION_FORMAT;
-import static com.hazelcast.jet.sql.impl.connector.SqlConnector.CSV_SERIALIZATION_FORMAT;
-import static com.hazelcast.jet.sql.impl.connector.SqlConnector.JSON_SERIALIZATION_FORMAT;
-import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_SERIALIZATION_FORMAT;
-import static com.hazelcast.jet.sql.impl.connector.SqlConnector.PARQUET_SERIALIZATION_FORMAT;
+import static com.hazelcast.jet.sql.impl.connector.SqlConnector.AVRO_FORMAT;
+import static com.hazelcast.jet.sql.impl.connector.SqlConnector.CSV_FORMAT;
+import static com.hazelcast.jet.sql.impl.connector.SqlConnector.JSON_FORMAT;
+import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_FORMAT;
+import static com.hazelcast.jet.sql.impl.connector.SqlConnector.PARQUET_FORMAT;
 import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.OPTION_CHARSET;
 import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.OPTION_DELIMITER;
 import static com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector.OPTION_GLOB;
@@ -46,7 +46,7 @@ import static java.util.Collections.emptyList;
 
 public final class FileTableFunction extends JetTableFunction {
 
-    public static final FileTableFunction CSV = new FileTableFunction(CSV_SERIALIZATION_FORMAT, asList(
+    public static final FileTableFunction CSV = new FileTableFunction(CSV_FORMAT, asList(
             new JetTableFunctionParameter(0, OPTION_PATH, true),
             new JetTableFunctionParameter(1, OPTION_GLOB, false),
             new JetTableFunctionParameter(2, OPTION_SHARED_FILE_SYSTEM, false),
@@ -56,7 +56,7 @@ public final class FileTableFunction extends JetTableFunction {
             // TODO: cloud credentials
     ));
 
-    public static final FileTableFunction JSON = new FileTableFunction(JSON_SERIALIZATION_FORMAT, asList(
+    public static final FileTableFunction JSON = new FileTableFunction(JSON_FORMAT, asList(
             new JetTableFunctionParameter(0, OPTION_PATH, true),
             new JetTableFunctionParameter(1, OPTION_GLOB, false),
             new JetTableFunctionParameter(2, OPTION_SHARED_FILE_SYSTEM, false),
@@ -64,14 +64,14 @@ public final class FileTableFunction extends JetTableFunction {
             // TODO: cloud credentials
     ));
 
-    public static final FileTableFunction AVRO = new FileTableFunction(AVRO_SERIALIZATION_FORMAT, asList(
+    public static final FileTableFunction AVRO = new FileTableFunction(AVRO_FORMAT, asList(
             new JetTableFunctionParameter(0, OPTION_PATH, true),
             new JetTableFunctionParameter(1, OPTION_GLOB, false),
             new JetTableFunctionParameter(2, OPTION_SHARED_FILE_SYSTEM, false)
             // TODO: cloud credentials
     ));
 
-    public static final FileTableFunction PARQUET = new FileTableFunction(PARQUET_SERIALIZATION_FORMAT, asList(
+    public static final FileTableFunction PARQUET = new FileTableFunction(PARQUET_FORMAT, asList(
             new JetTableFunctionParameter(0, OPTION_PATH, true),
             new JetTableFunctionParameter(1, OPTION_GLOB, false),
             new JetTableFunctionParameter(2, OPTION_SHARED_FILE_SYSTEM, false)
@@ -115,7 +115,7 @@ public final class FileTableFunction extends JetTableFunction {
         assert arguments.size() == parameters.size();
 
         Map<String, String> options = new HashMap<>();
-        options.put(OPTION_SERIALIZATION_FORMAT, format);
+        options.put(OPTION_FORMAT, format);
         for (int i = 0; i < arguments.size(); i++) {
             if (arguments.get(i) != null) {
                 options.put(parameters.get(i).getName(), arguments.get(i).toString());

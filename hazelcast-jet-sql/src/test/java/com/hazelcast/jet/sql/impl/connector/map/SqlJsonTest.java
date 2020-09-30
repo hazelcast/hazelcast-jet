@@ -30,11 +30,11 @@ import java.time.LocalTime;
 import java.time.ZonedDateTime;
 
 import static com.hazelcast.jet.core.TestUtil.createMap;
-import static com.hazelcast.jet.sql.impl.connector.SqlConnector.JAVA_SERIALIZATION_FORMAT;
-import static com.hazelcast.jet.sql.impl.connector.SqlConnector.JSON_SERIALIZATION_FORMAT;
+import static com.hazelcast.jet.sql.impl.connector.SqlConnector.JAVA_FORMAT;
+import static com.hazelcast.jet.sql.impl.connector.SqlConnector.JSON_FORMAT;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_KEY_CLASS;
-import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_SERIALIZATION_KEY_FORMAT;
-import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_SERIALIZATION_VALUE_FORMAT;
+import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_KEY_FORMAT;
+import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_VALUE_FORMAT;
 import static java.time.ZoneId.systemDefault;
 import static java.time.ZoneOffset.UTC;
 import static java.util.Arrays.asList;
@@ -58,8 +58,8 @@ public class SqlJsonTest extends SqlTestSupport {
                 + ", name VARCHAR EXTERNAL NAME \"this.name\""
                 + ") TYPE " + IMapSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ("
-                + '"' + OPTION_SERIALIZATION_KEY_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + '\''
-                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + '\''
+                + '"' + OPTION_KEY_FORMAT + "\" '" + JSON_FORMAT + '\''
+                + ", \"" + OPTION_VALUE_FORMAT + "\" '" + JSON_FORMAT + '\''
                 + ")");
 
         assertMapEventually(
@@ -81,8 +81,8 @@ public class SqlJsonTest extends SqlTestSupport {
                 + ", value_name VARCHAR EXTERNAL NAME \"this.name\""
                 + ") TYPE " + IMapSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ("
-                + '"' + OPTION_SERIALIZATION_KEY_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + '\''
-                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + '\''
+                + '"' + OPTION_KEY_FORMAT + "\" '" + JSON_FORMAT + '\''
+                + ", \"" + OPTION_VALUE_FORMAT + "\" '" + JSON_FORMAT + '\''
                 + ")");
 
         assertMapEventually(
@@ -103,9 +103,9 @@ public class SqlJsonTest extends SqlTestSupport {
                 + "name VARCHAR"
                 + ") TYPE " + IMapSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ("
-                + '"' + OPTION_SERIALIZATION_KEY_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + '\''
+                + '"' + OPTION_KEY_FORMAT + "\" '" + JAVA_FORMAT + '\''
                 + ", \"" + OPTION_KEY_CLASS + "\" '" + Integer.class.getName() + '\''
-                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + '\''
+                + ", \"" + OPTION_VALUE_FORMAT + "\" '" + JSON_FORMAT + '\''
                 + ")");
 
         // insert initial record
@@ -117,9 +117,9 @@ public class SqlJsonTest extends SqlTestSupport {
                 + ", ssn BIGINT"
                 + ") TYPE " + IMapSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ("
-                + '"' + OPTION_SERIALIZATION_KEY_FORMAT + "\" '" + JAVA_SERIALIZATION_FORMAT + '\''
+                + '"' + OPTION_KEY_FORMAT + "\" '" + JAVA_FORMAT + '\''
                 + ", \"" + OPTION_KEY_CLASS + "\" '" + Integer.class.getName() + '\''
-                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + '\''
+                + ", \"" + OPTION_VALUE_FORMAT + "\" '" + JSON_FORMAT + '\''
                 + ")"
         );
 
@@ -160,8 +160,8 @@ public class SqlJsonTest extends SqlTestSupport {
                 + ", timestampTz TIMESTAMP WITH TIME ZONE"
                 + ") TYPE " + IMapSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ("
-                + '"' + OPTION_SERIALIZATION_KEY_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + '\''
-                + ", \"" + OPTION_SERIALIZATION_VALUE_FORMAT + "\" '" + JSON_SERIALIZATION_FORMAT + '\''
+                + '"' + OPTION_KEY_FORMAT + "\" '" + JSON_FORMAT + '\''
+                + ", \"" + OPTION_VALUE_FORMAT + "\" '" + JSON_FORMAT + '\''
                 + ")");
 
         sqlService.execute("SINK INTO " + to + " SELECT "

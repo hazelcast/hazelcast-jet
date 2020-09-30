@@ -28,8 +28,8 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
 
-import static com.hazelcast.jet.sql.impl.connector.SqlConnector.AVRO_SERIALIZATION_FORMAT;
-import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_SERIALIZATION_FORMAT;
+import static com.hazelcast.jet.sql.impl.connector.SqlConnector.AVRO_FORMAT;
+import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_FORMAT;
 import static java.time.ZoneOffset.UTC;
 import static java.util.Collections.singletonList;
 
@@ -52,7 +52,7 @@ public class SqlAvroTest extends SqlTestSupport {
                 + "nonExistingField VARCHAR"
                 + ") TYPE " + FileSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ("
-                + '"' + OPTION_SERIALIZATION_FORMAT + "\" '" + AVRO_SERIALIZATION_FORMAT + '\''
+                + '"' + OPTION_FORMAT + "\" '" + AVRO_FORMAT + '\''
                 + ", \"" + FileSqlConnector.OPTION_PATH + "\" '" + RESOURCES_PATH + '\''
                 + ", \"" + FileSqlConnector.OPTION_GLOB + "\" '" + "file.avro" + '\''
                 + ")"
@@ -72,7 +72,7 @@ public class SqlAvroTest extends SqlTestSupport {
                 + ", name VARCHAR EXTERNAL NAME string"
                 + ") TYPE " + FileSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ("
-                + '"' + OPTION_SERIALIZATION_FORMAT + "\" '" + AVRO_SERIALIZATION_FORMAT + '\''
+                + '"' + OPTION_FORMAT + "\" '" + AVRO_FORMAT + '\''
                 + ", \"" + FileSqlConnector.OPTION_PATH + "\" '" + RESOURCES_PATH + '\''
                 + ", \"" + FileSqlConnector.OPTION_GLOB + "\" '" + "file.avro" + '\''
                 + ")"
@@ -103,7 +103,7 @@ public class SqlAvroTest extends SqlTestSupport {
                 + ", timestampTz TIMESTAMP WITH TIME ZONE"
                 + ") TYPE " + FileSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ( "
-                + '"' + OPTION_SERIALIZATION_FORMAT + "\" '" + AVRO_SERIALIZATION_FORMAT + '\''
+                + '"' + OPTION_FORMAT + "\" '" + AVRO_FORMAT + '\''
                 + ", \"" + FileSqlConnector.OPTION_PATH + "\" '" + RESOURCES_PATH + '\''
                 + ", \"" + FileSqlConnector.OPTION_GLOB + "\" '" + "file.avro" + '\''
                 + ")"
@@ -135,7 +135,7 @@ public class SqlAvroTest extends SqlTestSupport {
         sqlService.execute("CREATE MAPPING " + name + ' '
                 + "TYPE " + FileSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ( "
-                + '"' + OPTION_SERIALIZATION_FORMAT + "\" '" + AVRO_SERIALIZATION_FORMAT + '\''
+                + '"' + OPTION_FORMAT + "\" '" + AVRO_FORMAT + '\''
                 + ", \"" + FileSqlConnector.OPTION_PATH + "\" '" + RESOURCES_PATH + '\''
                 + ", \"" + FileSqlConnector.OPTION_GLOB + "\" '" + "file.avro" + '\''
                 + ")"

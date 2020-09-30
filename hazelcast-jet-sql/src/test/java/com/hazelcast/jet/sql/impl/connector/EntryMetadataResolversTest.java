@@ -33,9 +33,9 @@ import org.mockito.MockitoAnnotations;
 import java.util.List;
 import java.util.Map;
 
-import static com.hazelcast.jet.sql.impl.connector.SqlConnector.JAVA_SERIALIZATION_FORMAT;
-import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_SERIALIZATION_KEY_FORMAT;
-import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_SERIALIZATION_VALUE_FORMAT;
+import static com.hazelcast.jet.sql.impl.connector.SqlConnector.JAVA_FORMAT;
+import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_KEY_FORMAT;
+import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_VALUE_FORMAT;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.emptyMap;
 import static java.util.Collections.singletonList;
@@ -63,7 +63,7 @@ public class EntryMetadataResolversTest {
         MockitoAnnotations.initMocks(this);
 
         given(nodeEngine.getSerializationService()).willReturn(ss);
-        given(resolver.supportedFormat()).willReturn(JAVA_SERIALIZATION_FORMAT);
+        given(resolver.supportedFormat()).willReturn(JAVA_FORMAT);
 
         resolvers = new EntryMetadataResolvers(resolver);
     }
@@ -71,8 +71,8 @@ public class EntryMetadataResolversTest {
     @Test
     public void test_resolveAndValidateFields() {
         Map<String, String> options = ImmutableMap.of(
-                OPTION_SERIALIZATION_KEY_FORMAT, JAVA_SERIALIZATION_FORMAT,
-                OPTION_SERIALIZATION_VALUE_FORMAT, JAVA_SERIALIZATION_FORMAT
+                OPTION_KEY_FORMAT, JAVA_FORMAT,
+                OPTION_VALUE_FORMAT, JAVA_FORMAT
         );
         given(resolver.resolveFields(true, emptyList(), options, ss))
                 .willReturn(singletonList(field("__key", QueryDataType.INT)));
@@ -90,8 +90,8 @@ public class EntryMetadataResolversTest {
     @Test
     public void when_keyClashesWithValue_then_keyIsChosen() {
         Map<String, String> options = ImmutableMap.of(
-                OPTION_SERIALIZATION_KEY_FORMAT, JAVA_SERIALIZATION_FORMAT,
-                OPTION_SERIALIZATION_VALUE_FORMAT, JAVA_SERIALIZATION_FORMAT
+                OPTION_KEY_FORMAT, JAVA_FORMAT,
+                OPTION_VALUE_FORMAT, JAVA_FORMAT
         );
         given(resolver.resolveFields(true, emptyList(), options, ss))
                 .willReturn(singletonList(field("field", QueryDataType.INT)));
@@ -106,8 +106,8 @@ public class EntryMetadataResolversTest {
     @Test
     public void when_keyFieldsIsEmpty_then_throws() {
         Map<String, String> options = ImmutableMap.of(
-                OPTION_SERIALIZATION_KEY_FORMAT, JAVA_SERIALIZATION_FORMAT,
-                OPTION_SERIALIZATION_VALUE_FORMAT, JAVA_SERIALIZATION_FORMAT
+                OPTION_KEY_FORMAT, JAVA_FORMAT,
+                OPTION_VALUE_FORMAT, JAVA_FORMAT
         );
         given(resolver.resolveFields(true, emptyList(), options, ss))
                 .willReturn(emptyList());
@@ -119,8 +119,8 @@ public class EntryMetadataResolversTest {
     @Test
     public void when_valueFieldsIsEmpty_then_throws() {
         Map<String, String> options = ImmutableMap.of(
-                OPTION_SERIALIZATION_KEY_FORMAT, JAVA_SERIALIZATION_FORMAT,
-                OPTION_SERIALIZATION_VALUE_FORMAT, JAVA_SERIALIZATION_FORMAT
+                OPTION_KEY_FORMAT, JAVA_FORMAT,
+                OPTION_VALUE_FORMAT, JAVA_FORMAT
         );
         given(resolver.resolveFields(true, emptyList(), options, ss))
                 .willReturn(singletonList(field("__key", QueryDataType.INT)));
@@ -144,7 +144,7 @@ public class EntryMetadataResolversTest {
     })
     public void test_resolveMetadata(boolean key) {
         Map<String, String> options = ImmutableMap.of(
-                (key ? OPTION_SERIALIZATION_KEY_FORMAT : OPTION_SERIALIZATION_VALUE_FORMAT), JAVA_SERIALIZATION_FORMAT
+                (key ? OPTION_KEY_FORMAT : OPTION_VALUE_FORMAT), JAVA_FORMAT
         );
         given(resolver.resolveMetadata(key, emptyList(), options, ss)).willReturn(mock(EntryMetadata.class));
 

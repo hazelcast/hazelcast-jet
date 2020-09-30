@@ -43,7 +43,7 @@ import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_KEY_FACTO
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_VALUE_CLASS_ID;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_VALUE_CLASS_VERSION;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_VALUE_FACTORY_ID;
-import static com.hazelcast.jet.sql.impl.connector.SqlConnector.PORTABLE_SERIALIZATION_FORMAT;
+import static com.hazelcast.jet.sql.impl.connector.SqlConnector.PORTABLE_FORMAT;
 import static java.lang.Integer.parseInt;
 
 final class MetadataPortableResolver implements EntryMetadataResolver {
@@ -55,7 +55,7 @@ final class MetadataPortableResolver implements EntryMetadataResolver {
 
     @Override
     public String supportedFormat() {
-        return PORTABLE_SERIALIZATION_FORMAT;
+        return PORTABLE_FORMAT;
     }
 
     @Override
