@@ -139,17 +139,17 @@ public interface SqlConnector {
     boolean isStream();
 
     /**
-     * Resolve a final field list given a field list and options from the
-     * user. The {@code userFields} can be empty, in this case the connector
-     * is supposed to resolve them. The returned list must not be empty.
+     * Resolve a final field list given a field list and options from the user.
+     * This method is called when processing a CREATE MAPPING statement.
      * <p>
-     * The method is free to do any changes to the user-provided field list, but
-     * should document the behavior to the user. Generally, it should not
-     * remove columns, but might add some.
+     * The {@code userFields} can be empty, in this case the connector is
+     * supposed to resolve them from a sample or from options. If it's not
+     * empty, it should be only validated - no columns should be added or
+     * removed or type changed. The external name can be added.
      * <p>
-     * The returned field list will be stored in the catalog and if the user lists
-     * the catalog, they will be visible to the user. It will be later passed
-     * to {@link #createTable}.
+     *  The returned list must not be empty. It will be stored in the catalog
+     *  and if the user lists the catalog, they will be visible to the user. It
+     *  will be later passed to {@link #createTable}.
      *
      * @param nodeEngine an instance of {@link NodeEngine}
      * @param options    user-provided options
@@ -164,8 +164,10 @@ public interface SqlConnector {
     );
 
     /**
-     * Creates a {@link Table} object with the given fields. Should not not attempt to
-     * connect to the remote service.
+     * Creates a {@link Table} object with the given fields. Should not not
+     * attempt to connect to the remote service and be fast.
+     * <p>
+     * This method is called for each statement execution and for each mapping.
      *
      * @param nodeEngine     an instance of {@link NodeEngine}
      * @param options        connector specific options

@@ -14,12 +14,11 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.sql.impl.connector.map;
+package com.hazelcast.jet.sql.impl.connector.keyvalue;
 
 import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.jet.impl.util.ReflectionUtils;
 import com.hazelcast.jet.sql.impl.connector.EntryMetadata;
-import com.hazelcast.jet.sql.impl.connector.EntryMetadataResolver;
 import com.hazelcast.jet.sql.impl.inject.PojoUpsertTargetDescriptor;
 import com.hazelcast.jet.sql.impl.inject.PrimitiveUpsertTargetDescriptor;
 import com.hazelcast.jet.sql.impl.schema.MappingField;
@@ -41,16 +40,22 @@ import java.util.Set;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.JAVA_FORMAT;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_KEY_CLASS;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_VALUE_CLASS;
+import static com.hazelcast.jet.sql.impl.connector.keyvalue.KvMetadataResolvers.extractKeyFields;
+import static com.hazelcast.jet.sql.impl.connector.keyvalue.KvMetadataResolvers.extractValueFields;
 import static com.hazelcast.sql.impl.extract.QueryPath.KEY;
 import static com.hazelcast.sql.impl.extract.QueryPath.VALUE;
 import static com.hazelcast.sql.impl.extract.QueryPath.VALUE_PATH;
 import static java.util.Collections.singletonList;
 
-final class MetadataJavaResolver implements EntryMetadataResolver {
+/**
+ * A utility for key-value connectors that use Java serialization ({@link
+ * java.io.Serializable}) to resolve fields.
+ */
+public final class KvMetadataJavaResolver implements KvMetadataResolver {
 
-    public static final MetadataJavaResolver INSTANCE = new MetadataJavaResolver();
+    public static final KvMetadataJavaResolver INSTANCE = new KvMetadataJavaResolver();
 
-    private MetadataJavaResolver() {
+    public KvMetadataJavaResolver() {
     }
 
     @Override
@@ -59,7 +64,7 @@ final class MetadataJavaResolver implements EntryMetadataResolver {
     }
 
     @Override
-    public List<MappingField> resolveFields(
+    public List<MappingField> resolveAndValidateFields(
             boolean isKey,
             List<MappingField> userFields,
             Map<String, String> options,
@@ -69,7 +74,7 @@ final class MetadataJavaResolver implements EntryMetadataResolver {
         return resolveFields(isKey, userFields, clazz);
     }
 
-    List<MappingField> resolveFields(
+    public List<MappingField> resolveFields(
             boolean isKey,
             List<MappingField> userFields,
             Class<?> clazz
@@ -158,7 +163,7 @@ final class MetadataJavaResolver implements EntryMetadataResolver {
         return resolveMetadata(isKey, resolvedFields, clazz);
     }
 
-    EntryMetadata resolveMetadata(
+    public EntryMetadata resolveMetadata(
             boolean isKey,
             List<MappingField> resolvedFields,
             Class<?> clazz

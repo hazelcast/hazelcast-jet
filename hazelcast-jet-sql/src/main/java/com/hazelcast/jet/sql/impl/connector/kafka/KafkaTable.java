@@ -23,6 +23,7 @@ import com.hazelcast.sql.impl.extract.QueryPath;
 import com.hazelcast.sql.impl.extract.QueryTargetDescriptor;
 import com.hazelcast.sql.impl.schema.TableField;
 import com.hazelcast.sql.impl.schema.TableStatistics;
+import com.hazelcast.sql.impl.schema.map.MapTableField;
 import com.hazelcast.sql.impl.type.QueryDataType;
 
 import java.util.Arrays;
@@ -91,7 +92,7 @@ class KafkaTable extends JetTable {
     }
 
     QueryPath[] paths() {
-        return getFields().stream().map(field -> ((KafkaTableField) field).getPath()).toArray(QueryPath[]::new);
+        return getFields().stream().map(field -> ((MapTableField) field).getPath()).toArray(QueryPath[]::new);
     }
 
     QueryDataType[] types() {

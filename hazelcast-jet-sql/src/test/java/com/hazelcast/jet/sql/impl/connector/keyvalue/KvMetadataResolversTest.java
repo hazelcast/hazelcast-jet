@@ -14,10 +14,11 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.sql.impl.connector;
+package com.hazelcast.jet.sql.impl.connector.keyvalue;
 
 import com.google.common.collect.ImmutableMap;
 import com.hazelcast.internal.serialization.InternalSerializationService;
+import com.hazelcast.jet.sql.impl.connector.EntryMetadata;
 import com.hazelcast.jet.sql.impl.schema.MappingField;
 import com.hazelcast.spi.impl.NodeEngine;
 import com.hazelcast.sql.impl.QueryException;
@@ -45,12 +46,12 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
 
 @RunWith(JUnitParamsRunner.class)
-public class EntryMetadataResolversTest {
+public class KvMetadataResolversTest {
 
-    private EntryMetadataResolvers resolvers;
+    private KvMetadataResolvers resolvers;
 
     @Mock
-    private EntryMetadataResolver resolver;
+    private KvMetadataResolver resolver;
 
     @Mock
     private NodeEngine nodeEngine;
@@ -65,7 +66,7 @@ public class EntryMetadataResolversTest {
         given(nodeEngine.getSerializationService()).willReturn(ss);
         given(resolver.supportedFormat()).willReturn(JAVA_FORMAT);
 
-        resolvers = new EntryMetadataResolvers(resolver);
+        resolvers = new KvMetadataResolvers(resolver);
     }
 
     @Test
@@ -74,9 +75,9 @@ public class EntryMetadataResolversTest {
                 OPTION_KEY_FORMAT, JAVA_FORMAT,
                 OPTION_VALUE_FORMAT, JAVA_FORMAT
         );
-        given(resolver.resolveFields(true, emptyList(), options, ss))
+        given(resolver.resolveAndValidateFields(true, emptyList(), options, ss))
                 .willReturn(singletonList(field("__key", QueryDataType.INT)));
-        given(resolver.resolveFields(false, emptyList(), options, ss))
+        given(resolver.resolveAndValidateFields(false, emptyList(), options, ss))
                 .willReturn(singletonList(field("this", QueryDataType.VARCHAR)));
 
         List<MappingField> fields = resolvers.resolveAndValidateFields(emptyList(), options, nodeEngine);
@@ -93,9 +94,9 @@ public class EntryMetadataResolversTest {
                 OPTION_KEY_FORMAT, JAVA_FORMAT,
                 OPTION_VALUE_FORMAT, JAVA_FORMAT
         );
-        given(resolver.resolveFields(true, emptyList(), options, ss))
+        given(resolver.resolveAndValidateFields(true, emptyList(), options, ss))
                 .willReturn(singletonList(field("field", QueryDataType.INT)));
-        given(resolver.resolveFields(false, emptyList(), options, ss))
+        given(resolver.resolveAndValidateFields(false, emptyList(), options, ss))
                 .willReturn(singletonList(field("field", QueryDataType.VARCHAR)));
 
         List<MappingField> fields = resolvers.resolveAndValidateFields(emptyList(), options, nodeEngine);
@@ -109,9 +110,9 @@ public class EntryMetadataResolversTest {
                 OPTION_KEY_FORMAT, JAVA_FORMAT,
                 OPTION_VALUE_FORMAT, JAVA_FORMAT
         );
-        given(resolver.resolveFields(true, emptyList(), options, ss))
+        given(resolver.resolveAndValidateFields(true, emptyList(), options, ss))
                 .willReturn(emptyList());
-        given(resolver.resolveFields(false, emptyList(), options, ss))
+        given(resolver.resolveAndValidateFields(false, emptyList(), options, ss))
                 .willReturn(singletonList(field("this", QueryDataType.INT)));
 
         List<MappingField> fields = resolvers.resolveAndValidateFields(emptyList(), options, nodeEngine);
@@ -125,9 +126,9 @@ public class EntryMetadataResolversTest {
                 OPTION_KEY_FORMAT, JAVA_FORMAT,
                 OPTION_VALUE_FORMAT, JAVA_FORMAT
         );
-        given(resolver.resolveFields(true, emptyList(), options, ss))
+        given(resolver.resolveAndValidateFields(true, emptyList(), options, ss))
                 .willReturn(singletonList(field("__key", QueryDataType.INT)));
-        given(resolver.resolveFields(false, emptyList(), options, ss))
+        given(resolver.resolveAndValidateFields(false, emptyList(), options, ss))
                 .willReturn(emptyList());
 
         List<MappingField> fields = resolvers.resolveAndValidateFields(emptyList(), options, nodeEngine);
@@ -141,9 +142,9 @@ public class EntryMetadataResolversTest {
                 OPTION_KEY_FORMAT, JAVA_FORMAT,
                 OPTION_VALUE_FORMAT, JAVA_FORMAT
         );
-        given(resolver.resolveFields(true, emptyList(), options, ss))
+        given(resolver.resolveAndValidateFields(true, emptyList(), options, ss))
                 .willReturn(emptyList());
-        given(resolver.resolveFields(false, emptyList(), options, ss))
+        given(resolver.resolveAndValidateFields(false, emptyList(), options, ss))
                 .willReturn(emptyList());
 
         assertThatThrownBy(() -> resolvers.resolveAndValidateFields(emptyList(), options, nodeEngine))

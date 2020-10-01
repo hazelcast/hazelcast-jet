@@ -20,9 +20,12 @@ import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.kafka.KafkaProcessors;
 import com.hazelcast.jet.sql.impl.connector.EntryMetadata;
-import com.hazelcast.jet.sql.impl.connector.EntryMetadataResolvers;
 import com.hazelcast.jet.sql.impl.connector.EntryProcessors;
 import com.hazelcast.jet.sql.impl.connector.SqlConnector;
+import com.hazelcast.jet.sql.impl.connector.keyvalue.KvMetadataAvroResolver;
+import com.hazelcast.jet.sql.impl.connector.keyvalue.KvMetadataJavaResolver;
+import com.hazelcast.jet.sql.impl.connector.keyvalue.KvMetadataJsonResolver;
+import com.hazelcast.jet.sql.impl.connector.keyvalue.KvMetadataResolvers;
 import com.hazelcast.jet.sql.impl.schema.MappingField;
 import com.hazelcast.spi.impl.NodeEngine;
 import com.hazelcast.sql.impl.expression.Expression;
@@ -47,13 +50,13 @@ public class KafkaSqlConnector implements SqlConnector {
 
     public static final String TYPE_NAME = "Kafka";
 
-    private final EntryMetadataResolvers metadataResolvers;
+    private final KvMetadataResolvers metadataResolvers;
 
     public KafkaSqlConnector() {
-        this.metadataResolvers = new EntryMetadataResolvers(
-                MetadataJavaResolver.INSTANCE,
-                MetadataJsonResolver.INSTANCE,
-                MetadataAvroResolver.INSTANCE
+        this.metadataResolvers = new KvMetadataResolvers(
+                KvMetadataJavaResolver.INSTANCE,
+                KvMetadataJsonResolver.INSTANCE,
+                KvMetadataAvroResolver.INSTANCE
         );
     }
 

@@ -22,6 +22,7 @@ import com.hazelcast.jet.sql.impl.inject.JsonUpsertTargetDescriptor;
 import com.hazelcast.jet.sql.impl.schema.MappingField;
 import com.hazelcast.sql.impl.QueryException;
 import com.hazelcast.sql.impl.extract.QueryPath;
+import com.hazelcast.sql.impl.schema.map.MapTableField;
 import com.hazelcast.sql.impl.type.QueryDataType;
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
@@ -30,7 +31,7 @@ import org.junit.runner.RunWith;
 
 import java.util.List;
 
-import static com.hazelcast.jet.sql.impl.connector.kafka.MetadataJsonResolver.INSTANCE;
+import static com.hazelcast.jet.sql.impl.connector.keyvalue.KvMetadataJsonResolver.INSTANCE;
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyMap;
 import static java.util.Collections.singletonList;
@@ -38,7 +39,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @RunWith(JUnitParamsRunner.class)
-public class MetadataJsonResolverTest {
+public class KvMetadataJsonResolverTest {
 
     @Test
     @Parameters({
@@ -46,7 +47,7 @@ public class MetadataJsonResolverTest {
             "false, this"
     })
     public void test_resolveFields(boolean key, String prefix) {
-        List<MappingField> fields = INSTANCE.resolveFields(
+        List<MappingField> fields = INSTANCE.resolveAndValidateFields(
                 key,
                 singletonList(field("field", QueryDataType.INT, prefix + ".field")),
                 emptyMap(),
@@ -62,7 +63,7 @@ public class MetadataJsonResolverTest {
             "false"
     })
     public void when_invalidExternalName_then_throws(boolean key) {
-        assertThatThrownBy(() -> INSTANCE.resolveFields(
+        assertThatThrownBy(() -> INSTANCE.resolveAndValidateFields(
                 key,
                 singletonList(field("field", QueryDataType.INT, "does_not_start_with_key_or_value")),
                 emptyMap(),
@@ -77,7 +78,7 @@ public class MetadataJsonResolverTest {
             "false, this"
     })
     public void when_duplicateExternalName_then_throws(boolean key, String prefix) {
-        assertThatThrownBy(() -> INSTANCE.resolveFields(
+        assertThatThrownBy(() -> INSTANCE.resolveAndValidateFields(
                 key,
                 asList(
                         field("field1", QueryDataType.INT, prefix + ".field"),
@@ -103,7 +104,7 @@ public class MetadataJsonResolverTest {
         );
 
         assertThat(metadata.getFields()).containsExactly(
-                new KafkaTableField("field", QueryDataType.INT, QueryPath.create(prefix + ".field"))
+                new MapTableField("field", QueryDataType.INT, false, QueryPath.create(prefix + ".field"))
         );
         assertThat(metadata.getQueryTargetDescriptor()).isEqualTo(JsonQueryTargetDescriptor.INSTANCE);
         assertThat(metadata.getUpsertTargetDescriptor()).isEqualTo(JsonUpsertTargetDescriptor.INSTANCE);

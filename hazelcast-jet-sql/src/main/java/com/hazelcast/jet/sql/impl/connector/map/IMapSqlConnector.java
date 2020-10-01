@@ -22,8 +22,9 @@ import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.core.processor.SinkProcessors;
 import com.hazelcast.jet.sql.impl.connector.EntryMetadata;
-import com.hazelcast.jet.sql.impl.connector.EntryMetadataResolvers;
+import com.hazelcast.jet.sql.impl.connector.keyvalue.KvMetadataResolvers;
 import com.hazelcast.jet.sql.impl.connector.EntryProcessors;
+import com.hazelcast.jet.sql.impl.connector.keyvalue.KvMetadataJavaResolver;
 import com.hazelcast.jet.sql.impl.connector.SqlConnector;
 import com.hazelcast.jet.sql.impl.inject.UpsertTargetDescriptor;
 import com.hazelcast.jet.sql.impl.schema.MappingField;
@@ -53,11 +54,11 @@ public class IMapSqlConnector implements SqlConnector {
 
     public static final String TYPE_NAME = "IMap";
 
-    private final EntryMetadataResolvers metadataResolvers;
+    private final KvMetadataResolvers metadataResolvers;
 
     public IMapSqlConnector() {
-        this.metadataResolvers = new EntryMetadataResolvers(
-                MetadataJavaResolver.INSTANCE,
+        this.metadataResolvers = new KvMetadataResolvers(
+                KvMetadataJavaResolver.INSTANCE,
                 MetadataPortableResolver.INSTANCE,
                 MetadataJsonResolver.INSTANCE
         );

@@ -139,6 +139,7 @@ public class SqlPojoTest extends SqlTestSupport {
         sqlService.execute("CREATE MAPPING " + name + " ("
                 + "key_id INT EXTERNAL NAME \"__key.id\""
                 + ", value_id INT EXTERNAL NAME \"this.id\""
+                + ", name VARCHAR"
                 + ") TYPE " + KafkaSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ( "
                 + '"' + OPTION_KEY_FORMAT + "\" '" + JAVA_FORMAT + '\''

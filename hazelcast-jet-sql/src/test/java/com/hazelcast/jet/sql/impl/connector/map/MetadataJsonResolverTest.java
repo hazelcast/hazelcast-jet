@@ -47,7 +47,7 @@ public class MetadataJsonResolverTest {
             "false, this"
     })
     public void test_resolveFields(boolean key, String prefix) {
-        List<MappingField> fields = INSTANCE.resolveFields(
+        List<MappingField> fields = INSTANCE.resolveAndValidateFields(
                 key,
                 singletonList(field("field", QueryDataType.INT, prefix + ".field")),
                 emptyMap(),
@@ -63,7 +63,7 @@ public class MetadataJsonResolverTest {
             "false"
     })
     public void when_invalidExternalName_then_throws(boolean key) {
-        assertThatThrownBy(() -> INSTANCE.resolveFields(
+        assertThatThrownBy(() -> INSTANCE.resolveAndValidateFields(
                 key,
                 singletonList(field("field", QueryDataType.INT, "does_not_start_with_key_or_value")),
                 emptyMap(),
@@ -78,7 +78,7 @@ public class MetadataJsonResolverTest {
             "false, this"
     })
     public void when_duplicateExternalName_then_throws(boolean key, String prefix) {
-        assertThatThrownBy(() -> INSTANCE.resolveFields(
+        assertThatThrownBy(() -> INSTANCE.resolveAndValidateFields(
                 key,
                 asList(
                         field("field1", QueryDataType.INT, prefix + ".field"),

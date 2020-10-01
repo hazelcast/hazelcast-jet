@@ -22,6 +22,7 @@ import com.hazelcast.jet.sql.impl.inject.AvroUpsertTargetDescriptor;
 import com.hazelcast.jet.sql.impl.schema.MappingField;
 import com.hazelcast.sql.impl.QueryException;
 import com.hazelcast.sql.impl.extract.QueryPath;
+import com.hazelcast.sql.impl.schema.map.MapTableField;
 import com.hazelcast.sql.impl.type.QueryDataType;
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
@@ -30,7 +31,7 @@ import org.junit.runner.RunWith;
 
 import java.util.List;
 
-import static com.hazelcast.jet.sql.impl.connector.kafka.MetadataAvroResolver.INSTANCE;
+import static com.hazelcast.jet.sql.impl.connector.keyvalue.KvMetadataAvroResolver.INSTANCE;
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyMap;
 import static java.util.Collections.singletonList;
@@ -38,7 +39,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @RunWith(JUnitParamsRunner.class)
-public class MetadataAvroResolverTest {
+public class KvMetadataAvroResolverTest {
 
     @Test
     @Parameters({
@@ -46,7 +47,7 @@ public class MetadataAvroResolverTest {
             "false, this"
     })
     public void test_resolveFields(boolean key, String prefix) {
-        List<MappingField> fields = INSTANCE.resolveFields(
+        List<MappingField> fields = INSTANCE.resolveAndValidateFields(
                 key,
                 singletonList(field("field", QueryDataType.INT, prefix + ".field")),
                 emptyMap(),
@@ -62,7 +63,7 @@ public class MetadataAvroResolverTest {
             "false"
     })
     public void when_invalidExternalName_then_throws(boolean key) {
-        assertThatThrownBy(() -> INSTANCE.resolveFields(
+        assertThatThrownBy(() -> INSTANCE.resolveAndValidateFields(
                 key,
                 singletonList(field("field", QueryDataType.INT, "does_not_start_with_key_or_value")),
                 emptyMap(),
@@ -77,7 +78,7 @@ public class MetadataAvroResolverTest {
             "false, this"
     })
     public void when_duplicateExternalName_then_throws(boolean key, String prefix) {
-        assertThatThrownBy(() -> INSTANCE.resolveFields(
+        assertThatThrownBy(() -> INSTANCE.resolveAndValidateFields(
                 key,
                 asList(
                         field("field1", QueryDataType.INT, prefix + ".field"),
@@ -113,15 +114,15 @@ public class MetadataAvroResolverTest {
         );
 
         assertThat(metadata.getFields()).containsExactly(
-                new KafkaTableField("string", QueryDataType.VARCHAR, QueryPath.create(prefix + ".string")),
-                new KafkaTableField("boolean", QueryDataType.BOOLEAN, QueryPath.create(prefix + ".boolean")),
-                new KafkaTableField("byte", QueryDataType.TINYINT, QueryPath.create(prefix + ".byte")),
-                new KafkaTableField("short", QueryDataType.SMALLINT, QueryPath.create(prefix + ".short")),
-                new KafkaTableField("int", QueryDataType.INT, QueryPath.create(prefix + ".int")),
-                new KafkaTableField("long", QueryDataType.BIGINT, QueryPath.create(prefix + ".long")),
-                new KafkaTableField("float", QueryDataType.REAL, QueryPath.create(prefix + ".float")),
-                new KafkaTableField("double", QueryDataType.DOUBLE, QueryPath.create(prefix + ".double")),
-                new KafkaTableField("decimal", QueryDataType.DECIMAL, QueryPath.create(prefix + ".decimal"))
+                new MapTableField("string", QueryDataType.VARCHAR, false, QueryPath.create(prefix + ".string")),
+                new MapTableField("boolean", QueryDataType.BOOLEAN, false, QueryPath.create(prefix + ".boolean")),
+                new MapTableField("byte", QueryDataType.TINYINT, false, QueryPath.create(prefix + ".byte")),
+                new MapTableField("short", QueryDataType.SMALLINT, false, QueryPath.create(prefix + ".short")),
+                new MapTableField("int", QueryDataType.INT, false, QueryPath.create(prefix + ".int")),
+                new MapTableField("long", QueryDataType.BIGINT, false, QueryPath.create(prefix + ".long")),
+                new MapTableField("float", QueryDataType.REAL, false, QueryPath.create(prefix + ".float")),
+                new MapTableField("double", QueryDataType.DOUBLE, false, QueryPath.create(prefix + ".double")),
+                new MapTableField("decimal", QueryDataType.DECIMAL, false, QueryPath.create(prefix + ".decimal"))
         );
         assertThat(metadata.getQueryTargetDescriptor()).isEqualTo(AvroQueryTargetDescriptor.INSTANCE);
         assertThat(metadata.getUpsertTargetDescriptor())

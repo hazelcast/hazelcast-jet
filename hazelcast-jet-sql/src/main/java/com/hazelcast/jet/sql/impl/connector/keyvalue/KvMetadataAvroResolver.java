@@ -14,17 +14,17 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.sql.impl.connector.kafka;
+package com.hazelcast.jet.sql.impl.connector.keyvalue;
 
 import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.jet.sql.impl.connector.EntryMetadata;
-import com.hazelcast.jet.sql.impl.connector.EntryMetadataResolver;
 import com.hazelcast.jet.sql.impl.extract.AvroQueryTargetDescriptor;
 import com.hazelcast.jet.sql.impl.inject.AvroUpsertTargetDescriptor;
 import com.hazelcast.jet.sql.impl.schema.MappingField;
 import com.hazelcast.sql.impl.QueryException;
 import com.hazelcast.sql.impl.extract.QueryPath;
 import com.hazelcast.sql.impl.schema.TableField;
+import com.hazelcast.sql.impl.schema.map.MapTableField;
 import com.hazelcast.sql.impl.type.QueryDataType;
 import org.apache.avro.Schema;
 import org.apache.avro.SchemaBuilder;
@@ -37,12 +37,14 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.AVRO_FORMAT;
+import static com.hazelcast.jet.sql.impl.connector.keyvalue.KvMetadataResolvers.extractKeyFields;
+import static com.hazelcast.jet.sql.impl.connector.keyvalue.KvMetadataResolvers.extractValueFields;
 
-final class MetadataAvroResolver implements EntryMetadataResolver {
+public final class KvMetadataAvroResolver implements KvMetadataResolver {
 
-    static final MetadataAvroResolver INSTANCE = new MetadataAvroResolver();
+    public static final KvMetadataAvroResolver INSTANCE = new KvMetadataAvroResolver();
 
-    private MetadataAvroResolver() {
+    private KvMetadataAvroResolver() {
     }
 
     @Override
@@ -51,7 +53,7 @@ final class MetadataAvroResolver implements EntryMetadataResolver {
     }
 
     @Override
-    public List<MappingField> resolveFields(
+    public List<MappingField> resolveAndValidateFields(
             boolean isKey,
             List<MappingField> userFields,
             Map<String, String> options,
@@ -91,7 +93,7 @@ final class MetadataAvroResolver implements EntryMetadataResolver {
             QueryDataType type = entry.getValue().type();
             String name = entry.getValue().name();
 
-            TableField field = new KafkaTableField(name, type, path);
+            TableField field = new MapTableField(name, type, false, path);
             fields.add(field);
         }
         return new EntryMetadata(
@@ -146,7 +148,7 @@ final class MetadataAvroResolver implements EntryMetadataResolver {
     }
 
     private QueryPath[] paths(List<TableField> fields) {
-        return fields.stream().map(field -> ((KafkaTableField) field).getPath()).toArray(QueryPath[]::new);
+        return fields.stream().map(field -> ((MapTableField) field).getPath()).toArray(QueryPath[]::new);
     }
 
     private QueryDataType[] types(List<TableField> fields) {

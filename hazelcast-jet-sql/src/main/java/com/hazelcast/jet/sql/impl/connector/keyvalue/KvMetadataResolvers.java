@@ -14,12 +14,15 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.sql.impl.connector;
+package com.hazelcast.jet.sql.impl.connector.keyvalue;
 
 import com.hazelcast.internal.serialization.InternalSerializationService;
+import com.hazelcast.jet.sql.impl.connector.EntryMetadata;
+import com.hazelcast.jet.sql.impl.connector.SqlConnector;
 import com.hazelcast.jet.sql.impl.schema.MappingField;
 import com.hazelcast.spi.impl.NodeEngine;
 import com.hazelcast.sql.impl.QueryException;
+import com.hazelcast.sql.impl.extract.QueryPath;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -38,15 +41,23 @@ import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toMap;
 import static java.util.stream.Stream.concat;
 
-public class EntryMetadataResolvers {
+/**
+ * A utility to resolve fields for key-value connectors that support
+ * multiple serialization methods.
+ */
+public class KvMetadataResolvers {
 
-    private final Map<String, EntryMetadataResolver> resolvers;
+    private final Map<String, KvMetadataResolver> resolvers;
 
-    public EntryMetadataResolvers(EntryMetadataResolver... resolvers) {
+    public KvMetadataResolvers(KvMetadataResolver... resolvers) {
         this.resolvers = stream(resolvers)
-                .collect(toMap(EntryMetadataResolver::supportedFormat, Function.identity()));
+                .collect(toMap(KvMetadataResolver::supportedFormat, Function.identity()));
     }
 
+    /**
+     * A utility to implement {@link SqlConnector#resolveAndValidateFields} in
+     * the connector.
+     */
     public List<MappingField> resolveAndValidateFields(
             List<MappingField> userFields,
             Map<String, String> options,
@@ -64,9 +75,9 @@ public class EntryMetadataResolvers {
         }
 
         List<MappingField> keyFields = findMetadataResolver(options, true)
-                .resolveFields(true, userFields, options, ss);
+                .resolveAndValidateFields(true, userFields, options, ss);
         List<MappingField> valueFields = findMetadataResolver(options, false)
-                .resolveFields(false, userFields, options, ss);
+                .resolveAndValidateFields(false, userFields, options, ss);
 
         Map<String, MappingField> fields = concat(keyFields.stream(), valueFields.stream())
                 .collect(LinkedHashMap::new, (map, field) -> map.putIfAbsent(field.name(), field), Map::putAll);
@@ -78,26 +89,90 @@ public class EntryMetadataResolvers {
         return new ArrayList<>(fields.values());
     }
 
+    /**
+     * A utility to implement {@link SqlConnector#createTable} in the
+     * connector.
+     */
     public EntryMetadata resolveMetadata(
             boolean isKey,
             List<MappingField> resolvedFields,
             Map<String, String> options,
             InternalSerializationService serializationService
     ) {
-        EntryMetadataResolver resolver = findMetadataResolver(options, isKey);
+        KvMetadataResolver resolver = findMetadataResolver(options, isKey);
         return requireNonNull(resolver.resolveMetadata(isKey, resolvedFields, options, serializationService));
     }
 
-    private EntryMetadataResolver findMetadataResolver(Map<String, String> options, boolean isKey) {
+    private KvMetadataResolver findMetadataResolver(Map<String, String> options, boolean isKey) {
         String option = isKey ? OPTION_KEY_FORMAT : OPTION_VALUE_FORMAT;
         String format = options.get(option);
         if (format == null) {
             throw QueryException.error("Missing '" + option + "' option");
         }
-        EntryMetadataResolver resolver = resolvers.get(format);
+        KvMetadataResolver resolver = resolvers.get(format);
         if (resolver == null) {
             throw QueryException.error("Unsupported serialization format - '" + format + "'");
         }
         return resolver;
+    }
+
+    public static Map<QueryPath, MappingField> extractKeyFields(
+            List<MappingField> fields
+    ) {
+        Map<QueryPath, MappingField> keyFieldsByPath = new LinkedHashMap<>();
+        for (MappingField mappingField : fields) {
+            String externalName = mappingField.externalName();
+
+            if (externalName == null
+                    || QueryPath.VALUE.equals(externalName)
+                    || externalName.startsWith(QueryPath.VALUE_PREFIX)) {
+                continue;
+            }
+
+            QueryPath path;
+            if (QueryPath.KEY.equals(externalName)) {
+                path = QueryPath.KEY_PATH;
+            } else if (externalName.startsWith(QueryPath.KEY_PREFIX)) {
+                path = QueryPath.create(externalName);
+            } else {
+                throw QueryException.error("Invalid external name: " + externalName);
+            }
+
+            if (keyFieldsByPath.putIfAbsent(path, mappingField) != null) {
+                throw QueryException.error("Duplicate external name: " + path);
+            }
+        }
+        return keyFieldsByPath;
+    }
+
+    public static Map<QueryPath, MappingField> extractValueFields(
+            List<MappingField> fields,
+            Function<String, QueryPath> defaultPathSupplier
+    ) {
+        Map<QueryPath, MappingField> valueFieldsByPath = new LinkedHashMap<>();
+        for (MappingField mappingField : fields) {
+            String externalName = mappingField.externalName();
+
+            if (externalName != null
+                    && (QueryPath.KEY.equals(externalName) || externalName.startsWith(QueryPath.KEY_PREFIX))) {
+                continue;
+            }
+
+            QueryPath path;
+            if (externalName == null) {
+                path = defaultPathSupplier.apply(mappingField.name());
+            } else if (QueryPath.VALUE.equals(externalName)) {
+                path = QueryPath.VALUE_PATH;
+            } else if (externalName.startsWith(QueryPath.VALUE_PREFIX)) {
+                path = QueryPath.create(externalName);
+            } else {
+                throw QueryException.error("Invalid external name: " + externalName);
+            }
+
+            if (valueFieldsByPath.putIfAbsent(path, mappingField) != null) {
+                throw QueryException.error("Duplicate external name: " + path);
+            }
+        }
+        return valueFieldsByPath;
     }
 }

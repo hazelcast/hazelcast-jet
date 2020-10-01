@@ -14,17 +14,17 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.sql.impl.connector.kafka;
+package com.hazelcast.jet.sql.impl.connector.keyvalue;
 
 import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.jet.sql.impl.connector.EntryMetadata;
-import com.hazelcast.jet.sql.impl.connector.EntryMetadataResolver;
 import com.hazelcast.jet.sql.impl.extract.JsonQueryTargetDescriptor;
 import com.hazelcast.jet.sql.impl.inject.JsonUpsertTargetDescriptor;
 import com.hazelcast.jet.sql.impl.schema.MappingField;
 import com.hazelcast.sql.impl.QueryException;
 import com.hazelcast.sql.impl.extract.QueryPath;
 import com.hazelcast.sql.impl.schema.TableField;
+import com.hazelcast.sql.impl.schema.map.MapTableField;
 import com.hazelcast.sql.impl.type.QueryDataType;
 
 import java.util.ArrayList;
@@ -34,12 +34,14 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.JSON_FORMAT;
+import static com.hazelcast.jet.sql.impl.connector.keyvalue.KvMetadataResolvers.extractKeyFields;
+import static com.hazelcast.jet.sql.impl.connector.keyvalue.KvMetadataResolvers.extractValueFields;
 
-final class MetadataJsonResolver implements EntryMetadataResolver {
+public final class KvMetadataJsonResolver implements KvMetadataResolver {
 
-    static final MetadataJsonResolver INSTANCE = new MetadataJsonResolver();
+    public static final KvMetadataJsonResolver INSTANCE = new KvMetadataJsonResolver();
 
-    private MetadataJsonResolver() {
+    private KvMetadataJsonResolver() {
     }
 
     @Override
@@ -48,7 +50,7 @@ final class MetadataJsonResolver implements EntryMetadataResolver {
     }
 
     @Override
-    public List<MappingField> resolveFields(
+    public List<MappingField> resolveAndValidateFields(
             boolean isKey,
             List<MappingField> userFields,
             Map<String, String> options,
@@ -88,7 +90,7 @@ final class MetadataJsonResolver implements EntryMetadataResolver {
             QueryDataType type = entry.getValue().type();
             String name = entry.getValue().name();
 
-            TableField field = new KafkaTableField(name, type, path);
+            TableField field = new MapTableField(name, type, false, path);
             fields.add(field);
         }
         return new EntryMetadata(

@@ -79,7 +79,7 @@ public class MetadataPortableResolverTest {
                 (key ? OPTION_KEY_CLASS_VERSION : OPTION_VALUE_CLASS_VERSION), String.valueOf(classDefinition.getVersion())
         );
 
-        List<MappingField> fields = INSTANCE.resolveFields(key, emptyList(), options, ss);
+        List<MappingField> fields = INSTANCE.resolveAndValidateFields(key, emptyList(), options, ss);
 
         assertThat(fields).containsExactly(
                 field("string", QueryDataType.VARCHAR, prefix + ".string"),
@@ -112,7 +112,7 @@ public class MetadataPortableResolverTest {
                 (key ? OPTION_KEY_CLASS_VERSION : OPTION_VALUE_CLASS_VERSION), String.valueOf(classDefinition.getVersion())
         );
 
-        List<MappingField> fields = INSTANCE.resolveFields(
+        List<MappingField> fields = INSTANCE.resolveAndValidateFields(
                 key,
                 singletonList(field("renamed_field", QueryDataType.INT, prefix + ".field")),
                 options,
@@ -143,7 +143,7 @@ public class MetadataPortableResolverTest {
                 (key ? OPTION_KEY_CLASS_VERSION : OPTION_VALUE_CLASS_VERSION), String.valueOf(classDefinition.getVersion())
         );
 
-        List<MappingField> fields = INSTANCE.resolveFields(
+        List<MappingField> fields = INSTANCE.resolveAndValidateFields(
                 key,
                 singletonList(field("field2", QueryDataType.VARCHAR, prefix + ".field2")),
                 options,
@@ -173,7 +173,7 @@ public class MetadataPortableResolverTest {
                 (key ? OPTION_KEY_CLASS_VERSION : OPTION_VALUE_CLASS_VERSION), String.valueOf(classDefinition.getVersion())
         );
 
-        assertThatThrownBy(() -> INSTANCE.resolveFields(
+        assertThatThrownBy(() -> INSTANCE.resolveAndValidateFields(
                 key,
                 singletonList(field("field", QueryDataType.VARCHAR, prefix + ".field")),
                 options,
@@ -200,7 +200,7 @@ public class MetadataPortableResolverTest {
                 (key ? OPTION_KEY_CLASS_VERSION : OPTION_VALUE_CLASS_VERSION), String.valueOf(classDefinition.getVersion())
         );
 
-        assertThatThrownBy(() -> MetadataJavaResolver.INSTANCE.resolveFields(
+        assertThatThrownBy(() -> MetadataPortableResolver.INSTANCE.resolveAndValidateFields(
                 key,
                 asList(
                         field("field1", QueryDataType.INT, prefix + ".field"),
@@ -209,7 +209,7 @@ public class MetadataPortableResolverTest {
                 options,
                 ss
         )).isInstanceOf(QueryException.class)
-          .hasMessageMatching("Unable to resolve table metadata. Missing '(key|value)JavaClass' option");
+          .hasMessageMatching("Duplicate external name: (__key|this).field");
     }
 
     @Test

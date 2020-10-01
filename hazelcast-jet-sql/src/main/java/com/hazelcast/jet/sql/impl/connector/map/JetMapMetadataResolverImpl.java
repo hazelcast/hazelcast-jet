@@ -17,6 +17,7 @@
 package com.hazelcast.jet.sql.impl.connector.map;
 
 import com.hazelcast.jet.sql.impl.connector.EntryMetadata;
+import com.hazelcast.jet.sql.impl.connector.keyvalue.KvMetadataJavaResolver;
 import com.hazelcast.jet.sql.impl.schema.MappingField;
 import com.hazelcast.nio.serialization.ClassDefinition;
 import com.hazelcast.sql.impl.schema.map.JetMapMetadataResolver;
@@ -34,8 +35,8 @@ public final class JetMapMetadataResolverImpl implements JetMapMetadataResolver 
 
     @Override
     public Object resolveClass(Class<?> clazz, boolean key) {
-        List<MappingField> mappingFields = MetadataJavaResolver.INSTANCE.resolveFields(key, emptyList(), clazz);
-        EntryMetadata metadata = MetadataJavaResolver.INSTANCE.resolveMetadata(key, mappingFields, clazz);
+        List<MappingField> mappingFields = KvMetadataJavaResolver.INSTANCE.resolveFields(key, emptyList(), clazz);
+        EntryMetadata metadata = KvMetadataJavaResolver.INSTANCE.resolveMetadata(key, mappingFields, clazz);
         return metadata.getUpsertTargetDescriptor();
     }
 
