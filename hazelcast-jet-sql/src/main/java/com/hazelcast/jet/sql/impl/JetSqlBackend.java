@@ -181,8 +181,8 @@ class JetSqlBackend implements SqlBackend {
         );
     }
 
-    private SqlPlan toDropMappingPlan(SqlDropMapping sqlDropTable) {
-        return new DropMappingPlan(sqlDropTable.name(), sqlDropTable.ifExists(), planExecutor);
+    private SqlPlan toDropMappingPlan(SqlDropMapping sqlDropMapping) {
+        return new DropMappingPlan(sqlDropMapping.name(), sqlDropMapping.ifExists(), planExecutor);
     }
 
     private SqlPlan toCreateJobPlan(QueryParseResult parseResult, OptimizerContext context) {
