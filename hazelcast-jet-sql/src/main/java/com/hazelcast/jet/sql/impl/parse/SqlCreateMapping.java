@@ -34,10 +34,13 @@ import org.apache.calcite.util.ImmutableNullableList;
 import javax.annotation.Nonnull;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static com.hazelcast.jet.sql.impl.schema.MappingCatalog.SCHEMA_NAME_PUBLIC;
 import static java.util.Objects.requireNonNull;
+import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toMap;
 
 public class SqlCreateMapping extends SqlCreate {
@@ -70,6 +73,16 @@ public class SqlCreateMapping extends SqlCreate {
         this.columns = requireNonNull(columns, "Columns should not be null");
         this.type = requireNonNull(type, "Type should not be null");
         this.options = requireNonNull(options, "Options should not be null");
+
+        String duplicateColumns = columns().collect(groupingBy(SqlMappingColumn::name, Collectors.counting()))
+                                           .entrySet().stream()
+                                           .filter(en -> en.getValue() > 1)
+                                           .map(Entry::getKey)
+                                           .collect(Collectors.joining(", "));
+
+        if (duplicateColumns.length() > 0) {
+            throw QueryException.error("Duplicate column(s): " + duplicateColumns);
+        }
     }
 
     public String name() {

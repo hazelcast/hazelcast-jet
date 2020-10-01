@@ -129,7 +129,7 @@ public class MetadataPortableResolverTest {
             "true, __key",
             "false, this"
     })
-    public void when_userDeclaresField_then_itsAddedToTheList(boolean key, String prefix) {
+    public void when_userDeclaresFields_then_fieldsNotAddedFromClassDefinition(boolean key, String prefix) {
         InternalSerializationService ss = new DefaultSerializationServiceBuilder().build();
         ClassDefinition classDefinition =
                 new ClassDefinitionBuilder(1, 2, 3)
@@ -151,7 +151,6 @@ public class MetadataPortableResolverTest {
         );
 
         assertThat(fields).containsExactly(
-                field("field1", QueryDataType.INT, prefix + ".field1"),
                 field("field2", QueryDataType.VARCHAR, prefix + ".field2")
         );
     }
@@ -177,32 +176,6 @@ public class MetadataPortableResolverTest {
         assertThatThrownBy(() -> INSTANCE.resolveFields(
                 key,
                 singletonList(field("field", QueryDataType.VARCHAR, prefix + ".field")),
-                options,
-                ss
-        )).isInstanceOf(QueryException.class);
-    }
-
-    @Test
-    @Parameters({
-            "true",
-            "false"
-    })
-    public void when_invalidExternalName_then_throws(boolean key) {
-        InternalSerializationService ss = new DefaultSerializationServiceBuilder().build();
-        ClassDefinition classDefinition =
-                new ClassDefinitionBuilder(1, 2, 3)
-                        .addIntField("field")
-                        .build();
-        ss.getPortableContext().registerClassDefinition(classDefinition);
-        Map<String, String> options = ImmutableMap.of(
-                (key ? OPTION_KEY_FACTORY_ID : OPTION_VALUE_FACTORY_ID), String.valueOf(classDefinition.getFactoryId()),
-                (key ? OPTION_KEY_CLASS_ID : OPTION_VALUE_CLASS_ID), String.valueOf(classDefinition.getClassId()),
-                (key ? OPTION_KEY_CLASS_VERSION : OPTION_VALUE_CLASS_VERSION), String.valueOf(classDefinition.getVersion())
-        );
-
-        assertThatThrownBy(() -> INSTANCE.resolveFields(
-                key,
-                singletonList(field("field", QueryDataType.VARCHAR, "does_not_start_with_key_or_value")),
                 options,
                 ss
         )).isInstanceOf(QueryException.class);

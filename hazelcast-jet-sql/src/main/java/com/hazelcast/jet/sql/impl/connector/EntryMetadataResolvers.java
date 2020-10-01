@@ -29,6 +29,10 @@ import java.util.function.Function;
 
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_KEY_FORMAT;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_VALUE_FORMAT;
+import static com.hazelcast.sql.impl.extract.QueryPath.KEY;
+import static com.hazelcast.sql.impl.extract.QueryPath.KEY_PREFIX;
+import static com.hazelcast.sql.impl.extract.QueryPath.VALUE;
+import static com.hazelcast.sql.impl.extract.QueryPath.VALUE_PREFIX;
 import static java.util.Arrays.stream;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toMap;
@@ -50,16 +54,19 @@ public class EntryMetadataResolvers {
     ) {
         InternalSerializationService ss = (InternalSerializationService) nodeEngine.getSerializationService();
 
+        // validate the external name: it must be "__key[.*]" or "this[.*]"
+        for (MappingField field : userFields) {
+            String extName = field.externalName();
+            if (extName != null && !extName.equals(KEY) && !extName.equals(VALUE)
+                    && !extName.startsWith(KEY_PREFIX) && !extName.startsWith(VALUE_PREFIX)) {
+                throw QueryException.error("Invalid external name '" + extName + "'");
+            }
+        }
+
         List<MappingField> keyFields = findMetadataResolver(options, true)
                 .resolveFields(true, userFields, options, ss);
-        if (keyFields.isEmpty()) {
-            throw QueryException.error("Empty key column list");
-        }
         List<MappingField> valueFields = findMetadataResolver(options, false)
                 .resolveFields(false, userFields, options, ss);
-        if (valueFields.isEmpty()) {
-            throw QueryException.error("Empty value column list");
-        }
 
         Map<String, MappingField> fields = concat(keyFields.stream(), valueFields.stream())
                 .collect(LinkedHashMap::new, (map, field) -> map.putIfAbsent(field.name(), field), Map::putAll);

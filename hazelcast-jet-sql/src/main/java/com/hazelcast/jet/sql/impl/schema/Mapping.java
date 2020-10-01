@@ -26,6 +26,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+/**
+ * An object stored in the SQL catalog for mappings created using DDL.
+ */
 public class Mapping implements DataSerializable {
 
     private String name;

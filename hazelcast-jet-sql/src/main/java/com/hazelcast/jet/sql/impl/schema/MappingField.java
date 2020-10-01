@@ -28,6 +28,9 @@ import java.util.Objects;
 
 import static java.util.Objects.requireNonNull;
 
+/**
+ * A field in a {@link Mapping}.
+ */
 public class MappingField implements DataSerializable {
 
     private static final String NAME = "name";

@@ -36,6 +36,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_KEY_CLASS_ID;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_KEY_CLASS_VERSION;
@@ -74,28 +75,34 @@ final class MetadataPortableResolver implements EntryMetadataResolver {
             List<MappingField> userFields,
             ClassDefinition clazz
     ) {
-        Map<QueryPath, MappingField> mappingFieldsByPath = isKey
+        Set<Entry<String, FieldType>> fieldsInClass = resolvePortable(clazz).entrySet();
+
+        Map<QueryPath, MappingField> userFieldsByPath = isKey
                 ? extractKeyFields(userFields)
                 : extractValueFields(userFields, name -> new QueryPath(name, false));
 
-        Map<String, MappingField> fields = new LinkedHashMap<>();
-        for (Entry<String, FieldType> entry : resolvePortable(clazz).entrySet()) {
-            QueryPath path = new QueryPath(entry.getKey(), isKey);
-            QueryDataType type = resolvePortableType(entry.getValue());
+        if (!userFields.isEmpty()) {
+            // the user used explicit fields in the DDL, just validate them
+            for (Entry<String, FieldType> classField : fieldsInClass) {
+                QueryPath path = new QueryPath(classField.getKey(), isKey);
+                QueryDataType type = resolvePortableType(classField.getValue());
 
-            MappingField mappingField = mappingFieldsByPath.get(path);
-            if (mappingField != null && !type.getTypeFamily().equals(mappingField.type().getTypeFamily())) {
-                throw QueryException.error("Mismatch between declared and inferred type - '" + mappingField.name() + "'");
+                MappingField mappingField = userFieldsByPath.get(path);
+                if (mappingField != null && !type.getTypeFamily().equals(mappingField.type().getTypeFamily())) {
+                    throw QueryException.error("Mismatch between declared and inferred type - '" + mappingField.name() + "'");
+                }
             }
-            String name = mappingField == null ? entry.getKey() : mappingField.name();
-
-            MappingField field = new MappingField(name, type, path.toString());
-            fields.putIfAbsent(field.name(), field);
+            return new ArrayList<>(userFieldsByPath.values());
+        } else {
+            List<MappingField> fields = new ArrayList<>();
+            for (Entry<String, FieldType> classField : fieldsInClass) {
+                QueryPath path = new QueryPath(classField.getKey(), isKey);
+                QueryDataType type = resolvePortableType(classField.getValue());
+                String name = classField.getKey();
+                fields.add(new MappingField(name, type, path.toString()));
+            }
+            return fields;
         }
-        for (MappingField field : mappingFieldsByPath.values()) {
-            fields.putIfAbsent(field.name(), field);
-        }
-        return new ArrayList<>(fields.values());
     }
 
     private static Map<String, FieldType> resolvePortable(ClassDefinition classDefinition) {

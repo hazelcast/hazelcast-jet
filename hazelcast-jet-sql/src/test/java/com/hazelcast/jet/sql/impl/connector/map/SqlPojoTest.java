@@ -50,6 +50,7 @@ import static java.time.ZoneId.systemDefault;
 import static java.time.ZoneOffset.UTC;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
+import static org.junit.Assert.assertEquals;
 
 public class SqlPojoTest extends SqlTestSupport {
 
@@ -119,6 +120,7 @@ public class SqlPojoTest extends SqlTestSupport {
         sqlService.execute("CREATE MAPPING " + name + " ("
                 + "key_id INT EXTERNAL NAME \"__key.id\""
                 + ", value_id INT EXTERNAL NAME \"this.id\""
+                + ", name VARCHAR"
                 + ") TYPE " + IMapSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ("
                 + '"' + OPTION_KEY_FORMAT + "\" '" + JAVA_FORMAT + '\''
@@ -179,6 +181,9 @@ public class SqlPojoTest extends SqlTestSupport {
         map.put(new PersonId(1), new InsuredPerson(1, "Alice", 123456789L));
 
         sqlService.execute("CREATE MAPPING " + name + " ("
+                + "id INT EXTERNAL NAME \"__key.id\","
+                + "name VARCHAR,"
+                // the "ssn" field isn't defined in the `Person` class, but in the subclass
                 + "ssn BIGINT"
                 + ") TYPE " + IMapSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ("
@@ -327,6 +332,22 @@ public class SqlPojoTest extends SqlTestSupport {
                         ZonedDateTime.of(2020, 4, 15, 12, 23, 34, 200_000_000, UTC).withZoneSameInstant(localOffset()).toOffsetDateTime(),
                         ZonedDateTime.of(2020, 4, 15, 12, 23, 34, 200_000_000, UTC).withZoneSameInstant(systemDefault()).toOffsetDateTime()
                 )));
+    }
+
+    @Test
+    public void when_fieldWithInitialValueUnmapped_then_initialValuePreserved() {
+        sqlService.execute("CREATE MAPPING " + mapName + "(__key INT)"
+                + " TYPE " + IMapSqlConnector.TYPE_NAME + "\n"
+                + "OPTIONS (\n"
+                + '"' + OPTION_KEY_FORMAT + "\" '" + JAVA_FORMAT + "',\n"
+                + '"' + OPTION_KEY_CLASS + "\" '" + Integer.class.getName() + "',\n"
+                + '"' + OPTION_VALUE_FORMAT + "\" '" + JAVA_FORMAT + "',\n"
+                + '"' + OPTION_VALUE_CLASS + "\" '" + ClassInitialValue.class.getName() + "'\n"
+                + ")");
+        sqlService.execute("SINK INTO " + mapName + "(__key) VALUES (1)");
+
+        ClassInitialValue val = instance().<Integer, ClassInitialValue>getMap(mapName).get(1);
+        assertEquals(Integer.valueOf(42), val.field);
     }
 
     @Test

@@ -235,7 +235,7 @@ public class SqlPortableTest extends SqlTestSupport {
                 + ")"
         );
 
-        sqlService.execute("SINK INTO " + name + " (value_id, key_id, name) VALUES (2, 1, 'Alice')");
+        sqlService.execute("SINK INTO " + name + " (value_id, key_id) VALUES (2, 1)");
 
         Entry<Data, Data> entry = randomEntryFrom(name);
 
@@ -244,11 +244,10 @@ public class SqlPortableTest extends SqlTestSupport {
 
         InternalGenericRecord valueReader = serializationService.readAsInternalGenericRecord(entry.getValue());
         assertThat(valueReader.readInt("id")).isEqualTo(2);
-        assertThat(valueReader.readUTF("name")).isEqualTo("Alice");
 
         assertRowsEventuallyInAnyOrder(
-                "SELECT key_id, value_id, name FROM " + name,
-                singletonList(new Row(1, 2, "Alice"))
+                "SELECT key_id, value_id FROM " + name,
+                singletonList(new Row(1, 2))
         );
     }
 
@@ -322,7 +321,9 @@ public class SqlPortableTest extends SqlTestSupport {
 
         // alter schema
         sqlService.execute("CREATE OR REPLACE MAPPING " + name + " ("
-                + "ssn BIGINT"
+//                + "id INT EXTERNAL NAME \"__key.id\""
+                + "name VARCHAR"
+                + ", ssn BIGINT"
                 + ") TYPE " + IMapSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ("
                 + '"' + OPTION_KEY_FORMAT + "\" '" + PORTABLE_FORMAT + '\''
@@ -337,14 +338,14 @@ public class SqlPortableTest extends SqlTestSupport {
         );
 
         // insert record against new schema/class definition
-        sqlService.execute("SINK INTO " + name + " VALUES (2, 'Bob', null)");
+        sqlService.execute("SINK INTO " + name + " VALUES ('Bob', null)");
 
         // assert both - initial & evolved - records are correctly read
         assertRowsEventuallyInAnyOrder(
                 "SELECT * FROM " + name,
                 asList(
-                        new Row(1, "Alice", 123456789L),
-                        new Row(2, "Bob", null)
+                        new Row("Alice", 123456789L),
+                        new Row("Bob", null)
                 )
         );
     }
