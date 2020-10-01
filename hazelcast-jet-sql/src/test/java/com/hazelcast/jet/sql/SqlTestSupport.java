@@ -122,46 +122,6 @@ public abstract class SqlTestSupport extends SimpleTestInClusterSupport {
     }
 
     /**
-     * Execute a query and ensures the result is empty.
-     *
-     * @param sql The query
-     */
-    public static void assertEmpty(String sql) {
-        SqlService sqlService = instance().getSql();
-        CompletableFuture<Void> future = new CompletableFuture<>();
-        AtomicInteger counter = new AtomicInteger(-1);
-
-        Thread thread = new Thread(() -> {
-            try (SqlResult result = sqlService.execute(sql)) {
-                int i = 0;
-                for (SqlRow ignored : result) {
-                    i++;
-                }
-                counter.set(i);
-                future.complete(null);
-            } catch (RuntimeException e) {
-                e.printStackTrace();
-                future.completeExceptionally(e);
-            }
-        });
-
-        thread.start();
-
-        try {
-            try {
-                future.get(10, TimeUnit.SECONDS);
-            } catch (TimeoutException e) {
-                thread.interrupt();
-                thread.join();
-            }
-        } catch (Exception e) {
-            throw sneakyThrow(e);
-        }
-
-        assertThat(counter.get()).isZero();
-    }
-
-    /**
      * Create DDL for an IMap with the given {@code name}, that uses
      * java serialization for both key and value with the given classes.
      */

@@ -87,13 +87,13 @@ final class MetadataJavaResolver implements EntryMetadataResolver {
             List<MappingField> userFields,
             QueryDataType type
     ) {
-        Map<QueryPath, MappingField> mappingFieldsByPath = isKey
+        Map<QueryPath, MappingField> userFieldsByPath = isKey
                 ? extractKeyFields(userFields)
                 : extractValueFields(userFields, name -> VALUE_PATH);
 
         QueryPath path = isKey ? QueryPath.KEY_PATH : QueryPath.VALUE_PATH;
 
-        MappingField mappingField = mappingFieldsByPath.get(path);
+        MappingField mappingField = userFieldsByPath.get(path);
         if (mappingField != null && !type.getTypeFamily().equals(mappingField.type().getTypeFamily())) {
             throw QueryException.error("Mismatch between declared and inferred type for field '"
                     + mappingField.name() + "'");
@@ -102,7 +102,7 @@ final class MetadataJavaResolver implements EntryMetadataResolver {
 
         MappingField field = new MappingField(name, type, path.toString());
 
-        for (MappingField mf : mappingFieldsByPath.values()) {
+        for (MappingField mf : userFieldsByPath.values()) {
             if (!field.name().equals(mf.name())) {
                 throw QueryException.error("Unmapped field: " + mf.name());
             }

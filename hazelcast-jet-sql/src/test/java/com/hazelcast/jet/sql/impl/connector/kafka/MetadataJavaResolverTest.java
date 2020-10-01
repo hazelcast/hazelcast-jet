@@ -187,7 +187,7 @@ public class MetadataJavaResolverTest {
             "true, __key",
             "false, this"
     })
-    public void when_userDeclaresObjectField_then_itsAddedToTheList(boolean key, String prefix) {
+    public void when_userDeclaresFields_then_fieldsFromClassNotAdded(boolean key, String prefix) {
         Map<String, String> options = ImmutableMap.of((key ? OPTION_KEY_CLASS : OPTION_VALUE_CLASS), Type.class.getName());
 
         List<MappingField> fields = INSTANCE.resolveFields(
@@ -198,7 +198,6 @@ public class MetadataJavaResolverTest {
         );
 
         assertThat(fields).containsExactly(
-                field("field", QueryDataType.INT, prefix + ".field"),
                 field("field2", QueryDataType.VARCHAR, prefix + ".field2")
         );
     }

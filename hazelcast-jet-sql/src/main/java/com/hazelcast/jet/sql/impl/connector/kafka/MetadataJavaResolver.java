@@ -32,12 +32,11 @@ import com.hazelcast.sql.impl.type.QueryDataTypeUtils;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 
-import static com.hazelcast.jet.impl.util.ReflectionUtils.loadClass;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.JAVA_FORMAT;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_KEY_CLASS;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_VALUE_CLASS;
@@ -65,7 +64,7 @@ final class MetadataJavaResolver implements EntryMetadataResolver {
             Map<String, String> options,
             InternalSerializationService serializationService
     ) {
-        Class<?> clazz = resolveClass(isKey, options);
+        Class<?> clazz = loadClass(isKey, options);
         return resolveFields(isKey, userFields, clazz);
     }
 
@@ -87,22 +86,22 @@ final class MetadataJavaResolver implements EntryMetadataResolver {
             List<MappingField> userFields,
             QueryDataType type
     ) {
-        Map<QueryPath, MappingField> mappingFieldsByPath = isKey
+        Map<QueryPath, MappingField> userFieldsByPath = isKey
                 ? extractKeyFields(userFields)
                 : extractValueFields(userFields, name -> VALUE_PATH);
 
         QueryPath path = isKey ? QueryPath.KEY_PATH : QueryPath.VALUE_PATH;
 
-        MappingField mappingField = mappingFieldsByPath.get(path);
+        MappingField mappingField = userFieldsByPath.get(path);
         if (mappingField != null && !type.getTypeFamily().equals(mappingField.type().getTypeFamily())) {
-            throw QueryException.error("Mismatch between declared and inferred type for field '" +
-                    mappingField.name() + "'");
+            throw QueryException.error("Mismatch between declared and inferred type for field '"
+                    + mappingField.name() + "'");
         }
         String name = mappingField == null ? (isKey ? KEY : VALUE) : mappingField.name();
 
         MappingField field = new MappingField(name, type, path.toString());
 
-        for (MappingField mf : mappingFieldsByPath.values()) {
+        for (MappingField mf : userFieldsByPath.values()) {
             if (!field.name().equals(mf.name())) {
                 throw QueryException.error("Unmapped field: " + mf.name());
             }
@@ -116,29 +115,35 @@ final class MetadataJavaResolver implements EntryMetadataResolver {
             List<MappingField> userFields,
             Class<?> clazz
     ) {
-        Map<QueryPath, MappingField> mappingFieldsByPath = isKey
+        Set<Entry<String, Class<?>>> fieldsInClass = ReflectionUtils.extractProperties(clazz).entrySet();
+
+        Map<QueryPath, MappingField> userFieldsByPath = isKey
                 ? extractKeyFields(userFields)
                 : extractValueFields(userFields, name -> new QueryPath(name, false));
 
-        Map<String, MappingField> fields = new LinkedHashMap<>();
-        for (Entry<String, Class<?>> entry : ReflectionUtils.extractProperties(clazz).entrySet()) {
-            QueryPath path = new QueryPath(entry.getKey(), isKey);
-            QueryDataType type = QueryDataTypeUtils.resolveTypeForClass(entry.getValue());
+        if (!userFields.isEmpty()) {
+            // the user used explicit fields in the DDL, just validate them
+            for (Entry<String, Class<?>> classField : fieldsInClass) {
+                QueryPath path = new QueryPath(classField.getKey(), isKey);
+                QueryDataType type = QueryDataTypeUtils.resolveTypeForClass(classField.getValue());
 
-            MappingField mappingField = mappingFieldsByPath.get(path);
-            if (mappingField != null && !type.getTypeFamily().equals(mappingField.type().getTypeFamily())) {
-                throw QueryException.error("Mismatch between declared and inferred type for field '"
-                        + mappingField.name() + "'");
+                MappingField mappingField = userFieldsByPath.get(path);
+                if (mappingField != null && !type.getTypeFamily().equals(mappingField.type().getTypeFamily())) {
+                    throw QueryException.error("Mismatch between declared and inferred type for field '"
+                            + mappingField.name() + "'");
+                }
             }
-            String name = mappingField == null ? entry.getKey() : mappingField.name();
-
-            MappingField field = new MappingField(name, type, path.toString());
-            fields.putIfAbsent(field.name(), field);
+            return new ArrayList<>(userFieldsByPath.values());
+        } else {
+            List<MappingField> fields = new ArrayList<>();
+            for (Entry<String, Class<?>> classField : fieldsInClass) {
+                QueryPath path = new QueryPath(classField.getKey(), isKey);
+                QueryDataType type = QueryDataTypeUtils.resolveTypeForClass(classField.getValue());
+                String name = classField.getKey();
+                fields.add(new MappingField(name, type, path.toString()));
+            }
+            return fields;
         }
-        for (MappingField field : mappingFieldsByPath.values()) {
-            fields.putIfAbsent(field.name(), field);
-        }
-        return new ArrayList<>(fields.values());
     }
 
     @Override
@@ -148,7 +153,7 @@ final class MetadataJavaResolver implements EntryMetadataResolver {
             Map<String, String> options,
             InternalSerializationService serializationService
     ) {
-        Class<?> clazz = resolveClass(isKey, options);
+        Class<?> clazz = loadClass(isKey, options);
         return resolveMetadata(isKey, resolvedFields, clazz);
     }
 
@@ -213,7 +218,7 @@ final class MetadataJavaResolver implements EntryMetadataResolver {
         );
     }
 
-    private Class<?> resolveClass(boolean isKey, Map<String, String> options) {
+    private Class<?> loadClass(boolean isKey, Map<String, String> options) {
         String classNameProperty = isKey ? OPTION_KEY_CLASS : OPTION_VALUE_CLASS;
         String className = options.get(classNameProperty);
 
@@ -221,6 +226,6 @@ final class MetadataJavaResolver implements EntryMetadataResolver {
             throw QueryException.error("Unable to resolve table metadata. Missing '" + classNameProperty + "' option");
         }
 
-        return loadClass(className);
+        return ReflectionUtils.loadClass(className);
     }
 }

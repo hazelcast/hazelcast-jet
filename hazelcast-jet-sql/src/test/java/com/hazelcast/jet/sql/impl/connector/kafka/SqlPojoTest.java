@@ -156,12 +156,12 @@ public class SqlPojoTest extends SqlTestSupport {
 
         assertTopicEventually(
                 name,
-                "INSERT INTO " + name + " (value_id, key_id, name) VALUES (2, 1, 'Alice')",
-                createMap(new PersonId(1), new Person(2, "Alice"))
+                "INSERT INTO " + name + " (value_id, key_id) VALUES (2, 1)",
+                createMap(new PersonId(1), new Person(2, null))
         );
         assertRowsEventuallyInAnyOrder(
-                "SELECT  key_id, value_id, name FROM " + name,
-                singletonList(new Row(1, 2, "Alice"))
+                "SELECT  key_id, value_id FROM " + name,
+                singletonList(new Row(1, 2))
         );
     }
 
