@@ -17,6 +17,8 @@
 package com.hazelcast.jet.impl.execution.init;
 
 import com.hazelcast.cluster.Address;
+import com.hazelcast.function.ComparatorEx;
+import com.hazelcast.internal.nio.Connection;
 import com.hazelcast.internal.partition.IPartitionService;
 import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.internal.util.StringUtil;
@@ -47,6 +49,7 @@ import com.hazelcast.jet.impl.execution.Tasklet;
 import com.hazelcast.jet.impl.execution.init.Contexts.ProcCtx;
 import com.hazelcast.jet.impl.execution.init.Contexts.ProcSupplierCtx;
 import com.hazelcast.jet.impl.util.AsyncSnapshotWriterImpl;
+import com.hazelcast.jet.impl.util.ObjectWithPartitionId;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
@@ -75,6 +78,7 @@ import static com.hazelcast.jet.core.Edge.DISTRIBUTE_TO_ALL;
 import static com.hazelcast.jet.impl.execution.OutboundCollector.compositeCollector;
 import static com.hazelcast.jet.impl.execution.TaskletExecutionService.TASKLET_INIT_CLOSE_EXECUTOR_NAME;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
+import static com.hazelcast.jet.impl.util.ImdgUtil.getMemberConnection;
 import static com.hazelcast.jet.impl.util.ImdgUtil.readList;
 import static com.hazelcast.jet.impl.util.ImdgUtil.writeList;
 import static com.hazelcast.jet.impl.util.Util.getJetInstance;
@@ -106,6 +110,8 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
     // *** Transient state below, used during #initialize() ***
 
     private final transient List<Tasklet> tasklets = new ArrayList<>();
+
+    private final transient Map<Address, Connection> memberConnections = new HashMap<>();
 
     /** dest vertex id --> dest ordinal --> sender addr -> receiver tasklet */
     private final transient Map<Integer, Map<Integer, Map<Address, ReceiverTasklet>>> receiverMap = new HashMap<>();
@@ -155,6 +161,9 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
         this.ptionArrgmt = new PartitionArrangement(partitionOwners, nodeEngine.getThisAddress());
         JetInstance instance = getJetInstance(nodeEngine);
         Set<Integer> higherPriorityVertices = VertexDef.getHigherPriorityVertices(vertices);
+        for (Address destAddr : remoteMembers.get()) {
+            memberConnections.put(destAddr, getMemberConnection(nodeEngine, destAddr));
+        }
         for (VertexDef vertex : vertices) {
             Collection<? extends Processor> processors = createProcessors(vertex, vertex.localParallelism());
 
@@ -164,8 +173,7 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
             Arrays.setAll(snapshotQueues, i -> new OneToOneConcurrentArrayQueue<>(SNAPSHOT_QUEUE_SIZE));
             ConcurrentConveyor<Object> ssConveyor = ConcurrentConveyor.concurrentConveyor(null, snapshotQueues);
             StoreSnapshotTasklet ssTasklet = new StoreSnapshotTasklet(snapshotContext,
-                    new ConcurrentInboundEdgeStream(ssConveyor, 0, 0, true,
-                            "ssFrom:" + vertex.name()),
+                    ConcurrentInboundEdgeStream.create(ssConveyor, 0, 0, true, "ssFrom:" + vertex.name(), null),
                     new AsyncSnapshotWriterImpl(nodeEngine, snapshotContext, vertex.name(), memberIndex, memberCount,
                             jobSerializationService),
                     nodeEngine.getLogger(StoreSnapshotTasklet.class.getName() + "."
@@ -398,11 +406,17 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
             for (Address destAddr : remoteMembers.get()) {
                 final ConcurrentConveyor<Object> conveyor = createConveyorArray(
                         1, edge.sourceVertex().localParallelism(), edge.getConfig().getQueueSize())[0];
-                final ConcurrentInboundEdgeStream inboundEdgeStream = newEdgeStream(edge, conveyor,
+                @SuppressWarnings("unchecked")
+                ComparatorEx<Object> origComparator = (ComparatorEx<Object>) edge.getOrderComparator();
+                ComparatorEx<ObjectWithPartitionId> adaptedComparator = origComparator == null ? null
+                        : (l, r) -> origComparator.compare(l.getItem(), r.getItem());
+
+                final InboundEdgeStream inboundEdgeStream = newEdgeStream(edge, conveyor,
                         "sender-toVertex:" + edge.destVertex().name() + "-toMember:"
-                                + destAddr.toString().replace('.', '-'));
+                                + destAddr.toString().replace('.', '-'), adaptedComparator);
                 final int destVertexId = edge.destVertex().vertexId();
                 final SenderTasklet t = new SenderTasklet(inboundEdgeStream, nodeEngine, destAddr,
+                        memberConnections.get(destAddr),
                         destVertexId, edge.getConfig().getPacketSizeLimit(), executionId,
                         edge.sourceVertex().name(), edge.sourceOrdinal(), jobSerializationService
                 );
@@ -575,7 +589,8 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
                                    collector, jobSerializationService,
                                    edge.getConfig().getReceiveWindowMultiplier(),
                                    getConfig().getInstanceConfig().getFlowControlPeriodMs(),
-                                   nodeEngine.getLoggingService(), addr, edge.destOrdinal(), edge.destVertex().name());
+                                   nodeEngine.getLoggingService(), addr, edge.destOrdinal(), edge.destVertex().name(),
+                                   memberConnections.get(addr));
                            addrToTasklet.put(addr, receiverTasklet);
                        }
                        return addrToTasklet;
@@ -594,17 +609,17 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
             // each tasklet has one input conveyor per edge
             final ConcurrentConveyor<Object> conveyor = localConveyorMap.get(inEdge.edgeId())[localProcessorIdx];
             inboundStreams.add(newEdgeStream(inEdge, conveyor,
-                    "inputTo:" + inEdge.destVertex().name() + '#' + globalProcessorIdx));
+                    "inputTo:" + inEdge.destVertex().name() + '#' + globalProcessorIdx, inEdge.getOrderComparator()));
         }
         return inboundStreams;
     }
 
-    private ConcurrentInboundEdgeStream newEdgeStream(
-            EdgeDef inEdge, ConcurrentConveyor<Object> conveyor, String debugName
+    private InboundEdgeStream newEdgeStream(
+            EdgeDef inEdge, ConcurrentConveyor<Object> conveyor, String debugName, ComparatorEx<?> comparator
     ) {
-        return new ConcurrentInboundEdgeStream(conveyor, inEdge.destOrdinal(), inEdge.priority(),
+        return ConcurrentInboundEdgeStream.create(conveyor, inEdge.destOrdinal(), inEdge.priority(),
                 jobConfig.getProcessingGuarantee() == ProcessingGuarantee.EXACTLY_ONCE,
-                debugName, inEdge.getComparator());
+                debugName, comparator);
     }
 
     public List<Processor> getProcessors() {

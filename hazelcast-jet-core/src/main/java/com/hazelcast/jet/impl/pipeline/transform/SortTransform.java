@@ -20,9 +20,9 @@ import com.hazelcast.function.ComparatorEx;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.Vertex;
+import com.hazelcast.jet.impl.pipeline.PipelineImpl.Context;
 import com.hazelcast.jet.impl.pipeline.Planner;
 import com.hazelcast.jet.impl.pipeline.Planner.PlannerVertex;
-import com.hazelcast.jet.impl.pipeline.PipelineImpl.Context;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -50,13 +50,16 @@ public class SortTransform<T> extends AbstractTransform {
 
     @Override
     public void addToDag(Planner p, Context context) {
+        String vertexName = name();
         determinedLocalParallelism(1);
-        Vertex v1 = p.dag.newVertex(name(), sortP(comparator));
-        PlannerVertex pv2 = p.addVertex(this, name() + COLLECT_STAGE_SUFFIX, determinedLocalParallelism(),
-                ProcessorMetaSupplier.forceTotalParallelismOne(ProcessorSupplier.of(mapP(identity())), name()));
+        Vertex v1 = p.dag.newVertex(vertexName, sortP(comparator))
+                         .localParallelism(localParallelism());
+        PlannerVertex pv2 = p.addVertex(this, vertexName + COLLECT_STAGE_SUFFIX, determinedLocalParallelism(),
+                ProcessorMetaSupplier.forceTotalParallelismOne(ProcessorSupplier.of(mapP(identity())), vertexName));
         p.addEdges(this, v1);
-        p.dag.edge(between(v1, pv2.v).distributed()
-                                     .allToOne(name())
-                                     .monotonicOrder(comparator));
+        p.dag.edge(between(v1, pv2.v)
+                .distributed()
+                .allToOne(vertexName)
+                .ordered(comparator));
     }
 }

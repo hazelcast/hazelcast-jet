@@ -17,6 +17,8 @@
 package com.hazelcast.jet.impl.pipeline.transform;
 
 import com.hazelcast.jet.aggregate.AggregateOperation;
+import com.hazelcast.jet.core.ProcessorMetaSupplier;
+import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.impl.pipeline.Planner;
 import com.hazelcast.jet.impl.pipeline.Planner.PlannerVertex;
@@ -101,8 +103,12 @@ public class AggregateTransform<A, R> extends AbstractTransform {
         Vertex v1 = p.dag.newVertex(vertexName + FIRST_STAGE_VERTEX_NAME_SUFFIX, accumulateP(aggrOp))
                          .localParallelism(localParallelism());
         determinedLocalParallelism(1);
-        PlannerVertex pv2 = p.addVertex(this, vertexName, determinedLocalParallelism(), combineP(aggrOp));
+        PlannerVertex pv2 = p.addVertex(this, vertexName, determinedLocalParallelism(),
+                ProcessorMetaSupplier.forceTotalParallelismOne(
+                        ProcessorSupplier.of(combineP(aggrOp)), vertexName));
         p.addEdges(this, v1);
-        p.dag.edge(between(v1, pv2.v).distributed().allToOne(name().hashCode()));
+        p.dag.edge(between(v1, pv2.v)
+                .distributed()
+                .allToOne(vertexName));
     }
 }

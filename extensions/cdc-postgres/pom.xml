@@ -29,7 +29,7 @@
     <parent>
         <groupId>com.hazelcast.jet</groupId>
         <artifactId>hazelcast-jet-extensions</artifactId>
-        <version>4.3-SNAPSHOT</version>
+        <version>4.4-SNAPSHOT</version>
     </parent>
 
     <properties>
@@ -117,6 +117,7 @@
             <groupId>org.testcontainers</groupId>
             <artifactId>toxiproxy</artifactId>
             <version>${testcontainers.version}</version>
+            <scope>test</scope>
         </dependency>
 
         <dependency>
@@ -131,6 +132,19 @@
             <artifactId>log4j-slf4j-impl</artifactId>
             <version>${log4j2.slf4j.binding.version}</version>
             <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>com.github.stefanbirkner</groupId>
+            <artifactId>system-rules</artifactId>
+            <version>1.19.0</version>
+            <scope>test</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>junit</groupId>
+                    <artifactId>junit-dep</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
     </dependencies>
 

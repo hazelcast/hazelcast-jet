@@ -206,7 +206,7 @@ data, depending on the underlying disk technology.
 [Hazelcast Jet](https://jet-start.sh/) is a distributed stream
 processing framework built on Hazelcast and combines a cache with
 fault-tolerant data processing.
-It has sources and sinks to integrate with several file, messaging and
+It has sources and sinks to integrate with various file, messaging and
 database systems (such as Amazon S3, Kafka, message brokers and
 relational databases).
 
