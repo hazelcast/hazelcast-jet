@@ -72,7 +72,10 @@ Thank you for your valuable contributions!
   the job from completing (#2158, #2532)
 [core] Fixed a job failure related to the coordinator member failing (#2461, #2546)
 [core] Fixed a job failure related to a member reconnecting (#2542, #2547)
-[core] Improve robustness related to Jet's internal `IMap` operations (#2533, #2550)
+[core] Improved robustness related to Jet's internal `IMap` operations (#2533, #2550)
+[cdc] Upgraded Jackson jr dep, solving a null handling issue (#2459)
+[cdc] Upgraded the Debezium dep, solving a Postgress issue resulting in data loss when
+  snapshotting (#2406)
 [core] Fixed a bug where a non-keyed aggregating stage would produce no output when no input
   (#2560, #2567)
 
