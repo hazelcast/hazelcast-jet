@@ -140,7 +140,7 @@ public class SqlPortableTest extends SqlTestSupport {
 
         sqlService.execute("SINK INTO partitioned." + name + " VALUES (2, 'Bob')");
 
-        assertRowsEventuallyInAnyOrder(
+        assertRowsAnyOrder(
                 "SELECT * FROM " + name,
                 asList(
                         new Row(1, "Alice"),
@@ -176,7 +176,7 @@ public class SqlPortableTest extends SqlTestSupport {
         InternalGenericRecord valueReader = serializationService.readAsInternalGenericRecord(entry.getValue());
         assertThat(valueReader.readUTF("name")).isNull();
 
-        assertRowsEventuallyInAnyOrder(
+        assertRowsAnyOrder(
                 "SELECT * FROM " + name,
                 singletonList(new Row(0, null))
         );
@@ -210,7 +210,7 @@ public class SqlPortableTest extends SqlTestSupport {
         assertThat(valueReader.readInt("id")).isEqualTo(0);
         assertThat(valueReader.readUTF("name")).isEqualTo("Alice");
 
-        assertRowsEventuallyInAnyOrder(
+        assertRowsAnyOrder(
                 "SELECT * FROM " + name,
                 singletonList(new Row(1, "Alice"))
         );
@@ -245,7 +245,7 @@ public class SqlPortableTest extends SqlTestSupport {
         InternalGenericRecord valueReader = serializationService.readAsInternalGenericRecord(entry.getValue());
         assertThat(valueReader.readInt("id")).isEqualTo(2);
 
-        assertRowsEventuallyInAnyOrder(
+        assertRowsAnyOrder(
                 "SELECT key_id, value_id FROM " + name,
                 singletonList(new Row(1, 2))
         );
@@ -290,7 +290,7 @@ public class SqlPortableTest extends SqlTestSupport {
         sqlService.execute("SINK INTO " + name + " VALUES (2, 'Bob', 123456789)");
 
         // assert both - initial & evolved - records are correctly read
-        assertRowsEventuallyInAnyOrder(
+        assertRowsAnyOrder(
                 "SELECT * FROM " + name,
                 asList(
                         new Row(1, "Alice", null),
@@ -341,7 +341,7 @@ public class SqlPortableTest extends SqlTestSupport {
         sqlService.execute("SINK INTO " + name + " VALUES ('Bob', null)");
 
         // assert both - initial & evolved - records are correctly read
-        assertRowsEventuallyInAnyOrder(
+        assertRowsAnyOrder(
                 "SELECT * FROM " + name,
                 asList(
                         new Row("Alice", 123456789L),
@@ -393,7 +393,7 @@ public class SqlPortableTest extends SqlTestSupport {
         assertThat(allTypesReader.readFloat("float")).isEqualTo(1234567890.1F);
         assertThat(allTypesReader.readDouble("double")).isEqualTo(123451234567890.1D);
 
-        assertRowsEventuallyInAnyOrder(
+        assertRowsAnyOrder(
                 "SELECT * FROM " + name,
                 singletonList(new Row(
                         13,

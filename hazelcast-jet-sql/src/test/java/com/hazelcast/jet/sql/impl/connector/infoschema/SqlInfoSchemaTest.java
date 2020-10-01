@@ -49,7 +49,7 @@ public class SqlInfoSchemaTest extends SqlTestSupport {
     @Test
     public void test_mappings() {
         // when
-        assertRowsEventuallyInAnyOrder(
+        assertRowsAnyOrder(
                 "SELECT * FROM information_schema.mappings",
                 singletonList(
                         new Row(
@@ -69,7 +69,7 @@ public class SqlInfoSchemaTest extends SqlTestSupport {
 
     @Test
     public void test_columns() {
-        assertRowsEventuallyInAnyOrder(
+        assertRowsAnyOrder(
                 "SELECT * FROM information_schema.columns",
                 asList(
                         new Row("hazelcast", "public", name, "__key", "0", "true", "INT"),
@@ -80,7 +80,7 @@ public class SqlInfoSchemaTest extends SqlTestSupport {
 
     @Test
     public void when_predicateAndProjectionIsUsed_then_correctRowsAndColumnsAreReturned() {
-        assertRowsEventuallyInAnyOrder(
+        assertRowsAnyOrder(
                 "SELECT mapping_name, UPPER(mapping_catalog), column_name, data_type "
                         + "FROM columns "
                         + "WHERE column_name = 'this'",

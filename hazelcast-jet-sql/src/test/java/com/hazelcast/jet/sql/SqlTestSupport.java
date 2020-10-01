@@ -80,7 +80,7 @@ public abstract class SqlTestSupport extends SimpleTestInClusterSupport {
             try (SqlResult result = sqlService.execute(sql)) {
                 Iterator<SqlRow> iterator = result.iterator();
                 for (int i = 0; i < expectedRows.size() && iterator.hasNext(); i++) {
-                    rows.add(new Row(result.getRowMetadata().getColumnCount(), iterator.next()));
+                    rows.add(new Row(iterator.next()));
                 }
                 future.complete(null);
             } catch (Throwable e) {
@@ -103,6 +103,20 @@ public abstract class SqlTestSupport extends SimpleTestInClusterSupport {
         }
 
         List<Row> actualRows = new ArrayList<>(rows);
+        assertThat(actualRows).containsExactlyInAnyOrderElementsOf(expectedRows);
+    }
+
+    /**
+     * Execute a query and wait until it completes. Assert that the returned
+     * rows contain the expected rows, in any order.
+     *
+     * @param sql          The query
+     * @param expectedRows Expected rows
+     */
+    public static void assertRowsAnyOrder(String sql, Collection<Row> expectedRows) {
+        SqlService sqlService = instance().getSql();
+        List<Row> actualRows = new ArrayList<>();
+        sqlService.execute(sql).iterator().forEachRemaining(r -> actualRows.add(new Row(r)));
         System.out.println("aaa: " + LocalDateTime.now());
         assertThat(actualRows).containsExactlyInAnyOrderElementsOf(expectedRows);
     }
@@ -177,9 +191,9 @@ public abstract class SqlTestSupport extends SimpleTestInClusterSupport {
 
         private final Object[] values;
 
-        private Row(int columnCount, SqlRow row) {
-            values = new Object[columnCount];
-            for (int i = 0; i < columnCount; i++) {
+        private Row(SqlRow row) {
+            values = new Object[row.getMetadata().getColumnCount()];
+            for (int i = 0; i < values.length; i++) {
                 values[i] = row.getObject(i);
             }
         }

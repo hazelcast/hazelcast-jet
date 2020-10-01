@@ -71,7 +71,7 @@ public class SqlCsvTest extends SqlTestSupport {
                 + ")"
         );
 
-        assertRowsEventuallyInAnyOrder(
+        assertRowsAnyOrder(
                 "SELECT * FROM " + name,
                 singletonList(new Row(
                         "string",
@@ -104,7 +104,7 @@ public class SqlCsvTest extends SqlTestSupport {
                 + ")"
         );
 
-        assertRowsEventuallyInAnyOrder(
+        assertRowsAnyOrder(
                 "SELECT "
                         + "string"
                         + ", \"boolean\""
@@ -140,7 +140,7 @@ public class SqlCsvTest extends SqlTestSupport {
 
     @Test
     public void test_tableFunction() {
-        assertRowsEventuallyInAnyOrder(
+        assertRowsAnyOrder(
                 "SELECT "
                         + "string"
                         + ", \"boolean\""

@@ -67,7 +67,7 @@ public class SqlJsonTest extends SqlTestSupport {
                 "SINK INTO " + name + " VALUES (null, null)",
                 createMap(new HazelcastJsonValue("{\"id\":null}"), new HazelcastJsonValue("{\"name\":null}"))
         );
-        assertRowsEventuallyInAnyOrder(
+        assertRowsAnyOrder(
                 "SELECT * FROM " + name,
                 singletonList(new Row(null, null))
         );
@@ -90,7 +90,7 @@ public class SqlJsonTest extends SqlTestSupport {
                 "SINK INTO " + name + " (value_name, key_name) VALUES ('Bob', 'Alice')",
                 createMap(new HazelcastJsonValue("{\"name\":\"Alice\"}"), new HazelcastJsonValue("{\"name\":\"Bob\"}"))
         );
-        assertRowsEventuallyInAnyOrder(
+        assertRowsAnyOrder(
                 "SELECT * FROM " + name,
                 singletonList(new Row("Alice", "Bob"))
         );
@@ -127,7 +127,7 @@ public class SqlJsonTest extends SqlTestSupport {
         sqlService.execute("SINK INTO " + name + " VALUES (69, 'Bob', 123456789)");
 
         // assert both - initial & evolved - records are correctly read
-        assertRowsEventuallyInAnyOrder(
+        assertRowsAnyOrder(
                 "SELECT * FROM " + name,
                 asList(
                         new Row(13, "Alice", null),
@@ -182,7 +182,7 @@ public class SqlJsonTest extends SqlTestSupport {
                 + " FROM " + from
         );
 
-        assertRowsEventuallyInAnyOrder(
+        assertRowsAnyOrder(
                 "SELECT * FROM " + to,
                 singletonList(new Row(
                         "1",

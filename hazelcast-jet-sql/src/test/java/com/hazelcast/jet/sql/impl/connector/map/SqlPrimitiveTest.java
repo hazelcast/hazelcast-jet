@@ -59,7 +59,7 @@ public class SqlPrimitiveTest extends SqlTestSupport {
                 "SINK INTO partitioned." + name + " VALUES (2, 'Bob')",
                 createMap(BigInteger.valueOf(1), "Alice", BigInteger.valueOf(2), "Bob")
         );
-        assertRowsEventuallyInAnyOrder(
+        assertRowsAnyOrder(
                 "SELECT * FROM " + name,
                 asList(
                         new Row(BigDecimal.valueOf(1), "Alice"),
@@ -81,7 +81,7 @@ public class SqlPrimitiveTest extends SqlTestSupport {
                 "SINK INTO " + name + " SELECT v, 'value-' || v FROM " + from,
                 createMap(0, "value-0", 1, "value-1")
         );
-        assertRowsEventuallyInAnyOrder(
+        assertRowsAnyOrder(
                 "SELECT * FROM " + name,
                 asList(
                         new Row(0, "value-0"),
@@ -100,7 +100,7 @@ public class SqlPrimitiveTest extends SqlTestSupport {
                 "SINK INTO " + name + " (this, __key) VALUES ('2', 1)",
                 createMap(1, "2")
         );
-        assertRowsEventuallyInAnyOrder(
+        assertRowsAnyOrder(
                 "SELECT * FROM " + name,
                 singletonList(new Row(1, "2"))
         );
@@ -116,7 +116,7 @@ public class SqlPrimitiveTest extends SqlTestSupport {
                 "SINK INTO " + name + " (this, __key) VALUES (2, CAST(0 + 1 AS INT))",
                 createMap(1, "2")
         );
-        assertRowsEventuallyInAnyOrder(
+        assertRowsAnyOrder(
                 "SELECT * FROM " + name,
                 singletonList(new Row(1, "2"))
         );
@@ -142,7 +142,7 @@ public class SqlPrimitiveTest extends SqlTestSupport {
                 format("SINK INTO %s (id, name) VALUES (2, 'value-2')", name),
                 createMap(2, "value-2")
         );
-        assertRowsEventuallyInAnyOrder(
+        assertRowsAnyOrder(
                 "SELECT * FROM " + name,
                 singletonList(new Row(2, "value-2"))
         );
@@ -167,7 +167,7 @@ public class SqlPrimitiveTest extends SqlTestSupport {
         map.put("k1", "v1");
         map.put("k2", "v2");
 
-        assertRowsEventuallyInAnyOrder(
+        assertRowsAnyOrder(
                 "SELECT * FROM " + tableName,
                 asList(
                         new Row("k1", "v1"),

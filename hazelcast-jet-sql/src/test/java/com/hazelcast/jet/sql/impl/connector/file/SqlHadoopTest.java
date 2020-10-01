@@ -88,7 +88,7 @@ public class SqlHadoopTest extends SqlTestSupport {
                 + ")"
         );
 
-        assertRowsEventuallyInAnyOrder(
+        assertRowsAnyOrder(
                 "SELECT name, id FROM " + name,
                 asList(
                         new Row("Alice", 1L)
@@ -111,7 +111,7 @@ public class SqlHadoopTest extends SqlTestSupport {
                 + ")"
         );
 
-        assertRowsEventuallyInAnyOrder(
+        assertRowsAnyOrder(
                 "SELECT name, id FROM " + name,
                 asList(
                         new Row("Alice", "1")
@@ -135,7 +135,7 @@ public class SqlHadoopTest extends SqlTestSupport {
                 + ")"
         );
 
-        assertRowsEventuallyInAnyOrder(
+        assertRowsAnyOrder(
                 "SELECT name, id FROM " + name,
                 asList(
                         new Row("Alice", 1L)
@@ -157,7 +157,7 @@ public class SqlHadoopTest extends SqlTestSupport {
                 + ")"
         );
 
-        assertRowsEventuallyInAnyOrder(
+        assertRowsAnyOrder(
                 "SELECT name, id FROM " + name,
                 asList(
                         new Row("Alice", 1)
@@ -181,7 +181,7 @@ public class SqlHadoopTest extends SqlTestSupport {
                 + ")"
         );
 
-        assertRowsEventuallyInAnyOrder(
+        assertRowsAnyOrder(
                 "SELECT * FROM " + name,
                 singletonList(new Row(9223372036854775807L, "string"))
         );
@@ -200,7 +200,7 @@ public class SqlHadoopTest extends SqlTestSupport {
                 + ")"
         );
 
-        assertRowsEventuallyInAnyOrder(
+        assertRowsAnyOrder(
                 "SELECT byte, string FROM " + name,
                 singletonList(new Row(127, "string"))
         );
@@ -220,7 +220,7 @@ public class SqlHadoopTest extends SqlTestSupport {
                 + ")"
         );
 
-        assertRowsEventuallyInAnyOrder(
+        assertRowsAnyOrder(
                 "SELECT * FROM " + name,
                 singletonList(new Row((Object) null))
         );
@@ -241,7 +241,7 @@ public class SqlHadoopTest extends SqlTestSupport {
                 + ")"
         );
 
-        assertRowsEventuallyInAnyOrder(
+        assertRowsAnyOrder(
                 "SELECT id, name FROM " + name,
                 singletonList(new Row((byte) 127, "string"))
         );
@@ -273,7 +273,7 @@ public class SqlHadoopTest extends SqlTestSupport {
                 + ")"
         );
 
-        assertRowsEventuallyInAnyOrder(
+        assertRowsAnyOrder(
                 "SELECT * FROM " + name,
                 singletonList(new Row(
                         "string",
@@ -306,7 +306,7 @@ public class SqlHadoopTest extends SqlTestSupport {
                 + ")"
         );
 
-        assertRowsEventuallyInAnyOrder(
+        assertRowsAnyOrder(
                 "SELECT "
                         + "string"
                         + ", \"boolean\""
@@ -344,7 +344,7 @@ public class SqlHadoopTest extends SqlTestSupport {
     public void test_parquet_tableFunction() throws IOException {
         store("/parquet-table-function/file.parquet", Files.readAllBytes(Paths.get("src/test/resources/file.parquet")));
 
-        assertRowsEventuallyInAnyOrder(
+        assertRowsAnyOrder(
                 "SELECT "
                         + "string"
                         + ", \"boolean\""

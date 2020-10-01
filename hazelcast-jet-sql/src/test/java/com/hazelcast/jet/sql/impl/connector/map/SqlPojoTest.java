@@ -72,7 +72,7 @@ public class SqlPojoTest extends SqlTestSupport {
                 "SINK INTO partitioned." + mapName + " VALUES (2, 'Bob')",
                 createMap(new PersonId(1), new Person(1, "Alice"), new PersonId(2), new Person(null, "Bob"))
         );
-        assertRowsEventuallyInAnyOrder(
+        assertRowsAnyOrder(
                 "SELECT * FROM " + mapName,
                 asList(
                         new Row(1, "Alice"),
@@ -91,7 +91,7 @@ public class SqlPojoTest extends SqlTestSupport {
                 "SINK INTO " + name + " VALUES (null, null)",
                 createMap(new PersonId(), new Person())
         );
-        assertRowsEventuallyInAnyOrder(
+        assertRowsAnyOrder(
                 "SELECT * FROM " + name,
                 singletonList(new Row(null, null))
         );
@@ -108,7 +108,7 @@ public class SqlPojoTest extends SqlTestSupport {
                 createMap(new PersonId(1), new Person(null, "Alice"))
         );
 
-        assertRowsEventuallyInAnyOrder(
+        assertRowsAnyOrder(
                 "SELECT * FROM " + name,
                 singletonList(new Row(1, "Alice"))
         );
@@ -135,7 +135,7 @@ public class SqlPojoTest extends SqlTestSupport {
                 "SINK INTO " + name + " (value_id, key_id, name) VALUES (2, 1, 'Alice')",
                 createMap(new PersonId(1), new Person(2, "Alice"))
         );
-        assertRowsEventuallyInAnyOrder(
+        assertRowsAnyOrder(
                 "SELECT key_id, value_id, name FROM " + name,
                 singletonList(new Row(1, 2, "Alice"))
         );
@@ -164,7 +164,7 @@ public class SqlPojoTest extends SqlTestSupport {
         sqlService.execute("SINK INTO " + name + " (id, name, ssn) VALUES (2, 'Bob', 123456789)");
 
         // assert both - initial & evolved - records are correctly read
-        assertRowsEventuallyInAnyOrder(
+        assertRowsAnyOrder(
                 "SELECT id, name, ssn FROM " + name,
                 asList(
                         new Row(1, "Alice", null),
@@ -202,7 +202,7 @@ public class SqlPojoTest extends SqlTestSupport {
                         new PersonId(2), new Person(null, "Bob")
                 )
         );
-        assertRowsEventuallyInAnyOrder(
+        assertRowsAnyOrder(
                 "SELECT * FROM " + name,
                 asList(
                         new Row(1, "Alice", 123456789L),
@@ -287,7 +287,7 @@ public class SqlPojoTest extends SqlTestSupport {
                         ZonedDateTime.of(2020, 4, 15, 12, 23, 34, 200_000_000, UTC).withZoneSameInstant(systemDefault()).toOffsetDateTime()
                 )));
 
-        assertRowsEventuallyInAnyOrder(
+        assertRowsAnyOrder(
                 "SELECT"
                         + " __key"
                         + ", string"
@@ -359,14 +359,14 @@ public class SqlPojoTest extends SqlTestSupport {
         // it behaves as if the DEFAULT was null.
         sqlService.execute(javaSerializableMapDdl(mapName, Integer.class, ClassInitialValue.class));
         sqlService.execute("SINK INTO " + mapName + "(__key) VALUES (1)");
-        assertRowsEventuallyInAnyOrder("SELECT * FROM " + mapName, singletonList(new Row(1, null)));
+        assertRowsAnyOrder("SELECT * FROM " + mapName, singletonList(new Row(1, null)));
     }
 
     @Test
     public void when_fieldWithInitialValueAssignedNull_then_isNull() {
         sqlService.execute(javaSerializableMapDdl(mapName, Integer.class, ClassInitialValue.class));
         sqlService.execute("SINK INTO " + mapName + "(__key, field) VALUES (1, null)");
-        assertRowsEventuallyInAnyOrder("SELECT * FROM " + mapName, singletonList(new Row(1, null)));
+        assertRowsAnyOrder("SELECT * FROM " + mapName, singletonList(new Row(1, null)));
     }
 
     public static class ClassInitialValue implements Serializable {

@@ -58,7 +58,7 @@ public class SqlJsonTest extends SqlTestSupport {
                 + ")"
         );
 
-        assertRowsEventuallyInAnyOrder(
+        assertRowsAnyOrder(
                 "SELECT * FROM " + name,
                 singletonList(new Row((Object) null))
         );
@@ -78,7 +78,7 @@ public class SqlJsonTest extends SqlTestSupport {
                 + ")"
         );
 
-        assertRowsEventuallyInAnyOrder(
+        assertRowsAnyOrder(
                 "SELECT id, name FROM " + name,
                 singletonList(new Row((byte) 127, "string"))
         );
@@ -109,7 +109,7 @@ public class SqlJsonTest extends SqlTestSupport {
                 + ")"
         );
 
-        assertRowsEventuallyInAnyOrder(
+        assertRowsAnyOrder(
                 "SELECT * FROM " + name,
                 singletonList(new Row(
                         "string",
@@ -141,7 +141,7 @@ public class SqlJsonTest extends SqlTestSupport {
                 + ")"
         );
 
-        assertRowsEventuallyInAnyOrder(
+        assertRowsAnyOrder(
                 "SELECT "
                         + "string"
                         + ", \"boolean\""
@@ -181,7 +181,7 @@ public class SqlJsonTest extends SqlTestSupport {
 
     @Test
     public void test_tableFunction() {
-        assertRowsEventuallyInAnyOrder(
+        assertRowsAnyOrder(
                 "SELECT "
                         + "string"
                         + ", \"boolean\""
