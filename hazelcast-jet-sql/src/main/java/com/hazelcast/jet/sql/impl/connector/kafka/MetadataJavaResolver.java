@@ -95,7 +95,8 @@ final class MetadataJavaResolver implements EntryMetadataResolver {
 
         MappingField mappingField = mappingFieldsByPath.get(path);
         if (mappingField != null && !type.getTypeFamily().equals(mappingField.type().getTypeFamily())) {
-            throw QueryException.error("Mismatch between declared and inferred type - '" + mappingField.name() + "'");
+            throw QueryException.error("Mismatch between declared and inferred type for field '" +
+                    mappingField.name() + "'");
         }
         String name = mappingField == null ? (isKey ? KEY : VALUE) : mappingField.name();
 
@@ -103,7 +104,7 @@ final class MetadataJavaResolver implements EntryMetadataResolver {
 
         for (MappingField mf : mappingFieldsByPath.values()) {
             if (!field.name().equals(mf.name())) {
-                throw QueryException.error("Unmapped field - '" + mf.name() + "'");
+                throw QueryException.error("Unmapped field: " + mf.name());
             }
         }
 
@@ -126,7 +127,8 @@ final class MetadataJavaResolver implements EntryMetadataResolver {
 
             MappingField mappingField = mappingFieldsByPath.get(path);
             if (mappingField != null && !type.getTypeFamily().equals(mappingField.type().getTypeFamily())) {
-                throw QueryException.error("Mismatch between declared and inferred type - '" + mappingField.name() + "'");
+                throw QueryException.error("Mismatch between declared and inferred type for field '"
+                        + mappingField.name() + "'");
             }
             String name = mappingField == null ? entry.getKey() : mappingField.name();
 

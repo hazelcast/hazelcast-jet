@@ -89,7 +89,7 @@ final class MetadataPortableResolver implements EntryMetadataResolver {
 
                 MappingField mappingField = userFieldsByPath.get(path);
                 if (mappingField != null && !type.getTypeFamily().equals(mappingField.type().getTypeFamily())) {
-                    throw QueryException.error("Mismatch between declared and inferred type - '" + mappingField.name() + "'");
+                    throw QueryException.error("Mismatch between declared and inferred type: " + mappingField.name());
                 }
             }
             return new ArrayList<>(userFieldsByPath.values());

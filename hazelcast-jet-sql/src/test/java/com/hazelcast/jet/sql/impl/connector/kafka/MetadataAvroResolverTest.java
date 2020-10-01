@@ -67,7 +67,8 @@ public class MetadataAvroResolverTest {
                 singletonList(field("field", QueryDataType.INT, "does_not_start_with_key_or_value")),
                 emptyMap(),
                 null
-        )).isInstanceOf(QueryException.class);
+        )).isInstanceOf(QueryException.class)
+          .hasMessageContaining("Invalid external name: does_not_start_with_key_or_value");
     }
 
     @Test
@@ -84,7 +85,8 @@ public class MetadataAvroResolverTest {
                 ),
                 emptyMap(),
                 null
-        )).isInstanceOf(QueryException.class);
+        )).isInstanceOf(QueryException.class)
+          .hasMessageMatching("Duplicate external name: (__key|this).field");
     }
 
     @Test

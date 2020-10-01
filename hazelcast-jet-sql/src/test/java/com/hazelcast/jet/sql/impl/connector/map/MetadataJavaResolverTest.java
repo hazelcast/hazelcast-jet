@@ -89,7 +89,8 @@ public class MetadataJavaResolverTest {
                 singletonList(field(path, QueryDataType.VARCHAR, path)),
                 options,
                 null
-        )).isInstanceOf(QueryException.class);
+        )).isInstanceOf(QueryException.class)
+          .hasMessageMatching("Mismatch between declared and inferred type for field '(__key|this)'");
     }
 
     @Test
@@ -105,7 +106,8 @@ public class MetadataJavaResolverTest {
                 singletonList(field("field", QueryDataType.INT, prefix + ".field")),
                 options,
                 null
-        )).isInstanceOf(QueryException.class);
+        )).isInstanceOf(QueryException.class)
+          .hasMessageContaining("Unmapped field: field");
     }
 
     @Test
@@ -121,7 +123,8 @@ public class MetadataJavaResolverTest {
                 singletonList(field(path, QueryDataType.INT, "invalid-path")),
                 options,
                 null
-        )).isInstanceOf(QueryException.class);
+        )).isInstanceOf(QueryException.class)
+          .hasMessageContaining("Invalid external name: invalid-path");
     }
 
     @Test
@@ -212,7 +215,8 @@ public class MetadataJavaResolverTest {
                 singletonList(field("field", QueryDataType.VARCHAR, prefix + ".field")),
                 options,
                 null
-        )).isInstanceOf(QueryException.class);
+        )).isInstanceOf(QueryException.class)
+          .hasMessageContaining("Mismatch between declared and inferred type for field 'field'");
     }
 
     @Test
@@ -228,7 +232,8 @@ public class MetadataJavaResolverTest {
                 singletonList(field("field", QueryDataType.VARCHAR, "does_not_start_with_key_or_value")),
                 options,
                 null
-        )).isInstanceOf(QueryException.class);
+        )).isInstanceOf(QueryException.class)
+          .hasMessageContaining("Invalid external name: does_not_start_with_key_or_value");
     }
 
     @Test

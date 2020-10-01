@@ -113,7 +113,7 @@ public class SqlMappingTest extends SqlTestSupport {
         assertRowsEventuallyInAnyOrder("SELECT * FROM partitioned.my_map", singletonList(new Row(42, 43)));
         assertThatThrownBy(() -> sqlService.execute("DROP MAPPING partitioned.my_map"))
                 // TODO a better message would be "You can't delete from 'partitioned' schema", but this is good enough
-                .hasMessageContaining("'partitioned.my_map' mapping does not exist");
+                .hasMessageContaining("Mapping does not exist: partitioned.my_map");
     }
 
     private static String generateRandomName() {

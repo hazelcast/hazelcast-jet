@@ -155,7 +155,7 @@ public class EntryMetadataResolversTest {
     public void when_formatIsMissingInOptionsWhileResolvingFields_then_throws() {
         assertThatThrownBy(() -> resolvers.resolveAndValidateFields(emptyList(), emptyMap(), nodeEngine))
                 .isInstanceOf(QueryException.class)
-                .hasMessageContaining("Missing 'keyFormat' option");;
+                .hasMessageContaining("Missing 'keyFormat' option");
     }
 
     @Test
@@ -182,7 +182,7 @@ public class EntryMetadataResolversTest {
     public void when_formatIsMissingInOptionsWhileResolvingMetadata_then_throws(boolean key) {
         assertThatThrownBy(() -> resolvers.resolveMetadata(key, emptyList(), emptyMap(), ss))
                 .isInstanceOf(QueryException.class)
-                .hasMessageMatching("Missing '(key|value)Format' option");;
+                .hasMessageMatching("Missing '(key|value)Format' option");
     }
 
     private static MappingField field(String name, QueryDataType type) {

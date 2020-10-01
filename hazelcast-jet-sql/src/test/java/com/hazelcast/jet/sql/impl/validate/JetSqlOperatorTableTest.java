@@ -85,8 +85,8 @@ public class JetSqlOperatorTableTest {
         SqlUserDefinedTableFunction sqlFunction = function("invalid");
 
         assertThatThrownBy(() -> sqlFunction.getRowType(TYPE_FACTORY, singletonList(node)))
-                .isInstanceOf(QueryException.class);
-
+                .isInstanceOf(QueryException.class)
+                .hasMessageContaining("All arguments of call to function test_function should be VARCHAR literals");
     }
 
     @SuppressWarnings("unused")

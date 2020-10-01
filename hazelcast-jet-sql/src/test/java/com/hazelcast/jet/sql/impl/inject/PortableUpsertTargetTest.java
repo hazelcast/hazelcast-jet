@@ -102,7 +102,9 @@ public class PortableUpsertTargetTest {
         UpsertInjector injector = target.createInjector("field");
 
         target.init();
-        assertThatThrownBy(() -> injector.set("1")).isInstanceOf(QueryException.class);
+        assertThatThrownBy(() -> injector.set("1"))
+                .isInstanceOf(QueryException.class)
+                .hasMessageContaining("Unable to inject a non-null value to 'field'");
     }
 
     @Test

@@ -178,7 +178,8 @@ public class MetadataPortableResolverTest {
                 singletonList(field("field", QueryDataType.VARCHAR, prefix + ".field")),
                 options,
                 ss
-        )).isInstanceOf(QueryException.class);
+        )).isInstanceOf(QueryException.class)
+          .hasMessageContaining("Mismatch between declared and inferred type: field");
     }
 
     @Test
@@ -207,7 +208,8 @@ public class MetadataPortableResolverTest {
                 ),
                 options,
                 ss
-        )).isInstanceOf(QueryException.class);
+        )).isInstanceOf(QueryException.class)
+          .hasMessageMatching("Unable to resolve table metadata. Missing '(key|value)JavaClass' option");
     }
 
     @Test

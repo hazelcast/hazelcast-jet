@@ -70,7 +70,9 @@ public class MappingCatalogTest {
 
         // when
         // then
-        assertThatThrownBy(() -> catalog.createMapping(mapping, true, true)).isInstanceOf(QueryException.class);
+        assertThatThrownBy(() -> catalog.createMapping(mapping, true, true))
+                .isInstanceOf(QueryException.class)
+                .hasMessageContaining("expected test exception");
         verifyZeroInteractions(storage);
     }
 
@@ -87,7 +89,8 @@ public class MappingCatalogTest {
         // when
         // then
         assertThatThrownBy(() -> catalog.createMapping(mapping, false, false))
-                .isInstanceOf(QueryException.class);
+                .isInstanceOf(QueryException.class)
+                .hasMessageContaining("Mapping already exists: name");
     }
 
     @Test
@@ -133,7 +136,8 @@ public class MappingCatalogTest {
         // when
         // then
         assertThatThrownBy(() -> catalog.removeMapping(name, false))
-                .isInstanceOf(QueryException.class);
+                .isInstanceOf(QueryException.class)
+                .hasMessageContaining("Mapping does not exist: name");
     }
 
     @Test

@@ -63,11 +63,11 @@ public interface EntryMetadataResolver {
             } else if (externalName.startsWith(QueryPath.KEY_PREFIX)) {
                 path = QueryPath.create(externalName);
             } else {
-                throw QueryException.error("Invalid external name '" + externalName + "'");
+                throw QueryException.error("Invalid external name: " + externalName);
             }
 
             if (keyFieldsByPath.putIfAbsent(path, mappingField) != null) {
-                throw QueryException.error("Duplicate key external name '" + path + "'");
+                throw QueryException.error("Duplicate external name: " + path);
             }
         }
         return keyFieldsByPath;
@@ -94,11 +94,11 @@ public interface EntryMetadataResolver {
             } else if (externalName.startsWith(QueryPath.VALUE_PREFIX)) {
                 path = QueryPath.create(externalName);
             } else {
-                throw QueryException.error("Invalid external name '" + externalName + "'");
+                throw QueryException.error("Invalid external name: " + externalName);
             }
 
             if (valueFieldsByPath.putIfAbsent(path, mappingField) != null) {
-                throw QueryException.error("Duplicate value external name '" + path + "'");
+                throw QueryException.error("Duplicate external name: " + path);
             }
         }
         return valueFieldsByPath;

@@ -66,7 +66,7 @@ class PortableUpsertTarget implements UpsertTarget {
         int fieldIndex = classDefinition.hasField(path) ? classDefinition.getField(path).getIndex() : -1;
         return value -> {
             if (fieldIndex == -1 && value != null) {
-                throw QueryException.error("Unable to inject non null (" + value + ") '" + path + "'");
+                throw QueryException.error("Unable to inject a non-null value to '" + path + "'");
             }
 
             if (fieldIndex > -1) {

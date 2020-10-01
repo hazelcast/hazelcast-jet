@@ -59,7 +59,9 @@ public class PojoUpsertTargetTest {
         UpsertInjector injector = target.createInjector("intField");
 
         target.init();
-        assertThatThrownBy(() -> injector.set(null)).isInstanceOf(QueryException.class);
+        assertThatThrownBy(() -> injector.set(null))
+                .isInstanceOf(QueryException.class)
+                .hasMessageContaining("Cannot set NULL to a primitive field");
     }
 
     @Test
@@ -71,7 +73,9 @@ public class PojoUpsertTargetTest {
         UpsertInjector injector = target.createInjector("longField");
 
         target.init();
-        assertThatThrownBy(() -> injector.set(null)).isInstanceOf(QueryException.class);
+        assertThatThrownBy(() -> injector.set(null))
+                .isInstanceOf(QueryException.class)
+                .hasMessageContaining("Cannot pass NULL to a method with a primitive argument");
     }
 
     @Test
@@ -83,7 +87,10 @@ public class PojoUpsertTargetTest {
         UpsertInjector injector = target.createInjector("field");
 
         target.init();
-        assertThatThrownBy(() -> injector.set(1)).isInstanceOf(QueryException.class);
+        assertThatThrownBy(() -> injector.set(1))
+                .isInstanceOf(QueryException.class)
+                .hasMessageContaining("Cannot set field \"field\" of class java.lang.Object: " +
+                        "no set-method or public field available");
     }
 
     @Test

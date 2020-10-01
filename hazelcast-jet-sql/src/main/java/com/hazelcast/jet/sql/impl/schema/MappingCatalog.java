@@ -67,7 +67,7 @@ public class MappingCatalog implements TableResolver {
         } else if (replace) {
             storage.put(name, resolved);
         } else if (!storage.putIfAbsent(name, resolved)) {
-            throw QueryException.error("'" + name + "' mapping already exists");
+            throw QueryException.error("Mapping already exists: " + name);
         }
     }
 
@@ -86,7 +86,7 @@ public class MappingCatalog implements TableResolver {
 
     public void removeMapping(String name, boolean ifExists) {
         if (!storage.remove(name) && !ifExists) {
-            throw QueryException.error("'" + name + "' mapping does not exist");
+            throw QueryException.error("Mapping does not exist: " + name);
         }
     }
 
