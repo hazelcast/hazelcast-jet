@@ -104,20 +104,23 @@ public class EntryMetadataResolversTest {
     }
 
     @Test
-    public void when_keyFieldsIsEmpty_then_throws() {
+    public void when_keyFieldsEmpty_then_doesNotFail() {
         Map<String, String> options = ImmutableMap.of(
                 OPTION_KEY_FORMAT, JAVA_FORMAT,
                 OPTION_VALUE_FORMAT, JAVA_FORMAT
         );
         given(resolver.resolveFields(true, emptyList(), options, ss))
                 .willReturn(emptyList());
+        given(resolver.resolveFields(false, emptyList(), options, ss))
+                .willReturn(singletonList(field("this", QueryDataType.INT)));
 
-        assertThatThrownBy(() -> resolvers.resolveAndValidateFields(emptyList(), options, nodeEngine))
-                .isInstanceOf(QueryException.class);
+        List<MappingField> fields = resolvers.resolveAndValidateFields(emptyList(), options, nodeEngine);
+        assertThat(fields)
+                .isEqualTo(singletonList(new MappingField("this", QueryDataType.INT, null)));
     }
 
     @Test
-    public void when_valueFieldsIsEmpty_then_throws() {
+    public void when_valueFieldsEmpty_then_doesNotFail() {
         Map<String, String> options = ImmutableMap.of(
                 OPTION_KEY_FORMAT, JAVA_FORMAT,
                 OPTION_VALUE_FORMAT, JAVA_FORMAT
@@ -127,14 +130,32 @@ public class EntryMetadataResolversTest {
         given(resolver.resolveFields(false, emptyList(), options, ss))
                 .willReturn(emptyList());
 
+        List<MappingField> fields = resolvers.resolveAndValidateFields(emptyList(), options, nodeEngine);
+        assertThat(fields)
+                .isEqualTo(singletonList(new MappingField("__key", QueryDataType.INT, null)));
+    }
+
+    @Test
+    public void when_keyAndValueFieldsEmpty_then_throws() {
+        Map<String, String> options = ImmutableMap.of(
+                OPTION_KEY_FORMAT, JAVA_FORMAT,
+                OPTION_VALUE_FORMAT, JAVA_FORMAT
+        );
+        given(resolver.resolveFields(true, emptyList(), options, ss))
+                .willReturn(emptyList());
+        given(resolver.resolveFields(false, emptyList(), options, ss))
+                .willReturn(emptyList());
+
         assertThatThrownBy(() -> resolvers.resolveAndValidateFields(emptyList(), options, nodeEngine))
-                .isInstanceOf(QueryException.class);
+                .isInstanceOf(QueryException.class)
+                .hasMessageContaining("The resolved field list is empty");
     }
 
     @Test
     public void when_formatIsMissingInOptionsWhileResolvingFields_then_throws() {
         assertThatThrownBy(() -> resolvers.resolveAndValidateFields(emptyList(), emptyMap(), nodeEngine))
-                .isInstanceOf(QueryException.class);
+                .isInstanceOf(QueryException.class)
+                .hasMessageContaining("Missing 'keyFormat' option");;
     }
 
     @Test
@@ -160,7 +181,8 @@ public class EntryMetadataResolversTest {
     })
     public void when_formatIsMissingInOptionsWhileResolvingMetadata_then_throws(boolean key) {
         assertThatThrownBy(() -> resolvers.resolveMetadata(key, emptyList(), emptyMap(), ss))
-                .isInstanceOf(QueryException.class);
+                .isInstanceOf(QueryException.class)
+                .hasMessageMatching("Missing '(key|value)Format' option");;
     }
 
     private static MappingField field(String name, QueryDataType type) {

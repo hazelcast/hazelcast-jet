@@ -71,6 +71,10 @@ public class EntryMetadataResolvers {
         Map<String, MappingField> fields = concat(keyFields.stream(), valueFields.stream())
                 .collect(LinkedHashMap::new, (map, field) -> map.putIfAbsent(field.name(), field), Map::putAll);
 
+        if (fields.isEmpty()) {
+            throw QueryException.error("The resolved field list is empty");
+        }
+
         return new ArrayList<>(fields.values());
     }
 
