@@ -24,6 +24,23 @@ To expand an issue number into a full GitHub link, use this template:
 https://github.com/hazelcast/hazelcast-jet/issues/<issue number>
 
 
+ADD YOUR PR ENTRY IN THIS SECTION: >>>
+
+Members of the open source community that appear in these release notes:
+
+Thank you for your valuable contributions!
+
+1. New Features
+
+2. Enhancements
+
+3. Fixes
+
+4. Breaking Changes
+
+<<< END PR SECTION
+
+
 ** Hazelcast Jet 4.3 **
 
 Members of the open source community that appear in these release notes:
