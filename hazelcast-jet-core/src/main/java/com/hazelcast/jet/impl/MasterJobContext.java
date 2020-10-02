@@ -44,7 +44,6 @@ import com.hazelcast.jet.impl.operation.GetLocalJobMetricsOperation.ExecutionNot
 import com.hazelcast.jet.impl.operation.InitExecutionOperation;
 import com.hazelcast.jet.impl.operation.StartExecutionOperation;
 import com.hazelcast.jet.impl.operation.TerminateExecutionOperation;
-import com.hazelcast.jet.impl.util.ExceptionUtil;
 import com.hazelcast.jet.impl.util.LoggingUtil;
 import com.hazelcast.jet.impl.util.NonCompletableFuture;
 import com.hazelcast.jet.impl.util.Util;
@@ -635,12 +634,11 @@ public class MasterJobContext {
                         && mc.jobConfig().getProcessingGuarantee() != NONE
                 ) {
                     mc.setJobStatus(SUSPENDED);
-                    mc.jobExecutionRecord().setSuspended("Requested by user");
+                    mc.jobExecutionRecord().setSuspended(null);
                     nonSynchronizedAction = () -> mc.writeJobExecutionRecord(false);
                 } else if (failure != null && !isCancelled() && mc.jobConfig().isSuspendOnFailure()) {
                     mc.setJobStatus(SUSPENDED);
-                    mc.jobExecutionRecord().setSuspended("Execution failure:\n" +
-                            ExceptionUtil.stackTraceToString(failure));
+                    mc.jobExecutionRecord().setSuspended(failure);
                     nonSynchronizedAction = () -> mc.writeJobExecutionRecord(false);
                 } else {
                     mc.setJobStatus(isSuccess(failure) ? COMPLETED : FAILED);
