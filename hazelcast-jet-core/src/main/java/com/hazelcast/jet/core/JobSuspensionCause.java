@@ -30,6 +30,8 @@ import javax.annotation.Nullable;
  * <p>
  * When the job has been suspended due to an error, then the cause of that
  * error is provided.
+ *
+ * @since 4.4
  */
 public interface JobSuspensionCause {
 
