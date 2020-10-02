@@ -37,6 +37,7 @@ import java.util.Map;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_KEY_CLASS;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_VALUE_CLASS;
 import static com.hazelcast.jet.sql.impl.connector.keyvalue.KvMetadataJavaResolver.INSTANCE;
+import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -234,6 +235,26 @@ public class KvMetadataJavaResolverTest {
                 null
         )).isInstanceOf(QueryException.class)
           .hasMessageContaining("Invalid external name: does_not_start_with_key_or_value");
+    }
+
+    @Test
+    @Parameters({
+            "true, __key",
+            "false, this"
+    })
+    public void when_userDeclaresObjectDuplicateExternalName_then_throws(boolean key, String prefix) {
+        Map<String, String> options = ImmutableMap.of((key ? OPTION_KEY_CLASS : OPTION_VALUE_CLASS), Type.class.getName());
+
+        assertThatThrownBy(() -> INSTANCE.resolveAndValidateFields(
+                key,
+                asList(
+                        field("field1", QueryDataType.INT, prefix + ".field"),
+                        field("field2", QueryDataType.VARCHAR, prefix + ".field")
+                ),
+                options,
+                null
+        )).isInstanceOf(QueryException.class)
+          .hasMessageMatching("Duplicate external name: (__key|this).field");
     }
 
     @Test
