@@ -73,7 +73,7 @@ public class ParallelismTest {
 
 
     @Test
-    public void when_cooperative_defaultLP_then_UsesProvidedLP() {
+    public void when_transform_applied_lp_should_match_expectedLP() {
         // When
         DAG dag = applyTransformAndGetDag(transform);
         // Then

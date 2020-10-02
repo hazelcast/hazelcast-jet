@@ -168,6 +168,8 @@ public abstract class AbstractTransform implements Transform {
                     determinedLocalParallelism(min(preferredLocalParallelism, defaultParallelism));
                 }
             }
+        } else {
+            determinedLocalParallelism(localParallelism());
         }
     }
 }
