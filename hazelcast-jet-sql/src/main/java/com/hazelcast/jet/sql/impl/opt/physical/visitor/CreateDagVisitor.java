@@ -20,10 +20,13 @@ import com.hazelcast.cluster.Address;
 import com.hazelcast.function.ConsumerEx;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.function.PredicateEx;
+import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Edge;
 import com.hazelcast.jet.core.Vertex;
+import com.hazelcast.jet.sql.impl.aggregate.Aggregators;
 import com.hazelcast.jet.sql.impl.expression.ExpressionUtil;
+import com.hazelcast.jet.sql.impl.opt.physical.AggregatePhysicalRel;
 import com.hazelcast.jet.sql.impl.opt.physical.FilterPhysicalRel;
 import com.hazelcast.jet.sql.impl.opt.physical.FullScanPhysicalRel;
 import com.hazelcast.jet.sql.impl.opt.physical.InsertPhysicalRel;
@@ -32,14 +35,21 @@ import com.hazelcast.jet.sql.impl.opt.physical.PhysicalRel;
 import com.hazelcast.jet.sql.impl.opt.physical.ProjectPhysicalRel;
 import com.hazelcast.jet.sql.impl.opt.physical.ValuesPhysicalRel;
 import com.hazelcast.sql.impl.calcite.schema.HazelcastTable;
+import com.hazelcast.sql.impl.plan.node.PlanNodeSchema;
 import com.hazelcast.sql.impl.schema.Table;
 import org.apache.calcite.rel.RelNode;
+import org.apache.calcite.rel.core.AggregateCall;
+import org.apache.calcite.util.ImmutableBitSet;
+import org.apache.commons.lang3.RandomStringUtils;
 
 import javax.annotation.Nullable;
 import java.util.List;
 import java.util.function.Consumer;
 
+import static com.hazelcast.function.Functions.entryKey;
 import static com.hazelcast.jet.core.Edge.between;
+import static com.hazelcast.jet.core.processor.Processors.accumulateByKeyP;
+import static com.hazelcast.jet.core.processor.Processors.combineByKeyP;
 import static com.hazelcast.jet.core.processor.Processors.filterP;
 import static com.hazelcast.jet.core.processor.Processors.mapP;
 import static com.hazelcast.jet.core.processor.SourceProcessors.convenientSourceP;
@@ -58,7 +68,7 @@ public class CreateDagVisitor {
     public Vertex onValues(ValuesPhysicalRel rel) {
         List<Object[]> values = rel.values();
 
-        return dag.newVertex("Values", convenientSourceP(
+        return dag.newVertex(name("Values"), convenientSourceP(
                 pCtx -> null,
                 (ignored, buffer) -> {
                     values.forEach(buffer::add);
@@ -91,7 +101,7 @@ public class CreateDagVisitor {
     public Vertex onFilter(FilterPhysicalRel rel) {
         PredicateEx<Object[]> filter = ExpressionUtil.filterFn(rel.filter());
 
-        Vertex vertex = dag.newVertex("Filter", filterP(filter::test));
+        Vertex vertex = dag.newVertex(name("Filter"), filterP(filter::test));
         connectInput(rel.getInput(), vertex, null);
         return vertex;
     }
@@ -99,13 +109,40 @@ public class CreateDagVisitor {
     public Vertex onProject(ProjectPhysicalRel rel) {
         FunctionEx<Object[], Object[]> projection = ExpressionUtil.projectionFn(rel.projection());
 
-        Vertex vertex = dag.newVertex("Project", mapP(projection));
+        Vertex vertex = dag.newVertex(name("Project"), mapP(projection));
         connectInput(rel.getInput(), vertex, null);
         return vertex;
     }
 
+    public Vertex onAggregate(AggregatePhysicalRel rel) {
+        // TODO: !isStream() check ???
+
+        ImmutableBitSet groupSet = rel.getGroupSet();
+        List<AggregateCall> aggregateCalls = rel.getAggCallList();
+        PlanNodeSchema inputSchema = rel.inputSchema();
+
+        List<FunctionEx<?, ?>> keyFns = Aggregators.keyFns(groupSet);
+        AggregateOperation<?, Object[]> aggregateOperation = Aggregators.operation(groupSet, aggregateCalls, inputSchema);
+
+       /* SupplierEx<Processor> aggregate = aggregateByKeyP(
+                keyFns,
+                aggregateOperation,
+                (key, row) -> row
+        );
+
+        Vertex vertex = dag.newVertex(vertexName("Aggregate"), aggregate).localParallelism(1);
+        connectInput(rel.getInput(), vertex, null);
+        return vertex;*/
+
+        Vertex v1 = dag.newVertex(name("Accumulate"), accumulateByKeyP(keyFns, aggregateOperation));
+        Vertex v2 = dag.newVertex(name("Combine"), combineByKeyP(aggregateOperation, (key, row) -> row));
+        dag.edge(between(v1, v2).distributed().partitioned(entryKey()));
+        connectInput(rel.getInput(), v1, null);
+        return v2;
+    }
+
     public Vertex onRoot(JetRootRel rootRel) {
-        Vertex vertex = dag.newVertex("ClientSink",
+        Vertex vertex = dag.newVertex(name("ClientSink"),
                 rootResultConsumerSink(rootRel.getInitiatorAddress(), rootRel.getQueryId()));
 
         // We use distribute-to-one edge to send all the items to the initiator member.
@@ -118,6 +155,10 @@ public class CreateDagVisitor {
 
     public DAG getDag() {
         return dag;
+    }
+
+    private String name(String prefix) {
+        return prefix + "-" + RandomStringUtils.randomAlphanumeric(3); // TODO
     }
 
     /**

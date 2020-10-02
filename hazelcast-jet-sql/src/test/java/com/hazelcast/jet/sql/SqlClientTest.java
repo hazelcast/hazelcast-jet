@@ -48,16 +48,18 @@ public class SqlClientTest extends SqlTestSupport {
         JetInstance client = factory().newClient();
         SqlService sqlService = client.getSql();
 
-        sqlService.execute("CREATE MAPPING t TYPE " + TestBatchSqlConnector.TYPE_NAME);
+        int itemCount = 10_000;
+
+        TestBatchSqlConnector.create(sqlService, "t", itemCount);
 
         SqlResult result = sqlService.execute("SELECT v FROM t");
-        BitSet seenValues = new BitSet(TestBatchSqlConnector.DEFAULT_ITEM_COUNT);
+        BitSet seenValues = new BitSet(itemCount);
         for (SqlRow r : result) {
             Integer v = r.getObject(0);
             assertFalse("value already seen: " + v, seenValues.get(v));
             seenValues.set(v);
         }
-        assertEquals(TestBatchSqlConnector.DEFAULT_ITEM_COUNT, seenValues.cardinality());
+        assertEquals(itemCount, seenValues.cardinality());
     }
 
     @Test

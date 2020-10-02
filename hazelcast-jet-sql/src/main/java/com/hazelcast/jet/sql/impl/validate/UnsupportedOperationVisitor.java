@@ -115,6 +115,13 @@ public final class UnsupportedOperationVisitor implements SqlVisitor<Void> {
         SUPPORTED_KINDS.add(SqlKind.LIKE);
         SUPPORTED_KINDS.add(SqlKind.TRIM);
 
+        // Aggregations
+        SUPPORTED_KINDS.add(SqlKind.COUNT);
+        SUPPORTED_KINDS.add(SqlKind.MIN);
+        SUPPORTED_KINDS.add(SqlKind.MAX);
+        SUPPORTED_KINDS.add(SqlKind.SUM);
+        SUPPORTED_KINDS.add(SqlKind.AVG);
+
         // Extensions
         SUPPORTED_KINDS.add(SqlKind.CREATE_TABLE);
         SUPPORTED_KINDS.add(SqlKind.DROP_TABLE);
@@ -315,10 +322,6 @@ public final class UnsupportedOperationVisitor implements SqlVisitor<Void> {
     private void processSelect(SqlSelect select) {
         if (select.hasOrderBy()) {
             throw unsupported(select.getOrderList(), SqlKind.ORDER_BY);
-        }
-
-        if (select.getGroup() != null && select.getGroup().size() > 0) {
-            throw unsupported(select.getGroup(), "GROUP BY");
         }
 
         if (select.getFetch() != null) {

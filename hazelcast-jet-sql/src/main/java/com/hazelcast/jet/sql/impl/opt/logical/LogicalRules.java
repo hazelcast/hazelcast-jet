@@ -51,6 +51,9 @@ public final class LogicalRules {
                 FullScanLogicalRule.INSTANCE,
                 FullFunctionScanLogicalRule.INSTANCE,
 
+                // Aggregate rules
+                AggregateLogicalRule.INSTANCE,
+
                 // Value rules
                 ValuesLogicalRule.INSTANCE,
                 ValuesReduceRule.FILTER_INSTANCE,
