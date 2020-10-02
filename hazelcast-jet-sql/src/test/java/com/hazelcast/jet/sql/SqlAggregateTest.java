@@ -443,7 +443,7 @@ public class SqlAggregateTest extends SqlTestSupport {
 
         assertRowsAnyOrder(
                 "SELECT SUM(distance) FROM " + name,
-                singletonList(new Row(null, null))
+                singletonList(new Row((Object) null))
         );
     }
 
@@ -538,7 +538,7 @@ public class SqlAggregateTest extends SqlTestSupport {
 
         assertRowsAnyOrder(
                 "SELECT AVG(distance) FROM " + name,
-                singletonList(new Row(null, null))
+                singletonList(new Row((Object) null))
         );
     }
 
