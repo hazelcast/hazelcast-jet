@@ -191,7 +191,7 @@ Memory consumption is affected by:
   data. See the [Hazelcast IMDG Deployment and Operations Guide](https://hazelcast.com/resources/hazelcast-deployment-operations-guide/)
   .
 
-> Hazelcast IMDG offers lite members to prevents the memory usage on
+> Hazelcast IMDG offers lite members to prevent the memory usage on
   these members. Lite members do not own any partitions, but they can
   access partitions that are owned by other members in the cluster. If
   there is no specific advantage of using non-homogeneous cluster
