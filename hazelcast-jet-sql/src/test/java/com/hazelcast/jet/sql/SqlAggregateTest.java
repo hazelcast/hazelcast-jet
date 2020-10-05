@@ -20,7 +20,6 @@ import com.hazelcast.jet.sql.impl.connector.test.TestBatchSqlConnector;
 import com.hazelcast.sql.SqlService;
 import com.hazelcast.sql.impl.type.QueryDataType;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.math.BigDecimal;
@@ -154,25 +153,6 @@ public class SqlAggregateTest extends SqlTestSupport {
                 asList(
                         new Row("Alice", 3L),
                         new Row("Bob", 1L)
-                )
-        );
-    }
-
-    @Test
-    @Ignore
-    public void test_groupDistinctCount() {
-        String name = createTable(
-                new String[]{"Alice", "1"},
-                new String[]{"Alice", "1"},
-                new String[]{"Bob", "1"},
-                new String[]{"Alice", "2"}
-        );
-
-        assertRowsAnyOrder(
-                "SELECT name, COUNT(DISTINCT distance) s FROM " + name + " GROUP BY name",
-                asList(
-                        new Row("Alice", 2),
-                        new Row("Bob", 1)
                 )
         );
     }

@@ -23,7 +23,6 @@ import com.hazelcast.sql.SqlRow;
 import com.hazelcast.sql.SqlService;
 import com.hazelcast.test.HazelcastTestSupport;
 
-import java.time.LocalDateTime;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -116,7 +115,6 @@ public abstract class SqlTestSupport extends SimpleTestInClusterSupport {
         SqlService sqlService = instance().getSql();
         List<Row> actualRows = new ArrayList<>();
         sqlService.execute(sql).iterator().forEachRemaining(r -> actualRows.add(new Row(r)));
-        System.out.println("aaa: " + LocalDateTime.now());
         assertThat(actualRows).containsExactlyInAnyOrderElementsOf(expectedRows);
     }
 

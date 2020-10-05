@@ -25,7 +25,7 @@ import java.io.IOException;
 import java.util.Arrays;
 
 @NotThreadSafe
-class Aggregator implements DataSerializable {
+public  class Aggregator implements DataSerializable {
 
     private Aggregation[] aggregations;
 

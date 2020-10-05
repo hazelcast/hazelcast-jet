@@ -24,6 +24,9 @@ import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Edge;
 import com.hazelcast.jet.core.Vertex;
+import com.hazelcast.jet.core.processor.Processors;
+import com.hazelcast.jet.sql.impl.aggregate.AggregateProcessors;
+import com.hazelcast.jet.sql.impl.aggregate.Aggregator;
 import com.hazelcast.jet.sql.impl.aggregate.Aggregators;
 import com.hazelcast.jet.sql.impl.expression.ExpressionUtil;
 import com.hazelcast.jet.sql.impl.opt.physical.AggregatePhysicalRel;
@@ -46,15 +49,13 @@ import javax.annotation.Nullable;
 import java.util.List;
 import java.util.function.Consumer;
 
-import static com.hazelcast.function.Functions.entryKey;
 import static com.hazelcast.jet.core.Edge.between;
-import static com.hazelcast.jet.core.processor.Processors.accumulateByKeyP;
-import static com.hazelcast.jet.core.processor.Processors.combineByKeyP;
 import static com.hazelcast.jet.core.processor.Processors.filterP;
 import static com.hazelcast.jet.core.processor.Processors.mapP;
 import static com.hazelcast.jet.core.processor.SourceProcessors.convenientSourceP;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnectorUtil.getJetSqlConnector;
 import static com.hazelcast.jet.sql.impl.processors.RootResultConsumerSink.rootResultConsumerSink;
+import static java.util.Collections.singletonList;
 
 public class CreateDagVisitor {
 
@@ -121,24 +122,21 @@ public class CreateDagVisitor {
         List<AggregateCall> aggregateCalls = rel.getAggCallList();
         PlanNodeSchema inputSchema = rel.inputSchema();
 
-        List<FunctionEx<?, ?>> keyFns = Aggregators.keyFns(groupSet);
-        AggregateOperation<?, Object[]> aggregateOperation = Aggregators.operation(groupSet, aggregateCalls, inputSchema);
+        FunctionEx<?, ?> keyFn = Aggregators.keyFn(groupSet);
+        AggregateOperation<Aggregator, Object[]> aggregateOperation = Aggregators.operation(groupSet, aggregateCalls, inputSchema);
 
-       /* SupplierEx<Processor> aggregate = aggregateByKeyP(
-                keyFns,
-                aggregateOperation,
-                (key, row) -> row
+        Vertex accumulateVertex = dag.newVertex(
+                name("Accumulate"),
+                Processors.accumulateByKeyP(singletonList(keyFn), aggregateOperation)
         );
+        connectInput(rel.getInput(), accumulateVertex, edge -> edge.partitioned(keyFn));
 
-        Vertex vertex = dag.newVertex(vertexName("Aggregate"), aggregate).localParallelism(1);
-        connectInput(rel.getInput(), vertex, null);
-        return vertex;*/
-
-        Vertex v1 = dag.newVertex(name("Accumulate"), accumulateByKeyP(keyFns, aggregateOperation));
-        Vertex v2 = dag.newVertex(name("Combine"), combineByKeyP(aggregateOperation, (key, row) -> row));
-        dag.edge(between(v1, v2).distributed().partitioned(entryKey()));
-        connectInput(rel.getInput(), v1, null);
-        return v2;
+        Vertex combineVertex = dag.newVertex(
+                name("Combine"),
+                AggregateProcessors.combineByKeyP(localMemberAddress, aggregateOperation)
+        );
+        dag.edge(between(accumulateVertex, combineVertex).allToOne("").distributeTo(localMemberAddress));
+        return combineVertex;
     }
 
     public Vertex onRoot(JetRootRel rootRel) {
@@ -148,8 +146,7 @@ public class CreateDagVisitor {
         // We use distribute-to-one edge to send all the items to the initiator member.
         // Such edge has to be partitioned, but the sink is LP=1 anyway, so we can use
         // allToOne with any key, it goes to a single processor on a single member anyway.
-        connectInput(rootRel.getInput(), vertex,
-                edge -> edge.allToOne("").distributeTo(localMemberAddress));
+        connectInput(rootRel.getInput(), vertex, edge -> edge.allToOne("").distributeTo(localMemberAddress));
         return vertex;
     }
 
@@ -167,8 +164,11 @@ public class CreateDagVisitor {
      *
      * @param configureEdgeFn optional function to configure the edge
      */
-    private void connectInput(RelNode inputRel, Vertex thisVertex,
-                              @Nullable Consumer<Edge> configureEdgeFn) {
+    private void connectInput(
+            RelNode inputRel,
+            Vertex thisVertex,
+            @Nullable Consumer<Edge> configureEdgeFn
+    ) {
         Vertex inputVertex = ((PhysicalRel) inputRel).visit(this);
         Edge edge = between(inputVertex, thisVertex);
         if (configureEdgeFn != null) {

@@ -26,7 +26,6 @@ import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.util.ImmutableBitSet;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 public final class Aggregators {
@@ -34,22 +33,21 @@ public final class Aggregators {
     private Aggregators() {
     }
 
-    public static List<FunctionEx<?, ?>> keyFns(
+    public static FunctionEx<?, ?> keyFn(
             ImmutableBitSet groupSet
     ) {
         List<Integer> groupIndices = groupSet.toList();
-        FunctionEx<Object[], Object> keyFn = row -> {
+
+        return (FunctionEx<Object[], Object>) row -> {
             Object[] key = new Object[groupIndices.size()];
             for (int i = 0; i < groupIndices.size(); i++) {
                 key[i] = row[groupIndices.get(i)];
             }
             return new ObjectArray(key);
         };
-
-        return Collections.singletonList(keyFn);
     }
 
-    public static AggregateOperation<?, Object[]> operation(
+    public static AggregateOperation<Aggregator, Object[]> operation(
             ImmutableBitSet groupSet,
             List<AggregateCall> aggregateCalls,
             PlanNodeSchema inputSchema
