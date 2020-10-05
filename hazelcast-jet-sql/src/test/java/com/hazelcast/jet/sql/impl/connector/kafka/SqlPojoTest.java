@@ -206,20 +206,8 @@ public class SqlPojoTest extends SqlTestSupport {
                 + ", timestampTz"
                 + ") SELECT "
                 + "CAST(1 AS INT)"
-                + ", string"
-                + ", \"boolean\""
-                + ", byte"
-                + ", short"
-                + ", \"int\""
-                + ", long"
-                + ", \"float\""
-                + ", \"double\""
-                + ", \"decimal\""
-                + ", \"time\""
-                + ", \"date\""
-                + ", \"timestamp\""
-                + ", \"timestampTz\""
-                + " FROM " + from
+                + ", f.*"
+                + " FROM " + from + " f"
         );
 
         assertRowsEventuallyInAnyOrder(

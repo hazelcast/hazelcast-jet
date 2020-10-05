@@ -214,23 +214,7 @@ public class SqlJsonTest extends SqlTestSupport {
                 + ")"
         );
 
-        sqlService.execute("INSERT INTO " + to + " SELECT "
-                + "1"
-                + ", string"
-                + ", \"boolean\""
-                + ", byte"
-                + ", short"
-                + ", \"int\""
-                + ", long"
-                + ", \"float\""
-                + ", \"double\""
-                + ", \"decimal\""
-                + ", \"time\""
-                + ", \"date\""
-                + ", \"timestamp\""
-                + ", \"timestampTz\""
-                + " FROM " + from
-        );
+        sqlService.execute("INSERT INTO " + to + " SELECT 1, f.* FROM " + from + " f");
 
         assertRowsEventuallyInAnyOrder(
                 "SELECT * FROM " + to,
