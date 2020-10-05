@@ -55,11 +55,10 @@ public class AggregateTransform<A, R> extends AbstractTransform {
 
     @Override
     public void addToDag(Planner p, Context context) {
-        determineLocalParallelism(-1, context, true);
         if (aggrOp.combineFn() == null) {
             addToDagSingleStage(p);
         } else {
-            addToDagTwoStage(p);
+            addToDagTwoStage(p, context);
         }
     }
 
@@ -98,10 +97,11 @@ public class AggregateTransform<A, R> extends AbstractTransform {
     //                   ----------------
     //                  |    combineP    | local parallelism = 1
     //                   ----------------
-    private void addToDagTwoStage(Planner p) {
+    private void addToDagTwoStage(Planner p, Context context) {
         String vertexName = name();
+        determineLocalParallelism(-1, context, true);
         Vertex v1 = p.dag.newVertex(vertexName + FIRST_STAGE_VERTEX_NAME_SUFFIX, accumulateP(aggrOp))
-                         .localParallelism(localParallelism());
+                         .localParallelism(determinedLocalParallelism());
         determinedLocalParallelism(1);
         PlannerVertex pv2 = p.addVertex(this, vertexName, determinedLocalParallelism(),
                 ProcessorMetaSupplier.forceTotalParallelismOne(

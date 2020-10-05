@@ -51,9 +51,10 @@ public class SortTransform<T> extends AbstractTransform {
     @Override
     public void addToDag(Planner p, Context context) {
         String vertexName = name();
-        determinedLocalParallelism(1);
+        determineLocalParallelism(-1, context, true);
         Vertex v1 = p.dag.newVertex(vertexName, sortP(comparator))
-                         .localParallelism(localParallelism());
+                         .localParallelism(determinedLocalParallelism());
+        determinedLocalParallelism(1);
         PlannerVertex pv2 = p.addVertex(this, vertexName + COLLECT_STAGE_SUFFIX, determinedLocalParallelism(),
                 ProcessorMetaSupplier.forceTotalParallelismOne(ProcessorSupplier.of(mapP(identity())), vertexName));
         p.addEdges(this, v1);
