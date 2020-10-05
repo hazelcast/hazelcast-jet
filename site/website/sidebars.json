@@ -38,6 +38,7 @@
       "api/submitting-jobs",
       "api/data-structures",
       "api/serialization",
+      "api/error-handling",
       "api/testing",
       "api/spring"
     ],
@@ -95,6 +96,7 @@
     ],
     "Design Documents": [
       "design-docs/index",
+      "design-docs/014-batchstage-sort",
       "design-docs/013-system-time-watermarks",
       "design-docs/012-improved-job-resilience",
       "design-docs/011-json-convenience",
