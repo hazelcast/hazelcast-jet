@@ -15,7 +15,6 @@
  */
 package com.hazelcast.jet.python;
 
-import com.hazelcast.internal.nio.IOUtil;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.logging.ILogger;
@@ -133,8 +132,6 @@ class PythonServiceContext {
             }
         } catch (Exception e) {
             throw new JetException("PythonService cleanup failed: " + e, e);
-        } finally {
-            IOUtil.delete(runtimeBaseDir);
         }
     }
 
