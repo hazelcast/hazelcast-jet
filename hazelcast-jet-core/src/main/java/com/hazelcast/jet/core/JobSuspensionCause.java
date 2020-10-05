@@ -55,7 +55,7 @@ public interface JobSuspensionCause {
     String errorCause();
 
     /**
-     * Describes the job suspension cause in a human readable form.
+     * Describes the job suspension cause in a human-readable form.
      */
     @Nonnull
     String description();

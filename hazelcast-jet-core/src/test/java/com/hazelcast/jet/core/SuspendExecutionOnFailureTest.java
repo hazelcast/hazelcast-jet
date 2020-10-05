@@ -114,9 +114,9 @@ public class SuspendExecutionOnFailureTest extends TestInClusterSupport {
         job.suspend();
         assertJobStatusEventually(job, SUSPENDED);
         assertThat(job.getSuspensionCause()).matches(JobSuspensionCause::requestedByUser);
-
+        assertThat(job.getSuspensionCause().description()).isEqualTo("Requested by user");
         assertThatThrownBy(job.getSuspensionCause()::errorCause)
-                .isInstanceOf(UnsupportedOperationException.class)
+                .isInstanceOf(IllegalStateException.class)
                 .hasMessage("Suspension not caused by an error");
 
         cancelAndJoin(job);

@@ -51,7 +51,7 @@ public class JobSuspensionCauseImpl implements JobSuspensionCause, IdentifiedDat
     @Override
     public String errorCause() {
         if (error == null) {
-            throw new UnsupportedOperationException("Suspension not caused by an error");
+            throw new IllegalStateException("Suspension not caused by an error");
         }
         return error;
     }
