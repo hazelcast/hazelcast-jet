@@ -15,7 +15,7 @@ queried without creating a mapping first).
 The mapping specifies the table name, an optional column list with types
 and connection and other parameters.
 
-Be default, the mappings are created in the `public` schema. Jet doesn't
+By default, the mappings are created in the `public` schema. Jet doesn't
 support user-created schemas currently. The implicit mappings for IMaps
 are created in the `partitioned` schema. You can't drop mappings in this
 schema, nor are they listed in the [information
@@ -49,7 +49,7 @@ already running, only new jobs are affected.
 - `MappingName`: an SQL identifier that identifies the mapping in SQL
   queries.
 
-- `ColumnName`, `ColumnType`: the name type of the column.
+- `ColumnName`, `ColumnType`: the name and type of the column.
 
 - `ExternalName`: the optional external name. If omitted, a
   connector-specific rules are used to derive it from the column name.
@@ -65,14 +65,24 @@ already running, only new jobs are affected.
   contains special characters like the period (`.`), dash (`-`) etc. The
   `OptionValue` is a regular SQL string enclosed in apostrophes.
 
-#### Auto-resolving of columns
+#### Auto-resolving of columns and options
 
-The `ColumnList` is optional. If it is omitted, Jet will connect to the
-remote system and try to resolve the columns in a connector-specific
-way. For example, Jet can read a random message from a Kafka topic and
-determine the column list from it. If Jet fails to resolve the columns
-(most commonly if the remote object is empty), the DDL statement will
-fail.
+The columns in the column list are optional. Depending on the connector
+it can resolve the columns based on the given options or by sampling a
+random record in the target object. For example, if you give the java
+class name for IMap value, we'll resolve the columns by reflecting that
+class.
+
+Even though columns and all necessary options are given, Jet still can
+add columns it finds in the target object to the mapping, so the mapping
+can end up having more columns than were present in the `CREATE MAPPING`
+statement. At times it can exhibit random behavior, for example if it
+happens to sample an old version of a JSON object with a field that's no
+longer used: such column will sometimes be added and sometimes not.
+
+If the connector fails to resolve at least one column and the necessary
+options, the statement can fail. Check out individual connector
+documentation for details.
 
 #### Example Without a Column List and Options
 
