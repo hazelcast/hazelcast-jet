@@ -18,10 +18,10 @@ package com.hazelcast.jet.core;
 
 import com.hazelcast.jet.config.JobConfig;
 
-import javax.annotation.Nullable;
+import javax.annotation.Nonnull;
 
 /**
- * Description of the cause that has lead to the job being suspended.
+ * Description of the cause that has led to the job being suspended.
  * <p>
  * One reason for the job to be suspended is the user explicitly requesting it.
  * Another reason is encountering an error during execution, while being
@@ -36,22 +36,28 @@ import javax.annotation.Nullable;
 public interface JobSuspensionCause {
 
     /**
-     * True if the job has been suspended due to an explicit request from the
-     * user.
+     * True if the user explicitly suspended the job.
      */
     boolean requestedByUser();
 
     /**
-     * True if the job has been suspended due to encountering an error during
+     * True if Jet suspended the job because it encountered an error during
      * execution.
      */
     boolean dueToError();
 
     /**
-     * Provides the error that has lead to the suspension of the job, or returns
-     * null if the cause of the suspension is different.
+     * Describes the error that has led to the suspension of the job. Throws
+     * {@link UnsupportedOperationException} if job was not suspended due to an
+     * error.
      */
-    @Nullable
-    Throwable errorCause();
+    @Nonnull
+    String errorCause();
+
+    /**
+     * Describes the job suspension cause in a human readable form.
+     */
+    @Nonnull
+    String description();
 
 }

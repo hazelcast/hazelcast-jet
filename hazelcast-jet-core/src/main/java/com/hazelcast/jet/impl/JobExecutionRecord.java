@@ -106,7 +106,7 @@ public class JobExecutionRecord implements IdentifiedDataSerializable {
         suspensionCause = null;
     }
 
-    public void setSuspended(@Nullable Throwable error) {
+    public void setSuspended(@Nullable String error) {
         suspensionCause = JobSuspensionCauseImpl.causedBy(error);
     }
 

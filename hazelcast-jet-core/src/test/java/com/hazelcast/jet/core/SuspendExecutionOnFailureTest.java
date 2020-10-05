@@ -115,6 +115,10 @@ public class SuspendExecutionOnFailureTest extends TestInClusterSupport {
         assertJobStatusEventually(job, SUSPENDED);
         assertThat(job.getSuspensionCause()).matches(JobSuspensionCause::requestedByUser);
 
+        assertThatThrownBy(job.getSuspensionCause()::errorCause)
+                .isInstanceOf(UnsupportedOperationException.class)
+                .hasMessage("Suspension not caused by an error");
+
         cancelAndJoin(job);
     }
 
@@ -133,8 +137,9 @@ public class SuspendExecutionOnFailureTest extends TestInClusterSupport {
         assertThat(job.getSuspensionCause()).matches(JobSuspensionCause::dueToError);
         assertThat(job.getSuspensionCause().errorCause())
                 .isNotNull()
-                .matches(error -> error.getMessage().matches("Exception in ProcessorTasklet\\{faulty#[0-9]*}: " +
-                        "java.lang.AssertionError: mock error"));
+                .matches(error -> error.matches("(?s)Execution failure:\n" +
+                        "com.hazelcast.jet.JetException: Exception in ProcessorTasklet\\{faulty#[0-9]*}: " +
+                        "java.lang.AssertionError: mock error.*"));
 
         cancelAndJoin(job);
     }

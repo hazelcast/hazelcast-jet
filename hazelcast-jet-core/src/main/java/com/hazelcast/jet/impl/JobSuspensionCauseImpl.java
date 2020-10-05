@@ -22,19 +22,19 @@ import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 
-import javax.annotation.Nullable;
+import javax.annotation.Nonnull;
 import java.io.IOException;
 
 public class JobSuspensionCauseImpl implements JobSuspensionCause, IdentifiedDataSerializable {
 
     private static final JobSuspensionCauseImpl REQUESTED_BY_USER = new JobSuspensionCauseImpl(null);
 
-    private Throwable error;
+    private String error;
 
     public JobSuspensionCauseImpl() { //needed for deserialization
     }
 
-    private JobSuspensionCauseImpl(Throwable error) {
+    private JobSuspensionCauseImpl(String error) {
         this.error = error;
     }
 
@@ -48,10 +48,27 @@ public class JobSuspensionCauseImpl implements JobSuspensionCause, IdentifiedDat
         return error != null;
     }
 
-    @Nullable
     @Override
-    public Throwable errorCause() {
+    public String errorCause() {
+        if (error == null) {
+            throw new UnsupportedOperationException("Suspension not caused by an error");
+        }
         return error;
+    }
+
+    @Nonnull
+    @Override
+    public String description() {
+        if (error == null) {
+            return "Requested by user";
+        } else {
+            return error;
+        }
+    }
+
+    @Override
+    public String toString() {
+        return description();
     }
 
     @Override
@@ -74,7 +91,7 @@ public class JobSuspensionCauseImpl implements JobSuspensionCause, IdentifiedDat
         error = in.readObject();
     }
 
-    static JobSuspensionCauseImpl causedBy(Throwable cause) {
+    static JobSuspensionCauseImpl causedBy(String cause) {
         return cause == null ? REQUESTED_BY_USER : new JobSuspensionCauseImpl(cause);
     }
 }
