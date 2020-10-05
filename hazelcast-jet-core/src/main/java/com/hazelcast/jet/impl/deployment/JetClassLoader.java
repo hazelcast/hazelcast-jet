@@ -80,7 +80,32 @@ public class JetClassLoader extends ClassLoader {
                     + " or start all members with it on classpath");
         }
         byte[] classBytes = uncheckCall(() -> IOUtil.toByteArray(classBytesStream));
+        definePackage(name);
         return defineClass(name, classBytes, 0, classBytes.length);
+    }
+
+    /**
+     * Defines the package if it is not already defined for the given class
+     * name.
+     *
+     * @param className the class name
+     */
+    private void definePackage(String className) {
+        if (isEmpty(className)) {
+            return;
+        }
+        int lastDotIndex = className.lastIndexOf('.');
+        if (lastDotIndex == -1) {
+            return;
+        }
+        String packageName = className.substring(0, lastDotIndex);
+        if (getPackage(packageName) != null) {
+            return;
+        }
+        try {
+            definePackage(packageName, null, null, null, null, null, null, null);
+        } catch (IllegalArgumentException ignored) {
+        }
     }
 
     @Override
