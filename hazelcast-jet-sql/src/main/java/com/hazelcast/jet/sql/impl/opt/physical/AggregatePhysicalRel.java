@@ -91,6 +91,10 @@ public class AggregatePhysicalRel extends Aggregate implements PhysicalRel {
             aggregationProviders.add(() -> new ValueAggregation(groupIndex, operandType));
         }
         for (AggregateCall aggregateCall : getAggCallList()) {
+            if (aggregateCall.isDistinct()) {
+                throw QueryException.error("Distinct aggregates are not supported: " + aggregateCall);
+            }
+
             SqlKind kind = aggregateCall.getAggregation().getKind();
             switch (kind) {
                 case COUNT:
