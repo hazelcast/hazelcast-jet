@@ -52,7 +52,7 @@ public class SqlJsonTest extends SqlTestSupport {
 
     @Test
     public void test_nulls() {
-        String name = generateRandomName();
+        String name = randomMapName();
         sqlService.execute("CREATE MAPPING " + name + " ("
                 + "id INT EXTERNAL NAME \"__key.id\""
                 + ", name VARCHAR EXTERNAL NAME \"this.name\""
@@ -75,7 +75,7 @@ public class SqlJsonTest extends SqlTestSupport {
 
     @Test
     public void test_fieldsMapping() {
-        String name = generateRandomName();
+        String name = randomMapName();
         sqlService.execute("CREATE MAPPING " + name + " ("
                 + "key_name VARCHAR EXTERNAL NAME \"__key.name\""
                 + ", value_name VARCHAR EXTERNAL NAME \"this.name\""
@@ -98,7 +98,7 @@ public class SqlJsonTest extends SqlTestSupport {
 
     @Test
     public void test_schemaEvolution() {
-        String name = generateRandomName();
+        String name = randomMapName();
         sqlService.execute("CREATE MAPPING " + name + " ("
                 + "name VARCHAR"
                 + ") TYPE " + IMapSqlConnector.TYPE_NAME + ' '
@@ -137,12 +137,11 @@ public class SqlJsonTest extends SqlTestSupport {
     }
 
     @Test
-    @SuppressWarnings("checkstyle:LineLength")
     public void test_allTypes() {
-        String from = generateRandomName();
+        String from = randomMapName();
         AllTypesSqlConnector.create(sqlService, from);
 
-        String to = generateRandomName();
+        String to = randomMapName();
         sqlService.execute("CREATE MAPPING " + to + " ("
                 + "id VARCHAR EXTERNAL NAME \"__key.id\""
                 + ", string VARCHAR"
@@ -164,23 +163,7 @@ public class SqlJsonTest extends SqlTestSupport {
                 + ", \"" + OPTION_VALUE_FORMAT + "\" '" + JSON_FORMAT + '\''
                 + ")");
 
-        sqlService.execute("SINK INTO " + to + " SELECT "
-                + "1"
-                + ", string"
-                + ", \"boolean\""
-                + ", byte"
-                + ", short"
-                + ", \"int\""
-                + ", long"
-                + ", \"float\""
-                + ", \"double\""
-                + ", \"decimal\""
-                + ", \"time\""
-                + ", \"date\""
-                + ", \"timestamp\""
-                + ", \"timestampTz\""
-                + " FROM " + from
-        );
+        sqlService.execute("SINK INTO " + to + " SELECT 1, f.* FROM " + from + " f");
 
         assertRowsAnyOrder(
                 "SELECT * FROM " + to,
@@ -198,12 +181,9 @@ public class SqlJsonTest extends SqlTestSupport {
                         LocalTime.of(12, 23, 34),
                         LocalDate.of(2020, 4, 15),
                         LocalDateTime.of(2020, 4, 15, 12, 23, 34, 1_000_000),
-                        ZonedDateTime.of(2020, 4, 15, 12, 23, 34, 200_000_000, UTC).withZoneSameInstant(systemDefault()).toOffsetDateTime()
+                        ZonedDateTime.of(2020, 4, 15, 12, 23, 34, 200_000_000, UTC)
+                                     .withZoneSameInstant(systemDefault()).toOffsetDateTime()
                 ))
         );
-    }
-
-    private static String generateRandomName() {
-        return "json_" + randomString().replace('-', '_');
     }
 }

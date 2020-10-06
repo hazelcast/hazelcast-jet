@@ -58,7 +58,7 @@ public abstract class SqlTestSupport extends SimpleTestInClusterSupport {
 
         Map<K, V> map = instance().getMap(mapName);
         assertTrueEventually(() ->
-                assertThat(new HashMap<>(map)).containsExactlyEntriesOf(expected), 20);
+                assertThat(new HashMap<>(map)).containsExactlyEntriesOf(expected), 10);
     }
 
     /**

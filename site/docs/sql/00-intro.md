@@ -29,9 +29,9 @@ of the default SQL engine features, see the documentation for the
 Hazelcast Jet is able to execute distributed SQL statements over any Jet
 connector that supports the SQL integration. Currently those are:
 
-- Local IMaps
-- Apache Kafka topics
-- Files (local and remote)
+- [Local IMaps](03-imap-connector.md)
+- [Apache Kafka topics](05-kafka-connector.md)
+- [Files (local and remote)](04-files-connector.md)
 
 Each connector specifies its own serialization formats and a way of
 mapping the stored objects to records with column names and SQL types.
@@ -64,3 +64,13 @@ inst.getSql().execute("CREATE MAPPING ...");
 ```
 
 Hazelcast doesn't currently support JDBC (it's planned for the future).
+Identifiers such as table and column names are case-sensitive. Function
+names and SQL keywords aren't. If your identifier contains special characters,
+use `"` to quote. An example if your map is named `my-map`:
+
+```sql
+SELECT * FROM "my-map";  -- works
+sElEcT * from "my-map";  -- works
+SELECT * FROM my-map;    -- fails, `-` interpreted as subtraction
+SELECT * FROM "MY-MAP";  -- fails, map name is case-sensitive
+```
