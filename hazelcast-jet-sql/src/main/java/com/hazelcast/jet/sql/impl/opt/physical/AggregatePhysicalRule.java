@@ -39,12 +39,6 @@ final class AggregatePhysicalRule extends RelOptRule {
 
     @Override
     public void onMatch(RelOptRuleCall call) {
-        // DISTINCT
-        // GROUPING SETS & ROLLUP/CUBE
-
-        // multiple keys ??
-        // sorted group sets ??
-
         AggregateLogicalRel logicalAggregate = call.rel(0);
         RelNode input = logicalAggregate.getInput();
 
