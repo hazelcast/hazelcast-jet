@@ -27,6 +27,7 @@ import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.sql.impl.aggregate.AggregateProcessors;
 import com.hazelcast.jet.sql.impl.aggregate.Aggregations;
+import com.hazelcast.jet.sql.impl.connector.SqlConnector;
 import com.hazelcast.jet.sql.impl.expression.ExpressionUtil;
 import com.hazelcast.jet.sql.impl.opt.physical.AggregatePhysicalRel;
 import com.hazelcast.jet.sql.impl.opt.physical.FilterPhysicalRel;
@@ -113,7 +114,11 @@ public class CreateDagVisitor {
     }
 
     public Vertex onAggregate(AggregatePhysicalRel rel) {
-        // TODO: !isStream() check ???
+        SqlConnector connector = getJetSqlConnector(rel.getTable().unwrap(HazelcastTable.class).getTarget());
+        if (connector.isStream()) {
+            throw new UnsupportedOperationException("Grouping/aggregations are not supported for "
+                    + connector.getClass().getName());
+        }
 
         FunctionEx<Object[], Object> groupKeyFn = rel.groupKeyFn();
         AggregateOperation<Aggregations, Object[]> aggregateOperation = rel.aggregateOperation();
