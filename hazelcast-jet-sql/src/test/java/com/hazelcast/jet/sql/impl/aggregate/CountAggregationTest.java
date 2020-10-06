@@ -34,8 +34,8 @@ public class CountAggregationTest {
     @Test
     public void test_accumulate() {
         CountAggregation aggregation = new CountAggregation();
-        aggregation.accumulate(null);
-        aggregation.accumulate(null);
+        aggregation.accumulate(new Object[0]);
+        aggregation.accumulate(new Object[0]);
 
         assertThat(aggregation.collect()).isEqualTo(2L);
     }
@@ -43,10 +43,10 @@ public class CountAggregationTest {
     @Test
     public void test_combine() {
         CountAggregation left = new CountAggregation();
-        left.accumulate(null);
+        left.accumulate(new Object[0]);
 
         CountAggregation right = new CountAggregation();
-        right.accumulate(null);
+        right.accumulate(new Object[0]);
 
         left.combine(right);
 
@@ -57,7 +57,7 @@ public class CountAggregationTest {
     @Test
     public void test_serialization() {
         CountAggregation original = new CountAggregation();
-        original.accumulate(null);
+        original.accumulate(new Object[0]);
 
         InternalSerializationService ss = new DefaultSerializationServiceBuilder().build();
         CountAggregation serialized = ss.toObject(ss.toData(original));

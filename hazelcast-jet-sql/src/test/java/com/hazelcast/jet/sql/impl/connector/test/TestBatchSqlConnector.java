@@ -106,8 +106,7 @@ public class TestBatchSqlConnector implements SqlConnector {
         return false;
     }
 
-    @Nonnull
-    @Override
+    @Nonnull @Override
     public List<MappingField> resolveAndValidateFields(
             @Nonnull NodeEngine nodeEngine,
             @Nonnull Map<String, String> options,
@@ -129,8 +128,7 @@ public class TestBatchSqlConnector implements SqlConnector {
         return fields;
     }
 
-    @Nonnull
-    @Override
+    @Nonnull @Override
     public Table createTable(
             @Nonnull NodeEngine nodeEngine,
             @Nonnull String schemaName,
@@ -179,8 +177,7 @@ public class TestBatchSqlConnector implements SqlConnector {
         return true;
     }
 
-    @Nonnull
-    @Override
+    @Nonnull @Override
     public Vertex fullScanReader(
             @Nonnull DAG dag,
             @Nonnull Table table,
@@ -216,7 +213,7 @@ public class TestBatchSqlConnector implements SqlConnector {
 
         @Override
         public String toString() {
-            return "TestValues" + "[" + getSchemaName() + "." + getSqlName() + "])";
+            return "TestBatch" + "[" + getSchemaName() + "." + getSqlName() + "])";
         }
     }
 }

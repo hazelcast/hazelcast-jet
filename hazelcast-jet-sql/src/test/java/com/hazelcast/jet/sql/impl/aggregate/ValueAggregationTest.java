@@ -63,7 +63,6 @@ public class ValueAggregationTest {
         InternalSerializationService ss = new DefaultSerializationServiceBuilder().build();
         ValueAggregation serialized = ss.toObject(ss.toData(original));
 
-        // then
         assertThat(serialized).isEqualTo(original);
     }
 }

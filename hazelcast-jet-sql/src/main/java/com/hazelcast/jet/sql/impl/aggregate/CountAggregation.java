@@ -25,8 +25,7 @@ import java.io.IOException;
 import java.util.Objects;
 
 @NotThreadSafe
-public
-class CountAggregation implements Aggregation {
+public class CountAggregation implements Aggregation {
 
     private long value;
 

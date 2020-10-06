@@ -30,8 +30,7 @@ import java.util.Objects;
 import static com.hazelcast.sql.impl.expression.math.ExpressionMath.DECIMAL_MATH_CONTEXT;
 
 @NotThreadSafe
-public
-class AvgAggregation implements Aggregation {
+public class AvgAggregation implements Aggregation {
 
     private int index;
     private QueryDataType resultType;
