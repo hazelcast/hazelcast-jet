@@ -148,7 +148,7 @@ public final class AggregateProcessors {
         }
     }
 
-    private static class CombineP extends AbstractProcessor {
+    private static final class CombineP extends AbstractProcessor {
 
         private final Map<Object, Aggregations> keyToAggregations;
         private final SupplierEx<Aggregations> aggregationsProvider;
@@ -185,7 +185,7 @@ public final class AggregateProcessors {
             return emitFromTraverser(resultTraverser);
         }
 
-        private class ResultTraverser implements Traverser<Aggregations> {
+        private final class ResultTraverser implements Traverser<Aggregations> {
 
             private final Iterator<Aggregations> aggregations;
 

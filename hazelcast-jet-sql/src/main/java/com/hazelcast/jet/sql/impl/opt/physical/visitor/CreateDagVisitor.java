@@ -59,7 +59,7 @@ public class CreateDagVisitor {
     private final DAG dag = new DAG();
     private final Address localMemberAddress;
 
-    int vertexCounter;
+    private int vertexCounter;
 
     public CreateDagVisitor(Address localMemberAddress) {
         this.localMemberAddress = localMemberAddress;

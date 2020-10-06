@@ -159,7 +159,7 @@ public class AggregatePhysicalRel extends Aggregate implements PhysicalRel {
         return new AggregatePhysicalRel(getCluster(), traitSet, input, groupSet, groupSets, aggCalls);
     }
 
-    private static class ObjectArray implements DataSerializable {
+    private static final class ObjectArray implements DataSerializable {
 
         private Object[] array;
 
