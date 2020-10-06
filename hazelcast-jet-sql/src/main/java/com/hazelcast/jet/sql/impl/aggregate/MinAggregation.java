@@ -26,6 +26,7 @@ import java.io.IOException;
 import java.util.Objects;
 
 @NotThreadSafe
+public
 class MinAggregation implements Aggregation {
 
     private int index;
@@ -37,7 +38,7 @@ class MinAggregation implements Aggregation {
     private MinAggregation() {
     }
 
-    MinAggregation(int index, QueryDataType operandType) {
+    public MinAggregation(int index, QueryDataType operandType) {
         this.index = index;
         this.operandType = operandType;
     }

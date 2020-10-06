@@ -25,25 +25,25 @@ import java.io.IOException;
 import java.util.Arrays;
 
 @NotThreadSafe
-public  class Aggregator implements DataSerializable {
+public class Aggregations implements DataSerializable {
 
     private Aggregation[] aggregations;
 
     @SuppressWarnings("unused")
-    Aggregator() {
+    private Aggregations() {
     }
 
-    Aggregator(Aggregation[] aggregations) {
+    public Aggregations(Aggregation[] aggregations) {
         this.aggregations = aggregations;
     }
 
-    void accumulate(Object[] row) {
+    public void accumulate(Object[] row) {
         for (Aggregation aggregation : aggregations) {
             aggregation.accumulate(row);
         }
     }
 
-    void combine(Aggregator other) {
+    public void combine(Aggregations other) {
         assert aggregations.length == other.aggregations.length;
 
         for (int i = 0; i < aggregations.length; i++) {
@@ -51,7 +51,7 @@ public  class Aggregator implements DataSerializable {
         }
     }
 
-    Object[] collect() {
+    public Object[] collect() {
         Object[] values = new Object[aggregations.length];
         for (int i = 0; i < aggregations.length; i++) {
             values[i] = aggregations[i].collect();
@@ -61,12 +61,18 @@ public  class Aggregator implements DataSerializable {
 
     @Override
     public void writeData(ObjectDataOutput out) throws IOException {
-        out.writeObject(aggregations);
+        out.writeInt(aggregations.length);
+        for (Aggregation aggregation : aggregations) {
+            out.writeObject(aggregation);
+        }
     }
 
     @Override
     public void readData(ObjectDataInput in) throws IOException {
-        aggregations = in.readObject();
+        aggregations = new Aggregation[in.readInt()];
+        for (int i = 0; i < aggregations.length; i++) {
+            aggregations[i] = in.readObject();
+        }
     }
 
     @Override
@@ -77,7 +83,7 @@ public  class Aggregator implements DataSerializable {
         if (o == null || getClass() != o.getClass()) {
             return false;
         }
-        Aggregator that = (Aggregator) o;
+        Aggregations that = (Aggregations) o;
         return Arrays.equals(aggregations, that.aggregations);
     }
 

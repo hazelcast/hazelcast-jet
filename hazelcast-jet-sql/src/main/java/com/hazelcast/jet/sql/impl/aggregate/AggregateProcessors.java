@@ -17,6 +17,7 @@
 package com.hazelcast.jet.sql.impl.aggregate;
 
 import com.hazelcast.cluster.Address;
+import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.core.AbstractProcessor;
@@ -48,13 +49,10 @@ public final class AggregateProcessors {
     }
 
     public static ProcessorMetaSupplier combineByKeyP(
-            Address localMemberAddress,
-            AggregateOperation<Aggregator, Object[]> aggregateOperation
+            Address memberAddress,
+            AggregateOperation<Aggregations, Object[]> aggregateOperation
     ) {
-        return new CombineProcessorMetaSupplier(
-                localMemberAddress,
-                aggregateOperation.withCombiningAccumulateFn(Entry<ObjectArray, Aggregator>::getValue)
-        );
+        return new CombineProcessorMetaSupplier(memberAddress, aggregateOperation.createFn());
     }
 
     @SuppressFBWarnings(
@@ -63,34 +61,30 @@ public final class AggregateProcessors {
     )
     private static final class CombineProcessorMetaSupplier implements ProcessorMetaSupplier, DataSerializable {
 
-        private Address localMemberAddress;
-        private AggregateOperation<Aggregator, Object[]> aggregateOperation;
+        private transient Address memberAddress;
+        private SupplierEx<Aggregations> aggregationsProvider;
 
         @SuppressWarnings("unused")
         private CombineProcessorMetaSupplier() {
         }
 
-        private CombineProcessorMetaSupplier(
-                Address localMemberAddress,
-                AggregateOperation<Aggregator, Object[]> aggregateOperation
-        ) {
-            this.localMemberAddress = localMemberAddress;
-            this.aggregateOperation = aggregateOperation;
+        private CombineProcessorMetaSupplier(Address memberAddress, SupplierEx<Aggregations> aggregationsProvider) {
+            this.memberAddress = memberAddress;
+            this.aggregationsProvider = aggregationsProvider;
         }
 
         @Nonnull
         @Override
         public Function<? super Address, ? extends ProcessorSupplier> get(@Nonnull List<Address> addresses) {
-            return address -> address.equals(localMemberAddress)
-                    ? new CombineProcessorSupplier(aggregateOperation)
+            return address -> address.equals(memberAddress)
+                    ? new CombineProcessorSupplier(aggregationsProvider)
                     : count -> nCopies(count, new AbstractProcessor() {
                 @Override
                 protected boolean tryProcess(int ordinal, @Nonnull Object item) {
-                    throw new IllegalStateException(
-                            "This vertex has a total parallelism of one and as such only"
-                                    + " expects input on a specific node. Edge configuration must be adjusted"
-                                    + " to make sure that only the expected node receives any input."
-                                    + " Unexpected input received from ordinal " + ordinal + ": " + item
+                    throw new IllegalArgumentException("This vertex has a total parallelism of one"
+                            + " and expects input on a specific edge. Edge configuration must be adjusted"
+                            + " to make sure that only the expected node receives any input."
+                            + " Unexpected input received from ordinal " + ordinal + ": " + item
                     );
                 }
 
@@ -108,14 +102,14 @@ public final class AggregateProcessors {
 
         @Override
         public void writeData(ObjectDataOutput out) throws IOException {
-            out.writeObject(localMemberAddress);
-            out.writeObject(aggregateOperation);
+            out.writeObject(memberAddress);
+            out.writeObject(aggregationsProvider);
         }
 
         @Override
         public void readData(ObjectDataInput in) throws IOException {
-            localMemberAddress = in.readObject();
-            aggregateOperation = in.readObject();
+            memberAddress = in.readObject();
+            aggregationsProvider = in.readObject();
         }
     }
 
@@ -125,88 +119,91 @@ public final class AggregateProcessors {
     )
     private static final class CombineProcessorSupplier implements ProcessorSupplier, DataSerializable {
 
-        private AggregateOperation<Aggregator, Object[]> aggregateOperation;
+        private SupplierEx<Aggregations> aggregationsProvider;
 
         @SuppressWarnings("unused")
         private CombineProcessorSupplier() {
         }
 
-        CombineProcessorSupplier(AggregateOperation<Aggregator, Object[]> aggregateOperation) {
-            this.aggregateOperation = aggregateOperation;
+        private CombineProcessorSupplier(SupplierEx<Aggregations> aggregationsProvider) {
+            this.aggregationsProvider = aggregationsProvider;
         }
 
         @Nonnull
         @Override
         public Collection<? extends Processor> get(int count) {
-            assert count == 1 : "count = " + count;
+            assert count == 1 : "" + count;
 
-            return singletonList(new CombineP(aggregateOperation));
+            return singletonList(new CombineP(aggregationsProvider));
         }
 
         @Override
         public void writeData(ObjectDataOutput out) throws IOException {
-            out.writeObject(aggregateOperation);
+            out.writeObject(aggregationsProvider);
         }
 
         @Override
         public void readData(ObjectDataInput in) throws IOException {
-            aggregateOperation = in.readObject();
+            aggregationsProvider = in.readObject();
         }
     }
 
     private static class CombineP extends AbstractProcessor {
 
-        private final Map<ObjectArray, Aggregator> keyToAccumulator;
-        private final AggregateOperation<Aggregator, Object[]> aggregateOperation;
+        private final Map<Object, Aggregations> keyToAggregations;
+        private final SupplierEx<Aggregations> aggregationsProvider;
 
         private Traverser<Object[]> resultTraverser;
 
-        CombineP(
-                AggregateOperation<Aggregator, Object[]> aggregateOperation
-        ) {
-            this.keyToAccumulator = new HashMap<>();
-            this.aggregateOperation = aggregateOperation;
+        private CombineP(SupplierEx<Aggregations> aggregationsProvider) {
+            this.keyToAggregations = new HashMap<>();
+            this.aggregationsProvider = aggregationsProvider;
         }
 
         @Override
         @SuppressWarnings("unchecked")
         protected boolean tryProcess(int ordinal, @Nonnull Object item) {
-            Entry<ObjectArray, Object[]> entry = (Entry<ObjectArray, Object[]>) item;
+            Entry<Object, Aggregations> entry = (Entry<Object, Aggregations>) item;
+            Object key = entry.getKey();
+            Aggregations incomingAggregations = entry.getValue();
 
-            ObjectArray key = entry.getKey();
-            Aggregator accumulator = keyToAccumulator.computeIfAbsent(key, k -> aggregateOperation.createFn().get());
-            aggregateOperation.accumulateFn(ordinal).accept(accumulator, item);
+            Aggregations existingAggregations = keyToAggregations.get(key);
+            if (existingAggregations == null) {
+                keyToAggregations.put(key, incomingAggregations);
+            } else {
+                existingAggregations.combine(incomingAggregations);
+            }
+
             return true;
         }
 
         @Override
         public boolean complete() {
             if (resultTraverser == null) {
-                resultTraverser = new ResultTraverser()
-                        .map(accumulator -> aggregateOperation.finishFn().apply(accumulator));
+                resultTraverser = new ResultTraverser().map(Aggregations::collect);
             }
             return emitFromTraverser(resultTraverser);
         }
 
-        private class ResultTraverser implements Traverser<Aggregator> {
+        private class ResultTraverser implements Traverser<Aggregations> {
 
-            private final Iterator<Aggregator> accumulators;
+            private final Iterator<Aggregations> aggregations;
 
             private ResultTraverser() {
-                this.accumulators = keyToAccumulator.isEmpty()
-                        ? new ArrayList<>(singletonList(aggregateOperation.createFn().get())).iterator()
-                        : keyToAccumulator.values().iterator();
+                this.aggregations = keyToAggregations.isEmpty()
+                        ? new ArrayList<>(singletonList(aggregationsProvider.get())).iterator()
+                        : keyToAggregations.values().iterator();
             }
 
             @Override
-            public Aggregator next() {
-                if (!accumulators.hasNext()) {
+            public Aggregations next() {
+                if (!aggregations.hasNext()) {
                     return null;
                 }
                 try {
-                    return accumulators.next();
+                    return aggregations.next();
                 } finally {
-                    accumulators.remove();
+                    aggregations.remove();
                 }
             }
         }

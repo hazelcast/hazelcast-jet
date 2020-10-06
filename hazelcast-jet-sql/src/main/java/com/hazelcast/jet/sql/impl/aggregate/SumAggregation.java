@@ -31,6 +31,7 @@ import java.util.Objects;
 import static com.hazelcast.sql.impl.expression.math.ExpressionMath.DECIMAL_MATH_CONTEXT;
 
 @NotThreadSafe
+public
 class SumAggregation implements Aggregation {
 
     private int index;
@@ -43,7 +44,7 @@ class SumAggregation implements Aggregation {
     private SumAggregation() {
     }
 
-    SumAggregation(int index, QueryDataType operandType) {
+    public SumAggregation(int index, QueryDataType operandType) {
         this.index = index;
         this.operandType = operandType;
         this.resultType = inferResultType(operandType);

@@ -26,6 +26,7 @@ import java.io.IOException;
 import java.util.Objects;
 
 @NotThreadSafe
+public
 class MaxAggregation implements Aggregation {
 
     private int index;
@@ -37,7 +38,7 @@ class MaxAggregation implements Aggregation {
     private MaxAggregation() {
     }
 
-    MaxAggregation(int index, QueryDataType operandType) {
+    public MaxAggregation(int index, QueryDataType operandType) {
         this.index = index;
         this.operandType = operandType;
     }

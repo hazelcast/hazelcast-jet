@@ -19,7 +19,7 @@ package com.hazelcast.jet.sql.impl.aggregate;
 import com.hazelcast.nio.serialization.DataSerializable;
 import com.hazelcast.sql.impl.type.QueryDataType;
 
-interface Aggregation extends DataSerializable {
+public interface Aggregation extends DataSerializable {
 
     QueryDataType resultType();
 

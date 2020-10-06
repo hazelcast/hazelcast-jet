@@ -30,7 +30,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
 @RunWith(MockitoJUnitRunner.class)
-public class AggregatorTest {
+public class AggregationsTest {
 
     private Aggregation[] aggregations;
 
@@ -46,19 +46,19 @@ public class AggregatorTest {
 
     @Test
     public void test_accumulate() {
-        Aggregator aggregator = new Aggregator(new Aggregation[]{aggregations[0], aggregations[1]});
+        Aggregations aggregations = new Aggregations(new Aggregation[]{this.aggregations[0], this.aggregations[1]});
         Object[] row = new Object[]{1};
 
-        aggregator.accumulate(row);
+        aggregations.accumulate(row);
 
-        verify(aggregations[0]).accumulate(row);
-        verify(aggregations[1]).accumulate(row);
+        verify(this.aggregations[0]).accumulate(row);
+        verify(this.aggregations[1]).accumulate(row);
     }
 
     @Test
     public void test_combine() {
-        Aggregator left = new Aggregator(new Aggregation[]{aggregations[0], aggregations[1]});
-        Aggregator right = new Aggregator(new Aggregation[]{aggregations[2], aggregations[3]});
+        Aggregations left = new Aggregations(new Aggregation[]{aggregations[0], aggregations[1]});
+        Aggregations right = new Aggregations(new Aggregation[]{aggregations[2], aggregations[3]});
 
         left.combine(right);
 
@@ -68,11 +68,11 @@ public class AggregatorTest {
 
     @Test
     public void test_collect() {
-        Aggregator aggregator = new Aggregator(new Aggregation[]{aggregations[0], aggregations[1]});
-        given(aggregations[0].collect()).willReturn(1L);
-        given(aggregations[1].collect()).willReturn("v");
+        Aggregations aggregations = new Aggregations(new Aggregation[]{this.aggregations[0], this.aggregations[1]});
+        given(this.aggregations[0].collect()).willReturn(1L);
+        given(this.aggregations[1].collect()).willReturn("v");
 
-        assertThat(aggregator.collect()).isEqualTo(new Object[]{1L, "v"});
+        assertThat(aggregations.collect()).isEqualTo(new Object[]{1L, "v"});
     }
 
     @Test

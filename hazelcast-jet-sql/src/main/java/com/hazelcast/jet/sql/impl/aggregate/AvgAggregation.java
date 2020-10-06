@@ -30,6 +30,7 @@ import java.util.Objects;
 import static com.hazelcast.sql.impl.expression.math.ExpressionMath.DECIMAL_MATH_CONTEXT;
 
 @NotThreadSafe
+public
 class AvgAggregation implements Aggregation {
 
     private int index;
@@ -42,7 +43,7 @@ class AvgAggregation implements Aggregation {
     private AvgAggregation() {
     }
 
-    AvgAggregation(int index, QueryDataType operandType) {
+    public AvgAggregation(int index, QueryDataType operandType) {
         this.index = index;
         this.resultType = inferResultType(operandType);
 
@@ -90,11 +91,11 @@ class AvgAggregation implements Aggregation {
 
     @Override
     public Object collect() {
-        Object sum0 = this.sum.collect();
-        if (sum0 == null) {
+        Object sum = this.sum.collect();
+        if (sum == null) {
             return null;
         }
-        Object count0 = this.count.collect();
+        Object count = this.count.collect();
 
         switch (resultType.getTypeFamily()) {
             case TINYINT:
@@ -102,13 +103,13 @@ class AvgAggregation implements Aggregation {
             case INTEGER:
             case BIGINT:
             case DECIMAL:
-                BigDecimal decimalSum = this.sum.resultType().getConverter().asDecimal(sum0);
-                BigDecimal decimalCount = this.count.resultType().getConverter().asDecimal(count0);
+                BigDecimal decimalSum = this.sum.resultType().getConverter().asDecimal(sum);
+                BigDecimal decimalCount = this.count.resultType().getConverter().asDecimal(count);
                 return decimalSum.divide(decimalCount, DECIMAL_MATH_CONTEXT);
             default:
                 assert resultType.getTypeFamily() == QueryDataTypeFamily.DOUBLE;
-                double doubleSum = this.sum.resultType().getConverter().asDouble(sum0);
-                double doubleCount = this.count.resultType().getConverter().asDouble(count0);
+                double doubleSum = this.sum.resultType().getConverter().asDouble(sum);
+                double doubleCount = this.count.resultType().getConverter().asDouble(count);
                 return doubleSum / doubleCount;
         }
     }

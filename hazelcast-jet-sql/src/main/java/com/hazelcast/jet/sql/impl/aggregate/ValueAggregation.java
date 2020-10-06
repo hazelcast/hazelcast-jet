@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.util.Objects;
 
 @NotThreadSafe
+public
 class ValueAggregation implements Aggregation {
 
     private int index;
@@ -36,7 +37,7 @@ class ValueAggregation implements Aggregation {
     private ValueAggregation() {
     }
 
-    ValueAggregation(int index, QueryDataType operandType) {
+    public ValueAggregation(int index, QueryDataType operandType) {
         this.index = index;
         this.operandType = operandType;
     }
