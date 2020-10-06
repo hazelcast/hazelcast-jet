@@ -164,7 +164,6 @@ public class SqlJsonTest extends SqlTestSupport {
                 + ")");
 
         sqlService.execute("SINK INTO " + to + " SELECT 1, f.* FROM " + from + " f");
-        instance().getMap(to).forEach((k, v) -> System.out.println(k + ": " + v));
 
         assertRowsAnyOrder(
                 "SELECT * FROM " + to,
