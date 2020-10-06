@@ -49,10 +49,10 @@ public final class AggregateProcessors {
     }
 
     public static ProcessorMetaSupplier combineByKeyP(
-            Address memberAddress,
+            Address destinationMemberAddress,
             AggregateOperation<Aggregations, Object[]> aggregateOperation
     ) {
-        return new CombineProcessorMetaSupplier(memberAddress, aggregateOperation.createFn());
+        return new CombineProcessorMetaSupplier(destinationMemberAddress, aggregateOperation.createFn());
     }
 
     @SuppressFBWarnings(
@@ -61,38 +61,51 @@ public final class AggregateProcessors {
     )
     private static final class CombineProcessorMetaSupplier implements ProcessorMetaSupplier, DataSerializable {
 
-        private transient Address memberAddress;
+        private transient Address destinationMemberAddress;
         private SupplierEx<Aggregations> aggregationsProvider;
 
         @SuppressWarnings("unused")
         private CombineProcessorMetaSupplier() {
         }
 
-        private CombineProcessorMetaSupplier(Address memberAddress, SupplierEx<Aggregations> aggregationsProvider) {
-            this.memberAddress = memberAddress;
+        private CombineProcessorMetaSupplier(
+                Address destinationMemberAddress,
+                SupplierEx<Aggregations> aggregationsProvider
+        ) {
+            this.destinationMemberAddress = destinationMemberAddress;
             this.aggregationsProvider = aggregationsProvider;
         }
 
         @Nonnull
         @Override
         public Function<? super Address, ? extends ProcessorSupplier> get(@Nonnull List<Address> addresses) {
-            return address -> address.equals(memberAddress)
-                    ? new CombineProcessorSupplier(aggregationsProvider)
-                    : count -> nCopies(count, new AbstractProcessor() {
-                @Override
-                protected boolean tryProcess(int ordinal, @Nonnull Object item) {
-                    throw new IllegalArgumentException("This vertex has a total parallelism of one"
-                            + " and expects input on a specific edge. Edge configuration must be adjusted"
-                            + " to make sure that only the expected node receives any input."
-                            + " Unexpected input received from ordinal " + ordinal + ": " + item
-                    );
-                }
+            return address -> address.equals(destinationMemberAddress)
+                    ?
+                    new ProcessorSupplier() {
+                        @Nonnull
+                        @Override
+                        public Collection<? extends Processor> get(int count) {
+                            assert count == 1 : "" + count;
 
-                @Override
-                protected void restoreFromSnapshot(@Nonnull Object key, @Nonnull Object value) {
-                    // state might be broadcast to all instances - ignore it in the no-op instances
-                }
-            });
+                            return singletonList(new CombineP(aggregationsProvider));
+                        }
+                    }
+                    :
+                    count -> nCopies(count, new AbstractProcessor() {
+                        @Override
+                        protected boolean tryProcess(int ordinal, @Nonnull Object item) {
+                            throw new IllegalArgumentException("This vertex has a total parallelism of one"
+                                    + " and expects input on a specific edge. Edge configuration must be adjusted"
+                                    + " to make sure that only the expected node receives any input."
+                                    + " Unexpected input received from ordinal " + ordinal + ": " + item
+                            );
+                        }
+
+                        @Override
+                        protected void restoreFromSnapshot(@Nonnull Object key, @Nonnull Object value) {
+                            // state might be broadcast to all instances - ignore it in the no-op instances
+                        }
+                    });
         }
 
         @Override
@@ -102,48 +115,13 @@ public final class AggregateProcessors {
 
         @Override
         public void writeData(ObjectDataOutput out) throws IOException {
-            out.writeObject(memberAddress);
+            out.writeObject(destinationMemberAddress);
             out.writeObject(aggregationsProvider);
         }
 
         @Override
         public void readData(ObjectDataInput in) throws IOException {
-            memberAddress = in.readObject();
-            aggregationsProvider = in.readObject();
-        }
-    }
-
-    @SuppressFBWarnings(
-            value = {"SE_BAD_FIELD", "SE_NO_SERIALVERSIONID"},
-            justification = "the class is never java-serialized"
-    )
-    private static final class CombineProcessorSupplier implements ProcessorSupplier, DataSerializable {
-
-        private SupplierEx<Aggregations> aggregationsProvider;
-
-        @SuppressWarnings("unused")
-        private CombineProcessorSupplier() {
-        }
-
-        private CombineProcessorSupplier(SupplierEx<Aggregations> aggregationsProvider) {
-            this.aggregationsProvider = aggregationsProvider;
-        }
-
-        @Nonnull
-        @Override
-        public Collection<? extends Processor> get(int count) {
-            assert count == 1 : "" + count;
-
-            return singletonList(new CombineP(aggregationsProvider));
-        }
-
-        @Override
-        public void writeData(ObjectDataOutput out) throws IOException {
-            out.writeObject(aggregationsProvider);
-        }
-
-        @Override
-        public void readData(ObjectDataInput in) throws IOException {
+            destinationMemberAddress = in.readObject();
             aggregationsProvider = in.readObject();
         }
     }
