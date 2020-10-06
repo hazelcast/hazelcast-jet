@@ -8,32 +8,33 @@ authorImageURL: https://i.stack.imgur.com/3X7wE.png
 
 In this post, we will take a legacy application and improve its search
 functionality. We will do this with only a few changes to the
-application itself - the technique called change data capture  (CDC)
-allows us to listen for changes in a database and react on these
-changes&nbsp;- write to a search index in our case. We will also enrich
-the data before we write it to the search index with a natural language
+application itself. Using a technique called change data capture (CDC)
+we will listen for changes in a database and react to these
+changes&nbsp;- write to a search index case. Before writing to the
+search index, we will also enrich the data with a natural language
 processing (NLP) step that extracts keywords from a text description.
 
 We might want to use an external search index for various reasons,
 especially:
 
-* Providing more feature-rich functionality than full-text search in a
-relational database.
+* to provide more feature-rich functionality than full-text search in a
+relational database;
 
-* It allows us to scale the search independently of the database.
+* to scale the search independently of the database;
 
-* Add more functionality (keyword extraction) to the application without
+* to add more functionality (keyword extraction) to the application
+ without
 modifying it - making changes to a legacy application is sometimes
 risky, or time-consuming, so taking this approach might be faster,
 therefore cheaper.  
 
 In this tutorial we will do the following:
 
-* Use Hazelcast Jet - an open-source stream processing system - and it’s
-CDC module to read changes made to the application database for
-further processing in a Jet pipeline
+* Use Hazelcast Jet - an open-source stream processing system - and its CDC
+module to read changes made to the application database for further
+processing in a Jet pipeline.
 
-* In the Jet pipeline, we will enrich the data with an NLP mapping step
+* In the Jet pipeline, we will enrich the data with an NLP mapping step.
 
 * Write the results to an Elasticsearch index, using an Elasticsearch
 connector, [released in Jet 4.2](/blog/2020/07/14/jet-42-is-released).
@@ -104,17 +105,17 @@ and you should see a screen similar to the following:
 ## Prepare for Change Data Capture
 
 In order to stream the changes from the MySQL database we need to modify
-certain settings and grant more permissions to the `petclinic` user
+certain settings and grant more permissions to the `petclinic` user.
 
 Run the following command to start MySQL client, enter the `mysql`
-password for the root user.
+password for the root user:
 
 ```bash
 docker run -it --rm --link petclinic-mysql:petclinic-mysql mysql mysql -hpetclinic-mysql -uroot -p
 ```
 
-We need the following to grant privileges to the `petclinic` user to allow
-listening to the database changes
+Run the following to grant privileges to the `petclinic` user to allow
+listening to the database changes:
 
 ```sql
 ALTER USER petclinic IDENTIFIED WITH mysql_native_password BY 'petclinic';
@@ -181,11 +182,11 @@ the Elasticsearch documentation or some other source.
 
 ## Hazelcast Jet Job
 
-Now that we have the Petclinic and Elastic set-up and working we can
+Now that we have the Petclinic and Elastic set-up and working, we can
 start the data pump - a Jet job reading change events from MySQL
 database and writing into the Elastic index.
 
-A Jet job is a pipeline of steps, that read, modify, aggregate or store
+A Jet job is a pipeline of steps that read, modify, aggregate or store
 data items. The job definition is written in Java and packaged as a jar
 file. The jar file is deployed to a Jet cluster, which takes care of the
 execution, scaling, fail-over and other operational aspects.
@@ -234,7 +235,7 @@ description. We will use Rapid Automatic Keyword Extraction (RAKE)
 algorithm, the implementation we use was originally published on
 [Github](https://github.com/Linguistic/rake). The implementation is not
 important for the demonstration, you could use any other Java library,
-call 3rd party service, e.g. via [grpc](/docs/how-tos/grpc) or use our
+call a 3rd party service, e.g. via [grpc](/docs/how-tos/grpc) or use our
 [python integration](/docs/tutorials/python).
 
 ```java
@@ -251,23 +252,23 @@ the change record to the keyword extraction service and sets the results
 into the keywords field of the Visit instance.
 
 It is a common pattern to enrich an item in a pipeline with more
-information, Hazelcast Jet works with POJOs in the pipeline, so you need
-to somehow compose the original item and the enriching information. One
-option is to use tuples. This works for a small number of fields. Other
-option would be to use a domain-specific object holding all the
-information - e.g. the `keywords` field. If you are on Java 14 or newer
-you might want to give the [Records preview
+information.  Hazelcast Jet works with POJOs in the pipeline, so you
+need to somehow compose the original item and the enriching information.
+One option is to use tuples.  This works for a small number of fields.
+Another option would be to use a domain-specific object holding all the
+information - e.g. the `keywords` field.  If you are on Java 14 or
+newer, you might want to give the [Records preview
 feature](https://openjdk.java.net/jeps/359) a try.
 
 ### Joining
 
 Change data capture sends changes to the database as individual records
 (represented by
-[ChangeRecord](https://jet-start.sh/javadoc/4.2/com/hazelcast/jet/cdc/ChangeRecord.html).
+[ChangeRecord](https://jet-start.sh/javadoc/4.2/com/hazelcast/jet/cdc/ChangeRecord.html)).
 Each record represents a changed row in a database table. If a single
-row is all that you need then you are good to go. You can see such
-example in our [Evergreen Cache blog
-post](/blog/2020/07/16/designing-evergreen-cache-cdc). But having a
+row is all that you need, you are good to go. You can see such example
+in our [Evergreen Cache blog
+post](/blog/2020/07/16/designing-evergreen-cache-cdc).  But having a
 single row to work with is not always the case - often you need to
 aggregate either multiple records from the same table or join records
 from different tables into a single aggregate record.
@@ -280,30 +281,33 @@ good idea to do the grouping by the key, because the mapping state is
 then evenly distributed across all nodes and the mapping operation
 parallelized.
 
-Our visit record contains the pet id but not the owner id, in such case,
-so we don’t have a single grouping key for all records. There are two options: 
-* perform the stateful mapping globally, which has the advantage
-of having a single state - the joining logic is simpler and the pipeline
-more straightforward. The obvious disadvantage is that such a solution
-is not scalable because the state may not fit onto a single member or it
-cannot be performed by a single thread;
+Our visit record contains the pet ID but not the owner ID, in such case,
+so we don’t have a single grouping key for all records. There are two
+options:
 
-* create two separate mapping steps - one grouped on the owner id and
-the other on the pet id. This is a trade-off between simplicity and
+* perform the stateful mapping globally, which has the advantage of
+having a single state - the joining logic is simpler and the pipeline
+more straightforward. The obvious disadvantage is that such a solution
+is not scalable because the state may not fit onto a single member and
+must be performed by a single thread;
+
+* create two separate mapping steps - one grouped on the owner ID and
+the other on the pet ID. This is a trade-off between simplicity and
 scalability.
 
 There are several observations which hold for both implementations:
 
-* the mapping state must cover all data from the beginning, there might
-be a domain-specific rule that would allow eviction of old items;
+* the mapping state must cover all data from the beginning, unless there
+is a domain-specific rule that would allow eviction of old items;
 
-* the records might arrive in any order, even if there is an FK between
-the records in the database, the order is not guaranteed, this is a
-property of CDC.
+* the records might arrive in any order, even if there is a foreign key
+between the records in the database, the order is not guaranteed, this
+is a property of CDC.
 
-* once the object is emitted from the join step it must not be modified,
-otherwise the later stages might see it in inconsistent state, causing
-issues which are hard to debug. We make defensive copies to avoid this.
+* once the object is emitted from the join step, it must not be
+modified, otherwise the later stages might see it in inconsistent
+state, causing issues which are hard to debug. We make defensive copies
+to avoid this.
 
 Go to
 [Github](https://github.com/hazelcast-demos/pet-clinic-index-job/blob/master/src/main/java/org/example/jet/petclinic/JoiningState.java#L11)
@@ -313,13 +317,13 @@ to see the full source code.
 
 The `ChangeRecord#operation()` method provides information about what
 kind of operation was performed on the record. If you need to handle
-deletions you should use it. The Petclinic application doesn’t allow
+deletions, you should use it. The Petclinic application doesn’t allow
 delete operations, so we don’t handle those.
 
 ### Elastic sink
 
 The fourth key part of the pipeline is the Elastic sink. It takes a
-document and writes it to Elasticsearch. You as a developer need to
+document and writes it to Elasticsearch. You as the developer need to
 provide information where the Elastic instance is running, what index to
 write to and how to convert the `Document` into one of `IndexRequest`,
 `UpdateRequest` or `DeleteRequest`. The Sink then takes care of batching
@@ -345,7 +349,7 @@ Or visualized as a graph:
 
 ![Pipeline with global mapping state](assets/2020-10-06-global-join-step.png)
 
-For the pipeline with two step join see [the source
+For the pipeline with the two-step join see [the source
 code](https://github.com/hazelcast-demos/pet-clinic-index-job/blob/two-joins/src/main/java/org/example/jet/petclinic/PetClinicIndexJob.java#L87)
 on Github. This is the graph visualisation of the pipeline:
 
@@ -356,7 +360,7 @@ on Github. This is the graph visualisation of the pipeline:
 In order to test the job, we need to create a test database identical to
 the Petclinic database.
 
-We have the following options
+We have the following options:
 
 * Start the pet clinic application inside the same JVM - the Petclinic
 is a Spring Boot application, running it in-process would be
@@ -408,12 +412,15 @@ path/to/pet-clinic-index-job/target/pet-clinic-index-job-1.0-SNAPSHOT-jar-with-d
 
 ## Petclinic application update
 
-Now that we have the data in Elasticsearch index we can update the
+Now that we have the data in Elasticsearch index, we can update the
 Petclinic application to use it for search.
 
 There are several changes in the application, but the most important
-changes are Create a search service to search for the data Update the
-search endpoint to use the new search service
+changes are:
+
+* created a search service to search for the data;
+
+* update the search endpoint to use the new search service.
 
 The following snippet shows the search method in the SearchService. It
 uses the Elasticsearch client directly, but one could use Spring Data
@@ -440,7 +447,7 @@ public Collection<Integer> search(String query) {
 The search endpoint will use the SearchService to search for the data.
 After retrieving the results the Owner entities need to be loaded from
 the database. This is not an issue as only a small subset of
-best-matching documents is returned from Elastic and loaded by id from
+best-matching documents is returned from Elastic and loaded by ID from
 the database.
 
 ```java
@@ -449,19 +456,19 @@ Collection<Integer> ownerIds = searchService.search(searchForm.getQuery());
 Collection<Owner> results = this.owners.findByIds(ownerIds);
 ```
 
-There are some more minor changes to the view, and the controller, you
+There are some more minor changes to the view and the controller, you
 can see all the changes in [this
 commit](https://github.com/spring-projects/hazelcast-demos/compare/main...elasticsearch).
 
 Checkout the `elasticsearch` branch with the changes and restart the
-application by running the maven command again:
+application by running the Maven command again:
 
 ```bash
 ./mvnw spring-boot:run -Dspring-boot.run.profiles=mysql
 ```
 
 We can verify that searching for “George” returns 2 results, one found
-in a first name, other in a name of a pet:
+in the first name, other in the name of a pet:
 
 ![Search "George"](assets/2020-10-06-search-george.png)
 
@@ -475,17 +482,18 @@ shown in that case) matching a keyword extracted from the description:
 We have shown how to stream changes using CDC, enrich the data,
 correlate (join) the records with other records and finally store the
 data into an Elasticsearch index so an application can provide better
-functionality to the user.
+search functionality to the user.
 
 This is mostly done independently of the original application and its
 database, reducing the impact it has on the original legacy system.
 
-If you would like to discuss this topic with use, drop by at [our
+If you would like to discuss this topic with us, drop by at [our
 Community Slack channel](https://hazelcastcommunity.slack.com/).
 
 ## Sources
 
-[Spring Petclinic](https://github.com/hazelcast-demos/spring-petclinic) - fork with modifications for this post.
+[Spring Petclinic](https://github.com/hazelcast-demos/spring-petclinic)
+-&nbsp;fork with modifications for this post.
 
 [Petclinic Indexing Job](https://github.com/hazelcast-demos/pet-clinic-index-job)
 
