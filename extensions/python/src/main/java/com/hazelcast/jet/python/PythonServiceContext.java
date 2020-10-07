@@ -74,8 +74,7 @@ class PythonServiceContext {
     private static final Object INIT_LOCK = new Object();
 
     private final ILogger logger;
-
-    private Path runtimeBaseDir;
+    private final Path runtimeBaseDir;
 
     PythonServiceContext(ProcessorSupplier.Context context, PythonServiceConfig cfg) {
         logger = context.jetInstance().getHazelcastInstance().getLoggingService()

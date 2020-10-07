@@ -50,8 +50,8 @@ import static java.util.concurrent.TimeUnit.SECONDS;
  */
 final class PythonService {
 
-    private static final int CREATE_CONTEXT_RETRY_COUNT = 3;
-    private static final int CREATE_CONTEXT_SLEEP_TIME_MILLIS = 1000;
+    private static final int CREATE_CONTEXT_RETRY_COUNT = 2;
+    private static final int CREATE_CONTEXT_RETRY_SLEEP_TIME_MILLIS = 1000;
     private static final String JET_TO_PYTHON_PREFIX = "jet_to_python_";
     static final String MAIN_SHELL_SCRIPT = JET_TO_PYTHON_PREFIX + "main.sh";
 
@@ -105,14 +105,16 @@ final class PythonService {
             PythonServiceConfig cfg
     ) {
         JetException jetException = null;
-        for (int i = 0; i < CREATE_CONTEXT_RETRY_COUNT; i++) {
+        for (int i = CREATE_CONTEXT_RETRY_COUNT; i >= 0 ; i--) {
             try {
                 return new PythonServiceContext(context, cfg);
             } catch (JetException exception) {
                 jetException = exception;
-                context.logger().warning("PythonService context creation failed", exception);
+                context.logger().warning(
+                        "PythonService context creation failed, " + (i > 0 ? " will retry" : " giving up"),
+                        exception);
                 try {
-                    Thread.sleep(CREATE_CONTEXT_SLEEP_TIME_MILLIS);
+                    Thread.sleep(CREATE_CONTEXT_RETRY_SLEEP_TIME_MILLIS);
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                     throw new JetException(e);
