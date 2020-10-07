@@ -38,13 +38,13 @@ final class ValuesPhysicalRule extends ConverterRule {
 
     @Override
     public RelNode convert(RelNode rel) {
-        ValuesLogicalRel values = (ValuesLogicalRel) rel;
+        ValuesLogicalRel logicalValues = (ValuesLogicalRel) rel;
 
         return new ValuesPhysicalRel(
-                values.getCluster(),
-                OptUtils.toPhysicalConvention(values.getTraitSet()),
-                values.getRowType(),
-                values.getTuples()
+                logicalValues.getCluster(),
+                OptUtils.toPhysicalConvention(logicalValues.getTraitSet()),
+                logicalValues.getRowType(),
+                logicalValues.getTuples()
         );
     }
 }

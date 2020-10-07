@@ -19,30 +19,31 @@ package com.hazelcast.jet.sql.impl.opt.physical;
 import com.hazelcast.jet.sql.impl.opt.OptUtils;
 import com.hazelcast.jet.sql.impl.opt.logical.FullScanLogicalRel;
 import org.apache.calcite.plan.RelOptRule;
-import org.apache.calcite.plan.RelOptRuleCall;
+import org.apache.calcite.rel.RelNode;
+import org.apache.calcite.rel.convert.ConverterRule;
 
 import static com.hazelcast.jet.sql.impl.opt.JetConventions.LOGICAL;
+import static com.hazelcast.jet.sql.impl.opt.JetConventions.PHYSICAL;
 
-final class FullScanPhysicalRule extends RelOptRule {
+final class FullScanPhysicalRule extends ConverterRule {
 
     static final RelOptRule INSTANCE = new FullScanPhysicalRule();
 
     private FullScanPhysicalRule() {
         super(
-                operand(FullScanLogicalRel.class, LOGICAL, any()),
+                FullScanLogicalRel.class, LOGICAL, PHYSICAL,
                 FullScanPhysicalRule.class.getSimpleName()
         );
     }
 
     @Override
-    public void onMatch(RelOptRuleCall call) {
-        FullScanLogicalRel logicalScan = call.rel(0);
+    public RelNode convert(RelNode rel) {
+        FullScanLogicalRel logicalScan = (FullScanLogicalRel) rel;
 
-        FullScanPhysicalRel rel = new FullScanPhysicalRel(
+        return new FullScanPhysicalRel(
                 logicalScan.getCluster(),
                 OptUtils.toPhysicalConvention(logicalScan.getTraitSet()),
                 logicalScan.getTable()
         );
-        call.transformTo(rel);
     }
 }
