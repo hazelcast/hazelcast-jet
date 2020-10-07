@@ -55,16 +55,16 @@ public class SumAggregationTest {
     @SuppressWarnings("unused")
     private Object[] values() {
         return new Object[]{
-                new Object[]{QueryDataType.TINYINT, (byte) 1, (byte) 2, 3},
-                new Object[]{QueryDataType.SMALLINT, (short) 1, (short) 2, 3},
+                new Object[]{QueryDataType.TINYINT, (byte) 1, (byte) 2, 3L},
+                new Object[]{QueryDataType.SMALLINT, (short) 1, (short) 2, 3L},
                 new Object[]{QueryDataType.INT, 1, 2, 3L},
                 new Object[]{QueryDataType.BIGINT, 1L, 2L, 3L},
                 new Object[]{QueryDataType.DECIMAL, new BigDecimal(1), new BigDecimal(2),
                         new BigDecimal(3)},
                 new Object[]{QueryDataType.REAL, 1F, 2F, 3D},
                 new Object[]{QueryDataType.DOUBLE, 1D, 2D, 3D},
-                new Object[]{QueryDataType.TINYINT, (byte) 1, null, 1},
-                new Object[]{QueryDataType.TINYINT, null, (byte) 1, 1},
+                new Object[]{QueryDataType.TINYINT, (byte) 1, null, 1L},
+                new Object[]{QueryDataType.TINYINT, null, (byte) 1, 1L},
                 new Object[]{QueryDataType.TINYINT, null, null, null}
         };
     }

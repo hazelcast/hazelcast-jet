@@ -21,7 +21,6 @@ import org.apache.calcite.plan.Convention;
 import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.convert.ConverterRule;
-import org.apache.calcite.rel.core.Aggregate.Group;
 import org.apache.calcite.rel.logical.LogicalAggregate;
 
 import static com.hazelcast.jet.sql.impl.opt.JetConventions.LOGICAL;
@@ -40,8 +39,6 @@ final class AggregateLogicalRule extends ConverterRule {
     @Override
     public RelNode convert(RelNode rel) {
         LogicalAggregate aggregate = (LogicalAggregate) rel;
-
-        assert aggregate.getGroupType() == Group.SIMPLE;
 
         return new AggregateLogicalRel(
                 aggregate.getCluster(),

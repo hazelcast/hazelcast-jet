@@ -62,6 +62,8 @@ public class AggregatePhysicalRel extends Aggregate implements PhysicalRel {
             List<AggregateCall> aggCalls
     ) {
         super(cluster, traits, new ArrayList<>(), child, groupSet, groupSets, aggCalls);
+
+        assert getGroupType() == Group.SIMPLE;
     }
 
     public FunctionEx<Object[], Object> groupKeyFn() {

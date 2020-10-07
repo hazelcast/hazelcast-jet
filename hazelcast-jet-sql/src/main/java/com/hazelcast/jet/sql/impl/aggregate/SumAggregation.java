@@ -53,7 +53,6 @@ public class SumAggregation implements Aggregation {
         switch (operandType.getTypeFamily()) {
             case TINYINT:
             case SMALLINT:
-                return QueryDataType.INT;
             case INTEGER:
             case BIGINT:
                 return QueryDataType.BIGINT;
@@ -96,9 +95,6 @@ public class SumAggregation implements Aggregation {
         }
 
         switch (resultType.getTypeFamily()) {
-            case INTEGER:
-                this.value = (int) this.value + converter.asInt(value);
-                break;
             case BIGINT:
                 this.value = (long) this.value + converter.asBigint(value);
                 break;
@@ -113,8 +109,6 @@ public class SumAggregation implements Aggregation {
 
     private Object identity() {
         switch (resultType.getTypeFamily()) {
-            case INTEGER:
-                return 0;
             case BIGINT:
                 return 0L;
             case DECIMAL:
