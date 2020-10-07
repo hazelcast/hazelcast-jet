@@ -172,8 +172,10 @@ public class CreateDagVisitor {
         return dag;
     }
 
+    /**
+     * Creates a unique vertex name.
+     */
     private String name(String prefix) {
-        // create unique vertex name
         return prefix + "#" + ++vertexCounter;
     }
 
