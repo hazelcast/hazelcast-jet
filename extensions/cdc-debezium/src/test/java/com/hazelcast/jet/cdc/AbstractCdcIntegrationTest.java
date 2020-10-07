@@ -124,7 +124,7 @@ public class AbstractCdcIntegrationTest extends JetTestSupport {
      * {@code stop()} method of test containers is implemented via `docker kill`
      * and this matters for some tests.
      */
-    protected static <T> T stopContainer(GenericContainer<?> container) {
+    protected static void stopContainer(GenericContainer<?> container) {
         String containerId = container.getContainerId();
         DockerClient dockerClient = DockerClientFactory.instance().client();
         dockerClient.stopContainerCmd(containerId)
@@ -133,7 +133,6 @@ public class AbstractCdcIntegrationTest extends JetTestSupport {
                 .withRemoveVolumes(true)
                 .withForce(true)
                 .exec();
-        return null;
     }
 
 }

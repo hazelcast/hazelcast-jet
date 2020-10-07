@@ -117,7 +117,7 @@ public class MySqlCdcNetworkIntegrationTest extends AbstractCdcIntegrationTest {
     @After
     public void after() {
         if (mysql != null) {
-            mysql = stopContainer(mysql);
+            stopContainer(mysql);
         }
     }
 
@@ -125,7 +125,8 @@ public class MySqlCdcNetworkIntegrationTest extends AbstractCdcIntegrationTest {
     public void when_noDatabaseToConnectTo() throws Exception {
         mysql = initMySql(null, 0);
         String containerIpAddress = mysql.getContainerIpAddress();
-        mysql = stopContainer(mysql);
+        stopContainer(mysql);
+        mysql = null;
 
         int port = findRandomOpenPortInRange(MYSQL_PORT + 100, MYSQL_PORT + 1000);
 
@@ -208,7 +209,8 @@ public class MySqlCdcNetworkIntegrationTest extends AbstractCdcIntegrationTest {
         MILLISECONDS.sleep(ThreadLocalRandom.current().nextInt(100, 500));
 
         // and DB is stopped
-        mysql = stopContainer(mysql);
+        stopContainer(mysql);
+        mysql = null;
 
         boolean neverReconnect = reconnectBehavior.getMaxAttempts() == 0;
         if (neverReconnect) {
@@ -280,7 +282,8 @@ public class MySqlCdcNetworkIntegrationTest extends AbstractCdcIntegrationTest {
         assertEqualsEventually(() -> jet.getMap("results").size(), 5);
 
         // and DB is stopped
-        mysql = stopContainer(mysql);
+        stopContainer(mysql);
+        mysql = null;
 
         boolean neverReconnect = reconnectBehavior.getMaxAttempts() == 0;
         if (neverReconnect) {

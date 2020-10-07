@@ -116,7 +116,7 @@ public class PostgresCdcNetworkIntegrationTest extends AbstractCdcIntegrationTes
     @After
     public void after() {
         if (postgres != null) {
-            postgres = stopContainer(postgres);
+            stopContainer(postgres);
         }
     }
 
@@ -124,7 +124,8 @@ public class PostgresCdcNetworkIntegrationTest extends AbstractCdcIntegrationTes
     public void when_noDatabaseToConnectTo() throws Exception {
         postgres = initPostgres(null, 0);
         String containerIpAddress = postgres.getContainerIpAddress();
-        postgres = stopContainer(postgres);
+        stopContainer(postgres);
+        postgres = null;
 
         int port = findRandomOpenPortInRange(POSTGRESQL_PORT + 100, POSTGRESQL_PORT + 1000);
         Pipeline pipeline = initPipeline(containerIpAddress, port);
@@ -209,7 +210,8 @@ public class PostgresCdcNetworkIntegrationTest extends AbstractCdcIntegrationTes
         MILLISECONDS.sleep(ThreadLocalRandom.current().nextInt(100, 500));
 
         // and DB is stopped
-        postgres = stopContainer(postgres);
+        stopContainer(postgres);
+        postgres = null;
 
         // then
         boolean neverReconnect = reconnectBehavior.getMaxAttempts() == 0;
@@ -288,7 +290,8 @@ public class PostgresCdcNetworkIntegrationTest extends AbstractCdcIntegrationTes
         assertEqualsEventually(() -> jet.getMap("results").size(), 5);
 
         // and DB is stopped
-        postgres = stopContainer(postgres);
+        stopContainer(postgres);
+        postgres = null;
 
         boolean neverReconnect = reconnectBehavior.getMaxAttempts() == 0;
         if (neverReconnect) {
