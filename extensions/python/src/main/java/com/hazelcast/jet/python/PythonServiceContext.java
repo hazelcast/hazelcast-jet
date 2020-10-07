@@ -81,9 +81,7 @@ class PythonServiceContext {
                         .getLogger(getClass().getPackage().getName());
         try {
             long start = System.nanoTime();
-            runtimeBaseDir = cfg.baseDir() != null
-                    ? context.attachedDirectory(cfg.baseDir().toString()).toPath()
-                    : context.attachedFile(cfg.handlerFile().toString()).toPath().getParent();
+            runtimeBaseDir = runtimeBaseDir(context, cfg);
             setupBaseDir(cfg);
             synchronized (INIT_LOCK) {
                 // synchronized: the script will run pip which is not concurrency-safe
@@ -111,6 +109,18 @@ class PythonServiceContext {
         } catch (Exception e) {
             throw new JetException("PythonService initialization failed: " + e, e);
         }
+    }
+
+    Path runtimeBaseDir(ProcessorSupplier.Context context, PythonServiceConfig cfg) {
+        File baseDir = cfg.baseDir();
+        if (baseDir != null) {
+            return context.attachedDirectory(baseDir.toString()).toPath();
+        }
+        File handlerFile = cfg.handlerFile();
+        if (handlerFile != null) {
+            return context.attachedDirectory(handlerFile.toString()).toPath().getParent();
+        }
+        throw new IllegalArgumentException("Either base directory or handler file should be configured");
     }
 
     void destroy() {
