@@ -124,13 +124,15 @@ public final class OptUtils {
     public static HazelcastTable extractHazelcastTable(RelNode rel) {
         assert rel.getTable() != null;
         HazelcastTable table = rel.getTable().unwrap(HazelcastTable.class);
+
         assert table != null;
         return table;
     }
 
     public static HazelcastTable findHazelcastTable(RelNode rel) {
         RelNode input = rel;
-        while (input.getTable() == null && input.getInputs().size() == 1) {
+        while (input.getTable() == null && input.getInputs().size() > 0) {
+            assert input.getInputs().size() == 1;
             input = input.getInput(0);
         }
         return extractHazelcastTable(input);

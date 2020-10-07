@@ -17,7 +17,7 @@
 package com.hazelcast.jet.sql.impl.aggregate;
 
 import com.hazelcast.cluster.Address;
-import com.hazelcast.function.SupplierEx;
+import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.core.AbstractProcessor;
@@ -37,7 +37,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.function.Function;
 
 import static java.util.Collections.nCopies;
@@ -48,11 +47,12 @@ public final class AggregateProcessors {
     private AggregateProcessors() {
     }
 
-    public static ProcessorMetaSupplier combineByKeyP(
+    public static ProcessorMetaSupplier combine(
             Address destinationMemberAddress,
+            FunctionEx<Object, Object> partitionKeyFn,
             AggregateOperation<Aggregations, Object[]> aggregateOperation
     ) {
-        return new CombineProcessorMetaSupplier(destinationMemberAddress, aggregateOperation.createFn());
+        return new CombineProcessorMetaSupplier(destinationMemberAddress, partitionKeyFn, aggregateOperation);
     }
 
     @SuppressFBWarnings(
@@ -62,7 +62,8 @@ public final class AggregateProcessors {
     private static final class CombineProcessorMetaSupplier implements ProcessorMetaSupplier, DataSerializable {
 
         private transient Address destinationMemberAddress;
-        private SupplierEx<Aggregations> aggregationsProvider;
+        private FunctionEx<Object, Object> partitionKeyFn;
+        private AggregateOperation<Aggregations, Object[]> aggregationOperation;
 
         @SuppressWarnings("unused")
         private CombineProcessorMetaSupplier() {
@@ -70,10 +71,12 @@ public final class AggregateProcessors {
 
         private CombineProcessorMetaSupplier(
                 Address destinationMemberAddress,
-                SupplierEx<Aggregations> aggregationsProvider
+                FunctionEx<Object, Object> partitionKeyFn,
+                AggregateOperation<Aggregations, Object[]> aggregationOperation
         ) {
             this.destinationMemberAddress = destinationMemberAddress;
-            this.aggregationsProvider = aggregationsProvider;
+            this.partitionKeyFn = partitionKeyFn;
+            this.aggregationOperation = aggregationOperation;
         }
 
         @Nonnull
@@ -87,7 +90,7 @@ public final class AggregateProcessors {
                         public Collection<? extends Processor> get(int count) {
                             assert count == 1 : "" + count;
 
-                            return singletonList(new CombineP(aggregationsProvider));
+                            return singletonList(new CombineP(partitionKeyFn, aggregationOperation));
                         }
                     }
                     :
@@ -116,49 +119,51 @@ public final class AggregateProcessors {
         @Override
         public void writeData(ObjectDataOutput out) throws IOException {
             out.writeObject(destinationMemberAddress);
-            out.writeObject(aggregationsProvider);
+            out.writeObject(partitionKeyFn);
+            out.writeObject(aggregationOperation);
         }
 
         @Override
         public void readData(ObjectDataInput in) throws IOException {
             destinationMemberAddress = in.readObject();
-            aggregationsProvider = in.readObject();
+            partitionKeyFn = in.readObject();
+            aggregationOperation = in.readObject();
         }
     }
 
     private static final class CombineP extends AbstractProcessor {
 
         private final Map<Object, Aggregations> keyToAggregations;
-        private final SupplierEx<Aggregations> aggregationsProvider;
+        private final FunctionEx<Object, Object> partitionKeyFn;
+        private final AggregateOperation<Aggregations, Object[]> aggregationOperation;
 
         private Traverser<Object[]> resultTraverser;
 
-        private CombineP(SupplierEx<Aggregations> aggregationsProvider) {
+        private CombineP(
+                FunctionEx<Object, Object> partitionKeyFn,
+                AggregateOperation<Aggregations, Object[]> aggregationOperation
+        ) {
             this.keyToAggregations = new HashMap<>();
-            this.aggregationsProvider = aggregationsProvider;
+            this.partitionKeyFn = partitionKeyFn;
+            this.aggregationOperation = aggregationOperation;
         }
 
         @Override
         @SuppressWarnings("unchecked")
         protected boolean tryProcess(int ordinal, @Nonnull Object item) {
-            Entry<Object, Aggregations> entry = (Entry<Object, Aggregations>) item;
-            Object key = entry.getKey();
-            Aggregations incomingAggregations = entry.getValue();
-
-            Aggregations existingAggregations = keyToAggregations.get(key);
-            if (existingAggregations == null) {
-                keyToAggregations.put(key, incomingAggregations);
-            } else {
-                existingAggregations.combine(incomingAggregations);
-            }
-
+            Aggregations aggregations = keyToAggregations.computeIfAbsent(
+                    partitionKeyFn.apply(item),
+                    key -> aggregationOperation.createFn().get()
+            );
+            aggregationOperation.accumulateFn(ordinal).accept(aggregations, item);
             return true;
         }
 
         @Override
         public boolean complete() {
             if (resultTraverser == null) {
-                resultTraverser = new ResultTraverser().map(Aggregations::collect);
+                resultTraverser = new ResultTraverser()
+                        .map(aggregations -> aggregationOperation.finishFn().apply(aggregations));
             }
             return emitFromTraverser(resultTraverser);
         }
@@ -169,7 +174,7 @@ public final class AggregateProcessors {
 
             private ResultTraverser() {
                 this.aggregations = keyToAggregations.isEmpty()
-                        ? new ArrayList<>(singletonList(aggregationsProvider.get())).iterator()
+                        ? new ArrayList<>(singletonList(aggregationOperation.createFn().get())).iterator()
                         : keyToAggregations.values().iterator();
             }
 

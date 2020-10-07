@@ -30,7 +30,9 @@ import com.hazelcast.jet.sql.impl.aggregate.Aggregations;
 import com.hazelcast.jet.sql.impl.connector.SqlConnector;
 import com.hazelcast.jet.sql.impl.expression.ExpressionUtil;
 import com.hazelcast.jet.sql.impl.opt.OptUtils;
-import com.hazelcast.jet.sql.impl.opt.physical.AggregatePhysicalRel;
+import com.hazelcast.jet.sql.impl.opt.physical.AggregateCombinePhysicalRel;
+import com.hazelcast.jet.sql.impl.opt.physical.AggregateGroupByKeyPhysicalRel;
+import com.hazelcast.jet.sql.impl.opt.physical.AggregateGroupPhysicalRel;
 import com.hazelcast.jet.sql.impl.opt.physical.FilterPhysicalRel;
 import com.hazelcast.jet.sql.impl.opt.physical.FullScanPhysicalRel;
 import com.hazelcast.jet.sql.impl.opt.physical.InsertPhysicalRel;
@@ -114,28 +116,45 @@ public class CreateDagVisitor {
         return vertex;
     }
 
-    public Vertex onAggregate(AggregatePhysicalRel rel) {
+    public Vertex onGroup(AggregateGroupPhysicalRel rel) {
+        AggregateOperation<?, Object[]> aggregateOperation = rel.aggregateOperation();
+
+        Vertex vertex = dag.newVertex(
+                name("Aggregate-Accumulate"),
+                Processors.accumulateP(aggregateOperation)
+        );
+        connectInput(rel.getInput(), vertex, null);
+        return vertex;
+    }
+
+    public Vertex onGroupByKey(AggregateGroupByKeyPhysicalRel rel) {
+        FunctionEx<Object[], Object> partitionKeyFn = rel.partitionKeyFn();
+        AggregateOperation<?, Object[]> aggregateOperation = rel.aggregateOperation();
+
+        Vertex vertex = dag.newVertex(
+                name("Aggregate-Accumulate"),
+                Processors.accumulateByKeyP(singletonList(partitionKeyFn), aggregateOperation)
+        );
+        connectInput(rel.getInput(), vertex, edge -> edge.partitioned(partitionKeyFn));
+        return vertex;
+    }
+
+    public Vertex onCombine(AggregateCombinePhysicalRel rel) {
         SqlConnector connector = getJetSqlConnector(OptUtils.findHazelcastTable(rel).getTarget());
         if (connector.isStream()) {
             throw new UnsupportedOperationException("Grouping/aggregations are not supported for "
                     + connector.getClass().getName());
         }
 
-        FunctionEx<Object[], Object> groupKeyFn = rel.groupKeyFn();
+        FunctionEx<Object, Object> partitionKeyFn = rel.partitionKeyFn();
         AggregateOperation<Aggregations, Object[]> aggregateOperation = rel.aggregateOperation();
 
-        Vertex accumulateVertex = dag.newVertex(
-                name("Aggregate-Accumulate"),
-                Processors.accumulateByKeyP(singletonList(groupKeyFn), aggregateOperation)
-        );
-        connectInput(rel.getInput(), accumulateVertex, edge -> edge.partitioned(groupKeyFn));
-
-        Vertex combineVertex = dag.newVertex(
+        Vertex vertex = dag.newVertex(
                 name("Aggregate-Combine"),
-                AggregateProcessors.combineByKeyP(localMemberAddress, aggregateOperation)
+                AggregateProcessors.combine(localMemberAddress, partitionKeyFn, aggregateOperation)
         );
-        dag.edge(between(accumulateVertex, combineVertex).allToOne("").distributeTo(localMemberAddress));
-        return combineVertex;
+        connectInput(rel.getInput(), vertex, edge -> edge.allToOne("").distributeTo(localMemberAddress));
+        return vertex;
     }
 
     public Vertex onRoot(JetRootRel rootRel) {
