@@ -93,6 +93,8 @@ public class MySqlCdcNetworkIntegrationTest extends AbstractCdcIntegrationTest {
     @Parameter(value = 2)
     public String testName;
 
+    private MySQLContainer<?> mysql;
+
     @Parameters(name = "{2}")
     public static Collection<Object[]> data() {
         return Arrays.asList(new Object[][] {
@@ -101,8 +103,6 @@ public class MySqlCdcNetworkIntegrationTest extends AbstractCdcIntegrationTest {
                 { RetryStrategies.indefinitely(RECONNECT_INTERVAL_MS), true, "reconnect w/ state reset"}
         });
     }
-
-    private MySQLContainer<?> mysql;
 
     @Before
     public void before() {

@@ -92,6 +92,8 @@ public class PostgresCdcNetworkIntegrationTest extends AbstractCdcIntegrationTes
     @Parameter(value = 2)
     public String testName;
 
+    private PostgreSQLContainer<?> postgres;
+
     @Parameters(name = "{2}")
     public static Collection<Object[]> data() {
         return Arrays.asList(new Object[][] {
@@ -100,8 +102,6 @@ public class PostgresCdcNetworkIntegrationTest extends AbstractCdcIntegrationTes
                 { RetryStrategies.indefinitely(RECONNECT_INTERVAL_MS), true, "reconnect w/ state reset"}
         });
     }
-
-    private PostgreSQLContainer<?> postgres;
 
     @Before
     public void before() {
