@@ -481,7 +481,7 @@ shown in that case) matching a keyword extracted from the description:
 
 We have shown how to stream changes using CDC, enrich the data,
 correlate (join) the records with other records and finally store the
-data into an Elasticsearch index so an application can provide better
+data into an Elasticsearch index, so an application can provide better
 search functionality to the user.
 
 This is mostly done independently of the original application and its
