@@ -298,7 +298,7 @@ public class SqlAvroTest extends SqlTestSupport {
     private static Schema stringSchema(String fieldName) {
         return SchemaBuilder.record("jet.sql")
                             .fields()
-                            .name(fieldName).type().nullable().stringType().stringDefault(null)
+                            .name(fieldName).type().unionOf().nullType().and().stringType().endUnion().nullDefault()
                             .endRecord();
     }
 
