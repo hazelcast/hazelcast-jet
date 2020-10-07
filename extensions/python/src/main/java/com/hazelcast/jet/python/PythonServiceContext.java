@@ -118,7 +118,7 @@ class PythonServiceContext {
         }
         File handlerFile = cfg.handlerFile();
         if (handlerFile != null) {
-            return context.attachedDirectory(handlerFile.toString()).toPath().getParent();
+            return context.attachedFile(handlerFile.toString()).toPath().getParent();
         }
         throw new IllegalArgumentException("Either base directory or handler file should be configured");
     }
