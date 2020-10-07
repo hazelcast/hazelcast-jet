@@ -139,8 +139,8 @@ public final class KvMetadataAvroResolver implements KvMetadataResolver {
                     break;
                 default:
                     schema = schema.name(paths[i].getPath()).type()
-                                   .nullable().stringType()
-                                   .stringDefault(null);
+                                   .unionOf().nullType().and().stringType().endUnion()
+                                   .nullDefault();
                     break;
             }
         }

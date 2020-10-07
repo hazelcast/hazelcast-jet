@@ -132,7 +132,7 @@ public class KvMetadataAvroResolverTest {
                                         + ",\"name\":\"sql\""
                                         + ",\"namespace\":\"jet\""
                                         + ",\"fields\":["
-                                        + "{\"name\":\"string\",\"type\":[\"string\",\"null\"],\"default\":null}"
+                                        + "{\"name\":\"string\",\"type\":[\"null\",\"string\"],\"default\":null}"
                                         + ",{\"name\":\"boolean\",\"type\":[\"null\",\"boolean\"],\"default\":null}"
                                         + ",{\"name\":\"byte\",\"type\":[\"null\",\"int\"],\"default\":null}"
                                         + ",{\"name\":\"short\",\"type\":[\"null\",\"int\"],\"default\":null}"
@@ -140,7 +140,7 @@ public class KvMetadataAvroResolverTest {
                                         + ",{\"name\":\"long\",\"type\":[\"null\",\"long\"],\"default\":null}"
                                         + ",{\"name\":\"float\",\"type\":[\"null\",\"float\"],\"default\":null}"
                                         + ",{\"name\":\"double\",\"type\":[\"null\",\"double\"],\"default\":null}"
-                                        + ",{\"name\":\"decimal\",\"type\":[\"string\",\"null\"],\"default\":null}"
+                                        + ",{\"name\":\"decimal\",\"type\":[\"null\",\"string\"],\"default\":null}"
                                         + "]"
                                         + "}"
                         )
