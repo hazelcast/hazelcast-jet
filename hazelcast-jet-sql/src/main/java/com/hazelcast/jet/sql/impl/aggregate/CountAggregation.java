@@ -27,9 +27,16 @@ import java.util.Objects;
 @NotThreadSafe
 public class CountAggregation implements Aggregation {
 
+    private int index;
+
     private long value;
 
     public CountAggregation() {
+        this.index = -1;
+    }
+
+    public CountAggregation(int index) {
+        this.index = index;
     }
 
     @Override
@@ -39,7 +46,9 @@ public class CountAggregation implements Aggregation {
 
     @Override
     public void accumulate(Object[] row) {
-        value++;
+        if (index == -1 || row[index] != null) {
+            value++;
+        }
     }
 
     @Override
@@ -56,11 +65,13 @@ public class CountAggregation implements Aggregation {
 
     @Override
     public void writeData(ObjectDataOutput out) throws IOException {
+        out.writeInt(index);
         out.writeLong(value);
     }
 
     @Override
     public void readData(ObjectDataInput in) throws IOException {
+        index = in.readInt();
         value = in.readLong();
     }
 
@@ -73,11 +84,12 @@ public class CountAggregation implements Aggregation {
             return false;
         }
         CountAggregation that = (CountAggregation) o;
-        return value == that.value;
+        return index == that.index &&
+                value == that.value;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(value);
+        return Objects.hash(index, value);
     }
 }

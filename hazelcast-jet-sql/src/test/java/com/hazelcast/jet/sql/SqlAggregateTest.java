@@ -128,12 +128,17 @@ public class SqlAggregateTest extends SqlTestSupport {
     public void test_count() {
         String name = createTable(
                 new String[]{"Alice", "1"},
-                new String[]{"Bob", "1"}
+                new String[]{"Bob", "1"},
+                new String[]{null, "1"}
         );
 
         assertRowsAnyOrder(
-                "SELECT COUNT(*) FROM " + name,
+                "SELECT COUNT(name) FROM " + name,
                 singletonList(new Row(2L))
+        );
+        assertRowsAnyOrder(
+                "SELECT COUNT(*) FROM " + name,
+                singletonList(new Row(3L))
         );
     }
 

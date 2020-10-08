@@ -155,28 +155,34 @@ final class AggregatePhysicalRule extends RelOptRule {
                 throw QueryException.error("DISTINCT aggregates are not supported: " + aggregateCall);
             }
 
+            List<Integer> aggregateCallArguments = aggregateCall.getArgList();
             SqlKind kind = aggregateCall.getAggregation().getKind();
             switch (kind) {
                 case COUNT:
-                    aggregationProviders.add(CountAggregation::new);
+                    if (aggregateCallArguments.size() == 0) {
+                        aggregationProviders.add(CountAggregation::new);
+                    } else {
+                        int countIndex = aggregateCallArguments.get(0);
+                        aggregationProviders.add(() -> new CountAggregation(countIndex));
+                    }
                     break;
                 case MIN:
-                    int minIndex = aggregateCall.getArgList().get(0);
+                    int minIndex = aggregateCallArguments.get(0);
                     QueryDataType minOperandType = operandTypes.get(minIndex);
                     aggregationProviders.add(() -> new MinAggregation(minIndex, minOperandType));
                     break;
                 case MAX:
-                    int maxIndex = aggregateCall.getArgList().get(0);
+                    int maxIndex = aggregateCallArguments.get(0);
                     QueryDataType maxOperandType = operandTypes.get(maxIndex);
                     aggregationProviders.add(() -> new MaxAggregation(maxIndex, maxOperandType));
                     break;
                 case SUM:
-                    int sumIndex = aggregateCall.getArgList().get(0);
+                    int sumIndex = aggregateCallArguments.get(0);
                     QueryDataType sumOperandType = operandTypes.get(sumIndex);
                     aggregationProviders.add(() -> new SumAggregation(sumIndex, sumOperandType));
                     break;
                 case AVG:
-                    int avgIndex = aggregateCall.getArgList().get(0);
+                    int avgIndex = aggregateCallArguments.get(0);
                     QueryDataType avgOperandType = operandTypes.get(avgIndex);
                     aggregationProviders.add(() -> new AvgAggregation(avgIndex, avgOperandType));
                     break;

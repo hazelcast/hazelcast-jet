@@ -34,10 +34,19 @@ public class CountAggregationTest {
     @Test
     public void test_accumulate() {
         CountAggregation aggregation = new CountAggregation();
-        aggregation.accumulate(new Object[0]);
-        aggregation.accumulate(new Object[0]);
+        aggregation.accumulate(new Object[]{null});
+        aggregation.accumulate(new Object[]{1});
 
         assertThat(aggregation.collect()).isEqualTo(2L);
+    }
+
+    @Test
+    public void test_accumulateIgnoreNulls() {
+        CountAggregation aggregation = new CountAggregation(0);
+        aggregation.accumulate(new Object[]{null});
+        aggregation.accumulate(new Object[]{1});
+
+        assertThat(aggregation.collect()).isEqualTo(1L);
     }
 
     @Test
