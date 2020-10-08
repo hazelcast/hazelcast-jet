@@ -19,7 +19,6 @@ package com.hazelcast.jet.pipeline;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.Traversers;
 import com.hazelcast.jet.accumulator.LongAccumulator;
-import com.hazelcast.jet.aggregate.AggregateOperations;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.impl.pipeline.PipelineImpl;
@@ -42,8 +41,7 @@ import static org.junit.Assert.assertEquals;
 
 @RunWith(Parameterized.class)
 @UseParametersRunnerFactory(HazelcastSerialParametersRunnerFactory.class)
-public class BatchParallelismTest {
-
+public class StreamStageParallelismTest {
     private static final int DEFAULT_PARALLELISM = 8;
     private static final int LOCAL_PARALLELISM = 11;
     private static final int UPSTREAM_PARALLELISM = 6;
@@ -54,7 +52,7 @@ public class BatchParallelismTest {
     };
 
     @Parameter(value = 0)
-    public FunctionEx<BatchStage<Integer>, BatchStage<Integer>> transform;
+    public FunctionEx<StreamStage<Integer>, StreamStage<Integer>> transform;
 
     @Parameter(value = 1)
     public List<String> vertexNames;
@@ -86,14 +84,6 @@ public class BatchParallelismTest {
                 ),
                 createParamSet(
                         stage -> stage
-                                .sort()
-                                .setLocalParallelism(LOCAL_PARALLELISM),
-                        Arrays.asList("sort", "sort-collect"),
-                        Arrays.asList(UPSTREAM_PARALLELISM, 1),
-                        "sort"
-                ),
-                createParamSet(
-                        stage -> stage
                                 .mapStateful(LongAccumulator::new, (s, x) -> x)
                                 .setLocalParallelism(LOCAL_PARALLELISM),
                         Collections.singletonList("map-stateful-global"),
@@ -102,35 +92,18 @@ public class BatchParallelismTest {
                 ),
                 createParamSet(
                         stage -> stage
-                                .aggregate(AggregateOperations.counting())
-                                .flatMap(x -> Traversers.<Integer>traverseItems())
-                                .setLocalParallelism(LOCAL_PARALLELISM),
-                        Arrays.asList("aggregate-prepare", "aggregate"),
-                        Arrays.asList(UPSTREAM_PARALLELISM, 1),
-                        "aggregate"
-                ),
-                createParamSet(
-                        stage -> stage
-                                .distinct()
-                                .setLocalParallelism(LOCAL_PARALLELISM),
-                        Arrays.asList("distinct-prepare", "distinct"),
-                        Arrays.asList(LOCAL_PARALLELISM, LOCAL_PARALLELISM),
-                        "distinct"
-                ),
-                createParamSet(
-                        stage -> stage
                                 .rebalance()
                                 .map(x -> x)
                                 .setLocalParallelism(LOCAL_PARALLELISM),
                         Collections.singletonList("map"),
-                        Collections.singletonList(UPSTREAM_PARALLELISM), // TODO: Consider in more detail
+                        Collections.singletonList(UPSTREAM_PARALLELISM),
                         "map-after-rebalance"
                 )
         );
     }
 
     private static Object[] createParamSet(
-            FunctionEx<BatchStage<Integer>, BatchStage<Integer>> transform,
+            FunctionEx<StreamStage<Integer>, StreamStage<Integer>> transform,
             List<String> vertexNames,
             List<Integer> expectedLPs,
             String transformName
@@ -151,11 +124,12 @@ public class BatchParallelismTest {
         }
     }
 
-    private DAG applyTransformAndGetDag(FunctionEx<BatchStage<Integer>, BatchStage<Integer>> transform) {
+    private DAG applyTransformAndGetDag(FunctionEx<StreamStage<Integer>, StreamStage<Integer>> transform) {
         PipelineImpl p = (PipelineImpl) Pipeline.create();
-        BatchStage<Integer> source = p.readFrom(TestSources.items(1))
-                                       .setLocalParallelism(UPSTREAM_PARALLELISM);
-        BatchStage<Integer> applied = source.apply(transform);
+        StreamStage<Integer> source = p.readFrom(TestSources.items(1))
+                                       .setLocalParallelism(UPSTREAM_PARALLELISM)
+                                       .addTimestamps(t -> 0, Long.MAX_VALUE);
+        StreamStage<Integer> applied = source.apply(transform);
         applied.writeTo(Sinks.noop());
         return p.toDag(PIPELINE_CTX);
     }
