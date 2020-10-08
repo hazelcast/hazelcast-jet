@@ -266,6 +266,6 @@ public class SqlPrimitiveTest extends SqlTestSupport {
                         + '"' + OPTION_KEY_FORMAT + "\" '" + JAVA_FORMAT + "',"
                         + '"' + OPTION_KEY_CLASS + "\" '" + Integer.class.getName() + "'"
                         + ")"))
-                .hasMessage("Unmapped field: fielddd");
+                .hasMessage("Unmapped field: field");
     }
 }
