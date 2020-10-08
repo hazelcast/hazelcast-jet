@@ -49,6 +49,14 @@ public class SqlAggregateTest extends SqlTestSupport {
         );
 
         assertRowsAnyOrder(
+                "SELECT name FROM " + name + " GROUP BY name",
+                asList(
+                        new Row("Alice"),
+                        new Row("Bob"),
+                        new Row((String) null)
+                )
+        );
+        assertRowsAnyOrder(
                 "SELECT distance, name FROM " + name + " GROUP BY distance, name",
                 asList(
                         new Row(1, "Alice"),
