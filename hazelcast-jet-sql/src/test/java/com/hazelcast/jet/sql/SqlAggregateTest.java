@@ -49,7 +49,7 @@ public class SqlAggregateTest extends SqlTestSupport {
         );
 
         assertRowsAnyOrder(
-                "SELECT name FROM " + name + " GROUP BY name",
+                "SELECT name FROM " + name + " GROUP BY 1", // field ordinal
                 asList(
                         new Row("Alice"),
                         new Row("Bob"),
