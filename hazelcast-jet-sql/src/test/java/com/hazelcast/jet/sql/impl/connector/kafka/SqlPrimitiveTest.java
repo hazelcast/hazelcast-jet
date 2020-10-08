@@ -34,12 +34,13 @@ import java.util.Map;
 import static com.hazelcast.jet.core.TestUtil.createMap;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.JAVA_FORMAT;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_KEY_CLASS;
-import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_OBJECT_NAME;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_KEY_FORMAT;
-import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_VALUE_FORMAT;
+import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_OBJECT_NAME;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_VALUE_CLASS;
+import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_VALUE_FORMAT;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public class SqlPrimitiveTest extends SqlTestSupport {
 
@@ -82,7 +83,7 @@ public class SqlPrimitiveTest extends SqlTestSupport {
                 + ")"
         );
 
-        String from = generateRandomName();
+        String from = randomName();
         TestBatchSqlConnector.create(sqlService, from, 2);
 
         assertTopicEventually(
@@ -157,6 +158,76 @@ public class SqlPrimitiveTest extends SqlTestSupport {
     }
 
     @Test
+    public void test_fieldsMapping() {
+        String name = createRandomTopic();
+        sqlService.execute("CREATE MAPPING " + name + " ("
+                + "id INT EXTERNAL NAME __key"
+                + ", name VARCHAR EXTERNAL NAME this"
+                + ") TYPE " + KafkaSqlConnector.TYPE_NAME + ' '
+                + "OPTIONS ( "
+                + '"' + OPTION_KEY_FORMAT + "\" '" + JAVA_FORMAT + '\''
+                + ", \"" + OPTION_KEY_CLASS + "\" '" + Integer.class.getName() + '\''
+                + ", \"" + OPTION_VALUE_FORMAT + "\" '" + JAVA_FORMAT + '\''
+                + ", \"" + OPTION_VALUE_CLASS + "\" '" + String.class.getName() + '\''
+                + ", \"bootstrap.servers\" '" + kafkaTestSupport.getBrokerConnectionString() + '\''
+                + ", \"key.serializer\" '" + IntegerSerializer.class.getCanonicalName() + '\''
+                + ", \"key.deserializer\" '" + IntegerDeserializer.class.getCanonicalName() + '\''
+                + ", \"value.serializer\" '" + StringSerializer.class.getCanonicalName() + '\''
+                + ", \"value.deserializer\" '" + StringDeserializer.class.getCanonicalName() + '\''
+                + ", \"auto.offset.reset\" 'earliest'"
+                + ")"
+        );
+
+        assertTopicEventually(
+                name,
+                "INSERT INTO " + name + " (id, name) VALUES (2, 'value-2')",
+                createMap(2, "value-2")
+        );
+        assertRowsEventuallyInAnyOrder(
+                "SELECT * FROM " + name,
+                singletonList(new Row(2, "value-2"))
+        );
+    }
+
+    @Test
+    public void test_objectAndMappingNameDifferent() {
+        String topicName = createRandomTopic();
+        String tableName = randomName();
+
+        sqlService.execute("CREATE MAPPING " + tableName + ' '
+                + "TYPE " + KafkaSqlConnector.TYPE_NAME + ' '
+                + "OPTIONS ( "
+                + '"' + OPTION_OBJECT_NAME + "\" '" + topicName + '\''
+                + ", \"" + OPTION_KEY_FORMAT + "\" '" + JAVA_FORMAT + '\''
+                + ", \"" + OPTION_KEY_CLASS + "\" '" + Integer.class.getName() + '\''
+                + ", \"" + OPTION_VALUE_FORMAT + "\" '" + JAVA_FORMAT + '\''
+                + ", \"" + OPTION_VALUE_CLASS + "\" '" + String.class.getName() + '\''
+                + ", \"bootstrap.servers\" '" + kafkaTestSupport.getBrokerConnectionString() + '\''
+                + ", \"key.serializer\" '" + IntegerSerializer.class.getCanonicalName() + '\''
+                + ", \"key.deserializer\" '" + IntegerDeserializer.class.getCanonicalName() + '\''
+                + ", \"value.serializer\" '" + StringSerializer.class.getCanonicalName() + '\''
+                + ", \"value.deserializer\" '" + StringDeserializer.class.getCanonicalName() + '\''
+                + ", \"auto.offset.reset\" 'earliest'"
+                + ")"
+        );
+
+        kafkaTestSupport.produce(topicName, 1, "Alice");
+        kafkaTestSupport.produce(topicName, 2, "Bob");
+
+        assertRowsEventuallyInAnyOrder(
+                "SELECT * FROM " + tableName,
+                asList(
+                        new Row(1, "Alice"),
+                        new Row(2, "Bob")
+                )
+        );
+        assertRowsEventuallyInAnyOrder(
+                "SELECT * FROM " + tableName,
+                asList(new Row(1, "Alice"), new Row(2, "Bob"))
+        );
+    }
+
+    @Test
     public void test_insertNulls() {
         String name = createRandomTopic();
         sqlService.execute("CREATE MAPPING " + name + ' '
@@ -217,47 +288,15 @@ public class SqlPrimitiveTest extends SqlTestSupport {
     }
 
     @Test
-    public void test_fieldsMapping() {
-        String name = createRandomTopic();
-        sqlService.execute("CREATE MAPPING " + name + " ("
-                + "id INT EXTERNAL NAME __key"
-                + ", name VARCHAR EXTERNAL NAME this"
-                + ") TYPE " + KafkaSqlConnector.TYPE_NAME + ' '
-                + "OPTIONS ( "
-                + '"' + OPTION_KEY_FORMAT + "\" '" + JAVA_FORMAT + '\''
-                + ", \"" + OPTION_KEY_CLASS + "\" '" + Integer.class.getName() + '\''
-                + ", \"" + OPTION_VALUE_FORMAT + "\" '" + JAVA_FORMAT + '\''
-                + ", \"" + OPTION_VALUE_CLASS + "\" '" + String.class.getName() + '\''
-                + ", \"bootstrap.servers\" '" + kafkaTestSupport.getBrokerConnectionString() + '\''
-                + ", \"key.serializer\" '" + IntegerSerializer.class.getCanonicalName() + '\''
-                + ", \"key.deserializer\" '" + IntegerDeserializer.class.getCanonicalName() + '\''
-                + ", \"value.serializer\" '" + StringSerializer.class.getCanonicalName() + '\''
-                + ", \"value.deserializer\" '" + StringDeserializer.class.getCanonicalName() + '\''
-                + ", \"auto.offset.reset\" 'earliest'"
-                + ")"
-        );
-
-        assertTopicEventually(
-                name,
-                "INSERT INTO " + name + " (id, name) VALUES (2, 'value-2')",
-                createMap(2, "value-2")
-        );
-        assertRowsEventuallyInAnyOrder(
-                "SELECT * FROM " + name,
-                singletonList(new Row(2, "value-2"))
-        );
-    }
-
-    @Test
-    public void test_topicNameAndTableNameDifferent() {
+    public void test_explicitKeyAndThis() {
         String topicName = createRandomTopic();
-        String tableName = generateRandomName();
 
-        sqlService.execute("CREATE MAPPING " + tableName + ' '
+        sqlService.execute("CREATE MAPPING " + topicName + '('
+                + "__key INT,"
+                + "this VARCHAR) "
                 + "TYPE " + KafkaSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ( "
-                + '"' + OPTION_OBJECT_NAME + "\" '" + topicName + '\''
-                + ", \"" + OPTION_KEY_FORMAT + "\" '" + JAVA_FORMAT + '\''
+                + '"' + OPTION_KEY_FORMAT + "\" '" + JAVA_FORMAT + '\''
                 + ", \"" + OPTION_KEY_CLASS + "\" '" + Integer.class.getName() + '\''
                 + ", \"" + OPTION_VALUE_FORMAT + "\" '" + JAVA_FORMAT + '\''
                 + ", \"" + OPTION_VALUE_CLASS + "\" '" + String.class.getName() + '\''
@@ -274,24 +313,79 @@ public class SqlPrimitiveTest extends SqlTestSupport {
         kafkaTestSupport.produce(topicName, 2, "Bob");
 
         assertRowsEventuallyInAnyOrder(
-                "SELECT * FROM " + tableName,
+                "SELECT * FROM " + topicName,
                 asList(
                         new Row(1, "Alice"),
                         new Row(2, "Bob")
                 )
         );
         assertRowsEventuallyInAnyOrder(
-                "SELECT * FROM " + tableName,
+                "SELECT * FROM " + topicName,
                 asList(new Row(1, "Alice"), new Row(2, "Bob"))
         );
     }
 
-    private static String generateRandomName() {
-        return "primitive_" + randomString().replace('-', '_');
+    @Test
+    public void test_noValueFormat() {
+        String topicName = randomName();
+        assertThatThrownBy(
+                () -> sqlService.execute("CREATE MAPPING " + topicName + " TYPE " + KafkaSqlConnector.TYPE_NAME + " "
+                        + "OPTIONS ("
+                        + '"' + OPTION_KEY_FORMAT + "\" '" + JAVA_FORMAT + "',"
+                        + '"' + OPTION_KEY_CLASS + "\" '" + String.class.getName() + "'"
+                        + ")"))
+                .hasMessage("Missing 'valueFormat' option");
+    }
+
+    @Test
+    public void test_noKeyFormat() {
+        String topicName = createRandomTopic();
+        sqlService.execute("CREATE MAPPING " + topicName + " TYPE " + KafkaSqlConnector.TYPE_NAME + " "
+                + "OPTIONS ("
+                + '"' + OPTION_VALUE_FORMAT + "\" '" + JAVA_FORMAT + "',"
+                + '"' + OPTION_VALUE_CLASS + "\" '" + Integer.class.getName() + "'"
+                + ", \"bootstrap.servers\" '" + kafkaTestSupport.getBrokerConnectionString() + '\''
+                + ", \"key.serializer\" '" + IntegerSerializer.class.getCanonicalName() + '\''
+                + ", \"key.deserializer\" '" + IntegerDeserializer.class.getCanonicalName() + '\''
+                + ", \"value.serializer\" '" + IntegerSerializer.class.getCanonicalName() + '\''
+                + ", \"value.deserializer\" '" + IntegerDeserializer.class.getCanonicalName() + '\''
+                + ", \"auto.offset.reset\" 'earliest'"
+                + ")");
+
+        sqlService.execute("SINK INTO " + topicName + " VALUES(42)");
+
+        assertRowsEventuallyInAnyOrder("SELECT * FROM " + topicName, singletonList(new Row(42)));
+    }
+
+    @Test
+    public void test_multipleFieldsForPrimitive_key() {
+        test_multipleFieldsForPrimitive("__key");
+    }
+
+    @Test
+    public void test_multipleFieldsForPrimitive_value() {
+        test_multipleFieldsForPrimitive("this");
+    }
+
+    private void test_multipleFieldsForPrimitive(String fieldName) {
+        String mapName = randomName();
+        assertThatThrownBy(
+                () -> sqlService.execute("CREATE MAPPING " + mapName + "("
+                        + fieldName + " INT,"
+                        + "field INT EXTERNAL NAME \"" + fieldName + ".field\""
+                        + ")"
+                        + " TYPE " + KafkaSqlConnector.TYPE_NAME
+                        + " OPTIONS ("
+                        + '"' + OPTION_VALUE_FORMAT + "\" '" + JAVA_FORMAT + "',"
+                        + '"' + OPTION_VALUE_CLASS + "\" '" + Integer.class.getName() + "',"
+                        + '"' + OPTION_KEY_FORMAT + "\" '" + JAVA_FORMAT + "',"
+                        + '"' + OPTION_KEY_CLASS + "\" '" + Integer.class.getName() + "'"
+                        + ")"))
+                .hasMessage("Unmapped field: field");
     }
 
     private static String createRandomTopic() {
-        String topicName = "t_" + randomString().replace('-', '_');
+        String topicName = randomName();
         kafkaTestSupport.createTopic(topicName, INITIAL_PARTITION_COUNT);
         return topicName;
     }

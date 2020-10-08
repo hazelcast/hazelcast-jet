@@ -17,6 +17,7 @@
 package com.hazelcast.jet.sql.impl.connector.kafka;
 
 import com.google.common.collect.ImmutableMap;
+import com.hazelcast.internal.nio.Bits;
 import com.hazelcast.jet.kafka.impl.KafkaTestSupport;
 import com.hazelcast.jet.sql.SqlTestSupport;
 import com.hazelcast.jet.sql.impl.connector.test.AllTypesSqlConnector;
@@ -28,18 +29,28 @@ import io.confluent.kafka.serializers.KafkaAvroSerializer;
 import org.apache.avro.Schema;
 import org.apache.avro.SchemaBuilder;
 import org.apache.avro.generic.GenericRecordBuilder;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.clients.consumer.ConsumerRecords;
+import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.common.serialization.ByteArrayDeserializer;
+import org.apache.kafka.common.serialization.IntegerDeserializer;
+import org.apache.kafka.common.serialization.IntegerSerializer;
 import org.eclipse.jetty.server.Server;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.net.ServerSocket;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZonedDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
@@ -50,7 +61,11 @@ import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_VALUE_FOR
 import static java.time.ZoneId.systemDefault;
 import static java.time.ZoneOffset.UTC;
 import static java.util.Arrays.asList;
+import static java.util.Collections.emptyMap;
 import static java.util.Collections.singletonList;
+import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.Assert.assertEquals;
 
 public class SqlAvroTest extends SqlTestSupport {
 
@@ -210,7 +225,7 @@ public class SqlAvroTest extends SqlTestSupport {
     @Test
     @SuppressWarnings("checkstyle:LineLength")
     public void test_allTypes() {
-        String from = generateRandomName();
+        String from = randomName();
         AllTypesSqlConnector.create(sqlService, from);
 
         String to = createRandomTopic();
@@ -266,8 +281,73 @@ public class SqlAvroTest extends SqlTestSupport {
         );
     }
 
-    private static String generateRandomName() {
-        return "json_" + randomString().replace('-', '_');
+    @Test
+    public void test_avroPrimitiveValue_key() {
+        test_avroPrimitiveValue("__key");
+    }
+
+    @Test
+    public void test_avroPrimitiveValue_value() {
+        test_avroPrimitiveValue("this");
+    }
+
+    private void test_avroPrimitiveValue(String path) {
+        assertThatThrownBy(
+                () -> sqlService.execute("CREATE MAPPING " + randomName() + " (" + path + " INT) "
+                        + "TYPE Kafka "
+                        + "OPTIONS ("
+                        + "keyFormat 'avro'"
+                        + ", valueFormat 'avro'"
+                        + ")"))
+                .hasMessage("Cannot use the '" + path + "' field with Avro serialization");
+    }
+
+    @Test
+    public void test_schemaIdForTwoQueriesIsEqual() {
+        String topicName = createRandomTopic();
+        sqlService.execute("CREATE MAPPING " + topicName + " (__key INT, field1 VARCHAR) "
+                + "TYPE Kafka "
+                + "OPTIONS ("
+                + "keyFormat 'java'"
+                + ", keyJavaClass 'java.lang.Integer'"
+                + ", valueFormat 'avro'"
+                + ", \"bootstrap.servers\" '" + kafkaTestSupport.getBrokerConnectionString() + '\''
+                + ", \"schema.registry.url\" '" + schemaRegistry.getURI() + '\''
+                + ", \"key.serializer\" '" + IntegerSerializer.class.getCanonicalName() + '\''
+                + ", \"key.deserializer\" '" + IntegerDeserializer.class.getCanonicalName() + '\''
+                + ", \"value.serializer\" '" + KafkaAvroSerializer.class.getCanonicalName() + '\''
+                + ", \"value.deserializer\" '" + KafkaAvroDeserializer.class.getCanonicalName() + '\''
+                + ", \"auto.offset.reset\" 'earliest')");
+
+        sqlService.execute("INSERT INTO " + topicName + " VALUES(42, 'foo')");
+        sqlService.execute("INSERT INTO " + topicName + " VALUES(43, 'bar')");
+
+        try (KafkaConsumer<Integer, byte[]> consumer = kafkaTestSupport.createConsumer(
+                IntegerDeserializer.class, ByteArrayDeserializer.class, emptyMap(), topicName)
+        ) {
+            long timeLimit = System.nanoTime() + SECONDS.toNanos(10);
+            List<Integer> schemaIds = new ArrayList<>();
+            while (schemaIds.size() < 2) {
+                if (System.nanoTime() > timeLimit) {
+                    Assert.fail("Timeout waiting for the records from Kafka");
+                }
+                ConsumerRecords<Integer, byte[]> records = consumer.poll(Duration.ofMillis(100));
+                for (ConsumerRecord<Integer, byte[]> record : records) {
+                    int id = Bits.readInt(record.value(), 0, true);
+                    schemaIds.add(id);
+                }
+            }
+            assertEquals("The schemaIds of the two records don't match", schemaIds.get(0), schemaIds.get(1));
+        }
+    }
+
+    @Test
+    public void when_createMappingNoColumns_then_fail() {
+        assertThatThrownBy(() ->
+                sqlService.execute("CREATE MAPPING " + randomName() + " "
+                        + "TYPE Kafka "
+                        + "OPTIONS (valueFormat 'avro')"))
+                .hasMessage("Column list is required for Avro format");
     }
 
     private static String createRandomTopic() {

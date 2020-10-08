@@ -179,7 +179,7 @@ public class MetadataPortableResolverTest {
                 options,
                 ss
         )).isInstanceOf(QueryException.class)
-          .hasMessageContaining("Mismatch between declared and inferred type: field");
+          .hasMessageContaining("Mismatch between declared and resolved type: field");
     }
 
     @Test

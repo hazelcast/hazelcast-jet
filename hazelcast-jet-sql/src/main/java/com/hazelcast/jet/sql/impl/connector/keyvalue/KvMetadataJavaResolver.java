@@ -40,11 +40,9 @@ import java.util.Set;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.JAVA_FORMAT;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_KEY_CLASS;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_VALUE_CLASS;
-import static com.hazelcast.jet.sql.impl.connector.keyvalue.KvMetadataResolvers.extractKeyFields;
-import static com.hazelcast.jet.sql.impl.connector.keyvalue.KvMetadataResolvers.extractValueFields;
+import static com.hazelcast.jet.sql.impl.connector.keyvalue.KvMetadataResolvers.*;
 import static com.hazelcast.sql.impl.extract.QueryPath.KEY;
 import static com.hazelcast.sql.impl.extract.QueryPath.VALUE;
-import static com.hazelcast.sql.impl.extract.QueryPath.VALUE_PATH;
 import static java.util.Collections.singletonList;
 
 /**
@@ -92,15 +90,13 @@ public final class KvMetadataJavaResolver implements KvMetadataResolver {
             List<MappingField> userFields,
             QueryDataType type
     ) {
-        Map<QueryPath, MappingField> userFieldsByPath = isKey
-                ? extractKeyFields(userFields)
-                : extractValueFields(userFields, name -> VALUE_PATH);
+        Map<QueryPath, MappingField> userFieldsByPath = extractFields(userFields, isKey);
 
         QueryPath path = isKey ? QueryPath.KEY_PATH : QueryPath.VALUE_PATH;
 
         MappingField mappingField = userFieldsByPath.get(path);
         if (mappingField != null && !type.getTypeFamily().equals(mappingField.type().getTypeFamily())) {
-            throw QueryException.error("Mismatch between declared and inferred type for field '"
+            throw QueryException.error("Mismatch between declared and resolved type for field '"
                     + mappingField.name() + "'");
         }
         String name = mappingField == null ? (isKey ? KEY : VALUE) : mappingField.name();
@@ -123,9 +119,7 @@ public final class KvMetadataJavaResolver implements KvMetadataResolver {
     ) {
         Set<Entry<String, Class<?>>> fieldsInClass = ReflectionUtils.extractProperties(clazz).entrySet();
 
-        Map<QueryPath, MappingField> userFieldsByPath = isKey
-                ? extractKeyFields(userFields)
-                : extractValueFields(userFields, name -> new QueryPath(name, false));
+        Map<QueryPath, MappingField> userFieldsByPath = extractFields(userFields, isKey);
 
         if (!userFields.isEmpty()) {
             // the user used explicit fields in the DDL, just validate them
@@ -135,7 +129,7 @@ public final class KvMetadataJavaResolver implements KvMetadataResolver {
 
                 MappingField mappingField = userFieldsByPath.get(path);
                 if (mappingField != null && !type.getTypeFamily().equals(mappingField.type().getTypeFamily())) {
-                    throw QueryException.error("Mismatch between declared and inferred type for field '"
+                    throw QueryException.error("Mismatch between declared and resolved type for field '"
                             + mappingField.name() + "'");
                 }
             }
@@ -177,9 +171,7 @@ public final class KvMetadataJavaResolver implements KvMetadataResolver {
     }
 
     private EntryMetadata resolvePrimitiveMetadata(boolean isKey, List<MappingField> resolvedFields) {
-        Map<QueryPath, MappingField> externalFieldsByPath = isKey
-                ? extractKeyFields(resolvedFields)
-                : extractValueFields(resolvedFields, name -> VALUE_PATH);
+        Map<QueryPath, MappingField> externalFieldsByPath = extractFields(resolvedFields, isKey);
 
         QueryPath path = isKey ? QueryPath.KEY_PATH : QueryPath.VALUE_PATH;
         MappingField mappingField = externalFieldsByPath.get(path);
@@ -198,9 +190,7 @@ public final class KvMetadataJavaResolver implements KvMetadataResolver {
             List<MappingField> resolvedFields,
             Class<?> clazz
     ) {
-        Map<QueryPath, MappingField> externalFieldsByPath = isKey
-                ? extractKeyFields(resolvedFields)
-                : extractValueFields(resolvedFields, name -> new QueryPath(name, false));
+        Map<QueryPath, MappingField> externalFieldsByPath = extractFields(resolvedFields, isKey);
 
         Map<String, Class<?>> typesByNames = ReflectionUtils.extractProperties(clazz);
 

@@ -34,8 +34,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.JSON_FORMAT;
-import static com.hazelcast.jet.sql.impl.connector.keyvalue.KvMetadataResolvers.extractKeyFields;
-import static com.hazelcast.jet.sql.impl.connector.keyvalue.KvMetadataResolvers.extractValueFields;
+import static com.hazelcast.jet.sql.impl.connector.keyvalue.KvMetadataResolvers.extractFields;
 
 public final class KvMetadataJsonResolver implements KvMetadataResolver {
 
@@ -56,15 +55,13 @@ public final class KvMetadataJsonResolver implements KvMetadataResolver {
             Map<String, String> options,
             InternalSerializationService serializationService
     ) {
-        Map<QueryPath, MappingField> mappingFieldsByPath = isKey
-                ? extractKeyFields(userFields)
-                : extractValueFields(userFields, name -> new QueryPath(name, false));
+        Map<QueryPath, MappingField> mappingFieldsByPath = extractFields(userFields, isKey);
 
         Map<String, MappingField> fields = new LinkedHashMap<>();
         for (Entry<QueryPath, MappingField> entry : mappingFieldsByPath.entrySet()) {
             QueryPath path = entry.getKey();
             if (path.getPath() == null) {
-                throw QueryException.error("Invalid external name '" + path.toString() + "'");
+                throw QueryException.error("Invalid external name: " + path.toString());
             }
             MappingField field = entry.getValue();
 
@@ -81,8 +78,8 @@ public final class KvMetadataJsonResolver implements KvMetadataResolver {
             InternalSerializationService serializationService
     ) {
         Map<QueryPath, MappingField> mappingFieldsByPath = isKey
-                ? extractKeyFields(resolvedFields)
-                : extractValueFields(resolvedFields, name -> new QueryPath(name, false));
+                ? extractFields(resolvedFields, true)
+                : extractFields(resolvedFields, false);
 
         List<TableField> fields = new ArrayList<>();
         for (Entry<QueryPath, MappingField> entry : mappingFieldsByPath.entrySet()) {

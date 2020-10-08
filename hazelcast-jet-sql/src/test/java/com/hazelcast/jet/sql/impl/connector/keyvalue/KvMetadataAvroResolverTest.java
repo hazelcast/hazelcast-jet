@@ -62,14 +62,18 @@ public class KvMetadataAvroResolverTest {
             "true",
             "false"
     })
-    public void when_invalidExternalName_then_throws(boolean key) {
-        assertThatThrownBy(() -> INSTANCE.resolveAndValidateFields(
+    public void when_noKeyOrThisPrefixInExternalName_then_usesValue(boolean key) {
+        EntryMetadata metadata = INSTANCE.resolveMetadata(
                 key,
-                singletonList(field("field", QueryDataType.INT, "does_not_start_with_key_or_value")),
+                singletonList(field("field", QueryDataType.INT, "extField")),
                 emptyMap(),
                 null
-        )).isInstanceOf(QueryException.class)
-          .hasMessageContaining("Invalid external name: does_not_start_with_key_or_value");
+        );
+        assertThat(metadata.getFields()).containsExactly(
+                key ? new MapTableField[0] :
+                        new MapTableField[] {
+                                new MapTableField("field", QueryDataType.INT, false, new QueryPath("extField", false))
+                        });
     }
 
     @Test
