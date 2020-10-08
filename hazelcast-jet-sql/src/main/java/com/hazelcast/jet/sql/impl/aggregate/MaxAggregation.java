@@ -51,7 +51,7 @@ public class MaxAggregation implements Aggregation {
     public void accumulate(Object[] row) {
         Object value = row[index];
 
-        if (this.value == null || (value != null && compare(this.value, value) > 0)) {
+        if (this.value == null || (value != null && compare(this.value, value) < 0)) {
             this.value = value;
         }
     }
@@ -62,7 +62,7 @@ public class MaxAggregation implements Aggregation {
 
         Object value = other.value;
 
-        if (this.value == null || (value != null && compare(this.value, value) > 0)) {
+        if (this.value == null || (value != null && compare(this.value, value) < 0)) {
             this.value = value;
         }
     }
@@ -75,7 +75,7 @@ public class MaxAggregation implements Aggregation {
         Comparable leftComparable = asComparable(left);
         Comparable rightComparable = asComparable(right);
 
-        return rightComparable.compareTo(leftComparable);
+        return leftComparable.compareTo(rightComparable);
     }
 
     private static Comparable<?> asComparable(Object value) {
