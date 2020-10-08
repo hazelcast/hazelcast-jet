@@ -1,0 +1,455 @@
+<!DOCTYPE html><html lang="en"><head><meta charSet="utf-8"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><title>Enabling Full-text Search with Change Data Capture in a Legacy Application · Hazelcast Jet</title><meta name="viewport" content="width=device-width"/><meta name="generator" content="Docusaurus"/><meta name="description" content="In this post, we will take a legacy application and improve its search"/><meta name="docsearch:language" content="en"/><meta property="og:title" content="Enabling Full-text Search with Change Data Capture in a Legacy Application · Hazelcast Jet"/><meta property="og:type" content="website"/><meta property="og:url" content="https://jet-start.sh/blog/2020/10/06/enabling-full-text-search"/><meta property="og:description" content="In this post, we will take a legacy application and improve its search"/><meta property="og:image" content="https://jet-start.sh/img/Hazelcast-Jet-Logo-Blue_Dark.jpg"/><meta name="twitter:card" content="summary"/><meta name="twitter:image" content="https://jet-start.sh/img/Hazelcast-Jet-Logo-Blue_Dark.jpg"/><link rel="shortcut icon" href="/img/favicon.png"/><link rel="stylesheet" href="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.css"/><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/default.min.css"/><link rel="alternate" type="application/atom+xml" href="https://jet-start.sh/blog/atom.xml" title="Hazelcast Jet Blog ATOM Feed"/><link rel="alternate" type="application/rss+xml" href="https://jet-start.sh/blog/feed.xml" title="Hazelcast Jet Blog RSS Feed"/><script>
+              (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+              (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+              m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+              })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+              ga('create', 'UA-158279495-1', 'auto');
+              ga('send', 'pageview');
+            </script><link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Ubuntu:300,400,500,600"/><link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,500,600,700,800"/><script type="text/javascript" src="https://buttons.github.io/buttons.js"></script><script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.0/clipboard.min.js"></script><script type="text/javascript" src="/js/code-block-buttons.js"></script><script type="text/javascript" src="https://plausible.io/js/plausible.js" async="" defer="" data-domain="jet-start.sh"></script><script src="/js/scrollSpy.js"></script><link rel="stylesheet" href="/css/prism.css"/><link rel="stylesheet" href="/css/main.css"/><script src="/js/codetabs.js"></script></head><body class="sideNavVisible separateOnPageNav"><div class="fixedHeaderContainer"><div class="headerWrapper wrapper"><header><a href="/"><img class="logo" src="/img/logo-dark.svg" alt="Hazelcast Jet"/></a><a href="/versions"><h3>4.2</h3></a><div class="navigationWrapper navigationSlider"><nav class="slidingNav"><ul class="nav-site nav-site-internal"><li class=""><a href="/docs/get-started/intro" target="_self">Docs</a></li><li class=""><a href="/download" target="_self">Download</a></li><li class=""><a href="/demos" target="_self">Demos</a></li><li class=""><a href="https://github.com/hazelcast/hazelcast-jet" target="_self">GitHub</a></li><li class=""><a href="https://slack.hazelcast.com/" target="_self">Community</a></li><li class="siteNavGroupActive"><a href="/blog/" target="_self">Blog</a></li><li class="navSearchWrapper reactNavSearchWrapper"><input type="text" id="search_input_react" placeholder="Search" title="Search"/></li></ul></nav></div></header></div></div><div class="navPusher"><div class="docMainWrapper wrapper"><div class="docsNavContainer" id="docsNav"><nav class="toc"><div class="toggleNav"><section class="navWrapper wrapper"><div class="navBreadcrumb wrapper"><div class="navToggle" id="navToggler"><div class="hamburger-menu"><div class="line1"></div><div class="line2"></div><div class="line3"></div></div></div><h2><i>›</i><span>All posts</span></h2><div class="tocToggler" id="tocToggler"><i class="icon-toc"></i></div></div><div class="navGroups"><div class="navGroup"><h3 class="navGroupCategoryTitle">All posts</h3><ul class=""><li class="navListItem navListItemActive"><a class="navItem" href="/blog/2020/10/06/enabling-full-text-search">Enabling Full-text Search with Change Data Capture in a Legacy Application</a></li><li class="navListItem"><a class="navItem" href="/blog/2020/09/18/cdc-meets-stream-processing">Change Data Capture meets Stream Processing</a></li><li class="navListItem"><a class="navItem" href="/blog/2020/08/05/gc-tuning-for-jet">Sub-10 ms Latency in Java: Concurrent GC with Green Threads</a></li><li class="navListItem"><a class="navItem" href="/blog/2020/07/16/designing-evergreen-cache-cdc">Designing an Evergreen Cache with Change Data Capture</a></li><li class="navListItem"><a class="navItem" href="/blog/2020/07/14/jet-42-is-released">Jet 4.2 is Released</a></li><li class="navListItem"><a class="navItem" href="/blog/2020/06/23/jdk-gc-benchmarks-rematch">Performance of Modern Java on Data-Heavy Workloads: The Low-Latency Rematch</a></li><li class="navListItem"><a class="navItem" href="/blog/2020/06/09/jdk-gc-benchmarks-part2">Performance of Modern Java on Data-Heavy Workloads: Batch Processing</a></li><li class="navListItem"><a class="navItem" href="/blog/2020/06/09/jdk-gc-benchmarks-part1">Performance of Modern Java on Data-Heavy Workloads: Real-Time Streaming</a></li><li class="navListItem"><a class="navItem" href="/blog/2020/05/25/grcp">Processing 10M queries / second on a single node using Jet and gRPC</a></li><li class="navListItem"><a class="navItem" href="/blog/2020/05/18/spark-jet">How Hazelcast Jet Compares to Apache Spark</a></li><li class="navListItem"><a class="navItem" href="/blog/2020/04/29/jet-41-is-released">Jet 4.1 is Released</a></li><li class="navListItem"><a class="navItem" href="/blog/2020/04/01/upgrading-to-jet-40">Upgrading to Jet 4.0</a></li><li class="navListItem"><a class="navItem" href="/blog/2020/03/30/ml-inference">Machine Learning Inference at Scale</a></li><li class="navListItem"><a class="navItem" href="/blog/2020/03/02/jet-40-is-released">Jet 4.0 is Released</a></li><li class="navListItem"><a class="navItem" href="/blog/2020/02/20/transactional-processors">Transactional connectors in Hazelcast Jet</a></li><li class="navListItem"><a class="navItem" href="/blog/2020/01/28/new-website">Announcing New Documentation Website</a></li><li class="navListItem"><a class="navItem" href="/blog/2019/11/12/stream-deduplication">Stream Deduplication with Hazelcast Jet</a></li></ul></div></div></section></div><script>
+            var coll = document.getElementsByClassName('collapsible');
+            var checkActiveCategory = true;
+            for (var i = 0; i < coll.length; i++) {
+              var links = coll[i].nextElementSibling.getElementsByTagName('*');
+              if (checkActiveCategory){
+                for (var j = 0; j < links.length; j++) {
+                  if (links[j].classList.contains('navListItemActive')){
+                    coll[i].nextElementSibling.classList.toggle('hide');
+                    coll[i].childNodes[1].classList.toggle('rotate');
+                    checkActiveCategory = false;
+                    break;
+                  }
+                }
+              }
+
+              coll[i].addEventListener('click', function() {
+                var arrow = this.childNodes[1];
+                arrow.classList.toggle('rotate');
+                var content = this.nextElementSibling;
+                content.classList.toggle('hide');
+              });
+            }
+
+            document.addEventListener('DOMContentLoaded', function() {
+              createToggler('#navToggler', '#docsNav', 'docsSliderActive');
+              createToggler('#tocToggler', 'body', 'tocActive');
+
+              var headings = document.querySelector('.toc-headings');
+              headings && headings.addEventListener('click', function(event) {
+                var el = event.target;
+                while(el !== headings){
+                  if (el.tagName === 'A') {
+                    document.body.classList.remove('tocActive');
+                    break;
+                  } else{
+                    el = el.parentNode;
+                  }
+                }
+              }, false);
+
+              function createToggler(togglerSelector, targetSelector, className) {
+                var toggler = document.querySelector(togglerSelector);
+                var target = document.querySelector(targetSelector);
+
+                if (!toggler) {
+                  return;
+                }
+
+                toggler.onclick = function(event) {
+                  event.preventDefault();
+
+                  target.classList.toggle(className);
+                };
+              }
+            });
+        </script></nav></div><div class="container mainContainer postContainer blogContainer"><div class="wrapper"><div class="lonePost"><div class="post"><header class="postHeader"><h1 class="postHeaderTitle"><a href="/blog/2020/10/06/enabling-full-text-search">Enabling Full-text Search with Change Data Capture in a Legacy Application</a></h1><p class="post-meta">October 6, 2020</p><div class="authorBlock"><p class="post-authorName"><a href="https://www.linkedin.com/in/frantisek-hartman/" target="_blank" rel="noreferrer noopener">František Hartman</a></p><div class="authorPhoto"><a href="https://www.linkedin.com/in/frantisek-hartman/" target="_blank" rel="noreferrer noopener"><img src="https://i.stack.imgur.com/3X7wE.png" alt="František Hartman"/></a></div></div></header><div><span><p>In this post, we will take a legacy application and improve its search
+functionality. We will do this with only a few changes to the
+application itself. Using a technique called change data capture (CDC)
+we will listen for changes in a database and react to these
+changes - write to a search index case. Before writing to the
+search index, we will also enrich the data with a natural language
+processing (NLP) step that extracts keywords from a text description.</p>
+<p>We might want to use an external search index for various reasons,
+especially:</p>
+<ul>
+<li><p>to provide more feature-rich functionality than full-text search in a
+relational database;</p></li>
+<li><p>to scale the search independently of the database;</p></li>
+<li><p>to add more functionality (keyword extraction) to the application
+without
+modifying it - making changes to a legacy application is sometimes
+risky, or time-consuming, so taking this approach might be faster,
+therefore cheaper.</p></li>
+</ul>
+<p>In this tutorial we will do the following:</p>
+<ul>
+<li><p>Use Hazelcast Jet - an open-source stream processing system - and its CDC
+module to read changes made to the application database for further
+processing in a Jet pipeline.</p></li>
+<li><p>In the Jet pipeline, we will enrich the data with an NLP mapping step.</p></li>
+<li><p>Write the results to an Elasticsearch index, using an Elasticsearch
+connector, <a href="/blog/2020/07/14/jet-42-is-released">released in Jet 4.2</a>.</p></li>
+</ul>
+<p><img src="/blog/assets/2020-10-06-architecture.png" alt="Architecture"></p>
+<h2><a class="anchor" aria-hidden="true" id="the-application"></a><a href="#the-application" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>The Application</h2>
+<p>We chose the <a href="https://github.com/spring-projects/spring-petclinic">Spring
+PetClinic</a>
+application. It is relatively well-known to many Java developers and is
+rather similar to a typical enterprise application.</p>
+<p>The application provides a management tool for managing pets, their
+owners, and visits to vets. It allows searching for owners, but only
+using the owner’s last name. We will make the search more feature-rich,
+allowing us to search on first name, last name, pet names and keywords
+extracted from descriptions of the visits.</p>
+<p>First, let’s start a vanilla version of the application. Run the
+following command to start MySQL database inside a Docker container, we
+use the official MySQL image, which allows us to create a database for
+the pet clinic application easily:</p>
+<pre><code class="hljs css language-bash">docker run --name petclinic-mysql -it \
+  -e MYSQL_DATABASE=petclinic \
+  -e MYSQL_USER=petclinic \
+  -e MYSQL_PASSWORD=petclinic \
+  -e MYSQL_ROOT_PASSWORD=mysql \
+  -p 3306:3306 mysql
+</code></pre>
+<p>Clone the pet clinic application source code from
+<a href="https://github.com/hazelcast-demos/spring-petclinic">Github</a> (this is a
+fork of the official <a href="https://github.com/spring-projects/spring-petclinic">Spring PetClinic
+repository</a> with a
+branch containing the changes we will make later for your convenience).</p>
+<pre><code class="hljs css language-bash">git <span class="hljs-built_in">clone</span> https://github.com/hazelcast-demos/spring-petclinic.git
+</code></pre>
+<p>Start the pet clinic application from the command line by running the
+following command:</p>
+<pre><code class="hljs css language-bash"><span class="hljs-built_in">cd</span> spring-petclinic
+./mvnw spring-boot:run -Dspring-boot.run.profiles=mysql
+</code></pre>
+<p>And wait for the following log message:</p>
+<pre><code class="hljs css language-text">2020-09-30 16:17:04.113  INFO 24847 --- [  restartedMain] o.s.s.petclinic.PetClinicApplication     : Started PetClinicApplication in 3.177 seconds (JVM running for 3.5)
+</code></pre>
+<p>Navigate to <a href="http://localhost:8080/">http://localhost:8080/</a></p>
+<p>-&gt; Click Find Owners in top-level menu</p>
+<p>-&gt; Click Find Owner button to list all data</p>
+<p>and you should see a screen similar to the following:</p>
+<p><img src="/blog/assets/2020-10-06-spring-petclinic-list.png" alt="Spring PetClinic Sample Application"></p>
+<h2><a class="anchor" aria-hidden="true" id="prepare-for-change-data-capture"></a><a href="#prepare-for-change-data-capture" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Prepare for Change Data Capture</h2>
+<p>In order to stream the changes from the MySQL database we need to modify
+certain settings and grant more permissions to the <code>petclinic</code> user.</p>
+<p>Run the following command to start MySQL client, enter the <code>mysql</code>
+password for the root user:</p>
+<pre><code class="hljs css language-bash">docker run -it --rm --link petclinic-mysql:petclinic-mysql mysql mysql -hpetclinic-mysql -uroot -p
+</code></pre>
+<p>Run the following to grant privileges to the <code>petclinic</code> user to allow
+listening to the database changes:</p>
+<pre><code class="hljs css language-sql"><span class="hljs-keyword">ALTER</span> <span class="hljs-keyword">USER</span> petclinic <span class="hljs-keyword">IDENTIFIED</span> <span class="hljs-keyword">WITH</span> mysql_native_password <span class="hljs-keyword">BY</span> <span class="hljs-string">'petclinic'</span>;
+<span class="hljs-keyword">GRANT</span> RELOAD <span class="hljs-keyword">ON</span> *.* <span class="hljs-keyword">TO</span> <span class="hljs-string">'petclinic'</span>;
+<span class="hljs-keyword">GRANT</span> <span class="hljs-keyword">REPLICATION</span> <span class="hljs-keyword">CLIENT</span> <span class="hljs-keyword">ON</span> *.* <span class="hljs-keyword">TO</span> <span class="hljs-string">'petclinic'</span>;
+<span class="hljs-keyword">GRANT</span> <span class="hljs-keyword">REPLICATION</span> <span class="hljs-keyword">SLAVE</span> <span class="hljs-keyword">ON</span> *.* <span class="hljs-keyword">TO</span> <span class="hljs-string">'petclinic'</span>;
+</code></pre>
+<p>The <code>ALTER USER</code> command changes the default authentication method to
+one supported by the Jet CDC connector. The <code>GRANT</code> commands allow the
+petclinic user to stream changes from the database in the same way as
+during master-slave replication.</p>
+<h2><a class="anchor" aria-hidden="true" id="start-elasticsearch"></a><a href="#start-elasticsearch" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Start Elasticsearch</h2>
+<p>We want to enable full-text search across multiple fields, but not all
+fields. With Elasticseach we need to create an index mapping that
+copies fields into a single field, the field is then used for searching.</p>
+<p>Run the following command to start Elasticsearch inside a docker
+container:</p>
+<pre><code class="hljs css language-bash">docker run --name petclinic-elastic \
+  -e discovery.type=single-node \
+  -e cluster.routing.allocation.disk.threshold_enabled=<span class="hljs-literal">false</span> \
+  -p9200:9200 elasticsearch:7.9.2
+</code></pre>
+<p>Create an Elasticsearch index mapping by running the following command:</p>
+<pre><code class="hljs css language-bash">curl -XPUT -H <span class="hljs-string">"Content-type: application/json"</span> -d <span class="hljs-string">'
+{
+  "mappings": {
+    "properties": {
+      "first_name": {
+        "type": "text",
+        "copy_to": "search"
+      },
+      "last_name": {
+        "type": "text",
+        "copy_to": "search"
+      },
+      "pets.name": {
+        "type": "text",
+        "copy_to": "search"
+      },
+      "pets.visits.keywords": {
+        "type": "text",
+        "copy_to": "search"
+      },
+      "search": {
+        "type": "text"
+      }
+    }
+  }
+}'</span> http://localhost:9200/petclinic-index
+</code></pre>
+<p>The default setting of Elasticsearch analyzer is suitable for us. For
+more elaborate configuration of the text analysis, you should look into
+the Elasticsearch documentation or some other source.</p>
+<h2><a class="anchor" aria-hidden="true" id="hazelcast-jet-job"></a><a href="#hazelcast-jet-job" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Hazelcast Jet Job</h2>
+<p>Now that we have the Petclinic and Elastic set-up and working, we can
+start the data pump - a Jet job reading change events from MySQL
+database and writing into the Elastic index.</p>
+<p>A Jet job is a pipeline of steps that read, modify, aggregate or store
+data items. The job definition is written in Java and packaged as a jar
+file. The jar file is deployed to a Jet cluster, which takes care of the
+execution, scaling, fail-over and other operational aspects.</p>
+<p>The job consists of 4 main parts:</p>
+<ul>
+<li><p>CDC Source connecting to MySQL database</p></li>
+<li><p>A mapping step running the keyword extraction</p></li>
+<li><p>A joining step reconstructing the document from change records from</p></li>
+<li><p>different tables</p></li>
+<li><p>Elasticsearch sink</p></li>
+</ul>
+<h3><a class="anchor" aria-hidden="true" id="cdc-source"></a><a href="#cdc-source" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>CDC Source</h3>
+<p>The configuration of the source is straightforward, just set the required
+parameters:</p>
+<pre><code class="hljs css language-java"><span class="token class-name">StreamSource</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">ChangeRecord</span><span class="token punctuation">></span></span> source <span class="token operator">=</span> <span class="token class-name">MySqlCdcSources</span>
+    <span class="token punctuation">.</span><span class="token function">mysql</span><span class="token punctuation">(</span><span class="token string">"mysql"</span><span class="token punctuation">)</span>
+    <span class="token punctuation">.</span><span class="token function">setDatabaseAddress</span><span class="token punctuation">(</span>databaseAddress<span class="token punctuation">)</span>
+    <span class="token punctuation">.</span><span class="token function">setDatabasePort</span><span class="token punctuation">(</span>databasePort<span class="token punctuation">)</span>
+    <span class="token punctuation">.</span><span class="token function">setDatabaseUser</span><span class="token punctuation">(</span>databaseUser<span class="token punctuation">)</span>
+    <span class="token punctuation">.</span><span class="token function">setDatabasePassword</span><span class="token punctuation">(</span>databasePassword<span class="token punctuation">)</span>
+    <span class="token punctuation">.</span><span class="token function">setClusterName</span><span class="token punctuation">(</span>clusterName<span class="token punctuation">)</span>
+    <span class="token punctuation">.</span><span class="token function">setDatabaseWhitelist</span><span class="token punctuation">(</span><span class="token string">"petclinic"</span><span class="token punctuation">)</span>
+    <span class="token punctuation">.</span><span class="token function">setTableWhitelist</span><span class="token punctuation">(</span><span class="token string">"petclinic.owners"</span><span class="token punctuation">,</span> <span class="token string">"petclinic.pets"</span><span class="token punctuation">,</span> <span class="token string">"petclinic.visits"</span><span class="token punctuation">)</span>
+    <span class="token punctuation">.</span><span class="token function">build</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>Use the source to read change events from MySQL into the pipeline:</p>
+<pre><code class="hljs css language-java"><span class="token class-name">Pipeline</span> p <span class="token operator">=</span> <span class="token class-name">Pipeline</span><span class="token punctuation">.</span><span class="token function">create</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token class-name">StreamStage</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">ChangeRecord</span><span class="token punctuation">></span></span> allRecords <span class="token operator">=</span> p<span class="token punctuation">.</span><span class="token function">readFrom</span><span class="token punctuation">(</span>mysqlSource<span class="token punctuation">)</span>
+                                        <span class="token punctuation">.</span><span class="token function">withoutTimestamps</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<h3><a class="anchor" aria-hidden="true" id="keyword-extraction"></a><a href="#keyword-extraction" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Keyword extraction</h3>
+<p>The next step in the pipeline is to extract the keywords from the visit
+description. We will use Rapid Automatic Keyword Extraction (RAKE)
+algorithm, the implementation we use was originally published on
+<a href="https://github.com/Linguistic/rake">Github</a>. The implementation is not
+important for the demonstration, you could use any other Java library,
+call a 3rd party service, e.g. via <a href="/docs/how-tos/grpc">grpc</a> or use our
+<a href="/docs/tutorials/python">python integration</a>.</p>
+<pre><code class="hljs css language-java"><span class="token comment">// Create factory for keyword service</span>
+<span class="token class-name">ServiceFactory</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token operator">?</span><span class="token punctuation">,</span> <span class="token class-name">Rake</span><span class="token punctuation">></span></span> keywordService <span class="token operator">=</span> <span class="token class-name">ServiceFactories</span><span class="token punctuation">.</span><span class="token function">sharedService</span><span class="token punctuation">(</span><span class="token punctuation">(</span>context<span class="token punctuation">)</span> <span class="token operator">-></span> <span class="token keyword">new</span> <span class="token class-name">Rake</span><span class="token punctuation">(</span><span class="token string">"en"</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+p<span class="token punctuation">.</span><span class="token function">readFrom</span><span class="token punctuation">(</span>mysqlSource<span class="token punctuation">)</span>
+ <span class="token punctuation">.</span><span class="token function">withoutTimestamps</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+ <span class="token punctuation">.</span><span class="token function">mapUsingService</span><span class="token punctuation">(</span>keywordService<span class="token punctuation">,</span> <span class="token class-name">PetClinicIndexJob</span><span class="token operator">::</span><span class="token function">enrichWithKeywords</span><span class="token punctuation">)</span>
+</code></pre>
+<p>The method <code>enrichWithKeywords</code> simply passes the description field from
+the change record to the keyword extraction service and sets the results
+into the keywords field of the Visit instance.</p>
+<p>It is a common pattern to enrich an item in a pipeline with more
+information.  Hazelcast Jet works with POJOs in the pipeline, so you
+need to somehow compose the original item and the enriching information.
+One option is to use tuples.  This works for a small number of fields.
+Another option would be to use a domain-specific object holding all the
+information - e.g. the <code>keywords</code> field.  If you are on Java 14 or
+newer, you might want to give the <a href="https://openjdk.java.net/jeps/359">Records preview
+feature</a> a try.</p>
+<h3><a class="anchor" aria-hidden="true" id="joining"></a><a href="#joining" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Joining</h3>
+<p>Change data capture sends changes to the database as individual records
+(represented by
+<a href="https://jet-start.sh/javadoc/4.2/com/hazelcast/jet/cdc/ChangeRecord.html">ChangeRecord</a>).
+Each record represents a changed row in a database table. If a single
+row is all that you need, you are good to go. You can see such example
+in our <a href="/blog/2020/07/16/designing-evergreen-cache-cdc">Evergreen Cache blog
+post</a>.  But having a
+single row to work with is not always the case - often you need to
+aggregate either multiple records from the same table or join records
+from different tables into a single aggregate record.</p>
+<p>In our case, we need to join 3 tables into a single document, which we
+then index into Elasticsearch. To perform the joining we will use
+<code>mapStateful</code> step. This can be performed either globally or partitioned
+on a grouping key. If all your records share a common key it is always a
+good idea to do the grouping by the key, because the mapping state is
+then evenly distributed across all nodes and the mapping operation
+parallelized.</p>
+<p>Our visit record contains the pet ID but not the owner ID, in such case,
+so we don’t have a single grouping key for all records. There are two
+options:</p>
+<ul>
+<li><p>perform the stateful mapping globally, which has the advantage of
+having a single state - the joining logic is simpler and the pipeline
+more straightforward. The obvious disadvantage is that such a solution
+is not scalable because the state may not fit onto a single member and
+must be performed by a single thread;</p></li>
+<li><p>create two separate mapping steps - one grouped on the owner ID and
+the other on the pet ID. This is a trade-off between simplicity and
+scalability.</p></li>
+</ul>
+<p>There are several observations which hold for both implementations:</p>
+<ul>
+<li><p>the mapping state must cover all data from the beginning, unless there
+is a domain-specific rule that would allow eviction of old items;</p></li>
+<li><p>the records might arrive in any order, even if there is a foreign key
+between the records in the database, the order is not guaranteed, this
+is a property of CDC.</p></li>
+<li><p>once the object is emitted from the join step, it must not be
+modified, otherwise the later stages might see it in inconsistent
+state, causing issues which are hard to debug. We make defensive copies
+to avoid this.</p></li>
+</ul>
+<p>Go to
+<a href="https://github.com/hazelcast-demos/pet-clinic-index-job/blob/master/src/main/java/org/example/jet/petclinic/JoiningState.java#L11">Github</a>
+to see the full source code.</p>
+<h3><a class="anchor" aria-hidden="true" id="deleting-changes"></a><a href="#deleting-changes" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Deleting changes</h3>
+<p>The <code>ChangeRecord#operation()</code> method provides information about what
+kind of operation was performed on the record. If you need to handle
+deletions, you should use it. The Petclinic application doesn’t allow
+delete operations, so we don’t handle those.</p>
+<h3><a class="anchor" aria-hidden="true" id="elastic-sink"></a><a href="#elastic-sink" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Elastic sink</h3>
+<p>The fourth key part of the pipeline is the Elastic sink. It takes a
+document and writes it to Elasticsearch. You as the developer need to
+provide information where the Elastic instance is running, what index to
+write to and how to convert the <code>Document</code> into one of <code>IndexRequest</code>,
+<code>UpdateRequest</code> or <code>DeleteRequest</code>. The Sink then takes care of batching
+the requests and parallelizing for higher performance, retries in case
+of network issues.</p>
+<h3><a class="anchor" aria-hidden="true" id="the-pipeline"></a><a href="#the-pipeline" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>The Pipeline</h3>
+<p>The final pipeline composes all the individual steps in a
+straightforward way:</p>
+<pre><code class="hljs css language-java"><span class="token class-name">Pipeline</span> p <span class="token operator">=</span> <span class="token class-name">Pipeline</span><span class="token punctuation">.</span><span class="token function">create</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+p<span class="token punctuation">.</span><span class="token function">readFrom</span><span class="token punctuation">(</span>mysqlSource<span class="token punctuation">)</span>
+ <span class="token punctuation">.</span><span class="token function">withoutTimestamps</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+ <span class="token punctuation">.</span><span class="token function">map</span><span class="token punctuation">(</span><span class="token class-name">PetClinicIndexJob</span><span class="token operator">::</span><span class="token function">mapChangeRecordToPOJO</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">setName</span><span class="token punctuation">(</span><span class="token string">"mapChangeRecordToPOJO"</span><span class="token punctuation">)</span>
+ <span class="token punctuation">.</span><span class="token function">mapUsingService</span><span class="token punctuation">(</span>keywordService<span class="token punctuation">,</span> <span class="token class-name">PetClinicIndexJob</span><span class="token operator">::</span><span class="token function">enrichWithKeywords</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">setName</span><span class="token punctuation">(</span><span class="token string">"enrichWithKeywords"</span><span class="token punctuation">)</span>
+ <span class="token punctuation">.</span><span class="token function">mapStateful</span><span class="token punctuation">(</span><span class="token class-name">JoiningState</span><span class="token operator">::</span><span class="token keyword">new</span><span class="token punctuation">,</span> <span class="token class-name">JoiningState</span><span class="token operator">::</span><span class="token function">join</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">setName</span><span class="token punctuation">(</span><span class="token string">"JoiningState::join"</span><span class="token punctuation">)</span>
+ <span class="token punctuation">.</span><span class="token function">writeTo</span><span class="token punctuation">(</span>elasticSink<span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>Or visualized as a graph:</p>
+<p><img src="/blog/assets/2020-10-06-global-join-step.png" alt="Pipeline with global mapping state"></p>
+<p>For the pipeline with the two-step join see <a href="https://github.com/hazelcast-demos/pet-clinic-index-job/blob/two-joins/src/main/java/org/example/jet/petclinic/PetClinicIndexJob.java#L87">the source
+code</a>
+on Github. This is the graph visualisation of the pipeline:</p>
+<p><img src="/blog/assets/2020-10-06-two-join-step.png" alt="Pipeline with 2 separate grouped join steps"></p>
+<h2><a class="anchor" aria-hidden="true" id="testing-the-job"></a><a href="#testing-the-job" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Testing the job</h2>
+<p>In order to test the job, we need to create a test database identical to
+the Petclinic database.</p>
+<p>We have the following options:</p>
+<ul>
+<li><p>Start the pet clinic application inside the same JVM - the Petclinic
+is a Spring Boot application, running it in-process would be
+relatively easy, but it represents a legacy application, which is
+usually quite difficult to run in such way. Also, there is a high
+probability of dependency clashes, which would make this difficult.</p></li>
+<li><p>Start the pet clinic application in a Docker container - it is likely
+that the application is not containerized, we would need to create
+such an image only for the tests.</p></li>
+<li><p>Create the database and data using SQL directly - reusing the SQL
+scripts from the Petclinic application and running inserts via JDBC
+seems the easiest way to do this so we will continue with this approach.</p></li>
+</ul>
+<p>Go to
+<a href="https://github.com/hazelcast-demos/pet-clinic-index-job/blob/master/src/main/java/org/example/jet/petclinic/PetClinicIndexJob.java#L121">Github</a>
+to see the full source code.</p>
+<h2><a class="anchor" aria-hidden="true" id="running-the-job"></a><a href="#running-the-job" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Running the Job</h2>
+<p>In order to run the indexing job, first checkout the
+<a href="https://github.com/hazelcast-demos/pet-clinic-index-job/">pet-clinic-indexing-job</a>
+repository</p>
+<pre><code class="hljs css language-bash">git <span class="hljs-built_in">clone</span> https://github.com/hazelcast-demos/pet-clinic-index-job.git
+</code></pre>
+<p>Then build the JAR containing to job</p>
+<pre><code class="hljs css language-bash"><span class="hljs-built_in">cd</span> pet-clinic-indexing-job
+mvn package
+</code></pre>
+<p>And finally submit the job by running the following command:</p>
+<pre><code class="hljs css language-bash">bin/jet submit \
+path/to/pet-clinic-index-job/target/pet-clinic-index-job-1.0-SNAPSHOT-jar-with-dependencies.jar\
+   --database-address localhost \
+   --database-port 3306 \
+   --database-user petclinic \
+   --database-password petclinic \
+   --elastic-host localhost:9200 \
+   --elastic-index petclinic-index
+</code></pre>
+<h2><a class="anchor" aria-hidden="true" id="petclinic-application-update"></a><a href="#petclinic-application-update" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Petclinic application update</h2>
+<p>Now that we have the data in Elasticsearch index, we can update the
+Petclinic application to use it for search.</p>
+<p>There are several changes in the application, but the most important
+changes are:</p>
+<ul>
+<li><p>created a search service to search for the data;</p></li>
+<li><p>update the search endpoint to use the new search service.</p></li>
+</ul>
+<p>The following snippet shows the search method in the SearchService. It
+uses the Elasticsearch client directly, but one could use Spring Data
+Elasticsearch as well.</p>
+<pre><code class="hljs css language-java"><span class="token keyword">public</span> <span class="token class-name">Collection</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">Integer</span><span class="token punctuation">></span></span> <span class="token function">search</span><span class="token punctuation">(</span><span class="token class-name">String</span> query<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token class-name">SearchRequest</span> searchRequest <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">SearchRequest</span><span class="token punctuation">(</span>index<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  searchRequest<span class="token punctuation">.</span><span class="token function">source</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">fetchSource</span><span class="token punctuation">(</span><span class="token boolean">true</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">query</span><span class="token punctuation">(</span><span class="token class-name">QueryBuilders</span><span class="token punctuation">.</span><span class="token function">wildcardQuery</span><span class="token punctuation">(</span>searchField<span class="token punctuation">,</span> query <span class="token operator">+</span> <span class="token string">"*"</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+  <span class="token keyword">try</span> <span class="token punctuation">{</span>
+     <span class="token class-name">SearchResponse</span> response <span class="token operator">=</span> client<span class="token punctuation">.</span><span class="token function">search</span><span class="token punctuation">(</span>searchRequest<span class="token punctuation">,</span> <span class="token class-name">RequestOptions</span><span class="token punctuation">.</span>DEFAULT<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+     <span class="token class-name">SearchHits</span> hits <span class="token operator">=</span> response<span class="token punctuation">.</span><span class="token function">getHits</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+     <span class="token keyword">return</span> <span class="token class-name">Arrays</span><span class="token punctuation">.</span><span class="token function">stream</span><span class="token punctuation">(</span>hits<span class="token punctuation">.</span><span class="token function">getHits</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">map</span><span class="token punctuation">(</span>hit <span class="token operator">-></span> <span class="token punctuation">(</span><span class="token class-name">Integer</span><span class="token punctuation">)</span> hit<span class="token punctuation">.</span><span class="token function">getSourceAsMap</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">get</span><span class="token punctuation">(</span><span class="token string">"ownerId"</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+           <span class="token punctuation">.</span><span class="token function">collect</span><span class="token punctuation">(</span><span class="token function">toList</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  <span class="token keyword">catch</span> <span class="token punctuation">(</span><span class="token class-name">IOException</span> e<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+     <span class="token keyword">throw</span> <span class="token keyword">new</span> <span class="token class-name">RuntimeException</span><span class="token punctuation">(</span>e<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>The search endpoint will use the SearchService to search for the data.
+After retrieving the results the Owner entities need to be loaded from
+the database. This is not an issue as only a small subset of
+best-matching documents is returned from Elastic and loaded by ID from
+the database.</p>
+<pre><code class="hljs css language-java"><span class="token class-name">Collection</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">Integer</span><span class="token punctuation">></span></span> ownerIds <span class="token operator">=</span> searchService<span class="token punctuation">.</span><span class="token function">search</span><span class="token punctuation">(</span>searchForm<span class="token punctuation">.</span><span class="token function">getQuery</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token comment">// find owners by last name</span>
+<span class="token class-name">Collection</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">Owner</span><span class="token punctuation">></span></span> results <span class="token operator">=</span> <span class="token keyword">this</span><span class="token punctuation">.</span>owners<span class="token punctuation">.</span><span class="token function">findByIds</span><span class="token punctuation">(</span>ownerIds<span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>There are some more minor changes to the view and the controller, you
+can see all the changes in <a href="https://github.com/spring-projects/hazelcast-demos/compare/main...elasticsearch">this
+commit</a>.</p>
+<p>Checkout the <code>elasticsearch</code> branch with the changes and restart the
+application by running the Maven command again:</p>
+<pre><code class="hljs css language-bash">./mvnw spring-boot:run -Dspring-boot.run.profiles=mysql
+</code></pre>
+<p>We can verify that searching for “George” returns 2 results, one found
+in the first name, other in the name of a pet:</p>
+<p><img src="/blog/assets/2020-10-06-search-george.png" alt="Search &quot;George&quot;"></p>
+<p>Entering “rabies” should bring up a single result (the detail screen is
+shown in that case) matching a keyword extracted from the description:</p>
+<p><img src="/blog/assets/2020-10-06-search-rabbies.png" alt="Search &quot;rabbies&quot;"></p>
+<h2><a class="anchor" aria-hidden="true" id="summary"></a><a href="#summary" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Summary</h2>
+<p>We have shown how to stream changes using CDC, enrich the data,
+correlate (join) the records with other records and finally store the
+data into an Elasticsearch index, so an application can provide better
+search functionality to the user.</p>
+<p>This is mostly done independently of the original application and its
+database, reducing the impact it has on the original legacy system.</p>
+<p>If you would like to discuss this topic with us, drop by at <a href="https://hazelcastcommunity.slack.com/">our
+Community Slack channel</a>.</p>
+<h2><a class="anchor" aria-hidden="true" id="sources"></a><a href="#sources" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Sources</h2>
+<p><a href="https://github.com/hazelcast-demos/spring-petclinic">Spring Petclinic</a>
+- fork with modifications for this post.</p>
+<p><a href="https://github.com/hazelcast-demos/pet-clinic-index-job">Petclinic Indexing Job</a></p>
+<p><a href="https://github.com/Linguistic/rake">Rake - rapid keyword extraction algorithm</a></p>
+</span></div></div><div class="blogSocialSection"></div></div><div class="blog-recent"><a class="button" href="/blog/">Recent posts</a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#the-application">The Application</a></li><li><a href="#prepare-for-change-data-capture">Prepare for Change Data Capture</a></li><li><a href="#start-elasticsearch">Start Elasticsearch</a></li><li><a href="#hazelcast-jet-job">Hazelcast Jet Job</a><ul class="toc-headings"><li><a href="#cdc-source">CDC Source</a></li><li><a href="#keyword-extraction">Keyword extraction</a></li><li><a href="#joining">Joining</a></li><li><a href="#deleting-changes">Deleting changes</a></li><li><a href="#elastic-sink">Elastic sink</a></li><li><a href="#the-pipeline">The Pipeline</a></li></ul></li><li><a href="#testing-the-job">Testing the job</a></li><li><a href="#running-the-job">Running the Job</a></li><li><a href="#petclinic-application-update">Petclinic application update</a></li><li><a href="#summary">Summary</a></li><li><a href="#sources">Sources</a></li></ul></nav></div><footer class="nav-footer" id="footer"><section class="sitemap"><div style="text-align:left"><a href="/" class="nav-home"><img src="/img/logo-light.svg" alt="Hazelcast Jet" width="200" height="40"/></a><div style="margin-left:12px"><a class="github-button" href="https://github.com/hazelcast/hazelcast-jet" data-icon="octicon-star" data-count-href="/facebook/docusaurus/stargazers" data-show-count="true" data-count-aria-label="# stargazers on GitHub" aria-label="Star this project on GitHub">Star On GitHub</a></div></div><div><h5>Docs</h5><a href="/docs/get-started/intro">Get Started</a><a href="/docs/concepts/dag">Concepts</a><a href="/docs/tutorials/kafka">Tutorials</a><a href="/docs/architecture/distributed-computing">Architecture</a><a href="/docs/operations/installation">Operations Guide</a><a href="/docs/enterprise">Enterprise Edition</a></div><div><h5>Community</h5><a href="https://groups.google.com/forum/#!forum/hazelcast-jet" target="_blank" rel="noreferrer noopener">Google Groups</a><a href="http://stackoverflow.com/questions/tagged/hazelcast-jet" target="_blank" rel="noreferrer noopener">Stack Overflow</a><a href="https://slack.hazelcast.com">Slack</a></div><div><h5>Latest From the Blog</h5><a href="/blog/2020/10/06/enabling-full-text-search">Enabling Full-text Search with Change Data Capture in a Legacy Application</a><a href="/blog/2020/09/18/cdc-meets-stream-processing">Change Data Capture meets Stream Processing</a><a href="/blog/2020/08/05/gc-tuning-for-jet">Sub-10 ms Latency in Java: Concurrent GC with Green Threads</a><a href="/blog/2020/07/16/designing-evergreen-cache-cdc">Designing an Evergreen Cache with Change Data Capture</a><a href="/blog/2020/07/14/jet-42-is-released">Jet 4.2 is Released</a></div><div><h5>More</h5><a href="https://github.com/hazelcast/hazelcast-jet">GitHub Project</a><a href="http://hazelcast.com/company/careers/">Work at Hazelcast</a><a href="/license">License</a></div></section><section class="copyright">Copyright © 2020 Hazelcast Inc.</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
+                document.addEventListener('keyup', function(e) {
+                  if (e.target !== document.body) {
+                    return;
+                  }
+                  // keyCode for '/' (slash)
+                  if (e.keyCode === 191) {
+                    const search = document.getElementById('search_input_react');
+                    search && search.focus();
+                  }
+                });
+              </script><script>
+              var search = docsearch({
+                
+                apiKey: '79d1e4941621b9fd761d279d4d19ed69',
+                indexName: 'hazelcast-jet',
+                inputSelector: '#search_input_react',
+                algoliaOptions: {"facetFilters":["language:en","version:4.2"]}
+              });
+            </script></body></html>

@@ -4,7 +4,7 @@
         <title>Hazelcast Jet Blog</title>
         <link>https://jet-start.sh/blog</link>
         <description>The best place to stay up-to-date with the latest Hazelcast Jet news and events.</description>
-        <lastBuildDate>Fri, 18 Sep 2020 06:00:00 GMT</lastBuildDate>
+        <lastBuildDate>Tue, 06 Oct 2020 06:00:00 GMT</lastBuildDate>
         <docs>https://validator.w3.org/feed/docs/rss2.html</docs>
         <generator>https://github.com/jpmonette/feed</generator>
         <image>
@@ -13,6 +13,13 @@
             <link>https://jet-start.sh/blog</link>
         </image>
         <copyright>Copyright © 2020 Hazelcast Inc.</copyright>
+        <item>
+            <title><![CDATA[Enabling Full-text Search with Change Data Capture in a Legacy Application]]></title>
+            <link>https://jet-start.sh/blog/2020/10/06/enabling-full-text-search.html</link>
+            <guid>https://jet-start.sh/blog/2020/10/06/enabling-full-text-search.html</guid>
+            <pubDate>Tue, 06 Oct 2020 06:00:00 GMT</pubDate>
+            <description><![CDATA[<p>In this post, we will take a legacy application and improve its search functionality. We will do this with only a few changes to the application itself. Using a technique called change data capture (CDC) we will listen for changes in a database and r...</p>]]></description>
+        </item>
         <item>
             <title><![CDATA[Change Data Capture meets Stream Processing]]></title>
             <link>https://jet-start.sh/blog/2020/09/18/cdc-meets-stream-processing.html</link>
