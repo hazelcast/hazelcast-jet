@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.sql.impl.connector.keyvalue;
 
+import com.hazelcast.function.FunctionEx;
 import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.jet.sql.impl.connector.EntryMetadata;
 import com.hazelcast.jet.sql.impl.connector.SqlConnector;
@@ -24,11 +25,12 @@ import com.hazelcast.spi.impl.NodeEngine;
 import com.hazelcast.sql.impl.QueryException;
 import com.hazelcast.sql.impl.extract.QueryPath;
 
+import javax.annotation.Nonnull;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Function;
 
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_KEY_FORMAT;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_VALUE_FORMAT;
@@ -36,7 +38,6 @@ import static com.hazelcast.sql.impl.extract.QueryPath.KEY;
 import static com.hazelcast.sql.impl.extract.QueryPath.KEY_PREFIX;
 import static com.hazelcast.sql.impl.extract.QueryPath.VALUE;
 import static com.hazelcast.sql.impl.extract.QueryPath.VALUE_PREFIX;
-import static java.util.Arrays.stream;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toMap;
 import static java.util.stream.Stream.concat;
@@ -47,11 +48,24 @@ import static java.util.stream.Stream.concat;
  */
 public class KvMetadataResolvers {
 
-    private final Map<String, KvMetadataResolver> resolvers;
+    private final Map<String, KvMetadataResolver> keyResolvers;
+    private final Map<String, KvMetadataResolver> valueResolvers;
 
     public KvMetadataResolvers(KvMetadataResolver... resolvers) {
-        this.resolvers = stream(resolvers)
-                .collect(toMap(KvMetadataResolver::supportedFormat, Function.identity()));
+        this(resolvers, resolvers);
+    }
+
+    public KvMetadataResolvers(
+            KvMetadataResolver[] keyResolvers,
+            KvMetadataResolver[] valueResolvers
+    ) {
+        this.keyResolvers = resolversMap(keyResolvers);
+        this.valueResolvers = resolversMap(valueResolvers);
+    }
+
+    private Map<String, KvMetadataResolver> resolversMap(KvMetadataResolver[] resolvers) {
+        return Arrays.stream(resolvers)
+                .collect(toMap(KvMetadataResolver::supportedFormat, FunctionEx.identity()));
     }
 
     /**
@@ -70,7 +84,7 @@ public class KvMetadataResolvers {
             String extName = field.externalName();
             if (extName != null && !extName.equals(KEY) && !extName.equals(VALUE)
                     && !extName.startsWith(KEY_PREFIX) && !extName.startsWith(VALUE_PREFIX)) {
-                throw QueryException.error("Invalid external name '" + extName + "'");
+                throw QueryException.error("Invalid external name: " + extName);
             }
         }
 
@@ -106,73 +120,39 @@ public class KvMetadataResolvers {
     private KvMetadataResolver findMetadataResolver(Map<String, String> options, boolean isKey) {
         String option = isKey ? OPTION_KEY_FORMAT : OPTION_VALUE_FORMAT;
         String format = options.get(option);
-        if (format == null) {
-            throw QueryException.error("Missing '" + option + "' option");
-        }
-        KvMetadataResolver resolver = resolvers.get(format);
+        KvMetadataResolver resolver = (isKey ? keyResolvers : valueResolvers).get(format);
         if (resolver == null) {
-            throw QueryException.error("Unsupported serialization format - '" + format + "'");
+            if (format == null) {
+                throw QueryException.error("Missing '" + option + "' option");
+            }
+            throw QueryException.error("Unsupported serialization format: " + format);
         }
         return resolver;
     }
 
-    public static Map<QueryPath, MappingField> extractKeyFields(
-            List<MappingField> fields
-    ) {
-        Map<QueryPath, MappingField> keyFieldsByPath = new LinkedHashMap<>();
-        for (MappingField mappingField : fields) {
-            String externalName = mappingField.externalName();
-
-            if (externalName == null
-                    || QueryPath.VALUE.equals(externalName)
-                    || externalName.startsWith(QueryPath.VALUE_PREFIX)) {
-                continue;
-            }
-
-            QueryPath path;
-            if (QueryPath.KEY.equals(externalName)) {
-                path = QueryPath.KEY_PATH;
-            } else if (externalName.startsWith(QueryPath.KEY_PREFIX)) {
-                path = QueryPath.create(externalName);
-            } else {
-                throw QueryException.error("Invalid external name: " + externalName);
-            }
-
-            if (keyFieldsByPath.putIfAbsent(path, mappingField) != null) {
-                throw QueryException.error("Duplicate external name: " + path);
-            }
-        }
-        return keyFieldsByPath;
-    }
-
-    public static Map<QueryPath, MappingField> extractValueFields(
-            List<MappingField> fields,
-            Function<String, QueryPath> defaultPathSupplier
-    ) {
+    public static Map<QueryPath, MappingField> extractFields(List<MappingField> fields, boolean isKey) {
         Map<QueryPath, MappingField> valueFieldsByPath = new LinkedHashMap<>();
         for (MappingField mappingField : fields) {
-            String externalName = mappingField.externalName();
-
-            if (externalName != null
-                    && (QueryPath.KEY.equals(externalName) || externalName.startsWith(QueryPath.KEY_PREFIX))) {
+            QueryPath path = resolveExternalName(mappingField);
+            if (isKey != path.isKey()) {
                 continue;
             }
-
-            QueryPath path;
-            if (externalName == null) {
-                path = defaultPathSupplier.apply(mappingField.name());
-            } else if (QueryPath.VALUE.equals(externalName)) {
-                path = QueryPath.VALUE_PATH;
-            } else if (externalName.startsWith(QueryPath.VALUE_PREFIX)) {
-                path = QueryPath.create(externalName);
-            } else {
-                throw QueryException.error("Invalid external name: " + externalName);
-            }
-
             if (valueFieldsByPath.putIfAbsent(path, mappingField) != null) {
                 throw QueryException.error("Duplicate external name: " + path);
             }
         }
         return valueFieldsByPath;
+    }
+
+
+
+    @Nonnull
+    private static QueryPath resolveExternalName(MappingField field) {
+        String extName = field.externalName();
+        String name = field.name();
+        if ((KEY.equals(name) || VALUE.equals(name)) && extName != null && !extName.equals(field.name())) {
+            throw QueryException.error("The column name and external name must be equal for the '" + name + "' column");
+        }
+        return QueryPath.create(extName != null ? extName : name);
     }
 }

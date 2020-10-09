@@ -29,10 +29,10 @@ import java.math.BigInteger;
 import static com.hazelcast.jet.core.TestUtil.createMap;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.JAVA_FORMAT;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_KEY_CLASS;
-import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_OBJECT_NAME;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_KEY_FORMAT;
-import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_VALUE_FORMAT;
+import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_OBJECT_NAME;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_VALUE_CLASS;
+import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_VALUE_FORMAT;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
@@ -50,7 +50,7 @@ public class SqlPrimitiveTest extends SqlTestSupport {
 
     @Test
     public void test_insertIntoDiscoveredMap() {
-        String name = generateRandomName();
+        String name = randomName();
 
         instance().getMap(name).put(BigInteger.valueOf(1), "Alice");
 
@@ -70,10 +70,10 @@ public class SqlPrimitiveTest extends SqlTestSupport {
 
     @Test
     public void test_insertSelect() {
-        String name = generateRandomName();
+        String name = randomName();
         sqlService.execute(javaSerializableMapDdl(name, Integer.class, String.class));
 
-        String from = generateRandomName();
+        String from = randomName();
         TestBatchSqlConnector.create(sqlService, from, 2);
 
         assertMapEventually(
@@ -92,7 +92,7 @@ public class SqlPrimitiveTest extends SqlTestSupport {
 
     @Test
     public void test_insertValues() {
-        String name = generateRandomName();
+        String name = randomName();
         sqlService.execute(javaSerializableMapDdl(name, Integer.class, String.class));
 
         assertMapEventually(
@@ -108,7 +108,7 @@ public class SqlPrimitiveTest extends SqlTestSupport {
 
     @Test
     public void test_insertWithProject() {
-        String name = generateRandomName();
+        String name = randomName();
         sqlService.execute(javaSerializableMapDdl(name, Integer.class, String.class));
 
         assertMapEventually(
@@ -124,7 +124,7 @@ public class SqlPrimitiveTest extends SqlTestSupport {
 
     @Test
     public void test_fieldsMapping() {
-        String name = generateRandomName();
+        String name = randomName();
         sqlService.execute("CREATE MAPPING " + name + " ("
                 + "id INT EXTERNAL NAME __key"
                 + ", name VARCHAR EXTERNAL NAME this"
@@ -149,9 +149,9 @@ public class SqlPrimitiveTest extends SqlTestSupport {
     }
 
     @Test
-    public void test_mapNameAndTableNameDifferent() {
-        String mapName = generateRandomName();
-        String tableName = generateRandomName();
+    public void test_objectAndMappingNameDifferent() {
+        String mapName = randomName();
+        String tableName = randomName();
 
         sqlService.execute("CREATE MAPPING " + tableName + " TYPE " + IMapSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ("
@@ -177,8 +177,54 @@ public class SqlPrimitiveTest extends SqlTestSupport {
     }
 
     @Test
+    public void test_explicitKeyAndThis() {
+        String mapName = randomName();
+
+        sqlService.execute("CREATE MAPPING " + mapName + '('
+                + "__key INT,"
+                + "this VARCHAR) "
+                + "TYPE " + IMapSqlConnector.TYPE_NAME + ' '
+                + "OPTIONS ( "
+                + '"' + OPTION_KEY_FORMAT + "\" '" + JAVA_FORMAT + '\''
+                + ", \"" + OPTION_KEY_CLASS + "\" '" + Integer.class.getName() + '\''
+                + ", \"" + OPTION_VALUE_FORMAT + "\" '" + JAVA_FORMAT + '\''
+                + ", \"" + OPTION_VALUE_CLASS + "\" '" + String.class.getName() + '\''
+                + ")"
+        );
+
+        sqlService.execute("SINK INTO " + mapName + " VALUES(42, 'foo')");
+
+        assertRowsAnyOrder("SELECT * FROM " + mapName,
+                singletonList(new Row(42, "foo")));
+    }
+
+    @Test
+    public void test_noValueFormat() {
+        String mapName = randomName();
+        assertThatThrownBy(
+                () -> sqlService.execute("CREATE MAPPING " + mapName + " TYPE " + IMapSqlConnector.TYPE_NAME + " "
+                        + "OPTIONS ("
+                        + '"' + OPTION_KEY_FORMAT + "\" '" + JAVA_FORMAT + "',"
+                        + '"' + OPTION_KEY_CLASS + "\" '" + Integer.class.getName() + "'"
+                        + ")"))
+                .hasMessage("Missing 'valueFormat' option");
+    }
+
+    @Test
+    public void test_noKeyFormat() {
+        String mapName = randomName();
+        assertThatThrownBy(
+                () -> sqlService.execute("CREATE MAPPING " + mapName + " TYPE " + IMapSqlConnector.TYPE_NAME + " "
+                        + "OPTIONS ("
+                        + '"' + OPTION_VALUE_FORMAT + "\" '" + JAVA_FORMAT + "',"
+                        + '"' + OPTION_VALUE_CLASS + "\" '" + String.class.getName() + "'"
+                        + ")"))
+                .hasMessage("Missing 'keyFormat' option");
+    }
+
+    @Test
     public void when_insertInto_then_throws() {
-        String name = generateRandomName();
+        String name = randomName();
         sqlService.execute(javaSerializableMapDdl(name, Integer.class, String.class));
 
         assertThatThrownBy(() -> sqlService.execute("INSERT INTO " + name + " (__key, this) VALUES (1, '2')"))
@@ -187,7 +233,7 @@ public class SqlPrimitiveTest extends SqlTestSupport {
 
     @Test
     public void when_typeMismatch_then_fail() {
-        String name = generateRandomName();
+        String name = randomName();
         instance().getMap(name).put(0, 0);
         sqlService.execute(javaSerializableMapDdl(name, String.class, String.class));
 
@@ -196,7 +242,30 @@ public class SqlPrimitiveTest extends SqlTestSupport {
                         "[expectedClass=java.lang.String, actualClass=java.lang.Integer]");
     }
 
-    private static String generateRandomName() {
-        return "primitive_" + randomString().replace('-', '_');
+    @Test
+    public void test_multipleFieldsForPrimitive_key() {
+        test_multipleFieldsForPrimitive("__key");
+    }
+
+    @Test
+    public void test_multipleFieldsForPrimitive_value() {
+        test_multipleFieldsForPrimitive("this");
+    }
+
+    private void test_multipleFieldsForPrimitive(String fieldName) {
+        String mapName = randomName();
+        assertThatThrownBy(
+                () -> sqlService.execute("CREATE MAPPING " + mapName + "("
+                        + fieldName + " INT,"
+                        + "field INT EXTERNAL NAME \"" + fieldName + ".field\""
+                        + ")"
+                        + " TYPE " + IMapSqlConnector.TYPE_NAME
+                        + " OPTIONS ("
+                        + '"' + OPTION_VALUE_FORMAT + "\" '" + JAVA_FORMAT + "',"
+                        + '"' + OPTION_VALUE_CLASS + "\" '" + Integer.class.getName() + "',"
+                        + '"' + OPTION_KEY_FORMAT + "\" '" + JAVA_FORMAT + "',"
+                        + '"' + OPTION_KEY_CLASS + "\" '" + Integer.class.getName() + "'"
+                        + ")"))
+                .hasMessage("Unmapped field: field");
     }
 }

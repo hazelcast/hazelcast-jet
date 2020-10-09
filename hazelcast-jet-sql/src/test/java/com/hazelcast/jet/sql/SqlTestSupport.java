@@ -16,12 +16,12 @@
 
 package com.hazelcast.jet.sql;
 
+import com.hazelcast.internal.util.UuidUtil;
 import com.hazelcast.jet.SimpleTestInClusterSupport;
 import com.hazelcast.jet.sql.impl.connector.map.IMapSqlConnector;
 import com.hazelcast.sql.SqlResult;
 import com.hazelcast.sql.SqlRow;
 import com.hazelcast.sql.SqlService;
-import com.hazelcast.test.HazelcastTestSupport;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -132,10 +132,10 @@ public abstract class SqlTestSupport extends SimpleTestInClusterSupport {
                 + ")";
     }
 
-    public static String randomMapName() {
-        // Prefix the name with some letters and remove dashes so that it doesn't start with
-        // a number and is a valid SQL identifier.
-        return "map_" + HazelcastTestSupport.randomMapName().replace('-', '_');
+    public static String randomName() {
+        // Prefix the UUID with some letters and remove dashes so that it doesn't start with
+        // a number and is a valid SQL identifier without quoting.
+        return "o_" + UuidUtil.newUnsecureUuidString().replace('-', '_');
     }
 
     /**

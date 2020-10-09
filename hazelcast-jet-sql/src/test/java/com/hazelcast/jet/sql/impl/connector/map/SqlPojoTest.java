@@ -43,8 +43,8 @@ import static com.hazelcast.jet.sql.TimeUtil.localOffset;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.JAVA_FORMAT;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_KEY_CLASS;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_KEY_FORMAT;
-import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_VALUE_FORMAT;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_VALUE_CLASS;
+import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_VALUE_FORMAT;
 import static java.time.Instant.ofEpochMilli;
 import static java.time.ZoneId.systemDefault;
 import static java.time.ZoneOffset.UTC;
@@ -55,7 +55,7 @@ import static org.junit.Assert.assertEquals;
 public class SqlPojoTest extends SqlTestSupport {
 
     private static SqlService sqlService;
-    private final String mapName = randomMapName();
+    private final String mapName = randomName();
 
     @BeforeClass
     public static void setUpClass() {
@@ -83,7 +83,7 @@ public class SqlPojoTest extends SqlTestSupport {
 
     @Test
     public void test_nulls() {
-        String name = randomMapName();
+        String name = randomName();
         sqlService.execute(javaSerializableMapDdl(name, PersonId.class, Person.class));
 
         assertMapEventually(
@@ -99,7 +99,7 @@ public class SqlPojoTest extends SqlTestSupport {
 
     @Test
     public void test_fieldsShadowing() {
-        String name = randomMapName();
+        String name = randomName();
         sqlService.execute(javaSerializableMapDdl(name, PersonId.class, Person.class));
 
         assertMapEventually(
@@ -116,7 +116,7 @@ public class SqlPojoTest extends SqlTestSupport {
 
     @Test
     public void test_fieldsMapping() {
-        String name = randomMapName();
+        String name = randomName();
         sqlService.execute("CREATE MAPPING " + name + " ("
                 + "key_id INT EXTERNAL NAME \"__key.id\""
                 + ", value_id INT EXTERNAL NAME \"this.id\""
@@ -143,7 +143,7 @@ public class SqlPojoTest extends SqlTestSupport {
 
     @Test
     public void test_schemaEvolution() {
-        String name = randomMapName();
+        String name = randomName();
         sqlService.execute(javaSerializableMapDdl(name, PersonId.class, Person.class));
 
         // insert initial record
@@ -175,7 +175,7 @@ public class SqlPojoTest extends SqlTestSupport {
 
     @Test
     public void test_fieldsExtensions() {
-        String name = randomMapName();
+        String name = randomName();
 
         Map<PersonId, InsuredPerson> map = instance().getMap(name);
         map.put(new PersonId(1), new InsuredPerson(1, "Alice", 123456789L));
@@ -214,10 +214,10 @@ public class SqlPojoTest extends SqlTestSupport {
     @Test
     @SuppressWarnings("checkstyle:LineLength")
     public void test_allTypes() {
-        String from = randomMapName();
+        String from = randomName();
         AllTypesSqlConnector.create(sqlService, from);
 
-        String to = randomMapName();
+        String to = randomName();
         sqlService.execute(javaSerializableMapDdl(to, BigInteger.class, AllTypesValue.class));
 
         assertMapEventually(

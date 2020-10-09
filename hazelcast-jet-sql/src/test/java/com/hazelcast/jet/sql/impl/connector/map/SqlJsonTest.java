@@ -52,7 +52,7 @@ public class SqlJsonTest extends SqlTestSupport {
 
     @Test
     public void test_nulls() {
-        String name = randomMapName();
+        String name = randomName();
         sqlService.execute("CREATE MAPPING " + name + " ("
                 + "id INT EXTERNAL NAME \"__key.id\""
                 + ", name VARCHAR EXTERNAL NAME \"this.name\""
@@ -75,7 +75,7 @@ public class SqlJsonTest extends SqlTestSupport {
 
     @Test
     public void test_fieldsMapping() {
-        String name = randomMapName();
+        String name = randomName();
         sqlService.execute("CREATE MAPPING " + name + " ("
                 + "key_name VARCHAR EXTERNAL NAME \"__key.name\""
                 + ", value_name VARCHAR EXTERNAL NAME \"this.name\""
@@ -98,7 +98,7 @@ public class SqlJsonTest extends SqlTestSupport {
 
     @Test
     public void test_schemaEvolution() {
-        String name = randomMapName();
+        String name = randomName();
         sqlService.execute("CREATE MAPPING " + name + " ("
                 + "name VARCHAR"
                 + ") TYPE " + IMapSqlConnector.TYPE_NAME + ' '
@@ -138,10 +138,10 @@ public class SqlJsonTest extends SqlTestSupport {
 
     @Test
     public void test_allTypes() {
-        String from = randomMapName();
+        String from = randomName();
         AllTypesSqlConnector.create(sqlService, from);
 
-        String to = randomMapName();
+        String to = randomName();
         sqlService.execute("CREATE MAPPING " + to + " ("
                 + "id VARCHAR EXTERNAL NAME \"__key.id\""
                 + ", string VARCHAR"

@@ -47,9 +47,11 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.time.Duration;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Properties;
+import java.util.Set;
 import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 
@@ -60,6 +62,8 @@ import static java.util.Collections.singleton;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static kafka.admin.RackAwareMode.Disabled$.MODULE$;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 import static scala.collection.JavaConversions.asScalaSet;
 import static scala.collection.JavaConversions.mapAsJavaMap;
 import static scala.collection.JavaConversions.mapAsScalaMap;
@@ -194,7 +198,7 @@ public class KafkaTestSupport {
         return createConsumer(IntegerDeserializer.class, StringDeserializer.class, emptyMap(), topicIds);
     }
 
-    private <K, V> KafkaConsumer<K, V> createConsumer(
+    public <K, V> KafkaConsumer<K, V> createConsumer(
             Class<? extends Deserializer<K>> keyDeserializerClass,
             Class<? extends Deserializer<V>> valueDeserializerClass,
             Map<String, String> properties,
@@ -215,9 +219,9 @@ public class KafkaTestSupport {
         return consumer;
     }
 
-    public void assertTopicContentsEventually(
+    public <K, V> void assertTopicContentsEventually(
             String topic,
-            Map<Integer, String> expected,
+            Map<K, V> expected,
             boolean assertPartitionEqualsKey
     ) {
         try (KafkaConsumer<Integer, String> consumer = createConsumer(topic)) {
@@ -258,10 +262,14 @@ public class KafkaTestSupport {
                 topic
         )) {
             long timeLimit = System.nanoTime() + SECONDS.toNanos(10);
+            Set<K> seenKeys = new HashSet<>();
             for (int totalRecords = 0; totalRecords < expected.size() && System.nanoTime() < timeLimit; ) {
                 ConsumerRecords<K, V> records = consumer.poll(Duration.ofMillis(100));
                 for (ConsumerRecord<K, V> record : records) {
-                    assertEquals("key=" + record.key(), expected.get(record.key()), record.value());
+                    assertTrue("key=" + record.key() + " already seen", seenKeys.add(record.key()));
+                    V expectedValue = expected.get(record.key());
+                    assertNotNull("key=" + record.key() + " received, but not expected", expectedValue);
+                    assertEquals("key=" + record.key(), expectedValue, record.value());
                     totalRecords++;
                 }
             }

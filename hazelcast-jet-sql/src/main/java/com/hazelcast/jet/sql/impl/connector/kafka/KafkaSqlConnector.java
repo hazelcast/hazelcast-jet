@@ -25,6 +25,8 @@ import com.hazelcast.jet.sql.impl.connector.SqlConnector;
 import com.hazelcast.jet.sql.impl.connector.keyvalue.KvMetadataAvroResolver;
 import com.hazelcast.jet.sql.impl.connector.keyvalue.KvMetadataJavaResolver;
 import com.hazelcast.jet.sql.impl.connector.keyvalue.KvMetadataJsonResolver;
+import com.hazelcast.jet.sql.impl.connector.keyvalue.KvMetadataNullResolver;
+import com.hazelcast.jet.sql.impl.connector.keyvalue.KvMetadataResolver;
 import com.hazelcast.jet.sql.impl.connector.keyvalue.KvMetadataResolvers;
 import com.hazelcast.jet.sql.impl.schema.MappingField;
 import com.hazelcast.spi.impl.NodeEngine;
@@ -54,10 +56,15 @@ public class KafkaSqlConnector implements SqlConnector {
 
     public KafkaSqlConnector() {
         this.metadataResolvers = new KvMetadataResolvers(
-                KvMetadataJavaResolver.INSTANCE,
-                KvMetadataJsonResolver.INSTANCE,
-                KvMetadataAvroResolver.INSTANCE
-        );
+                new KvMetadataResolver[]{
+                        KvMetadataNullResolver.INSTANCE,
+                        KvMetadataJavaResolver.INSTANCE,
+                        KvMetadataJsonResolver.INSTANCE,
+                        KvMetadataAvroResolver.INSTANCE},
+                new KvMetadataResolver[]{
+                        KvMetadataJavaResolver.INSTANCE,
+                        KvMetadataJsonResolver.INSTANCE,
+                        KvMetadataAvroResolver.INSTANCE});
     }
 
     @Override

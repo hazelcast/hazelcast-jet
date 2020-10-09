@@ -91,7 +91,7 @@ public class KvMetadataJavaResolverTest {
                 options,
                 null
         )).isInstanceOf(QueryException.class)
-          .hasMessageMatching("Mismatch between declared and inferred type for field '(__key|this)'");
+          .hasMessageMatching("Mismatch between declared and resolved type for field '(__key|this)'");
     }
 
     @Test
@@ -125,7 +125,7 @@ public class KvMetadataJavaResolverTest {
                 options,
                 null
         )).isInstanceOf(QueryException.class)
-          .hasMessageContaining("Invalid external name: invalid-path");
+          .hasMessageContaining("The column name and external name must be equal for the '" + path + "' column");
     }
 
     @Test
@@ -217,7 +217,7 @@ public class KvMetadataJavaResolverTest {
                 options,
                 null
         )).isInstanceOf(QueryException.class)
-          .hasMessageContaining("Mismatch between declared and inferred type for field 'field'");
+          .hasMessageContaining("Mismatch between declared and resolved type for field 'field'");
     }
 
     @Test
@@ -225,16 +225,21 @@ public class KvMetadataJavaResolverTest {
             "true",
             "false"
     })
-    public void when_userDeclaresObjectInvalidExternalName_then_throws(boolean key) {
-        Map<String, String> options = ImmutableMap.of((key ? OPTION_KEY_CLASS : OPTION_VALUE_CLASS), Type.class.getName());
+    public void when_noKeyOrThisPrefixInExternalName_then_usesValue(boolean key) {
+        Map<String, String> options =
+                ImmutableMap.of((key ? OPTION_KEY_CLASS : OPTION_VALUE_CLASS), Object.class.getName());
 
-        assertThatThrownBy(() -> INSTANCE.resolveAndValidateFields(
+        EntryMetadata metadata = INSTANCE.resolveMetadata(
                 key,
-                singletonList(field("field", QueryDataType.VARCHAR, "does_not_start_with_key_or_value")),
+                singletonList(field("field", QueryDataType.INT, "extField")),
                 options,
                 null
-        )).isInstanceOf(QueryException.class)
-          .hasMessageContaining("Invalid external name: does_not_start_with_key_or_value");
+        );
+        assertThat(metadata.getFields()).containsExactly(
+                key ? new MapTableField[0] :
+                        new MapTableField[] {
+                                new MapTableField("field", QueryDataType.INT, false, new QueryPath("extField", false))
+                        });
     }
 
     @Test

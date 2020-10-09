@@ -45,8 +45,7 @@ import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_VALUE_CLA
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_VALUE_CLASS_VERSION;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_VALUE_FACTORY_ID;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.PORTABLE_FORMAT;
-import static com.hazelcast.jet.sql.impl.connector.keyvalue.KvMetadataResolvers.extractKeyFields;
-import static com.hazelcast.jet.sql.impl.connector.keyvalue.KvMetadataResolvers.extractValueFields;
+import static com.hazelcast.jet.sql.impl.connector.keyvalue.KvMetadataResolvers.extractFields;
 import static java.lang.Integer.parseInt;
 
 final class MetadataPortableResolver implements KvMetadataResolver {
@@ -79,9 +78,7 @@ final class MetadataPortableResolver implements KvMetadataResolver {
     ) {
         Set<Entry<String, FieldType>> fieldsInClass = resolvePortable(clazz).entrySet();
 
-        Map<QueryPath, MappingField> userFieldsByPath = isKey
-                ? extractKeyFields(userFields)
-                : extractValueFields(userFields, name -> new QueryPath(name, false));
+        Map<QueryPath, MappingField> userFieldsByPath = extractFields(userFields, isKey);
 
         if (!userFields.isEmpty()) {
             // the user used explicit fields in the DDL, just validate them
@@ -91,7 +88,7 @@ final class MetadataPortableResolver implements KvMetadataResolver {
 
                 MappingField mappingField = userFieldsByPath.get(path);
                 if (mappingField != null && !type.getTypeFamily().equals(mappingField.type().getTypeFamily())) {
-                    throw QueryException.error("Mismatch between declared and inferred type: " + mappingField.name());
+                    throw QueryException.error("Mismatch between declared and resolved type: " + mappingField.name());
                 }
             }
             return new ArrayList<>(userFieldsByPath.values());
@@ -158,9 +155,7 @@ final class MetadataPortableResolver implements KvMetadataResolver {
             List<MappingField> resolvedFields,
             ClassDefinition clazz
     ) {
-        Map<QueryPath, MappingField> mappingFieldsByPath = isKey
-                ? extractKeyFields(resolvedFields)
-                : extractValueFields(resolvedFields, name -> new QueryPath(name, false));
+        Map<QueryPath, MappingField> mappingFieldsByPath = extractFields(resolvedFields, isKey);
 
         List<TableField> fields = new ArrayList<>();
         for (Entry<QueryPath, MappingField> entry : mappingFieldsByPath.entrySet()) {

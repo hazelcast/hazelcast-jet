@@ -33,7 +33,7 @@ public class SqlInfoSchemaTest extends SqlTestSupport {
 
     private static SqlService sqlService;
 
-    private final String name = randomMapName();
+    private final String name = randomName();
 
     @BeforeClass
     public static void setUpClass() {
