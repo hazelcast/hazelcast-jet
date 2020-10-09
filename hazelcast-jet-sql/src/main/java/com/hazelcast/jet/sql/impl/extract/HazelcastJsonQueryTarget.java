@@ -53,7 +53,7 @@ class HazelcastJsonQueryTarget implements QueryTarget {
             } catch (QueryDataTypeMismatchException e) {
                 throw QueryException.dataException("Failed to extract map entry " + (key ? "key" : "value") + " field \""
                         + path + "\" because of type mismatch [expectedClass=" + e.getExpectedClass().getName()
-                        + ", actualClass=" + e.getActualClass().getName() + ']').withInvalidate();
+                        + ", actualClass=" + e.getActualClass().getName() + ']').markInvalidate();
             } catch (Exception e) {
                 throw QueryException.dataException("Failed to extract map entry " + (key ? "key" : "value") + " field \""
                         + path + "\": " + e.getMessage(), e);
