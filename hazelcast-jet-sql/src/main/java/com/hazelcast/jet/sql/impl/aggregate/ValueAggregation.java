@@ -24,6 +24,11 @@ import javax.annotation.concurrent.NotThreadSafe;
 import java.io.IOException;
 import java.util.Objects;
 
+/**
+ * Special-case aggregation that aggregates multiple instances of the same
+ * value. The result is the value. Asserts that no non-equal value is
+ * accumulated.
+ */
 @NotThreadSafe
 public class ValueAggregation implements Aggregation {
 

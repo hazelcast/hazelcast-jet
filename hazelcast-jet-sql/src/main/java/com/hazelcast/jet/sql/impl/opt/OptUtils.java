@@ -125,6 +125,10 @@ public final class OptUtils {
         return rel.getTable().unwrap(HazelcastTable.class);
     }
 
+    /**
+     * Recursively find {@link HazelcastTable} in the given {@code rel} or its
+     * inputs.
+     */
     public static HazelcastTable findHazelcastTable(RelNode rel) {
         RelNode input = rel;
         while (input.getTable() == null && input.getInputs().size() > 0) {

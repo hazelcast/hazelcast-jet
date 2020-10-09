@@ -42,6 +42,10 @@ import java.util.Map;
 import static com.hazelcast.jet.impl.util.Util.toList;
 import static java.util.Collections.singletonList;
 
+/**
+ * A connector for SQL that has a single column `v` of type BIGINT and
+ * emits 100 items per second using {@link TestSources#itemStream(int)}.
+ */
 public class TestStreamSqlConnector implements SqlConnector {
 
     public static final String TYPE_NAME = "TestStream";

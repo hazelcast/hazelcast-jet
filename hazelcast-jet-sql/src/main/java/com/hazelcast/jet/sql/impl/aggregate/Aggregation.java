@@ -19,13 +19,25 @@ package com.hazelcast.jet.sql.impl.aggregate;
 import com.hazelcast.nio.serialization.DataSerializable;
 import com.hazelcast.sql.impl.type.QueryDataType;
 
+/**
+ * A mutable object used for computing the SQL aggregation functions.
+ */
 public interface Aggregation extends DataSerializable {
 
     QueryDataType resultType();
 
+    /**
+     * Accumulate a value from a single row into this instance.
+     */
     void accumulate(Object[] row);
 
+    /**
+     * Merge another aggregation into this aggregation.
+     */
     void combine(Aggregation other);
 
+    /**
+     * Return the aggregation result.
+     */
     Object collect();
 }

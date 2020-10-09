@@ -24,6 +24,9 @@ import javax.annotation.concurrent.NotThreadSafe;
 import java.io.IOException;
 import java.util.Arrays;
 
+/**
+ * A holder of {@link Aggregation} instances for the entire row.
+ */
 @NotThreadSafe
 public class Aggregations implements DataSerializable {
 

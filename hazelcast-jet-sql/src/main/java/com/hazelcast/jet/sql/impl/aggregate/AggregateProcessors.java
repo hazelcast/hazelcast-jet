@@ -149,7 +149,6 @@ public final class AggregateProcessors {
         }
 
         @Override
-        @SuppressWarnings("unchecked")
         protected boolean tryProcess(int ordinal, @Nonnull Object item) {
             Aggregations aggregations = keyToAggregations.computeIfAbsent(
                     partitionKeyFn.apply(item),
