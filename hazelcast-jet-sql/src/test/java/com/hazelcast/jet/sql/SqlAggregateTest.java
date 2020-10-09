@@ -17,6 +17,8 @@
 package com.hazelcast.jet.sql;
 
 import com.hazelcast.jet.sql.impl.connector.test.TestBatchSqlConnector;
+import com.hazelcast.jet.sql.impl.connector.test.TestStreamSqlConnector;
+import com.hazelcast.sql.HazelcastSqlException;
 import com.hazelcast.sql.SqlService;
 import com.hazelcast.sql.impl.type.QueryDataType;
 import org.junit.BeforeClass;
@@ -26,6 +28,7 @@ import java.math.BigDecimal;
 
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public class SqlAggregateTest extends SqlTestSupport {
 
@@ -87,6 +90,25 @@ public class SqlAggregateTest extends SqlTestSupport {
     }
 
     @Test
+    public void test_groupByExpression() {
+        String name = createTable(
+                new String[]{"Alice", "1"},
+                new String[]{"Bob", "1"},
+                new String[]{"Alice", "2"},
+                new String[]{"Alice", "1"}
+        );
+
+        assertRowsAnyOrder(
+                "SELECT name, (distance * 2) d FROM " + name + " GROUP BY name, distance * 2",
+                asList(
+                        new Row("Alice", 2L),
+                        new Row("Alice", 4L),
+                        new Row("Bob", 2L)
+                )
+        );
+    }
+
+    @Test
     public void test_groupHaving() {
         String name = createTable(
                 new String[]{"Alice", "1"},
@@ -120,6 +142,27 @@ public class SqlAggregateTest extends SqlTestSupport {
                         new Row("Alice", 4L),
                         new Row("Alice", 8L),
                         new Row("Joey", 4L)
+                )
+        );
+    }
+
+    @Test
+    public void test_groupByNotSelectedField() {
+        String name = createTable(
+                new String[]{"Alice", "2"},
+                new String[]{"Bob", "1"},
+                new String[]{"Alice", "4"},
+                new String[]{"Alice", "2"},
+                new String[]{"Joey", "2"}
+        );
+
+        assertRowsAnyOrder(
+                "SELECT name FROM " + name + " GROUP BY name, distance",
+                asList(
+                        new Row("Alice"),
+                        new Row("Alice"),
+                        new Row("Bob"),
+                        new Row("Joey")
                 )
         );
     }
@@ -192,6 +235,26 @@ public class SqlAggregateTest extends SqlTestSupport {
     }
 
     @Test
+    public void test_groupCountExpression() {
+        String name = createTable(
+                new String[]{"Alice", "1"},
+                new String[]{"Bob", "1"},
+                new String[]{"Alice", "2"},
+                new String[]{"Alice", "1"},
+                new String[]{"Joey", "1"}
+        );
+
+        assertRowsAnyOrder(
+                "SELECT name, 2 * COUNT(*) FROM " + name + " GROUP BY name",
+                asList(
+                        new Row("Alice", 6L),
+                        new Row("Bob", 2L),
+                        new Row("Joey", 2L)
+                )
+        );
+    }
+
+    @Test
     public void test_groupCountHaving() {
         String name = createTable(
                 new String[]{"Alice", "1"},
@@ -202,6 +265,24 @@ public class SqlAggregateTest extends SqlTestSupport {
 
         assertRowsAnyOrder(
                 "SELECT name, COUNT(*) c FROM " + name + " GROUP BY name, distance HAVING c < 2",
+                asList(
+                        new Row("Alice", 1L),
+                        new Row("Bob", 1L)
+                )
+        );
+    }
+
+    @Test
+    public void test_groupCountHavingAggr() {
+        String name = createTable(
+                new String[]{"Alice", "1"},
+                new String[]{"Bob", "1"},
+                new String[]{"Alice", "2"},
+                new String[]{"Alice", "1"}
+        );
+
+        assertRowsAnyOrder(
+                "SELECT name, COUNT(*) FROM " + name + " GROUP BY name, distance HAVING COUNT(*) < 2",
                 asList(
                         new Row("Alice", 1L),
                         new Row("Bob", 1L)
@@ -228,11 +309,23 @@ public class SqlAggregateTest extends SqlTestSupport {
     }
 
     @Test
+    public void test_countDistinct() {
+        String name = createTable();
+
+        assertThatThrownBy(
+                () -> assertRowsAnyOrder(
+                        "SELECT COUNT(DISTINCT name) FROM " + name,
+                        singletonList(new Row("Alice", 1))))
+                .isInstanceOf(HazelcastSqlException.class)
+                .hasMessage("DISTINCT aggregates are not supported: COUNT(DISTINCT $0)");
+    }
+
+    @Test
     public void test_min() {
         String name = createTable(
                 new String[]{"Alice", "2"},
                 new String[]{"Bob", "1"},
-                new String[]{"Joey", "null"}
+                new String[]{"Joey", null}
         );
 
         assertRowsAnyOrder(
@@ -326,7 +419,7 @@ public class SqlAggregateTest extends SqlTestSupport {
         String name = createTable(
                 new String[]{"Alice", "1"},
                 new String[]{"Bob", "2"},
-                new String[]{"Joey", "null"}
+                new String[]{"Joey", null}
         );
 
         assertRowsAnyOrder(
@@ -421,7 +514,7 @@ public class SqlAggregateTest extends SqlTestSupport {
         String name = createTable(
                 new String[]{"Alice", "1"},
                 new String[]{"Bob", "2"},
-                new String[]{"Joey", "null"}
+                new String[]{"Joey", null}
         );
 
         assertRowsAnyOrder(
@@ -433,6 +526,18 @@ public class SqlAggregateTest extends SqlTestSupport {
     @Test
     public void test_emptySum() {
         String name = createTable();
+
+        assertRowsAnyOrder(
+                "SELECT SUM(distance) FROM " + name,
+                singletonList(new Row((Object) null))
+        );
+    }
+
+    @Test
+    public void test_almostEmptySum() {
+        String name = createTable(
+                new String[]{"Alice", null}
+        );
 
         assertRowsAnyOrder(
                 "SELECT SUM(distance) FROM " + name,
@@ -516,7 +621,7 @@ public class SqlAggregateTest extends SqlTestSupport {
         String name = createTable(
                 new String[]{"Alice", "4"},
                 new String[]{"Bob", "2"},
-                new String[]{"Joey", "null"}
+                new String[]{"Joey", null}
         );
 
         assertRowsAnyOrder(
@@ -621,8 +726,78 @@ public class SqlAggregateTest extends SqlTestSupport {
         );
     }
 
+    @Test
+    public void test_expressionFromAggregates() {
+        String name = createTable(
+                new String[]{"Alice", "1"},
+                new String[]{"Bob", "2"},
+                new String[]{"Joey", "3"}
+        );
+
+        assertRowsAnyOrder(
+                "SELECT COUNT(*) * SUM(distance) FROM " + name,
+                singletonList(new Row(18L))
+        );
+    }
+
+    @Test
+    public void test_aggregatingStreamingSource() {
+        String name = randomName();
+        sqlService.execute("CREATE MAPPING " + name + " TYPE " + TestStreamSqlConnector.TYPE_NAME);
+
+        assertThatThrownBy(() -> sqlService.execute("SELECT COUNT(*) FROM " + name))
+                .isInstanceOf(HazelcastSqlException.class)
+                .hasMessageContaining("not supported");
+    }
+
+    @Test
+    public void test_nestedAggregation() {
+        String name = createTable(
+                new String[]{"Alice", "1"},
+                new String[]{"Bob", "2"},
+                new String[]{"Alice", "2"},
+                new String[]{"Bob", "3"},
+                new String[]{"Joey", "3"}
+        );
+
+        assertRowsAnyOrder(
+                "SELECT MAX(avg_dist) " +
+                        "FROM (SELECT name, AVG(distance) avg_dist FROM " + name + " GROUP BY name)",
+                singletonList(
+                        new Row(new BigDecimal("3"))
+                )
+        );
+    }
+
+    @Test
+    public void test_rollup() {
+        String name = createTable();
+        assertThatThrownBy(
+                () -> sqlService.execute("SELECT COUNT(*) FROM " + name + " GROUP BY ROLLUP(name, distance)"))
+                .isInstanceOf(HazelcastSqlException.class)
+                .hasMessageContaining("ROLLUP not supported");
+    }
+
+    @Test
+    public void test_cube() {
+        String name = createTable();
+        assertThatThrownBy(
+                () -> sqlService.execute("SELECT COUNT(*) FROM " + name + " GROUP BY CUBE(name, distance)"))
+                .isInstanceOf(HazelcastSqlException.class)
+                .hasMessageContaining("CUBE not supported");
+    }
+
+    @Test
+    public void test_groupingSet() {
+        String name = createTable();
+        assertThatThrownBy(
+                () -> sqlService.execute("SELECT COUNT(*) FROM " + name + " GROUP BY GROUPING SETS ((name), (distance))"))
+                .isInstanceOf(HazelcastSqlException.class)
+                .hasMessageContaining("GROUPING SETS not supported");
+    }
+
     private static String createTable(String[]... values) {
-        String name = "aggregate_" + randomString().replace('-', '_');
+        String name = randomName();
         TestBatchSqlConnector.create(
                 sqlService,
                 name,
