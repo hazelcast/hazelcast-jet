@@ -39,6 +39,7 @@ import com.hazelcast.sql.impl.type.QueryDataTypeFamily;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -83,6 +84,17 @@ public class TestBatchSqlConnector implements SqlConnector {
             List<QueryDataType> types,
             List<String[]> values
     ) {
+        if (names.stream().anyMatch(n -> n.contains(DELIMITER) || n.contains("'"))) {
+            throw new IllegalArgumentException("'" + DELIMITER + "' and apostrophe not supported in names");
+        }
+
+        if (values.stream().flatMap(Arrays::stream).filter(Objects::nonNull)
+                  .anyMatch(n -> n.equals(NULL) || n.contains(VALUES_DELIMITER) || n.contains("'"))
+        ) {
+            throw new IllegalArgumentException("The text '" + NULL + "', the newline character and apostrophe not " +
+                    "supported in values");
+        }
+
         String namesStringified = join(DELIMITER, names);
         String typesStringified = types.stream().map(type -> type.getTypeFamily().name()).collect(joining(DELIMITER));
         String valuesStringified = values.stream().map(row -> join(DELIMITER, row)).collect(joining(VALUES_DELIMITER));
