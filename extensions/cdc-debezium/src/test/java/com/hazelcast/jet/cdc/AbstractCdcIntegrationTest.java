@@ -142,8 +142,9 @@ public class AbstractCdcIntegrationTest extends JetTestSupport {
 
     protected <T> T namedTestContainer(GenericContainer<?> container) {
         return (T) container.withCreateContainerCmdModifier(createContainerCmd -> {
-            String test = AbstractCdcIntegrationTest.this.getClass().getSimpleName() + "." + testName.getMethodName();
-            createContainerCmd.withName(test + "___" + randomName());
+            String source = AbstractCdcIntegrationTest.this.getClass().getSimpleName() + "." + testName.getMethodName()
+                .replaceAll("\\[|\\]|\\/| ", "_");
+            createContainerCmd.withName(source + "___" + randomName());
         });
     }
 
