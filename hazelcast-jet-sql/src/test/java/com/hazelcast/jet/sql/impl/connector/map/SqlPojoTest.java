@@ -55,7 +55,6 @@ import static org.junit.Assert.assertEquals;
 public class SqlPojoTest extends SqlTestSupport {
 
     private static SqlService sqlService;
-    private final String mapName = randomName();
 
     @BeforeClass
     public static void setUpClass() {
@@ -65,6 +64,7 @@ public class SqlPojoTest extends SqlTestSupport {
 
     @Test
     public void test_insertIntoDiscoveredMap() {
+        String mapName = randomName();
         instance().getMap(mapName).put(new PersonId(1), new Person(1, "Alice"));
 
         assertMapEventually(
@@ -336,6 +336,7 @@ public class SqlPojoTest extends SqlTestSupport {
 
     @Test
     public void when_fieldWithInitialValueUnmapped_then_initialValuePreserved() {
+        String mapName = randomName();
         sqlService.execute("CREATE MAPPING " + mapName + "(__key INT)"
                 + " TYPE " + IMapSqlConnector.TYPE_NAME + "\n"
                 + "OPTIONS (\n"
@@ -357,6 +358,7 @@ public class SqlPojoTest extends SqlTestSupport {
         // field. One could expect that the field will be left alone. On the other hand, we can say that all mapped fields
         // are always overwritten: if they're not present, we'll write null. We don't support DEFAULT values yet, but
         // it behaves as if the DEFAULT was null.
+        String mapName = randomName();
         sqlService.execute(javaSerializableMapDdl(mapName, Integer.class, ClassInitialValue.class));
         sqlService.execute("SINK INTO " + mapName + "(__key) VALUES (1)");
         assertRowsAnyOrder("SELECT * FROM " + mapName, singletonList(new Row(1, null)));
@@ -364,6 +366,7 @@ public class SqlPojoTest extends SqlTestSupport {
 
     @Test
     public void when_fieldWithInitialValueAssignedNull_then_isNull() {
+        String mapName = randomName();
         sqlService.execute(javaSerializableMapDdl(mapName, Integer.class, ClassInitialValue.class));
         sqlService.execute("SINK INTO " + mapName + "(__key, field) VALUES (1, null)");
         assertRowsAnyOrder("SELECT * FROM " + mapName, singletonList(new Row(1, null)));

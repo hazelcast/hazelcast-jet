@@ -62,10 +62,10 @@ public final class KvMetadataAvroResolver implements KvMetadataResolver {
             throw QueryException.error("Column list is required for Avro format");
         }
 
-        Map<QueryPath, MappingField> mappingFieldsByPath = extractFields(userFields, isKey);
+        Map<QueryPath, MappingField> userFieldsByPath = extractFields(userFields, isKey);
 
         Map<String, MappingField> fields = new LinkedHashMap<>();
-        for (Entry<QueryPath, MappingField> entry : mappingFieldsByPath.entrySet()) {
+        for (Entry<QueryPath, MappingField> entry : userFieldsByPath.entrySet()) {
             QueryPath path = entry.getKey();
             if (path.getPath() == null) {
                 throw QueryException.error("Cannot use the '" + path + "' field with Avro serialization");
@@ -84,10 +84,10 @@ public final class KvMetadataAvroResolver implements KvMetadataResolver {
             Map<String, String> options,
             InternalSerializationService serializationService
     ) {
-        Map<QueryPath, MappingField> mappingFieldsByPath = extractFields(resolvedFields, isKey);
+        Map<QueryPath, MappingField> userFieldsByPath = extractFields(resolvedFields, isKey);
 
         List<TableField> fields = new ArrayList<>();
-        for (Entry<QueryPath, MappingField> entry : mappingFieldsByPath.entrySet()) {
+        for (Entry<QueryPath, MappingField> entry : userFieldsByPath.entrySet()) {
             QueryPath path = entry.getKey();
             QueryDataType type = entry.getValue().type();
             String name = entry.getValue().name();

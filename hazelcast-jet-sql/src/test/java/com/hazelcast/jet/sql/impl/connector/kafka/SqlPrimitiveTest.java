@@ -293,8 +293,8 @@ public class SqlPrimitiveTest extends SqlTestSupport {
 
         sqlService.execute("CREATE MAPPING " + topicName + '('
                 + "__key INT,"
-                + "this VARCHAR) "
-                + "TYPE " + KafkaSqlConnector.TYPE_NAME + ' '
+                + "this VARCHAR" +
+                ") TYPE " + KafkaSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ( "
                 + '"' + OPTION_KEY_FORMAT + "\" '" + JAVA_FORMAT + '\''
                 + ", \"" + OPTION_KEY_CLASS + "\" '" + Integer.class.getName() + '\''
@@ -340,7 +340,8 @@ public class SqlPrimitiveTest extends SqlTestSupport {
     @Test
     public void test_noKeyFormat() {
         String topicName = createRandomTopic();
-        sqlService.execute("CREATE MAPPING " + topicName + " TYPE " + KafkaSqlConnector.TYPE_NAME + " "
+        sqlService.execute("CREATE MAPPING " + topicName + ' '
+                + "TYPE " + KafkaSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ("
                 + '"' + OPTION_VALUE_FORMAT + "\" '" + JAVA_FORMAT + "',"
                 + '"' + OPTION_VALUE_CLASS + "\" '" + Integer.class.getName() + "'"
@@ -371,17 +372,16 @@ public class SqlPrimitiveTest extends SqlTestSupport {
         String mapName = randomName();
         assertThatThrownBy(
                 () -> sqlService.execute("CREATE MAPPING " + mapName + "("
-                        + fieldName + " INT,"
-                        + "field INT EXTERNAL NAME \"" + fieldName + ".field\""
-                        + ")"
-                        + " TYPE " + KafkaSqlConnector.TYPE_NAME
+                        + fieldName + " INT"
+                        + ", field INT EXTERNAL NAME \"" + fieldName + ".field\""
+                        + ") TYPE " + KafkaSqlConnector.TYPE_NAME
                         + " OPTIONS ("
                         + '"' + OPTION_VALUE_FORMAT + "\" '" + JAVA_FORMAT + "',"
                         + '"' + OPTION_VALUE_CLASS + "\" '" + Integer.class.getName() + "',"
                         + '"' + OPTION_KEY_FORMAT + "\" '" + JAVA_FORMAT + "',"
                         + '"' + OPTION_KEY_CLASS + "\" '" + Integer.class.getName() + "'"
-                        + ")"))
-                .hasMessage("Unmapped field: field");
+                        + ")")
+        ).hasMessage("Unmapped field: field");
     }
 
     private static String createRandomTopic() {

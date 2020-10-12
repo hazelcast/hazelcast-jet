@@ -119,7 +119,7 @@ public class SqlPortableTest extends SqlTestSupport {
 
     @Test
     public void test_insertsIntoDiscoveredMap() {
-        String name = generateRandomName();
+        String name = randomName();
 
         instance().getMap(name).put(
                 new PortableGenericRecordBuilder(
@@ -151,7 +151,7 @@ public class SqlPortableTest extends SqlTestSupport {
 
     @Test
     public void test_nulls() throws IOException {
-        String name = generateRandomName();
+        String name = randomName();
         sqlService.execute("CREATE MAPPING " + name + ' '
                 + "TYPE " + IMapSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ("
@@ -184,7 +184,7 @@ public class SqlPortableTest extends SqlTestSupport {
 
     @Test
     public void test_fieldsShadowing() throws IOException {
-        String name = generateRandomName();
+        String name = randomName();
         sqlService.execute("CREATE MAPPING " + name + ' '
                 + "TYPE " + IMapSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ("
@@ -218,7 +218,7 @@ public class SqlPortableTest extends SqlTestSupport {
 
     @Test
     public void test_fieldsMapping() throws IOException {
-        String name = generateRandomName();
+        String name = randomName();
         sqlService.execute("CREATE MAPPING " + name + " ("
                 + "key_id INT EXTERNAL NAME \"__key.id\""
                 + ", value_id INT EXTERNAL NAME \"this.id\""
@@ -253,7 +253,7 @@ public class SqlPortableTest extends SqlTestSupport {
 
     @Test
     public void test_schemaEvolution() {
-        String name = generateRandomName();
+        String name = randomName();
         sqlService.execute("CREATE MAPPING " + name + ' '
                 + "TYPE " + IMapSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ("
@@ -301,7 +301,7 @@ public class SqlPortableTest extends SqlTestSupport {
 
     @Test
     public void test_fieldsExtensions() {
-        String name = generateRandomName();
+        String name = randomName();
         sqlService.execute("CREATE OR REPLACE MAPPING " + name + ' '
                 + "TYPE " + IMapSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ( "
@@ -321,7 +321,6 @@ public class SqlPortableTest extends SqlTestSupport {
 
         // alter schema
         sqlService.execute("CREATE OR REPLACE MAPPING " + name + " ("
-//                + "id INT EXTERNAL NAME \"__key.id\""
                 + "name VARCHAR"
                 + ", ssn BIGINT"
                 + ") TYPE " + IMapSqlConnector.TYPE_NAME + ' '
@@ -352,7 +351,7 @@ public class SqlPortableTest extends SqlTestSupport {
 
     @Test
     public void test_allTypes() throws IOException {
-        String name = generateRandomName();
+        String name = randomName();
         sqlService.execute("CREATE MAPPING " + name + ' '
                 + "TYPE " + IMapSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ("
@@ -408,10 +407,6 @@ public class SqlPortableTest extends SqlTestSupport {
                         123451234567890.1D
                 ))
         );
-    }
-
-    private static String generateRandomName() {
-        return "portable_" + randomString().replace('-', '_');
     }
 
     @SuppressWarnings({"OptionalGetWithoutIsPresent", "unchecked", "rawtypes"})

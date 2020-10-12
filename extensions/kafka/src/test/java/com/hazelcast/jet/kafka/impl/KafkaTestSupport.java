@@ -219,9 +219,9 @@ public class KafkaTestSupport {
         return consumer;
     }
 
-    public <K, V> void assertTopicContentsEventually(
+    public void assertTopicContentsEventually(
             String topic,
-            Map<K, V> expected,
+            Map<Integer, String> expected,
             boolean assertPartitionEqualsKey
     ) {
         try (KafkaConsumer<Integer, String> consumer = createConsumer(topic)) {
