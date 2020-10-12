@@ -177,6 +177,21 @@ public class SqlAggregateTest extends SqlTestSupport {
     }
 
     @Test
+    public void test_distinctCount() {
+        String name = createTable(
+                new String[]{"Alice", "1"},
+                new String[]{"Alice", "2"},
+                new String[]{"Bob", "1"},
+                new String[]{"Alice", "1"}
+        );
+
+        assertRowsAnyOrder(
+                "SELECT COUNT(DISTINCT distance) FROM " + name,
+                singletonList(new Row(2L))
+        );
+    }
+
+    @Test
     public void test_groupCount() {
         String name = createTable(
                 new String[]{"Alice", "1"},
@@ -189,6 +204,24 @@ public class SqlAggregateTest extends SqlTestSupport {
                 "SELECT name, COUNT(*) FROM " + name + " GROUP BY name",
                 asList(
                         new Row("Alice", 3L),
+                        new Row("Bob", 1L)
+                )
+        );
+    }
+
+    @Test
+    public void test_groupDistinctCount() {
+        String name = createTable(
+                new String[]{"Alice", "1"},
+                new String[]{"Alice", "2"},
+                new String[]{"Bob", "1"},
+                new String[]{"Alice", "1"}
+        );
+
+        assertRowsAnyOrder(
+                "SELECT name, COUNT(DISTINCT distance) FROM " + name + " GROUP BY name",
+                asList(
+                        new Row("Alice", 2L),
                         new Row("Bob", 1L)
                 )
         );
@@ -287,18 +320,6 @@ public class SqlAggregateTest extends SqlTestSupport {
                         new Row("Bob", 2L, 1L)
                 )
         );
-    }
-
-    @Test
-    public void test_countDistinct() {
-        String name = createTable();
-
-        assertThatThrownBy(
-                () -> assertRowsAnyOrder(
-                        "SELECT COUNT(DISTINCT name) FROM " + name,
-                        singletonList(new Row("Alice", 1))))
-                .isInstanceOf(HazelcastSqlException.class)
-                .hasMessage("DISTINCT aggregates are not supported: COUNT(DISTINCT $0)");
     }
 
     @Test
@@ -527,6 +548,21 @@ public class SqlAggregateTest extends SqlTestSupport {
     }
 
     @Test
+    public void test_distinctSum() {
+        String name = createTable(
+                new String[]{"Alice", "1"},
+                new String[]{"Alice", "2"},
+                new String[]{"Bob", "1"},
+                new String[]{"Alice", "1"}
+        );
+
+        assertRowsAnyOrder(
+                "SELECT SUM(DISTINCT distance) FROM " + name,
+                singletonList(new Row(3L))
+        );
+    }
+
+    @Test
     public void test_groupSum() {
         String name = createTable(
                 new String[]{"Alice", "1"},
@@ -539,6 +575,24 @@ public class SqlAggregateTest extends SqlTestSupport {
                 asList(
                         new Row("Alice", 3L),
                         new Row("Bob", 2L)
+                )
+        );
+    }
+
+    @Test
+    public void test_groupDistinctSum() {
+        String name = createTable(
+                new String[]{"Alice", "1"},
+                new String[]{"Alice", "2"},
+                new String[]{"Bob", "1"},
+                new String[]{"Alice", "1"}
+        );
+
+        assertRowsAnyOrder(
+                "SELECT name, SUM(DISTINCT distance) FROM " + name + " GROUP BY name",
+                asList(
+                        new Row("Alice", 3L),
+                        new Row("Bob", 1L)
                 )
         );
     }
@@ -622,6 +676,21 @@ public class SqlAggregateTest extends SqlTestSupport {
     }
 
     @Test
+    public void test_distinctAvg() {
+        String name = createTable(
+                new String[]{"Alice", "1"},
+                new String[]{"Alice", "2"},
+                new String[]{"Bob", "1"},
+                new String[]{"Alice", "1"}
+        );
+
+        assertRowsAnyOrder(
+                "SELECT AVG(DISTINCT distance) FROM " + name,
+                singletonList(new Row(new BigDecimal("1.5")))
+        );
+    }
+
+    @Test
     public void test_groupAvg() {
         String name = createTable(
                 new String[]{"Alice", "1"},
@@ -634,6 +703,24 @@ public class SqlAggregateTest extends SqlTestSupport {
                 asList(
                         new Row("Alice", new BigDecimal("1.5")),
                         new Row("Bob", new BigDecimal("2"))
+                )
+        );
+    }
+
+    @Test
+    public void test_groupDistinctAvg() {
+        String name = createTable(
+                new String[]{"Alice", "1"},
+                new String[]{"Alice", "2"},
+                new String[]{"Bob", "1"},
+                new String[]{"Alice", "1"}
+        );
+
+        assertRowsAnyOrder(
+                "SELECT name, AVG(DISTINCT distance) FROM " + name + " GROUP BY name",
+                asList(
+                        new Row("Alice", new BigDecimal("1.5")),
+                        new Row("Bob", new BigDecimal("1"))
                 )
         );
     }

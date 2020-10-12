@@ -30,9 +30,8 @@ import java.util.Objects;
  * accumulated.
  */
 @NotThreadSafe
-public class ValueAggregation implements Aggregation {
+public class ValueAggregation extends Aggregation {
 
-    private int index;
     private QueryDataType operandType;
 
     private Object value;
@@ -42,7 +41,7 @@ public class ValueAggregation implements Aggregation {
     }
 
     public ValueAggregation(int index, QueryDataType operandType) {
-        this.index = index;
+        super(index, false, false);
         this.operandType = operandType;
     }
 
@@ -52,9 +51,7 @@ public class ValueAggregation implements Aggregation {
     }
 
     @Override
-    public void accumulate(Object[] row) {
-        Object value = row[index];
-
+    protected void accumulate(Object value) {
         assert this.value == null || this.value.equals(value);
 
         this.value = value;
@@ -78,14 +75,12 @@ public class ValueAggregation implements Aggregation {
 
     @Override
     public void writeData(ObjectDataOutput out) throws IOException {
-        out.writeInt(index);
         out.writeObject(operandType);
         out.writeObject(value);
     }
 
     @Override
     public void readData(ObjectDataInput in) throws IOException {
-        index = in.readInt();
         operandType = in.readObject();
         value = in.readObject();
     }
@@ -99,13 +94,12 @@ public class ValueAggregation implements Aggregation {
             return false;
         }
         ValueAggregation that = (ValueAggregation) o;
-        return index == that.index &&
-                Objects.equals(operandType, that.operandType) &&
+        return Objects.equals(operandType, that.operandType) &&
                 Objects.equals(value, that.value);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(index, operandType, value);
+        return Objects.hash(operandType, value);
     }
 }

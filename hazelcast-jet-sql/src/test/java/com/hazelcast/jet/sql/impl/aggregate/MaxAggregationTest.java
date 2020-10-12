@@ -42,6 +42,7 @@ public class MaxAggregationTest {
                 new Object[]{null, null, null},
                 new Object[]{null, 1, 1},
                 new Object[]{1, null, 1},
+                new Object[]{1, 1, 1},
                 new Object[]{1, 2, 2},
                 new Object[]{2, 1, 2}
         };

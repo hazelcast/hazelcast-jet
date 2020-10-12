@@ -92,6 +92,17 @@ public class AvgAggregationTest {
     }
 
     @Test
+    public void test_accumulateDistinct() {
+        AvgAggregation aggregation = new AvgAggregation(0, QueryDataType.INT, true);
+        aggregation.accumulate(new Object[]{null});
+        aggregation.accumulate(new Object[]{1});
+        aggregation.accumulate(new Object[]{1});
+        aggregation.accumulate(new Object[]{2});
+
+        assertThat(aggregation.collect()).isEqualTo(new BigDecimal("1.5"));
+    }
+
+    @Test
     @Parameters(method = "values")
     public void test_combine(QueryDataType operandType, Object value1, Object value2, Object expected) {
         AvgAggregation left = new AvgAggregation(0, operandType);

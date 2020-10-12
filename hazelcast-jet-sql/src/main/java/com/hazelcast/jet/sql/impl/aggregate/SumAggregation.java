@@ -31,9 +31,8 @@ import java.util.Objects;
 import static com.hazelcast.sql.impl.expression.math.ExpressionMath.DECIMAL_MATH_CONTEXT;
 
 @NotThreadSafe
-public class SumAggregation implements Aggregation {
+public class SumAggregation extends Aggregation {
 
-    private int index;
     private QueryDataType operandType;
     private QueryDataType resultType;
 
@@ -44,7 +43,11 @@ public class SumAggregation implements Aggregation {
     }
 
     public SumAggregation(int index, QueryDataType operandType) {
-        this.index = index;
+        this(index, operandType, false);
+    }
+
+    public SumAggregation(int index, QueryDataType operandType, boolean distinct) {
+        super(index, true, distinct);
         this.operandType = operandType;
         this.resultType = inferResultType(operandType);
     }
@@ -72,11 +75,8 @@ public class SumAggregation implements Aggregation {
     }
 
     @Override
-    public void accumulate(Object[] row) {
-        Object value = row[index];
-        if (value != null) {
-            add(value, operandType.getConverter());
-        }
+    protected void accumulate(Object value) {
+        add(value, operandType.getConverter());
     }
 
     @Override
@@ -131,7 +131,6 @@ public class SumAggregation implements Aggregation {
 
     @Override
     public void writeData(ObjectDataOutput out) throws IOException {
-        out.writeInt(index);
         out.writeObject(operandType);
         out.writeObject(resultType);
         out.writeObject(value);
@@ -139,7 +138,6 @@ public class SumAggregation implements Aggregation {
 
     @Override
     public void readData(ObjectDataInput in) throws IOException {
-        index = in.readInt();
         operandType = in.readObject();
         resultType = in.readObject();
         value = in.readObject();
@@ -154,14 +152,13 @@ public class SumAggregation implements Aggregation {
             return false;
         }
         SumAggregation that = (SumAggregation) o;
-        return index == that.index &&
-                Objects.equals(operandType, that.operandType) &&
+        return Objects.equals(operandType, that.operandType) &&
                 Objects.equals(resultType, that.resultType) &&
                 Objects.equals(value, that.value);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(index, operandType, resultType, value);
+        return Objects.hash(operandType, resultType, value);
     }
 }

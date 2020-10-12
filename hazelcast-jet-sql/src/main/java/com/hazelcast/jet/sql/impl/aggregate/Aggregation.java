@@ -19,25 +19,55 @@ package com.hazelcast.jet.sql.impl.aggregate;
 import com.hazelcast.nio.serialization.DataSerializable;
 import com.hazelcast.sql.impl.type.QueryDataType;
 
+import java.util.HashSet;
+import java.util.Set;
+
 /**
  * A mutable object used for computing the SQL aggregation functions.
  */
-public interface Aggregation extends DataSerializable {
+public abstract class Aggregation implements DataSerializable {
 
-    QueryDataType resultType();
+    private int index;
+    private boolean ignoreNulls;
+    private Set<Object> values;
+
+    protected Aggregation() {
+    }
+
+    protected Aggregation(int index, boolean ignoreNulls, boolean distinct) {
+        this.index = index;
+        this.ignoreNulls = ignoreNulls;
+        this.values = distinct ? new HashSet<>() : null;
+    }
+
+    public abstract QueryDataType resultType();
 
     /**
      * Accumulate a value from a single row into this instance.
      */
-    void accumulate(Object[] row);
+    public final void accumulate(Object[] row) {
+        Object value = index > -1 ? row[index] : null;
+
+        if (value == null && ignoreNulls) {
+            return;
+        }
+
+        if (value != null && values != null && !values.add(value)) {
+            return;
+        }
+
+        accumulate(value);
+    }
+
+    protected abstract void accumulate(Object value);
 
     /**
      * Merge another aggregation into this aggregation.
      */
-    void combine(Aggregation other);
+    public abstract void combine(Aggregation other);
 
     /**
      * Return the aggregation result.
      */
-    Object collect();
+    public abstract Object collect();
 }

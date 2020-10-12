@@ -73,13 +73,14 @@ final class AggregatePhysicalRule extends RelOptRule {
     }
 
     private static RelNode optimize(AggregateLogicalRel logicalAggregate, RelNode physicalInput) {
-        return logicalAggregate.getGroupSet().cardinality() == 0
+        return logicalAggregate.getGroupSet().cardinality() == 0 && !logicalAggregate.containsDistinctCall()
                 ? toGroupCombine(logicalAggregate, physicalInput)
                 : toGroupByKeyCombine(logicalAggregate, physicalInput);
     }
 
     /**
-     * Scalar aggregate case (no GROUP BY clause). The output is a single row.
+     * Scalar aggregate case (no GROUP BY clause nor DISTINCT aggregation, i.e. SELECT COUNT(*) FROM t).
+     * The output is a single row.
      */
     private static RelNode toGroupCombine(AggregateLogicalRel logicalAggregate, RelNode physicalInput) {
         AggregateOperation<Aggregations, Object[]> aggregateOperation = aggregateOperation(
@@ -108,7 +109,11 @@ final class AggregatePhysicalRule extends RelOptRule {
     }
 
     /**
-     * Vector aggregate case (GROUP BY clause present).
+     * Scalar aggregate case if GROUP BY clause is not present but a DISTINCT aggregation is.
+     * The output is a single row.
+     * <p>
+     * Vector aggregate case if GROUP BY clause is present.
+     * Possibly multiple rows in the output.
      */
     @SuppressWarnings("rawtypes")
     private static RelNode toGroupByKeyCombine(AggregateLogicalRel logicalAggregate, RelNode physicalInput) {
@@ -123,7 +128,8 @@ final class AggregatePhysicalRule extends RelOptRule {
                 physicalInput.getTraitSet(),
                 physicalInput,
                 logicalAggregate.getGroupSet(),
-                aggregateOperation
+                aggregateOperation,
+                logicalAggregate.containsDistinctCall()
         );
 
         return new AggregateCombinePhysicalRel(
@@ -151,19 +157,19 @@ final class AggregatePhysicalRule extends RelOptRule {
             aggregationProviders.add(() -> new ValueAggregation(groupIndex, operandType));
         }
         for (AggregateCall aggregateCall : aggregateCalls) {
-            if (aggregateCall.isDistinct()) {
-                throw QueryException.error("DISTINCT aggregates are not supported: " + aggregateCall);
-            }
-
+            boolean distinct = aggregateCall.isDistinct();
             List<Integer> aggregateCallArguments = aggregateCall.getArgList();
             SqlKind kind = aggregateCall.getAggregation().getKind();
             switch (kind) {
                 case COUNT:
-                    if (aggregateCallArguments.size() == 0) {
-                        aggregationProviders.add(CountAggregation::new);
-                    } else {
+                    if (distinct) {
+                        int countIndex = aggregateCallArguments.get(0);
+                        aggregationProviders.add(() -> new CountAggregation(countIndex, true));
+                    } else if (aggregateCallArguments.size() == 1) {
                         int countIndex = aggregateCallArguments.get(0);
                         aggregationProviders.add(() -> new CountAggregation(countIndex));
+                    } else {
+                        aggregationProviders.add(CountAggregation::new);
                     }
                     break;
                 case MIN:
@@ -179,12 +185,12 @@ final class AggregatePhysicalRule extends RelOptRule {
                 case SUM:
                     int sumIndex = aggregateCallArguments.get(0);
                     QueryDataType sumOperandType = operandTypes.get(sumIndex);
-                    aggregationProviders.add(() -> new SumAggregation(sumIndex, sumOperandType));
+                    aggregationProviders.add(() -> new SumAggregation(sumIndex, sumOperandType, distinct));
                     break;
                 case AVG:
                     int avgIndex = aggregateCallArguments.get(0);
                     QueryDataType avgOperandType = operandTypes.get(avgIndex);
-                    aggregationProviders.add(() -> new AvgAggregation(avgIndex, avgOperandType));
+                    aggregationProviders.add(() -> new AvgAggregation(avgIndex, avgOperandType, distinct));
                     break;
                 default:
                     throw QueryException.error("Unsupported aggregation: " + kind);

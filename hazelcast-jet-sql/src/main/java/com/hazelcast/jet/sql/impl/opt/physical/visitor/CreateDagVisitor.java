@@ -134,7 +134,12 @@ public class CreateDagVisitor {
                 name("Aggregate-Accumulate"),
                 Processors.accumulateByKeyP(singletonList(partitionKeyFn), aggregateOperation)
         );
-        connectInput(rel.getInput(), vertex, edge -> edge.partitioned(partitionKeyFn));
+        connectInput(rel.getInput(), vertex, edge -> {
+            edge.partitioned(partitionKeyFn);
+            if (rel.distributed()) {
+                edge.distributed();
+            }
+        });
         return vertex;
     }
 

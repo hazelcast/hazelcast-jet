@@ -30,9 +30,8 @@ import java.util.Objects;
 import static com.hazelcast.sql.impl.expression.math.ExpressionMath.DECIMAL_MATH_CONTEXT;
 
 @NotThreadSafe
-public class AvgAggregation implements Aggregation {
+public class AvgAggregation extends Aggregation {
 
-    private int index;
     private QueryDataType resultType;
 
     private SumAggregation sum;
@@ -43,9 +42,12 @@ public class AvgAggregation implements Aggregation {
     }
 
     public AvgAggregation(int index, QueryDataType operandType) {
-        this.index = index;
-        this.resultType = inferResultType(operandType);
+        this(index, operandType, false);
+    }
 
+    public AvgAggregation(int index, QueryDataType operandType, boolean distinct) {
+        super(index, true, distinct);
+        this.resultType = inferResultType(operandType);
         this.sum = new SumAggregation(index, operandType);
         this.count = new CountAggregation();
     }
@@ -72,12 +74,9 @@ public class AvgAggregation implements Aggregation {
     }
 
     @Override
-    public void accumulate(Object[] row) {
-        Object value = row[index];
-        if (value != null) {
-            sum.accumulate(row);
-            count.accumulate(row);
-        }
+    protected void accumulate(Object value) {
+        sum.accumulate(value);
+        count.accumulate(value);
     }
 
     @Override
@@ -115,7 +114,6 @@ public class AvgAggregation implements Aggregation {
 
     @Override
     public void writeData(ObjectDataOutput out) throws IOException {
-        out.writeInt(index);
         out.writeObject(resultType);
         out.writeObject(sum);
         out.writeObject(count);
@@ -123,7 +121,6 @@ public class AvgAggregation implements Aggregation {
 
     @Override
     public void readData(ObjectDataInput in) throws IOException {
-        index = in.readInt();
         resultType = in.readObject();
         sum = in.readObject();
         count = in.readObject();
@@ -138,14 +135,13 @@ public class AvgAggregation implements Aggregation {
             return false;
         }
         AvgAggregation that = (AvgAggregation) o;
-        return index == that.index &&
-                Objects.equals(resultType, that.resultType) &&
+        return Objects.equals(resultType, that.resultType) &&
                 Objects.equals(sum, that.sum) &&
                 Objects.equals(count, that.count);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(index, resultType, sum, count);
+        return Objects.hash(resultType, sum, count);
     }
 }

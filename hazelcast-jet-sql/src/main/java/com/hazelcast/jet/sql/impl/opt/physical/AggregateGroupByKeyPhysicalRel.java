@@ -39,37 +39,44 @@ public class AggregateGroupByKeyPhysicalRel extends SingleRel implements Physica
 
     private final ImmutableBitSet groupSet;
     private final AggregateOperation<?, Object[]> aggregateOperation;
+    private final boolean distributed;
 
     AggregateGroupByKeyPhysicalRel(
             RelOptCluster cluster,
             RelTraitSet traits,
             RelNode input,
             ImmutableBitSet groupSet,
-            AggregateOperation<?, Object[]> aggregateOperation
-
+            AggregateOperation<?, Object[]> aggregateOperation,
+            boolean distributed
     ) {
         super(cluster, traits, input);
 
-        assert groupSet.cardinality() > 0;
-
         this.groupSet = groupSet;
         this.aggregateOperation = aggregateOperation;
+        this.distributed = distributed;
     }
 
     public FunctionEx<Object[], Object> partitionKeyFn() {
-        List<Integer> groupIndices = groupSet.toList();
-
-        return row -> {
-            Object[] key = new Object[groupIndices.size()];
-            for (int i = 0; i < groupIndices.size(); i++) {
-                key[i] = row[groupIndices.get(i)];
-            }
-            return new ObjectArray(key);
-        };
+        if (groupSet.cardinality() == 0) {
+            return row -> "ALL";
+        } else {
+            List<Integer> groupIndices = groupSet.toList();
+            return row -> {
+                Object[] key = new Object[groupIndices.size()];
+                for (int i = 0; i < groupIndices.size(); i++) {
+                    key[i] = row[groupIndices.get(i)];
+                }
+                return new ObjectArray(key);
+            };
+        }
     }
 
     public AggregateOperation<?, Object[]> aggregateOperation() {
         return aggregateOperation;
+    }
+
+    public boolean distributed() {
+        return distributed;
     }
 
     @Override
@@ -86,12 +93,20 @@ public class AggregateGroupByKeyPhysicalRel extends SingleRel implements Physica
     @Override
     public RelWriter explainTerms(RelWriter pw) {
         return super.explainTerms(pw)
-                    .item("group", groupSet);
+                    .item("group", groupSet)
+                    .item("distributed", distributed);
     }
 
     @Override
     public RelNode copy(RelTraitSet traitSet, List<RelNode> inputs) {
-        return new AggregateGroupByKeyPhysicalRel(getCluster(), traitSet, sole(inputs), groupSet, aggregateOperation);
+        return new AggregateGroupByKeyPhysicalRel(
+                getCluster(),
+                traitSet,
+                sole(inputs),
+                groupSet,
+                aggregateOperation,
+                distributed
+        );
     }
 
     private static final class ObjectArray implements DataSerializable {

@@ -25,18 +25,20 @@ import java.io.IOException;
 import java.util.Objects;
 
 @NotThreadSafe
-public class CountAggregation implements Aggregation {
-
-    private int index;
+public class CountAggregation extends Aggregation {
 
     private long value;
 
     public CountAggregation() {
-        this.index = -1;
+        super(-1, false, false);
     }
 
     public CountAggregation(int index) {
-        this.index = index;
+        super(index, true, false);
+    }
+
+    public CountAggregation(int index, boolean distinct) {
+        super(index, true, distinct);
     }
 
     @Override
@@ -45,10 +47,8 @@ public class CountAggregation implements Aggregation {
     }
 
     @Override
-    public void accumulate(Object[] row) {
-        if (index == -1 || row[index] != null) {
-            value++;
-        }
+    protected void accumulate(Object value) {
+        this.value++;
     }
 
     @Override
@@ -65,13 +65,11 @@ public class CountAggregation implements Aggregation {
 
     @Override
     public void writeData(ObjectDataOutput out) throws IOException {
-        out.writeInt(index);
         out.writeLong(value);
     }
 
     @Override
     public void readData(ObjectDataInput in) throws IOException {
-        index = in.readInt();
         value = in.readLong();
     }
 
@@ -84,12 +82,11 @@ public class CountAggregation implements Aggregation {
             return false;
         }
         CountAggregation that = (CountAggregation) o;
-        return index == that.index &&
-                value == that.value;
+        return value == that.value;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(index, value);
+        return Objects.hash(value);
     }
 }

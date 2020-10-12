@@ -50,6 +50,17 @@ public class CountAggregationTest {
     }
 
     @Test
+    public void test_accumulateDistinct() {
+        CountAggregation aggregation = new CountAggregation(0, true);
+        aggregation.accumulate(new Object[]{null});
+        aggregation.accumulate(new Object[]{1});
+        aggregation.accumulate(new Object[]{1});
+        aggregation.accumulate(new Object[]{2});
+
+        assertThat(aggregation.collect()).isEqualTo(2L);
+    }
+
+    @Test
     public void test_combine() {
         CountAggregation left = new CountAggregation();
         left.accumulate(new Object[0]);

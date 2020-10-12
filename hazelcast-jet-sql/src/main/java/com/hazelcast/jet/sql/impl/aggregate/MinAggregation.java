@@ -26,9 +26,8 @@ import java.io.IOException;
 import java.util.Objects;
 
 @NotThreadSafe
-public class MinAggregation implements Aggregation {
+public class MinAggregation extends Aggregation {
 
-    private int index;
     private QueryDataType operandType;
 
     private Object value;
@@ -38,7 +37,7 @@ public class MinAggregation implements Aggregation {
     }
 
     public MinAggregation(int index, QueryDataType operandType) {
-        this.index = index;
+        super(index, true, false);
         this.operandType = operandType;
     }
 
@@ -48,10 +47,8 @@ public class MinAggregation implements Aggregation {
     }
 
     @Override
-    public void accumulate(Object[] row) {
-        Object value = row[index];
-
-        if (this.value == null || (value != null && compare(this.value, value) > 0)) {
+    protected void accumulate(Object value) {
+        if (this.value == null || compare(this.value, value) > 0) {
             this.value = value;
         }
     }
@@ -93,14 +90,12 @@ public class MinAggregation implements Aggregation {
 
     @Override
     public void writeData(ObjectDataOutput out) throws IOException {
-        out.writeInt(index);
         out.writeObject(operandType);
         out.writeObject(value);
     }
 
     @Override
     public void readData(ObjectDataInput in) throws IOException {
-        index = in.readInt();
         operandType = in.readObject();
         value = in.readObject();
     }
@@ -114,13 +109,12 @@ public class MinAggregation implements Aggregation {
             return false;
         }
         MinAggregation that = (MinAggregation) o;
-        return index == that.index &&
-                Objects.equals(operandType, that.operandType) &&
+        return Objects.equals(operandType, that.operandType) &&
                 Objects.equals(value, that.value);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(index, operandType, value);
+        return Objects.hash(operandType, value);
     }
 }
