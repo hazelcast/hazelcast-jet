@@ -33,7 +33,6 @@ import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_KEY_FORMA
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_OBJECT_NAME;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_VALUE_CLASS;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_VALUE_FORMAT;
-import static java.lang.String.format;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -139,7 +138,7 @@ public class SqlPrimitiveTest extends SqlTestSupport {
 
         assertMapEventually(
                 name,
-                format("SINK INTO %s (id, name) VALUES (2, 'value-2')", name),
+                "SINK INTO " + name + " (id, name) VALUES (2, 'value-2')",
                 createMap(2, "value-2")
         );
         assertRowsAnyOrder(
@@ -182,8 +181,8 @@ public class SqlPrimitiveTest extends SqlTestSupport {
 
         sqlService.execute("CREATE MAPPING " + mapName + '('
                 + "__key INT,"
-                + "this VARCHAR) "
-                + "TYPE " + IMapSqlConnector.TYPE_NAME + ' '
+                + "this VARCHAR"
+                + ") TYPE " + IMapSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ( "
                 + '"' + OPTION_KEY_FORMAT + "\" '" + JAVA_FORMAT + '\''
                 + ", \"" + OPTION_KEY_CLASS + "\" '" + Integer.class.getName() + '\''
@@ -206,8 +205,8 @@ public class SqlPrimitiveTest extends SqlTestSupport {
                         + "OPTIONS ("
                         + '"' + OPTION_KEY_FORMAT + "\" '" + JAVA_FORMAT + "',"
                         + '"' + OPTION_KEY_CLASS + "\" '" + Integer.class.getName() + "'"
-                        + ")"))
-                .hasMessage("Missing 'valueFormat' option");
+                        + ")")
+        ).hasMessage("Missing 'valueFormat' option");
     }
 
     @Test
@@ -218,8 +217,8 @@ public class SqlPrimitiveTest extends SqlTestSupport {
                         + "OPTIONS ("
                         + '"' + OPTION_VALUE_FORMAT + "\" '" + JAVA_FORMAT + "',"
                         + '"' + OPTION_VALUE_CLASS + "\" '" + String.class.getName() + "'"
-                        + ")"))
-                .hasMessage("Missing 'keyFormat' option");
+                        + ")")
+        ).hasMessage("Missing 'keyFormat' option");
     }
 
     @Test
@@ -256,10 +255,9 @@ public class SqlPrimitiveTest extends SqlTestSupport {
         String mapName = randomName();
         assertThatThrownBy(
                 () -> sqlService.execute("CREATE MAPPING " + mapName + "("
-                        + fieldName + " INT,"
-                        + "field INT EXTERNAL NAME \"" + fieldName + ".field\""
-                        + ")"
-                        + " TYPE " + IMapSqlConnector.TYPE_NAME
+                        + fieldName + " INT"
+                        + ", field INT EXTERNAL NAME \"" + fieldName + ".field\""
+                        + ") TYPE " + IMapSqlConnector.TYPE_NAME
                         + " OPTIONS ("
                         + '"' + OPTION_VALUE_FORMAT + "\" '" + JAVA_FORMAT + "',"
                         + '"' + OPTION_VALUE_CLASS + "\" '" + Integer.class.getName() + "',"

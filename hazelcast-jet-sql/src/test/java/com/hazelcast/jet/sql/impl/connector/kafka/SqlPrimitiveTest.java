@@ -158,6 +158,66 @@ public class SqlPrimitiveTest extends SqlTestSupport {
     }
 
     @Test
+    public void test_insertNulls() {
+        String name = createRandomTopic();
+        sqlService.execute("CREATE MAPPING " + name + ' '
+                + "TYPE " + KafkaSqlConnector.TYPE_NAME + ' '
+                + "OPTIONS ( "
+                + '"' + OPTION_KEY_FORMAT + "\" '" + JAVA_FORMAT + '\''
+                + ", \"" + OPTION_KEY_CLASS + "\" '" + Integer.class.getName() + '\''
+                + ", \"" + OPTION_VALUE_FORMAT + "\" '" + JAVA_FORMAT + '\''
+                + ", \"" + OPTION_VALUE_CLASS + "\" '" + String.class.getName() + '\''
+                + ", \"bootstrap.servers\" '" + kafkaTestSupport.getBrokerConnectionString() + '\''
+                + ", \"key.serializer\" '" + IntegerSerializer.class.getCanonicalName() + '\''
+                + ", \"key.deserializer\" '" + IntegerDeserializer.class.getCanonicalName() + '\''
+                + ", \"value.serializer\" '" + StringSerializer.class.getCanonicalName() + '\''
+                + ", \"value.deserializer\" '" + StringDeserializer.class.getCanonicalName() + '\''
+                + ", \"auto.offset.reset\" 'earliest'"
+                + ")"
+        );
+
+        assertTopicEventually(
+                name,
+                "INSERT INTO " + name + " VALUES (null, null)",
+                createMap(null, null)
+        );
+        assertRowsEventuallyInAnyOrder(
+                "SELECT * FROM " + name,
+                singletonList(new Row(null, null))
+        );
+    }
+
+    @Test
+    public void test_insertWithProject() {
+        String name = createRandomTopic();
+        sqlService.execute("CREATE MAPPING " + name + ' '
+                + "TYPE " + KafkaSqlConnector.TYPE_NAME + ' '
+                + "OPTIONS ( "
+                + '"' + OPTION_KEY_FORMAT + "\" '" + JAVA_FORMAT + '\''
+                + ", \"" + OPTION_KEY_CLASS + "\" '" + Integer.class.getName() + '\''
+                + ", \"" + OPTION_VALUE_FORMAT + "\" '" + JAVA_FORMAT + '\''
+                + ", \"" + OPTION_VALUE_CLASS + "\" '" + String.class.getName() + '\''
+                + ", \"bootstrap.servers\" '" + kafkaTestSupport.getBrokerConnectionString() + '\''
+                + ", \"key.serializer\" '" + IntegerSerializer.class.getCanonicalName() + '\''
+                + ", \"key.deserializer\" '" + IntegerDeserializer.class.getCanonicalName() + '\''
+                + ", \"value.serializer\" '" + StringSerializer.class.getCanonicalName() + '\''
+                + ", \"value.deserializer\" '" + StringDeserializer.class.getCanonicalName() + '\''
+                + ", \"auto.offset.reset\" 'earliest'"
+                + ")"
+        );
+
+        assertTopicEventually(
+                name,
+                "INSERT INTO " + name + " (this, __key) VALUES (2, CAST(0 + 1 AS INT))",
+                createMap(1, "2")
+        );
+        assertRowsEventuallyInAnyOrder(
+                "SELECT * FROM " + name,
+                singletonList(new Row(1, "2"))
+        );
+    }
+
+    @Test
     public void test_fieldsMapping() {
         String name = createRandomTopic();
         sqlService.execute("CREATE MAPPING " + name + " ("
@@ -224,66 +284,6 @@ public class SqlPrimitiveTest extends SqlTestSupport {
         assertRowsEventuallyInAnyOrder(
                 "SELECT * FROM " + tableName,
                 asList(new Row(1, "Alice"), new Row(2, "Bob"))
-        );
-    }
-
-    @Test
-    public void test_insertNulls() {
-        String name = createRandomTopic();
-        sqlService.execute("CREATE MAPPING " + name + ' '
-                + "TYPE " + KafkaSqlConnector.TYPE_NAME + ' '
-                + "OPTIONS ( "
-                + '"' + OPTION_KEY_FORMAT + "\" '" + JAVA_FORMAT + '\''
-                + ", \"" + OPTION_KEY_CLASS + "\" '" + Integer.class.getName() + '\''
-                + ", \"" + OPTION_VALUE_FORMAT + "\" '" + JAVA_FORMAT + '\''
-                + ", \"" + OPTION_VALUE_CLASS + "\" '" + String.class.getName() + '\''
-                + ", \"bootstrap.servers\" '" + kafkaTestSupport.getBrokerConnectionString() + '\''
-                + ", \"key.serializer\" '" + IntegerSerializer.class.getCanonicalName() + '\''
-                + ", \"key.deserializer\" '" + IntegerDeserializer.class.getCanonicalName() + '\''
-                + ", \"value.serializer\" '" + StringSerializer.class.getCanonicalName() + '\''
-                + ", \"value.deserializer\" '" + StringDeserializer.class.getCanonicalName() + '\''
-                + ", \"auto.offset.reset\" 'earliest'"
-                + ")"
-        );
-
-        assertTopicEventually(
-                name,
-                "INSERT INTO " + name + " VALUES (null, null)",
-                createMap(null, null)
-        );
-        assertRowsEventuallyInAnyOrder(
-                "SELECT * FROM " + name,
-                singletonList(new Row(null, null))
-        );
-    }
-
-    @Test
-    public void test_insertWithProject() {
-        String name = createRandomTopic();
-        sqlService.execute("CREATE MAPPING " + name + ' '
-                + "TYPE " + KafkaSqlConnector.TYPE_NAME + ' '
-                + "OPTIONS ( "
-                + '"' + OPTION_KEY_FORMAT + "\" '" + JAVA_FORMAT + '\''
-                + ", \"" + OPTION_KEY_CLASS + "\" '" + Integer.class.getName() + '\''
-                + ", \"" + OPTION_VALUE_FORMAT + "\" '" + JAVA_FORMAT + '\''
-                + ", \"" + OPTION_VALUE_CLASS + "\" '" + String.class.getName() + '\''
-                + ", \"bootstrap.servers\" '" + kafkaTestSupport.getBrokerConnectionString() + '\''
-                + ", \"key.serializer\" '" + IntegerSerializer.class.getCanonicalName() + '\''
-                + ", \"key.deserializer\" '" + IntegerDeserializer.class.getCanonicalName() + '\''
-                + ", \"value.serializer\" '" + StringSerializer.class.getCanonicalName() + '\''
-                + ", \"value.deserializer\" '" + StringDeserializer.class.getCanonicalName() + '\''
-                + ", \"auto.offset.reset\" 'earliest'"
-                + ")"
-        );
-
-        assertTopicEventually(
-                name,
-                "INSERT INTO " + name + " (this, __key) VALUES (2, CAST(0 + 1 AS INT))",
-                createMap(1, "2")
-        );
-        assertRowsEventuallyInAnyOrder(
-                "SELECT * FROM " + name,
-                singletonList(new Row(1, "2"))
         );
     }
 
