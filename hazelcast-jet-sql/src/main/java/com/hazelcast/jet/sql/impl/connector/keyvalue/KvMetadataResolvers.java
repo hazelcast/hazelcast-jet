@@ -131,20 +131,18 @@ public class KvMetadataResolvers {
     }
 
     public static Map<QueryPath, MappingField> extractFields(List<MappingField> fields, boolean isKey) {
-        Map<QueryPath, MappingField> valueFieldsByPath = new LinkedHashMap<>();
-        for (MappingField mappingField : fields) {
-            QueryPath path = resolveExternalName(mappingField);
+        Map<QueryPath, MappingField> fieldsByPath = new LinkedHashMap<>();
+        for (MappingField field : fields) {
+            QueryPath path = resolveExternalName(field);
             if (isKey != path.isKey()) {
                 continue;
             }
-            if (valueFieldsByPath.putIfAbsent(path, mappingField) != null) {
+            if (fieldsByPath.putIfAbsent(path, field) != null) {
                 throw QueryException.error("Duplicate external name: " + path);
             }
         }
-        return valueFieldsByPath;
+        return fieldsByPath;
     }
-
-
 
     @Nonnull
     private static QueryPath resolveExternalName(MappingField field) {

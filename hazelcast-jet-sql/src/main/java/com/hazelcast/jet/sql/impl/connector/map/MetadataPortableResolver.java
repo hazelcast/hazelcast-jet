@@ -155,10 +155,10 @@ final class MetadataPortableResolver implements KvMetadataResolver {
             List<MappingField> resolvedFields,
             ClassDefinition clazz
     ) {
-        Map<QueryPath, MappingField> mappingFieldsByPath = extractFields(resolvedFields, isKey);
+        Map<QueryPath, MappingField> userFieldsByPath = extractFields(resolvedFields, isKey);
 
         List<TableField> fields = new ArrayList<>();
-        for (Entry<QueryPath, MappingField> entry : mappingFieldsByPath.entrySet()) {
+        for (Entry<QueryPath, MappingField> entry : userFieldsByPath.entrySet()) {
             QueryPath path = entry.getKey();
             QueryDataType type = entry.getValue().type();
             String name = entry.getValue().name();

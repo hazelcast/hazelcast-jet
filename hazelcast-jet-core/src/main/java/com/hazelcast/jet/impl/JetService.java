@@ -128,7 +128,7 @@ public class JetService implements ManagedService, MembershipAwareService, LiveO
         networking = new Networking(engine, jobExecutionService, config.getInstanceConfig().getFlowControlPeriodMs());
 
         ClientEngineImpl clientEngine = engine.getService(ClientEngineImpl.SERVICE_NAME);
-        ExceptionUtil.registerJetExceptions(clientEngine.getClientExceptions());
+        ExceptionUtil.registerJetExceptions(clientEngine.getExceptionFactory());
 
         if (parseBoolean(config.getHazelcastConfig().getProperties().getProperty(JET_SHUTDOWNHOOK_ENABLED.getName()))) {
             logger.finest("Adding Jet shutdown hook");

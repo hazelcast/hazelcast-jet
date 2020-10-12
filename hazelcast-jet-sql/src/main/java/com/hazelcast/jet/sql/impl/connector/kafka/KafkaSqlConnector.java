@@ -60,11 +60,14 @@ public class KafkaSqlConnector implements SqlConnector {
                         KvMetadataNullResolver.INSTANCE,
                         KvMetadataJavaResolver.INSTANCE,
                         KvMetadataJsonResolver.INSTANCE,
-                        KvMetadataAvroResolver.INSTANCE},
+                        KvMetadataAvroResolver.INSTANCE
+                },
                 new KvMetadataResolver[]{
                         KvMetadataJavaResolver.INSTANCE,
                         KvMetadataJsonResolver.INSTANCE,
-                        KvMetadataAvroResolver.INSTANCE});
+                        KvMetadataAvroResolver.INSTANCE
+                }
+        );
     }
 
     @Override

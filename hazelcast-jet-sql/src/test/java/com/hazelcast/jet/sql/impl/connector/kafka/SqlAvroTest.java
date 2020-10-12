@@ -293,8 +293,9 @@ public class SqlAvroTest extends SqlTestSupport {
 
     private void test_avroPrimitiveValue(String path) {
         assertThatThrownBy(
-                () -> sqlService.execute("CREATE MAPPING " + randomName() + " (" + path + " INT) "
-                        + "TYPE Kafka "
+                () -> sqlService.execute("CREATE MAPPING " + randomName() + " ("
+                        + path + " INT"
+                        + ") TYPE Kafka "
                         + "OPTIONS ("
                         + "keyFormat 'avro'"
                         + ", valueFormat 'avro'"

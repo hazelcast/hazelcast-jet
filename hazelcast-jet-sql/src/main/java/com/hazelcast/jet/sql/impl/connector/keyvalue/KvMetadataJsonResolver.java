@@ -55,10 +55,10 @@ public final class KvMetadataJsonResolver implements KvMetadataResolver {
             Map<String, String> options,
             InternalSerializationService serializationService
     ) {
-        Map<QueryPath, MappingField> mappingFieldsByPath = extractFields(userFields, isKey);
+        Map<QueryPath, MappingField> userFieldsByPath = extractFields(userFields, isKey);
 
         Map<String, MappingField> fields = new LinkedHashMap<>();
-        for (Entry<QueryPath, MappingField> entry : mappingFieldsByPath.entrySet()) {
+        for (Entry<QueryPath, MappingField> entry : userFieldsByPath.entrySet()) {
             QueryPath path = entry.getKey();
             if (path.getPath() == null) {
                 throw QueryException.error("Invalid external name: " + path.toString());
@@ -77,12 +77,10 @@ public final class KvMetadataJsonResolver implements KvMetadataResolver {
             Map<String, String> options,
             InternalSerializationService serializationService
     ) {
-        Map<QueryPath, MappingField> mappingFieldsByPath = isKey
-                ? extractFields(resolvedFields, true)
-                : extractFields(resolvedFields, false);
+        Map<QueryPath, MappingField> userFieldsByPath = extractFields(resolvedFields, isKey);
 
         List<TableField> fields = new ArrayList<>();
-        for (Entry<QueryPath, MappingField> entry : mappingFieldsByPath.entrySet()) {
+        for (Entry<QueryPath, MappingField> entry : userFieldsByPath.entrySet()) {
             QueryPath path = entry.getKey();
             QueryDataType type = entry.getValue().type();
             String name = entry.getValue().name();
