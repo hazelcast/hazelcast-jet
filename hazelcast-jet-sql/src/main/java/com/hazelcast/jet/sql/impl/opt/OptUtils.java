@@ -125,21 +125,6 @@ public final class OptUtils {
         return rel.getTable().unwrap(HazelcastTable.class);
     }
 
-    /**
-     * Recursively find {@link HazelcastTable} in the given {@code rel} or its
-     * inputs.
-     */
-    public static HazelcastTable findHazelcastTable(RelNode rel) {
-        RelNode input = rel;
-        while (input.getTable() == null && input.getInputs().size() > 0) {
-            if (input.getInputs().size() > 1) {
-                throw new RuntimeException("multiple inputs found");
-            }
-            input = input.getInput(0);
-        }
-        return extractHazelcastTable(input);
-    }
-
     public static Collection<RelNode> extractPhysicalRelsFromSubset(RelNode node) {
         if (node instanceof RelSubset) {
             RelSubset subset = (RelSubset) node;

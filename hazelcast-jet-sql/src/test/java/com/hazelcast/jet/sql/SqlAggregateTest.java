@@ -41,7 +41,7 @@ public class SqlAggregateTest extends SqlTestSupport {
     }
 
     @Test
-    public void test_group() {
+    public void test_groupBy() {
         String name = createTable(
                 new String[]{"Alice", "1"},
                 new String[]{"Bob", "1"},
@@ -71,20 +71,22 @@ public class SqlAggregateTest extends SqlTestSupport {
     }
 
     @Test
-    public void test_groupExpression() {
+    public void test_groupByNotSelectedField() {
         String name = createTable(
-                new String[]{"Alice", "1"},
-                new String[]{"Bob", "1"},
                 new String[]{"Alice", "2"},
-                new String[]{"Alice", "1"}
+                new String[]{"Bob", "1"},
+                new String[]{"Alice", "4"},
+                new String[]{"Alice", "2"},
+                new String[]{"Joey", "2"}
         );
 
         assertRowsAnyOrder(
-                "SELECT name, (distance * 2) d FROM " + name + " GROUP BY name, d",
+                "SELECT name FROM " + name + " GROUP BY name, distance",
                 asList(
-                        new Row("Alice", 2L),
-                        new Row("Alice", 4L),
-                        new Row("Bob", 2L)
+                        new Row("Alice"),
+                        new Row("Alice"),
+                        new Row("Bob"),
+                        new Row("Joey")
                 )
         );
     }
@@ -109,7 +111,7 @@ public class SqlAggregateTest extends SqlTestSupport {
     }
 
     @Test
-    public void test_groupHaving() {
+    public void test_groupByHaving() {
         String name = createTable(
                 new String[]{"Alice", "1"},
                 new String[]{"Bob", "1"},
@@ -127,7 +129,7 @@ public class SqlAggregateTest extends SqlTestSupport {
     }
 
     @Test
-    public void test_groupExpressionHavingExpression() {
+    public void test_groupByExpressionHavingExpression() {
         String name = createTable(
                 new String[]{"Alice", "2"},
                 new String[]{"Bob", "1"},
@@ -142,27 +144,6 @@ public class SqlAggregateTest extends SqlTestSupport {
                         new Row("Alice", 4L),
                         new Row("Alice", 8L),
                         new Row("Joey", 4L)
-                )
-        );
-    }
-
-    @Test
-    public void test_groupByNotSelectedField() {
-        String name = createTable(
-                new String[]{"Alice", "2"},
-                new String[]{"Bob", "1"},
-                new String[]{"Alice", "4"},
-                new String[]{"Alice", "2"},
-                new String[]{"Joey", "2"}
-        );
-
-        assertRowsAnyOrder(
-                "SELECT name FROM " + name + " GROUP BY name, distance",
-                asList(
-                        new Row("Alice"),
-                        new Row("Alice"),
-                        new Row("Bob"),
-                        new Row("Joey")
                 )
         );
     }
@@ -273,7 +254,7 @@ public class SqlAggregateTest extends SqlTestSupport {
     }
 
     @Test
-    public void test_groupCountHavingAggr() {
+    public void test_groupCountHavingAggregation() {
         String name = createTable(
                 new String[]{"Alice", "1"},
                 new String[]{"Bob", "1"},
@@ -741,16 +722,6 @@ public class SqlAggregateTest extends SqlTestSupport {
     }
 
     @Test
-    public void test_aggregatingStreamingSource() {
-        String name = randomName();
-        sqlService.execute("CREATE MAPPING " + name + " TYPE " + TestStreamSqlConnector.TYPE_NAME);
-
-        assertThatThrownBy(() -> sqlService.execute("SELECT COUNT(*) FROM " + name))
-                .isInstanceOf(HazelcastSqlException.class)
-                .hasMessageContaining("not supported");
-    }
-
-    @Test
     public void test_nestedAggregation() {
         String name = createTable(
                 new String[]{"Alice", "1"},
@@ -767,6 +738,16 @@ public class SqlAggregateTest extends SqlTestSupport {
                         new Row(new BigDecimal("3"))
                 )
         );
+    }
+
+    @Test
+    public void test_aggregatingStreamingSource() {
+        String name = randomName();
+        sqlService.execute("CREATE MAPPING " + name + " TYPE " + TestStreamSqlConnector.TYPE_NAME);
+
+        assertThatThrownBy(() -> sqlService.execute("SELECT COUNT(*) FROM " + name))
+                .isInstanceOf(HazelcastSqlException.class)
+                .hasMessageContaining("not supported");
     }
 
     @Test

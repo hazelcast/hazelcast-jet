@@ -96,7 +96,12 @@ public class SumAggregation implements Aggregation {
 
         switch (resultType.getTypeFamily()) {
             case BIGINT:
-                this.value = (long) this.value + converter.asBigint(value);
+                try {
+                    this.value = Math.addExact((long) this.value, converter.asBigint(value));
+                } catch (ArithmeticException e) {
+                    throw QueryException.dataException(QueryDataTypeFamily.BIGINT + " overflow in 'SUM' function " +
+                            "(consider adding explicit CAST to DECIMAL)");
+                }
                 break;
             case DECIMAL:
                 this.value = ((BigDecimal) this.value).add(converter.asDecimal(value), DECIMAL_MATH_CONTEXT);

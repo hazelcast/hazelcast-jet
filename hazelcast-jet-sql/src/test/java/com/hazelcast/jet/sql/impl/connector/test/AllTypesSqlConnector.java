@@ -166,7 +166,7 @@ public class AllTypesSqlConnector implements SqlConnector {
 
         @Override
         public String toString() {
-            return "AllTypes" + "[" + getSchemaName() + "." + getSqlName() + "])";
+            return "AllTypes" + "[" + getSchemaName() + "." + getSqlName() + "]";
         }
     }
 }

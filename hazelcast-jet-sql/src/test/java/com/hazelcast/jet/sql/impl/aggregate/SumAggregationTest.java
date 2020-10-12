@@ -18,6 +18,7 @@ package com.hazelcast.jet.sql.impl.aggregate;
 
 import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.internal.serialization.impl.DefaultSerializationServiceBuilder;
+import com.hazelcast.sql.impl.QueryException;
 import com.hazelcast.sql.impl.type.QueryDataType;
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
@@ -27,6 +28,7 @@ import org.junit.runner.RunWith;
 import java.math.BigDecimal;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @RunWith(JUnitParamsRunner.class)
 public class SumAggregationTest {
@@ -77,6 +79,16 @@ public class SumAggregationTest {
         aggregation.accumulate(new Object[]{value2});
 
         assertThat(aggregation.collect()).isEqualTo(expected);
+    }
+
+    @Test
+    public void test_accumulateOverflow() {
+        SumAggregation aggregation = new SumAggregation(0, QueryDataType.BIGINT);
+        aggregation.accumulate(new Object[]{Long.MAX_VALUE});
+
+        assertThatThrownBy(() -> aggregation.accumulate(new Object[]{1L}))
+                .isInstanceOf(QueryException.class)
+                .hasMessageContaining("BIGINT overflow");
     }
 
     @Test

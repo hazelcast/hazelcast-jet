@@ -23,13 +23,11 @@ import com.hazelcast.function.PredicateEx;
 import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Edge;
+import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.core.processor.Processors;
-import com.hazelcast.jet.sql.impl.aggregate.AggregateProcessors;
 import com.hazelcast.jet.sql.impl.aggregate.Aggregations;
-import com.hazelcast.jet.sql.impl.connector.SqlConnector;
 import com.hazelcast.jet.sql.impl.expression.ExpressionUtil;
-import com.hazelcast.jet.sql.impl.opt.OptUtils;
 import com.hazelcast.jet.sql.impl.opt.physical.AggregateCombinePhysicalRel;
 import com.hazelcast.jet.sql.impl.opt.physical.AggregateGroupByKeyPhysicalRel;
 import com.hazelcast.jet.sql.impl.opt.physical.AggregateGroupPhysicalRel;
@@ -40,6 +38,7 @@ import com.hazelcast.jet.sql.impl.opt.physical.JetRootRel;
 import com.hazelcast.jet.sql.impl.opt.physical.PhysicalRel;
 import com.hazelcast.jet.sql.impl.opt.physical.ProjectPhysicalRel;
 import com.hazelcast.jet.sql.impl.opt.physical.ValuesPhysicalRel;
+import com.hazelcast.jet.sql.impl.processors.AggregationCombiner;
 import com.hazelcast.sql.impl.calcite.schema.HazelcastTable;
 import com.hazelcast.sql.impl.schema.Table;
 import org.apache.calcite.rel.RelNode;
@@ -140,18 +139,15 @@ public class CreateDagVisitor {
     }
 
     public Vertex onCombine(AggregateCombinePhysicalRel rel) {
-        SqlConnector connector = getJetSqlConnector(OptUtils.findHazelcastTable(rel).getTarget());
-        if (connector.isStream()) {
-            throw new UnsupportedOperationException("Grouping/aggregations are not supported for "
-                    + connector.getClass().getName());
-        }
-
         FunctionEx<Object, Object> partitionKeyFn = rel.partitionKeyFn();
         AggregateOperation<Aggregations, Object[]> aggregateOperation = rel.aggregateOperation();
 
         Vertex vertex = dag.newVertex(
                 name("Aggregate-Combine"),
-                AggregateProcessors.combine(localMemberAddress, partitionKeyFn, aggregateOperation)
+                ProcessorMetaSupplier.forceTotalParallelismOne(
+                        new AggregationCombiner.Supplier(partitionKeyFn, aggregateOperation),
+                        localMemberAddress
+                )
         );
         connectInput(rel.getInput(), vertex, edge -> edge.allToOne("").distributeTo(localMemberAddress));
         return vertex;
@@ -176,7 +172,7 @@ public class CreateDagVisitor {
      * Creates a unique {@code Vertex} name with a given prefix.
      */
     private String name(String prefix) {
-        return prefix + "#" + ++vertexCounter;
+        return prefix + '(' + ++vertexCounter + ')';
     }
 
     /**

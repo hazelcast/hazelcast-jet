@@ -225,7 +225,7 @@ public class TestBatchSqlConnector implements SqlConnector {
 
         @Override
         public String toString() {
-            return "TestBatch" + "[" + getSchemaName() + "." + getSqlName() + "])";
+            return "TestBatch" + "[" + getSchemaName() + "." + getSqlName() + "]";
         }
     }
 }
