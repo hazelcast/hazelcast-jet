@@ -356,6 +356,10 @@ public interface ProcessorMetaSupplier extends Serializable {
         return new SerialProcessorMetaSupplier(supplier, memberAddress);
     }
 
+    /**
+     * A meta-supplier that will only use the given {@code ProcessorSupplier}
+     * on a node with given {@link Address}.
+     */
     final class SerialProcessorMetaSupplier implements ProcessorMetaSupplier, DataSerializable {
 
         private transient ProcessorSupplier supplier;

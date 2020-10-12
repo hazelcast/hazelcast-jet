@@ -37,7 +37,7 @@ import java.util.Map;
 
 import static java.util.Collections.singletonList;
 
-public class AggregationCombiner extends AbstractProcessor {
+public final class AggregationCombiner extends AbstractProcessor {
 
     private final Map<Object, Aggregations> keyToAggregations;
     private final FunctionEx<Object, Object> partitionKeyFn;
