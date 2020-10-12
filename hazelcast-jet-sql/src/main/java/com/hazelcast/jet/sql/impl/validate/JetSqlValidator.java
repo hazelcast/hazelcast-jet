@@ -21,6 +21,7 @@ import com.hazelcast.jet.sql.impl.parse.SqlCreateJob;
 import com.hazelcast.sql.impl.calcite.schema.HazelcastTable;
 import com.hazelcast.sql.impl.calcite.validate.HazelcastSqlValidator;
 import com.hazelcast.sql.impl.calcite.validate.types.HazelcastTypeFactory;
+import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlInsert;
 import org.apache.calcite.sql.SqlKind;
@@ -33,6 +34,7 @@ import org.apache.calcite.sql.validate.SqlValidatorTable;
 
 import static com.hazelcast.jet.sql.impl.connector.SqlConnectorUtil.getJetSqlConnector;
 import static com.hazelcast.jet.sql.impl.validate.ValidatorResource.RESOURCE;
+import static org.apache.calcite.sql.SqlKind.AGGREGATE;
 
 public class JetSqlValidator extends HazelcastSqlValidator {
 
@@ -72,9 +74,33 @@ public class JetSqlValidator extends HazelcastSqlValidator {
     protected void validateGroupClause(SqlSelect select) {
         super.validateGroupClause(select);
 
-        if (containsStreamingSource(select)) {
-            throw newValidationError(select, RESOURCE.error("not supported for a streaming query"));
+        if (containsGroupingOrAggregation(select) && containsStreamingSource(select)) {
+            throw newValidationError(select, RESOURCE.error("Grouping/aggregations not supported for a streaming query"));
         }
+    }
+
+    private boolean containsGroupingOrAggregation(SqlSelect select) {
+        if (select.getGroup() != null && select.getGroup().size() > 0) {
+            return true;
+        }
+
+        class FindAggregateVisitor extends SqlBasicVisitor<Void> {
+            boolean found;
+
+            @Override
+            public Void visit(SqlCall call) {
+                if (call.getKind().belongsTo(AGGREGATE)) {
+                    found = true;
+                    return null;
+                } else {
+                    return super.visit(call);
+                }
+            }
+        }
+
+        FindAggregateVisitor visitor = new FindAggregateVisitor();
+        select.getSelectList().accept(visitor);
+        return visitor.found;
     }
 
     /**
