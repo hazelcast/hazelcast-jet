@@ -30,23 +30,23 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
 @RunWith(MockitoJUnitRunner.class)
-public class AggregationsTest {
+public class SqlAggregationsTest {
 
-    private Aggregation[] aggregations;
+    private SqlAggregation[] aggregations;
 
     @Before
     public void setUp() {
-        aggregations = new Aggregation[]{
-                mock(Aggregation.class),
-                mock(Aggregation.class),
-                mock(Aggregation.class),
-                mock(Aggregation.class)
+        aggregations = new SqlAggregation[]{
+                mock(SqlAggregation.class),
+                mock(SqlAggregation.class),
+                mock(SqlAggregation.class),
+                mock(SqlAggregation.class)
         };
     }
 
     @Test
     public void test_accumulate() {
-        Aggregations aggregations = new Aggregations(new Aggregation[]{this.aggregations[0], this.aggregations[1]});
+        SqlAggregations aggregations = new SqlAggregations(new SqlAggregation[]{this.aggregations[0], this.aggregations[1]});
         Object[] row = new Object[]{1};
 
         aggregations.accumulate(row);
@@ -57,8 +57,8 @@ public class AggregationsTest {
 
     @Test
     public void test_combine() {
-        Aggregations left = new Aggregations(new Aggregation[]{aggregations[0], aggregations[1]});
-        Aggregations right = new Aggregations(new Aggregation[]{aggregations[2], aggregations[3]});
+        SqlAggregations left = new SqlAggregations(new SqlAggregation[]{aggregations[0], aggregations[1]});
+        SqlAggregations right = new SqlAggregations(new SqlAggregation[]{aggregations[2], aggregations[3]});
 
         left.combine(right);
 
@@ -68,7 +68,7 @@ public class AggregationsTest {
 
     @Test
     public void test_collect() {
-        Aggregations aggregations = new Aggregations(new Aggregation[]{this.aggregations[0], this.aggregations[1]});
+        SqlAggregations aggregations = new SqlAggregations(new SqlAggregation[]{this.aggregations[0], this.aggregations[1]});
         given(this.aggregations[0].collect()).willReturn(1L);
         given(this.aggregations[1].collect()).willReturn("v");
 
@@ -77,11 +77,11 @@ public class AggregationsTest {
 
     @Test
     public void test_serialization() {
-        ValueAggregation original = new ValueAggregation(0, QueryDataType.VARCHAR);
+        ValueSqlAggregation original = new ValueSqlAggregation(0, QueryDataType.VARCHAR);
         original.accumulate(new Object[]{"v"});
 
         InternalSerializationService ss = new DefaultSerializationServiceBuilder().build();
-        ValueAggregation serialized = ss.toObject(ss.toData(original));
+        ValueSqlAggregation serialized = ss.toObject(ss.toData(original));
 
         assertThat(serialized).isEqualTo(original);
     }

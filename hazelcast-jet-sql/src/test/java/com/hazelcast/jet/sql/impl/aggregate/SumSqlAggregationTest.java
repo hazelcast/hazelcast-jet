@@ -31,7 +31,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @RunWith(JUnitParamsRunner.class)
-public class SumAggregationTest {
+public class SumSqlAggregationTest {
 
     @SuppressWarnings("unused")
     private Object[] types() {
@@ -49,7 +49,7 @@ public class SumAggregationTest {
     @Test
     @Parameters(method = "types")
     public void test_default(QueryDataType operandType) {
-        SumAggregation aggregation = new SumAggregation(0, operandType);
+        SumSqlAggregation aggregation = new SumSqlAggregation(0, operandType);
 
         assertThat(aggregation.collect()).isNull();
     }
@@ -74,7 +74,7 @@ public class SumAggregationTest {
     @Test
     @Parameters(method = "values")
     public void test_accumulate(QueryDataType operandType, Object value1, Object value2, Object expected) {
-        SumAggregation aggregation = new SumAggregation(0, operandType);
+        SumSqlAggregation aggregation = new SumSqlAggregation(0, operandType);
         aggregation.accumulate(new Object[]{value1});
         aggregation.accumulate(new Object[]{value2});
 
@@ -83,7 +83,7 @@ public class SumAggregationTest {
 
     @Test
     public void test_accumulateOverflow() {
-        SumAggregation aggregation = new SumAggregation(0, QueryDataType.BIGINT);
+        SumSqlAggregation aggregation = new SumSqlAggregation(0, QueryDataType.BIGINT);
         aggregation.accumulate(new Object[]{Long.MAX_VALUE});
 
         assertThatThrownBy(() -> aggregation.accumulate(new Object[]{1L}))
@@ -93,7 +93,7 @@ public class SumAggregationTest {
 
     @Test
     public void test_accumulateDistinct() {
-        SumAggregation aggregation = new SumAggregation(0, QueryDataType.INT, true);
+        SumSqlAggregation aggregation = new SumSqlAggregation(0, QueryDataType.INT, true);
         aggregation.accumulate(new Object[]{null});
         aggregation.accumulate(new Object[]{1});
         aggregation.accumulate(new Object[]{1});
@@ -105,10 +105,10 @@ public class SumAggregationTest {
     @Test
     @Parameters(method = "values")
     public void test_combine(QueryDataType operandType, Object value1, Object value2, Object expected) {
-        SumAggregation left = new SumAggregation(0, operandType);
+        SumSqlAggregation left = new SumSqlAggregation(0, operandType);
         left.accumulate(new Object[]{value1});
 
-        SumAggregation right = new SumAggregation(0, operandType);
+        SumSqlAggregation right = new SumSqlAggregation(0, operandType);
         right.accumulate(new Object[]{value2});
 
         left.combine(right);
@@ -118,11 +118,11 @@ public class SumAggregationTest {
 
     @Test
     public void test_serialization() {
-        SumAggregation original = new SumAggregation(0, QueryDataType.TINYINT);
+        SumSqlAggregation original = new SumSqlAggregation(0, QueryDataType.TINYINT);
         original.accumulate(new Object[]{(byte) 1});
 
         InternalSerializationService ss = new DefaultSerializationServiceBuilder().build();
-        SumAggregation serialized = ss.toObject(ss.toData(original));
+        SumSqlAggregation serialized = ss.toObject(ss.toData(original));
 
         assertThat(serialized).isEqualTo(original);
     }

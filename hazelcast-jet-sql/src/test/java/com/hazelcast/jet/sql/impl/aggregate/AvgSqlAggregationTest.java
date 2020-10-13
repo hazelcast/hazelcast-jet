@@ -31,7 +31,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @RunWith(JUnitParamsRunner.class)
-public class AvgAggregationTest {
+public class AvgSqlAggregationTest {
 
     @SuppressWarnings("unused")
     private Object[] types() {
@@ -49,7 +49,7 @@ public class AvgAggregationTest {
     @Test
     @Parameters(method = "types")
     public void test_default(QueryDataType operandType) {
-        AvgAggregation aggregation = new AvgAggregation(0, operandType);
+        AvgSqlAggregation aggregation = new AvgSqlAggregation(0, operandType);
 
         assertThat(aggregation.collect()).isNull();
     }
@@ -74,7 +74,7 @@ public class AvgAggregationTest {
     @Test
     @Parameters(method = "values")
     public void test_accumulate(QueryDataType operandType, Object value1, Object value2, Object expected) {
-        AvgAggregation aggregation = new AvgAggregation(0, operandType);
+        AvgSqlAggregation aggregation = new AvgSqlAggregation(0, operandType);
         aggregation.accumulate(new Object[]{value1});
         aggregation.accumulate(new Object[]{value2});
 
@@ -83,7 +83,7 @@ public class AvgAggregationTest {
 
     @Test
     public void test_accumulateOverflow() {
-        AvgAggregation aggregation = new AvgAggregation(0, QueryDataType.BIGINT);
+        AvgSqlAggregation aggregation = new AvgSqlAggregation(0, QueryDataType.BIGINT);
         aggregation.accumulate(new Object[]{Long.MAX_VALUE});
 
         assertThatThrownBy(() -> aggregation.accumulate(new Object[]{1L}))
@@ -93,7 +93,7 @@ public class AvgAggregationTest {
 
     @Test
     public void test_accumulateDistinct() {
-        AvgAggregation aggregation = new AvgAggregation(0, QueryDataType.INT, true);
+        AvgSqlAggregation aggregation = new AvgSqlAggregation(0, QueryDataType.INT, true);
         aggregation.accumulate(new Object[]{null});
         aggregation.accumulate(new Object[]{1});
         aggregation.accumulate(new Object[]{1});
@@ -105,10 +105,10 @@ public class AvgAggregationTest {
     @Test
     @Parameters(method = "values")
     public void test_combine(QueryDataType operandType, Object value1, Object value2, Object expected) {
-        AvgAggregation left = new AvgAggregation(0, operandType);
+        AvgSqlAggregation left = new AvgSqlAggregation(0, operandType);
         left.accumulate(new Object[]{value1});
 
-        AvgAggregation right = new AvgAggregation(0, operandType);
+        AvgSqlAggregation right = new AvgSqlAggregation(0, operandType);
         right.accumulate(new Object[]{value2});
 
         left.combine(right);
@@ -118,11 +118,11 @@ public class AvgAggregationTest {
 
     @Test
     public void test_serialization() {
-        AvgAggregation original = new AvgAggregation(0, QueryDataType.TINYINT);
+        AvgSqlAggregation original = new AvgSqlAggregation(0, QueryDataType.TINYINT);
         original.accumulate(new Object[]{(byte) 1});
 
         InternalSerializationService ss = new DefaultSerializationServiceBuilder().build();
-        AvgAggregation serialized = ss.toObject(ss.toData(original));
+        AvgSqlAggregation serialized = ss.toObject(ss.toData(original));
 
         assertThat(serialized).isEqualTo(original);
     }

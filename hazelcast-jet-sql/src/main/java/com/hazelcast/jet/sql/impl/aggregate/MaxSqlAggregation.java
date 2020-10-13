@@ -26,17 +26,17 @@ import java.io.IOException;
 import java.util.Objects;
 
 @NotThreadSafe
-public class MaxAggregation extends Aggregation {
+public class MaxSqlAggregation extends SqlAggregation {
 
     private QueryDataType operandType;
 
     private Object value;
 
     @SuppressWarnings("unused")
-    private MaxAggregation() {
+    private MaxSqlAggregation() {
     }
 
-    public MaxAggregation(int index, QueryDataType operandType) {
+    public MaxSqlAggregation(int index, QueryDataType operandType) {
         super(index, true, false);
         this.operandType = operandType;
     }
@@ -54,8 +54,8 @@ public class MaxAggregation extends Aggregation {
     }
 
     @Override
-    public void combine(Aggregation other0) {
-        MaxAggregation other = (MaxAggregation) other0;
+    public void combine(SqlAggregation other0) {
+        MaxSqlAggregation other = (MaxSqlAggregation) other0;
 
         Object value = other.value;
 
@@ -108,7 +108,7 @@ public class MaxAggregation extends Aggregation {
         if (o == null || getClass() != o.getClass()) {
             return false;
         }
-        MaxAggregation that = (MaxAggregation) o;
+        MaxSqlAggregation that = (MaxSqlAggregation) o;
         return Objects.equals(operandType, that.operandType) &&
                 Objects.equals(value, that.value);
     }

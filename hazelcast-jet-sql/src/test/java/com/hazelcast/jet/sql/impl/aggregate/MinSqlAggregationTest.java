@@ -27,11 +27,11 @@ import org.junit.runner.RunWith;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @RunWith(JUnitParamsRunner.class)
-public class MinAggregationTest {
+public class MinSqlAggregationTest {
 
     @Test
     public void test_default() {
-        MinAggregation aggregation = new MinAggregation(0, QueryDataType.INT);
+        MinSqlAggregation aggregation = new MinSqlAggregation(0, QueryDataType.INT);
 
         assertThat(aggregation.collect()).isNull();
     }
@@ -51,7 +51,7 @@ public class MinAggregationTest {
     @Test
     @Parameters(method = "values")
     public void test_accumulate(Object value1, Object value2, Object expected) {
-        MinAggregation aggregation = new MinAggregation(0, QueryDataType.INT);
+        MinSqlAggregation aggregation = new MinSqlAggregation(0, QueryDataType.INT);
         aggregation.accumulate(new Object[]{value1});
         aggregation.accumulate(new Object[]{value2});
 
@@ -61,10 +61,10 @@ public class MinAggregationTest {
     @Test
     @Parameters(method = "values")
     public void test_combine(Object value1, Object value2, Object expected) {
-        MinAggregation left = new MinAggregation(0, QueryDataType.INT);
+        MinSqlAggregation left = new MinSqlAggregation(0, QueryDataType.INT);
         left.accumulate(new Object[]{value1});
 
-        MinAggregation right = new MinAggregation(0, QueryDataType.INT);
+        MinSqlAggregation right = new MinSqlAggregation(0, QueryDataType.INT);
         right.accumulate(new Object[]{value2});
 
         left.combine(right);
@@ -75,11 +75,11 @@ public class MinAggregationTest {
 
     @Test
     public void test_serialization() {
-        MinAggregation original = new MinAggregation(0, QueryDataType.INT);
+        MinSqlAggregation original = new MinSqlAggregation(0, QueryDataType.INT);
         original.accumulate(new Object[]{1});
 
         InternalSerializationService ss = new DefaultSerializationServiceBuilder().build();
-        MinAggregation serialized = ss.toObject(ss.toData(original));
+        MinSqlAggregation serialized = ss.toObject(ss.toData(original));
 
         assertThat(serialized).isEqualTo(original);
     }

@@ -21,6 +21,7 @@ import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.sql.impl.QueryException;
 import com.hazelcast.sql.impl.type.QueryDataType;
 import com.hazelcast.sql.impl.type.QueryDataTypeFamily;
+import com.hazelcast.sql.impl.type.converter.Converter;
 
 import javax.annotation.concurrent.NotThreadSafe;
 import java.io.IOException;
@@ -30,26 +31,25 @@ import java.util.Objects;
 import static com.hazelcast.sql.impl.expression.math.ExpressionMath.DECIMAL_MATH_CONTEXT;
 
 @NotThreadSafe
-public class AvgAggregation extends Aggregation {
+public class SumSqlAggregation extends SqlAggregation {
 
+    private QueryDataType operandType;
     private QueryDataType resultType;
 
-    private SumAggregation sum;
-    private CountAggregation count;
+    private Object value;
 
     @SuppressWarnings("unused")
-    private AvgAggregation() {
+    private SumSqlAggregation() {
     }
 
-    public AvgAggregation(int index, QueryDataType operandType) {
+    public SumSqlAggregation(int index, QueryDataType operandType) {
         this(index, operandType, false);
     }
 
-    public AvgAggregation(int index, QueryDataType operandType, boolean distinct) {
+    public SumSqlAggregation(int index, QueryDataType operandType, boolean distinct) {
         super(index, true, distinct);
+        this.operandType = operandType;
         this.resultType = inferResultType(operandType);
-        this.sum = new SumAggregation(index, operandType);
-        this.count = new CountAggregation();
     }
 
     private static QueryDataType inferResultType(QueryDataType operandType) {
@@ -58,6 +58,7 @@ public class AvgAggregation extends Aggregation {
             case SMALLINT:
             case INTEGER:
             case BIGINT:
+                return QueryDataType.BIGINT;
             case DECIMAL:
                 return QueryDataType.DECIMAL;
             case REAL:
@@ -75,55 +76,71 @@ public class AvgAggregation extends Aggregation {
 
     @Override
     protected void accumulate(Object value) {
-        sum.accumulate(value);
-        count.accumulate(value);
+        add(value, operandType.getConverter());
     }
 
     @Override
-    public void combine(Aggregation other0) {
-        AvgAggregation other = (AvgAggregation) other0;
+    public void combine(SqlAggregation other0) {
+        SumSqlAggregation other = (SumSqlAggregation) other0;
 
-        sum.combine(other.sum);
-        count.combine(other.count);
+        Object value = other.value;
+        if (value != null) {
+            add(value, resultType.getConverter());
+        }
+    }
+
+    private void add(Object value, Converter converter) {
+        if (this.value == null) {
+            this.value = identity();
+        }
+
+        switch (resultType.getTypeFamily()) {
+            case BIGINT:
+                try {
+                    this.value = Math.addExact((long) this.value, converter.asBigint(value));
+                } catch (ArithmeticException e) {
+                    throw QueryException.dataException(QueryDataTypeFamily.BIGINT + " overflow in 'SUM' function " +
+                            "(consider adding explicit CAST to DECIMAL)");
+                }
+                break;
+            case DECIMAL:
+                this.value = ((BigDecimal) this.value).add(converter.asDecimal(value), DECIMAL_MATH_CONTEXT);
+                break;
+            default:
+                assert resultType.getTypeFamily() == QueryDataTypeFamily.DOUBLE;
+                this.value = (double) this.value + converter.asDouble(value);
+        }
+    }
+
+    private Object identity() {
+        switch (resultType.getTypeFamily()) {
+            case BIGINT:
+                return 0L;
+            case DECIMAL:
+                return BigDecimal.ZERO;
+            default:
+                assert resultType.getTypeFamily() == QueryDataTypeFamily.DOUBLE;
+                return 0.0D;
+        }
     }
 
     @Override
     public Object collect() {
-        Object sum = this.sum.collect();
-        if (sum == null) {
-            return null;
-        }
-        Object count = this.count.collect();
-
-        switch (resultType.getTypeFamily()) {
-            case TINYINT:
-            case SMALLINT:
-            case INTEGER:
-            case BIGINT:
-            case DECIMAL:
-                BigDecimal decimalSum = this.sum.resultType().getConverter().asDecimal(sum);
-                BigDecimal decimalCount = this.count.resultType().getConverter().asDecimal(count);
-                return decimalSum.divide(decimalCount, DECIMAL_MATH_CONTEXT);
-            default:
-                assert resultType.getTypeFamily() == QueryDataTypeFamily.DOUBLE;
-                double doubleSum = this.sum.resultType().getConverter().asDouble(sum);
-                double doubleCount = this.count.resultType().getConverter().asDouble(count);
-                return doubleSum / doubleCount;
-        }
+        return value;
     }
 
     @Override
     public void writeData(ObjectDataOutput out) throws IOException {
+        out.writeObject(operandType);
         out.writeObject(resultType);
-        out.writeObject(sum);
-        out.writeObject(count);
+        out.writeObject(value);
     }
 
     @Override
     public void readData(ObjectDataInput in) throws IOException {
+        operandType = in.readObject();
         resultType = in.readObject();
-        sum = in.readObject();
-        count = in.readObject();
+        value = in.readObject();
     }
 
     @Override
@@ -134,14 +151,14 @@ public class AvgAggregation extends Aggregation {
         if (o == null || getClass() != o.getClass()) {
             return false;
         }
-        AvgAggregation that = (AvgAggregation) o;
-        return Objects.equals(resultType, that.resultType) &&
-                Objects.equals(sum, that.sum) &&
-                Objects.equals(count, that.count);
+        SumSqlAggregation that = (SumSqlAggregation) o;
+        return Objects.equals(operandType, that.operandType) &&
+                Objects.equals(resultType, that.resultType) &&
+                Objects.equals(value, that.value);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(resultType, sum, count);
+        return Objects.hash(operandType, resultType, value);
     }
 }

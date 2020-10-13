@@ -25,16 +25,16 @@ import java.util.Set;
 /**
  * A mutable object used for computing the SQL aggregation functions.
  */
-public abstract class Aggregation implements DataSerializable {
+public abstract class SqlAggregation implements DataSerializable {
 
     private int index;
     private boolean ignoreNulls;
     private Set<Object> values;
 
-    protected Aggregation() {
+    protected SqlAggregation() {
     }
 
-    protected Aggregation(int index, boolean ignoreNulls, boolean distinct) {
+    protected SqlAggregation(int index, boolean ignoreNulls, boolean distinct) {
         this.index = index;
         this.ignoreNulls = ignoreNulls;
         this.values = distinct ? new HashSet<>() : null;
@@ -64,7 +64,7 @@ public abstract class Aggregation implements DataSerializable {
     /**
      * Merge another aggregation into this aggregation.
      */
-    public abstract void combine(Aggregation other);
+    public abstract void combine(SqlAggregation other);
 
     /**
      * Return the aggregation result.

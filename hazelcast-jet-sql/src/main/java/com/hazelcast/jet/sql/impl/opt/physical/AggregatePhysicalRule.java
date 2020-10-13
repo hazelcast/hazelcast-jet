@@ -18,14 +18,14 @@ package com.hazelcast.jet.sql.impl.opt.physical;
 
 import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.aggregate.AggregateOperation;
-import com.hazelcast.jet.sql.impl.aggregate.Aggregation;
-import com.hazelcast.jet.sql.impl.aggregate.Aggregations;
-import com.hazelcast.jet.sql.impl.aggregate.AvgAggregation;
-import com.hazelcast.jet.sql.impl.aggregate.CountAggregation;
-import com.hazelcast.jet.sql.impl.aggregate.MaxAggregation;
-import com.hazelcast.jet.sql.impl.aggregate.MinAggregation;
-import com.hazelcast.jet.sql.impl.aggregate.SumAggregation;
-import com.hazelcast.jet.sql.impl.aggregate.ValueAggregation;
+import com.hazelcast.jet.sql.impl.aggregate.SqlAggregation;
+import com.hazelcast.jet.sql.impl.aggregate.SqlAggregations;
+import com.hazelcast.jet.sql.impl.aggregate.AvgSqlAggregation;
+import com.hazelcast.jet.sql.impl.aggregate.CountSqlAggregation;
+import com.hazelcast.jet.sql.impl.aggregate.MaxSqlAggregation;
+import com.hazelcast.jet.sql.impl.aggregate.MinSqlAggregation;
+import com.hazelcast.jet.sql.impl.aggregate.SumSqlAggregation;
+import com.hazelcast.jet.sql.impl.aggregate.ValueSqlAggregation;
 import com.hazelcast.jet.sql.impl.opt.OptUtils;
 import com.hazelcast.jet.sql.impl.opt.logical.AggregateLogicalRel;
 import com.hazelcast.sql.impl.QueryException;
@@ -83,7 +83,7 @@ final class AggregatePhysicalRule extends RelOptRule {
      * The output is a single row.
      */
     private static RelNode toGroupCombine(AggregateLogicalRel logicalAggregate, RelNode physicalInput) {
-        AggregateOperation<Aggregations, Object[]> aggregateOperation = aggregateOperation(
+        AggregateOperation<SqlAggregations, Object[]> aggregateOperation = aggregateOperation(
                 physicalInput.getRowType(),
                 logicalAggregate.getGroupSet(),
                 logicalAggregate.getAggCallList()
@@ -117,7 +117,7 @@ final class AggregatePhysicalRule extends RelOptRule {
      */
     @SuppressWarnings("rawtypes")
     private static RelNode toGroupByKeyCombine(AggregateLogicalRel logicalAggregate, RelNode physicalInput) {
-        AggregateOperation<Aggregations, Object[]> aggregateOperation = aggregateOperation(
+        AggregateOperation<SqlAggregations, Object[]> aggregateOperation = aggregateOperation(
                 physicalInput.getRowType(),
                 logicalAggregate.getGroupSet(),
                 logicalAggregate.getAggCallList()
@@ -140,21 +140,21 @@ final class AggregatePhysicalRule extends RelOptRule {
                 logicalAggregate.getGroupSets(),
                 logicalAggregate.getAggCallList(),
                 o -> ((Entry) o).getKey(),
-                aggregateOperation.withCombiningAccumulateFn(Entry<Object, Aggregations>::getValue)
+                aggregateOperation.withCombiningAccumulateFn(Entry<Object, SqlAggregations>::getValue)
         );
     }
 
-    private static AggregateOperation<Aggregations, Object[]> aggregateOperation(
+    private static AggregateOperation<SqlAggregations, Object[]> aggregateOperation(
             RelDataType inputType,
             ImmutableBitSet groupSet,
             List<AggregateCall> aggregateCalls
     ) {
         List<QueryDataType> operandTypes = OptUtils.schema(inputType).getTypes();
 
-        List<SupplierEx<Aggregation>> aggregationProviders = new ArrayList<>();
+        List<SupplierEx<SqlAggregation>> aggregationProviders = new ArrayList<>();
         for (Integer groupIndex : groupSet.toList()) {
             QueryDataType operandType = operandTypes.get(groupIndex);
-            aggregationProviders.add(() -> new ValueAggregation(groupIndex, operandType));
+            aggregationProviders.add(() -> new ValueSqlAggregation(groupIndex, operandType));
         }
         for (AggregateCall aggregateCall : aggregateCalls) {
             boolean distinct = aggregateCall.isDistinct();
@@ -164,33 +164,33 @@ final class AggregatePhysicalRule extends RelOptRule {
                 case COUNT:
                     if (distinct) {
                         int countIndex = aggregateCallArguments.get(0);
-                        aggregationProviders.add(() -> new CountAggregation(countIndex, true));
+                        aggregationProviders.add(() -> new CountSqlAggregation(countIndex, true));
                     } else if (aggregateCallArguments.size() == 1) {
                         int countIndex = aggregateCallArguments.get(0);
-                        aggregationProviders.add(() -> new CountAggregation(countIndex));
+                        aggregationProviders.add(() -> new CountSqlAggregation(countIndex));
                     } else {
-                        aggregationProviders.add(CountAggregation::new);
+                        aggregationProviders.add(CountSqlAggregation::new);
                     }
                     break;
                 case MIN:
                     int minIndex = aggregateCallArguments.get(0);
                     QueryDataType minOperandType = operandTypes.get(minIndex);
-                    aggregationProviders.add(() -> new MinAggregation(minIndex, minOperandType));
+                    aggregationProviders.add(() -> new MinSqlAggregation(minIndex, minOperandType));
                     break;
                 case MAX:
                     int maxIndex = aggregateCallArguments.get(0);
                     QueryDataType maxOperandType = operandTypes.get(maxIndex);
-                    aggregationProviders.add(() -> new MaxAggregation(maxIndex, maxOperandType));
+                    aggregationProviders.add(() -> new MaxSqlAggregation(maxIndex, maxOperandType));
                     break;
                 case SUM:
                     int sumIndex = aggregateCallArguments.get(0);
                     QueryDataType sumOperandType = operandTypes.get(sumIndex);
-                    aggregationProviders.add(() -> new SumAggregation(sumIndex, sumOperandType, distinct));
+                    aggregationProviders.add(() -> new SumSqlAggregation(sumIndex, sumOperandType, distinct));
                     break;
                 case AVG:
                     int avgIndex = aggregateCallArguments.get(0);
                     QueryDataType avgOperandType = operandTypes.get(avgIndex);
-                    aggregationProviders.add(() -> new AvgAggregation(avgIndex, avgOperandType, distinct));
+                    aggregationProviders.add(() -> new AvgSqlAggregation(avgIndex, avgOperandType, distinct));
                     break;
                 default:
                     throw QueryException.error("Unsupported aggregation: " + kind);
@@ -199,14 +199,14 @@ final class AggregatePhysicalRule extends RelOptRule {
 
         return AggregateOperation
                 .withCreate(() -> {
-                    Aggregation[] aggregations = new Aggregation[aggregationProviders.size()];
+                    SqlAggregation[] aggregations = new SqlAggregation[aggregationProviders.size()];
                     for (int i = 0; i < aggregationProviders.size(); i++) {
                         aggregations[i] = aggregationProviders.get(i).get();
                     }
-                    return new Aggregations(aggregations);
+                    return new SqlAggregations(aggregations);
                 })
-                .andAccumulate(Aggregations::accumulate)
-                .andCombine(Aggregations::combine)
-                .andExportFinish(Aggregations::collect);
+                .andAccumulate(SqlAggregations::accumulate)
+                .andCombine(SqlAggregations::combine)
+                .andExportFinish(SqlAggregations::collect);
     }
 }

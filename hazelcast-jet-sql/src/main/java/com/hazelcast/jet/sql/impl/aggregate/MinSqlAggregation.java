@@ -18,30 +18,26 @@ package com.hazelcast.jet.sql.impl.aggregate;
 
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
+import com.hazelcast.sql.impl.QueryException;
 import com.hazelcast.sql.impl.type.QueryDataType;
 
 import javax.annotation.concurrent.NotThreadSafe;
 import java.io.IOException;
 import java.util.Objects;
 
-/**
- * Special-case aggregation that aggregates multiple instances of the same
- * value. The result is the value. Asserts that no non-equal value is
- * accumulated.
- */
 @NotThreadSafe
-public class ValueAggregation extends Aggregation {
+public class MinSqlAggregation extends SqlAggregation {
 
     private QueryDataType operandType;
 
     private Object value;
 
     @SuppressWarnings("unused")
-    private ValueAggregation() {
+    private MinSqlAggregation() {
     }
 
-    public ValueAggregation(int index, QueryDataType operandType) {
-        super(index, false, false);
+    public MinSqlAggregation(int index, QueryDataType operandType) {
+        super(index, true, false);
         this.operandType = operandType;
     }
 
@@ -52,20 +48,39 @@ public class ValueAggregation extends Aggregation {
 
     @Override
     protected void accumulate(Object value) {
-        assert this.value == null || this.value.equals(value);
-
-        this.value = value;
+        if (this.value == null || compare(this.value, value) > 0) {
+            this.value = value;
+        }
     }
 
     @Override
-    public void combine(Aggregation other0) {
-        ValueAggregation other = (ValueAggregation) other0;
+    public void combine(SqlAggregation other0) {
+        MinSqlAggregation other = (MinSqlAggregation) other0;
 
         Object value = other.value;
 
-        assert this.value == null || this.value.equals(value);
+        if (this.value == null || (value != null && compare(this.value, value) > 0)) {
+            this.value = value;
+        }
+    }
 
-        this.value = value;
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private int compare(Object left, Object right) {
+        assert left != null;
+        assert right != null;
+
+        Comparable leftComparable = asComparable(left);
+        Comparable rightComparable = asComparable(right);
+
+        return leftComparable.compareTo(rightComparable);
+    }
+
+    private static Comparable<?> asComparable(Object value) {
+        if (value instanceof Comparable) {
+            return (Comparable<?>) value;
+        } else {
+            throw QueryException.error("MIN not supported for " + value.getClass() + ": not comparable");
+        }
     }
 
     @Override
@@ -93,7 +108,7 @@ public class ValueAggregation extends Aggregation {
         if (o == null || getClass() != o.getClass()) {
             return false;
         }
-        ValueAggregation that = (ValueAggregation) o;
+        MinSqlAggregation that = (MinSqlAggregation) o;
         return Objects.equals(operandType, that.operandType) &&
                 Objects.equals(value, that.value);
     }

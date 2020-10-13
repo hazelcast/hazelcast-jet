@@ -25,28 +25,28 @@ import java.io.IOException;
 import java.util.Arrays;
 
 /**
- * A holder of {@link Aggregation} instances for the entire row.
+ * A holder of {@link SqlAggregation} instances for the entire row.
  */
 @NotThreadSafe
-public class Aggregations implements DataSerializable {
+public class SqlAggregations implements DataSerializable {
 
-    private Aggregation[] aggregations;
+    private SqlAggregation[] aggregations;
 
     @SuppressWarnings("unused")
-    private Aggregations() {
+    private SqlAggregations() {
     }
 
-    public Aggregations(Aggregation[] aggregations) {
+    public SqlAggregations(SqlAggregation[] aggregations) {
         this.aggregations = aggregations;
     }
 
     public void accumulate(Object[] row) {
-        for (Aggregation aggregation : aggregations) {
+        for (SqlAggregation aggregation : aggregations) {
             aggregation.accumulate(row);
         }
     }
 
-    public void combine(Aggregations other) {
+    public void combine(SqlAggregations other) {
         assert aggregations.length == other.aggregations.length;
 
         for (int i = 0; i < aggregations.length; i++) {
@@ -65,14 +65,14 @@ public class Aggregations implements DataSerializable {
     @Override
     public void writeData(ObjectDataOutput out) throws IOException {
         out.writeInt(aggregations.length);
-        for (Aggregation aggregation : aggregations) {
+        for (SqlAggregation aggregation : aggregations) {
             out.writeObject(aggregation);
         }
     }
 
     @Override
     public void readData(ObjectDataInput in) throws IOException {
-        aggregations = new Aggregation[in.readInt()];
+        aggregations = new SqlAggregation[in.readInt()];
         for (int i = 0; i < aggregations.length; i++) {
             aggregations[i] = in.readObject();
         }
@@ -86,7 +86,7 @@ public class Aggregations implements DataSerializable {
         if (o == null || getClass() != o.getClass()) {
             return false;
         }
-        Aggregations that = (Aggregations) o;
+        SqlAggregations that = (SqlAggregations) o;
         return Arrays.equals(aggregations, that.aggregations);
     }
 

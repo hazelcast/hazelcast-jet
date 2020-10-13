@@ -25,19 +25,19 @@ import java.io.IOException;
 import java.util.Objects;
 
 @NotThreadSafe
-public class CountAggregation extends Aggregation {
+public class CountSqlAggregation extends SqlAggregation {
 
     private long value;
 
-    public CountAggregation() {
+    public CountSqlAggregation() {
         super(-1, false, false);
     }
 
-    public CountAggregation(int index) {
+    public CountSqlAggregation(int index) {
         super(index, true, false);
     }
 
-    public CountAggregation(int index, boolean distinct) {
+    public CountSqlAggregation(int index, boolean distinct) {
         super(index, true, distinct);
     }
 
@@ -52,8 +52,8 @@ public class CountAggregation extends Aggregation {
     }
 
     @Override
-    public void combine(Aggregation other0) {
-        CountAggregation other = (CountAggregation) other0;
+    public void combine(SqlAggregation other0) {
+        CountSqlAggregation other = (CountSqlAggregation) other0;
 
         value += other.value;
     }
@@ -81,7 +81,7 @@ public class CountAggregation extends Aggregation {
         if (o == null || getClass() != o.getClass()) {
             return false;
         }
-        CountAggregation that = (CountAggregation) o;
+        CountSqlAggregation that = (CountSqlAggregation) o;
         return value == that.value;
     }
 

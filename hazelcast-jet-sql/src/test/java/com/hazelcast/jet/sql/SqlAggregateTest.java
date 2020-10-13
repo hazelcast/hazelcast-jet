@@ -76,7 +76,7 @@ public class SqlAggregateTest extends SqlTestSupport {
         String name = createTable();
 
         assertRowsAnyOrder(
-                "SELECT name FROM " + name + " GROUP BY name", // field ordinal
+                "SELECT name FROM " + name + " GROUP BY name",
                 emptyList()
         );
     }

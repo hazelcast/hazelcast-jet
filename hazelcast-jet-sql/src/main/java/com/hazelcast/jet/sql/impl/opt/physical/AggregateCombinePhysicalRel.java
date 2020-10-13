@@ -19,7 +19,7 @@ package com.hazelcast.jet.sql.impl.opt.physical;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.core.Vertex;
-import com.hazelcast.jet.sql.impl.aggregate.Aggregations;
+import com.hazelcast.jet.sql.impl.aggregate.SqlAggregations;
 import com.hazelcast.jet.sql.impl.opt.OptUtils;
 import com.hazelcast.jet.sql.impl.opt.physical.visitor.CreateDagVisitor;
 import com.hazelcast.sql.impl.plan.node.PlanNodeSchema;
@@ -36,7 +36,7 @@ import java.util.List;
 public class AggregateCombinePhysicalRel extends Aggregate implements PhysicalRel {
 
     private final FunctionEx<Object, Object> partitionKeyFn;
-    private final AggregateOperation<Aggregations, Object[]> aggregateOperation;
+    private final AggregateOperation<SqlAggregations, Object[]> aggregateOperation;
 
     AggregateCombinePhysicalRel(
             RelOptCluster cluster,
@@ -46,7 +46,7 @@ public class AggregateCombinePhysicalRel extends Aggregate implements PhysicalRe
             List<ImmutableBitSet> groupSets,
             List<AggregateCall> aggCalls,
             FunctionEx<Object, Object> partitionKeyFn,
-            AggregateOperation<Aggregations, Object[]> aggregateOperation
+            AggregateOperation<SqlAggregations, Object[]> aggregateOperation
     ) {
         super(cluster, traits, new ArrayList<>(), input, groupSet, groupSets, aggCalls);
 
@@ -58,7 +58,7 @@ public class AggregateCombinePhysicalRel extends Aggregate implements PhysicalRe
         return partitionKeyFn;
     }
 
-    public AggregateOperation<Aggregations, Object[]> aggregateOperation() {
+    public AggregateOperation<SqlAggregations, Object[]> aggregateOperation() {
         return aggregateOperation;
     }
 

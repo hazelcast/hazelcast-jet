@@ -23,18 +23,18 @@ import org.junit.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class ValueAggregationTest {
+public class ValueSqlAggregationTest {
 
     @Test
     public void test_default() {
-        ValueAggregation aggregation = new ValueAggregation(0, QueryDataType.OBJECT);
+        ValueSqlAggregation aggregation = new ValueSqlAggregation(0, QueryDataType.OBJECT);
 
         assertThat(aggregation.collect()).isNull();
     }
 
     @Test
     public void test_accumulate() {
-        ValueAggregation aggregation = new ValueAggregation(1, QueryDataType.VARCHAR);
+        ValueSqlAggregation aggregation = new ValueSqlAggregation(1, QueryDataType.VARCHAR);
         aggregation.accumulate(new Object[]{1, "v"});
         aggregation.accumulate(new Object[]{2, "v"});
 
@@ -43,10 +43,10 @@ public class ValueAggregationTest {
 
     @Test
     public void test_combine() {
-        ValueAggregation left = new ValueAggregation(0, QueryDataType.VARCHAR);
+        ValueSqlAggregation left = new ValueSqlAggregation(0, QueryDataType.VARCHAR);
         left.accumulate(new Object[]{null});
 
-        ValueAggregation right = new ValueAggregation(0, QueryDataType.VARCHAR);
+        ValueSqlAggregation right = new ValueSqlAggregation(0, QueryDataType.VARCHAR);
         right.accumulate(new Object[]{"v"});
 
         left.combine(right);
@@ -57,11 +57,11 @@ public class ValueAggregationTest {
 
     @Test
     public void test_serialization() {
-        ValueAggregation original = new ValueAggregation(0, QueryDataType.VARCHAR);
+        ValueSqlAggregation original = new ValueSqlAggregation(0, QueryDataType.VARCHAR);
         original.accumulate(new Object[]{"v"});
 
         InternalSerializationService ss = new DefaultSerializationServiceBuilder().build();
-        ValueAggregation serialized = ss.toObject(ss.toData(original));
+        ValueSqlAggregation serialized = ss.toObject(ss.toData(original));
 
         assertThat(serialized).isEqualTo(original);
     }

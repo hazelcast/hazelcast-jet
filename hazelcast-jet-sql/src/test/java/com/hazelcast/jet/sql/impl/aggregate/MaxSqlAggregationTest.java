@@ -27,11 +27,11 @@ import org.junit.runner.RunWith;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @RunWith(JUnitParamsRunner.class)
-public class MaxAggregationTest {
+public class MaxSqlAggregationTest {
 
     @Test
     public void test_default() {
-        MaxAggregation aggregation = new MaxAggregation(0, QueryDataType.INT);
+        MaxSqlAggregation aggregation = new MaxSqlAggregation(0, QueryDataType.INT);
 
         assertThat(aggregation.collect()).isNull();
     }
@@ -51,7 +51,7 @@ public class MaxAggregationTest {
     @Test
     @Parameters(method = "values")
     public void test_accumulate(Object value1, Object value2, Object expected) {
-        MaxAggregation aggregation = new MaxAggregation(0, QueryDataType.INT);
+        MaxSqlAggregation aggregation = new MaxSqlAggregation(0, QueryDataType.INT);
         aggregation.accumulate(new Object[]{value1});
         aggregation.accumulate(new Object[]{value2});
 
@@ -61,10 +61,10 @@ public class MaxAggregationTest {
     @Test
     @Parameters(method = "values")
     public void test_combine(Object value1, Object value2, Object expected) {
-        MaxAggregation left = new MaxAggregation(0, QueryDataType.INT);
+        MaxSqlAggregation left = new MaxSqlAggregation(0, QueryDataType.INT);
         left.accumulate(new Object[]{value1});
 
-        MaxAggregation right = new MaxAggregation(0, QueryDataType.INT);
+        MaxSqlAggregation right = new MaxSqlAggregation(0, QueryDataType.INT);
         right.accumulate(new Object[]{value2});
 
         left.combine(right);
@@ -75,11 +75,11 @@ public class MaxAggregationTest {
 
     @Test
     public void test_serialization() {
-        MaxAggregation original = new MaxAggregation(0, QueryDataType.INT);
+        MaxSqlAggregation original = new MaxSqlAggregation(0, QueryDataType.INT);
         original.accumulate(new Object[]{1});
 
         InternalSerializationService ss = new DefaultSerializationServiceBuilder().build();
-        MaxAggregation serialized = ss.toObject(ss.toData(original));
+        MaxSqlAggregation serialized = ss.toObject(ss.toData(original));
 
         assertThat(serialized).isEqualTo(original);
     }

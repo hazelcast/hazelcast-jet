@@ -22,18 +22,18 @@ import org.junit.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class CountAggregationTest {
+public class CountSqlAggregationTest {
 
     @Test
     public void test_default() {
-        CountAggregation aggregation = new CountAggregation();
+        CountSqlAggregation aggregation = new CountSqlAggregation();
 
         assertThat(aggregation.collect()).isEqualTo(0L);
     }
 
     @Test
     public void test_accumulate() {
-        CountAggregation aggregation = new CountAggregation();
+        CountSqlAggregation aggregation = new CountSqlAggregation();
         aggregation.accumulate(new Object[]{null});
         aggregation.accumulate(new Object[]{1});
 
@@ -42,7 +42,7 @@ public class CountAggregationTest {
 
     @Test
     public void test_accumulateIgnoreNulls() {
-        CountAggregation aggregation = new CountAggregation(0);
+        CountSqlAggregation aggregation = new CountSqlAggregation(0);
         aggregation.accumulate(new Object[]{null});
         aggregation.accumulate(new Object[]{1});
 
@@ -51,7 +51,7 @@ public class CountAggregationTest {
 
     @Test
     public void test_accumulateDistinct() {
-        CountAggregation aggregation = new CountAggregation(0, true);
+        CountSqlAggregation aggregation = new CountSqlAggregation(0, true);
         aggregation.accumulate(new Object[]{null});
         aggregation.accumulate(new Object[]{1});
         aggregation.accumulate(new Object[]{1});
@@ -62,10 +62,10 @@ public class CountAggregationTest {
 
     @Test
     public void test_combine() {
-        CountAggregation left = new CountAggregation();
+        CountSqlAggregation left = new CountSqlAggregation();
         left.accumulate(new Object[0]);
 
-        CountAggregation right = new CountAggregation();
+        CountSqlAggregation right = new CountSqlAggregation();
         right.accumulate(new Object[0]);
 
         left.combine(right);
@@ -76,11 +76,11 @@ public class CountAggregationTest {
 
     @Test
     public void test_serialization() {
-        CountAggregation original = new CountAggregation();
+        CountSqlAggregation original = new CountSqlAggregation();
         original.accumulate(new Object[0]);
 
         InternalSerializationService ss = new DefaultSerializationServiceBuilder().build();
-        CountAggregation serialized = ss.toObject(ss.toData(original));
+        CountSqlAggregation serialized = ss.toObject(ss.toData(original));
 
         assertThat(serialized).isEqualTo(original);
     }
