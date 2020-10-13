@@ -46,7 +46,8 @@ public class SqlAggregationsTest {
 
     @Test
     public void test_accumulate() {
-        SqlAggregations aggregations = new SqlAggregations(new SqlAggregation[]{this.aggregations[0], this.aggregations[1]});
+        SqlAggregations aggregations =
+                new SqlAggregations(new SqlAggregation[]{this.aggregations[0], this.aggregations[1]});
         Object[] row = new Object[]{1};
 
         aggregations.accumulate(row);
@@ -68,7 +69,8 @@ public class SqlAggregationsTest {
 
     @Test
     public void test_collect() {
-        SqlAggregations aggregations = new SqlAggregations(new SqlAggregation[]{this.aggregations[0], this.aggregations[1]});
+        SqlAggregations aggregations =
+                new SqlAggregations(new SqlAggregation[]{this.aggregations[0], this.aggregations[1]});
         given(this.aggregations[0].collect()).willReturn(1L);
         given(this.aggregations[1].collect()).willReturn("v");
 
