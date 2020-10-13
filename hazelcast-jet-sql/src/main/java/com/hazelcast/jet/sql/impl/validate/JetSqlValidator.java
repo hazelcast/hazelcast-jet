@@ -21,7 +21,6 @@ import com.hazelcast.jet.sql.impl.parse.SqlCreateJob;
 import com.hazelcast.sql.impl.calcite.schema.HazelcastTable;
 import com.hazelcast.sql.impl.calcite.validate.HazelcastSqlValidator;
 import com.hazelcast.sql.impl.calcite.validate.types.HazelcastTypeFactory;
-import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlInsert;
 import org.apache.calcite.sql.SqlKind;
@@ -84,23 +83,13 @@ public class JetSqlValidator extends HazelcastSqlValidator {
             return true;
         }
 
-        class FindAggregateVisitor extends SqlBasicVisitor<Void> {
-            boolean found;
-
-            @Override
-            public Void visit(SqlCall call) {
-                if (call.getKind().belongsTo(AGGREGATE)) {
-                    found = true;
-                    return null;
-                } else {
-                    return super.visit(call);
-                }
+        for (SqlNode node : select.getSelectList()) {
+            if (node.getKind().belongsTo(AGGREGATE)) {
+                return true;
             }
         }
 
-        FindAggregateVisitor visitor = new FindAggregateVisitor();
-        select.getSelectList().accept(visitor);
-        return visitor.found;
+        return false;
     }
 
     /**
