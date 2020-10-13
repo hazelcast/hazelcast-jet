@@ -23,6 +23,7 @@ import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.sql.impl.aggregate.Aggregations;
 
 import javax.annotation.Nonnull;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -71,7 +72,7 @@ public final class AggregationCombiner extends AbstractProcessor {
 
         private ResultTraverser() {
             this.aggregations = keyToAggregations.isEmpty()
-                    ? singletonList(aggregationOperation.createFn().get()).iterator()
+                    ? new ArrayList<>(singletonList(aggregationOperation.createFn().get())).iterator()
                     : keyToAggregations.values().iterator();
         }
 

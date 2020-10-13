@@ -27,6 +27,7 @@ import org.junit.Test;
 import java.math.BigDecimal;
 
 import static java.util.Arrays.asList;
+import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -67,6 +68,16 @@ public class SqlAggregateTest extends SqlTestSupport {
                         new Row(1, "Bob"),
                         new Row(1, null)
                 )
+        );
+    }
+
+    @Test
+    public void test_groupByEmpty() {
+        String name = createTable();
+
+        assertRowsAnyOrder(
+                "SELECT name FROM " + name + " GROUP BY name", // field ordinal
+                emptyList()
         );
     }
 
@@ -173,6 +184,16 @@ public class SqlAggregateTest extends SqlTestSupport {
         assertRowsAnyOrder(
                 "SELECT COUNT(*) FROM " + name,
                 singletonList(new Row(0L))
+        );
+    }
+
+    @Test
+    public void test_emptyCountGroupBy() {
+        String name = createTable();
+
+        assertRowsAnyOrder(
+                "SELECT COUNT(*) FROM " + name + " GROUP BY name",
+                emptyList()
         );
     }
 
