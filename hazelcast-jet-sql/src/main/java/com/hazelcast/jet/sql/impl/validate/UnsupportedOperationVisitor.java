@@ -281,8 +281,7 @@ public final class UnsupportedOperationVisitor implements SqlVisitor<Void> {
                 if (symbolValue instanceof SqlTrimFunction.Flag) {
                     return null;
                 }
-                if (symbolValue instanceof SqlSelectKeyword
-                        && ((SqlSelectKeyword) symbolValue).name().equals("DISTINCT")) {
+                if (symbolValue == SqlSelectKeyword.DISTINCT) {
                     return null;
                 }
 
