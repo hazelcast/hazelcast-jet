@@ -94,7 +94,7 @@ public class JetSqlValidator extends HazelcastSqlValidator {
 
     /**
      * Goes over all the referenced tables in the given {@link SqlNode}
-     * and returns true if any of it uses a streaming connector.
+     * and returns true if any of them uses a streaming connector.
      */
     private boolean containsStreamingSource(SqlNode node) {
         class FindStreamingTablesVisitor extends SqlBasicVisitor<Void> {

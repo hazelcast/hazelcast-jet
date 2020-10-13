@@ -63,6 +63,8 @@ public class AvgSqlAggregationTest {
                 new Object[]{QueryDataType.BIGINT, 1L, 2L, new BigDecimal("1.5")},
                 new Object[]{QueryDataType.DECIMAL, new BigDecimal(1), new BigDecimal(2),
                         new BigDecimal("1.5")},
+                new Object[]{QueryDataType.DECIMAL, new BigDecimal("9223372036854775808998"),
+                        new BigDecimal("9223372036854775808999"), new BigDecimal("9223372036854775808998.5")},
                 new Object[]{QueryDataType.REAL, 1F, 2F, 1.5D},
                 new Object[]{QueryDataType.DOUBLE, 1D, 2D, 1.5D},
                 new Object[]{QueryDataType.TINYINT, (byte) 1, null, new BigDecimal("1")},
@@ -79,6 +81,16 @@ public class AvgSqlAggregationTest {
         aggregation.accumulate(new Object[]{value2});
 
         assertThat(aggregation.collect()).isEqualTo(expected);
+    }
+
+    @Test
+    public void test_periodicDecimal() {
+        AvgSqlAggregation aggregation = new AvgSqlAggregation(0, QueryDataType.DECIMAL);
+        aggregation.accumulate(new Object[]{BigDecimal.ZERO});
+        aggregation.accumulate(new Object[]{BigDecimal.ONE});
+        aggregation.accumulate(new Object[]{BigDecimal.ONE});
+
+        assertThat(aggregation.collect()).isEqualTo(new BigDecimal("0.66666666666666666666666666666666666667"));
     }
 
     @Test
