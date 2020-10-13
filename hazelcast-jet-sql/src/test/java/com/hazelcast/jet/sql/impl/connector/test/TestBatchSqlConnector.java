@@ -88,6 +88,10 @@ public class TestBatchSqlConnector implements SqlConnector {
             throw new IllegalArgumentException("'" + DELIMITER + "' and apostrophe not supported in names");
         }
 
+        if (types.contains(QueryDataType.OBJECT)) {
+            throw new IllegalArgumentException("OBJECT type not supported");
+        }
+
         if (values.stream().flatMap(Arrays::stream).filter(Objects::nonNull)
                   .anyMatch(n -> n.equals(NULL) || n.contains(VALUES_DELIMITER) || n.contains("'"))
         ) {

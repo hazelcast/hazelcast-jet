@@ -79,7 +79,7 @@ public class MaxAggregation extends Aggregation {
         if (value instanceof Comparable) {
             return (Comparable<?>) value;
         } else {
-            throw QueryException.error(value.getClass() + " is not comparable");
+            throw QueryException.error("MAX not supported for " + value.getClass() + ": not comparable");
         }
     }
 
