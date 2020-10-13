@@ -30,6 +30,7 @@ import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.DataSerializable;
 import com.hazelcast.partition.strategy.StringPartitioningStrategy;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -339,6 +340,11 @@ public interface ProcessorMetaSupplier extends Serializable {
             @Nonnull ProcessorSupplier supplier,
             @Nonnull Address memberAddress
     ) {
+        /**
+         * A meta-supplier that will only use the given {@code ProcessorSupplier}
+         * on a node with given {@link Address}.
+         */
+        @SuppressFBWarnings(value = "SE_BAD_FIELD", justification = "the class is never java-serialized")
         class SpecificMemberPms implements ProcessorMetaSupplier, DataSerializable {
 
             private ProcessorSupplier supplier;

@@ -30,6 +30,7 @@ import com.hazelcast.jet.impl.JetService;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.nio.serialization.DataSerializable;
 import com.hazelcast.spi.impl.NodeEngine;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
@@ -478,6 +479,8 @@ public final class Util {
      * @throws IOException
      */
     @Nullable
+    @SuppressFBWarnings(value = "RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE",
+            justification = "it's a false positive since java 11: https://github.com/spotbugs/spotbugs/issues/756")
     public static String firstLineFromFirstFile(String directory, String glob) throws IOException {
         try (DirectoryStream<Path> directoryStream = Files.newDirectoryStream(Paths.get(directory), glob)) {
             for (Path path : directoryStream) { // TODO: directory check
