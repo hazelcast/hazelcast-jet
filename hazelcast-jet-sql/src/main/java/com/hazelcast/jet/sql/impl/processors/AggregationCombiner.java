@@ -20,17 +20,9 @@ import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.core.AbstractProcessor;
-import com.hazelcast.jet.core.Processor;
-import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.sql.impl.aggregate.Aggregations;
-import com.hazelcast.nio.ObjectDataInput;
-import com.hazelcast.nio.ObjectDataOutput;
-import com.hazelcast.nio.serialization.DataSerializable;
 
 import javax.annotation.Nonnull;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -45,7 +37,7 @@ public final class AggregationCombiner extends AbstractProcessor {
 
     private Traverser<Object[]> resultTraverser;
 
-    private AggregationCombiner(
+    public AggregationCombiner(
             FunctionEx<Object, Object> partitionKeyFn,
             AggregateOperation<Aggregations, Object[]> aggregationOperation
     ) {
@@ -79,7 +71,7 @@ public final class AggregationCombiner extends AbstractProcessor {
 
         private ResultTraverser() {
             this.aggregations = keyToAggregations.isEmpty()
-                    ? new ArrayList<>(singletonList(aggregationOperation.createFn().get())).iterator()
+                    ? singletonList(aggregationOperation.createFn().get()).iterator()
                     : keyToAggregations.values().iterator();
         }
 
@@ -93,44 +85,6 @@ public final class AggregationCombiner extends AbstractProcessor {
             } finally {
                 aggregations.remove();
             }
-        }
-    }
-
-    public static class Supplier implements ProcessorSupplier, DataSerializable {
-
-        private FunctionEx<Object, Object> partitionKeyFn;
-        private AggregateOperation<Aggregations, Object[]> aggregationOperation;
-
-        @SuppressWarnings("unused")
-        public Supplier() {
-        }
-
-        public Supplier(
-                FunctionEx<Object, Object> partitionKeyFn,
-                AggregateOperation<Aggregations, Object[]> aggregationOperation
-        ) {
-            this.partitionKeyFn = partitionKeyFn;
-            this.aggregationOperation = aggregationOperation;
-        }
-
-        @Nonnull
-        @Override
-        public Collection<? extends Processor> get(int count) {
-            assert count == 1 : "" + count;
-
-            return singletonList(new AggregationCombiner(partitionKeyFn, aggregationOperation));
-        }
-
-        @Override
-        public void writeData(ObjectDataOutput out) throws IOException {
-            out.writeObject(partitionKeyFn);
-            out.writeObject(aggregationOperation);
-        }
-
-        @Override
-        public void readData(ObjectDataInput in) throws IOException {
-            partitionKeyFn = in.readObject();
-            aggregationOperation = in.readObject();
         }
     }
 }

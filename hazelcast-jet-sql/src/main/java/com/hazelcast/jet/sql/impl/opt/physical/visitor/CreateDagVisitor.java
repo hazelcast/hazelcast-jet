@@ -24,6 +24,7 @@ import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Edge;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
+import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.sql.impl.aggregate.Aggregations;
@@ -150,7 +151,7 @@ public class CreateDagVisitor {
         Vertex vertex = dag.newVertex(
                 name("Aggregate-Combine"),
                 ProcessorMetaSupplier.forceTotalParallelismOne(
-                        new AggregationCombiner.Supplier(partitionKeyFn, aggregateOperation),
+                        ProcessorSupplier.of(() -> new AggregationCombiner(partitionKeyFn, aggregateOperation)),
                         localMemberAddress
                 )
         );
