@@ -38,6 +38,7 @@ import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.SqlSelect;
+import org.apache.calcite.sql.SqlSelectKeyword;
 import org.apache.calcite.sql.SqlUserDefinedTypeNameSpec;
 import org.apache.calcite.sql.SqlUtil;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
@@ -278,6 +279,10 @@ public final class UnsupportedOperationVisitor implements SqlVisitor<Void> {
                 Object symbolValue = literal.getValue();
 
                 if (symbolValue instanceof SqlTrimFunction.Flag) {
+                    return null;
+                }
+                if (symbolValue instanceof SqlSelectKeyword
+                        && ((SqlSelectKeyword) symbolValue).name().equals("DISTINCT")) {
                     return null;
                 }
 

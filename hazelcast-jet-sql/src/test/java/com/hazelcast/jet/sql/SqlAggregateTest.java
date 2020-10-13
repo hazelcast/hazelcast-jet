@@ -160,6 +160,26 @@ public class SqlAggregateTest extends SqlTestSupport {
     }
 
     @Test
+    public void test_distinct() {
+        String name = createTable(
+                new String[]{"Alice", "2"},
+                new String[]{"Bob", "1"},
+                new String[]{"Alice", "4"},
+                new String[]{"Alice", "2"},
+                new String[]{"Joey", "2"}
+        );
+
+        assertRowsAnyOrder(
+                "SELECT DISTINCT name FROM " + name,
+                asList(
+                        new Row("Alice"),
+                        new Row("Bob"),
+                        new Row("Joey")
+                )
+        );
+    }
+
+    @Test
     public void test_count() {
         String name = createTable(
                 new String[]{"Alice", "1"},
