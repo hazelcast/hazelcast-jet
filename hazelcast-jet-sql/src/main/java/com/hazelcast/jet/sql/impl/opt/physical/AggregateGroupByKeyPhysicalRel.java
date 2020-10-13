@@ -57,11 +57,11 @@ public class AggregateGroupByKeyPhysicalRel extends SingleRel implements Physica
     }
 
     public FunctionEx<Object[], Object> partitionKeyFn() {
-        List<Integer> groupIndices = groupSet.toList();
+        int[] groupIndices = groupSet.toArray();
         return row -> {
-            Object[] key = new Object[groupIndices.size()];
-            for (int i = 0; i < groupIndices.size(); i++) {
-                key[i] = row[groupIndices.get(i)];
+            Object[] key = new Object[groupIndices.length];
+            for (int i = 0; i < groupIndices.length; i++) {
+                key[i] = row[groupIndices[i]];
             }
             return new ObjectArray(key);
         };
