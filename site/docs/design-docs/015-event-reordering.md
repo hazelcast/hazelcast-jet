@@ -57,18 +57,27 @@ always be feasible. E.g. If any stage of the pipeline contains only a
 single node (LP=1), following stages have to contain a single node,
 which is a suboptimal utilization of parallelism.
 
-### Sorting Events in the Same Window
+### Sorting Events Between The Consecutive Watermarks
 
-Jet already offers windowing support using watermark. We sort the events
-in the same window so we can put the events in their initial order.
-However, in this approach, sorting events requires an extra computation
-and we have to wait for the window to close. This increases the latency
-with windowSize/2 on average. The issue of sparse events can also occur
-in this approach.
+Jet already offers support for watermarking. If we have a sorting key
+for events, we can sort the events between the two consecutive watermark
+according to the sorting key so we can put the events in their initial
+order. Users will not define the window in an explicit way. The user
+will only add stateful mapping (or any order-sensitive stage) to his
+pipeline, and we will add such an intermediate sorting stage during
+planning.
 
-To use this solution, we need a more precise timestamp or mark like a
-SequenceId - Our timestamp precision is low, resulting in overlapping
-events with the same timestamp.
+As the cost of this work, sorting events requires an extra computation
+and we have to wait for the closing watermark to arrive. This increases
+the latency with watermarkPeriod/2 on average. The issue of sparse
+events can also occur in this approach.
+
+To use this solution, we need a sorting key such as more precise
+timestamp or mark like a SequenceId for events- Our timestamp precision
+is low, resulting in overlapping events with the same timestamp and it
+is not easy to add this SequenceId (sorting key) to events in a reliable
+way especially when the total parallelism of the source is greater than
+one. I just put this approach to be seen.
 
 ### Smart Job Planning
 
@@ -102,4 +111,20 @@ to prevent reordering and where we add the sorting stages independently
 from the user by considering the classes of transforms. Since we have to
 consider the subsequent stages for any stage while making this
 determination, it is not enough to visit the pipeline stages only with
-topological order.
+topological order. We can with using reverse topological order.
+
+By browsing on the reverse topological order, we can decide where to
+activate/deactivate the ordering prevention logic. The algorithm for
+this job will be as follows:
+
+1. Traverse to DAG in the reverse topological order.
+2. When visit a order-sensitive node, activate the ordering prevention
+   logic for this and future nodes until visiting a node that produces
+   its own order.
+3. After visiting the node that produces its own order, deactivate the
+   ordering prevention logic the following nodes until visiting a
+   order-sensitive node.
+4. Follow this procedure to visit all nodes.
+
+Until now I have not considered sorting the items between watermarks. I
+think to consider it according to its feasibility
