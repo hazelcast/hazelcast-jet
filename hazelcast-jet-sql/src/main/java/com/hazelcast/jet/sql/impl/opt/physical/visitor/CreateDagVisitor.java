@@ -151,9 +151,11 @@ public class CreateDagVisitor {
                 name("Aggregate-Combine"),
                 ProcessorMetaSupplier.forceTotalParallelismOne(
                         ProcessorSupplier.of(
-                                Processors.aggregateByKeyP(singletonList(partitionKeyFn),
+                                Processors.aggregateByKeyP(
+                                        singletonList(partitionKeyFn),
                                         aggregateOperation,
-                                        (key, value) -> value)
+                                        (key, value) -> value
+                                )
                         ),
                         localMemberAddress
                 )
