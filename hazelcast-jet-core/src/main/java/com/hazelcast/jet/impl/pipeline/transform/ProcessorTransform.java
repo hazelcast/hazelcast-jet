@@ -20,6 +20,7 @@ import com.hazelcast.function.BiFunctionEx;
 import com.hazelcast.function.BiPredicateEx;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.Traverser;
+import com.hazelcast.jet.core.Edge;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.impl.pipeline.Planner;
@@ -153,6 +154,10 @@ public class ProcessorTransform extends AbstractTransform {
     public void addToDag(Planner p, Context context) {
         determineLocalParallelism(processorSupplier.preferredLocalParallelism(), context, true);
         PlannerVertex pv = p.addVertex(this, name(), determinedLocalParallelism(), processorSupplier);
-        p.addEdges(this, pv.v);
+        if (shouldPreserveEventOrder()) {
+            p.addEdges(this, pv.v, Edge::isolated);
+        } else {
+            p.addEdges(this, pv.v);
+        }
     }
 }

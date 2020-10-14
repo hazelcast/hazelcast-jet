@@ -115,7 +115,7 @@ public class BatchStageParallelismTest {
                                 .sort()
                                 .setLocalParallelism(LOCAL_PARALLELISM),
                         Arrays.asList("sort", "sort-collect"),
-                        Arrays.asList(UPSTREAM_PARALLELISM, 1),
+                        Arrays.asList(LOCAL_PARALLELISM, 1),
                         "sort"
                 ),
                 createParamSet(
@@ -125,15 +125,6 @@ public class BatchStageParallelismTest {
                         Collections.singletonList("map-stateful-global"),
                         Collections.singletonList(1),
                         "map-stateful-global"
-                ),
-                createParamSet(
-                        stage -> stage
-                                .aggregate(counting())
-                                .flatMap(x -> Traversers.<Long>traverseItems())
-                                .setLocalParallelism(LOCAL_PARALLELISM),
-                        Arrays.asList("aggregate-prepare", "aggregate"),
-                        Arrays.asList(UPSTREAM_PARALLELISM, 1),
-                        "aggregate"
                 ),
                 createParamSet(
                         stage -> stage
@@ -148,7 +139,7 @@ public class BatchStageParallelismTest {
                                 .aggregate(counting())
                                 .setLocalParallelism(LOCAL_PARALLELISM),
                         Arrays.asList("aggregate-prepare", "aggregate"),
-                        Arrays.asList(UPSTREAM_PARALLELISM, 1),
+                        Arrays.asList(LOCAL_PARALLELISM, 1),
                         "two-stage-aggregation"
                 ),
                 createParamSet(
@@ -168,6 +159,18 @@ public class BatchStageParallelismTest {
                         Collections.singletonList("custom-transform"),
                         Collections.singletonList(UPSTREAM_PARALLELISM),
                         "custom-transform"
+                ),
+                createParamSet(
+                        stage -> stage
+                                .map(x -> x)
+                                .setLocalParallelism(LOCAL_PARALLELISM)
+                                .aggregate(counting())
+                                .setLocalParallelism(LOCAL_PARALLELISM)
+                                .flatMap(x -> Traversers.<Long>traverseItems())
+                                .setLocalParallelism(LOCAL_PARALLELISM),
+                        Arrays.asList("map", "aggregate-prepare", "aggregate", "flat-map"),
+                        Arrays.asList(LOCAL_PARALLELISM, LOCAL_PARALLELISM, 1, 1),
+                        "map+aggregate+flat-map"
                 )
         );
     }
@@ -186,10 +189,11 @@ public class BatchStageParallelismTest {
     public void when_transform_applied_lp_should_match_expectedLP() {
         // When
         DAG dag = applyTransformAndGetDag(transform);
-        System.out.println(dag.toJson(DEFAULT_PARALLELISM));
         // Then
         for (int i = 0; i < vertexNames.size(); i++) {
             Vertex tsVertex = dag.getVertex(vertexNames.get(i));
+            assertEquals((int) expectedLPs.get(i), tsVertex.getLocalParallelism());
+            // To show ineffectiveness of Vertex.determineLocalParallelism()
             assertEquals((int) expectedLPs.get(i), tsVertex.determineLocalParallelism(DEFAULT_PARALLELISM));
         }
     }
@@ -199,7 +203,9 @@ public class BatchStageParallelismTest {
         BatchStage<Long> source = p.readFrom(TestSources.items(1L))
                                    .setLocalParallelism(UPSTREAM_PARALLELISM);
         BatchStage<Long> applied = source.apply(transform);
-        applied.writeTo(Sinks.noop());
+        applied.mapStateful(LongAccumulator::new, (s, x) -> x)
+               .writeTo(Sinks.noop());
         return p.toDag(PIPELINE_CTX);
     }
+
 }

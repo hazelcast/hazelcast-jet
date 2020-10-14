@@ -33,7 +33,7 @@ import static com.hazelcast.jet.core.processor.Processors.accumulateP;
 import static com.hazelcast.jet.core.processor.Processors.aggregateP;
 import static com.hazelcast.jet.core.processor.Processors.combineP;
 
-public class AggregateTransform<A, R> extends AbstractTransform {
+public class AggregateTransform<A, R> extends AbstractTransform implements SequencerTransform {
     public static final String FIRST_STAGE_VERTEX_NAME_SUFFIX = "-prepare";
 
     @Nonnull

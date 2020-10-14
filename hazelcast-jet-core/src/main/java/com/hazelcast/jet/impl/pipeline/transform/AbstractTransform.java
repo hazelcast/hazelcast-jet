@@ -43,6 +43,8 @@ public abstract class AbstractTransform implements Transform {
 
     private final boolean[] upstreamRebalancingFlags;
 
+    private boolean preserveEventOrder;
+
     private final FunctionEx<?, ?>[] upstreamPartitionKeyFns;
 
     protected AbstractTransform(@Nonnull String name, @Nonnull List<Transform> upstream) {
@@ -50,6 +52,7 @@ public abstract class AbstractTransform implements Transform {
         // Planner updates this list to fuse the stateless transforms:
         this.upstream = new ArrayList<>(upstream);
         this.upstreamRebalancingFlags = new boolean[upstream.size()];
+        this.preserveEventOrder = false;
         this.upstreamPartitionKeyFns = new FunctionEx[upstream.size()];
     }
 
@@ -122,6 +125,16 @@ public abstract class AbstractTransform implements Transform {
         return 0;
     }
 
+    @Override
+    public boolean shouldPreserveEventOrder() {
+        return preserveEventOrder;
+    }
+
+    @Override
+    public void setPreserveEventOrder(boolean value) {
+        preserveEventOrder = value;
+    }
+
     protected final boolean shouldRebalanceAnyInput() {
         for (boolean b : upstreamRebalancingFlags) {
             if (b) {
@@ -153,7 +166,8 @@ public abstract class AbstractTransform implements Transform {
             upstreamParallelism = upstream.get(0).determinedLocalParallelism();
         }
 
-        if (shouldMatchUpstreamParallelism && upstreamParallelism != Vertex.LOCAL_PARALLELISM_USE_DEFAULT) {
+        if (shouldMatchUpstreamParallelism && upstreamParallelism != Vertex.LOCAL_PARALLELISM_USE_DEFAULT
+                && shouldPreserveEventOrder()) {
             determinedLocalParallelism(upstreamParallelism);
             return;
         }

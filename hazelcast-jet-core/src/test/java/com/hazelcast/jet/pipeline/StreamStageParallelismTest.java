@@ -130,7 +130,8 @@ public class StreamStageParallelismTest {
                                        .setLocalParallelism(UPSTREAM_PARALLELISM)
                                        .addTimestamps(t -> 0, Long.MAX_VALUE);
         StreamStage<Integer> applied = source.apply(transform);
-        applied.writeTo(Sinks.noop());
+        applied.mapStateful(LongAccumulator::new, (s, x) -> x)
+               .writeTo(Sinks.noop());
         return p.toDag(PIPELINE_CTX);
     }
 }

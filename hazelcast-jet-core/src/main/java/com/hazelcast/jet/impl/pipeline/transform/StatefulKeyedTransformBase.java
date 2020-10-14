@@ -24,7 +24,7 @@ import java.util.function.Supplier;
 
 import static java.lang.Math.max;
 
-abstract class StatefulKeyedTransformBase<T, K, S> extends AbstractTransform {
+abstract class StatefulKeyedTransformBase<T, K, S> extends AbstractTransform implements OrderSensitiveTransform {
 
     private static final int TTL_TO_WM_STRIDE_RATIO = 10;
 

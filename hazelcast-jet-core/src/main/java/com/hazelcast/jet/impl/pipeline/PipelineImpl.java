@@ -19,6 +19,8 @@ package com.hazelcast.jet.impl.pipeline;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.impl.pipeline.transform.AbstractTransform;
 import com.hazelcast.jet.impl.pipeline.transform.BatchSourceTransform;
+import com.hazelcast.jet.impl.pipeline.transform.OrderSensitiveTransform;
+import com.hazelcast.jet.impl.pipeline.transform.SequencerTransform;
 import com.hazelcast.jet.impl.pipeline.transform.SinkTransform;
 import com.hazelcast.jet.impl.pipeline.transform.StreamSourceTransform;
 import com.hazelcast.jet.impl.pipeline.transform.Transform;
@@ -205,6 +207,30 @@ public class PipelineImpl implements Pipeline {
         Map<Transform, List<Transform>> safeCopy = new LinkedHashMap<>();
         adjacencyMap.forEach((k, v) -> safeCopy.put(k, new ArrayList<>(v)));
         return safeCopy;
+    }
+
+    void determinePreserveOrderFlags() {
+        List<Transform> transforms = new ArrayList<>(adjacencyMap().keySet());
+        Collections.reverse(transforms);
+        for (Transform transform : transforms) {
+            if (transform instanceof OrderSensitiveTransform) {
+                transform.setPreserveEventOrder(true);
+                for (Transform upstream : transform.upstream()) {
+                    upstream.setPreserveEventOrder(true);
+                }
+            } else if (transform instanceof SequencerTransform) {
+                transform.setPreserveEventOrder(false);
+                for (Transform upstream : transform.upstream()) {
+                    upstream.setPreserveEventOrder(false);
+                }
+            } else {
+                // propagate the transform ordering preserving property to upstream transforms
+                boolean curr = transform.shouldPreserveEventOrder();
+                for (Transform upstream : transform.upstream()) {
+                    upstream.setPreserveEventOrder(curr);
+                }
+            }
+        }
     }
 
     void makeNamesUnique() {
