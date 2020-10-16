@@ -71,16 +71,16 @@ If a transform does not use partitioned edge:
 
 Otherwise:
 
-- fo not change the properties of the transform using partitioned edge
+- do not change the properties of the transform if it already uses
+  partitioned edge.
 
 To ensure such LP equality between transforms, we had to specify LP's in
 job planning (pipeline.toDag()) stage. After that, we did this by
 modifying pipeline stages (transforms) one-by-one. The changes applied
 to the transforms listed below:
 
-|Transform or Operator|The summary
-of changes|
-|------|:------|----------|----------|
+|Transform or Operator|The summary of changes|
+|------|------|
 |Aggregate Transform (Both of Single and Two Stage)|No changes have been made to the vertex's local parallelism of this transform and the configuration of the edge which connects it to the previous stage (Without considering non commutative-associative aggregates). We mark the transform as SequencerTransform to understand that these aggregate transforms produce their own order during job planning.|
 |Batch Source Transform|No changes have been made to the vertex's local parallelism of this transform.|
 |Distinct Transform|No changes have been made to the vertex's local parallelism of this transform and the configuration of the edge which connects it to the previous stage.|
