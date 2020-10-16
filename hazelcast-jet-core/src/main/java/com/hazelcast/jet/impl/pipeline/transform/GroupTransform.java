@@ -35,7 +35,7 @@ import static com.hazelcast.jet.core.processor.Processors.aggregateByKeyP;
 import static com.hazelcast.jet.core.processor.Processors.combineByKeyP;
 import static com.hazelcast.jet.impl.pipeline.transform.AggregateTransform.FIRST_STAGE_VERTEX_NAME_SUFFIX;
 
-public class GroupTransform<K, A, R, OUT> extends AbstractTransform {
+public class GroupTransform<K, A, R, OUT> extends AbstractTransform implements SequencerTransform {
     @Nonnull
     private final List<FunctionEx<?, ? extends K>> groupKeyFns;
     @Nonnull
@@ -63,7 +63,7 @@ public class GroupTransform<K, A, R, OUT> extends AbstractTransform {
 
     @Override
     public void addToDag(Planner p, Context context) {
-        determineLocalParallelism(-1, context, true);
+        determineLocalParallelism(-1, context, false);
         if (shouldRebalanceAnyInput() || aggrOp.combineFn() == null) {
             addToDagSingleStage(p);
         } else {
@@ -85,7 +85,7 @@ public class GroupTransform<K, A, R, OUT> extends AbstractTransform {
     //                        | aggregateByKeyP |
     //                         -----------------
     private void addToDagSingleStage(Planner p) {
-        PlannerVertex pv = p.addVertex(this, name(), localParallelism(),
+        PlannerVertex pv = p.addVertex(this, name(), determinedLocalParallelism(),
                 aggregateByKeyP(groupKeyFns, aggrOp, mapToOutputFn));
         p.addEdges(this, pv.v, (e, ord) -> e.distributed().partitioned(groupKeyFns.get(ord)));
     }

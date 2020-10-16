@@ -52,7 +52,7 @@ public class SinkTransform<T> extends AbstractTransform {
     @Override
     @SuppressWarnings({"rawtypes", "unchecked"})
     public void addToDag(Planner p, Context context) {
-        determineLocalParallelism(sink.metaSupplier().preferredLocalParallelism(), context, true);
+        determineLocalParallelism(sink.metaSupplier().preferredLocalParallelism(), context, false);
         PlannerVertex pv = p.addVertex(this, name(), determinedLocalParallelism(),
                 adaptingMetaSupplier(sink.metaSupplier(), ordinalsToAdapt));
         p.addEdges(this, pv.v, (e, ord) -> {

@@ -45,7 +45,7 @@ import static com.hazelcast.jet.impl.JetEvent.jetEvent;
 import static com.hazelcast.jet.impl.pipeline.transform.AggregateTransform.FIRST_STAGE_VERTEX_NAME_SUFFIX;
 import static java.util.Collections.nCopies;
 
-public class WindowAggregateTransform<A, R> extends AbstractTransform {
+public class WindowAggregateTransform<A, R> extends AbstractTransform implements SequencerTransform {
     private static final int MAX_WATERMARK_STRIDE = 100;
     private static final int MIN_WMS_PER_SESSION = 100;
     @SuppressWarnings("rawtypes")
@@ -126,7 +126,8 @@ public class WindowAggregateTransform<A, R> extends AbstractTransform {
     //            | aggregateToSlidingWindowP | local parallelism = 1
     //             ---------------------------
     private void addSlidingWindowSingleStage(Planner p, SlidingWindowDefinition wDef) {
-        PlannerVertex pv = p.addVertex(this, name(), 1,
+        determinedLocalParallelism(1);
+        PlannerVertex pv = p.addVertex(this, name(), determinedLocalParallelism(),
                 aggregateToSlidingWindowP(
                         nCopies(aggrOp.arity(), new ConstantFunctionEx<>(name().hashCode())),
                         nCopies(aggrOp.arity(), (ToLongFunctionEx<JetEvent<?>>) JetEvent::timestamp),

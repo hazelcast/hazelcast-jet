@@ -99,7 +99,7 @@ public class AggregateTransform<A, R> extends AbstractTransform implements Seque
     //                   ----------------
     private void addToDagTwoStage(Planner p, Context context) {
         String vertexName = name();
-        determineLocalParallelism(-1, context, true);
+        determineLocalParallelism(-1, context, false);
         Vertex v1 = p.dag.newVertex(vertexName + FIRST_STAGE_VERTEX_NAME_SUFFIX, accumulateP(aggrOp))
                          .localParallelism(determinedLocalParallelism());
         determinedLocalParallelism(1);
