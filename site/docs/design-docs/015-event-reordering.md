@@ -61,12 +61,17 @@ which is a suboptimal utilization of parallelism.
 
 In order to prevent the order of events from changing, we avoid the use
 of round-robin edge. The common pattern we've implemented in most
-transforms to achieve this:
+transforms to achieve this described below.
 
-- Ensure that the PlannerVertex of any transform receiving input from
-  the upper transform has LP equal to the output vertex of the upstream
-  transform.
-- Connect this transform vertices with isolated edge.
+If a transform does not use partitioned edge:
+
+- Ensure that the LP of the input vertex of the transform is equal to
+  the PlannerVertex of the upstream transform.
+- Connect these transform vertices with isolated edge.
+
+Otherwise:
+
+- fo not change the properties of the transform using partitioned edge
 
 To ensure such LP equality between transforms, we had to specify LP's in
 job planning (pipeline.toDag()) stage. After that, we did this by
@@ -79,17 +84,17 @@ of changes|
 |Aggregate Transform (Both of Single and Two Stage)|No changes have been made to the vertex's local parallelism of this transform and the configuration of the edge which connects it to the previous stage (Without considering non commutative-associative aggregates). We mark the transform as SequencerTransform to understand that these aggregate transforms produce their own order during job planning.|
 |Batch Source Transform|No changes have been made to the vertex's local parallelism of this transform.|
 |Distinct Transform|No changes have been made to the vertex's local parallelism of this transform and the configuration of the edge which connects it to the previous stage.|
-|FlatMapTransform|If the preserve ordering is active, we determine the LP of the transform vertex to have the same LP as the output vertex of the upstream transform and connect them with the isolated edge.|
+|FlatMapTransform|If the preserve ordering is active, we determine the LP of the transform vertex to have the same LP as the PlannerVertex of the upstream transform and connect them with the isolated edge.|
 |FlatMapStatefulTransform|No changes have been made to the vertex's local parallelism of this transform and the configuration of the edge which connects it to the previous stage. We mark this transform as OrderSensitiveTransform.|
 |GlobalMapStatefulTransform|No changes have been made to the vertex's local parallelism of this transform and the configuration of the edge which connects it to the previous stage. We mark this transform as OrderSensitiveTransform. |
 |GroupTransform(GroupAggregateTransform)|No changes have been made to the vertex's local parallelism of this transform and the configuration of the edge which connects it to the previous stage (Without considering non commutative-associative aggregates). We mark this transform as SequencerTransform.|
 |HashJoinTransform|`TODO: Consider it in more detail.` With my little knowledge, I don't plan to make any changes to this transform.|
-|MapTransform|If preserve ordering is active, we determine the LP of the transform vertex to have the same LP as the output vertex of the upstream transform and connect them with the isolated edge.|
-|KeyedMapStatefulTransform|We determine the LP of the transform vertex to have the same LP as the output vertex of the upstream transform. We mark this transform as OrderSensitiveTransform.|
+|MapTransform|If preserve ordering is active, we determine the LP of the transform vertex to have the same LP as the PlannerVertex of the upstream transform and connect them with the isolated edge.|
+|KeyedMapStatefulTransform|No changes have been made to the vertex's local parallelism of this transform and the configuration of the edge which connects it to the previous stage. We mark this transform as OrderSensitiveTransform.|
 |MergeTransform|`TODO: Consider it in more detail.`|
 |PartitionedProcessorTransform|No changes have been made to this transform.|
 |PeekTransform|No changes have been made to this transform.|
-|ProcessorTransform|If preserve ordering is active, we determine the LP of the transform vertex to have the same LP as the output vertex of the upstream transform and connect them with the isolated edge.|
+|ProcessorTransform|If preserve ordering is active, we determine the LP of the transform vertex to have the same LP as the PlannerVertex of the upstream transform and connect them with the isolated edge.|
 |SortTransform|No changes have been made to the vertex's local parallelism of this transform and the configuration of the edge which connects it to the previous stage. We mark this transform as SequencerTransform. |
 |SinkTransform|No changes have been made to the vertex's local parallelism of this transform and the configuration of the edge which connects it to the previous stage.|
 |Stream Source Transform|No changes have been made to the vertex's local parallelism of this transform.|
