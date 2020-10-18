@@ -7,7 +7,7 @@ description: Avoid event reordering in unexpected cases
 
 ## Goal
 
-Remove the effects of event reordering in the Jet Jobs
+Avoid non-intuitive event reordering in Jet pipelines.
 
 ## Problem statement
 
