@@ -48,7 +48,7 @@ allowing event reordering vs performance.
 ### Prevention of Event Reordering
 
 When distributing events from a one node to multiple nodes, events get
-out-of-order. If we especially avoid this situation that breaks the
+out of order. If we specifically avoid this situation that breaks the
 order in the pipeline, the order of events will be preserved. But, this
 comes with the loss of parallelism: The maximum number of nodes in one
 stage is restricted by the predecessor stage (LP of the stage <= LP of
