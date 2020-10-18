@@ -1,6 +1,6 @@
 ---
 title: 015 - Avoiding Event Reordering Effects
-description: Prevent events from getting reordered inside Jet jobs
+description: Avoid event reordering in unexpected cases
 ---
 
 *Since*: 4.4
