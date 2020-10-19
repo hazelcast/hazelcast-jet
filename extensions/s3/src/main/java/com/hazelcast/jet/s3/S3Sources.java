@@ -216,6 +216,8 @@ public final class S3Sources {
      * @param mapFn          the function which creates output object from each
      *                       line. Gets the object name and line as parameters
      * @param <T>            the type of the items the source emits
+     *
+     * @since 4.3
      */
     @Nonnull
     public static <I, T> BatchSource<T> s3(
