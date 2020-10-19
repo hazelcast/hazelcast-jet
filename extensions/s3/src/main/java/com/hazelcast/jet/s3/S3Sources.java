@@ -35,6 +35,7 @@ import javax.annotation.Nullable;
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.Serializable;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.Iterator;
@@ -143,7 +144,6 @@ public final class S3Sources {
      * BatchStage<String> srcStage = p.readFrom(S3Sources.s3(
      *      Arrays.asList("bucket1", "bucket2"),
      *      "prefix",
-     *      StandardCharsets.UTF_8,
      *      () -> S3Client.create(),
      *      (inputStream) -> new LineIterator(new InputStreamReader(inputStream)),
      *      (filename, line) -> line
@@ -169,6 +169,62 @@ public final class S3Sources {
             @Nonnull FunctionEx<? super InputStream, ? extends Stream<I>> readFileFn,
             @Nonnull BiFunctionEx<String, ? super I, ? extends T> mapFn
     ) {
+        final FileReadingFunction<I> adaptedFunction = (inputStream, key, bucketName)
+                -> readFileFn.apply(inputStream);
+        return SourceBuilder
+                .batch("s3-source", context ->
+                        new S3SourceContext<I, T>(bucketNames, prefix, context, clientSupplier, adaptedFunction,
+                                mapFn))
+                .<T>fillBufferFn(S3SourceContext::fillBuffer)
+                .distributed(LOCAL_PARALLELISM)
+                .destroyFn(S3SourceContext::close)
+                .build();
+    }
+
+    /**
+     * Creates an AWS S3 {@link BatchSource} which lists all the objects in the
+     * bucket-list using given {@code prefix}, reads them using provided {@code
+     * readFileFn}, transforms each read item to the desired output object
+     * using given {@code mapFn} and emits them to downstream.
+     * <p>
+     * The source does not save any state to snapshot. If the job is restarted,
+     * it will re-emit all entries.
+     * <p>
+     * The default local parallelism for this processor is 2.
+     * <p>
+     * Here is an example which reads the objects from a single bucket with
+     * applying the given prefix.
+     *
+     * <pre>{@code
+     * Pipeline p = Pipeline.create();
+     * BatchStage<String> srcStage = p.readFrom(S3Sources.s3(
+     *      Arrays.asList("bucket1", "bucket2"),
+     *      "prefix",
+     *      () -> S3Client.create(),
+     *      (inputStream, key, bucketName) -> new LineIterator(new InputStreamReader(inputStream)),
+     *      (filename, line) -> line
+     * ));
+     * }</pre>
+     *
+     * @param bucketNames    list of bucket-names
+     * @param prefix         the prefix to filter the objects. Optional, passing
+     *                       {@code null} will list all objects.
+     * @param clientSupplier function which returns the s3 client to use
+     *                       one client per processor instance is used
+     * @param readFileFn     the function which creates iterator, which reads
+     *                       the file in lazy way
+     * @param mapFn          the function which creates output object from each
+     *                       line. Gets the object name and line as parameters
+     * @param <T>            the type of the items the source emits
+     */
+    @Nonnull
+    public static <I, T> BatchSource<T> s3(
+            @Nonnull List<String> bucketNames,
+            @Nullable String prefix,
+            @Nonnull SupplierEx<? extends S3Client> clientSupplier,
+            @Nonnull FileReadingFunction<I> readFileFn,
+            @Nonnull BiFunctionEx<String, ? super I, ? extends T> mapFn
+    ) {
         return SourceBuilder
                 .batch("s3-source", context ->
                         new S3SourceContext<I, T>(bucketNames, prefix, context, clientSupplier, readFileFn,
@@ -179,13 +235,20 @@ public final class S3Sources {
                 .build();
     }
 
+    /**
+     * Functional interface for functions reading some file with context information of key and bucket name.
+     */
+    public interface FileReadingFunction<I> extends Serializable {
+        Stream<I> readFile(InputStream inputStream, String key, String bucketName);
+    }
+
     private static final class S3SourceContext<I, T> {
 
         private static final int BATCH_COUNT = 1024;
 
         private final String prefix;
         private final S3Client amazonS3;
-        private final FunctionEx<? super InputStream, ? extends Stream<I>> readFileFn;
+        private final FileReadingFunction<I> readFileFn;
         private final BiFunctionEx<String, ? super I, ? extends T> mapFn;
         private final int processorIndex;
         private final int totalParallelism;
@@ -200,7 +263,7 @@ public final class S3Sources {
                 String prefix,
                 Context context,
                 SupplierEx<? extends S3Client> clientSupplier,
-                FunctionEx<? super InputStream, ? extends Stream<I>> readFileFn,
+                FileReadingFunction<I> readFileFn,
                 BiFunctionEx<String, ? super I, ? extends T> mapFn
         ) {
             this.prefix = prefix;
@@ -237,7 +300,7 @@ public final class S3Sources {
 
                 ResponseInputStream<GetObjectResponse> responseInputStream = amazonS3.getObject(getObjectRequest);
                 currentKey = key;
-                itemTraverser = traverseStream(readFileFn.apply(responseInputStream));
+                itemTraverser = traverseStream(readFileFn.readFile(responseInputStream, key, bucketName));
                 addBatchToBuffer(buffer);
             } else {
                 // iterator is empty, we've exhausted all the objects
