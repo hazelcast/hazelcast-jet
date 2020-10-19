@@ -11,22 +11,28 @@ Avoid non-intuitive event reordering in Jet pipelines.
 
 ## Problem statement
 
-Events are getting reordered inside Jet jobs. Thus, Jet only enables the
-users to write jobs that are insensitive to the encounter order:
-jobs including only stateless mapping and aggregation based on
-commutative-associative functions etc. But, this out-of-order affects
-the correctness of jobs including state.
+Jet processes events in parallel, therefore a total order of events
+doesn't exist. However, in some use cases, users expect the order within
+a partition to be preserved, because the partition is a basic unit of
+parallelism and a single partition is always processed by a single
+processor.
 
-Jet execution engine tries to increase data parallelism as much as
-possible while sending the events originating from one source DAG node
-to multiple DAG nodes. This is why event disordering happens.
+However, in previous versions, Jet used round-robin edges in places
+where no partitioning was required. For example before the stateless
+`map` operation. This caused that two events from the same partition
+could be handled by two parallel workers, and potentially overtake each
+other.
 
 ![Events Getting Reordered](assets/events_getting_reordered.svg)
 
-After these events are distributed to multiple nodes, the occurrence
-order of events is partially disrupted. After these disruption, if these
-events encounter an order-sensitive transform(operator), they will cause
-unexpected results.
+On the other hand, the round-robin edges have the benefit of maximizing
+the parallelism. Commonly, sources have lower than maximum parallelism
+and the round-robin edge ensured that the downstream transform could
+have more parallelism than the source.
+
+In this document we describe ways to avoid the usage of round-robin
+edges and still preserve the performance potential of the previous
+implementation.
 
 ## Design
 
