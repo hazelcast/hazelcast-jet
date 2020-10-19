@@ -62,6 +62,7 @@ import static com.hazelcast.jet.impl.JobRepository.JOB_RESULTS_MAP_NAME;
 import static com.hazelcast.jet.impl.config.ConfigProvider.locateAndGetClientConfig;
 import static com.hazelcast.jet.impl.config.ConfigProvider.locateAndGetJetConfig;
 import static com.hazelcast.spi.properties.ClusterProperty.SHUTDOWNHOOK_ENABLED;
+import static java.lang.Boolean.parseBoolean;
 
 /**
  * Entry point to the Jet product.
@@ -258,11 +259,18 @@ public final class Jet {
             Properties p = new Properties();
             p.load(resource);
             String jetHzVersion = p.getProperty("jet.hazelcast.version");
+
             if (!hzVersion.equals(jetHzVersion)) {
-                throw new JetException("Jet uses Hazelcast IMDG version " + jetHzVersion + " however " +
+                String message = "Jet uses Hazelcast IMDG version " + jetHzVersion + " however " +
                         "version " + hzVersion + " was found in the classpath. " +
                         " As Jet already shades Hazelcast jars there is no need to explicitly " +
-                        "add a dependency to it.");
+                        "add a dependency to it.";
+                boolean errorOnMismatch = parseBoolean(System.getProperty("jet.hazelcast.errorOnMismatch", "true"));
+                if (errorOnMismatch) {
+                    throw new JetException(message);
+                } else {
+                    LOGGER.warning(message);
+                }
             }
         } catch (IOException e) {
             LOGGER.warning("Could not read the file jet-runtime.properties", e);
