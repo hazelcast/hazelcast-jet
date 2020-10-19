@@ -239,8 +239,19 @@ public final class S3Sources {
 
     /**
      * Functional interface for functions reading some file with context information of key and bucket name.
+     *
+     * @param <I> Type of elements returned from reading.
      */
     public interface FileReadingFunction<I> extends Serializable {
+
+        /**
+         * Reads file from given input stream. File key and bucket name are provided for additional context,
+         * eg. for logging.
+         * @param inputStream input stream providing file content
+         * @param key file key from S3
+         * @param bucketName S3 bucket name in which the file is
+         * @return Stream of parsed elements
+         */
         Stream<I> readFile(InputStream inputStream, String key, String bucketName);
     }
 
