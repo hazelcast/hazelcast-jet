@@ -242,6 +242,7 @@ public final class S3Sources {
      *
      * @param <I> Type of elements returned from reading.
      */
+    @FunctionalInterface
     public interface FileReadingFunction<I> extends Serializable {
 
         /**
