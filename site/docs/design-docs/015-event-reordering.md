@@ -12,105 +12,141 @@ Avoid non-intuitive event reordering in Jet pipelines.
 ## Problem statement
 
 Jet processes events in parallel, therefore a total order of events
-doesn't exist. However, in some use cases, users expect the order within
-a partition to be preserved, because the partition is a basic unit of
-parallelism and a single partition is always processed by a single
-processor.
+doesn't exist. However, in some use cases, users expect the order of
+events with the same key to be preserved, in order to be able to apply
+stateful processing logic on them.
 
-However, in previous versions, Jet used round-robin edges in places
-where no partitioning was required. For example before the stateless
-`map` operation. This caused that two events from the same partition
-could be handled by two parallel workers, and potentially overtake each
-other.
+So far, Jet's default has been to use a round-robin strategy to balance
+the traffic across parallel processors. Typically, the pipeline starts
+out with a source that has low parallelism, and the round-robin edge
+spreads out the data to downstream transforms with full parallelism.
+
+It is also possible to spread out the data using a partitioning scheme,
+so that all events with the same key go to the same downstream
+processor. This is less flexible and may suffer from data bias, where a
+handful of keys dominate the traffic volume. On the other hand, its
+advantage over round-robin is preserving the order among the same-keyed
+events.
+
+Jet already uses partitioning by key, but only on edges towards stages
+that explicitly use a grouping key, such as `aggregate`. The aggregating
+processor must observe all the events with a given key, but it is not
+ordering-sensitive.
+
+Jet also has the `mapStateful` transform, which is more general than
+`aggregate` and can contain arbitrary stateful logic. This logic is
+often order-sensitive, so it breaks down under event reordering.
 
 ![Events Getting Reordered](assets/events_getting_reordered.svg)
-
-On the other hand, the round-robin edges have the benefit of maximizing
-the parallelism. Commonly, sources have lower than maximum parallelism
-and the round-robin edge ensured that the downstream transform could
-have more parallelism than the source.
 
 In this document we describe ways to avoid the usage of round-robin
 edges and still preserve the performance potential of the previous
 implementation.
 
-## Design
+## Design Ideas
 
-There are two possible solutions for this problem:
+There are two basic ways to remove event reordering:
 
-* To prevent event reordering from happening
-* To sort the events in the same window before they encounter the
-  order-sensitive transforms(operators)
+* Prevent it from happening in the first place
+* Restore it before encountering an order-sensitive transform (stage)
 
-Both approaches have different effects on the performance. In the
-beginning, I thought we could create hybrid approach to benefit from
-both of the solutions above but then I realize the second solution is
-not feasible for most of the time because we need to have a sorting key
-between the items - timestamp is not sufficient for this. Thus, we
-decided to implement the first solution, putting aside the second
-solution for now.
+These approaches have different effects on the performance: the first
+one constrains our freedom to balance the traffic, while the second one
+introduces a sorting overhead.
 
-### Prevention of Event Reordering
+The second approach is not feasible most of the time because we don't
+have a good enough sorting key. The obvious choice, event timestamp, is
+not good enough because there's nothing stopping two events from
+occurring within the same millisecond.
 
-When distributing events from a one node to multiple nodes, events get
-out of order. If we specifically avoid this situation that breaks the
-order in the pipeline, the order of events will be preserved. But, this
-comes with the loss of parallelism: The maximum number of nodes in one
-stage is restricted by the predecessor stage (LP of the stage <= LP of
-the previous stage). Applying this for the entire pipeline may not
-always be feasible. E.g. If any stage of the pipeline contains only a
-single node (LP=1), following stages have to contain a single node,
-which is a suboptimal utilization of parallelism.
+Therefore we're focusing on the first approach: keep maintaining the
+original event order at every stage. Let us analyze the situation at
+each stage, starting from the source. There are two kinds of data
+sources:
 
-### Implementation Details
+1. single-point source (no parallelism)
+2. partitioned source (parallelized by a grouping key)
 
-In order to prevent the order of events from changing, we avoid the use
-of round-robin edge. The common pattern we've implemented in most
-transforms to achieve this described below.
+If we start out from a single-point source and there's no grouping key
+we can extract and parallelize on, we have no choice but to process all
+the data without parellelism. There is no technical challenge to solve
+here, so we'll focus on the cases where we do have a
+grouping/partitioning key.
 
-If a transform does not use partitioned edge:
+## Keep the Order of a Partitioned Source
 
-* Ensure that the LP of the input vertex of the transform is equal to
-  the PlannerVertex of the upstream transform.
+A partitioned source is both parallel and order-preserving, it preserves
+the order of the keyed substreams. The current situation in Jet is such
+that it loses this order in stateless transform stages, through
+round-robin edges. Also, Jet doesn't automatically capture the
+partitioning key and propagate it through the pipeline.
+
+### Keep it Without the Key
+
+We can keep the order even without the partitioning key, simply by
+keeping the partitions isolated throughout the pipeline. This seems to
+allows us a level of parallelism equal to the number of partitions in
+the source. However, it is pretty inflexible:
+
+1. Jet's symmetrical execution model means that the source parallelism
+  must be a multiple of the size of the cluster
+2. Jet cluster may change in size, affecting the parallelism of the
+  source
+3. Number of partitions in the source is not intended to drive Jet's
+   parallelism
+
+### Keep it Using the Key
+
+In streaming pipelines we already wrap every event object into a
+`JetEvent` that holds the metadata. We can add the partitioning key (or
+just the partition ID, an integer) there and then apply a partitioned
+edge whenever we used to apply the round-robin one. We can apply an
+optimization as well, by using the cheaper `isolated` edge when
+connecting transforms with the same local parallelism.
+
+This approach is more intrusive because it affects the pipelines without
+windowed aggregation, which currently don't need the wrapping
+`JetEvent`.
+
+## Decision: Keep the Order Without the Key
+
+TODO: explain the decision.
+
+## Implementation of the Preserve Parallelism Approach
+
+This affects the code in the `Planner`. If the incoming edge we would
+attach to the transform is a round-robin one (`unicast`), then:
+
+* Ensure that the local parallelism (LP) of the input vertex of the
+  transform is equal to the PlannerVertex of the upstream transform.
 
 * Connect these transform vertices with isolated edge.
 
-Otherwise:
+Otherwise, if it's a partitioned edge, do nothing.
 
-* do not change the properties of the transform if it already uses
-  partitioned edge.
-
-To ensure such LP equality between transforms, we had to specify LP's in
-job planning (pipeline.toDag()) stage. After that, we did this by
-modifying pipeline stages (transforms) one-by-one. The changes applied
-to the transforms listed below:
+We applied the policy to enforce equal local parallelism during the
+pipeline-to-DAG conversion stage, `Pipeline.toDag()`. We also inspected
+and adjusted the code in each of the `Transform.addToDa()`
+implementations, switching to the `isolated` edge where needed. Here is
+the summary of these changes:
 
 |Transform or Operator|The summary of changes|
 |------|------|
-|Aggregate Transform (Both of Single and Two Stage)|No changes have been made to the vertex's local parallelism of this transform and the configuration of the edge which connects it to the previous stage (Without considering non commutative-associative aggregates). We mark the transform as SequencerTransform to understand that these aggregate transforms produce their own order during job planning.|
-|Batch Source Transform|No changes have been made to the vertex's local parallelism of this transform.|
-|Distinct Transform|No changes have been made to the vertex's local parallelism of this transform and the configuration of the edge which connects it to the previous stage.|
-|FlatMapTransform|If the preserve ordering is active, we determine the LP of the transform vertex to have the same LP as the PlannerVertex of the upstream transform and connect them with the isolated edge.|
-|FlatMapStatefulTransform|No changes have been made to the vertex's local parallelism of this transform and the configuration of the edge which connects it to the previous stage. We mark this transform as OrderSensitiveTransform.|
-|GlobalMapStatefulTransform|No changes have been made to the vertex's local parallelism of this transform and the configuration of the edge which connects it to the previous stage. We mark this transform as OrderSensitiveTransform. |
-|GroupTransform(GroupAggregateTransform)|No changes have been made to the vertex's local parallelism of this transform and the configuration of the edge which connects it to the previous stage (Without considering non commutative-associative aggregates). We mark this transform as SequencerTransform.|
-|HashJoinTransform| `TODO: Consider it in more detail.` With my little knowledge, I don't plan to make any changes to this transform.|
-|MapTransform|If preserve ordering is active, we determine the LP of the transform vertex to have the same LP as the PlannerVertex of the upstream transform and connect them with the isolated edge.|
-|KeyedMapStatefulTransform|No changes have been made to the vertex's local parallelism of this transform and the configuration of the edge which connects it to the previous stage. We mark this transform as OrderSensitiveTransform.|
-|MergeTransform| `TODO: Consider it in more detail.` |
-|PartitionedProcessorTransform|No changes have been made to this transform.|
-|PeekTransform|No changes have been made to this transform.|
-|ProcessorTransform|If preserve ordering is active, we determine the LP of the transform vertex to have the same LP as the PlannerVertex of the upstream transform and connect them with the isolated edge.|
-|SortTransform|No changes have been made to the vertex's local parallelism of this transform and the configuration of the edge which connects it to the previous stage. We mark this transform as SequencerTransform. |
-|SinkTransform|No changes have been made to the vertex's local parallelism of this transform and the configuration of the edge which connects it to the previous stage.|
-|Stream Source Transform|No changes have been made to the vertex's local parallelism of this transform.|
-|TimestampTransform|We mark this transform as OrderSensitiveTransform to keep its current characteristics after the change in the job planning phase.|
-|WindowAggregateTransform|No changes have been made to the vertex's local parallelism of this transform and the configuration of the edge which connects it to the previous stage(Without considering non commutative-associative aggregates). We mark this transform as SequencerTransform.|
-|WindowGroupTransform(WindowedGroupAggregateTransform)|No changes have been made to the vertex's local parallelism of this transform and the configuration of the edge which connects it to the previous stage. We mark this transform as SequencerTransform.|
+|Map/Filter/FlatMap|Enforce parallelism equal to the upstream, apply the `isolated` edge.|
+|Custom (Core API) Transform|Enforce parallelism equal to the upstream, apply the `isolated` edge.|
+|Partitioned Custom Transform|No changes, it already uses a partitioned edge.|
+|Aggregation|No changes. Aggregation is order-insensitive, but due to the use of partitioning, it already preserves the order from the upstream. Marked as `SequencerTransform` (its output has a new ordering)|
+|Distinct|No changes. We don't guarantee to emit the very first distinct item.|
+|Sorting|No changes. Sorting is order-insensitive and enforces its own order in the output. Marked as a `SequencerTransform`.|
+|HashJoinTransform| Edge-0 (carrying the stream to be enriched): Enforce parallelism equal to the upstream, apply the `isolated` edge.|
+|Stateful Mapping|No changes, stateful mapping already preserves the order of the upstream stage. Marked as `OrderSensitiveTransform`|
+|MergeTransform| `TODO` |
+|TimestampTransform|No changes, this transform already uses the `isolated` edge. Marked `OrderSensitiveTransform` to keep doing what it already does.|
+|PeekTransform|No changes.|
+|Sources|No changes.|
+|Sinks|No changes.|
 
-Even though there is no LP and edge type change occurs in some
-transforms, transforms are adapted to determine exact LP values and
-propagate these to the downstream transforms.
+## More Ideas
 
 ### Sorting Events Between The Consecutive Watermarks
 
@@ -136,46 +172,26 @@ one. I just put this approach to be seen.
 
 ### Smart Job Planning
 
-If we classify the transforms as order-sensitive and order-insensitive,
-we can determine whether we will require the initial event order at the
-stage of the pipeline. In other words, grouping the transforms according
-to whether the result of the transforms is affected by the event order
-or not is one of the most important factor that will help us hide the
-ordering effects. To clarify why this would be useful, consider this
-example case: Suppose the pipeline contains all order-insensitive
-transforms. Then, if we are aware that they are order-insensitive, we
-can avoid to preserving the event order unnecessarily. In this way, we
-make use of parallelism as much as possible.
+We classified the transforms as order-sensitive and order-insensitive.
+This allows us to analyze the graph of the pipeline and identify which
+parts of it need the ordering restrictions. Basically, we must protect
+the order only on a path going from an order-creating stage to a
+stateful mapping stage. We also classified the transforms into
+order-propagating and order-creating. Sources create the order, as well
+as sorting and aggregating stages. For example, if a pipeline contains
+stateful mapping downstream of an aggregating stage, only that part must
+preserve the order.
 
-Similarly, some kind of transforms can put the events in a certain
-order. If there is no order-sensitive transform before this type of
-transforms, we don't need to do any ordering related effort before it
-since a new order is produced after this transform. To put it in another
-way, these kind of transforms fix the order that could be previously
-broken (e.g. sort). This group may include aggregate transforms since
-they produce their own order (the output of windowed aggregate
-transforms are ordered in its own).
-
-With the smart job planning, we determine the subpipelines that we need
-to prevent reordering and where we add the sorting stages independently
-from the user by considering the classes of transforms. Since we have to
-consider the subsequent stages for any stage while making this
-determination, it is not enough to visit the pipeline stages only with
-topological order. We could achieve this by traversing DAG in reverse
-topological order.
-
-By browsing the DAG on the reverse topological order, we can decide
-where to activate/deactivate the ordering prevention logic. The
-algorithm for this will be as follows:
+The algorithm to find these order-sensitive subgraphs requires us to
+traverse the `Transform` DAG in reverse topological order. This way, at
+each stage, we know whether somewhere in its downstream there's an
+order-sensitive stage. Here's the algorithm we use:
 
 1. Traverse to DAG in the reverse topological order.
-2. When visit a order-sensitive node (OrderSensitiveTransform), activate
-   the ordering prevention logic for this and future nodes until
-   visiting a node (SequencerTransform) that produces its own order.
-3. After visiting the node that produces its own order, deactivate the
-   ordering prevention logic the following nodes until visiting a
+2. When visiting an order-sensitive transform, activate the ordering
+   prevention logic for this and future transforms until visiting an
+   order-creating transform.
+3. After visiting an order-creating transform, deactivate the
+   ordering prevention logic for the future transforms until visiting an
    order-sensitive node.
 4. Follow this procedure to visit all nodes.
-
-With the use of this algorithm, we  benefit more from parallelism by
-activating event ordering prevention in as few places as possible.
