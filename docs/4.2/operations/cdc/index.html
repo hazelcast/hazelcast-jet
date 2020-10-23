@@ -1,0 +1,336 @@
+<!DOCTYPE html><html lang="en"><head><meta charSet="utf-8"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><title>Change Data Capture · Hazelcast Jet</title><meta name="viewport" content="width=device-width"/><meta name="generator" content="Docusaurus"/><meta name="description" content="Guide for deploying Change Data Capture connectors and target databases."/><meta name="docsearch:version" content="4.2"/><meta name="docsearch:language" content="en"/><meta property="og:title" content="Change Data Capture · Hazelcast Jet"/><meta property="og:type" content="website"/><meta property="og:url" content="https://jet-start.sh/"/><meta property="og:description" content="Guide for deploying Change Data Capture connectors and target databases."/><meta property="og:image" content="https://jet-start.sh/img/Hazelcast-Jet-Logo-Blue_Dark.jpg"/><meta name="twitter:card" content="summary"/><meta name="twitter:image" content="https://jet-start.sh/img/Hazelcast-Jet-Logo-Blue_Dark.jpg"/><link rel="shortcut icon" href="/img/favicon.png"/><link rel="stylesheet" href="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.css"/><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/default.min.css"/><link rel="alternate" type="application/atom+xml" href="https://jet-start.sh/blog/atom.xml" title="Hazelcast Jet Blog ATOM Feed"/><link rel="alternate" type="application/rss+xml" href="https://jet-start.sh/blog/feed.xml" title="Hazelcast Jet Blog RSS Feed"/><script>
+              (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+              (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+              m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+              })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+              ga('create', 'UA-158279495-1', 'auto');
+              ga('send', 'pageview');
+            </script><link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Ubuntu:300,400,500,600"/><link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,500,600,700,800"/><script type="text/javascript" src="https://buttons.github.io/buttons.js"></script><script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.0/clipboard.min.js"></script><script type="text/javascript" src="/js/code-block-buttons.js"></script><script type="text/javascript" src="https://plausible.io/js/plausible.js" async="" defer="" data-domain="jet-start.sh"></script><script src="/js/scrollSpy.js"></script><link rel="stylesheet" href="/css/prism.css"/><link rel="stylesheet" href="/css/main.css"/><script src="/js/codetabs.js"></script></head><body class="sideNavVisible separateOnPageNav"><div class="fixedHeaderContainer"><div class="headerWrapper wrapper"><header><a href="/"><img class="logo" src="/img/logo-dark.svg" alt="Hazelcast Jet"/></a><a href="/versions"><h3>4.2</h3></a><div class="navigationWrapper navigationSlider"><nav class="slidingNav"><ul class="nav-site nav-site-internal"><li class="siteNavGroupActive"><a href="/docs/4.2/get-started/intro" target="_self">Docs</a></li><li class=""><a href="/download" target="_self">Download</a></li><li class=""><a href="/demos" target="_self">Demos</a></li><li class=""><a href="https://github.com/hazelcast/hazelcast-jet" target="_self">GitHub</a></li><li class=""><a href="https://slack.hazelcast.com/" target="_self">Community</a></li><li class=""><a href="/blog/" target="_self">Blog</a></li><li class="navSearchWrapper reactNavSearchWrapper"><input type="text" id="search_input_react" placeholder="Search" title="Search"/></li></ul></nav></div></header></div></div><div class="navPusher"><div class="docMainWrapper wrapper"><div class="docsNavContainer" id="docsNav"><nav class="toc"><div class="toggleNav"><section class="navWrapper wrapper"><div class="navBreadcrumb wrapper"><div class="navToggle" id="navToggler"><div class="hamburger-menu"><div class="line1"></div><div class="line2"></div><div class="line3"></div></div></div><h2><i>›</i><span>Operations Guide</span></h2><div class="tocToggler" id="tocToggler"><i class="icon-toc"></i></div></div><div class="navGroups"><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Get Started<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.2/get-started/intro">Introduction</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/get-started/first-job">Your First Jet Program</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/get-started/installation">Set Up a Jet Cluster</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/get-started/submit-job">Submit a Job to the Cluster</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/get-started/scale-job">Scale Your Job</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Tutorials<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.2/tutorials/kafka">Process Events from Apache Kafka</a></li><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">Change Data Capture</h4><ul><li class="navListItem"><a class="navItem" href="/docs/4.2/tutorials/cdc">MySQL</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/tutorials/cdc-postgres">PostgreSQL</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/tutorials/cdc-join">Join</a></li></ul></div><li class="navListItem"><a class="navItem" href="/docs/4.2/tutorials/map-join">Enrich Your Stream</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/tutorials/windowing">Apply Windowed Aggregation</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/tutorials/python">Apply a Python Function</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/tutorials/spring-boot">Spring Boot Starter</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/tutorials/pulsar">Group Messages from Apache Pulsar</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Concepts<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.2/concepts/dag">Directed Acyclic Graph (DAG)</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/concepts/event-time">Streaming and Event Time</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/concepts/processing-guarantees">Processing Guarantees for Stateful Computation</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Programming Guide<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.2/api/pipeline">Building Pipelines</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/api/stateless-transforms">Stateless Transforms</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/api/stateful-transforms">Stateful Transforms</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/api/more-transforms">More Transforms</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/api/sources-sinks">Sources and Sinks</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/api/submitting-jobs">Submitting Jobs</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/api/data-structures">Distributed Data Structures</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/api/serialization">Serialization</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/api/testing">Testing</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/api/spring">Spring Integration</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">How-To Guides<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.2/how-tos/stream-imap">Receive IMap Change Stream</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/how-tos/observables">Receive Results on the Client</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/how-tos/custom-batch-source">Add Batching to Custom Source</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/how-tos/custom-stream-source">Create a Streaming Source</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/how-tos/custom-sink">Create a Sink</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/how-tos/custom-aggregate-operation">Build a Custom Aggregate Operation</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/how-tos/operator">Install Kubernetes Operator</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/how-tos/xa">Compatibility of XA Support</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/how-tos/grpc">Call gRPC Service</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Operations Guide<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.2/operations/installation">Installation</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/operations/configuration">Configuration</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/operations/discovery">Cluster Discovery</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/operations/cluster-sizing">Cluster Sizing</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/operations/gc-concerns">Concerns Related to GC</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/operations/job-management">Job Management</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/operations/docker">Running With Docker</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/operations/kubernetes">Deployment On Kubernetes</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/operations/monitoring">Monitoring and Metrics</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/operations/version-compatibility">Version Compatibility</a></li><li class="navListItem navListItemActive"><a class="navItem" href="/docs/4.2/operations/cdc">Change Data Capture</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Architecture<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.2/architecture/distributed-computing">Pipeline Execution Model</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/architecture/execution-engine">Cooperative Multithreading</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/architecture/cluster-topology">Cluster Topology</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/architecture/event-time-processing">Event Time-Based Processing</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/architecture/sliding-window">Sliding Window Aggregation</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/architecture/fault-tolerance">Fault Tolerance</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/architecture/in-memory-storage">In-Memory Storage</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Enterprise Edition<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.2/enterprise/">Introduction</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/enterprise/installation">Installation</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/enterprise/management-center">Management Center</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/enterprise/operator-openshift">Installation on Red Hat OpenShift</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/enterprise/security">Security</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/enterprise/job-update">Updating Jobs</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/enterprise/lossless-restart">Lossless Cluster Restart</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/enterprise/off-heap">Off-Heap Data Structures</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/enterprise/blue-green">Blue-Green Client</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Design Documents<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.2/design-docs/">Introduction</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/design-docs/011-json-convenience">011 - JSON Convenience</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/design-docs/010-operator-framework">010 - Kubernetes Operators</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/design-docs/009-pulsar-connector">009 - Apache Pulsar Connector</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/design-docs/008-stage-rebalance">008 - Rebalance Data on a Pipeline Stage</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/design-docs/007-grpc-support">007 - Extended gRPC Support</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/design-docs/006-declarative-serialization">006 - Declarative Serialization</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/design-docs/005-cdc-sources">005 - Change Data Capture (CDC) Sources</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/design-docs/004-spring-boot-starter">004 - Spring Boot Starter</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/design-docs/003-elasticsearch-connector">003 - Elasticsearch Connector</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/design-docs/002-job-level-serialization">002 - Job-level Serialization</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/design-docs/001-code-deployment-improvements">001 - Code Deployment Improvements</a></li></ul></div></div></section></div><script>
+            var coll = document.getElementsByClassName('collapsible');
+            var checkActiveCategory = true;
+            for (var i = 0; i < coll.length; i++) {
+              var links = coll[i].nextElementSibling.getElementsByTagName('*');
+              if (checkActiveCategory){
+                for (var j = 0; j < links.length; j++) {
+                  if (links[j].classList.contains('navListItemActive')){
+                    coll[i].nextElementSibling.classList.toggle('hide');
+                    coll[i].childNodes[1].classList.toggle('rotate');
+                    checkActiveCategory = false;
+                    break;
+                  }
+                }
+              }
+
+              coll[i].addEventListener('click', function() {
+                var arrow = this.childNodes[1];
+                arrow.classList.toggle('rotate');
+                var content = this.nextElementSibling;
+                content.classList.toggle('hide');
+              });
+            }
+
+            document.addEventListener('DOMContentLoaded', function() {
+              createToggler('#navToggler', '#docsNav', 'docsSliderActive');
+              createToggler('#tocToggler', 'body', 'tocActive');
+
+              var headings = document.querySelector('.toc-headings');
+              headings && headings.addEventListener('click', function(event) {
+                var el = event.target;
+                while(el !== headings){
+                  if (el.tagName === 'A') {
+                    document.body.classList.remove('tocActive');
+                    break;
+                  } else{
+                    el = el.parentNode;
+                  }
+                }
+              }, false);
+
+              function createToggler(togglerSelector, targetSelector, className) {
+                var toggler = document.querySelector(togglerSelector);
+                var target = document.querySelector(targetSelector);
+
+                if (!toggler) {
+                  return;
+                }
+
+                toggler.onclick = function(event) {
+                  event.preventDefault();
+
+                  target.classList.toggle(className);
+                };
+              }
+            });
+        </script></nav></div><div class="container mainContainer docsContainer"><div class="wrapper"><div class="post"><header class="postHeader"><a class="edit-page-link button" href="https://github.com/hazelcast/hazelcast-jet/edit/master/site/docs/operations/cdc.md" target="_blank" rel="noreferrer noopener">Edit</a><h1 id="__docusaurus" class="postHeaderTitle">Change Data Capture</h1></header><article><div><span><h2><a class="anchor" aria-hidden="true" id="database-setup"></a><a href="#database-setup" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Database Setup</h2>
+<p>When using <a href="/docs/4.2/api/sources-sinks#change-data-capture-cdc">CDC data
+sources</a> in Jet, one
+must also take care that the source databases are set up correctly,
+meaning they have all the features, required for change data capture,
+enabled.</p>
+<h3><a class="anchor" aria-hidden="true" id="mysql"></a><a href="#mysql" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>MySQL</h3>
+<h4><a class="anchor" aria-hidden="true" id="database-user"></a><a href="#database-user" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Database user</h4>
+<p>The MySQL CDC source needs a MySQL database user which will be used for
+connecting to the database. For how to create one, see the &quot;CREATE USER
+Statement&quot; in the MySQL Reference Manual
+(<a href="https://dev.mysql.com/doc/refman/5.7/en/create-user.html">5.7</a>,
+<a href="https://dev.mysql.com/doc/refman/8.0/en/create-user.html">8.0</a> - note
+that <code>mysql_native_password</code> is no longer the default authentication
+plugin in MySQL 8; you will need to specify it using the
+<code>IDENTIFIED WITH mysql_native_password BY '&lt;password&gt;'</code> construct).</p>
+<p>This database user will also need to have certain permissions enabled.
+Use the &quot;GRANT Statement&quot;
+(<a href="https://dev.mysql.com/doc/refman/5.7/en/grant.html">5.7</a>,
+<a href="https://dev.mysql.com/doc/refman/8.0/en/grant.html">8.0</a>) to set them
+if missing. The needed permissions are following:</p>
+<ul>
+<li>SELECT: enables selection of rows from tables
+(<a href="https://dev.mysql.com/doc/refman/5.7/en/privileges-provided.html#priv_select">5.7</a>,
+<a href="https://dev.mysql.com/doc/refman/8.0/en/privileges-provided.html#priv_select">8.0</a>)</li>
+<li>RELOAD: enables usage of the FLUSH statement to clear or reload
+internal caches, flush tables or acquire locks
+(<a href="https://dev.mysql.com/doc/refman/5.7/en/privileges-provided.html#priv_reload">5.7</a>,
+<a href="https://dev.mysql.com/doc/refman/8.0/en/privileges-provided.html#priv_reload">8.0</a>)</li>
+<li>SHOW DATABASES: enables usage of the SHOW DATABASES statement
+(<a href="https://dev.mysql.com/doc/refman/5.7/en/privileges-provided.html#priv_show-databases">5.7</a>,
+<a href="https://dev.mysql.com/doc/refman/8.0/en/privileges-provided.html#priv_show-databases">8.0</a>)</li>
+<li>REPLICATION SLAVE: enables reading the server's binlog (source of the
+CDC events)
+(<a href="https://dev.mysql.com/doc/refman/5.7/en/privileges-provided.html#priv_replication-slave">5.7</a>,
+<a href="https://dev.mysql.com/doc/refman/8.0/en/privileges-provided.html#priv_replication-slave">8.0</a>)</li>
+<li>REPLICATION CLIENT: enables usage of SHOW MASTER STATUS, SHOW SLAVE
+STATUS and SHOW BINARY LOGS statements
+(<a href="https://dev.mysql.com/doc/refman/5.7/en/privileges-provided.html#priv_replication-client">5.7</a>,
+<a href="https://dev.mysql.com/doc/refman/8.0/en/privileges-provided.html#priv_replication-client">8.0</a>)</li>
+</ul>
+<h4><a class="anchor" aria-hidden="true" id="binlog"></a><a href="#binlog" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Binlog</h4>
+<p>Binary logging can be enabled by adding a couple of options to the MySQL
+config file. See MySQL Reference Manual on how to do that
+(<a href="https://dev.mysql.com/doc/refman/5.7/en/option-files.html">5.7</a>,
+<a href="https://dev.mysql.com/doc/refman/8.0/en/option-files.html">8.0</a>). For
+example:</p>
+<pre><code class="hljs css language-text">server-id         = 223344
+log_bin           = mysql-bin
+binlog_format     = ROW
+binlog_row_image  = FULL
+expire_logs_days  = 10
+</code></pre>
+<p>The semantics of these options are as follows:</p>
+<ul>
+<li><strong>server-id</strong>: must be unique withing the MySQL cluster
+(<a href="https://dev.mysql.com/doc/refman/5.7/en/replication-options.html#sysvar_server_id">5.7</a>,
+<a href="https://dev.mysql.com/doc/refman/8.0/en/replication-options.html#sysvar_server_id">8.0</a>)</li>
+<li><strong>log_bin</strong>: base name of the sequence of binlog files
+(<a href="https://dev.mysql.com/doc/refman/5.7/en/replication-options-binary-log.html#option_mysqld_log-bin">5.7</a>,
+<a href="https://dev.mysql.com/doc/refman/8.0/en/replication-options-binary-log.html#option_mysqld_log-bin">8.0</a>)</li>
+<li><strong>binlog_format</strong>: must be set to &quot;ROW&quot; in order for the CDC source to
+work properly
+(<a href="https://dev.mysql.com/doc/refman/5.7/en/replication-options-binary-log.html#sysvar_binlog_format">5.7</a>,
+<a href="https://dev.mysql.com/doc/refman/8.0/en/replication-options-binary-log.html#sysvar_binlog_format">8.0</a>)</li>
+<li><strong>binlog_row_image</strong>: must be set to &quot;FULL&quot; in order for the CDC
+source to work properly
+(<a href="https://dev.mysql.com/doc/refman/5.7/en/replication-options-binary-log.html#sysvar_binlog_row_image">5.7</a>,
+<a href="https://dev.mysql.com/doc/refman/8.0/en/replication-options-binary-log.html#sysvar_binlog_row_image">8.0</a>)</li>
+<li><strong>expire_log_days</strong>: number of days for automatic binlog file removal
+(<a href="https://dev.mysql.com/doc/refman/5.7/en/replication-options-binary-log.html#sysvar_expire_logs_days">5.7</a>,
+<a href="https://dev.mysql.com/doc/refman/8.0/en/replication-options-binary-log.html#sysvar_expire_logs_days">8.0</a>)</li>
+</ul>
+<p>While the database server is running, the active values of these
+variables can be checked with the help of the &quot;SHOW VARIABLES Statement&quot;
+(<a href="https://dev.mysql.com/doc/refman/5.7/en/show-variables.html">5.7</a>,
+<a href="https://dev.mysql.com/doc/refman/8.0/en/show-variables.html">8.0</a>).
+It's worth pointing out that the names of the options sometimes differ
+from the names of the MySQL system variables they set. For example:</p>
+<pre><code class="hljs css language-text">SHOW VARIABLES LIKE 'server_id';
+</code></pre>
+<h4><a class="anchor" aria-hidden="true" id="session-timeouts"></a><a href="#session-timeouts" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Session timeouts</h4>
+<p>When an initial consistent snapshot is made for large databases, your
+established connection could timeout while the tables are being read.
+You can prevent this behavior by configuring <strong>interactive_timeout</strong>
+(<a href="https://dev.mysql.com/doc/refman/5.7/en/server-system-variables.html#sysvar_interactive_timeout">5.0</a>,
+<a href="https://dev.mysql.com/doc/refman/8.0/en/server-system-variables.html#sysvar_interactive_timeout">8.0</a>)
+and <strong>wait_timeout</strong>
+(<a href="https://dev.mysql.com/doc/refman/5.7/en/server-system-variables.html#sysvar_wait_timeout">5.0</a>,
+<a href="https://dev.mysql.com/doc/refman/8.0/en/server-system-variables.html#sysvar_wait_timeout">8.0</a>)
+in your MySQL configuration file.</p>
+<p>On how to work with the MySQL config file consult the Reference Manual
+(<a href="https://dev.mysql.com/doc/refman/5.7/en/option-files.html">5.7</a>,
+<a href="https://dev.mysql.com/doc/refman/8.0/en/option-files.html">8.0</a>).</p>
+<h3><a class="anchor" aria-hidden="true" id="postgresql"></a><a href="#postgresql" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>PostgreSQL</h3>
+<h4><a class="anchor" aria-hidden="true" id="database-version"></a><a href="#database-version" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Database version</h4>
+<p>The PostgreSQL change data capture connector works by exploiting the
+<a href="https://www.postgresql.org/docs/current/logicaldecoding-explanation.html">logical
+decoding</a>
+feature of the database, first introduced in version 9.4. This version
+however is no longer supported. Debezium recommends running change data
+capture on version <a href="https://www.postgresql.org/docs/9.6/index.html">9.6</a>
+or later.</p>
+<h4><a class="anchor" aria-hidden="true" id="output-plug-in"></a><a href="#output-plug-in" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Output plug-in</h4>
+<p>PostgreSQL's logical decoding feature is a mechanism which allows the
+extraction of the changes which were committed to the transaction log
+and the processing of these changes in a user-friendly manner via the
+help of an <a href="https://www.postgresql.org/docs/current/logicaldecoding-output-plugin.html">output
+plug-in</a>.</p>
+<p>The output plug-ins currently available are:</p>
+<ul>
+<li><a href="https://github.com/debezium/postgres-decoderbufs"><code>decoderbufs</code></a>,
+maintained by the Debezium community, based on ProtoBuf</li>
+<li><a href="https://github.com/eulerto/wal2json"><code>wal2json</code></a>, maintained by the
+wal2json community, based on JSON</li>
+<li><code>pgoutput</code>, the standard logical decoding plug-in in PostgreSQL 10 and
+later, maintained by the Postgres community</li>
+</ul>
+<p>The <code>pgoutput</code> plug-in is always present and requires no explicit
+installation, for the other two follow the instructions provided by
+their maintainers.</p>
+<p>Note: for simplicity Debezium also provides a Docker image based on a
+vanilla <a href="https://github.com/debezium/docker-images/tree/master/postgres/9.6">PostgreSQL server
+image</a>
+on top of which it compiles and installs all above mentioned plugins.</p>
+<h4><a class="anchor" aria-hidden="true" id="server-config"></a><a href="#server-config" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Server config</h4>
+<p>Running change data capture on a PostgreSQL server requires certain
+configuration options to be set accordingly. This can be done either by</p>
+<ul>
+<li>editing the <code>postgresql.conf</code> file, or by</li>
+<li>using the <a href="https://www.postgresql.org/docs/current/sql-altersystem.html">ALTER
+SYSTEM</a>
+command</li>
+</ul>
+<p>The important properties to set are:</p>
+<pre><code class="hljs css language-properties"><span class="hljs-comment"># MODULES</span>
+<span class="hljs-attr">shared_preload_libraries</span> = <span class="hljs-string">'decoderbufs,wal2json'</span>
+<span class="hljs-comment">
+# REPLICATION</span>
+<span class="hljs-attr">wal_level</span> = <span class="hljs-string">logical</span>
+<span class="hljs-attr">max_wal_senders</span> = <span class="hljs-string">1</span>
+<span class="hljs-attr">max_replication_slots</span> = <span class="hljs-string">1</span>
+</code></pre>
+<p><code>shared_preload_libraries</code> contains a comma separated list of installed
+output plug-ins. <code>wal_levels</code> is used to tell the server to use logical
+decoding with the write-ahead log.</p>
+<p>Logical decoding uses <a href="https://www.postgresql.org/docs/current/logicaldecoding-explanation.html#LOGICALDECODING-REPLICATION-SLOTS">replication
+slots</a>.
+Replication slots retain WAL data even during connector outages. For
+this reason it is important to monitor and limit replication slots to
+avoid too much disk consumption and other conditions that can happen,
+such as catalog bloat if a slot stays unused for too long. This is why
+the <code>max_wal_sender</code> and <code>max_replication_slots</code> parameters are set with
+the smallest possible values.</p>
+<h4><a class="anchor" aria-hidden="true" id="replication-permissions"></a><a href="#replication-permissions" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Replication permissions</h4>
+<p>Replication can only be performed by a database user (specifically the
+one we set up our CDC connector with) only if the user has appropriate
+permissions. The permissions needed are <code>REPLICATION</code> and <code>LOGIN</code>.</p>
+<p>For setting up database users/roles see the <a href="https://www.postgresql.org/docs/9.6/user-manag.html">PostgreSQL
+documentation</a>, but
+basically the essential command is:</p>
+<pre><code class="hljs css language-text">CREATE ROLE name REPLICATION LOGIN;
+</code></pre>
+<p>Note: database super-users already have all the permissions needed by
+replication too.</p>
+<h4><a class="anchor" aria-hidden="true" id="client-authentication"></a><a href="#client-authentication" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Client authentication</h4>
+<p>Replication can only be performed for a configured number of hosts. The
+PostgreSQL server needs to allow access from the host the CDC connector
+is running on. To specify such  <a href="https://www.postgresql.org/docs/9.6/auth-pg-hba-conf.html">client authentication</a>
+options add following lines to the end of the <code>pg_hba.conf</code> file:</p>
+<pre><code class="hljs css language-text">local   replication    user                    trust
+host    replication    user    127.0.0.1/32    trust
+host    replication    user    ::1/128         trust
+</code></pre>
+<p>This example tells the server to allow replication for the specified
+user locally or on <code>localhost</code>, using IPv4 or IPv6.</p>
+<h3><a class="anchor" aria-hidden="true" id="other-databases"></a><a href="#other-databases" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Other Databases</h3>
+<p>Streaming CDC data from other databases supported by Debezium is
+possible in Jet by using the <a href="/javadoc/4.2/com/hazelcast/jet/cdc/DebeziumCdcSources.html">generic Debezium
+source</a>.
+This deployment guide however only covers the databases we have first
+class support for. For the other ones pls. refer to the Debezium
+documentation:</p>
+<ul>
+<li><a href="https://debezium.io/documentation/reference/1.1/connectors/sqlserver.html#setting-up-sqlserver">SQL
+Server</a></li>
+<li><a href="https://debezium.io/documentation/reference/1.1/connectors/mongodb.html#setting-up-mongodb">MongoDB</a></li>
+<li><a href="https://debezium.io/documentation/reference/1.1/connectors/oracle.html#setting-up-oracle">Oracle</a></li>
+<li><a href="https://debezium.io/documentation/reference/1.1/connectors/db2.html#setting-up-Db2">Db2</a></li>
+<li><a href="https://debezium.io/documentation/reference/1.1/connectors/cassandra.html#setting-up-cassandra">Cassandra</a></li>
+</ul>
+<h2><a class="anchor" aria-hidden="true" id="connector-deployment"></a><a href="#connector-deployment" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Connector Deployment</h2>
+<h3><a class="anchor" aria-hidden="true" id="mysql-1"></a><a href="#mysql-1" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>MySQL</h3>
+<h4><a class="anchor" aria-hidden="true" id="using-replicas"></a><a href="#using-replicas" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Using replicas</h4>
+<p>Enabling the features needed for the MySQL CDC connector (in particular
+the binlog) has a performance impact on the database. From our
+measurements we estimated it to around 15%, but this is very dependent
+on your particular workload. What's certain is that it's not negligible.</p>
+<p>Enabling CDC requires pretty much the same settings as replication, so
+if you already have replication enabled, then there should be no further
+performance penalty. However the CDC source is an extra replication
+client, so if you already have replication you might consider connecting
+the CDC source to your replica, instead of the main database.</p>
+<p>Another reason why using a replica for CDC might be useful, is that for
+large databases the snapshot taken by the CDC source when it first
+starts can take a significant amount of time and will put heavy load on
+the database during that period. This might affect the performance of
+other transactions.</p>
+<h4><a class="anchor" aria-hidden="true" id="using-global-transaction-ids"></a><a href="#using-global-transaction-ids" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Using Global Transaction IDs</h4>
+<p>When using a replica for the CDC source and in general when the MySQL
+server cluster has multiple member it's a good idea to give yourself the
+option of connecting the CDC source to any one of the members. The
+source does track the transaction ids in the binlog and can connect to
+the binlog of another MySQL server on restart, but in order for the ids
+to match between servers Global Transaction Identifiers (GTIDs) must be
+enabled in them.</p>
+<p>This can be achieved by setting both of the <strong>gtid_mode</strong>
+(<a href="https://dev.mysql.com/doc/refman/5.7/en/replication-options-gtids.html#sysvar_gtid_mode">5.0</a>,
+<a href="https://dev.mysql.com/doc/refman/8.0/en/replication-options-gtids.html#sysvar_gtid_mode">8.0</a>)
+and <strong>enforce_gtid_consistency</strong>
+(<a href="https://dev.mysql.com/doc/refman/5.7/en/replication-options-gtids.html#sysvar_enforce_gtid_consistency">5.0</a>,
+<a href="https://dev.mysql.com/doc/refman/8.0/en/replication-options-gtids.html#sysvar_enforce_gtid_consistency">8.0</a>)
+options to &quot;ON&quot;.</p>
+<p>On how to work with the MySQL config file consult the Reference Manual
+(<a href="https://dev.mysql.com/doc/refman/5.7/en/option-files.html">5.7</a>,
+<a href="https://dev.mysql.com/doc/refman/8.0/en/option-files.html">8.0</a>).</p>
+<h3><a class="anchor" aria-hidden="true" id="postgresql-1"></a><a href="#postgresql-1" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>PostgreSQL</h3>
+<h4><a class="anchor" aria-hidden="true" id="primary-only-replication"></a><a href="#primary-only-replication" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Primary-only replication</h4>
+<p>As we've mentioned in the <a href="#postgresql">PostgreSQL database setup
+section</a> the connector uses logical decoding replication
+slots. All PostgreSQL versions (up to 12) only support logical
+replication slots on <em>primary</em> servers.</p>
+<p>This means that it's not possible to limit the performance impact of
+running change data capture on replicas. This weakness is somewhat
+offset by the fact that the logical replication process seems quite
+limited as far as the amount of resources it can acquire. When measuring
+its output it behaves quite like a single threaded process, which can't
+saturate neither CPU nor the network.</p>
+<p>In our tests we didn't manage to make it output much more than 20,000
+records/second, so on a powerful server running the database it
+shouldn't affect normal operations too severely.</p>
+<h4><a class="anchor" aria-hidden="true" id="failure-tolerance"></a><a href="#failure-tolerance" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Failure tolerance</h4>
+<p>PostgreSQL failure tolerance associated with replication slots is
+somewhat lacking in certain aspects. The CDC connector can quite nicely
+deal with its own restart or connection loss to the primary database,
+but only as long as replication slots remain intact. Replication
+slots are not themselves synced to physical replicas, so you can’t
+continue to use a slot after a master failure results in promotion
+of a standby.</p>
+<p>There are discussions in the PostgreSQL community around a feature
+called <em>failover slots</em> which would help mitigate this problem, but as
+of version 12 they have not been implemented yet.</p>
+</span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/docs/4.2/operations/version-compatibility"><span class="arrow-prev">← </span><span>Version Compatibility</span></a><a class="docs-next button" href="/docs/4.2/architecture/distributed-computing"><span>Pipeline Execution Model</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#database-setup">Database Setup</a><ul class="toc-headings"><li><a href="#mysql">MySQL</a></li><li><a href="#postgresql">PostgreSQL</a></li><li><a href="#other-databases">Other Databases</a></li></ul></li><li><a href="#connector-deployment">Connector Deployment</a><ul class="toc-headings"><li><a href="#mysql-1">MySQL</a></li><li><a href="#postgresql-1">PostgreSQL</a></li></ul></li></ul></nav></div><footer class="nav-footer" id="footer"><section class="sitemap"><div style="text-align:left"><a href="/" class="nav-home"><img src="/img/logo-light.svg" alt="Hazelcast Jet" width="200" height="40"/></a><div style="margin-left:12px"><a class="github-button" href="https://github.com/hazelcast/hazelcast-jet" data-icon="octicon-star" data-count-href="/facebook/docusaurus/stargazers" data-show-count="true" data-count-aria-label="# stargazers on GitHub" aria-label="Star this project on GitHub">Star On GitHub</a></div></div><div><h5>Docs</h5><a href="/docs/get-started/intro">Get Started</a><a href="/docs/concepts/dag">Concepts</a><a href="/docs/tutorials/kafka">Tutorials</a><a href="/docs/architecture/distributed-computing">Architecture</a><a href="/docs/operations/installation">Operations Guide</a><a href="/docs/enterprise">Enterprise Edition</a></div><div><h5>Community</h5><a href="https://groups.google.com/forum/#!forum/hazelcast-jet" target="_blank" rel="noreferrer noopener">Google Groups</a><a href="http://stackoverflow.com/questions/tagged/hazelcast-jet" target="_blank" rel="noreferrer noopener">Stack Overflow</a><a href="https://slack.hazelcast.com">Slack</a></div><div><h5>Latest From the Blog</h5><a href="/blog/2020/10/23/jet-43-is-released">Jet 4.3 Released</a><a href="/blog/2020/10/06/enabling-full-text-search">Enabling Full-text Search with Change Data Capture in a Legacy Application</a><a href="/blog/2020/09/18/cdc-meets-stream-processing">Change Data Capture meets Stream Processing</a><a href="/blog/2020/08/05/gc-tuning-for-jet">Sub-10 ms Latency in Java: Concurrent GC with Green Threads</a><a href="/blog/2020/07/16/designing-evergreen-cache-cdc">Designing an Evergreen Cache with Change Data Capture</a></div><div><h5>More</h5><a href="https://github.com/hazelcast/hazelcast-jet">GitHub Project</a><a href="http://hazelcast.com/company/careers/">Work at Hazelcast</a><a href="/license">License</a></div></section><section class="copyright">Copyright © 2020 Hazelcast Inc.</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
+                document.addEventListener('keyup', function(e) {
+                  if (e.target !== document.body) {
+                    return;
+                  }
+                  // keyCode for '/' (slash)
+                  if (e.keyCode === 191) {
+                    const search = document.getElementById('search_input_react');
+                    search && search.focus();
+                  }
+                });
+              </script><script>
+              var search = docsearch({
+                
+                apiKey: '79d1e4941621b9fd761d279d4d19ed69',
+                indexName: 'hazelcast-jet',
+                inputSelector: '#search_input_react',
+                algoliaOptions: {"facetFilters":["language:en","version:4.2"]}
+              });
+            </script></body></html>

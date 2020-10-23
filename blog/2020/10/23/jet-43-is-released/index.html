@@ -1,0 +1,245 @@
+<!DOCTYPE html><html lang="en"><head><meta charSet="utf-8"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><title>Jet 4.3 Released · Hazelcast Jet</title><meta name="viewport" content="width=device-width"/><meta name="generator" content="Docusaurus"/><meta name="description" content="Today we&#x27;re releasing Hazelcast Jet 4.3, our fourth release in 2020!"/><meta name="docsearch:language" content="en"/><meta property="og:title" content="Jet 4.3 Released · Hazelcast Jet"/><meta property="og:type" content="website"/><meta property="og:url" content="https://jet-start.sh/blog/2020/10/23/jet-43-is-released"/><meta property="og:description" content="Today we&#x27;re releasing Hazelcast Jet 4.3, our fourth release in 2020!"/><meta property="og:image" content="https://jet-start.sh/img/Hazelcast-Jet-Logo-Blue_Dark.jpg"/><meta name="twitter:card" content="summary"/><meta name="twitter:image" content="https://jet-start.sh/img/Hazelcast-Jet-Logo-Blue_Dark.jpg"/><link rel="shortcut icon" href="/img/favicon.png"/><link rel="stylesheet" href="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.css"/><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/default.min.css"/><link rel="alternate" type="application/atom+xml" href="https://jet-start.sh/blog/atom.xml" title="Hazelcast Jet Blog ATOM Feed"/><link rel="alternate" type="application/rss+xml" href="https://jet-start.sh/blog/feed.xml" title="Hazelcast Jet Blog RSS Feed"/><script>
+              (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+              (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+              m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+              })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+              ga('create', 'UA-158279495-1', 'auto');
+              ga('send', 'pageview');
+            </script><link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Ubuntu:300,400,500,600"/><link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,500,600,700,800"/><script type="text/javascript" src="https://buttons.github.io/buttons.js"></script><script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.0/clipboard.min.js"></script><script type="text/javascript" src="/js/code-block-buttons.js"></script><script type="text/javascript" src="https://plausible.io/js/plausible.js" async="" defer="" data-domain="jet-start.sh"></script><script src="/js/scrollSpy.js"></script><link rel="stylesheet" href="/css/prism.css"/><link rel="stylesheet" href="/css/main.css"/><script src="/js/codetabs.js"></script></head><body class="sideNavVisible separateOnPageNav"><div class="fixedHeaderContainer"><div class="headerWrapper wrapper"><header><a href="/"><img class="logo" src="/img/logo-dark.svg" alt="Hazelcast Jet"/></a><a href="/versions"><h3>4.3</h3></a><div class="navigationWrapper navigationSlider"><nav class="slidingNav"><ul class="nav-site nav-site-internal"><li class=""><a href="/docs/get-started/intro" target="_self">Docs</a></li><li class=""><a href="/download" target="_self">Download</a></li><li class=""><a href="/demos" target="_self">Demos</a></li><li class=""><a href="https://github.com/hazelcast/hazelcast-jet" target="_self">GitHub</a></li><li class=""><a href="https://slack.hazelcast.com/" target="_self">Community</a></li><li class="siteNavGroupActive"><a href="/blog/" target="_self">Blog</a></li><li class="navSearchWrapper reactNavSearchWrapper"><input type="text" id="search_input_react" placeholder="Search" title="Search"/></li></ul></nav></div></header></div></div><div class="navPusher"><div class="docMainWrapper wrapper"><div class="docsNavContainer" id="docsNav"><nav class="toc"><div class="toggleNav"><section class="navWrapper wrapper"><div class="navBreadcrumb wrapper"><div class="navToggle" id="navToggler"><div class="hamburger-menu"><div class="line1"></div><div class="line2"></div><div class="line3"></div></div></div><h2><i>›</i><span>All posts</span></h2><div class="tocToggler" id="tocToggler"><i class="icon-toc"></i></div></div><div class="navGroups"><div class="navGroup"><h3 class="navGroupCategoryTitle">All posts</h3><ul class=""><li class="navListItem navListItemActive"><a class="navItem" href="/blog/2020/10/23/jet-43-is-released">Jet 4.3 Released</a></li><li class="navListItem"><a class="navItem" href="/blog/2020/10/06/enabling-full-text-search">Enabling Full-text Search with Change Data Capture in a Legacy Application</a></li><li class="navListItem"><a class="navItem" href="/blog/2020/09/18/cdc-meets-stream-processing">Change Data Capture meets Stream Processing</a></li><li class="navListItem"><a class="navItem" href="/blog/2020/08/05/gc-tuning-for-jet">Sub-10 ms Latency in Java: Concurrent GC with Green Threads</a></li><li class="navListItem"><a class="navItem" href="/blog/2020/07/16/designing-evergreen-cache-cdc">Designing an Evergreen Cache with Change Data Capture</a></li><li class="navListItem"><a class="navItem" href="/blog/2020/07/14/jet-42-is-released">Jet 4.2 is Released</a></li><li class="navListItem"><a class="navItem" href="/blog/2020/06/23/jdk-gc-benchmarks-rematch">Performance of Modern Java on Data-Heavy Workloads: The Low-Latency Rematch</a></li><li class="navListItem"><a class="navItem" href="/blog/2020/06/09/jdk-gc-benchmarks-part2">Performance of Modern Java on Data-Heavy Workloads: Batch Processing</a></li><li class="navListItem"><a class="navItem" href="/blog/2020/06/09/jdk-gc-benchmarks-part1">Performance of Modern Java on Data-Heavy Workloads: Real-Time Streaming</a></li><li class="navListItem"><a class="navItem" href="/blog/2020/05/25/grcp">Processing 10M queries / second on a single node using Jet and gRPC</a></li><li class="navListItem"><a class="navItem" href="/blog/2020/05/18/spark-jet">How Hazelcast Jet Compares to Apache Spark</a></li><li class="navListItem"><a class="navItem" href="/blog/2020/04/29/jet-41-is-released">Jet 4.1 is Released</a></li><li class="navListItem"><a class="navItem" href="/blog/2020/04/01/upgrading-to-jet-40">Upgrading to Jet 4.0</a></li><li class="navListItem"><a class="navItem" href="/blog/2020/03/30/ml-inference">Machine Learning Inference at Scale</a></li><li class="navListItem"><a class="navItem" href="/blog/2020/03/02/jet-40-is-released">Jet 4.0 is Released</a></li><li class="navListItem"><a class="navItem" href="/blog/2020/02/20/transactional-processors">Transactional connectors in Hazelcast Jet</a></li><li class="navListItem"><a class="navItem" href="/blog/2020/01/28/new-website">Announcing New Documentation Website</a></li><li class="navListItem"><a class="navItem" href="/blog/2019/11/12/stream-deduplication">Stream Deduplication with Hazelcast Jet</a></li></ul></div></div></section></div><script>
+            var coll = document.getElementsByClassName('collapsible');
+            var checkActiveCategory = true;
+            for (var i = 0; i < coll.length; i++) {
+              var links = coll[i].nextElementSibling.getElementsByTagName('*');
+              if (checkActiveCategory){
+                for (var j = 0; j < links.length; j++) {
+                  if (links[j].classList.contains('navListItemActive')){
+                    coll[i].nextElementSibling.classList.toggle('hide');
+                    coll[i].childNodes[1].classList.toggle('rotate');
+                    checkActiveCategory = false;
+                    break;
+                  }
+                }
+              }
+
+              coll[i].addEventListener('click', function() {
+                var arrow = this.childNodes[1];
+                arrow.classList.toggle('rotate');
+                var content = this.nextElementSibling;
+                content.classList.toggle('hide');
+              });
+            }
+
+            document.addEventListener('DOMContentLoaded', function() {
+              createToggler('#navToggler', '#docsNav', 'docsSliderActive');
+              createToggler('#tocToggler', 'body', 'tocActive');
+
+              var headings = document.querySelector('.toc-headings');
+              headings && headings.addEventListener('click', function(event) {
+                var el = event.target;
+                while(el !== headings){
+                  if (el.tagName === 'A') {
+                    document.body.classList.remove('tocActive');
+                    break;
+                  } else{
+                    el = el.parentNode;
+                  }
+                }
+              }, false);
+
+              function createToggler(togglerSelector, targetSelector, className) {
+                var toggler = document.querySelector(togglerSelector);
+                var target = document.querySelector(targetSelector);
+
+                if (!toggler) {
+                  return;
+                }
+
+                toggler.onclick = function(event) {
+                  event.preventDefault();
+
+                  target.classList.toggle(className);
+                };
+              }
+            });
+        </script></nav></div><div class="container mainContainer postContainer blogContainer"><div class="wrapper"><div class="lonePost"><div class="post"><header class="postHeader"><h1 class="postHeaderTitle"><a href="/blog/2020/10/23/jet-43-is-released">Jet 4.3 Released</a></h1><p class="post-meta">October 23, 2020</p><div class="authorBlock"><p class="post-authorName"><a href="https://twitter.com/mtopolnik" target="_blank" rel="noreferrer noopener">Marko Topolnik</a></p><div class="authorPhoto"><a href="https://twitter.com/mtopolnik" target="_blank" rel="noreferrer noopener"><img src="https://pbs.twimg.com/profile_images/922726943614783488/Pb5DDGWF_400x400.jpg" alt="Marko Topolnik"/></a></div></div></header><div><span><p>Today we're releasing Hazelcast Jet 4.3, our fourth release in 2020!</p>
+<p>We took part in Google Summer of Code that ended just a few weeks ago,
+and this release already brings a productionized piece of work by our
+student, <a href="https://github.com/MohamedMandouh">Mohamed Mandouh</a>:
+distributed in-memory sorting. Mohamed's primary focus was research into
+the feasibility of integrating RocksDB or a similar DB library as a
+disk-based state backend for Jet's hash join, aggregation and sorting,
+and we plan to continue with this work for some more time.</p>
+<p>Here are the main improvements in this release:</p>
+<h2><a class="anchor" aria-hidden="true" id="benchmarking-and-tuning-for-low-latency"></a><a href="#benchmarking-and-tuning-for-low-latency" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Benchmarking and Tuning for Low Latency</h2>
+<p>Continuing the story from the previous release, we <a href="/blog/2020/08/05-gc-tuning-for-jet">benchmarked and
+fine-tuned Jet</a> with a focus on
+low-latency processing. Jet can now give you a 99.99th percentile
+latency of less than 10 milliseconds at a pipeline throughput of 60M
+items/second! Based on this work we significantly expanded the
+Operations Guide section on <a href="/docs/operations/gc-concerns">Garbage
+Collection</a> with many new
+latency-squashing tricks.</p>
+<h2><a class="anchor" aria-hidden="true" id="batchstagesort"></a><a href="#batchstagesort" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>BatchStage.sort()</h2>
+<p>As mentioned, this is the work coming out of this year's GSoC. You can
+now sort the data coming out of a batch pipeline stage. For example,
+this starts from an asceding sequence 0..9,999, sorts it in descending
+order, and prints the result:</p>
+<pre><code class="hljs css language-java"><span class="token keyword">var</span> pipeline <span class="token operator">=</span> <span class="token class-name">Pipeline</span><span class="token punctuation">.</span><span class="token function">create</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">var</span> integerSequence <span class="token operator">=</span> <span class="token class-name">TestSources</span><span class="token punctuation">.</span><span class="token function">items</span><span class="token punctuation">(</span><span class="token class-name">IntStream</span><span class="token punctuation">.</span><span class="token function">range</span><span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">,</span> <span class="token number">10_000</span><span class="token punctuation">)</span>
+        <span class="token punctuation">.</span><span class="token function">boxed</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">toArray</span><span class="token punctuation">(</span><span class="token class-name">Integer</span><span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token operator">::</span><span class="token keyword">new</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+pipeline<span class="token punctuation">.</span><span class="token function">readFrom</span><span class="token punctuation">(</span>integerSequence<span class="token punctuation">)</span>
+        <span class="token punctuation">.</span><span class="token function">sort</span><span class="token punctuation">(</span><span class="token class-name">ComparatorEx</span><span class="token punctuation">.</span><span class="token function">comparing</span><span class="token punctuation">(</span>i <span class="token operator">-></span> <span class="token operator">-</span>i<span class="token punctuation">)</span><span class="token punctuation">)</span>
+        <span class="token punctuation">.</span><span class="token function">writeTo</span><span class="token punctuation">(</span><span class="token class-name">Sinks</span><span class="token punctuation">.</span><span class="token function">logger</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">try</span> <span class="token punctuation">{</span>
+    <span class="token class-name">Jet</span><span class="token punctuation">.</span><span class="token function">bootstrappedInstance</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">newJob</span><span class="token punctuation">(</span>pipeline<span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">join</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span> <span class="token keyword">finally</span> <span class="token punctuation">{</span>
+    <span class="token class-name">Jet</span><span class="token punctuation">.</span><span class="token function">shutdownAll</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>Jet's current execution model allows reordering, e.g., when maximizing
+parallel throughput in stateless transform stages, which means you may
+easily lose the sort order. In the next release we'll add the ability to
+set limits on these optimizations so that the ordering survives.</p>
+<h2><a class="anchor" aria-hidden="true" id="testsourceslongstream"></a><a href="#testsourceslongstream" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>TestSources.longStream()</h2>
+<p>Our community contributor <a href="https://github.com/guenter-hesse">Guenter
+Hesse</a> took the ad-hoc work we did for
+our low latency GC benchmarks and productionized it to be included in
+our library. If you want to benchmark Hazelcast Jet in a way that
+doesn't depend on the specifics of an actual data source, you can use
+this distributed event generator that produces a timestamped sequence of
+<code>Long</code> numbers. You can then transform the sequence numbers to whichever
+mock events you are using for the benchmark:</p>
+<pre><code class="hljs css language-java"><span class="token class-name">StreamStage</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">></span></span> trades <span class="token operator">=</span> pipeline
+        <span class="token punctuation">.</span><span class="token function">readFrom</span><span class="token punctuation">(</span><span class="token class-name">TestSources</span><span class="token punctuation">.</span><span class="token function">longStream</span><span class="token punctuation">(</span><span class="token number">1_000_000</span><span class="token punctuation">,</span> <span class="token number">25</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+        <span class="token punctuation">.</span><span class="token function">withNativeTimestamps</span><span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">)</span>
+        <span class="token punctuation">.</span><span class="token function">map</span><span class="token punctuation">(</span>i <span class="token operator">-></span> <span class="token class-name">String</span><span class="token punctuation">.</span><span class="token function">format</span><span class="token punctuation">(</span><span class="token string">"Trade %09d"</span><span class="token punctuation">,</span> i<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>This stage will generate a steady stream of a million events per second,
+keeping the latency of emiting any given event at a minimum. If you run
+it in a cluster, every cluster node will generate its share of the
+events.</p>
+<h2><a class="anchor" aria-hidden="true" id="preserve-job-state-on-exception"></a><a href="#preserve-job-state-on-exception" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Preserve Job State on Exception</h2>
+<p>Jet's default behavior (and so far the only choice) is to cancel and
+dispose of a job that throws an exception from any part of the pipeline.
+This is usually user code, but it could also be IO errors while
+contacting outside services. We are now introducing an option that
+applies to jobs with enabled fault tolerance: Jet can now keep the job
+in a suspended state, with the latest snapshot attached to it. Once you
+remove the cause of the exception, you can resume the job and it will
+continue executing without data loss.</p>
+<p>As a part of these improvements, we added a whole new section on <a href="/docs/api/error-handling">error
+handling</a> in the Programming Guide.</p>
+<h2><a class="anchor" aria-hidden="true" id="make-continuous-progress-in-pipelines-based-on-ingestion-time"></a><a href="#make-continuous-progress-in-pipelines-based-on-ingestion-time" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Make Continuous Progress in Pipelines Based on Ingestion Time</h2>
+<p>Hazelcast Jet is primarily built to respect the original event
+timestamps instead of just noting the time it received them. Time
+advances in the pipeline when events with fresh timestamps arrive. This
+system has an Achilles' heel for the case where the event stream is very
+sparse: without events, time doesn't pass. When you have a partitioned
+data source, each partition has its own event time, and Jet must
+consolidate them into a single global event time. For this to work out
+without losses, time advances according to the &quot;slowest&quot; partition, with
+the lowest local event time. So all it takes is a single partition out
+of potential hundreds or thousands, to experience very low traffic, and
+your entire pipeline experiences stalls.</p>
+<p>In this release we bring a partial solution to this general problem:
+if you happen to work with a pipeline based on ingestion time instead of
+event time, Jet can be certain that the time advances in any partition
+with or without events. We use this to improve our watermark emission
+logic and make progress regardless of actual events coming in. We expect
+to invest more effort into heuristic approaches that will improve the
+progress of event time-based pipelines as well.</p>
+<h2><a class="anchor" aria-hidden="true" id="full-release-notes"></a><a href="#full-release-notes" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Full Release Notes</h2>
+<p>Members of the open source community that appear in these release notes:</p>
+<ul>
+<li>@caioguedes</li>
+<li>@guenter-hesse</li>
+<li>@MohamedMandouh</li>
+</ul>
+<p>Thank you for your valuable contributions!</p>
+<h3><a class="anchor" aria-hidden="true" id="new-features"></a><a href="#new-features" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>New Features</h3>
+<ul>
+<li>[pipeline-api] [014] @MohamedMandouh implemented distributed sorting:
+<code>BatchStage.sort()</code> (#2469, #2544)</li>
+<li>[core] [012] Added <code>JobConfig.suspendOnFailure</code>: suspend a job on
+exception instead of cancelling it (#2411)</li>
+<li>[cdc] Improved the consistency of reconnect behaviour across CDC
+sources, new uniform API to configure the reconnect strategy (#2419)</li>
+</ul>
+<h3><a class="anchor" aria-hidden="true" id="enhancements"></a><a href="#enhancements" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Enhancements</h3>
+<ul>
+<li>[core] @guenter-hesse contributed a test source to benchmark Jet's
+throughput and latency (#2382)</li>
+<li>[core] [013] Improved watermark semantics that prevent low event rate
+from stalling an ingestion time-based pipeline (#2485, #2514)</li>
+<li>[cdc] Exposed the sequence number in the CDC <code>ChangeRecord</code> that
+orders the events (#2390)</li>
+<li>[core] Two new DAG edge types: <code>distributeToOne</code> (sending all data to
+one member) and <code>ordered</code> (maintaining the sort order) (#2394, #2469,
+#2544)</li>
+<li>[core] Disabled access to external XML entities when parsing XML
+config, this was a potential XXE attack vector (#2528)</li>
+</ul>
+<h3><a class="anchor" aria-hidden="true" id="fixes"></a><a href="#fixes" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Fixes</h3>
+<ul>
+<li>[core] Fixed error handling during job startup that could result in
+inconsistent job state (#2383)</li>
+<li>[core] Fixed an internal exception that leaked out of Observable
+(#2313, #2389)</li>
+<li>[core] Prevented Observable from processing in-flight items after
+cancellation (#2415, #2418)</li>
+<li>[cli] @caioguedes fixed an issue with <code>--targets</code> option in CLI where
+it would overwrite other settings (#2373, #2421)</li>
+<li>[metrics] Fixed a problem where an internally added DAG vertex would
+show up as a source instead of the actual source vertex (#2475, #2476)</li>
+<li>[core] Fixed a race that could cause <code>getJobStatus()</code> to throw an
+exception if called right after <code>newJob()</code> (#2481, #2484)</li>
+<li>[core] Fix a race between snapshotting and restarting (#2487, #2503)</li>
+<li>[core] Fixed a race where <code>getJobStatus()</code> would report <code>RUNNING</code> even
+though it was actually <code>COMPLETING</code>. (#2507)</li>
+<li>[core] Fixed an issue where a <code>DONE_ITEM</code> could get lost due to
+connection failure, preventing the job from completing (#2158, #2532)</li>
+<li>[core] Fixed a job failure related to the coordinator member failing
+(#2461, #2546)</li>
+<li>[core] Fixed a job failure related to a member reconnecting (#2542,
+#2547)</li>
+<li>[core] Improved robustness related to Jet's internal <code>IMap</code> operations
+(#2533, #2550)</li>
+<li>[cdc] Upgraded Jackson jr dep, solving a null handling issue (#2459)</li>
+<li>[cdc] Upgraded the Debezium dep, solving a Postgress issue resulting
+in data loss when snapshotting (#2406)</li>
+<li>[core] Fixed a bug where a non-keyed aggregating stage would produce
+no output when no input (#2560, #2567)</li>
+</ul>
+<h3><a class="anchor" aria-hidden="true" id="breaking-changes"></a><a href="#breaking-changes" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Breaking Changes</h3>
+<ul>
+<li>[pipeline-api] Breaking signature change to
+<code>Sources.streamFromProcessorWithWatermarks()</code></li>
+<li>[pipeline-api] Deprecated <code>Pipeline.toDag()</code>, made <code>Pipeline</code> and all
+its components <code>Serializable</code>.</li>
+<li>[core-api] Breaking signature change to <code>StreamEventJournalP</code>, methods
+<code>streamRemoteMapSupplier()</code> and <code>streamRemoteCacheSupplier</code></li>
+</ul>
+<p><em>If you enjoyed reading this post, check out Jet at
+<a href="https://github.com/hazelcast/hazelcast-jet">GitHub</a> and give us a
+star!</em></p>
+</span></div></div><div class="blogSocialSection"></div></div><div class="blog-recent"><a class="button" href="/blog/">Recent posts</a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#benchmarking-and-tuning-for-low-latency">Benchmarking and Tuning for Low Latency</a></li><li><a href="#batchstagesort">BatchStage.sort()</a></li><li><a href="#testsourceslongstream">TestSources.longStream()</a></li><li><a href="#preserve-job-state-on-exception">Preserve Job State on Exception</a></li><li><a href="#make-continuous-progress-in-pipelines-based-on-ingestion-time">Make Continuous Progress in Pipelines Based on Ingestion Time</a></li><li><a href="#full-release-notes">Full Release Notes</a><ul class="toc-headings"><li><a href="#new-features">New Features</a></li><li><a href="#enhancements">Enhancements</a></li><li><a href="#fixes">Fixes</a></li><li><a href="#breaking-changes">Breaking Changes</a></li></ul></li></ul></nav></div><footer class="nav-footer" id="footer"><section class="sitemap"><div style="text-align:left"><a href="/" class="nav-home"><img src="/img/logo-light.svg" alt="Hazelcast Jet" width="200" height="40"/></a><div style="margin-left:12px"><a class="github-button" href="https://github.com/hazelcast/hazelcast-jet" data-icon="octicon-star" data-count-href="/facebook/docusaurus/stargazers" data-show-count="true" data-count-aria-label="# stargazers on GitHub" aria-label="Star this project on GitHub">Star On GitHub</a></div></div><div><h5>Docs</h5><a href="/docs/get-started/intro">Get Started</a><a href="/docs/concepts/dag">Concepts</a><a href="/docs/tutorials/kafka">Tutorials</a><a href="/docs/architecture/distributed-computing">Architecture</a><a href="/docs/operations/installation">Operations Guide</a><a href="/docs/enterprise">Enterprise Edition</a></div><div><h5>Community</h5><a href="https://groups.google.com/forum/#!forum/hazelcast-jet" target="_blank" rel="noreferrer noopener">Google Groups</a><a href="http://stackoverflow.com/questions/tagged/hazelcast-jet" target="_blank" rel="noreferrer noopener">Stack Overflow</a><a href="https://slack.hazelcast.com">Slack</a></div><div><h5>Latest From the Blog</h5><a href="/blog/2020/10/23/jet-43-is-released">Jet 4.3 Released</a><a href="/blog/2020/10/06/enabling-full-text-search">Enabling Full-text Search with Change Data Capture in a Legacy Application</a><a href="/blog/2020/09/18/cdc-meets-stream-processing">Change Data Capture meets Stream Processing</a><a href="/blog/2020/08/05/gc-tuning-for-jet">Sub-10 ms Latency in Java: Concurrent GC with Green Threads</a><a href="/blog/2020/07/16/designing-evergreen-cache-cdc">Designing an Evergreen Cache with Change Data Capture</a></div><div><h5>More</h5><a href="https://github.com/hazelcast/hazelcast-jet">GitHub Project</a><a href="http://hazelcast.com/company/careers/">Work at Hazelcast</a><a href="/license">License</a></div></section><section class="copyright">Copyright © 2020 Hazelcast Inc.</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
+                document.addEventListener('keyup', function(e) {
+                  if (e.target !== document.body) {
+                    return;
+                  }
+                  // keyCode for '/' (slash)
+                  if (e.keyCode === 191) {
+                    const search = document.getElementById('search_input_react');
+                    search && search.focus();
+                  }
+                });
+              </script><script>
+              var search = docsearch({
+                
+                apiKey: '79d1e4941621b9fd761d279d4d19ed69',
+                indexName: 'hazelcast-jet',
+                inputSelector: '#search_input_react',
+                algoliaOptions: {"facetFilters":["language:en","version:4.3"]}
+              });
+            </script></body></html>

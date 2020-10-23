@@ -1,0 +1,407 @@
+<!DOCTYPE html><html lang="en"><head><meta charSet="utf-8"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><title>Spring Integration · Hazelcast Jet</title><meta name="viewport" content="width=device-width"/><meta name="generator" content="Docusaurus"/><meta name="description" content="Using Spring for working with Jet"/><meta name="docsearch:version" content="4.2"/><meta name="docsearch:language" content="en"/><meta property="og:title" content="Spring Integration · Hazelcast Jet"/><meta property="og:type" content="website"/><meta property="og:url" content="https://jet-start.sh/"/><meta property="og:description" content="Using Spring for working with Jet"/><meta property="og:image" content="https://jet-start.sh/img/Hazelcast-Jet-Logo-Blue_Dark.jpg"/><meta name="twitter:card" content="summary"/><meta name="twitter:image" content="https://jet-start.sh/img/Hazelcast-Jet-Logo-Blue_Dark.jpg"/><link rel="shortcut icon" href="/img/favicon.png"/><link rel="stylesheet" href="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.css"/><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/default.min.css"/><link rel="alternate" type="application/atom+xml" href="https://jet-start.sh/blog/atom.xml" title="Hazelcast Jet Blog ATOM Feed"/><link rel="alternate" type="application/rss+xml" href="https://jet-start.sh/blog/feed.xml" title="Hazelcast Jet Blog RSS Feed"/><script>
+              (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+              (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+              m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+              })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+              ga('create', 'UA-158279495-1', 'auto');
+              ga('send', 'pageview');
+            </script><link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Ubuntu:300,400,500,600"/><link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,500,600,700,800"/><script type="text/javascript" src="https://buttons.github.io/buttons.js"></script><script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.0/clipboard.min.js"></script><script type="text/javascript" src="/js/code-block-buttons.js"></script><script type="text/javascript" src="https://plausible.io/js/plausible.js" async="" defer="" data-domain="jet-start.sh"></script><script src="/js/scrollSpy.js"></script><link rel="stylesheet" href="/css/prism.css"/><link rel="stylesheet" href="/css/main.css"/><script src="/js/codetabs.js"></script></head><body class="sideNavVisible separateOnPageNav"><div class="fixedHeaderContainer"><div class="headerWrapper wrapper"><header><a href="/"><img class="logo" src="/img/logo-dark.svg" alt="Hazelcast Jet"/></a><a href="/versions"><h3>4.2</h3></a><div class="navigationWrapper navigationSlider"><nav class="slidingNav"><ul class="nav-site nav-site-internal"><li class="siteNavGroupActive"><a href="/docs/4.2/get-started/intro" target="_self">Docs</a></li><li class=""><a href="/download" target="_self">Download</a></li><li class=""><a href="/demos" target="_self">Demos</a></li><li class=""><a href="https://github.com/hazelcast/hazelcast-jet" target="_self">GitHub</a></li><li class=""><a href="https://slack.hazelcast.com/" target="_self">Community</a></li><li class=""><a href="/blog/" target="_self">Blog</a></li><li class="navSearchWrapper reactNavSearchWrapper"><input type="text" id="search_input_react" placeholder="Search" title="Search"/></li></ul></nav></div></header></div></div><div class="navPusher"><div class="docMainWrapper wrapper"><div class="docsNavContainer" id="docsNav"><nav class="toc"><div class="toggleNav"><section class="navWrapper wrapper"><div class="navBreadcrumb wrapper"><div class="navToggle" id="navToggler"><div class="hamburger-menu"><div class="line1"></div><div class="line2"></div><div class="line3"></div></div></div><h2><i>›</i><span>Programming Guide</span></h2><div class="tocToggler" id="tocToggler"><i class="icon-toc"></i></div></div><div class="navGroups"><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Get Started<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.2/get-started/intro">Introduction</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/get-started/first-job">Your First Jet Program</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/get-started/installation">Set Up a Jet Cluster</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/get-started/submit-job">Submit a Job to the Cluster</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/get-started/scale-job">Scale Your Job</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Tutorials<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.2/tutorials/kafka">Process Events from Apache Kafka</a></li><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">Change Data Capture</h4><ul><li class="navListItem"><a class="navItem" href="/docs/4.2/tutorials/cdc">MySQL</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/tutorials/cdc-postgres">PostgreSQL</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/tutorials/cdc-join">Join</a></li></ul></div><li class="navListItem"><a class="navItem" href="/docs/4.2/tutorials/map-join">Enrich Your Stream</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/tutorials/windowing">Apply Windowed Aggregation</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/tutorials/python">Apply a Python Function</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/tutorials/spring-boot">Spring Boot Starter</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/tutorials/pulsar">Group Messages from Apache Pulsar</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Concepts<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.2/concepts/dag">Directed Acyclic Graph (DAG)</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/concepts/event-time">Streaming and Event Time</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/concepts/processing-guarantees">Processing Guarantees for Stateful Computation</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Programming Guide<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.2/api/pipeline">Building Pipelines</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/api/stateless-transforms">Stateless Transforms</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/api/stateful-transforms">Stateful Transforms</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/api/more-transforms">More Transforms</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/api/sources-sinks">Sources and Sinks</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/api/submitting-jobs">Submitting Jobs</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/api/data-structures">Distributed Data Structures</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/api/serialization">Serialization</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/api/testing">Testing</a></li><li class="navListItem navListItemActive"><a class="navItem" href="/docs/4.2/api/spring">Spring Integration</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">How-To Guides<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.2/how-tos/stream-imap">Receive IMap Change Stream</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/how-tos/observables">Receive Results on the Client</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/how-tos/custom-batch-source">Add Batching to Custom Source</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/how-tos/custom-stream-source">Create a Streaming Source</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/how-tos/custom-sink">Create a Sink</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/how-tos/custom-aggregate-operation">Build a Custom Aggregate Operation</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/how-tos/operator">Install Kubernetes Operator</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/how-tos/xa">Compatibility of XA Support</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/how-tos/grpc">Call gRPC Service</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Operations Guide<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.2/operations/installation">Installation</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/operations/configuration">Configuration</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/operations/discovery">Cluster Discovery</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/operations/cluster-sizing">Cluster Sizing</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/operations/gc-concerns">Concerns Related to GC</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/operations/job-management">Job Management</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/operations/docker">Running With Docker</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/operations/kubernetes">Deployment On Kubernetes</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/operations/monitoring">Monitoring and Metrics</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/operations/version-compatibility">Version Compatibility</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/operations/cdc">Change Data Capture</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Architecture<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.2/architecture/distributed-computing">Pipeline Execution Model</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/architecture/execution-engine">Cooperative Multithreading</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/architecture/cluster-topology">Cluster Topology</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/architecture/event-time-processing">Event Time-Based Processing</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/architecture/sliding-window">Sliding Window Aggregation</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/architecture/fault-tolerance">Fault Tolerance</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/architecture/in-memory-storage">In-Memory Storage</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Enterprise Edition<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.2/enterprise/">Introduction</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/enterprise/installation">Installation</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/enterprise/management-center">Management Center</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/enterprise/operator-openshift">Installation on Red Hat OpenShift</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/enterprise/security">Security</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/enterprise/job-update">Updating Jobs</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/enterprise/lossless-restart">Lossless Cluster Restart</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/enterprise/off-heap">Off-Heap Data Structures</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/enterprise/blue-green">Blue-Green Client</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Design Documents<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.2/design-docs/">Introduction</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/design-docs/011-json-convenience">011 - JSON Convenience</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/design-docs/010-operator-framework">010 - Kubernetes Operators</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/design-docs/009-pulsar-connector">009 - Apache Pulsar Connector</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/design-docs/008-stage-rebalance">008 - Rebalance Data on a Pipeline Stage</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/design-docs/007-grpc-support">007 - Extended gRPC Support</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/design-docs/006-declarative-serialization">006 - Declarative Serialization</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/design-docs/005-cdc-sources">005 - Change Data Capture (CDC) Sources</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/design-docs/004-spring-boot-starter">004 - Spring Boot Starter</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/design-docs/003-elasticsearch-connector">003 - Elasticsearch Connector</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/design-docs/002-job-level-serialization">002 - Job-level Serialization</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/design-docs/001-code-deployment-improvements">001 - Code Deployment Improvements</a></li></ul></div></div></section></div><script>
+            var coll = document.getElementsByClassName('collapsible');
+            var checkActiveCategory = true;
+            for (var i = 0; i < coll.length; i++) {
+              var links = coll[i].nextElementSibling.getElementsByTagName('*');
+              if (checkActiveCategory){
+                for (var j = 0; j < links.length; j++) {
+                  if (links[j].classList.contains('navListItemActive')){
+                    coll[i].nextElementSibling.classList.toggle('hide');
+                    coll[i].childNodes[1].classList.toggle('rotate');
+                    checkActiveCategory = false;
+                    break;
+                  }
+                }
+              }
+
+              coll[i].addEventListener('click', function() {
+                var arrow = this.childNodes[1];
+                arrow.classList.toggle('rotate');
+                var content = this.nextElementSibling;
+                content.classList.toggle('hide');
+              });
+            }
+
+            document.addEventListener('DOMContentLoaded', function() {
+              createToggler('#navToggler', '#docsNav', 'docsSliderActive');
+              createToggler('#tocToggler', 'body', 'tocActive');
+
+              var headings = document.querySelector('.toc-headings');
+              headings && headings.addEventListener('click', function(event) {
+                var el = event.target;
+                while(el !== headings){
+                  if (el.tagName === 'A') {
+                    document.body.classList.remove('tocActive');
+                    break;
+                  } else{
+                    el = el.parentNode;
+                  }
+                }
+              }, false);
+
+              function createToggler(togglerSelector, targetSelector, className) {
+                var toggler = document.querySelector(togglerSelector);
+                var target = document.querySelector(targetSelector);
+
+                if (!toggler) {
+                  return;
+                }
+
+                toggler.onclick = function(event) {
+                  event.preventDefault();
+
+                  target.classList.toggle(className);
+                };
+              }
+            });
+        </script></nav></div><div class="container mainContainer docsContainer"><div class="wrapper"><div class="post"><header class="postHeader"><a class="edit-page-link button" href="https://github.com/hazelcast/hazelcast-jet/edit/master/site/docs/api/spring.md" target="_blank" rel="noreferrer noopener">Edit</a><h1 id="__docusaurus" class="postHeaderTitle">Spring Integration</h1></header><article><div><span><p>You can configure and start a Hazelcast Jet instance (or a Hazelcast Jet
+client) programmatically using an <em>Annotation</em> based configuration or
+declaratively using an <em>XML</em> based configuration.</p>
+<h2><a class="anchor" aria-hidden="true" id="annotation-based-configuration"></a><a href="#annotation-based-configuration" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Annotation-Based Configuration</h2>
+<p>Annotation-Based Configuration does not require any XML definition.
+Simply create a configuration class annotated with <code>@Configuration</code> and
+provide a <code>JetInstance</code> (either a member or client) as a bean by
+annotating the method with <code>@Bean</code>.</p>
+<pre><code class="hljs css language-java"><span class="token annotation punctuation">@Configuration</span>
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">AppConfig</span> <span class="token punctuation">{</span>
+
+    <span class="token annotation punctuation">@Bean</span>
+    <span class="token keyword">public</span> <span class="token class-name">SpringManagedContext</span> <span class="token function">springManagedContext</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token keyword">return</span> <span class="token keyword">new</span> <span class="token class-name">SpringManagedContext</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+
+    <span class="token annotation punctuation">@Bean</span>
+    <span class="token keyword">public</span> <span class="token class-name">JetInstance</span> <span class="token function">instance</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token comment">// You can configure Hazelcast Jet instance programmatically</span>
+        <span class="token class-name">JetConfig</span> jetConfig <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">JetConfig</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+                <span class="token comment">// configure SpringManagedContext for @SpringAware</span>
+                <span class="token punctuation">.</span><span class="token function">configureHazelcast</span><span class="token punctuation">(</span>hzConfig <span class="token operator">-></span>
+                    hzConfig<span class="token punctuation">.</span><span class="token function">setManagedContext</span><span class="token punctuation">(</span><span class="token function">springManagedContext</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">return</span> <span class="token class-name">Jet</span><span class="token punctuation">.</span><span class="token function">newJetInstance</span><span class="token punctuation">(</span>jetConfig<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+
+    <span class="token annotation punctuation">@Bean</span>
+    <span class="token keyword">public</span> <span class="token class-name">JetInstance</span> <span class="token function">client</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token comment">// You can configure Hazelcast Jet client programmatically</span>
+        <span class="token class-name">ClientConfig</span> clientConfig <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">ClientConfig</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+                <span class="token comment">// configure SpringManagedContext for @SpringAware</span>
+                <span class="token punctuation">.</span><span class="token function">setManagedContext</span><span class="token punctuation">(</span><span class="token function">springManagedContext</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">return</span> <span class="token class-name">Jet</span><span class="token punctuation">.</span><span class="token function">newJetClient</span><span class="token punctuation">(</span>clientConfig<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<h2><a class="anchor" aria-hidden="true" id="enabling-springaware-objects"></a><a href="#enabling-springaware-objects" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Enabling SpringAware Objects</h2>
+<p>Hazelcast IMDG has a special annotation, <code>@SpringAware</code>, which enables
+you to initialize the object with spring context.</p>
+<p>When a job is submitted to the cluster, processors are created by
+Hazelcast Jet on each member. By marking your processor with
+<code>@SpringAware</code>, you make spring context accessible to your processor
+which gives you the ability:</p>
+<ul>
+<li>to apply bean properties</li>
+<li>to apply factory callbacks such as <code>ApplicationContextAware</code>,
+<code>BeanNameAware</code></li>
+<li>to apply bean post-processing annotations such as <code>InitializingBean</code>,
+<code>@PostConstruct</code></li>
+</ul>
+<p>Here is a custom processor which an <code>IList</code> is injected as a resource.</p>
+<pre><code class="hljs css language-java"><span class="token annotation punctuation">@SpringAware</span>
+<span class="token keyword">private</span> <span class="token keyword">class</span> <span class="token class-name">CustomProcessor</span> <span class="token keyword">extends</span> <span class="token class-name">AbstractProcessor</span> <span class="token punctuation">{</span>
+
+    <span class="token annotation punctuation">@Resource</span><span class="token punctuation">(</span>name <span class="token operator">=</span> <span class="token string">"my-list-bean"</span><span class="token punctuation">)</span>
+    <span class="token keyword">private</span> <span class="token class-name">IList</span> list<span class="token punctuation">;</span>
+
+    <span class="token annotation punctuation">@Override</span>
+    <span class="token keyword">protected</span> <span class="token keyword">void</span> <span class="token function">init</span><span class="token punctuation">(</span><span class="token annotation punctuation">@Nonnull</span> <span class="token class-name">Context</span> context<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token punctuation">}</span>
+
+    <span class="token annotation punctuation">@Override</span>
+    <span class="token keyword">public</span> <span class="token keyword">boolean</span> <span class="token function">complete</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token keyword">return</span> <span class="token boolean">false</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>You can use <code>@SpringAware</code> annotation while creating custom sources and
+sinks (with <code>SourceBuilder</code> and <code>SinkBuilder</code> respectively). Both
+builders expects you to pass a function which creates a <code>context</code>
+object. By marking that object with <code>@SpringAware</code> annotation you can
+make spring context accessible to the source/sink.</p>
+<pre><code class="hljs css language-java"><span class="token annotation punctuation">@SpringAware</span>
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">SourceContext</span> <span class="token punctuation">{</span>
+
+    <span class="token annotation punctuation">@Resource</span><span class="token punctuation">(</span>name <span class="token operator">=</span> <span class="token string">"my-source-map"</span><span class="token punctuation">)</span>
+    <span class="token class-name">IMap</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">,</span> <span class="token class-name">String</span><span class="token punctuation">></span></span> sourceMap<span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+<span class="token annotation punctuation">@SpringAware</span>
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">SinkContext</span> <span class="token punctuation">{</span>
+
+    <span class="token annotation punctuation">@Resource</span><span class="token punctuation">(</span>name <span class="token operator">=</span> <span class="token string">"my-sink-map"</span><span class="token punctuation">)</span>
+    <span class="token class-name">IMap</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">,</span> <span class="token class-name">String</span><span class="token punctuation">></span></span> sinkMap<span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>You can also use <code>@SpringAware</code> annotation while enriching your data via
+lookup from an external system. Again you need to mark the <code>context</code>
+object of <code>ServiceFactory</code> with <code>@SpringAware</code>. Hazelcast Jet also
+provides utility methods (see <code>JetSpringServiceFactories</code>) to use Spring
+beans as a <code>context</code> object for the <code>ServiceFactory</code>.</p>
+<pre><code class="hljs css language-java"><span class="token class-name">Pipeline</span> pipeline <span class="token operator">=</span> <span class="token class-name">Pipeline</span><span class="token punctuation">.</span><span class="token function">create</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+pipeline<span class="token punctuation">.</span><span class="token function">readFrom</span><span class="token punctuation">(</span><span class="token class-name">Sources</span><span class="token punctuation">.</span><span class="token function">list</span><span class="token punctuation">(</span><span class="token string">"list"</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+        <span class="token punctuation">.</span><span class="token function">mapUsingService</span><span class="token punctuation">(</span><span class="token class-name">JetSpringServiceFactories</span><span class="token punctuation">.</span><span class="token function">bean</span><span class="token punctuation">(</span><span class="token string">"my-bean"</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token punctuation">(</span>myBean<span class="token punctuation">,</span> item<span class="token punctuation">)</span> <span class="token operator">-></span> myBean<span class="token punctuation">.</span><span class="token function">enrich</span><span class="token punctuation">(</span>item<span class="token punctuation">)</span><span class="token punctuation">)</span>
+        <span class="token punctuation">.</span><span class="token function">writeTo</span><span class="token punctuation">(</span><span class="token class-name">Sinks</span><span class="token punctuation">.</span><span class="token function">logger</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>You need to configure Hazelcast Jet with <code>&lt;hz:spring-aware/&gt;</code> tag or set
+<code>SpringManagedContext</code> programmatically to enable spring-aware objects.</p>
+<h2><a class="anchor" aria-hidden="true" id="declarative-configuration"></a><a href="#declarative-configuration" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Declarative Configuration</h2>
+<p>Hazelcast Jet can be configured as a component in the Spring Application
+Context. You can use the plain <code>bean</code> element and define individual
+properties on a <code>JetConfig</code> instance, but Hazelcast Jet also provides
+its own schema-based configuration which will make this much less
+verbose.</p>
+<h3><a class="anchor" aria-hidden="true" id="using-default-beans-namespace"></a><a href="#using-default-beans-namespace" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Using Default Beans Namespace</h3>
+<p>You can declare Hazelcast Jet objects using the default Spring beans
+namespace. Here is an example for a Hazelcast Jet Instance declaration:</p>
+<pre><code class="hljs css language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">beans</span> <span class="hljs-attr">xmlns</span>=<span class="hljs-string">"http://www.springframework.org/schema/beans"</span>
+       <span class="hljs-attr">xmlns:xsi</span>=<span class="hljs-string">"http://www.w3.org/2001/XMLSchema-instance"</span>
+       <span class="hljs-attr">xsi:schemaLocation</span>=<span class="hljs-string">"http://www.springframework.org/schema/beans
+        http://www.springframework.org/schema/beans/spring-beans-2.5.xsd"</span>&gt;</span>
+    <span class="hljs-tag">&lt;<span class="hljs-name">bean</span> <span class="hljs-attr">id</span>=<span class="hljs-string">"instance"</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"com.hazelcast.jet.Jet"</span> <span class="hljs-attr">factory-method</span>=<span class="hljs-string">"newJetInstance"</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">constructor-arg</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">bean</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"com.hazelcast.jet.config.JetConfig"</span>&gt;</span>
+                <span class="hljs-tag">&lt;<span class="hljs-name">property</span> <span class="hljs-attr">name</span>=<span class="hljs-string">"hazelcastConfig"</span>&gt;</span>
+                    <span class="hljs-tag">&lt;<span class="hljs-name">bean</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"com.hazelcast.config.Config"</span>&gt;</span>
+                        <span class="hljs-comment">&lt;!-- ... --&gt;</span>
+                    <span class="hljs-tag">&lt;/<span class="hljs-name">bean</span>&gt;</span>
+                <span class="hljs-tag">&lt;/<span class="hljs-name">property</span>&gt;</span>
+                <span class="hljs-tag">&lt;<span class="hljs-name">property</span> <span class="hljs-attr">name</span>=<span class="hljs-string">"instanceConfig"</span>&gt;</span>
+                    <span class="hljs-tag">&lt;<span class="hljs-name">bean</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"com.hazelcast.jet.config.InstanceConfig"</span>&gt;</span>
+                        <span class="hljs-tag">&lt;<span class="hljs-name">property</span> <span class="hljs-attr">name</span>=<span class="hljs-string">"cooperativeThreadCount"</span> <span class="hljs-attr">value</span>=<span class="hljs-string">"2"</span>/&gt;</span>
+                    <span class="hljs-tag">&lt;/<span class="hljs-name">bean</span>&gt;</span>
+                <span class="hljs-tag">&lt;/<span class="hljs-name">property</span>&gt;</span>
+                <span class="hljs-tag">&lt;<span class="hljs-name">property</span> <span class="hljs-attr">name</span>=<span class="hljs-string">"defaultEdgeConfig"</span>&gt;</span>
+                    <span class="hljs-tag">&lt;<span class="hljs-name">bean</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"com.hazelcast.jet.config.EdgeConfig"</span>&gt;</span>
+                        <span class="hljs-tag">&lt;<span class="hljs-name">property</span> <span class="hljs-attr">name</span>=<span class="hljs-string">"queueSize"</span> <span class="hljs-attr">value</span>=<span class="hljs-string">"2048"</span>/&gt;</span>
+                    <span class="hljs-tag">&lt;/<span class="hljs-name">bean</span>&gt;</span>
+                <span class="hljs-tag">&lt;/<span class="hljs-name">property</span>&gt;</span>
+                <span class="hljs-tag">&lt;<span class="hljs-name">property</span> <span class="hljs-attr">name</span>=<span class="hljs-string">"properties"</span>&gt;</span>
+                    <span class="hljs-tag">&lt;<span class="hljs-name">props</span>&gt;</span>
+                        <span class="hljs-tag">&lt;<span class="hljs-name">prop</span> <span class="hljs-attr">key</span>=<span class="hljs-string">"foo"</span>&gt;</span>bar<span class="hljs-tag">&lt;/<span class="hljs-name">prop</span>&gt;</span>
+                    <span class="hljs-tag">&lt;/<span class="hljs-name">props</span>&gt;</span>
+                <span class="hljs-tag">&lt;/<span class="hljs-name">property</span>&gt;</span>
+            <span class="hljs-tag">&lt;/<span class="hljs-name">bean</span>&gt;</span>
+        <span class="hljs-tag">&lt;/<span class="hljs-name">constructor-arg</span>&gt;</span>
+    <span class="hljs-tag">&lt;/<span class="hljs-name">bean</span>&gt;</span>
+    <span class="hljs-tag">&lt;<span class="hljs-name">bean</span> <span class="hljs-attr">id</span>=<span class="hljs-string">"map"</span> <span class="hljs-attr">factory-bean</span>=<span class="hljs-string">"instance"</span> <span class="hljs-attr">factory-method</span>=<span class="hljs-string">"getMap"</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">constructor-arg</span> <span class="hljs-attr">value</span>=<span class="hljs-string">"my-map"</span>/&gt;</span>
+    <span class="hljs-tag">&lt;/<span class="hljs-name">bean</span>&gt;</span>
+<span class="hljs-tag">&lt;/<span class="hljs-name">beans</span>&gt;</span>
+</code></pre>
+<h3><a class="anchor" aria-hidden="true" id="using-jet-beans-namespace"></a><a href="#using-jet-beans-namespace" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Using Jet Beans Namespace</h3>
+<p>Hazelcast Jet embeds Hazelcast IMDG thus configuration of Hazelcast Jet
+(<code>JetConfig</code>) embeds the underlying Hazelcast IMDG configuration
+(<code>Config</code>). Hazelcast Jet and Hazelcast IMDG provide their own Spring
+config schema which enables you to configure them with their namespace
+prefixes.</p>
+<p>Here’s how your namespace and schema instance declarations may look:</p>
+<pre><code class="hljs css language-xml"><span class="hljs-meta">&lt;?xml version="1.0" encoding="UTF-8"?&gt;</span>
+<span class="hljs-tag">&lt;<span class="hljs-name">beans</span> <span class="hljs-attr">xmlns</span>=<span class="hljs-string">"http://www.springframework.org/schema/beans"</span>
+       <span class="hljs-attr">xmlns:xsi</span>=<span class="hljs-string">"http://www.w3.org/2001/XMLSchema-instance"</span>
+       <span class="hljs-attr">xmlns:jet</span>=<span class="hljs-string">"http://www.hazelcast.com/schema/jet-spring"</span>
+       <span class="hljs-attr">xmlns:hz</span>=<span class="hljs-string">"http://www.hazelcast.com/schema/spring"</span>
+       <span class="hljs-attr">xsi:schemaLocation</span>=<span class="hljs-string">"http://www.springframework.org/schema/beans
+        http://www.springframework.org/schema/beans/spring-beans-2.5.xsd
+        http://www.hazelcast.com/schema/spring
+        http://www.hazelcast.com/schema/spring/hazelcast-spring-4.0.1.xsd
+        http://www.hazelcast.com/schema/jet-spring
+        http://www.hazelcast.com/schema/jet-spring/hazelcast-jet-spring-4.2.xsd"</span>&gt;</span>
+        <span class="hljs-comment">&lt;!-- ... --&gt;</span>
+ <span class="hljs-tag">&lt;/<span class="hljs-name">beans</span>&gt;</span>
+</code></pre>
+<h4><a class="anchor" aria-hidden="true" id="configuring-the-hazelcast-jet-instance"></a><a href="#configuring-the-hazelcast-jet-instance" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Configuring the Hazelcast Jet Instance</h4>
+<p>Using the specified namespaces you can configure a Hazelcast Jet
+instance:</p>
+<pre><code class="hljs css language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">jet:instance</span> <span class="hljs-attr">id</span>=<span class="hljs-string">"instance"</span>&gt;</span>
+    <span class="hljs-tag">&lt;<span class="hljs-name">hz:config</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">hz:spring-aware</span>/&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">hz:group</span> <span class="hljs-attr">name</span>=<span class="hljs-string">"jet"</span>/&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">hz:network</span> <span class="hljs-attr">port</span>=<span class="hljs-string">"5701"</span> <span class="hljs-attr">port-auto-increment</span>=<span class="hljs-string">"false"</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">hz:join</span>&gt;</span>
+                <span class="hljs-tag">&lt;<span class="hljs-name">hz:multicast</span> <span class="hljs-attr">enabled</span>=<span class="hljs-string">"false"</span>/&gt;</span>
+                <span class="hljs-tag">&lt;<span class="hljs-name">hz:tcp-ip</span> <span class="hljs-attr">enabled</span>=<span class="hljs-string">"true"</span>&gt;</span>
+                    <span class="hljs-tag">&lt;<span class="hljs-name">hz:member</span>&gt;</span>127.0.0.1:5701<span class="hljs-tag">&lt;/<span class="hljs-name">hz:member</span>&gt;</span>
+                <span class="hljs-tag">&lt;/<span class="hljs-name">hz:tcp-ip</span>&gt;</span>
+            <span class="hljs-tag">&lt;/<span class="hljs-name">hz:join</span>&gt;</span>
+        <span class="hljs-tag">&lt;/<span class="hljs-name">hz:network</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">hz:map</span> <span class="hljs-attr">name</span>=<span class="hljs-string">"map"</span> <span class="hljs-attr">backup-count</span>=<span class="hljs-string">"3"</span>&gt;</span>
+        <span class="hljs-tag">&lt;/<span class="hljs-name">hz:map</span>&gt;</span>
+    <span class="hljs-tag">&lt;/<span class="hljs-name">hz:config</span>&gt;</span>
+    <span class="hljs-tag">&lt;<span class="hljs-name">jet:instance-config</span> <span class="hljs-attr">cooperative-thread-Count</span>=<span class="hljs-string">"2"</span>/&gt;</span>
+    <span class="hljs-tag">&lt;<span class="hljs-name">jet:default-edge-config</span> <span class="hljs-attr">queue-size</span>=<span class="hljs-string">"2048"</span>/&gt;</span>
+    <span class="hljs-tag">&lt;<span class="hljs-name">jet:properties</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">hz:property</span> <span class="hljs-attr">name</span>=<span class="hljs-string">"foo"</span>&gt;</span>bar<span class="hljs-tag">&lt;/<span class="hljs-name">hz:property</span>&gt;</span>
+    <span class="hljs-tag">&lt;/<span class="hljs-name">jet:properties</span>&gt;</span>
+<span class="hljs-tag">&lt;/<span class="hljs-name">jet:instance</span>&gt;</span>
+</code></pre>
+<p>See that we've configured Hazelcast Jet related configuration options
+(cooperative thread count, queue size for edges and a property) as well
+as Hazelcast IMDG related configuration options, (group name, the join
+mechanism and the <code>IMap</code> named <code>map</code> with <code>3</code> backup-count).</p>
+<h4><a class="anchor" aria-hidden="true" id="configuring-the-hazelcast-jet-client"></a><a href="#configuring-the-hazelcast-jet-client" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Configuring the Hazelcast Jet Client</h4>
+<p>You can configure a Hazelcast Jet client instead of an instance which
+will connect to an external Hazelcast Jet cluster instead of creating an
+embedded one.</p>
+<pre><code class="hljs css language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">jet:client</span> <span class="hljs-attr">id</span>=<span class="hljs-string">"jet-client"</span>&gt;</span>
+    <span class="hljs-tag">&lt;<span class="hljs-name">jet:group</span> <span class="hljs-attr">name</span>=<span class="hljs-string">"jet"</span>/&gt;</span>
+    <span class="hljs-tag">&lt;<span class="hljs-name">jet:network</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">hz:member</span>&gt;</span>127.0.0.1:5701<span class="hljs-tag">&lt;/<span class="hljs-name">hz:member</span>&gt;</span>
+    <span class="hljs-tag">&lt;/<span class="hljs-name">jet:network</span>&gt;</span>
+    <span class="hljs-tag">&lt;<span class="hljs-name">jet:spring-aware</span>/&gt;</span>
+<span class="hljs-tag">&lt;/<span class="hljs-name">jet:client</span>&gt;</span>
+</code></pre>
+<h4><a class="anchor" aria-hidden="true" id="additional-bean-types"></a><a href="#additional-bean-types" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Additional Bean Types</h4>
+<p>You can obtain the underlying <code>HazelcastInstance</code> from the Jet instance
+(or the Jet client) as a bean and use it to obtain these Hazelcast IMDG
+beans:</p>
+<pre><code class="hljs css language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">beans</span> <span class="hljs-attr">xmlns</span>=<span class="hljs-string">"http://www.springframework.org/schema/beans"</span>
+       <span class="hljs-attr">xmlns:xsi</span>=<span class="hljs-string">"http://www.w3.org/2001/XMLSchema-instance"</span>
+       <span class="hljs-attr">xmlns:jet</span>=<span class="hljs-string">"http://www.hazelcast.com/schema/jet-spring"</span>
+       <span class="hljs-attr">xmlns:hz</span>=<span class="hljs-string">"http://www.hazelcast.com/schema/spring"</span>
+       <span class="hljs-attr">xsi:schemaLocation</span>=<span class="hljs-string">"http://www.springframework.org/schema/beans
+        http://www.springframework.org/schema/beans/spring-beans-2.5.xsd
+        http://www.hazelcast.com/schema/spring
+        http://www.hazelcast.com/schema/spring/hazelcast-spring-4.0.xsd
+        http://www.hazelcast.com/schema/jet-spring
+        http://www.hazelcast.com/schema/jet-spring/hazelcast-jet-spring-4.2.xsd"</span>&gt;</span>
+
+    <span class="hljs-comment">&lt;!-- Obtain Hazelcast IMDG instance from Hazelcast Jet instance--&gt;</span>
+    <span class="hljs-tag">&lt;<span class="hljs-name">jet:hazelcast</span> <span class="hljs-attr">jet-instance-ref</span>=<span class="hljs-string">"jet-instance"</span> <span class="hljs-attr">id</span>=<span class="hljs-string">"hazelcast-instance"</span>/&gt;</span>
+
+    <span class="hljs-comment">&lt;!-- Create an IMAP named 'my-map' using Hazelcast Jet instance --&gt;</span>
+    <span class="hljs-tag">&lt;<span class="hljs-name">jet:map</span> <span class="hljs-attr">instance-ref</span>=<span class="hljs-string">"jet-instance"</span> <span class="hljs-attr">name</span>=<span class="hljs-string">"my-map"</span> <span class="hljs-attr">id</span>=<span class="hljs-string">"my-map-bean"</span>/&gt;</span>
+
+    <span class="hljs-comment">&lt;!-- Create an IList named 'my-list' using Hazelcast Jet client --&gt;</span>
+    <span class="hljs-tag">&lt;<span class="hljs-name">jet:list</span> <span class="hljs-attr">instance-ref</span>=<span class="hljs-string">"jet-client"</span> <span class="hljs-attr">name</span>=<span class="hljs-string">"my-list"</span> <span class="hljs-attr">id</span>=<span class="hljs-string">"my-list-bean"</span>/&gt;</span>
+
+    <span class="hljs-comment">&lt;!-- Create a MultiMap named 'my-multiMap' using Hazelcast IMDG instance --&gt;</span>
+    <span class="hljs-tag">&lt;<span class="hljs-name">hz:multiMap</span> <span class="hljs-attr">id</span>=<span class="hljs-string">"multiMap"</span> <span class="hljs-attr">instance-ref</span>=<span class="hljs-string">"hazelcast-instance"</span> <span class="hljs-attr">name</span>=<span class="hljs-string">"my-multiMap"</span>/&gt;</span>
+
+    <span class="hljs-comment">&lt;!-- Create a ReplicatedMap named 'my-replicatedMap' using Hazelcast IMDG instance --&gt;</span>
+    <span class="hljs-tag">&lt;<span class="hljs-name">hz:replicatedMap</span> <span class="hljs-attr">id</span>=<span class="hljs-string">"replicatedMap"</span> <span class="hljs-attr">instance-ref</span>=<span class="hljs-string">"hazelcast-instance"</span> <span class="hljs-attr">name</span>=<span class="hljs-string">"my-replicatedMap"</span>/&gt;</span>
+
+    <span class="hljs-comment">&lt;!-- Create an IQueue named 'my-queue' using Hazelcast IMDG instance --&gt;</span>
+    <span class="hljs-tag">&lt;<span class="hljs-name">hz:queue</span> <span class="hljs-attr">id</span>=<span class="hljs-string">"queue"</span> <span class="hljs-attr">instance-ref</span>=<span class="hljs-string">"hazelcast-instance"</span> <span class="hljs-attr">name</span>=<span class="hljs-string">"my-queue"</span>/&gt;</span>
+
+    <span class="hljs-comment">&lt;!-- Create an ITopic named 'my-topic' using Hazelcast IMDG instance --&gt;</span>
+    <span class="hljs-tag">&lt;<span class="hljs-name">hz:topic</span> <span class="hljs-attr">id</span>=<span class="hljs-string">"topic"</span> <span class="hljs-attr">instance-ref</span>=<span class="hljs-string">"hazelcast-instance"</span> <span class="hljs-attr">name</span>=<span class="hljs-string">"my-topic"</span>/&gt;</span>
+
+    <span class="hljs-comment">&lt;!-- Create an ISet named 'my-set' using Hazelcast IMDG instance --&gt;</span>
+    <span class="hljs-tag">&lt;<span class="hljs-name">hz:set</span> <span class="hljs-attr">id</span>=<span class="hljs-string">"set"</span> <span class="hljs-attr">instance-ref</span>=<span class="hljs-string">"hazelcast-instance"</span> <span class="hljs-attr">name</span>=<span class="hljs-string">"my-set"</span>/&gt;</span>
+
+    <span class="hljs-comment">&lt;!-- Create an IExecutorService named 'my-executorService' using Hazelcast IMDG instance --&gt;</span>
+    <span class="hljs-tag">&lt;<span class="hljs-name">hz:executorService</span> <span class="hljs-attr">id</span>=<span class="hljs-string">"executorService"</span> <span class="hljs-attr">instance-ref</span>=<span class="hljs-string">"hazelcast-instance"</span> <span class="hljs-attr">name</span>=<span class="hljs-string">"my-executorService"</span>/&gt;</span>
+
+    <span class="hljs-comment">&lt;!-- Create an IdGenerator named 'my-idGenerator' using Hazelcast IMDG instance --&gt;</span>
+    <span class="hljs-tag">&lt;<span class="hljs-name">hz:idGenerator</span> <span class="hljs-attr">id</span>=<span class="hljs-string">"idGenerator"</span> <span class="hljs-attr">instance-ref</span>=<span class="hljs-string">"hazelcast-instance"</span> <span class="hljs-attr">name</span>=<span class="hljs-string">"my-idGenerator"</span>/&gt;</span>
+
+    <span class="hljs-comment">&lt;!-- Create an IAtomicLong named 'my-atomicLong' using Hazelcast IMDG instance --&gt;</span>
+    <span class="hljs-tag">&lt;<span class="hljs-name">hz:atomicLong</span> <span class="hljs-attr">id</span>=<span class="hljs-string">"atomicLong"</span> <span class="hljs-attr">instance-ref</span>=<span class="hljs-string">"hazelcast-instance"</span> <span class="hljs-attr">name</span>=<span class="hljs-string">"my-atomicLong"</span>/&gt;</span>
+
+    <span class="hljs-comment">&lt;!-- Create an IAtomicReference named 'my-atomicReference' using Hazelcast IMDG instance --&gt;</span>
+    <span class="hljs-tag">&lt;<span class="hljs-name">hz:atomicReference</span> <span class="hljs-attr">id</span>=<span class="hljs-string">"atomicReference"</span> <span class="hljs-attr">instance-ref</span>=<span class="hljs-string">"hazelcast-instance"</span> <span class="hljs-attr">name</span>=<span class="hljs-string">"my-atomicReference"</span>/&gt;</span>
+
+    <span class="hljs-comment">&lt;!-- Create an ISemaphore named 'my-semaphore' using Hazelcast IMDG instance --&gt;</span>
+    <span class="hljs-tag">&lt;<span class="hljs-name">hz:semaphore</span> <span class="hljs-attr">id</span>=<span class="hljs-string">"semaphore"</span> <span class="hljs-attr">instance-ref</span>=<span class="hljs-string">"hazelcast-instance"</span> <span class="hljs-attr">name</span>=<span class="hljs-string">"my-semaphore"</span>/&gt;</span>
+
+    <span class="hljs-comment">&lt;!-- Create an ICountDownLatch named 'my-countDownLatch' using Hazelcast IMDG instance --&gt;</span>
+    <span class="hljs-tag">&lt;<span class="hljs-name">hz:countDownLatch</span> <span class="hljs-attr">id</span>=<span class="hljs-string">"countDownLatch"</span> <span class="hljs-attr">instance-ref</span>=<span class="hljs-string">"hazelcast-instance"</span> <span class="hljs-attr">name</span>=<span class="hljs-string">"my-countDownLatch"</span>/&gt;</span>
+
+    <span class="hljs-comment">&lt;!-- Create an ILock named 'my-lock' using Hazelcast IMDG instance --&gt;</span>
+    <span class="hljs-tag">&lt;<span class="hljs-name">hz:lock</span> <span class="hljs-attr">id</span>=<span class="hljs-string">"lock"</span> <span class="hljs-attr">instance-ref</span>=<span class="hljs-string">"hazelcast-instance"</span> <span class="hljs-attr">name</span>=<span class="hljs-string">"my-lock"</span>/&gt;</span>
+<span class="hljs-tag">&lt;/<span class="hljs-name">beans</span>&gt;</span>
+</code></pre>
+<p>Hazelcast Jet also supports <code>lazy-init</code>, <code>scope</code> and <code>depends-on</code> bean
+attributes.</p>
+<pre><code class="hljs css language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">beans</span> <span class="hljs-attr">xmlns</span>=<span class="hljs-string">"http://www.springframework.org/schema/beans"</span>
+       <span class="hljs-attr">xmlns:xsi</span>=<span class="hljs-string">"http://www.w3.org/2001/XMLSchema-instance"</span>
+       <span class="hljs-attr">xmlns:jet</span>=<span class="hljs-string">"http://www.hazelcast.com/schema/jet-spring"</span>
+       <span class="hljs-attr">xsi:schemaLocation</span>=<span class="hljs-string">"http://www.springframework.org/schema/beans
+        http://www.springframework.org/schema/beans/spring-beans-2.5.xsd
+        http://www.hazelcast.com/schema/jet-spring
+        http://www.hazelcast.com/schema/jet-spring/hazelcast-jet-spring-4.2.xsd"</span>&gt;</span>
+    <span class="hljs-tag">&lt;<span class="hljs-name">jet:instance</span> <span class="hljs-attr">id</span>=<span class="hljs-string">"instance"</span> <span class="hljs-attr">lazy-init</span>=<span class="hljs-string">"true"</span> <span class="hljs-attr">scope</span>=<span class="hljs-string">"singleton"</span>&gt;</span>
+    <span class="hljs-comment">&lt;!-- ... --&gt;</span>
+    <span class="hljs-tag">&lt;/<span class="hljs-name">jet:instance</span>&gt;</span>
+    <span class="hljs-tag">&lt;<span class="hljs-name">jet:client</span> <span class="hljs-attr">id</span>=<span class="hljs-string">"client"</span> <span class="hljs-attr">scope</span>=<span class="hljs-string">"prototype"</span> <span class="hljs-attr">depends-on</span>=<span class="hljs-string">"instance"</span>&gt;</span>
+    <span class="hljs-comment">&lt;!-- ... --&gt;</span>
+    <span class="hljs-tag">&lt;/<span class="hljs-name">jet:client</span>&gt;</span>
+<span class="hljs-tag">&lt;/<span class="hljs-name">beans</span>&gt;</span>
+</code></pre>
+<h2><a class="anchor" aria-hidden="true" id="spring-boot-integration"></a><a href="#spring-boot-integration" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Spring Boot Integration</h2>
+<p>Hazelcast Jet provides
+<a href="https://github.com/hazelcast/hazelcast-jet-contrib/tree/master/hazelcast-jet-spring-boot-starter">Hazelcast Jet Spring Boot Starter</a>
+which automatically configures and starts a <code>JetInstance</code>, either a
+server or a client, if Jet is on the classpath.</p>
+<p>To create a server instance you need to put <code>hazelcast-jet.yaml</code> or
+<code>hazelcast-jet.xml</code> to the classpath or to the root directory. To
+create a client instance you need to put <code>hazelcast-client.yaml</code> or
+<code>hazelcast-client.xml</code> to the classpath or to the root directory.</p>
+<p>If your configuration files are available with different names then you
+can point to them by config properties, <code>hazelcast.jet.server.config</code>
+for server and <code>hazelcast.jet.client.config</code> for client. You can also
+use system properties, <code>hazelcast.jet.config</code> for server and
+<code>hazelcast.client.config</code> for client.</p>
+<p>If you want to configure the underlying <code>HazelcastInstance</code>, you need
+to put <code>hazelcast.yaml</code> or <code>hazelcast.xml</code> to the classpath or to the
+root directory. You can use the config property
+<code>hazelcast.jet.imdg.config</code> or system property
+<code>hazelcast.config</code> to explicitly set the configuration file.</p>
+<p>If no configuration file is present or explicitly specified, the
+starter creates a server instance using the default configuration file
+(<code>hazelcast-jet-default.yaml</code>).</p>
+<p>See <a href="/docs/4.2/tutorials/spring-boot">Spring Boot Starter</a> tutorial for
+examples.</p>
+<h3><a class="anchor" aria-hidden="true" id="conflict-with-hazelcast-imdg-starter"></a><a href="#conflict-with-hazelcast-imdg-starter" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Conflict with Hazelcast IMDG Starter</h3>
+<p>Spring Boot has out of the box support for Hazelcast IMDG starter. This
+creates a conflict when Hazelcast IMDG related configuration files
+(like <code>hazelcast.xml</code> or <code>hazelcast-client.xml</code>) are on the classpath
+or at the root directory. We have addressed this issue by disabling
+Hazelcast IMDG starter if Hazelcast Jet is present. See the
+<a href="https://github.com/spring-projects/spring-boot/pull/20729">PR</a> on
+Spring Boot repository.</p>
+<p>As a workaround users can exclude the Hazelcast IMDG auto-configuration
+class like below:</p>
+<pre><code class="hljs css language-java"><span class="token annotation punctuation">@SpringBootApplication</span><span class="token punctuation">(</span>exclude <span class="token operator">=</span> <span class="token class-name">HazelcastAutoConfiguration</span><span class="token punctuation">.</span><span class="token keyword">class</span><span class="token punctuation">)</span>
+</code></pre>
+<h3><a class="anchor" aria-hidden="true" id="springaware-objects"></a><a href="#springaware-objects" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>SpringAware Objects</h3>
+<p>Hazelcast Jet Spring Boot Starter configures the created member
+instances with <code>SpringManagedContext</code> automatically. See
+<a href="#enabling-springaware-objects">Enabling SpringAware Objects</a> for more
+information.</p>
+</span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/docs/4.2/api/testing"><span class="arrow-prev">← </span><span>Testing</span></a><a class="docs-next button" href="/docs/4.2/how-tos/stream-imap"><span>Receive IMap Change Stream</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#annotation-based-configuration">Annotation-Based Configuration</a></li><li><a href="#enabling-springaware-objects">Enabling SpringAware Objects</a></li><li><a href="#declarative-configuration">Declarative Configuration</a><ul class="toc-headings"><li><a href="#using-default-beans-namespace">Using Default Beans Namespace</a></li><li><a href="#using-jet-beans-namespace">Using Jet Beans Namespace</a></li></ul></li><li><a href="#spring-boot-integration">Spring Boot Integration</a><ul class="toc-headings"><li><a href="#conflict-with-hazelcast-imdg-starter">Conflict with Hazelcast IMDG Starter</a></li><li><a href="#springaware-objects">SpringAware Objects</a></li></ul></li></ul></nav></div><footer class="nav-footer" id="footer"><section class="sitemap"><div style="text-align:left"><a href="/" class="nav-home"><img src="/img/logo-light.svg" alt="Hazelcast Jet" width="200" height="40"/></a><div style="margin-left:12px"><a class="github-button" href="https://github.com/hazelcast/hazelcast-jet" data-icon="octicon-star" data-count-href="/facebook/docusaurus/stargazers" data-show-count="true" data-count-aria-label="# stargazers on GitHub" aria-label="Star this project on GitHub">Star On GitHub</a></div></div><div><h5>Docs</h5><a href="/docs/get-started/intro">Get Started</a><a href="/docs/concepts/dag">Concepts</a><a href="/docs/tutorials/kafka">Tutorials</a><a href="/docs/architecture/distributed-computing">Architecture</a><a href="/docs/operations/installation">Operations Guide</a><a href="/docs/enterprise">Enterprise Edition</a></div><div><h5>Community</h5><a href="https://groups.google.com/forum/#!forum/hazelcast-jet" target="_blank" rel="noreferrer noopener">Google Groups</a><a href="http://stackoverflow.com/questions/tagged/hazelcast-jet" target="_blank" rel="noreferrer noopener">Stack Overflow</a><a href="https://slack.hazelcast.com">Slack</a></div><div><h5>Latest From the Blog</h5><a href="/blog/2020/10/23/jet-43-is-released">Jet 4.3 Released</a><a href="/blog/2020/10/06/enabling-full-text-search">Enabling Full-text Search with Change Data Capture in a Legacy Application</a><a href="/blog/2020/09/18/cdc-meets-stream-processing">Change Data Capture meets Stream Processing</a><a href="/blog/2020/08/05/gc-tuning-for-jet">Sub-10 ms Latency in Java: Concurrent GC with Green Threads</a><a href="/blog/2020/07/16/designing-evergreen-cache-cdc">Designing an Evergreen Cache with Change Data Capture</a></div><div><h5>More</h5><a href="https://github.com/hazelcast/hazelcast-jet">GitHub Project</a><a href="http://hazelcast.com/company/careers/">Work at Hazelcast</a><a href="/license">License</a></div></section><section class="copyright">Copyright © 2020 Hazelcast Inc.</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
+                document.addEventListener('keyup', function(e) {
+                  if (e.target !== document.body) {
+                    return;
+                  }
+                  // keyCode for '/' (slash)
+                  if (e.keyCode === 191) {
+                    const search = document.getElementById('search_input_react');
+                    search && search.focus();
+                  }
+                });
+              </script><script>
+              var search = docsearch({
+                
+                apiKey: '79d1e4941621b9fd761d279d4d19ed69',
+                indexName: 'hazelcast-jet',
+                inputSelector: '#search_input_react',
+                algoliaOptions: {"facetFilters":["language:en","version:4.2"]}
+              });
+            </script></body></html>

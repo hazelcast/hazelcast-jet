@@ -1,0 +1,326 @@
+<!DOCTYPE html><html lang="en"><head><meta charSet="utf-8"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><title>Install Kubernetes Operator · Hazelcast Jet</title><meta name="viewport" content="width=device-width"/><meta name="generator" content="Docusaurus"/><meta name="description" content="A step-by-step guide on how to install Hazelcast Jet Kubernetes Operator on your Kubernetes Cluster."/><meta name="docsearch:version" content="4.2"/><meta name="docsearch:language" content="en"/><meta property="og:title" content="Install Kubernetes Operator · Hazelcast Jet"/><meta property="og:type" content="website"/><meta property="og:url" content="https://jet-start.sh/"/><meta property="og:description" content="A step-by-step guide on how to install Hazelcast Jet Kubernetes Operator on your Kubernetes Cluster."/><meta property="og:image" content="https://jet-start.sh/img/Hazelcast-Jet-Logo-Blue_Dark.jpg"/><meta name="twitter:card" content="summary"/><meta name="twitter:image" content="https://jet-start.sh/img/Hazelcast-Jet-Logo-Blue_Dark.jpg"/><link rel="shortcut icon" href="/img/favicon.png"/><link rel="stylesheet" href="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.css"/><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/default.min.css"/><link rel="alternate" type="application/atom+xml" href="https://jet-start.sh/blog/atom.xml" title="Hazelcast Jet Blog ATOM Feed"/><link rel="alternate" type="application/rss+xml" href="https://jet-start.sh/blog/feed.xml" title="Hazelcast Jet Blog RSS Feed"/><script>
+              (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+              (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+              m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+              })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+              ga('create', 'UA-158279495-1', 'auto');
+              ga('send', 'pageview');
+            </script><link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Ubuntu:300,400,500,600"/><link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,500,600,700,800"/><script type="text/javascript" src="https://buttons.github.io/buttons.js"></script><script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.0/clipboard.min.js"></script><script type="text/javascript" src="/js/code-block-buttons.js"></script><script type="text/javascript" src="https://plausible.io/js/plausible.js" async="" defer="" data-domain="jet-start.sh"></script><script src="/js/scrollSpy.js"></script><link rel="stylesheet" href="/css/prism.css"/><link rel="stylesheet" href="/css/main.css"/><script src="/js/codetabs.js"></script></head><body class="sideNavVisible separateOnPageNav"><div class="fixedHeaderContainer"><div class="headerWrapper wrapper"><header><a href="/"><img class="logo" src="/img/logo-dark.svg" alt="Hazelcast Jet"/></a><a href="/versions"><h3>4.2</h3></a><div class="navigationWrapper navigationSlider"><nav class="slidingNav"><ul class="nav-site nav-site-internal"><li class="siteNavGroupActive"><a href="/docs/4.2/get-started/intro" target="_self">Docs</a></li><li class=""><a href="/download" target="_self">Download</a></li><li class=""><a href="/demos" target="_self">Demos</a></li><li class=""><a href="https://github.com/hazelcast/hazelcast-jet" target="_self">GitHub</a></li><li class=""><a href="https://slack.hazelcast.com/" target="_self">Community</a></li><li class=""><a href="/blog/" target="_self">Blog</a></li><li class="navSearchWrapper reactNavSearchWrapper"><input type="text" id="search_input_react" placeholder="Search" title="Search"/></li></ul></nav></div></header></div></div><div class="navPusher"><div class="docMainWrapper wrapper"><div class="docsNavContainer" id="docsNav"><nav class="toc"><div class="toggleNav"><section class="navWrapper wrapper"><div class="navBreadcrumb wrapper"><div class="navToggle" id="navToggler"><div class="hamburger-menu"><div class="line1"></div><div class="line2"></div><div class="line3"></div></div></div><h2><i>›</i><span>How-To Guides</span></h2><div class="tocToggler" id="tocToggler"><i class="icon-toc"></i></div></div><div class="navGroups"><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Get Started<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.2/get-started/intro">Introduction</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/get-started/first-job">Your First Jet Program</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/get-started/installation">Set Up a Jet Cluster</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/get-started/submit-job">Submit a Job to the Cluster</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/get-started/scale-job">Scale Your Job</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Tutorials<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.2/tutorials/kafka">Process Events from Apache Kafka</a></li><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">Change Data Capture</h4><ul><li class="navListItem"><a class="navItem" href="/docs/4.2/tutorials/cdc">MySQL</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/tutorials/cdc-postgres">PostgreSQL</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/tutorials/cdc-join">Join</a></li></ul></div><li class="navListItem"><a class="navItem" href="/docs/4.2/tutorials/map-join">Enrich Your Stream</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/tutorials/windowing">Apply Windowed Aggregation</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/tutorials/python">Apply a Python Function</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/tutorials/spring-boot">Spring Boot Starter</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/tutorials/pulsar">Group Messages from Apache Pulsar</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Concepts<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.2/concepts/dag">Directed Acyclic Graph (DAG)</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/concepts/event-time">Streaming and Event Time</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/concepts/processing-guarantees">Processing Guarantees for Stateful Computation</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Programming Guide<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.2/api/pipeline">Building Pipelines</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/api/stateless-transforms">Stateless Transforms</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/api/stateful-transforms">Stateful Transforms</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/api/more-transforms">More Transforms</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/api/sources-sinks">Sources and Sinks</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/api/submitting-jobs">Submitting Jobs</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/api/data-structures">Distributed Data Structures</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/api/serialization">Serialization</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/api/testing">Testing</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/api/spring">Spring Integration</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">How-To Guides<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.2/how-tos/stream-imap">Receive IMap Change Stream</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/how-tos/observables">Receive Results on the Client</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/how-tos/custom-batch-source">Add Batching to Custom Source</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/how-tos/custom-stream-source">Create a Streaming Source</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/how-tos/custom-sink">Create a Sink</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/how-tos/custom-aggregate-operation">Build a Custom Aggregate Operation</a></li><li class="navListItem navListItemActive"><a class="navItem" href="/docs/4.2/how-tos/operator">Install Kubernetes Operator</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/how-tos/xa">Compatibility of XA Support</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/how-tos/grpc">Call gRPC Service</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Operations Guide<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.2/operations/installation">Installation</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/operations/configuration">Configuration</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/operations/discovery">Cluster Discovery</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/operations/cluster-sizing">Cluster Sizing</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/operations/gc-concerns">Concerns Related to GC</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/operations/job-management">Job Management</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/operations/docker">Running With Docker</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/operations/kubernetes">Deployment On Kubernetes</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/operations/monitoring">Monitoring and Metrics</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/operations/version-compatibility">Version Compatibility</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/operations/cdc">Change Data Capture</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Architecture<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.2/architecture/distributed-computing">Pipeline Execution Model</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/architecture/execution-engine">Cooperative Multithreading</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/architecture/cluster-topology">Cluster Topology</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/architecture/event-time-processing">Event Time-Based Processing</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/architecture/sliding-window">Sliding Window Aggregation</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/architecture/fault-tolerance">Fault Tolerance</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/architecture/in-memory-storage">In-Memory Storage</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Enterprise Edition<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.2/enterprise/">Introduction</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/enterprise/installation">Installation</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/enterprise/management-center">Management Center</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/enterprise/operator-openshift">Installation on Red Hat OpenShift</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/enterprise/security">Security</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/enterprise/job-update">Updating Jobs</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/enterprise/lossless-restart">Lossless Cluster Restart</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/enterprise/off-heap">Off-Heap Data Structures</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/enterprise/blue-green">Blue-Green Client</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Design Documents<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/4.2/design-docs/">Introduction</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/design-docs/011-json-convenience">011 - JSON Convenience</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/design-docs/010-operator-framework">010 - Kubernetes Operators</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/design-docs/009-pulsar-connector">009 - Apache Pulsar Connector</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/design-docs/008-stage-rebalance">008 - Rebalance Data on a Pipeline Stage</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/design-docs/007-grpc-support">007 - Extended gRPC Support</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/design-docs/006-declarative-serialization">006 - Declarative Serialization</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/design-docs/005-cdc-sources">005 - Change Data Capture (CDC) Sources</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/design-docs/004-spring-boot-starter">004 - Spring Boot Starter</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/design-docs/003-elasticsearch-connector">003 - Elasticsearch Connector</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/design-docs/002-job-level-serialization">002 - Job-level Serialization</a></li><li class="navListItem"><a class="navItem" href="/docs/4.2/design-docs/001-code-deployment-improvements">001 - Code Deployment Improvements</a></li></ul></div></div></section></div><script>
+            var coll = document.getElementsByClassName('collapsible');
+            var checkActiveCategory = true;
+            for (var i = 0; i < coll.length; i++) {
+              var links = coll[i].nextElementSibling.getElementsByTagName('*');
+              if (checkActiveCategory){
+                for (var j = 0; j < links.length; j++) {
+                  if (links[j].classList.contains('navListItemActive')){
+                    coll[i].nextElementSibling.classList.toggle('hide');
+                    coll[i].childNodes[1].classList.toggle('rotate');
+                    checkActiveCategory = false;
+                    break;
+                  }
+                }
+              }
+
+              coll[i].addEventListener('click', function() {
+                var arrow = this.childNodes[1];
+                arrow.classList.toggle('rotate');
+                var content = this.nextElementSibling;
+                content.classList.toggle('hide');
+              });
+            }
+
+            document.addEventListener('DOMContentLoaded', function() {
+              createToggler('#navToggler', '#docsNav', 'docsSliderActive');
+              createToggler('#tocToggler', 'body', 'tocActive');
+
+              var headings = document.querySelector('.toc-headings');
+              headings && headings.addEventListener('click', function(event) {
+                var el = event.target;
+                while(el !== headings){
+                  if (el.tagName === 'A') {
+                    document.body.classList.remove('tocActive');
+                    break;
+                  } else{
+                    el = el.parentNode;
+                  }
+                }
+              }, false);
+
+              function createToggler(togglerSelector, targetSelector, className) {
+                var toggler = document.querySelector(togglerSelector);
+                var target = document.querySelector(targetSelector);
+
+                if (!toggler) {
+                  return;
+                }
+
+                toggler.onclick = function(event) {
+                  event.preventDefault();
+
+                  target.classList.toggle(className);
+                };
+              }
+            });
+        </script></nav></div><div class="container mainContainer docsContainer"><div class="wrapper"><div class="post"><header class="postHeader"><a class="edit-page-link button" href="https://github.com/hazelcast/hazelcast-jet/edit/master/site/docs/how-tos/operator.md" target="_blank" rel="noreferrer noopener">Edit</a><h1 id="__docusaurus" class="postHeaderTitle">Install Kubernetes Operator</h1></header><article><div><span><p>The <a href="https://github.com/operator-framework">Operator Framework</a> is an
+open source toolkit to manage Kubernetes native applications, called
+operators, in an effective, automated, and scalable way.</p>
+<p>Hazelcast Jet provides an Operator to simplify deployment on Kubernetes
+clusters. This is a step-by-step guide how to deploy Hazelcast Jet
+cluster together with Management Center on your Kubernetes cluster.</p>
+<h2><a class="anchor" aria-hidden="true" id="prerequisites"></a><a href="#prerequisites" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Prerequisites</h2>
+<ul>
+<li>Kubernetes cluster (with admin rights) and the <code>kubectl</code> command
+configured (you may use <a href="https://kubernetes.io/docs/getting-started-guides/minikube/">Minikube</a>
+)</li>
+</ul>
+<h2><a class="anchor" aria-hidden="true" id="installation"></a><a href="#installation" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Installation</h2>
+<p>Hazelcast Jet Operator is published on <a href="https://operatorhub.io/">OperatorHub.io</a>
+, registry for Kubernetes Operators. It can be either installed via
+Operator Lifecycle Manager or manually.</p>
+<h3><a class="anchor" aria-hidden="true" id="installing-with-operator-lifecycle-managerolm"></a><a href="#installing-with-operator-lifecycle-managerolm" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Installing with Operator Lifecycle Manager(OLM)</h3>
+<p>Operator Lifecycle Manager helps you to install, update, and generally
+manage the lifecycle of all of the operators (and their associated
+services) running across your clusters.</p>
+<h4><a class="anchor" aria-hidden="true" id="installing-the-olm"></a><a href="#installing-the-olm" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Installing the OLM</h4>
+<p>You need to install the OLM to your cluster if it's not yet installed.</p>
+<p>Check out the <a href="https://github.com/operator-framework/operator-lifecycle-manager/releases">latest releases on GitHub</a>
+for release-specific install instructions for OLM.</p>
+<p>To install the OLM, Download the <code>install.sh</code> script from the Github
+Releases page and execute it with the latest OLM version like below:</p>
+<pre><code class="hljs css language-bash">chmod +x install.sh
+./install.sh &lt;olm-version&gt;
+</code></pre>
+<p>Then you can verify that the OLM is installed and running on your cluster
+with the command below:</p>
+<pre><code class="hljs css language-bash">$ kubectl get pods -n olm
+NAME                                READY   STATUS    RESTARTS   AGE
+catalog-operator-66cf4f96f4-d9t4w   1/1     Running   0          1m
+olm-operator-9b64f8547-cd67m        1/1     Running   0          1m
+operatorhubio-catalog-7z5wh         1/1     Running   0          1m
+packageserver-854879f5cf-49z64      1/1     Running   0          1m
+packageserver-854879f5cf-r7kzz      1/1     Running   0          1m
+</code></pre>
+<h4><a class="anchor" aria-hidden="true" id="installing-the-hazelcast-jet-operator"></a><a href="#installing-the-hazelcast-jet-operator" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Installing the Hazelcast Jet Operator</h4>
+<p>Install the Hazelcast Jet Operator by running the following command:</p>
+<pre><code class="hljs css language-bash">kubectl create -f https://operatorhub.io/install/hazelcast-jet-operator.yaml
+</code></pre>
+<p>Hazelcast Jet Operator will be installed in the <code>operators</code> namespace
+and will be usable from all namespaces in the cluster.</p>
+<p>After install, watch your operator come up using the following command.
+It might take around a minute for installation to be succeed.</p>
+<pre><code class="hljs css language-bash">$ kubectl get csv -n operators
+NAME                            DISPLAY                  VERSION   REPLACES   PHASE
+hazelcast-jet-operator.v0.1.0   Hazelcast Jet Operator   0.1.0                Succeeded
+</code></pre>
+<h3><a class="anchor" aria-hidden="true" id="manual-installation"></a><a href="#manual-installation" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Manual Installation</h3>
+<p>If you'd like to manually install the Hazelcast Jet Operator without
+installing the OLM, please follow the README on <a href="https://github.com/hazelcast/hazelcast-jet-operator/tree/master/hazelcast-jet-operator">Hazelcast Jet Operator</a>
+GitHub repository.</p>
+<h2><a class="anchor" aria-hidden="true" id="creating-a-hazelcast-jet-cluster"></a><a href="#creating-a-hazelcast-jet-cluster" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Creating a Hazelcast Jet Cluster</h2>
+<p>After successfully installing the Hazelcast Jet Operator to your cluster
+we can now create Hazelcast Jet clusters with the <code>HazelcastJet</code> custom
+resource.</p>
+<p>Create a file name <code>hazelcast-jet.yaml</code> with the contents below:</p>
+<pre><code class="hljs css language-yaml"><span class="hljs-attr">apiVersion:</span> <span class="hljs-string">hazelcast.com/v1alpha1</span>
+<span class="hljs-attr">kind:</span> <span class="hljs-string">HazelcastJet</span>
+<span class="hljs-attr">metadata:</span>
+  <span class="hljs-attr">name:</span> <span class="hljs-string">jet-cluster</span>
+<span class="hljs-attr">spec:</span>
+  <span class="hljs-attr">cluster:</span>
+    <span class="hljs-attr">memberCount:</span> <span class="hljs-number">2</span>
+  <span class="hljs-attr">securityContext:</span>
+    <span class="hljs-attr">runAsUser:</span> <span class="hljs-string">""</span>
+    <span class="hljs-attr">runAsGroup:</span> <span class="hljs-string">""</span>
+    <span class="hljs-attr">fsGroup:</span> <span class="hljs-string">""</span>
+</code></pre>
+<p><strong>Note:</strong> You can use <a href="https://github.com/hazelcast/hazelcast-jet-operator/blob/master/hazelcast-jet-operator/hazelcast-jet-full.yaml">this
+file</a>
+for configuration options reference.</p>
+<blockquote>
+<h3><a class="anchor" aria-hidden="true" id="setting-the-license-key-for-management-center-optional"></a><a href="#setting-the-license-key-for-management-center-optional" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Setting the License Key for Management Center (Optional)</h3>
+<p>If you do have an
+active license subscription for Hazelcast Jet Management Center, use
+the configuration below to start your cluster. You can
+apply for a 30-day trial if you don't have one from <a href="https://hazelcast.com/get-started/#deploymenttype-jet">Hazelcast Website</a>
+. This step is optional and only for Hazelcast Jet Management Center.
+Hazelcast Jet doesn't require a license key. You can also skip the
+deployment of Management Center altogether by setting the <code>managementcenter.enabled</code>
+property to <code>false</code>.</p>
+<pre><code class="hljs css language-yaml"><span class="hljs-attr">apiVersion:</span> <span class="hljs-string">hazelcast.com/v1alpha1</span>
+<span class="hljs-attr">kind:</span> <span class="hljs-string">HazelcastJet</span>
+<span class="hljs-attr">metadata:</span>
+ <span class="hljs-attr">name:</span> <span class="hljs-string">jet-cluster</span>
+<span class="hljs-attr">spec:</span>
+ <span class="hljs-attr">cluster:</span>
+   <span class="hljs-attr">memberCount:</span> <span class="hljs-number">2</span>
+ <span class="hljs-attr">securityContext:</span>
+   <span class="hljs-attr">runAsUser:</span> <span class="hljs-string">""</span>
+   <span class="hljs-attr">runAsGroup:</span> <span class="hljs-string">""</span>
+   <span class="hljs-attr">fsGroup:</span> <span class="hljs-string">""</span>
+ <span class="hljs-attr">managementcenter:</span>
+   <span class="hljs-attr">licenseKey:</span> <span class="hljs-string">&lt;YOUR_LICENSE_KEY&gt;</span>
+</code></pre>
+</blockquote>
+<p>Start Hazelcast Jet cluster with the following command.</p>
+<pre><code class="hljs css language-bash">kubectl apply -f hazelcast-jet.yaml
+</code></pre>
+<p>Your Hazelcast Jet cluster (together with Hazelcast Jet Management Center)
+should be created.</p>
+<pre><code class="hljs css language-bash">$ kubectl get all
+NAME                                                               READY   STATUS    RESTARTS   AGE
+pod/jet-cluster-hazelcast-jet-0                                    1/1     Running   0          6m28s
+pod/jet-cluster-hazelcast-jet-1                                    1/1     Running   0          5m54s
+pod/jet-cluster-hazelcast-jet-management-center-85bbf6948b-p5n5h   1/1     Running   0          6m30s
+
+NAME                                                  TYPE           CLUSTER-IP     EXTERNAL-IP     PORT(S)                        AGE
+service/jet-cluster-hazelcast-jet                     ClusterIP      None           &lt;none&gt;          5701/TCP                       6m32s
+service/jet-cluster-hazelcast-jet-management-center   LoadBalancer   10.47.244.94   34.72.142.219   8081:32476/TCP,443:32535/TCP   6m32s
+service/kubernetes                                    ClusterIP      10.47.240.1    &lt;none&gt;          443/TCP                        2d22h
+
+NAME                                                          READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/jet-cluster-hazelcast-jet-management-center   1/1     1            1           6m32s
+
+NAME                                                                     DESIRED   CURRENT   READY   AGE
+replicaset.apps/jet-cluster-hazelcast-jet-management-center-85bbf6948b   1         1         1       6m32s
+
+NAME                                         READY   AGE
+statefulset.apps/jet-cluster-hazelcast-jet   2/2     6m33s
+</code></pre>
+<p>Check the logs of the Hazelcast Jet nodes to verify cluster formation
+with the command below:</p>
+<pre><code class="hljs css language-bash">$ kubectl logs pod/jet-cluster-hazelcast-jet-1
+...
+...
+2020-05-11 07:42:50,785 [ INFO] [hz.naughty_mendel.generic-operation.thread-0] [c.h.i.c.ClusterService]:
+
+Members {size:2, ver:2} [
+ Member [10.44.1.11]:5701 - a720a93f-418a-4656-82a9-ae69eaeba99d
+ Member [10.44.2.9]:5701 - 5ac07dd4-e631-444e-a9ab-5e5faf1cd617 this
+]
+
+2020-05-11 07:42:51,747 [ INFO] [main] [c.h.c.LifecycleService]: [10.44.2.9]:5701 is STARTED
+...
+</code></pre>
+<p>As you can verify from the logs that we do have a 2 node Hazelcast Jet
+cluster formed successfully.</p>
+<h2><a class="anchor" aria-hidden="true" id="submitting-the-sample-job"></a><a href="#submitting-the-sample-job" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Submitting the Sample Job</h2>
+<p>To access this cluster inside Kubernetes environment from outside, we
+need to do port forwarding. Port forwarding makes a port of a pod in the
+remote Kubernetes cluster available to the local environment.</p>
+<p>To submit a job, we'll do port forwarding from a Hazelcast Jet
+pod on port 5701 to local port 5701. The command requires to
+use a pod name to be forwarded.</p>
+<p>Run the command below with to do port forwarding happen:</p>
+<pre><code class="hljs css language-bash">$ kubectl port-forward pod/jet-cluster-hazelcast-jet-1 5701:5701
+Forwarding from 127.0.0.1:5701 -&gt; 5701
+Forwarding from [::1]:5701 -&gt; 5701
+...
+</code></pre>
+<p>Download and unpack Hazelcast Jet distribution from <a href="https://jet-start.sh/download">Jet
+Website</a> to use sample job packaged with it.</p>
+<p>In a different terminal window, unpack and navigate to the distribution
+folder with the commands below:</p>
+<pre><code class="hljs css language-bash">tar xf hazelcast-jet-4.2.tar.gz
+<span class="hljs-built_in">cd</span> hazelcast-jet-4.2/
+</code></pre>
+<p>Verify that CLI can connect to the cluster with the command below:</p>
+<pre><code class="hljs css language-bash">$ bin/jet cluster
+State: ACTIVE
+Version: 4.2
+Size: 2
+
+ADDRESS                  UUID
+[10.44.1.11]:5701        a720a93f-418a-4656-82a9-ae69eaeba99d
+[10.44.2.9]:5701         5ac07dd4-e631-444e-a9ab-5e5faf1cd617
+</code></pre>
+<p>Then you can submit the example job from the distribution package with
+the command below:</p>
+<pre><code class="hljs css language-bash">$ bin/jet submit examples/hello-world.jar
+Submitting JAR <span class="hljs-string">'examples/hello-world.jar'</span> with arguments []
+Top 10 random numbers <span class="hljs-keyword">in</span> the latest window:
+ 1. 9,192,248,499,877,110,770
+ 2. 9,137,762,581,670,149,663
+ 3. 8,919,106,540,516,409,274
+ 4. 8,802,486,215,849,765,726
+ 5. 7,618,430,691,765,141,863
+ 6. 7,346,532,478,235,724,392
+ 7. 7,097,603,655,485,784,276
+ 8. 7,077,059,954,496,239,921
+ 9. 6,489,569,388,718,300,773
+ 10. 6,477,025,315,319,514,141
+...
+</code></pre>
+<p>That's it, you've successfully deployed a job from your local machine to
+the Hazelcast Jet cluster running inside Kubernetes
+environment.</p>
+<h2><a class="anchor" aria-hidden="true" id="connect-to-hazelcast-jet-management-center"></a><a href="#connect-to-hazelcast-jet-management-center" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Connect to Hazelcast Jet Management Center</h2>
+<p>Run the following command to get Hazelcast Jet Management Center service
+details:</p>
+<pre><code class="hljs css language-bash">$ kubectl get svc
+NAME                                          TYPE           CLUSTER-IP     EXTERNAL-IP     PORT(S)                        AGE
+jet-cluster-hazelcast-jet                     ClusterIP      None           &lt;none&gt;          5701/TCP                       54m
+jet-cluster-hazelcast-jet-management-center   LoadBalancer   10.47.244.94   34.72.142.219   8081:32476/TCP,443:32535/TCP   54m
+kubernetes                                    ClusterIP      10.47.240.1    &lt;none&gt;          443/TCP                        2d23h
+</code></pre>
+<p>To connect to Hazelcast Jet Management Center, you can use <code>EXTERNAL-IP</code>
+and open your browser at: <code>http://&lt;EXTERNAL-IP&gt;:8081</code>.</p>
+<blockquote>
+<p>If you are running on a Minikube environment which does not have
+Load Balancer support out of the box and it will show the <code>EXTERNAL-IP</code>
+as <code>pending</code>.</p>
+<p>To solve this problem, on a separate terminal window, run the following
+command:</p>
+<pre><code class="hljs css language-bash">minikube tunnel
+</code></pre>
+<p>It will ask for a password and expose service to the host operating
+system.</p>
+<p>When asked for service details with the following:</p>
+<pre><code class="hljs css language-bash">kubectl get svc
+</code></pre>
+</blockquote>
+<p>It should show the <code>EXTERNAL-IP</code> and Hazelcast Jet Management Center
+should be accessible at  <code>http://&lt;EXTERNAL-IP&gt;:8081</code>.</p>
+<p>You should see the login page at <code>http://&lt;EXTERNAL-IP&gt;:8081</code> like below and
+use <code>admin</code> as both username and password to login.</p>
+<p><img src="/docs/assets/mc-login.png" alt="Hazelcast Jet Management Center Login"></p>
+<p>You can see various details regarding cluster and the job in the
+dashboard.</p>
+<p><img src="/docs/assets/mc-dashboard.png" alt="Hazelcast Jet Management Center Dashboard"></p>
+<p>Click to running job named <code>hello-world</code>, which we've submitted earlier,
+in the <code>Active Jobs</code> section to see the details of it.</p>
+<p><img src="/docs/assets/mc-job.png" alt="Hazelcast Jet Management Center Job Details"></p>
+<h2><a class="anchor" aria-hidden="true" id="stopping-the-job"></a><a href="#stopping-the-job" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Stopping the Job</h2>
+<p>You can stop the job when you are done with it.</p>
+<p>To stop the job we need to know its name or id. List the jobs running
+in the cluster with the command below:</p>
+<pre><code class="hljs css language-bash">$ bin/jet list-jobs
+ID                  STATUS             SUBMISSION TIME         NAME
+045e-25d1-b680-0001 RUNNING            2020-05-18T14:47:04.595 hello-world
+</code></pre>
+<p>Then you can cancel it using either name or id of the job like
+following:</p>
+<pre><code class="hljs css language-bash">$ bin/jet cancel hello-world
+Cancelling job id=045e-25d1-b680-0001, name=hello-world, submissionTime=2020-05-18T14:47:04.595
+Job cancelled.
+</code></pre>
+</span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/docs/4.2/how-tos/custom-aggregate-operation"><span class="arrow-prev">← </span><span>Build a Custom Aggregate Operation</span></a><a class="docs-next button" href="/docs/4.2/how-tos/xa"><span>Compatibility of XA Support</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#prerequisites">Prerequisites</a></li><li><a href="#installation">Installation</a><ul class="toc-headings"><li><a href="#installing-with-operator-lifecycle-managerolm">Installing with Operator Lifecycle Manager(OLM)</a></li><li><a href="#manual-installation">Manual Installation</a></li></ul></li><li><a href="#creating-a-hazelcast-jet-cluster">Creating a Hazelcast Jet Cluster</a><ul class="toc-headings"><li><a href="#setting-the-license-key-for-management-center-optional">Setting the License Key for Management Center (Optional)</a></li></ul></li><li><a href="#submitting-the-sample-job">Submitting the Sample Job</a></li><li><a href="#connect-to-hazelcast-jet-management-center">Connect to Hazelcast Jet Management Center</a></li><li><a href="#stopping-the-job">Stopping the Job</a></li></ul></nav></div><footer class="nav-footer" id="footer"><section class="sitemap"><div style="text-align:left"><a href="/" class="nav-home"><img src="/img/logo-light.svg" alt="Hazelcast Jet" width="200" height="40"/></a><div style="margin-left:12px"><a class="github-button" href="https://github.com/hazelcast/hazelcast-jet" data-icon="octicon-star" data-count-href="/facebook/docusaurus/stargazers" data-show-count="true" data-count-aria-label="# stargazers on GitHub" aria-label="Star this project on GitHub">Star On GitHub</a></div></div><div><h5>Docs</h5><a href="/docs/get-started/intro">Get Started</a><a href="/docs/concepts/dag">Concepts</a><a href="/docs/tutorials/kafka">Tutorials</a><a href="/docs/architecture/distributed-computing">Architecture</a><a href="/docs/operations/installation">Operations Guide</a><a href="/docs/enterprise">Enterprise Edition</a></div><div><h5>Community</h5><a href="https://groups.google.com/forum/#!forum/hazelcast-jet" target="_blank" rel="noreferrer noopener">Google Groups</a><a href="http://stackoverflow.com/questions/tagged/hazelcast-jet" target="_blank" rel="noreferrer noopener">Stack Overflow</a><a href="https://slack.hazelcast.com">Slack</a></div><div><h5>Latest From the Blog</h5><a href="/blog/2020/10/23/jet-43-is-released">Jet 4.3 Released</a><a href="/blog/2020/10/06/enabling-full-text-search">Enabling Full-text Search with Change Data Capture in a Legacy Application</a><a href="/blog/2020/09/18/cdc-meets-stream-processing">Change Data Capture meets Stream Processing</a><a href="/blog/2020/08/05/gc-tuning-for-jet">Sub-10 ms Latency in Java: Concurrent GC with Green Threads</a><a href="/blog/2020/07/16/designing-evergreen-cache-cdc">Designing an Evergreen Cache with Change Data Capture</a></div><div><h5>More</h5><a href="https://github.com/hazelcast/hazelcast-jet">GitHub Project</a><a href="http://hazelcast.com/company/careers/">Work at Hazelcast</a><a href="/license">License</a></div></section><section class="copyright">Copyright © 2020 Hazelcast Inc.</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
+                document.addEventListener('keyup', function(e) {
+                  if (e.target !== document.body) {
+                    return;
+                  }
+                  // keyCode for '/' (slash)
+                  if (e.keyCode === 191) {
+                    const search = document.getElementById('search_input_react');
+                    search && search.focus();
+                  }
+                });
+              </script><script>
+              var search = docsearch({
+                
+                apiKey: '79d1e4941621b9fd761d279d4d19ed69',
+                indexName: 'hazelcast-jet',
+                inputSelector: '#search_input_react',
+                algoliaOptions: {"facetFilters":["language:en","version:4.2"]}
+              });
+            </script></body></html>

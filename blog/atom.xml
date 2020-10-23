@@ -2,12 +2,23 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
     <id>https://jet-start.sh/blog</id>
     <title>Hazelcast Jet Blog</title>
-    <updated>2020-10-06T06:00:00.000Z</updated>
+    <updated>2020-10-23T06:00:00.000Z</updated>
     <generator>https://github.com/jpmonette/feed</generator>
     <link rel="alternate" href="https://jet-start.sh/blog"/>
     <subtitle>The best place to stay up-to-date with the latest Hazelcast Jet news and events.</subtitle>
     <logo>https://jet-start.sh/img/logo-dark.svg</logo>
     <rights>Copyright © 2020 Hazelcast Inc.</rights>
+    <entry>
+        <title type="html"><![CDATA[Jet 4.3 Released]]></title>
+        <id>https://jet-start.sh/blog/2020/10/23/jet-43-is-released.html</id>
+        <link href="https://jet-start.sh/blog/2020/10/23/jet-43-is-released.html"/>
+        <updated>2020-10-23T06:00:00.000Z</updated>
+        <summary type="html"><![CDATA[<p>Today we're releasing Hazelcast Jet 4.3, our fourth release in 2020!</p> <p>We took part in Google Summer of Code that ended just a few weeks ago, and this release already brings a productionized piece of work by our student, <a href="https://github.com/MohamedMandouh">Mohamed Mandouh</a>: distributed in...</p>]]></summary>
+        <author>
+            <name>Marko Topolnik</name>
+            <uri>https://twitter.com/mtopolnik</uri>
+        </author>
+    </entry>
     <entry>
         <title type="html"><![CDATA[Enabling Full-text Search with Change Data Capture in a Legacy Application]]></title>
         <id>https://jet-start.sh/blog/2020/10/06/enabling-full-text-search.html</id>

@@ -4,7 +4,7 @@
         <title>Hazelcast Jet Blog</title>
         <link>https://jet-start.sh/blog</link>
         <description>The best place to stay up-to-date with the latest Hazelcast Jet news and events.</description>
-        <lastBuildDate>Tue, 06 Oct 2020 06:00:00 GMT</lastBuildDate>
+        <lastBuildDate>Fri, 23 Oct 2020 06:00:00 GMT</lastBuildDate>
         <docs>https://validator.w3.org/feed/docs/rss2.html</docs>
         <generator>https://github.com/jpmonette/feed</generator>
         <image>
@@ -13,6 +13,13 @@
             <link>https://jet-start.sh/blog</link>
         </image>
         <copyright>Copyright © 2020 Hazelcast Inc.</copyright>
+        <item>
+            <title><![CDATA[Jet 4.3 Released]]></title>
+            <link>https://jet-start.sh/blog/2020/10/23/jet-43-is-released.html</link>
+            <guid>https://jet-start.sh/blog/2020/10/23/jet-43-is-released.html</guid>
+            <pubDate>Fri, 23 Oct 2020 06:00:00 GMT</pubDate>
+            <description><![CDATA[<p>Today we're releasing Hazelcast Jet 4.3, our fourth release in 2020!</p> <p>We took part in Google Summer of Code that ended just a few weeks ago, and this release already brings a productionized piece of work by our student, <a href="https://github.com/MohamedMandouh">Mohamed Mandouh</a>: distributed in...</p>]]></description>
+        </item>
         <item>
             <title><![CDATA[Enabling Full-text Search with Change Data Capture in a Legacy Application]]></title>
             <link>https://jet-start.sh/blog/2020/10/06/enabling-full-text-search.html</link>
