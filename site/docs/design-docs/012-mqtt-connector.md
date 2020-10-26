@@ -58,7 +58,7 @@ received at the published QoS. Messages published at a higher quality
 of service will be received using the QoS specified on the subscription.
 If the broker refuses a subscription, the return code indicates the
 failure rather than QoS. For example, the client may have insufficient
-permission to subscribe to the topic or the topic may be malformed.
+permission to subscribe to the topic, or the topic may be malformed.
 
 All messages sent with QoS 1 and 2 are queued for offline clients until
 the client is available again. However, this queuing is only possible
