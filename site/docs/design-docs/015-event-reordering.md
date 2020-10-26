@@ -85,7 +85,7 @@ partitioning key and propagate it through the pipeline.
 
 We can keep the order even without the partitioning key, simply by
 keeping the partitions isolated throughout the pipeline. This seems to
-allows us a level of parallelism equal to the number of partitions in
+allow us a level of parallelism equal to the number of partitions in
 the source. However, it is pretty inflexible:
 
 1. Jet's symmetrical execution model means that the source parallelism
@@ -135,7 +135,7 @@ the summary of these changes:
 |Map/Filter/FlatMap|Enforce parallelism equal to the upstream, apply the `isolated` edge.|
 |Custom (Core API) Transform|Enforce parallelism equal to the upstream, apply the `isolated` edge.|
 |Partitioned Custom Transform|No changes, it already uses a partitioned edge.|
-|Aggregation|No changes. Aggregation is order-insensitive, but due to the use of partitioning, it already preserves the order from the upstream. Marked as `SequencerTransform` (its output has a new ordering)|
+|Aggregation|No changes. Aggregation is order-insensitive, and creates a new order in its output. Marked as `SequencerTransform`.|
 |Distinct|No changes. We don't guarantee to emit the very first distinct item.|
 |Sorting|No changes. Sorting is order-insensitive and enforces its own order in the output. Marked as a `SequencerTransform`.|
 |HashJoinTransform| Edge-0 (carrying the stream to be enriched): Enforce parallelism equal to the upstream, apply the `isolated` edge.|
@@ -146,31 +146,7 @@ the summary of these changes:
 |Sources|No changes.|
 |Sinks|No changes.|
 
-## More Ideas
-
-### Sorting Events Between The Consecutive Watermarks
-
-Jet already offers support for watermarking. If we have a sorting key
-for events, we can sort the events between the two consecutive watermark
-according to the sorting key so we can put the events in their initial
-order. Users will not define the window in an explicit way. The user
-will only add stateful mapping (or any order-sensitive stage) to his
-pipeline, and we will add such an intermediate sorting stage during
-planning.
-
-As the cost of this work, sorting events requires an extra computation
-and we have to wait for the closing watermark to arrive. This increases
-the latency with watermarkPeriod/2 on average. The issue of sparse
-events can also occur in this approach.
-
-To use this solution, we need a sorting key such as more precise
-timestamp or mark like a SequenceId for events- Our timestamp precision
-is low, resulting in overlapping events with the same timestamp and it
-is not easy to add this SequenceId (sorting key) to events in a reliable
-way especially when the total parallelism of the source is greater than
-one. I just put this approach to be seen.
-
-### Smart Job Planning
+## Smart Job Planning
 
 We classified the transforms as order-sensitive and order-insensitive.
 This allows us to analyze the graph of the pipeline and identify which
@@ -195,3 +171,25 @@ order-sensitive stage. Here's the algorithm we use:
    ordering prevention logic for the future transforms until visiting an
    order-sensitive node.
 4. Follow this procedure to visit all nodes.
+
+## Not Implementing Now: Sorting Events Between Consecutive Watermarks
+
+Jet already offers support for watermarking. If we have a sorting key
+for events, we can sort the events between the two consecutive watermark
+according to the sorting key so we can put the events in their initial
+order. Users will not define the window in an explicit way. The user
+will only add stateful mapping (or any order-sensitive stage) to his
+pipeline, and we will add such an intermediate sorting stage during
+planning.
+
+As the cost of this work, sorting events requires an extra computation
+and we have to wait for the closing watermark to arrive. This increases
+the latency with watermarkPeriod/2 on average. The issue of sparse
+events can also occur in this approach.
+
+To use this solution, we need a sorting key such as more precise
+timestamp or mark like a SequenceId for events- Our timestamp precision
+is low, resulting in overlapping events with the same timestamp and it
+is not easy to add this SequenceId (sorting key) to events in a reliable
+way especially when the total parallelism of the source is greater than
+one. I just put this approach to be seen.
