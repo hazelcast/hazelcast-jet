@@ -47,7 +47,7 @@ import static com.hazelcast.jet.impl.JetEvent.jetEvent;
 import static com.hazelcast.jet.impl.pipeline.transform.AggregateTransform.FIRST_STAGE_VERTEX_NAME_SUFFIX;
 import static java.util.Collections.nCopies;
 
-public class WindowGroupTransform<K, R> extends AbstractTransform implements SequencerTransform {
+public class WindowGroupTransform<K, R> extends AbstractTransform {
 
     @SuppressWarnings("rawtypes")
     private static final KeyedWindowResultFunction JET_EVENT_KEYED_WINDOW_RESULT_FN =
@@ -71,6 +71,7 @@ public class WindowGroupTransform<K, R> extends AbstractTransform implements Seq
         this.wDef = wDef;
         this.keyFns = keyFns;
         this.aggrOp = aggrOp;
+        setSequencer(true);
     }
 
     private static String createName(WindowDefinition wDef) {

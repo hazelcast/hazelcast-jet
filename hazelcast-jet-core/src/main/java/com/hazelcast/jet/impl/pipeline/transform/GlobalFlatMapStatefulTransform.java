@@ -29,7 +29,7 @@ import javax.annotation.Nonnull;
 
 import static com.hazelcast.jet.core.processor.Processors.flatMapStatefulP;
 
-public class GlobalFlatMapStatefulTransform<T, S, R> extends AbstractTransform implements OrderSensitiveTransform {
+public class GlobalFlatMapStatefulTransform<T, S, R> extends AbstractTransform {
 
     private final ToLongFunctionEx<? super T> timestampFn;
     private final SupplierEx<? extends S> createFn;
@@ -45,6 +45,7 @@ public class GlobalFlatMapStatefulTransform<T, S, R> extends AbstractTransform i
         this.timestampFn = timestampFn;
         this.createFn = createFn;
         this.statefulFlatMapFn = statefulFlatMapFn;
+        setOrderSensitive(true);
     }
 
     @Override

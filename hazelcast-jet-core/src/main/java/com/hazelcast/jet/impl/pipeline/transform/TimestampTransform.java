@@ -27,7 +27,7 @@ import javax.annotation.Nonnull;
 import static com.hazelcast.internal.util.Preconditions.checkNotNull;
 import static com.hazelcast.jet.core.processor.Processors.insertWatermarksP;
 
-public class TimestampTransform<T> extends AbstractTransform implements OrderSensitiveTransform {
+public class TimestampTransform<T> extends AbstractTransform {
     @Nonnull
     private EventTimePolicy<? super T> eventTimePolicy;
 
@@ -39,6 +39,7 @@ public class TimestampTransform<T> extends AbstractTransform implements OrderSen
         this.eventTimePolicy = eventTimePolicy;
         checkNotNull(eventTimePolicy.timestampFn(),
                 "timestampFn must not be null if timestamps aren't added in the source");
+        setOrderSensitive(true);
     }
 
     @Override

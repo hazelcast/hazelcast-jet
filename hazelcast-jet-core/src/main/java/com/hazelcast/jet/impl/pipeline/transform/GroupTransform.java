@@ -35,7 +35,7 @@ import static com.hazelcast.jet.core.processor.Processors.aggregateByKeyP;
 import static com.hazelcast.jet.core.processor.Processors.combineByKeyP;
 import static com.hazelcast.jet.impl.pipeline.transform.AggregateTransform.FIRST_STAGE_VERTEX_NAME_SUFFIX;
 
-public class GroupTransform<K, A, R, OUT> extends AbstractTransform implements SequencerTransform {
+public class GroupTransform<K, A, R, OUT> extends AbstractTransform {
     @Nonnull
     private final List<FunctionEx<?, ? extends K>> groupKeyFns;
     @Nonnull
@@ -53,6 +53,7 @@ public class GroupTransform<K, A, R, OUT> extends AbstractTransform implements S
         this.groupKeyFns = groupKeyFns;
         this.aggrOp = aggrOp;
         this.mapToOutputFn = mapToOutputFn;
+        setSequencer(true);
     }
 
     private static String createName(@Nonnull List<Transform> upstream) {

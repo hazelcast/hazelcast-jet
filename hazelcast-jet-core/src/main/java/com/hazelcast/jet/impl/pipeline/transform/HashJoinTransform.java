@@ -119,8 +119,7 @@ public class HashJoinTransform<T0, R> extends AbstractTransform {
     @Override
     @SuppressWarnings("unchecked")
     public void addToDag(Planner p, Context context) {
-        // TODO: Need to be considered more carefully
-        determineLocalParallelism(-1, context, false);
+        determineLocalParallelism(-1, context, true);
         PlannerVertex primary = p.xform2vertex.get(this.upstream().get(0));
         List keyFns = toList(this.clauses, JoinClause::leftKeyFn);
 
@@ -134,7 +133,11 @@ public class HashJoinTransform<T0, R> extends AbstractTransform {
         Vertex joiner = p.addVertex(this, name() + "-joiner", determinedLocalParallelism(),
                 () -> new HashJoinP<>(keyFns, tags, mapToOutputBiFn, mapToOutputTriFn, tupleToItems)).v;
         Edge edgeToJoiner = from(primary.v, primary.nextAvailableOrdinal()).to(joiner, 0);
-        applyRebalancing(edgeToJoiner, this);
+        if (shouldPreserveEventOrder()) {
+            edgeToJoiner.isolated();
+        } else {
+            applyRebalancing(edgeToJoiner, this);
+        }
         p.dag.edge(edgeToJoiner);
 
         String collectorName = name() + "-collector";

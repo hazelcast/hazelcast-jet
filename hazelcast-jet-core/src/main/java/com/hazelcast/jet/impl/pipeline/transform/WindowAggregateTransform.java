@@ -45,7 +45,7 @@ import static com.hazelcast.jet.impl.JetEvent.jetEvent;
 import static com.hazelcast.jet.impl.pipeline.transform.AggregateTransform.FIRST_STAGE_VERTEX_NAME_SUFFIX;
 import static java.util.Collections.nCopies;
 
-public class WindowAggregateTransform<A, R> extends AbstractTransform implements SequencerTransform {
+public class WindowAggregateTransform<A, R> extends AbstractTransform {
     private static final int MAX_WATERMARK_STRIDE = 100;
     private static final int MIN_WMS_PER_SESSION = 100;
     @SuppressWarnings("rawtypes")
@@ -66,6 +66,7 @@ public class WindowAggregateTransform<A, R> extends AbstractTransform implements
         super(createName(wDef), upstream);
         this.aggrOp = aggrOp;
         this.wDef = wDef;
+        setSequencer(true);
     }
 
     static String createName(WindowDefinition wDef) {
@@ -103,7 +104,6 @@ public class WindowAggregateTransform<A, R> extends AbstractTransform implements
 
     @Override
     public void addToDag(Planner p, Context context) {
-        // TODO: Need to be considered more carefully
         if (wDef instanceof SessionWindowDefinition) {
             addSessionWindow(p, (SessionWindowDefinition) wDef);
         } else if (aggrOp.combineFn() == null || wDef.earlyResultsPeriod() > 0) {
@@ -169,7 +169,9 @@ public class WindowAggregateTransform<A, R> extends AbstractTransform implements
         // We use requested parallelism for 1st stage: edge to it is local-unicast, each processor
         // can process part of the input which will be combined into one result in 2nd stage.
         v1.localParallelism(localParallelism());
-        PlannerVertex pv2 = p.addVertex(this, name(), 1,
+
+        determinedLocalParallelism(1);
+        PlannerVertex pv2 = p.addVertex(this, name(), determinedLocalParallelism(),
                 combineToSlidingWindowP(winPolicy, aggrOp, jetEventOfWindowResultFn()));
         p.addEdges(this, v1);
         p.dag.edge(between(v1, pv2.v).distributed().allToOne(name().hashCode()));
@@ -188,6 +190,7 @@ public class WindowAggregateTransform<A, R> extends AbstractTransform implements
     //            | aggregateToSessionWindowP | local parallelism = 1
     //             ---------------------------
     private void addSessionWindow(Planner p, SessionWindowDefinition wDef) {
+        determinedLocalParallelism(1);
         PlannerVertex pv = p.addVertex(this, name(), determinedLocalParallelism(),
                 aggregateToSessionWindowP(
                         wDef.sessionTimeout(),

@@ -45,6 +45,10 @@ public abstract class AbstractTransform implements Transform {
 
     private boolean preserveEventOrder;
 
+    private boolean orderSensitive;
+
+    private boolean sequencer;
+
     private final FunctionEx<?, ?>[] upstreamPartitionKeyFns;
 
     protected AbstractTransform(@Nonnull String name, @Nonnull List<Transform> upstream) {
@@ -53,6 +57,8 @@ public abstract class AbstractTransform implements Transform {
         this.upstream = new ArrayList<>(upstream);
         this.upstreamRebalancingFlags = new boolean[upstream.size()];
         this.preserveEventOrder = false;
+        this.orderSensitive = false;
+        this.sequencer = false;
         this.upstreamPartitionKeyFns = new FunctionEx[upstream.size()];
     }
 
@@ -128,6 +134,26 @@ public abstract class AbstractTransform implements Transform {
     @Override
     public boolean shouldPreserveEventOrder() {
         return preserveEventOrder;
+    }
+
+    @Override
+    public boolean isOrderSensitive() {
+        return orderSensitive;
+    }
+
+    @Override
+    public void setOrderSensitive(boolean value) {
+        orderSensitive = value;
+    }
+
+    @Override
+    public boolean isSequencer() {
+        return sequencer;
+    }
+
+    @Override
+    public void setSequencer(boolean value) {
+        sequencer = value;
     }
 
     @Override

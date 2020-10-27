@@ -33,7 +33,7 @@ import static com.hazelcast.jet.core.processor.Processors.mapP;
 import static com.hazelcast.jet.core.processor.Processors.sortP;
 
 
-public class SortTransform<T> extends AbstractTransform implements SequencerTransform {
+public class SortTransform<T> extends AbstractTransform {
 
     private static final String COLLECT_STAGE_SUFFIX = "-collect";
     private final ComparatorEx<? super T> comparator;
@@ -46,6 +46,7 @@ public class SortTransform<T> extends AbstractTransform implements SequencerTran
         } else {
             this.comparator = comparator;
         }
+        setSequencer(true);
     }
 
     @Override

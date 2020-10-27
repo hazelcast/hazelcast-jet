@@ -19,8 +19,6 @@ package com.hazelcast.jet.impl.pipeline;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.impl.pipeline.transform.AbstractTransform;
 import com.hazelcast.jet.impl.pipeline.transform.BatchSourceTransform;
-import com.hazelcast.jet.impl.pipeline.transform.OrderSensitiveTransform;
-import com.hazelcast.jet.impl.pipeline.transform.SequencerTransform;
 import com.hazelcast.jet.impl.pipeline.transform.SinkTransform;
 import com.hazelcast.jet.impl.pipeline.transform.StreamSourceTransform;
 import com.hazelcast.jet.impl.pipeline.transform.Transform;
@@ -213,12 +211,12 @@ public class PipelineImpl implements Pipeline {
         List<Transform> transforms = new ArrayList<>(adjacencyMap().keySet());
         Collections.reverse(transforms);
         for (Transform transform : transforms) {
-            if (transform instanceof OrderSensitiveTransform) {
+            if (transform.isOrderSensitive()) {
                 transform.setPreserveEventOrder(true);
                 for (Transform upstream : transform.upstream()) {
                     upstream.setPreserveEventOrder(true);
                 }
-            } else if (transform instanceof SequencerTransform) {
+            } else if (transform.isSequencer()) {
                 transform.setPreserveEventOrder(false);
                 for (Transform upstream : transform.upstream()) {
                     upstream.setPreserveEventOrder(false);

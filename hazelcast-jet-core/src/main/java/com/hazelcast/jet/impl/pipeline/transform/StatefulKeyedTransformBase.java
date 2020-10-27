@@ -24,7 +24,7 @@ import java.util.function.Supplier;
 
 import static java.lang.Math.max;
 
-abstract class StatefulKeyedTransformBase<T, K, S> extends AbstractTransform implements OrderSensitiveTransform {
+abstract class StatefulKeyedTransformBase<T, K, S> extends AbstractTransform {
 
     private static final int TTL_TO_WM_STRIDE_RATIO = 10;
 
@@ -46,6 +46,7 @@ abstract class StatefulKeyedTransformBase<T, K, S> extends AbstractTransform imp
         this.keyFn = keyFn;
         this.timestampFn = timestampFn;
         this.createFn = createFn;
+        setOrderSensitive(true);
     }
 
     @Override
