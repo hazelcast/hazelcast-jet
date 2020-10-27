@@ -22,7 +22,7 @@ broadening our setup to include a total of seven machines: a three-node
 Jet cluster, a three-node Kafka cluster that acts as the data source for
 Jet, and a node that simulates a stream of events and sends it to Kafka:
 
-![Cluster Setup](assets/2020-10-20_big-data-benchmark-1.svg)
+![Cluster Setup](assets/2020-10-29_big-data-benchmark-1.svg)
 
 As before, we are using EC2 instances: for Kafka we use i3.2xlarge (they
 come with a fast 2 TB SSD) and for the rest we use c5.4xlarge. The
@@ -110,7 +110,7 @@ impact on latency**.
 
 Here is the latency chart for the three setups we described above:
 
-![Effects of GC Tuning](assets/2020-10-20_histo-gc-tuning.png)
+![Effects of GC Tuning](assets/2020-10-29_histo-gc-tuning.png)
 
 It shows the significance of that single GC parameter, `MaxGCPauseMillis`,
 as well as the relative insignificance of the other GC/Jet tuning tricks
@@ -133,7 +133,7 @@ messages per second with more latency in the lower percentiles, but
 degrading less at the outlier end, resulting in almost the same 99.99%
 latency (within the margin of error):
 
-![Effects Eager Fsync](assets/2020-10-20_histo-kafka-fsync.png)
+![Effects Eager Fsync](assets/2020-10-29_histo-kafka-fsync.png)
 
 There's a caveat to this result, though: eventually Kafka has to delete
 old segment files from the disk, and while it's doing that in the
