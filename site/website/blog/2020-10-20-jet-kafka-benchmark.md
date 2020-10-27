@@ -1,5 +1,5 @@
 ---
-title: Latency in Distributed Live Stream Processing: How Low Can We Go?
+title: Distributed Publish-Receive-Classify-Aggregate: Latency Below 80 ms
 description: Measuring the latency of a 7-node setup with 3 network hops
 author: Marko Topolnik
 authorURL: https://twitter.com/mtopolnik
@@ -30,14 +30,10 @@ instances have 16 vCPUs.
 
 Our event stream simulator uses 12 threads to send 6,000,000 stock trade
 events per second to a Kafka topic with 24 partitions and a replication
-factor of 3\. The events are about 50,000 different "stock tickers",
+factor of 3\. The events refer to 50,000 different "stock tickers",
 which are the keys we use for processing. The message describing an
-event that we send to Kafka is very small, including just the timestamp,
-5-char ticker, price and quantity. It comes to about 30 bytes.
-
-We leave Kafka's fsync settings at the default, which means there's no
-guarantee the data will be fsync'ed to the SSD before getting the
-message acknowledgment.
+event that we send to Kafka is very small: just the timestamp, 5-char
+ticker, price and quantity. It comes to about 30 bytes.
 
 Our stream processing pipeline measures the mean number of trades per
 second for each stock over the last 20 seconds, updated every 20
@@ -45,6 +41,12 @@ milliseconds. This requires us to maintain a 20-second sliding window of
 event counts, sliced into a thousand 20-millisecond buckets, for each of
 the 50,000 stocks. We must come up with the sum of all the buckets in
 each of the 50,000 sliding windows every 20 millseconds.
+
+We used commit
+[#ecb416](https://github.com/hazelcast/big-data-benchmark/commit/ecb4166cb69ba0831f2eed1451e67bae655fcf90)
+from Hazelcast's Big Data Benchmark repository, which also contains
+[detailed instructions](https://github.com/hazelcast/big-data-benchmark/blob/master/trade-monitor/README.md) on how to reproduce the results in this
+post.
 
 The earliest time we can emit our result is after seeing at least one
 event &mdash; from each Kafka partition &mdash; that is beyond the
@@ -72,7 +74,6 @@ histogram of the whole run.
 
 ## Baseline Run
 
-
 In order to establish a baseline reading, we used the stock Java ready
 for use on AWS: Amazon's Corretto build of OpenJDK 11, without any JVM
 parameters. This setup resulted in a **99.99% latency of 120 ms**. This
@@ -80,7 +81,6 @@ already looks pretty good for a data path that involves three network
 hops (albeit in the same availability zone).
 
 ## Basic GC Tuning
-
 
 As the most basic tuning step, we added `-XX:MaxGCPauseMillis=10` to all
 the JVMs involved. This parameter tells the G1 collector how to
@@ -94,37 +94,44 @@ With this one change our **99.99% latency dropped to 72 milliseconds**.
 
 ## Upgrading to JDK 15 and ZGC
 
+In our earlier benchmarks, JVM and Jet optimizations beyond this point
+squeeze out a few more milliseconds of latency, so our expectation was
+that they won't show up as relevant in this setup, which is probably
+dominated by occasional spikes in the latency of the network links.
 
-The above result looks so good that our impression was the GC was
-probably not a big influence anymore, network latency and any internal
-Kafka latency are probably dominating it. To make sure, we made a third
-run with JDK 15 and ZGC used for the event simulator and Kafka. ZGC's
-weak point is that it's non-generational, and since Jet has significant
-medium-lived state, we kept G1 there. We did adjust Jet's cooperative
-thread pool size, in order to leave two CPU cores free for G1's
-background work. **None of these changes made an impact on latency**.
+To make sure, we made a third run with JDK 15 and ZGC used for the event
+simulator and Kafka. ZGC's weak point is that it's non-generational, and
+since Jet has significant medium-lived state, we kept G1 there. We did
+adjust Jet's cooperative thread pool size, in order to leave two CPU
+cores free for G1's background work. **None of these changes made an
+impact on latency**.
 
 ## Latency Chart
 
+Here is the latency chart for the three setups we described above:
+
 ![Effects of GC Tuning](assets/2020-10-20_histo-gc-tuning.png)
+
+It shows the significance of that single GC parameter, `MaxGCPauseMillis`,
+as well as the relative insignificance of the other GC/Jet tuning tricks
+we came up with in earlier benchmarks.
 
 ## Eager Fsync in Kafka
 
-While monitoring the benchmark runs, we noticed that there's an uptick
-in latency every time the Kafka log rolls to a new segment file. This
-could be due to background fsyncing of the file before closing it. We
-made a guess that, if we enable eager fsyncing of every individual
-message in Kafka, the latency of a single message should go up but it
-should also be flatter because there won't be any big fsyncs once every
-gigabyte (the default Kafka log segment size). We also anticipated this
-would reduce the throughput of the setup.
+By default, Kafka does not guarantee it stored your message on the disk
+before it returned the acknowledgement to you. Doing this implies the
+expensive `fsync` operation on the log file and usually reduces the
+throughput. Kafka's main recommendation is to rely on the replication
+across the cluster for resilience to failure, and the SSD only for
+long-term storage of large amounts of data.
 
-Our measurement indeed confirmed a drop in throughput, but much less
-than we expected: to get good results, we had to dial down the event
-rate by just 1M, from 6M to 5M per second. Latency indeed turned out to
-be flatter, but once again we were surprised by how little it increased
-overall: the 99.99th percentile got even lower than before, to just **60
-milliseconds**!
+Nevertheless, out of curiousity we enabled the eager `fsync` of each
+message before acknowledging it, using the
+`log.flush.interval.messages=1` configuration setting. The result was
+pretty surprising &mdash; Kafka was still able to handle 6 million
+messages per second with more latency in the lower percentiles, but
+degrading less at the outlier end, resulting in almost the same 99.99%
+latency (within the margin of error):
 
 ![Effects Eager Fsync](assets/2020-10-20_histo-kafka-fsync.png)
 
@@ -139,7 +146,14 @@ Another thing to have in mind is that we used the `i3` instance type on
 EC2, whose SSD hardware is specifically optimized for this kind of
 workload.
 
-## RedPanda
+## Noisy AWS Environment
+
+We regularly noticed significant differences when repeating the same
+benchmark at different times on AWS. We used the `us-east` availability
+zone starting at 3 AM EST, and as the morning hours were coming, we
+observed more and more latency spikes. We report only the best results,
+taken during the `us-east` night. This is a crucial consideration to
+take into account when trying to reproduce our results.
 
 _If you enjoyed reading this post, check out Jet at
 [GitHub](https://github.com/hazelcast/hazelcast-jet) and give us a
