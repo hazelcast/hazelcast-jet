@@ -29,6 +29,7 @@ import javax.annotation.Nonnull;
 import java.util.List;
 
 import static com.hazelcast.jet.core.Edge.between;
+import static com.hazelcast.jet.core.Vertex.LOCAL_PARALLELISM_USE_DEFAULT;
 import static com.hazelcast.jet.core.processor.Processors.accumulateP;
 import static com.hazelcast.jet.core.processor.Processors.aggregateP;
 import static com.hazelcast.jet.core.processor.Processors.combineP;
@@ -100,7 +101,7 @@ public class AggregateTransform<A, R> extends AbstractTransform {
     //                   ----------------
     private void addToDagTwoStage(Planner p, Context context) {
         String vertexName = name();
-        determineLocalParallelism(-1, context, false);
+        determineLocalParallelism(LOCAL_PARALLELISM_USE_DEFAULT, context, false);
         Vertex v1 = p.dag.newVertex(vertexName + FIRST_STAGE_VERTEX_NAME_SUFFIX, accumulateP(aggrOp))
                          .localParallelism(determinedLocalParallelism());
         determinedLocalParallelism(1);

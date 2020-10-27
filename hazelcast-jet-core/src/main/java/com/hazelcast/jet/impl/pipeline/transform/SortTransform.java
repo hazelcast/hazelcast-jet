@@ -29,6 +29,7 @@ import javax.annotation.Nullable;
 
 import static com.hazelcast.function.FunctionEx.identity;
 import static com.hazelcast.jet.core.Edge.between;
+import static com.hazelcast.jet.core.Vertex.LOCAL_PARALLELISM_USE_DEFAULT;
 import static com.hazelcast.jet.core.processor.Processors.mapP;
 import static com.hazelcast.jet.core.processor.Processors.sortP;
 
@@ -52,7 +53,7 @@ public class SortTransform<T> extends AbstractTransform {
     @Override
     public void addToDag(Planner p, Context context) {
         String vertexName = name();
-        determineLocalParallelism(-1, context, true);
+        determineLocalParallelism(LOCAL_PARALLELISM_USE_DEFAULT, context, true);
         Vertex v1 = p.dag.newVertex(vertexName, sortP(comparator))
                          .localParallelism(determinedLocalParallelism());
         determinedLocalParallelism(1);

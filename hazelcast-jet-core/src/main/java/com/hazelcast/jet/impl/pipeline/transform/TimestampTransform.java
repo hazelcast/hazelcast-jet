@@ -25,6 +25,7 @@ import com.hazelcast.jet.impl.pipeline.PipelineImpl.Context;
 import javax.annotation.Nonnull;
 
 import static com.hazelcast.internal.util.Preconditions.checkNotNull;
+import static com.hazelcast.jet.core.Vertex.LOCAL_PARALLELISM_USE_DEFAULT;
 import static com.hazelcast.jet.core.processor.Processors.insertWatermarksP;
 
 public class TimestampTransform<T> extends AbstractTransform {
@@ -49,7 +50,7 @@ public class TimestampTransform<T> extends AbstractTransform {
 
     @Override
     public void addToDag(Planner p, Context context) {
-        determineLocalParallelism(-1, context, true);
+        determineLocalParallelism(LOCAL_PARALLELISM_USE_DEFAULT, context, true);
         PlannerVertex pv = p.addVertex(
                 this, name(), determinedLocalParallelism(), insertWatermarksP(eventTimePolicy)
         );

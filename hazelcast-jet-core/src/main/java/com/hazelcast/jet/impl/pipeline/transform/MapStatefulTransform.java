@@ -28,6 +28,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.function.Supplier;
 
+import static com.hazelcast.jet.core.Vertex.LOCAL_PARALLELISM_USE_DEFAULT;
 import static com.hazelcast.jet.core.processor.Processors.mapStatefulP;
 
 public class MapStatefulTransform<T, K, S, R> extends StatefulKeyedTransformBase<T, K, S> {
@@ -51,7 +52,7 @@ public class MapStatefulTransform<T, K, S, R> extends StatefulKeyedTransformBase
 
     @Override
     public void addToDag(Planner p, Context context) {
-        determineLocalParallelism(-1, context, false);
+        determineLocalParallelism(LOCAL_PARALLELISM_USE_DEFAULT, context, false);
         PlannerVertex pv = p.addVertex(this, name(), determinedLocalParallelism(),
                 mapStatefulP(ttl, keyFn, timestampFn, createFn, statefulMapFn, onEvictFn));
         p.addEdges(this, pv.v, edge -> edge.partitioned(keyFn).distributed());

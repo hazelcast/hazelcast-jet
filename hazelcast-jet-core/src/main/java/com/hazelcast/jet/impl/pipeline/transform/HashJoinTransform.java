@@ -35,6 +35,7 @@ import javax.annotation.Nullable;
 import java.util.List;
 
 import static com.hazelcast.jet.core.Edge.from;
+import static com.hazelcast.jet.core.Vertex.LOCAL_PARALLELISM_USE_DEFAULT;
 import static com.hazelcast.jet.impl.pipeline.Planner.applyRebalancing;
 import static com.hazelcast.jet.impl.pipeline.Planner.tailList;
 import static com.hazelcast.jet.impl.util.Util.toList;
@@ -119,7 +120,7 @@ public class HashJoinTransform<T0, R> extends AbstractTransform {
     @Override
     @SuppressWarnings("unchecked")
     public void addToDag(Planner p, Context context) {
-        determineLocalParallelism(-1, context, true);
+        determineLocalParallelism(LOCAL_PARALLELISM_USE_DEFAULT, context, true);
         PlannerVertex primary = p.xform2vertex.get(this.upstream().get(0));
         List keyFns = toList(this.clauses, JoinClause::leftKeyFn);
 

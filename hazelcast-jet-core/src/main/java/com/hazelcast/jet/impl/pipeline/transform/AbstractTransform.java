@@ -17,7 +17,6 @@
 package com.hazelcast.jet.impl.pipeline.transform;
 
 import com.hazelcast.function.FunctionEx;
-import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.impl.pipeline.PipelineImpl.Context;
 
 import javax.annotation.Nonnull;
@@ -25,6 +24,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
+import static com.hazelcast.jet.core.Vertex.LOCAL_PARALLELISM_USE_DEFAULT;
 import static com.hazelcast.jet.core.Vertex.checkLocalParallelism;
 import static java.lang.Math.min;
 import static java.util.Collections.singletonList;
@@ -37,9 +37,9 @@ public abstract class AbstractTransform implements Transform {
     @Nonnull
     private final List<Transform> upstream;
 
-    private int localParallelism = Vertex.LOCAL_PARALLELISM_USE_DEFAULT;
+    private int localParallelism = LOCAL_PARALLELISM_USE_DEFAULT;
 
-    private int determinedLocalParallelism = Vertex.LOCAL_PARALLELISM_USE_DEFAULT;
+    private int determinedLocalParallelism = LOCAL_PARALLELISM_USE_DEFAULT;
 
     private final boolean[] upstreamRebalancingFlags;
 
@@ -192,17 +192,17 @@ public abstract class AbstractTransform implements Transform {
             upstreamParallelism = upstream.get(0).determinedLocalParallelism();
         }
 
-        if (shouldMatchUpstreamParallelism && upstreamParallelism != Vertex.LOCAL_PARALLELISM_USE_DEFAULT
+        if (shouldMatchUpstreamParallelism && upstreamParallelism != LOCAL_PARALLELISM_USE_DEFAULT
                 && shouldPreserveEventOrder()) {
             determinedLocalParallelism(upstreamParallelism);
             return;
         }
 
-        if (localParallelism() == Vertex.LOCAL_PARALLELISM_USE_DEFAULT) {
-            if (preferredLocalParallelism == Vertex.LOCAL_PARALLELISM_USE_DEFAULT) {
+        if (localParallelism() == LOCAL_PARALLELISM_USE_DEFAULT) {
+            if (preferredLocalParallelism == LOCAL_PARALLELISM_USE_DEFAULT) {
                 determinedLocalParallelism(defaultParallelism);
             } else {
-                if (defaultParallelism == Vertex.LOCAL_PARALLELISM_USE_DEFAULT) {
+                if (defaultParallelism == LOCAL_PARALLELISM_USE_DEFAULT) {
                     determinedLocalParallelism(preferredLocalParallelism);
                 } else {
                     determinedLocalParallelism(min(preferredLocalParallelism, defaultParallelism));

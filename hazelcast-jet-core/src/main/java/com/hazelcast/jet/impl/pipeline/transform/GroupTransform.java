@@ -30,6 +30,7 @@ import java.util.List;
 import static com.hazelcast.function.Functions.entryKey;
 import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.Partitioner.HASH_CODE;
+import static com.hazelcast.jet.core.Vertex.LOCAL_PARALLELISM_USE_DEFAULT;
 import static com.hazelcast.jet.core.processor.Processors.accumulateByKeyP;
 import static com.hazelcast.jet.core.processor.Processors.aggregateByKeyP;
 import static com.hazelcast.jet.core.processor.Processors.combineByKeyP;
@@ -64,7 +65,7 @@ public class GroupTransform<K, A, R, OUT> extends AbstractTransform {
 
     @Override
     public void addToDag(Planner p, Context context) {
-        determineLocalParallelism(-1, context, false);
+        determineLocalParallelism(LOCAL_PARALLELISM_USE_DEFAULT, context, false);
         if (shouldRebalanceAnyInput() || aggrOp.combineFn() == null) {
             addToDagSingleStage(p);
         } else {

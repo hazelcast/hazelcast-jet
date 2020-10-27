@@ -39,6 +39,7 @@ import static com.hazelcast.function.Functions.entryKey;
 import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.Partitioner.HASH_CODE;
 import static com.hazelcast.jet.core.SlidingWindowPolicy.slidingWinPolicy;
+import static com.hazelcast.jet.core.Vertex.LOCAL_PARALLELISM_USE_DEFAULT;
 import static com.hazelcast.jet.core.processor.Processors.accumulateByFrameP;
 import static com.hazelcast.jet.core.processor.Processors.aggregateToSessionWindowP;
 import static com.hazelcast.jet.core.processor.Processors.aggregateToSlidingWindowP;
@@ -85,7 +86,7 @@ public class WindowGroupTransform<K, R> extends AbstractTransform {
 
     @Override
     public void addToDag(Planner p, Context context) {
-        // TODO: Need to be considered more carefully
+        determineLocalParallelism(LOCAL_PARALLELISM_USE_DEFAULT, context, false);
         if (wDef instanceof SessionWindowDefinition) {
             addSessionWindow(p, (SessionWindowDefinition) wDef);
         } else if (aggrOp.combineFn() == null || wDef.earlyResultsPeriod() > 0 || shouldRebalanceAnyInput()) {
@@ -108,7 +109,8 @@ public class WindowGroupTransform<K, R> extends AbstractTransform {
     //            | aggregateToSlidingWindowP |
     //             ---------------------------
     private void addSlidingWindowSingleStage(Planner p, SlidingWindowDefinition wDef) {
-        PlannerVertex pv = p.addVertex(this, name(), localParallelism(),
+
+        PlannerVertex pv = p.addVertex(this, name(), determinedLocalParallelism(),
                 aggregateToSlidingWindowP(
                         keyFns,
                         nCopies(keyFns.size(), (ToLongFunctionEx<JetEvent<?>>) JetEvent::timestamp),
@@ -146,8 +148,8 @@ public class WindowGroupTransform<K, R> extends AbstractTransform {
                 TimestampKind.EVENT,
                 winPolicy,
                 aggrOp));
-        v1.localParallelism(localParallelism());
-        PlannerVertex pv2 = p.addVertex(this, name(), localParallelism(),
+        v1.localParallelism(determinedLocalParallelism());
+        PlannerVertex pv2 = p.addVertex(this, name(), determinedLocalParallelism(),
                 combineToSlidingWindowP(winPolicy, aggrOp, jetEventOfKeyedWindowResultFn()));
         p.addEdges(this, v1, (e, ord) -> e.partitioned(keyFns.get(ord), HASH_CODE));
         p.dag.edge(between(v1, pv2.v).distributed().partitioned(entryKey()));
@@ -166,7 +168,7 @@ public class WindowGroupTransform<K, R> extends AbstractTransform {
     //            | aggregateToSessionWindowP |
     //             ---------------------------
     private void addSessionWindow(Planner p, SessionWindowDefinition wDef) {
-        PlannerVertex pv = p.addVertex(this, name(), localParallelism(),
+        PlannerVertex pv = p.addVertex(this, name(), determinedLocalParallelism(),
                 aggregateToSessionWindowP(
                         wDef.sessionTimeout(),
                         wDef.earlyResultsPeriod(),
