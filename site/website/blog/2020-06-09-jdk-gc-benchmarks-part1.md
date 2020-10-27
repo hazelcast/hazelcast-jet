@@ -82,10 +82,9 @@ And here are our overall conclusions:
    exhibited brittleness, with the low-latency regime suddenly giving
    way to very long pauses and even OOMEs.
 
-This post is Part 1 of a two-part series and presents our findings for
-the two streaming scenarios. In [Part
-2](/blog/2020/06/09/jdk-gc-benchmarks-part2) we'll present the results
-for batch processing.
+This post presents our findings for the two streaming scenarios. In
+[Part 2](/blog/2020/06/09/jdk-gc-benchmarks-part2) we'll present the
+results for batch processing.
 
 ## Streaming Pipeline Benchmark
 
