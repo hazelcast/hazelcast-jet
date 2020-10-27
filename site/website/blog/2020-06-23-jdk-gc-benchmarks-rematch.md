@@ -13,6 +13,7 @@ This post is a part of a series:
 - [Part 2 (batch workload benchmark)](/blog/2020/06/09/jdk-gc-benchmarks-part2)
 - Part 3 (you are here)
 - [Part 4 (concurrent GC with green threads)](/blog/2020/08/05/gc-tuning-for-jet)
+- [Part 5 (cluster setup with Kafka)](/blog/2020/10/29/jet-kafka-benchmark)
 
 This is a followup on Part 1 of the blog post series we started earlier
 this month, analyzing the performance of modern JVMs on workloads that

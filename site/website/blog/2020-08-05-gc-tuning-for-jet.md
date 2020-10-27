@@ -13,6 +13,7 @@ This post is a part of a series:
 - [Part 2 (batch workload benchmark)](/blog/2020/06/09/jdk-gc-benchmarks-part2)
 - [Part 3 (low-latency benchmark)](/blog/2020/06/23/jdk-gc-benchmarks-rematch)
 - Part 4 (you are here)
+- [Part 5 (cluster setup with Kafka)](/blog/2020/10/29/jet-kafka-benchmark)
 
 In Part 3 we showed that a modern JVM running live stream aggregation
 can achieve a 99.99% latency lower than 10 milliseconds. The focus of
