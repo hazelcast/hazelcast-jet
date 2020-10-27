@@ -42,7 +42,14 @@ event counts, sliced into a thousand 20-millisecond buckets, for each of
 the 50,000 stocks. We must come up with the sum of all the buckets in
 each of the 50,000 sliding windows every 20 millseconds.
 
-We used commit
+In summary, these are our parameters:
+
+- 6,000,000 events per second
+- 50,000 distinct keys
+- 20-second sliding window
+- 20-millisecond update interval
+
+We used the commit
 [#ecb416](https://github.com/hazelcast/big-data-benchmark/commit/ecb4166cb69ba0831f2eed1451e67bae655fcf90)
 from Hazelcast's Big Data Benchmark repository, which also contains
 [detailed instructions](https://github.com/hazelcast/big-data-benchmark/blob/master/trade-monitor/README.md) on how to reproduce the results in this
@@ -76,9 +83,7 @@ histogram of the whole run.
 
 In order to establish a baseline reading, we used the stock Java ready
 for use on AWS: Amazon's Corretto build of OpenJDK 11, without any JVM
-parameters. This setup resulted in a **99.99% latency of 120 ms**. This
-already looks pretty good for a data path that involves three network
-hops (albeit in the same availability zone).
+parameters. This setup resulted in a **99.99% latency of 120 ms**.
 
 ## Basic GC Tuning
 
@@ -91,13 +96,15 @@ default to `-XX:MaxGCPauseMillis=20`, but the JVM default that was in
 effect for the event simulator and Jet, is 200 ms.
 
 With this one change our **99.99% latency dropped to 72 milliseconds**.
+This looks very good for a setup that involves three network hops
+(albeit in the same AWS availability zone).
 
 ## Upgrading to JDK 15 and ZGC
 
 In our earlier benchmarks, JVM and Jet optimizations beyond this point
-squeeze out a few more milliseconds of latency, so our expectation was
-that they won't show up as relevant in this setup, which is probably
-dominated by occasional spikes in the latency of the network links.
+squeeze out a few more milliseconds of latency, but compared to the
+latency introduced by three network hops, our expectation was that they
+wouldn't show up as relevant in this setup.
 
 To make sure, we made a third run with JDK 15 and ZGC used for the event
 simulator and Kafka. ZGC's weak point is that it's non-generational, and
