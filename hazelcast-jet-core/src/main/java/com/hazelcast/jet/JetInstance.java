@@ -38,6 +38,7 @@ import com.hazelcast.map.IMap;
 import com.hazelcast.map.impl.MapService;
 import com.hazelcast.replicatedmap.ReplicatedMap;
 import com.hazelcast.ringbuffer.Ringbuffer;
+import com.hazelcast.spi.annotation.Beta;
 import com.hazelcast.topic.ITopic;
 
 import javax.annotation.Nonnull;
@@ -253,6 +254,21 @@ public interface JetInstance {
                         (SnapshotValidationRecord) entry.getValue()))
                 .collect(toList());
     }
+
+    /**
+     * Returns a service to execute distributed SQL queries.
+     * <p>
+     * The service is in beta state. Behavior and API might be changed in future releases. Binary compatibility is not
+     * guaranteed between minor and patch releases.
+     *
+     * @return SQL service
+     *
+     * @see JetSqlService
+     * @since 4.4
+     */
+    @Beta
+    @Nonnull
+    JetSqlService getSql();
 
     /**
      * Returns the distributed map instance with the specified name.
