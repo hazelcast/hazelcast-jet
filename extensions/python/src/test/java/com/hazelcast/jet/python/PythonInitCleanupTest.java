@@ -299,7 +299,9 @@ public class PythonInitCleanupTest extends SimpleTestInClusterSupport {
 
         Pipeline p = Pipeline.create();
         p.readFrom(TestSources.items("1"))
-         .<String>map(t -> { throw new Exception("expected failure"); })
+         .<String>map(t -> {
+             throw new Exception("expected failure");
+         })
          .apply(mapUsingPythonBatch(cfg)).setLocalParallelism(2)
          .writeTo(Sinks.logger());
 

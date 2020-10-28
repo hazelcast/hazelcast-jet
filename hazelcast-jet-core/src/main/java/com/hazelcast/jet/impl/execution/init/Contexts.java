@@ -32,6 +32,7 @@ import com.hazelcast.jet.impl.deployment.IMapInputStream;
 import com.hazelcast.jet.impl.util.ExceptionUtil;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.map.IMap;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -40,9 +41,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
-import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Stream;
 
 import static com.hazelcast.jet.Util.idToString;
 import static com.hazelcast.jet.config.ResourceType.DIRECTORY;
@@ -243,6 +242,8 @@ public final class Contexts {
             }
         }
 
+        @SuppressFBWarnings(value = "NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE",
+            justification = "SpotBugs bug, ignores requireNonNull() https://github.com/spotbugs/spotbugs/issues/651")
         private void recreateIfExists(@Nonnull String id) {
             File dirFile = tempDirectories.get(id);
             if (dirFile == null) {
@@ -254,8 +255,9 @@ public final class Contexts {
                 if (!filesNotMarked.isEmpty()) {
                     logger().info("Couldn't 'chmod u+w' these files: " + filesNotMarked);
                 }
-                Stream.of(Objects.requireNonNull(dirFile.listFiles()))
-                      .forEach(IOUtil::delete);
+                for (File file : requireNonNull(dirFile.listFiles())) {
+                    IOUtil.delete(file);
+                }
                 extractFileToDisk(id, dirFile);
             } catch (IOException e) {
                 throw ExceptionUtil.rethrow(e);
