@@ -220,9 +220,8 @@ public class PipelineImpl implements Pipeline {
                 transform.setPreserveEventOrder(false);
             } else {
                 // propagate the transform ordering preserving property to upstream transforms
-                boolean curr = transform.shouldPreserveEventOrder();
-                for (Transform upstream : transform.upstream()) {
-                    if (curr) {
+                if (transform.shouldPreserveEventOrder()) {
+                    for (Transform upstream : transform.upstream()) {
                         upstream.setPreserveEventOrder(true);
                     }
                 }
