@@ -47,7 +47,9 @@ import com.hazelcast.sql.impl.schema.Table;
 import org.apache.calcite.rel.RelNode;
 
 import javax.annotation.Nullable;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Consumer;
 
 import static com.hazelcast.function.Functions.entryKey;
@@ -64,7 +66,7 @@ public class CreateDagVisitor {
     private final DAG dag = new DAG();
     private final Address localMemberAddress;
 
-    private int vertexCounter;
+    private final Map<String, Integer> vertexNameIndexes = new HashMap<>();
 
     public CreateDagVisitor(Address localMemberAddress) {
         this.localMemberAddress = localMemberAddress;
@@ -212,7 +214,11 @@ public class CreateDagVisitor {
      * Creates a unique {@code Vertex} name with a given prefix.
      */
     private String name(String prefix) {
-        return prefix + '(' + ++vertexCounter + ')';
+        int index = vertexNameIndexes.merge(prefix, 1, Integer::sum);
+        if (index > 1) {
+            return prefix + '-' + index;
+        }
+        return prefix;
     }
 
     /**
