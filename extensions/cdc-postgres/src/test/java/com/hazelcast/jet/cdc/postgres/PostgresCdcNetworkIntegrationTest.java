@@ -33,8 +33,8 @@ import com.hazelcast.jet.retry.RetryStrategy;
 import com.hazelcast.jet.test.SerialTest;
 import com.hazelcast.test.HazelcastSerialParametersRunnerFactory;
 import com.hazelcast.test.annotation.NightlyTest;
+import org.junit.After;
 import org.junit.Assume;
-import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.contrib.java.lang.system.EnvironmentVariables;
@@ -91,6 +91,8 @@ public class PostgresCdcNetworkIntegrationTest extends AbstractCdcIntegrationTes
     @Parameter(value = 2)
     public String testName;
 
+    private PostgreSQLContainer<?> postgres;
+
     @Parameters(name = "{2}")
     public static Collection<Object[]> data() {
         return Arrays.asList(new Object[][] {
@@ -100,21 +102,19 @@ public class PostgresCdcNetworkIntegrationTest extends AbstractCdcIntegrationTes
         });
     }
 
-    @Before
-    public void before() {
-        //disable Testcontainer's automatic resource manager
-        //containers are cleaned up explicitly
-        //automatic resource manager is just an extra thing that can break
-        //(have had problems with it not being cleaned up properly itself)
-        environmentVariables.set("TESTCONTAINERS_RYUK_DISABLED", "true");
-        assertEquals("true", System.getenv("TESTCONTAINERS_RYUK_DISABLED"));
+    @After
+    public void after() {
+        if (postgres != null) {
+            stopContainer(postgres);
+        }
     }
 
     @Test
     public void when_noDatabaseToConnectTo() throws Exception {
-        PostgreSQLContainer<?> postgres = initPostgres(null, 0);
+        postgres = initPostgres(null, 0);
         String containerIpAddress = postgres.getContainerIpAddress();
         stopContainer(postgres);
+        postgres = null;
 
         int port = findRandomOpenPortInRange(POSTGRESQL_PORT + 100, POSTGRESQL_PORT + 1000);
         Pipeline pipeline = initPipeline(containerIpAddress, port);
@@ -143,7 +143,6 @@ public class PostgresCdcNetworkIntegrationTest extends AbstractCdcIntegrationTes
                 assertEquals(RUNNING, job.getStatus());
             } finally {
                 abortJob(job);
-                stopContainer(postgres);
             }
         }
     }
@@ -154,47 +153,9 @@ public class PostgresCdcNetworkIntegrationTest extends AbstractCdcIntegrationTes
                 Network network = initNetwork();
                 ToxiproxyContainer toxiproxy = initToxiproxy(network);
         ) {
-            PostgreSQLContainer<?> postgres = initPostgres(network, null);
-            try {
-                ToxiproxyContainer.ContainerProxy proxy = initProxy(toxiproxy, postgres);
-                Pipeline pipeline = initPipeline(proxy.getContainerIpAddress(), proxy.getProxyPort());
-                // when job starts
-                JetInstance jet = createJetMembers(2)[0];
-                Job job = jet.newJob(pipeline);
-                assertJobStatusEventually(job, RUNNING);
-
-                // and snapshotting is ongoing (we have no exact way of identifying
-                // the moment, but random sleep will catch it at least some of the time)
-                MILLISECONDS.sleep(ThreadLocalRandom.current().nextInt(0, 500));
-
-                // and connection is cut
-                proxy.setConnectionCut(true);
-
-                // and some time passes
-                MILLISECONDS.sleep(2 * RECONNECT_INTERVAL_MS);
-                //it takes the bloody thing ages to notice the connection being down, so it won't notice this...
-
-                // and connection recovers
-                proxy.setConnectionCut(false);
-
-                // then connector manages to reconnect and finish snapshot
-                try {
-                    assertEqualsEventually(() -> jet.getMap("results").size(), 4);
-                } finally {
-                    abortJob(job);
-                }
-            } finally {
-                stopContainer(postgres);
-            }
-        }
-    }
-
-    @Test
-    public void when_databaseShutdownOrLongDisconnectDuringSnapshotting() throws Exception {
-        int port = findRandomOpenPort();
-        PostgreSQLContainer<?> postgres = initPostgres(null, port);
-        Pipeline pipeline = initPipeline(postgres.getContainerIpAddress(), port);
-        try {
+            postgres = initPostgres(network, null);
+            ToxiproxyContainer.ContainerProxy proxy = initProxy(toxiproxy, postgres);
+            Pipeline pipeline = initPipeline(proxy.getContainerIpAddress(), proxy.getProxyPort());
             // when job starts
             JetInstance jet = createJetMembers(2)[0];
             Job job = jet.newJob(pipeline);
@@ -202,34 +163,62 @@ public class PostgresCdcNetworkIntegrationTest extends AbstractCdcIntegrationTes
 
             // and snapshotting is ongoing (we have no exact way of identifying
             // the moment, but random sleep will catch it at least some of the time)
-            MILLISECONDS.sleep(ThreadLocalRandom.current().nextInt(100, 500));
+            MILLISECONDS.sleep(ThreadLocalRandom.current().nextInt(0, 500));
 
-            // and DB is stopped
-            stopContainer(postgres);
-            postgres = null;
+            // and connection is cut
+            proxy.setConnectionCut(true);
 
-            // then
-            boolean neverReconnect = reconnectBehavior.getMaxAttempts() == 0;
-            if (neverReconnect) {
-                // then job fails
-                assertThatThrownBy(job::join)
-                        .hasRootCauseInstanceOf(JetException.class)
-                        .hasStackTraceContaining("Failed to connect to database");
-            } else {
-                // and DB is started anew
-                postgres = initPostgres(null, port);
+            // and some time passes
+            MILLISECONDS.sleep(2 * RECONNECT_INTERVAL_MS);
+            //it takes the bloody thing ages to notice the connection being down, so it won't notice this...
 
-                // then snapshotting finishes successfully
-                try {
-                    assertEqualsEventually(() -> jet.getMap("results").size(), 4);
-                    assertEquals(RUNNING, job.getStatus());
-                } finally {
-                    abortJob(job);
-                }
+            // and connection recovers
+            proxy.setConnectionCut(false);
+
+            // then connector manages to reconnect and finish snapshot
+            try {
+                assertEqualsEventually(() -> jet.getMap("results").size(), 4);
+            } finally {
+                abortJob(job);
             }
-        } finally {
-            if (postgres != null) {
-                stopContainer(postgres);
+        }
+    }
+
+    @Test
+    public void when_databaseShutdownOrLongDisconnectDuringSnapshotting() throws Exception {
+        int port = findRandomOpenPort();
+        postgres = initPostgres(null, port);
+        Pipeline pipeline = initPipeline(postgres.getContainerIpAddress(), port);
+        // when job starts
+        JetInstance jet = createJetMembers(2)[0];
+        Job job = jet.newJob(pipeline);
+        assertJobStatusEventually(job, RUNNING);
+
+        // and snapshotting is ongoing (we have no exact way of identifying
+        // the moment, but random sleep will catch it at least some of the time)
+        MILLISECONDS.sleep(ThreadLocalRandom.current().nextInt(100, 500));
+
+        // and DB is stopped
+        stopContainer(postgres);
+        postgres = null;
+
+        // then
+        boolean neverReconnect = reconnectBehavior.getMaxAttempts() == 0;
+        if (neverReconnect) {
+            // then job fails
+            assertThatThrownBy(job::join)
+                    .hasRootCauseInstanceOf(JetException.class)
+                    .hasStackTraceContaining("Failed to connect to database");
+        } else {
+            // and DB is started anew
+            postgres = initPostgres(null, port);
+
+            // then snapshotting finishes successfully
+            try {
+                assertEqualsEventually(() -> jet.getMap("results").size(), 4);
+                assertEquals(RUNNING, job.getStatus());
+            } finally {
+                abortJob(job);
             }
         }
     }
@@ -240,40 +229,36 @@ public class PostgresCdcNetworkIntegrationTest extends AbstractCdcIntegrationTes
                 Network network = initNetwork();
                 ToxiproxyContainer toxiproxy = initToxiproxy(network);
         ) {
-            PostgreSQLContainer<?> postgres = initPostgres(network, null);
+            postgres = initPostgres(network, null);
+            ToxiproxyContainer.ContainerProxy proxy = initProxy(toxiproxy, postgres);
+            Pipeline pipeline = initPipeline(proxy.getContainerIpAddress(), proxy.getProxyPort());
+            // when connector is up and transitions to binlog reading
+            JetInstance jet = createJetMembers(2)[0];
+            Job job = jet.newJob(pipeline);
+            assertEqualsEventually(() -> jet.getMap("results").size(), 4);
+            SECONDS.sleep(3);
+            insertRecords(postgres, 1005);
+            assertEqualsEventually(() -> jet.getMap("results").size(), 5);
+
+            // and the connection is cut
+            proxy.setConnectionCut(true);
+
+            // and some new events get generated in the DB
+            insertRecords(postgres, 1006, 1007);
+
+            // and some time passes
+            MILLISECONDS.sleep(5 * RECONNECT_INTERVAL_MS);
+
+            // and the connection is re-established
+            proxy.setConnectionCut(false);
+
+            // then
             try {
-                ToxiproxyContainer.ContainerProxy proxy = initProxy(toxiproxy, postgres);
-                Pipeline pipeline = initPipeline(proxy.getContainerIpAddress(), proxy.getProxyPort());
-                // when connector is up and transitions to binlog reading
-                JetInstance jet = createJetMembers(2)[0];
-                Job job = jet.newJob(pipeline);
-                assertEqualsEventually(() -> jet.getMap("results").size(), 4);
-                SECONDS.sleep(3);
-                insertRecords(postgres, 1005);
-                assertEqualsEventually(() -> jet.getMap("results").size(), 5);
-
-                // and the connection is cut
-                proxy.setConnectionCut(true);
-
-                // and some new events get generated in the DB
-                insertRecords(postgres, 1006, 1007);
-
-                // and some time passes
-                MILLISECONDS.sleep(5 * RECONNECT_INTERVAL_MS);
-
-                // and the connection is re-established
-                proxy.setConnectionCut(false);
-
-                // then
-                try {
-                    // then job keeps running, connector starts freshly, including snapshotting
-                    assertEqualsEventually(() -> jet.getMap("results").size(), 7);
-                    assertEquals(RUNNING, job.getStatus());
-                } finally {
-                    abortJob(job);
-                }
+                // then job keeps running, connector starts freshly, including snapshotting
+                assertEqualsEventually(() -> jet.getMap("results").size(), 7);
+                assertEquals(RUNNING, job.getStatus());
             } finally {
-                stopContainer(postgres);
+                abortJob(job);
             }
         }
     }
@@ -283,51 +268,45 @@ public class PostgresCdcNetworkIntegrationTest extends AbstractCdcIntegrationTes
         Assume.assumeFalse(reconnectBehavior.getMaxAttempts() < 0 && !resetStateOnReconnect);
 
         int port = findRandomOpenPort();
-        PostgreSQLContainer<?> postgres = initPostgres(null, port);
+        postgres = initPostgres(null, port);
         Pipeline pipeline = initPipeline(postgres.getContainerIpAddress(), port);
-        try {
-            // when connector is up and transitions to binlog reading
-            JetInstance jet = createJetMembers(2)[0];
-            Job job = jet.newJob(pipeline);
-            assertEqualsEventually(() -> jet.getMap("results").size(), 4);
-            SECONDS.sleep(3);
+        // when connector is up and transitions to binlog reading
+        JetInstance jet = createJetMembers(2)[0];
+        Job job = jet.newJob(pipeline);
+        assertEqualsEventually(() -> jet.getMap("results").size(), 4);
+        SECONDS.sleep(3);
+        insertRecords(postgres, 1005);
+        assertEqualsEventually(() -> jet.getMap("results").size(), 5);
+
+        // and DB is stopped
+        stopContainer(postgres);
+        postgres = null;
+
+        boolean neverReconnect = reconnectBehavior.getMaxAttempts() == 0;
+        if (neverReconnect) {
+            // then job fails
+            assertThatThrownBy(job::join)
+                    .hasRootCauseInstanceOf(JetException.class)
+                    .hasStackTraceContaining("Failed to connect to database");
+        } else {
+            // and results are cleared
+            jet.getMap("results").clear();
+            assertEqualsEventually(() -> jet.getMap("results").size(), 0);
+
+            // and DB is started anew
+            postgres = initPostgres(null, port);
             insertRecords(postgres, 1005);
-            assertEqualsEventually(() -> jet.getMap("results").size(), 5);
 
-            // and DB is stopped
-            stopContainer(postgres);
-            postgres = null;
+            // and some time passes
+            SECONDS.sleep(3);
+            insertRecords(postgres, 1006, 1007);
 
-            boolean neverReconnect = reconnectBehavior.getMaxAttempts() == 0;
-            if (neverReconnect) {
-                // then job fails
-                assertThatThrownBy(job::join)
-                        .hasRootCauseInstanceOf(JetException.class)
-                        .hasStackTraceContaining("Failed to connect to database");
-            } else {
-                // and results are cleared
-                jet.getMap("results").clear();
-                assertEqualsEventually(() -> jet.getMap("results").size(), 0);
-
-                // and DB is started anew
-                postgres = initPostgres(null, port);
-                insertRecords(postgres, 1005);
-
-                // and some time passes
-                SECONDS.sleep(3);
-                insertRecords(postgres, 1006, 1007);
-
-                try {
-                    // then job keeps running, connector starts freshly, including snapshotting
-                    assertEqualsEventually(() -> jet.getMap("results").size(), 7);
-                    assertEquals(RUNNING, job.getStatus());
-                } finally {
-                    abortJob(job);
-                }
-            }
-        } finally {
-            if (postgres != null) {
-                stopContainer(postgres);
+            try {
+                // then job keeps running, connector starts freshly, including snapshotting
+                assertEqualsEventually(() -> jet.getMap("results").size(), 7);
+                assertEquals(RUNNING, job.getStatus());
+            } finally {
+                abortJob(job);
             }
         }
     }
@@ -364,15 +343,13 @@ public class PostgresCdcNetworkIntegrationTest extends AbstractCdcIntegrationTes
         }
     }
 
-    private static Network initNetwork() {
-        return Network.newNetwork();
-    }
-
-    private static PostgreSQLContainer<?> initPostgres(Network network, Integer fixedExposedPort) {
-        PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("debezium/example-postgres:1.2")
-                .withDatabaseName("postgres")
-                .withUsername("postgres")
-                .withPassword("postgres");
+    private PostgreSQLContainer<?> initPostgres(Network network, Integer fixedExposedPort) {
+        PostgreSQLContainer<?> postgres = namedTestContainer(
+                new PostgreSQLContainer<>("debezium/example-postgres:1.2")
+                        .withDatabaseName("postgres")
+                        .withUsername("postgres")
+                        .withPassword("postgres")
+        );
         if (fixedExposedPort != null) {
             Consumer<CreateContainerCmd> cmd = e -> e.withPortBindings(
                     new PortBinding(Ports.Binding.bindPort(fixedExposedPort), new ExposedPort(POSTGRESQL_PORT)));
@@ -386,10 +363,14 @@ public class PostgresCdcNetworkIntegrationTest extends AbstractCdcIntegrationTes
         return postgres;
     }
 
-    private static ToxiproxyContainer initToxiproxy(Network network) {
-        ToxiproxyContainer toxiproxy = new ToxiproxyContainer().withNetwork(network);
+    private ToxiproxyContainer initToxiproxy(Network network) {
+        ToxiproxyContainer toxiproxy = namedTestContainer(new ToxiproxyContainer().withNetwork(network));
         toxiproxy.start();
         return toxiproxy;
+    }
+
+    private static Network initNetwork() {
+        return Network.newNetwork();
     }
 
     private static ToxiproxyContainer.ContainerProxy initProxy(
@@ -452,7 +433,7 @@ public class PostgresCdcNetworkIntegrationTest extends AbstractCdcIntegrationTes
             }
         }
 
-        throw new IOException("No free port in range [" + fromInclusive + ", " +  toExclusive + ")");
+        throw new IOException("No free port in range [" + fromInclusive + ", " + toExclusive + ")");
     }
 
 }
