@@ -135,16 +135,16 @@ the summary of these changes:
 |Map/Filter/FlatMap|Enforce parallelism equal to the upstream, apply the `isolated` edge.|
 |Custom (Core API) Transform|Enforce parallelism equal to the upstream, apply the `isolated` edge.|
 |Partitioned Custom Transform|No changes, it already uses a partitioned edge.|
-|Aggregation|No changes. Aggregation is order-insensitive, and creates a new order in its output. Marked as `SequencerTransform`.|
+|Aggregation|No changes. Aggregation is order-insensitive, and creates a new order in its output. Marked as `OrderCreator`.|
 |Distinct|No changes. We don't guarantee to emit the very first distinct item.|
-|Sorting|No changes. Sorting is order-insensitive and enforces its own order in the output. Marked as a `SequencerTransform`.|
+|Sorting|No changes. Sorting is order-insensitive and enforces its own order in the output. Marked as a `OrderCreator`.|
 |HashJoinTransform| Edge-0 (carrying the stream to be enriched): Enforce parallelism equal to the upstream, apply the `isolated` edge.|
-|Stateful Mapping|No changes, stateful mapping already preserves the order of the upstream stage. Marked as `OrderSensitiveTransform`|
-|MergeTransform| `TODO` |
-|TimestampTransform|No changes, this transform already uses the `isolated` edge. Marked `OrderSensitiveTransform` to keep doing what it already does.|
+|Stateful Mapping|No changes, stateful mapping already preserves the order of the upstream stage. Marked as `OrderSensitive`|
+|MergeTransform| Enforce parallelism equal to the minimum of its upstreams, apply the updated version of isolated edge.|
+|TimestampTransform|No changes, this transform already uses the `isolated` edge. Marked `OrderSensitive` to keep doing what it already does.|
 |PeekTransform|No changes.|
 |Sources|No changes.|
-|Sinks|No changes.|
+|Sinks| At the first, all sinks are marked as `OrderSensitive` because it is easier to implement, but some sinks may not really be. TODO: we should consider and mark each sink according to their order sensitivities for a better job planning, and provide an interface for the users to mark their sinks during creation.|
 
 ## Smart Job Planning
 
