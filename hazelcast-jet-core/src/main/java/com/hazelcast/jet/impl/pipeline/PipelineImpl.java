@@ -218,14 +218,13 @@ public class PipelineImpl implements Pipeline {
                 }
             } else if (transform.isOrderCreator()) {
                 transform.setPreserveEventOrder(false);
-                for (Transform upstream : transform.upstream()) {
-                    upstream.setPreserveEventOrder(false);
-                }
             } else {
                 // propagate the transform ordering preserving property to upstream transforms
                 boolean curr = transform.shouldPreserveEventOrder();
                 for (Transform upstream : transform.upstream()) {
-                    upstream.setPreserveEventOrder(curr);
+                    if (curr) {
+                        upstream.setPreserveEventOrder(true);
+                    }
                 }
             }
         }
