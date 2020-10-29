@@ -41,6 +41,7 @@ public class SinkTransform<T> extends AbstractTransform {
         super(sink.name(), upstream);
         this.sink = sink;
         this.ordinalsToAdapt = ordinalsToAdapt;
+        setOrderSensitive(true);
     }
 
     public SinkTransform(@Nonnull SinkImpl<T> sink, @Nonnull Transform upstream, boolean adaptToJetEvents) {

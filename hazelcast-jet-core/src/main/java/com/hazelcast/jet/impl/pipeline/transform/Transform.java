@@ -66,9 +66,9 @@ public interface Transform extends Serializable {
 
     void setOrderSensitive(boolean value);
 
-    boolean isSequencer();
+    boolean isOrderCreator();
 
-    void setSequencer(boolean value);
+    void setOrderCreator(boolean value);
 
     FunctionEx<?, ?> partitionKeyFnForInput(int ordinal);
 

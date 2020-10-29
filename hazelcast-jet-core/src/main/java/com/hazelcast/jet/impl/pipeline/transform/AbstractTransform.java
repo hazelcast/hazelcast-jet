@@ -47,7 +47,7 @@ public abstract class AbstractTransform implements Transform {
 
     private boolean orderSensitive;
 
-    private boolean sequencer;
+    private boolean orderCreator;
 
     private final FunctionEx<?, ?>[] upstreamPartitionKeyFns;
 
@@ -58,7 +58,7 @@ public abstract class AbstractTransform implements Transform {
         this.upstreamRebalancingFlags = new boolean[upstream.size()];
         this.preserveEventOrder = false;
         this.orderSensitive = false;
-        this.sequencer = false;
+        this.orderCreator = false;
         this.upstreamPartitionKeyFns = new FunctionEx[upstream.size()];
     }
 
@@ -147,13 +147,13 @@ public abstract class AbstractTransform implements Transform {
     }
 
     @Override
-    public boolean isSequencer() {
-        return sequencer;
+    public boolean isOrderCreator() {
+        return orderCreator;
     }
 
     @Override
-    public void setSequencer(boolean value) {
-        sequencer = value;
+    public void setOrderCreator(boolean value) {
+        orderCreator = value;
     }
 
     @Override

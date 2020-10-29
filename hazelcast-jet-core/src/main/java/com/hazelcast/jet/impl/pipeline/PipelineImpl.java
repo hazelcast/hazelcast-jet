@@ -216,7 +216,7 @@ public class PipelineImpl implements Pipeline {
                 for (Transform upstream : transform.upstream()) {
                     upstream.setPreserveEventOrder(true);
                 }
-            } else if (transform.isSequencer()) {
+            } else if (transform.isOrderCreator()) {
                 transform.setPreserveEventOrder(false);
                 for (Transform upstream : transform.upstream()) {
                     upstream.setPreserveEventOrder(false);

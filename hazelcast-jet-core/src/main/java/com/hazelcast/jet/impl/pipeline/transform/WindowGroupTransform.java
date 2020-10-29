@@ -72,7 +72,7 @@ public class WindowGroupTransform<K, R> extends AbstractTransform {
         this.wDef = wDef;
         this.keyFns = keyFns;
         this.aggrOp = aggrOp;
-        setSequencer(true);
+        setOrderCreator(true);
     }
 
     private static String createName(WindowDefinition wDef) {

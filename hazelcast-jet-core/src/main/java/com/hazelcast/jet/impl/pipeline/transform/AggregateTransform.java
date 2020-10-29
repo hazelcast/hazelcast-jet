@@ -46,7 +46,7 @@ public class AggregateTransform<A, R> extends AbstractTransform {
     ) {
         super(createName(upstream), upstream);
         this.aggrOp = aggrOp;
-        setSequencer(true);
+        setOrderCreator(true);
     }
 
     private static String createName(@Nonnull List<Transform> upstream) {
