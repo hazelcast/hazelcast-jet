@@ -103,6 +103,7 @@ import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.withTryCatch;
 import static com.hazelcast.jet.impl.util.LoggingUtil.logFinest;
+import static com.hazelcast.jet.impl.util.Util.formatJobDuration;
 import static com.hazelcast.jet.impl.util.Util.toList;
 import static java.util.Collections.emptyList;
 import static java.util.concurrent.CompletableFuture.completedFuture;
@@ -690,7 +691,7 @@ public class MasterJobContext {
         StringBuilder sb = new StringBuilder();
         sb.append("Execution of ").append(mc.jobIdString()).append(' ').append(conclusion);
         sb.append("\n\t").append("Start time: ").append(Util.toLocalDateTime(executionStartTime));
-        sb.append("\n\t").append("Duration: ").append(String.format("%,d ms", executionEndTime - executionStartTime));
+        sb.append("\n\t").append("Duration: ").append(formatJobDuration(executionEndTime - executionStartTime));
         if (jobMetrics.stream().noneMatch(rjm -> rjm.getBlob() != null)) {
             sb.append("\n\tTo see additional job metrics enable JobConfig.storeMetricsAfterJobCompletion");
         } else {
