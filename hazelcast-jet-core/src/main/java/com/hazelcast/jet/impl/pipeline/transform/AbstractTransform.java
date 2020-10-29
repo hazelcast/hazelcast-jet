@@ -183,13 +183,13 @@ public abstract class AbstractTransform implements Transform {
 
         int defaultParallelism = context.defaultLocalParallelism();
         int upstreamParallelism = -1;
-        // Here I assume that this upstreamLocalParallelism is already
-        // ineffective in the LP determination of the transforms with
-        // multiple upstream transforms. Or if it is effective, then
-        // the LPs of upstreams should be equal. So, only get the first
-        // upstream LP value as upstreamParallelism.
+        // Get the minimum of upstream LPs as upstreamParallelism
         if (!upstream().isEmpty()) {
-            upstreamParallelism = upstream.get(0).determinedLocalParallelism();
+            upstreamParallelism = upstream()
+                    .stream()
+                    .mapToInt(Transform::determinedLocalParallelism)
+                    .min()
+                    .getAsInt();
         }
 
         if (shouldMatchUpstreamParallelism && upstreamParallelism != LOCAL_PARALLELISM_USE_DEFAULT

@@ -278,6 +278,10 @@ public class Planner {
         if (keyFn != null) {
             edge.partitioned(keyFn);
         } else if (edge.getRoutingPolicy() == RoutingPolicy.ISOLATED) {
+            // TODO: It is for patching purposes. This breaks the
+            //  contract of rebalancing but we will never encounter
+            //  this case after handling rebalancing in the smart
+            //  job planning and then we can remove this block.
             edge.unicast();
         }
     }

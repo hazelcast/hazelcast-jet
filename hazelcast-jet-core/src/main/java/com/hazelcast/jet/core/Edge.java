@@ -348,14 +348,9 @@ public class Edge implements IdentifiedDataSerializable {
     /**
      * Activates the {@link RoutingPolicy#ISOLATED ISOLATED} routing policy
      * which establishes isolated paths from upstream to downstream processors.
-     * Each downstream processor is assigned exactly one upstream processor and
-     * each upstream processor is assigned a disjoint subset of downstream
-     * processors. This allows the selective application of backpressure to
-     * just one source processor that feeds a given downstream processor.
      * <p>
-     * These restrictions imply that the downstream's local parallelism
-     * cannot be less than upstream's. Since all traffic will be local, this
-     * policy is not allowed on a distributed edge.
+     * Since all traffic will be local, this policy is not allowed on a
+     * distributed edge.
      */
     @Nonnull
     public Edge isolated() {
@@ -654,12 +649,16 @@ public class Edge implements IdentifiedDataSerializable {
          */
         UNICAST,
         /**
-         * Like {@link #UNICAST}, but guarantees that any given downstream
-         * processor receives data from exactly one upstream processor. This is
-         * needed in some DAG setups to apply selective backpressure to individual
-         * upstream source processors.
+         * Like {@link #UNICAST}, but unlike unicast, it also offers such guarantees:
+         * <ul>
+         * <li>If LP_upstream <= LP_downstream, it guarantees that any given downstream
+         * processor receives data from exactly one upstream processor
+         * the second item
+         * <li> If LP_upstream >= LP_downstream it guarantees
+         * that any given upstream processor sends data to exactly one downstream
+         * processor.
+         * </ul>
          * <p>
-         * The downstream's local parallelism must not be less than the upstream's.
          * This policy is only available on a local edge.
          */
         ISOLATED,

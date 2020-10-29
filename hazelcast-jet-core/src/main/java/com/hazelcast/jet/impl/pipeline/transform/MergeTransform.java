@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.impl.pipeline.transform;
 
+import com.hazelcast.jet.core.Edge;
 import com.hazelcast.jet.impl.pipeline.Planner;
 import com.hazelcast.jet.impl.pipeline.Planner.PlannerVertex;
 import com.hazelcast.jet.impl.pipeline.PipelineImpl.Context;
@@ -23,6 +24,7 @@ import com.hazelcast.jet.impl.pipeline.PipelineImpl.Context;
 import javax.annotation.Nonnull;
 
 import static com.hazelcast.function.FunctionEx.identity;
+import static com.hazelcast.jet.core.Vertex.LOCAL_PARALLELISM_USE_DEFAULT;
 import static com.hazelcast.jet.core.processor.Processors.mapP;
 import static java.util.Arrays.asList;
 
@@ -34,9 +36,12 @@ public class MergeTransform<T> extends AbstractTransform {
 
     @Override
     public void addToDag(Planner p, Context context) {
-        // TODO: Need to be considered more carefully
-        determineLocalParallelism(-1, context, false);
+        determineLocalParallelism(LOCAL_PARALLELISM_USE_DEFAULT, context, true);
         PlannerVertex pv = p.addVertex(this, name(), determinedLocalParallelism(), mapP(identity()));
-        p.addEdges(this, pv.v);
+        if (shouldPreserveEventOrder()) {
+            p.addEdges(this, pv.v, Edge::isolated);
+        } else {
+            p.addEdges(this, pv.v);
+        }
     }
 }
