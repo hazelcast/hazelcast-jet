@@ -253,6 +253,22 @@ Maven snippet:
 </dependencies>
 ```
 
+## PR trigger phrases
+
+If the PR is created then PR builder executes default profile of Jet test suite 
+with the PR branch. It's executed on Linux machine with Oracle JDK 8.
+
+In some cases it can be useful to run also other tests or run tests on 
+different environment. In this case following trigger phrases can be used. 
+To run them just send a comment with trigger phrases to PR conversation.
+
+* `verify` - it executes common PR builder again
+* `run-nightly-tests` - executes profile with nightly tests in all modules
+* `run-cdc-debezium-tests` - executes all tests in `extensions/cdc-debezium` module
+* `run-cdc-mysql-tests` - executes all tests in `extensions/cdc-mysql` module
+* `run-cdc-postgres-tests` - executes sall tests in `extensions/cdc-postgres` module
+* `run-windows` - executes all tests on Windows machine (HighFive is not supported here)
+
 ## License
 
 Source code in this repository is covered by one of two licenses:
