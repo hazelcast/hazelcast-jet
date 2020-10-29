@@ -933,6 +933,12 @@ public final class Sinks {
      * FileSinkBuilder#exactlyOnce(boolean) exactlyOnce(false)} on the returned
      * builder. This will give you <i>at-least-once</i> guarantee for the
      * source and unchanged guarantee for other processors.
+     * <p>
+     * For fault-tolerance to work, the target file system must be a network
+     * file system. If you lose a member with its files, you'll obviously lose
+     * data. Even if that member rejoins later with the lost files, the job
+     * might have processed more data on the remaining members and will not
+     * commit the temporary files on the failed member.
      *
      * <h3>File name structure</h3>
      * <pre>{@code
