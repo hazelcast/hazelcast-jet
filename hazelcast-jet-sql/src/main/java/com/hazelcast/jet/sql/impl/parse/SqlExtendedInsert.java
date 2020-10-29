@@ -35,6 +35,7 @@ import org.apache.calcite.sql.SqlWriter;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.validate.SqlValidator;
 import org.apache.calcite.sql.validate.SqlValidatorScope;
+import org.apache.calcite.sql.validate.SqlValidatorTable;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -92,7 +93,13 @@ public class SqlExtendedInsert extends SqlInsert {
 
     @Override
     public void validate(SqlValidator validator, SqlValidatorScope scope) {
-        HazelcastTable table = validator.getCatalogReader().getTable(tableNames()).unwrap(HazelcastTable.class);
+        SqlValidatorTable table0 = validator.getCatalogReader().getTable(tableNames());
+        if (table0 == null) {
+            super.validate(validator, scope);
+            assert false; // should have failed with "Object not found"
+        }
+
+        HazelcastTable table = table0.unwrap(HazelcastTable.class);
         if (getTargetColumnList() == null) {
             RelDataType rowType = table.getRowType(validator.getTypeFactory());
             List<SqlNode> columnListWithoutHidden = new ArrayList<>();
