@@ -473,6 +473,7 @@ public final class Util {
      * </ul>
      */
     @Nonnull
+    @SuppressWarnings("checkstyle:MagicNumber") // number of hours per day isn't magic :)
     public static String formatJobDuration(long durationMs) {
         if (durationMs == Long.MIN_VALUE) {
             return "" + Long.MIN_VALUE;
