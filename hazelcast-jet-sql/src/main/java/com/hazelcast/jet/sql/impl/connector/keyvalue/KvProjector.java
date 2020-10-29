@@ -28,8 +28,6 @@ import static com.hazelcast.jet.sql.impl.type.converter.ToConverters.getToConver
 
 class KvProjector {
 
-    private static final UpsertInjector DISCARDING_INJECTOR = value -> { };
-
     private final QueryDataType[] types;
 
     private final UpsertTarget keyTarget;
