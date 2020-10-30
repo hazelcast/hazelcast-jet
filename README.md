@@ -253,21 +253,29 @@ Maven snippet:
 </dependencies>
 ```
 
-## PR trigger phrases
+## Trigger phrases in the Pull Request Conversation
 
-If the PR is created then PR builder executes default profile of Jet test suite 
-with the PR branch. It's executed on Linux machine with Oracle JDK 8.
+When you create a pull request (PR), it must pass a build-and-test
+procedure. Maintainers will be notified about your PR, and they can
+trigger the build using special comments. These are the phrases you may
+see used in the comments on your PR:
 
-In some cases it can be useful to run also other tests or run tests on 
-different environment. In this case following trigger phrases can be used. 
-To run them just send a comment with trigger phrases to PR conversation.
+* `verify` - run the default PR builder, equivalent to `mvn clean
+  install`
+* `run-nightly-tests` - use the settings for the nightly build (`mvn
+  clean install -Pnightly`). This includes slower tests in the run,
+  which we don't normally run on every PR
+* `run-windows` - run the tests on a Windows machine (HighFive is not
+  supported here)
+* `run-cdc-debezium-tests` - run tests in the `extensions/cdc-debezium`
+  module
+* `run-cdc-mysql-tests` - run tests in the `extensions/cdc-mysql`
+  module
+* `run-cdc-postgres-tests` - run all tests in the
+  `extensions/cdc-postgres` module
 
-* `verify` - it executes common PR builder again
-* `run-nightly-tests` - executes profile with nightly tests in all modules
-* `run-cdc-debezium-tests` - executes all tests in `extensions/cdc-debezium` module
-* `run-cdc-mysql-tests` - executes all tests in `extensions/cdc-mysql` module
-* `run-cdc-postgres-tests` - executes sall tests in `extensions/cdc-postgres` module
-* `run-windows` - executes all tests on Windows machine (HighFive is not supported here)
+Where not indicated, the builds run on a Linux machine with Oracle JDK
+8.
 
 ## License
 
