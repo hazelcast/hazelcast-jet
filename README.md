@@ -267,9 +267,9 @@ see used in the comments on your PR:
   which we don't normally run on every PR
 * `run-windows` - run the tests on a Windows machine (HighFive is not
   supported here)
-* `run-cdc-debezium-tests` - run tests in the `extensions/cdc-debezium`
-  module
-* `run-cdc-mysql-tests` - run tests in the `extensions/cdc-mysql`
+* `run-cdc-debezium-tests` - run all tests in the 
+  `extensions/cdc-debezium` module
+* `run-cdc-mysql-tests` - run all tests in the `extensions/cdc-mysql`
   module
 * `run-cdc-postgres-tests` - run all tests in the
   `extensions/cdc-postgres` module
