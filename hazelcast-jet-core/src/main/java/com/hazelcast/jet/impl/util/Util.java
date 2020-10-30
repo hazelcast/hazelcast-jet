@@ -498,7 +498,7 @@ public final class Util {
      *
      * @param basePath the directory where to edit the file permissions
      * @param editFn the permission-editing function, described above
-     * @return the list of all relative pathnames of files for which editing
+     * @return the list of all relative path names of files for which editing
      *         permissions failed
      * @throws IOException if the directory's contents cannot be traversed
      */
@@ -515,9 +515,6 @@ public final class Util {
                     filesNotMarked.add(basePath.relativize(path).toString());
                 }
             });
-        }
-        if (!filesNotMarked.isEmpty()) {
-            System.err.println("Couldn't 'chmod " + "chmodOp" + "' these files: " + filesNotMarked);
         }
         return filesNotMarked;
     }
