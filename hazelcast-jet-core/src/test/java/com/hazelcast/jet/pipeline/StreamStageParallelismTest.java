@@ -125,7 +125,7 @@ public class StreamStageParallelismTest {
     }
 
     private DAG applyTransformAndGetDag(FunctionEx<StreamStage<Integer>, StreamStage<Integer>> transform) {
-        PipelineImpl p = (PipelineImpl) Pipeline.create();
+        PipelineImpl p = (PipelineImpl) Pipeline.create().setPreserveOrder(true);
         StreamStage<Integer> source = p.readFrom(TestSources.items(1))
                                        .setLocalParallelism(UPSTREAM_PARALLELISM)
                                        .addTimestamps(t -> 0, Long.MAX_VALUE);

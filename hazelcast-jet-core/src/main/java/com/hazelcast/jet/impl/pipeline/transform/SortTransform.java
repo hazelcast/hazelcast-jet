@@ -52,7 +52,7 @@ public class SortTransform<T> extends AbstractTransform {
     @Override
     public void addToDag(Planner p, Context context) {
         String vertexName = name();
-        determineLocalParallelism(LOCAL_PARALLELISM_USE_DEFAULT, context, true);
+        determineLocalParallelism(LOCAL_PARALLELISM_USE_DEFAULT, context, false);
         Vertex v1 = p.dag.newVertex(vertexName, sortP(comparator))
                          .localParallelism(determinedLocalParallelism());
         determinedLocalParallelism(1);

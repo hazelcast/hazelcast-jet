@@ -58,10 +58,6 @@ public interface Transform extends Serializable {
 
     boolean shouldRebalanceInput(int ordinal);
 
-    boolean shouldPreserveEventOrder();
-
-    void setPreserveEventOrder(boolean value);
-
     FunctionEx<?, ?> partitionKeyFnForInput(int ordinal);
 
     @Nonnull

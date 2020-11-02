@@ -76,6 +76,10 @@ public class Planner {
         this.pipeline = pipeline;
     }
 
+    public boolean isPreserveOrder() {
+        return pipeline.isPreserveOrder();
+    }
+
     @SuppressWarnings("rawtypes")
     DAG createDag(Context context) {
         pipeline.makeNamesUnique();

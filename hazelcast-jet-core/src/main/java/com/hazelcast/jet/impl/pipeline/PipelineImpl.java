@@ -55,6 +55,7 @@ public class PipelineImpl implements Pipeline {
 
     private final Map<Transform, List<Transform>> adjacencyMap = new LinkedHashMap<>();
     private final Map<String, File> attachedFiles = new HashMap<>();
+    private boolean preserveOrder;
 
     @Nonnull @Override
     @SuppressWarnings("unchecked")
@@ -72,6 +73,17 @@ public class PipelineImpl implements Pipeline {
         xform.onAssignToStage();
         register(xform);
         return new StreamSourceStageImpl<>(xform, this);
+    }
+
+    @Override
+    public boolean isPreserveOrder() {
+        return preserveOrder;
+    }
+
+    @Nonnull @Override
+    public PipelineImpl setPreserveOrder(boolean value) {
+        preserveOrder = value;
+        return this;
     }
 
     @Nonnull @Override

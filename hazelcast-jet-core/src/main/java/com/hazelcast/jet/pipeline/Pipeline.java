@@ -56,6 +56,20 @@ public interface Pipeline extends Serializable {
     }
 
     /**
+     *
+     * @return
+     */
+    boolean isPreserveOrder();
+
+    /**
+     *
+     * @param value
+     * @return
+     */
+    @Nonnull
+    Pipeline setPreserveOrder(boolean value);
+
+    /**
      * Returns a pipeline stage that represents a bounded (batch) data source. It
      * has no upstream stages and emits the data (typically coming from an outside
      * source) to its downstream stages.

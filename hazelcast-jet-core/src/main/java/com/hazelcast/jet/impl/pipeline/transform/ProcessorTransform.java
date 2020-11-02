@@ -152,9 +152,9 @@ public class ProcessorTransform extends AbstractTransform {
 
     @Override
     public void addToDag(Planner p, Context context) {
-        determineLocalParallelism(processorSupplier.preferredLocalParallelism(), context, shouldPreserveEventOrder());
+        determineLocalParallelism(processorSupplier.preferredLocalParallelism(), context, p.isPreserveOrder());
         PlannerVertex pv = p.addVertex(this, name(), determinedLocalParallelism(), processorSupplier);
-        if (shouldPreserveEventOrder()) {
+        if (p.isPreserveOrder()) {
             p.addEdges(this, pv.v, Edge::isolated);
         } else {
             p.addEdges(this, pv.v);

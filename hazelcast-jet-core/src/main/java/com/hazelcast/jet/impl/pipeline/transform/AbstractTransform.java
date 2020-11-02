@@ -43,8 +43,6 @@ public abstract class AbstractTransform implements Transform {
 
     private final boolean[] upstreamRebalancingFlags;
 
-    private boolean preserveEventOrder;
-
     private final FunctionEx<?, ?>[] upstreamPartitionKeyFns;
 
     protected AbstractTransform(@Nonnull String name, @Nonnull List<Transform> upstream) {
@@ -53,7 +51,6 @@ public abstract class AbstractTransform implements Transform {
         this.upstream = new ArrayList<>(upstream);
         this.upstreamRebalancingFlags = new boolean[upstream.size()];
         this.upstreamPartitionKeyFns = new FunctionEx[upstream.size()];
-        this.preserveEventOrder = false;
     }
 
     protected AbstractTransform(String name, @Nonnull Transform upstream) {
@@ -123,16 +120,6 @@ public abstract class AbstractTransform implements Transform {
     @Override
     public long preferredWatermarkStride() {
         return 0;
-    }
-
-    @Override
-    public boolean shouldPreserveEventOrder() {
-        return preserveEventOrder;
-    }
-
-    @Override
-    public void setPreserveEventOrder(boolean value) {
-        preserveEventOrder = value;
     }
 
     protected final boolean shouldRebalanceAnyInput() {

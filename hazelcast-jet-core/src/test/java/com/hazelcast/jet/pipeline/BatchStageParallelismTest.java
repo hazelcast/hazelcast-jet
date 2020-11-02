@@ -148,7 +148,7 @@ public class BatchStageParallelismTest {
                                 .map(x -> x)
                                 .setLocalParallelism(LOCAL_PARALLELISM),
                         Collections.singletonList("map"),
-                        Collections.singletonList(UPSTREAM_PARALLELISM), // TODO: Consider in more detail
+                        Collections.singletonList(UPSTREAM_PARALLELISM),
                         "map-after-rebalance"
                 ),
                 createParamSet(
@@ -169,7 +169,7 @@ public class BatchStageParallelismTest {
                                 .flatMap(x -> Traversers.<Long>traverseItems())
                                 .setLocalParallelism(LOCAL_PARALLELISM),
                         Arrays.asList("map", "aggregate-prepare", "aggregate", "flat-map"),
-                        Arrays.asList(LOCAL_PARALLELISM, LOCAL_PARALLELISM, 1, 1),
+                        Arrays.asList(UPSTREAM_PARALLELISM, LOCAL_PARALLELISM, 1, 1),
                         "map+aggregate+flat-map"
                 )
         );
@@ -199,7 +199,7 @@ public class BatchStageParallelismTest {
     }
 
     private DAG applyTransformAndGetDag(FunctionEx<BatchStage<Long>, BatchStage<Long>> transform) {
-        PipelineImpl p = (PipelineImpl) Pipeline.create();
+        PipelineImpl p = (PipelineImpl) Pipeline.create().setPreserveOrder(true);
         BatchStage<Long> source = p.readFrom(TestSources.items(1L))
                                    .setLocalParallelism(UPSTREAM_PARALLELISM);
         BatchStage<Long> applied = source.apply(transform);
