@@ -74,6 +74,7 @@ class ShardReadWorker implements ShardWorker {
             switch (state) {
                 case NO_SHARD_ITERATOR:
                     shardIteratorResult = kinesis.getShardIteratorAsync(stream, shardId, "TRIM_HORIZON");
+                    //todo: TRIM_HORIZON doesn't seeem to work, as advertised on real AWS backend...
                     state = State.WAITING_FOR_SHARD_ITERATOR;
                     return Collections.emptyList();
                 case WAITING_FOR_SHARD_ITERATOR:
@@ -84,6 +85,7 @@ class ShardReadWorker implements ShardWorker {
                     return Collections.emptyList();
                 case READY_TO_READ_RECORDS:
                     GetRecordsRequest getRecordsRequest = buildGetRecordsRequest(shardIterator);
+                    //todo: have to check and limit the rate of these requests, fails without it on real backend
                     recordsResult = kinesis.getRecordsAsync(getRecordsRequest);
                     state = State.WAITING_FOR_RECORDS;
                     return Collections.emptyList();

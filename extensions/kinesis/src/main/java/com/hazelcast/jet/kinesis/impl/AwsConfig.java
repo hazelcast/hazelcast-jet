@@ -18,6 +18,7 @@ package com.hazelcast.jet.kinesis.impl;
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
+import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
 import com.amazonaws.client.builder.AwsClientBuilder;
 import com.amazonaws.services.kinesis.AmazonKinesisAsync;
 import com.amazonaws.services.kinesis.AmazonKinesisAsyncClientBuilder;
@@ -47,9 +48,6 @@ public class AwsConfig implements Serializable { //todo: is it worth to use bett
             @Nullable String accessKey,
             @Nullable String secretKey
     ) {
-        if (endpoint == null ^ region == null) {
-            throw new IllegalArgumentException("AWS endpoint and region overrides must be specified together");
-        }
         this.endpoint = endpoint;
         this.region = region;
 
@@ -60,18 +58,40 @@ public class AwsConfig implements Serializable { //todo: is it worth to use bett
         this.secretKey = secretKey;
     }
 
+    @Nullable
+    public String getEndpoint() {
+        return endpoint;
+    }
+
+    @Nullable
+    public String getRegion() {
+        return region;
+    }
+
+    @Nullable
+    public String getAccessKey() {
+        return accessKey;
+    }
+
+    @Nullable
+    public String getSecretKey() {
+        return secretKey;
+    }
+
     public AmazonKinesisAsync buildClient() {
         AmazonKinesisAsyncClientBuilder builder = AmazonKinesisAsyncClientBuilder.standard();
-        if (endpoint != null) {
-            builder.withEndpointConfiguration(
-                    new AwsClientBuilder.EndpointConfiguration(endpoint, region)
-            );
+        if (endpoint == null) {
+            if (region != null) {
+                builder.setRegion(region);
+            }
+        } else {
+            builder.withEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration(endpoint, region));
         }
-        if (accessKey != null) {
-            builder.withCredentials(
-                    new AWSStaticCredentialsProvider(new BasicAWSCredentials(accessKey, secretKey))
-            );
-        }
+
+        builder.withCredentials(accessKey == null ? new DefaultAWSCredentialsProviderChain() :
+                new AWSStaticCredentialsProvider(new BasicAWSCredentials(accessKey, secretKey))
+        );
+
         builder.withClientConfiguration(
                 new ClientConfiguration()
                         .withMaxErrorRetry(0)

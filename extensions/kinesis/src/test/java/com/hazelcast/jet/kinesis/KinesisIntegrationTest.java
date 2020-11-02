@@ -21,15 +21,14 @@ import com.amazonaws.services.kinesis.model.CreateStreamRequest;
 import com.amazonaws.services.kinesis.model.PutRecordsRequest;
 import com.amazonaws.services.kinesis.model.PutRecordsRequestEntry;
 import com.amazonaws.services.kinesis.model.PutRecordsResult;
-import com.amazonaws.services.kinesis.model.Record;
 import com.amazonaws.services.kinesis.model.StreamDescription;
 import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.SimpleTestInClusterSupport;
+import com.hazelcast.jet.Util;
 import com.hazelcast.jet.kinesis.impl.AwsConfig;
-import com.hazelcast.jet.kinesis.impl.KinesisSourcePMetaSupplier;
 import com.hazelcast.jet.pipeline.Pipeline;
+import com.hazelcast.jet.pipeline.Sink;
 import com.hazelcast.jet.pipeline.Sinks;
-import com.hazelcast.jet.pipeline.Sources;
 import com.hazelcast.jet.pipeline.StreamSource;
 import com.hazelcast.map.IMap;
 import org.junit.BeforeClass;
@@ -46,16 +45,16 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.concurrent.TimeUnit;
 
-import static com.hazelcast.jet.Util.entry;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
 public class KinesisIntegrationTest extends SimpleTestInClusterSupport {
 
     private static final int KEYS = 10;
-    private static final int MEMBER_COUNT = 1; //todo: 2
+    private static final int MEMBER_COUNT = 2;
 
     @Rule
     public LocalStackContainer localstack = new LocalStackContainer("0.12.1")
@@ -63,7 +62,9 @@ public class KinesisIntegrationTest extends SimpleTestInClusterSupport {
 
     @BeforeClass
     public static void beforeClass() {
-        System.setProperty(SDKGlobalConfiguration.AWS_CBOR_DISABLE_SYSTEM_PROPERTY, "true"); //todo: performance issue...
+        System.setProperty(SDKGlobalConfiguration.AWS_CBOR_DISABLE_SYSTEM_PROPERTY, "true");
+        //todo: force jackson versions to what we use (2.11.x) and have the resulting issue
+        // fixed by Localstack
 
         initialize(MEMBER_COUNT, null);
     }
@@ -74,33 +75,22 @@ public class KinesisIntegrationTest extends SimpleTestInClusterSupport {
 
         IMap<String, List<String>> results = instance().getMap(testId);
 
-        AwsConfig awsConfig = new AwsConfig(
-                "http://localhost:" + localstack.getMappedPort(4566),
-                localstack.getRegion(),
-                localstack.getAccessKey(),
-                localstack.getSecretKey()
-        );
-        System.out.println(awsConfig);
-
+        AwsConfig awsConfig = getAwsConfig(localstack);
         AmazonKinesisAsync kinesis = awsConfig.buildClient();
 
         String streamName = "StockTradeStream";
         createStream(kinesis, streamName, 1);
         waitForStreamToActivate(kinesis, streamName);
 
-        Pipeline pipeline = Pipeline.create();
-        StreamSource<Record> source = Sources.streamFromProcessor("source",
-                new KinesisSourcePMetaSupplier(awsConfig, streamName)); //todo: source class
-        pipeline.readFrom(source)
-                .withoutTimestamps()
-                .groupingKey(Record::getPartitionKey)
-                .mapStateful((SupplierEx<List<String>>) ArrayList::new,
-                        (s, k, r) -> {
-                            s.add(new String(r.getData().array(), Charset.defaultCharset()));
-                            return entry(k, new ArrayList<>(s));
-                        })
-                .writeTo(Sinks.map(results));
-        instance().newJob(pipeline);
+        StreamSource<Entry<String, byte[]>> source = KinesisSources.kinesis(streamName)
+                .withEndpoint(awsConfig.getEndpoint())
+                .withRegion(awsConfig.getRegion())
+                .withCredentials(awsConfig.getAccessKey(), awsConfig.getSecretKey())
+                .build();
+
+        Sink<Entry<String, List<String>>> sink = Sinks.map(results);
+
+        instance().newJob(getPipeline(source, sink));
 
         int messages = 100;
         Map<String, List<String>> expectedMessages = sendMessages(kinesis, streamName, messages);
@@ -108,11 +98,35 @@ public class KinesisIntegrationTest extends SimpleTestInClusterSupport {
 
     }
 
+    private static AwsConfig getAwsConfig(LocalStackContainer localstack) {
+        return new AwsConfig(
+                "http://localhost:" + localstack.getMappedPort(4566),
+                localstack.getRegion(),
+                localstack.getAccessKey(),
+                localstack.getSecretKey()
+        );
+    }
+
     private static void createStream(AmazonKinesisAsync kinesis, String streamName, int shardCount) {
         CreateStreamRequest request = new CreateStreamRequest();
         request.setShardCount(shardCount);
         request.setStreamName(streamName);
         kinesis.createStream(request);
+    }
+
+    private static Pipeline getPipeline(StreamSource<Entry<String, byte[]>> source,
+                                        Sink<Entry<String, List<String>>> sink) {
+        Pipeline pipeline = Pipeline.create();
+        pipeline.readFrom(source)
+                .withoutTimestamps()
+                .groupingKey(Entry::getKey)
+                .mapStateful((SupplierEx<List<String>>) ArrayList::new,
+                        (s, k, e) -> {
+                            s.add(new String(e.getValue(), Charset.defaultCharset()));
+                            return Util.<String, List<String>>entry(k, new ArrayList<>(s));
+                        })
+                .writeTo(sink);
+        return pipeline;
     }
 
     private static Map<String, List<String>> sendMessages(AmazonKinesisAsync kinesis, String streamName, int messages) {

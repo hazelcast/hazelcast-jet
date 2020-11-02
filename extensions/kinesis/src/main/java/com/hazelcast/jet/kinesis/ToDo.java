@@ -20,9 +20,6 @@ package com.hazelcast.jet.kinesis;
  */
 public class ToDo {
 
-    //todo: extract aws config params into a wrapping class
-    //todo: make params serializable
-
     //todo: Use ranges only for initial shard distribution, handle splits and merges internally;
     // splits: processor handles all children, merge: processor that handled parent handles it,
     // decide based on two parents
@@ -44,6 +41,8 @@ public class ToDo {
     //todo: @since tags
     //todo: @Nonnull/@Nullable annotations
     //todo: javadoc
+
+    //todo: make sure all integration tests run on real backend too
 
     //is one AmazonKinesisAsync per Jet member enough? how does performance look like?
 

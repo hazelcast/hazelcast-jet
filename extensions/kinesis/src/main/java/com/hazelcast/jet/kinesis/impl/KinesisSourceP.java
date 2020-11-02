@@ -30,6 +30,8 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+import static com.hazelcast.jet.Util.entry;
+
 public class KinesisSourceP extends AbstractProcessor {
 
     private final AmazonKinesisAsync kinesis;
@@ -93,7 +95,8 @@ public class KinesisSourceP extends AbstractProcessor {
                         .map(record -> new String(record.getData().array(), Charset.defaultCharset()))
                         .collect(Collectors.toList());
                 System.err.println("messages = " + messages); //todo: remove
-                traverser = Traversers.traverseIterable(records);
+                traverser = Traversers.traverseIterable(records)
+                        .map(r -> entry(r.getPartitionKey(), r.getData().array())); //todo: performance impact
                 emitFromTraverser(traverser);
                 return false;
             }
