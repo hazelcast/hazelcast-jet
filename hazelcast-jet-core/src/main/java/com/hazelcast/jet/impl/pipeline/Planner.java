@@ -79,7 +79,6 @@ public class Planner {
     @SuppressWarnings("rawtypes")
     DAG createDag(Context context) {
         pipeline.makeNamesUnique();
-        pipeline.determinePreserveOrderFlags();
         Map<Transform, List<Transform>> adjacencyMap = pipeline.adjacencyMap();
         validateNoLeakage(adjacencyMap);
         checkTopologicalSort(adjacencyMap.entrySet());

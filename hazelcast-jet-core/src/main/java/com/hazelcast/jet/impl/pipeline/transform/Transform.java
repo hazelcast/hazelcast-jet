@@ -62,14 +62,6 @@ public interface Transform extends Serializable {
 
     void setPreserveEventOrder(boolean value);
 
-    boolean isOrderSensitive();
-
-    void setOrderSensitive(boolean value);
-
-    boolean isOrderCreator();
-
-    void setOrderCreator(boolean value);
-
     FunctionEx<?, ?> partitionKeyFnForInput(int ordinal);
 
     @Nonnull

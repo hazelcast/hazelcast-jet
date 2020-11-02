@@ -47,7 +47,6 @@ public class SortTransform<T> extends AbstractTransform {
         } else {
             this.comparator = comparator;
         }
-        setOrderCreator(true);
     }
 
     @Override

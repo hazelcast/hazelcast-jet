@@ -46,7 +46,7 @@ public class MapTransform<T, R> extends AbstractTransform {
 
     @Override
     public void addToDag(Planner p, Context context) {
-        determineLocalParallelism(LOCAL_PARALLELISM_USE_DEFAULT, context, true);
+        determineLocalParallelism(LOCAL_PARALLELISM_USE_DEFAULT, context, shouldPreserveEventOrder());
         PlannerVertex pv = p.addVertex(this, name(), determinedLocalParallelism(), mapP(mapFn()));
         if (shouldPreserveEventOrder()) {
             p.addEdges(this, pv.v, Edge::isolated);

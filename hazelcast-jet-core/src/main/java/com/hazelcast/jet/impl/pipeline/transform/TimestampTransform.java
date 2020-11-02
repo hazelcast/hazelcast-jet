@@ -40,7 +40,6 @@ public class TimestampTransform<T> extends AbstractTransform {
         this.eventTimePolicy = eventTimePolicy;
         checkNotNull(eventTimePolicy.timestampFn(),
                 "timestampFn must not be null if timestamps aren't added in the source");
-        setOrderSensitive(true);
     }
 
     @Override

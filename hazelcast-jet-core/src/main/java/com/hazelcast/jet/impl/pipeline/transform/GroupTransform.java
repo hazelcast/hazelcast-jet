@@ -54,7 +54,6 @@ public class GroupTransform<K, A, R, OUT> extends AbstractTransform {
         this.groupKeyFns = groupKeyFns;
         this.aggrOp = aggrOp;
         this.mapToOutputFn = mapToOutputFn;
-        setOrderCreator(true);
     }
 
     private static String createName(@Nonnull List<Transform> upstream) {

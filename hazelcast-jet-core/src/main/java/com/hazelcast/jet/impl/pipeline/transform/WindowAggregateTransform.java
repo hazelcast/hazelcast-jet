@@ -66,7 +66,6 @@ public class WindowAggregateTransform<A, R> extends AbstractTransform {
         super(createName(wDef), upstream);
         this.aggrOp = aggrOp;
         this.wDef = wDef;
-        setOrderCreator(true);
     }
 
     static String createName(WindowDefinition wDef) {

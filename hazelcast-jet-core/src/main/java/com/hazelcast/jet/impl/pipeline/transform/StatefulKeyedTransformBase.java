@@ -46,7 +46,6 @@ abstract class StatefulKeyedTransformBase<T, K, S> extends AbstractTransform {
         this.keyFn = keyFn;
         this.timestampFn = timestampFn;
         this.createFn = createFn;
-        setOrderSensitive(true);
     }
 
     @Override

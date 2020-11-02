@@ -44,7 +44,6 @@ public class GlobalMapStatefulTransform<T, S, R> extends AbstractTransform {
         this.timestampFn = timestampFn;
         this.createFn = createFn;
         this.statefulMapFn = statefulMapFn;
-        setOrderSensitive(true);
     }
 
     @Override

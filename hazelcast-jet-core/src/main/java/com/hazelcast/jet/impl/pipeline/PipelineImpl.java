@@ -207,28 +207,6 @@ public class PipelineImpl implements Pipeline {
         return safeCopy;
     }
 
-    void determinePreserveOrderFlags() {
-        List<Transform> transforms = new ArrayList<>(adjacencyMap().keySet());
-        Collections.reverse(transforms);
-        for (Transform transform : transforms) {
-            if (transform.isOrderSensitive()) {
-                transform.setPreserveEventOrder(true);
-                for (Transform upstream : transform.upstream()) {
-                    upstream.setPreserveEventOrder(true);
-                }
-            } else if (transform.isOrderCreator()) {
-                transform.setPreserveEventOrder(false);
-            } else {
-                // propagate the transform ordering preserving property to upstream transforms
-                if (transform.shouldPreserveEventOrder()) {
-                    for (Transform upstream : transform.upstream()) {
-                        upstream.setPreserveEventOrder(true);
-                    }
-                }
-            }
-        }
-    }
-
     void makeNamesUnique() {
         Set<String> usedNames = new HashSet<>();
         for (Transform transform : adjacencyMap.keySet()) {

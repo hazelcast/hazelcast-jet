@@ -120,7 +120,7 @@ public class HashJoinTransform<T0, R> extends AbstractTransform {
     @Override
     @SuppressWarnings("unchecked")
     public void addToDag(Planner p, Context context) {
-        determineLocalParallelism(LOCAL_PARALLELISM_USE_DEFAULT, context, true);
+        determineLocalParallelism(LOCAL_PARALLELISM_USE_DEFAULT, context, shouldPreserveEventOrder());
         PlannerVertex primary = p.xform2vertex.get(this.upstream().get(0));
         List keyFns = toList(this.clauses, JoinClause::leftKeyFn);
 

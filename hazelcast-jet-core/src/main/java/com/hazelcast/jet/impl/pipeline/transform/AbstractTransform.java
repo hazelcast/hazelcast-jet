@@ -45,10 +45,6 @@ public abstract class AbstractTransform implements Transform {
 
     private boolean preserveEventOrder;
 
-    private boolean orderSensitive;
-
-    private boolean orderCreator;
-
     private final FunctionEx<?, ?>[] upstreamPartitionKeyFns;
 
     protected AbstractTransform(@Nonnull String name, @Nonnull List<Transform> upstream) {
@@ -56,10 +52,8 @@ public abstract class AbstractTransform implements Transform {
         // Planner updates this list to fuse the stateless transforms:
         this.upstream = new ArrayList<>(upstream);
         this.upstreamRebalancingFlags = new boolean[upstream.size()];
-        this.preserveEventOrder = false;
-        this.orderSensitive = false;
-        this.orderCreator = false;
         this.upstreamPartitionKeyFns = new FunctionEx[upstream.size()];
+        this.preserveEventOrder = false;
     }
 
     protected AbstractTransform(String name, @Nonnull Transform upstream) {
@@ -137,26 +131,6 @@ public abstract class AbstractTransform implements Transform {
     }
 
     @Override
-    public boolean isOrderSensitive() {
-        return orderSensitive;
-    }
-
-    @Override
-    public void setOrderSensitive(boolean value) {
-        orderSensitive = value;
-    }
-
-    @Override
-    public boolean isOrderCreator() {
-        return orderCreator;
-    }
-
-    @Override
-    public void setOrderCreator(boolean value) {
-        orderCreator = value;
-    }
-
-    @Override
     public void setPreserveEventOrder(boolean value) {
         preserveEventOrder = value;
     }
@@ -169,6 +143,7 @@ public abstract class AbstractTransform implements Transform {
         }
         return false;
     }
+
 
     /**
      * Determines the local parallelism value for the transform by looking at
@@ -192,8 +167,7 @@ public abstract class AbstractTransform implements Transform {
                     .getAsInt();
         }
 
-        if (shouldMatchUpstreamParallelism && upstreamParallelism != LOCAL_PARALLELISM_USE_DEFAULT
-                && shouldPreserveEventOrder()) {
+        if (shouldMatchUpstreamParallelism && upstreamParallelism != LOCAL_PARALLELISM_USE_DEFAULT) {
             determinedLocalParallelism(upstreamParallelism);
             return;
         }
