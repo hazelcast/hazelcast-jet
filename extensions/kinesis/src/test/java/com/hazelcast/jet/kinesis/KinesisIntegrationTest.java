@@ -32,7 +32,7 @@ import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.StreamSource;
 import com.hazelcast.map.IMap;
 import org.junit.BeforeClass;
-import org.junit.Rule;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.testcontainers.containers.localstack.LocalStackContainer;
 import org.testcontainers.containers.localstack.LocalStackContainer.Service;
@@ -56,33 +56,48 @@ public class KinesisIntegrationTest extends SimpleTestInClusterSupport {
     private static final int KEYS = 10;
     private static final int MEMBER_COUNT = 2;
 
-    @Rule
-    public LocalStackContainer localstack = new LocalStackContainer("0.12.1")
+    private static final int MAX_SEND_BATCH_SIZE = 500;
+
+    @ClassRule
+    public static LocalStackContainer LOCALSTACK = new LocalStackContainer("0.12.1")
             .withServices(Service.KINESIS);
 
     @BeforeClass
     public static void beforeClass() {
         System.setProperty(SDKGlobalConfiguration.AWS_CBOR_DISABLE_SYSTEM_PROPERTY, "true");
         //todo: force jackson versions to what we use (2.11.x) and have the resulting issue
-        // fixed by Localstack
+        // fixed by Localstack (https://github.com/localstack/localstack/issues/3208)
 
         initialize(MEMBER_COUNT, null);
     }
 
     @Test
-    public void test() {
-        String testId = "test"; //todo: improve
+    public void staticStream_1Shard() throws Exception {
+        staticStream(1);
+    }
 
-        IMap<String, List<String>> results = instance().getMap(testId);
+    @Test
+    public void staticStream_2Shard() throws Exception {
+        staticStream(2);
+    }
 
-        AwsConfig awsConfig = getAwsConfig(localstack);
+    @Test
+    public void staticStream_50Shard() throws Exception {
+        staticStream(50);
+    }
+
+    private void staticStream(int shardCount) throws Exception {
+        String stream = "static" + shardCount;
+
+        IMap<String, List<String>> results = instance().getMap(stream);
+
+        AwsConfig awsConfig = getAwsConfig(LOCALSTACK);
         AmazonKinesisAsync kinesis = awsConfig.buildClient();
 
-        String streamName = "StockTradeStream";
-        createStream(kinesis, streamName, 1);
-        waitForStreamToActivate(kinesis, streamName);
+        createStream(kinesis, stream, shardCount);
+        waitForStreamToActivate(kinesis, stream);
 
-        StreamSource<Entry<String, byte[]>> source = KinesisSources.kinesis(streamName)
+        StreamSource<Entry<String, byte[]>> source = KinesisSources.kinesis(stream)
                 .withEndpoint(awsConfig.getEndpoint())
                 .withRegion(awsConfig.getRegion())
                 .withCredentials(awsConfig.getAccessKey(), awsConfig.getSecretKey())
@@ -92,10 +107,9 @@ public class KinesisIntegrationTest extends SimpleTestInClusterSupport {
 
         instance().newJob(getPipeline(source, sink));
 
-        int messages = 100;
-        Map<String, List<String>> expectedMessages = sendMessages(kinesis, streamName, messages);
+        int messages = 2500;
+        Map<String, List<String>> expectedMessages = sendMessages(kinesis, stream, messages);
         assertTrueEventually(() -> assertEquals(expectedMessages, results));
-
     }
 
     private static AwsConfig getAwsConfig(LocalStackContainer localstack) {
@@ -129,11 +143,23 @@ public class KinesisIntegrationTest extends SimpleTestInClusterSupport {
         return pipeline;
     }
 
-    private static Map<String, List<String>> sendMessages(AmazonKinesisAsync kinesis, String streamName, int messages) {
-        List<PutRecordsRequestEntry> requestEntries = new ArrayList<>(messages); //todo: 500 is the maximum limit
+    private static Map<String, List<String>> sendMessages(AmazonKinesisAsync kinesis, String stream, int messages) throws Exception {
         Map<String, List<String>> sentMessages = new HashMap<>();
+        for (int i = 0; i < messages; i = i + MAX_SEND_BATCH_SIZE) {
+            sendMessages(kinesis, stream, i, Math.min(messages, i + MAX_SEND_BATCH_SIZE), sentMessages);
+        }
+        return sentMessages;
+    }
 
-        for (int i = 0; i < messages; i++) {
+    private static void sendMessages(AmazonKinesisAsync kinesis, String stream, int fromInclusive, int toExclusive,
+                                     Map<String, List<String>> sentMessages) {
+        int count = toExclusive - fromInclusive;
+        if (count > MAX_SEND_BATCH_SIZE) {
+            throw new IllegalArgumentException("Can send only " + MAX_SEND_BATCH_SIZE + " messages at once");
+        }
+
+        List<PutRecordsRequestEntry> requestEntries = new ArrayList<>(count);
+        for (int i = fromInclusive; i < toExclusive; i++) {
             String key = Integer.toString(i % KEYS);
             String message = "Message " + i + " for key " + key;
             sentMessages.merge(key, Collections.singletonList(message), (l1, l2) -> {
@@ -145,13 +171,11 @@ public class KinesisIntegrationTest extends SimpleTestInClusterSupport {
             requestEntries.add(putRecordRequestEntry(key, ByteBuffer.wrap(message.getBytes())));
         }
 
-        PutRecordsResult response = kinesis.putRecords(putRecordsRequest(streamName, requestEntries));
+        PutRecordsResult response = kinesis.putRecords(putRecordsRequest(stream, requestEntries));
         int failures = response.getFailedRecordCount();
         if (failures > 0) {
             fail("Sending messages to Kinesis failed: " + response);
         }
-
-        return sentMessages;
     }
 
     private static void waitForStreamToActivate(AmazonKinesisAsync kinesis, String stream) {

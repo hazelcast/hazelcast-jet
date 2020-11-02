@@ -25,7 +25,6 @@ import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.logging.ILogger;
 
 import javax.annotation.Nonnull;
-import java.nio.charset.Charset;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -67,7 +66,7 @@ public class KinesisSourceP extends AbstractProcessor {
         if (hashRange.contains(shard.getHashKeyRange().getStartingHashKey())) {
             logger.info("Shard " + shard.getShardId() + " of stream " + stream + " handled by " +
                     KinesisSourceP.class.getSimpleName() + " " + processorIndex);
-            return new ShardReadWorker(kinesis, stream, shard.getShardId());
+            return new ShardReadWorker(kinesis, stream, shard);
         }
         if (hashRange.contains(shard.getHashKeyRange().getEndingHashKey())) {
             return null; //todo: MonitorWorker, which will watch out for splits
@@ -91,10 +90,11 @@ public class KinesisSourceP extends AbstractProcessor {
 
             List<Record> records = worker.poll();
             if (!records.isEmpty()) {
-                List<String> messages = records.stream()
+                /*List<String> messages = records.stream()
                         .map(record -> new String(record.getData().array(), Charset.defaultCharset()))
                         .collect(Collectors.toList());
-                System.err.println("messages = " + messages); //todo: remove
+                System.err.println("messages = " + messages);*/ //todo: remove
+                System.err.println(i + " - messages = " + records.size()); //todo: remove
                 traverser = Traversers.traverseIterable(records)
                         .map(r -> entry(r.getPartitionKey(), r.getData().array())); //todo: performance impact
                 emitFromTraverser(traverser);

@@ -19,7 +19,9 @@ import com.amazonaws.services.kinesis.AmazonKinesisAsync;
 import com.amazonaws.services.kinesis.model.GetRecordsRequest;
 import com.amazonaws.services.kinesis.model.GetRecordsResult;
 import com.amazonaws.services.kinesis.model.GetShardIteratorResult;
+import com.amazonaws.services.kinesis.model.ProvisionedThroughputExceededException;
 import com.amazonaws.services.kinesis.model.Record;
+import com.amazonaws.services.kinesis.model.Shard;
 
 import javax.annotation.Nonnull;
 import java.util.Collections;
@@ -31,40 +33,50 @@ import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
 
 class ShardReadWorker implements ShardWorker {
 
-    //todo: shard iterators expire after 5 minutes... how do we deal with that?
+    /* Kinesis allows for a maximum of 5 GetRecords operations per second. */
+    private static final int GET_RECORD_OPS_PER_SECOND = 5;
 
-    //todo: getting a shard iterator can be done only 5 times per second per shard; we need to make sure
+    /* The maximum number of records that can be returned by a single GetRecords
+     * operation is 10,000, which might be a bit much for a cooperative source,
+     * so we limit it.*/
+    private static final int GET_RECORDS_LIMIT = 1000;
 
-    //todo: now we read every record from the shard; we'll probably want to do that only starting from
-    // a certain sequence number, once we have snapshotted offsets
-
-    //todo: Each data record can be up to 1 MiB in size, and each shard can read up to 2 MiB per second.
-    // You can ensure that your calls don't exceed the maximum supported size or throughput by using the
-    // Limit parameter to specify the maximum number of records that GetRecords can return. Consider your
-    // average record size when determining this limit. The maximum number of records that can be returned
-    // per call is 10,000.
-    // The size of the data returned by GetRecords varies depending on the utilization of the shard.
-    // The maximum size of data that GetRecords can return is 10 MiB. If a call returns this amount of data,
-    // subsequent calls made within the next 5 seconds throw ProvisionedThroughputExceededException. If there
-    // is insufficient provisioned throughput on the stream, subsequent calls made within the next 1 second
-    // throw ProvisionedThroughputExceededException. GetRecords doesn't return any data when it throws an exception.
-    // For this reason, we recommend that you wait 1 second between calls to GetRecords. However, it's possible
-    // that the application will get exceptions for longer than 1 second.
+    /* Even though GetRecords operations are limited to 5 per second, if one
+     * such operation happens to return too much data, following operations will
+     * throw ProvisionedThroughputExceededException. In such cases we need to
+     * wait a bit longer than for regular rate limiting.
+     *
+     * Relevant section from AWS documentation:
+     *
+     * "The size of the data returned by GetRecords varies depending on the
+     * utilization of the shard. The maximum size of data that GetRecords can
+     * return is 10 MiB. If a call returns this amount of data, subsequent calls
+     * made within the next 5 seconds throw
+     * ProvisionedThroughputExceededException. If there is insufficient
+     * provisioned throughput on the stream, subsequent calls made within the
+     * next 1 second throw ProvisionedThroughputExceededException. GetRecords
+     * doesn't return any data when it throws an exception. For this reason, we
+     * recommend that you wait 1 second between calls to GetRecords. However,
+     * it's possible that the application will get exceptions for longer than
+     * 1 second." */
+    private static final long READ_PAUSE_AFTER_THROUGHPUT_EXCEEDED = 1000L;
 
     private final AmazonKinesisAsync kinesis;
     private final String stream;
-    private final String shardId;
+    private final Shard shard;
+    private final RandomizedRateTracker getRecordsRateTracker =
+            new RandomizedRateTracker(1000, GET_RECORD_OPS_PER_SECOND);
 
     private State state = State.NO_SHARD_ITERATOR;
-
     private String shardIterator;
     private Future<GetShardIteratorResult> shardIteratorResult;
     private Future<GetRecordsResult> recordsResult;
+    private long nextGetRecordsTime = 0;
 
-    ShardReadWorker(AmazonKinesisAsync kinesis, String stream, String shardId) {
+    ShardReadWorker(AmazonKinesisAsync kinesis, String stream, Shard shard) {
         this.kinesis = kinesis;
         this.stream = stream;
-        this.shardId = shardId;
+        this.shard = shard;
     }
 
     @Override
@@ -73,42 +85,66 @@ class ShardReadWorker implements ShardWorker {
         try {
             switch (state) {
                 case NO_SHARD_ITERATOR:
-                    shardIteratorResult = kinesis.getShardIteratorAsync(stream, shardId, "TRIM_HORIZON");
-                    //todo: TRIM_HORIZON doesn't seeem to work, as advertised on real AWS backend...
+                    shardIteratorResult = kinesis.getShardIteratorAsync(
+                            stream,
+                            shard.getShardId(),
+                            "AT_SEQUENCE_NUMBER",
+                            shard.getSequenceNumberRange().getStartingSequenceNumber()
+                    ); //todo: proper starting sequence number will be provided from offsets restored from Jet snapshots
                     state = State.WAITING_FOR_SHARD_ITERATOR;
                     return Collections.emptyList();
+
+
                 case WAITING_FOR_SHARD_ITERATOR:
                     if (shardIteratorResult.isDone()) {
                         shardIterator = shardIteratorResult.get().getShardIterator();
                         state = State.READY_TO_READ_RECORDS;
                     }
                     return Collections.emptyList();
+
+
                 case READY_TO_READ_RECORDS:
+                    if (System.currentTimeMillis() < nextGetRecordsTime) {
+                        return Collections.emptyList();
+                    }
+
                     GetRecordsRequest getRecordsRequest = buildGetRecordsRequest(shardIterator);
-                    //todo: have to check and limit the rate of these requests, fails without it on real backend
                     recordsResult = kinesis.getRecordsAsync(getRecordsRequest);
                     state = State.WAITING_FOR_RECORDS;
+
+                    nextGetRecordsTime = System.currentTimeMillis() + getRecordsRateTracker.next();
+
                     return Collections.emptyList();
+
+
                 case WAITING_FOR_RECORDS:
                     if (recordsResult.isDone()) {
-                        GetRecordsResult recordsResult = this.recordsResult.get();
-                        List<Record> records = recordsResult.getRecords();
-
-                        shardIterator = recordsResult.getNextShardIterator();
-                        if (shardIterator == null) {
-                            state = State.SHARD_CLOSED;
-                        } else {
-                            state = State.READY_TO_READ_RECORDS;
+                        try {
+                            GetRecordsResult result = recordsResult.get();
+                            shardIterator = result.getNextShardIterator();
+                            state = shardIterator == null ? State.SHARD_CLOSED : State.READY_TO_READ_RECORDS;
+                            return result.getRecords();
+                        } catch (ExecutionException e) {
+                            Throwable cause = e.getCause();
+                            if (cause instanceof ProvisionedThroughputExceededException) {
+                                nextGetRecordsTime = System.currentTimeMillis() + READ_PAUSE_AFTER_THROUGHPUT_EXCEEDED;
+                                state = State.READY_TO_READ_RECORDS;
+                                return Collections.emptyList();
+                            } else {
+                                throw rethrow(cause);
+                            }
                         }
-
-                        return records;
                     } else {
                         return Collections.emptyList();
                     }
+
+
                 case SHARD_CLOSED:
                     throw new RuntimeException(); //todo: handle splits & merges
+
+
                 default:
-                    throw new RuntimeException(); //todo
+                    throw new RuntimeException("Unhandled state, programming error");
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
@@ -116,12 +152,6 @@ class ShardReadWorker implements ShardWorker {
         } catch (ExecutionException e) {
             throw rethrow(e);
         }
-    }
-
-    private static GetRecordsRequest buildGetRecordsRequest(String shardIterator) {
-        GetRecordsRequest getRecordsRequest = new GetRecordsRequest();
-        getRecordsRequest.setShardIterator(shardIterator);
-        return getRecordsRequest;
     }
 
     private enum State {
@@ -150,6 +180,13 @@ class ShardReadWorker implements ShardWorker {
          */
         SHARD_CLOSED,
         ;
+    }
+
+    private static GetRecordsRequest buildGetRecordsRequest(String shardIterator) {
+        GetRecordsRequest getRecordsRequest = new GetRecordsRequest();
+        getRecordsRequest.setShardIterator(shardIterator);
+        getRecordsRequest.setLimit(GET_RECORDS_LIMIT);
+        return getRecordsRequest;
     }
 
 }
