@@ -277,7 +277,8 @@ public final class UnsupportedOperationVisitor implements SqlVisitor<Void> {
                 if (symbolValue instanceof SqlTrimFunction.Flag) {
                     return null;
                 }
-                if (symbolValue == SqlSelectKeyword.DISTINCT) {
+                // `SELECT ALL` is the opposite of `SELECT DISTINCT` and it's the default if neither is used, we allow it
+                if (symbolValue == SqlSelectKeyword.DISTINCT || symbolValue == SqlSelectKeyword.ALL) {
                     return null;
                 }
 

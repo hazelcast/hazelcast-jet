@@ -180,6 +180,28 @@ public class SqlAggregateTest extends SqlTestSupport {
     }
 
     @Test
+    public void test_all() {
+        String name = createTable(
+                new String[]{"Alice", "2"},
+                new String[]{"Bob", "1"},
+                new String[]{"Alice", "4"},
+                new String[]{"Alice", "2"},
+                new String[]{"Joey", "2"}
+        );
+
+        assertRowsAnyOrder(
+                "SELECT ALL name FROM " + name,
+                asList(
+                        new Row("Alice"),
+                        new Row("Alice"),
+                        new Row("Alice"),
+                        new Row("Bob"),
+                        new Row("Joey")
+                )
+        );
+    }
+
+    @Test
     public void test_count() {
         String name = createTable(
                 new String[]{"Alice", "1"},
@@ -405,6 +427,20 @@ public class SqlAggregateTest extends SqlTestSupport {
     }
 
     @Test
+    public void test_distinctMin() {
+        String name = createTable(
+                new String[]{"Alice", "2"},
+                new String[]{"Bob", "1"},
+                new String[]{"Joey", null}
+        );
+
+        assertRowsAnyOrder(
+                "SELECT MIN(DISTINCT name) FROM " + name,
+                singletonList(new Row("Alice"))
+        );
+    }
+
+    @Test
     public void test_groupExpressionMin() {
         String name = createTable(
                 new String[]{"Alice", "2"},
@@ -495,6 +531,20 @@ public class SqlAggregateTest extends SqlTestSupport {
                         new Row("Alice", 2),
                         new Row("Bob", 2)
                 )
+        );
+    }
+
+    @Test
+    public void test_distinctMax() {
+        String name = createTable(
+                new String[]{"Alice", "1"},
+                new String[]{"Bob", "2"},
+                new String[]{"Joey", null}
+        );
+
+        assertRowsAnyOrder(
+                "SELECT MAX(DISTINCT name) FROM " + name,
+                singletonList(new Row("Joey"))
         );
     }
 
