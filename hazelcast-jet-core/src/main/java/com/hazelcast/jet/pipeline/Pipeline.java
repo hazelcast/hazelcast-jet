@@ -56,15 +56,26 @@ public interface Pipeline extends Serializable {
     }
 
     /**
-     *
-     * @return
+     * Returns the preserve order property of this pipeline
      */
     boolean isPreserveOrder();
 
     /**
+     * Sets the preserve order property of this pipeline, which instructs
+     * Jet to keep the event order the same. Enabling this property adds
+     * restrictions to the data flow on the DAG, and this causes a decrease
+     * in performance most of the time.
+     * <p>
+     * Since Jet processes events in parallel, the event order is generally
+     * a partial order defined in the source or specified by grouping keys.
+     * Jet preserves this partial order if this property is set to true.
+     * <p>
+     * This property cannot be used with the rebalance without key operator
+     * because it breaks the event order in an explicit way.
+     * <p>
+     * The default value is false.
      *
-     * @param value
-     * @return
+     * @return this pipeline
      */
     @Nonnull
     Pipeline setPreserveOrder(boolean value);
