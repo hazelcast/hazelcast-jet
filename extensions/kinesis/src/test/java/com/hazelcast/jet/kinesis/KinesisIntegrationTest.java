@@ -23,6 +23,7 @@ import com.amazonaws.services.kinesis.model.PutRecordsRequestEntry;
 import com.amazonaws.services.kinesis.model.PutRecordsResult;
 import com.amazonaws.services.kinesis.model.Record;
 import com.amazonaws.services.kinesis.model.StreamDescription;
+import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.SimpleTestInClusterSupport;
 import com.hazelcast.jet.kinesis.impl.AwsConfig;
 import com.hazelcast.jet.kinesis.impl.KinesisSourcePMetaSupplier;
@@ -38,6 +39,7 @@ import org.testcontainers.containers.localstack.LocalStackContainer;
 import org.testcontainers.containers.localstack.LocalStackContainer.Service;
 
 import java.nio.ByteBuffer;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -53,17 +55,15 @@ import static org.junit.Assert.fail;
 public class KinesisIntegrationTest extends SimpleTestInClusterSupport {
 
     private static final int KEYS = 10;
+    private static final int MEMBER_COUNT = 1; //todo: 2
 
     @Rule
-    public LocalStackContainer localstack = new LocalStackContainer("latest") //todo: use numbered/fixed version
+    public LocalStackContainer localstack = new LocalStackContainer("0.12.1")
             .withServices(Service.KINESIS);
-
-    private static final int MEMBER_COUNT = 1; //todo: 2
 
     @BeforeClass
     public static void beforeClass() {
-        // See https://github.com/mhart/kinesalite#cbor-protocol-issues-with-the-java-sdk
-        System.setProperty(SDKGlobalConfiguration.AWS_CBOR_DISABLE_SYSTEM_PROPERTY, "true"); //todo: necessary?
+        System.setProperty(SDKGlobalConfiguration.AWS_CBOR_DISABLE_SYSTEM_PROPERTY, "true"); //todo: performance issue...
 
         initialize(MEMBER_COUNT, null);
     }
@@ -94,10 +94,11 @@ public class KinesisIntegrationTest extends SimpleTestInClusterSupport {
         pipeline.readFrom(source)
                 .withoutTimestamps()
                 .groupingKey(Record::getPartitionKey)
-                .mapStateful(() -> new ArrayList<String>(), (s, k, r) -> {
-                    s.add(new String(r.getData().array()));
-                    return entry(k, new ArrayList<>(s));
-                })
+                .mapStateful((SupplierEx<List<String>>) ArrayList::new,
+                        (s, k, r) -> {
+                            s.add(new String(r.getData().array(), Charset.defaultCharset()));
+                            return entry(k, new ArrayList<>(s));
+                        })
                 .writeTo(Sinks.map(results));
         instance().newJob(pipeline);
 
@@ -125,8 +126,8 @@ public class KinesisIntegrationTest extends SimpleTestInClusterSupport {
                 ArrayList<String> retList = new ArrayList<>();
                 retList.addAll(l1);
                 retList.addAll(l2);
-                return retList;}
-            );
+                return retList;
+            });
             requestEntries.add(putRecordRequestEntry(key, ByteBuffer.wrap(message.getBytes())));
         }
 

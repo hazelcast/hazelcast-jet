@@ -1,3 +1,18 @@
+/*
+ * Copyright 2020 Hazelcast Inc.
+ *
+ * Licensed under the Hazelcast Community License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://hazelcast.com/hazelcast-community-license
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.hazelcast.jet.kinesis.impl;
 
 import com.amazonaws.ClientConfiguration;
@@ -11,6 +26,8 @@ import javax.annotation.Nullable;
 import java.io.Serializable;
 
 public class AwsConfig implements Serializable { //todo: is it worth to use better serialization?
+
+    private static final int CONNECTION_TIMEOUT = 1000;
 
     @Nullable
     private final String endpoint;
@@ -58,7 +75,7 @@ public class AwsConfig implements Serializable { //todo: is it worth to use bett
         builder.withClientConfiguration(
                 new ClientConfiguration()
                         .withMaxErrorRetry(0)
-                        .withConnectionTimeout(1000)); //todo: need to have proper retry policy
+                        .withConnectionTimeout(CONNECTION_TIMEOUT)); //todo: need to have proper retry policy
 
         return builder.build();
     }
