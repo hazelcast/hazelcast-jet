@@ -401,7 +401,7 @@ public class DAG implements IdentifiedDataSerializable, Iterable<Vertex> {
                 : String.valueOf(localParallelism);
             builder.append("\t\"")
                    .append(escapeGraphviz(v.getName()))
-                   .append("\" [label=\"").append(v.getName()).append(" LP=").append(parallelism).append("\"]")
+                   .append("\" [localParallelism=").append(parallelism).append("]")
                    .append(";\n");
         }
 
