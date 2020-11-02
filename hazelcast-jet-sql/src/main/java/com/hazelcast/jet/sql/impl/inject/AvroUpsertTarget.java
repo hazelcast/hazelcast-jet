@@ -26,6 +26,8 @@ import org.apache.avro.generic.GenericRecordBuilder;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
 
+import static com.hazelcast.jet.sql.impl.inject.UpsertInjector.FAILING_TOP_LEVEL_INJECTOR;
+
 @NotThreadSafe
 class AvroUpsertTarget implements UpsertTarget {
 
@@ -39,6 +41,10 @@ class AvroUpsertTarget implements UpsertTarget {
 
     @Override
     public UpsertInjector createInjector(@Nullable String path, QueryDataType type) {
+        if (path == null) {
+            return FAILING_TOP_LEVEL_INJECTOR;
+        }
+
         switch (type.getTypeFamily()) {
             case TINYINT:
                 return value -> record.set(path, value == null ? null : ((Byte) value).intValue());
@@ -65,14 +71,6 @@ class AvroUpsertTarget implements UpsertTarget {
     }
 
     private UpsertInjector createObjectInjector(String path) {
-        if (path == null) {
-            return value -> {
-                if (value != null) {
-                    throw QueryException.error("Writing to top-level fields not supported");
-                }
-            };
-        }
-
         return value -> {
             if (value == null) {
                 record.set(path, null);

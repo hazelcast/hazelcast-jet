@@ -26,6 +26,8 @@ import com.hazelcast.sql.impl.type.QueryDataType;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
 
+import static com.hazelcast.jet.sql.impl.inject.UpsertInjector.FAILING_TOP_LEVEL_INJECTOR;
+
 @NotThreadSafe
 class HazelcastJsonUpsertTarget implements UpsertTarget {
 
@@ -37,6 +39,10 @@ class HazelcastJsonUpsertTarget implements UpsertTarget {
     @Override
     @SuppressWarnings("checkstyle:ReturnCount")
     public UpsertInjector createInjector(@Nullable String path, QueryDataType type) {
+        if (path == null) {
+            return FAILING_TOP_LEVEL_INJECTOR;
+        }
+
         switch (type.getTypeFamily()) {
             case BOOLEAN:
                 return value -> {
@@ -109,14 +115,6 @@ class HazelcastJsonUpsertTarget implements UpsertTarget {
     }
 
     private UpsertInjector createObjectInjector(String path) {
-        if (path == null) {
-            return value -> {
-                if (value != null) {
-                    throw QueryException.error("Writing to top-level fields not supported");
-                }
-            };
-        }
-
         return value -> {
             if (value == null) {
                 json.add(path, (String) null);

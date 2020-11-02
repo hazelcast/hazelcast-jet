@@ -16,8 +16,17 @@
 
 package com.hazelcast.jet.sql.impl.inject;
 
+import com.hazelcast.sql.impl.QueryException;
+
 @FunctionalInterface
 public interface UpsertInjector {
+
+    UpsertInjector FAILING_TOP_LEVEL_INJECTOR =
+            value -> {
+                if (value != null) {
+                    throw QueryException.error("Writing to top-level fields not supported");
+                }
+            };
 
     void set(Object value);
 }

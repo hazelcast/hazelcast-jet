@@ -30,6 +30,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 import static com.hazelcast.jet.impl.util.ReflectionUtils.loadClass;
+import static com.hazelcast.jet.sql.impl.inject.UpsertInjector.FAILING_TOP_LEVEL_INJECTOR;
 import static java.util.stream.Collectors.toMap;
 
 @NotThreadSafe
@@ -49,11 +50,7 @@ class PojoUpsertTarget implements UpsertTarget {
     @Override
     public UpsertInjector createInjector(@Nullable String path, QueryDataType type) {
         if (path == null) {
-            return value -> {
-                if (value != null) {
-                    throw QueryException.error("Writing to top-level fields not supported");
-                }
-            };
+            return FAILING_TOP_LEVEL_INJECTOR;
         }
 
         Method method = ReflectionUtils.findPropertySetter(clazz, path, typesByPaths.get(path));
