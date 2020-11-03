@@ -89,7 +89,7 @@ public class CreateDagVisitor {
         Table table = rel.getTable().unwrap(HazelcastTable.class).getTarget();
 
         return getJetSqlConnector(table)
-                .fullScanReader(dag, table, null, rel.filter(), rel.projection());
+                .fullScanReader(dag, table, rel.filter(), rel.projection());
     }
 
     public Vertex onFilter(FilterPhysicalRel rel) {

@@ -142,7 +142,6 @@ public class AllTypesSqlConnector implements SqlConnector {
     public Vertex fullScanReader(
             @Nonnull DAG dag,
             @Nonnull Table table,
-            @Nullable String timestampField,
             @Nullable Expression<Boolean> predicate,
             @Nonnull List<Expression<?>> projection
     ) {

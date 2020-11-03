@@ -196,9 +196,7 @@ public interface SqlConnector {
 
     /**
      * Returns a supplier for a source vertex reading the input according to
-     * the projection/predicate. The output type of the source is Object[]. If
-     * {@code timestampField} is not null, the source should generate
-     * watermarks according to it.
+     * the projection/predicate. The output type of the source is Object[].
      * <p>
      * The result is:<ul>
      * <li>{@code f0}: the source vertex of the sub-DAG
@@ -222,7 +220,6 @@ public interface SqlConnector {
     default Vertex fullScanReader(
             @Nonnull DAG dag,
             @Nonnull Table table,
-            @Nullable String timestampField,
             @Nullable Expression<Boolean> predicate,
             @Nonnull List<Expression<?>> projection
     ) {
