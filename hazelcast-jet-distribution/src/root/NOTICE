@@ -25,6 +25,7 @@ Apache License, Version 2.0
   Jackson-core:2.11.2
   jackson-databind:2.10.0
   Jackson dataformat: CBOR:2.8.11
+  Jackson-dataformat-CSV:2.11.2
   Jackson dataformat: Smile:2.8.11
   Jackson-dataformat-YAML:2.8.11
   Jackson datatype: JSR310:2.10.0
