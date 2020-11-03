@@ -36,7 +36,9 @@ public class KinesisSourcePMetaSupplier implements ProcessorMetaSupplier {
     private static final long serialVersionUID = 1L;
     private static final HashRange ENTIRE_HASH_RANGE = new HashRange(ZERO, valueOf(2).pow(128));
 
+    @Nonnull
     private final AwsConfig awsConfig;
+    @Nonnull
     private final String stream;
 
     private transient Map<Address, HashRange> assignedHashRanges;

@@ -82,7 +82,7 @@ public final class KinesisSources {
         @Nonnull
         public StreamSource<Map.Entry<String, byte[]>> build() {
             AwsConfig awsConfig = new AwsConfig(endpoint, region, accessKey, secretKey);
-            return Sources.streamFromProcessor("Kinesis(" + stream + ")",
+            return Sources.streamFromProcessor("Kinesis Source (" + stream + ")",
                     new KinesisSourcePMetaSupplier(awsConfig, stream));
         }
     }

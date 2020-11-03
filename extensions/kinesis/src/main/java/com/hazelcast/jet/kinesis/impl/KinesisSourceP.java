@@ -33,8 +33,11 @@ import static com.hazelcast.jet.Util.entry;
 
 public class KinesisSourceP extends AbstractProcessor {
 
+    @Nonnull
     private final AmazonKinesisAsync kinesis;
+    @Nonnull
     private final String stream;
+    @Nonnull
     private final HashRange hashRange;
 
     private ILogger logger;
@@ -93,7 +96,7 @@ public class KinesisSourceP extends AbstractProcessor {
                 /*List<String> messages = records.stream()
                         .map(record -> new String(record.getData().array(), Charset.defaultCharset()))
                         .collect(Collectors.toList());
-                System.err.println("messages = " + messages);*/ //todo: remove
+                System.err.println(i + " - messages = " + messages);*/ //todo: remove
                 System.err.println(i + " - messages = " + records.size()); //todo: remove
                 traverser = Traversers.traverseIterable(records)
                         .map(r -> entry(r.getPartitionKey(), r.getData().array())); //todo: performance impact

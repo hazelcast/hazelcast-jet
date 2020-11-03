@@ -20,16 +20,17 @@ import com.amazonaws.services.kinesis.AmazonKinesisAsync;
 import com.amazonaws.services.kinesis.model.CreateStreamRequest;
 import com.amazonaws.services.kinesis.model.PutRecordsRequest;
 import com.amazonaws.services.kinesis.model.PutRecordsRequestEntry;
-import com.amazonaws.services.kinesis.model.PutRecordsResult;
 import com.amazonaws.services.kinesis.model.StreamDescription;
 import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.SimpleTestInClusterSupport;
 import com.hazelcast.jet.Util;
 import com.hazelcast.jet.kinesis.impl.AwsConfig;
+import com.hazelcast.jet.pipeline.BatchSource;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sink;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.StreamSource;
+import com.hazelcast.jet.pipeline.test.TestSources;
 import com.hazelcast.map.IMap;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -42,21 +43,20 @@ import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
+import static com.hazelcast.internal.util.MapUtil.entry;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
 
 public class KinesisIntegrationTest extends SimpleTestInClusterSupport {
 
     private static final int KEYS = 10;
     private static final int MEMBER_COUNT = 2;
-
-    private static final int MAX_SEND_BATCH_SIZE = 500;
 
     @ClassRule
     public static LocalStackContainer LOCALSTACK = new LocalStackContainer("0.12.1")
@@ -108,7 +108,7 @@ public class KinesisIntegrationTest extends SimpleTestInClusterSupport {
         instance().newJob(getPipeline(source, sink));
 
         int messages = 2500;
-        Map<String, List<String>> expectedMessages = sendMessages(kinesis, stream, messages);
+        Map<String, List<String>> expectedMessages = sendMessages(awsConfig, stream, messages);
         assertTrueEventually(() -> assertEquals(expectedMessages, results));
     }
 
@@ -143,39 +143,39 @@ public class KinesisIntegrationTest extends SimpleTestInClusterSupport {
         return pipeline;
     }
 
-    private static Map<String, List<String>> sendMessages(AmazonKinesisAsync kinesis, String stream, int messages) throws Exception {
-        Map<String, List<String>> sentMessages = new HashMap<>();
-        for (int i = 0; i < messages; i = i + MAX_SEND_BATCH_SIZE) {
-            sendMessages(kinesis, stream, i, Math.min(messages, i + MAX_SEND_BATCH_SIZE), sentMessages);
-        }
-        return sentMessages;
-    }
+    private static Map<String, List<String>> sendMessages(AwsConfig awsConfig, String stream, int count) {
+        List<Entry<String, String>> keyedMessages = IntStream.range(0, count)
+                .boxed()
+                .map(i -> entry(Integer.toString(i % KEYS), i))
+                .map(e -> entry(e.getKey(), "Message " + e.getValue() + " for key " + e.getKey()))
+                .collect(Collectors.toList());
 
-    private static void sendMessages(AmazonKinesisAsync kinesis, String stream, int fromInclusive, int toExclusive,
-                                     Map<String, List<String>> sentMessages) {
-        int count = toExclusive - fromInclusive;
-        if (count > MAX_SEND_BATCH_SIZE) {
-            throw new IllegalArgumentException("Can send only " + MAX_SEND_BATCH_SIZE + " messages at once");
-        }
+        BatchSource<Entry<String, byte[]>> source = TestSources.items(keyedMessages.stream()
+                .map(e1 -> entry(e1.getKey(), e1.getValue().getBytes()))
+                .collect(Collectors.toList()));
+        Sink<Entry<String, byte[]>> sink = KinesisSinks.kinesis(stream)
+                .withEndpoint(awsConfig.getEndpoint())
+                .withRegion(awsConfig.getRegion())
+                .withCredentials(awsConfig.getAccessKey(), awsConfig.getSecretKey())
+                .build();
 
-        List<PutRecordsRequestEntry> requestEntries = new ArrayList<>(count);
-        for (int i = fromInclusive; i < toExclusive; i++) {
-            String key = Integer.toString(i % KEYS);
-            String message = "Message " + i + " for key " + key;
-            sentMessages.merge(key, Collections.singletonList(message), (l1, l2) -> {
-                ArrayList<String> retList = new ArrayList<>();
-                retList.addAll(l1);
-                retList.addAll(l2);
-                return retList;
-            });
-            requestEntries.add(putRecordRequestEntry(key, ByteBuffer.wrap(message.getBytes())));
-        }
+        Pipeline pipeline = Pipeline.create();
+        pipeline.readFrom(source)
+                .writeTo(sink);
 
-        PutRecordsResult response = kinesis.putRecords(putRecordsRequest(stream, requestEntries));
-        int failures = response.getFailedRecordCount();
-        if (failures > 0) {
-            fail("Sending messages to Kinesis failed: " + response);
-        }
+        instance().newJob(pipeline).join();
+
+        return keyedMessages.stream()
+                .collect(Collectors.toMap(
+                        Entry::getKey,
+                        e -> Collections.singletonList(e.getValue()),
+                        (l1, l2) -> {
+                            ArrayList<String> retList = new ArrayList<>();
+                            retList.addAll(l1);
+                            retList.addAll(l2);
+                            return retList;
+                        }
+                ));
     }
 
     private static void waitForStreamToActivate(AmazonKinesisAsync kinesis, String stream) {

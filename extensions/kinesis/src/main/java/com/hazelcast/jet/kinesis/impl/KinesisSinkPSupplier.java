@@ -1,21 +1,7 @@
-/*
- * Copyright 2020 Hazelcast Inc.
- *
- * Licensed under the Hazelcast Community License (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://hazelcast.com/hazelcast-community-license
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 package com.hazelcast.jet.kinesis.impl;
 
 import com.amazonaws.services.kinesis.AmazonKinesisAsync;
+import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorSupplier;
 
@@ -25,7 +11,7 @@ import java.util.stream.IntStream;
 
 import static java.util.stream.Collectors.toList;
 
-public class KinesisSourcePSupplier implements ProcessorSupplier {
+public class KinesisSinkPSupplier<T> implements ProcessorSupplier {
 
     private static final long serialVersionUID = 1L;
 
@@ -34,18 +20,22 @@ public class KinesisSourcePSupplier implements ProcessorSupplier {
     @Nonnull
     private final String stream;
     @Nonnull
-    private final HashRange hashRange;
+    private final FunctionEx<T, String> keyFn;
+    @Nonnull
+    private final FunctionEx<T, byte[]> valueFn;
 
     private transient AmazonKinesisAsync kinesis;
 
-    public KinesisSourcePSupplier(
+    public KinesisSinkPSupplier(
             @Nonnull AwsConfig awsConfig,
             @Nonnull String stream,
-            @Nonnull HashRange hashRange
+            @Nonnull FunctionEx<T, String> keyFn,
+            @Nonnull FunctionEx<T, byte[]> valueFn
     ) {
         this.awsConfig = awsConfig;
         this.stream = stream;
-        this.hashRange = hashRange;
+        this.keyFn = keyFn;
+        this.valueFn = valueFn;
     }
 
     @Override
@@ -57,7 +47,7 @@ public class KinesisSourcePSupplier implements ProcessorSupplier {
     @Override
     public Collection<? extends Processor> get(int count) {
         return IntStream.range(0, count)
-                .mapToObj(i -> new KinesisSourceP(kinesis, stream, hashRange.partition(i, count)))
+                .mapToObj(i -> new KinesisSinkP<T>(kinesis, stream, keyFn, valueFn))
                 .collect(toList());
     }
 }

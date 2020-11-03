@@ -44,7 +44,9 @@ public class ToDo {
 
     //todo: make sure all integration tests run on real backend too
 
-    //is one AmazonKinesisAsync per Jet member enough? how does performance look like?
+    //todo: sink could rely not only on throughput exceptions, but actively track shards
+
+    //todo: is one AmazonKinesisAsync per Jet member enough? how does performance look like?
 
     //todo: update source/sink docs
     //todo: tutorial
