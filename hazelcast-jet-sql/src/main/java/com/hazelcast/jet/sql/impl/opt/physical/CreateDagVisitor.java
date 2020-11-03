@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.sql.impl.opt.physical.visitor;
+package com.hazelcast.jet.sql.impl.opt.physical;
 
 import com.hazelcast.cluster.Address;
 import com.hazelcast.function.ConsumerEx;
@@ -29,19 +29,6 @@ import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.sql.impl.aggregate.ObjectArrayKey;
 import com.hazelcast.jet.sql.impl.expression.ExpressionUtil;
-import com.hazelcast.jet.sql.impl.opt.physical.AggregateAccumulateByKeyPhysicalRel;
-import com.hazelcast.jet.sql.impl.opt.physical.AggregateAccumulatePhysicalRel;
-import com.hazelcast.jet.sql.impl.opt.physical.AggregateByKeyPhysicalRel;
-import com.hazelcast.jet.sql.impl.opt.physical.AggregateCombineByKeyPhysicalRel;
-import com.hazelcast.jet.sql.impl.opt.physical.AggregateCombinePhysicalRel;
-import com.hazelcast.jet.sql.impl.opt.physical.AggregatePhysicalRel;
-import com.hazelcast.jet.sql.impl.opt.physical.FilterPhysicalRel;
-import com.hazelcast.jet.sql.impl.opt.physical.FullScanPhysicalRel;
-import com.hazelcast.jet.sql.impl.opt.physical.InsertPhysicalRel;
-import com.hazelcast.jet.sql.impl.opt.physical.JetRootRel;
-import com.hazelcast.jet.sql.impl.opt.physical.PhysicalRel;
-import com.hazelcast.jet.sql.impl.opt.physical.ProjectPhysicalRel;
-import com.hazelcast.jet.sql.impl.opt.physical.ValuesPhysicalRel;
 import com.hazelcast.sql.impl.calcite.schema.HazelcastTable;
 import com.hazelcast.sql.impl.schema.Table;
 import org.apache.calcite.rel.RelNode;

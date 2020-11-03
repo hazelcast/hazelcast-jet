@@ -18,7 +18,6 @@ package com.hazelcast.jet.sql.impl.opt.physical;
 
 import com.hazelcast.cluster.Address;
 import com.hazelcast.jet.core.Vertex;
-import com.hazelcast.jet.sql.impl.opt.physical.visitor.CreateDagVisitor;
 import com.hazelcast.sql.impl.QueryId;
 import com.hazelcast.sql.impl.calcite.opt.AbstractRootRel;
 import com.hazelcast.sql.impl.plan.node.PlanNodeSchema;
