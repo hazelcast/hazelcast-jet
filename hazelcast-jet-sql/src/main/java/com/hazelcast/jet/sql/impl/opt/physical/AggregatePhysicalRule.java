@@ -200,7 +200,7 @@ final class AggregatePhysicalRule extends RelOptRule {
                     aggregationProviders.add(() -> new AvgSqlAggregation(avgIndex, avgOperandType, distinct));
                     break;
                 default:
-                    throw QueryException.error("Unsupported aggregation: " + kind);
+                    throw QueryException.error("Unsupported aggregation function: " + kind);
             }
         }
 

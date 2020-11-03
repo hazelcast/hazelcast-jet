@@ -53,6 +53,7 @@ import static java.util.stream.Collectors.toList;
 
 /**
  * A test batch-data connector. It emits rows of provided types and values.
+ * It emits a slice of the rows on each member.
  */
 public class TestBatchSqlConnector implements SqlConnector {
 
@@ -206,7 +207,7 @@ public class TestBatchSqlConnector implements SqlConnector {
                 .map(row -> ExpressionUtil.evaluate(predicate, projection, row))
                 .filter(Objects::nonNull)
                 .collect(toList());
-        BatchSource<Object[]> source = TestSources.items(items);
+        BatchSource<Object[]> source = TestSources.itemsDistributed(items);
         ProcessorMetaSupplier pms = ((BatchSourceTransform<Object[]>) source).metaSupplier;
         return dag.newVertex(table.toString(), pms);
     }
