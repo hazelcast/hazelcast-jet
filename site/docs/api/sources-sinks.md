@@ -1067,7 +1067,7 @@ the [CDC Deployment Guide](../operations/cdc.md).
 
 #### CDC Connectors
 
-As of Jet version 4.2 we have following types of CDC sources:
+As of Jet version {jet-version} we have following types of CDC sources:
 
 * [DebeziumCdcSources](/javadoc/{jet-version}/com/hazelcast/jet/cdc/DebeziumCdcSources.html):
   generic source for all databases supported by Debezium

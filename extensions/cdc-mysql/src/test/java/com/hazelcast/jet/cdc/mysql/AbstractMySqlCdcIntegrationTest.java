@@ -18,14 +18,16 @@ package com.hazelcast.jet.cdc.mysql;
 
 import com.hazelcast.jet.cdc.AbstractCdcIntegrationTest;
 import com.hazelcast.jet.test.IgnoreInJenkinsOnWindows;
+import org.junit.Assume;
+import org.junit.Before;
 import org.junit.Rule;
+import org.junit.experimental.categories.Category;
 import org.testcontainers.containers.MySQLContainer;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
-import org.junit.experimental.categories.Category;
 
 import static org.testcontainers.containers.MySQLContainer.MYSQL_PORT;
 
@@ -33,9 +35,17 @@ import static org.testcontainers.containers.MySQLContainer.MYSQL_PORT;
 public abstract class AbstractMySqlCdcIntegrationTest extends AbstractCdcIntegrationTest {
 
     @Rule
-    public MySQLContainer<?> mysql = new MySQLContainer<>("debezium/example-mysql:1.2")
-            .withUsername("mysqluser")
-            .withPassword("mysqlpw");
+    public MySQLContainer<?> mysql = namedTestContainer(
+            new MySQLContainer<>("debezium/example-mysql:1.2")
+                    .withUsername("mysqluser")
+                    .withPassword("mysqlpw")
+    );
+
+    @Before
+    public void ignoreOnJdk15() throws SQLException {
+        Assume.assumeFalse("https://github.com/hazelcast/hazelcast-jet/issues/2623",
+                System.getProperty("java.version").startsWith("15"));
+    }
 
     protected MySqlCdcSources.Builder sourceBuilder(String name) {
         return MySqlCdcSources.mysql(name)

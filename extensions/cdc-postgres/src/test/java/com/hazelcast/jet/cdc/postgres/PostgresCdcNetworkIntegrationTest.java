@@ -35,7 +35,6 @@ import com.hazelcast.test.HazelcastSerialParametersRunnerFactory;
 import com.hazelcast.test.annotation.NightlyTest;
 import org.junit.After;
 import org.junit.Assume;
-import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.contrib.java.lang.system.EnvironmentVariables;
@@ -101,16 +100,6 @@ public class PostgresCdcNetworkIntegrationTest extends AbstractCdcIntegrationTes
                 { RetryStrategies.indefinitely(RECONNECT_INTERVAL_MS), false, "reconnect"},
                 { RetryStrategies.indefinitely(RECONNECT_INTERVAL_MS), true, "reconnect w/ state reset"}
         });
-    }
-
-    @Before
-    public void before() {
-        //disable Testcontainer's automatic resource manager
-        //containers are cleaned up explicitly
-        //automatic resource manager is just an extra thing that can break
-        //(have had problems with it not being cleaned up properly itself)
-        environmentVariables.set("TESTCONTAINERS_RYUK_DISABLED", "true");
-        assertEquals("true", System.getenv("TESTCONTAINERS_RYUK_DISABLED"));
     }
 
     @After
@@ -354,15 +343,13 @@ public class PostgresCdcNetworkIntegrationTest extends AbstractCdcIntegrationTes
         }
     }
 
-    private static Network initNetwork() {
-        return Network.newNetwork();
-    }
-
-    private static PostgreSQLContainer<?> initPostgres(Network network, Integer fixedExposedPort) {
-        PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("debezium/example-postgres:1.2")
-                .withDatabaseName("postgres")
-                .withUsername("postgres")
-                .withPassword("postgres");
+    private PostgreSQLContainer<?> initPostgres(Network network, Integer fixedExposedPort) {
+        PostgreSQLContainer<?> postgres = namedTestContainer(
+                new PostgreSQLContainer<>("debezium/example-postgres:1.2")
+                        .withDatabaseName("postgres")
+                        .withUsername("postgres")
+                        .withPassword("postgres")
+        );
         if (fixedExposedPort != null) {
             Consumer<CreateContainerCmd> cmd = e -> e.withPortBindings(
                     new PortBinding(Ports.Binding.bindPort(fixedExposedPort), new ExposedPort(POSTGRESQL_PORT)));
@@ -376,10 +363,14 @@ public class PostgresCdcNetworkIntegrationTest extends AbstractCdcIntegrationTes
         return postgres;
     }
 
-    private static ToxiproxyContainer initToxiproxy(Network network) {
-        ToxiproxyContainer toxiproxy = new ToxiproxyContainer().withNetwork(network);
+    private ToxiproxyContainer initToxiproxy(Network network) {
+        ToxiproxyContainer toxiproxy = namedTestContainer(new ToxiproxyContainer().withNetwork(network));
         toxiproxy.start();
         return toxiproxy;
+    }
+
+    private static Network initNetwork() {
+        return Network.newNetwork();
     }
 
     private static ToxiproxyContainer.ContainerProxy initProxy(
@@ -442,7 +433,7 @@ public class PostgresCdcNetworkIntegrationTest extends AbstractCdcIntegrationTes
             }
         }
 
-        throw new IOException("No free port in range [" + fromInclusive + ", " +  toExclusive + ")");
+        throw new IOException("No free port in range [" + fromInclusive + ", " + toExclusive + ")");
     }
 
 }
