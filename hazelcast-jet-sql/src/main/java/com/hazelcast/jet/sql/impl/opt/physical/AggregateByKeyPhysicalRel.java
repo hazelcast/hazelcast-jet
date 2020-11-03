@@ -65,7 +65,7 @@ public class AggregateByKeyPhysicalRel extends Aggregate implements PhysicalRel 
     }
 
     @Override
-    public Vertex visit(CreateDagVisitor visitor) {
+    public Vertex accept(CreateDagVisitor visitor) {
         return visitor.onAggregateByKey(this);
     }
 

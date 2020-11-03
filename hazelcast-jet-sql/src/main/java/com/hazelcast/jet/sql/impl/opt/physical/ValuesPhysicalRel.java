@@ -50,7 +50,7 @@ public class ValuesPhysicalRel extends Values implements PhysicalRel {
     }
 
     @Override
-    public Vertex visit(CreateDagVisitor visitor) {
+    public Vertex accept(CreateDagVisitor visitor) {
         return visitor.onValues(this);
     }
 

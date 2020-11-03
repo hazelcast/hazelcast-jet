@@ -52,7 +52,7 @@ public class InsertPhysicalRel extends TableModify implements PhysicalRel {
     }
 
     @Override
-    public Vertex visit(CreateDagVisitor visitor) {
+    public Vertex accept(CreateDagVisitor visitor) {
         return visitor.onInsert(this);
     }
 

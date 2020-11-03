@@ -60,10 +60,10 @@ public interface PhysicalRel extends RelNode {
     }
 
     /**
-     * Visit a physical rel.
+     * Accept a visitor to this physical rel.
      *
      * @param visitor Visitor.
      * @return the DAG vertex created for this rel
      */
-    Vertex visit(CreateDagVisitor visitor);
+    Vertex accept(CreateDagVisitor visitor);
 }

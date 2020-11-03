@@ -59,7 +59,7 @@ public class AggregateCombineByKeyPhysicalRel extends Aggregate implements Physi
     }
 
     @Override
-    public Vertex visit(CreateDagVisitor visitor) {
+    public Vertex accept(CreateDagVisitor visitor) {
         return visitor.onCombineByKey(this);
     }
 

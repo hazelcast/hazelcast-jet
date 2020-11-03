@@ -47,7 +47,7 @@ public class FilterPhysicalRel extends AbstractFilterRel implements PhysicalRel 
     }
 
     @Override
-    public Vertex visit(CreateDagVisitor visitor) {
+    public Vertex accept(CreateDagVisitor visitor) {
         return visitor.onFilter(this);
     }
 

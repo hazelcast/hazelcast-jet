@@ -53,7 +53,7 @@ public class AggregateAccumulatePhysicalRel extends SingleRel implements Physica
     }
 
     @Override
-    public Vertex visit(CreateDagVisitor visitor) {
+    public Vertex accept(CreateDagVisitor visitor) {
         return visitor.onAccumulate(this);
     }
 

@@ -219,7 +219,7 @@ public class CreateDagVisitor {
             Vertex thisVertex,
             @Nullable Consumer<Edge> configureEdgeFn
     ) {
-        Vertex inputVertex = ((PhysicalRel) inputRel).visit(this);
+        Vertex inputVertex = ((PhysicalRel) inputRel).accept(this);
         Edge edge = between(inputVertex, thisVertex);
         if (configureEdgeFn != null) {
             configureEdgeFn.accept(edge);

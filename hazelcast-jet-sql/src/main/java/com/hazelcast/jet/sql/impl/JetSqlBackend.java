@@ -301,7 +301,7 @@ class JetSqlBackend implements SqlBackend {
 
     private DAG createDag(PhysicalRel physicalRel) {
         CreateDagVisitor visitor = new CreateDagVisitor(nodeEngine.getLocalMember().getAddress());
-        physicalRel.visit(visitor);
+        physicalRel.accept(visitor);
         return visitor.getDag();
     }
 }

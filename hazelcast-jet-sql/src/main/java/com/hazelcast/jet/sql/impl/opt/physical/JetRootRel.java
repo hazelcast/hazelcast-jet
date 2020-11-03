@@ -50,7 +50,7 @@ public class JetRootRel extends AbstractRootRel implements PhysicalRel {
     }
 
     @Override
-    public Vertex visit(CreateDagVisitor visitor) {
+    public Vertex accept(CreateDagVisitor visitor) {
         return visitor.onRoot(this);
     }
 }

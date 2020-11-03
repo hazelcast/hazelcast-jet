@@ -64,7 +64,7 @@ public class AggregateAccumulateByKeyPhysicalRel extends SingleRel implements Ph
     }
 
     @Override
-    public Vertex visit(CreateDagVisitor visitor) {
+    public Vertex accept(CreateDagVisitor visitor) {
         return visitor.onAccumulateByKey(this);
     }
 

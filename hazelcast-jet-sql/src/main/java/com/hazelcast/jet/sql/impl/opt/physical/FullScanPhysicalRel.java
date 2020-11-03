@@ -79,7 +79,7 @@ public class FullScanPhysicalRel extends TableScan implements PhysicalRel {
     }
 
     @Override
-    public Vertex visit(CreateDagVisitor visitor) {
+    public Vertex accept(CreateDagVisitor visitor) {
         return visitor.onFullScan(this);
     }
 
