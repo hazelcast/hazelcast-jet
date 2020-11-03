@@ -103,12 +103,13 @@ public final class ReflectionUtils {
 
     /**
      * Return a set-method for a class and a property. The setter must start
-     * with "set", must be public, non-static, must return void and take one
-     * argument of type {@code type}.
+     * with "set", must be public, non-static, must return void or the
+     * containing class type (a builder-style setter) and take one argument of
+     * {@code propertyType}.
      *
      * @param clazz The containing class
      * @param propertyName Name of the property
-     * @param type The type of the property
+     * @param propertyType The propertyType of the property
      *
      * @return The found setter or null if one matching the criteria doesn't exist
      */
@@ -116,13 +117,13 @@ public final class ReflectionUtils {
     public static Method findPropertySetter(
             @Nonnull Class<?> clazz,
             @Nonnull String propertyName,
-            @Nonnull Class<?> type
+            @Nonnull Class<?> propertyType
     ) {
         String setterName = "set" + toUpperCase(propertyName.charAt(0)) + propertyName.substring(1);
 
         Method method;
         try {
-            method = clazz.getMethod(setterName, type);
+            method = clazz.getMethod(setterName, propertyType);
         } catch (NoSuchMethodException e) {
             return null;
         }
@@ -136,7 +137,7 @@ public final class ReflectionUtils {
         }
 
         Class<?> returnType = method.getReturnType();
-        if (returnType != void.class && returnType != Void.class) {
+        if (returnType != void.class && returnType != Void.class && returnType != clazz) {
             return null;
         }
 

@@ -103,6 +103,11 @@ public class ReflectionUtilsTest {
     }
 
     @Test
+    public void when_findPropertySetter_public_builderStyleReturnType_then_returnsIt() {
+        assertNotNull(findPropertySetter(JavaProperties.class, "builderStyleSetter", int.class));
+    }
+
+    @Test
     public void when_findPropertySetter_publicStatic_then_returnsNull() {
         assertNull(findPropertySetter(JavaProperties.class, "publicStaticField", int.class));
     }
@@ -292,6 +297,10 @@ public class ReflectionUtilsTest {
 
         public int setIntWithParameter(int parameter) {
             return 0;
+        }
+
+        public JavaProperties setBuilderStyleSetter(int parameter) {
+            return this;
         }
     }
 
