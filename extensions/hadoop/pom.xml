@@ -74,18 +74,8 @@
                     </execution>
                 </executions>
                 <configuration>
-                    <!-- TODO verify this works in integration tests-->
-<!--                    <finalName>${project.name}-with-${hadoop.version}-${project.version}</finalName>-->
                     <createSourcesJar>true</createSourcesJar>
                     <shadeSourcesContent>true</shadeSourcesContent>
-                    <!--<shadedArtifactAttached>true</shadedArtifactAttached>
-                    <shadedClassifierName>with-${hadoop.version}</shadedClassifierName>-->
-<!--                    <artifactSet>
-                        &lt;!&ndash;<includes>
-                            <include>com.hazelcast.jet:hazelcast-jet-hadoop</include>
-                        </includes>&ndash;&gt;
-
-                    </artifactSet>-->
                     <!--
                     We actually don't shade these in here in Hadoop module, they are already part of core
                     But we need to relocate the usage in the Hadoop module
