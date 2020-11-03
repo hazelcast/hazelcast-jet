@@ -5,7 +5,7 @@ description: Introduction to Hazelcast Jet SQL features.
 
 
 The SQL service provided by Hazelcast Jet allows you to specify Jet jobs
-declaratively.
+declaratively using the well-known SQL language.
 
 **Note:** _The service is in beta state. Behavior and API might change in
 future releases. Binary compatibility is not guaranteed between minor or
