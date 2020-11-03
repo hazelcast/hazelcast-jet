@@ -110,3 +110,16 @@ will never see any result. Therefore Jet relaxed the behavior: the sink
 is free to define its own transaction semantics. Due to support for
 fault tolerance it might even have at-least-once semantics. If a query
 fails, you might see partial results written.
+
+## Case sensitivity
+
+Identifiers such as table and column names are case-sensitive. Function
+names and SQL keywords aren't. If your identifier contains special characters,
+use `"` to quote. For example, if your map is named `my-map`:
+
+```sql
+SELECT * FROM "my-map";  -- works
+sElEcT * from "my-map";  -- works
+SELECT * FROM my-map;    -- fails, `-` interpreted as subtraction
+SELECT * FROM "MY-MAP";  -- fails, map name is case-sensitive
+```
