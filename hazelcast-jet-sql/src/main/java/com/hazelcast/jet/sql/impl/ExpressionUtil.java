@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.sql.impl.expression;
+package com.hazelcast.jet.sql.impl;
 
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.function.PredicateEx;

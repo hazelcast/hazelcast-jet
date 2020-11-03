@@ -26,7 +26,6 @@ import com.hazelcast.jet.sql.impl.JetPlan.DropMappingPlan;
 import com.hazelcast.jet.sql.impl.JetPlan.DropSnapshotPlan;
 import com.hazelcast.jet.sql.impl.JetPlan.ExecutionPlan;
 import com.hazelcast.jet.sql.impl.calcite.parser.JetSqlParser;
-import com.hazelcast.jet.sql.impl.convert.JetSqlToRelConverter;
 import com.hazelcast.jet.sql.impl.opt.OptUtils;
 import com.hazelcast.jet.sql.impl.opt.logical.LogicalRel;
 import com.hazelcast.jet.sql.impl.opt.logical.LogicalRules;

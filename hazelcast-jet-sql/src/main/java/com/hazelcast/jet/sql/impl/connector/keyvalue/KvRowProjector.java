@@ -27,7 +27,7 @@ import com.hazelcast.sql.impl.type.QueryDataType;
 import java.util.List;
 import java.util.Map.Entry;
 
-import static com.hazelcast.jet.sql.impl.expression.ExpressionUtil.evaluate;
+import static com.hazelcast.jet.sql.impl.ExpressionUtil.evaluate;
 
 class KvRowProjector implements Row {
 

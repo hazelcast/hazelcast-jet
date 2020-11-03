@@ -28,7 +28,7 @@ import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.sql.impl.aggregate.ObjectArrayKey;
-import com.hazelcast.jet.sql.impl.expression.ExpressionUtil;
+import com.hazelcast.jet.sql.impl.ExpressionUtil;
 import com.hazelcast.sql.impl.calcite.schema.HazelcastTable;
 import com.hazelcast.sql.impl.schema.Table;
 import org.apache.calcite.rel.RelNode;

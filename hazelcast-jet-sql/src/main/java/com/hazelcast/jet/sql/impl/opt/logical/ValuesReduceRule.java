@@ -17,7 +17,7 @@
 package com.hazelcast.jet.sql.impl.opt.logical;
 
 import com.google.common.collect.ImmutableList;
-import com.hazelcast.jet.sql.impl.expression.ExpressionUtil;
+import com.hazelcast.jet.sql.impl.ExpressionUtil;
 import com.hazelcast.jet.sql.impl.opt.OptUtils;
 import com.hazelcast.sql.impl.expression.Expression;
 import com.hazelcast.sql.impl.plan.node.PlanNodeSchema;

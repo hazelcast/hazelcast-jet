@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.sql.impl.convert;
+package com.hazelcast.jet.sql.impl;
 
 import com.hazelcast.sql.impl.calcite.HazelcastSqlToRelConverter;
 import org.apache.calcite.plan.RelOptCluster;
