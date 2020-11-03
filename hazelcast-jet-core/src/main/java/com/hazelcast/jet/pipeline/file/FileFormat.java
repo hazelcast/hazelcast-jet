@@ -16,6 +16,9 @@
 
 package com.hazelcast.jet.pipeline.file;
 
+import javax.annotation.Nonnull;
+import java.nio.charset.Charset;
+
 /**
  * Specification of the file format.
  *
@@ -29,4 +32,85 @@ public interface FileFormat<T> {
      */
     String format();
 
+    /*
+     * FileFormat factory methods for format discoverability
+     */
+
+    /**
+     * File format for Avro files, see {@link AvroFileFormat}
+     */
+    static <T> AvroFileFormat<T> avro() {
+        return new AvroFileFormat<>();
+    }
+
+    /**
+     * File format for AvroFiles, see {@link AvroFileFormat}
+     */
+    static <T> AvroFileFormat<T> avro(Class<T> clazz) {
+        return new AvroFileFormat<T>().withReflect(clazz);
+    }
+
+    /**
+     * File format for CSV files, see {@link CsvFileFormat}
+     */
+    static <T> CsvFileFormat<T> csv(@Nonnull Class<T> clazz) {
+        return new CsvFileFormat<T>(clazz);
+    }
+
+    /**
+     * File format for JSON files, see {@link JsonFileFormat}
+     */
+    static <T> JsonFileFormat<T> json(@Nonnull Class<T> clazz) {
+        return new JsonFileFormat<>(clazz);
+    }
+
+    /**
+     * File format for text files where each lines is emitted as
+     * a String from the source
+     */
+    static LinesTextFileFormat lines() {
+        return new LinesTextFileFormat();
+    }
+
+    /**
+     * File format for text files where each lines is emitted as
+     * a String from the source, see {@link LinesTextFileFormat}
+     *
+     * @param charset charset of the file, not supported by Hadoop based file connector, which uses only UTF-8
+     */
+    static LinesTextFileFormat lines(@Nonnull Charset charset) {
+        return new LinesTextFileFormat(charset);
+    }
+
+    /**
+     * File format for Parquet files, see {@link ParquetFileFormat}
+     */
+    static <T> ParquetFileFormat<T> parquet() {
+        return new ParquetFileFormat<>();
+    }
+
+    /**
+     * File format for binary files, see {@link RawBytesFileFormat}
+     */
+    static RawBytesFileFormat bytes() {
+        return new RawBytesFileFormat();
+    }
+
+    /**
+     * File format for text files, where the whole file is emitted as
+     * a single string, see {@link TextFileFormat}
+     */
+    static TextFileFormat text() {
+        return new TextFileFormat();
+    }
+
+    /**
+     * File format for text files, where the whole file is emitted as
+     * a single string, see {@link TextFileFormat}
+     *
+     * @param charset charset of the file, not supported by Hadoop based file connector, which uses only UTF-8
+     */
+    static TextFileFormat text(@Nonnull Charset charset) {
+        return new TextFileFormat(charset);
+    }
 }
