@@ -29,11 +29,14 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * TODO
+ * An API to bridge Jet connectors and SQL. Allows the use of a Jet
+ * connector from SQL and create a mapping for remote objects available
+ * through the connector.
+ * <p>
+ * It's currently private because we expect significant changes to it, but
+ * we plan to make it part of the public Core API in the future.
  */
 public interface SqlConnector {
-
-    // TODO do these options apply to every SQL connector? Should we move them?
 
     /**
      * The key serialization format for key-value connectors.
@@ -218,10 +221,8 @@ public interface SqlConnector {
     @Nonnull
     default Vertex fullScanReader(
             @Nonnull DAG dag,
-            // TODO convert back to JetTable after we can read maps using IMDG code
             @Nonnull Table table,
             @Nullable String timestampField,
-            // TODO: do we want to expose Expression to the user ?
             @Nullable Expression<Boolean> predicate,
             @Nonnull List<Expression<?>> projection
     ) {
