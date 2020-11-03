@@ -44,7 +44,6 @@ public final class LogicalRules {
                 ProjectMergeRule.INSTANCE,
                 ProjectRemoveRule.INSTANCE,
                 ProjectFilterTransposeRule.INSTANCE,
-                ProjectJoinTransposeRule.INSTANCE,
                 ProjectIntoScanLogicalRule.INSTANCE,
 
                 // Scan rules
