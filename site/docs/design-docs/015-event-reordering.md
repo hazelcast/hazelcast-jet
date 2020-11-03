@@ -83,7 +83,7 @@ partitioning key and propagate it through the pipeline.
 
 ### Keep it Without the Key
 
-We can keep the order even without the partitioning key, simply by
+We can ¡even without the partitioning key, simply by
 keeping the partitions isolated throughout the pipeline. This seems to
 allow us a level of parallelism equal to the number of partitions in
 the source. However, it is pretty inflexible:
@@ -112,10 +112,26 @@ windowed aggregation, which currently don't need the wrapping
 
 TODO: explain the decision.
 
-## Implementation of the Preserve Parallelism Approach
+## Implementation of the Preserve Order Approach
 
-This affects the code in the `Planner`. If the incoming edge we would
-attach to the transform is a round-robin one (`unicast`), then:
+We added a setter/getter methods to Pipeline to activate/deactivate this
+approach on the pipeline. The default value for this property is `false`
+that means that do not preserve the order of events. User can set this
+property as follows:
+
+```java
+pipeline.setPreserveOrder(true);
+```
+
+and get the value of this property by:
+
+```java
+boolean value = pipeline.isPreserveOrder();
+```
+
+Enabling this property hints the Jet to keep the event order the same.
+It affects the code in the `Planner`. If the incoming edge we would
+attach to the transform is a round-robin one (`unicast`), then Jet:
 
 * Ensure that the local parallelism (LP) of the input vertex of the
   transform is equal to the PlannerVertex of the upstream transform.
@@ -126,7 +142,7 @@ Otherwise, if it's a partitioned edge, do nothing.
 
 We applied the policy to enforce equal local parallelism during the
 pipeline-to-DAG conversion stage, `Pipeline.toDag()`. We also inspected
-and adjusted the code in each of the `Transform.addToDa()`
+and adjusted the code in each of the `Transform.addToDag()`
 implementations, switching to the `isolated` edge where needed. Here is
 the summary of these changes:
 
@@ -135,18 +151,26 @@ the summary of these changes:
 |Map/Filter/FlatMap|Enforce parallelism equal to the upstream, apply the `isolated` edge.|
 |Custom (Core API) Transform|Enforce parallelism equal to the upstream, apply the `isolated` edge.|
 |Partitioned Custom Transform|No changes, it already uses a partitioned edge.|
-|Aggregation|No changes. Aggregation is order-insensitive, and creates a new order in its output. Marked as `OrderCreator`.|
+|Aggregation|No changes. Aggregation is order-insensitive, and creates a new order in its output. |
 |Distinct|No changes. We don't guarantee to emit the very first distinct item.|
-|Sorting|No changes. Sorting is order-insensitive and enforces its own order in the output. Marked as a `OrderCreator`.|
+|Sorting|No changes. Sorting is order-insensitive and enforces its own order in the output.|
 |HashJoinTransform| Edge-0 (carrying the stream to be enriched): Enforce parallelism equal to the upstream, apply the `isolated` edge.|
-|Stateful Mapping|No changes, stateful mapping already preserves the order of the upstream stage. Marked as `OrderSensitive`|
+|Stateful Mapping|No changes, stateful mapping already preserves the order of the upstream stage. |
 |MergeTransform| Enforce parallelism equal to the minimum of its upstreams, apply the updated version of isolated edge.|
-|TimestampTransform|No changes, this transform already uses the `isolated` edge. Marked `OrderSensitive` to keep doing what it already does.|
+|TimestampTransform|No changes, this transform already uses the `isolated` edge.|
 |PeekTransform|No changes.|
 |Sources|No changes.|
-|Sinks| At the first, all sinks are marked as `OrderSensitive` because it is easier to implement, but some sinks may not really be. TODO: we should consider and mark each sink according to their order sensitivities for a better job planning, and provide an interface for the users to mark their sinks during creation.|
+|Sinks|No changes.|
 
-## Smart Job Planning
+## Not Implementing Now: Smart Job Planning (Abandoned)
+
+Since it requires marking pipeline.stages as order sensitive or not, we
+have abandoned using it in this first implementation. In other words,
+this approach requires the user to know which stages of the pipeline is
+order-sensitive or not. I leave this section in the TDD as this approach
+can be used for fine-grained optimizations. You can also find the
+implementation we deleted
+[here](https://github.com/hazelcast/hazelcast-jet/pull/2522/commits/a745b678f5fa05ee54400750bcb69117bcf37f1f#diff-e841e6cd817336dba2e28b8598d91ba0105f513b9ad56ddbbe79513c4bf63613L210-L231).
 
 We classified the transforms as order-sensitive and order-insensitive.
 This allows us to analyze the graph of the pipeline and identify which
@@ -166,8 +190,8 @@ order-sensitive stage. Here's the algorithm we use:
 1. Traverse to DAG in the reverse topological order.
 2. When visiting an order-sensitive transform, activate the ordering
    prevention logic for this and future transforms until visiting an
-   order-creating transform.
-3. After visiting an order-creating transform, deactivate the
+   order-creator transform.
+3. After visiting an order-creator transform, deactivate the
    ordering prevention logic for the future transforms until visiting an
    order-sensitive node.
 4. Follow this procedure to visit all nodes.
