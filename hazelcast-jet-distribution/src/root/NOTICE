@@ -114,6 +114,7 @@ Apache License, Version 2.0
   lang-mustache:7.0.0
   parent-join:7.0.0
   rank-eval:7.0.0
+  Javassist:3.26.0-GA
   LZ4 and xxHash:1.5.0
   SnakeYAML Engine:1.0
   snappy-java:1.1.1.3
@@ -140,6 +141,7 @@ BSD 3-Clause License
   Protocol Buffers [Core]:3.13.0
   ParaNamer Core:2.7
   ANTLR 4 Runtime:4.7.2
+  Reflections:0.9.12
 CC0
   reactive-streams:1.0.2
 EPL 2.0
@@ -148,18 +150,24 @@ GNU General Public License, version 2 (GPL2), with the classpath exception
   Checker Qual:2.5.5
 GPL2 w/ CPE
   javax.ws.rs-api:2.1.1
+LGPL 2.1
+  Javassist:3.26.0-GA
 MIT License
   ClassGraph:4.8.66
   JOpt Simple:5.0.2
   Checker Qual:2.5.5
   Animal Sniffer Annotations:1.18
   SLF4J API Module:1.7.25
+MPL 1.1
+  Javassist:3.26.0-GA
 Public Domain
   XZ for Java:1.5
 Public Domain, per Creative Commons CC0
   HdrHistogram:2.1.9
 The GNU General Public License, v2 with FOSS exception
   MySQL Connector/J:8.0.16
+WTFPL
+  Reflections:0.9.12
 
 -----
 
