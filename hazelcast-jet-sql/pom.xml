@@ -34,7 +34,6 @@
 
     <properties>
         <confluent.version>4.1.0</confluent.version>
-        <parquet.version>1.10.1</parquet.version>
     </properties>
 
     <repositories>
@@ -59,11 +58,31 @@
             <groupId>com.hazelcast</groupId>
             <artifactId>hazelcast-sql</artifactId>
             <version>${hazelcast.version}</version>
-            <classifier>jar-with-dependencies</classifier>
+            <classifier>original</classifier>
             <exclusions>
                 <exclusion>
                     <groupId>com.hazelcast</groupId>
                     <artifactId>hazelcast</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>com.google.code.findbugs</groupId>
+                    <artifactId>jsr305</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.checkerframework</groupId>
+                    <artifactId>checker-compat-qual</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>com.google.errorprone</groupId>
+                    <artifactId>error_prone_annotations</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>com.google.j2objc</groupId>
+                    <artifactId>j2objc-annotations</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.codehaus.mojo</groupId>
+                    <artifactId>animal-sniffer-annotations</artifactId>
                 </exclusion>
             </exclusions>
         </dependency>
@@ -165,13 +184,6 @@
             <classifier>test</classifier>
             <scope>test</scope>
         </dependency>
-
-        <dependency>
-            <groupId>org.apache.hadoop</groupId>
-            <artifactId>hadoop-minicluster</artifactId>
-            <version>${hadoop.version}</version>
-            <scope>test</scope>
-        </dependency>
     </dependencies>
 
     <build>
@@ -191,10 +203,10 @@
                                 <artifactItem>
                                     <groupId>com.hazelcast</groupId>
                                     <artifactId>hazelcast-sql</artifactId>
-                                    <classifier>jar-with-dependencies</classifier>
+                                    <classifier>original</classifier>
                                     <type>jar</type>
                                     <overWrite>true</overWrite>
-                                    <outputDirectory>${project.build.directory}/</outputDirectory>
+                                    <outputDirectory>${project.build.directory}</outputDirectory>
                                     <includes>**/Parser.jj</includes>
                                 </artifactItem>
                             </artifactItems>
