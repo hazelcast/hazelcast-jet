@@ -16,10 +16,11 @@
 
 package com.hazelcast.jet.sql.impl.opt.logical;
 
+import com.hazelcast.sql.impl.calcite.opt.logical.FilterIntoScanLogicalRule;
+import com.hazelcast.sql.impl.calcite.opt.logical.ProjectIntoScanLogicalRule;
 import org.apache.calcite.rel.rules.FilterMergeRule;
 import org.apache.calcite.rel.rules.FilterProjectTransposeRule;
 import org.apache.calcite.rel.rules.ProjectFilterTransposeRule;
-import org.apache.calcite.rel.rules.ProjectJoinTransposeRule;
 import org.apache.calcite.rel.rules.ProjectMergeRule;
 import org.apache.calcite.rel.rules.ProjectRemoveRule;
 import org.apache.calcite.rel.rules.PruneEmptyRules;
