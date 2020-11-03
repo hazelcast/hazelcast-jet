@@ -137,17 +137,18 @@ public interface SqlConnector {
     boolean isStream();
 
     /**
-     * Resolve a final field list given a field list and options from the user.
-     * This method is called when processing a CREATE MAPPING statement.
+     * Resolves the final field list given an initial field list and options
+     * from the user. Jet calls this method when processing a CREATE MAPPING
+     * statement.
      * <p>
      * The {@code userFields} can be empty, in this case the connector is
      * supposed to resolve them from a sample or from options. If it's not
-     * empty, it should be only validated - no columns should be added or
-     * removed or type changed. The external name can be added.
+     * empty, it should only validate it &mdash; it should neither add/remove
+     * columns nor change the type. It can add the external name.
      * <p>
-     *  The returned list must not be empty. It will be stored in the catalog
-     *  and if the user lists the catalog, they will be visible to the user. It
-     *  will be later passed to {@link #createTable}.
+     * The returned list must not be empty. Jet stores it in the catalog, and
+     * the user can see it by listing the catalog. Jet will later pass it to
+     * {@link #createTable}.
      *
      * @param nodeEngine an instance of {@link NodeEngine}
      * @param options    user-provided options
@@ -162,10 +163,11 @@ public interface SqlConnector {
     );
 
     /**
-     * Creates a {@link Table} object with the given fields. Should not not
-     * attempt to connect to the remote service and be fast.
+     * Creates a {@link Table} object with the given fields. Should return
+     * quickly; specificially it should not attempt to connect to the remote
+     * service.
      * <p>
-     * This method is called for each statement execution and for each mapping.
+     * Jet calls this method for each statement execution and for each mapping.
      *
      * @param nodeEngine     an instance of {@link NodeEngine}
      * @param options        connector specific options
@@ -182,8 +184,8 @@ public interface SqlConnector {
     );
 
     /**
-     * Returns whether the {@link #fullScanReader} is supported for this
-     * connector. The default implementation returns {@code false}.
+     * Returns whether this connector supports the {@link #fullScanReader}. The
+     * default implementation returns {@code false}.
      */
     default boolean supportsFullScanReader() {
         return false;
@@ -192,28 +194,26 @@ public interface SqlConnector {
     /**
      * Returns a supplier for a source vertex reading the input according to
      * the projection/predicate. The output type of the source is Object[]. If
-     * timestampField is not null, the source should generate watermarks
-     * according to it.
+     * {@code timestampField} is not null, the source should generate
+     * watermarks according to it.
      * <p>
      * The result is:<ul>
      * <li>{@code f0}: the source vertex of the sub-DAG
      * <li>{@code f1}: the sink vertex of teh sub-DAG
      * </ul>
      * <p>
-     * The field indexes in the predicate and projection both refer to indexes
-     * of original fields of the jetTable. That is if the table has fields
-     * {@code a, b, c} and the query is:
-     *
+     * The field indexes in the predicate and projection refer to the
+     * zero-based indexes of the original fields of the {code table}. For
+     * example, if the table has fields {@code a, b, c} and the query is:
      * <pre>{@code
      *     SELECT b FROM t WHERE c=10
      * }</pre>
-     * <p>
      * Then the projection will be {@code {1}} and the predicate will be {@code
      * {2}=10}.
      *
-     * @param table      The table object
+     * @param table      the table object
      * @param predicate  SQL expression to filter the rows
-     * @param projection list of field names to return
+     * @param projection the list of field names to return
      */
     @Nonnull
     default Vertex fullScanReader(
@@ -231,16 +231,16 @@ public interface SqlConnector {
     }
 
     /**
-     * Returns whether the {@link #sink} is supported for this connector. The
-     * default implementation returns {@code false}.
+     * Returns whether this connector supports the {@link #sink}. The default
+     * implementation returns {@code false}.
      */
     default boolean supportsSink() {
         return false;
     }
 
     /**
-     * Returns whether {@code INSERT} statements can be used for this
-     * connector. The default implementation returns {@code false}.
+     * Returns whether this connector supports the {@code INSERT} statement.
+     * The default implementation returns {@code false}.
      */
     default boolean supportsInsert() {
         return false;
