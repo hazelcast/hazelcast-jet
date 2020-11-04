@@ -28,7 +28,6 @@ import com.hazelcast.sql.impl.row.Row;
 
 import java.util.NoSuchElementException;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static com.hazelcast.sql.impl.ResultIterator.HasNextResult.DONE;
@@ -41,9 +40,10 @@ public class JetQueryResultProducer implements QueryResultProducer {
 
     static final int QUEUE_CAPACITY = 4096;
 
+    private static final Exception NORMAL_COMPLETION = new NormalCompletionException();
+
     private final OneToOneConcurrentArrayQueue<Row> queue = new OneToOneConcurrentArrayQueue<>(QUEUE_CAPACITY);
-    private final AtomicReference<QueryException> error = new AtomicReference<>();
-    private final AtomicBoolean done = new AtomicBoolean();
+    private final AtomicReference<Exception> done = new AtomicReference<>();
     private InternalIterator iterator;
 
     @Override
@@ -57,18 +57,16 @@ public class JetQueryResultProducer implements QueryResultProducer {
 
     @Override
     public void onError(QueryException error) {
-        if (done.compareAndSet(false, true)) {
-            this.error.compareAndSet(null, error);
-        }
+        done.compareAndSet(null, error);
     }
 
     public void done() {
-        done.set(true);
+        done.compareAndSet(null, NORMAL_COMPLETION);
     }
 
     public void consume(Inbox inbox) {
-        if (error.get() != null) {
-            throw new RuntimeException(error.get());
+        if (done.get() != null) {
+            throw new RuntimeException(done.get());
         }
         for (Object[] r; (r = (Object[]) inbox.peek()) != null && queue.offer(new HeapRow(r)); ) {
             inbox.remove();
@@ -129,14 +127,20 @@ public class JetQueryResultProducer implements QueryResultProducer {
          * </ul>
          */
         private boolean isDone() {
-            if (done.get()) {
-                QueryException localError = error.get();
-                if (localError != null) {
-                    throw new RuntimeException("The Jet SQL job failed: " + localError.getMessage(), localError);
+            Exception doneExc = done.get();
+            if (doneExc != null) {
+                if (doneExc instanceof NormalCompletionException) {
+                    return true;
                 }
-                return true;
+                throw new RuntimeException("The Jet SQL job failed: " + doneExc.getMessage(), doneExc);
             }
             return false;
+        }
+    }
+
+    private static final class NormalCompletionException extends Exception {
+        NormalCompletionException() {
+            super("done normally");
         }
     }
 }
