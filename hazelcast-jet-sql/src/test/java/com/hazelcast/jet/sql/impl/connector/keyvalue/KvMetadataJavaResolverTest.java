@@ -107,7 +107,7 @@ public class KvMetadataJavaResolverTest {
                 options,
                 null
         )).isInstanceOf(QueryException.class)
-          .hasMessageContaining("The field '" + prefix + "' is of type INT, you can't map '" + prefix + ".field' too");
+          .hasMessage("The field '" + prefix + "' is of type INTEGER, you can't map '" + prefix + ".field' too");
     }
 
     @Test

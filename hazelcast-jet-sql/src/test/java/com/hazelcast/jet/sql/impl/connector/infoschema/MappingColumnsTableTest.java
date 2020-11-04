@@ -49,7 +49,7 @@ public class MappingColumnsTableTest {
         List<Object[]> rows = mappingColumnsTable.rows();
 
         // then
-        assertThat(rows)
-                .containsExactly(new Object[]{"catalog", "table-schema", "table-name", "table-field", "0", "true", "INT"});
+        assertThat(rows).containsExactly(
+                new Object[]{"catalog", "table-schema", "table-name", "table-field", 0, "true", "INTEGER"});
     }
 }

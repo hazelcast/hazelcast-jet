@@ -264,6 +264,7 @@ public class SqlPrimitiveTest extends SqlTestSupport {
                         + '"' + OPTION_KEY_FORMAT + "\" '" + JAVA_FORMAT + "',"
                         + '"' + OPTION_KEY_CLASS + "\" '" + Integer.class.getName() + "'"
                         + ")"))
-                .hasMessage("The field '" + fieldName + "' is of type INT, you can't map '" + fieldName + ".field' too");
+                .hasMessage(
+                        "The field '" + fieldName + "' is of type INTEGER, you can't map '" + fieldName + ".field' too");
     }
 }
