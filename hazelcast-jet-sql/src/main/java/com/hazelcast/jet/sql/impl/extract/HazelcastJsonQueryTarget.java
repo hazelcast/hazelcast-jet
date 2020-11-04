@@ -16,7 +16,6 @@
 
 package com.hazelcast.jet.sql.impl.extract;
 
-import com.hazelcast.internal.serialization.Data;
 import com.hazelcast.internal.serialization.SerializationService;
 import com.hazelcast.query.impl.getters.Extractors;
 import com.hazelcast.sql.impl.QueryException;
