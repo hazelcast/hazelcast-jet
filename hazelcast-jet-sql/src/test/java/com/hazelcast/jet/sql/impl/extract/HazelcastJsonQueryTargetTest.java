@@ -85,7 +85,8 @@ public class HazelcastJsonQueryTargetTest {
     public void test_get(Object value) {
         Extractors extractors = Extractors.newBuilder(SERIALIZATION_SERVICE).build();
 
-        QueryTarget target = new HazelcastJsonQueryTarget(extractors, true);
+        QueryTarget target = new HazelcastJsonQueryTarget(SERIALIZATION_SERVICE, extractors, true);
+        QueryExtractor topExtractor = target.createExtractor(null, OBJECT);
         QueryExtractor nonExistingExtractor = target.createExtractor("nonExisting", OBJECT);
         QueryExtractor stringExtractor = target.createExtractor("string", VARCHAR);
         QueryExtractor booleanExtractor = target.createExtractor("boolean", BOOLEAN);
@@ -105,6 +106,7 @@ public class HazelcastJsonQueryTargetTest {
 
         target.setTarget(value);
 
+        assertThat(topExtractor.get()).isInstanceOf(HazelcastJsonValue.class);
         assertThat(nonExistingExtractor.get()).isNull();
         assertThat(stringExtractor.get()).isEqualTo("string");
         assertThat(booleanExtractor.get()).isEqualTo(true);

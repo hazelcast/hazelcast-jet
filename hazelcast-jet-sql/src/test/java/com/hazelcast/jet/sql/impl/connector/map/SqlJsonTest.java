@@ -61,7 +61,8 @@ public class SqlJsonTest extends SqlTestSupport {
                 + "OPTIONS ("
                 + '"' + OPTION_KEY_FORMAT + "\" '" + JSON_FORMAT + '\''
                 + ", \"" + OPTION_VALUE_FORMAT + "\" '" + JSON_FORMAT + '\''
-                + ")");
+                + ")"
+        );
 
         assertMapEventually(
                 name,
@@ -84,7 +85,8 @@ public class SqlJsonTest extends SqlTestSupport {
                 + "OPTIONS ("
                 + '"' + OPTION_KEY_FORMAT + "\" '" + JSON_FORMAT + '\''
                 + ", \"" + OPTION_VALUE_FORMAT + "\" '" + JSON_FORMAT + '\''
-                + ")");
+                + ")"
+        );
 
         assertMapEventually(
                 name,
@@ -107,7 +109,8 @@ public class SqlJsonTest extends SqlTestSupport {
                 + '"' + OPTION_KEY_FORMAT + "\" '" + JAVA_FORMAT + '\''
                 + ", \"" + OPTION_KEY_CLASS + "\" '" + Integer.class.getName() + '\''
                 + ", \"" + OPTION_VALUE_FORMAT + "\" '" + JSON_FORMAT + '\''
-                + ")");
+                + ")"
+        );
 
         // insert initial record
         sqlService.execute("SINK INTO " + name + " VALUES (13, 'Alice')");
@@ -163,7 +166,8 @@ public class SqlJsonTest extends SqlTestSupport {
                 + "OPTIONS ("
                 + '"' + OPTION_KEY_FORMAT + "\" '" + JSON_FORMAT + '\''
                 + ", \"" + OPTION_VALUE_FORMAT + "\" '" + JSON_FORMAT + '\''
-                + ")");
+                + ")"
+        );
 
         sqlService.execute("SINK INTO " + to + " SELECT 1, f.* FROM " + from + " f");
 
@@ -209,8 +213,29 @@ public class SqlJsonTest extends SqlTestSupport {
                         + "OPTIONS ("
                         + '"' + OPTION_KEY_FORMAT + "\" '" + JSON_FORMAT + '\''
                         + ", \"" + OPTION_VALUE_FORMAT + "\" '" + JSON_FORMAT + '\''
-                        + ")"))
+                        + ")"
+                ))
                 .isInstanceOf(HazelcastSqlException.class)
                 .hasMessage("Invalid external name: " + field);
+    }
+
+    @Test
+    public void test_topLevelFieldExtraction() {
+        String name = randomName();
+        sqlService.execute("CREATE MAPPING " + name + " ("
+                           + "id INT EXTERNAL NAME \"__key.id\""
+                           + ", name VARCHAR EXTERNAL NAME \"this.name\""
+                           + ") TYPE " + IMapSqlConnector.TYPE_NAME + ' '
+                           + "OPTIONS ("
+                           + '"' + OPTION_KEY_FORMAT + "\" '" + JSON_FORMAT + '\''
+                           + ", \"" + OPTION_VALUE_FORMAT + "\" '" + JSON_FORMAT + '\''
+                           + ")"
+        );
+        sqlService.execute("SINK INTO " + name + " VALUES (1, 'Alice')");
+
+        assertRowsAnyOrder(
+                "SELECT __key IS NULL, this IS NULL FROM " + name,
+                singletonList(new Row(false, false))
+        );
     }
 }

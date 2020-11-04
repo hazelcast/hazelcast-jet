@@ -33,7 +33,7 @@ public final class HazelcastJsonQueryTargetDescriptor implements QueryTargetDesc
 
     @Override
     public QueryTarget create(InternalSerializationService serializationService, Extractors extractors, boolean isKey) {
-        return new HazelcastJsonQueryTarget(extractors, isKey);
+        return new HazelcastJsonQueryTarget(serializationService, extractors, isKey);
     }
 
     @Override

@@ -387,7 +387,7 @@ public class SqlPojoTest extends SqlTestSupport {
         test_writingToTopLevel(false);
     }
 
-    public void test_writingToTopLevel(boolean explicit) {
+    private void test_writingToTopLevel(boolean explicit) {
         String mapName = randomName();
         sqlService.execute("CREATE MAPPING " + mapName + "(" +
                 "__key INT," +
@@ -420,6 +420,18 @@ public class SqlPojoTest extends SqlTestSupport {
     }
 
     @Test
+    public void test_topLevelFieldExtraction() {
+        String name = randomName();
+        sqlService.execute(javaSerializableMapDdl(name, PersonId.class, Person.class));
+        sqlService.execute("SINK INTO " + name + " (id, name) VALUES (1, 'Alice')");
+
+        assertRowsAnyOrder(
+                "SELECT __key IS NULL, this IS NULL FROM " + name,
+                singletonList(new Row(false, false))
+        );
+    }
+
+    @Test
     public void test_nestedField() {
         String mapName = randomName();
         assertThatThrownBy(() ->
@@ -436,17 +448,5 @@ public class SqlPojoTest extends SqlTestSupport {
     public static class ClassInitialValue implements Serializable {
 
         public Integer field = 42;
-    }
-
-    public static class Pet implements Serializable {
-        public String petName;
-        public Person owner;
-
-        public Pet() { }
-
-        public Pet(String petName, Person owner) {
-            this.petName = petName;
-            this.owner = owner;
-        }
     }
 }

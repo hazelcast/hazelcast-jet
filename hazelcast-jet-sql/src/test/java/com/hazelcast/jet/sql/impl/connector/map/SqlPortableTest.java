@@ -469,6 +469,30 @@ public class SqlPortableTest extends SqlTestSupport {
         assertFalse(resultIter.hasNext());
     }
 
+    @Test
+    public void test_topLevelFieldExtraction() {
+        String name = randomName();
+        sqlService.execute("CREATE MAPPING " + name + ' '
+                           + "TYPE " + IMapSqlConnector.TYPE_NAME + ' '
+                           + "OPTIONS ("
+                           + '"' + OPTION_KEY_FORMAT + "\" '" + PORTABLE_FORMAT + '\''
+                           + ", \"" + OPTION_KEY_FACTORY_ID + "\" '" + PERSON_ID_FACTORY_ID + '\''
+                           + ", \"" + OPTION_KEY_CLASS_ID + "\" '" + PERSON_ID_CLASS_ID + '\''
+                           + ", \"" + OPTION_KEY_CLASS_VERSION + "\" '" + PERSON_ID_CLASS_VERSION + '\''
+                           + ", \"" + OPTION_VALUE_FORMAT + "\" '" + PORTABLE_FORMAT + '\''
+                           + ", \"" + OPTION_VALUE_FACTORY_ID + "\" '" + PERSON_FACTORY_ID + '\''
+                           + ", \"" + OPTION_VALUE_CLASS_ID + "\" '" + PERSON_CLASS_ID + '\''
+                           + ", \"" + OPTION_VALUE_CLASS_VERSION + "\" '" + PERSON_CLASS_VERSION + '\''
+                           + ")"
+        );
+        sqlService.execute("SINK INTO " + name + " (id, name) VALUES (1, 'Alice')");
+
+        assertRowsAnyOrder(
+                "SELECT __key IS NULL, this IS NULL FROM " + name,
+                singletonList(new Row(false, false))
+        );
+    }
+
     @SuppressWarnings({"OptionalGetWithoutIsPresent", "unchecked", "rawtypes"})
     private static Entry<Data, Data> randomEntryFrom(String mapName) {
         NodeEngine engine = ((HazelcastInstanceImpl) instance().getHazelcastInstance()).node.nodeEngine;

@@ -16,6 +16,8 @@
 
 package com.hazelcast.jet.sql.impl.extract;
 
+import com.hazelcast.internal.serialization.Data;
+import com.hazelcast.internal.serialization.SerializationService;
 import com.hazelcast.query.impl.getters.Extractors;
 import com.hazelcast.sql.impl.QueryException;
 import com.hazelcast.sql.impl.extract.QueryExtractor;
@@ -29,12 +31,14 @@ import javax.annotation.concurrent.NotThreadSafe;
 @NotThreadSafe
 class HazelcastJsonQueryTarget implements QueryTarget {
 
+    private final SerializationService serializationService;
     private final Extractors extractors;
     private final boolean key;
 
     private Object target;
 
-    HazelcastJsonQueryTarget(Extractors extractors, boolean key) {
+    HazelcastJsonQueryTarget(SerializationService serializationService, Extractors extractors, boolean key) {
+        this.serializationService = serializationService;
         this.extractors = extractors;
         this.key = key;
     }
@@ -46,6 +50,26 @@ class HazelcastJsonQueryTarget implements QueryTarget {
 
     @Override
     public QueryExtractor createExtractor(String path, QueryDataType type) {
+        return path == null ? createExtractor(type) : createFieldExtractor(path, type);
+    }
+
+    private QueryExtractor createExtractor(QueryDataType type) {
+        return () -> {
+            try {
+                Object value = target instanceof Data ? serializationService.toObject(target) : target;
+                return type.convert(value);
+            } catch (QueryDataTypeMismatchException e) {
+                throw QueryException.dataException("Failed to extract map entry " + (key ? "key" : "value")
+                        + " because of type mismatch [expectedClass=" + e.getExpectedClass().getName()
+                        + ", actualClass=" + e.getActualClass().getName() + ']').markInvalidate();
+            } catch (Exception e) {
+                throw QueryException.dataException("Failed to extract map entry " + (key ? "key" : "value") + ": "
+                        + e.getMessage(), e);
+            }
+        };
+    }
+
+    private QueryExtractor createFieldExtractor(String path, QueryDataType type) {
         return () -> {
             try {
                 Object value = extractors.extract(target, path, null, false);
