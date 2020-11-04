@@ -21,8 +21,8 @@ import javax.annotation.Nonnull;
 import static java.util.Objects.requireNonNull;
 
 /**
- * {@code FileFormat} for JSON Lines files, where each line is one JSON
- * object.
+ * {@code FileFormat} for the JSON Lines files. See {@link FileFormat#json}
+ * for more details.
  *
  * @param <T> type of items a source using this file format will emit
  */
@@ -36,10 +36,10 @@ public class JsonFileFormat<T> implements FileFormat<T> {
     private final Class<T> clazz;
 
     /**
-     * Creates a {@code JsonFileFormat} where each JSON object represents a
-     * Java object of the provided type. The file source will use reflection
+     * Creates a {@code JsonFileFormat}. See {@link FileFormat#json} for
+     * more details.
      *
-     * @param clazz class to deserialize into
+     * @param clazz the type of the object to deserialize JSON into
      */
     public JsonFileFormat(@Nonnull Class<T> clazz) {
         this.clazz = requireNonNull(clazz, "class must not be null");
@@ -49,11 +49,12 @@ public class JsonFileFormat<T> implements FileFormat<T> {
      * Returns the type of the object the data source using this format will
      * emit.
      */
+    @Nonnull
     public Class<T> clazz() {
         return clazz;
     }
 
-    @Override
+    @Nonnull @Override
     public String format() {
         return FORMAT_JSONL;
     }

@@ -16,11 +16,11 @@
 
 package com.hazelcast.jet.pipeline.file;
 
+import javax.annotation.Nonnull;
+
 /**
- * {@link FileFormat} for Parquet files.
- * <p>
- * <strong>NOTE:</strong> this format is supported only through the Hadoop
- * connector.
+ * {@link FileFormat} for Parquet files. See {@link FileFormat#parquet} for
+ * more details.
  *
  * @param <T> type of items a source using this file format will emit
  */
@@ -31,7 +31,7 @@ public class ParquetFileFormat<T> implements FileFormat<T> {
      */
     public static final String FORMAT_PARQUET = "parquet";
 
-    @Override
+    @Nonnull @Override
     public String format() {
         return FORMAT_PARQUET;
     }

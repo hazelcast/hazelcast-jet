@@ -24,7 +24,7 @@ import static java.util.Objects.requireNonNull;
 
 /**
  * {@link FileFormat} for text files where the whole file is one {@code
- * String} data item.
+ * String} data item. See {@link FileFormat#text} for more details.
  */
 public class TextFileFormat implements FileFormat<String> {
 
@@ -61,7 +61,7 @@ public class TextFileFormat implements FileFormat<String> {
         return charset;
     }
 
-    @Override
+    @Nonnull @Override
     public String format() {
         return FORMAT_TXT;
     }

@@ -16,9 +16,11 @@
 
 package com.hazelcast.jet.pipeline.file;
 
+import javax.annotation.Nonnull;
+
 /**
  * {@code FileFormat} for binary files where the whole file is one {@code
- * byte[]} item emitted from the source.
+ * byte[]} item. See {@link FileFormat#bytes} for more details.
  */
 public class RawBytesFileFormat implements FileFormat<byte[]> {
 
@@ -27,7 +29,7 @@ public class RawBytesFileFormat implements FileFormat<byte[]> {
      */
     public static final String FORMAT_BIN = "bin";
 
-    @Override
+    @Nonnull @Override
     public String format() {
         return FORMAT_BIN;
     }

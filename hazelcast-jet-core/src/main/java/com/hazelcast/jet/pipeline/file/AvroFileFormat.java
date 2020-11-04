@@ -16,10 +16,12 @@
 
 package com.hazelcast.jet.pipeline.file;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 /**
- * {@link FileFormat} for avro files.
+ * {@link FileFormat} for avro files. See {@link FileFormat#avro} for more
+ * details.
  *
  * @param <T> type of items a source using this file format will emit
  */
@@ -40,7 +42,7 @@ public class AvroFileFormat<T> implements FileFormat<T> {
      *
      * @param reflectClass class to deserialize data into
      */
-    public AvroFileFormat<T> withReflect(Class<T> reflectClass) {
+    public AvroFileFormat<T> withReflect(@Nullable Class<T> reflectClass) {
         this.reflectClass = reflectClass;
         return this;
     }
@@ -54,7 +56,7 @@ public class AvroFileFormat<T> implements FileFormat<T> {
         return reflectClass;
     }
 
-    @Override
+    @Nonnull @Override
     public String format() {
         return FORMAT_AVRO;
     }

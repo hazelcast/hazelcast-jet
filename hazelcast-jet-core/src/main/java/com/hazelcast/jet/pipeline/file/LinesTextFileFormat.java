@@ -24,7 +24,7 @@ import static java.util.Objects.requireNonNull;
 
 /**
  * {@link FileFormat} for text files where each line is a {@code String}
- * data item.
+ * data item. See {@link FileFormat#lines} for more details.
  */
 public class LinesTextFileFormat implements FileFormat<String> {
 
@@ -61,7 +61,7 @@ public class LinesTextFileFormat implements FileFormat<String> {
         return charset;
     }
 
-    @Override
+    @Nonnull @Override
     public String format() {
         return FORMAT_LINES;
     }
