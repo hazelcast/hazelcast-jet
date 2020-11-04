@@ -115,7 +115,7 @@ public class OrderedBatchParallelismTest {
                                 .sort()
                                 .setLocalParallelism(LOCAL_PARALLELISM),
                         Arrays.asList("sort", "sort-collect"),
-                        Arrays.asList(LOCAL_PARALLELISM, 1),
+                        Arrays.asList(UPSTREAM_PARALLELISM, 1),
                         "sort"
                 ),
                 createParamSet(
@@ -139,7 +139,7 @@ public class OrderedBatchParallelismTest {
                                 .aggregate(counting())
                                 .setLocalParallelism(LOCAL_PARALLELISM),
                         Arrays.asList("aggregate-prepare", "aggregate"),
-                        Arrays.asList(LOCAL_PARALLELISM, 1),
+                        Arrays.asList(UPSTREAM_PARALLELISM, 1),
                         "two-stage-aggregation"
                 ),
                 createParamSet(
@@ -169,7 +169,7 @@ public class OrderedBatchParallelismTest {
                                 .flatMap(x -> Traversers.<Long>traverseItems())
                                 .setLocalParallelism(LOCAL_PARALLELISM),
                         Arrays.asList("map", "aggregate-prepare", "aggregate", "flat-map"),
-                        Arrays.asList(UPSTREAM_PARALLELISM, LOCAL_PARALLELISM, 1, 1),
+                        Arrays.asList(UPSTREAM_PARALLELISM, UPSTREAM_PARALLELISM, 1, 1),
                         "map+aggregate+flat-map"
                 )
         );

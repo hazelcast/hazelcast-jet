@@ -123,7 +123,6 @@ public class AggregateTransform<A, R> extends AbstractTransform {
         determineLocalParallelism(LOCAL_PARALLELISM_USE_DEFAULT, context, p.isPreserveOrder());
         Vertex v1 = p.dag.newVertex(vertexName + FIRST_STAGE_VERTEX_NAME_SUFFIX, accumulateP(aggrOp))
                          .localParallelism(determinedLocalParallelism());
-        p.addEdges(this, v1);
         if (p.isPreserveOrder()) {
             p.addEdges(this, v1, Edge::isolated);
         } else {
