@@ -17,10 +17,30 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 public class KinesisSinkP<T> implements Processor {
+
+    /**
+     * PutRecords requests are limited to 500 records.
+     */
+    private static final int MAX_RECORDS_IN_REQUEST = 500;
+
+
+    /**
+     * Each record, when encoded as a byte array, is limited to 1M,
+     * including the partition key (Unicode String).
+     */
+    private static final int MAX_RECORD_SIZE_IN_BYTES = 1024 * 1024;
+
+    /**
+     * The maximum allowed size of all the records in a PutRecords request,
+     * including partition keys is 5M.
+     */
+    private static final int MAX_REQUEST_SIZE_IN_BYTES = 5 * 1024 * 1024;
 
     /**
      * The number of Unicode characters making up keys is limited to a maximum
@@ -28,14 +48,10 @@ public class KinesisSinkP<T> implements Processor {
      */
     private static final int MAX_UNICODE_CHARS_IN_KEY = 256;
 
-    @Nonnull
     private final AmazonKinesisAsync kinesis;
-    @Nonnull
     private final String stream;
-    @Nonnull
-    FunctionEx<T, String> keyFn;
-    @Nonnull
-    FunctionEx<T, byte[]> valueFn;
+    private final FunctionEx<T, String> keyFn;
+    private final FunctionEx<T, byte[]> valueFn;
 
     private final Buffer<T> buffer;
 
@@ -90,6 +106,10 @@ public class KinesisSinkP<T> implements Processor {
     }
 
     private void bufferFromInbox(@Nonnull Inbox inbox) {
+        if (buffer.isFull()) {
+            return;
+        }
+
         while (true) {
             T t = (T) inbox.peek();
             if (t == null) {
@@ -136,6 +156,7 @@ public class KinesisSinkP<T> implements Processor {
                     buffer.remove(i);
                 }
             }
+            //todo: need exponential backoff, before retrying
         } else {
             buffer.clear();
         }
@@ -148,36 +169,17 @@ public class KinesisSinkP<T> implements Processor {
 
     private static class Buffer<T> {
 
-        /**
-         * PutRecords requests are limited to 500 records.
-         */
-        private static final int MAX_RECORDS_IN_REQUEST = 500;
-
-
-        /**
-         * Each record, when encoded as a byte array, is limited to 1M,
-         * including the partition key (Unicode String).
-         */
-        private static final int MAX_RECORD_SIZE_IN_BYTES = 1024 * 1024;
-
-        /**
-         * The maximum allowed size of all the records in a PutRecords request,
-         * including partition keys is 5M.
-         */
-        private static final int MAX_REQUEST_SIZE_IN_BYTES = 5 * 1024 * 1024;
-
         private final FunctionEx<T, String> keyFn;
         private final FunctionEx<T, byte[]> valueFn;
 
-        private final List<PutRecordsRequestEntry> entries = new ArrayList<>(MAX_RECORDS_IN_REQUEST);
-
-        //todo: could reuse PutRecordsRequestEntry
-
+        private final BufferEntry[] entries;
+        private int entryCount;
         private int totalEntrySize;
 
         public Buffer(FunctionEx<T, String> keyFn, FunctionEx<T, byte[]> valueFn) {
             this.keyFn = keyFn;
             this.valueFn = valueFn;
+            this.entries = initEntries();
         }
 
         boolean add(T item) {
@@ -189,49 +191,97 @@ public class KinesisSinkP<T> implements Processor {
             int keyLength = getKeyLength(key);
 
             byte[] value = valueFn.apply(item);
-            int itemLenght = value.length + keyLength;
-            if (itemLenght > MAX_RECORD_SIZE_IN_BYTES) {
+            int itemLength = value.length + keyLength;
+            if (itemLength > MAX_RECORD_SIZE_IN_BYTES) {
                 throw new IllegalArgumentException("Item " + item + " encoded length (key + payload) is too big");
             }
 
-            if (totalEntrySize + itemLenght > MAX_REQUEST_SIZE_IN_BYTES) {
+            if (totalEntrySize + itemLength > MAX_REQUEST_SIZE_IN_BYTES) {
                 return false;
             } else {
-                totalEntrySize += itemLenght;
+                totalEntrySize += itemLength;
 
-                PutRecordsRequestEntry entry = new PutRecordsRequestEntry();
-                entry.setPartitionKey(key);
-                entry.setData(ByteBuffer.wrap(value));
-
-                entries.add(entry);
+                BufferEntry entry = entries[entryCount++];
+                entry.set(key, value, itemLength);
 
                 return true;
             }
         }
 
-        public void remove(int index) {
-            PutRecordsRequestEntry entry = entries.remove(index);
-            int keyLength = getKeyLength(entry.getPartitionKey());
-            ByteBuffer bb = entry.getData();
-            int valueLength = bb.limit();
-            totalEntrySize -= keyLength + valueLength;
+        public void remove(int index) { //todo: test it, at least manually
+            if (index < 0 || index >= entryCount) {
+                throw new IllegalArgumentException("Index needs to be between 0 and " + entryCount);
+            }
+
+            totalEntrySize -= entries[index].encodedSize;
+
+            int lastIndex = entryCount - 1;
+            if (index < lastIndex) {
+                BufferEntry tmp = entries[index];
+                entries[index] = entries[lastIndex];
+                entries[lastIndex] = tmp;
+            } else {
+                entryCount--;
+            }
         }
 
         boolean isEmpty() {
-            return totalEntrySize == 0;
+            return entryCount == 0;
+        }
+
+        public boolean isFull() {
+            return entryCount == entries.length;
         }
 
         void clear() {
-            entries.clear();
+            entryCount = 0;
             totalEntrySize = 0;
         }
 
         public List<PutRecordsRequestEntry> content() {
-            return entries;
+            return Arrays.stream(entries)
+                    .limit(entryCount)
+                    .map(e -> e.putRecordsRequestEntry)
+                    .collect(Collectors.toList());
         }
 
         private int getKeyLength(String key) {
             return key.getBytes(StandardCharsets.UTF_8).length; //todo: does AWS actually use UTF-8?
+        }
+
+        private static BufferEntry[] initEntries() {
+            return IntStream.range(0, MAX_RECORDS_IN_REQUEST).boxed()
+                    .map(IGNORED -> new BufferEntry())
+                    .toArray(BufferEntry[]::new);
+        }
+    }
+
+    private static final class BufferEntry {
+
+        private final PutRecordsRequestEntry putRecordsRequestEntry;
+
+        private int encodedSize;
+
+        BufferEntry() {
+            putRecordsRequestEntry = new PutRecordsRequestEntry();
+            encodedSize = 0;
+        }
+
+        public void set(String partitionKey, byte[] data, int size) {
+            putRecordsRequestEntry.setPartitionKey(partitionKey);
+
+            ByteBuffer byteBuffer = putRecordsRequestEntry.getData();
+            if (byteBuffer == null || byteBuffer.capacity() < data.length) {
+                putRecordsRequestEntry.setData(ByteBuffer.wrap(data));
+            } else {
+                byteBuffer.clear();
+                byteBuffer.put(data);
+                byteBuffer.flip();
+            }
+
+            //todo: do we ever want to shrink the buffers?
+
+            encodedSize = size;
         }
     }
 }
