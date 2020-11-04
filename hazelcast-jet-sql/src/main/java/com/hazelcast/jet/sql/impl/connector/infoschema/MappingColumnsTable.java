@@ -83,6 +83,4 @@ public class MappingColumnsTable extends InfoSchemaTable {
         }
         return rows;
     }
-
-
 }
