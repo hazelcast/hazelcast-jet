@@ -234,8 +234,10 @@ public class SqlJsonTest extends SqlTestSupport {
         sqlService.execute("SINK INTO " + name + " VALUES (1, 'Alice')");
 
         assertRowsAnyOrder(
-                "SELECT __key IS NULL, this IS NULL FROM " + name,
-                singletonList(new Row(false, false))
+                "SELECT __key, this FROM " + name,
+                singletonList(new Row(
+                        new HazelcastJsonValue("{\"id\":1}"),
+                        new HazelcastJsonValue("{\"name\":\"Alice\"}")))
         );
     }
 }

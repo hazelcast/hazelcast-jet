@@ -426,8 +426,8 @@ public class SqlPojoTest extends SqlTestSupport {
         sqlService.execute("SINK INTO " + name + " (id, name) VALUES (1, 'Alice')");
 
         assertRowsAnyOrder(
-                "SELECT __key IS NULL, this IS NULL FROM " + name,
-                singletonList(new Row(false, false))
+                "SELECT __key, this FROM " + name,
+                singletonList(new Row(new PersonId(1), new Person(null, "Alice")))
         );
     }
 

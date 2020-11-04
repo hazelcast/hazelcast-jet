@@ -80,6 +80,8 @@ public class SqlPortableTest extends SqlTestSupport {
     private static final int ALL_TYPES_CLASS_VERSION = 9;
 
     private static InternalSerializationService serializationService;
+    private static ClassDefinition personIdClassDefinition;
+    private static ClassDefinition personClassDefinition;
 
     @BeforeClass
     // reusing ClassDefinitions as schema does not change
@@ -89,13 +91,13 @@ public class SqlPortableTest extends SqlTestSupport {
 
         serializationService = ((HazelcastInstanceImpl) instance().getHazelcastInstance()).getSerializationService();
 
-        ClassDefinition personIdClassDefinition =
+        personIdClassDefinition =
                 new ClassDefinitionBuilder(PERSON_ID_FACTORY_ID, PERSON_ID_CLASS_ID, PERSON_ID_CLASS_VERSION)
                         .addIntField("id")
                         .build();
         serializationService.getPortableContext().registerClassDefinition(personIdClassDefinition);
 
-        ClassDefinition personClassDefinition =
+        personClassDefinition =
                 new ClassDefinitionBuilder(PERSON_FACTORY_ID, PERSON_CLASS_ID, PERSON_CLASS_VERSION)
                         .addIntField("id")
                         .addUTFField("name")
@@ -131,17 +133,10 @@ public class SqlPortableTest extends SqlTestSupport {
         String name = randomName();
 
         instance().getMap(name).put(
-                new PortableGenericRecordBuilder(
-                        new ClassDefinitionBuilder(PERSON_ID_FACTORY_ID, PERSON_ID_CLASS_ID, PERSON_ID_CLASS_VERSION)
-                                .addIntField("id")
-                                .build())
+                new PortableGenericRecordBuilder(personIdClassDefinition)
                         .writeInt("id", 1)
                         .build(),
-                new PortableGenericRecordBuilder(
-                        new ClassDefinitionBuilder(PERSON_FACTORY_ID, PERSON_CLASS_ID, PERSON_CLASS_VERSION)
-                                .addIntField("id")
-                                .addUTFField("name")
-                                .build())
+                new PortableGenericRecordBuilder(personClassDefinition)
                         .writeInt("id", 2)
                         .writeUTF("name", "Alice")
                         .build()
@@ -487,10 +482,19 @@ public class SqlPortableTest extends SqlTestSupport {
         );
         sqlService.execute("SINK INTO " + name + " (id, name) VALUES (1, 'Alice')");
 
-        assertRowsAnyOrder(
-                "SELECT __key IS NULL, this IS NULL FROM " + name,
-                singletonList(new Row(false, false))
-        );
+        Iterator<SqlRow> rowIterator = sqlService.execute("SELECT __key, this FROM " + name).iterator();
+        SqlRow row = rowIterator.next();
+        assertFalse(rowIterator.hasNext());
+
+        assertThat(row.<Object>getObject(0)).isEqualToComparingFieldByField(
+                new PortableGenericRecordBuilder(personIdClassDefinition)
+                        .writeInt("id", 1)
+                        .build());
+        assertThat(row.<Object>getObject(1)).isEqualToComparingFieldByField(
+                new PortableGenericRecordBuilder(personClassDefinition)
+                        .writeInt("id", 0)
+                        .writeUTF("name", "Alice")
+                        .build());
     }
 
     @SuppressWarnings({"OptionalGetWithoutIsPresent", "unchecked", "rawtypes"})
