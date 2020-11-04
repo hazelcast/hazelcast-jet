@@ -19,8 +19,8 @@ In the first release Jet SQL supports following features:
 - SQL Queries over [Apache Kafka topics](05-kafka-connector.md) and
 [Files (local and remote)](04-files-connector.md)
 - Joining Kafka or file data with local IMaps (enrichment)
-- Filtering and projection using [SQL expressions
-](https://docs.hazelcast.org/docs/latest-dev/manual/html-single/index.html#expressions)  
+- Filtering and projection using [SQL
+expressions](https://docs.hazelcast.org/docs/latest-dev/manual/html-single/index.html#expressions)
 - Aggregating data from files using predefined
 [aggregate functions](00a-basic-commands#aggregation-functions)
 - Receiving query results via Jet client (Java) or writing the results
@@ -29,8 +29,8 @@ to an [IMap](03-imap-connector.md) in the Jet cluster
 [Job Management](02-job-management.md)
 
 Notably, the following features are currently unsupported: joins
-arbitrary external data sources, window aggregation, JDBC. We plan to
-support these in the future.
+arbitrary external data sources, window aggregation, JDBC, sorting
+(ORDER BY clause). We plan to support these in the future.
 
 ## Example: How to query Kafka using SQL
 
@@ -38,47 +38,84 @@ Consider that we have a topic called `trades` that contain ticker
 updates. Trades are encoded as JSON messages:
 
 ```json
-{ key: ticker, value: price }
+{ "ticker": "ABCD", "value": 5.5 }
 ```
 
 To use a remote topic as a table in Jet, an EXTERNAL MAPPING must be
 created first. This maps the JSON messages to a fixed list of columns
 with data types:
 
-```java
-// TODO
-CREATE MAPPING trade_topic (
-    __key VARCHAR,
-    field1 INT)
-TYPE IMap
+```sql
+CREATE MAPPING trades (
+    ticker VARCHAR,
+    value DECIMAL)
+TYPE Kafka
 OPTIONS (
-    keyFormat 'json',
-    valueFormat 'json')
+-- TODO can we omit the key??
+    valueFormat 'json',
+    "bootstrap.servers" '1.2.3.4',
+    "value.deserializer" 'org.apache.kafka.connect.json.JsonSerializer')
 ```
 
-Jet SQL queries can now use the `trade_topic` as a table:
+Jet SQL queries can now use the `trades` as a table:
 
 ```java
 JetInstance inst = ...;
-try (SqlResult result = inst.getSql().execute("SELECT ...")) {
+try (SqlResult result = inst.getSql().execute("SELECT * FROM trades")) {
     for (SqlRow row : result) {
         // Process the row.
     }
 }
-
 ```
 
 The query now runs in the Jet cluster and streams results to the Jet
-client that started it.
+client that started it. The iteration will never complete
 
 Instead of sending results to the caller, Jet SQL query can also update
-the IMap using `SINK INTO` command. Jet SQL can thus be used as a
-simple API to ingest data into Hazelcast:
+the IMap using the `SINK INTO` command. Jet SQL can thus be used as a
+simple API to ingest data into Hazelcast. To be able to write to an
+IMap, Jet has to know what objects to create for the map key and value.
+It can derive that automatically by sampling an existing entry in the
+map, but if the map is possibly empty, you have to create a mapping for
+it too.
+
+```sql
+inst.getSql().execute("CREATE MAPPING latest_trades "
+    + "TYPE IMap "
+    + "OPTIONS ("
+    + "keyFormat 'java',"
+    + "keyJavaClass 'java.lang.String',"
+    + "valueFormat 'java',"
+    + "valueJavaClass 'java.math.BigDecimal'"
+    + ")"
+);
+```
+
+Note that we omitted the column list in this query. It will be
+determined automatically according to the options. Since we use `String`
+and `BigDecimal` as the key and java class, the default name for key
+(`__key`) and for the value (`this`) will be used. So the mapping will
+behave as if these these two columns were specified in the previous
+statement:
+
+```sql
+(
+    __key VARCHAR,
+    this DECIMAL
+)
+```
+
+Now we can try to submit the `SINK INTO`. But since the `trades` is an
+Apache Kafka topic, :
 
 ```java
-// TODO
-JetInstance inst = ...;
-inst.getSql().execute("SINK INTO latest_trades SELECT FROM trade_topic ...");
+inst.getSql().execute("SINK INTO latest_trades SELECT * FROM trades");
+```
+
+But what happened? It threw this exception:
+
+```plain
+You must use CREATE JOB statement for a streaming DML query
 ```
 
 Jet will run the query in the cluster until it's terminated. Use Jet
