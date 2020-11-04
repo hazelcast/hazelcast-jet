@@ -42,7 +42,6 @@ import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_KEY_CLASS
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.OPTION_VALUE_CLASS;
 import static com.hazelcast.jet.sql.impl.connector.keyvalue.KvMetadataResolvers.extractFields;
 import static com.hazelcast.jet.sql.impl.connector.keyvalue.KvMetadataResolvers.maybeAddDefaultField;
-import static com.hazelcast.jet.sql.impl.type.QueryDataTypeUtils.sqlTypeName;
 import static com.hazelcast.sql.impl.extract.QueryPath.KEY;
 import static com.hazelcast.sql.impl.extract.QueryPath.VALUE;
 import static java.util.Collections.singletonList;
@@ -108,7 +107,7 @@ public final class KvMetadataJavaResolver implements KvMetadataResolver {
         for (MappingField mf : userFieldsByPath.values()) {
             if (!field.externalName().equals(mf.externalName())) {
                 throw QueryException.error("The field '" + field.externalName() + "' is of type "
-                        + sqlTypeName(field.type()) + ", you can't map '" + mf.externalName() + "' too");
+                        + field.type().getTypeFamily().name() + ", you can't map '" + mf.externalName() + "' too");
             }
         }
 

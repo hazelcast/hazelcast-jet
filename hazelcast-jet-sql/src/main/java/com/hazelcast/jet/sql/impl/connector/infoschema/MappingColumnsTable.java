@@ -17,7 +17,6 @@
 package com.hazelcast.jet.sql.impl.connector.infoschema;
 
 import com.hazelcast.jet.sql.impl.schema.MappingDefinition;
-import com.hazelcast.jet.sql.impl.type.QueryDataTypeUtils;
 import com.hazelcast.sql.impl.schema.ConstantTableStatistics;
 import com.hazelcast.sql.impl.schema.TableField;
 import com.hazelcast.sql.impl.type.QueryDataType;
@@ -77,7 +76,7 @@ public class MappingColumnsTable extends InfoSchemaTable {
                         field.getName(),
                         String.valueOf(i),
                         String.valueOf(true),
-                        QueryDataTypeUtils.sqlTypeName(field.getType())
+                        field.getType().getTypeFamily().name()
                 };
                 rows.add(row);
             }
