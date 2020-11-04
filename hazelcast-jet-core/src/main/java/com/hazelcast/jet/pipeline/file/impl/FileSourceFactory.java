@@ -19,16 +19,22 @@ package com.hazelcast.jet.pipeline.file.impl;
 import com.hazelcast.jet.pipeline.BatchSource;
 import com.hazelcast.jet.pipeline.file.FileSourceBuilder;
 
+import javax.annotation.Nonnull;
+
 /**
- * Internal API for factories that build {@link BatchSource} from {@link FileSourceBuilder}
+ * A factory of Pipeline API's {@link BatchSource} based on a {@link
+ * FileSourceBuilder}.
+ *
  */
 public interface FileSourceFactory {
 
     /**
-     * Create an instance of the source from the given builder
+     * Returns a Jet {@link BatchSource} that behaves as specified by the
+     * provided file source builder.
      *
-     * @param builder configured FileSourceBuilder
-     * @param <T>     type of the item emitted from the source
+     * @param builder the builder object to use to create the source
+     * @param <T>     type of the item the source emits
      */
-    <T> BatchSource<T> create(FileSourceBuilder<T> builder);
+    @Nonnull
+    <T> BatchSource<T> create(@Nonnull FileSourceBuilder<T> builder);
 }

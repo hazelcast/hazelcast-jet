@@ -19,6 +19,7 @@ package com.hazelcast.jet.pipeline.file.impl;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.pipeline.file.FileFormat;
 
+import javax.annotation.Nonnull;
 import java.nio.file.Path;
 import java.util.stream.Stream;
 
@@ -35,11 +36,13 @@ public interface ReadFileFnProvider {
      * that maps a {@code Path} on the local filesystem to a stream of items
      * that the file source should emit.
      */
-    <T> FunctionEx<? super Path, ? extends Stream<T>> createReadFileFn(FileFormat<T> format);
+    @Nonnull
+    <T> FunctionEx<Path, Stream<T>> createReadFileFn(@Nonnull FileFormat<T> format);
 
     /**
      * Returns a string that identifies the {@link FileFormat} supported by
      * this function provider.
      */
+    @Nonnull
     String format();
 }

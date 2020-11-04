@@ -46,6 +46,7 @@ import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.parquet.avro.AvroParquetInputFormat;
 
+import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
@@ -56,14 +57,14 @@ import static com.hazelcast.jet.hadoop.impl.JsonInputFormat.JSON_INPUT_FORMAT_BE
 import static java.util.Objects.requireNonNull;
 
 /**
- * Hadoop-based implementation of {@link FileSourceFactory}
+ * Hadoop-based implementation of {@link FileSourceFactory}.
  */
 public class HadoopFileSourceFactory implements FileSourceFactory {
 
     private final Map<String, JobConfigurer> configs;
 
     /**
-     * Creates HadoopSourceFactory
+     * Creates the HadoopSourceFactory.
      */
     public HadoopFileSourceFactory() {
         configs = new HashMap<>();
@@ -77,9 +78,9 @@ public class HadoopFileSourceFactory implements FileSourceFactory {
         configs.put(TextFileFormat.FORMAT_TXT, new TextJobConfigurer());
     }
 
-    @Override
+    @Nonnull @Override
     @SuppressWarnings("unchecked")
-    public <T> BatchSource<T> create(FileSourceBuilder<T> builder) {
+    public <T> BatchSource<T> create(@Nonnull FileSourceBuilder<T> builder) {
 
         try {
             Job job = Job.getInstance();
@@ -102,16 +103,15 @@ public class HadoopFileSourceFactory implements FileSourceFactory {
     }
 
     /**
-     * Hadoop map-reduce job configurer
-     *
+     * Hadoop map-reduce job configurer.
      */
     public interface JobConfigurer {
 
         /**
-         * Configure the given job with a file format
-         *
-         * This method should set the input format class and any
-         * required configuration parameters.
+         * Configures the given job with the given file format.
+         * <p>
+         * This method should set the input format class and any required
+         * configuration parameters.
          *
          * @param job    map-reduce job to configure
          * @param format format to configure the job with
@@ -119,14 +119,14 @@ public class HadoopFileSourceFactory implements FileSourceFactory {
         <T> void configure(Job job, FileFormat<T> format);
 
         /**
-         * Projection function from the key-value result of the
-         * map-reduce job into the item emitted from the source.
+         * Projection function from the key-value result of the map-reduce job into
+         * the item emitted from the source.
+         * <p>
+         * The types of key/value are determined by the input format class set by
+         * the configure method.
          *
-         * The types of key/value are determined by the input format
-         * class set by the configure method.
-         *
-         * @return projection function from key-value result into the
-         * item emitted from the source
+         * @return projection function from key-value result into the item emitted from the
+         *         source
          */
         BiFunctionEx<?, ?, ?> projectionFn();
     }

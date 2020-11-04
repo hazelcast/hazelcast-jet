@@ -35,6 +35,7 @@ import com.hazelcast.jet.pipeline.file.RawBytesFileFormat;
 import com.hazelcast.jet.pipeline.file.TextFileFormat;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
+import javax.annotation.Nonnull;
 import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.InputStream;
@@ -58,7 +59,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
 
 /**
- * Implementation of FileSourceFactory for local filesystem
+ * Implementation of FileSourceFactory for the local filesystem.
  */
 public class LocalFileSourceFactory implements FileSourceFactory {
 
@@ -86,8 +87,8 @@ public class LocalFileSourceFactory implements FileSourceFactory {
         mapFns.put(provider.format(), provider);
     }
 
-    @Override
-    public <T> BatchSource<T> create(FileSourceBuilder<T> builder) {
+    @Nonnull @Override
+    public <T> BatchSource<T> create(@Nonnull FileSourceBuilder<T> builder) {
         Tuple2<String, String> dirAndGlob = deriveDirectoryAndGlobFromPath(builder.path());
         assert dirAndGlob.f0() != null && dirAndGlob.f1() != null;
 
@@ -127,17 +128,17 @@ public class LocalFileSourceFactory implements FileSourceFactory {
     }
 
     private boolean isDirectory(String path) {
-        // We can't touch real filesystem because this code runs on the client when the job is submitted, which is
-        // likely a different machine than the cluster members
-
-        // So this is a best guess that directories end with /
+        // We can't ask the filesystem because this code runs on the client, which
+        // is likely a different machine than the cluster members. So this is a
+        // best guess, we assume that directories end with '/'.
         return path.endsWith("/");
     }
 
     @SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION")
     private abstract static class AbstractReadFileFnProvider implements ReadFileFnProvider {
 
-        public <T> FunctionEx<Path, Stream<T>> createReadFileFn(FileFormat<T> format) {
+        @Nonnull @Override
+        public <T> FunctionEx<Path, Stream<T>> createReadFileFn(@Nonnull FileFormat<T> format) {
             FunctionEx<InputStream, Stream<T>> mapInputStreamFn = mapInputStreamFn(format);
             return path -> {
                 FileInputStream fis = new FileInputStream(path.toFile());
@@ -145,12 +146,13 @@ public class LocalFileSourceFactory implements FileSourceFactory {
             };
         }
 
+        @Nonnull
         abstract <T> FunctionEx<InputStream, Stream<T>> mapInputStreamFn(FileFormat<T> format);
     }
 
     private static class CsvReadFileFnProvider extends AbstractReadFileFnProvider {
 
-        @Override
+        @Nonnull @Override
         <T> FunctionEx<InputStream, Stream<T>> mapInputStreamFn(FileFormat<T> format) {
             CsvFileFormat<T> csvFileFormat = (CsvFileFormat<T>) format;
             Class<?> formatClazz = csvFileFormat.clazz(); // Format is not Serializable
@@ -167,7 +169,7 @@ public class LocalFileSourceFactory implements FileSourceFactory {
             };
         }
 
-        @Override
+        @Nonnull @Override
         public String format() {
             return CsvFileFormat.FORMAT_CSV;
         }
@@ -175,6 +177,7 @@ public class LocalFileSourceFactory implements FileSourceFactory {
 
     private static class JsonReadFileFnProvider extends AbstractReadFileFnProvider {
 
+        @Nonnull
         @Override
         <T> FunctionEx<InputStream, Stream<T>> mapInputStreamFn(FileFormat<T> format) {
             JsonFileFormat<T> jsonFileFormat = (JsonFileFormat<T>) format;
@@ -188,7 +191,7 @@ public class LocalFileSourceFactory implements FileSourceFactory {
             };
         }
 
-        @Override
+        @Nonnull @Override
         public String format() {
             return JsonFileFormat.FORMAT_JSONL;
         }
@@ -196,7 +199,7 @@ public class LocalFileSourceFactory implements FileSourceFactory {
 
     private static class LinesReadFileFnProvider extends AbstractReadFileFnProvider {
 
-        @Override
+        @Nonnull @Override
         @SuppressWarnings("unchecked")
         <T> FunctionEx<InputStream, Stream<T>> mapInputStreamFn(FileFormat<T> format) {
             LinesTextFileFormat linesTextFileFormat = (LinesTextFileFormat) format;
@@ -207,7 +210,7 @@ public class LocalFileSourceFactory implements FileSourceFactory {
             };
         }
 
-        @Override
+        @Nonnull @Override
         public String format() {
             return LinesTextFileFormat.FORMAT_LINES;
         }
@@ -215,14 +218,14 @@ public class LocalFileSourceFactory implements FileSourceFactory {
 
     private static class ParquetReadFileFnProvider implements ReadFileFnProvider {
 
-        @Override
-        public <T> FunctionEx<Path, Stream<T>> createReadFileFn(FileFormat<T> format) {
+        @Nonnull @Override
+        public <T> FunctionEx<Path, Stream<T>> createReadFileFn(@Nonnull FileFormat<T> format) {
             throw new UnsupportedOperationException("Reading Parquet files is not supported in local filesystem mode." +
                     " " +
                     "Use Jet Hadoop module with FileSourceBuilder.useHadoopForLocalFiles option instead.");
         }
 
-        @Override
+        @Nonnull @Override
         public String format() {
             return ParquetFileFormat.FORMAT_PARQUET;
         }
@@ -230,13 +233,13 @@ public class LocalFileSourceFactory implements FileSourceFactory {
 
     private static class RawBytesReadFileFnProvider extends AbstractReadFileFnProvider {
 
-        @Override
+        @Nonnull @Override
         @SuppressWarnings("unchecked")
         <T> FunctionEx<InputStream, Stream<T>> mapInputStreamFn(FileFormat<T> format) {
             return is -> (Stream<T>) Stream.of(IOUtil.readFully(is));
         }
 
-        @Override
+        @Nonnull @Override
         public String format() {
             return RawBytesFileFormat.FORMAT_BIN;
         }
@@ -244,7 +247,7 @@ public class LocalFileSourceFactory implements FileSourceFactory {
 
     private static class TextReadFileFnProvider extends AbstractReadFileFnProvider {
 
-        @Override
+        @Nonnull @Override
         @SuppressWarnings("unchecked")
         <T> FunctionEx<InputStream, Stream<T>> mapInputStreamFn(FileFormat<T> format) {
             TextFileFormat textFileFormat = (TextFileFormat) format;
@@ -252,7 +255,7 @@ public class LocalFileSourceFactory implements FileSourceFactory {
             return is -> (Stream<T>) Stream.of(new String(IOUtil.readFully(is), Charset.forName(thisCharset)));
         }
 
-        @Override
+        @Nonnull @Override
         public String format() {
             return TextFileFormat.FORMAT_TXT;
         }

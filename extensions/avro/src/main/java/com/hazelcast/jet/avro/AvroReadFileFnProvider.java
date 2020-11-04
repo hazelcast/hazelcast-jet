@@ -25,6 +25,7 @@ import org.apache.avro.io.DatumReader;
 import org.apache.avro.reflect.ReflectDatumReader;
 import org.apache.avro.specific.SpecificDatumReader;
 
+import javax.annotation.Nonnull;
 import java.nio.file.Path;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
@@ -37,8 +38,8 @@ import static com.hazelcast.jet.impl.util.Util.uncheckRun;
  */
 public class AvroReadFileFnProvider implements ReadFileFnProvider {
 
-    @Override
-    public <T> FunctionEx<Path, Stream<T>> createReadFileFn(FileFormat<T> format) {
+    @Nonnull @Override
+    public <T> FunctionEx<Path, Stream<T>> createReadFileFn(@Nonnull FileFormat<T> format) {
         AvroFileFormat<T> avroFileFormat = (AvroFileFormat<T>) format;
         Class<T> reflectClass = avroFileFormat.reflectClass();
         return (path) -> {
@@ -51,13 +52,13 @@ public class AvroReadFileFnProvider implements ReadFileFnProvider {
 
     private static <T> DatumReader<T> datumReader(Class<T> reflectClass) {
 //        TODO handle when class is subtype of SpecificRecord
-/*        if (SpecificRecord.class.isAssignableFrom(reflectClass)) {
-            return new SpecificDatumReader<>(reflectClass);
-        }*/
+//        if (SpecificRecord.class.isAssignableFrom(reflectClass)) {
+//            return new SpecificDatumReader<>(reflectClass);
+//        }
         return reflectClass == null ? new SpecificDatumReader<>() : new ReflectDatumReader<>(reflectClass);
     }
 
-    @Override
+    @Nonnull @Override
     public String format() {
         return AvroFileFormat.FORMAT_AVRO;
     }
