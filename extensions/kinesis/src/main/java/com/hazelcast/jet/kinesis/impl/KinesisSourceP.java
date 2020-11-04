@@ -97,7 +97,7 @@ public class KinesisSourceP extends AbstractProcessor {
                         .map(record -> new String(record.getData().array(), Charset.defaultCharset()))
                         .collect(Collectors.toList());
                 System.err.println(i + " - messages = " + messages);*/ //todo: remove
-                System.err.println(i + " - messages = " + records.size()); //todo: remove
+//                System.err.println(i + " - messages = " + records.size()); //todo: remove
                 traverser = Traversers.traverseIterable(records)
                         .map(r -> entry(r.getPartitionKey(), r.getData().array())); //todo: performance impact
                 emitFromTraverser(traverser);

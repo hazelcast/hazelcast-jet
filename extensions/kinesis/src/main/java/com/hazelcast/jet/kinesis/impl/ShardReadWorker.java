@@ -71,7 +71,7 @@ class ShardReadWorker implements ShardWorker {
     private String shardIterator;
     private Future<GetShardIteratorResult> shardIteratorResult;
     private Future<GetRecordsResult> recordsResult;
-    private long nextGetRecordsTime = 0;
+    private long nextGetRecordsTime;
 
     ShardReadWorker(AmazonKinesisAsync kinesis, String stream, Shard shard) {
         this.kinesis = kinesis;

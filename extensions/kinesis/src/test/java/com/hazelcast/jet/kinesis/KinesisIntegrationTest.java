@@ -55,12 +55,12 @@ import static org.junit.Assert.assertEquals;
 
 public class KinesisIntegrationTest extends SimpleTestInClusterSupport {
 
-    private static final int KEYS = 10;
-    private static final int MEMBER_COUNT = 2;
-
     @ClassRule
     public static LocalStackContainer LOCALSTACK = new LocalStackContainer("0.12.1")
             .withServices(Service.KINESIS);
+
+    private static final int KEYS = 10;
+    private static final int MEMBER_COUNT = 2;
 
     @BeforeClass
     public static void beforeClass() {
