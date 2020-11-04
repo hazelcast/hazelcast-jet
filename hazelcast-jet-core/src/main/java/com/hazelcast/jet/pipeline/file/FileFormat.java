@@ -20,95 +20,100 @@ import javax.annotation.Nonnull;
 import java.nio.charset.Charset;
 
 /**
- * Specification of the file format.
+ * Identifies the data format of a file to be used as a Jet data source.
+ * This is a data object that holds the configuration; actual implementation
+ * code is looked up elsewhere, by using this object as a key.
  *
- * @param <T> type of the items emitted from the source
+ * @param <T> type of items a source using this file format will emit
  */
 public interface FileFormat<T> {
 
     /**
-     * Unique identifier of the file format, e.g. commonly used suffix or a
-     * descriptive name
+     * Returns the unique identifier of the file format. The convention is to
+     * use the well-known filename suffix or, if there is none, a short-form
+     * name of the format.
      */
     String format();
 
-    /*
-     * FileFormat factory methods for format discoverability
-     */
+
+    // Factory methods for supported file formats are here for easy discoverability.
 
     /**
-     * File format for Avro files, see {@link AvroFileFormat}
+     * Returns a file format for Avro files.
      */
     static <T> AvroFileFormat<T> avro() {
         return new AvroFileFormat<>();
     }
 
     /**
-     * File format for AvroFiles, see {@link AvroFileFormat}
+     * Returns a file format for Avro files that specifies to use reflection
+     * to deserialize the data into instances of the provided Java class.
      */
     static <T> AvroFileFormat<T> avro(Class<T> clazz) {
         return new AvroFileFormat<T>().withReflect(clazz);
     }
 
     /**
-     * File format for CSV files, see {@link CsvFileFormat}
+     * Returns a file format for CSV files.
      */
     static <T> CsvFileFormat<T> csv(@Nonnull Class<T> clazz) {
         return new CsvFileFormat<T>(clazz);
     }
 
     /**
-     * File format for JSON files, see {@link JsonFileFormat}
+     * Returns a file format for JSON files.
      */
     static <T> JsonFileFormat<T> json(@Nonnull Class<T> clazz) {
         return new JsonFileFormat<>(clazz);
     }
 
     /**
-     * File format for text files where each lines is emitted as
-     * a String from the source
+     * Returns a file format for text files where each line is a {@code String}
+     * data item. It uses the UTF-8 character encoding.
      */
     static LinesTextFileFormat lines() {
         return new LinesTextFileFormat();
     }
 
     /**
-     * File format for text files where each lines is emitted as
-     * a String from the source, see {@link LinesTextFileFormat}
+     * Returns a file format for text files where each line is a {@code String}
+     * data item. This variant allows you to choose the character encoding.
+     * Note that the Hadoop-based file connector only accepts UTF-8.
      *
-     * @param charset charset of the file, not supported by Hadoop based file connector, which uses only UTF-8
+     * @param charset character encoding of the file
      */
     static LinesTextFileFormat lines(@Nonnull Charset charset) {
         return new LinesTextFileFormat(charset);
     }
 
     /**
-     * File format for Parquet files, see {@link ParquetFileFormat}
+     * Returns a file format for Parquet files.
      */
     static <T> ParquetFileFormat<T> parquet() {
         return new ParquetFileFormat<>();
     }
 
     /**
-     * File format for binary files, see {@link RawBytesFileFormat}
+     * Returns a file format for binary files.
      */
     static RawBytesFileFormat bytes() {
         return new RawBytesFileFormat();
     }
 
     /**
-     * File format for text files, where the whole file is emitted as
-     * a single string, see {@link TextFileFormat}
+     * Returns a file format for text files where the whole file is a single
+     * string item. It uses the UTF-8 character encoding.
      */
     static TextFileFormat text() {
         return new TextFileFormat();
     }
 
     /**
-     * File format for text files, where the whole file is emitted as
-     * a single string, see {@link TextFileFormat}
+     * Returns a file format for text files where the whole file is a single
+     * string item. This variant allows you to choose the character encoding.
+     * Note that the Hadoop-based file connector only accepts UTF-8.
      *
-     * @param charset charset of the file, not supported by Hadoop based file connector, which uses only UTF-8
+     * @param charset character encoding of the file
      */
     static TextFileFormat text(@Nonnull Charset charset) {
         return new TextFileFormat(charset);

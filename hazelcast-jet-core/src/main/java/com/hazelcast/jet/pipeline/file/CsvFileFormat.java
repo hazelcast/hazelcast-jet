@@ -19,22 +19,22 @@ package com.hazelcast.jet.pipeline.file;
 import static java.util.Objects.requireNonNull;
 
 /**
- * FileFormat for CSV files
+ * {@link FileFormat} for CSV files.
  *
- * @param <T> type of items emitted from the source
+ * @param <T> type of items a source using this file format will emit
  */
 public class CsvFileFormat<T> implements FileFormat<T> {
 
     /**
-     * Format id for CSV
+     * Format ID for CSV.
      */
     public static final String FORMAT_CSV = "csv";
 
     private final Class<T> clazz;
 
     /**
-     * Jet will deserialize the items into an instance of the given class.
-     * It will use the first line of the CSV (header) to infer the column names
+     * Creates a {@code CsvFileFormat} which deserializes each line into an
+     * instance of the given class. It will use the first line of the CSV (header) to infer the column names
      * to map to the fields.
      *
      * @param clazz class to deserialize into

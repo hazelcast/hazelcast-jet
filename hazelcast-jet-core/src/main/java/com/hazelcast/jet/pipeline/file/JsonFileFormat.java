@@ -21,21 +21,23 @@ import javax.annotation.Nonnull;
 import static java.util.Objects.requireNonNull;
 
 /**
- * FileFormat for JSON Lines files
+ * {@code FileFormat} for JSON Lines files, where each line is one JSON
+ * object.
  *
- * @param <T> type of the items emitted from the source
+ * @param <T> type of items a source using this file format will emit
  */
 public class JsonFileFormat<T> implements FileFormat<T> {
 
     /**
-     * Format id for JSON Lines
+     * Format ID for JSON Lines.
      */
     public static final String FORMAT_JSONL = "jsonl";
 
     private final Class<T> clazz;
 
     /**
-     * Create a JsonFileFormat, which deserializes each line into an instance of given class
+     * Creates a {@code JsonFileFormat} where each JSON object represents a
+     * Java object of the provided type. The file source will use reflection
      *
      * @param clazz class to deserialize into
      */
@@ -44,7 +46,8 @@ public class JsonFileFormat<T> implements FileFormat<T> {
     }
 
     /**
-     * Class to deserialize into
+     * Returns the type of the object the data source using this format will
+     * emit.
      */
     public Class<T> clazz() {
         return clazz;

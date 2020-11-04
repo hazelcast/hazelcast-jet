@@ -56,7 +56,7 @@ import static com.hazelcast.jet.hadoop.impl.JsonInputFormat.JSON_INPUT_FORMAT_BE
 import static java.util.Objects.requireNonNull;
 
 /**
- * Hadoop based implementation for FileSourceFactory
+ * Hadoop-based implementation of {@link FileSourceFactory}
  */
 public class HadoopFileSourceFactory implements FileSourceFactory {
 
@@ -78,6 +78,7 @@ public class HadoopFileSourceFactory implements FileSourceFactory {
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public <T> BatchSource<T> create(FileSourceBuilder<T> builder) {
 
         try {

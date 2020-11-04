@@ -23,35 +23,39 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
 
 /**
- * FileFormat for text files which read each line as a String item emitted from the source
+ * {@link FileFormat} for text files where each line is a {@code String}
+ * data item.
  */
 public class LinesTextFileFormat implements FileFormat<String> {
 
     /**
-     * Format id for text file as lines
+     * Format ID for text file as lines.
      */
     public static final String FORMAT_LINES = "lines";
 
     private final Charset charset;
 
     /**
-     * Create LinesTextFileFormat with default character encoding (UTF-8)
+     * Creates a {@code LinesTextFileFormat} with the default character
+     * encoding (UTF-8).
      */
     public LinesTextFileFormat() {
         this(UTF_8);
     }
 
     /**
-     * Create LinesTextFileFormat with default character encoding (UTF-8)
-     *
-     * NOTE: This option is supported for local files only, not for files read using the Hadoop connector
+     * Creates a {@code LinesTextFileFormat} with the provided character
+     * encoding (UTF-8).
+     * <p>
+     * <strong>NOTE:</strong> the Hadoop connector only supports UTF-8. This
+     * option is supported for local files only.
      */
     public LinesTextFileFormat(@Nonnull Charset charset) {
         this.charset = requireNonNull(charset, "charset must not be null");
     }
 
     /**
-     * The configured character encoding
+     * Returns the configured character encoding.
      */
     public Charset charset() {
         return charset;

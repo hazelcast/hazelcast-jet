@@ -17,16 +17,17 @@
 package com.hazelcast.jet.pipeline.file;
 
 /**
- * FileFormat for reading parquet files.
+ * {@link FileFormat} for Parquet files.
  * <p>
- * NOTE: This FileFormat is supported only when using Hadoop connector
+ * <strong>NOTE:</strong> this format is supported only through the Hadoop
+ * connector.
  *
- * @param <T> type of the items emitted from the source
+ * @param <T> type of items a source using this file format will emit
  */
 public class ParquetFileFormat<T> implements FileFormat<T> {
 
     /**
-     * Format id for Parquet
+     * Format ID for Parquet.
      */
     public static final String FORMAT_PARQUET = "parquet";
 

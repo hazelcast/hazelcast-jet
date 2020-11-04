@@ -89,6 +89,7 @@ public class LocalFileSourceFactory implements FileSourceFactory {
     @Override
     public <T> BatchSource<T> create(FileSourceBuilder<T> builder) {
         Tuple2<String, String> dirAndGlob = deriveDirectoryAndGlobFromPath(builder.path());
+        assert dirAndGlob.f0() != null && dirAndGlob.f1() != null;
 
         FileFormat<T> format = requireNonNull(builder.format());
         ReadFileFnProvider readFileFnProvider = readFileFnProviders.get(format.format());
@@ -196,13 +197,13 @@ public class LocalFileSourceFactory implements FileSourceFactory {
     private static class LinesReadFileFnProvider extends AbstractReadFileFnProvider {
 
         @Override
+        @SuppressWarnings("unchecked")
         <T> FunctionEx<InputStream, Stream<T>> mapInputStreamFn(FileFormat<T> format) {
             LinesTextFileFormat linesTextFileFormat = (LinesTextFileFormat) format;
             String thisCharset = linesTextFileFormat.charset().name();
             return is -> {
                 BufferedReader reader = new BufferedReader(new InputStreamReader(is, thisCharset));
-                return (Stream<T>) reader.lines()
-                                         .onClose(() -> uncheckRun(reader::close));
+                return (Stream<T>) reader.lines().onClose(() -> uncheckRun(reader::close));
             };
         }
 
@@ -230,6 +231,7 @@ public class LocalFileSourceFactory implements FileSourceFactory {
     private static class RawBytesReadFileFnProvider extends AbstractReadFileFnProvider {
 
         @Override
+        @SuppressWarnings("unchecked")
         <T> FunctionEx<InputStream, Stream<T>> mapInputStreamFn(FileFormat<T> format) {
             return is -> (Stream<T>) Stream.of(IOUtil.readFully(is));
         }
@@ -243,6 +245,7 @@ public class LocalFileSourceFactory implements FileSourceFactory {
     private static class TextReadFileFnProvider extends AbstractReadFileFnProvider {
 
         @Override
+        @SuppressWarnings("unchecked")
         <T> FunctionEx<InputStream, Stream<T>> mapInputStreamFn(FileFormat<T> format) {
             TextFileFormat textFileFormat = (TextFileFormat) format;
             String thisCharset = textFileFormat.charset().name();

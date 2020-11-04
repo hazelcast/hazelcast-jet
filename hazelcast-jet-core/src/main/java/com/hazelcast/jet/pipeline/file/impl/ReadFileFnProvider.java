@@ -23,23 +23,23 @@ import java.nio.file.Path;
 import java.util.stream.Stream;
 
 /**
- * Provides a mapping function from a Path to a Stream of items emitted from local filesystem source
+ * Provides a mapping function from a {@code Path} to a {@code Stream} of
+ * items emitted from a local filesystem source. It is specialized to a
+ * single {@link FileFormat}, whose ID you can retrieve from the {@link
+ * #format} method.
  */
 public interface ReadFileFnProvider {
 
     /**
-     * Returns a mapping function for a given a configured FileFormat
-     *
-     * @param format FileFormat
-     *
-     * @return mapping function, which maps Path on local filesystem to a stream of
-     * items emitted from the source
+     * Takes a {@link FileFormat} and uses it to create and return a function
+     * that maps a {@code Path} on the local filesystem to a stream of items
+     * that the file source should emit.
      */
-    <T> FunctionEx<Path, Stream<T>> createReadFileFn(FileFormat<T> format);
+    <T> FunctionEx<? super Path, ? extends Stream<T>> createReadFileFn(FileFormat<T> format);
 
     /**
-     * Return unique identifier of the FileFormat, which the mapFn can read
+     * Returns a string that identifies the {@link FileFormat} supported by
+     * this function provider.
      */
     String format();
-
 }

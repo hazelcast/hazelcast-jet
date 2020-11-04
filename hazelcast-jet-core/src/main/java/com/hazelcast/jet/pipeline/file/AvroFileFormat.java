@@ -21,12 +21,12 @@ import javax.annotation.Nullable;
 /**
  * {@link FileFormat} for avro files.
  *
- * @param <T> type of items emitted from the source
+ * @param <T> type of items a source using this file format will emit
  */
 public class AvroFileFormat<T> implements FileFormat<T> {
 
     /**
-     * Format id for Avro
+     * Format id for Avro.
      */
     public static final String FORMAT_AVRO = "avro";
 
@@ -35,8 +35,8 @@ public class AvroFileFormat<T> implements FileFormat<T> {
     /**
      * Specifies to use reflection to deserialize data into the given class.
      * Jet will use the {@code ReflectDatumReader} to read Avro data. The
-     * parameter may be null, this disables the option to deserialize using
-     * reflection.
+     * parameter may be {@code null}, this disables the option to deserialize
+     * using reflection.
      *
      * @param reflectClass class to deserialize data into
      */
@@ -47,7 +47,6 @@ public class AvroFileFormat<T> implements FileFormat<T> {
 
     /**
      * Returns the class Jet will deserialize data into (using reflection).
-     *
      * Null if not set.
      */
     @Nullable

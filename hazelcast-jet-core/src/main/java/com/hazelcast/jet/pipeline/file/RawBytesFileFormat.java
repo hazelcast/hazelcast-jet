@@ -17,12 +17,13 @@
 package com.hazelcast.jet.pipeline.file;
 
 /**
- * FileFormat for binary files, which reads whole file as a byte[] item emitted from the source
+ * {@code FileFormat} for binary files where the whole file is one {@code
+ * byte[]} item emitted from the source.
  */
 public class RawBytesFileFormat implements FileFormat<byte[]> {
 
     /**
-     * Format id for raw binary data
+     * Format ID for raw binary data.
      */
     public static final String FORMAT_BIN = "bin";
 
