@@ -34,9 +34,9 @@ public class MappingColumnsTable extends InfoSchemaTable {
     private static final String NAME = "columns";
 
     private static final List<TableField> FIELDS = asList(
-            new TableField("mapping_catalog", QueryDataType.VARCHAR, false),
-            new TableField("mapping_schema", QueryDataType.VARCHAR, false),
-            new TableField("mapping_name", QueryDataType.VARCHAR, false),
+            new TableField("table_catalog", QueryDataType.VARCHAR, false),
+            new TableField("table_schema", QueryDataType.VARCHAR, false),
+            new TableField("table_name", QueryDataType.VARCHAR, false),
             new TableField("column_name", QueryDataType.VARCHAR, false),
             new TableField("ordinal_position", QueryDataType.VARCHAR, false),
             new TableField("is_nullable", QueryDataType.VARCHAR, false),
