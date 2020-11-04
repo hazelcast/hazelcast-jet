@@ -144,16 +144,17 @@ We applied the policy to enforce equal local parallelism during the
 pipeline-to-DAG conversion stage, `Pipeline.toDag()`. We also inspected
 and adjusted the code in each of the `Transform.addToDag()`
 implementations, switching to the `isolated` edge where needed. Here is
-the summary of these changes:
+the summary of changes that shows how transforms behave when this global
+preserve order property is activated:
 
 |Transform or Operator|The summary of changes|
 |------|------|
 |Map/Filter/FlatMap|Enforce parallelism equal to the upstream, apply the `isolated` edge.|
 |Custom (Core API) Transform|Enforce parallelism equal to the upstream, apply the `isolated` edge.|
 |Partitioned Custom Transform|No changes, it already uses a partitioned edge.|
-|Aggregation|No changes. Aggregation is order-insensitive, and creates a new order in its output. |
+|Aggregation|Enforce parallelism equal to the upstream, apply the `isolated` edge so that it can process non-commutative and non-associative aggregations|
 |Distinct|No changes. We don't guarantee to emit the very first distinct item.|
-|Sorting|No changes. Sorting is order-insensitive and enforces its own order in the output.|
+|Sorting|To allow stable sorting, enforce parallelism equal to the upstream, apply the `isolated` edge.|
 |HashJoinTransform| Edge-0 (carrying the stream to be enriched): Enforce parallelism equal to the upstream, apply the `isolated` edge.|
 |Stateful Mapping|No changes, stateful mapping already preserves the order of the upstream stage. |
 |MergeTransform| Enforce parallelism equal to the minimum of its upstreams, apply the updated version of isolated edge.|

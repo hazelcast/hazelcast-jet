@@ -44,7 +44,7 @@ import static org.junit.Assert.assertEquals;
 
 @RunWith(Parameterized.class)
 @UseParametersRunnerFactory(HazelcastSerialParametersRunnerFactory.class)
-public class BatchStageParallelismTest {
+public class OrderedBatchParallelismTest {
 
     private static final int DEFAULT_PARALLELISM = 8;
     private static final int LOCAL_PARALLELISM = 11;

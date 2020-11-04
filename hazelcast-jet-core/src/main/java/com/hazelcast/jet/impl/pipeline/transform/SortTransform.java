@@ -17,6 +17,7 @@
 package com.hazelcast.jet.impl.pipeline.transform;
 
 import com.hazelcast.function.ComparatorEx;
+import com.hazelcast.jet.core.Edge;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.Vertex;
@@ -52,13 +53,17 @@ public class SortTransform<T> extends AbstractTransform {
     @Override
     public void addToDag(Planner p, Context context) {
         String vertexName = name();
-        determineLocalParallelism(LOCAL_PARALLELISM_USE_DEFAULT, context, false);
+        determineLocalParallelism(LOCAL_PARALLELISM_USE_DEFAULT, context, p.isPreserveOrder());
         Vertex v1 = p.dag.newVertex(vertexName, sortP(comparator))
                          .localParallelism(determinedLocalParallelism());
+        if (p.isPreserveOrder()) {
+            p.addEdges(this, v1, Edge::isolated);
+        } else {
+            p.addEdges(this, v1);
+        }
         determinedLocalParallelism(1);
         PlannerVertex pv2 = p.addVertex(this, vertexName + COLLECT_STAGE_SUFFIX, determinedLocalParallelism(),
                 ProcessorMetaSupplier.forceTotalParallelismOne(ProcessorSupplier.of(mapP(identity())), vertexName));
-        p.addEdges(this, v1);
         p.dag.edge(between(v1, pv2.v)
                 .distributed()
                 .allToOne(vertexName)

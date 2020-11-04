@@ -41,7 +41,7 @@ import static org.junit.Assert.assertEquals;
 
 @RunWith(Parameterized.class)
 @UseParametersRunnerFactory(HazelcastSerialParametersRunnerFactory.class)
-public class StreamStageParallelismTest {
+public class OrderedStreamParallelismTest {
     private static final int DEFAULT_PARALLELISM = 8;
     private static final int LOCAL_PARALLELISM = 11;
     private static final int UPSTREAM_PARALLELISM = 6;
@@ -89,15 +89,6 @@ public class StreamStageParallelismTest {
                         Collections.singletonList("map-stateful-global"),
                         Collections.singletonList(1),
                         "map-stateful-global"
-                ),
-                createParamSet(
-                        stage -> stage
-                                .rebalance()
-                                .map(x -> x)
-                                .setLocalParallelism(LOCAL_PARALLELISM),
-                        Collections.singletonList("map"),
-                        Collections.singletonList(UPSTREAM_PARALLELISM),
-                        "map-after-rebalance"
                 )
         );
     }
