@@ -56,7 +56,7 @@ class HazelcastJsonQueryTarget implements QueryTarget {
     private QueryExtractor createExtractor(QueryDataType type) {
         return () -> {
             try {
-                Object value = target instanceof Data ? serializationService.toObject(target) : target;
+                Object value = serializationService.toObject(target);
                 return type.convert(value);
             } catch (QueryDataTypeMismatchException e) {
                 throw QueryException.dataException("Failed to extract map entry " + (key ? "key" : "value")
