@@ -72,8 +72,8 @@ public class SqlInfoSchemaTest extends SqlTestSupport {
         assertRowsAnyOrder(
                 "SELECT * FROM information_schema.columns",
                 asList(
-                        new Row("hazelcast", "public", name, "__key", "0", "true", "INT"),
-                        new Row("hazelcast", "public", name, "this", "1", "true", "VARCHAR")
+                        new Row("hazelcast", "public", name, "__key", 0, "true", "INTEGER"),
+                        new Row("hazelcast", "public", name, "this", 1, "true", "VARCHAR")
                 )
         );
     }
@@ -81,7 +81,7 @@ public class SqlInfoSchemaTest extends SqlTestSupport {
     @Test
     public void when_predicateAndProjectionIsUsed_then_correctRowsAndColumnsAreReturned() {
         assertRowsAnyOrder(
-                "SELECT mapping_name, UPPER(mapping_catalog), column_name, data_type "
+                "SELECT table_name, UPPER(table_catalog), column_name, data_type "
                         + "FROM information_schema.columns "
                         + "WHERE column_name = 'this'",
                 singletonList(

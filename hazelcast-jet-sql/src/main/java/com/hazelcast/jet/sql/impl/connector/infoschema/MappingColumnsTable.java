@@ -38,7 +38,7 @@ public class MappingColumnsTable extends InfoSchemaTable {
             new TableField("table_schema", QueryDataType.VARCHAR, false),
             new TableField("table_name", QueryDataType.VARCHAR, false),
             new TableField("column_name", QueryDataType.VARCHAR, false),
-            new TableField("ordinal_position", QueryDataType.VARCHAR, false),
+            new TableField("ordinal_position", QueryDataType.INT, false),
             new TableField("is_nullable", QueryDataType.VARCHAR, false),
             new TableField("data_type", QueryDataType.VARCHAR, false)
     );
@@ -74,7 +74,7 @@ public class MappingColumnsTable extends InfoSchemaTable {
                         definition.schema(),
                         definition.name(),
                         field.getName(),
-                        String.valueOf(i),
+                        i,
                         String.valueOf(true),
                         field.getType().getTypeFamily().name()
                 };
