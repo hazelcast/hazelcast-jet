@@ -207,19 +207,30 @@ public class SqlJobManagementTest extends SimpleTestInClusterSupport {
     }
 
     @Test
-    public void when_snapshotExport_then_failNotEnterprise() {
+    public void when_snapshotExportWithoutOrReplace_then_orReplaceRequired() {
         sqlService.execute("CREATE MAPPING src TYPE TestStream");
         sqlService.execute(javaSerializableMapDdl("dest", Long.class, Long.class));
 
         sqlService.execute("CREATE JOB testJob AS SINK INTO dest SELECT v, v FROM src");
 
         assertThatThrownBy(() -> sqlService.execute("CREATE SNAPSHOT mySnapshot FOR JOB testJob"))
+                .hasMessageContaining("The OR REPLACE option is required for CREATE SNAPSHOT");
+    }
+
+    @Test
+    public void when_snapshotExport_then_failNotEnterprise() {
+        sqlService.execute("CREATE MAPPING src TYPE TestStream");
+        sqlService.execute(javaSerializableMapDdl("dest", Long.class, Long.class));
+
+        sqlService.execute("CREATE JOB testJob AS SINK INTO dest SELECT v, v FROM src");
+
+        assertThatThrownBy(() -> sqlService.execute("CREATE OR REPLACE SNAPSHOT mySnapshot FOR JOB testJob"))
                 .hasMessageContaining("You need Hazelcast Jet Enterprise to use this feature");
     }
 
     @Test
     public void when_snapshotExport_jobDoesNotExist_then_fail() {
-        assertThatThrownBy(() -> sqlService.execute("CREATE SNAPSHOT mySnapshot FOR JOB nonExistentJob"))
+        assertThatThrownBy(() -> sqlService.execute("CREATE OR REPLACE SNAPSHOT mySnapshot FOR JOB nonExistentJob"))
                 .hasMessageContaining("The job 'nonExistentJob' doesn't exist");
     }
 

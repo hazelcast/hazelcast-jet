@@ -17,6 +17,7 @@
 package com.hazelcast.jet.sql.impl.parse;
 
 import com.hazelcast.internal.util.Preconditions;
+import com.hazelcast.sql.impl.QueryException;
 import org.apache.calcite.sql.SqlCreate;
 import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlKind;
@@ -45,9 +46,14 @@ public class SqlCreateSnapshot extends SqlCreate {
     public SqlCreateSnapshot(
             SqlIdentifier snapshotName,
             SqlIdentifier jobName,
+            boolean replace,
             SqlParserPos pos
     ) {
         super(OPERATOR, pos, true, false);
+
+        if (!replace) {
+            throw QueryException.error("The OR REPLACE option is required for CREATE SNAPSHOT");
+        }
 
         this.snapshotName = requireNonNull(snapshotName, "Snapshot name must not be null");
         this.jobName = requireNonNull(jobName, "Job name must not be null");

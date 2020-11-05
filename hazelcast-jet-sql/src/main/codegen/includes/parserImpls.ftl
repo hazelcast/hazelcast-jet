@@ -339,6 +339,7 @@ SqlCreate SqlCreateSnapshot(Span span, boolean replace) :
         return new SqlCreateSnapshot(
             snapshotName,
             jobName,
+            replace,
             startPos.plus(getPos())
         );
     }
