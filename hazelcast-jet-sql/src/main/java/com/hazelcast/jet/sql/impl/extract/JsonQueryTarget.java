@@ -46,6 +46,14 @@ public class JsonQueryTarget implements QueryTarget {
 
     @Override
     public QueryExtractor createExtractor(String path, QueryDataType type) {
+        return path == null ? createExtractor() : createFieldExtractor(path, type);
+    }
+
+    private QueryExtractor createExtractor() {
+        return () -> json;
+    }
+
+    private QueryExtractor createFieldExtractor(String path, QueryDataType type) {
         return () -> type.convert(extractValue(json, path));
     }
 

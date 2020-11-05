@@ -237,7 +237,8 @@ public class SqlJsonTest extends SqlTestSupport {
                 "SELECT __key, this FROM " + name,
                 singletonList(new Row(
                         new HazelcastJsonValue("{\"id\":1}"),
-                        new HazelcastJsonValue("{\"name\":\"Alice\"}")))
+                        new HazelcastJsonValue("{\"name\":\"Alice\"}")
+                ))
         );
     }
 }

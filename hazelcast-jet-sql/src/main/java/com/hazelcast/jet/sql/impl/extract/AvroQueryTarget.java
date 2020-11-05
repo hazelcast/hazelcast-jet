@@ -36,6 +36,14 @@ public class AvroQueryTarget implements QueryTarget {
 
     @Override
     public QueryExtractor createExtractor(String path, QueryDataType type) {
+        return path == null ? createExtractor() : createFieldExtractor(path, type);
+    }
+
+    private QueryExtractor createExtractor() {
+        return () -> record;
+    }
+
+    private QueryExtractor createFieldExtractor(String path, QueryDataType type) {
         return () -> type.convert(extractValue(record, path));
     }
 

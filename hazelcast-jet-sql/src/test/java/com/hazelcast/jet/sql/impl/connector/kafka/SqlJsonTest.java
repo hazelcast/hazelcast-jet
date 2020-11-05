@@ -16,6 +16,10 @@
 
 package com.hazelcast.jet.sql.impl.connector.kafka;
 
+import com.fasterxml.jackson.databind.node.IntNode;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.databind.node.TextNode;
 import com.hazelcast.jet.kafka.impl.KafkaTestSupport;
 import com.hazelcast.jet.sql.SqlTestSupport;
 import com.hazelcast.jet.sql.impl.connector.test.AllTypesSqlConnector;
@@ -262,6 +266,35 @@ public class SqlJsonTest extends SqlTestSupport {
                         + ")"))
                 .isInstanceOf(HazelcastSqlException.class)
                 .hasMessage("Invalid external name: " + field);
+    }
+
+    @Test
+    public void test_topLevelFieldExtraction() {
+        String name = createRandomTopic();
+        sqlService.execute("CREATE MAPPING " + name + " ("
+                + "id INT EXTERNAL NAME \"__key.id\""
+                + ", name VARCHAR"
+                + ") TYPE " + KafkaSqlConnector.TYPE_NAME + ' '
+                + "OPTIONS ( "
+                + '"' + OPTION_KEY_FORMAT + "\" '" + JSON_FORMAT + '\''
+                + ", \"" + OPTION_VALUE_FORMAT + "\" '" + JSON_FORMAT + '\''
+                + ", \"bootstrap.servers\" '" + kafkaTestSupport.getBrokerConnectionString() + '\''
+                + ", \"key.serializer\" '" + JsonSerializer.class.getCanonicalName() + '\''
+                + ", \"key.deserializer\" '" + JsonDeserializer.class.getCanonicalName() + '\''
+                + ", \"value.serializer\" '" + JsonSerializer.class.getCanonicalName() + '\''
+                + ", \"value.deserializer\" '" + JsonDeserializer.class.getCanonicalName() + '\''
+                + ", \"auto.offset.reset\" 'earliest'"
+                + ")"
+        );
+        sqlService.execute("INSERT INTO " + name + " VALUES (1, 'Alice')");
+
+        assertRowsEventuallyInAnyOrder(
+                "SELECT __key, this FROM " + name,
+                singletonList(new Row(
+                        new ObjectNode(JsonNodeFactory.instance).set("id", new IntNode(1)),
+                        new ObjectNode(JsonNodeFactory.instance).set("name", new TextNode("Alice"))
+                ))
+        );
     }
 
     private static String createRandomTopic() {

@@ -20,6 +20,7 @@ import com.hazelcast.sql.impl.extract.QueryExtractor;
 import com.hazelcast.sql.impl.extract.QueryTarget;
 import org.apache.avro.Schema;
 import org.apache.avro.SchemaBuilder;
+import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.generic.GenericRecordBuilder;
 import org.junit.Test;
 
@@ -51,6 +52,7 @@ public class AvroQueryTargetTest {
     @Test
     public void test_get() {
         QueryTarget target = new AvroQueryTarget();
+        QueryExtractor topExtractor = target.createExtractor(null, OBJECT);
         QueryExtractor nonExistingExtractor = target.createExtractor("nonExisting", OBJECT);
         QueryExtractor stringExtractor = target.createExtractor("string", VARCHAR);
         QueryExtractor booleanExtractor = target.createExtractor("boolean", BOOLEAN);
@@ -106,6 +108,7 @@ public class AvroQueryTargetTest {
                 .build()
         );
 
+        assertThat(topExtractor.get()).isInstanceOf(GenericRecord.class);
         assertThat(nonExistingExtractor.get()).isNull();
         assertThat(stringExtractor.get()).isEqualTo("string");
         assertThat(booleanExtractor.get()).isEqualTo(true);

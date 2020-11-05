@@ -299,6 +299,32 @@ public class SqlPojoTest extends SqlTestSupport {
                 singletonList(new Row(1, new Person(null, "foo"), "foo")));
     }
 
+    @Test
+    public void test_topLevelFieldExtraction() {
+        String name = createRandomTopic();
+        sqlService.execute("CREATE MAPPING " + name + ' '
+                + "TYPE " + KafkaSqlConnector.TYPE_NAME + ' '
+                + "OPTIONS ( "
+                + '"' + OPTION_KEY_FORMAT + "\" '" + JAVA_FORMAT + '\''
+                + ", \"" + OPTION_KEY_CLASS + "\" '" + PersonId.class.getName() + '\''
+                + ", \"" + OPTION_VALUE_FORMAT + "\" '" + JAVA_FORMAT + '\''
+                + ", \"" + OPTION_VALUE_CLASS + "\" '" + Person.class.getName() + '\''
+                + ", \"bootstrap.servers\" '" + kafkaTestSupport.getBrokerConnectionString() + '\''
+                + ", \"key.serializer\" '" + PersonIdSerializer.class.getCanonicalName() + '\''
+                + ", \"key.deserializer\" '" + PersonIdDeserializer.class.getCanonicalName() + '\''
+                + ", \"value.serializer\" '" + PersonSerializer.class.getCanonicalName() + '\''
+                + ", \"value.deserializer\" '" + PersonDeserializer.class.getCanonicalName() + '\''
+                + ", \"auto.offset.reset\" 'earliest'"
+                + ")"
+        );
+        sqlService.execute("INSERT INTO " + name + " VALUES (1, 'Alice')");
+
+        assertRowsEventuallyInAnyOrder(
+                "SELECT __key, this FROM " + name,
+                singletonList(new Row(new PersonId(1), new Person(null, "Alice")))
+        );
+    }
+
     private static String createRandomTopic() {
         String topicName = "t_" + randomString().replace('-', '_');
         kafkaTestSupport.createTopic(topicName, INITIAL_PARTITION_COUNT);

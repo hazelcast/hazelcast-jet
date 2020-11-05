@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.sql.impl.extract;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hazelcast.sql.impl.extract.QueryExtractor;
 import com.hazelcast.sql.impl.extract.QueryTarget;
@@ -77,6 +78,7 @@ public class JsonQueryTargetTest {
     @Parameters(method = "values")
     public void test_get(Object value) {
         QueryTarget target = new JsonQueryTarget();
+        QueryExtractor topExtractor = target.createExtractor(null, OBJECT);
         QueryExtractor nonExistingExtractor = target.createExtractor("nonExisting", OBJECT);
         QueryExtractor stringExtractor = target.createExtractor("string", VARCHAR);
         QueryExtractor booleanExtractor = target.createExtractor("boolean", BOOLEAN);
@@ -96,6 +98,7 @@ public class JsonQueryTargetTest {
 
         target.setTarget(value);
 
+        assertThat(topExtractor.get()).isInstanceOf(JsonNode.class);
         assertThat(nonExistingExtractor.get()).isNull();
         assertThat(stringExtractor.get()).isEqualTo("string");
         assertThat(booleanExtractor.get()).isEqualTo(true);

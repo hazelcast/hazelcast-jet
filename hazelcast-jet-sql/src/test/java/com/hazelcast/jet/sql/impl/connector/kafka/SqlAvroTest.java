@@ -104,7 +104,7 @@ public class SqlAvroTest extends SqlTestSupport {
         String name = createRandomTopic();
         sqlService.execute("CREATE MAPPING " + name + " ("
                 + "id INT EXTERNAL NAME \"__key.id\""
-                + ", name VARCHAR EXTERNAL NAME \"this.name\""
+                + ", name VARCHAR"
                 + ") TYPE " + KafkaSqlConnector.TYPE_NAME + ' '
                 + "OPTIONS ( "
                 + '"' + OPTION_KEY_FORMAT + "\" '" + AVRO_FORMAT + '\''
@@ -375,6 +375,36 @@ public class SqlAvroTest extends SqlTestSupport {
                         + ")"))
                 .isInstanceOf(HazelcastSqlException.class)
                 .hasMessage("Cannot use the '" + field + "' field with Avro serialization");
+    }
+
+    @Test
+    public void test_topLevelFieldExtraction() {
+        String name = createRandomTopic();
+        sqlService.execute("CREATE MAPPING " + name + " ("
+                + "id INT EXTERNAL NAME \"__key.id\""
+                + ", name VARCHAR"
+                + ") TYPE " + KafkaSqlConnector.TYPE_NAME + ' '
+                + "OPTIONS ( "
+                + '"' + OPTION_KEY_FORMAT + "\" '" + AVRO_FORMAT + '\''
+                + ", \"" + OPTION_VALUE_FORMAT + "\" '" + AVRO_FORMAT + '\''
+                + ", \"bootstrap.servers\" '" + kafkaTestSupport.getBrokerConnectionString() + '\''
+                + ", \"schema.registry.url\" '" + schemaRegistry.getURI() + '\''
+                + ", \"key.serializer\" '" + KafkaAvroSerializer.class.getCanonicalName() + '\''
+                + ", \"key.deserializer\" '" + KafkaAvroDeserializer.class.getCanonicalName() + '\''
+                + ", \"value.serializer\" '" + KafkaAvroSerializer.class.getCanonicalName() + '\''
+                + ", \"value.deserializer\" '" + KafkaAvroDeserializer.class.getCanonicalName() + '\''
+                + ", \"auto.offset.reset\" 'earliest'"
+                + ")"
+        );
+        sqlService.execute("INSERT INTO " + name + " VALUES (1, 'Alice')");
+
+        assertRowsEventuallyInAnyOrder(
+                "SELECT __key, this FROM " + name,
+                singletonList(new Row(
+                        new GenericRecordBuilder(intSchema("id")).set("id", 1).build(),
+                        new GenericRecordBuilder(stringSchema("name")).set("name", "Alice").build()
+                ))
+        );
     }
 
     private static String createRandomTopic() {
