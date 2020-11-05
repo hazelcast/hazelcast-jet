@@ -30,11 +30,11 @@ Apache License, Version 2.0
   JCIP Annotations under Apache License:1.0-1
   FindBugs-jsr305:3.0.0
   Gson:2.2.4
-  error-prone annotations:2.2.0
-  Guava InternalFutureFailureAccess and InternalFutures:1.0
-  Guava: Google Core Libraries for Java:27.0-jre
+  error-prone annotations:2.3.4
+  Guava InternalFutureFailureAccess and InternalFutures:1.0.1
+  Guava: Google Core Libraries for Java:29.0-jre
   Guava ListenableFuture only:9999.0-empty-to-avoid-conflict-with-guava
-  J2ObjC Annotations:1.1
+  J2ObjC Annotations:1.3
   Nimbus JOSE+JWT:4.41.1
   OkHttp:2.7.5
   Okio:1.6.0
@@ -130,8 +130,7 @@ GPL2 w/ CPE
   jersey-core:1.19
   Java Architecture for XML Binding:2.2.11
 MIT License
-  Checker Qual:2.5.2
-  Animal Sniffer Annotations:1.17
+  Checker Qual:2.11.1
   SLF4J API Module:1.7.7
 Public Domain
   XZ for Java:1.5
