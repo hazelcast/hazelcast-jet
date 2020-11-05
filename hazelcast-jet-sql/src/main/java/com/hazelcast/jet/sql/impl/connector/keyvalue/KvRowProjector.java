@@ -29,7 +29,7 @@ import java.util.Map.Entry;
 
 import static com.hazelcast.jet.sql.impl.ExpressionUtil.evaluate;
 
-class KvRowProjector implements Row {
+public class KvRowProjector implements Row {
 
     private final QueryTarget keyTarget;
     private final QueryTarget valueTarget;
@@ -39,7 +39,7 @@ class KvRowProjector implements Row {
     private final List<Expression<?>> projection;
 
     @SuppressWarnings("unchecked")
-    KvRowProjector(
+    public KvRowProjector(
             QueryPath[] paths,
             QueryDataType[] types,
             QueryTarget keyTarget,

@@ -27,11 +27,13 @@ import com.hazelcast.jet.sql.impl.connector.keyvalue.KvMetadataJavaResolver;
 import com.hazelcast.jet.sql.impl.connector.keyvalue.KvMetadataResolvers;
 import com.hazelcast.jet.sql.impl.connector.keyvalue.KvProcessors;
 import com.hazelcast.jet.sql.impl.inject.UpsertTargetDescriptor;
+import com.hazelcast.jet.sql.impl.join.JoinInfo;
 import com.hazelcast.jet.sql.impl.schema.MappingField;
 import com.hazelcast.map.impl.MapContainer;
 import com.hazelcast.map.impl.MapService;
 import com.hazelcast.map.impl.MapServiceContext;
 import com.hazelcast.spi.impl.NodeEngine;
+import com.hazelcast.sql.impl.expression.Expression;
 import com.hazelcast.sql.impl.extract.QueryPath;
 import com.hazelcast.sql.impl.schema.ConstantTableStatistics;
 import com.hazelcast.sql.impl.schema.Table;
@@ -41,9 +43,12 @@ import com.hazelcast.sql.impl.schema.map.PartitionedMapTable;
 import com.hazelcast.sql.impl.type.QueryDataType;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 
 import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.sql.impl.schema.map.MapTableUtils.estimatePartitionedMapRowCount;
@@ -53,6 +58,8 @@ import static java.util.stream.Stream.concat;
 public class IMapSqlConnector implements SqlConnector {
 
     public static final String TYPE_NAME = "IMap";
+
+    private static final int RANDOM_SUFFIX_LENGTH = 5;
 
     private final KvMetadataResolvers metadataResolvers;
 
@@ -120,6 +127,37 @@ public class IMapSqlConnector implements SqlConnector {
                 Collections.emptyList(),
                 hd
         );
+    }
+
+    @Override
+    public boolean supportsNestedLoopReader() {
+        return true;
+    }
+
+    @Nonnull @Override
+    public Vertex nestedLoopReader(
+            @Nonnull DAG dag,
+            @Nonnull Table table0,
+            @Nullable Expression<Boolean> predicate,
+            @Nonnull List<Expression<?>> projections,
+            @Nonnull JoinInfo joinInfo
+    ) {
+        PartitionedMapTable table = (PartitionedMapTable) table0;
+
+        return dag.newVertex(
+                // TODO use something better for vertex names
+                "NestedLoopJoin(" + toString(table) + ")-" + randomLetters(RANDOM_SUFFIX_LENGTH),
+                JoinProcessors.processor(table, predicate, projections, joinInfo)
+        );
+    }
+
+    private static String randomLetters(int len) {
+        Random r = ThreadLocalRandom.current();
+        char[] res = new char[len];
+        for (int i = 0; i < len; i++) {
+            res[i] = (char) ('a' + r.nextInt('z' - 'a'));
+        }
+        return new String(res);
     }
 
     @Override

@@ -18,6 +18,7 @@ package com.hazelcast.jet.sql.impl.connector;
 
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Vertex;
+import com.hazelcast.jet.sql.impl.join.JoinInfo;
 import com.hazelcast.jet.sql.impl.schema.MappingField;
 import com.hazelcast.spi.impl.NodeEngine;
 import com.hazelcast.sql.impl.expression.Expression;
@@ -225,12 +226,33 @@ public interface SqlConnector {
     ) {
         assert !supportsFullScanReader();
         throw new UnsupportedOperationException("Full scan reader not supported for " + getClass().getName());
+    }
 
+    /**
+     * TODO
+     */
+    default boolean supportsNestedLoopReader() {
+        return false;
     }
 
     /**
      * Returns whether this connector supports the {@link #sink}. The default
      * implementation returns {@code false}.
+     */
+    @Nonnull
+    default Vertex nestedLoopReader(
+            @Nonnull DAG dag,
+            @Nonnull Table table0,
+            @Nullable Expression<Boolean> predicate,
+            @Nonnull List<Expression<?>> projections,
+            @Nonnull JoinInfo joinInfo
+    ) {
+        assert !supportsNestedLoopReader();
+        throw new UnsupportedOperationException("Nested loop reader not supported for " + getClass().getName());
+    }
+
+    /**
+     * TODO
      */
     default boolean supportsSink() {
         return false;

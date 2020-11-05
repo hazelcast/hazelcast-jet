@@ -182,6 +182,22 @@ public class CreateDagVisitor {
         return vertex;
     }
 
+    public Vertex onNestedLoopJoin(JoinNestedLoopPhysicalRel rel) {
+        assert rel.getRight() instanceof FullScanPhysicalRel : rel.getRight().getRelTypeName();
+
+        Table rightTable = rel.getRight().getTable().unwrap(HazelcastTable.class).getTarget();
+
+        Vertex vertex = getJetSqlConnector(rightTable).nestedLoopReader(
+                dag,
+                rightTable,
+                rel.rightFilter(),
+                rel.rightProjection(),
+                rel.joinInfo()
+        );
+        connectInput(rel.getLeft(), vertex, null);
+        return vertex;
+    }
+
     public Vertex onRoot(JetRootRel rootRel) {
         Vertex vertex = dag.newVertex(name("ClientSink"),
                 rootResultConsumerSink(rootRel.getInitiatorAddress(), rootRel.getQueryId()));

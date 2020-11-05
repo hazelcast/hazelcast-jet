@@ -21,14 +21,17 @@ import com.hazelcast.jet.sql.impl.parse.SqlCreateJob;
 import com.hazelcast.sql.impl.calcite.schema.HazelcastTable;
 import com.hazelcast.sql.impl.calcite.validate.HazelcastSqlValidator;
 import com.hazelcast.sql.impl.calcite.validate.types.HazelcastTypeFactory;
+import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlInsert;
+import org.apache.calcite.sql.SqlJoin;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlSelect;
 import org.apache.calcite.sql.util.SqlBasicVisitor;
 import org.apache.calcite.sql.validate.SqlConformance;
 import org.apache.calcite.sql.validate.SqlValidatorCatalogReader;
+import org.apache.calcite.sql.validate.SqlValidatorScope;
 import org.apache.calcite.sql.validate.SqlValidatorTable;
 
 import static com.hazelcast.jet.sql.impl.connector.SqlConnectorUtil.getJetSqlConnector;
@@ -122,5 +125,29 @@ public class JetSqlValidator extends HazelcastSqlValidator {
         FindStreamingTablesVisitor visitor = new FindStreamingTablesVisitor();
         node.accept(visitor);
         return visitor.found;
+    }
+
+    @Override
+    protected void validateJoin(SqlJoin join, SqlValidatorScope scope) {
+        super.validateJoin(join, scope);
+
+        class FindSelectVisitor extends SqlBasicVisitor<Void> {
+            boolean found;
+
+            public Void visit(SqlCall call) {
+                if (call.getKind() == SqlKind.SELECT) {
+                    found = true;
+                    return null;
+                } else {
+                    return call.getOperator().acceptCall(this, call);
+                }
+            }
+        }
+
+        FindSelectVisitor visitor = new FindSelectVisitor();
+        join.accept(visitor);
+        if (visitor.found) {
+            throw newValidationError(join, RESOURCE.subqueryOnRightSideOfJoinNotSupported());
+        }
     }
 }

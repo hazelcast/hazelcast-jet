@@ -26,12 +26,15 @@ import com.hazelcast.sql.impl.calcite.validate.HazelcastSqlOperatorTable;
 import com.hazelcast.sql.impl.calcite.validate.types.HazelcastTypeSystem;
 import org.apache.calcite.runtime.CalciteContextException;
 import org.apache.calcite.runtime.Resources.ExInst;
+import org.apache.calcite.sql.JoinConditionType;
+import org.apache.calcite.sql.JoinType;
 import org.apache.calcite.sql.SqlBasicTypeNameSpec;
 import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlDataTypeSpec;
 import org.apache.calcite.sql.SqlDynamicParam;
 import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlIntervalQualifier;
+import org.apache.calcite.sql.SqlJoin;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlLiteral;
 import org.apache.calcite.sql.SqlNode;
@@ -282,6 +285,16 @@ public final class UnsupportedOperationVisitor implements SqlVisitor<Void> {
                     return null;
                 }
 
+                if (symbolValue == JoinType.INNER || symbolValue == JoinType.COMMA) {
+                    return null;
+                }
+                if (symbolValue == JoinConditionType.ON
+                    || symbolValue == JoinConditionType.NONE
+                    || symbolValue == JoinConditionType.USING
+                ) {
+                    return null;
+                }
+
                 throw error(literal, RESOURCE.error(symbolValue + " literal is not supported"));
 
             default:
@@ -304,6 +317,10 @@ public final class UnsupportedOperationVisitor implements SqlVisitor<Void> {
         switch (kind) {
             case SELECT:
                 processSelect((SqlSelect) call);
+                break;
+
+            case JOIN:
+                processJoin((SqlJoin) call);
                 break;
 
             case OTHER:
@@ -331,6 +348,14 @@ public final class UnsupportedOperationVisitor implements SqlVisitor<Void> {
 
         if (select.getOffset() != null) {
             throw unsupported(select.getOffset(), "OFFSET");
+        }
+    }
+
+    private void processJoin(SqlJoin join) {
+        JoinType joinType = join.getJoinType();
+
+        if (joinType != JoinType.INNER && joinType != JoinType.COMMA) {
+            throw unsupported(join, joinType.name() + " join");
         }
     }
 

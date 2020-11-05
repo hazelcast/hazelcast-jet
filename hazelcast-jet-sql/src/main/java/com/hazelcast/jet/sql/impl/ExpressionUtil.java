@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.sql.impl;
 
+import com.hazelcast.function.BiFunctionEx;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.function.PredicateEx;
 import com.hazelcast.sql.impl.expression.Expression;
@@ -26,6 +27,7 @@ import com.hazelcast.sql.impl.row.Row;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public final class ExpressionUtil {
@@ -56,6 +58,18 @@ public final class ExpressionUtil {
                 result[i] = evaluate(projections.get(i), row);
             }
             return result;
+        };
+    }
+
+    public static BiFunctionEx<Object[], Object[], Object[]> joinFn(
+            @Nonnull Expression<Boolean> predicate
+    ) {
+        return (left, right) -> {
+            Object[] joined = Arrays.copyOf(left, left.length + right.length);
+            System.arraycopy(right, 0, joined, left.length, right.length);
+
+            Row row = new HeapRow(joined);
+            return Boolean.TRUE.equals(evaluate(predicate, row)) ? joined : null;
         };
     }
 
