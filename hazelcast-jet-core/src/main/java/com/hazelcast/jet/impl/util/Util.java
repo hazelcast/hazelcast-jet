@@ -40,24 +40,31 @@ import java.io.NotSerializableException;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
 import java.io.Serializable;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.attribute.PosixFilePermission;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLongArray;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.function.ToIntFunction;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.Util.idToString;
@@ -66,6 +73,7 @@ import static com.hazelcast.jet.core.processor.SinkProcessors.writeMapP;
 import static com.hazelcast.jet.core.processor.SourceProcessors.readMapP;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 import static java.lang.Math.abs;
+import static java.nio.file.LinkOption.NOFOLLOW_LINKS;
 import static java.util.Collections.emptyList;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.mapping;
@@ -461,7 +469,83 @@ public final class Util {
      * using the given {@code mapFn}.
      */
     @Nonnull
-    public static <T, R> List<R> toList(@Nonnull Collection<T> coll, Function<? super T, ? extends R> mapFn) {
+    public static <T, R> List<R> toList(@Nonnull Collection<T> coll, @Nonnull Function<? super T, ? extends R> mapFn) {
         return coll.stream().map(mapFn).collect(Collectors.toList());
+    }
+
+    /**
+     * Edits the permissions on the file denoted by {@code path} by calling
+     * {@code editFn} with the set of that file's current permissions. {@code
+     * editFn} should modify that set to the desired permission set, and this
+     * method will propagate them to the file. If {@code editFn} returns {@code
+     * false}, the file will be left untouched. Returning {@code false} is an
+     * optimization feature because it avoids the expensive filesystem
+     * operation; if you always return {@code true}, this method will still
+     * behave correctly.
+     */
+    public static void editPermissions(
+            @Nonnull Path path, @Nonnull Predicate<? super Set<PosixFilePermission>> editFn
+    ) throws IOException {
+        Set<PosixFilePermission> perms = Files.getPosixFilePermissions(path, NOFOLLOW_LINKS);
+        if (editFn.test(perms)) {
+            Files.setPosixFilePermissions(path, perms);
+        }
+    }
+
+    /**
+     * Edits the permissions on all the files in the {@code basePath} and
+     * its subdirectories. It calls {@link #editPermissions} with every file.
+     *
+     * @param basePath the directory where to edit the file permissions
+     * @param editFn the permission-editing function, described above
+     * @return the list of all relative path names of files for which editing
+     *         permissions failed
+     * @throws IOException if the directory's contents cannot be traversed
+     */
+    public static List<String> editPermissionsRecursively(
+            @Nonnull Path basePath,
+            @Nonnull Predicate<? super Set<PosixFilePermission>> editFn
+    ) throws IOException {
+        List<String> filesNotMarked = new ArrayList<>();
+        try (Stream<Path> walk = Files.walk(basePath)) {
+            walk.forEach(path -> {
+                try {
+                    editPermissions(path, editFn);
+                } catch (Exception e) {
+                    filesNotMarked.add(basePath.relativize(path).toString());
+                }
+            });
+        }
+        return filesNotMarked;
+    }
+
+    /**
+     * Formats a duration given im milliseconds to the form of:
+     * <ul>
+     *     <li>{@code HH:MM:SS.sss}, if <24 hours
+     *     <li>{@code Nd HH:MM:SS.sss} otherwise
+     * </ul>
+     */
+    @Nonnull
+    @SuppressWarnings("checkstyle:MagicNumber") // number of hours per day isn't magic :)
+    public static String formatJobDuration(long durationMs) {
+        if (durationMs == Long.MIN_VALUE) {
+            return "" + Long.MIN_VALUE;
+        }
+        String sign = "";
+        if (durationMs < 0) {
+            sign = "-";
+            durationMs = -durationMs;
+        }
+        long millis = durationMs % 1000;
+        durationMs /= 1000;
+        long seconds = durationMs % 60;
+        durationMs /= 60;
+        long minutes = durationMs % 60;
+        durationMs /= 60;
+        long hours = durationMs % 24;
+        durationMs /= 24;
+        String textUpToHours = String.format("%02d:%02d:%02d.%03d", hours, minutes, seconds, millis);
+        return sign + (durationMs > 0 ? durationMs + "d " : "") + textUpToHours;
     }
 }

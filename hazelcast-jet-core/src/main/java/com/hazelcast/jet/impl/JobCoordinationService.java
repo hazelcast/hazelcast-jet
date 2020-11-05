@@ -422,8 +422,12 @@ public class JobCoordinationService {
     public CompletableFuture<JobStatus> getJobStatus(long jobId) {
         return callWithJob(jobId,
                 mc -> {
+                    // When the job finishes running, we write NOT_RUNNING to jobStatus first and then
+                    // write null to requestedTerminationMode (see MasterJobContext.finalizeJob()). We
+                    // have to read them in the opposite order.
+                    TerminationMode terminationMode = mc.jobContext().requestedTerminationMode();
                     JobStatus jobStatus = mc.jobStatus();
-                    return jobStatus == RUNNING && mc.jobContext().requestedTerminationMode() != null
+                    return jobStatus == RUNNING && terminationMode != null
                             ? COMPLETING
                             : jobStatus;
                 },
@@ -712,14 +716,14 @@ public class JobCoordinationService {
      * Completes the job which is coordinated with the given master context object.
      */
     @CheckReturnValue
-    CompletableFuture<Void> completeJob(MasterContext masterContext, Throwable error) {
+    CompletableFuture<Void> completeJob(MasterContext masterContext, Throwable error, long completionTime) {
         return submitToCoordinatorThread(() -> {
             // the order of operations is important.
             List<RawJobMetrics> jobMetrics =
                     masterContext.jobConfig().isStoreMetricsAfterJobCompletion()
                             ? masterContext.jobContext().jobMetrics()
                             : null;
-            jobRepository.completeJob(masterContext, jobMetrics, error);
+            jobRepository.completeJob(masterContext, jobMetrics, error, completionTime);
             if (masterContexts.remove(masterContext.jobId(), masterContext)) {
                 completeObservables(masterContext.jobRecord().getOwnedObservables(), error);
                 logger.fine(masterContext.jobIdString() + " is completed");
