@@ -3,7 +3,8 @@ title: Job Management
 description: Commands to manage SQL jobs
 ---
 
-## CREATE/DROP JOB
+
+## CREATE/DROP/ALTER JOB
 
 Creates a job from a query that is not tied to the client session. When
 you submit an INSERT query, its lifecycle is tied to the client session:
@@ -56,14 +57,16 @@ DROP JOB [IF EXISTS] job_name [WITH SNAPSHOT snapshot_name]
 - `WITH SNAPSHOT`: export a named snapshot before cancelling the job
   (enterprise feature)
 
-## Other job operations
-
-These operations are equivalent to `Job.suspend()`, `Job.resume()` and
-`Job.restart()`, see their javadoc for more information.
+### ALTER JOB Synopsis
 
 ```sql
 ALTER JOB job_name { SUSPEND | RESUME | RESTART }
 ```
+
+These operations are equivalent to `Job.suspend()`, `Job.resume()` and
+`Job.restart()`, see their javadoc for more information.
+
+## CREATE/DROP SNAPSHOT
 
 To export a snapshot for a running job use:
 
@@ -80,7 +83,7 @@ CREATE [OR REPLACE] SNAPSHOT snapshot_name FOR JOB job_name
 
 The job will continue running after the snapshot is exported. To cancel
 the job after the snapshot is exported, use the [DROP JOB .. WITH
-SNAPSHOT](#drop-job) command [described above](#drop-job).
+SNAPSHOT](#drop-job-synopsis) command described above.
 
 To delete a previously exported snapshot use:
 
@@ -92,8 +95,8 @@ DROP SNAPSHOT [IF EXISTS] snapshot_name
 
 - `job_name`: the job for which to create the snapshot
 
-To start a new job using the exported snapshot as initial, use [CREATE
-JOB](#create-job) command with the `initialSnapshotName` option set to
-the snapshot name.
+To start a new job using the exported snapshot as initial, use the
+[CREATE JOB](#create-job-synopsis) command with the
+`initialSnapshotName` option set to the snapshot name.
 
-CREATE MAPPING Syntax*Note:* Exported snapshots is an enterprise feature.
+*Note:* Exported snapshots is an enterprise feature.

@@ -3,8 +3,9 @@ title: SQL Introduction
 description: Introduction to Hazelcast Jet SQL features.
 ---
 
+
 The Hazelcast Jet SQL service executes distributed SQL statements over
-Hazelcast collections and external data sets.
+Hazelcast IMaps and external data sets.
 
 It allows you to create a Jet processing job using the familiar SQL
 language.
@@ -34,7 +35,6 @@ These are some of the features on our roadmap:
 - joins with arbitrary external data sources
 - windowed aggregation
 - JDBC
-- sorting (ORDER BY)
 
 ## Example: How to query Apache Kafka using SQL
 
@@ -88,12 +88,12 @@ call to close it earlier. By default the reading starts at the tip of
 the topic, but you can modify it by adding `auto.offset.reset` Kafka
 property to toe mapping options.
 
-can also update an IMap using the `SINK INTO` command, which means you
-can use Jet SQL as a simple API to ingest data and store it in the IMDG.
-To be able to write to an IMap, Jet has to know what objects to create
-for the map key and value. It can derive that automatically by sampling
-an existing entry in the map, but if the map may be empty, you have to
-create a mapping for it, too.
+Jet can also update an IMap using the `SINK INTO` command, which means
+you can use Jet SQL as a simple API to ingest data and store it in the
+IMDG. To be able to write to an IMap, Jet has to know what objects to
+create for the map key and value. It can derive that automatically by
+sampling an existing entry in the map, but if the map may be empty, you
+have to create a mapping for it, too.
 
 ```sql
 CREATE MAPPING latest_trades
@@ -189,11 +189,10 @@ Hazelcast IMDG can execute SQL statements using either the default SQL
 backend or the Jet SQL backend.
 
 The default SQL backend is designed for quick, ad-hoc queries over
-Hazelcast in-memory collections. The Jet backend allows you to combine
-Hazelcast collections with external data sources (Kafka, files) using a
-single query. It is designed for long-running queries (continuous
-queries, batch processing) and does not optimize for very low query
-initialization overhead.
+IMaps. The Jet backend allows you to combine various data sources (IMap,
+Kafka, files) using a single query. It is designed for long-running
+queries (continuous queries, batch processing) and does not optimize for
+very low query initialization overhead.
 
 The Hazelcast SQL service selects the backend automatically with a
 trial-and-error approach: first try the default IMDG backend, if it
