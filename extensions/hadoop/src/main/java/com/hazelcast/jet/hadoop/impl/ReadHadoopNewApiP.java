@@ -18,7 +18,7 @@ package com.hazelcast.jet.hadoop.impl;
 
 import com.hazelcast.cluster.Address;
 import com.hazelcast.cluster.Member;
-import com.hazelcast.function.BiFunctionEx;
+import com.hazelcast.function.SupplierEx;
 import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.core.AbstractProcessor;
@@ -45,6 +45,7 @@ import java.lang.reflect.Constructor;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import static com.hazelcast.jet.Traversers.traverseIterable;
@@ -64,7 +65,8 @@ public final class ReadHadoopNewApiP<K, V, R> extends AbstractProcessor {
     private final Configuration configuration;
     private final InputFormat inputFormat;
     private final Traverser<R> trav;
-    private BiFunctionEx<K, V, R> projectionFn;
+    private final SupplierEx<BiFunction<K, V, R>> projectionSupplierFn;
+    private BiFunction<K, V, R> projectionFn;
 
     private InternalSerializationService serializationService;
     private RecordReader<K, V> reader;
@@ -73,23 +75,25 @@ public final class ReadHadoopNewApiP<K, V, R> extends AbstractProcessor {
             @Nonnull Configuration configuration,
             @Nonnull InputFormat inputFormat,
             @Nonnull List<InputSplit> splits,
-            @Nonnull BiFunctionEx<K, V, R> projectionFn
+            @Nonnull SupplierEx<BiFunction<K, V, R>> projectionSupplierFn
     ) {
         this.configuration = configuration;
         this.inputFormat = inputFormat;
         this.trav = traverseIterable(splits)
                 .flatMap(this::traverseSplit);
-        this.projectionFn = projectionFn;
+        this.projectionSupplierFn = projectionSupplierFn;
     }
 
     @Override
     protected void init(@Nonnull Context context) {
         serializationService = ((ProcCtx) context).serializationService();
+        projectionFn = projectionSupplierFn.get();
+
         // we clone the projection of key/value if configured so because some of the
         // record-readers return the same object for `reader.getCurrentKey()`
         // and `reader.getCurrentValue()` which is mutated for each `reader.nextKeyValue()`.
         if (configuration.getBoolean(COPY_ON_READ, true)) {
-            BiFunctionEx<K, V, R> actualProjectionFn = this.projectionFn;
+            BiFunction<K, V, R> actualProjectionFn = this.projectionFn;
             this.projectionFn = (key, value) -> {
                 R result = actualProjectionFn.apply(key, value);
                 return result == null ? null : serializationService.toObject(serializationService.toData(result));
@@ -160,13 +164,16 @@ public final class ReadHadoopNewApiP<K, V, R> extends AbstractProcessor {
          */
         @SuppressFBWarnings("SE_BAD_FIELD")
         private final Configuration configuration;
-        private final BiFunctionEx<K, V, R> projectionFn;
+        private final SupplierEx<BiFunction<K, V, R>> projectionSupplierFn;
 
         private transient Map<Address, List<IndexedInputSplit>> assigned;
 
-        public MetaSupplier(@Nonnull Configuration configuration, @Nonnull BiFunctionEx<K, V, R> projectionFn) {
+        public MetaSupplier(
+                @Nonnull Configuration configuration,
+                @Nonnull SupplierEx<BiFunction<K, V, R>> projectionSupplierFn
+        ) {
             this.configuration = configuration;
-            this.projectionFn = projectionFn;
+            this.projectionSupplierFn = projectionSupplierFn;
         }
 
         @Override
@@ -187,7 +194,7 @@ public final class ReadHadoopNewApiP<K, V, R> extends AbstractProcessor {
         @Nonnull @Override
         public Function<Address, ProcessorSupplier> get(@Nonnull List<Address> addresses) {
             return address ->
-                    new Supplier<>(configuration, assigned.getOrDefault(address, emptyList()), projectionFn);
+                    new Supplier<>(configuration, assigned.getOrDefault(address, emptyList()), projectionSupplierFn);
         }
     }
 
@@ -199,17 +206,17 @@ public final class ReadHadoopNewApiP<K, V, R> extends AbstractProcessor {
          * SerializableJobConf}, which are serializable.
          */
         @SuppressFBWarnings("SE_BAD_FIELD")
-        private Configuration configuration;
-        private BiFunctionEx<K, V, R> projectionFn;
-        private List<IndexedInputSplit> assignedSplits;
+        private final Configuration configuration;
+        private final SupplierEx<BiFunction<K, V, R>> projectionSupplierFn;
+        private final List<IndexedInputSplit> assignedSplits;
 
         Supplier(
                 Configuration configuration,
                 List<IndexedInputSplit> assignedSplits,
-                @Nonnull BiFunctionEx<K, V, R> projectionFn
+                @Nonnull SupplierEx<BiFunction<K, V, R>> projectionSupplierFn
         ) {
             this.configuration = configuration;
-            this.projectionFn = projectionFn;
+            this.projectionSupplierFn = projectionSupplierFn;
             this.assignedSplits = assignedSplits;
         }
 
@@ -225,7 +232,12 @@ public final class ReadHadoopNewApiP<K, V, R> extends AbstractProcessor {
                                         .stream()
                                         .map(IndexedInputSplit::getNewSplit)
                                         .collect(toList());
-                                return new ReadHadoopNewApiP<>(configuration, inputFormat, mappedSplits, projectionFn);
+                                return new ReadHadoopNewApiP<>(
+                                        configuration,
+                                        inputFormat,
+                                        mappedSplits,
+                                        projectionSupplierFn
+                                );
                             }
                     ).collect(toList());
         }

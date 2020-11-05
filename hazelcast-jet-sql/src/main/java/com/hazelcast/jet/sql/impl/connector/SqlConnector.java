@@ -39,6 +39,11 @@ import java.util.Map;
 public interface SqlConnector {
 
     /**
+     * TODO
+     */
+    String OPTION_FORMAT = "format";
+
+    /**
      * The key serialization format for key-value connectors.
      */
     String OPTION_KEY_FORMAT = "keyFormat";
@@ -115,10 +120,20 @@ public interface SqlConnector {
     String JSON_FORMAT = "json";
 
     /**
+     * TODO
+     */
+    String CSV_FORMAT = "csv";
+
+    /**
      * Value for {@value #OPTION_KEY_FORMAT} and {@value #OPTION_VALUE_FORMAT}
      * for Avro serialization.
      */
     String AVRO_FORMAT = "avro";
+
+    /**
+     * TODO
+     */
+    String PARQUET_FORMAT = "parquet";
 
     /**
      * A key in the table options (TO).

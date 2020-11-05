@@ -12,8 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#
 
-com.hazelcast.jet.sql.impl.connector.map.IMapSqlConnector
-com.hazelcast.jet.sql.impl.connector.file.FileSqlConnector
-com.hazelcast.jet.sql.impl.connector.kafka.KafkaSqlConnector
+
+# needed to override xerces factory coming with HDFS dependencies
+com.sun.org.apache.xerces.internal.jaxp.validation.XMLSchemaFactory
