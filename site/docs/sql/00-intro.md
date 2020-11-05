@@ -3,21 +3,22 @@ title: SQL Introduction
 description: Introduction to Hazelcast Jet SQL features.
 ---
 
-Hazelcast Jet SQL service executes distributed SQL statements over
+The Hazelcast Jet SQL service executes distributed SQL statements over
 Hazelcast collections and external data sets.
 
-It allows you to specify Jet jobs using the well-known SQL language.
+It allows you to create a Jet processing job using the familiar SQL
+language.
 
-**Note:** _The service is in beta state. Behavior and API might change in
-future releases. Binary compatibility is not guaranteed between minor or
-patch releases._
+**Note:** _The service is in beta state. Behavior and API might change
+in future releases. Binary compatibility is not guaranteed between minor
+or patch releases._
 
 ## Overview
 
-In the first release Jet SQL supports following features:
+In the first release, Jet SQL supports the following features:
 
 - SQL Queries over [Apache Kafka topics](05-kafka-connector.md) and
-[Files (local and remote)](04-files-connector.md)
+[files (local and remote)](04-files-connector.md)
 - Joining Kafka or file data with local IMaps (enrichment)
 - Filtering and projection using [SQL
 expressions](https://docs.hazelcast.org/docs/latest-dev/manual/html-single/index.html#expressions)
@@ -28,22 +29,25 @@ to an [IMap](03-imap-connector.md) in the Jet cluster
 - Running continuous (streaming) and batch queries, see
 [Job Management](02-job-management.md)
 
-Notably, the following features are currently unsupported: joins
-arbitrary external data sources, window aggregation, JDBC, sorting
-(ORDER BY clause). We plan to support these in the future.
+These are some of the features on our roadmap:
+
+- joins with arbitrary external data sources
+- windowed aggregation
+- JDBC
+- sorting (ORDER BY)
 
 ## Example: How to query Apache Kafka using SQL
 
-Consider that we have a topic called `trades` that contains ticker
-updates. Trades are encoded as JSON messages:
+We have a topic called `trades` with stock trade events. Trades are
+encoded as JSON messages:
 
 ```json
 { "ticker": "ABCD", "price": 5.5 }
 ```
 
-To use a remote topic as a table in Jet, an `EXTERNAL MAPPING` must be
-created first. This maps the JSON messages to a fixed list of columns
-with data types:
+To use a remote topic as a table in Jet, first create an `EXTERNAL
+MAPPING`. It maps the JSON messages to a fixed list of columns with
+data types:
 
 ```sql
 CREATE MAPPING trades (
@@ -84,13 +88,12 @@ call to close it earlier. By default the reading starts at the tip of
 the topic, but you can modify it by adding `auto.offset.reset` Kafka
 property to toe mapping options.
 
-Instead of sending results to the caller, Jet SQL query can also update
-an IMap using the `SINK INTO` command. Jet SQL can thus be used as a
-simple API to ingest data into Hazelcast. To be able to write to an
-IMap, Jet has to know what objects to create for the map key and value.
-It can derive that automatically by sampling an existing entry in the
-map, but if the map is possibly empty, you have to create a mapping for
-it too.
+can also update an IMap using the `SINK INTO` command, which means you
+can use Jet SQL as a simple API to ingest data and store it in the IMDG.
+To be able to write to an IMap, Jet has to know what objects to create
+for the map key and value. It can derive that automatically by sampling
+an existing entry in the map, but if the map may be empty, you have to
+create a mapping for it, too.
 
 ```sql
 CREATE MAPPING latest_trades
@@ -153,9 +156,8 @@ DROP JOB trades_ingestion
 
 ## Installation
 
-For proper functionality the `hazelcast-jet-sql` has to be on the class
-path. If you're using Gradle or Maven, make sure to add this module to
-the dependencies.
+You need the `hazelcast-jet-sql` module on your classpath. If you're
+using Gradle or Maven, make sure to add this module to the dependencies:
 
 <!--DOCUSAURUS_CODE_TABS-->
 
@@ -178,27 +180,27 @@ compile 'com.hazelcast.jet:hazelcast-jet-sql:{jet-version}'
 <!--END_DOCUSAURUS_CODE_TABS-->
 
 If you're using the distribution package, make sure to move the
-`hazelcast-jet-sql-{jet-version}.jar` file from the `opt/` to `lib/`
+`hazelcast-jet-sql-{jet-version}.jar` file from the `opt/` to the `lib/`
 directory.
 
-## Hazelcast SQL and Jet SQL
+## IMDG SQL and Jet SQL
 
-Hazelcast can execute SQL statements using either the default SQL
-backend contained in the Hazelcast IMDG, or using the Jet SQL backend.
+Hazelcast IMDG can execute SQL statements using either the default SQL
+backend or the Jet SQL backend.
 
-Default SQL backend is designed for fast, online queries over Hazelcast
-in-memory collections. Jet SQL backend allows you to combine Hazelcast
-collections with external data sources (Kafka, files) using a single
-query. It is designed for long-running queries (continuous queries,
-batch processing). As such, Jet is not optimized for low overhead during
-job submission so a tiny queries will not have great performance.
+The default SQL backend is designed for quick, ad-hoc queries over
+Hazelcast in-memory collections. The Jet backend allows you to combine
+Hazelcast collections with external data sources (Kafka, files) using a
+single query. It is designed for long-running queries (continuous
+queries, batch processing) and does not optimize for very low query
+initialization overhead.
 
-Hazelcast SQL service selects the backend automatically. The algorithm
-is this: we first try the default IMDG backend, if it can't execute a
-particular statement, we try the Jet backend.
+The Hazelcast SQL service selects the backend automatically with a
+trial-and-error approach: first try the default IMDG backend, if it
+can't execute the statement, try the Jet backend.
 
 This documentation summarizes the additional SQL features of Hazelcast
 Jet. For a summary of the default SQL engine features, supported data
-types and the built-in functions and operators please see the _SQL_
+types and the built-in functions and operators, please see the _SQL_
 chapter in the [Hazelcast IMDG reference
 manual](https://hazelcast.org/imdg/docs/).
