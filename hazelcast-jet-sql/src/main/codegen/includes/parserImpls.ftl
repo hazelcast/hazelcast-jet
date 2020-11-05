@@ -145,7 +145,7 @@ QueryDataType NumericTypes() :
     |
         <SMALLINT> { type = QueryDataType.SMALLINT; }
     |
-        <INT> { type = QueryDataType.INT; }
+        ( <INT> | <INTEGER> ) { type = QueryDataType.INT; }
     |
         <BIGINT> { type = QueryDataType.BIGINT; }
     |

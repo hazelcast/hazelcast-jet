@@ -25,11 +25,13 @@ import com.hazelcast.sql.SqlService;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import java.util.Iterator;
 import java.util.Map;
 
 import static java.util.Collections.singletonList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.Assert.assertEquals;
 
 public class SqlMappingTest extends SqlTestSupport {
 
@@ -100,6 +102,21 @@ public class SqlMappingTest extends SqlTestSupport {
     public void when_badType_then_fail() {
         assertThatThrownBy(() -> sqlService.execute("CREATE MAPPING m TYPE TooBad"))
                 .hasMessageContaining("Unknown connector type: TooBad");
+    }
+
+    @Test
+    public void test_intAndIntegerIsAlias() {
+        sqlService.execute("CREATE MAPPING m_int(__key INT) TYPE IMap " +
+                "OPTIONS(keyFormat 'java', keyJavaClass 'java.lang.Integer', valueFormat 'json')");
+        sqlService.execute("CREATE MAPPING m_integer(__key INTEGER) TYPE IMap " +
+                "OPTIONS(keyFormat 'java', keyJavaClass 'java.lang.Integer', valueFormat 'json')");
+
+        MappingStorage mappingStorage = new MappingStorage(getNodeEngineImpl(instance()));
+        assertEquals(2, mappingStorage.values().size());
+        Iterator<Mapping> iterator = mappingStorage.values().iterator();
+
+        // the two mappings must be equal, except for their name
+        assertThat(iterator.next()).isEqualToIgnoringGivenFields(iterator.next(), "name");
     }
 
     @Test
