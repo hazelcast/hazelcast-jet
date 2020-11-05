@@ -151,9 +151,9 @@ QueryDataType NumericTypes() :
     |
         <REAL> { type = QueryDataType.REAL; }
     |
-        <DOUBLE> { type = QueryDataType.DOUBLE; }
+        <DOUBLE> [ <PRECISION> ] { type = QueryDataType.DOUBLE; }
     |
-        <DECIMAL> { type = QueryDataType.DECIMAL; }
+        (<DECIMAL> | <DEC> | <NUMERIC> ) { type = QueryDataType.DECIMAL; }
     )
     {
         return type;
@@ -165,7 +165,7 @@ QueryDataType CharacterTypes() :
     QueryDataType type;
 }
 {
-        <VARCHAR> { type = QueryDataType.VARCHAR; }
+        ( <VARCHAR> | ( <CHAR> | <CHARACTER> ) <VARYING> ) { type = QueryDataType.VARCHAR; }
     {
         return type;
     }

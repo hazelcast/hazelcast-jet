@@ -25,6 +25,7 @@ import com.hazelcast.sql.SqlService;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import java.math.BigDecimal;
 import java.util.Iterator;
 import java.util.Map;
 
@@ -105,18 +106,40 @@ public class SqlMappingTest extends SqlTestSupport {
     }
 
     @Test
-    public void test_intAndIntegerIsAlias() {
-        sqlService.execute("CREATE MAPPING m_int(__key INT) TYPE IMap " +
-                "OPTIONS(keyFormat 'java', keyJavaClass 'java.lang.Integer', valueFormat 'json')");
-        sqlService.execute("CREATE MAPPING m_integer(__key INTEGER) TYPE IMap " +
-                "OPTIONS(keyFormat 'java', keyJavaClass 'java.lang.Integer', valueFormat 'json')");
+    public void test_alias_int_integer() {
+        test_alias(Integer.class.getName(), "int", "integer");
+    }
+
+    @Test
+    public void test_alias_double_doublePrecision() {
+        test_alias(Double.class.getName(), "double", "double precision");
+    }
+
+    @Test
+    public void test_alias_dec_decimal_numeric() {
+        test_alias(BigDecimal.class.getName(), "dec", "decimal", "numeric");
+    }
+
+    @Test
+    public void test_alias_varchar_charVarying_characterVarying() {
+        test_alias(String.class.getName(), "varchar", "char varying", "character varying");
+    }
+
+    private void test_alias(String javaClassName, String ... aliases) {
+        for (String alias : aliases) {
+            sqlService.execute("CREATE MAPPING \"m_" + alias + "\"(__key " + alias + ") TYPE IMap " +
+                    "OPTIONS(keyFormat 'java', keyJavaClass '" + javaClassName + "', valueFormat 'json')");
+        }
 
         MappingStorage mappingStorage = new MappingStorage(getNodeEngineImpl(instance()));
-        assertEquals(2, mappingStorage.values().size());
+        assertEquals(aliases.length, mappingStorage.values().size());
         Iterator<Mapping> iterator = mappingStorage.values().iterator();
 
         // the two mappings must be equal, except for their name
-        assertThat(iterator.next()).isEqualToIgnoringGivenFields(iterator.next(), "name");
+        Mapping firstMapping = iterator.next();
+        while (iterator.hasNext()) {
+            assertThat(iterator.next()).isEqualToIgnoringGivenFields(firstMapping, "name");
+        }
     }
 
     @Test

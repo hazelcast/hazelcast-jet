@@ -94,7 +94,7 @@ public class AllTypesSqlConnector implements SqlConnector {
     };
 
     public static void create(SqlService sqlService, String tableName) {
-        sqlService.execute("CREATE MAPPING " + tableName + ' ' + "TYPE " + AllTypesSqlConnector.TYPE_NAME);
+        sqlService.execute("CREATE MAPPING " + tableName + " TYPE " + AllTypesSqlConnector.TYPE_NAME);
     }
 
     @Override
