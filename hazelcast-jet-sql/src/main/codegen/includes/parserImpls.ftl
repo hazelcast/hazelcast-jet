@@ -381,13 +381,13 @@ SqlNodeList SqlOptions():
     [
         sqlOption = SqlOption()
         {
-            sqlOptions.put(sqlOption.key(), sqlOption);
+            sqlOptions.put(sqlOption.keyString(), sqlOption);
         }
         (
             <COMMA> sqlOption = SqlOption()
             {
-                if (sqlOptions.putIfAbsent(sqlOption.key(), sqlOption) != null) {
-                    throw SqlUtil.newContextException(getPos(), ParserResource.RESOURCE.duplicateOption(sqlOption.key()));
+                if (sqlOptions.putIfAbsent(sqlOption.keyString(), sqlOption) != null) {
+                    throw SqlUtil.newContextException(getPos(), ParserResource.RESOURCE.duplicateOption(sqlOption.keyString()));
                 }
             }
         )*
