@@ -42,4 +42,22 @@ public interface ParserResource {
 
     @BaseMessage("The OR REPLACE option is required for CREATE SNAPSHOT")
     ExInst<SqlValidatorException> createSnapshotWithoutReplace();
+
+    @BaseMessage("Unsupported value for {0}: {1}")
+    ExInst<SqlValidatorException> processingGuaranteeBadValue(String key, String value);
+
+    @BaseMessage("Invalid number for {0}: {1}")
+    ExInst<SqlValidatorException> jobOptionIncorrectNumber(String key, String value);
+
+    @BaseMessage("Unknown job option: {0}")
+    ExInst<SqlValidatorException> unknownJobOption(String key);
+
+    @BaseMessage("The mapping must be created in the \"public\" schema")
+    ExInst<SqlValidatorException> mappingIncorrectSchema();
+
+    @BaseMessage("Mapping does not exist: {0}")
+    ExInst<SqlValidatorException> droppedMappingDoesNotExist(String mappingName);
+
+    @BaseMessage("Writing to top-level fields of type OBJECT not supported")
+    ExInst<SqlValidatorException> insertToTopLevelObject();
 }
