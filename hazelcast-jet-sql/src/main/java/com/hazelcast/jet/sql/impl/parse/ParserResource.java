@@ -39,4 +39,7 @@ public interface ParserResource {
 
     @BaseMessage("INSERT INTO clause is not supported for {0}")
     ExInst<SqlValidatorException> insertIntoNotSupported(String connectorName);
+
+    @BaseMessage("The OR REPLACE option is required for CREATE SNAPSHOT")
+    ExInst<SqlValidatorException> createSnapshotWithoutReplace();
 }
