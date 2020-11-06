@@ -78,7 +78,12 @@ public class SqlCreateSnapshot extends SqlCreate {
 
     @Override
     public void unparse(SqlWriter writer, int leftPrec, int rightPrec) {
-        writer.keyword("CREATE SNAPSHOT");
+        writer.keyword("CREATE");
+        if (getReplace()) {
+            writer.keyword("OR REPLACE");
+        }
+        writer.keyword("SNAPSHOT");
+
         snapshotName.unparse(writer, leftPrec, rightPrec);
         writer.keyword("FOR JOB");
         jobName.unparse(writer, leftPrec, rightPrec);
