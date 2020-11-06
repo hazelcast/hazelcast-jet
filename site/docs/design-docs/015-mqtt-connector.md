@@ -32,8 +32,8 @@ QoS: a number indicates the delivery guarantee of the message.
 
 Identifier: a short number that uniquely identifies the messages
 between the client and broker. This is relevant only for QoS levels
-greater than 0. Identifier is not unique between all clients and once
-the message flow is complete can be re-used.
+greater than 0. The identifier is not unique between all clients.
+Once the message flow is complete, the client can reuse the identifier.
 
 Retain Flag: flag that defines whether the message is saved by the
 broker as the last known good value for the specified topic. When a new
@@ -50,12 +50,12 @@ know anything about the processing.
 
 To receive messages on topics of interest, the client sends a
 `SUBSCRIBE` message to the broker. The message contains a list of
-subscriptions which are made of a topic and a QoS level. The topic can
+subscriptions which consists of a topic and a QoS level. The topic can
 contain wildcards that make it possible to subscribe to a topic pattern
 rather than a specific topic.
 
 The broker sends back a return code indicating the QoS level granted
-for each of the subscription. Messages published at a lower QoS will be
+for each of the subscriptions. Messages published at a lower QoS will be
 received at the published QoS. Messages published at a higher quality
 of service will be received using the QoS specified on the subscription.
 If the broker refuses a subscription, the return code indicates the
@@ -68,20 +68,20 @@ if the client has a persistent session.
 
 ## MQTT Clients
 
-We need to pick a java mqtt client for source and sink to connect to
+We need to pick a java MQTT client for source and sink to connect to
 the broker. There are several options out there:
 
 ### Paho Java Client
 
 The Eclipse Paho project provides open-source client implementations of
 MQTT protocols for various languages and [Paho Java Client](https://www.eclipse.org/paho/clients/java/)
-is one of them. The client offers synchronous and asynchronous APIs, the
-sync one is a wrapper to the asynchronous one. Paho Java Client does
-not support MQTT 5.0 protocol yet, it is a work in progress.
+is one of them. The client offers synchronous and asynchronous APIs.
+The sync one is a wrapper to the asynchronous one. Paho Java Client
+does not support MQTT 5.0 protocol yet. It is a work in progress.
 
-If not configured explicitly, client will try to connect to the broker
-using MQTT 3.1.1 protocol and if fails to connect falls back to MQTT
-3.0 protocol.
+If not configured explicitly, the client will try to connect to the
+broker using MQTT 3.1.1 protocol. If it fails to connect, the client
+falls back to MQTT 3.0 protocol.
 
 The client supports:
 
@@ -94,9 +94,9 @@ The client supports:
   when reconnects.
 - WebSocket: Client can connect to brokers that support WebSockets
 - High Availability: You can configure multiple brokers and in case of
-  a failure, client tries other brokers.
+  a failure, the client tries other brokers.
 
-It is really lightweight(240 KB), single jar without any dependencies.
+It is lightweight(240 KB) and a single jar without any dependencies.
 We can say that it is one of the most popular clients.
 
 ### HiveMQ Client
@@ -118,7 +118,7 @@ The client supports:
   back (MQTT 5.0 feature, broker needs to have/enabled the feature)
 
 HiveMQ Client is not lightweight compared to Paho Java client, 1.1 MB.
-It has also netty and rxjava dependencies.
+It has also `netty` and `rxjava` dependencies.
 
 ## MQTT Versions
 
@@ -131,9 +131,9 @@ It has also netty and rxjava dependencies.
 
 MQTT 5 brings new features like `Shared subscriptions` and `Time to
 live` for messages and client sessions and many more. While these new
-features looks promising, I couldn't find any information regarding the
+features look promising, I couldn't find any information regarding the
 adoption rate of MQTT 5. The only java client supports MQTT 5 is
-`HiveMQ Client` and for other languages I've found only a single
+`HiveMQ Client` and for other languages, I've found only a single
 library or none at all.
 
 ## MQTT Connector
@@ -145,12 +145,12 @@ support MQTT 5, but the adoption rate of MQTT 5 is questionable.
 ### Source
 
 We use our `SourceBuilder` to create a streaming source for MQTT
-messages. Source is not distributed, it creates a client on one of the
-members and subscribes to the topics.
+messages. The source is not distributed, it creates a client on one of
+the members and subscribes to the topics.
 
 The subscription mechanism is push-based. We set a callback to the
 client, and it is called as the messages arrived. Since our
-`SourceBuilder` is designed for pull based systems, we buffer the
+`SourceBuilder` is designed for pull-based systems, we buffer the
 messages to a blocking queue and drain them in the `fillBufferFn`. We
 apply the given mapping function to the binary message and keep the
 mapped item in the queue.
@@ -202,26 +202,26 @@ MqttSources.builder()
 
 #### Fault Tolerance
 
-Mqtt protocol defines these quality of services for subscribing the
+MQTT protocol defines these quality-of-services for subscribing the
 topics: `AT_MOST_ONCE`, `AT_LEAST_ONCE`, `EXACTLY_ONCE`. But I've
-confirmed loss of message with `EXACTLY_ONCE` configuration even when
+confirmed a loss of message with `EXACTLY_ONCE` configuration even when
 the client restarted gracefully. I'm not sure if this is an issue of
 the client or the broker. I'll test the behaviour with HiveMQ client
 too.
 
 If a client subscribes to a topic with quality of service `AT_LEAST_ONCE`
 or `EXACTLY_ONCE` and connects to the broker with `cleanSession=false`,
-then the broker keeps the messages in case of a disconnection. Broker
+then the broker keeps the messages in case of a disconnection. The broker
 serves these buffered messages once the client is re-connected. You
 need to use a unique identifier for the client.
 
-The source itself is not fault tolerant and does not save any state. In
-case of a restart, source does not know where it left and relies on the
-broker. If broker keeps a session for the client (above situation),
-source continues where it left otherwise the source emits messages after
-the subscription.
+The source itself is not fault-tolerant and does not save any state. In
+case of a restart, the source does not know where it left and relies on
+the broker. If the broker keeps a session for the client (above
+situation), the source continues where it left otherwise the source
+emits messages after the subscription.
 
-Paho client has an `autoReconnect` option, in case of a disconnect
+Paho client has an `autoReconnect` option, in case of a disconnect, the
 client tries to reconnect to the broker. After the reconnection, source
 re-subscribes to the topics.
 
@@ -290,11 +290,10 @@ MqttSinks.builder()
 
 #### Fault Tolerance
 
-The sink is not fault tolerant and does not save any state. In case of
+The sink is not fault-tolerant and does not save any state. In case of
 a restart, some messages can be duplicated.
 
 #### Error handling
 
 The sink uses async client to publish the messages. Any error/exception
 encountered while publishing the messages will not fail the job.
-  
