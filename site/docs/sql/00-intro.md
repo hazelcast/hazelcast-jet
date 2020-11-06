@@ -1,14 +1,11 @@
 ---
-title: SQL Introduction
+title: Hazelcast Jet SQL
 description: Introduction to Hazelcast Jet SQL features.
 ---
 
-
-The Hazelcast Jet SQL service executes distributed SQL statements over
+Hazelcast Jet allows you to create a Jet processing job using the
+familiar SQL language. It can execute distributed SQL statements over
 Hazelcast IMaps and external data sets.
-
-It allows you to create a Jet processing job using the familiar SQL
-language.
 
 **Note:** _The service is in beta state. Behavior and API might change
 in future releases. Binary compatibility is not guaranteed between minor
@@ -22,7 +19,7 @@ In the first release, Jet SQL supports the following features:
 [files (local and remote)](04-files-connector.md)
 - Joining Kafka or file data with local IMaps (enrichment)
 - Filtering and projection using [SQL
-expressions](https://docs.hazelcast.org/docs/latest-dev/manual/html-single/index.html#expressions)
+expressions](https://docs.hazelcast.org/docs/{imdg-version}/manual/html-single/index.html#expressions)
 - Aggregating data from files using predefined
 [aggregate functions](00a-basic-commands#aggregation-functions)
 - Receiving query results via Jet client (Java) or writing the results
@@ -32,8 +29,8 @@ to an [IMap](03-imap-connector.md) in the Jet cluster
 
 These are some of the features on our roadmap:
 
-- joins with arbitrary external data sources
-- windowed aggregation
+- Joins with arbitrary external data sources
+- Windowed aggregation
 - JDBC
 
 ## Example: How to query Apache Kafka using SQL
@@ -200,6 +197,6 @@ can't execute the statement, try the Jet backend.
 
 This documentation summarizes the additional SQL features of Hazelcast
 Jet. For a summary of the default SQL engine features, supported data
-types and the built-in functions and operators, please see the _SQL_
-chapter in the [Hazelcast IMDG reference
-manual](https://hazelcast.org/imdg/docs/).
+types and the built-in functions and operators, please see the [chapter
+on SQL](https://docs.hazelcast.org/docs/{imdg-version}/manual/html-single/index.html#sql)
+in the Hazelcast IMDG reference manual.

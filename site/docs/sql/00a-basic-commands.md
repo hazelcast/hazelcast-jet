@@ -20,13 +20,13 @@ The clauses above are standard SQL clauses. The `table_name` is a
 mapping name, either as created using [DDL](01-ddl.md) or one created
 automatically for non-empty IMaps.
 
-Jet supports all operators and functions supported by IMDG. For
-reference, find the _SQL_ section in the _Hazelcast IMDG Reference
-Manual_. Additionally, Jet supports the aggregation functions.
+Jet supports all operators and functions supported by IMDG. Go to the
+[chapter on SQL](https://docs.hazelcast.org/docs/{imdg-version}/manual/html-single/index.html#sql)
+in the Hazelcast IMDG reference manual for the full reference.
 
 ### Aggregation functions
 
-Jet supports these aggregation functions:
+Jet supports these aggregate functions:
 
 | Name<img width='350'/> | Description |
 |--|--|
@@ -37,18 +37,18 @@ Jet supports these aggregation functions:
 |`MIN(any)` :: _same as input_ | Computes the minimum of the non-null input values. Applicable also to OBJECT type, if the underlying value is `java.lang.Comparable` |
 |`MAX(any)` :: _same as input_ | Computes the maximum of the non-null input values. Applicable also to OBJECT type, if the underlying value is `java.lang.Comparable` |
 
-Except for `COUNT` the functions return NULL when no rows are
-aggregated. The functions cannot be applied to streaming inputs: they
-need to accumulate the whole of input to produce some results and you
-can't do this with input data. Currently, aggregation functions also
-can't be used for data coming from IMaps because Jet currently doesn't
-support reading from IMaps.
+Except for `COUNT`, the functions return NULL when there were no rows to
+aggregate. They cannot be applied to streaming inputs: they need to
+accumulate the whole of input to produce some results, but a streaming
+input has no end. Currently, aggregate functions can't be used for data
+coming from IMaps, either, because Jet doesn't currently support reading
+from IMaps.
 
-The argument to any aggregation function can be prepended with
-`DISTINCT` keyword. In this case only distinct values are supplied to
-the aggregation function. In case of MIN/MAX it makes no difference and
-the keyword is ignored. For example, this query calculates the number of
-distinct colors cars in the table have:
+You can prepend `DISTINCT` to the argument of any aggregate function in
+order to supply only the distinct values to it. In the case of
+`MIN`/`MAX` this makes no difference and the keyword is ignored. For
+example, this query calculates the number of distinct colors of cars in
+the table:
 
 ```sql
 SELECT COUNT(DISTINCT color)
@@ -57,19 +57,21 @@ FROM cars
 
 #### Memory considerations
 
-The batch aggregation always maintains intermediate results in memory.
-If you use the `DISTINCT` keyword, Jet also needs increased memory to
-store the distinct values. Jet currently does not have any memory
-management. If the number of groups in the result is high, it can lead
-to `OutOfMemoryException`, after which the cluster might be unusable.
-Also Jet never does streaming accumulation in case the input is already
-sorted according to the grouping. This will be done in the future when
-aggregation functions are supported by the default SQL engine.
+Batch aggregation maintains all intermediate results in memory. If you
+use the `DISTINCT` keyword, Jet must also store all the distinct values.
+Jet currently does not have any memory management. If the number of
+groups in the result is large, it can lead to an `OutOfMemoryError`,
+after which the cluster might be unusable. In some cases the user can
+arrange for the input stream to be sorted by the grouping key. Jet could
+use this fact to aggregate the data without keeping all the keys in RAM,
+but currently it does not support this optimization. We plan to do this
+in the future, when the default SQL engine will support aggregate
+functions.
 
 ### Isolation level
 
-The isolation level is defined by the individual connectors used by
-tables involved in the query. In general it's _read-committed_. One
+Every connector underlying a table used in the query declares the
+isolation level it provides. In general it's _read-committed_. One
 aspect of this mode is that it doesn't prevent reading different
 versions of a single row while executing a single query. In streaming
 mode this behavior is even desired: for example, if you join a record
@@ -86,16 +88,16 @@ version from the time when the query was started.
 { SELECT ... | VALUES(expression, [, ...]) }
 ```
 
-Jet jobs typically read from some source(s) and write to a sink.
-However, writing to the sink doesn't directly map to SQL commands. A Jet
-sink isn't limited to only insert or delete rows, even the SQL standard
-`MERGE` statement isn't easily applicable.
+Jobs that process unbounded streams typically read from some source(s)
+and write to a sink. However, writing to the sink doesn't directly map
+to SQL commands. A Jet sink isn't limited to only insert or delete rows,
+even the SQL standard `MERGE` statement isn't easily applicable.
 
-As a solution, Jet uses the non-standard `SINK INTO` command. Its
-semantics is defined by the each connector. Jet takes the output of the
-SELECT statement and sends it to the sink to process. For example, when
-writing to IMap, the value associated with the key is overwritten, one
-key can be overwritten multiple times.
+As a solution, Jet uses the non-standard `SINK INTO` command, whose
+semantics depend on the underlying sink connector. Jet takes the output
+of the SELECT statement and sends it to the sink to process. For
+example, when writing to an IMap, the value associated with the key is
+overwritten, and one key can be overwritten multiple times.
 
 Some connectors support the `INSERT INTO` statement. If they do, the
 behavior is defined by the SQL standard. For example, the Apache Kafka
@@ -105,17 +107,18 @@ statements.
 ### Transactional behavior
 
 In SQL a statement is always atomic. In streaming SQL this is not
-possible: a statement can run for infinite time, if it was atomic, we
-will never see any result. Therefore Jet relaxed the behavior: the sink
-is free to define its own transaction semantics. Due to support for
-fault tolerance it might even have at-least-once semantics. If a query
-fails, you might see partial results written.
+possible: since the SQL statement never completes, we will never see any
+result. Therefore Jet relaxes the behavior: the sink is free to define
+its own transaction semantics. Jet has the option to support fault
+tolerance with at-least-once semantics, violating strict atomicity.
+Also, if a query fails, you might see partial results written.
 
 ## Case sensitivity
 
 Identifiers such as table and column names are case-sensitive. Function
-names and SQL keywords aren't. If your identifier contains special characters,
-use `"` to quote. For example, if your map is named `my-map`:
+names and SQL keywords aren't. If your identifier contains special
+characters, use `"` to quote. For example, if your map is named
+`my-map`:
 
 ```sql
 SELECT * FROM "my-map";  -- works
