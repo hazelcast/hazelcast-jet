@@ -57,15 +57,16 @@ FROM cars
 
 #### Memory considerations
 
-Batch aggregation maintains all intermediate results in memory. If you
-use the `DISTINCT` keyword, Jet must also store all the distinct values.
-Jet currently does not have any memory management. If the number of
-groups in the result is large, it can lead to an `OutOfMemoryError`,
-after which the cluster might be unusable. In some cases the user can
-arrange for the input stream to be sorted by the grouping key. Jet could
-use this fact to aggregate the data without keeping all the keys in RAM,
-but currently it does not support this optimization. We plan to do this
-in the future, when the default SQL engine will support aggregate
+Batch aggregation maintains an aggregate for each group in memory as the
+results are computed. If you use the `DISTINCT` keyword, Jet must also
+store all the distinct values for each group. Jet currently does not
+have any memory management. If the number of groups in the result is
+large, it can lead to an `OutOfMemoryError`, after which the cluster
+might be unusable. In some cases the user can arrange for the input
+stream to be sorted by the grouping key. Jet could use this fact to
+aggregate the data without keeping all the groups in memory, but
+currently it does not support this optimization. We plan to do this in
+the future, when the default SQL engine will support aggregate
 functions.
 
 ### Isolation level
