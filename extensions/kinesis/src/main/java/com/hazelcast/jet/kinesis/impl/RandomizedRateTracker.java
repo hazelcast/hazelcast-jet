@@ -15,7 +15,9 @@
  */
 package com.hazelcast.jet.kinesis.impl;
 
+import java.util.Arrays;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.stream.Collectors;
 
 /**
  * Kinesis Data Streams impose various limits on their operations (details
@@ -59,5 +61,10 @@ public class RandomizedRateTracker {
         }
         parts[n - 1] = remaining;
         return parts;
+    }
+
+    @Override
+    public String toString() {
+        return Arrays.stream(parts).boxed().map(Object::toString).collect(Collectors.joining(", "));
     }
 }

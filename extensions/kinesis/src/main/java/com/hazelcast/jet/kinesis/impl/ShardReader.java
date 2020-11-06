@@ -23,15 +23,13 @@ import com.amazonaws.services.kinesis.model.ProvisionedThroughputExceededExcepti
 import com.amazonaws.services.kinesis.model.Record;
 import com.amazonaws.services.kinesis.model.Shard;
 
-import javax.annotation.Nonnull;
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
 
-class ShardReadWorker implements ShardWorker {
+class ShardReader extends AbstractShardWorker {
 
     /* Kinesis allows for a maximum of 5 GetRecords operations per second. */
     private static final int GET_RECORD_OPS_PER_SECOND = 5;
@@ -61,8 +59,6 @@ class ShardReadWorker implements ShardWorker {
      * 1 second." */
     private static final long READ_PAUSE_AFTER_THROUGHPUT_EXCEEDED = 1000L;
 
-    private final AmazonKinesisAsync kinesis;
-    private final String stream;
     private final Shard shard;
     private final RandomizedRateTracker getRecordsRateTracker =
             new RandomizedRateTracker(1000, GET_RECORD_OPS_PER_SECOND);
@@ -73,15 +69,16 @@ class ShardReadWorker implements ShardWorker {
     private Future<GetRecordsResult> recordsResult;
     private long nextGetRecordsTime;
 
-    ShardReadWorker(AmazonKinesisAsync kinesis, String stream, Shard shard) {
-        this.kinesis = kinesis;
-        this.stream = stream;
+    private List<Record> data;
+
+    ShardReader(AmazonKinesisAsync kinesis, String stream, Shard shard) {
+        super(kinesis, stream);
         this.shard = shard;
     }
 
-    @Override
-    @Nonnull
-    public List<Record> poll() {
+    public Result run() {
+        data = null;
+
         try {
             switch (state) {
                 case NO_SHARD_ITERATOR:
@@ -92,7 +89,7 @@ class ShardReadWorker implements ShardWorker {
                             shard.getSequenceNumberRange().getStartingSequenceNumber()
                     ); //todo: proper starting sequence number will be provided from offsets restored from Jet snapshots
                     state = State.WAITING_FOR_SHARD_ITERATOR;
-                    return Collections.emptyList();
+                    return Result.NOTHING;
 
 
                 case WAITING_FOR_SHARD_ITERATOR:
@@ -100,12 +97,12 @@ class ShardReadWorker implements ShardWorker {
                         shardIterator = shardIteratorResult.get().getShardIterator();
                         state = State.READY_TO_READ_RECORDS;
                     }
-                    return Collections.emptyList();
+                    return Result.NOTHING;
 
 
                 case READY_TO_READ_RECORDS:
                     if (System.currentTimeMillis() < nextGetRecordsTime) {
-                        return Collections.emptyList();
+                        return Result.NOTHING;
                     }
 
                     GetRecordsRequest getRecordsRequest = buildGetRecordsRequest(shardIterator);
@@ -114,7 +111,7 @@ class ShardReadWorker implements ShardWorker {
 
                     nextGetRecordsTime = System.currentTimeMillis() + getRecordsRateTracker.next();
 
-                    return Collections.emptyList();
+                    return Result.NOTHING;
 
 
                 case WAITING_FOR_RECORDS:
@@ -122,36 +119,69 @@ class ShardReadWorker implements ShardWorker {
                         try {
                             GetRecordsResult result = recordsResult.get();
                             shardIterator = result.getNextShardIterator();
-                            state = shardIterator == null ? State.SHARD_CLOSED : State.READY_TO_READ_RECORDS;
-                            return result.getRecords();
+                            if (shardIterator == null) {
+                                state = State.SHARD_CLOSED;
+                            } else {
+                                state = State.READY_TO_READ_RECORDS;
+                            }
+                            data = result.getRecords();
+                            return data.size() > 0 ? Result.HAS_DATA : Result.NOTHING;
                         } catch (ExecutionException e) {
                             Throwable cause = e.getCause();
                             if (cause instanceof ProvisionedThroughputExceededException) {
                                 nextGetRecordsTime = System.currentTimeMillis() + READ_PAUSE_AFTER_THROUGHPUT_EXCEEDED;
                                 state = State.READY_TO_READ_RECORDS;
-                                return Collections.emptyList();
+                                return Result.NOTHING;
                             } else {
                                 throw rethrow(cause);
                             }
                         }
                     } else {
-                        return Collections.emptyList();
+                        return Result.NOTHING;
                     }
 
 
                 case SHARD_CLOSED:
-                    throw new RuntimeException(); //todo: handle splits & merges
-
+                    return Result.CLOSED;
 
                 default:
-                    throw new RuntimeException("Unhandled state, programming error");
+                    throw new RuntimeException("Programming error, unhandled state: " + state);
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw rethrow(e);
-        } catch (ExecutionException e) {
+        } catch (ExecutionException e) { //todo: move this to the level of specific operations and handle some cases
+            e.printStackTrace();
             throw rethrow(e);
         }
+    }
+
+    public Shard getShard() {
+        return shard;
+    }
+
+    public List<Record> getData() {
+        if (data == null) {
+            throw new IllegalStateException("Can't ask for data when none is available");
+        }
+        return data;
+    }
+
+    enum Result {
+        /**
+         * Running the reader has not produced any events that need handling.
+         */
+        NOTHING,
+
+        /**
+         * Running the reader has produced new data to be processed.
+         */
+        HAS_DATA,
+
+        /**
+         * Running the reader revealed the shard being closed (due to merge or split).
+         */
+        CLOSED
     }
 
     private enum State {

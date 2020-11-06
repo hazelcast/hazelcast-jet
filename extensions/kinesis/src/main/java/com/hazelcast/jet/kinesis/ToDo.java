@@ -20,14 +20,15 @@ package com.hazelcast.jet.kinesis;
  */
 public class ToDo {
 
+    //todo: merges and splits can reorder in-flight messages, document this
+    //todo: offer option for single instance sources to fix reordering; test this
+
     //todo: Use ranges only for initial shard distribution, handle splits and merges internally;
     // splits: processor handles all children, merge: processor that handled parent handles it,
     // decide based on two parents
 
     //todo: test source when stream doesn't exist
     //todo: test stream when shard count is more than 100
-
-    //todo: share container for tests, just use different streams in each test
 
     //todo: saved shard offsets for recovery, maybe as shard id -- offset last seen map?
     // what happens after split/merge, should we delete the offset of CLOSED shards?
@@ -50,5 +51,4 @@ public class ToDo {
 
     //todo: update source/sink docs
     //todo: tutorial
-    //todo: deployment guide?
 }

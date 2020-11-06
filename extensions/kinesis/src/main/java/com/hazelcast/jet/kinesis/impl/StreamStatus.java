@@ -22,13 +22,13 @@ enum StreamStatus {
     UPDATING("UPDATING")    // Shards in the stream are being merged or split.
     ;
 
-    private final String status;
+    private final String id;
 
-    StreamStatus(String status) {
-        this.status = status;
+    StreamStatus(String id) {
+        this.id = id;
     }
 
-    public boolean is(String testedStatus) {
-        return status.equals(testedStatus);
+    public boolean is(String id) {
+        return this.id.equals(id);
     }
 }

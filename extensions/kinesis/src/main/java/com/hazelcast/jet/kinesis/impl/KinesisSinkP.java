@@ -198,6 +198,10 @@ public class KinesisSinkP<T> implements Processor {
         }
 
         boolean add(T item) {
+            if (entryCount == entries.length) {
+                return false;
+            }
+
             String key = keyFn.apply(item);
             int unicodeCharsInKey = key.length();
             if (unicodeCharsInKey > MAX_UNICODE_CHARS_IN_KEY) {
