@@ -51,4 +51,8 @@ public class ToDo {
 
     //todo: update source/sink docs
     //todo: tutorial
+
+    //todo: preserve order during merges and splits via a generic Jet mechanism which we could use to detect when items
+    // from closed shards have finished traversing the pipeline; this same mechanism could be used to replace the current
+    // what snapshotting is being done too
 }

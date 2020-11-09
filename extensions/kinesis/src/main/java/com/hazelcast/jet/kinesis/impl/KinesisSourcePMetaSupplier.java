@@ -29,6 +29,7 @@ import java.util.function.Function;
 
 import static java.math.BigInteger.ZERO;
 import static java.math.BigInteger.valueOf;
+import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 
 public class KinesisSourcePMetaSupplier implements ProcessorMetaSupplier {
@@ -55,6 +56,8 @@ public class KinesisSourcePMetaSupplier implements ProcessorMetaSupplier {
     public void init(@Nonnull ProcessorMetaSupplier.Context context) {
         List<Address> addresses = getMemberAddresses(context);
         assignedHashRanges = assignHashRangesToMembers(addresses);
+        context.logger().info("Hash ranges assigned to members: \n\t" +
+                assignedHashRanges.entrySet().stream().map(Object::toString).collect(joining("\n\t")));
     }
 
     @Nonnull

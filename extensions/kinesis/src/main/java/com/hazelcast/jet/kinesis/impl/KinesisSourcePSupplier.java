@@ -21,6 +21,7 @@ import com.hazelcast.jet.core.ProcessorSupplier;
 
 import javax.annotation.Nonnull;
 import java.util.Collection;
+import java.util.List;
 import java.util.stream.IntStream;
 
 import static java.util.stream.Collectors.toList;
@@ -56,8 +57,9 @@ public class KinesisSourcePSupplier implements ProcessorSupplier {
     @Nonnull
     @Override
     public Collection<? extends Processor> get(int count) {
-        return IntStream.range(0, count)
+        List<KinesisSourceP> x = IntStream.range(0, count)
                 .mapToObj(i -> new KinesisSourceP(kinesis, stream, hashRange.partition(i, count)))
                 .collect(toList());
+        return x;
     }
 }

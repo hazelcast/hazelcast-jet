@@ -28,10 +28,6 @@ public class HashRange implements Serializable { //todo: is it worth to use bett
     private final BigInteger minInclusive;
     private final BigInteger maxExclusive;
 
-    public HashRange(long minInclusive, long maxExclusive) {
-        this(BigInteger.valueOf(minInclusive), BigInteger.valueOf(maxExclusive));
-    }
-
     public HashRange(@Nonnull BigInteger minInclusive, @Nonnull BigInteger maxExclusive) {
         if (minInclusive.compareTo(ZERO) < 0) {
             throw new IllegalArgumentException("Partition start can't be negative");
@@ -53,19 +49,29 @@ public class HashRange implements Serializable { //todo: is it worth to use bett
         if (index < 0 || index >= count) {
             throw new IllegalArgumentException("Index must be between 0 and " + count);
         }
-        BigInteger partitionSize = size().divide(valueOf(count));
-        BigInteger partitionStart = minInclusive.add(partitionSize.multiply(valueOf(index)));
-        BigInteger partitionEnd = partitionStart.add(partitionSize);
+        BigInteger partitionStart = minInclusive.add(size().multiply(valueOf(index)).divide(valueOf(count)));
+        BigInteger partitionEnd = minInclusive.add(size().multiply(valueOf(index + 1)).divide(valueOf(count)));
         return new HashRange(partitionStart, partitionEnd);
+    }
+
+    public BigInteger getMinInclusive() {
+        return minInclusive;
+    }
+
+    public BigInteger getMaxExclusive() {
+        return maxExclusive;
     }
 
     private BigInteger size() {
         return maxExclusive.subtract(minInclusive);
     }
 
-    public boolean contains(String stringValue) {
-        BigInteger value = new BigInteger(stringValue);
+    public boolean contains(BigInteger value) {
         return value.compareTo(minInclusive) >= 0 && value.compareTo(maxExclusive) < 0;
+    }
+
+    public boolean isAdjacent(HashRange other) {
+        return minInclusive.equals(other.maxExclusive) || maxExclusive.equals(other.minInclusive);
     }
 
     @Override

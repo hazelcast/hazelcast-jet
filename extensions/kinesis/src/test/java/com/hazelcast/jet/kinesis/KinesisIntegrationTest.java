@@ -20,12 +20,15 @@ import com.amazonaws.services.kinesis.AmazonKinesisAsync;
 import com.amazonaws.services.kinesis.model.CreateStreamRequest;
 import com.amazonaws.services.kinesis.model.MergeShardsRequest;
 import com.amazonaws.services.kinesis.model.Shard;
-import com.amazonaws.services.kinesis.model.StreamDescription;
 import com.hazelcast.function.SupplierEx;
+import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
-import com.hazelcast.jet.SimpleTestInClusterSupport;
 import com.hazelcast.jet.Util;
+import com.hazelcast.jet.core.JetTestSupport;
+import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.kinesis.impl.AwsConfig;
+import com.hazelcast.jet.kinesis.impl.HashRange;
+import com.hazelcast.jet.kinesis.impl.KinesisUtil;
 import com.hazelcast.jet.pipeline.BatchSource;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sink;
@@ -33,9 +36,10 @@ import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.StreamSource;
 import com.hazelcast.jet.pipeline.test.TestSources;
 import com.hazelcast.map.IMap;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.testcontainers.containers.localstack.LocalStackContainer;
 import org.testcontainers.containers.localstack.LocalStackContainer.Service;
@@ -47,25 +51,36 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.concurrent.TimeUnit;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static com.hazelcast.internal.util.MapUtil.entry;
+import static com.hazelcast.jet.kinesis.impl.KinesisUtil.hashRange;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.assertTrue;
 
-public class KinesisIntegrationTest extends SimpleTestInClusterSupport {
+public class KinesisIntegrationTest extends JetTestSupport {
 
-    //todo: tests are slow... is it the sink?
+    //todo: tests are slow... why?
 
     @ClassRule
-    public static LocalStackContainer LOCALSTACK = new LocalStackContainer("0.12.1")
+    public static final LocalStackContainer LOCALSTACK = new LocalStackContainer("0.12.1")
             .withServices(Service.KINESIS);
 
     private static final int KEYS = 10;
     private static final int MEMBER_COUNT = 2;
+    private static final int MESSAGES = 25_000;
+    private static final String STREAM = "TestStream";
+    private static final String RESULTS = "Results";
+
+    private static AwsConfig AWS_CONFIG;
+    private static AmazonKinesisAsync KINESIS;
+
+    private JetInstance jet;
+    private IMap<String, List<String>> results;
 
     @BeforeClass
     public static void beforeClass() {
@@ -73,125 +88,181 @@ public class KinesisIntegrationTest extends SimpleTestInClusterSupport {
         //todo: force jackson versions to what we use (2.11.x) and have the resulting issue
         // fixed by Localstack (https://github.com/localstack/localstack/issues/3208)
 
-        initialize(MEMBER_COUNT, null);
+        AWS_CONFIG = new AwsConfig(
+                "http://localhost:" + LOCALSTACK.getMappedPort(4566),
+                LOCALSTACK.getRegion(),
+                LOCALSTACK.getAccessKey(),
+                LOCALSTACK.getSecretKey()
+        );
+        KINESIS = AWS_CONFIG.buildClient();
+    }
+
+    @Before
+    public void before() {
+        jet = createJetMembers(MEMBER_COUNT)[0];
+        results = jet.getMap(RESULTS);
+    }
+
+    @After
+    public void after() {
+        deleteStream();
+
+        results.clear();
+        results.destroy();
     }
 
     @Test
-    public void staticStream_1Shard() throws Exception {
+    public void staticStream_1Shard() {
         staticStream(1);
     }
 
     @Test
-    public void staticStream_2Shards() throws Exception {
+    public void staticStream_2Shards() {
         staticStream(2);
     }
 
     @Test
-    public void staticStream_50Shards() throws Exception {
+    public void staticStream_50Shards() {
         staticStream(50);
     }
 
-    private void staticStream(int shardCount) throws Exception {
-        String stream = "static" + shardCount;
+    private void staticStream(int shardCount) {
+        createStream(shardCount);
+        waitForStreamToActivate();
 
-        IMap<String, List<String>> results = instance().getMap(stream);
-
-        AwsConfig awsConfig = getAwsConfig(LOCALSTACK);
-        AmazonKinesisAsync kinesis = awsConfig.buildClient();
-
-        createStream(kinesis, stream, shardCount);
-        waitForStreamToActivate(kinesis, stream);
-
-        StreamSource<Entry<String, byte[]>> source = KinesisSources.kinesis(stream)
-                .withEndpoint(awsConfig.getEndpoint())
-                .withRegion(awsConfig.getRegion())
-                .withCredentials(awsConfig.getAccessKey(), awsConfig.getSecretKey())
-                .build();
+        StreamSource<Entry<String, byte[]>> source = kinesisSource();
 
         Sink<Entry<String, List<String>>> sink = Sinks.map(results);
 
-        instance().newJob(getPipeline(source, sink));
+        jet.newJob(getPipeline(source, sink));
 
-        int messages = 25_000;
-        Map<String, List<String>> expectedMessages = sendMessages(awsConfig, stream, messages, true);
+        Map<String, List<String>> expectedMessages = sendMessages(true);
         assertMessages(expectedMessages, results, true);
     }
 
     @Test
-    @Ignore //todo
     public void dynamicStream_2Shards_mergeBeforeData() {
-        fail("Not yet implemented"); //todo
+        int shardCount = 2;
+
+        createStream(shardCount);
+        waitForStreamToActivate();
+
+        List<String> shards = getActiveShards().stream()
+                .map(Shard::getShardId)
+                .collect(Collectors.toList());
+        mergeShards(shards.get(0), shards.get(1));
+
+        StreamSource<Entry<String, byte[]>> source = kinesisSource();
+
+        Sink<Entry<String, List<String>>> sink = Sinks.map(results);
+
+        jet.newJob(getPipeline(source, sink));
+
+        Map<String, List<String>> expectedMessages = sendMessages(true);
+        assertMessages(expectedMessages, results, true);
     }
 
     @Test
     public void dynamicStream_2Shards_mergeDuringData() {
-        int shardCount = 2;
+        dynamicStream_mergesDuringData(2, 1);
+    }
 
-        String stream = "dynamic" + shardCount + "Before";
+    @Test
+    public void dynamicStream_50Shards_mergesDuringData() {
+        //important to test with more shards than can fit in a single list shards response
+         dynamicStream_mergesDuringData(50, 5);
+    }
 
-        IMap<String, List<String>> results = instance().getMap(stream);
+    private void dynamicStream_mergesDuringData(int shards, int merges) {
+        createStream(shards);
+        waitForStreamToActivate();
 
-        AwsConfig awsConfig = getAwsConfig(LOCALSTACK);
-        AmazonKinesisAsync kinesis = awsConfig.buildClient();
-
-        createStream(kinesis, stream, shardCount);
-        waitForStreamToActivate(kinesis, stream);
-
-        StreamSource<Entry<String, byte[]>> source = KinesisSources.kinesis(stream)
-                .withEndpoint(awsConfig.getEndpoint())
-                .withRegion(awsConfig.getRegion())
-                .withCredentials(awsConfig.getAccessKey(), awsConfig.getSecretKey())
-                .build();
+        StreamSource<Entry<String, byte[]>> source = kinesisSource();
 
         Sink<Entry<String, List<String>>> sink = Sinks.map(results);
 
-        instance().newJob(getPipeline(source, sink));
+        jet.newJob(getPipeline(source, sink));
 
-        int messages = 25_000;
-        Map<String, List<String>> expectedMessages = sendMessages(awsConfig, stream, messages, false);
+        Map<String, List<String>> expectedMessages = sendMessages(false);
 
-        List<String> shards = getShards(kinesis, stream);
-
+        //wait for some data to start coming out of the pipeline, before starting the merging
         assertTrueEventually(() -> assertFalse(results.isEmpty()));
-        mergeShards(kinesis, stream, shards.get(0), shards.get(1));
+
+        List<Shard> oldShards = Collections.emptyList();
+        for (int i = 0; i < merges; i++) {
+            Set<String> oldShardIds = oldShards.stream().map(Shard::getShardId).collect(Collectors.toSet());
+            List<Shard> currentShards = getActiveShards();
+            List<Shard> newShards = currentShards.stream()
+                    .filter(shard -> !oldShardIds.contains(shard.getShardId()))
+                    .collect(Collectors.toList());
+            assertTrue(newShards.size() >= 1);
+            oldShards = currentShards;
+
+            Collections.shuffle(newShards);
+            Tuple2<String, String> adjacentPair = findAdjacentPair(newShards.get(0), currentShards);
+            mergeShards(adjacentPair.f0(), adjacentPair.f1());
+            waitForStreamToActivate();
+        }
 
         assertMessages(expectedMessages, results, false);
     }
 
-    @Test
-    @Ignore //todo
-    public void dynamicStream_10Shards_someMergesBeforeData() {
-        fail("Not yet implemented"); //todo
+    private Map<String, List<String>> sendMessages(boolean join) {
+        List<Entry<String, String>> msgEntryList = IntStream.range(0, MESSAGES)
+                .boxed()
+                .map(i -> entry(Integer.toString(i % KEYS), i))
+                .map(e -> entry(e.getKey(), String.format("Message %09d for key %s", e.getValue(), e.getKey())))
+                .collect(Collectors.toList());
+
+        BatchSource<Entry<String, byte[]>> source = TestSources.items(msgEntryList.stream()
+                .map(e1 -> entry(e1.getKey(), e1.getValue().getBytes()))
+                .collect(Collectors.toList()));
+        Sink<Entry<String, byte[]>> sink = kinesisSink();
+
+        Pipeline pipeline = Pipeline.create();
+        pipeline.readFrom(source)
+                .writeTo(sink);
+
+        Job job = jet.newJob(pipeline);
+
+        Map<String, List<String>> retMap = toMap(msgEntryList);
+
+        if (join) {
+            job.join();
+        }
+
+        return retMap;
     }
 
-    @Test
-    @Ignore //todo
-    public void dynamicStream_10Shards_someMergesDuringData() {
-        fail("Not yet implemented"); //todo
+    private static Tuple2<String, String> findAdjacentPair(Shard shard, List<Shard> allShards) {
+        HashRange shardRange = hashRange(shard);
+        for (Shard examinedShard : allShards) {
+            HashRange examinedRange = hashRange(examinedShard);
+            if (shardRange.isAdjacent(examinedRange)) {
+                if (shardRange.getMinInclusive().compareTo(examinedRange.getMinInclusive()) <= 0) {
+                    return Tuple2.tuple2(shard.getShardId(), examinedShard.getShardId());
+                } else {
+                    return Tuple2.tuple2(examinedShard.getShardId(), shard.getShardId());
+                }
+            }
+        }
+        throw new IllegalStateException("There must be an adjacent shard");
     }
 
-    @Test
-    @Ignore //todo
-    public void dynamicStream_50Shards_allMergeDuringData() {
-        fail("Not yet implemented"); //todo
-    }
-
-    //todo: test with more than 100 shards, monitor behaves differently in that case
-
-    private static AwsConfig getAwsConfig(LocalStackContainer localstack) {
-        return new AwsConfig(
-                "http://localhost:" + localstack.getMappedPort(4566),
-                localstack.getRegion(),
-                localstack.getAccessKey(),
-                localstack.getSecretKey()
-        );
-    }
-
-    private static void createStream(AmazonKinesisAsync kinesis, String streamName, int shardCount) {
+    private static void createStream(int shardCount) {
         CreateStreamRequest request = new CreateStreamRequest();
         request.setShardCount(shardCount);
-        request.setStreamName(streamName);
-        kinesis.createStream(request);
+        request.setStreamName(STREAM);
+        KINESIS.createStream(request);
+    }
+
+    private static void deleteStream() {
+        KINESIS.deleteStream(STREAM);
+        assertTrueEventually(() -> assertFalse(KINESIS.listStreams().isHasMoreStreams()));
+    }
+
+    private static void waitForStreamToActivate() {
+        KinesisUtil.waitForStreamToActivate(KINESIS, STREAM);
     }
 
     private static Pipeline getPipeline(StreamSource<Entry<String, byte[]>> source,
@@ -210,71 +281,34 @@ public class KinesisIntegrationTest extends SimpleTestInClusterSupport {
         return pipeline;
     }
 
-    private static Map<String, List<String>> sendMessages(AwsConfig awsConfig, String stream, int count, boolean join) {
-        List<Entry<String, String>> msgEntryList = IntStream.range(0, count)
-                .boxed()
-                .map(i -> entry(Integer.toString(i % KEYS), i))
-                .map(e -> entry(e.getKey(), String.format("Message %09d for key %s", e.getValue(), e.getKey())))
-                .collect(Collectors.toList());
-
-        BatchSource<Entry<String, byte[]>> source = TestSources.items(msgEntryList.stream()
-                .map(e1 -> entry(e1.getKey(), e1.getValue().getBytes()))
-                .collect(Collectors.toList()));
-        Sink<Entry<String, byte[]>> sink = KinesisSinks.kinesis(stream)
-                .withEndpoint(awsConfig.getEndpoint())
-                .withRegion(awsConfig.getRegion())
-                .withCredentials(awsConfig.getAccessKey(), awsConfig.getSecretKey())
-                .build();
-
-        Pipeline pipeline = Pipeline.create();
-        pipeline.readFrom(source)
-                .writeTo(sink);
-
-        Job job = instance().newJob(pipeline);
-
-        Map<String, List<String>> retMap = toMap(msgEntryList);
-
-        if (join) {
-            job.join();
-        }
-
-        return retMap;
-    }
-
-    private static void waitForStreamToActivate(AmazonKinesisAsync kinesis, String stream) {
-        while (true) {
-            StreamDescription description = describeStream(kinesis, stream);
-            String status = description.getStreamStatus();
-            if ("ACTIVE".equals(status)) {
-                return;
-            } else {
-                System.out.println("Waiting for stream " + stream + " to be active ...");
-                try {
-                    TimeUnit.MILLISECONDS.sleep(500);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-            }
-        }
-    }
-
-    private static StreamDescription describeStream(AmazonKinesisAsync kinesis, String stream) {
-        return kinesis.describeStream(stream).getStreamDescription();
-    }
-
-    private static List<String> getShards(AmazonKinesisAsync kinesis, String stream) {
-        return describeStream(kinesis, stream).getShards().stream()
-                .map(Shard::getShardId)
-                .collect(Collectors.toList());
-    }
-
-    private static void mergeShards(AmazonKinesisAsync kinesis, String stream, String shard1, String shard2) {
+    private static void mergeShards(String shard1, String shard2) {
         MergeShardsRequest request = new MergeShardsRequest();
-        request.setStreamName(stream);
+        request.setStreamName(STREAM);
         request.setShardToMerge(shard1);
         request.setAdjacentShardToMerge(shard2);
 
-        kinesis.mergeShards(request);
+        System.out.println("Merging " + shard1 + " with " + shard2);
+        KINESIS.mergeShards(request);
+    }
+
+    private static List<Shard> getActiveShards() {
+        return KinesisUtil.getActiveShards(KINESIS, STREAM);
+    }
+
+    private static StreamSource<Entry<String, byte[]>> kinesisSource() {
+        return KinesisSources.kinesis(STREAM)
+                .withEndpoint(AWS_CONFIG.getEndpoint())
+                .withRegion(AWS_CONFIG.getRegion())
+                .withCredentials(AWS_CONFIG.getAccessKey(), AWS_CONFIG.getSecretKey())
+                .build();
+    }
+
+    private static Sink<Entry<String, byte[]>> kinesisSink() {
+        return KinesisSinks.kinesis(STREAM)
+                .withEndpoint(AWS_CONFIG.getEndpoint())
+                .withRegion(AWS_CONFIG.getRegion())
+                .withCredentials(AWS_CONFIG.getAccessKey(), AWS_CONFIG.getSecretKey())
+                .build();
     }
 
     private static void assertMessages(
@@ -283,7 +317,7 @@ public class KinesisIntegrationTest extends SimpleTestInClusterSupport {
             boolean checkOrder
     ) {
         assertTrueEventually(() -> {
-            assertEquals(expected.keySet(), actual.keySet());
+            assertEquals(getKeySetsDifferDescription(expected, actual), expected.keySet(), actual.keySet());
 
             for (Entry<String, List<String>> entry : expected.entrySet()) {
                 String key = entry.getKey();
@@ -294,12 +328,45 @@ public class KinesisIntegrationTest extends SimpleTestInClusterSupport {
                     actualMessages = new ArrayList<>(actualMessages);
                     actualMessages.sort(String::compareTo);
                 }
-                assertEquals(expectedMessages, actualMessages);
+                assertEquals(getMessagesDifferDescription(key, expectedMessages, actualMessages),
+                        expectedMessages, actualMessages);
             }
         });
     }
 
     @Nonnull
+    private static String getKeySetsDifferDescription(Map<String, List<String>> expected,
+                                                      IMap<String, List<String>> actual) {
+        return "Key sets differ!" +
+                "\n\texpected: " + new TreeSet<>(expected.keySet()) +
+                "\n\t  actual: " + new TreeSet<>(actual.keySet());
+    }
+
+    @Nonnull
+    private static String getMessagesDifferDescription(String key, List<String> expected, List<String> actual) {
+        StringBuilder sb = new StringBuilder()
+                .append("Messages for key ").append(key).append(" differ!")
+                .append("\n\texpected: ").append(expected.size())
+                .append("\n\t  actual: ").append(actual.size());
+
+        for (int i = 0; i < Math.min(expected.size(), actual.size()); i++) {
+            if (!expected.get(i).equals(actual.get(i))) {
+                sb.append("\n\tfirst difference at index: ").append(i);
+                sb.append("\n\t\texpected: ").append(expected.get(i));
+                for (int j = i + 1; j < Math.min(i + 10, expected.size()); j++) {
+                    sb.append(", ").append(expected.get(j));
+                }
+                sb.append("\n\t\t  actual: ").append(actual.get(i));
+                for (int j = i + 1; j < Math.min(i + 10, actual.size()); j++) {
+                    sb.append(", ").append(actual.get(j));
+                }
+                break;
+            }
+        }
+
+        return sb.toString();
+    }
+
     private static Map<String, List<String>> toMap(List<Entry<String, String>> entryList) {
         return entryList.stream()
                 .collect(Collectors.toMap(

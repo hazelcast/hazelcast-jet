@@ -20,7 +20,7 @@ import com.amazonaws.services.kinesis.model.PutRecordsRequest;
 import com.amazonaws.services.kinesis.model.PutRecordsRequestEntry;
 import com.amazonaws.services.kinesis.model.PutRecordsResult;
 import com.amazonaws.services.kinesis.model.PutRecordsResultEntry;
-import com.amazonaws.services.kinesis.model.StreamDescription;
+import com.amazonaws.services.kinesis.model.StreamStatus;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.core.Inbox;
 import com.hazelcast.jet.core.Outbox;
@@ -95,7 +95,7 @@ public class KinesisSinkP<T> implements Processor {
         logger = context.logger();
 
         while (!isStreamActive()) {
-            logger.info("Waiting for stream  + " + stream + " to become active...");
+            logger.info("Waiting for stream " + stream + " to become active...");
         }
     }
 
@@ -178,8 +178,8 @@ public class KinesisSinkP<T> implements Processor {
     }
 
     private boolean isStreamActive() {
-        StreamDescription description = kinesis.describeStream(stream).getStreamDescription();
-        return "ACTIVE".equals(description.getStreamStatus());
+        String status = KinesisUtil.getStreamStatus(kinesis, stream);
+        return StreamStatus.ACTIVE.toString().equals(status);
     }
 
     private static class Buffer<T> {

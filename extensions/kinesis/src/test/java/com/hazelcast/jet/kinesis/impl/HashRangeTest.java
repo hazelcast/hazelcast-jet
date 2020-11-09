@@ -17,6 +17,8 @@ package com.hazelcast.jet.kinesis.impl;
 
 import org.junit.Test;
 
+import java.math.BigInteger;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -25,18 +27,48 @@ public class HashRangeTest {
 
     @Test
     public void partition() {
-        HashRange range = new HashRange(1000, 2000);
-        assertEquals(new HashRange(1000, 1500), range.partition(0, 2));
-        assertEquals(new HashRange(1500, 2000), range.partition(1, 2));
+        HashRange range = range(1000, 2000);
+        assertEquals(range(1000, 1500), range.partition(0, 2));
+        assertEquals(range(1500, 2000), range.partition(1, 2));
+
+        range = range("0", "170141183460469231731687303715884105728");
+        assertEquals(range("0", "14178431955039102644307275309657008810"),
+                range.partition(0, 12));
+        assertEquals(range("14178431955039102644307275309657008810", "28356863910078205288614550619314017621"),
+                range.partition(1, 12));
+        assertEquals(range("28356863910078205288614550619314017621", "42535295865117307932921825928971026432"),
+                range.partition(2, 12));
+        // ...
+        assertEquals(range("141784319550391026443072753096570088106", "155962751505430129087380028406227096917"),
+                range.partition(10, 12));
+        assertEquals(range("155962751505430129087380028406227096917", "170141183460469231731687303715884105728"),
+                range.partition(11, 12));
     }
 
     @Test
     public void contains() {
-        HashRange range = new HashRange(1000, 2000);
-        assertFalse(range.contains("999"));
-        assertTrue(range.contains("1000"));
-        assertTrue(range.contains("1999"));
-        assertFalse(range.contains("2000"));
-        assertFalse(range.contains("2001"));
+        HashRange range = range(1000, 2000);
+        assertFalse(range.contains(new BigInteger("999")));
+        assertTrue(range.contains(new BigInteger("1000")));
+        assertTrue(range.contains(new BigInteger("1999")));
+        assertFalse(range.contains(new BigInteger("2000")));
+        assertFalse(range.contains(new BigInteger("2001")));
+    }
+
+    @Test
+    public void isAdjacent() {
+        HashRange range = range(1000, 2000);
+        assertFalse(range.isAdjacent(range(0, 999)));
+        assertTrue(range.isAdjacent(range(0, 1000)));
+        assertTrue(range.isAdjacent(range(2000, 3000)));
+        assertFalse(range.isAdjacent(range(2001, 3000)));
+    }
+
+    private static HashRange range(long startInclusive, long endExclusive) {
+        return new HashRange(BigInteger.valueOf(startInclusive), BigInteger.valueOf(endExclusive));
+    }
+
+    private static HashRange range(String startInclusive, String endExclusive) {
+        return new HashRange(new BigInteger(startInclusive), new BigInteger(endExclusive));
     }
 }

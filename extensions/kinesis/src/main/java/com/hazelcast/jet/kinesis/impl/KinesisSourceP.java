@@ -18,21 +18,21 @@ package com.hazelcast.jet.kinesis.impl;
 import com.amazonaws.services.kinesis.AmazonKinesisAsync;
 import com.amazonaws.services.kinesis.model.Record;
 import com.amazonaws.services.kinesis.model.Shard;
-import com.amazonaws.services.kinesis.model.StreamDescription;
-import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.Traversers;
 import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.logging.ILogger;
 
 import javax.annotation.Nonnull;
-import java.nio.charset.Charset;
 import java.util.List;
 import java.util.Objects;
-import java.util.concurrent.TimeUnit;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import static com.hazelcast.jet.Util.entry;
+import static com.hazelcast.jet.kinesis.impl.KinesisUtil.getActiveShards;
+import static com.hazelcast.jet.kinesis.impl.KinesisUtil.shardBelongsToRange;
+import static com.hazelcast.jet.kinesis.impl.KinesisUtil.waitForStreamToActivate;
 
 public class KinesisSourceP extends AbstractProcessor {
 
@@ -65,7 +65,12 @@ public class KinesisSourceP extends AbstractProcessor {
         logger = context.logger();
         id = context.globalProcessorIndex();
 
-        List<Shard> shardsInRange = getShardsInRange(kinesis, stream, hashRange);
+        logger.info("Processor " + id + " handles " + hashRange);
+
+        waitForStreamToActivate(kinesis, stream);
+        //todo: what happens if data stream starts updating right here?
+        List<Shard> shardsInRange = getActiveShards(kinesis, stream,
+                (Predicate<? super Shard>) shard -> shardBelongsToRange(shard, hashRange));
         rangeMonitor = new RangeMonitor(id, context.totalParallelism(), kinesis, stream, hashRange, shardsInRange, logger);
         shardReaders = shardsInRange.stream()
                 .map(this::initShardReader)
@@ -74,22 +79,24 @@ public class KinesisSourceP extends AbstractProcessor {
 
     @Override
     public boolean complete() {
-        if (shardReaders.isEmpty()) {
-            return true; //todo: done, not so when we will have monitor workers too
-        }
-
         if (!emitFromTraverser(traverser)) {
             return false;
         }
 
-        if (true) { //todo: only do it from time to time
-            RangeMonitor.Result result = rangeMonitor.run();
-            if (RangeMonitor.Result.NEW_SHARD.equals(result)) {
-                Shard shard = rangeMonitor.getNewShard();
-                shardReaders.add(initShardReader(shard));
-            }
-        }
+        runMonitor();
+        runReaders();
+        return false;
+    }
 
+    private void runMonitor() {
+        RangeMonitor.Result result = rangeMonitor.run();
+        if (RangeMonitor.Result.NEW_SHARD.equals(result)) {
+            Shard shard = rangeMonitor.getNewShard();
+            shardReaders.add(initShardReader(shard));
+        }
+    }
+
+    private void runReaders() {
         for (int i = 0; i < shardReaders.size(); i++) {
             ShardReader reader = shardReaders.get(nextShardReader);
             nextShardReader = incrCircular(nextShardReader, shardReaders.size());
@@ -97,26 +104,24 @@ public class KinesisSourceP extends AbstractProcessor {
             ShardReader.Result result = reader.run();
             if (ShardReader.Result.HAS_DATA.equals(result)) {
                 List<Record> records = reader.getData();
-                List<String> messages = records.stream()
+                /*List<String> messages = records.stream()
                         .map(record -> new String(record.getData().array(), Charset.defaultCharset()))
                         .collect(Collectors.toList());
-//                System.err.println(i + " - messages = " + messages); //todo: remove
-                System.err.println(i + " - messages = " + records.size()); //todo: remove
+                System.err.println(reader.getShard().getShardId() + " - messages = " + messages);*/ //todo: remove
+                System.err.println(reader.getShard().getShardId() + " - messages = " + records.size()); //todo: remove
                 traverser = Traversers.traverseIterable(records)
                         .map(r -> entry(r.getPartitionKey(), r.getData().array())); //todo: performance impact
                 emitFromTraverser(traverser);
-                return false;
+                return;
             } else if (ShardReader.Result.CLOSED.equals(result)) {
                 Shard shard = reader.getShard();
                 logger.info("Shard " + shard.getShardId() + " of stream " + stream + " closed");
                 shardReaders.remove(decrCircular(nextShardReader, shardReaders.size()));
                 rangeMonitor.removeShard(shard);
                 nextShardReader = 0;
-                return false;
+                return;
             }
         }
-
-        return false;
     }
 
     @Override
@@ -134,29 +139,6 @@ public class KinesisSourceP extends AbstractProcessor {
         return new ShardReader(kinesis, stream, shard);
     }
 
-    private static List<Shard> getShardsInRange(AmazonKinesisAsync kinesis, String stream, HashRange range) {
-        return getAllShards(kinesis, stream).stream()
-                .filter(shard -> KinesisUtil.shardBelongsToRange(shard, range))
-                .collect(Collectors.toList());
-    }
-
-    private static List<Shard> getAllShards(AmazonKinesisAsync kinesis, String stream) {
-        while (true) {
-            StreamDescription description = kinesis.describeStream(stream).getStreamDescription();
-            //todo: use list shards instead of describe stream
-            String status = description.getStreamStatus();
-            if (StreamStatus.ACTIVE.is(status)) {
-                return description.getShards();
-            } else if (StreamStatus.CREATING.is(status) || StreamStatus.UPDATING.is(status)) {
-                sleep(250, TimeUnit.MILLISECONDS); //todo: use exponential backup
-            } else if (StreamStatus.DELETING.is(status)) {
-                throw new JetException("Stream is being deleted");
-            } else {
-                throw new RuntimeException("Programming error, unhandled stream status: " + status);
-            }
-        }
-    }
-
     private static int incrCircular(int v, int limit) {
         v++;
         if (v == limit) {
@@ -171,14 +153,5 @@ public class KinesisSourceP extends AbstractProcessor {
             v = limit - 1;
         }
         return v;
-    }
-
-    private static void sleep(long duration, TimeUnit unit) {
-        try {
-            unit.sleep(duration);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new JetException("Waiting for stream to activate interrupted");
-        }
     }
 }
