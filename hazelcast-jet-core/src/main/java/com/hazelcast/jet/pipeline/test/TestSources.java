@@ -27,6 +27,7 @@ import com.hazelcast.jet.pipeline.SourceBuilder.TimestampedSourceBuffer;
 
 import javax.annotation.Nonnull;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
@@ -70,6 +71,50 @@ public final class TestSources {
     public static <T> BatchSource<T> items(@Nonnull T... items) {
         Objects.requireNonNull(items, "items");
         return items(Arrays.asList(items));
+    }
+
+
+
+    /**
+     * Returns a streaming source that generates events created by the {@code
+     * generatorFns} at the specified rate and in a parallel manner.
+     * @since 4.4
+     */
+    @Nonnull
+    public static <T> StreamSource<T> itemsParallel(long eventsPerSecond, @Nonnull List<GeneratorFunction<? extends T>> generatorFns) {
+        Objects.requireNonNull(generatorFns, "iterables");
+
+        return Sources.streamFromProcessorWithWatermarks("itemsParallel",
+                true,
+                eventTimePolicy -> ProcessorMetaSupplier.of(generatorFns.size(), () ->
+                        new ParallelStreamP<>(eventsPerSecond, eventTimePolicy, generatorFns))
+        );
+    }
+
+
+    /**
+     * Returns a streaming source that generates events created by the {@code
+     * generatorFns} at the specified rate. This source generates events on
+     * its each parallel processor.
+     * <p>
+     * The source supports {@linkplain
+     * StreamSourceStage#withNativeTimestamps(long) native timestamps}. The
+     * timestamp is the current system time at the moment they are generated.
+     * The source is not distributed and all the items are generated on the
+     * same node. This source is not fault-tolerant. The sequence will be
+     * reset once a job is restarted.
+     * <p>
+     * <strong>Note:</strong>
+     * There is no absolute guarantee that the actual rate of emitted items
+     * will match the supplied value. It is ensured that no emitted event's
+     * timestamp will be in the future.
+     *
+     * @since 4.4
+     */
+    @Nonnull
+    public static <T> StreamSource<T> itemsParallel(long eventsPerSecond, @Nonnull GeneratorFunction<? extends T>... generatorFns) {
+        Objects.requireNonNull(generatorFns, "items");
+        return itemsParallel(eventsPerSecond, Arrays.asList(generatorFns));
     }
 
     /**
