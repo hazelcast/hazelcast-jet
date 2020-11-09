@@ -66,11 +66,9 @@ final class JoinScanProcessorFactory implements JoinProcessorFactory {
                 }
 
                 Object[] joined = joinFn.apply(left, right);
-                if (joined == null) {
-                    continue;
+                if (joined != null) {
+                    rows.add(joined);
                 }
-
-                rows.add(joined);
             }
             return Traversers.traverseIterable(rows);
         };
