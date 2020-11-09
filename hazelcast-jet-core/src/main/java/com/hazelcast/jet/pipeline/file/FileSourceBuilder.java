@@ -81,6 +81,7 @@ public class FileSourceBuilder<T> {
     private final String path;
     private FileFormat<T> format;
     private boolean useHadoop;
+    private boolean sharedFileSystem;
 
     /**
      * Creates a new file source builder with the given path. It can point
@@ -127,6 +128,31 @@ public class FileSourceBuilder<T> {
     }
 
     /**
+     * Sets if files are in a shared storage visible to all members. Default
+     * value is {@code false}.
+     * <p>
+     * If {@code sharedFileSystem} is {@code true}, Jet will assume all members
+     * see the same files. They will split the work so that each member will
+     * read a part of the files. If {@code sharedFileSystem} is {@code false},
+     * each member will read all files in the directory, assuming the are
+     * local.
+     * <p>
+     * If you start all the members on a single machine (such as for
+     * development), set this property to true. If you have multiple machines
+     * with multiple members each and the directory is not a shared storage,
+     * it's not possible to configure the file reader correctly - use only one
+     * member per machine.
+     * <p>
+     * NOTE: Only valid for local filesystem, distributed filesystems are
+     * always shared.
+     */
+    @Nonnull
+    public FileSourceBuilder<T> sharedFileSystem(boolean sharedFileSystem) {
+        this.sharedFileSystem = sharedFileSystem;
+        return this;
+    }
+
+    /**
      * Specifies an arbitrary option for the underlying source. If you are
      * looking for a missing option, check out the {@link FileFormat} class
      * you're using, it offers parsing-related options.
@@ -161,6 +187,13 @@ public class FileSourceBuilder<T> {
     @Nullable
     public FileFormat<T> format() {
         return format;
+    }
+
+    /**
+     * Returns if the filesystem is shared. Only valid for local filesystem, distributed filesystems are always shared.
+     */
+    public boolean sharedFileSystem() {
+        return sharedFileSystem;
     }
 
     /**

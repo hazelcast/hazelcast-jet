@@ -97,6 +97,7 @@ public class LocalFileSourceFactory implements FileSourceFactory {
         FunctionEx<Path, Stream<T>> mapFn = readFileFnProvider.createReadFileFn(format);
         return Sources.filesBuilder(dirAndGlob.f0())
                       .glob(dirAndGlob.f1())
+                      .sharedFileSystem(builder.sharedFileSystem())
                       .build(mapFn);
     }
 

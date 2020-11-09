@@ -52,6 +52,12 @@ public abstract class BaseFileFormatTest extends JetTestSupport {
     protected <T> void assertItemsInSource(
             FileSourceBuilder<T> source, ConsumerEx<List<T>> assertion
     ) {
+        assertItemsInSource(1, source, assertion);
+    }
+
+    protected <T> void assertItemsInSource(
+            int memberCount, FileSourceBuilder<T> source, ConsumerEx<List<T>> assertion
+    ) {
         if (useHadoop) {
             source.useHadoopForLocalFiles();
         }
@@ -61,7 +67,11 @@ public abstract class BaseFileFormatTest extends JetTestSupport {
         p.readFrom(source.build())
          .apply(Assertions.assertCollected(assertion));
 
-        JetInstance jet = createJetMember();
-        jet.newJob(p).join();
+        JetInstance[] jets = createJetMembers(memberCount);
+        jets[0].newJob(p).join();
+
+        for (JetInstance jet : jets) {
+            jet.shutdown();
+        }
     }
 }
