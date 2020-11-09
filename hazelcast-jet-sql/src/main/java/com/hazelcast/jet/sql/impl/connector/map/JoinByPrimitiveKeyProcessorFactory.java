@@ -71,6 +71,10 @@ final class JoinByPrimitiveKeyProcessorFactory implements JoinProcessorFactory {
             }
 
             Object[] right = rightProjector.project(entry(key, value));
+            if (right == null) {
+                return traverser;
+            }
+
             Object[] joined = joinFn.apply(left, right);
             if (joined != null) {
                 traverser.accept(joined);

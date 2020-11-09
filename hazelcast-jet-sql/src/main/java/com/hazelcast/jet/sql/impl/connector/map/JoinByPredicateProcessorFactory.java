@@ -75,6 +75,10 @@ final class JoinByPredicateProcessorFactory implements JoinProcessorFactory {
             List<Object[]> rows = new ArrayList<>();
             for (Entry<Object, Object> entry : map.entrySet(predicate)) {
                 Object[] right = rightProjector.project(entry);
+                if (right == null) {
+                    continue;
+                }
+
                 Object[] joined = joinFn.apply(left, right);
                 if (joined != null) {
                     rows.add(joined);
