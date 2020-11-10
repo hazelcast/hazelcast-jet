@@ -16,12 +16,13 @@
 package com.hazelcast.jet.kinesis.impl;
 
 import com.amazonaws.services.kinesis.AmazonKinesisAsync;
+import com.amazonaws.services.kinesis.model.DescribeStreamSummaryRequest;
 import com.amazonaws.services.kinesis.model.ListShardsRequest;
 import com.amazonaws.services.kinesis.model.ListShardsResult;
 import com.amazonaws.services.kinesis.model.Shard;
 import com.amazonaws.services.kinesis.model.ShardFilter;
 import com.amazonaws.services.kinesis.model.ShardFilterType;
-import com.amazonaws.services.kinesis.model.StreamDescription;
+import com.amazonaws.services.kinesis.model.StreamDescriptionSummary;
 import com.amazonaws.services.kinesis.model.StreamStatus;
 import com.hazelcast.jet.JetException;
 
@@ -44,7 +45,10 @@ public final class KinesisUtil {
     }
 
     public static String getStreamStatus(AmazonKinesisAsync kinesis, String stream) {
-        StreamDescription description = kinesis.describeStream(stream).getStreamDescription();
+        DescribeStreamSummaryRequest request = new DescribeStreamSummaryRequest();
+        request.setStreamName(stream);
+
+        StreamDescriptionSummary description = kinesis.describeStreamSummary(request).getStreamDescriptionSummary();
         return description.getStreamStatus();
     }
 
@@ -129,12 +133,6 @@ public final class KinesisUtil {
     public static boolean shardBelongsToRange(@Nonnull Shard shard, @Nonnull HashRange range) {
         String startingHashKey = shard.getHashKeyRange().getStartingHashKey();
         return range.contains(new BigInteger(startingHashKey));
-    }
-
-    public static HashRange hashRange(@Nonnull Shard shard) {
-        BigInteger startInclusive = new BigInteger(shard.getHashKeyRange().getStartingHashKey());
-        BigInteger endExclusive = new BigInteger(shard.getHashKeyRange().getEndingHashKey()).add(BigInteger.ONE);
-        return new HashRange(startInclusive, endExclusive);
     }
 
     public static String toString(Collection<? extends Shard> shards) { //todo: remove?

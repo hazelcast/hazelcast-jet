@@ -23,7 +23,7 @@ import com.amazonaws.services.kinesis.model.ProvisionedThroughputExceededExcepti
 import com.amazonaws.services.kinesis.model.Record;
 import com.amazonaws.services.kinesis.model.Shard;
 
-import java.util.List;
+import java.util.LinkedList;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
@@ -33,11 +33,6 @@ class ShardReader extends AbstractShardWorker {
 
     /* Kinesis allows for a maximum of 5 GetRecords operations per second. */
     private static final int GET_RECORD_OPS_PER_SECOND = 5;
-
-    /* The maximum number of records that can be returned by a single GetRecords
-     * operation is 10,000, which might be a bit much for a cooperative source,
-     * so we limit it.*/
-    private static final int GET_RECORDS_LIMIT = 1000;
 
     /* Even though GetRecords operations are limited to 5 per second, if one
      * such operation happens to return too much data, following operations will
@@ -59,6 +54,14 @@ class ShardReader extends AbstractShardWorker {
      * 1 second." */
     private static final long READ_PAUSE_AFTER_THROUGHPUT_EXCEEDED = 1000L;
 
+    /**
+     * Maximum number of records returned by this reader in a single batch. Is
+     * limited due to being used from a cooperative processor. Should not pose
+     * a performance bottleneck, because while available data is being processed
+     * the asynchronous request for more will already be issued in the background.
+     */
+    private static final int DATA_BATCH_SIZE = 100;
+
     private final Shard shard;
     private final RandomizedRateTracker getRecordsRateTracker =
             new RandomizedRateTracker(1000, GET_RECORD_OPS_PER_SECOND);
@@ -69,7 +72,7 @@ class ShardReader extends AbstractShardWorker {
     private Future<GetRecordsResult> recordsResult;
     private long nextGetRecordsTime;
 
-    private List<Record> data;
+    private final LinkedList<Record> data = new LinkedList<>();
 
     ShardReader(AmazonKinesisAsync kinesis, String stream, Shard shard) {
         super(kinesis, stream);
@@ -77,8 +80,6 @@ class ShardReader extends AbstractShardWorker {
     }
 
     public Result run() {
-        data = null;
-
         try {
             switch (state) {
                 case NO_SHARD_ITERATOR:
@@ -95,21 +96,15 @@ class ShardReader extends AbstractShardWorker {
                 case WAITING_FOR_SHARD_ITERATOR:
                     if (shardIteratorResult.isDone()) {
                         shardIterator = shardIteratorResult.get().getShardIterator();
-                        state = State.READY_TO_READ_RECORDS;
+                        state = State.NEED_TO_REQUEST_RECORDS;
                     }
                     return Result.NOTHING;
 
 
-                case READY_TO_READ_RECORDS:
-                    if (System.currentTimeMillis() < nextGetRecordsTime) {
-                        return Result.NOTHING;
+                case NEED_TO_REQUEST_RECORDS:
+                    if (attemptToSendGetRecordsRequest()) {
+                        state = State.WAITING_FOR_RECORDS;
                     }
-
-                    GetRecordsRequest getRecordsRequest = buildGetRecordsRequest(shardIterator);
-                    recordsResult = kinesis.getRecordsAsync(getRecordsRequest);
-                    state = State.WAITING_FOR_RECORDS;
-
-                    nextGetRecordsTime = System.currentTimeMillis() + getRecordsRateTracker.next();
 
                     return Result.NOTHING;
 
@@ -119,18 +114,22 @@ class ShardReader extends AbstractShardWorker {
                         try {
                             GetRecordsResult result = recordsResult.get();
                             shardIterator = result.getNextShardIterator();
+                            data.addAll(result.getRecords());
                             if (shardIterator == null) {
                                 state = State.SHARD_CLOSED;
+                                return data.size() > 0 ? Result.HAS_DATA : Result.CLOSED;
+                            } else if (data.size() > 0) {
+                                state = State.HAS_DATA_NEED_TO_REQUEST_RECORDS;
+                                return Result.HAS_DATA;
                             } else {
-                                state = State.READY_TO_READ_RECORDS;
+                                state = State.NEED_TO_REQUEST_RECORDS;
+                                return Result.NOTHING;
                             }
-                            data = result.getRecords();
-                            return data.size() > 0 ? Result.HAS_DATA : Result.NOTHING;
                         } catch (ExecutionException e) {
                             Throwable cause = e.getCause();
                             if (cause instanceof ProvisionedThroughputExceededException) {
                                 nextGetRecordsTime = System.currentTimeMillis() + READ_PAUSE_AFTER_THROUGHPUT_EXCEEDED;
-                                state = State.READY_TO_READ_RECORDS;
+                                state = State.NEED_TO_REQUEST_RECORDS;
                                 return Result.NOTHING;
                             } else {
                                 throw rethrow(cause);
@@ -141,8 +140,22 @@ class ShardReader extends AbstractShardWorker {
                     }
 
 
+                case HAS_DATA_NEED_TO_REQUEST_RECORDS:
+                    if (attemptToSendGetRecordsRequest()) {
+                        state = data.size() > 0 ? State.HAS_DATA : State.WAITING_FOR_RECORDS;
+                    }
+
+                    return data.size() > 0 ? Result.HAS_DATA : Result.NOTHING;
+
+
+                case HAS_DATA:
+                    state = data.size() > 0 ? State.HAS_DATA : State.WAITING_FOR_RECORDS;
+                    return data.size() > 0 ? Result.HAS_DATA : Result.NOTHING;
+
+
                 case SHARD_CLOSED:
-                    return Result.CLOSED;
+                    return data.size() > 0 ? Result.HAS_DATA : Result.CLOSED;
+
 
                 default:
                     throw new RuntimeException("Programming error, unhandled state: " + state);
@@ -156,15 +169,33 @@ class ShardReader extends AbstractShardWorker {
         }
     }
 
+    private boolean attemptToSendGetRecordsRequest() {
+        if (System.currentTimeMillis() < nextGetRecordsTime) {
+            return false;
+        }
+
+        GetRecordsRequest getRecordsRequest = buildGetRecordsRequest(shardIterator);
+        recordsResult = kinesis.getRecordsAsync(getRecordsRequest);
+
+        nextGetRecordsTime = System.currentTimeMillis() + getRecordsRateTracker.next();
+        return true;
+    }
+
     public Shard getShard() {
         return shard;
     }
 
-    public List<Record> getData() {
-        if (data == null) {
+    public Record[] getData() {
+        if (data.isEmpty()) {
             throw new IllegalStateException("Can't ask for data when none is available");
         }
-        return data;
+
+        Record[] records = new Record[Math.min(data.size(), DATA_BATCH_SIZE)];
+        for (int i = 0; i < records.length; i++) {
+            records[i] = data.remove();
+        }
+
+        return records;
     }
 
     enum Result {
@@ -196,14 +227,26 @@ class ShardReader extends AbstractShardWorker {
         WAITING_FOR_SHARD_ITERATOR,
 
         /**
-         * Records ready to be read.
+         * Has no data available, ready to read some.
          */
-        READY_TO_READ_RECORDS,
+        NEED_TO_REQUEST_RECORDS,
 
         /**
-         * Reading records initiated, waiting for results.
+         * Has no data, reading records initiated, waiting for results.
          */
         WAITING_FOR_RECORDS,
+
+        /**
+         * Has some data read previously, ready to issue request for more.
+         * The previously read data might get processed while more arrives.
+         */
+        HAS_DATA_NEED_TO_REQUEST_RECORDS,
+
+        /**
+         * Has some data read previously, reading more initiated, waiting for
+         * the processing of what's already available to finish.
+         */
+        HAS_DATA,
 
         /**
          * Shard has been terminated, due to a split or a merge.
@@ -215,7 +258,6 @@ class ShardReader extends AbstractShardWorker {
     private static GetRecordsRequest buildGetRecordsRequest(String shardIterator) {
         GetRecordsRequest getRecordsRequest = new GetRecordsRequest();
         getRecordsRequest.setShardIterator(shardIterator);
-        getRecordsRequest.setLimit(GET_RECORDS_LIMIT);
         return getRecordsRequest;
     }
 

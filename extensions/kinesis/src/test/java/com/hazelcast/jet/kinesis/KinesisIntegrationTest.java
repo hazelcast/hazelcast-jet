@@ -20,6 +20,7 @@ import com.amazonaws.services.kinesis.AmazonKinesisAsync;
 import com.amazonaws.services.kinesis.model.CreateStreamRequest;
 import com.amazonaws.services.kinesis.model.MergeShardsRequest;
 import com.amazonaws.services.kinesis.model.Shard;
+import com.amazonaws.services.kinesis.model.SplitShardRequest;
 import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
@@ -45,6 +46,7 @@ import org.testcontainers.containers.localstack.LocalStackContainer;
 import org.testcontainers.containers.localstack.LocalStackContainer.Service;
 
 import javax.annotation.Nonnull;
+import java.math.BigInteger;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -57,7 +59,6 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static com.hazelcast.internal.util.MapUtil.entry;
-import static com.hazelcast.jet.kinesis.impl.KinesisUtil.hashRange;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -126,8 +127,8 @@ public class KinesisIntegrationTest extends JetTestSupport {
         staticStream(50);
     }
 
-    private void staticStream(int shardCount) {
-        createStream(shardCount);
+    private void staticStream(int shards) {
+        createStream(shards);
         waitForStreamToActivate();
 
         StreamSource<Entry<String, byte[]>> source = kinesisSource();
@@ -142,9 +143,7 @@ public class KinesisIntegrationTest extends JetTestSupport {
 
     @Test
     public void dynamicStream_2Shards_mergeBeforeData() {
-        int shardCount = 2;
-
-        createStream(shardCount);
+        createStream(2);
         waitForStreamToActivate();
 
         List<String> shards = getActiveShards().stream()
@@ -207,6 +206,67 @@ public class KinesisIntegrationTest extends JetTestSupport {
         assertMessages(expectedMessages, results, false);
     }
 
+    @Test
+    public void dynamicStream_1Shard_splitBeforeData() {
+        createStream(1);
+        waitForStreamToActivate();
+
+        List<Shard> shards = getActiveShards();
+        splitShard(shards.get(0));
+
+        StreamSource<Entry<String, byte[]>> source = kinesisSource();
+
+        Sink<Entry<String, List<String>>> sink = Sinks.map(results);
+
+        jet.newJob(getPipeline(source, sink));
+
+        Map<String, List<String>> expectedMessages = sendMessages(true);
+        assertMessages(expectedMessages, results, true);
+    }
+
+    @Test
+    public void dynamicStream_1Shard_splitsDuringData() {
+        dynamicStream_splitsDuringData(1, 3);
+    }
+
+    @Test
+    public void dynamicStream_10Shards_splitsDuringData() {
+        dynamicStream_splitsDuringData(10, 10);
+    }
+
+    private void dynamicStream_splitsDuringData(int shards, int splits) {
+        createStream(shards);
+        waitForStreamToActivate();
+
+        StreamSource<Entry<String, byte[]>> source = kinesisSource();
+
+        Sink<Entry<String, List<String>>> sink = Sinks.map(results);
+
+        jet.newJob(getPipeline(source, sink));
+
+        Map<String, List<String>> expectedMessages = sendMessages(false);
+
+        //wait for some data to start coming out of the pipeline, before starting the splits
+        assertTrueEventually(() -> assertFalse(results.isEmpty()));
+
+        List<Shard> oldShards = Collections.emptyList();
+        for (int i = 0; i < splits; i++) {
+            Set<String> oldShardIds = oldShards.stream().map(Shard::getShardId).collect(Collectors.toSet());
+            List<Shard> currentShards = getActiveShards();
+            List<Shard> newShards = currentShards.stream()
+                    .filter(shard -> !oldShardIds.contains(shard.getShardId()))
+                    .collect(Collectors.toList());
+            assertTrue(newShards.size() >= 1);
+            oldShards = currentShards;
+
+            Collections.shuffle(newShards);
+            splitShard(newShards.get(0));
+            waitForStreamToActivate();
+        }
+
+        assertMessages(expectedMessages, results, false);
+    }
+
     private Map<String, List<String>> sendMessages(boolean join) {
         List<Entry<String, String>> msgEntryList = IntStream.range(0, MESSAGES)
                 .boxed()
@@ -234,35 +294,20 @@ public class KinesisIntegrationTest extends JetTestSupport {
         return retMap;
     }
 
-    private static Tuple2<String, String> findAdjacentPair(Shard shard, List<Shard> allShards) {
-        HashRange shardRange = hashRange(shard);
-        for (Shard examinedShard : allShards) {
-            HashRange examinedRange = hashRange(examinedShard);
-            if (shardRange.isAdjacent(examinedRange)) {
-                if (shardRange.getMinInclusive().compareTo(examinedRange.getMinInclusive()) <= 0) {
-                    return Tuple2.tuple2(shard.getShardId(), examinedShard.getShardId());
-                } else {
-                    return Tuple2.tuple2(examinedShard.getShardId(), shard.getShardId());
-                }
-            }
-        }
-        throw new IllegalStateException("There must be an adjacent shard");
+    private static StreamSource<Entry<String, byte[]>> kinesisSource() {
+        return KinesisSources.kinesis(STREAM)
+                .withEndpoint(AWS_CONFIG.getEndpoint())
+                .withRegion(AWS_CONFIG.getRegion())
+                .withCredentials(AWS_CONFIG.getAccessKey(), AWS_CONFIG.getSecretKey())
+                .build();
     }
 
-    private static void createStream(int shardCount) {
-        CreateStreamRequest request = new CreateStreamRequest();
-        request.setShardCount(shardCount);
-        request.setStreamName(STREAM);
-        KINESIS.createStream(request);
-    }
-
-    private static void deleteStream() {
-        KINESIS.deleteStream(STREAM);
-        assertTrueEventually(() -> assertFalse(KINESIS.listStreams().isHasMoreStreams()));
-    }
-
-    private static void waitForStreamToActivate() {
-        KinesisUtil.waitForStreamToActivate(KINESIS, STREAM);
+    private static Sink<Entry<String, byte[]>> kinesisSink() {
+        return KinesisSinks.kinesis(STREAM)
+                .withEndpoint(AWS_CONFIG.getEndpoint())
+                .withRegion(AWS_CONFIG.getRegion())
+                .withCredentials(AWS_CONFIG.getAccessKey(), AWS_CONFIG.getSecretKey())
+                .build();
     }
 
     private static Pipeline getPipeline(StreamSource<Entry<String, byte[]>> source,
@@ -281,6 +326,22 @@ public class KinesisIntegrationTest extends JetTestSupport {
         return pipeline;
     }
 
+    private static void createStream(int shardCount) {
+        CreateStreamRequest request = new CreateStreamRequest();
+        request.setShardCount(shardCount);
+        request.setStreamName(STREAM);
+        KINESIS.createStream(request);
+    }
+
+    private static void deleteStream() {
+        KINESIS.deleteStream(STREAM);
+        assertTrueEventually(() -> assertFalse(KINESIS.listStreams().isHasMoreStreams()));
+    }
+
+    private static void waitForStreamToActivate() {
+        KinesisUtil.waitForStreamToActivate(KINESIS, STREAM);
+    }
+
     private static void mergeShards(String shard1, String shard2) {
         MergeShardsRequest request = new MergeShardsRequest();
         request.setStreamName(STREAM);
@@ -291,24 +352,21 @@ public class KinesisIntegrationTest extends JetTestSupport {
         KINESIS.mergeShards(request);
     }
 
+    private static void splitShard(Shard shard) {
+        HashRange range = HashRange.of(shard.getHashKeyRange());
+        BigInteger middle = range.getMinInclusive().add(range.getMaxExclusive()).divide(BigInteger.valueOf(2));
+
+        SplitShardRequest request = new SplitShardRequest();
+        request.setStreamName(STREAM);
+        request.setShardToSplit(shard.getShardId());
+        request.setNewStartingHashKey(middle.toString());
+
+        System.out.println("Splitting " + shard);
+        KINESIS.splitShard(request);
+    }
+
     private static List<Shard> getActiveShards() {
         return KinesisUtil.getActiveShards(KINESIS, STREAM);
-    }
-
-    private static StreamSource<Entry<String, byte[]>> kinesisSource() {
-        return KinesisSources.kinesis(STREAM)
-                .withEndpoint(AWS_CONFIG.getEndpoint())
-                .withRegion(AWS_CONFIG.getRegion())
-                .withCredentials(AWS_CONFIG.getAccessKey(), AWS_CONFIG.getSecretKey())
-                .build();
-    }
-
-    private static Sink<Entry<String, byte[]>> kinesisSink() {
-        return KinesisSinks.kinesis(STREAM)
-                .withEndpoint(AWS_CONFIG.getEndpoint())
-                .withRegion(AWS_CONFIG.getRegion())
-                .withCredentials(AWS_CONFIG.getAccessKey(), AWS_CONFIG.getSecretKey())
-                .build();
     }
 
     private static void assertMessages(
@@ -365,6 +423,21 @@ public class KinesisIntegrationTest extends JetTestSupport {
         }
 
         return sb.toString();
+    }
+
+    private static Tuple2<String, String> findAdjacentPair(Shard shard, List<Shard> allShards) {
+        HashRange shardRange = HashRange.of(shard.getHashKeyRange());
+        for (Shard examinedShard : allShards) {
+            HashRange examinedRange = HashRange.of(examinedShard.getHashKeyRange());
+            if (shardRange.isAdjacent(examinedRange)) {
+                if (shardRange.getMinInclusive().compareTo(examinedRange.getMinInclusive()) <= 0) {
+                    return Tuple2.tuple2(shard.getShardId(), examinedShard.getShardId());
+                } else {
+                    return Tuple2.tuple2(examinedShard.getShardId(), shard.getShardId());
+                }
+            }
+        }
+        throw new IllegalStateException("There must be an adjacent shard");
     }
 
     private static Map<String, List<String>> toMap(List<Entry<String, String>> entryList) {

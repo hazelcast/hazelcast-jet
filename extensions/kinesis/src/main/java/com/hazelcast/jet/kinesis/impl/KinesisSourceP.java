@@ -103,14 +103,10 @@ public class KinesisSourceP extends AbstractProcessor {
 
             ShardReader.Result result = reader.run();
             if (ShardReader.Result.HAS_DATA.equals(result)) {
-                List<Record> records = reader.getData();
-                /*List<String> messages = records.stream()
-                        .map(record -> new String(record.getData().array(), Charset.defaultCharset()))
-                        .collect(Collectors.toList());
-                System.err.println(reader.getShard().getShardId() + " - messages = " + messages);*/ //todo: remove
-                System.err.println(reader.getShard().getShardId() + " - messages = " + records.size()); //todo: remove
-                traverser = Traversers.traverseIterable(records)
-                        .map(r -> entry(r.getPartitionKey(), r.getData().array())); //todo: performance impact
+                Record[] records = reader.getData();
+                System.err.println(reader.getShard().getShardId() + " - messages = " + records.length); //todo: remove
+                traverser = Traversers.traverseArray(records)
+                        .map(r -> entry(r.getPartitionKey(), r.getData().array())); //todo: performance impact?
                 emitFromTraverser(traverser);
                 return;
             } else if (ShardReader.Result.CLOSED.equals(result)) {
