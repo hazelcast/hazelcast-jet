@@ -21,13 +21,13 @@ import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.core.processor.SinkProcessors;
+import com.hazelcast.jet.sql.impl.JoinInfo;
 import com.hazelcast.jet.sql.impl.connector.SqlConnector;
 import com.hazelcast.jet.sql.impl.connector.keyvalue.KvMetadata;
 import com.hazelcast.jet.sql.impl.connector.keyvalue.KvMetadataJavaResolver;
 import com.hazelcast.jet.sql.impl.connector.keyvalue.KvMetadataResolvers;
 import com.hazelcast.jet.sql.impl.connector.keyvalue.KvProcessors;
 import com.hazelcast.jet.sql.impl.inject.UpsertTargetDescriptor;
-import com.hazelcast.jet.sql.impl.JoinInfo;
 import com.hazelcast.jet.sql.impl.schema.MappingField;
 import com.hazelcast.map.impl.MapContainer;
 import com.hazelcast.map.impl.MapService;
@@ -145,17 +145,16 @@ public class IMapSqlConnector implements SqlConnector {
         PartitionedMapTable table = (PartitionedMapTable) table0;
 
         return dag.newVertex(
-                // TODO use something better for vertex names
-                "NestedLoopJoin(" + toString(table) + ")-" + randomLetters(RANDOM_SUFFIX_LENGTH),
+                "NestedLoopJoin(" + toString(table) + ")-" + randomLetters(),
                 JoinProcessors.processor(table, predicate, projections, joinInfo)
         );
     }
 
-    private static String randomLetters(int len) {
-        Random r = ThreadLocalRandom.current();
-        char[] res = new char[len];
-        for (int i = 0; i < len; i++) {
-            res[i] = (char) ('a' + r.nextInt('z' - 'a'));
+    private static String randomLetters() {
+        Random random = ThreadLocalRandom.current();
+        char[] res = new char[RANDOM_SUFFIX_LENGTH];
+        for (int i = 0; i < RANDOM_SUFFIX_LENGTH; i++) {
+            res[i] = (char) ('a' + random.nextInt('z' - 'a'));
         }
         return new String(res);
     }

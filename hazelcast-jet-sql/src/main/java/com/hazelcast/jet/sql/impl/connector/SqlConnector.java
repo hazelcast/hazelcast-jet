@@ -197,15 +197,16 @@ public interface SqlConnector {
 
     /**
      * Returns a supplier for a source vertex reading the input according to
-     * the projection/predicate. The output type of the source is Object[].
+     * the {@code projection}/{@code predicate}. The output type of the
+     * source is Object[].
      * <p>
      * The result is:<ul>
      * <li>{@code f0}: the source vertex of the sub-DAG
-     * <li>{@code f1}: the sink vertex of teh sub-DAG
+     * <li>{@code f1}: the sink vertex of the sub-DAG
      * </ul>
      * <p>
      * The field indexes in the predicate and projection refer to the
-     * zero-based indexes of the original fields of the {code table}. For
+     * zero-based indexes of the original fields of the {@code table}. For
      * example, if the table has fields {@code a, b, c} and the query is:
      * <pre>{@code
      *     SELECT b FROM t WHERE c=10
@@ -229,22 +230,44 @@ public interface SqlConnector {
     }
 
     /**
-     * Returns whether this connector supports the {@link #nestedLoopReader}. The default
-     * implementation returns {@code false}.
+     * Returns whether this connector supports the {@link #nestedLoopReader}.
+     * The default implementation returns {@code false}.
      */
     default boolean supportsNestedLoopReader() {
         return false;
     }
 
     /**
-     * TODO
+     * Returns a supplier for a joining vertex reading the Object[] input
+     * and connecting it with the source according to the {@code joinInfo}.
+     * The source is read according to {@code projection}/{@code predicate}.
+     * The output type of the source is Object[].
+     * <p>
+     * The result is:<ul>
+     * <li>{@code f0}: the source vertex of the sub-DAG
+     * <li>{@code f1}: the sink vertex of teh sub-DAG
+     * </ul>
+     * <p>
+     * The field indexes in the predicate and projection refer to the
+     * zero-based indexes of the original fields of the {@code table}. For
+     * example, if the table has fields {@code a, b, c} and the query is:
+     * <pre>{@code
+     *     SELECT b FROM t WHERE c=10
+     * }</pre>
+     * Then the projection will be {@code {1}} and the predicate will be {@code
+     * {2}=10}.
+     *
+     * @param table      the table object
+     * @param predicate  SQL expression to filter the rows
+     * @param projection the list of fields to return
+     * @param joinInfo   {@link JoinInfo}
      */
     @Nonnull
     default Vertex nestedLoopReader(
             @Nonnull DAG dag,
-            @Nonnull Table table0,
+            @Nonnull Table table,
             @Nullable Expression<Boolean> predicate,
-            @Nonnull List<Expression<?>> projections,
+            @Nonnull List<Expression<?>> projection,
             @Nonnull JoinInfo joinInfo
     ) {
         assert !supportsNestedLoopReader();

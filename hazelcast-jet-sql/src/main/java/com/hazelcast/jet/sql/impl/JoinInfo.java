@@ -23,6 +23,18 @@ import com.hazelcast.sql.impl.expression.Expression;
 
 import java.io.IOException;
 
+/**
+ * An analyzed join condition.
+ * <p>
+ * Contains:<ul>
+ * <li>{@code leftEquiJoinIndices}: indices of the fields from the left side of
+ * a join which are equi-join keys
+ * <li>{@code rightEquiJoinIndices}: indices of the fields from the right side
+ * of a join which are equi-join keys
+ * <li>{@code nonEquiCondition}: remaining join filters that are not equijoins
+ * <li>{@code condition}: all join filters
+ * </ul>
+ */
 public class JoinInfo implements DataSerializable {
 
     private int[] leftEquiJoinIndices;
