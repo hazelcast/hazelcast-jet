@@ -145,7 +145,7 @@ public class JetSqlValidator extends HazelcastSqlValidator {
         }
 
         FindSelectVisitor visitor = new FindSelectVisitor();
-        join.accept(visitor);
+        join.getRight().accept(visitor);
         if (visitor.found) {
             throw newValidationError(join, RESOURCE.subqueryOnRightSideOfJoinNotSupported());
         }

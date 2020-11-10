@@ -229,15 +229,15 @@ public interface SqlConnector {
     }
 
     /**
-     * TODO
+     * Returns whether this connector supports the {@link #nestedLoopReader}. The default
+     * implementation returns {@code false}.
      */
     default boolean supportsNestedLoopReader() {
         return false;
     }
 
     /**
-     * Returns whether this connector supports the {@link #sink}. The default
-     * implementation returns {@code false}.
+     * TODO
      */
     @Nonnull
     default Vertex nestedLoopReader(
@@ -252,7 +252,8 @@ public interface SqlConnector {
     }
 
     /**
-     * TODO
+     * Returns whether this connector supports the {@link #sink}. The default
+     * implementation returns {@code false}.
      */
     default boolean supportsSink() {
         return false;
