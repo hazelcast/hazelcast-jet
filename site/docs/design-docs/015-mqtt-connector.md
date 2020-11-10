@@ -3,8 +3,6 @@ title: 015 - Mqtt Connector
 description: Mqtt Connector (source and sink)
 ---
 
-*Target Release*: 4.3
-
 ## Background
 
 MQTT is a machine-to-machine (M2M)/”Internet of Things” connectivity
@@ -232,13 +230,6 @@ creates a client for each processor and publishes messages to the
 specified topic. We append the global processor index to the specified
 clientId for uniqueness, e.g `producer-1`, `producer-2`...
 
-Paho client has a configuration called `maxInflight` which limits the
-`in-flight` messages with quality of service `AT_LEAST_ONCE` and
-`EXACTLY_ONCE`. This limitation is per client. Sink uses a semaphore
-with the permit count of specified `maxInflight` to limit the messages.
-Sink does not apply this limiting to the messages with quality of
-service `AT_MOST_ONCE`.
-
 #### API
 
 Since there are several configuration options for the sink, we created
@@ -255,6 +246,7 @@ MqttSinks.builder()
         .topic("topic")
         .autoReconnect()
         .keepSession()
+        .retryCount(5)
         .messageFn(item -> {
             MqttMessage message = new MqttMessage(item.getBytes());
             message.setQos(2);
@@ -263,8 +255,8 @@ MqttSinks.builder()
         .build();
 ```
 
-You can also provide a `MqttConnectOptions` function instead of
-configuring the options one by one:
+You can provide a `MqttConnectOptions` function instead of configuring
+the options one by one.
 
 ```java
 MqttSinks.builder()
@@ -278,6 +270,15 @@ MqttSinks.builder()
             options.setPassword("password".toCharArray());
             options.setMaxInflight(100);
             return options;
+        })
+        .retryFn((exception, tryCount) -> {
+            if(tryCount > 5) {
+                return 0;
+            }
+            if(exception.getReasonCode() != MqttException.REASON_CODE_BROKER_UNAVAILABLE) {
+                return 0;
+            }
+            return 200;
         })
         .topic("topic")
         .messageFn(item -> {
@@ -295,5 +296,10 @@ a restart, some messages can be duplicated.
 
 #### Error handling
 
-The sink uses async client to publish the messages. Any error/exception
-encountered while publishing the messages will not fail the job.
+The sink uses sync client to publish the messages. Any error/exception
+encountered while publishing the messages will fail the job. User can
+configure the retrying of the messages by providing a retry function.
+The retry function accepts a `MqttException`, current try count and
+returns the wait time before trying to send the message again. Any
+non-positive value means that the sink should not retry the message and
+fail the job.
