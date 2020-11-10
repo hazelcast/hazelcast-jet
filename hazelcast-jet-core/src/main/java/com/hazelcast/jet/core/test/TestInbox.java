@@ -33,9 +33,15 @@ public final class TestInbox implements Inbox {
 
     private final ArrayDeque<Object> queue = new ArrayDeque<>();
 
+    /**
+     * Constructs the inbox.
+     */
     public TestInbox() {
     }
 
+    /**
+     * Convenience for {@code new TestInbox().queue().addAll(o)}
+     */
     public TestInbox(Collection<?> collection) {
         queue.addAll(collection);
     }
