@@ -18,13 +18,15 @@ package com.hazelcast.jet.pipeline;
 
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.function.PredicateEx;
-import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Traversers;
 import com.hazelcast.jet.accumulator.LongAccumulator;
+import com.hazelcast.jet.core.JetTestSupport;
 import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.pipeline.test.Assertions;
 import com.hazelcast.test.HazelcastSerialParametersRunnerFactory;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -43,16 +45,28 @@ import static java.util.stream.Collectors.toList;
 
 @RunWith(Parameterized.class)
 @UseParametersRunnerFactory(HazelcastSerialParametersRunnerFactory.class)
-public class OrderedProcessingTest {
-
+public class OrderedProcessingTest extends JetTestSupport {
 
     private static final int LOCAL_PARALLELISM = 11;
+    private static Pipeline p;
+    private static JetInstance jet;
 
     @Parameter(value = 0)
     public FunctionEx<BatchStage<Integer>, BatchStage<Integer>> transform;
 
     @Parameter(value = 1)
     public String transformName;
+
+    @Before
+    public void setup() {
+        jet = createJetMember();
+        p = Pipeline.create();
+    }
+
+    @After
+    public void after() {
+        jet.shutdown();
+    }
 
     @Parameters(name = "{index}: transform={1}")
     public static Collection<Object[]> data() {
@@ -113,9 +127,6 @@ public class OrderedProcessingTest {
 
     @Test
     public void ordered_processing_test() {
-        Pipeline p = Pipeline.create();
-        JetInstance jet = Jet.bootstrappedInstance();
-
         int itemCount = 5_000;
         List<Integer> sequence1 = IntStream.range(0, itemCount).boxed().collect(toList());
         List<Integer> sequence2 = IntStream.range(itemCount, 2 * itemCount).boxed().collect(toList());
