@@ -1,3 +1,19 @@
+/*
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.hazelcast.jet.pipeline.test;
 
 import com.hazelcast.jet.Traverser;
@@ -9,10 +25,12 @@ import com.hazelcast.jet.core.EventTimePolicy;
 import javax.annotation.Nonnull;
 
 import java.util.List;
+import java.util.stream.IntStream;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static java.util.stream.Collectors.toList;
 
 
 /**
@@ -25,8 +43,8 @@ public class ParallelStreamP<T> extends AbstractProcessor {
     private final long nanoTimeMillisToCurrentTimeMillis = determineTimeOffset();
     private final long periodNanos;
     private final EventTimeMapper<? super T> eventTimeMapper;
+    private int globalProcessorIndex;
     private long startNanoTime;
-    private long globalProcessorIndex;
     private long totalParallelism;
 
     private long nowNanoTime;
@@ -35,23 +53,28 @@ public class ParallelStreamP<T> extends AbstractProcessor {
     private Traverser<Object> traverser = new AppendableTraverser<>(2);
 
     private final List<GeneratorFunction<? extends T>> generators;
-    private GeneratorFunction<? extends T> generator;
+    private List<GeneratorFunction<? extends T>> assignedGenerators;
 
-    ParallelStreamP(long eventsPerSecond, EventTimePolicy<? super T> eventTimePolicy, List<GeneratorFunction<? extends T>> generators) {
+    ParallelStreamP(long eventsPerSecond, EventTimePolicy<? super T> eventTimePolicy,
+                    List<GeneratorFunction<? extends T>> generators) {
         this.startNanoTime = System.currentTimeMillis(); // temporarily holds the parameter value until init
-        this.periodNanos = NANOS_PER_SECOND/ eventsPerSecond;
+        this.periodNanos = NANOS_PER_SECOND / eventsPerSecond;
         this.eventTimeMapper = new EventTimeMapper<>(eventTimePolicy);
-        eventTimeMapper.addPartitions(1);
+        eventTimeMapper.addPartitions(generators.size());
         this.generators = generators;
     }
 
     @Override
     protected void init(@Nonnull Context context) {
         totalParallelism = context.totalParallelism();
-        globalProcessorIndex = context.localProcessorIndex();
+        globalProcessorIndex = context.globalProcessorIndex();
         startNanoTime = MILLISECONDS.toNanos(startNanoTime + nanoTimeMillisToCurrentTimeMillis) +
                 globalProcessorIndex * periodNanos;
-        generator = generators.get((int) globalProcessorIndex);
+
+        assignedGenerators = IntStream.range(0, generators.size())
+                .filter(i -> i % totalParallelism == globalProcessorIndex)
+                .mapToObj(generators::get)
+                .collect(toList());
     }
 
     @Override
@@ -67,11 +90,14 @@ public class ParallelStreamP<T> extends AbstractProcessor {
 
     private void emitEvents() throws Exception {
         long emitUpTo = (nowNanoTime - startNanoTime) / periodNanos;
-        while (emitFromTraverser(traverser) && sequence * totalParallelism < emitUpTo) {
-            long timestampNanoTime = startNanoTime + sequence * totalParallelism * periodNanos;
+        while (emitFromTraverser(traverser) && sequence < emitUpTo) {
+            long timestampNanoTime = startNanoTime + sequence * periodNanos;
             long timestamp = NANOSECONDS.toMillis(timestampNanoTime) - nanoTimeMillisToCurrentTimeMillis;
-            T item = generator.generate(timestamp, sequence++);
-            traverser = eventTimeMapper.flatMapEvent(nowNanoTime, item, 0, timestamp);
+            for (GeneratorFunction<? extends T> generator : assignedGenerators) {
+                T item = generator.generate(timestamp, sequence);
+                traverser = eventTimeMapper.flatMapEvent(nowNanoTime, item, globalProcessorIndex, timestamp);
+            }
+            sequence++;
         }
     }
 

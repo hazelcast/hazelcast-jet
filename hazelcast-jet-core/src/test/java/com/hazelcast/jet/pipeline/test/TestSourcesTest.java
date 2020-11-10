@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.pipeline.test;
 
+import com.hazelcast.jet.pipeline.BatchStage;
 import com.hazelcast.jet.pipeline.PipelineTestSupport;
 import org.junit.Rule;
 import org.junit.Test;
@@ -29,6 +30,7 @@ import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
 import static com.hazelcast.jet.pipeline.WindowDefinition.tumbling;
 import static com.hazelcast.jet.pipeline.test.Assertions.assertCollectedEventually;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static java.util.stream.Collectors.toList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -46,6 +48,29 @@ public class TestSourcesTest extends PipelineTestSupport {
         p.readFrom(TestSources.items(input))
                 .apply(Assertions.assertOrdered(expected));
 
+        jet().newJob(p).join();
+    }
+
+    @Test
+    public void test_parallelItems() {
+        int itemCount = 500;
+        List<Integer> sequence1 = IntStream.range(0, itemCount).boxed().collect(toList());
+        List<Integer> sequence2 = IntStream.range(itemCount, 2 * itemCount).boxed().collect(toList());
+        List<Integer> sequence3 = IntStream.range(2 * itemCount, 3 * itemCount).boxed().collect(toList());
+        List<Integer> sequence4 = IntStream.range(3 * itemCount, 4 * itemCount).boxed().collect(toList());
+
+
+        BatchStage<Integer> srcStage = p.readFrom(TestSources
+                .itemsParallel(sequence1, sequence2, sequence3, sequence4));
+        srcStage.filter(i -> i < itemCount)
+                .apply(Assertions.assertOrdered(sequence1));
+        srcStage.filter(i -> itemCount <= i && i < 2 * itemCount)
+                .apply(Assertions.assertOrdered(sequence2));
+        srcStage.filter(i -> 2 * itemCount <= i && i < 3 * itemCount)
+                .apply(Assertions.assertOrdered(sequence3));
+        srcStage.filter(i -> 3 * itemCount <= i && i < 4 * itemCount)
+                .apply(Assertions.assertOrdered(sequence4));
+        p.setPreserveOrder(true);
         jet().newJob(p).join();
     }
 

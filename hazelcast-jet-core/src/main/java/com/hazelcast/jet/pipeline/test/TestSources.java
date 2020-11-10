@@ -74,28 +74,65 @@ public final class TestSources {
     }
 
 
-
     /**
-     * Returns a streaming source that generates events created by the {@code
-     * generatorFns} at the specified rate and in a parallel manner.
+     * Returns a batch source that iterates through the supplied items in a
+     * parallel manner then terminates.
      * @since 4.4
      */
     @Nonnull
-    public static <T> StreamSource<T> itemsParallel(long eventsPerSecond, @Nonnull List<GeneratorFunction<? extends T>> generatorFns) {
+    public static <T> BatchSource<T> itemsParallel(@Nonnull List<Iterable<? extends T>> iterables) {
+        Objects.requireNonNull(iterables, "iterables");
+        return Sources.batchFromProcessor("itemsParallel",
+                ProcessorMetaSupplier.of(iterables.size(), () -> new ParallelBatchP<>(iterables))
+        );
+    }
+
+    /**
+     * Returns a batch source that iterates through the supplied items in a
+     * parallel manner then terminates.
+     * @since 4.4
+     */
+    @Nonnull
+    public static <T> BatchSource<T> itemsParallel(@Nonnull Iterable<? extends T>... iterables) {
+        Objects.requireNonNull(iterables, "iterables");
+        return itemsParallel(Arrays.asList(iterables));
+    }
+
+
+
+    /**
+     * Returns a streaming source that generates events created by the {@code
+     * generatorFns} at the specified rate in each of its parallel branches.
+     * In the default use of this source, a source processor is created for
+     * each generator function and these processors generate events with
+     * these assigned generator functions. If total parallelism is more than
+     * the number of generatorFns, some source processors will remain idle.
+     * This source's preferred local parallelism is determined as if it would
+     * work in a single member.
+     * @since 4.4
+     */
+    @Nonnull
+    public static <T> StreamSource<T> itemsParallel(long eventsPerSecondPerBranch,
+                                                    @Nonnull List<GeneratorFunction<? extends T>> generatorFns) {
         Objects.requireNonNull(generatorFns, "iterables");
 
         return Sources.streamFromProcessorWithWatermarks("itemsParallel",
                 true,
                 eventTimePolicy -> ProcessorMetaSupplier.of(generatorFns.size(), () ->
-                        new ParallelStreamP<>(eventsPerSecond, eventTimePolicy, generatorFns))
+                        new ParallelStreamP<>(eventsPerSecondPerBranch, eventTimePolicy, generatorFns))
         );
     }
 
 
     /**
      * Returns a streaming source that generates events created by the {@code
-     * generatorFns} at the specified rate. This source generates events on
-     * its each parallel processor.
+     * generatorFns} at the specified rate in each of its parallel branches.
+     * In the default use of this source, a source processor is created for
+     * each generator function and these processors generate events with
+     * these assigned generator functions. If total parallelism is more than
+     * the number of generatorFns, some source processors will remain idle.
+     * This source's preferred local parallelism is determined as if it would
+     * work in a single member.
      * <p>
      * The source supports {@linkplain
      * StreamSourceStage#withNativeTimestamps(long) native timestamps}. The
@@ -112,9 +149,10 @@ public final class TestSources {
      * @since 4.4
      */
     @Nonnull
-    public static <T> StreamSource<T> itemsParallel(long eventsPerSecond, @Nonnull GeneratorFunction<? extends T>... generatorFns) {
+    public static <T> StreamSource<T> itemsParallel(long eventsPerSecondPerBranch,
+                                                    @Nonnull GeneratorFunction<? extends T>... generatorFns) {
         Objects.requireNonNull(generatorFns, "items");
-        return itemsParallel(eventsPerSecond, Arrays.asList(generatorFns));
+        return itemsParallel(eventsPerSecondPerBranch, Arrays.asList(generatorFns));
     }
 
     /**
