@@ -16,12 +16,15 @@
 
 package com.hazelcast.jet.sql.impl.connector.map;
 
+import com.hazelcast.function.SupplierEx;
 import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.impl.execution.init.Contexts.ProcSupplierCtx;
+import com.hazelcast.jet.pipeline.ServiceFactories;
+import com.hazelcast.jet.pipeline.ServiceFactory;
+import com.hazelcast.jet.sql.impl.JoinInfo;
 import com.hazelcast.jet.sql.impl.connector.keyvalue.KvRowProjector;
-import com.hazelcast.jet.sql.impl.join.JoinInfo;
 import com.hazelcast.map.IMap;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
@@ -97,9 +100,10 @@ final class JoinProcessors {
     interface JoinProcessorFactory extends Serializable {
 
         Processor create(
+                ServiceFactory<Object, IMap<Object, Object>> mapFactory,
                 IMap<Object, Object> map,
                 QueryPath[] rightPaths,
-                KvRowProjector rightProjector,
+                SupplierEx<KvRowProjector> rightProjectorSupplier,
                 JoinInfo joinInfo
         );
     }
@@ -125,6 +129,7 @@ final class JoinProcessors {
 
         private JoinProcessorFactory processorFactory;
 
+        private transient ServiceFactory<Object, IMap<Object, Object>> mapFactory;
         private transient IMap<Object, Object> map;
         private transient InternalSerializationService serializationService;
         private transient Extractors extractors;
@@ -161,7 +166,9 @@ final class JoinProcessors {
         }
 
         @Override
+        @SuppressWarnings("unchecked")
         public void init(@Nonnull Context context) {
+            mapFactory = (ServiceFactory<Object, IMap<Object, Object>>) ServiceFactories.iMapService(mapName);
             map = context.jetInstance().getMap(mapName);
             serializationService = ((ProcSupplierCtx) context).serializationService();
             extractors = Extractors.newBuilder(serializationService).build();
@@ -172,15 +179,21 @@ final class JoinProcessors {
         public Collection<? extends Processor> get(int count) {
             List<Processor> processors = new ArrayList<>(count);
             for (int i = 0; i < count; i++) {
-                KvRowProjector rightProjector = new KvRowProjector(
+                Processor processor = processorFactory.create(
+                        mapFactory,
+                        map,
                         paths,
-                        types,
-                        keyQueryDescriptor.create(serializationService, extractors, true),
-                        valueQueryDescriptor.create(serializationService, extractors, false),
-                        predicate,
-                        projection
+                        () -> new KvRowProjector(
+                                paths,
+                                types,
+                                keyQueryDescriptor.create(serializationService, extractors, true),
+                                valueQueryDescriptor.create(serializationService, extractors, false),
+                                predicate,
+                                projection
+                        ),
+                        joinInfo
                 );
-                processors.add(processorFactory.create(map, paths, rightProjector, joinInfo));
+                processors.add(processor);
             }
             return processors;
         }

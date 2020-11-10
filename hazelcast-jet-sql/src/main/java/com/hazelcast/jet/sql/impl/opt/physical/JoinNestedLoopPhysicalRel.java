@@ -17,7 +17,7 @@
 package com.hazelcast.jet.sql.impl.opt.physical;
 
 import com.hazelcast.jet.core.Vertex;
-import com.hazelcast.jet.sql.impl.join.JoinInfo;
+import com.hazelcast.jet.sql.impl.JoinInfo;
 import com.hazelcast.sql.impl.calcite.schema.HazelcastTable;
 import com.hazelcast.sql.impl.expression.Expression;
 import com.hazelcast.sql.impl.plan.node.PlanNodeSchema;

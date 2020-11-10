@@ -66,7 +66,7 @@ public class AsyncTransformUsingServiceOrderedP<C, S, T, R> extends AbstractAsyn
     /**
      * Constructs a processor with the given mapping function.
      */
-    AsyncTransformUsingServiceOrderedP(
+    public AsyncTransformUsingServiceOrderedP(
             @Nonnull ServiceFactory<C, S> serviceFactory,
             @Nonnull C serviceContext,
             int maxConcurrentOps,

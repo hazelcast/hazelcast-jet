@@ -18,7 +18,7 @@ package com.hazelcast.jet.sql.impl.connector;
 
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Vertex;
-import com.hazelcast.jet.sql.impl.join.JoinInfo;
+import com.hazelcast.jet.sql.impl.JoinInfo;
 import com.hazelcast.jet.sql.impl.schema.MappingField;
 import com.hazelcast.spi.impl.NodeEngine;
 import com.hazelcast.sql.impl.expression.Expression;

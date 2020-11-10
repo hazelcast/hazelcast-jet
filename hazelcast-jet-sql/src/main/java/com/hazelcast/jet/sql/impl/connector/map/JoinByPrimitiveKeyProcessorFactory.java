@@ -17,17 +17,20 @@
 package com.hazelcast.jet.sql.impl.connector.map;
 
 import com.hazelcast.function.BiFunctionEx;
-import com.hazelcast.function.FunctionEx;
+import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.Traverser;
+import com.hazelcast.jet.Traversers;
 import com.hazelcast.jet.core.Processor;
-import com.hazelcast.jet.core.ResettableSingletonTraverser;
-import com.hazelcast.jet.impl.processor.TransformP;
+import com.hazelcast.jet.impl.processor.AsyncTransformUsingServiceOrderedP;
+import com.hazelcast.jet.pipeline.ServiceFactory;
 import com.hazelcast.jet.sql.impl.ExpressionUtil;
+import com.hazelcast.jet.sql.impl.JoinInfo;
 import com.hazelcast.jet.sql.impl.connector.keyvalue.KvRowProjector;
 import com.hazelcast.jet.sql.impl.connector.map.JoinProcessors.JoinProcessorFactory;
-import com.hazelcast.jet.sql.impl.join.JoinInfo;
 import com.hazelcast.map.IMap;
 import com.hazelcast.sql.impl.extract.QueryPath;
+
+import java.util.concurrent.CompletableFuture;
 
 import static com.hazelcast.jet.Util.entry;
 
@@ -35,22 +38,29 @@ final class JoinByPrimitiveKeyProcessorFactory implements JoinProcessorFactory {
 
     static final JoinByPrimitiveKeyProcessorFactory INSTANCE = new JoinByPrimitiveKeyProcessorFactory();
 
+    private static final int MAX_CONCURRENT_OPS = 8;
+
     private JoinByPrimitiveKeyProcessorFactory() {
     }
 
     @Override
     public Processor create(
+            ServiceFactory<Object, IMap<Object, Object>> mapFactory,
             IMap<Object, Object> map,
             QueryPath[] rightPaths,
-            KvRowProjector rightProjector,
+            SupplierEx<KvRowProjector> rightProjectorSupplier,
             JoinInfo joinInfo
     ) {
-        return new TransformP<>(joinFn(map, rightProjector, joinInfo));
+        return new AsyncTransformUsingServiceOrderedP<>(
+                mapFactory,
+                map,
+                MAX_CONCURRENT_OPS,
+                callAsyncFn(rightProjectorSupplier, joinInfo)
+        );
     }
 
-    private static FunctionEx<Object[], Traverser<Object[]>> joinFn(
-            IMap<Object, Object> map,
-            KvRowProjector rightProjector,
+    private static BiFunctionEx<IMap<Object, Object>, Object[], CompletableFuture<Traverser<Object[]>>> callAsyncFn(
+            SupplierEx<KvRowProjector> rightProjectorSupplier,
             JoinInfo joinInfo
     ) {
         assert joinInfo.leftEquiJoinIndices().length == 1;
@@ -58,28 +68,29 @@ final class JoinByPrimitiveKeyProcessorFactory implements JoinProcessorFactory {
         int leftEquiJoinIndex = joinInfo.leftEquiJoinIndices()[0];
         BiFunctionEx<Object[], Object[], Object[]> joinFn = ExpressionUtil.joinFn(joinInfo.nonEquiCondition());
 
-        ResettableSingletonTraverser<Object[]> traverser = new ResettableSingletonTraverser<>();
-        return left -> {
+        return (map, left) -> {
             Object key = left[leftEquiJoinIndex];
             if (key == null) {
-                return traverser;
+                return null;
             }
 
-            Object value = map.get(key);
-            if (value == null) {
-                return traverser;
-            }
+            return map.getAsync(key).toCompletableFuture()
+                      .thenApply(value -> {
+                          if (value == null) {
+                              return null;
+                          }
 
-            Object[] right = rightProjector.project(entry(key, value));
-            if (right == null) {
-                return traverser;
-            }
+                          Object[] right = rightProjectorSupplier.get().project(entry(key, value));
+                          if (right == null) {
+                              return null;
+                          }
 
-            Object[] joined = joinFn.apply(left, right);
-            if (joined != null) {
-                traverser.accept(joined);
-            }
-            return traverser;
+                          Object[] joined = joinFn.apply(left, right);
+                          if (joined != null) {
+                              return Traversers.singleton(joined);
+                          }
+                          return null;
+                      });
         };
     }
 }

@@ -33,6 +33,13 @@ public final class TestInbox implements Inbox {
 
     private final ArrayDeque<Object> queue = new ArrayDeque<>();
 
+    public TestInbox() {
+    }
+
+    public TestInbox(Collection<?> collection) {
+        queue.addAll(collection);
+    }
+
     @Override
     public boolean isEmpty() {
         return queue.isEmpty();

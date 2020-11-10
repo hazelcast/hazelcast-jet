@@ -27,7 +27,7 @@ import com.hazelcast.jet.sql.impl.connector.keyvalue.KvMetadataJavaResolver;
 import com.hazelcast.jet.sql.impl.connector.keyvalue.KvMetadataResolvers;
 import com.hazelcast.jet.sql.impl.connector.keyvalue.KvProcessors;
 import com.hazelcast.jet.sql.impl.inject.UpsertTargetDescriptor;
-import com.hazelcast.jet.sql.impl.join.JoinInfo;
+import com.hazelcast.jet.sql.impl.JoinInfo;
 import com.hazelcast.jet.sql.impl.schema.MappingField;
 import com.hazelcast.map.impl.MapContainer;
 import com.hazelcast.map.impl.MapService;
