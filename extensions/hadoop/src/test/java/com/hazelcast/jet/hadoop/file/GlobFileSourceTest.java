@@ -36,6 +36,14 @@ public class GlobFileSourceTest extends BaseFileFormatTest {
     }
 
     @Test
+    public void shouldReadFilesMatchingGlobInTheMiddle() {
+        FileSourceBuilder<String> source = FileSources.files("src/test/resources/glob/f*le")
+                                                      .withFormat(FileFormat.text());
+
+        assertItemsInSource(source, "file");
+    }
+
+    @Test
     @Ignore("windows don't support * in filenames, either remove this test or make it non-windows only")
     public void shouldReadFileWithEscapedGlob() {
         FileSourceBuilder<String> source = FileSources.files("src/test/resources/glob/file\\*")
