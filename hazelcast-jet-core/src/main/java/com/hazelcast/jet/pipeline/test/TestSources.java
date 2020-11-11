@@ -20,15 +20,13 @@ import com.hazelcast.jet.annotation.EvolvingApi;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.pipeline.BatchSource;
 import com.hazelcast.jet.pipeline.SourceBuilder;
-import com.hazelcast.jet.pipeline.SourceBuilder.TimestampedSourceBuffer;
 import com.hazelcast.jet.pipeline.Sources;
 import com.hazelcast.jet.pipeline.StreamSource;
 import com.hazelcast.jet.pipeline.StreamSourceStage;
+import com.hazelcast.jet.pipeline.SourceBuilder.TimestampedSourceBuffer;
 
 import javax.annotation.Nonnull;
 import java.util.Arrays;
-import java.util.Iterator;
-import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
@@ -48,7 +46,7 @@ public final class TestSources {
 
     /**
      * Returns a batch source which iterates through the supplied iterable and
-     * then terminates. The source is non-distributed.
+     * then terminates.
      *
      * @since 3.2
      */
@@ -56,15 +54,15 @@ public final class TestSources {
     public static <T> BatchSource<T> items(@Nonnull Iterable<? extends T> items) {
         Objects.requireNonNull(items, "items");
         return SourceBuilder.batch("items", ctx -> null)
-            .<T>fillBufferFn((ignored, buf) -> {
-                items.forEach(buf::add);
-                buf.close();
-            }).build();
+                .<T>fillBufferFn((ignored, buf) -> {
+                    items.forEach(buf::add);
+                    buf.close();
+                }).build();
     }
 
     /**
      * Returns a batch source which iterates through the supplied items and
-     * then terminates. The source is non-distributed.
+     * then terminates.
      *
      * @since 3.2
      */
@@ -72,126 +70,6 @@ public final class TestSources {
     public static <T> BatchSource<T> items(@Nonnull T... items) {
         Objects.requireNonNull(items, "items");
         return items(Arrays.asList(items));
-    }
-
-
-    /**
-     * Returns a batch source that iterates through the supplied items in a
-     * parallel manner then terminates.
-     * @since 4.4
-     */
-    @Nonnull
-    public static <T> BatchSource<T> itemsParallel(@Nonnull List<Iterable<? extends T>> iterables) {
-        Objects.requireNonNull(iterables, "iterables");
-        return Sources.batchFromProcessor("itemsParallel",
-                ProcessorMetaSupplier.of(iterables.size(), () -> new ParallelBatchP<>(iterables))
-        );
-    }
-
-    /**
-     * Returns a batch source that iterates through the supplied items in a
-     * parallel manner then terminates.
-     * @since 4.4
-     */
-    @Nonnull
-    public static <T> BatchSource<T> itemsParallel(@Nonnull Iterable<? extends T>... iterables) {
-        Objects.requireNonNull(iterables, "iterables");
-        return itemsParallel(Arrays.asList(iterables));
-    }
-
-
-
-    /**
-     * Returns a streaming source that generates events created by the {@code
-     * generatorFns} at the specified rate in each of its parallel branches.
-     * In the default use of this source, a source processor is created for
-     * each generator function and these processors generate events with
-     * these assigned generator functions. If total parallelism is more than
-     * the number of generatorFns, some source processors will remain idle.
-     * This source's preferred local parallelism is determined as if it would
-     * work in a single member.
-     * @since 4.4
-     */
-    @Nonnull
-    public static <T> StreamSource<T> itemsParallel(long eventsPerSecondPerBranch,
-                                                    @Nonnull List<GeneratorFunction<? extends T>> generatorFns) {
-        Objects.requireNonNull(generatorFns, "iterables");
-
-        return Sources.streamFromProcessorWithWatermarks("itemsParallel",
-                true,
-                eventTimePolicy -> ProcessorMetaSupplier.of(generatorFns.size(), () ->
-                        new ParallelStreamP<>(eventsPerSecondPerBranch, eventTimePolicy, generatorFns))
-        );
-    }
-
-
-    /**
-     * Returns a streaming source that generates events created by the {@code
-     * generatorFns} at the specified rate in each of its parallel branches.
-     * In the default use of this source, a source processor is created for
-     * each generator function and these processors generate events with
-     * these assigned generator functions. If total parallelism is more than
-     * the number of generatorFns, some source processors will remain idle.
-     * This source's preferred local parallelism is determined as if it would
-     * work in a single member.
-     * <p>
-     * The source supports {@linkplain
-     * StreamSourceStage#withNativeTimestamps(long) native timestamps}. The
-     * timestamp is the current system time at the moment they are generated.
-     * The source is not distributed and all the items are generated on the
-     * same node. This source is not fault-tolerant. The sequence will be
-     * reset once a job is restarted.
-     * <p>
-     * <strong>Note:</strong>
-     * There is no absolute guarantee that the actual rate of emitted items
-     * will match the supplied value. It is ensured that no emitted event's
-     * timestamp will be in the future.
-     *
-     * @since 4.4
-     */
-    @Nonnull
-    public static <T> StreamSource<T> itemsParallel(long eventsPerSecondPerBranch,
-                                                    @Nonnull GeneratorFunction<? extends T>... generatorFns) {
-        Objects.requireNonNull(generatorFns, "items");
-        return itemsParallel(eventsPerSecondPerBranch, Arrays.asList(generatorFns));
-    }
-
-    /**
-     * Returns a batch source which iterates through the supplied iterable and
-     * then terminates. The source is distributed - a slice of the items is
-     * emitted on each member with local parallelism of 1.
-     *
-     * @since 4.4
-     */
-    @Nonnull
-    public static <T> BatchSource<T> itemsDistributed(@Nonnull Iterable<? extends T> items) {
-        Objects.requireNonNull(items, "items");
-        return SourceBuilder.batch("items", ctx -> ctx)
-                .<T>fillBufferFn((ctx, buf) -> {
-                    Iterator<? extends T> iterator = items.iterator();
-                    for (int i = 0; iterator.hasNext(); i++) {
-                        T item = iterator.next();
-                        if (i % ctx.totalParallelism() == ctx.globalProcessorIndex()) {
-                            buf.add(item);
-                        }
-                    }
-                    buf.close();
-                })
-                .distributed(1)
-                .build();
-    }
-
-    /**
-     * Returns a batch source which iterates through the supplied items and
-     * then terminates. The source is distributed - a slice of the items is
-     * emitted on each member with local parallelism of 1.
-     *
-     * @since 4.4
-     */
-    @Nonnull
-    public static <T> BatchSource<T> itemsDistributed(@Nonnull T... items) {
-        Objects.requireNonNull(items, "items");
-        return itemsDistributed(Arrays.asList(items));
     }
 
     /**
@@ -245,15 +123,15 @@ public final class TestSources {
     @EvolvingApi
     @Nonnull
     public static <T> StreamSource<T> itemStream(
-        int itemsPerSecond,
-        @Nonnull GeneratorFunction<? extends T> generatorFn
+            int itemsPerSecond,
+            @Nonnull GeneratorFunction<? extends T> generatorFn
     ) {
         Objects.requireNonNull(generatorFn, "generatorFn");
         checkSerializable(generatorFn, "generatorFn");
 
         return SourceBuilder.timestampedStream("itemStream", ctx -> new ItemStreamSource<T>(itemsPerSecond, generatorFn))
-            .<T>fillBufferFn(ItemStreamSource::fillBuffer)
-            .build();
+                .<T>fillBufferFn(ItemStreamSource::fillBuffer)
+                .build();
     }
 
     /**

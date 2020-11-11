@@ -52,11 +52,11 @@ public class ParallelStreamP<T> extends AbstractProcessor {
     private long sequence;
     private Traverser<Object> traverser = new AppendableTraverser<>(2);
 
-    private final List<GeneratorFunction<? extends T>> generators;
-    private List<GeneratorFunction<? extends T>> assignedGenerators;
+    private final List<? extends GeneratorFunction<T>> generators;
+    private List<GeneratorFunction<T>> assignedGenerators;
 
-    ParallelStreamP(long eventsPerSecond, EventTimePolicy<? super T> eventTimePolicy,
-                    List<GeneratorFunction<? extends T>> generators) {
+    public ParallelStreamP(long eventsPerSecond, EventTimePolicy<? super T> eventTimePolicy,
+                    List<? extends GeneratorFunction<T>> generators) {
         this.startNanoTime = System.currentTimeMillis(); // temporarily holds the parameter value until init
         this.periodNanos = NANOS_PER_SECOND / eventsPerSecond;
         this.eventTimeMapper = new EventTimeMapper<>(eventTimePolicy);

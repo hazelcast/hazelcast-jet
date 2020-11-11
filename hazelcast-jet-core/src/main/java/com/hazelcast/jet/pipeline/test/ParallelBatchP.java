@@ -33,11 +33,11 @@ import static java.util.stream.Collectors.toList;
  */
 public class ParallelBatchP<T> extends AbstractProcessor {
 
-    private List<Traverser> traversers;
+    private List<Traverser<T>> traversers;
 
-    private final List<Iterable<? extends T>> iterables;
+    private final List<? extends Iterable<T>> iterables;
 
-    ParallelBatchP(List<Iterable<? extends T>> iterables) {
+    public ParallelBatchP(List<? extends Iterable<T>> iterables) {
         this.iterables = iterables;
     }
 
@@ -55,7 +55,7 @@ public class ParallelBatchP<T> extends AbstractProcessor {
     @Override
     public boolean complete() {
         boolean isCompleted = true;
-        for (Traverser traverser : traversers) {
+        for (Traverser<T> traverser : traversers) {
             if (!emitFromTraverser(traverser)) {
                 isCompleted = false;
             }

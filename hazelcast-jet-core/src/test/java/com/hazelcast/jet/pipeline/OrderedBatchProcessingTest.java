@@ -21,9 +21,10 @@ import com.hazelcast.function.PredicateEx;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Traversers;
 import com.hazelcast.jet.accumulator.LongAccumulator;
-import com.hazelcast.jet.core.JetTestSupport;
+import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.pipeline.test.Assertions;
+import com.hazelcast.jet.pipeline.test.ParallelBatchP;
 import com.hazelcast.test.HazelcastSerialParametersRunnerFactory;
 import org.junit.After;
 import org.junit.Before;
@@ -34,18 +35,19 @@ import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
 import org.junit.runners.Parameterized.UseParametersRunnerFactory;
 
+import javax.annotation.Nonnull;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.IntStream;
 
 import static com.hazelcast.function.Functions.wholeItem;
-import static com.hazelcast.jet.pipeline.test.TestSources.itemsParallel;
 import static java.util.stream.Collectors.toList;
 
 @RunWith(Parameterized.class)
 @UseParametersRunnerFactory(HazelcastSerialParametersRunnerFactory.class)
-public class OrderedProcessingTest extends JetTestSupport {
+public class OrderedBatchProcessingTest extends PipelineTestSupport {
 
     private static final int LOCAL_PARALLELISM = 11;
     private static Pipeline p;
@@ -126,14 +128,17 @@ public class OrderedProcessingTest extends JetTestSupport {
 
 
     @Test
-    public void ordered_processing_test() {
+    public void ordered_batch_processing_test() {
         int itemCount = 5_000;
         List<Integer> sequence1 = IntStream.range(0, itemCount).boxed().collect(toList());
         List<Integer> sequence2 = IntStream.range(itemCount, 2 * itemCount).boxed().collect(toList());
         List<Integer> sequence3 = IntStream.range(2 * itemCount, 3 * itemCount).boxed().collect(toList());
         List<Integer> sequence4 = IntStream.range(3 * itemCount, 4 * itemCount).boxed().collect(toList());
 
-        BatchStage<Integer> srcStage = p.readFrom(itemsParallel(sequence1, sequence2, sequence3, sequence4));
+        BatchStage<Integer> srcStage = p.readFrom(
+                itemsParallel(Arrays.asList(sequence1, sequence2, sequence3, sequence4))
+        );
+
         BatchStage<Integer> applied = srcStage.apply(transform);
 
         applied.filter(i -> i < itemCount)
@@ -149,4 +154,16 @@ public class OrderedProcessingTest extends JetTestSupport {
         jet.newJob(p).join();
     }
 
+    /**
+     * Returns a batch source that iterates through the supplied items in a
+     * parallel manner then terminates.
+     * @since 4.4
+     */
+    @Nonnull
+    public static <T> BatchSource<T> itemsParallel(@Nonnull List<? extends Iterable<T>> iterables) {
+        Objects.requireNonNull(iterables, "iterables");
+        return Sources.batchFromProcessor("itemsParallel",
+                ProcessorMetaSupplier.of(iterables.size(), () -> new ParallelBatchP<>(iterables))
+        );
+    }
 }
