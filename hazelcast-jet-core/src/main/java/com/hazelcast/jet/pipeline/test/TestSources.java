@@ -54,10 +54,10 @@ public final class TestSources {
     public static <T> BatchSource<T> items(@Nonnull Iterable<? extends T> items) {
         Objects.requireNonNull(items, "items");
         return SourceBuilder.batch("items", ctx -> null)
-                .<T>fillBufferFn((ignored, buf) -> {
-                    items.forEach(buf::add);
-                    buf.close();
-                }).build();
+            .<T>fillBufferFn((ignored, buf) -> {
+                items.forEach(buf::add);
+                buf.close();
+            }).build();
     }
 
     /**
@@ -123,15 +123,15 @@ public final class TestSources {
     @EvolvingApi
     @Nonnull
     public static <T> StreamSource<T> itemStream(
-            int itemsPerSecond,
-            @Nonnull GeneratorFunction<? extends T> generatorFn
+        int itemsPerSecond,
+        @Nonnull GeneratorFunction<? extends T> generatorFn
     ) {
         Objects.requireNonNull(generatorFn, "generatorFn");
         checkSerializable(generatorFn, "generatorFn");
 
         return SourceBuilder.timestampedStream("itemStream", ctx -> new ItemStreamSource<T>(itemsPerSecond, generatorFn))
-                .<T>fillBufferFn(ItemStreamSource::fillBuffer)
-                .build();
+            .<T>fillBufferFn(ItemStreamSource::fillBuffer)
+            .build();
     }
 
     /**

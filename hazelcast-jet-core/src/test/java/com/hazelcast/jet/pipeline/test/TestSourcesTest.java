@@ -54,28 +54,28 @@ public class TestSourcesTest extends PipelineTestSupport {
         int itemsPerSecond = 20;
 
         p.readFrom(TestSources.longStream(itemsPerSecond, 0))
-                .withNativeTimestamps(0)
-                .window(tumbling(SECONDS.toMillis(1)))
-                .aggregate(counting())
-                .apply(assertCollectedEventually(60, windowResults -> {
-                    //look at last 5 windows at most, always ignore first
-                    int windowsToConsider = Math.min(5, Math.max(windowResults.size() - 1, 0));
+         .withNativeTimestamps(0)
+         .window(tumbling(SECONDS.toMillis(1)))
+         .aggregate(counting())
+         .apply(assertCollectedEventually(60, windowResults -> {
+             //look at last 5 windows at most, always ignore first
+             int windowsToConsider = Math.min(5, Math.max(windowResults.size() - 1, 0));
 
-                    //count the total no. of items emitted in those windows
-                    int totalItems = windowResults.stream()
-                            .skip(windowResults.size() - windowsToConsider)
-                            .mapToInt(r -> r.result().intValue())
-                            .sum();
+             //count the total no. of items emitted in those windows
+             int totalItems = windowResults.stream()
+                                           .skip(windowResults.size() - windowsToConsider)
+                                           .mapToInt(r -> r.result().intValue())
+                                           .sum();
 
-                    //compute their average
-                    double avgItems = (double) totalItems / windowsToConsider;
+             //compute their average
+             double avgItems = (double) totalItems / windowsToConsider;
 
-                    //compute how far the actual average is from the desired one
-                    double deviationFromTarget = Math.abs(avgItems - itemsPerSecond);
+             //compute how far the actual average is from the desired one
+             double deviationFromTarget = Math.abs(avgItems - itemsPerSecond);
 
-                    assertTrue(String.format("Average items per second (%.2f) too far from target (%d)",
-                            avgItems, itemsPerSecond), deviationFromTarget <= 0.1d);
-                }));
+             assertTrue(String.format("Average items per second (%.2f) too far from target (%d)",
+                     avgItems, itemsPerSecond), deviationFromTarget <= 0.1d);
+         }));
 
         expectedException.expectMessage(AssertionCompletedException.class.getName());
         executeAndPeel();
@@ -86,13 +86,13 @@ public class TestSourcesTest extends PipelineTestSupport {
         int expectedItemCount = 20;
 
         p.readFrom(TestSources.itemStream(10))
-                .withoutTimestamps()
-                .apply(assertCollectedEventually(10, items -> {
-                    assertTrue("list should contain at least " + expectedItemCount + " items", items.size() > expectedItemCount);
-                    for (int i = 0; i < items.size(); i++) {
-                        assertEquals(i, items.get(i).sequence());
-                    }
-                }));
+         .withoutTimestamps()
+         .apply(assertCollectedEventually(10, items -> {
+             assertTrue("list should contain at least " + expectedItemCount + " items", items.size() > expectedItemCount);
+             for (int i = 0; i < items.size(); i++) {
+                 assertEquals(i, items.get(i).sequence());
+             }
+         }));
 
         expectedException.expectMessage(AssertionCompletedException.class.getName());
         executeAndPeel();
@@ -103,28 +103,28 @@ public class TestSourcesTest extends PipelineTestSupport {
         int itemsPerSecond = 10;
 
         p.readFrom(TestSources.itemStream(itemsPerSecond))
-                .withNativeTimestamps(0)
-                .window(tumbling(1000))
-                .aggregate(counting())
-                .apply(assertCollectedEventually(60, windowResults -> {
-                    //look at last 5 windows at most, always ignore first
-                    int windowsToConsider = Math.min(5, Math.max(windowResults.size() - 1, 0));
+         .withNativeTimestamps(0)
+         .window(tumbling(1000))
+         .aggregate(counting())
+         .apply(assertCollectedEventually(60, windowResults -> {
+             //look at last 5 windows at most, always ignore first
+             int windowsToConsider = Math.min(5, Math.max(windowResults.size() - 1, 0));
 
-                    //count the total no. of items emitted in those windows
-                    int totalItems = windowResults.stream()
-                            .skip(windowResults.size() - windowsToConsider)
-                            .mapToInt(r -> r.result().intValue())
-                            .sum();
+             //count the total no. of items emitted in those windows
+             int totalItems = windowResults.stream()
+                     .skip(windowResults.size() - windowsToConsider)
+                     .mapToInt(r -> r.result().intValue())
+                     .sum();
 
-                    //compute their average
-                    double avgItems = (double) totalItems / windowsToConsider;
+             //compute their average
+             double avgItems = (double) totalItems / windowsToConsider;
 
-                    //compute how far the actual average is from the desired one
-                    double deviationFromTarget = Math.abs(avgItems - itemsPerSecond);
+             //compute how far the actual average is from the desired one
+             double deviationFromTarget = Math.abs(avgItems - itemsPerSecond);
 
-                    assertTrue(String.format("Average items per second (%.2f) too far from target (%d)",
-                            avgItems, itemsPerSecond), deviationFromTarget <= 0.1d);
-                }));
+             assertTrue(String.format("Average items per second (%.2f) too far from target (%d)",
+                     avgItems, itemsPerSecond), deviationFromTarget <= 0.1d);
+         }));
 
         expectedException.expectMessage(AssertionCompletedException.class.getName());
         executeAndPeel();
