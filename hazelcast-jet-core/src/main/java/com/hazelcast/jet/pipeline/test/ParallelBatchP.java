@@ -37,6 +37,12 @@ public class ParallelBatchP<T> extends AbstractProcessor {
 
     private final List<? extends Iterable<T>> iterables;
 
+    /**
+     * Creates a processor that generates items using its assigned
+     * iterables. This processor picks its assigned iterables from
+     * the list of iterables according to its global processor index.
+     * @param iterables list of iterables used to emit items
+     */
     public ParallelBatchP(List<? extends Iterable<T>> iterables) {
         this.iterables = iterables;
     }

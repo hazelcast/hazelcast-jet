@@ -21,6 +21,7 @@ import com.hazelcast.function.PredicateEx;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Traversers;
 import com.hazelcast.jet.accumulator.LongAccumulator;
+import com.hazelcast.jet.core.JetTestSupport;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.pipeline.test.Assertions;
@@ -47,7 +48,7 @@ import static java.util.stream.Collectors.toList;
 
 @RunWith(Parameterized.class)
 @UseParametersRunnerFactory(HazelcastSerialParametersRunnerFactory.class)
-public class OrderedBatchProcessingTest extends PipelineTestSupport {
+public class OrderedBatchProcessingTest extends JetTestSupport {
 
     private static final int LOCAL_PARALLELISM = 11;
     private static Pipeline p;

@@ -55,10 +55,18 @@ public class ParallelStreamP<T> extends AbstractProcessor {
     private final List<? extends GeneratorFunction<T>> generators;
     private List<GeneratorFunction<T>> assignedGenerators;
 
-    public ParallelStreamP(long eventsPerSecond, EventTimePolicy<? super T> eventTimePolicy,
+    /**
+     * Creates a processor that generates items using its assigned
+     * generator functions. This processor picks its generator functions
+     * according to its global processor index.
+     * @param eventsPerSecondPerGenerator the desired event rate for each generator
+     * @param eventTimePolicy parameters for watermark generation
+     * @param generators list of generator functions used in source
+     */
+    public ParallelStreamP(long eventsPerSecondPerGenerator, EventTimePolicy<? super T> eventTimePolicy,
                     List<? extends GeneratorFunction<T>> generators) {
         this.startNanoTime = System.currentTimeMillis(); // temporarily holds the parameter value until init
-        this.periodNanos = NANOS_PER_SECOND / eventsPerSecond;
+        this.periodNanos = NANOS_PER_SECOND / eventsPerSecondPerGenerator;
         this.eventTimeMapper = new EventTimeMapper<>(eventTimePolicy);
         eventTimeMapper.addPartitions(generators.size());
         this.generators = generators;
@@ -70,7 +78,7 @@ public class ParallelStreamP<T> extends AbstractProcessor {
         globalProcessorIndex = context.globalProcessorIndex();
         startNanoTime = MILLISECONDS.toNanos(startNanoTime + nanoTimeMillisToCurrentTimeMillis) +
                 globalProcessorIndex * periodNanos;
-
+        // Assigned generator
         assignedGenerators = IntStream.range(0, generators.size())
                 .filter(i -> i % totalParallelism == globalProcessorIndex)
                 .mapToObj(generators::get)
