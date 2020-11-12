@@ -250,7 +250,7 @@ public interface SqlConnector {
      * zero-based indexes of the original fields of the {@code table}. For
      * example, if the table has fields {@code a, b, c} and the query is:
      * <pre>{@code
-     *     SELECT b FROM t WHERE c=10
+     *     SELECT l.v, r.b FROM l JOIN r ON l.v = r.b WHERE r.c=10
      * }</pre>
      * Then the projection will be {@code {1}} and the predicate will be {@code
      * {2}=10}.
@@ -258,7 +258,7 @@ public interface SqlConnector {
      * @param table      the table object
      * @param predicate  SQL expression to filter the rows
      * @param projection the list of fields to return
-     * @param jetJoinInfo   {@link JetJoinInfo}
+     * @param joinInfo   {@link JetJoinInfo}
      */
     @Nonnull
     default Vertex nestedLoopReader(
@@ -266,10 +266,10 @@ public interface SqlConnector {
             @Nonnull Table table,
             @Nullable Expression<Boolean> predicate,
             @Nonnull List<Expression<?>> projection,
-            @Nonnull JetJoinInfo jetJoinInfo
+            @Nonnull JetJoinInfo joinInfo
     ) {
         assert !supportsNestedLoopReader();
-        throw new UnsupportedOperationException("Nested loop reader not supported for " + getClass().getName());
+        throw new UnsupportedOperationException("Nested loop not supported for " + typeName());
     }
 
     /**
@@ -297,6 +297,6 @@ public interface SqlConnector {
             @Nonnull Table table
     ) {
         assert !supportsSink();
-        throw new UnsupportedOperationException("Sink not supported for " + getClass().getName());
+        throw new UnsupportedOperationException("Sink not supported for " + typeName());
     }
 }

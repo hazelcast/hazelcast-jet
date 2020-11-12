@@ -140,13 +140,13 @@ public class IMapSqlConnector implements SqlConnector {
             @Nonnull Table table0,
             @Nullable Expression<Boolean> predicate,
             @Nonnull List<Expression<?>> projections,
-            @Nonnull JetJoinInfo jetJoinInfo
+            @Nonnull JetJoinInfo joinInfo
     ) {
         PartitionedMapTable table = (PartitionedMapTable) table0;
 
         return dag.newVertex(
                 "NestedLoopJoin(" + toString(table) + ")-" + randomLetters(),
-                JoinProcessors.processor(table, predicate, projections, jetJoinInfo)
+                JoinProcessors.joiner(joinInfo, table, predicate, projections)
         );
     }
 

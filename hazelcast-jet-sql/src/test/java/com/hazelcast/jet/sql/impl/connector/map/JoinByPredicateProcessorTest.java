@@ -17,18 +17,24 @@
 package com.hazelcast.jet.sql.impl.connector.map;
 
 import com.google.common.collect.ImmutableSet;
+import com.hazelcast.internal.serialization.InternalSerializationService;
+import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.core.Outbox;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.Processor.Context;
+import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.test.TestInbox;
-import com.hazelcast.jet.sql.impl.connector.keyvalue.KvRowProjector;
+import com.hazelcast.jet.impl.execution.init.Contexts.ProcSupplierCtx;
 import com.hazelcast.jet.sql.impl.JetJoinInfo;
+import com.hazelcast.jet.sql.impl.connector.keyvalue.KvRowProjector;
 import com.hazelcast.map.IMap;
+import com.hazelcast.query.Predicate;
 import com.hazelcast.sql.impl.expression.ColumnExpression;
 import com.hazelcast.sql.impl.expression.ConstantExpression;
 import com.hazelcast.sql.impl.expression.Expression;
 import com.hazelcast.sql.impl.expression.predicate.ComparisonMode;
 import com.hazelcast.sql.impl.expression.predicate.ComparisonPredicate;
+import com.hazelcast.sql.impl.extract.QueryPath;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -42,27 +48,44 @@ import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 @RunWith(MockitoJUnitRunner.class)
-public class JoinScanProcessorFactoryTest {
+public class JoinByPredicateProcessorTest {
 
     @Mock
     private IMap<Object, Object> map;
 
     @Mock
+    private KvRowProjector.Supplier rightRowProjectorSupplier;
+
+    @Mock
     private KvRowProjector rightProjector;
+
+    @Mock
+    private ProcSupplierCtx supplierContext;
+
+    @Mock
+    private Context processorContext;
+
+    @Mock
+    private JetInstance jetInstance;
 
     @Mock
     private Outbox outbox;
 
     @Mock
-    private Context context;
+    private InternalSerializationService serializationService;
 
     @Before
     public void setUp() {
+        given(rightRowProjectorSupplier.get(any(), any())).willReturn(rightProjector);
+        given(supplierContext.serializationService()).willReturn(serializationService);
+        given(supplierContext.jetInstance()).willReturn(jetInstance);
+        given(jetInstance.getMap(anyString())).willReturn(map);
         given(outbox.offer(anyInt(), any())).willReturn(true);
     }
 
@@ -71,9 +94,8 @@ public class JoinScanProcessorFactoryTest {
     public void when_filteredOutByProjector_then_absent() throws Exception {
         // given
         Processor processor = processor((Expression<Boolean>) ConstantExpression.create(true, BOOLEAN));
-        processor.init(outbox, context);
 
-        given(map.entrySet()).willReturn(ImmutableSet.of(entry(1, "value-1"), entry(2, "value-2")));
+        given(map.entrySet(any(Predicate.class))).willReturn(ImmutableSet.of(entry(1, "value-1"), entry(2, "value-2")));
         given(rightProjector.project(entry(1, "value-1"))).willReturn(null);
         given(rightProjector.project(entry(2, "value-2"))).willReturn(new Object[]{2, "value-2"});
 
@@ -92,9 +114,8 @@ public class JoinScanProcessorFactoryTest {
     public void when_projectedByProjector_then_modified() throws Exception {
         // given
         Processor processor = processor((Expression<Boolean>) ConstantExpression.create(true, BOOLEAN));
-        processor.init(outbox, context);
 
-        given(map.entrySet()).willReturn(ImmutableSet.of(entry(1, "value-1")));
+        given(map.entrySet(any(Predicate.class))).willReturn(ImmutableSet.of(entry(1, "value-1")));
         given(rightProjector.project(entry(1, "value-1"))).willReturn(new Object[]{2, "modified"});
 
         // when
@@ -107,7 +128,7 @@ public class JoinScanProcessorFactoryTest {
     }
 
     @Test
-    @SuppressWarnings("ResultOfMethodCallIgnored")
+    @SuppressWarnings({"unchecked", "ResultOfMethodCallIgnored"})
     public void when_filteredOutByCondition_then_absent() throws Exception {
         // given
         Processor processor = processor(ComparisonPredicate.create(
@@ -115,9 +136,8 @@ public class JoinScanProcessorFactoryTest {
                 ColumnExpression.create(1, INT),
                 ComparisonMode.EQUALS
         ));
-        processor.init(outbox, context);
 
-        given(map.entrySet()).willReturn(ImmutableSet.of(entry(1, "value-1"), entry(2, "value-2")));
+        given(map.entrySet(any(Predicate.class))).willReturn(ImmutableSet.of(entry(1, "value-1"), entry(2, "value-2")));
         given(rightProjector.project(entry(1, "value-1"))).willReturn(new Object[]{1, "value-1"});
         given(rightProjector.project(entry(2, "value-2"))).willReturn(new Object[]{2, "value-2"});
 
@@ -130,13 +150,18 @@ public class JoinScanProcessorFactoryTest {
         verifyNoMoreInteractions(outbox);
     }
 
-    private Processor processor(Expression<Boolean> condition) {
-        return JoinScanProcessorFactory.INSTANCE.create(
-                null,
-                map,
-                null,
-                () -> rightProjector,
-                new JetJoinInfo(new int[0], new int[0], null, condition)
+    private Processor processor(Expression<Boolean> nonEquiCondition) throws Exception {
+        ProcessorSupplier supplier = new JoinByPredicateProcessorSupplier(
+                new JetJoinInfo(new int[]{0}, new int[]{0}, nonEquiCondition, null),
+                "map",
+                new QueryPath[]{QueryPath.KEY_PATH},
+                rightRowProjectorSupplier
         );
+        supplier.init(supplierContext);
+
+        Processor processor = supplier.get(1).iterator().next();
+        processor.init(outbox, processorContext);
+
+        return processor;
     }
 }

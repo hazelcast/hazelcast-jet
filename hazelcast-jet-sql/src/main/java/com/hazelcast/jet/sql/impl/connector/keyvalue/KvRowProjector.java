@@ -16,14 +16,21 @@
 
 package com.hazelcast.jet.sql.impl.connector.keyvalue;
 
+import com.hazelcast.internal.serialization.InternalSerializationService;
+import com.hazelcast.nio.ObjectDataInput;
+import com.hazelcast.nio.ObjectDataOutput;
+import com.hazelcast.nio.serialization.DataSerializable;
+import com.hazelcast.query.impl.getters.Extractors;
 import com.hazelcast.sql.impl.expression.ConstantExpression;
 import com.hazelcast.sql.impl.expression.Expression;
 import com.hazelcast.sql.impl.extract.QueryExtractor;
 import com.hazelcast.sql.impl.extract.QueryPath;
 import com.hazelcast.sql.impl.extract.QueryTarget;
+import com.hazelcast.sql.impl.extract.QueryTargetDescriptor;
 import com.hazelcast.sql.impl.row.Row;
 import com.hazelcast.sql.impl.type.QueryDataType;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Map.Entry;
 
@@ -36,16 +43,16 @@ public class KvRowProjector implements Row {
     private final QueryExtractor[] extractors;
 
     private final Expression<Boolean> predicate;
-    private final List<Expression<?>> projection;
+    private final List<Expression<?>> projections;
 
     @SuppressWarnings("unchecked")
-    public KvRowProjector(
+    KvRowProjector(
             QueryPath[] paths,
             QueryDataType[] types,
             QueryTarget keyTarget,
             QueryTarget valueTarget,
             Expression<Boolean> predicate,
-            List<Expression<?>> projection
+            List<Expression<?>> projections
     ) {
         this.keyTarget = keyTarget;
         this.valueTarget = valueTarget;
@@ -53,7 +60,7 @@ public class KvRowProjector implements Row {
 
         this.predicate = predicate != null ? predicate
                 : (Expression<Boolean>) ConstantExpression.create(true, QueryDataType.BOOLEAN);
-        this.projection = projection;
+        this.projections = projections;
     }
 
     private static QueryExtractor[] createExtractors(
@@ -82,9 +89,9 @@ public class KvRowProjector implements Row {
             return null;
         }
 
-        Object[] row = new Object[projection.size()];
-        for (int i = 0; i < projection.size(); i++) {
-            row[i] = evaluate(projection.get(i), this);
+        Object[] row = new Object[projections.size()];
+        for (int i = 0; i < projections.size(); i++) {
+            row[i] = evaluate(projections.get(i), this);
         }
         return row;
     }
@@ -98,5 +105,91 @@ public class KvRowProjector implements Row {
     @Override
     public int getColumnCount() {
         return extractors.length;
+    }
+
+    public static Supplier supplier(
+            QueryPath[] paths,
+            QueryDataType[] types,
+            QueryTargetDescriptor keyDescriptor,
+            QueryTargetDescriptor valueDescriptor,
+            Expression<Boolean> predicate,
+            List<Expression<?>> projections
+    ) {
+        return new Supplier(paths, types, keyDescriptor, valueDescriptor, predicate, projections);
+    }
+
+    public static class Supplier implements DataSerializable {
+
+        private QueryPath[] paths;
+        private QueryDataType[] types;
+
+        private QueryTargetDescriptor keyDescriptor;
+        private QueryTargetDescriptor valueDescriptor;
+
+        private Expression<Boolean> predicate;
+        private List<Expression<?>> projections;
+
+        @SuppressWarnings("unused")
+        private Supplier() {
+        }
+
+        Supplier(
+                QueryPath[] paths,
+                QueryDataType[] types,
+                QueryTargetDescriptor keyDescriptor,
+                QueryTargetDescriptor valueDescriptor,
+                Expression<Boolean> predicate,
+                List<Expression<?>> projections
+        ) {
+            this.paths = paths;
+            this.types = types;
+            this.keyDescriptor = keyDescriptor;
+            this.valueDescriptor = valueDescriptor;
+            this.predicate = predicate;
+            this.projections = projections;
+        }
+
+        public KvRowProjector get(InternalSerializationService serializationService, Extractors extractors) {
+            return new KvRowProjector(
+                    paths,
+                    types,
+                    keyDescriptor.create(serializationService, extractors, true),
+                    valueDescriptor.create(serializationService, extractors, false),
+                    predicate,
+                    projections
+            );
+        }
+
+        @Override
+        public void writeData(ObjectDataOutput out) throws IOException {
+            out.writeInt(paths.length);
+            for (QueryPath path : paths) {
+                out.writeObject(path);
+            }
+            out.writeInt(types.length);
+            for (QueryDataType type : types) {
+                out.writeObject(type);
+            }
+            out.writeObject(keyDescriptor);
+            out.writeObject(valueDescriptor);
+            out.writeObject(predicate);
+            out.writeObject(projections);
+        }
+
+        @Override
+        public void readData(ObjectDataInput in) throws IOException {
+            paths = new QueryPath[in.readInt()];
+            for (int i = 0; i < paths.length; i++) {
+                paths[i] = in.readObject();
+            }
+            types = new QueryDataType[in.readInt()];
+            for (int i = 0; i < types.length; i++) {
+                types[i] = in.readObject();
+            }
+            keyDescriptor = in.readObject();
+            valueDescriptor = in.readObject();
+            predicate = in.readObject();
+            projections = in.readObject();
+        }
     }
 }
