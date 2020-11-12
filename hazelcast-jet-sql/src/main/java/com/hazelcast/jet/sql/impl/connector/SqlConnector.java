@@ -239,7 +239,8 @@ public interface SqlConnector {
 
     /**
      * Returns a supplier for a joining vertex reading the Object[] input
-     * and connecting it with the source according to the {@code joinInfo}.
+     * - on the left side of a join - and connecting it with the source - on
+     * the right side of a join - according to the {@code joinInfo}.
      * The source is read according to {@code projection}/{@code predicate}.
      * The output type of the source is Object[].
      * <p>
