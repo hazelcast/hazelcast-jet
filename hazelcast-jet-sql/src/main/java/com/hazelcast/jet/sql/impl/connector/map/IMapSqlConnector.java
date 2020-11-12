@@ -200,6 +200,6 @@ public class IMapSqlConnector implements SqlConnector {
     }
 
     private static String toString(PartitionedMapTable table) {
-        return "IMap" + "[" + table.getSchemaName() + "." + table.getSqlName() + "]";
+        return TYPE_NAME + "[" + table.getSchemaName() + "." + table.getSqlName() + "]";
     }
 }

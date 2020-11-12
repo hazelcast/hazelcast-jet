@@ -100,6 +100,6 @@ class KafkaTable extends JetTable {
 
     @Override
     public String toString() {
-        return "Kafka[" + getSchemaName() + "." + getSqlName() + "]";
+        return getSqlConnector().typeName() + "[" + getSchemaName() + "." + getSqlName() + "]";
     }
 }
