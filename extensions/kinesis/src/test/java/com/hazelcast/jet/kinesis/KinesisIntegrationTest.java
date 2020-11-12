@@ -149,9 +149,7 @@ public class KinesisIntegrationTest extends JetTestSupport {
         createStream(2);
         HELPER.waitForStreamToActivate();
 
-        List<String> shards = HELPER.listActiveShards().stream()
-                .map(Shard::getShardId)
-                .collect(Collectors.toList());
+        List<Shard> shards = HELPER.listActiveShards();
         mergeShards(shards.get(0), shards.get(1));
 
         StreamSource<Entry<String, byte[]>> source = kinesisSource();
@@ -201,7 +199,7 @@ public class KinesisIntegrationTest extends JetTestSupport {
             oldShards = currentShards;
 
             Collections.shuffle(newShards);
-            Tuple2<String, String> adjacentPair = findAdjacentPair(newShards.get(0), currentShards);
+            Tuple2<Shard, Shard> adjacentPair = findAdjacentPair(newShards.get(0), currentShards);
             mergeShards(adjacentPair.f0(), adjacentPair.f1());
             HELPER.waitForStreamToActivate();
         }
@@ -341,13 +339,13 @@ public class KinesisIntegrationTest extends JetTestSupport {
         assertTrueEventually(() -> assertFalse(KINESIS.listStreams().isHasMoreStreams()));
     }
 
-    private static void mergeShards(String shard1, String shard2) {
+    private static void mergeShards(Shard shard1, Shard shard2) {
         MergeShardsRequest request = new MergeShardsRequest();
         request.setStreamName(STREAM);
-        request.setShardToMerge(shard1);
-        request.setAdjacentShardToMerge(shard2);
+        request.setShardToMerge(shard1.getShardId());
+        request.setAdjacentShardToMerge(shard2.getShardId());
 
-        System.out.println("Merging " + shard1 + " with " + shard2);
+        System.out.println("Merging " + shard1.getShardId() + " with " + shard2.getShardId());
         KINESIS.mergeShards(request);
     }
 
@@ -360,7 +358,7 @@ public class KinesisIntegrationTest extends JetTestSupport {
         request.setShardToSplit(shard.getShardId());
         request.setNewStartingHashKey(middle.toString());
 
-        System.out.println("Splitting " + shard);
+        System.out.println("Splitting " + shard.getShardId());
         KINESIS.splitShard(request);
     }
 
@@ -420,15 +418,15 @@ public class KinesisIntegrationTest extends JetTestSupport {
         return sb.toString();
     }
 
-    private static Tuple2<String, String> findAdjacentPair(Shard shard, List<Shard> allShards) {
+    private static Tuple2<Shard, Shard> findAdjacentPair(Shard shard, List<Shard> allShards) {
         HashRange shardRange = HashRange.of(shard.getHashKeyRange());
         for (Shard examinedShard : allShards) {
             HashRange examinedRange = HashRange.of(examinedShard.getHashKeyRange());
             if (shardRange.isAdjacent(examinedRange)) {
                 if (shardRange.getMinInclusive().compareTo(examinedRange.getMinInclusive()) <= 0) {
-                    return Tuple2.tuple2(shard.getShardId(), examinedShard.getShardId());
+                    return Tuple2.tuple2(shard, examinedShard);
                 } else {
-                    return Tuple2.tuple2(examinedShard.getShardId(), shard.getShardId());
+                    return Tuple2.tuple2(examinedShard, shard);
                 }
             }
         }

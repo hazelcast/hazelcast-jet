@@ -30,6 +30,8 @@ import static com.hazelcast.jet.impl.pipeline.SinkImpl.Type.DISTRIBUTED_PARTITIO
 
 /**
  * todo: javadoc
+ *
+ * @since 4.4
  */
 public final class KinesisSinks {
 

@@ -143,10 +143,7 @@ public class RangeMonitor extends AbstractShardWorker {
     }
 
     public void removeShard(Shard shard) {
-        //todo: how can we clean up the known set?
-        // we can't immediately remove them from the known set, when reading data reports them closed, because
-        // listing shards is an operation not in sync with reading
-        // maybe make the known set shard-last listed timestamp pairs and use that for removing eventually?
+        knownShards.remove(shard.getShardId());
     }
 
     public Shard getNewShard() {
