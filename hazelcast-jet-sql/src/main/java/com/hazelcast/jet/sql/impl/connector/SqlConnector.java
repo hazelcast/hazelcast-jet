@@ -249,6 +249,6 @@ public interface SqlConnector {
             @Nonnull Table table
     ) {
         assert !supportsSink();
-        throw new UnsupportedOperationException("Sink not supported for " + getClass().getName());
+        throw new UnsupportedOperationException("Sink not supported for " + typeName());
     }
 }
