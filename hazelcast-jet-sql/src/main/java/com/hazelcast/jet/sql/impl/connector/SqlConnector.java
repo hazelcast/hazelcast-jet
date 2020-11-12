@@ -243,10 +243,7 @@ public interface SqlConnector {
      * The source is read according to {@code projection}/{@code predicate}.
      * The output type of the source is Object[].
      * <p>
-     * The result is:<ul>
-     * <li>{@code f0}: the source vertex of the sub-DAG
-     * <li>{@code f1}: the sink vertex of teh sub-DAG
-     * </ul>
+     * The result is the vertex to be added to the DAG.
      * <p>
      * The field indexes in the predicate and projection refer to the
      * zero-based indexes of the original fields of the {@code table}. For

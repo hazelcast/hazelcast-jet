@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.sql.impl;
 
+import com.hazelcast.internal.util.Preconditions;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.DataSerializable;
@@ -31,7 +32,7 @@ import java.io.IOException;
  * a join which are equi-join keys
  * <li>{@code rightEquiJoinIndices}: indices of the fields from the right side
  * of a join which are equi-join keys
- * <li>{@code nonEquiCondition}: remaining join filters that are not equijoins
+ * <li>{@code nonEquiCondition}: remaining join filters that are not equi-joins
  * <li>{@code condition}: all join filters
  * </ul>
  */
@@ -53,6 +54,7 @@ public class JoinInfo implements DataSerializable {
             Expression<Boolean> nonEquiCondition,
             Expression<Boolean> condition
     ) {
+        Preconditions.checkTrue(leftEquiJoinIndices.length == rightEquiJoinIndices.length, "indices length mismatch");
         this.leftEquiJoinIndices = leftEquiJoinIndices;
         this.rightEquiJoinIndices = rightEquiJoinIndices;
         this.nonEquiCondition = nonEquiCondition;
