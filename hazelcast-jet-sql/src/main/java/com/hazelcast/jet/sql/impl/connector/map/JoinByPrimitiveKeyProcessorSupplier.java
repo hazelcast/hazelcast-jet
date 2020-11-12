@@ -78,7 +78,6 @@ final class JoinByPrimitiveKeyProcessorSupplier implements ProcessorSupplier, Da
     }
 
     @Override
-    @SuppressWarnings("unchecked")
     public void init(@Nonnull Context context) {
         map = context.jetInstance().getMap(mapName);
         serializationService = ((ProcSupplierCtx) context).serializationService();
