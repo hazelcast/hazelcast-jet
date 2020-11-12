@@ -50,7 +50,7 @@ import static java.util.Objects.requireNonNull;
  * file and emits instances of the class you specify.
  * <p>
  * You may also use Hadoop to read local files by specifying the
- * {@link #useHadoopForLocalFiles()} flag.
+ * {@link #useHadoopForLocalFiles(boolean)} flag.
  * <p>
  * Usage:
  * <pre>{@code
@@ -109,7 +109,7 @@ public class FileSourceBuilder<T> {
      * interface. See its javadoc for details.
      */
     @Nonnull
-    public <T_NEW> FileSourceBuilder<T_NEW> withFormat(@Nonnull FileFormat<T_NEW> fileFormat) {
+    public <T_NEW> FileSourceBuilder<T_NEW> format(@Nonnull FileFormat<T_NEW> fileFormat) {
         @SuppressWarnings("unchecked")
         FileSourceBuilder<T_NEW> newThis = (FileSourceBuilder<T_NEW>) this;
         newThis.format = fileFormat;
@@ -120,10 +120,13 @@ public class FileSourceBuilder<T> {
      * Specifies to use Hadoop for files from local filesystem. One advantage
      * of Hadoop is that it can provide better parallelization when the number
      * of files is smaller than the total parallelism of the pipeline source.
+     * Defaults to false.
+     *
+     * @param useHadoop if Hadoop should be use for reading local filesystem
      */
     @Nonnull
-    public FileSourceBuilder<T> useHadoopForLocalFiles() {
-        useHadoop = true;
+    public FileSourceBuilder<T> useHadoopForLocalFiles(boolean useHadoop) {
+        this.useHadoop = useHadoop;
         return this;
     }
 
@@ -158,7 +161,7 @@ public class FileSourceBuilder<T> {
      * you're using, it offers parsing-related options.
      */
     @Nonnull
-    public FileSourceBuilder<T> withOption(String key, String value) {
+    public FileSourceBuilder<T> option(String key, String value) {
         requireNonNull(key, "key must not be null");
         requireNonNull(value, "value must not be null");
         options.put(key, value);
@@ -192,7 +195,7 @@ public class FileSourceBuilder<T> {
     /**
      * Returns if the filesystem is shared. Only valid for local filesystem, distributed filesystems are always shared.
      */
-    public boolean sharedFileSystem() {
+    public boolean isSharedFileSystem() {
         return sharedFileSystem;
     }
 

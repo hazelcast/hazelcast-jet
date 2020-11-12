@@ -72,17 +72,17 @@ following way:
 
 ```java
 BatchSource<String> source = FileSources.files("logs/wikipedia.txt")
-                                        .useHadoopForLocalFiles()
+                                        .useHadoopForLocalFiles(true)
                                         .build();
 ```
 
-You can provide additional options to Hadoop via `withOption(String,
+You can provide additional options to Hadoop via `option(String,
 String)` method. E.g. to read all files in a directory recursively:
 
 ```java
 BatchSource<String> source = FileSources.files("logs/wikipedia.txt")
-                                        .useHadoopForLocalFiles()
-                                        .withOption("mapreduce.input.fileinputformat.input.dir.recursive", "true")
+                                        .useHadoopForLocalFiles(true)
+                                        .option("mapreduce.input.fileinputformat.input.dir.recursive", "true")
                                         .build();
 ```
 
@@ -90,13 +90,13 @@ BatchSource<String> source = FileSources.files("logs/wikipedia.txt")
 
 The `FileSourceBuilder` defaults to UTF-8 encoded text with the file
 read line by line. You can specify the file format using
-`withFormat(FileFormat)` method.  See the available formats in
+`format(FileFormat)` method.  See the available formats in
 `FileFormat.*` interface.  E.g., create the source in the following way
 to read the whole file as a single String using `FileFormat.text()`:
 
 ```java
 BatchSource<String> source = FileSources.files("path/to/my/file")
-                                        .withFormat(FileFormat.text())
+                                        .format(FileFormat.text())
                                         .build();
 ```
 
@@ -134,7 +134,7 @@ satisfy the Java type system:
 
 ```java
 BatchSource<User> source = FileSources.files("users.avro")
-                                      .withFormat(FileFormat.<User>avro())
+                                      .format(FileFormat.<User>avro())
                                       .build();
 ```
 
@@ -146,7 +146,7 @@ read the data:
 
 ```java
 BatchSource<User> source = FileSources.files("users.avro")
-                                      .withFormat(FileFormat.avro(User.class))
+                                      .format(FileFormat.avro(User.class))
                                       .build();
 ```
 
@@ -164,7 +164,7 @@ Create the file source in the following way to read from file
 
 ```java
 BatchSource<User> source = FileSources.files("users.csv")
-                                      .withFormat(FileFormat.csv(User.class))
+                                      .format(FileFormat.csv(User.class))
                                       .build();
 ```
 
@@ -178,7 +178,7 @@ Create the file source in the following way to read from file
 
 ```java
 BatchSource<User> source = FileSources.files("users.jsonl")
-                                      .withFormat(FileFormat.json(User.class))
+                                      .format(FileFormat.json(User.class))
                                       .build();
 ```
 
@@ -189,7 +189,7 @@ file is read as a single String:
 
 ```java
 BatchSource<String> source = FileSources.files("file.txt")
-                                      .withFormat(FileFormat.text())
+                                      .format(FileFormat.text())
                                       .build();
 ```
 
@@ -199,15 +199,15 @@ the option will be ignored.
 
 ```java
 BatchSource<String> source = FileSources.files("file.txt")
-                                        .withFormat(FileFormat.text(Charset.forName("Cp1250")));
+                                        .format(FileFormat.text(Charset.forName("Cp1250")));
 ```
 
 You can read file line by line in the following way, this is the default
-and you can omit the `.withFormat(FileFormat.lines())` part.
+and you can omit the `.format(FileFormat.lines())` part.
 
 ```java
 BatchSource<String> source = FileSources.files("file.txt")
-                                      .withFormat(FileFormat.lines())
+                                      .format(FileFormat.lines())
                                       .build();
 ```
 
@@ -220,14 +220,14 @@ Apache Avro for deserialization.
 
 Parquet has a dependency on Hadoop, so it can be used only with one of
 the Hadoop based modules. You can still read parquet file from local
-filesystem with the `.useHadoopForLocalFiles()` flag.
+filesystem with the `.useHadoopForLocalFiles(true)` flag.
 
 Create the file source in the following way to read data from a parquet
 file:
 
 ```java
 BatchSource<String> source = FileSources.files("users.parquet")
-                                        .withFormat(FileFormat.<SpecificUser>parquet())
+                                        .format(FileFormat.<SpecificUser>parquet())
                                         .build();
 ```
 
@@ -237,7 +237,7 @@ You can read binary files (e.g. images) in the following way:
 
 ```java
 BatchSource<byte[]> source = FileSources.files("file.txt")
-                                        .withFormat(FileFormat.bytes())
+                                        .format(FileFormat.bytes())
                                         .build();
 ```
 
@@ -260,7 +260,7 @@ ways to authenticate see the linked documentation for the services and
 
 Provide your AWS access key id and secret key with required access via
 `fs.s3a.access.key` and `fs.s3a.secret.key` options, using
-`FileSourceBuilder#withOption` method on the source builder.
+`FileSourceBuilder#option` method on the source builder.
 
 For additional ways to authenticate see the
 [Hadoop-AWS documentation](https://hadoop.apache.org/docs/current/hadoop-aws/tools/hadoop-aws/index.html#Authenticating_with_S3)
@@ -272,7 +272,7 @@ and
 
 Provide a location of the keyfile via
 `google.cloud.auth.service.account.json.keyfile` source option, using
-`FileSourceBuilder#withOption` method on the source builder. Note that
+`FileSourceBuilder#option` method on the source builder. Note that
 the file must be available on the node where you submit the job and on
 the cluster members.
 
@@ -280,7 +280,7 @@ the cluster members.
 
 Provide an account key via
 `fs.azure.account.key.<your account name>.blob.core.windows.net` source
-option, using `FileSourceBuilder#withOption` method on the source
+option, using `FileSourceBuilder#option` method on the source
 builder.
 
 For additional ways to authenticate see
@@ -289,7 +289,7 @@ support.
 
 #### Azure Data Lake Generation 1
 
-Provide the following properties using `FileSourceBuilder#withOption`
+Provide the following properties using `FileSourceBuilder#option`
 method on the source builder:
 
 ```text

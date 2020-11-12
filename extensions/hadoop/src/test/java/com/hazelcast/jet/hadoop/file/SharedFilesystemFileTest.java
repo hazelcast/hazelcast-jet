@@ -32,13 +32,13 @@ public class SharedFilesystemFileTest extends BaseFileFormatTest {
         assumeThat(useHadoop).isFalse();
 
         FileSourceBuilder<String> source = FileSources.files("src/test/resources/directory/")
-                                                      .withFormat(FileFormat.lines())
+                                                      .format(FileFormat.lines())
                                                       .sharedFileSystem(true);
 
         assertItemsInSource(2, source, (collected) -> assertThat(collected).hasSize(4));
 
         source = FileSources.files("src/test/resources/directory/")
-                                                      .withFormat(FileFormat.lines())
+                                                      .format(FileFormat.lines())
                                                       .sharedFileSystem(false);
 
         assertItemsInSource(2, source, (collected) -> assertThat(collected).hasSize(8));

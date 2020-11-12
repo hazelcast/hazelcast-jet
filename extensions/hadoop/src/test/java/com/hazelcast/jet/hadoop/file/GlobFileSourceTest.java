@@ -30,7 +30,7 @@ public class GlobFileSourceTest extends BaseFileFormatTest {
     @Test
     public void shouldReadFilesMatchingGlob() {
         FileSourceBuilder<String> source = FileSources.files("src/test/resources/glob/file*")
-                                                      .withFormat(FileFormat.text());
+                                                      .format(FileFormat.text());
 
         assertItemsInSource(source, "file", "file1");
     }
@@ -38,7 +38,7 @@ public class GlobFileSourceTest extends BaseFileFormatTest {
     @Test
     public void shouldReadFilesMatchingGlobInTheMiddle() {
         FileSourceBuilder<String> source = FileSources.files("src/test/resources/glob/f*le")
-                                                      .withFormat(FileFormat.text());
+                                                      .format(FileFormat.text());
 
         assertItemsInSource(source, "file");
     }
@@ -47,7 +47,7 @@ public class GlobFileSourceTest extends BaseFileFormatTest {
     public void shouldReadFilesMatchingGlobInPath() {
         assumeThat(useHadoop).isTrue();
         FileSourceBuilder<String> source = FileSources.files("src/test/resources/*/file")
-                                                      .withFormat(FileFormat.text());
+                                                      .format(FileFormat.text());
 
         assertItemsInSource(source, "file");
     }
@@ -56,7 +56,7 @@ public class GlobFileSourceTest extends BaseFileFormatTest {
     @Ignore("windows don't support * in filenames, either remove this test or make it non-windows only")
     public void shouldReadFileWithEscapedGlob() {
         FileSourceBuilder<String> source = FileSources.files("src/test/resources/glob/file\\*")
-                                                      .withFormat(FileFormat.text());
+                                                      .format(FileFormat.text());
 
         assertItemsInSource(source, "file*");
     }
@@ -64,7 +64,7 @@ public class GlobFileSourceTest extends BaseFileFormatTest {
     @Test
     public void shouldReadAllFilesInDirectory() {
         FileSourceBuilder<String> source = FileSources.files("src/test/resources/directory/")
-                                                      .withFormat(FileFormat.text());
+                                                      .format(FileFormat.text());
 
         assertItemsInSource(source, (collected) -> assertThat(collected).hasSize(2));
     }
@@ -73,7 +73,7 @@ public class GlobFileSourceTest extends BaseFileFormatTest {
     public void shouldReadAllFilesInDirectoryNoSlash() {
         assumeThat(useHadoop).isTrue();
         FileSourceBuilder<String> source = FileSources.files("src/test/resources/directory")
-                                                      .withFormat(FileFormat.text());
+                                                      .format(FileFormat.text());
 
         assertItemsInSource(source, (collected) -> assertThat(collected).hasSize(2));
     }

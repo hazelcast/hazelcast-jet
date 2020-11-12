@@ -59,7 +59,7 @@ public abstract class BaseFileFormatTest extends JetTestSupport {
             int memberCount, FileSourceBuilder<T> source, ConsumerEx<List<T>> assertion
     ) {
         if (useHadoop) {
-            source.useHadoopForLocalFiles();
+            source.useHadoopForLocalFiles(true);
         }
 
         Pipeline p = Pipeline.create();

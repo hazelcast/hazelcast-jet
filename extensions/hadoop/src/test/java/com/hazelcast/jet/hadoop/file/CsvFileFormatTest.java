@@ -28,7 +28,7 @@ public class CsvFileFormatTest extends BaseFileFormatTest {
     public void shouldReadCsvFile() throws Exception {
 
         FileSourceBuilder<User> source = FileSources.files("src/test/resources/file.csv")
-                                                    .withFormat(FileFormat.csv(User.class));
+                                                    .format(FileFormat.csv(User.class));
 
         assertItemsInSource(source,
                 new User("Frantisek", 7),

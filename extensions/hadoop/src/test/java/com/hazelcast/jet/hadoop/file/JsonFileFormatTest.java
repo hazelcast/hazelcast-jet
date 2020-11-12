@@ -27,7 +27,7 @@ public class JsonFileFormatTest extends BaseFileFormatTest {
     @Test
     public void shouldReadJsonLinesFile() throws Exception {
         FileSourceBuilder<User> source = FileSources.files("src/test/resources/file.jsonl")
-                                                    .withFormat(FileFormat.json(User.class));
+                                                    .format(FileFormat.json(User.class));
 
         assertItemsInSource(source,
                 new User("Frantisek", 7),

@@ -45,7 +45,7 @@ public class ParquetFileFormatTest extends BaseFileFormatTest {
         createParquetFile();
 
         FileSourceBuilder<SpecificUser> source = FileSources.files("target/parquet/file.parquet")
-                                                            .withFormat(FileFormat.parquet());
+                                                            .format(FileFormat.parquet());
         assertItemsInSource(source,
                 new SpecificUser("Frantisek", 7),
                 new SpecificUser("Ali", 42)

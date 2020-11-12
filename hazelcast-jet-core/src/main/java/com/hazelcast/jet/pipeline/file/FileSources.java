@@ -44,7 +44,7 @@ public final class FileSources {
      *  .writeTo(Sinks.logger());}</pre>
      *
      * You can override the format by calling
-     * {@link FileSourceBuilder#withFormat(FileFormat)} method.
+     * {@link FileSourceBuilder#format(FileFormat)} method.
      * For example:
      * <pre>{@code
      * BatchSource<byte[]> source = FileSources.files("path/to/binary/file")
@@ -63,6 +63,6 @@ public final class FileSources {
      */
     public static FileSourceBuilder<String> files(String path) {
         return new FileSourceBuilder<>(path)
-                .withFormat(new LinesTextFileFormat());
+                .format(new LinesTextFileFormat());
     }
 }
