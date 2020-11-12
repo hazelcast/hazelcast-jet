@@ -19,6 +19,7 @@ package com.hazelcast.jet.sql.impl.connector.map;
 import com.hazelcast.config.InMemoryFormat;
 import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.jet.core.DAG;
+import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.core.processor.SinkProcessors;
 import com.hazelcast.jet.sql.impl.JetJoinInfo;
@@ -27,6 +28,7 @@ import com.hazelcast.jet.sql.impl.connector.keyvalue.KvMetadata;
 import com.hazelcast.jet.sql.impl.connector.keyvalue.KvMetadataJavaResolver;
 import com.hazelcast.jet.sql.impl.connector.keyvalue.KvMetadataResolvers;
 import com.hazelcast.jet.sql.impl.connector.keyvalue.KvProcessors;
+import com.hazelcast.jet.sql.impl.connector.keyvalue.KvRowProjector;
 import com.hazelcast.jet.sql.impl.inject.UpsertTargetDescriptor;
 import com.hazelcast.jet.sql.impl.schema.MappingField;
 import com.hazelcast.map.impl.MapContainer;
@@ -35,6 +37,7 @@ import com.hazelcast.map.impl.MapServiceContext;
 import com.hazelcast.spi.impl.NodeEngine;
 import com.hazelcast.sql.impl.expression.Expression;
 import com.hazelcast.sql.impl.extract.QueryPath;
+import com.hazelcast.sql.impl.extract.QueryTargetDescriptor;
 import com.hazelcast.sql.impl.schema.ConstantTableStatistics;
 import com.hazelcast.sql.impl.schema.Table;
 import com.hazelcast.sql.impl.schema.TableField;
@@ -144,10 +147,43 @@ public class IMapSqlConnector implements SqlConnector {
     ) {
         PartitionedMapTable table = (PartitionedMapTable) table0;
 
+        ProcessorSupplier pSupplier;
+        String name = table.getMapName();
+        List<TableField> fields = table.getFields();
+        QueryPath[] paths = fields.stream().map(field -> ((MapTableField) field).getPath()).toArray(QueryPath[]::new);
+        QueryDataType[] types = fields.stream().map(TableField::getType).toArray(QueryDataType[]::new);
+        QueryTargetDescriptor keyDescriptor = table.getKeyDescriptor();
+        QueryTargetDescriptor valueDescriptor = table.getValueDescriptor();
+
+        KvRowProjector.Supplier rightRowProjectorSupplier =
+                KvRowProjector.supplier(paths, types, keyDescriptor, valueDescriptor, predicate, projections);
+
+        String desc;
+        if (isEquiJoinByPrimitiveKey(joinInfo, fields)) {
+            pSupplier = new JoinByPrimitiveKeyProcessorSupplier(joinInfo, name, rightRowProjectorSupplier);
+            desc = "imap.get";
+        } else if (joinInfo.isEquiJoin()) {
+            pSupplier = new JoinByPredicateProcessorSupplier(joinInfo, name, paths, rightRowProjectorSupplier);
+            desc = "imap.entrySet(predicate)";
+        } else {
+            pSupplier = new JoinScanProcessorSupplier(joinInfo, name, rightRowProjectorSupplier);
+            desc = "imap.entrySet(<full>)";
+        }
         return dag.newVertex(
-                "NestedLoopJoin(" + toString(table) + ")-" + randomLetters(),
-                JoinProcessors.joiner(joinInfo, table, predicate, projections)
+                "NestedLoopJoin(" + toString(table) + ")-" + desc + "-" + randomLetters(),
+                pSupplier
         );
+    }
+
+    private static boolean isEquiJoinByPrimitiveKey(JetJoinInfo joinInfo, List<TableField> fields) {
+        if (joinInfo.rightEquiJoinIndices().length != 1) {
+            return false;
+        }
+
+        MapTableField field = (MapTableField) fields.get(joinInfo.rightEquiJoinIndices()[0]);
+        QueryPath path = field.getPath();
+
+        return path.isTop() && path.isKey();
     }
 
     private static String randomLetters() {
