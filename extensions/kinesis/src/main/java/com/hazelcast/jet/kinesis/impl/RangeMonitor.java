@@ -16,8 +16,10 @@
 package com.hazelcast.jet.kinesis.impl;
 
 import com.amazonaws.services.kinesis.AmazonKinesisAsync;
-import com.amazonaws.services.kinesis.model.ListShardsRequest;
+import com.amazonaws.services.kinesis.model.ExpiredNextTokenException;
+import com.amazonaws.services.kinesis.model.LimitExceededException;
 import com.amazonaws.services.kinesis.model.ListShardsResult;
+import com.amazonaws.services.kinesis.model.ResourceInUseException;
 import com.amazonaws.services.kinesis.model.Shard;
 import com.hazelcast.logging.ILogger;
 
@@ -26,11 +28,10 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
-import static com.hazelcast.jet.kinesis.impl.KinesisUtil.shardBelongsToRange;
+import static com.hazelcast.jet.kinesis.impl.KinesisHelper.shardBelongsToRange;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
@@ -47,7 +48,6 @@ public class RangeMonitor extends AbstractShardWorker {
      */
     private static final double PERCENTAGE_OF_SHARD_LISTING_RATE_UTILIZED = 0.5;
 
-    private final int id; //todo: remove
     private final HashRange hashRange;
     private final Set<String> knownShards;
     private final RandomizedRateTracker listShardsRateTracker;
@@ -60,7 +60,6 @@ public class RangeMonitor extends AbstractShardWorker {
     private long nextListShardsTime;
 
     public RangeMonitor(
-            int id,
             int totalInstances,
             AmazonKinesisAsync kinesis,
             String stream,
@@ -68,8 +67,7 @@ public class RangeMonitor extends AbstractShardWorker {
             Collection<Shard> knownShards,
             ILogger logger
     ) {
-        super(kinesis, stream);
-        this.id = id;
+        super(kinesis, stream, logger);
         this.logger = logger;
         this.hashRange = hashRange;
         this.knownShards = knownShards.stream().map(Shard::getShardId).collect(toSet());
@@ -78,76 +76,70 @@ public class RangeMonitor extends AbstractShardWorker {
     }
 
     public Result run() {
-        try {
-            switch (state) {
-                case READY_TO_LIST_SHARDS:
-                    if (System.currentTimeMillis() < nextListShardsTime) {
-                        return Result.NOTHING;
-                    }
-
-                    ListShardsRequest request = KinesisUtil.requestOfShards(stream, nextToken);
-                    listShardResult = kinesis.listShardsAsync(request);
-                    state = State.WAITING_FOR_SHARD_LIST;
-
-                    nextListShardsTime = System.currentTimeMillis() + listShardsRateTracker.next();
-
-                    return Result.NOTHING;
-
-
-                case WAITING_FOR_SHARD_LIST:
-                    if (listShardResult.isDone()) {
-                        try {
-                            ListShardsResult result = listShardResult.get();
-                            nextToken = result.getNextToken();
-
-                            List<Shard> shards = result.getShards();
-                            /*System.err.println(id + " - shards = \n\t" +
-                                    shards.stream().map(Object::toString).collect(joining("\n\t")) +
-                                    "\nactive = " + KinesisUtil.toString(shards, KinesisUtil::shardIsActive) +
-                                    "\nrange = " + hashRange +
-                                    "\nin range: " + KinesisUtil.toString(shards,
-                                    shard -> shardBelongsToRange(shard, hashRange)));*/ //todo: remove
-
-                            List<Shard> unknownShards = shards.stream()
-                                    .filter(KinesisUtil::shardActive)
-                                    .filter(shard -> shardBelongsToRange(shard, hashRange))
-                                    .filter(shard -> !knownShards.contains(shard.getShardId())).collect(toList());
-
-                            if (unknownShards.isEmpty()) {
-                                state = State.READY_TO_LIST_SHARDS;
-                                return Result.NOTHING;
-                            } else {
-//                                System.err.println(id + " - unknownShards = " + unknownShards); //todo: remove
-                                knownShards.addAll(unknownShards.stream().map(Shard::getShardId).collect(toList()));
-                                newShards.addAll(unknownShards);
-                                state = State.NEW_SHARDS_FOUND;
-                                return Result.NEW_SHARD;
-                            }
-                        } catch (ExecutionException e) {
-                            logger.warning("Error encountered while reading active shard list. Will retry. Cause: " +
-                                    e.getMessage());
-                            //todo: exponential backoff?
-                            //todo: handle some?
-                            nextToken = null;
-                            state = State.READY_TO_LIST_SHARDS;
-                            return Result.NOTHING;
-                        }
-                    } else {
-                        return Result.NOTHING;
-                    }
-
-                case NEW_SHARDS_FOUND:
-                    newShards.remove(0);
-                    state = newShards.isEmpty() ? State.READY_TO_LIST_SHARDS : State.NEW_SHARDS_FOUND;
-                    return newShards.isEmpty() ? Result.NOTHING : Result.NEW_SHARD;
-
-                default:
-                    throw new RuntimeException("Programming error, unhandled state: " + state);
-            }
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw rethrow(e);
+        switch (state) {
+            case READY_TO_LIST_SHARDS:
+                return handleReadyToListShards();
+            case WAITING_FOR_SHARD_LIST:
+                return handleWaitingForShardList();
+            case NEW_SHARDS_FOUND:
+                return handleNewShardsFound();
+            default:
+                throw new RuntimeException("Programming error, unhandled state: " + state);
         }
+    }
+
+    private Result handleReadyToListShards() {
+        if (System.currentTimeMillis() < nextListShardsTime) {
+            return Result.NOTHING;
+        }
+
+        listShardResult = helper.listShardsAsync(nextToken);
+        state = State.WAITING_FOR_SHARD_LIST;
+
+        nextListShardsTime = System.currentTimeMillis() + listShardsRateTracker.next();
+
+        return Result.NOTHING;
+    }
+
+    private Result handleWaitingForShardList() {
+        if (listShardResult.isDone()) {
+            try {
+                ListShardsResult result = helper.readResult(listShardResult);
+                nextToken = result.getNextToken();
+
+                List<Shard> shards = result.getShards();
+
+                List<Shard> unknownShards = shards.stream()
+                        .filter(KinesisHelper::shardActive)
+                        .filter(shard -> shardBelongsToRange(shard, hashRange))
+                        .filter(shard -> !knownShards.contains(shard.getShardId())).collect(toList());
+
+                if (unknownShards.isEmpty()) {
+                    state = State.READY_TO_LIST_SHARDS;
+                    return Result.NOTHING;
+                } else {
+                    knownShards.addAll(unknownShards.stream().map(Shard::getShardId).collect(toList()));
+                    newShards.addAll(unknownShards);
+                    state = State.NEW_SHARDS_FOUND;
+                    return Result.NEW_SHARD;
+                }
+            } catch (LimitExceededException | ExpiredNextTokenException | ResourceInUseException e) {
+                logger.warning("Recoverable error encountered while listing shards: " + e.getMessage());
+                nextToken = null;
+                state = State.READY_TO_LIST_SHARDS; //todo: exponential backoff (add to nextListShardsTime)
+                return Result.NOTHING;
+            } catch (Throwable t) {
+                throw rethrow(t);
+            }
+        } else {
+            return Result.NOTHING;
+        }
+    }
+
+    private Result handleNewShardsFound() {
+        newShards.remove(0);
+        state = newShards.isEmpty() ? State.READY_TO_LIST_SHARDS : State.NEW_SHARDS_FOUND;
+        return newShards.isEmpty() ? Result.NOTHING : Result.NEW_SHARD;
     }
 
     public void removeShard(Shard shard) {

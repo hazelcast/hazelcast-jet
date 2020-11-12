@@ -30,9 +30,7 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import static com.hazelcast.jet.Util.entry;
-import static com.hazelcast.jet.kinesis.impl.KinesisUtil.getActiveShards;
-import static com.hazelcast.jet.kinesis.impl.KinesisUtil.shardBelongsToRange;
-import static com.hazelcast.jet.kinesis.impl.KinesisUtil.waitForStreamToActivate;
+import static com.hazelcast.jet.kinesis.impl.KinesisHelper.shardBelongsToRange;
 
 public class KinesisSourceP extends AbstractProcessor {
 
@@ -48,6 +46,7 @@ public class KinesisSourceP extends AbstractProcessor {
 
     private Traverser<Object> traverser = Traversers.empty();
 
+    private KinesisHelper helper;
     private RangeMonitor rangeMonitor;
     private List<ShardReader> shardReaders;
     private int nextShardReader;
@@ -65,13 +64,14 @@ public class KinesisSourceP extends AbstractProcessor {
         logger = context.logger();
         id = context.globalProcessorIndex();
 
+        helper = new KinesisHelper(kinesis, stream, logger);
+
         logger.info("Processor " + id + " handles " + hashRange);
 
-        waitForStreamToActivate(kinesis, stream);
-        //todo: what happens if data stream starts updating right here?
-        List<Shard> shardsInRange = getActiveShards(kinesis, stream,
+        helper.waitForStreamToActivate();
+        List<Shard> shardsInRange = helper.listActiveShards(
                 (Predicate<? super Shard>) shard -> shardBelongsToRange(shard, hashRange));
-        rangeMonitor = new RangeMonitor(id, context.totalParallelism(), kinesis, stream, hashRange, shardsInRange, logger);
+        rangeMonitor = new RangeMonitor(context.totalParallelism(), kinesis, stream, hashRange, shardsInRange, logger);
         shardReaders = shardsInRange.stream()
                 .map(this::initShardReader)
                 .collect(Collectors.toList());
@@ -104,9 +104,9 @@ public class KinesisSourceP extends AbstractProcessor {
             ShardReader.Result result = reader.run();
             if (ShardReader.Result.HAS_DATA.equals(result)) {
                 Record[] records = reader.getData();
-                System.err.println(reader.getShard().getShardId() + " - messages = " + records.length); //todo: remove
+                //System.err.println(reader.getShard().getShardId() + " - messages = " + records.length); //todo: remove
                 traverser = Traversers.traverseArray(records)
-                        .map(r -> entry(r.getPartitionKey(), r.getData().array())); //todo: performance impact?
+                        .map(r -> entry(r.getPartitionKey(), r.getData().array())); //todo: shady
                 emitFromTraverser(traverser);
                 return;
             } else if (ShardReader.Result.CLOSED.equals(result)) {
@@ -126,13 +126,20 @@ public class KinesisSourceP extends AbstractProcessor {
             return false;
         }
 
-        return true; //todo: actual snapshot saving
+        //todo: actual snapshot saving; we will be saving the sequence numbers of last seen messages, per shard
+        return true;
+    }
+
+    @Override
+    protected void restoreFromSnapshot(@Nonnull Object key, @Nonnull Object value) {
+        //todo: look for last seen sequence numbers of handled shards
+        // pass them to readers so that they can request records only from the sequence no. onward
     }
 
     @Nonnull
     private ShardReader initShardReader(Shard shard) {
         logger.info("Shard " + shard.getShardId() + " of stream " + stream + " assigned to processor instance " + id);
-        return new ShardReader(kinesis, stream, shard);
+        return new ShardReader(kinesis, stream, shard, logger);
     }
 
     private static int incrCircular(int v, int limit) {

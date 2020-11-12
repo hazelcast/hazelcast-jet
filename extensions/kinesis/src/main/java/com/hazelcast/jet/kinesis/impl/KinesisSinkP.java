@@ -20,7 +20,6 @@ import com.amazonaws.services.kinesis.model.PutRecordsRequest;
 import com.amazonaws.services.kinesis.model.PutRecordsRequestEntry;
 import com.amazonaws.services.kinesis.model.PutRecordsResult;
 import com.amazonaws.services.kinesis.model.PutRecordsResultEntry;
-import com.amazonaws.services.kinesis.model.StreamStatus;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.core.Inbox;
 import com.hazelcast.jet.core.Outbox;
@@ -38,6 +37,12 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 public class KinesisSinkP<T> implements Processor {
+
+    //todo; Each shard can support writes up to 1,000 records per second, up to a
+    // maximum data write total of 1 MiB per second. Right now we don't pre-check
+    // this, because we don't check which item goes to what shard, we just rely
+    // failure handling with exponential backoff. Would be complicated to improve
+    // on, but can we affort not to?
 
     /**
      * PutRecords requests are limited to 500 records.
@@ -71,6 +76,7 @@ public class KinesisSinkP<T> implements Processor {
     private final Buffer<T> buffer;
 
     private ILogger logger;
+    private KinesisHelper helper;
 
     public KinesisSinkP(
             AmazonKinesisAsync kinesis,
@@ -93,15 +99,13 @@ public class KinesisSinkP<T> implements Processor {
     @Override
     public void init(@Nonnull Outbox outbox, @Nonnull Context context) {
         logger = context.logger();
-
-        while (!isStreamActive()) {
-            logger.info("Waiting for stream " + stream + " to become active...");
-        }
+        helper = new KinesisHelper(kinesis, stream, logger);
+        helper.waitForStreamToActivate();
     }
 
     @Override
     public boolean tryProcess() {
-        return isStreamActive();
+        return helper.isStreamActive();
     }
 
     @Override
@@ -111,7 +115,7 @@ public class KinesisSinkP<T> implements Processor {
 
     @Override
     public void process(int ordinal, @Nonnull Inbox inbox) {
-        if (!isStreamActive()) {
+        if (!helper.isStreamActive()) {
             return;
         }
 
@@ -171,15 +175,10 @@ public class KinesisSinkP<T> implements Processor {
                     buffer.remove(i);
                 }
             }
-            //todo: need exponential backoff, before retrying
+            //todo: need exponential backoff before retrying, will implement after it's cooperative
         } else {
             buffer.clear();
         }
-    }
-
-    private boolean isStreamActive() {
-        String status = KinesisUtil.getStreamStatus(kinesis, stream);
-        return StreamStatus.ACTIVE.toString().equals(status);
     }
 
     private static class Buffer<T> {

@@ -34,7 +34,6 @@ public class ToDo {
     // what happens after split/merge, should we delete the offset of CLOSED shards?
 
     //todo: clarify what license to use
-    //todo: handle Kinesis quotas: https://docs.aws.amazon.com/streams/latest/dev/service-sizes-and-limits.html
     //todo: delete this class
 
     //todo: test that does random shard splits & merges mixed with data updates and checks that all data is processed

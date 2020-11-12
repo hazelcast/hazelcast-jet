@@ -29,13 +29,14 @@ import com.hazelcast.jet.core.JetTestSupport;
 import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.kinesis.impl.AwsConfig;
 import com.hazelcast.jet.kinesis.impl.HashRange;
-import com.hazelcast.jet.kinesis.impl.KinesisUtil;
+import com.hazelcast.jet.kinesis.impl.KinesisHelper;
 import com.hazelcast.jet.pipeline.BatchSource;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sink;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.StreamSource;
 import com.hazelcast.jet.pipeline.test.TestSources;
+import com.hazelcast.logging.Logger;
 import com.hazelcast.map.IMap;
 import org.junit.After;
 import org.junit.Before;
@@ -79,6 +80,7 @@ public class KinesisIntegrationTest extends JetTestSupport {
 
     private static AwsConfig AWS_CONFIG;
     private static AmazonKinesisAsync KINESIS;
+    private static KinesisHelper HELPER;
 
     private JetInstance jet;
     private IMap<String, List<String>> results;
@@ -96,6 +98,7 @@ public class KinesisIntegrationTest extends JetTestSupport {
                 LOCALSTACK.getSecretKey()
         );
         KINESIS = AWS_CONFIG.buildClient();
+        HELPER = new KinesisHelper(KINESIS, STREAM, Logger.getLogger(KinesisIntegrationTest.class));
     }
 
     @Before
@@ -129,7 +132,7 @@ public class KinesisIntegrationTest extends JetTestSupport {
 
     private void staticStream(int shards) {
         createStream(shards);
-        waitForStreamToActivate();
+        HELPER.waitForStreamToActivate();
 
         StreamSource<Entry<String, byte[]>> source = kinesisSource();
 
@@ -144,9 +147,9 @@ public class KinesisIntegrationTest extends JetTestSupport {
     @Test
     public void dynamicStream_2Shards_mergeBeforeData() {
         createStream(2);
-        waitForStreamToActivate();
+        HELPER.waitForStreamToActivate();
 
-        List<String> shards = getActiveShards().stream()
+        List<String> shards = HELPER.listActiveShards().stream()
                 .map(Shard::getShardId)
                 .collect(Collectors.toList());
         mergeShards(shards.get(0), shards.get(1));
@@ -174,7 +177,7 @@ public class KinesisIntegrationTest extends JetTestSupport {
 
     private void dynamicStream_mergesDuringData(int shards, int merges) {
         createStream(shards);
-        waitForStreamToActivate();
+        HELPER.waitForStreamToActivate();
 
         StreamSource<Entry<String, byte[]>> source = kinesisSource();
 
@@ -190,7 +193,7 @@ public class KinesisIntegrationTest extends JetTestSupport {
         List<Shard> oldShards = Collections.emptyList();
         for (int i = 0; i < merges; i++) {
             Set<String> oldShardIds = oldShards.stream().map(Shard::getShardId).collect(Collectors.toSet());
-            List<Shard> currentShards = getActiveShards();
+            List<Shard> currentShards = HELPER.listActiveShards();
             List<Shard> newShards = currentShards.stream()
                     .filter(shard -> !oldShardIds.contains(shard.getShardId()))
                     .collect(Collectors.toList());
@@ -200,7 +203,7 @@ public class KinesisIntegrationTest extends JetTestSupport {
             Collections.shuffle(newShards);
             Tuple2<String, String> adjacentPair = findAdjacentPair(newShards.get(0), currentShards);
             mergeShards(adjacentPair.f0(), adjacentPair.f1());
-            waitForStreamToActivate();
+            HELPER.waitForStreamToActivate();
         }
 
         assertMessages(expectedMessages, results, false);
@@ -209,9 +212,9 @@ public class KinesisIntegrationTest extends JetTestSupport {
     @Test
     public void dynamicStream_1Shard_splitBeforeData() {
         createStream(1);
-        waitForStreamToActivate();
+        HELPER.waitForStreamToActivate();
 
-        List<Shard> shards = getActiveShards();
+        List<Shard> shards = HELPER.listActiveShards();
         splitShard(shards.get(0));
 
         StreamSource<Entry<String, byte[]>> source = kinesisSource();
@@ -236,7 +239,7 @@ public class KinesisIntegrationTest extends JetTestSupport {
 
     private void dynamicStream_splitsDuringData(int shards, int splits) {
         createStream(shards);
-        waitForStreamToActivate();
+        HELPER.waitForStreamToActivate();
 
         StreamSource<Entry<String, byte[]>> source = kinesisSource();
 
@@ -252,7 +255,7 @@ public class KinesisIntegrationTest extends JetTestSupport {
         List<Shard> oldShards = Collections.emptyList();
         for (int i = 0; i < splits; i++) {
             Set<String> oldShardIds = oldShards.stream().map(Shard::getShardId).collect(Collectors.toSet());
-            List<Shard> currentShards = getActiveShards();
+            List<Shard> currentShards = HELPER.listActiveShards();
             List<Shard> newShards = currentShards.stream()
                     .filter(shard -> !oldShardIds.contains(shard.getShardId()))
                     .collect(Collectors.toList());
@@ -261,7 +264,7 @@ public class KinesisIntegrationTest extends JetTestSupport {
 
             Collections.shuffle(newShards);
             splitShard(newShards.get(0));
-            waitForStreamToActivate();
+            HELPER.waitForStreamToActivate();
         }
 
         assertMessages(expectedMessages, results, false);
@@ -338,10 +341,6 @@ public class KinesisIntegrationTest extends JetTestSupport {
         assertTrueEventually(() -> assertFalse(KINESIS.listStreams().isHasMoreStreams()));
     }
 
-    private static void waitForStreamToActivate() {
-        KinesisUtil.waitForStreamToActivate(KINESIS, STREAM);
-    }
-
     private static void mergeShards(String shard1, String shard2) {
         MergeShardsRequest request = new MergeShardsRequest();
         request.setStreamName(STREAM);
@@ -363,10 +362,6 @@ public class KinesisIntegrationTest extends JetTestSupport {
 
         System.out.println("Splitting " + shard);
         KINESIS.splitShard(request);
-    }
-
-    private static List<Shard> getActiveShards() {
-        return KinesisUtil.getActiveShards(KINESIS, STREAM);
     }
 
     private static void assertMessages(

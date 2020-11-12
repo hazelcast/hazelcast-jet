@@ -27,24 +27,6 @@ import static java.math.BigInteger.valueOf;
 
 public class HashRange implements Serializable { //todo: is it worth to use better serialization?
 
-    public static HashRange of(@Nonnull BigInteger minInclusive, @Nonnull BigInteger maxExclusive) {
-        return new HashRange(minInclusive, maxExclusive);
-    }
-
-    public static HashRange of(@Nonnull HashKeyRange hashKeyRange) {
-        BigInteger startInclusive = new BigInteger(hashKeyRange.getStartingHashKey());
-        BigInteger endExclusive = new BigInteger(hashKeyRange.getEndingHashKey()).add(BigInteger.ONE);
-        return new HashRange(startInclusive, endExclusive);
-    }
-
-    static HashRange of(long startInclusive, long endExclusive) {
-        return new HashRange(BigInteger.valueOf(startInclusive), BigInteger.valueOf(endExclusive));
-    }
-
-    static HashRange of(@Nonnull String startInclusive, @Nonnull String endExclusive) {
-        return new HashRange(new BigInteger(startInclusive), new BigInteger(endExclusive));
-    }
-
     private final BigInteger minInclusive;
     private final BigInteger maxExclusive;
 
@@ -60,6 +42,24 @@ public class HashRange implements Serializable { //todo: is it worth to use bett
         }
         this.minInclusive = Objects.requireNonNull(minInclusive, "minInclusive");
         this.maxExclusive = Objects.requireNonNull(maxExclusive, "maxExclusive");
+    }
+
+    public static HashRange of(@Nonnull BigInteger minInclusive, @Nonnull BigInteger maxExclusive) {
+        return new HashRange(minInclusive, maxExclusive);
+    }
+
+    public static HashRange of(@Nonnull HashKeyRange hashKeyRange) {
+        BigInteger startInclusive = new BigInteger(hashKeyRange.getStartingHashKey());
+        BigInteger endExclusive = new BigInteger(hashKeyRange.getEndingHashKey()).add(BigInteger.ONE);
+        return new HashRange(startInclusive, endExclusive);
+    }
+
+    public static HashRange of(long startInclusive, long endExclusive) {
+        return new HashRange(BigInteger.valueOf(startInclusive), BigInteger.valueOf(endExclusive));
+    }
+
+    public static HashRange of(@Nonnull String startInclusive, @Nonnull String endExclusive) {
+        return new HashRange(new BigInteger(startInclusive), new BigInteger(endExclusive));
     }
 
     public HashRange partition(int index, int count) {

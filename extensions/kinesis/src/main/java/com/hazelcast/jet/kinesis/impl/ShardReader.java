@@ -16,15 +16,15 @@
 package com.hazelcast.jet.kinesis.impl;
 
 import com.amazonaws.services.kinesis.AmazonKinesisAsync;
-import com.amazonaws.services.kinesis.model.GetRecordsRequest;
+import com.amazonaws.services.kinesis.model.ExpiredIteratorException;
 import com.amazonaws.services.kinesis.model.GetRecordsResult;
 import com.amazonaws.services.kinesis.model.GetShardIteratorResult;
 import com.amazonaws.services.kinesis.model.ProvisionedThroughputExceededException;
 import com.amazonaws.services.kinesis.model.Record;
 import com.amazonaws.services.kinesis.model.Shard;
+import com.hazelcast.logging.ILogger;
 
 import java.util.LinkedList;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
@@ -74,99 +74,107 @@ class ShardReader extends AbstractShardWorker {
 
     private final LinkedList<Record> data = new LinkedList<>();
 
-    ShardReader(AmazonKinesisAsync kinesis, String stream, Shard shard) {
-        super(kinesis, stream);
+    ShardReader(AmazonKinesisAsync kinesis, String stream, Shard shard, ILogger logger) {
+        super(kinesis, stream, logger);
         this.shard = shard;
     }
 
     public Result run() {
-        try {
-            switch (state) {
-                case NO_SHARD_ITERATOR:
-                    shardIteratorResult = kinesis.getShardIteratorAsync(
-                            stream,
-                            shard.getShardId(),
-                            "AT_SEQUENCE_NUMBER",
-                            shard.getSequenceNumberRange().getStartingSequenceNumber()
-                    ); //todo: proper starting sequence number will be provided from offsets restored from Jet snapshots
-                    state = State.WAITING_FOR_SHARD_ITERATOR;
-                    return Result.NOTHING;
-
-
-                case WAITING_FOR_SHARD_ITERATOR:
-                    if (shardIteratorResult.isDone()) {
-                        shardIterator = shardIteratorResult.get().getShardIterator();
-                        state = State.NEED_TO_REQUEST_RECORDS;
-                    }
-                    return Result.NOTHING;
-
-
-                case NEED_TO_REQUEST_RECORDS:
-                    if (attemptToSendGetRecordsRequest()) {
-                        state = State.WAITING_FOR_RECORDS;
-                    }
-
-                    return Result.NOTHING;
-
-
-                case WAITING_FOR_RECORDS:
-                    if (recordsResult.isDone()) {
-                        try {
-                            GetRecordsResult result = recordsResult.get();
-                            shardIterator = result.getNextShardIterator();
-                            data.addAll(result.getRecords());
-                            if (shardIterator == null) {
-                                state = State.SHARD_CLOSED;
-                                return data.size() > 0 ? Result.HAS_DATA : Result.CLOSED;
-                            } else if (data.size() > 0) {
-                                state = State.HAS_DATA_NEED_TO_REQUEST_RECORDS;
-                                return Result.HAS_DATA;
-                            } else {
-                                state = State.NEED_TO_REQUEST_RECORDS;
-                                return Result.NOTHING;
-                            }
-                        } catch (ExecutionException e) {
-                            Throwable cause = e.getCause();
-                            if (cause instanceof ProvisionedThroughputExceededException) {
-                                nextGetRecordsTime = System.currentTimeMillis() + READ_PAUSE_AFTER_THROUGHPUT_EXCEEDED;
-                                state = State.NEED_TO_REQUEST_RECORDS;
-                                return Result.NOTHING;
-                            } else {
-                                throw rethrow(cause);
-                            }
-                        }
-                    } else {
-                        return Result.NOTHING;
-                    }
-
-
-                case HAS_DATA_NEED_TO_REQUEST_RECORDS:
-                    if (attemptToSendGetRecordsRequest()) {
-                        state = data.size() > 0 ? State.HAS_DATA : State.WAITING_FOR_RECORDS;
-                    }
-
-                    return data.size() > 0 ? Result.HAS_DATA : Result.NOTHING;
-
-
-                case HAS_DATA:
-                    state = data.size() > 0 ? State.HAS_DATA : State.WAITING_FOR_RECORDS;
-                    return data.size() > 0 ? Result.HAS_DATA : Result.NOTHING;
-
-
-                case SHARD_CLOSED:
-                    return data.size() > 0 ? Result.HAS_DATA : Result.CLOSED;
-
-
-                default:
-                    throw new RuntimeException("Programming error, unhandled state: " + state);
-            }
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw rethrow(e);
-        } catch (ExecutionException e) { //todo: move this to the level of specific operations and handle some cases
-            e.printStackTrace();
-            throw rethrow(e);
+        switch (state) {
+            case NO_SHARD_ITERATOR:
+                return handleNoShardIterator();
+            case WAITING_FOR_SHARD_ITERATOR:
+                return handleWaitingForShardIterator();
+            case NEED_TO_REQUEST_RECORDS:
+                return handleNeedToRequestRecords();
+            case WAITING_FOR_RECORDS:
+                return handleWaitingForRecords();
+            case HAS_DATA_NEED_TO_REQUEST_RECORDS:
+                return handleHasDataNeedToRequestRecords();
+            case HAS_DATA:
+                return handleHasData();
+            case SHARD_CLOSED:
+                return handleShardClosed();
+            default:
+                throw new RuntimeException("Programming error, unhandled state: " + state);
         }
+    }
+
+    private Result handleNoShardIterator() {
+        shardIteratorResult = helper.getShardIteratorAsync(shard);
+        state = State.WAITING_FOR_SHARD_ITERATOR;
+        return Result.NOTHING;
+    }
+
+    private Result handleWaitingForShardIterator() {
+        if (shardIteratorResult.isDone()) {
+            try {
+                shardIterator = helper.readResult(shardIteratorResult).getShardIterator();
+                state = State.NEED_TO_REQUEST_RECORDS;
+            } catch (Throwable t) {
+                throw rethrow(t);
+            }
+        }
+        return Result.NOTHING;
+    }
+
+    private Result handleNeedToRequestRecords() {
+        if (attemptToSendGetRecordsRequest()) {
+            state = State.WAITING_FOR_RECORDS;
+        }
+
+        return Result.NOTHING;
+    }
+
+    private Result handleWaitingForRecords() {
+        if (recordsResult.isDone()) {
+            try {
+                GetRecordsResult result = helper.readResult(recordsResult);
+                shardIterator = result.getNextShardIterator();
+                data.addAll(result.getRecords());
+                if (shardIterator == null) {
+                    state = State.SHARD_CLOSED;
+                    return data.size() > 0 ? Result.HAS_DATA : Result.CLOSED;
+                } else if (data.size() > 0) {
+                    state = State.HAS_DATA_NEED_TO_REQUEST_RECORDS;
+                    return Result.HAS_DATA;
+                } else {
+                    state = State.NEED_TO_REQUEST_RECORDS;
+                    return Result.NOTHING;
+                }
+            } catch (ProvisionedThroughputExceededException pte) {
+                logger.warning("Data throughput rate exceeded. Backing off and retrying.");
+                nextGetRecordsTime = System.currentTimeMillis() +
+                        READ_PAUSE_AFTER_THROUGHPUT_EXCEEDED; //todo: proper exponential backoff
+                state = State.NEED_TO_REQUEST_RECORDS;
+                return Result.NOTHING;
+            } catch (ExpiredIteratorException eie) {
+                logger.warning("Record iterator expired. Retrying.");
+                state = State.NEED_TO_REQUEST_RECORDS;
+                return Result.NOTHING;
+            } catch (Throwable t) {
+                throw rethrow(t);
+            }
+        } else {
+            return Result.NOTHING;
+        }
+    }
+
+    private Result handleHasDataNeedToRequestRecords() {
+        if (attemptToSendGetRecordsRequest()) {
+            state = data.size() > 0 ? State.HAS_DATA : State.WAITING_FOR_RECORDS;
+        }
+
+        return data.size() > 0 ? Result.HAS_DATA : Result.NOTHING;
+    }
+
+    private Result handleHasData() {
+        state = data.size() > 0 ? State.HAS_DATA : State.WAITING_FOR_RECORDS;
+        return data.size() > 0 ? Result.HAS_DATA : Result.NOTHING;
+    }
+
+    private Result handleShardClosed() {
+        return data.size() > 0 ? Result.HAS_DATA : Result.CLOSED;
     }
 
     private boolean attemptToSendGetRecordsRequest() {
@@ -174,8 +182,7 @@ class ShardReader extends AbstractShardWorker {
             return false;
         }
 
-        GetRecordsRequest getRecordsRequest = buildGetRecordsRequest(shardIterator);
-        recordsResult = kinesis.getRecordsAsync(getRecordsRequest);
+        recordsResult = helper.getRecordsAsync(shardIterator);
 
         nextGetRecordsTime = System.currentTimeMillis() + getRecordsRateTracker.next();
         return true;
@@ -253,12 +260,6 @@ class ShardReader extends AbstractShardWorker {
          */
         SHARD_CLOSED,
         ;
-    }
-
-    private static GetRecordsRequest buildGetRecordsRequest(String shardIterator) {
-        GetRecordsRequest getRecordsRequest = new GetRecordsRequest();
-        getRecordsRequest.setShardIterator(shardIterator);
-        return getRecordsRequest;
     }
 
 }

@@ -16,14 +16,15 @@
 package com.hazelcast.jet.kinesis.impl;
 
 import com.amazonaws.services.kinesis.AmazonKinesisAsync;
+import com.hazelcast.logging.ILogger;
 
-abstract class AbstractShardWorker { //todo: makes sense?
+abstract class AbstractShardWorker {
 
-    protected final AmazonKinesisAsync kinesis;
-    protected final String stream;
+    protected final KinesisHelper helper;
+    protected final ILogger logger;
 
-    AbstractShardWorker(AmazonKinesisAsync kinesis, String stream) {
-        this.kinesis = kinesis;
-        this.stream = stream;
+    AbstractShardWorker(AmazonKinesisAsync kinesis, String stream, ILogger logger) {
+        this.helper = new KinesisHelper(kinesis, stream, logger);
+        this.logger = logger;
     }
 }
