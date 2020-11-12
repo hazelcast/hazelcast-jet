@@ -38,11 +38,16 @@ import com.hazelcast.jet.pipeline.StreamSource;
 import com.hazelcast.jet.pipeline.test.TestSources;
 import com.hazelcast.logging.Logger;
 import com.hazelcast.map.IMap;
+import com.hazelcast.test.HazelcastSerialClassRunner;
+import com.hazelcast.test.annotation.NightlyTest;
+import com.hazelcast.test.annotation.SlowTest;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
+import org.junit.runner.RunWith;
 import org.testcontainers.containers.localstack.LocalStackContainer;
 import org.testcontainers.containers.localstack.LocalStackContainer.Service;
 
@@ -64,6 +69,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+@RunWith(HazelcastSerialClassRunner.class)
 public class KinesisIntegrationTest extends JetTestSupport {
 
     //todo: tests are slow... why?
@@ -82,7 +88,7 @@ public class KinesisIntegrationTest extends JetTestSupport {
     private static AmazonKinesisAsync KINESIS;
     private static KinesisHelper HELPER;
 
-    private JetInstance jet;
+    private JetInstance[] cluster;
     private IMap<String, List<String>> results;
 
     @BeforeClass
@@ -103,29 +109,35 @@ public class KinesisIntegrationTest extends JetTestSupport {
 
     @Before
     public void before() {
-        jet = createJetMembers(MEMBER_COUNT)[0];
-        results = jet.getMap(RESULTS);
+        cluster = createJetMembers(MEMBER_COUNT);
+        results = jet().getMap(RESULTS);
     }
 
     @After
     public void after() {
+        cleanUpCluster(cluster);
+
         deleteStream();
+        HELPER.waitForStreamToDisappear();
 
         results.clear();
         results.destroy();
     }
 
     @Test
+    @Category(SlowTest.class)
     public void staticStream_1Shard() {
         staticStream(1);
     }
 
     @Test
+    @Category(NightlyTest.class)
     public void staticStream_2Shards() {
         staticStream(2);
     }
 
     @Test
+    @Category(NightlyTest.class)
     public void staticStream_50Shards() {
         staticStream(50);
     }
@@ -138,13 +150,14 @@ public class KinesisIntegrationTest extends JetTestSupport {
 
         Sink<Entry<String, List<String>>> sink = Sinks.map(results);
 
-        jet.newJob(getPipeline(source, sink));
+        jet().newJob(getPipeline(source, sink));
 
         Map<String, List<String>> expectedMessages = sendMessages(true);
         assertMessages(expectedMessages, results, true);
     }
 
     @Test
+    @Category(NightlyTest.class)
     public void dynamicStream_2Shards_mergeBeforeData() {
         createStream(2);
         HELPER.waitForStreamToActivate();
@@ -156,18 +169,20 @@ public class KinesisIntegrationTest extends JetTestSupport {
 
         Sink<Entry<String, List<String>>> sink = Sinks.map(results);
 
-        jet.newJob(getPipeline(source, sink));
+        jet().newJob(getPipeline(source, sink));
 
         Map<String, List<String>> expectedMessages = sendMessages(true);
         assertMessages(expectedMessages, results, true);
     }
 
     @Test
+    @Category(SlowTest.class)
     public void dynamicStream_2Shards_mergeDuringData() {
         dynamicStream_mergesDuringData(2, 1);
     }
 
     @Test
+    @Category(NightlyTest.class)
     public void dynamicStream_50Shards_mergesDuringData() {
         //important to test with more shards than can fit in a single list shards response
          dynamicStream_mergesDuringData(50, 5);
@@ -181,7 +196,7 @@ public class KinesisIntegrationTest extends JetTestSupport {
 
         Sink<Entry<String, List<String>>> sink = Sinks.map(results);
 
-        jet.newJob(getPipeline(source, sink));
+        jet().newJob(getPipeline(source, sink));
 
         Map<String, List<String>> expectedMessages = sendMessages(false);
 
@@ -208,6 +223,7 @@ public class KinesisIntegrationTest extends JetTestSupport {
     }
 
     @Test
+    @Category(NightlyTest.class)
     public void dynamicStream_1Shard_splitBeforeData() {
         createStream(1);
         HELPER.waitForStreamToActivate();
@@ -219,18 +235,20 @@ public class KinesisIntegrationTest extends JetTestSupport {
 
         Sink<Entry<String, List<String>>> sink = Sinks.map(results);
 
-        jet.newJob(getPipeline(source, sink));
+        jet().newJob(getPipeline(source, sink));
 
         Map<String, List<String>> expectedMessages = sendMessages(true);
         assertMessages(expectedMessages, results, true);
     }
 
     @Test
+    @Category(SlowTest.class)
     public void dynamicStream_1Shard_splitsDuringData() {
         dynamicStream_splitsDuringData(1, 3);
     }
 
     @Test
+    @Category(NightlyTest.class)
     public void dynamicStream_10Shards_splitsDuringData() {
         dynamicStream_splitsDuringData(10, 10);
     }
@@ -243,7 +261,7 @@ public class KinesisIntegrationTest extends JetTestSupport {
 
         Sink<Entry<String, List<String>>> sink = Sinks.map(results);
 
-        jet.newJob(getPipeline(source, sink));
+        jet().newJob(getPipeline(source, sink));
 
         Map<String, List<String>> expectedMessages = sendMessages(false);
 
@@ -284,15 +302,19 @@ public class KinesisIntegrationTest extends JetTestSupport {
         pipeline.readFrom(source)
                 .writeTo(sink);
 
-        Job job = jet.newJob(pipeline);
+        Job sendJob = jet().newJob(pipeline);
 
         Map<String, List<String>> retMap = toMap(msgEntryList);
 
         if (join) {
-            job.join();
+            sendJob.join();
         }
 
         return retMap;
+    }
+
+    private JetInstance jet() {
+        return cluster[0];
     }
 
     private static StreamSource<Entry<String, byte[]>> kinesisSource() {

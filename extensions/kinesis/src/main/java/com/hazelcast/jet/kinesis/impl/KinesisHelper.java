@@ -101,6 +101,22 @@ public class KinesisHelper {
         }
     }
 
+    public void waitForStreamToDisappear() {
+        while (true) {
+            List<String> streams = callSafely(this::listStreams);
+            if (streams.isEmpty()) {
+                return;
+            } else {
+                logger.info("Waiting for stream " + stream + " to disappear...");
+                waitABit();
+            }
+        }
+    }
+
+    private List<String> listStreams() {
+        return kinesis.listStreams().getStreamNames();
+    }
+
     private StreamStatus getStreamStatus() {
         DescribeStreamSummaryRequest request = new DescribeStreamSummaryRequest();
         request.setStreamName(stream);
