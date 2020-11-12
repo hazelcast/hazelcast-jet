@@ -285,7 +285,10 @@ public final class UnsupportedOperationVisitor implements SqlVisitor<Void> {
                     return null;
                 }
 
-                if (symbolValue == JoinType.INNER || symbolValue == JoinType.COMMA) {
+                if (symbolValue == JoinType.INNER
+                    || symbolValue == JoinType.COMMA
+                    || symbolValue == JoinType.CROSS
+                ) {
                     return null;
                 }
                 if (symbolValue == JoinConditionType.ON
@@ -354,7 +357,7 @@ public final class UnsupportedOperationVisitor implements SqlVisitor<Void> {
     private void processJoin(SqlJoin join) {
         JoinType joinType = join.getJoinType();
 
-        if (joinType != JoinType.INNER && joinType != JoinType.COMMA) {
+        if (joinType != JoinType.INNER && joinType != JoinType.COMMA && joinType != JoinType.CROSS) {
             throw unsupported(join, joinType.name() + " join");
         }
     }
@@ -371,10 +374,10 @@ public final class UnsupportedOperationVisitor implements SqlVisitor<Void> {
 
     private void processOtherDdl(SqlCall call) {
         if (!(call instanceof SqlCreateJob)
-                && !(call instanceof SqlDropJob)
-                && !(call instanceof SqlAlterJob)
-                && !(call instanceof SqlCreateSnapshot)
-                && !(call instanceof SqlDropSnapshot)
+            && !(call instanceof SqlDropJob)
+            && !(call instanceof SqlAlterJob)
+            && !(call instanceof SqlCreateSnapshot)
+            && !(call instanceof SqlDropSnapshot)
         ) {
             throw unsupported(call, "OTHER DDL class (" + call.getClass().getSimpleName() + ")");
         }

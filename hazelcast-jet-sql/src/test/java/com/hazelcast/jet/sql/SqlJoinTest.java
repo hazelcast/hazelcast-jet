@@ -72,13 +72,4 @@ public class SqlJoinTest extends SqlTestSupport {
                 .hasCauseInstanceOf(QueryException.class)
                 .hasMessageContaining("FULL join not supported");
     }
-
-    @Test
-    public void test_crossJoinFails() {
-        TestBatchSqlConnector.create(sqlService, "b", 0);
-
-        assertThatThrownBy(() -> sqlService.execute("SELECT 1 FROM b AS b1 CROSS JOIN b AS b2"))
-                .hasCauseInstanceOf(QueryException.class)
-                .hasMessageContaining("CROSS join not supported");
-    }
 }

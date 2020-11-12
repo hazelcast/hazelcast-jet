@@ -66,29 +66,6 @@ public class SqlJoinTest extends SqlTestSupport {
     }
 
     @Test
-    public void test_innerJoinWithConditionInWhereClause() {
-        String leftName = randomName();
-        TestBatchSqlConnector.create(sqlService, leftName, 3);
-
-        String mapName = randomName();
-        instance().getMap(mapName).putAll(ImmutableMap.of(
-                1, "value-1",
-                2, "value-2",
-                3, "value-3"
-        ));
-
-        assertRowsAnyOrder(
-                "SELECT l.v, m.this " +
-                "FROM " + leftName + " l, " + mapName + " m " +
-                "WHERE l.v = m.__key",
-                asList(
-                        new Row(1, "value-1"),
-                        new Row(2, "value-2")
-                )
-        );
-    }
-
-    @Test
     public void test_innerJoinUsing() {
         String leftName = randomName();
         TestBatchSqlConnector.create(
@@ -113,6 +90,76 @@ public class SqlJoinTest extends SqlTestSupport {
                 asList(
                         new Row(1, "value-1"),
                         new Row(2, "value-2")
+                )
+        );
+    }
+
+    @Test
+    public void test_innerJoinWithConditionInWhereClause() {
+        String leftName = randomName();
+        TestBatchSqlConnector.create(sqlService, leftName, 3);
+
+        String mapName = randomName();
+        instance().getMap(mapName).putAll(ImmutableMap.of(
+                1, "value-1",
+                2, "value-2",
+                3, "value-3"
+        ));
+
+        assertRowsAnyOrder(
+                "SELECT l.v, m.this " +
+                "FROM " + leftName + " l, " + mapName + " m " +
+                "WHERE l.v = m.__key",
+                asList(
+                        new Row(1, "value-1"),
+                        new Row(2, "value-2")
+                )
+        );
+    }
+
+    @Test
+    public void test_innerJoinWithoutCondition() {
+        String leftName = randomName();
+        TestBatchSqlConnector.create(sqlService, leftName, 2);
+
+        String mapName = randomName();
+        instance().getMap(mapName).putAll(ImmutableMap.of(
+                1, "value-1",
+                2, "value-2"
+        ));
+
+        assertRowsAnyOrder(
+                "SELECT l.v, m.this " +
+                "FROM " + leftName + " l, " + mapName + " m ",
+                asList(
+                        new Row(0, "value-1"),
+                        new Row(0, "value-2"),
+                        new Row(1, "value-1"),
+                        new Row(1, "value-2")
+                )
+        );
+    }
+
+    @Test
+    public void test_crossJoin() {
+        String leftName = randomName();
+        TestBatchSqlConnector.create(sqlService, leftName, 2);
+
+        String mapName = randomName();
+        instance().getMap(mapName).putAll(ImmutableMap.of(
+                1, "value-1",
+                2, "value-2"
+        ));
+
+        assertRowsAnyOrder(
+                "SELECT l.v, m.this " +
+                "FROM " + leftName + " l " +
+                "CROSS JOIN " + mapName + " m ",
+                asList(
+                        new Row(0, "value-1"),
+                        new Row(0, "value-2"),
+                        new Row(1, "value-1"),
+                        new Row(1, "value-2")
                 )
         );
     }
