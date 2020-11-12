@@ -28,6 +28,7 @@ import com.hazelcast.client.impl.spi.impl.ClientInvocation;
 import com.hazelcast.cluster.Cluster;
 import com.hazelcast.cluster.ClusterState;
 import com.hazelcast.cluster.Member;
+import com.hazelcast.function.ConsumerEx;
 import com.hazelcast.instance.JetBuildInfo;
 import com.hazelcast.internal.util.FutureUtil;
 import com.hazelcast.jet.Jet;
@@ -43,6 +44,11 @@ import com.hazelcast.jet.impl.JetClientInstanceImpl;
 import com.hazelcast.jet.impl.JobSummary;
 import com.hazelcast.jet.impl.config.ConfigProvider;
 import com.hazelcast.jet.server.JetCommandLine.JetVersionProvider;
+import com.hazelcast.sql.HazelcastSqlException;
+import com.hazelcast.sql.SqlColumnMetadata;
+import com.hazelcast.sql.SqlResult;
+import com.hazelcast.sql.SqlRow;
+import com.hazelcast.sql.SqlRowMetadata;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.DefaultExceptionHandler;
@@ -60,6 +66,8 @@ import picocli.CommandLine.RunAll;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.LineNumberReader;
 import java.io.PrintStream;
 import java.lang.reflect.InvocationTargetException;
 import java.time.LocalDateTime;
@@ -71,7 +79,6 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.LockSupport;
-import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.logging.Level;
 import java.util.logging.LogManager;
@@ -179,6 +186,57 @@ public class JetCommandLine implements Runnable {
         // top-level command, do nothing
     }
 
+    @Command(description = "Starts the SQL console")
+    public void sql(@Mixin(name = "verbosity") Verbosity verbosity,
+            @Mixin(name = "targets") TargetsMixin targets
+            ) {
+        runWithJet(targets, verbosity, jet -> {
+            LineNumberReader in = new LineNumberReader(new InputStreamReader(System.in));
+            for (;;) {
+                out.print("\nsql> ");
+                String line = in.readLine();
+                if (line == null || "exit".equals(line)) {
+                    break;
+                }
+                if ("".equals(line.trim())) {
+                    continue;
+                }
+                SqlResult res;
+                try {
+                    res = jet.getSql().execute(line);
+                } catch (HazelcastSqlException e) {
+                    out.println(e.getMessage());
+                    continue;
+                }
+                if (res.updateCount() == -1) {
+                    SqlRowMetadata metadata = res.getRowMetadata();
+                    for (int i = 0; i < metadata.getColumnCount(); i++) {
+                        if (i > 0) {
+                            out.print(", ");
+                        }
+                        SqlColumnMetadata column = metadata.getColumn(i);
+                        out.print(column.getName() + ':' + column.getType());
+                    }
+                    out.println("\n--------");
+                    int rowCount = 0;
+                    for (SqlRow row : res) {
+                        rowCount++;
+                        for (int i = 0; i < metadata.getColumnCount(); i++) {
+                            if (i > 0) {
+                                out.print(", ");
+                            }
+                            out.print(row.<Object>getObject(i));
+                        }
+                        out.println();
+                    }
+                    out.println("\n" + rowCount + " row(s) selected");
+                } else {
+                    out.println(res.updateCount() + " row(s) affected");
+                }
+            }
+        });
+    }
+
     @Command(description = "Submits a job to the cluster")
     public void submit(
             @Mixin(name = "verbosity") Verbosity verbosity,
@@ -234,8 +292,7 @@ public class JetCommandLine implements Runnable {
                     description = "Name of the job to suspend"
             ) String name
     ) throws IOException {
-        targetsMixin.replace(targets);
-        runWithJet(verbosity, jet -> {
+        runWithJet(targets, verbosity, jet -> {
             Job job = getJob(jet, name);
             assertJobRunning(name, job);
             printf("Suspending job %s...", formatJob(job));
@@ -256,8 +313,7 @@ public class JetCommandLine implements Runnable {
                     description = "Name of the job to cancel"
             ) String name
     ) throws IOException {
-        targetsMixin.replace(targets);
-        runWithJet(verbosity, jet -> {
+        runWithJet(targets, verbosity, jet -> {
             Job job = getJob(jet, name);
             assertJobActive(name, job);
             printf("Cancelling job %s", formatJob(job));
@@ -286,8 +342,7 @@ public class JetCommandLine implements Runnable {
                     description = "Cancel the job after taking the snapshot")
                     boolean isTerminal
     ) throws IOException {
-        targetsMixin.replace(targets);
-        runWithJet(verbosity, jet -> {
+        runWithJet(targets, verbosity, jet -> {
             Job job = getJob(jet, jobName);
             assertJobActive(jobName, job);
             if (isTerminal) {
@@ -316,8 +371,7 @@ public class JetCommandLine implements Runnable {
                     description = "Name of the snapshot")
                     String snapshotName
     ) throws IOException {
-        targetsMixin.replace(targets);
-        runWithJet(verbosity, jet -> {
+        runWithJet(targets, verbosity, jet -> {
             JobStateSnapshot jobStateSnapshot = jet.getJobStateSnapshot(snapshotName);
             if (jobStateSnapshot == null) {
                 throw new JetException(String.format("Didn't find a snapshot named '%s'", snapshotName));
@@ -338,8 +392,7 @@ public class JetCommandLine implements Runnable {
                     description = "Name of the job to restart")
                     String name
     ) throws IOException {
-        targetsMixin.replace(targets);
-        runWithJet(verbosity, jet -> {
+        runWithJet(targets, verbosity, jet -> {
             Job job = getJob(jet, name);
             assertJobRunning(name, job);
             println("Restarting job " + formatJob(job) + "...");
@@ -360,8 +413,7 @@ public class JetCommandLine implements Runnable {
                     description = "Name of the job to resume")
                     String name
     ) throws IOException {
-        targetsMixin.replace(targets);
-        runWithJet(verbosity, jet -> {
+        runWithJet(targets, verbosity, jet -> {
             Job job = getJob(jet, name);
             if (job.getStatus() != JobStatus.SUSPENDED) {
                 throw new RuntimeException("Job '" + name + "' is not suspended. Current state: " + job.getStatus());
@@ -384,8 +436,7 @@ public class JetCommandLine implements Runnable {
                     description = "Lists all jobs including completed and failed ones")
                     boolean listAll
     ) throws IOException {
-        targetsMixin.replace(targets);
-        runWithJet(verbosity, jet -> {
+        runWithJet(targets, verbosity, jet -> {
             JetClientInstanceImpl client = (JetClientInstanceImpl) jet;
             List<JobSummary> summaries = client.getJobSummaryList();
             String format = "%-19s %-18s %-23s %s";
@@ -410,8 +461,7 @@ public class JetCommandLine implements Runnable {
             @Option(names = {"-F", "--full-job-name"},
                     description = "Don't trim job name to fit, can break layout")
                     boolean fullJobName) throws IOException {
-        targetsMixin.replace(targets);
-        runWithJet(verbosity, jet -> {
+        runWithJet(targets, verbosity, jet -> {
             Collection<JobStateSnapshot> snapshots = jet.getJobStateSnapshots();
             printf("%-23s %-15s %-24s %s", "TIME", "SIZE (bytes)", "JOB NAME", "SNAPSHOT NAME");
             snapshots.stream()
@@ -434,8 +484,7 @@ public class JetCommandLine implements Runnable {
             @Mixin(name = "verbosity") Verbosity verbosity,
             @Mixin(name = "targets") TargetsMixin targets
     ) {
-        targetsMixin.replace(targets);
-        runWithJet(verbosity, jet -> {
+        runWithJet(targets, verbosity, jet -> {
             JetClientInstanceImpl client = (JetClientInstanceImpl) jet;
             HazelcastClientInstanceImpl hazelcastClient = client.getHazelcastClient();
             ClientClusterService clientClusterService = hazelcastClient.getClientClusterService();
@@ -483,7 +532,8 @@ public class JetCommandLine implements Runnable {
         );
     }
 
-    private void runWithJet(Verbosity verbosity, Consumer<JetInstance> consumer) {
+    private void runWithJet(TargetsMixin targets, Verbosity verbosity, ConsumerEx<JetInstance> consumer) {
+        this.targetsMixin.replace(targets);
         this.verbosity.merge(verbosity);
         configureLogging();
         JetInstance jet = getJetClient();
