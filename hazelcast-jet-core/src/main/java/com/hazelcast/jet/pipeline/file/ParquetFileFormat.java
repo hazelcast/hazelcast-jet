@@ -31,6 +31,13 @@ public class ParquetFileFormat<T> implements FileFormat<T> {
      */
     public static final String FORMAT_PARQUET = "parquet";
 
+    /**
+     * Creates {@link ParquetFileFormat}. See {@link FileFormats#parquet()}
+     * for more details.
+     */
+    ParquetFileFormat() {
+    }
+
     @Nonnull @Override
     public String format() {
         return FORMAT_PARQUET;

@@ -39,7 +39,7 @@ public class LinesTextFileFormat implements FileFormat<String> {
      * Creates a {@code LinesTextFileFormat} with the default character
      * encoding (UTF-8).
      */
-    public LinesTextFileFormat() {
+    LinesTextFileFormat() {
         this(UTF_8);
     }
 
@@ -50,7 +50,7 @@ public class LinesTextFileFormat implements FileFormat<String> {
      * <strong>NOTE:</strong> the Hadoop connector only supports UTF-8. This
      * option is supported for local files only.
      */
-    public LinesTextFileFormat(@Nonnull Charset charset) {
+    LinesTextFileFormat(@Nonnull Charset charset) {
         this.charset = requireNonNull(charset, "charset must not be null");
     }
 

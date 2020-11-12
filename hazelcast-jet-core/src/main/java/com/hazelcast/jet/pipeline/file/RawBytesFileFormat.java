@@ -29,6 +29,13 @@ public class RawBytesFileFormat implements FileFormat<byte[]> {
      */
     public static final String FORMAT_BIN = "bin";
 
+    /**
+     * Create {@link RawBytesFileFormat}. See {@link FileFormats#bytes()} for more
+     * details.
+     */
+    RawBytesFileFormat() {
+    }
+
     @Nonnull @Override
     public String format() {
         return FORMAT_BIN;

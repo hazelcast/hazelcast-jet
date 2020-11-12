@@ -41,7 +41,7 @@ public class CsvFileFormat<T> implements FileFormat<T> {
      *
      * @param clazz type of the object to deserialize CSV lines into
      */
-    public CsvFileFormat(Class<T> clazz) {
+    CsvFileFormat(@Nonnull Class<T> clazz) {
         this.clazz = requireNonNull(clazz, "clazz must not be null");
     }
 
@@ -49,6 +49,7 @@ public class CsvFileFormat<T> implements FileFormat<T> {
      * Returns the type of the object the data source using this format will
      * emit.
      */
+    @Nonnull
     public Class<T> clazz() {
         return clazz;
     }

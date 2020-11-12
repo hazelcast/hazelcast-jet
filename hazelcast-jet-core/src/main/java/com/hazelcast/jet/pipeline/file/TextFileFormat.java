@@ -39,7 +39,7 @@ public class TextFileFormat implements FileFormat<String> {
      * Creates a {@code TextFileFormat} with the default character encoding
      * (UTF-8).
      */
-    public TextFileFormat() {
+    TextFileFormat() {
         this(UTF_8);
     }
 
@@ -50,13 +50,14 @@ public class TextFileFormat implements FileFormat<String> {
      * <strong>NOTE:</strong> the Hadoop connector only supports UTF-8. This
      * option is supported for local files only.
      */
-    public TextFileFormat(@Nonnull Charset charset) {
+    TextFileFormat(@Nonnull Charset charset) {
         this.charset = requireNonNull(charset, "charset must not be null");
     }
 
     /**
      * Returns the configured character encoding.
      */
+    @Nonnull
     public Charset charset() {
         return charset;
     }

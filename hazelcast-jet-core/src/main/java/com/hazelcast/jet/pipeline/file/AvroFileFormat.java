@@ -35,6 +35,13 @@ public class AvroFileFormat<T> implements FileFormat<T> {
     private Class<T> reflectClass;
 
     /**
+     * Creates {@link AvroFileFormat}. See {@link FileFormats#avro} for more
+     * details.
+     */
+    AvroFileFormat() {
+    }
+
+    /**
      * Specifies to use reflection to deserialize data into the given class.
      * Jet will use the {@code ReflectDatumReader} to read Avro data. The
      * parameter may be {@code null}, this disables the option to deserialize
@@ -42,6 +49,7 @@ public class AvroFileFormat<T> implements FileFormat<T> {
      *
      * @param reflectClass class to deserialize data into
      */
+    @Nonnull
     public AvroFileFormat<T> withReflect(@Nullable Class<T> reflectClass) {
         this.reflectClass = reflectClass;
         return this;

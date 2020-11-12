@@ -41,7 +41,7 @@ public class JsonFileFormat<T> implements FileFormat<T> {
      *
      * @param clazz the type of the object to deserialize JSON into
      */
-    public JsonFileFormat(@Nonnull Class<T> clazz) {
+    JsonFileFormat(@Nonnull Class<T> clazz) {
         this.clazz = requireNonNull(clazz, "class must not be null");
     }
 
