@@ -18,13 +18,14 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+
     <modelVersion>4.0.0</modelVersion>
     <packaging>jar</packaging>
-    <name>hazelcast-jet-hadoop</name>
-    <description>Hadoop Input/Output support for Hazelcast Jet</description>
+    <name>hazelcast-jet-csv</name>
+    <description>CSV support for Hazelcast Jet</description>
     <url>http://www.hazelcast.com/</url>
 
-    <artifactId>hazelcast-jet-hadoop</artifactId>
+    <artifactId>hazelcast-jet-csv</artifactId>
 
     <parent>
         <groupId>com.hazelcast.jet</groupId>
@@ -40,27 +41,10 @@
                 <configuration>
                     <archive>
                         <manifestEntries>
-                            <Automatic-Module-Name>com.hazelcast.jet.hadoop</Automatic-Module-Name>
+                            <Automatic-Module-Name>com.hazelcast.jet.csv</Automatic-Module-Name>
                         </manifestEntries>
                     </archive>
                 </configuration>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.avro</groupId>
-                <artifactId>avro-maven-plugin</artifactId>
-                <version>${avro.version}</version>
-                <executions>
-                    <execution>
-                        <phase>generate-sources</phase>
-                        <goals>
-                            <goal>schema</goal>
-                        </goals>
-                        <configuration>
-                            <testSourceDirectory>${project.basedir}/src/test/avro</testSourceDirectory>
-                            <testOutputDirectory>${project.basedir}/src/test/java/</testOutputDirectory>
-                        </configuration>
-                    </execution>
-                </executions>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -76,10 +60,9 @@
                 <configuration>
                     <createSourcesJar>true</createSourcesJar>
                     <shadeSourcesContent>true</shadeSourcesContent>
-                    <!--
-                    We actually don't shade these in here in Hadoop module, they are already part of core
-                    But we need to relocate the usage in the Hadoop module
-                    -->
+                    <createDependencyReducedPom>true</createDependencyReducedPom>
+                    <shadedArtifactAttached>true</shadedArtifactAttached>
+                    <shadedClassifierName>jar-with-dependencies</shadedClassifierName>
                     <relocations>
                         <relocation>
                             <pattern>com.fasterxml.jackson.core</pattern>
@@ -98,6 +81,16 @@
                         <transformer
                             implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer" />
                     </transformers>
+                    <filters>
+                        <filter>
+                            <artifact>*:*</artifact>
+                            <excludes>
+                                <exclude>META-INF/*.SF</exclude>
+                                <exclude>META-INF/*.DSA</exclude>
+                                <exclude>META-INF/*.RSA</exclude>
+                            </excludes>
+                        </filter>
+                    </filters>
                 </configuration>
             </plugin>
 
@@ -106,62 +99,16 @@
 
     <dependencies>
         <dependency>
-            <groupId>org.apache.hadoop</groupId>
-            <artifactId>hadoop-client</artifactId>
-            <version>${hadoop.version}</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.avro</groupId>
-            <artifactId>avro</artifactId>
-            <version>${avro.version}</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.avro</groupId>
-            <artifactId>avro-mapred</artifactId>
-            <version>${avro.version}</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.parquet</groupId>
-            <artifactId>parquet-avro</artifactId>
-            <version>${parquet.version}</version>
-            <scope>provided</scope>
-        </dependency>
-
-        <!-- Hadoop brings in jackson 2.8, our jackson support expects 2.10 if present at all -->
-        <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-databind</artifactId>
-            <version>${jackson.jr.version}</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
             <groupId>com.fasterxml.jackson.dataformat</groupId>
             <artifactId>jackson-dataformat-csv</artifactId>
             <version>${jackson.jr.version}</version>
-            <scope>provided</scope> <!-- part of hazelcast-jet-csv, which user needs to have on CP -->
-        </dependency>
-
-        <!-- Test dependencies -->
-        <dependency>
-            <groupId>com.hazelcast.jet</groupId>
-            <artifactId>hazelcast-jet-avro</artifactId>
-            <version>${project.version}</version>
-            <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>com.hazelcast.jet</groupId>
-            <artifactId>hazelcast-jet-csv</artifactId>
-            <version>${project.version}</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.logging.log4j</groupId>
-            <artifactId>log4j-slf4j-impl</artifactId>
-            <version>${log4j2.version}</version>
-            <scope>test</scope>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-core</artifactId>
+            <version>${jackson.jr.version}</version>
+            <scope>provided</scope> <!-- already part of core -->
         </dependency>
     </dependencies>
+
 </project>

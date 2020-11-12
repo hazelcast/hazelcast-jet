@@ -16,16 +16,12 @@
 
 package com.hazelcast.jet.pipeline.file.impl;
 
-import com.fasterxml.jackson.databind.ObjectReader;
-import com.fasterxml.jackson.dataformat.csv.CsvMapper;
-import com.fasterxml.jackson.dataformat.csv.CsvSchema;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.impl.util.IOUtil;
 import com.hazelcast.jet.json.JsonUtil;
 import com.hazelcast.jet.pipeline.BatchSource;
 import com.hazelcast.jet.pipeline.Sources;
-import com.hazelcast.jet.pipeline.file.CsvFileFormat;
 import com.hazelcast.jet.pipeline.file.FileFormat;
 import com.hazelcast.jet.pipeline.file.FileSourceBuilder;
 import com.hazelcast.jet.pipeline.file.JsonFileFormat;
@@ -47,10 +43,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.ServiceLoader;
-import java.util.Spliterator;
-import java.util.Spliterators;
 import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
 
 import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
 import static com.hazelcast.jet.impl.util.Util.uncheckCall;
@@ -68,7 +61,6 @@ public class LocalFileSourceFactory implements FileSourceFactory {
     static {
         Map<String, ReadFileFnProvider> mapFns = new HashMap<>();
 
-        addMapFnProvider(mapFns, new CsvReadFileFnProvider());
         addMapFnProvider(mapFns, new JsonReadFileFnProvider());
         addMapFnProvider(mapFns, new LinesReadFileFnProvider());
         addMapFnProvider(mapFns, new ParquetReadFileFnProvider());
@@ -149,31 +141,6 @@ public class LocalFileSourceFactory implements FileSourceFactory {
 
         @Nonnull
         abstract <T> FunctionEx<InputStream, Stream<T>> mapInputStreamFn(FileFormat<T> format);
-    }
-
-    private static class CsvReadFileFnProvider extends AbstractReadFileFnProvider {
-
-        @Nonnull @Override
-        <T> FunctionEx<InputStream, Stream<T>> mapInputStreamFn(FileFormat<T> format) {
-            CsvFileFormat<T> csvFileFormat = (CsvFileFormat<T>) format;
-            Class<?> formatClazz = csvFileFormat.clazz(); // Format is not Serializable
-            return is -> {
-                CsvSchema schema = CsvSchema.emptySchema().withHeader();
-                CsvMapper mapper = new CsvMapper();
-                ObjectReader reader = mapper.readerFor(formatClazz).with(schema);
-
-                return StreamSupport.stream(
-                        Spliterators.spliteratorUnknownSize(
-                                reader.readValues(is),
-                                Spliterator.ORDERED),
-                        false);
-            };
-        }
-
-        @Nonnull @Override
-        public String format() {
-            return CsvFileFormat.FORMAT_CSV;
-        }
     }
 
     private static class JsonReadFileFnProvider extends AbstractReadFileFnProvider {
