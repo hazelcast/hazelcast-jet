@@ -1,1 +1,1 @@
-com.hazelcast.jet.csv.CsvReadFileFnProvider
+com.hazelcast.jet.csv.impl.CsvReadFileFnProvider

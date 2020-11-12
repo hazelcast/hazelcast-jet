@@ -18,6 +18,8 @@ package com.hazelcast.jet.pipeline.file;
 
 /**
  * Convenience methods to FileSourceBuilder
+ *
+ * @since 4.4
  */
 public final class FileSources {
 

@@ -26,6 +26,7 @@ import java.nio.charset.Charset;
  * code is looked up elsewhere, by using this object as a key.
  *
  * @param <T> type of items a source using this file format will emit
+ * @since 4.4
  */
 public interface FileFormat<T> {
 

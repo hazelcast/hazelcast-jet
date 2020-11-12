@@ -60,6 +60,7 @@ import static java.util.Objects.requireNonNull;
  * }</pre>
  *
  * @param <T>
+ * @since 4.4
  */
 public class FileSourceBuilder<T> {
 

@@ -24,6 +24,7 @@ import javax.annotation.Nullable;
  * details.
  *
  * @param <T> type of items a source using this file format will emit
+ * @since 4.4
  */
 public class AvroFileFormat<T> implements FileFormat<T> {
 
@@ -35,7 +36,7 @@ public class AvroFileFormat<T> implements FileFormat<T> {
     private Class<T> reflectClass;
 
     /**
-     * Creates {@link AvroFileFormat}. See {@link FileFormats#avro} for more
+     * Creates {@link AvroFileFormat}. See {@link FileFormat#avro} for more
      * details.
      */
     AvroFileFormat() {

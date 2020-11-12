@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.avro;
+package com.hazelcast.jet.avro.impl;
 
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.pipeline.file.AvroFileFormat;
@@ -51,10 +51,6 @@ public class AvroReadFileFnProvider implements ReadFileFnProvider {
     }
 
     private static <T> DatumReader<T> datumReader(Class<T> reflectClass) {
-//        TODO handle when class is subtype of SpecificRecord
-//        if (SpecificRecord.class.isAssignableFrom(reflectClass)) {
-//            return new SpecificDatumReader<>(reflectClass);
-//        }
         return reflectClass == null ? new SpecificDatumReader<>() : new ReflectDatumReader<>(reflectClass);
     }
 

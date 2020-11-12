@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.csv;
+package com.hazelcast.jet.csv.impl;
 
 import com.fasterxml.jackson.databind.ObjectReader;
 import com.fasterxml.jackson.dataformat.csv.CsvMapper;
@@ -38,8 +38,6 @@ import static java.util.Spliterator.ORDERED;
 /**
  * ReadFileFnProvider for CSV files, reading given path and deserializing using
  * Jackson CsvMapper
- *
- * @since 4.4
  */
 @SuppressFBWarnings(
         value = "OBL_UNSATISFIED_OBLIGATION",

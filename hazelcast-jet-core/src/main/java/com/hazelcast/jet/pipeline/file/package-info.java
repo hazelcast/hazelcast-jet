@@ -18,11 +18,7 @@
  * This package offers the {@link com.hazelcast.jet.pipeline.file.FileSourceBuilder}
  * which allows you to construct various kinds of {@link com.hazelcast.jet.pipeline.Pipeline
  * Pipeline} sources that read from local or distributed files.
- * <p>
- * <strong>NOTE:</strong> As of Hazelcast Jet 4.3, this is evolving API and
- * there may breakingly change in any future release.
+ *
+ * @since 4.4
  */
-@EvolvingApi
 package com.hazelcast.jet.pipeline.file;
-
-import com.hazelcast.jet.annotation.EvolvingApi;

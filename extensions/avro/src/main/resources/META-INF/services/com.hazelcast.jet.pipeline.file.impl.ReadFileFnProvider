@@ -1,1 +1,1 @@
-com.hazelcast.jet.avro.AvroReadFileFnProvider
+com.hazelcast.jet.avro.impl.AvroReadFileFnProvider

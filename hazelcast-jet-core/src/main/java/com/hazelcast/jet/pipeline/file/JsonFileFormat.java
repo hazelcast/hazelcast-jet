@@ -25,6 +25,7 @@ import static java.util.Objects.requireNonNull;
  * for more details.
  *
  * @param <T> type of items a source using this file format will emit
+ * @since 4.4
  */
 public class JsonFileFormat<T> implements FileFormat<T> {
 

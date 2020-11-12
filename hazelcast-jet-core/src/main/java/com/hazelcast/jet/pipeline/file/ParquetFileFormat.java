@@ -23,6 +23,7 @@ import javax.annotation.Nonnull;
  * more details.
  *
  * @param <T> type of items a source using this file format will emit
+ * @since 4.4
  */
 public class ParquetFileFormat<T> implements FileFormat<T> {
 
@@ -32,7 +33,7 @@ public class ParquetFileFormat<T> implements FileFormat<T> {
     public static final String FORMAT_PARQUET = "parquet";
 
     /**
-     * Creates {@link ParquetFileFormat}. See {@link FileFormats#parquet()}
+     * Creates {@link ParquetFileFormat}. See {@link FileFormat#parquet()}
      * for more details.
      */
     ParquetFileFormat() {

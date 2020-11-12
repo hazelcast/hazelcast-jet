@@ -19,4 +19,4 @@
  *
  * @since 4.4
  */
-package com.hazelcast.jet.csv;
+package com.hazelcast.jet.csv.impl;
