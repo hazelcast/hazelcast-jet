@@ -197,10 +197,11 @@ public interface SqlConnector {
 
     /**
      * Returns a supplier for a source vertex reading the input according to
-     * the projection/predicate. The output type of the source is Object[].
+     * the {@code projection}/{@code predicate}. The output type of the source
+     * is Object[].
      * <p>
      * The field indexes in the predicate and projection refer to the
-     * zero-based indexes of the original fields of the {code table}. For
+     * zero-based indexes of the original fields of the {@code table}. For
      * example, if the table has fields {@code a, b, c} and the query is:
      * <pre>{@code
      *     SELECT b FROM t WHERE c=10
@@ -222,6 +223,7 @@ public interface SqlConnector {
     ) {
         assert !supportsFullScanReader();
         throw new UnsupportedOperationException("Full scan not supported for " + typeName());
+    }
 
     /**
      * Returns whether this connector supports the {@link #nestedLoopReader}.
