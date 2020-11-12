@@ -238,7 +238,7 @@ public interface SqlConnector {
      * - on the left side of a join - and connecting it with the source - on
      * the right side of a join - according to the {@code joinInfo}.
      * The source is read according to {@code projection}/{@code predicate}.
-     * The output type of the source is Object[].
+     * The output type is Object[].
      * <p>
      * The result is the vertex to be added to the DAG.
      * <p>
