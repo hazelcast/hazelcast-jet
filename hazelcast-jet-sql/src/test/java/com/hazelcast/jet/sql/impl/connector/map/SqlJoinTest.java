@@ -511,4 +511,50 @@ public class SqlJoinTest extends SqlTestSupport {
         // SELECT * FROM left JOIN LATERAL (SELECT __key, this FROM map WHERE __key < 3) AS m ON 1 = 1
         // SELECT * FROM left JOIN LATERAL (SELECT __key FROM map WHERE __key > l.v) m ON 1 = 1
     }
+
+    @Test
+    public void test_joinWithTypeConversion_smallerLeft() {
+        String leftName = randomName();
+        TestBatchSqlConnector.create(sqlService, leftName, 3);
+
+        String mapName = randomName();
+        instance().getMap(mapName).putAll(ImmutableMap.of(
+                (short) 1, "value-1",
+                (short) 2, "value-2",
+                (short) 3, "value-3"
+        ));
+
+        assertRowsAnyOrder(
+                "SELECT l.v, m.this " +
+                        "FROM " + leftName + " l " +
+                        "INNER JOIN " + mapName + " m ON l.v = m.__key",
+                asList(
+                        new Row(1, "value-1"),
+                        new Row(2, "value-2")
+                )
+        );
+    }
+
+    @Test
+    public void test_joinWithTypeConversion_smallerRight() {
+        String leftName = randomName();
+        TestBatchSqlConnector.create(sqlService, leftName, 3);
+
+        String mapName = randomName();
+        instance().getMap(mapName).putAll(ImmutableMap.of(
+                1L, "value-1",
+                2L, "value-2",
+                3L, "value-3"
+        ));
+
+        assertRowsAnyOrder(
+                "SELECT l.v, m.this " +
+                        "FROM " + leftName + " l " +
+                        "INNER JOIN " + mapName + " m ON l.v = m.__key",
+                asList(
+                        new Row(1, "value-1"),
+                        new Row(2, "value-2")
+                )
+        );
+    }
 }
