@@ -183,7 +183,7 @@ public class CreateDagVisitor {
     }
 
     public Vertex onNestedLoopJoin(JoinNestedLoopPhysicalRel rel) {
-        assert rel.getRight() instanceof FullScanPhysicalRel : rel.getRight().getRelTypeName();
+        assert rel.getRight() instanceof FullScanPhysicalRel : rel.getRight().getClass();
 
         Table rightTable = rel.getRight().getTable().unwrap(HazelcastTable.class).getTarget();
 

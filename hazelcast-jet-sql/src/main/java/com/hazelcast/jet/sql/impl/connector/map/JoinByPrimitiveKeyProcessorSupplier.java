@@ -26,7 +26,6 @@ import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.impl.execution.init.Contexts.ProcSupplierCtx;
 import com.hazelcast.jet.impl.processor.AsyncTransformUsingServiceOrderedP;
 import com.hazelcast.jet.pipeline.ServiceFactories;
-import com.hazelcast.jet.pipeline.ServiceFactory;
 import com.hazelcast.jet.sql.impl.ExpressionUtil;
 import com.hazelcast.jet.sql.impl.JetJoinInfo;
 import com.hazelcast.jet.sql.impl.connector.keyvalue.KvRowProjector;
@@ -58,7 +57,6 @@ final class JoinByPrimitiveKeyProcessorSupplier implements ProcessorSupplier, Da
     private String mapName;
     private KvRowProjector.Supplier rightRowProjectorSupplier;
 
-    private transient ServiceFactory<Object, IMap<Object, Object>> mapFactory;
     private transient IMap<Object, Object> map;
     private transient InternalSerializationService serializationService;
     private transient Extractors extractors;
@@ -82,7 +80,6 @@ final class JoinByPrimitiveKeyProcessorSupplier implements ProcessorSupplier, Da
     @Override
     @SuppressWarnings("unchecked")
     public void init(@Nonnull Context context) {
-        mapFactory = (ServiceFactory<Object, IMap<Object, Object>>) ServiceFactories.iMapService(mapName);
         map = context.jetInstance().getMap(mapName);
         serializationService = ((ProcSupplierCtx) context).serializationService();
         extractors = Extractors.newBuilder(serializationService).build();
@@ -97,7 +94,7 @@ final class JoinByPrimitiveKeyProcessorSupplier implements ProcessorSupplier, Da
         List<Processor> processors = new ArrayList<>(count);
         for (int i = 0; i < count; i++) {
             Processor processor = new AsyncTransformUsingServiceOrderedP<>(
-                    mapFactory,
+                    ServiceFactories.iMapService(mapName),
                     map,
                     MAX_CONCURRENT_OPS,
                     joinFn(joinInfo, rightRowProjectorSupplier)

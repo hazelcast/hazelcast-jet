@@ -30,6 +30,7 @@ import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.pipeline.ServiceFactory;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.ArrayDeque;
 import java.util.concurrent.CompletableFuture;
 
@@ -58,7 +59,7 @@ public class AsyncTransformUsingServiceOrderedP<C, S, T, R> extends AbstractAsyn
     private int queuedWmCount;
 
     private Traverser<?> currentTraverser = Traversers.empty();
-    private ResettableSingletonTraverser<Watermark> watermarkTraverser = new ResettableSingletonTraverser<>();
+    private final ResettableSingletonTraverser<Watermark> watermarkTraverser = new ResettableSingletonTraverser<>();
 
     @Probe(name = "numInFlightOps")
     private final Counter asyncOpsCounterMetric = SwCounter.newSwCounter();
@@ -68,7 +69,7 @@ public class AsyncTransformUsingServiceOrderedP<C, S, T, R> extends AbstractAsyn
      */
     public AsyncTransformUsingServiceOrderedP(
             @Nonnull ServiceFactory<C, S> serviceFactory,
-            @Nonnull C serviceContext,
+            @Nullable C serviceContext,
             int maxConcurrentOps,
             @Nonnull BiFunctionEx<? super S, ? super T, ? extends CompletableFuture<Traverser<R>>> callAsyncFn
     ) {
