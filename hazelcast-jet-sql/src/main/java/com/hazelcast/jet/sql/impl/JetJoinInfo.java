@@ -56,6 +56,7 @@ public class JetJoinInfo implements DataSerializable {
             Expression<Boolean> condition
     ) {
         Preconditions.checkTrue(leftEquiJoinIndices.length == rightEquiJoinIndices.length, "indices length mismatch");
+
         this.leftEquiJoinIndices = leftEquiJoinIndices;
         this.rightEquiJoinIndices = rightEquiJoinIndices;
         this.nonEquiCondition = nonEquiCondition;
@@ -84,15 +85,6 @@ public class JetJoinInfo implements DataSerializable {
     }
 
     @Override
-    public String toString() {
-        return "JoinInfo{" +
-                "leftEquiJoinIndices=" + Arrays.toString(leftEquiJoinIndices) +
-                ", rightEquiJoinIndices=" + Arrays.toString(rightEquiJoinIndices) +
-                ", nonEquiCondition=" + nonEquiCondition +
-                '}';
-    }
-
-    @Override
     public void writeData(ObjectDataOutput out) throws IOException {
         out.writeObject(leftEquiJoinIndices);
         out.writeObject(rightEquiJoinIndices);
@@ -106,5 +98,15 @@ public class JetJoinInfo implements DataSerializable {
         rightEquiJoinIndices = in.readObject();
         nonEquiCondition = in.readObject();
         condition = in.readObject();
+    }
+
+    @Override
+    public String toString() {
+        return "JetJoinInfo{" +
+               "leftEquiJoinIndices=" + Arrays.toString(leftEquiJoinIndices) +
+               ", rightEquiJoinIndices=" + Arrays.toString(rightEquiJoinIndices) +
+               ", nonEquiCondition=" + nonEquiCondition +
+               ", condition=" + condition +
+               '}';
     }
 }

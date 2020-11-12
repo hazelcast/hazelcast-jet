@@ -35,6 +35,7 @@ import com.hazelcast.nio.serialization.DataSerializable;
 import com.hazelcast.query.Predicate;
 import com.hazelcast.query.impl.getters.Extractors;
 import com.hazelcast.sql.impl.extract.QueryPath;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 import javax.annotation.Nonnull;
 import java.io.IOException;
@@ -43,6 +44,10 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map.Entry;
 
+@SuppressFBWarnings(
+        value = {"SE_BAD_FIELD", "SE_NO_SERIALVERSIONID"},
+        justification = "the class is never java-serialized"
+)
 final class JoinByPredicateProcessorSupplier implements ProcessorSupplier, DataSerializable {
 
     private JetJoinInfo joinInfo;

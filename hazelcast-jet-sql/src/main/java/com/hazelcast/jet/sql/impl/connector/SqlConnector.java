@@ -269,7 +269,7 @@ public interface SqlConnector {
             @Nonnull JetJoinInfo joinInfo
     ) {
         assert !supportsNestedLoopReader();
-        throw new UnsupportedOperationException("Nested loop not supported for " + typeName());
+        throw new UnsupportedOperationException("Join not supported for " + typeName());
     }
 
     /**

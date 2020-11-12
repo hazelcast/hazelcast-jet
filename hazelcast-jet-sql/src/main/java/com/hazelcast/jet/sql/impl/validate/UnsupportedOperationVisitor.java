@@ -374,10 +374,10 @@ public final class UnsupportedOperationVisitor implements SqlVisitor<Void> {
 
     private void processOtherDdl(SqlCall call) {
         if (!(call instanceof SqlCreateJob)
-            && !(call instanceof SqlDropJob)
-            && !(call instanceof SqlAlterJob)
-            && !(call instanceof SqlCreateSnapshot)
-            && !(call instanceof SqlDropSnapshot)
+                && !(call instanceof SqlDropJob)
+                && !(call instanceof SqlAlterJob)
+                && !(call instanceof SqlCreateSnapshot)
+                && !(call instanceof SqlDropSnapshot)
         ) {
             throw unsupported(call, "OTHER DDL class (" + call.getClass().getSimpleName() + ")");
         }

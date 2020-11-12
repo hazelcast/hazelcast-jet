@@ -35,6 +35,7 @@ import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.DataSerializable;
 import com.hazelcast.query.impl.getters.Extractors;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 import javax.annotation.Nonnull;
 import java.io.IOException;
@@ -45,6 +46,10 @@ import java.util.concurrent.CompletableFuture;
 
 import static com.hazelcast.jet.Util.entry;
 
+@SuppressFBWarnings(
+        value = {"SE_BAD_FIELD", "SE_NO_SERIALVERSIONID"},
+        justification = "the class is never java-serialized"
+)
 final class JoinByPrimitiveKeyProcessorSupplier implements ProcessorSupplier, DataSerializable {
 
     private static final int MAX_CONCURRENT_OPS = 8;
