@@ -18,7 +18,7 @@ package com.hazelcast.jet.sql.impl.connector;
 
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Vertex;
-import com.hazelcast.jet.sql.impl.JoinInfo;
+import com.hazelcast.jet.sql.impl.JetJoinInfo;
 import com.hazelcast.jet.sql.impl.schema.MappingField;
 import com.hazelcast.spi.impl.NodeEngine;
 import com.hazelcast.sql.impl.expression.Expression;
@@ -258,7 +258,7 @@ public interface SqlConnector {
      * @param table      the table object
      * @param predicate  SQL expression to filter the rows
      * @param projection the list of fields to return
-     * @param joinInfo   {@link JoinInfo}
+     * @param jetJoinInfo   {@link JetJoinInfo}
      */
     @Nonnull
     default Vertex nestedLoopReader(
@@ -266,7 +266,7 @@ public interface SqlConnector {
             @Nonnull Table table,
             @Nullable Expression<Boolean> predicate,
             @Nonnull List<Expression<?>> projection,
-            @Nonnull JoinInfo joinInfo
+            @Nonnull JetJoinInfo jetJoinInfo
     ) {
         assert !supportsNestedLoopReader();
         throw new UnsupportedOperationException("Nested loop reader not supported for " + getClass().getName());

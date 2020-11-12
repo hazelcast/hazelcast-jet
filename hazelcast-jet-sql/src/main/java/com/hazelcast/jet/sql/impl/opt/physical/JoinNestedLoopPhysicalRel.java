@@ -17,7 +17,7 @@
 package com.hazelcast.jet.sql.impl.opt.physical;
 
 import com.hazelcast.jet.core.Vertex;
-import com.hazelcast.jet.sql.impl.JoinInfo;
+import com.hazelcast.jet.sql.impl.JetJoinInfo;
 import com.hazelcast.sql.impl.calcite.schema.HazelcastTable;
 import com.hazelcast.sql.impl.expression.Expression;
 import com.hazelcast.sql.impl.plan.node.PlanNodeSchema;
@@ -55,7 +55,7 @@ public class JoinNestedLoopPhysicalRel extends Join implements PhysicalRel {
         return ((FullScanPhysicalRel) getRight()).projection();
     }
 
-    public JoinInfo joinInfo() {
+    public JetJoinInfo joinInfo() {
         int[] leftKeys = joinInfo.leftKeys.toIntArray();
 
         HazelcastTable table = getRight().getTable().unwrap(HazelcastTable.class);
@@ -66,7 +66,7 @@ public class JoinNestedLoopPhysicalRel extends Join implements PhysicalRel {
 
         Expression<Boolean> condition = filter(schema(), getCondition());
 
-        return new JoinInfo(leftKeys, rightKeys, nonEquiCondition, condition);
+        return new JetJoinInfo(leftKeys, rightKeys, nonEquiCondition, condition);
     }
 
     @Override

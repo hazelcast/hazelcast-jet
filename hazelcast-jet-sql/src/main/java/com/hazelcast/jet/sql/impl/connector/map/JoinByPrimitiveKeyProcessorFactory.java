@@ -24,7 +24,7 @@ import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.impl.processor.AsyncTransformUsingServiceOrderedP;
 import com.hazelcast.jet.pipeline.ServiceFactory;
 import com.hazelcast.jet.sql.impl.ExpressionUtil;
-import com.hazelcast.jet.sql.impl.JoinInfo;
+import com.hazelcast.jet.sql.impl.JetJoinInfo;
 import com.hazelcast.jet.sql.impl.connector.keyvalue.KvRowProjector;
 import com.hazelcast.jet.sql.impl.connector.map.JoinProcessors.JoinProcessorFactory;
 import com.hazelcast.map.IMap;
@@ -49,24 +49,24 @@ final class JoinByPrimitiveKeyProcessorFactory implements JoinProcessorFactory {
             IMap<Object, Object> map,
             QueryPath[] rightPaths,
             SupplierEx<KvRowProjector> rightProjectorSupplier,
-            JoinInfo joinInfo
+            JetJoinInfo jetJoinInfo
     ) {
         return new AsyncTransformUsingServiceOrderedP<>(
                 mapFactory,
                 map,
                 MAX_CONCURRENT_OPS,
-                callAsyncFn(rightProjectorSupplier, joinInfo)
+                callAsyncFn(rightProjectorSupplier, jetJoinInfo)
         );
     }
 
     private static BiFunctionEx<IMap<Object, Object>, Object[], CompletableFuture<Traverser<Object[]>>> callAsyncFn(
             SupplierEx<KvRowProjector> rightProjectorSupplier,
-            JoinInfo joinInfo
+            JetJoinInfo jetJoinInfo
     ) {
-        assert joinInfo.leftEquiJoinIndices().length == 1;
+        assert jetJoinInfo.leftEquiJoinIndices().length == 1;
 
-        int leftEquiJoinIndex = joinInfo.leftEquiJoinIndices()[0];
-        BiFunctionEx<Object[], Object[], Object[]> joinFn = ExpressionUtil.joinFn(joinInfo.nonEquiCondition());
+        int leftEquiJoinIndex = jetJoinInfo.leftEquiJoinIndices()[0];
+        BiFunctionEx<Object[], Object[], Object[]> joinFn = ExpressionUtil.joinFn(jetJoinInfo.nonEquiCondition());
 
         return (map, left) -> {
             Object key = left[leftEquiJoinIndex];

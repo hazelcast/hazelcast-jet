@@ -22,7 +22,7 @@ import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.Processor.Context;
 import com.hazelcast.jet.core.test.TestInbox;
 import com.hazelcast.jet.sql.impl.connector.keyvalue.KvRowProjector;
-import com.hazelcast.jet.sql.impl.JoinInfo;
+import com.hazelcast.jet.sql.impl.JetJoinInfo;
 import com.hazelcast.map.IMap;
 import com.hazelcast.sql.impl.expression.ColumnExpression;
 import com.hazelcast.sql.impl.expression.ConstantExpression;
@@ -136,7 +136,7 @@ public class JoinScanProcessorFactoryTest {
                 map,
                 null,
                 () -> rightProjector,
-                new JoinInfo(new int[0], new int[0], null, condition)
+                new JetJoinInfo(new int[0], new int[0], null, condition)
         );
     }
 }

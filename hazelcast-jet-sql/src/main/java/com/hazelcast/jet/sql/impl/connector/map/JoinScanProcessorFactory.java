@@ -25,7 +25,7 @@ import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.impl.processor.TransformBatchedP;
 import com.hazelcast.jet.pipeline.ServiceFactory;
 import com.hazelcast.jet.sql.impl.ExpressionUtil;
-import com.hazelcast.jet.sql.impl.JoinInfo;
+import com.hazelcast.jet.sql.impl.JetJoinInfo;
 import com.hazelcast.jet.sql.impl.connector.keyvalue.KvRowProjector;
 import com.hazelcast.jet.sql.impl.connector.map.JoinProcessors.JoinProcessorFactory;
 import com.hazelcast.map.IMap;
@@ -50,11 +50,11 @@ final class JoinScanProcessorFactory implements JoinProcessorFactory {
             IMap<Object, Object> map,
             QueryPath[] rightPaths,
             SupplierEx<KvRowProjector> rightProjectorSupplier,
-            JoinInfo joinInfo
+            JetJoinInfo jetJoinInfo
     ) {
         return new TransformBatchedP<Object[], Object[]>(
                 MAX_BATCH_SIZE,
-                joinFn(map, rightProjectorSupplier.get(), joinInfo)
+                joinFn(map, rightProjectorSupplier.get(), jetJoinInfo)
         ) {
             @Override
             public boolean isCooperative() {
@@ -66,9 +66,9 @@ final class JoinScanProcessorFactory implements JoinProcessorFactory {
     private static FunctionEx<List<? super Object[]>, Traverser<Object[]>> joinFn(
             IMap<Object, Object> map,
             KvRowProjector rightProjector,
-            JoinInfo joinInfo
+            JetJoinInfo jetJoinInfo
     ) {
-        BiFunctionEx<Object[], Object[], Object[]> joinFn = ExpressionUtil.joinFn(joinInfo.condition());
+        BiFunctionEx<Object[], Object[], Object[]> joinFn = ExpressionUtil.joinFn(jetJoinInfo.condition());
 
         return lefts -> {
             List<Object[]> rows = new ArrayList<>();

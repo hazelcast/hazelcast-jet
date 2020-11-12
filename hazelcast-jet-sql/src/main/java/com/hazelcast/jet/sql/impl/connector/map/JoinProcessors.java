@@ -23,7 +23,7 @@ import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.impl.execution.init.Contexts.ProcSupplierCtx;
 import com.hazelcast.jet.pipeline.ServiceFactories;
 import com.hazelcast.jet.pipeline.ServiceFactory;
-import com.hazelcast.jet.sql.impl.JoinInfo;
+import com.hazelcast.jet.sql.impl.JetJoinInfo;
 import com.hazelcast.jet.sql.impl.connector.keyvalue.KvRowProjector;
 import com.hazelcast.map.IMap;
 import com.hazelcast.nio.ObjectDataInput;
@@ -55,7 +55,7 @@ final class JoinProcessors {
             PartitionedMapTable table,
             Expression<Boolean> predicate,
             List<Expression<?>> projections,
-            JoinInfo joinInfo
+            JetJoinInfo jetJoinInfo
     ) {
         String name = table.getMapName();
         List<TableField> fields = table.getFields();
@@ -70,27 +70,27 @@ final class JoinProcessors {
                 table.getValueDescriptor(),
                 predicate,
                 projections,
-                joinInfo,
-                resolveJoinProcessorFactory(joinInfo, fields)
+                jetJoinInfo,
+                resolveJoinProcessorFactory(jetJoinInfo, fields)
         );
     }
 
-    private static JoinProcessorFactory resolveJoinProcessorFactory(JoinInfo joinInfo, List<TableField> fields) {
-        if (isEquiJoinByPrimitiveKey(joinInfo, fields)) {
+    private static JoinProcessorFactory resolveJoinProcessorFactory(JetJoinInfo jetJoinInfo, List<TableField> fields) {
+        if (isEquiJoinByPrimitiveKey(jetJoinInfo, fields)) {
             return JoinByPrimitiveKeyProcessorFactory.INSTANCE;
-        } else if (joinInfo.isEquiJoin()) {
+        } else if (jetJoinInfo.isEquiJoin()) {
             return JoinByPredicateProcessorFactory.INSTANCE;
         } else {
             return JoinScanProcessorFactory.INSTANCE;
         }
     }
 
-    private static boolean isEquiJoinByPrimitiveKey(JoinInfo joinInfo, List<TableField> fields) {
-        if (joinInfo.rightEquiJoinIndices().length != 1) {
+    private static boolean isEquiJoinByPrimitiveKey(JetJoinInfo jetJoinInfo, List<TableField> fields) {
+        if (jetJoinInfo.rightEquiJoinIndices().length != 1) {
             return false;
         }
 
-        MapTableField field = (MapTableField) fields.get(joinInfo.rightEquiJoinIndices()[0]);
+        MapTableField field = (MapTableField) fields.get(jetJoinInfo.rightEquiJoinIndices()[0]);
         QueryPath path = field.getPath();
 
         return path.isTop() && path.isKey();
@@ -104,7 +104,7 @@ final class JoinProcessors {
                 IMap<Object, Object> map,
                 QueryPath[] rightPaths,
                 SupplierEx<KvRowProjector> rightProjectorSupplier,
-                JoinInfo joinInfo
+                JetJoinInfo jetJoinInfo
         );
     }
 
@@ -125,7 +125,7 @@ final class JoinProcessors {
         private Expression<Boolean> predicate;
         private List<Expression<?>> projection;
 
-        private JoinInfo joinInfo;
+        private JetJoinInfo jetJoinInfo;
 
         private JoinProcessorFactory processorFactory;
 
@@ -146,7 +146,7 @@ final class JoinProcessors {
                 QueryTargetDescriptor valueQueryDescriptor,
                 Expression<Boolean> predicate,
                 List<Expression<?>> projection,
-                JoinInfo joinInfo,
+                JetJoinInfo jetJoinInfo,
                 JoinProcessorFactory processorFactory
         ) {
             this.mapName = mapName;
@@ -160,7 +160,7 @@ final class JoinProcessors {
             this.predicate = predicate;
             this.projection = projection;
 
-            this.joinInfo = joinInfo;
+            this.jetJoinInfo = jetJoinInfo;
 
             this.processorFactory = processorFactory;
         }
@@ -191,7 +191,7 @@ final class JoinProcessors {
                                 predicate,
                                 projection
                         ),
-                        joinInfo
+                        jetJoinInfo
                 );
                 processors.add(processor);
             }
@@ -213,7 +213,7 @@ final class JoinProcessors {
             out.writeObject(valueQueryDescriptor);
             out.writeObject(predicate);
             out.writeObject(projection);
-            out.writeObject(joinInfo);
+            out.writeObject(jetJoinInfo);
             out.writeObject(processorFactory);
         }
 
@@ -232,7 +232,7 @@ final class JoinProcessors {
             valueQueryDescriptor = in.readObject();
             predicate = in.readObject();
             projection = in.readObject();
-            joinInfo = in.readObject();
+            jetJoinInfo = in.readObject();
             processorFactory = in.readObject();
         }
     }

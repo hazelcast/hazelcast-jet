@@ -21,7 +21,7 @@ import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.core.processor.SinkProcessors;
-import com.hazelcast.jet.sql.impl.JoinInfo;
+import com.hazelcast.jet.sql.impl.JetJoinInfo;
 import com.hazelcast.jet.sql.impl.connector.SqlConnector;
 import com.hazelcast.jet.sql.impl.connector.keyvalue.KvMetadata;
 import com.hazelcast.jet.sql.impl.connector.keyvalue.KvMetadataJavaResolver;
@@ -140,13 +140,13 @@ public class IMapSqlConnector implements SqlConnector {
             @Nonnull Table table0,
             @Nullable Expression<Boolean> predicate,
             @Nonnull List<Expression<?>> projections,
-            @Nonnull JoinInfo joinInfo
+            @Nonnull JetJoinInfo jetJoinInfo
     ) {
         PartitionedMapTable table = (PartitionedMapTable) table0;
 
         return dag.newVertex(
                 "NestedLoopJoin(" + toString(table) + ")-" + randomLetters(),
-                JoinProcessors.processor(table, predicate, projections, joinInfo)
+                JoinProcessors.processor(table, predicate, projections, jetJoinInfo)
         );
     }
 

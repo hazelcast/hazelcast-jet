@@ -23,6 +23,7 @@ import com.hazelcast.nio.serialization.DataSerializable;
 import com.hazelcast.sql.impl.expression.Expression;
 
 import java.io.IOException;
+import java.util.Arrays;
 
 /**
  * An analyzed join condition.
@@ -36,7 +37,7 @@ import java.io.IOException;
  * <li>{@code condition}: all join filters
  * </ul>
  */
-public class JoinInfo implements DataSerializable {
+public class JetJoinInfo implements DataSerializable {
 
     private int[] leftEquiJoinIndices;
     private int[] rightEquiJoinIndices;
@@ -45,10 +46,10 @@ public class JoinInfo implements DataSerializable {
     private Expression<Boolean> condition;
 
     @SuppressWarnings("unused")
-    private JoinInfo() {
+    private JetJoinInfo() {
     }
 
-    public JoinInfo(
+    public JetJoinInfo(
             int[] leftEquiJoinIndices,
             int[] rightEquiJoinIndices,
             Expression<Boolean> nonEquiCondition,
@@ -80,6 +81,15 @@ public class JoinInfo implements DataSerializable {
 
     public boolean isEquiJoin() {
         return rightEquiJoinIndices.length > 0;
+    }
+
+    @Override
+    public String toString() {
+        return "JoinInfo{" +
+                "leftEquiJoinIndices=" + Arrays.toString(leftEquiJoinIndices) +
+                ", rightEquiJoinIndices=" + Arrays.toString(rightEquiJoinIndices) +
+                ", nonEquiCondition=" + nonEquiCondition +
+                '}';
     }
 
     @Override
