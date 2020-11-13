@@ -29,6 +29,7 @@ import org.junit.Test;
 import static com.hazelcast.sql.impl.type.QueryDataType.INT;
 import static com.hazelcast.sql.impl.type.QueryDataType.VARCHAR;
 import static java.util.Arrays.asList;
+import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -58,6 +59,31 @@ public class SqlJoinTest extends SqlTestSupport {
                 "SELECT l.v, m.this " +
                 "FROM " + leftName + " l " +
                 "INNER JOIN " + mapName + " m ON l.v = m.__key",
+                asList(
+                        new Row(1, "value-1"),
+                        new Row(2, "value-2")
+                )
+        );
+    }
+
+    @Test
+    public void test_innerJoin_conditionInWhereClause() {
+        String leftName = randomName();
+        TestBatchSqlConnector.create(sqlService, leftName, 3);
+
+        String mapName = randomName();
+        instance().getMap(mapName).putAll(ImmutableMap.of(
+                1, "value-1",
+                2, "value-2",
+                3, "value-3"
+        ));
+
+        // TODO assert that it uses the join-primitive plan
+        assertRowsAnyOrder(
+                "SELECT l.v, m.this " +
+                "FROM " + leftName + " l " +
+                "INNER JOIN " + mapName + " m ON 1=1 " +
+                "WHERE l.v = m.__key",
                 asList(
                         new Row(1, "value-1"),
                         new Row(2, "value-2")
@@ -298,6 +324,51 @@ public class SqlJoinTest extends SqlTestSupport {
                         new Row(3, 1, "value-1"),
                         new Row(3, 2, "value-2")
                 )
+        );
+    }
+
+    @Test
+    public void test_joinEquiJoinAndDisjunction() {
+        String leftName = randomName();
+        TestBatchSqlConnector.create(sqlService, leftName, 4);
+
+        String mapName = randomName();
+        instance().getMap(mapName).putAll(ImmutableMap.of(
+                1, "value-1",
+                2, "value-2",
+                3, "value-3"
+        ));
+
+        // this currently uses the full-scan join
+        assertRowsAnyOrder(
+                "SELECT l.v, m.__key, m.this " +
+                        "FROM " + leftName + " l " +
+                        "JOIN " + mapName + " m ON l.v = m.__key OR l.v = m.__key",
+                asList(
+                        new Row(1, 1, "value-1"),
+                        new Row(2, 2, "value-2"),
+                        new Row(3, 3, "value-3")
+                )
+        );
+    }
+
+    @Test
+    public void test_alwaysFalseCondition() {
+        String leftName = randomName();
+        TestBatchSqlConnector.create(sqlService, leftName, 4);
+
+        String mapName = randomName();
+        instance().getMap(mapName).putAll(ImmutableMap.of(
+                1, "value-1",
+                2, "value-2",
+                3, "value-3"
+        ));
+
+        assertRowsAnyOrder(
+                "SELECT l.v, m.__key, m.this " +
+                        "FROM " + leftName + " l " +
+                        "JOIN " + mapName + " m ON 1=2",
+                emptyList()
         );
     }
 
