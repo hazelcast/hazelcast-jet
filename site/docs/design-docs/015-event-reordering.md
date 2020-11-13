@@ -69,7 +69,7 @@ sources:
 
 If we start out from a single-point source and there's no grouping key
 we can extract and parallelize on, we have no choice but to process all
-the data without parellelism. There is no technical challenge to solve
+the data without parallelism. There is no technical challenge to solve
 here, so we'll focus on the cases where we do have a
 grouping/partitioning key.
 
@@ -83,10 +83,10 @@ partitioning key and propagate it through the pipeline.
 
 ### Keep it Without the Key
 
-We can ¡even without the partitioning key, simply by
-keeping the partitions isolated throughout the pipeline. This seems to
-allow us a level of parallelism equal to the number of partitions in
-the source. However, it is pretty inflexible:
+We can even without the partitioning key, simply by keeping the
+partitions isolated throughout the pipeline. This seems to allow us a
+level of parallelism equal to the number of partitions in the source.
+However, it is pretty inflexible:
 
 1. Jet's symmetrical execution model means that the source parallelism
   must be a multiple of the size of the cluster
@@ -110,7 +110,11 @@ windowed aggregation, which currently don't need the wrapping
 
 ## Decision: Keep the Order Without the Key
 
-TODO: explain the decision.
+This discussion was more relevant before we decided on this
+preserveOrder as property to globally activate/deactivate on the
+pipeline. For now, since user activates this property in pipeline, the
+decision to protect or not protect the order in pipelines that do not
+contain these keys is set there.
 
 ## Implementation of the Preserve Order Approach
 
@@ -152,7 +156,7 @@ preserve order property is activated:
 |Map/Filter/FlatMap|Enforce parallelism equal to the upstream, apply the `isolated` edge.|
 |Custom (Core API) Transform|Enforce parallelism equal to the upstream, apply the `isolated` edge.|
 |Partitioned Custom Transform|No changes, it already uses a partitioned edge.|
-|Aggregation|Enforce parallelism equal to the upstream, apply the `isolated` edge so that it can process non-commutative and non-associative aggregations|
+|Aggregation|Enforce parallelism equal to the upstream, apply the `isolated` edge in two stage aggregations without keys so that it can process non-commutative and non-associative aggregations|
 |Distinct|No changes. We don't guarantee to emit the very first distinct item.|
 |Sorting|To allow stable sorting, enforce parallelism equal to the upstream, apply the `isolated` edge.|
 |HashJoinTransform| Edge-0 (carrying the stream to be enriched): Enforce parallelism equal to the upstream, apply the `isolated` edge.|
@@ -165,7 +169,7 @@ preserve order property is activated:
 
 ## Not Implementing Now: Smart Job Planning (Abandoned)
 
-Since it requires marking pipeline.stages as order sensitive or not, we
+Since it requires marking pipeline stages as order sensitive or not, we
 have abandoned using it in this first implementation. In other words,
 this approach requires the user to know which stages of the pipeline is
 order-sensitive or not. I leave this section in the TDD as this approach
