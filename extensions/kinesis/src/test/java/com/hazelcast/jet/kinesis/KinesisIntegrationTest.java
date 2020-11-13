@@ -98,7 +98,7 @@ public class KinesisIntegrationTest extends JetTestSupport {
         // fixed by Localstack (https://github.com/localstack/localstack/issues/3208)
 
         AWS_CONFIG = new AwsConfig(
-                "http://localhost:" + LOCALSTACK.getMappedPort(4566),
+                "http://" + LOCALSTACK.getHost() + ":" + LOCALSTACK.getMappedPort(4566),
                 LOCALSTACK.getRegion(),
                 LOCALSTACK.getAccessKey(),
                 LOCALSTACK.getSecretKey()
