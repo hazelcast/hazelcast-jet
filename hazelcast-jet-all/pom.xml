@@ -74,6 +74,7 @@
                             <include>com.hazelcast.jet:*</include>
                             <include>com.hazelcast:*</include>
                             <include>info.picocli:picocli</include>
+                            <include>org.jline:jline</include>
                             <include>io.github.classgraph:classgraph</include>
                             <include>com.fasterxml.jackson.jr:jackson-jr-objects</include>
                             <include>com.fasterxml.jackson.jr:jackson-jr-annotation-support</include>
@@ -93,6 +94,10 @@
                         <relocation>
                             <pattern>picocli</pattern>
                             <shadedPattern>com.hazelcast.jet.picocli</shadedPattern>
+                        </relocation>
+                        <relocation>
+                            <pattern>jline</pattern>
+                            <shadedPattern>com.hazelcast.jet.jline</shadedPattern>
                         </relocation>
                         <relocation>
                             <pattern>io.github.classgraph</pattern>
@@ -142,6 +147,11 @@
             <groupId>info.picocli</groupId>
             <artifactId>picocli</artifactId>
             <version>${picocli.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jline</groupId>
+            <artifactId>jline</artifactId>
+            <version>${jline.version}</version>
         </dependency>
 
         <!-- These dependencies are otherwise optional, but we include them in the

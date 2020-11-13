@@ -149,6 +149,7 @@
                             <artifactId>picocli</artifactId>
                             <version>${picocli.version}</version>
                         </dependency>
+
                         <dependency>
                             <groupId>io.github.classgraph</groupId>
                             <artifactId>classgraph</artifactId>
@@ -324,6 +325,11 @@
             <artifactId>picocli</artifactId>
             <version>${picocli.version}</version>
             <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>org.jline</groupId>
+            <artifactId>jline</artifactId>
+            <version>${jline.version}</version>
         </dependency>
         <dependency>
             <groupId>io.github.classgraph</groupId>

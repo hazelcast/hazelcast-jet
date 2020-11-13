@@ -49,6 +49,8 @@ import com.hazelcast.sql.SqlColumnMetadata;
 import com.hazelcast.sql.SqlResult;
 import com.hazelcast.sql.SqlRow;
 import com.hazelcast.sql.SqlRowMetadata;
+import org.jline.reader.LineReader;
+import org.jline.reader.LineReaderBuilder;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.DefaultExceptionHandler;
@@ -66,8 +68,6 @@ import picocli.CommandLine.RunAll;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.LineNumberReader;
 import java.io.PrintStream;
 import java.lang.reflect.InvocationTargetException;
 import java.time.LocalDateTime;
@@ -191,10 +191,17 @@ public class JetCommandLine implements Runnable {
             @Mixin(name = "targets") TargetsMixin targets
             ) {
         runWithJet(targets, verbosity, jet -> {
-            LineNumberReader in = new LineNumberReader(new InputStreamReader(System.in));
+            LineReader reader = LineReaderBuilder.builder()
+                    .variable(LineReader.SECONDARY_PROMPT_PATTERN, "%M%P > ")
+                    .variable(LineReader.INDENTATION, 2)
+                    .variable(LineReader.LIST_MAX, 100)
+                    .option(LineReader.Option.INSERT_BRACKET, true)
+                    .option(LineReader.Option.EMPTY_WORD_OPTIONS, false)
+                    .option(LineReader.Option.USE_FORWARD_SLASH, true)             // use forward slash in directory separator
+                    .option(LineReader.Option.DISABLE_EVENT_EXPANSION, true)
+                    .build();
             for (;;) {
-                out.print("\nsql> ");
-                String line = in.readLine();
+                String line = reader.readLine("sql> ");
                 if (line == null || "exit".equals(line)) {
                     break;
                 }
