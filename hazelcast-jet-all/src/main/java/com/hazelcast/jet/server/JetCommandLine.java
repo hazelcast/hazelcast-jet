@@ -105,6 +105,7 @@ public class JetCommandLine implements Runnable {
 
     private static final int MAX_STR_LENGTH = 24;
     private static final int WAIT_INTERVAL_MILLIS = 100;
+    private static final int SQL_LIST_MAX = 100;
 
     private final Function<ClientConfig, JetInstance> jetClientFn;
     private final PrintStream out;
@@ -194,11 +195,9 @@ public class JetCommandLine implements Runnable {
             LineReader reader = LineReaderBuilder.builder()
                     .variable(LineReader.SECONDARY_PROMPT_PATTERN, "%M%P > ")
                     .variable(LineReader.INDENTATION, 2)
-                    .variable(LineReader.LIST_MAX, 100)
-                    .option(LineReader.Option.INSERT_BRACKET, true)
-                    .option(LineReader.Option.EMPTY_WORD_OPTIONS, false)
-                    .option(LineReader.Option.USE_FORWARD_SLASH, true)             // use forward slash in directory separator
+                    .variable(LineReader.LIST_MAX, SQL_LIST_MAX)
                     .option(LineReader.Option.DISABLE_EVENT_EXPANSION, true)
+                    .appName("hazelcast-jet-sql")
                     .build();
             for (;;) {
                 String line = reader.readLine("sql> ");

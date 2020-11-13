@@ -146,7 +146,8 @@ BSD 3-Clause License
   ANTLR 4 Runtime:4.7.2
   commons-compiler:3.0.11
   janino:3.0.11
-  JLine Bundle:3.16.0
+  JLine Reader:3.16.0
+  JLine Terminal:3.16.0
 CC0
   reactive-streams:1.0.2
 EPL 2.0
