@@ -156,8 +156,10 @@ public class OrderedBatchProcessingTest extends JetTestSupport {
     }
 
     /**
-     * Returns a batch source that iterates through the supplied items in a
-     * parallel manner then terminates.
+     * Returns a batch source that emits the items supplied in the iterables.
+     * It emits the items from different iterables in parallel, but preserves
+     * the order within each iterable.
+     *
      * @since 4.4
      */
     @Nonnull

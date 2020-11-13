@@ -133,16 +133,19 @@ public abstract class AbstractTransform implements Transform {
 
 
     /**
-     * Determines the local parallelism value for the transform by looking at
-     * local parallelism of its upstream transform its local parallelism, preferred local parallelism, and the default
-     * local parallelism provided in Pipeline.Context object.
+     * Determines the local parallelism of the transform by looking at
+     * its preferred local parallelism, the local parallelism of its upstream
+     * transforms, and the default local parallelism in {@code
+     * PipelineImpl.Context}.
      * <p>
-     * If none of them is set, returns the default local parallelism
-     * provided in PipelineImpl.Context object.
+     * If none of them is set, returns the default local parallelism provided
+     * {@code PipelineImpl.Context}.
      */
-    protected void determineLocalParallelism(int preferredLocalParallelism, Context context,
-                                             boolean shouldMatchUpstreamParallelism) {
-
+    protected void determineLocalParallelism(
+            int preferredLocalParallelism,
+            Context context,
+            boolean shouldMatchUpstreamParallelism
+    ) {
         int defaultParallelism = context.defaultLocalParallelism();
         int upstreamParallelism = -1;
         // Get the minimum of upstream LPs as upstreamParallelism

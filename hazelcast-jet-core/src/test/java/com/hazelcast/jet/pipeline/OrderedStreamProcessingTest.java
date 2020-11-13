@@ -235,23 +235,21 @@ public class OrderedStreamProcessingTest extends JetTestSupport implements Seria
         }
     }
 
-
     /**
      * Returns a streaming source that generates events created by the {@code
-     * generatorFns} at the specified rate in each of its parallel branches.
-     * In the default use of this source, a source processor is created for
-     * each generator function and these processors generate events with
-     * these assigned generator functions. If total parallelism is more than
-     * the number of generatorFns, some source processors will remain idle.
-     * This source's preferred local parallelism is determined as if it would
-     * work in a single member.
+     * generatorFn}s. It emits the data from different generators in parallel,
+     * but preserves the order of every individual generator.
+     * <p>
+     * By default, it sets its preferred local parallelism equal to the number
+     * of generator functions, thus having one processor for each of them even
+     * on a single-member cluster. If there are more members, some
+     * processors will remain idle.
      * <p>
      * The source supports {@linkplain
      * StreamSourceStage#withNativeTimestamps(long) native timestamps}. The
-     * timestamp is the current system time at the moment they are generated.
-     * The source is not distributed and all the items are generated on the
-     * same node. This source is not fault-tolerant. The sequence will be
-     * reset once a job is restarted.
+     * timestamp is the current system time at the moment the event is
+     * generated. The source is not fault-tolerant. If the job restarts, all
+     * the generator functions are reset and emit everything from the start.
      *
      * @since 4.4
      */
@@ -266,7 +264,6 @@ public class OrderedStreamProcessingTest extends JetTestSupport implements Seria
                 eventTimePolicy -> ProcessorMetaSupplier.of(generatorFns.size(), () ->
                         new ParallelStreamP<>(eventsPerSecondPerGenerator, eventTimePolicy, generatorFns)));
     }
-
 
     private LongAccumulator[] create(int generatorCount) {
         LongAccumulator[] state = new LongAccumulator[generatorCount];

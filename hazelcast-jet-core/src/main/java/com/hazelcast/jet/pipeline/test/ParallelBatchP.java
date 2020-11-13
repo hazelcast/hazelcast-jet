@@ -29,7 +29,10 @@ import static java.util.stream.Collectors.toList;
 
 
 /**
- * @param <T> generated item type
+ * Implements a mock batch source with parallelism. It emits the items from
+ * the lists you supply, preserving the order within each list.
+ *
+ * @param <T> type of emitted items
  */
 public class ParallelBatchP<T> extends AbstractProcessor {
 

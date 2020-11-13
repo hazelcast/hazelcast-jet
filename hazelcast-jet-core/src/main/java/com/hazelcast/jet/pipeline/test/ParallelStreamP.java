@@ -34,7 +34,11 @@ import static java.util.stream.Collectors.toList;
 
 
 /**
- * @param <T> generated item type
+ * Implements a mock stream source with parallelism. It emits the items
+ * from the generator functions you supply, preserving the order of each
+ * generator.
+ *
+ * @param <T> type of emitted items
  */
 public class ParallelStreamP<T> extends AbstractProcessor {
 
@@ -59,6 +63,7 @@ public class ParallelStreamP<T> extends AbstractProcessor {
      * Creates a processor that generates items using its assigned
      * generator functions. This processor picks its generator functions
      * according to its global processor index.
+     *
      * @param eventsPerSecondPerGenerator the desired event rate for each generator
      * @param eventTimePolicy parameters for watermark generation
      * @param generators list of generator functions used in source

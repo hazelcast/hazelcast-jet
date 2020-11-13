@@ -61,21 +61,22 @@ public interface Pipeline extends Serializable {
     boolean isPreserveOrder();
 
     /**
-     * Sets the preserve order property of this pipeline, which instructs
-     * Jet to keep the event order the same. Enabling this property adds
-     * restrictions to the data flow on the DAG, and this causes a decrease
-     * in performance most of the time.
+     * Tells Jet whether or not it is allowed to reorder the events for better
+     * performance. Enabling this property adds restrictions to the internal
+     * data flows that ensure each pipeline stage observes the events in the
+     * same order as they were received from the source.
      * <p>
-     * Since Jet processes events in parallel, the event order is generally
-     * a partial order defined in the source or specified by grouping keys.
-     * Jet preserves this partial order if this property is set to true.
+     * Keep in mind that there is often no total event order to begin with,
+     * for example in partitioned sources. In this case there is still partial
+     * order per each partition, and that is the order Jet preserves.
      * <p>
-     * This property cannot be used with the rebalance without key operator
-     * because it breaks the event order in an explicit way.
+     * If you enable this property, you cannot use the {@link
+     * GeneralStage#rebalance() rebalance} operator without a grouping key,
+     * because it explicitly orders Jet to break the event order.
      * <p>
      * The default value is false.
      *
-     * @return this pipeline
+     * @return {@code this}, for fluent API
      */
     @Nonnull
     Pipeline setPreserveOrder(boolean value);

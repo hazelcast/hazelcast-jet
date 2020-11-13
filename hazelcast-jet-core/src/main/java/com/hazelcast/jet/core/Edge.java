@@ -644,33 +644,37 @@ public class Edge implements IdentifiedDataSerializable {
      */
     public enum RoutingPolicy implements Serializable {
         /**
-         * For each item a single destination processor is chosen from the
-         * candidate set, with no restriction on the choice.
+         * This policy chooses for each item a single destination processor
+         * from the candidate set, with no restriction on the choice.
          */
         UNICAST,
         /**
-         * Like {@link #UNICAST}, but unlike unicast, it also offers such guarantees:
-         * <ul>
-         * <li>If LP_upstream <= LP_downstream, it guarantees that any given downstream
-         * processor receives data from exactly one upstream processor
-         * the second item
-         * <li> If LP_upstream >= LP_downstream it guarantees
-         * that any given upstream processor sends data to exactly one downstream
-         * processor.
-         * </ul>
+         * This policy sets up isolated parallel data paths between two vertices,
+         * as much as it can given the level of mismatch between the local
+         * parallelism (LP) of the upstream vs. the downstream vertices.
+         * Specifically:
+         * <ul><li>
+         *     If LP_upstream <= LP_downstream, every downstream processor receives
+         *     data from only one upstream processor
+         * </li><li>
+         *     If LP_upstream >= LP_downstream, every upstream processor sends data to
+         *     only one downstream processor
+         * </li></ul>
+         * If LP_upstream = LP_downstream, both of the above are true and there are
+         * isolated pairs of upstream and downstream processors.
          * <p>
          * This policy is only available on a local edge.
          */
         ISOLATED,
         /**
-         * Each item is sent to the one processor responsible for the item's
-         * partition ID. On a distributed edge the processor is unique across the
-         * cluster; on a non-distributed edge the processor is unique only within a
-         * member.
+         * This policy sends every item to the one processor responsible for the
+         * item's partition ID. On a distributed edge, this processor is unique
+         * across the cluster; on a non-distributed edge, the processor is unique
+         * only within a member.
          */
         PARTITIONED,
         /**
-         * Each item is sent to all candidate processors.
+         * This policy sends each item to all candidate processors.
          */
         BROADCAST
     }
