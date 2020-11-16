@@ -28,7 +28,7 @@ import com.hazelcast.sql.impl.row.Row;
 
 import java.util.NoSuchElementException;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static com.hazelcast.sql.impl.ResultIterator.HasNextResult.DONE;
 import static com.hazelcast.sql.impl.ResultIterator.HasNextResult.TIMEOUT;
@@ -40,36 +40,38 @@ public class JetQueryResultProducer implements QueryResultProducer {
 
     static final int QUEUE_CAPACITY = 4096;
 
-    private static final Exception NORMAL_COMPLETION = new NormalCompletionException();
+    private final OneToOneConcurrentArrayQueue<Row> rows = new OneToOneConcurrentArrayQueue<>(QUEUE_CAPACITY);
+    private final AtomicBoolean done = new AtomicBoolean(false);
 
-    private final OneToOneConcurrentArrayQueue<Row> queue = new OneToOneConcurrentArrayQueue<>(QUEUE_CAPACITY);
-    private final AtomicReference<Exception> done = new AtomicReference<>();
     private InternalIterator iterator;
+    private Exception exception;
 
     @Override
     public ResultIterator<Row> iterator() {
         if (iterator != null) {
-            throw new IllegalStateException("The iterator can be requested only once");
+            throw new IllegalStateException("Iterator can be requested only once");
         }
         iterator = new InternalIterator();
         return iterator;
     }
 
-    @Override
-    public void onError(QueryException error) {
-        done.compareAndSet(null, error);
+    public void consume(Inbox inbox) {
+        if (done.get()) {
+            throw exception == null ? new IllegalStateException("Already done") : new RuntimeException(exception);
+        }
+        for (Object[] row; (row = (Object[]) inbox.peek()) != null && rows.offer(new HeapRow(row)); ) {
+            inbox.remove();
+        }
     }
 
     public void done() {
-        done.compareAndSet(null, NORMAL_COMPLETION);
+        done.set(true);
     }
 
-    public void consume(Inbox inbox) {
-        if (done.get() != null) {
-            throw new RuntimeException(done.get());
-        }
-        for (Object[] r; (r = (Object[]) inbox.peek()) != null && queue.offer(new HeapRow(r)); ) {
-            inbox.remove();
+    @Override
+    public void onError(QueryException error) {
+        if (done.compareAndSet(false, true)) {
+            exception = error;
         }
     }
 
@@ -81,16 +83,57 @@ public class JetQueryResultProducer implements QueryResultProducer {
         private Row nextRow;
 
         @Override
-        public HasNextResult hasNext(long timeout, TimeUnit timeUnit) {
-            return nextRow != null || (nextRow = queue.poll()) != null ? YES
-                    : isDone() ? DONE
-                    : timeout == 0 ? TIMEOUT
-                    : hasNextWait(System.nanoTime() + timeUnit.toNanos(timeout));
+        public boolean hasNext() {
+            return hasNextWait(Long.MAX_VALUE) == YES;
         }
 
         @Override
-        public boolean hasNext() {
-            return hasNextWait(Long.MAX_VALUE) == YES;
+        public HasNextResult hasNext(long timeout, TimeUnit timeUnit) {
+            if (nextRow != null || (nextRow = rows.poll()) != null) {
+                return YES;
+            }
+
+            if (done.get()) {
+                if ((nextRow = rows.poll()) != null) {
+                    return YES;
+                } else {
+                    if (exception == null) {
+                        return DONE;
+                    } else {
+                        throw new RuntimeException("The Jet SQL job failed: " + exception.getMessage(), exception);
+                    }
+                }
+            }
+
+            if (timeout == 0) {
+                return TIMEOUT;
+            }
+
+            return hasNextWait(System.nanoTime() + timeUnit.toNanos(timeout));
+        }
+
+        private HasNextResult hasNextWait(long endTimeNanos) {
+            long idleCount = 0;
+            do {
+                if (nextRow != null || (nextRow = rows.poll()) != null) {
+                    return YES;
+                }
+
+                if (done.get()) {
+                    if ((nextRow = rows.poll()) != null) {
+                        return YES;
+                    } else {
+                        if (exception == null) {
+                            return DONE;
+                        } else {
+                            throw new RuntimeException("The Jet SQL job failed: " + exception.getMessage(), exception);
+                        }
+                    }
+                }
+
+                idler.idle(++idleCount);
+            } while (System.nanoTime() < endTimeNanos);
+            return TIMEOUT;
         }
 
         @Override
@@ -101,46 +144,8 @@ public class JetQueryResultProducer implements QueryResultProducer {
             try {
                 return nextRow;
             } finally {
-                nextRow = queue.poll();
+                nextRow = rows.poll();
             }
-        }
-
-        private HasNextResult hasNextWait(long endTimeNanos) {
-            long idleCount = 0;
-            do {
-                if (nextRow != null || (nextRow = queue.poll()) != null) {
-                    return YES;
-                }
-                if (isDone()) {
-                    return DONE;
-                }
-                idler.idle(++idleCount);
-            } while (System.nanoTime() < endTimeNanos);
-            return TIMEOUT;
-        }
-
-        /**
-         * Returns:<ul>
-         *     <li>true, if done
-         *     <li>false, if not done
-         *     <li>throws exception, if done with error
-         * </ul>
-         */
-        private boolean isDone() {
-            Exception doneExc = done.get();
-            if (doneExc != null) {
-                if (doneExc instanceof NormalCompletionException) {
-                    return true;
-                }
-                throw new RuntimeException("The Jet SQL job failed: " + doneExc.getMessage(), doneExc);
-            }
-            return false;
-        }
-    }
-
-    private static final class NormalCompletionException extends Exception {
-        NormalCompletionException() {
-            super("done normally");
         }
     }
 }
