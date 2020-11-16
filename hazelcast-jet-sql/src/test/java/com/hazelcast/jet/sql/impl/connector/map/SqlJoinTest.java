@@ -67,31 +67,6 @@ public class SqlJoinTest extends SqlTestSupport {
     }
 
     @Test
-    public void test_innerJoin_conditionInWhereClause() {
-        String leftName = randomName();
-        TestBatchSqlConnector.create(sqlService, leftName, 3);
-
-        String mapName = randomName();
-        instance().getMap(mapName).putAll(ImmutableMap.of(
-                1, "value-1",
-                2, "value-2",
-                3, "value-3"
-        ));
-
-        // TODO assert that it uses the join-primitive plan
-        assertRowsAnyOrder(
-                "SELECT l.v, m.this " +
-                "FROM " + leftName + " l " +
-                "INNER JOIN " + mapName + " m ON 1=1 " +
-                "WHERE l.v = m.__key",
-                asList(
-                        new Row(1, "value-1"),
-                        new Row(2, "value-2")
-                )
-        );
-    }
-
-    @Test
     public void test_innerJoinUsing() {
         String leftName = randomName();
         TestBatchSqlConnector.create(
@@ -121,7 +96,7 @@ public class SqlJoinTest extends SqlTestSupport {
     }
 
     @Test
-    public void test_innerJoinWithConditionInWhereClause() {
+    public void test_innerJoinConditionInWhereClause() {
         String leftName = randomName();
         TestBatchSqlConnector.create(sqlService, leftName, 3);
 
@@ -135,6 +110,31 @@ public class SqlJoinTest extends SqlTestSupport {
         assertRowsAnyOrder(
                 "SELECT l.v, m.this " +
                 "FROM " + leftName + " l, " + mapName + " m " +
+                "WHERE l.v = m.__key",
+                asList(
+                        new Row(1, "value-1"),
+                        new Row(2, "value-2")
+                )
+        );
+    }
+
+    @Test
+    public void test_innerJoinAndConditionInWhereClause() {
+        String leftName = randomName();
+        TestBatchSqlConnector.create(sqlService, leftName, 3);
+
+        String mapName = randomName();
+        instance().getMap(mapName).putAll(ImmutableMap.of(
+                1, "value-1",
+                2, "value-2",
+                3, "value-3"
+        ));
+
+        // TODO assert that it uses the join-primitive plan
+        assertRowsAnyOrder(
+                "SELECT l.v, m.this " +
+                "FROM " + leftName + " l " +
+                "INNER JOIN " + mapName + " m ON 1=1 " +
                 "WHERE l.v = m.__key",
                 asList(
                         new Row(1, "value-1"),
@@ -342,33 +342,13 @@ public class SqlJoinTest extends SqlTestSupport {
         // this currently uses the full-scan join
         assertRowsAnyOrder(
                 "SELECT l.v, m.__key, m.this " +
-                        "FROM " + leftName + " l " +
-                        "JOIN " + mapName + " m ON l.v = m.__key OR l.v = m.__key",
+                "FROM " + leftName + " l " +
+                "JOIN " + mapName + " m ON l.v = m.__key OR l.v = m.__key",
                 asList(
                         new Row(1, 1, "value-1"),
                         new Row(2, 2, "value-2"),
                         new Row(3, 3, "value-3")
                 )
-        );
-    }
-
-    @Test
-    public void test_alwaysFalseCondition() {
-        String leftName = randomName();
-        TestBatchSqlConnector.create(sqlService, leftName, 4);
-
-        String mapName = randomName();
-        instance().getMap(mapName).putAll(ImmutableMap.of(
-                1, "value-1",
-                2, "value-2",
-                3, "value-3"
-        ));
-
-        assertRowsAnyOrder(
-                "SELECT l.v, m.__key, m.this " +
-                        "FROM " + leftName + " l " +
-                        "JOIN " + mapName + " m ON 1=2",
-                emptyList()
         );
     }
 
@@ -562,25 +542,23 @@ public class SqlJoinTest extends SqlTestSupport {
     }
 
     @Test
-    public void test_innerJoinWithSubqueryFails() {
+    public void test_alwaysFalseCondition() {
         String leftName = randomName();
-        TestBatchSqlConnector.create(sqlService, leftName, 1);
+        TestBatchSqlConnector.create(sqlService, leftName, 4);
 
         String mapName = randomName();
-        instance().getMap(mapName).put(1, "value-1");
+        instance().getMap(mapName).putAll(ImmutableMap.of(
+                1, "value-1",
+                2, "value-2",
+                3, "value-3"
+        ));
 
-        assertThatThrownBy(() ->
-                sqlService.execute(
-                        "SELECT 1 " +
-                        "FROM " + leftName + " AS l " +
-                        "JOIN (SELECT * FROM " + mapName + ") AS m ON l.v = m.__key"
-                ))
-                .hasCauseInstanceOf(QueryException.class)
-                .hasMessageContaining("Subquery on the right side of a join not supported");
-
-        // SELECT * FROM left JOIN (SELECT SUM(__key) AS __key FROM map) AS m ON l.v = m.__key
-        // SELECT * FROM left JOIN LATERAL (SELECT __key, this FROM map WHERE __key < 3) AS m ON 1 = 1
-        // SELECT * FROM left JOIN LATERAL (SELECT __key FROM map WHERE __key > l.v) m ON 1 = 1
+        assertRowsAnyOrder(
+                "SELECT l.v, m.__key, m.this " +
+                "FROM " + leftName + " l " +
+                "JOIN " + mapName + " m ON 1=2",
+                emptyList()
+        );
     }
 
     @Test
@@ -597,8 +575,8 @@ public class SqlJoinTest extends SqlTestSupport {
 
         assertRowsAnyOrder(
                 "SELECT l.v, m.this " +
-                        "FROM " + leftName + " l " +
-                        "INNER JOIN " + mapName + " m ON l.v = m.__key",
+                "FROM " + leftName + " l " +
+                "INNER JOIN " + mapName + " m ON l.v = m.__key",
                 asList(
                         new Row(1, "value-1"),
                         new Row(2, "value-2")
@@ -620,12 +598,34 @@ public class SqlJoinTest extends SqlTestSupport {
 
         assertRowsAnyOrder(
                 "SELECT l.v, m.this " +
-                        "FROM " + leftName + " l " +
-                        "INNER JOIN " + mapName + " m ON l.v = m.__key",
+                "FROM " + leftName + " l " +
+                "INNER JOIN " + mapName + " m ON l.v = m.__key",
                 asList(
                         new Row(1, "value-1"),
                         new Row(2, "value-2")
                 )
         );
+    }
+
+    @Test
+    public void test_innerJoinWithSubqueryFails() {
+        String leftName = randomName();
+        TestBatchSqlConnector.create(sqlService, leftName, 1);
+
+        String mapName = randomName();
+        instance().getMap(mapName).put(1, "value-1");
+
+        assertThatThrownBy(() ->
+                sqlService.execute(
+                        "SELECT 1 " +
+                        "FROM " + leftName + " AS l " +
+                        "JOIN (SELECT * FROM " + mapName + ") AS m ON l.v = m.__key"
+                ))
+                .hasCauseInstanceOf(QueryException.class)
+                .hasMessageContaining("Subquery on the right side of a join not supported");
+
+        // SELECT * FROM left JOIN (SELECT SUM(__key) AS __key FROM map) AS m ON l.v = m.__key
+        // SELECT * FROM left JOIN LATERAL (SELECT __key, this FROM map WHERE __key < 3) AS m ON 1 = 1
+        // SELECT * FROM left JOIN LATERAL (SELECT __key FROM map WHERE __key > l.v) m ON 1 = 1
     }
 }
