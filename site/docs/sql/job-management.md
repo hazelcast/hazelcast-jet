@@ -35,6 +35,18 @@ AS query_spec
 - `option_name`, `option_value`: the job configuration options. The list
   of options matches the methods in the `JobConfig` class.
 
+#### List of Available Job Options
+
+|Option|Allowed value|
+|--|--|
+|`processingGuarantee`|`exactlyOnce`<br>`atLeastOnce`<br>`none`|
+|`snapshotIntervalMillis`|a positive number|
+|`autoScaling`|`true`, `false`|
+|`splitBrainProtectionEnabled`|`true`, `false`|
+|`metricsEnabled`|`true`, `false`|
+|`storeMetricsAfterJobCompletion`|`true`, `false`|
+|`initialSnapshotName`|any string|
+
 #### Example
 
 ```sql
