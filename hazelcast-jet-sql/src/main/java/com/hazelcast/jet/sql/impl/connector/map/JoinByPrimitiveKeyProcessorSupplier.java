@@ -27,13 +27,13 @@ import com.hazelcast.jet.impl.execution.init.Contexts.ProcSupplierCtx;
 import com.hazelcast.jet.impl.processor.AsyncTransformUsingServiceOrderedP;
 import com.hazelcast.jet.pipeline.ServiceFactories;
 import com.hazelcast.jet.sql.impl.ExpressionUtil;
-import com.hazelcast.jet.sql.impl.JetJoinInfo;
 import com.hazelcast.jet.sql.impl.connector.keyvalue.KvRowProjector;
 import com.hazelcast.map.IMap;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.DataSerializable;
 import com.hazelcast.query.impl.getters.Extractors;
+import com.hazelcast.sql.impl.expression.Expression;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 import javax.annotation.Nonnull;
@@ -53,7 +53,8 @@ final class JoinByPrimitiveKeyProcessorSupplier implements ProcessorSupplier, Da
 
     private static final int MAX_CONCURRENT_OPS = 8;
 
-    private JetJoinInfo joinInfo;
+    private int leftEquiJoinIndex;
+    private Expression<Boolean> condition;
     private String mapName;
     private KvRowProjector.Supplier rightRowProjectorSupplier;
 
@@ -66,13 +67,13 @@ final class JoinByPrimitiveKeyProcessorSupplier implements ProcessorSupplier, Da
     }
 
     JoinByPrimitiveKeyProcessorSupplier(
-            JetJoinInfo joinInfo,
+            int leftEquiJoinIndex,
+            Expression<Boolean> condition,
             String mapName,
             KvRowProjector.Supplier rightRowProjectorSupplier
     ) {
-        assert joinInfo.isEquiJoin() && joinInfo.leftEquiJoinIndices().length == 1;
-
-        this.joinInfo = joinInfo;
+        this.leftEquiJoinIndex = leftEquiJoinIndex;
+        this.condition = condition;
         this.mapName = mapName;
         this.rightRowProjectorSupplier = rightRowProjectorSupplier;
     }
@@ -96,7 +97,7 @@ final class JoinByPrimitiveKeyProcessorSupplier implements ProcessorSupplier, Da
                     ServiceFactories.iMapService(mapName),
                     map,
                     MAX_CONCURRENT_OPS,
-                    joinFn(joinInfo, rightRowProjectorSupplier)
+                    joinFn(leftEquiJoinIndex, condition, rightRowProjectorSupplier)
             );
             processors.add(processor);
         }
@@ -104,11 +105,11 @@ final class JoinByPrimitiveKeyProcessorSupplier implements ProcessorSupplier, Da
     }
 
     private static BiFunctionEx<IMap<Object, Object>, Object[], CompletableFuture<Traverser<Object[]>>> joinFn(
-            JetJoinInfo joinInfo,
+            int leftEquiJoinIndex,
+            Expression<Boolean> condition,
             SupplierEx<KvRowProjector> rightRowProjectorSupplier
     ) {
-        int leftEquiJoinIndex = joinInfo.leftEquiJoinIndices()[0];
-        BiFunctionEx<Object[], Object[], Object[]> joinFn = ExpressionUtil.joinFn(joinInfo.nonEquiCondition());
+        BiFunctionEx<Object[], Object[], Object[]> joinFn = ExpressionUtil.joinFn(condition);
 
         return (map, left) -> {
             Object key = left[leftEquiJoinIndex];
@@ -138,15 +139,17 @@ final class JoinByPrimitiveKeyProcessorSupplier implements ProcessorSupplier, Da
 
     @Override
     public void writeData(ObjectDataOutput out) throws IOException {
+        out.writeInt(leftEquiJoinIndex);
+        out.writeObject(condition);
         out.writeObject(mapName);
         out.writeObject(rightRowProjectorSupplier);
-        out.writeObject(joinInfo);
     }
 
     @Override
     public void readData(ObjectDataInput in) throws IOException {
+        leftEquiJoinIndex = in.readInt();
+        condition = in.readObject();
         mapName = in.readObject();
         rightRowProjectorSupplier = in.readObject();
-        joinInfo = in.readObject();
     }
 }

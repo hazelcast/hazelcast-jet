@@ -24,7 +24,6 @@ import com.hazelcast.jet.core.Processor.Context;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.test.TestInbox;
 import com.hazelcast.jet.impl.execution.init.Contexts.ProcSupplierCtx;
-import com.hazelcast.jet.sql.impl.JetJoinInfo;
 import com.hazelcast.jet.sql.impl.connector.keyvalue.KvRowProjector;
 import com.hazelcast.map.IMap;
 import com.hazelcast.sql.impl.expression.ColumnExpression;
@@ -122,8 +121,8 @@ public class JoinByPrimitiveKeyProcessorTest {
         // given
         Processor processor = processor((Expression<Boolean>) ConstantExpression.create(true, BOOLEAN));
 
-        given(map.getAsync(1)).willReturn(CompletableFuture.completedFuture("value-1"));
-        given(rightProjector.project(entry(1, "value-1"))).willReturn(null);
+        given(map.getAsync(1)).willReturn(CompletableFuture.completedFuture("value"));
+        given(rightProjector.project(entry(1, "value"))).willReturn(null);
 
         // when
         processor.process(0, new TestInbox(singletonList(new Object[]{1})));
@@ -139,8 +138,8 @@ public class JoinByPrimitiveKeyProcessorTest {
         // given
         Processor processor = processor((Expression<Boolean>) ConstantExpression.create(true, BOOLEAN));
 
-        given(map.getAsync(1)).willReturn(CompletableFuture.completedFuture("value-1"));
-        given(rightProjector.project(entry(1, "value-1"))).willReturn(new Object[]{2, "modified"});
+        given(map.getAsync(1)).willReturn(CompletableFuture.completedFuture("original"));
+        given(rightProjector.project(entry(1, "original"))).willReturn(new Object[]{2, "modified"});
 
         // when
         processor.process(0, new TestInbox(singletonList(new Object[]{1})));
@@ -171,9 +170,10 @@ public class JoinByPrimitiveKeyProcessorTest {
         verifyNoInteractions(outbox);
     }
 
-    private Processor processor(Expression<Boolean> nonEquiCondition) throws Exception {
+    private Processor processor(Expression<Boolean> condition) throws Exception {
         ProcessorSupplier supplier = new JoinByPrimitiveKeyProcessorSupplier(
-                new JetJoinInfo(new int[]{0}, new int[]{0}, nonEquiCondition, null),
+                0,
+                condition,
                 "map",
                 rightRowProjectorSupplier
         );

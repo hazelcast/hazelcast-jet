@@ -147,7 +147,6 @@ public class IMapSqlConnector implements SqlConnector {
     ) {
         PartitionedMapTable table = (PartitionedMapTable) table0;
 
-        ProcessorSupplier pSupplier;
         String name = table.getMapName();
         List<TableField> fields = table.getFields();
         QueryPath[] paths = fields.stream().map(field -> ((MapTableField) field).getPath()).toArray(QueryPath[]::new);
@@ -158,9 +157,16 @@ public class IMapSqlConnector implements SqlConnector {
         KvRowProjector.Supplier rightRowProjectorSupplier =
                 KvRowProjector.supplier(paths, types, keyDescriptor, valueDescriptor, predicate, projections);
 
+        ProcessorSupplier pSupplier;
         String desc;
-        if (isEquiJoinByPrimitiveKey(joinInfo, fields)) {
-            pSupplier = new JoinByPrimitiveKeyProcessorSupplier(joinInfo, name, rightRowProjectorSupplier);
+        int leftEquiJoinPrimitiveKeyIndex = leftEquiJoinPrimitiveKeyIndex(joinInfo, fields);
+        if (leftEquiJoinPrimitiveKeyIndex > -1) {
+            pSupplier = new JoinByPrimitiveKeyProcessorSupplier(
+                    leftEquiJoinPrimitiveKeyIndex,
+                    joinInfo.condition(),
+                    name,
+                    rightRowProjectorSupplier
+            );
             desc = "imap.get";
         } else if (joinInfo.isEquiJoin()) {
             pSupplier = new JoinByPredicateProcessorSupplier(joinInfo, name, paths, rightRowProjectorSupplier);
@@ -175,15 +181,16 @@ public class IMapSqlConnector implements SqlConnector {
         );
     }
 
-    private static boolean isEquiJoinByPrimitiveKey(JetJoinInfo joinInfo, List<TableField> fields) {
-        if (joinInfo.rightEquiJoinIndices().length != 1) {
-            return false;
+    private static int leftEquiJoinPrimitiveKeyIndex(JetJoinInfo joinInfo, List<TableField> fields) {
+        int[] rightEquiJoinIndices = joinInfo.rightEquiJoinIndices();
+        for (int i = 0; i < rightEquiJoinIndices.length; i++) {
+            MapTableField field = (MapTableField) fields.get(rightEquiJoinIndices[i]);
+            QueryPath path = field.getPath();
+            if (path.isTop() && path.isKey()) {
+                return joinInfo.leftEquiJoinIndices()[i];
+            }
         }
-
-        MapTableField field = (MapTableField) fields.get(joinInfo.rightEquiJoinIndices()[0]);
-        QueryPath path = field.getPath();
-
-        return path.isTop() && path.isKey();
+        return -1;
     }
 
     private static String randomLetters() {
