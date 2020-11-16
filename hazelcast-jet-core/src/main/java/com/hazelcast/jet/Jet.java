@@ -265,7 +265,8 @@ public final class Jet {
                         "version " + hzVersion + " was found in the classpath. " +
                         " As Jet already shades Hazelcast jars there is no need to explicitly " +
                         "add a dependency to it.";
-                boolean errorOnMismatch = !parseBoolean(System.getProperty("jet.imdg.version.mismatch.check.disabled", "false"));
+                String cbecmDisabledValue = System.getProperty("jet.imdg.version.mismatch.check.disabled", "false");
+                boolean errorOnMismatch = !parseBoolean(cbecmDisabledValue);
                 if (errorOnMismatch) {
                     throw new JetException(message);
                 } else {
