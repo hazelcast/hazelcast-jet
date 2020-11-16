@@ -89,6 +89,16 @@ public final class JetProperties {
             = new HazelcastProperty("jet.home", "");
 
     /**
+     * If {@code false}, Jet will check during initialization that IMDG module has compatible version.
+     * Changing to {@code true} may be helpful if user needs some slight IMDG version change
+     * (eg. for some hotfix). Default value is false (check will be performed).
+     *
+     * @since 4.4
+     */
+    public static final HazelcastProperty JET_IMDG_VERSION_CHECK_DISABLED
+            = new HazelcastProperty("jet.imdg.version.mismatch.check.disabled", "false");
+
+    /**
      * The minimum time in microseconds the cooperative worker threads will
      * sleep if none of the tasklets made any progress. Lower values increase
      * idle CPU usage but may result in decreased latency. Higher values will

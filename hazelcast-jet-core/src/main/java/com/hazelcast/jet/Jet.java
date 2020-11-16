@@ -54,8 +54,7 @@ import java.util.Optional;
 import java.util.Properties;
 import java.util.function.Function;
 
-import static com.hazelcast.jet.core.JetProperties.JET_SHUTDOWNHOOK_ENABLED;
-import static com.hazelcast.jet.core.JetProperties.JOB_RESULTS_TTL_SECONDS;
+import static com.hazelcast.jet.core.JetProperties.*;
 import static com.hazelcast.jet.impl.JobRepository.INTERNAL_JET_OBJECTS_PREFIX;
 import static com.hazelcast.jet.impl.JobRepository.JOB_METRICS_MAP_NAME;
 import static com.hazelcast.jet.impl.JobRepository.JOB_RESULTS_MAP_NAME;
@@ -63,6 +62,7 @@ import static com.hazelcast.jet.impl.config.ConfigProvider.locateAndGetClientCon
 import static com.hazelcast.jet.impl.config.ConfigProvider.locateAndGetJetConfig;
 import static com.hazelcast.spi.properties.ClusterProperty.SHUTDOWNHOOK_ENABLED;
 import static java.lang.Boolean.parseBoolean;
+import static java.lang.System.getProperty;
 
 /**
  * Entry point to the Jet product.
@@ -265,8 +265,7 @@ public final class Jet {
                         "version " + hzVersion + " was found in the classpath. " +
                         " As Jet already shades Hazelcast jars there is no need to explicitly " +
                         "add a dependency to it.";
-                String checkDisabledValue = System.getProperty("jet.imdg.version.mismatch.check.disabled", "false");
-                boolean errorOnMismatch = !parseBoolean(checkDisabledValue);
+                boolean errorOnMismatch = !versionCheckDisabled();
                 if (errorOnMismatch) {
                     throw new JetException(message);
                 } else {
@@ -276,6 +275,11 @@ public final class Jet {
         } catch (IOException e) {
             LOGGER.warning("Could not read the file jet-runtime.properties", e);
         }
+    }
+
+    private static boolean versionCheckDisabled() {
+        String rawValue = getProperty(JET_IMDG_VERSION_CHECK_DISABLED.getName(), JET_IMDG_VERSION_CHECK_DISABLED.getDefaultValue());
+        return Boolean.parseBoolean(rawValue);
     }
 
     private static synchronized void configureJetService(JetConfig jetConfig) {
