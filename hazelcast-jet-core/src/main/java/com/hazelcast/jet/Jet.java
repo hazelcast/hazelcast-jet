@@ -278,7 +278,8 @@ public final class Jet {
     }
 
     private static boolean versionCheckDisabled() {
-        String rawValue = getProperty(JET_IMDG_VERSION_CHECK_DISABLED.getName(), JET_IMDG_VERSION_CHECK_DISABLED.getDefaultValue());
+        String rawValue = getProperty(JET_IMDG_VERSION_CHECK_DISABLED.getName(),
+                JET_IMDG_VERSION_CHECK_DISABLED.getDefaultValue());
         return Boolean.parseBoolean(rawValue);
     }
 
