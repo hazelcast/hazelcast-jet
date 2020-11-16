@@ -22,9 +22,7 @@ import com.hazelcast.jet.SimpleTestInClusterSupport;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.sql.SqlService;
 import org.junit.BeforeClass;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 
 import static com.hazelcast.jet.config.ProcessingGuarantee.EXACTLY_ONCE;
 import static com.hazelcast.jet.core.JobStatus.RUNNING;
@@ -40,9 +38,6 @@ public class SqlJobManagementTest extends SimpleTestInClusterSupport {
 
     private static SqlService sqlService;
 
-    @Rule
-    public ExpectedException exception = ExpectedException.none();
-
     @BeforeClass
     public static void beforeClass() {
         initialize(1, null);
@@ -54,29 +49,50 @@ public class SqlJobManagementTest extends SimpleTestInClusterSupport {
         sqlService.execute("CREATE MAPPING src TYPE TestStream");
         sqlService.execute(javaSerializableMapDdl("dest", Long.class, Long.class));
 
-        exception.expectMessage("You must use CREATE JOB statement for a streaming DML query");
-        sqlService.execute("SINK INTO dest SELECT v, v FROM src");
+        assertThatThrownBy(() -> sqlService.execute("SINK INTO dest SELECT v, v FROM src"))
+                .hasMessageContaining("You must use CREATE JOB statement for a streaming DML query");
     }
 
     @Test
     public void when_ddlStatementWithCreateJob_then_fail() {
-        exception.expectMessage("Encountered \"CREATE\" at line 1, column 19");
-        sqlService.execute("CREATE JOB job AS CREATE MAPPING src TYPE TestStream");
+        assertThatThrownBy(() -> sqlService.execute("CREATE JOB job AS CREATE MAPPING src TYPE TestStream"))
+                .hasMessageContaining("Encountered \"CREATE\" at line 1, column 19");
     }
 
     @Test
     public void when_dqlStatementWithCreateJob_then_fail() {
-        exception.expectMessage("Encountered \"SELECT\" at line 1, column 19." + System.lineSeparator() +
-                "Was expecting one of:" + System.lineSeparator() +
-                "    \"INSERT\" ..." + System.lineSeparator() +
-                "    \"SINK\" ...");
-        sqlService.execute("CREATE JOB job AS SELECT 42 FROM my_map");
+        assertThatThrownBy(() -> sqlService.execute("CREATE JOB job AS SELECT 42 FROM my_map"))
+                .hasMessageContaining("Encountered \"SELECT\" at line 1, column 19." + System.lineSeparator() +
+                        "Was expecting one of:" + System.lineSeparator() +
+                        "    \"INSERT\" ..." + System.lineSeparator() +
+                        "    \"SINK\" ...");
     }
 
     @Test
     public void when_createOrReplaceJob_then_fail() {
         assertThatThrownBy(() -> sqlService.execute("CREATE OR REPLACE JOB fooJob AS INSERT INTO t1 SELECT FROM t2"))
                 .hasMessageContaining("OR REPLACE is not supported for CREATE JOB");
+    }
+
+    @Test
+    public void when_createJobUnknownOption_then_fail() {
+        assertThatThrownBy(() -> sqlService.execute("CREATE JOB foo OPTIONS (badOption 'value') AS "
+                        + "INSERT INTO t1 VALUES(1)"))
+                .hasMessage("From line 1, column 25 to line 1, column 33: Unknown job option: badOption");
+    }
+
+    @Test
+    public void when_snapshotIntervalNotNumber_then_fail() {
+        assertThatThrownBy(() -> sqlService.execute("CREATE JOB foo OPTIONS (snapshotIntervalMillis 'foo') AS "
+                        + "INSERT INTO t1 VALUES(1)"))
+               .hasMessage("From line 1, column 48 to line 1, column 52: Invalid number for snapshotIntervalMillis: foo");
+    }
+
+    @Test
+    public void when_badProcessingGuarantee_then_fail() {
+        assertThatThrownBy(() -> sqlService.execute("CREATE JOB foo OPTIONS (processingGuarantee 'foo') AS "
+                        + "INSERT INTO t1 VALUES(1)"))
+               .hasMessage("From line 1, column 45 to line 1, column 49: Unsupported value for processingGuarantee: foo");
     }
 
     @Test
@@ -140,7 +156,8 @@ public class SqlJobManagementTest extends SimpleTestInClusterSupport {
                 "autoScaling 'false'," +
                 "splitBrainProtectionEnabled 'true'," +
                 "metricsEnabled 'false'," +
-                "initialSnapshotName 'fooSnapshot')" +
+                "initialSnapshotName 'fooSnapshot'," +
+                "storeMetricsAfterJobCompletion 'true')" +
                 "AS SINK INTO dest SELECT v, v FROM src");
 
         JobConfig config = instance().getJob("testJob").getConfig();
@@ -207,19 +224,30 @@ public class SqlJobManagementTest extends SimpleTestInClusterSupport {
     }
 
     @Test
-    public void when_snapshotExport_then_failNotEnterprise() {
+    public void when_snapshotExportWithoutOrReplace_then_orReplaceRequired() {
         sqlService.execute("CREATE MAPPING src TYPE TestStream");
         sqlService.execute(javaSerializableMapDdl("dest", Long.class, Long.class));
 
         sqlService.execute("CREATE JOB testJob AS SINK INTO dest SELECT v, v FROM src");
 
         assertThatThrownBy(() -> sqlService.execute("CREATE SNAPSHOT mySnapshot FOR JOB testJob"))
+                .hasMessageContaining("The OR REPLACE option is required for CREATE SNAPSHOT");
+    }
+
+    @Test
+    public void when_snapshotExport_then_failNotEnterprise() {
+        sqlService.execute("CREATE MAPPING src TYPE TestStream");
+        sqlService.execute(javaSerializableMapDdl("dest", Long.class, Long.class));
+
+        sqlService.execute("CREATE JOB testJob AS SINK INTO dest SELECT v, v FROM src");
+
+        assertThatThrownBy(() -> sqlService.execute("CREATE OR REPLACE SNAPSHOT mySnapshot FOR JOB testJob"))
                 .hasMessageContaining("You need Hazelcast Jet Enterprise to use this feature");
     }
 
     @Test
     public void when_snapshotExport_jobDoesNotExist_then_fail() {
-        assertThatThrownBy(() -> sqlService.execute("CREATE SNAPSHOT mySnapshot FOR JOB nonExistentJob"))
+        assertThatThrownBy(() -> sqlService.execute("CREATE OR REPLACE SNAPSHOT mySnapshot FOR JOB nonExistentJob"))
                 .hasMessageContaining("The job 'nonExistentJob' doesn't exist");
     }
 

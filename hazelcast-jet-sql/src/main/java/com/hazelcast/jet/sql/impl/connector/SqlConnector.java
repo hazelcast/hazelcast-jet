@@ -213,11 +213,6 @@ public interface SqlConnector {
      * Returns a supplier for a source vertex reading the input according to
      * the projection/predicate. The output type of the source is Object[].
      * <p>
-     * The result is:<ul>
-     * <li>{@code f0}: the source vertex of the sub-DAG
-     * <li>{@code f1}: the sink vertex of teh sub-DAG
-     * </ul>
-     * <p>
      * The field indexes in the predicate and projection refer to the
      * zero-based indexes of the original fields of the {code table}. For
      * example, if the table has fields {@code a, b, c} and the query is:
@@ -230,6 +225,7 @@ public interface SqlConnector {
      * @param table      the table object
      * @param predicate  SQL expression to filter the rows
      * @param projection the list of field names to return
+     * @return The DAG Vertex handling the reading
      */
     @Nonnull
     default Vertex fullScanReader(
@@ -239,7 +235,7 @@ public interface SqlConnector {
             @Nonnull List<Expression<?>> projection
     ) {
         assert !supportsFullScanReader();
-        throw new UnsupportedOperationException("Full scan reader not supported for " + getClass().getName());
+        throw new UnsupportedOperationException("Full scan not supported for " + typeName());
 
     }
 
@@ -268,6 +264,6 @@ public interface SqlConnector {
             @Nonnull Table table
     ) {
         assert !supportsSink();
-        throw new UnsupportedOperationException("Sink not supported for " + getClass().getName());
+        throw new UnsupportedOperationException("Sink not supported for " + typeName());
     }
 }
