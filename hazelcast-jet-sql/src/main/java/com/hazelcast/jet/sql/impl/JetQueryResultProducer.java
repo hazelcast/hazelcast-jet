@@ -56,6 +56,15 @@ public class JetQueryResultProducer implements QueryResultProducer {
         return iterator;
     }
 
+    @Override
+    public void onError(QueryException error) {
+        done.compareAndSet(null, error);
+    }
+
+    public void done() {
+        done.compareAndSet(null, NORMAL_COMPLETION);
+    }
+
     public void consume(Inbox inbox) {
         if (done.get() != null) {
             throw new RuntimeException(done.get());
@@ -63,15 +72,6 @@ public class JetQueryResultProducer implements QueryResultProducer {
         for (Object[] row; (row = (Object[]) inbox.peek()) != null && rows.offer(new HeapRow(row)); ) {
             inbox.remove();
         }
-    }
-
-    public void done() {
-        done.compareAndSet(null, NORMAL_COMPLETION);
-    }
-
-    @Override
-    public void onError(QueryException error) {
-        done.compareAndSet(null, error);
     }
 
     private class InternalIterator implements ResultIterator<Row> {
@@ -82,16 +82,28 @@ public class JetQueryResultProducer implements QueryResultProducer {
         private Row nextRow;
 
         @Override
-        public boolean hasNext() {
-            return hasNextWait(Long.MAX_VALUE) == YES;
-        }
-
-        @Override
         public HasNextResult hasNext(long timeout, TimeUnit timeUnit) {
             return nextRow != null || (nextRow = rows.poll()) != null ? YES
                     : isDone() ? DONE
                     : timeout == 0 ? TIMEOUT
                     : hasNextWait(System.nanoTime() + timeUnit.toNanos(timeout));
+        }
+
+        @Override
+        public boolean hasNext() {
+            return hasNextWait(Long.MAX_VALUE) == YES;
+        }
+
+        @Override
+        public Row next() {
+            if (!hasNext()) {
+                throw new NoSuchElementException();
+            }
+            try {
+                return nextRow;
+            } finally {
+                nextRow = rows.poll();
+            }
         }
 
         private HasNextResult hasNextWait(long endTimeNanos) {
@@ -110,7 +122,7 @@ public class JetQueryResultProducer implements QueryResultProducer {
 
         /**
          * Returns:<ul>
-         * <li>true, if done and rows is exhausted
+         * <li>true, if done and rows are exhausted
          * <li>false, if not done or rows are not exhausted
          * <li>throws exception, if done with error
          * </ul>
@@ -119,28 +131,19 @@ public class JetQueryResultProducer implements QueryResultProducer {
             Exception exception = done.get();
             if (exception != null) {
                 if (exception instanceof NormalCompletionException) {
+                    // finish the rows first
                     return rows.isEmpty();
                 }
                 throw new RuntimeException("The Jet SQL job failed: " + exception.getMessage(), exception);
             }
             return false;
         }
-
-        @Override
-        public Row next() {
-            if (!hasNext()) {
-                throw new NoSuchElementException();
-            }
-            try {
-                return nextRow;
-            } finally {
-                nextRow = rows.poll();
-            }
-        }
     }
 
     private static final class NormalCompletionException extends Exception {
         NormalCompletionException() {
+            // Use writableStackTrace = false, the exception is not created at a place where it's thrown,
+            // it's better if it has no stack trace then.
             super("Done normally", null, false, false);
         }
     }
