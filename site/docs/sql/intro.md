@@ -54,8 +54,12 @@ TYPE Kafka
 OPTIONS (
     valueFormat 'json',
     "bootstrap.servers" '1.2.3.4',
-    "value.deserializer" 'org.apache.kafka.connect.json.JsonSerializer')
+    "key.deserializer" 'org.apache.kafka.common.serialization.ByteArrayDeserializer',
+    "value.deserializer" 'org.apache.kafka.connect.json.JsonDeserializer')
 ```
+
+_Note:_ we have to use the `key.deserializer` option, even though we
+don't use the key. It's required by Kafka.
 
 To submit the above query, use the Java API (we plan JDBC support and
 support in non-Java clients in the future):
