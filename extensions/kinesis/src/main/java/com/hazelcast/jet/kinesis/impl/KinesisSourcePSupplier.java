@@ -16,12 +16,13 @@
 package com.hazelcast.jet.kinesis.impl;
 
 import com.amazonaws.services.kinesis.AmazonKinesisAsync;
+import com.hazelcast.jet.core.EventTimePolicy;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorSupplier;
 
 import javax.annotation.Nonnull;
 import java.util.Collection;
-import java.util.List;
+import java.util.Map;
 import java.util.stream.IntStream;
 
 import static java.util.stream.Collectors.toList;
@@ -35,6 +36,8 @@ public class KinesisSourcePSupplier implements ProcessorSupplier {
     @Nonnull
     private final String stream;
     @Nonnull
+    private final EventTimePolicy<? super Map.Entry<String, byte[]>> eventTimePolicy;
+    @Nonnull
     private final HashRange hashRange;
 
     private transient AmazonKinesisAsync kinesis;
@@ -42,10 +45,12 @@ public class KinesisSourcePSupplier implements ProcessorSupplier {
     public KinesisSourcePSupplier(
             @Nonnull AwsConfig awsConfig,
             @Nonnull String stream,
+            @Nonnull EventTimePolicy<? super Map.Entry<String, byte[]>> eventTimePolicy,
             @Nonnull HashRange hashRange
     ) {
         this.awsConfig = awsConfig;
         this.stream = stream;
+        this.eventTimePolicy = eventTimePolicy;
         this.hashRange = hashRange;
     }
 
@@ -57,9 +62,8 @@ public class KinesisSourcePSupplier implements ProcessorSupplier {
     @Nonnull
     @Override
     public Collection<? extends Processor> get(int count) {
-        List<KinesisSourceP> x = IntStream.range(0, count)
-                .mapToObj(i -> new KinesisSourceP(kinesis, stream, hashRange.partition(i, count)))
+        return IntStream.range(0, count)
+                .mapToObj(i -> new KinesisSourceP(kinesis, stream, eventTimePolicy, hashRange.partition(i, count)))
                 .collect(toList());
-        return x;
     }
 }

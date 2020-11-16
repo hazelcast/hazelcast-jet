@@ -23,6 +23,7 @@ import com.hazelcast.jet.pipeline.StreamSource;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * Contains factory methods for creating steaming sources based on
@@ -40,7 +41,7 @@ public final class KinesisSources {
      */
     @Nonnull
     public static Builder kinesis(@Nonnull String stream) {
-        return new Builder(stream);
+        return new Builder(Objects.requireNonNull(stream));
     }
 
     /**
@@ -101,8 +102,11 @@ public final class KinesisSources {
         @Nonnull
         public StreamSource<Map.Entry<String, byte[]>> build() {
             AwsConfig awsConfig = new AwsConfig(endpoint, region, accessKey, secretKey);
-            return Sources.streamFromProcessor("Kinesis Source (" + stream + ")",
-                    new KinesisSourcePMetaSupplier(awsConfig, stream));
+            String stream = this.stream;
+            return Sources.streamFromProcessorWithWatermarks(
+                    "Kinesis Source (" + stream + ")",
+                    true,
+                    eventTimePolicy -> new KinesisSourcePMetaSupplier(awsConfig, stream, eventTimePolicy));
         }
     }
 

@@ -21,10 +21,15 @@ import com.amazonaws.services.kinesis.model.Shard;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.Traversers;
 import com.hazelcast.jet.core.AbstractProcessor;
+import com.hazelcast.jet.core.EventTimeMapper;
+import com.hazelcast.jet.core.EventTimePolicy;
 import com.hazelcast.logging.ILogger;
 
 import javax.annotation.Nonnull;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -39,6 +44,8 @@ public class KinesisSourceP extends AbstractProcessor {
     @Nonnull
     private final String stream;
     @Nonnull
+    private final EventTimeMapper<? super Map.Entry<String, byte[]>> eventTimeMapper;
+    @Nonnull
     private final HashRange hashRange;
 
     private int id;
@@ -48,12 +55,18 @@ public class KinesisSourceP extends AbstractProcessor {
 
     private KinesisHelper helper;
     private RangeMonitor rangeMonitor;
-    private List<ShardReader> shardReaders;
-    private int nextShardReader;
+    private List<ShardReader> shardReaders = new ArrayList<>();
+    private int nextReader;
 
-    public KinesisSourceP(@Nonnull AmazonKinesisAsync kinesis, @Nonnull String stream, @Nonnull HashRange hashRange) {
+    public KinesisSourceP(
+            @Nonnull AmazonKinesisAsync kinesis,
+            @Nonnull String stream,
+            @Nonnull EventTimePolicy<? super Map.Entry<String, byte[]>> eventTimePolicy,
+            @Nonnull HashRange hashRange
+    ) {
         this.kinesis = Objects.requireNonNull(kinesis, "kinesis");
         this.stream = Objects.requireNonNull(stream, "stream");
+        this.eventTimeMapper = new EventTimeMapper<>(eventTimePolicy);
         this.hashRange = Objects.requireNonNull(hashRange, "hashRange");
     }
 
@@ -72,9 +85,7 @@ public class KinesisSourceP extends AbstractProcessor {
         List<Shard> shardsInRange = helper.listActiveShards(
                 (Predicate<? super Shard>) shard -> shardBelongsToRange(shard, hashRange));
         rangeMonitor = new RangeMonitor(context.totalParallelism(), kinesis, stream, hashRange, shardsInRange, logger);
-        shardReaders = shardsInRange.stream()
-                .map(this::initShardReader)
-                .collect(Collectors.toList());
+        addShardReaders(shardsInRange);
     }
 
     @Override
@@ -90,34 +101,41 @@ public class KinesisSourceP extends AbstractProcessor {
 
     private void runMonitor() {
         RangeMonitor.Result result = rangeMonitor.run();
-        if (RangeMonitor.Result.NEW_SHARD.equals(result)) {
-            Shard shard = rangeMonitor.getNewShard();
-            shardReaders.add(initShardReader(shard));
+        if (RangeMonitor.Result.NEW_SHARDS.equals(result)) {
+            Collection<Shard> shards = rangeMonitor.getNewShards();
+            addShardReaders(shards);
         }
     }
 
     private void runReaders() {
         for (int i = 0; i < shardReaders.size(); i++) {
-            ShardReader reader = shardReaders.get(nextShardReader);
-            nextShardReader = incrCircular(nextShardReader, shardReaders.size());
+            int currentReader = nextReader;
+            ShardReader reader = shardReaders.get(currentReader);
+            nextReader = incrCircular(currentReader, shardReaders.size());
 
             ShardReader.Result result = reader.run();
             if (ShardReader.Result.HAS_DATA.equals(result)) {
                 Record[] records = reader.getData();
-                //System.err.println(reader.getShard().getShardId() + " - messages = " + records.length); //todo: remove
                 traverser = Traversers.traverseArray(records)
-                        .map(r -> entry(r.getPartitionKey(), r.getData().array())); //todo: shady
+                        .flatMap(record -> eventTimeMapper.flatMapEvent(
+                                entry(record.getPartitionKey(), record.getData().array()), //todo: shady?
+                                currentReader,
+                                record.getApproximateArrivalTimestamp().getTime()
+                        ));
                 emitFromTraverser(traverser);
                 return;
             } else if (ShardReader.Result.CLOSED.equals(result)) {
                 Shard shard = reader.getShard();
                 logger.info("Shard " + shard.getShardId() + " of stream " + stream + " closed");
-                shardReaders.remove(decrCircular(nextShardReader, shardReaders.size()));
-                rangeMonitor.removeShard(shard);
-                nextShardReader = 0;
+                removeShardReader(currentReader);
+                rangeMonitor.forgetShard(shard);
+                nextReader = 0;
                 return;
             }
         }
+
+        traverser = eventTimeMapper.flatMapIdle();
+        emitFromTraverser(traverser);
     }
 
     @Override
@@ -127,6 +145,8 @@ public class KinesisSourceP extends AbstractProcessor {
         }
 
         //todo: actual snapshot saving; we will be saving the sequence numbers of last seen messages, per shard
+
+        //todo: save watermark, see StreamKafkaP
         return true;
     }
 
@@ -134,6 +154,20 @@ public class KinesisSourceP extends AbstractProcessor {
     protected void restoreFromSnapshot(@Nonnull Object key, @Nonnull Object value) {
         //todo: look for last seen sequence numbers of handled shards
         // pass them to readers so that they can request records only from the sequence no. onward
+
+        //todo: restore watermark, see StreamKafkaP
+    }
+
+    private void addShardReaders(Collection<Shard> shardsInRange) {
+        shardReaders.addAll(shardsInRange.stream()
+                .map(this::initShardReader)
+                .collect(Collectors.toList()));
+        eventTimeMapper.addPartitions(shardReaders.size());
+    }
+
+    private void removeShardReader(int index) {
+        shardReaders.remove(index);
+        eventTimeMapper.removePartition(index);
     }
 
     @Nonnull
@@ -146,14 +180,6 @@ public class KinesisSourceP extends AbstractProcessor {
         v++;
         if (v == limit) {
             v = 0;
-        }
-        return v;
-    }
-
-    private static int decrCircular(int v, int limit) {
-        v--;
-        if (v < 0) {
-            v = limit - 1;
         }
         return v;
     }

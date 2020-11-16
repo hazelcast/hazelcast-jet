@@ -131,10 +131,6 @@ public class KinesisHelper {
         return listActiveShards(shard -> true, Function.identity());
     }
 
-    public <T> List<T> listActiveShards(Function<? super Shard, T> mapper) {
-        return listActiveShards(shard -> true, mapper);
-    }
-
     public List<Shard> listActiveShards(Predicate<? super Shard> filter) {
         return listActiveShards(filter, Function.identity());
     }

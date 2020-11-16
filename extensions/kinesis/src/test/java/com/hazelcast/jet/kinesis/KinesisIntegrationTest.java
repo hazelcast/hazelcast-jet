@@ -26,6 +26,7 @@ import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.Util;
 import com.hazelcast.jet.core.JetTestSupport;
+import com.hazelcast.jet.datamodel.KeyedWindowResult;
 import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.kinesis.impl.AwsConfig;
 import com.hazelcast.jet.kinesis.impl.HashRange;
@@ -35,6 +36,8 @@ import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sink;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.StreamSource;
+import com.hazelcast.jet.pipeline.WindowDefinition;
+import com.hazelcast.jet.pipeline.test.AssertionCompletedException;
 import com.hazelcast.jet.pipeline.test.TestSources;
 import com.hazelcast.jet.test.SerialTest;
 import com.hazelcast.logging.Logger;
@@ -45,8 +48,10 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.testcontainers.containers.localstack.LocalStackContainer;
 import org.testcontainers.containers.localstack.LocalStackContainer.Service;
@@ -61,10 +66,15 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.concurrent.CompletionException;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static com.hazelcast.internal.util.MapUtil.entry;
+import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
+import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
+import static com.hazelcast.jet.pipeline.test.Assertions.assertCollectedEventually;
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -87,6 +97,9 @@ public class KinesisIntegrationTest extends JetTestSupport {
     private static AwsConfig AWS_CONFIG;
     private static AmazonKinesisAsync KINESIS;
     private static KinesisHelper HELPER;
+
+    @Rule
+    public ExpectedException expectedException = ExpectedException.none();
 
     private JetInstance[] cluster;
     private IMap<String, List<String>> results;
@@ -122,6 +135,40 @@ public class KinesisIntegrationTest extends JetTestSupport {
 
         results.clear();
         results.destroy();
+    }
+
+    @Test
+    @Category(SerialTest.class)
+    public void timestampsAndWatermarks() throws Throwable {
+        createStream(1);
+        HELPER.waitForStreamToActivate();
+
+        expectedException.expectMessage(AssertionCompletedException.class.getName());
+
+        try {
+            long windowSize = SECONDS.toMillis(3);
+
+            Pipeline pipeline = Pipeline.create();
+            pipeline.readFrom(kinesisSource())
+                    .withNativeTimestamps(0)
+                    .groupingKey(Entry::getKey)
+                    .window(WindowDefinition.tumbling(windowSize))
+                    .aggregate(counting())
+                    .apply(assertCollectedEventually(120, windowResults -> {
+                        for (int i = 0; i < KEYS; i++) {
+                            String key = Integer.toString(i);
+                            List<KeyedWindowResult<String, Long>> resultsForKey = windowResults.stream()
+                                    .filter(wr -> wr.key().equals(key))
+                                    .collect(Collectors.toList());
+                            assertTrue(resultsForKey.size() > 2); //multiple windows for each key, so watermarks work too
+                        }
+                    }));
+
+            sendMessages(false);
+            jet().newJob(pipeline).join();
+        } catch (CompletionException ce) {
+            throw peel(ce);
+        }
     }
 
     @Test

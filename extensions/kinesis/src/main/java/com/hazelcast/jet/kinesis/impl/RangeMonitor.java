@@ -121,7 +121,7 @@ public class RangeMonitor extends AbstractShardWorker {
                     knownShards.addAll(unknownShards.stream().map(Shard::getShardId).collect(toList()));
                     newShards.addAll(unknownShards);
                     state = State.NEW_SHARDS_FOUND;
-                    return Result.NEW_SHARD;
+                    return Result.NEW_SHARDS;
                 }
             } catch (LimitExceededException | ExpiredNextTokenException | ResourceInUseException e) {
                 logger.warning("Recoverable error encountered while listing shards: " + e.getMessage());
@@ -137,20 +137,20 @@ public class RangeMonitor extends AbstractShardWorker {
     }
 
     private Result handleNewShardsFound() {
-        newShards.remove(0);
-        state = newShards.isEmpty() ? State.READY_TO_LIST_SHARDS : State.NEW_SHARDS_FOUND;
-        return newShards.isEmpty() ? Result.NOTHING : Result.NEW_SHARD;
+        newShards.clear();
+        state = State.READY_TO_LIST_SHARDS;
+        return Result.NOTHING;
     }
 
-    public void removeShard(Shard shard) {
+    public void forgetShard(Shard shard) {
         knownShards.remove(shard.getShardId());
     }
 
-    public Shard getNewShard() {
+    public Collection<Shard> getNewShards() {
         if (newShards.isEmpty()) {
             throw new IllegalStateException("Can't ask for new shards observed when there are none");
         }
-        return newShards.get(0);
+        return newShards;
     }
 
     enum Result {
@@ -160,9 +160,9 @@ public class RangeMonitor extends AbstractShardWorker {
         NOTHING,
 
         /**
-         * Running the monitor has lead to noticing a new shard that needs handling.
+         * Running the monitor has lead to noticing new shards that need handling.
          */
-        NEW_SHARD
+        NEW_SHARDS
     }
 
     private enum State {

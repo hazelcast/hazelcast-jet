@@ -17,6 +17,7 @@ package com.hazelcast.jet.kinesis.impl;
 
 import com.hazelcast.cluster.Address;
 import com.hazelcast.cluster.Member;
+import com.hazelcast.jet.core.EventTimePolicy;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
 
@@ -24,7 +25,6 @@ import javax.annotation.Nonnull;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.function.Function;
 
 import static java.math.BigInteger.ZERO;
@@ -41,15 +41,19 @@ public class KinesisSourcePMetaSupplier implements ProcessorMetaSupplier {
     private final AwsConfig awsConfig;
     @Nonnull
     private final String stream;
+    @Nonnull
+    private final EventTimePolicy<? super Map.Entry<String, byte[]>> eventTimePolicy;
 
     private transient Map<Address, HashRange> assignedHashRanges;
 
     public KinesisSourcePMetaSupplier(
             @Nonnull AwsConfig awsConfig,
-            @Nonnull String stream
+            @Nonnull String stream,
+            @Nonnull EventTimePolicy<? super Map.Entry<String, byte[]>> eventTimePolicy
     ) {
         this.awsConfig = awsConfig;
-        this.stream = Objects.requireNonNull(stream);
+        this.stream = stream;
+        this.eventTimePolicy = eventTimePolicy;
     }
 
     @Override
@@ -63,11 +67,10 @@ public class KinesisSourcePMetaSupplier implements ProcessorMetaSupplier {
     @Nonnull
     @Override
     public Function<? super Address, ? extends ProcessorSupplier> get(@Nonnull List<Address> addresses) {
-        Function<Address, ProcessorSupplier> function = address -> {
+        return address -> {
             HashRange assignedRange = assignedHashRanges.get(address);
-            return new KinesisSourcePSupplier(awsConfig, stream, assignedRange);
+            return new KinesisSourcePSupplier(awsConfig, stream, eventTimePolicy, assignedRange);
         };
-        return function;
     }
 
     @Nonnull
