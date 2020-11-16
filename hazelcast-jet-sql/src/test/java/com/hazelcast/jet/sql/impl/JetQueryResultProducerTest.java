@@ -103,21 +103,6 @@ public class JetQueryResultProducerTest extends JetTestSupport {
     }
 
     @Test
-    @SuppressWarnings("ResultOfMethodCallIgnored")
-    public void when_doneWithError_then_remainingItemsIterated() {
-        inbox.queue().add(new Object[]{1});
-        inbox.queue().add(new Object[]{2});
-        producer.consume(inbox);
-        producer.onError(QueryException.error("mock error"));
-
-        assertThat(iterator.hasNext()).isTrue();
-        assertThat((int) iterator.next().get(0)).isEqualTo(1);
-        assertThat(iterator.hasNext()).isTrue();
-        assertThat((int) iterator.next().get(0)).isEqualTo(2);
-        assertThatThrownBy(iterator::hasNext).hasMessageContaining("mock error");
-    }
-
-    @Test
     public void when_doneWithErrorWhileWaiting_then_throw_async() {
         assertThat(iterator.hasNext(0, SECONDS)).isEqualTo(TIMEOUT);
         producer.onError(QueryException.error("mock error"));
