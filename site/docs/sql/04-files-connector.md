@@ -1,5 +1,0 @@
----
-title: Files Connector
----
-
-TODO
