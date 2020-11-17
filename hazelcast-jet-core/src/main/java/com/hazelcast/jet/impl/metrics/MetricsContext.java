@@ -28,7 +28,10 @@ import com.hazelcast.jet.core.metrics.Unit;
 import javax.annotation.Nonnull;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicLongFieldUpdater;
+import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 
 public class MetricsContext implements DynamicMetricsProvider {
@@ -36,10 +39,7 @@ public class MetricsContext implements DynamicMetricsProvider {
     private static final BiFunction<String, Unit, AbstractMetric> CREATE_SINGLE_WRITER_METRIC = SingleWriterMetric::new;
     private static final BiFunction<String, Unit, AbstractMetric> CREATE_THREAD_SAFE_METRICS = ThreadSafeMetric::new;
 
-    private String onlyName;
-    private AbstractMetric onlyMetric;
-
-    private Map<String, AbstractMetric> metrics;
+    private final MetricsStore store = new MetricsStore();
 
     Metric metric(String name, Unit unit) {
         return metric(name, unit, CREATE_SINGLE_WRITER_METRIC);
@@ -50,47 +50,15 @@ public class MetricsContext implements DynamicMetricsProvider {
     }
 
     private Metric metric(String name, Unit unit, BiFunction<String, Unit, AbstractMetric> metricSupplier) {
-        if (metrics == null) { //at most one already defined metric
-            if (onlyMetric == null) { //no already defined metrics
-                onlyMetric = metricSupplier.apply(name, unit);
-                onlyName = name;
-                return onlyMetric;
-            } else { //one single already defined metric
-                if (name.equals(onlyName)) { //single already defined metric same as the requested one
-                    return onlyMetric;
-                } else { //single already defined metric different from the requested one
-                    metrics = new HashMap<>();
-                    metrics.put(onlyName, onlyMetric);
-
-                    onlyMetric = null;
-                    onlyName = null;
-
-                    AbstractMetric metric = metricSupplier.apply(name, unit);
-                    metrics.put(name, metric);
-                    return metric;
-                }
-            }
-        } else { //multiple metrics already defined
-            AbstractMetric metric = metrics.get(name);
-            if (metric == null) { //requested metric not yet defined
-                metric = metricSupplier.apply(name, unit);
-                metrics.put(name, metric);
-            }
-            return metric;
-        }
+        return store.localGet(name, unit, metricSupplier);
     }
 
     @Override
     public void provideDynamicMetrics(MetricDescriptor tagger, MetricsCollectionContext context) {
-        if (onlyMetric != null) {
-            context.collect(
-                    addUserTag(tagger), onlyName, ProbeLevel.INFO, toProbeUnit(onlyMetric.unit()), onlyMetric.get()
-            );
-        } else if (metrics != null) {
-            MetricDescriptor withUserTag = addUserTag(tagger);
-            metrics.forEach((name, metric) ->
-                    context.collect(withUserTag, name, ProbeLevel.INFO, toProbeUnit(metric.unit()), metric.get()));
-        }
+        MetricDescriptor withUserTag = tagger.copy().withTag(MetricTags.USER, "true");
+
+        store.threadSafeForEach((name, metric) ->
+                context.collect(withUserTag, name, ProbeLevel.INFO, toProbeUnit(metric.unit()), metric.get()));
     }
 
     private static MetricDescriptor addUserTag(MetricDescriptor tagger) {
@@ -206,6 +174,44 @@ public class MetricsContext implements DynamicMetricsProvider {
         @Override
         protected long get() {
             return VOLATILE_VALUE_UPDATER.get(this);
+        }
+    }
+
+    /**
+     * Map for storing metrics on a per name basis. Meant to offer fast,
+     * single-threaded access, but also a loosely consistent, thread safe
+     * way to iterate over the content.
+     */
+    private static class MetricsStore {
+
+        private Map<String, AbstractMetric> threadLocalStore;
+        private volatile ConcurrentMap<String, AbstractMetric> threadSafeStore;
+
+        /**
+         * Always called on the same thread, the one executing the Tasklet this context belongs to.
+         */
+        Metric localGet(String name, Unit unit, BiFunction<String, Unit, AbstractMetric> metricSupplier) {
+            if (threadLocalStore == null) { //first metric being stored
+                threadLocalStore = new HashMap<>();
+                threadSafeStore = new ConcurrentHashMap<>();
+            }
+
+            AbstractMetric metric = threadLocalStore.get(name);
+            if (metric != null) {
+                return metric;
+            }
+
+            metric = metricSupplier.apply(name, unit);
+            threadLocalStore.put(name, metric);
+            threadSafeStore.put(name, metric);
+
+            return metric;
+        }
+
+        void threadSafeForEach(BiConsumer<? super String, ? super AbstractMetric> consumer) {
+            if (threadSafeStore != null) {
+                threadLocalStore.forEach(consumer);
+            }
         }
     }
 
