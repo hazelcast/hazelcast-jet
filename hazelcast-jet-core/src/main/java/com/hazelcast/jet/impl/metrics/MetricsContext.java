@@ -210,7 +210,7 @@ public class MetricsContext implements DynamicMetricsProvider {
 
         void threadSafeForEach(BiConsumer<? super String, ? super AbstractMetric> consumer) {
             if (threadSafeStore != null) {
-                threadLocalStore.forEach(consumer);
+                threadSafeStore.forEach(consumer);
             }
         }
     }
