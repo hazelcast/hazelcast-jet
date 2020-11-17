@@ -105,7 +105,7 @@ class NodeExtensionCommon {
         if (!revision.isEmpty()) {
             build += " - " + revision;
         }
-        return "Used Hazelcast IMDG version: " + node.getVersion() + " (" + build + ")";
+        return "Based on Hazelcast IMDG version: " + node.getVersion() + " (" + build + ")";
     }
 
     private String serializationVersionMessage() {
