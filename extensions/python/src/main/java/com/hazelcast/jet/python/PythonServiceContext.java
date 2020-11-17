@@ -18,6 +18,7 @@ package com.hazelcast.jet.python;
 import com.hazelcast.internal.nio.IOUtil;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.core.ProcessorSupplier;
+import com.hazelcast.jet.impl.util.ExceptionUtil;
 import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.logging.ILogger;
 
@@ -76,6 +77,7 @@ class PythonServiceContext {
     PythonServiceContext(ProcessorSupplier.Context context, PythonServiceConfig cfg) {
         logger = context.jetInstance().getHazelcastInstance().getLoggingService()
                         .getLogger(getClass().getPackage().getName());
+        checkIfPythonIsAvailable();
         try {
             long start = System.nanoTime();
             runtimeBaseDir = recreateRuntimeBaseDir(context, cfg);
@@ -105,6 +107,14 @@ class PythonServiceContext {
                     TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start)));
         } catch (Exception e) {
             throw new JetException("PythonService initialization failed: " + e, e);
+        }
+    }
+
+    private void checkIfPythonIsAvailable() {
+        try {
+            new ProcessBuilder("python3", "--version").start().waitFor();
+        } catch (Exception e) {
+            throw ExceptionUtil.sneakyThrow(new Exception("python3 is not available", e));
         }
     }
 
