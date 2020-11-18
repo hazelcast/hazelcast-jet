@@ -16,15 +16,15 @@
 
 package com.hazelcast.jet.sql.impl.inject;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.JsonGenerator;
 import com.hazelcast.sql.impl.QueryException;
 import com.hazelcast.sql.impl.type.QueryDataType;
 
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 import static com.hazelcast.jet.sql.impl.inject.UpsertInjector.FAILING_TOP_LEVEL_INJECTOR;
@@ -32,9 +32,10 @@ import static com.hazelcast.jet.sql.impl.inject.UpsertInjector.FAILING_TOP_LEVEL
 @NotThreadSafe
 class JsonUpsertTarget implements UpsertTarget {
 
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final JsonFactory JSON_FACTORY = new JsonFactory();
 
-    private ObjectNode json;
+    private final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    private JsonGenerator jsonGen;
 
     JsonUpsertTarget() {
     }
@@ -46,80 +47,95 @@ class JsonUpsertTarget implements UpsertTarget {
             return FAILING_TOP_LEVEL_INJECTOR;
         }
 
-        switch (type.getTypeFamily()) {
-            case BOOLEAN:
-                return value -> json.put(path, (Boolean) value);
-            case TINYINT:
-                return value -> {
-                    if (value == null) {
-                        json.putNull(path);
-                    } else {
-                        json.put(path, (Byte) value);
-                    }
-                };
-            case SMALLINT:
-                return value -> json.put(path, (Short) value);
-            case INTEGER:
-                return value -> json.put(path, (Integer) value);
-            case BIGINT:
-                return value -> json.put(path, (Long) value);
-            case REAL:
-                return value -> json.put(path, (Float) value);
-            case DOUBLE:
-                return value -> json.put(path, (Double) value);
-            case DECIMAL:
-            case TIME:
-            case DATE:
-            case TIMESTAMP:
-            case TIMESTAMP_WITH_TIME_ZONE:
-            case VARCHAR:
-                return value -> json.put(path, (String) QueryDataType.VARCHAR.convert(value));
-            case OBJECT:
-                return createObjectInjector(path);
-            default:
-                throw QueryException.error("Unsupported type: " + type);
-        }
-    }
-
-    private UpsertInjector createObjectInjector(String path) {
         return value -> {
-            if (value == null) {
-                json.putNull(path);
-            } else if (value instanceof JsonNode) {
-                json.set(path, (JsonNode) value);
-            } else if (value instanceof Boolean) {
-                json.put(path, (boolean) value);
-            } else if (value instanceof Byte) {
-                json.put(path, (byte) value);
-            } else if (value instanceof Short) {
-                json.put(path, (short) value);
-            } else if (value instanceof Integer) {
-                json.put(path, (int) value);
-            } else if (value instanceof Long) {
-                json.put(path, (long) value);
-            } else if (value instanceof Float) {
-                json.put(path, (float) value);
-            } else if (value instanceof Double) {
-                json.put(path, (double) value);
-            } else {
-                json.put(path, (String) QueryDataType.VARCHAR.convert(value));
+            try {
+                if (value == null) {
+                    jsonGen.writeNullField(path);
+                } else {
+                    switch (type.getTypeFamily()) {
+                        case BOOLEAN:
+                            jsonGen.writeBooleanField(path, (Boolean) value);
+                            break;
+                        case TINYINT:
+                            jsonGen.writeNumberField(path, (Byte) value);
+                            break;
+                        case SMALLINT:
+                            jsonGen.writeNumberField(path, (Short) value);
+                            break;
+                        case INTEGER:
+                            jsonGen.writeNumberField(path, (Integer) value);
+                            break;
+                        case BIGINT:
+                            jsonGen.writeNumberField(path, (Long) value);
+                            break;
+                        case REAL:
+                            jsonGen.writeNumberField(path, (Float) value);
+                            break;
+                        case DOUBLE:
+                            jsonGen.writeNumberField(path, (Double) value);
+                            break;
+                        case DECIMAL:
+                        case TIME:
+                        case DATE:
+                        case TIMESTAMP:
+                        case TIMESTAMP_WITH_TIME_ZONE:
+                        case VARCHAR:
+                            jsonGen.writeStringField(path, (String) QueryDataType.VARCHAR.convert(value));
+                            break;
+                        case OBJECT:
+                            injectObject(path, value);
+                            break;
+                        default:
+                            throw QueryException.error("Unsupported type: " + type);
+                    }
+                }
+            } catch (IOException e) {
+                throw sneakyThrow(e);
             }
         };
     }
 
+    private void injectObject(String path, Object value) throws IOException {
+        if (value == null) {
+            jsonGen.writeNullField(path);
+        } else if (value instanceof Boolean) {
+            jsonGen.writeBooleanField(path, (boolean) value);
+        } else if (value instanceof Byte) {
+            jsonGen.writeNumberField(path, (byte) value);
+        } else if (value instanceof Short) {
+            jsonGen.writeNumberField(path, (short) value);
+        } else if (value instanceof Integer) {
+            jsonGen.writeNumberField(path, (int) value);
+        } else if (value instanceof Long) {
+            jsonGen.writeNumberField(path, (long) value);
+        } else if (value instanceof Float) {
+            jsonGen.writeNumberField(path, (float) value);
+        } else if (value instanceof Double) {
+            jsonGen.writeNumberField(path, (double) value);
+        } else {
+            jsonGen.writeStringField(path, (String) QueryDataType.VARCHAR.convert(value));
+        }
+    }
+
     @Override
     public void init() {
-        json = MAPPER.createObjectNode();
+        baos.reset();
+        try {
+            jsonGen = JSON_FACTORY.createGenerator(baos);
+            jsonGen.writeStartObject();
+        } catch (IOException e) {
+            throw sneakyThrow(e);
+        }
     }
 
     @Override
     public Object conclude() {
-        ObjectNode json = this.json;
-        this.json = null;
         try {
-            return MAPPER.writeValueAsBytes(json);
-        } catch (JsonProcessingException jpe) {
-            throw sneakyThrow(jpe);
+            jsonGen.writeEndObject();
+            jsonGen.close();
+        } catch (IOException e) {
+            throw sneakyThrow(e);
         }
+        return baos.toByteArray();
     }
 }
