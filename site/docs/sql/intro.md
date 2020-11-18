@@ -49,17 +49,20 @@ data types:
 ```sql
 CREATE MAPPING trades (
     ticker VARCHAR,
-    value DECIMAL)
+    price DECIMAL)
 TYPE Kafka
 OPTIONS (
     valueFormat 'json',
     "bootstrap.servers" '1.2.3.4',
+    "key.serializer" 'org.apache.kafka.common.serialization.ByteArraySerializer',
     "key.deserializer" 'org.apache.kafka.common.serialization.ByteArrayDeserializer',
-    "value.deserializer" 'org.apache.kafka.connect.json.JsonDeserializer')
+    "value.serializer" 'org.apache.kafka.connect.json.JsonSerializer')
+    "value.deserializer" 'org.apache.kafka.connect.json.JsonDeserializer',
 ```
 
-_Note:_ we have to use the `key.deserializer` option, even though we
-don't use the key. It's required by Kafka.
+_Note:_ we have to specify the serializer/deserializer also for the key,
+even though we don't use the key (Kafka allows a null key). But the
+configuration option is required by Kafka.
 
 To submit the above query, use the Java API (we plan JDBC support and
 support in non-Java clients in the future):
@@ -121,19 +124,19 @@ statement:
 )
 ```
 
-The SINK INTO command will look like this:
+The `SINK INTO` command will look like this:
 
 ```sql
 SINK INTO latest_trades(__key, this)
-SELECT ticker, value
+SELECT ticker, price
 FROM trades
 ```
 
-It will put the `ticker` and `value` fields from the messages in the
+It will put the `ticker` and `price` fields from the messages in the
 topic into the `latest_trades` IMap. The `ticker` field will be used as
-the map key and the `value` field will be used as the map value. If
+the map key and the `price` field will be used as the map value. If
 multiple messages have the same ticker, the entry in the target map will
-be overwritten, as they arrive.
+be overwritten, in the order they arrive.
 
 However, you cannot directly execute the above command because it would
 never complete. Remember, it's reading from a Kafka topic. Since it
@@ -142,7 +145,7 @@ doesn't return any rows to the client, you must create a job for it:
 ```sql
 CREATE JOB trades_ingestion AS
 SINK INTO latest_trades(__key, this)
-SELECT ticker, value
+SELECT ticker, price
 FROM trades
 ```
 
