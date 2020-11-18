@@ -15,17 +15,17 @@ or patch releases._
 
 In the first release, Jet SQL supports the following features:
 
-- SQL Queries over [Apache Kafka topics](05-kafka-connector.md) and
-[files (local and remote)](04-files-connector.md)
+- SQL Queries over [Apache Kafka topics](kafka-connector.md) and files
+(local and remote) (TODO)
 - Joining Kafka or file data with local IMaps (enrichment)
 - Filtering and projection using [SQL
 expressions](https://docs.hazelcast.org/docs/{imdg-version}/manual/html-single/index.html#expressions)
-- Aggregating data from files using predefined
-[aggregate functions](00a-basic-commands#aggregation-functions)
+- Aggregating data from files using predefined [aggregate
+functions](basic-commands#aggregation-functions)
 - Receiving query results via Jet client (Java) or writing the results
-to an [IMap](03-imap-connector.md) in the Jet cluster
+to an [IMap](imap-connector.md) in the Jet cluster
 - Running continuous (streaming) and batch queries, see
-[Job Management](02-job-management.md)
+[Job Management](job-management.md)
 
 These are some of the features on our roadmap:
 

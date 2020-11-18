@@ -102,7 +102,7 @@ the string value is a JSON object like this:
 ```
 
 For details regarding the above statement see the [IMap
-connector](03-imap-connector.md) chapter.
+connector](imap-connector.md) chapter.
 
 ### DROP MAPPING Synopsis
 
