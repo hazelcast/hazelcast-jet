@@ -15,7 +15,7 @@ or patch releases._
 
 In the first release, Jet SQL supports the following features:
 
-- SQL Queries over [Apache Kafka topics](kafka-connector.md) and files
+- SQL queries over [Apache Kafka topics](kafka-connector.md) and files
 (local and remote) (TODO)
 - Joining Kafka or file data with local IMaps (enrichment)
 - Filtering and projection using [SQL
@@ -30,39 +30,50 @@ to an [IMap](imap-connector.md) in the Jet cluster
 These are some of the features on our roadmap:
 
 - Joins with arbitrary external data sources
-- Windowed aggregation
+- Windowed aggregation of streaming data
 - JDBC
 
 ## Example: How to query Apache Kafka using SQL
 
-We have a topic called `trades` with stock trade events. Trades are
-encoded as JSON messages:
+First, make sure you have kafka up and running. Please follow any of the
+Kafka tutorials. Start a broker and create a topic named `trades`.
 
-```json
-{ "ticker": "ABCD", "price": 5.5 }
+The trades will be encoded as JSON messages:
+
+```plain
+key: ABCD
+value: {
+    "ticker": "ABCD",
+    "price": 5.5,
+    "amount": 10
+}
 ```
 
+The key is a string, the value is a JSON object. The `ticker` is
+repeated in both the key and the value. We'll ignore the key in the
+subsequent examples, it's only used by Kafka for partitioning.
+
 To use a remote topic as a table in Jet, first create an `EXTERNAL
-MAPPING`. It maps the JSON messages to a fixed list of columns with
-data types:
+MAPPING`. It maps the messages to a fixed list of columns with data
+types:
 
 ```sql
 CREATE MAPPING trades (
     ticker VARCHAR,
-    price DECIMAL)
+    price DECIMAL,
+    amount BIGINT)
 TYPE Kafka
 OPTIONS (
     valueFormat 'json',
-    "bootstrap.servers" '1.2.3.4',
-    "key.serializer" 'org.apache.kafka.common.serialization.ByteArraySerializer',
-    "key.deserializer" 'org.apache.kafka.common.serialization.ByteArrayDeserializer',
-    "value.serializer" 'org.apache.kafka.connect.json.JsonSerializer',
-    "value.deserializer" 'org.apache.kafka.connect.json.JsonDeserializer')
+    "bootstrap.servers" '1.2.3.4:9092'
+    /* ... more configuration options for the Kafka consumer */
+)
 ```
 
-_Note:_ we have to specify the serializer/deserializer also for the key,
-even though we don't use the key (Kafka allows a null key). But the
-configuration option is required by Kafka.
+_Note:_ we don't have to specify `value.deserializer` in the `OPTIONS`.
+If it's not present and the `valueFormat` is JSON, Jet will
+automatically add the `ByteArraySerializer` and `ByteArrayDeserializer`.
+Jet reads/writes the JSON values directly from the `byte[]`.
 
 To submit the above query, use the Java API (we plan JDBC support and
 support in non-Java clients in the future):
