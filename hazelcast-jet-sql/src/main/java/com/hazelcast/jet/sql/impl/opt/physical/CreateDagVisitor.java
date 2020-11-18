@@ -27,8 +27,8 @@ import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.core.processor.Processors;
-import com.hazelcast.jet.sql.impl.aggregate.ObjectArrayKey;
 import com.hazelcast.jet.sql.impl.ExpressionUtil;
+import com.hazelcast.jet.sql.impl.connector.SqlConnector.NestedLoopJoin;
 import com.hazelcast.sql.impl.calcite.schema.HazelcastTable;
 import com.hazelcast.sql.impl.schema.Table;
 import org.apache.calcite.rel.RelNode;
@@ -148,7 +148,7 @@ public class CreateDagVisitor {
     }
 
     public Vertex onAggregateByKey(AggregateByKeyPhysicalRel rel) {
-        FunctionEx<Object[], ObjectArrayKey> groupKeyFn = rel.groupKeyFn();
+        FunctionEx<Object[], ?> groupKeyFn = rel.groupKeyFn();
         AggregateOperation<?, Object[]> aggregateOperation = rel.aggrOp();
 
         Vertex vertex = dag.newVertex(
@@ -160,7 +160,7 @@ public class CreateDagVisitor {
     }
 
     public Vertex onAccumulateByKey(AggregateAccumulateByKeyPhysicalRel rel) {
-        FunctionEx<Object[], ObjectArrayKey> groupKeyFn = rel.groupKeyFn();
+        FunctionEx<Object[], ?> groupKeyFn = rel.groupKeyFn();
         AggregateOperation<?, Object[]> aggregateOperation = rel.aggrOp();
 
         Vertex vertex = dag.newVertex(
@@ -187,14 +187,14 @@ public class CreateDagVisitor {
 
         Table rightTable = rel.getRight().getTable().unwrap(HazelcastTable.class).getTarget();
 
-        Vertex vertex = getJetSqlConnector(rightTable).nestedLoopReader(
-                dag,
+        NestedLoopJoin join = getJetSqlConnector(rightTable).nestedLoopReader(
                 rightTable,
                 rel.rightFilter(),
                 rel.rightProjection(),
                 rel.joinInfo()
         );
-        connectInput(rel.getLeft(), vertex, null);
+        Vertex vertex = dag.newVertex(name(join.vertexName()), join.joiningProcessorSupplier());
+        connectInput(rel.getLeft(), vertex, join.configureEdgeFn());
         return vertex;
     }
 

@@ -17,6 +17,8 @@
 package com.hazelcast.jet.sql.impl.connector;
 
 import com.hazelcast.jet.core.DAG;
+import com.hazelcast.jet.core.Edge;
+import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.sql.impl.JetJoinInfo;
 import com.hazelcast.jet.sql.impl.schema.MappingField;
@@ -28,6 +30,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 
 /**
  * An API to bridge Jet connectors and SQL. Allows the use of a Jet
@@ -240,8 +243,6 @@ public interface SqlConnector {
      * The source is read according to {@code projection}/{@code predicate}.
      * The output type is Object[].
      * <p>
-     * The result is the vertex to be added to the DAG.
-     * <p>
      * The field indexes in the predicate and projection refer to the
      * zero-based indexes of the original fields of the {@code table}. For
      * example, if the table has fields {@code a, b, c} and the query is:
@@ -255,10 +256,10 @@ public interface SqlConnector {
      * @param predicate  SQL expression to filter the rows
      * @param projection the list of fields to return
      * @param joinInfo   {@link JetJoinInfo}
+     * @return {@link NestedLoopJoin}
      */
     @Nonnull
-    default Vertex nestedLoopReader(
-            @Nonnull DAG dag,
+    default NestedLoopJoin nestedLoopReader(
             @Nonnull Table table,
             @Nullable Expression<Boolean> predicate,
             @Nonnull List<Expression<?>> projection,
@@ -294,5 +295,52 @@ public interface SqlConnector {
     ) {
         assert !supportsSink();
         throw new UnsupportedOperationException("Sink not supported for " + typeName());
+    }
+
+    /**
+     * Definition of a nested loop join.
+     * <p>
+     * Contains:<ul>
+     * <li>{@code vertexName}: name of the joining vertex to be added
+     * to DAG
+     * <li>{@code processorSupplier}: supplier of the joining vertex to
+     * be added to the DAG, that reads the Object[] input - on the left
+     * side of a join - and connects it with the source - on the right
+     * side of a join
+     * <li>{@code configureEdgeFn}: function to configure the edge the
+     * joining vertex is connected to
+     * </ul>
+     */
+    class NestedLoopJoin {
+
+        private final String vertexName;
+        private final ProcessorSupplier joiningProcessorSupplier;
+        private final Consumer<Edge> configureEdgeFn;
+
+        public NestedLoopJoin(String vertexName, ProcessorSupplier joiningProcessorSupplier) {
+            this(vertexName, joiningProcessorSupplier, null);
+        }
+
+        public NestedLoopJoin(
+                String vertexName,
+                ProcessorSupplier joiningProcessorSupplier,
+                Consumer<Edge> configureEdgeFn
+        ) {
+            this.vertexName = vertexName;
+            this.joiningProcessorSupplier = joiningProcessorSupplier;
+            this.configureEdgeFn = configureEdgeFn;
+        }
+
+        public String vertexName() {
+            return vertexName;
+        }
+
+        public ProcessorSupplier joiningProcessorSupplier() {
+            return joiningProcessorSupplier;
+        }
+
+        public Consumer<Edge> configureEdgeFn() {
+            return configureEdgeFn;
+        }
     }
 }

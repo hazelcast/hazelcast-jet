@@ -17,9 +17,9 @@
 package com.hazelcast.jet.sql.impl.connector.map;
 
 import com.hazelcast.config.InMemoryFormat;
+import com.hazelcast.function.FunctionEx;
 import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.jet.core.DAG;
-import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.core.processor.SinkProcessors;
 import com.hazelcast.jet.sql.impl.JetJoinInfo;
@@ -50,8 +50,6 @@ import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
-import java.util.concurrent.ThreadLocalRandom;
 
 import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.sql.impl.schema.map.MapTableUtils.estimatePartitionedMapRowCount;
@@ -61,8 +59,6 @@ import static java.util.stream.Stream.concat;
 public class IMapSqlConnector implements SqlConnector {
 
     public static final String TYPE_NAME = "IMap";
-
-    private static final int RANDOM_SUFFIX_LENGTH = 5;
 
     private final KvMetadataResolvers metadataResolvers;
 
@@ -138,8 +134,7 @@ public class IMapSqlConnector implements SqlConnector {
     }
 
     @Nonnull @Override
-    public Vertex nestedLoopReader(
-            @Nonnull DAG dag,
+    public NestedLoopJoin nestedLoopReader(
             @Nonnull Table table0,
             @Nullable Expression<Boolean> predicate,
             @Nonnull List<Expression<?>> projections,
@@ -157,28 +152,29 @@ public class IMapSqlConnector implements SqlConnector {
         KvRowProjector.Supplier rightRowProjectorSupplier =
                 KvRowProjector.supplier(paths, types, keyDescriptor, valueDescriptor, predicate, projections);
 
-        ProcessorSupplier pSupplier;
-        String desc;
         int leftEquiJoinPrimitiveKeyIndex = leftEquiJoinPrimitiveKeyIndex(joinInfo, fields);
         if (leftEquiJoinPrimitiveKeyIndex > -1) {
-            pSupplier = new JoinByPrimitiveKeyProcessorSupplier(
-                    leftEquiJoinPrimitiveKeyIndex,
-                    joinInfo.condition(),
-                    name,
-                    rightRowProjectorSupplier
+            return new NestedLoopJoin(
+                    "Join(Lookup-" + toString(table) + ")",
+                    new JoinByPrimitiveKeyProcessorSupplier(
+                            leftEquiJoinPrimitiveKeyIndex,
+                            joinInfo.condition(),
+                            name,
+                            rightRowProjectorSupplier
+                    ),
+                    edge -> edge.partitioned(extractPrimitiveKeyFn(leftEquiJoinPrimitiveKeyIndex)).distributed()
             );
-            desc = "imap.get";
         } else if (joinInfo.isEquiJoin()) {
-            pSupplier = new JoinByPredicateProcessorSupplier(joinInfo, name, paths, rightRowProjectorSupplier);
-            desc = "imap.entrySet(predicate)";
+            return new NestedLoopJoin(
+                    "Join(Predicate-" + toString(table) + ")",
+                    new JoinByPredicateProcessorSupplier(joinInfo, name, paths, rightRowProjectorSupplier)
+            );
         } else {
-            pSupplier = new JoinScanProcessorSupplier(joinInfo, name, rightRowProjectorSupplier);
-            desc = "imap.entrySet(<full>)";
+            return new NestedLoopJoin(
+                    "Join(Scan-" + toString(table) + ")",
+                    new JoinScanProcessorSupplier(joinInfo, name, rightRowProjectorSupplier)
+            );
         }
-        return dag.newVertex(
-                "NestedLoopJoin(" + toString(table) + ")-" + desc + "-" + randomLetters(),
-                pSupplier
-        );
     }
 
     private static int leftEquiJoinPrimitiveKeyIndex(JetJoinInfo joinInfo, List<TableField> fields) {
@@ -193,13 +189,11 @@ public class IMapSqlConnector implements SqlConnector {
         return -1;
     }
 
-    private static String randomLetters() {
-        Random random = ThreadLocalRandom.current();
-        char[] res = new char[RANDOM_SUFFIX_LENGTH];
-        for (int i = 0; i < RANDOM_SUFFIX_LENGTH; i++) {
-            res[i] = (char) ('a' + random.nextInt('z' - 'a'));
-        }
-        return new String(res);
+    private static FunctionEx<Object, ?> extractPrimitiveKeyFn(int index) {
+        return row -> {
+            Object value = ((Object[]) row)[index];
+            return value == null ? "" : value;
+        };
     }
 
     @Override
