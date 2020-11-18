@@ -34,6 +34,8 @@ import org.apache.kafka.common.serialization.StringSerializer;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import java.util.Map;
+
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.AVRO_FORMAT;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.JAVA_FORMAT;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnector.JSON_FORMAT;
@@ -59,6 +61,27 @@ public class PropertiesResolverTest {
     @Test
     public void when_formatIsAbsent_then_doesNotFail() {
         assertThat(PropertiesResolver.resolveProperties(emptyMap())).isEmpty();
+    }
+
+    @Test
+    public void when_propertyIsDefined_then_itsNotOverwritten() {
+        // key
+        Map<String, String> keyOptions = ImmutableMap.of(
+                OPTION_KEY_FORMAT, JAVA_FORMAT,
+                OPTION_KEY_CLASS, short.class.getName(),
+                KEY_SERIALIZER, "already-defined-key-serializer",
+                KEY_DESERIALIZER, "already-defined-key-deserializer"
+        );
+        assertThat(PropertiesResolver.resolveProperties(keyOptions)).containsExactlyInAnyOrderEntriesOf(keyOptions);
+
+        // value
+        Map<String, String> valueOptions = ImmutableMap.of(
+                OPTION_VALUE_FORMAT, JAVA_FORMAT,
+                OPTION_VALUE_CLASS, short.class.getName(),
+                VALUE_SERIALIZER, "already-defined-value-serializer",
+                VALUE_DESERIALIZER, "already-defined-value-deserializer"
+        );
+        assertThat(PropertiesResolver.resolveProperties(valueOptions)).containsExactlyInAnyOrderEntriesOf(valueOptions);
     }
 
     @SuppressWarnings("unused")
