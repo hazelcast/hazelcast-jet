@@ -37,7 +37,7 @@ class JsonUpsertTarget implements UpsertTarget {
     private static final JsonFactory JSON_FACTORY = new ObjectMapper().getFactory();
 
     private final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-    private JsonGenerator jsonGen;
+    private JsonGenerator generator;
 
     JsonUpsertTarget() {
     }
@@ -52,29 +52,29 @@ class JsonUpsertTarget implements UpsertTarget {
         return value -> {
             try {
                 if (value == null) {
-                    jsonGen.writeNullField(path);
+                    generator.writeNullField(path);
                 } else {
                     switch (type.getTypeFamily()) {
                         case BOOLEAN:
-                            jsonGen.writeBooleanField(path, (Boolean) value);
+                            generator.writeBooleanField(path, (Boolean) value);
                             break;
                         case TINYINT:
-                            jsonGen.writeNumberField(path, (Byte) value);
+                            generator.writeNumberField(path, (Byte) value);
                             break;
                         case SMALLINT:
-                            jsonGen.writeNumberField(path, (Short) value);
+                            generator.writeNumberField(path, (Short) value);
                             break;
                         case INTEGER:
-                            jsonGen.writeNumberField(path, (Integer) value);
+                            generator.writeNumberField(path, (Integer) value);
                             break;
                         case BIGINT:
-                            jsonGen.writeNumberField(path, (Long) value);
+                            generator.writeNumberField(path, (Long) value);
                             break;
                         case REAL:
-                            jsonGen.writeNumberField(path, (Float) value);
+                            generator.writeNumberField(path, (Float) value);
                             break;
                         case DOUBLE:
-                            jsonGen.writeNumberField(path, (Double) value);
+                            generator.writeNumberField(path, (Double) value);
                             break;
                         case DECIMAL:
                         case TIME:
@@ -82,7 +82,7 @@ class JsonUpsertTarget implements UpsertTarget {
                         case TIMESTAMP:
                         case TIMESTAMP_WITH_TIME_ZONE:
                         case VARCHAR:
-                            jsonGen.writeStringField(path, (String) QueryDataType.VARCHAR.convert(value));
+                            generator.writeStringField(path, (String) QueryDataType.VARCHAR.convert(value));
                             break;
                         case OBJECT:
                             injectObject(path, value);
@@ -98,27 +98,27 @@ class JsonUpsertTarget implements UpsertTarget {
     }
 
     private void injectObject(String path, Object value) throws IOException {
-        jsonGen.writeFieldName(path);
+        generator.writeFieldName(path);
         if (value == null) {
-            jsonGen.writeNull();
+            generator.writeNull();
         } else if (value instanceof TreeNode) {
-            jsonGen.writeTree((TreeNode) value);
+            generator.writeTree((TreeNode) value);
         } else if (value instanceof Boolean) {
-            jsonGen.writeBoolean((boolean) value);
+            generator.writeBoolean((boolean) value);
         } else if (value instanceof Byte) {
-            jsonGen.writeNumber((byte) value);
+            generator.writeNumber((byte) value);
         } else if (value instanceof Short) {
-            jsonGen.writeNumber((short) value);
+            generator.writeNumber((short) value);
         } else if (value instanceof Integer) {
-            jsonGen.writeNumber((int) value);
+            generator.writeNumber((int) value);
         } else if (value instanceof Long) {
-            jsonGen.writeNumber((long) value);
+            generator.writeNumber((long) value);
         } else if (value instanceof Float) {
-            jsonGen.writeNumber((float) value);
+            generator.writeNumber((float) value);
         } else if (value instanceof Double) {
-            jsonGen.writeNumber((double) value);
+            generator.writeNumber((double) value);
         } else {
-            jsonGen.writeString((String) QueryDataType.VARCHAR.convert(value));
+            generator.writeString((String) QueryDataType.VARCHAR.convert(value));
         }
     }
 
@@ -126,8 +126,8 @@ class JsonUpsertTarget implements UpsertTarget {
     public void init() {
         baos.reset();
         try {
-            jsonGen = JSON_FACTORY.createGenerator(baos);
-            jsonGen.writeStartObject();
+            generator = JSON_FACTORY.createGenerator(baos);
+            generator.writeStartObject();
         } catch (IOException e) {
             throw sneakyThrow(e);
         }
@@ -136,8 +136,8 @@ class JsonUpsertTarget implements UpsertTarget {
     @Override
     public Object conclude() {
         try {
-            jsonGen.writeEndObject();
-            jsonGen.close();
+            generator.writeEndObject();
+            generator.close();
         } catch (IOException e) {
             throw sneakyThrow(e);
         }
