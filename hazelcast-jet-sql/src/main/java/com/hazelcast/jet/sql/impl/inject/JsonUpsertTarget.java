@@ -18,6 +18,8 @@ package com.hazelcast.jet.sql.impl.inject;
 
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.core.TreeNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hazelcast.sql.impl.QueryException;
 import com.hazelcast.sql.impl.type.QueryDataType;
 
@@ -32,7 +34,7 @@ import static com.hazelcast.jet.sql.impl.inject.UpsertInjector.FAILING_TOP_LEVEL
 @NotThreadSafe
 class JsonUpsertTarget implements UpsertTarget {
 
-    private static final JsonFactory JSON_FACTORY = new JsonFactory();
+    private static final JsonFactory JSON_FACTORY = new ObjectMapper().getFactory();
 
     private final ByteArrayOutputStream baos = new ByteArrayOutputStream();
     private JsonGenerator jsonGen;
@@ -96,24 +98,27 @@ class JsonUpsertTarget implements UpsertTarget {
     }
 
     private void injectObject(String path, Object value) throws IOException {
+        jsonGen.writeFieldName(path);
         if (value == null) {
-            jsonGen.writeNullField(path);
+            jsonGen.writeNull();
+        } else if (value instanceof TreeNode) {
+            jsonGen.writeTree((TreeNode) value);
         } else if (value instanceof Boolean) {
-            jsonGen.writeBooleanField(path, (boolean) value);
+            jsonGen.writeBoolean((boolean) value);
         } else if (value instanceof Byte) {
-            jsonGen.writeNumberField(path, (byte) value);
+            jsonGen.writeNumber((byte) value);
         } else if (value instanceof Short) {
-            jsonGen.writeNumberField(path, (short) value);
+            jsonGen.writeNumber((short) value);
         } else if (value instanceof Integer) {
-            jsonGen.writeNumberField(path, (int) value);
+            jsonGen.writeNumber((int) value);
         } else if (value instanceof Long) {
-            jsonGen.writeNumberField(path, (long) value);
+            jsonGen.writeNumber((long) value);
         } else if (value instanceof Float) {
-            jsonGen.writeNumberField(path, (float) value);
+            jsonGen.writeNumber((float) value);
         } else if (value instanceof Double) {
-            jsonGen.writeNumberField(path, (double) value);
+            jsonGen.writeNumber((double) value);
         } else {
-            jsonGen.writeStringField(path, (String) QueryDataType.VARCHAR.convert(value));
+            jsonGen.writeString((String) QueryDataType.VARCHAR.convert(value));
         }
     }
 
