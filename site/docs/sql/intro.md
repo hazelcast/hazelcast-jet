@@ -56,8 +56,8 @@ OPTIONS (
     "bootstrap.servers" '1.2.3.4',
     "key.serializer" 'org.apache.kafka.common.serialization.ByteArraySerializer',
     "key.deserializer" 'org.apache.kafka.common.serialization.ByteArrayDeserializer',
-    "value.serializer" 'org.apache.kafka.connect.json.JsonSerializer')
-    "value.deserializer" 'org.apache.kafka.connect.json.JsonDeserializer',
+    "value.serializer" 'org.apache.kafka.connect.json.JsonSerializer',
+    "value.deserializer" 'org.apache.kafka.connect.json.JsonDeserializer')
 ```
 
 _Note:_ we have to specify the serializer/deserializer also for the key,
@@ -79,7 +79,8 @@ was a table:
 JetInstance inst = ...;
 try (SqlResult result = inst.getSql().execute("SELECT * FROM trades")) {
     for (SqlRow row : result) {
-        // Process the row.
+        // Process the row
+        System.out.println(row);
     }
 }
 ```
