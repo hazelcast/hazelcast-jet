@@ -36,9 +36,6 @@ final class PropertiesResolver {
 
     // using strings instead of canonical names to not fail without Kafka on the classpath
 
-    private static final String NULL_SERIALIZER = "com.hazelcast.jet.sql.impl.connector.kafka.NullSerializer";
-    private static final String NULL_DESERIALIZER = "com.hazelcast.jet.sql.impl.connector.kafka.NullDeserializer";
-
     private static final String SHORT_SERIALIZER = "org.apache.kafka.common.serialization.ShortSerializer";
     private static final String SHORT_DESERIALIZER = "org.apache.kafka.common.serialization.ShortDeserializer";
 
@@ -60,8 +57,8 @@ final class PropertiesResolver {
     private static final String AVRO_SERIALIZER = "io.confluent.kafka.serializers.KafkaAvroSerializer";
     private static final String AVRO_DESERIALIZER = "io.confluent.kafka.serializers.KafkaAvroDeserializer";
 
-    private static final String JSON_SERIALIZER = "org.apache.kafka.common.serialization.ByteArraySerializer";
-    private static final String JSON_DESERIALIZER = "org.apache.kafka.common.serialization.ByteArrayDeserializer";
+    private static final String BYTE_ARRAY_SERIALIZER = "org.apache.kafka.common.serialization.ByteArraySerializer";
+    private static final String BYTE_ARRAY_DESERIALIZER = "org.apache.kafka.common.serialization.ByteArrayDeserializer";
 
     private PropertiesResolver() {
     }
@@ -86,8 +83,8 @@ final class PropertiesResolver {
 
         String format = options.get(isKey ? OPTION_KEY_FORMAT : OPTION_VALUE_FORMAT);
         if (format == null && isKey) {
-            properties.putIfAbsent(serializer, NULL_SERIALIZER);
-            properties.putIfAbsent(deserializer, NULL_DESERIALIZER);
+            properties.putIfAbsent(serializer, BYTE_ARRAY_SERIALIZER);
+            properties.putIfAbsent(deserializer, BYTE_ARRAY_DESERIALIZER);
         } else if (JAVA_FORMAT.equals(format)) {
             String clazz = options.get(isKey ? SqlConnector.OPTION_KEY_CLASS : SqlConnector.OPTION_VALUE_CLASS);
             if (Short.class.getName().equals(clazz) || short.class.getName().equals(clazz)) {
@@ -113,8 +110,8 @@ final class PropertiesResolver {
             properties.putIfAbsent(serializer, AVRO_SERIALIZER);
             properties.putIfAbsent(deserializer, AVRO_DESERIALIZER);
         } else if (JSON_FORMAT.equals(format)) {
-            properties.putIfAbsent(serializer, JSON_SERIALIZER);
-            properties.putIfAbsent(deserializer, JSON_DESERIALIZER);
+            properties.putIfAbsent(serializer, BYTE_ARRAY_SERIALIZER);
+            properties.putIfAbsent(deserializer, BYTE_ARRAY_DESERIALIZER);
         }
     }
 }

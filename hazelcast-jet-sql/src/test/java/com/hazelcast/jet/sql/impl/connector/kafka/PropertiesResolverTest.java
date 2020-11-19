@@ -63,8 +63,8 @@ public class PropertiesResolverTest {
     public void test_absentFormat() {
         assertThat(PropertiesResolver.resolveProperties(emptyMap()))
                 .containsExactlyInAnyOrderEntriesOf(ImmutableMap.of(
-                        KEY_SERIALIZER, NullSerializer.class.getCanonicalName(),
-                        KEY_DESERIALIZER, NullDeserializer.class.getCanonicalName()
+                        KEY_SERIALIZER, ByteArraySerializer.class.getCanonicalName(),
+                        KEY_DESERIALIZER, ByteArrayDeserializer.class.getCanonicalName()
                 ));
     }
 
