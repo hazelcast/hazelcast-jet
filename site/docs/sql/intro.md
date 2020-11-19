@@ -35,8 +35,13 @@ These are some of the features on our roadmap:
 
 ## Installation
 
-You need the `hazelcast-jet-sql` module on your classpath. For
-Gradle or Maven, make sure to add the dependency:
+When you use the distribution package, the `hazelcast-jet-sql` is not on
+the class path by default. Make sure to move the
+`hazelcast-jet-sql-{jet-version}.jar` file from the `opt/` to the `lib/`
+directory.
+
+If you use Jet in embedded mode, besides the `hazelcast-jet-core`
+dependency add also the `hazelcast-jet-sql` dep:
 
 <!--DOCUSAURUS_CODE_TABS-->
 
@@ -58,10 +63,6 @@ compile 'com.hazelcast.jet:hazelcast-jet-sql:{jet-version}'
 
 <!--END_DOCUSAURUS_CODE_TABS-->
 
-If you're using the distribution package, make sure to move the
-`hazelcast-jet-sql-{jet-version}.jar` file from the `opt/` to the `lib/`
-directory.
-
 If you use other features from SQL such as the Kafka or File connectors,
 also add the `hazelcast-jet-kafka` or `hazelcast-jet-hadoop` modules in
 the same way.
@@ -71,11 +72,11 @@ the same way.
 In this example we'll show how to query Apache Kafka using SQL and
 stream the messages to an IMap.
 
-First, make sure you have Apache Kafka up and running. Please follow any
-of the Kafka tutorials. Start a broker and create a topic named
-`trades`.
+First, make sure you have Apache Kafka up and running. You can follow
+the [instructions here](https://kafka.apache.org/quickstart). Start the
+broker and create a topic named `trades`.
 
-The trades will be encoded as JSON messages:
+In our topic the trades will be encoded as JSON messages:
 
 ```plain
 key: ABCD
@@ -97,26 +98,28 @@ MAPPING` for the topic. It maps the messages to a fixed list of columns
 with data types:
 
 ```sql
-CREATE MAPPING trades (
+CREATE EXTERNAL MAPPING trades (
     ticker VARCHAR,
     price DECIMAL,
     amount BIGINT)
 TYPE Kafka
 OPTIONS (
     valueFormat 'json',
-    "bootstrap.servers" '1.2.3.4:9092'
+    "bootstrap.servers" '127.0.0.1:9092'
     /* ... more configuration options for the Kafka consumer */
 )
 ```
 
 The `valueFormat` option specifies the serialization format for the
 value. For other possible values see the [Kafka
-Connector](kafka-connector) page. The options not handled by Jet are all
-passed to the Kafka consumer or producer, such as the
-`bootstrap.servers` above.
+Connector](kafka-connector) page. The options not handled by Jet, such
+as the `bootstrap.servers` above, are all passed directly to the Kafka
+consumer or producer.
 
-To submit the above query, use the Java API (we plan JDBC support and
-support in non-Java clients in the future):
+// TODO document the CLI
+
+To submit the above query, use the Java API (we plan to support JDBC and
+non-Java clients in the future):
 
 ```java
 JetInstance inst = ...;
@@ -249,7 +252,7 @@ use the `ticker` as the key, every new trade for the same ticker will
 overwrite the previous trade for that ticker, hence the name
 `latest_trades`.
 
-### Creating a Streaming Job
+### Creating a Long-Running Job
 
 However, you cannot directly execute the above command because it would
 never complete. Remember, it's reading from a Kafka topic, which is a
@@ -263,9 +266,30 @@ SELECT ticker, ticker, price, amount
 FROM trades
 ```
 
-The part after the `AS` keyword is same as the previous statement. The
-command will create a job named `trades_ingestion`. Now, even if the
+The part after the `AS` keyword is the same as the previous statement.
+The command will create a job named `trades_ingestion`. Now, even if the
 client disconnects, the cluster will continue running the job.
+
+### Checking the Target IMap Contents
+
+To add some messages to the Kafka topic you can use this command:
+
+```sql
+INSERT INTO trades
+VALUES ('ABCD', 5.5, 10), ('EFGH', 14, 20) /* ,  ... */
+```
+
+While this works, we intend to use this way only for prototyping or
+ad-hoc work. Jet is optimized for larger or long-running queries. Under
+the hood, it will spin up a distributed job for each INSERT statement.
+If you benchmarked the number of records per second, the performance
+would be embarrassing.
+
+To check out the contents of the `latest_trades` IMap, use:
+
+```sql
+SELECT * FROM latest_trades
+```
 
 ### Cancelling the Job
 
