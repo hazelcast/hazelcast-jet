@@ -129,7 +129,7 @@ public class PostgresCdcNetworkIntegrationTest extends AbstractCdcIntegrationTes
             assertTrue(jet.getMap("results").isEmpty());
 
             // and DB starts
-            startContainer(postgres);
+            postgres.start();
             try {
                 // then source connects successfully
                 assertEqualsEventually(() -> jet.getMap("results").size(), 4);
@@ -351,7 +351,7 @@ public class PostgresCdcNetworkIntegrationTest extends AbstractCdcIntegrationTes
         if (network != null) {
             postgres = postgres.withNetwork(network);
         }
-        startContainer(postgres);
+        postgres.start();
         return postgres;
     }
 

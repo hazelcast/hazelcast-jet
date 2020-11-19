@@ -18,7 +18,6 @@ package com.hazelcast.jet.cdc;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.github.dockerjava.api.DockerClient;
-import com.github.dockerjava.api.command.InspectContainerResponse;
 import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.core.JetTestSupport;
 import com.hazelcast.jet.core.Processor;
@@ -40,7 +39,6 @@ import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -133,11 +131,6 @@ public class AbstractCdcIntegrationTest extends JetTestSupport {
         return port;
     }
 
-    protected static void startContainer(GenericContainer<?> container) {
-        container.start();
-        waitForContainerToStart(container);
-    }
-
     /**
      * Stops a container via the `docker stop` command. Necessary because the
      * {@code stop()} method of test containers is implemented via `docker kill`
@@ -147,48 +140,7 @@ public class AbstractCdcIntegrationTest extends JetTestSupport {
         DockerClient dockerClient = DockerClientFactory.instance().client();
         dockerClient.stopContainerCmd(container.getContainerId()).exec();
 
-        waitForContainerToStop(container);
-
         container.stop(); //allow the resource reaper to clean its registries
-    }
-
-    private static void waitForContainerToStart(GenericContainer<?> container) {
-        String containerId = container.getContainerId();
-
-        DockerClient dockerClient = DockerClientFactory.instance().client();
-        boolean running;
-        do {
-            InspectContainerResponse containerInfo = dockerClient.inspectContainerCmd(containerId).exec();
-            running = containerInfo.getState() != null && Boolean.TRUE.equals(containerInfo.getState().getRunning());
-            if (!running) {
-                System.out.println("Waiting for container " + containerId + " to start ...");
-                sleepABit();
-            }
-        } while (!running);
-    }
-
-    private static void waitForContainerToStop(GenericContainer<?> container) {
-        String containerId = container.getContainerId();
-
-        DockerClient dockerClient = DockerClientFactory.instance().client();
-        boolean running;
-        do {
-            InspectContainerResponse containerInfo = dockerClient.inspectContainerCmd(containerId).exec();
-            running = containerInfo.getState() != null && Boolean.TRUE.equals(containerInfo.getState().getRunning());
-            if (running) {
-                System.out.println("Waiting for container " + containerId + " to stop ...");
-                sleepABit();
-            }
-        } while (running);
-    }
-
-    private static void sleepABit() {
-        try {
-            TimeUnit.MILLISECONDS.sleep(250);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw sneakyThrow(e);
-        }
     }
 
     protected <T> T namedTestContainer(GenericContainer<?> container) {
