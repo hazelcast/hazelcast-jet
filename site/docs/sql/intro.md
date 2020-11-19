@@ -40,8 +40,8 @@ the class path by default. Make sure to move the
 `hazelcast-jet-sql-{jet-version}.jar` file from the `opt/` to the `lib/`
 directory.
 
-If you use Jet in embedded mode, besides the `hazelcast-jet-core`
-dependency add also the `hazelcast-jet-sql` dep:
+If you use Jet in embedded mode, besides the `hazelcast-jet` dependency
+add also the `hazelcast-jet-sql` dep:
 
 <!--DOCUSAURUS_CODE_TABS-->
 
