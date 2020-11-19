@@ -15,6 +15,7 @@
  */
 package com.hazelcast.jet.kinesis.impl;
 
+import com.amazonaws.SdkClientException;
 import com.amazonaws.services.kinesis.AmazonKinesisAsync;
 import com.amazonaws.services.kinesis.model.AmazonKinesisException;
 import com.amazonaws.services.kinesis.model.DescribeStreamSummaryRequest;
@@ -212,6 +213,9 @@ public class KinesisHelper {
                 String message = "A specified parameter exceeds its restrictions, is not supported, or can't be used.";
                 logger.severe(message, iae);
                 throw new JetException(message, iae);
+            } catch (SdkClientException sce) {
+                String message = "Amazon SDK failure, ignoring and retrying.";
+                logger.warning(message, sce);
             } catch (Exception e) {
                 throw rethrow(e);
             }
