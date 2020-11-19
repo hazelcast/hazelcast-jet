@@ -187,7 +187,7 @@ dependencies {
     implementation 'com.hazelcast.jet:hazelcast-jet:{jet-version}'
     implementation 'com.hazelcast.jet:hazelcast-jet-cdc-debezium:{jet-version}'
     implementation 'com.hazelcast.jet:hazelcast-jet-cdc-postgres:{jet-version}'
-    compileOnly 'com.fasterxml.jackson.core:jackson-annotations:2.11.0'
+    implementation 'com.fasterxml.jackson.core:jackson-annotations:2.11.0'
 }
 
 jar.manifest.attributes 'Main-Class': 'org.example.JetJob'
