@@ -1,0 +1,315 @@
+<!DOCTYPE html><html lang="en"><head><meta charSet="utf-8"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><title>Hazelcast Jet SQL · Hazelcast Jet</title><meta name="viewport" content="width=device-width"/><meta name="generator" content="Docusaurus"/><meta name="description" content="Introduction to Hazelcast Jet SQL features."/><meta name="docsearch:version" content="next"/><meta name="docsearch:language" content="en"/><meta property="og:title" content="Hazelcast Jet SQL · Hazelcast Jet"/><meta property="og:type" content="website"/><meta property="og:url" content="https://jet-start.sh/"/><meta property="og:description" content="Introduction to Hazelcast Jet SQL features."/><meta property="og:image" content="https://jet-start.sh/img/Hazelcast-Jet-Logo-Blue_Dark.jpg"/><meta name="twitter:card" content="summary"/><meta name="twitter:image" content="https://jet-start.sh/img/Hazelcast-Jet-Logo-Blue_Dark.jpg"/><link rel="shortcut icon" href="/img/favicon.png"/><link rel="stylesheet" href="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.css"/><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/default.min.css"/><link rel="alternate" type="application/atom+xml" href="https://jet-start.sh/blog/atom.xml" title="Hazelcast Jet Blog ATOM Feed"/><link rel="alternate" type="application/rss+xml" href="https://jet-start.sh/blog/feed.xml" title="Hazelcast Jet Blog RSS Feed"/><script>
+              (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+              (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+              m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+              })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+              ga('create', 'UA-158279495-1', 'auto');
+              ga('send', 'pageview');
+            </script><link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Ubuntu:300,400,500,600"/><link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,500,600,700,800"/><script type="text/javascript" src="https://buttons.github.io/buttons.js"></script><script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.0/clipboard.min.js"></script><script type="text/javascript" src="/js/code-block-buttons.js"></script><script type="text/javascript" src="https://plausible.io/js/plausible.js" async="" defer="" data-domain="jet-start.sh"></script><script src="/js/scrollSpy.js"></script><link rel="stylesheet" href="/css/prism.css"/><link rel="stylesheet" href="/css/main.css"/><script src="/js/codetabs.js"></script></head><body class="sideNavVisible separateOnPageNav"><div class="fixedHeaderContainer"><div class="headerWrapper wrapper"><header><a href="/"><img class="logo" src="/img/logo-dark.svg" alt="Hazelcast Jet"/></a><a href="/versions"><h3>next</h3></a><div class="navigationWrapper navigationSlider"><nav class="slidingNav"><ul class="nav-site nav-site-internal"><li class="siteNavGroupActive"><a href="/docs/next/get-started/intro" target="_self">Docs</a></li><li class=""><a href="/download" target="_self">Download</a></li><li class=""><a href="/demos" target="_self">Demos</a></li><li class=""><a href="https://github.com/hazelcast/hazelcast-jet" target="_self">GitHub</a></li><li class=""><a href="https://slack.hazelcast.com/" target="_self">Community</a></li><li class=""><a href="/blog/" target="_self">Blog</a></li><li class="navSearchWrapper reactNavSearchWrapper"><input type="text" id="search_input_react" placeholder="Search" title="Search"/></li></ul></nav></div></header></div></div><div class="navPusher"><div class="docMainWrapper wrapper"><div class="docsNavContainer" id="docsNav"><nav class="toc"><div class="toggleNav"><section class="navWrapper wrapper"><div class="navBreadcrumb wrapper"><div class="navToggle" id="navToggler"><div class="hamburger-menu"><div class="line1"></div><div class="line2"></div><div class="line3"></div></div></div><h2><i>›</i><span>SQL</span></h2><div class="tocToggler" id="tocToggler"><i class="icon-toc"></i></div></div><div class="navGroups"><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Get Started<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/next/get-started/intro">Introduction</a></li><li class="navListItem"><a class="navItem" href="/docs/next/get-started/first-job">Your First Jet Program</a></li><li class="navListItem"><a class="navItem" href="/docs/next/get-started/installation">Set Up a Jet Cluster</a></li><li class="navListItem"><a class="navItem" href="/docs/next/get-started/submit-job">Submit a Job to the Cluster</a></li><li class="navListItem"><a class="navItem" href="/docs/next/get-started/scale-job">Scale Your Job</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Tutorials<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/next/tutorials/kafka">Process Events from Apache Kafka</a></li><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">Change Data Capture</h4><ul><li class="navListItem"><a class="navItem" href="/docs/next/tutorials/cdc">MySQL</a></li><li class="navListItem"><a class="navItem" href="/docs/next/tutorials/cdc-postgres">PostgreSQL</a></li><li class="navListItem"><a class="navItem" href="/docs/next/tutorials/cdc-join">Join</a></li></ul></div><li class="navListItem"><a class="navItem" href="/docs/next/tutorials/map-join">Enrich Your Stream</a></li><li class="navListItem"><a class="navItem" href="/docs/next/tutorials/windowing">Apply Windowed Aggregation</a></li><li class="navListItem"><a class="navItem" href="/docs/next/tutorials/python">Apply a Python Function</a></li><li class="navListItem"><a class="navItem" href="/docs/next/tutorials/spring-boot">Spring Boot Starter</a></li><li class="navListItem"><a class="navItem" href="/docs/next/tutorials/pulsar">Group Messages from Apache Pulsar</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Concepts<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/next/concepts/dag">Directed Acyclic Graph (DAG)</a></li><li class="navListItem"><a class="navItem" href="/docs/next/concepts/event-time">Streaming and Event Time</a></li><li class="navListItem"><a class="navItem" href="/docs/next/concepts/processing-guarantees">Processing Guarantees for Stateful Computation</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Programming Guide<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/next/api/pipeline">Building Pipelines</a></li><li class="navListItem"><a class="navItem" href="/docs/next/api/stateless-transforms">Stateless Transforms</a></li><li class="navListItem"><a class="navItem" href="/docs/next/api/stateful-transforms">Stateful Transforms</a></li><li class="navListItem"><a class="navItem" href="/docs/next/api/more-transforms">More Transforms</a></li><li class="navListItem"><a class="navItem" href="/docs/next/api/sources-sinks">Sources and Sinks</a></li><li class="navListItem"><a class="navItem" href="/docs/next/api/submitting-jobs">Submitting Jobs</a></li><li class="navListItem"><a class="navItem" href="/docs/next/api/data-structures">Distributed Data Structures</a></li><li class="navListItem"><a class="navItem" href="/docs/next/api/serialization">Serialization</a></li><li class="navListItem"><a class="navItem" href="/docs/next/api/error-handling">Error Handling Strategies</a></li><li class="navListItem"><a class="navItem" href="/docs/next/api/testing">Testing</a></li><li class="navListItem"><a class="navItem" href="/docs/next/api/spring">Spring Integration</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">SQL<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem navListItemActive"><a class="navItem" href="/docs/next/sql/intro">Hazelcast Jet SQL</a></li><li class="navListItem"><a class="navItem" href="/docs/next/sql/basic-commands">Basic commands</a></li><li class="navListItem"><a class="navItem" href="/docs/next/sql/ddl">DDL statements</a></li><li class="navListItem"><a class="navItem" href="/docs/next/sql/job-management">Job Management</a></li><li class="navListItem"><a class="navItem" href="/docs/next/sql/imap-connector">IMap Connector</a></li><li class="navListItem"><a class="navItem" href="/docs/next/sql/kafka-connector">Apache Kafka Connector</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">How-To Guides<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/next/how-tos/stream-imap">Receive IMap Change Stream</a></li><li class="navListItem"><a class="navItem" href="/docs/next/how-tos/observables">Receive Results on the Client</a></li><li class="navListItem"><a class="navItem" href="/docs/next/how-tos/custom-batch-source">Add Batching to Custom Source</a></li><li class="navListItem"><a class="navItem" href="/docs/next/how-tos/custom-stream-source">Create a Streaming Source</a></li><li class="navListItem"><a class="navItem" href="/docs/next/how-tos/custom-sink">Create a Sink</a></li><li class="navListItem"><a class="navItem" href="/docs/next/how-tos/custom-aggregate-operation">Build a Custom Aggregate Operation</a></li><li class="navListItem"><a class="navItem" href="/docs/next/how-tos/operator">Install Kubernetes Operator</a></li><li class="navListItem"><a class="navItem" href="/docs/next/how-tos/xa">Compatibility of XA Support</a></li><li class="navListItem"><a class="navItem" href="/docs/next/how-tos/grpc">Call gRPC Service</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Operations Guide<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/next/operations/installation">Installation</a></li><li class="navListItem"><a class="navItem" href="/docs/next/operations/configuration">Configuration</a></li><li class="navListItem"><a class="navItem" href="/docs/next/operations/discovery">Cluster Discovery</a></li><li class="navListItem"><a class="navItem" href="/docs/next/operations/cluster-sizing">Cluster Sizing</a></li><li class="navListItem"><a class="navItem" href="/docs/next/operations/gc-concerns">Concerns Related to GC</a></li><li class="navListItem"><a class="navItem" href="/docs/next/operations/job-management">Job Management</a></li><li class="navListItem"><a class="navItem" href="/docs/next/operations/docker">Running With Docker</a></li><li class="navListItem"><a class="navItem" href="/docs/next/operations/kubernetes">Deployment On Kubernetes</a></li><li class="navListItem"><a class="navItem" href="/docs/next/operations/monitoring">Monitoring and Metrics</a></li><li class="navListItem"><a class="navItem" href="/docs/next/operations/version-compatibility">Version Compatibility</a></li><li class="navListItem"><a class="navItem" href="/docs/next/operations/cdc">Change Data Capture</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Architecture<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/next/architecture/distributed-computing">Pipeline Execution Model</a></li><li class="navListItem"><a class="navItem" href="/docs/next/architecture/execution-engine">Cooperative Multithreading</a></li><li class="navListItem"><a class="navItem" href="/docs/next/architecture/cluster-topology">Cluster Topology</a></li><li class="navListItem"><a class="navItem" href="/docs/next/architecture/event-time-processing">Event Time-Based Processing</a></li><li class="navListItem"><a class="navItem" href="/docs/next/architecture/sliding-window">Sliding Window Aggregation</a></li><li class="navListItem"><a class="navItem" href="/docs/next/architecture/fault-tolerance">Fault Tolerance</a></li><li class="navListItem"><a class="navItem" href="/docs/next/architecture/in-memory-storage">In-Memory Storage</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Enterprise Edition<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/next/enterprise/">Introduction</a></li><li class="navListItem"><a class="navItem" href="/docs/next/enterprise/installation">Installation</a></li><li class="navListItem"><a class="navItem" href="/docs/next/enterprise/management-center">Management Center</a></li><li class="navListItem"><a class="navItem" href="/docs/next/enterprise/operator-openshift">Installation on Red Hat OpenShift</a></li><li class="navListItem"><a class="navItem" href="/docs/next/enterprise/security">Security</a></li><li class="navListItem"><a class="navItem" href="/docs/next/enterprise/job-update">Updating Jobs</a></li><li class="navListItem"><a class="navItem" href="/docs/next/enterprise/lossless-restart">Lossless Cluster Restart</a></li><li class="navListItem"><a class="navItem" href="/docs/next/enterprise/off-heap">Off-Heap Data Structures</a></li><li class="navListItem"><a class="navItem" href="/docs/next/enterprise/blue-green">Blue-Green Client</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle collapsible">Design Documents<span class="arrow"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#565656" d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"></path><path d="M0 0h24v24H0z" fill="none"></path></svg></span></h3><ul class="hide"><li class="navListItem"><a class="navItem" href="/docs/next/design-docs/">Introduction</a></li><li class="navListItem"><a class="navItem" href="/docs/next/design-docs/014-batchstage-sort">014 -- BatchStage.sort()</a></li><li class="navListItem"><a class="navItem" href="/docs/next/design-docs/013-system-time-watermarks">013 - Resolving Sparse Events Issue with System-Time Watermarks</a></li><li class="navListItem"><a class="navItem" href="/docs/next/design-docs/012-improved-job-resilience">012 - Improved Resilience of Fault-Tolerant Streaming Jobs</a></li><li class="navListItem"><a class="navItem" href="/docs/next/design-docs/011-json-convenience">011 - JSON Convenience</a></li><li class="navListItem"><a class="navItem" href="/docs/next/design-docs/010-operator-framework">010 - Kubernetes Operators</a></li><li class="navListItem"><a class="navItem" href="/docs/next/design-docs/009-pulsar-connector">009 - Apache Pulsar Connector</a></li><li class="navListItem"><a class="navItem" href="/docs/next/design-docs/008-stage-rebalance">008 - Rebalance Data on a Pipeline Stage</a></li><li class="navListItem"><a class="navItem" href="/docs/next/design-docs/007-grpc-support">007 - Extended gRPC Support</a></li><li class="navListItem"><a class="navItem" href="/docs/next/design-docs/006-declarative-serialization">006 - Declarative Serialization</a></li><li class="navListItem"><a class="navItem" href="/docs/next/design-docs/005-cdc-sources">005 - Change Data Capture (CDC) Sources</a></li><li class="navListItem"><a class="navItem" href="/docs/next/design-docs/004-spring-boot-starter">004 - Spring Boot Starter</a></li><li class="navListItem"><a class="navItem" href="/docs/next/design-docs/003-elasticsearch-connector">003 - Elasticsearch Connector</a></li><li class="navListItem"><a class="navItem" href="/docs/next/design-docs/002-job-level-serialization">002 - Job-level Serialization</a></li><li class="navListItem"><a class="navItem" href="/docs/next/design-docs/001-code-deployment-improvements">001 - Code Deployment Improvements</a></li></ul></div></div></section></div><script>
+            var coll = document.getElementsByClassName('collapsible');
+            var checkActiveCategory = true;
+            for (var i = 0; i < coll.length; i++) {
+              var links = coll[i].nextElementSibling.getElementsByTagName('*');
+              if (checkActiveCategory){
+                for (var j = 0; j < links.length; j++) {
+                  if (links[j].classList.contains('navListItemActive')){
+                    coll[i].nextElementSibling.classList.toggle('hide');
+                    coll[i].childNodes[1].classList.toggle('rotate');
+                    checkActiveCategory = false;
+                    break;
+                  }
+                }
+              }
+
+              coll[i].addEventListener('click', function() {
+                var arrow = this.childNodes[1];
+                arrow.classList.toggle('rotate');
+                var content = this.nextElementSibling;
+                content.classList.toggle('hide');
+              });
+            }
+
+            document.addEventListener('DOMContentLoaded', function() {
+              createToggler('#navToggler', '#docsNav', 'docsSliderActive');
+              createToggler('#tocToggler', 'body', 'tocActive');
+
+              var headings = document.querySelector('.toc-headings');
+              headings && headings.addEventListener('click', function(event) {
+                var el = event.target;
+                while(el !== headings){
+                  if (el.tagName === 'A') {
+                    document.body.classList.remove('tocActive');
+                    break;
+                  } else{
+                    el = el.parentNode;
+                  }
+                }
+              }, false);
+
+              function createToggler(togglerSelector, targetSelector, className) {
+                var toggler = document.querySelector(togglerSelector);
+                var target = document.querySelector(targetSelector);
+
+                if (!toggler) {
+                  return;
+                }
+
+                toggler.onclick = function(event) {
+                  event.preventDefault();
+
+                  target.classList.toggle(className);
+                };
+              }
+            });
+        </script></nav></div><div class="container mainContainer docsContainer"><div class="wrapper"><div class="post"><header class="postHeader"><a class="edit-page-link button" href="https://github.com/hazelcast/hazelcast-jet/edit/master/site/docs/sql/intro.md" target="_blank" rel="noreferrer noopener">Edit</a><h1 id="__docusaurus" class="postHeaderTitle">Hazelcast Jet SQL</h1></header><article><div><span><p>Hazelcast Jet allows you to create a Jet processing job using the
+familiar SQL language. It can execute distributed SQL statements over
+Hazelcast IMaps and external data sets.</p>
+<p><strong>Note:</strong> <em>The service is in beta state. Behavior and API might change
+in future releases. Binary compatibility is not guaranteed between minor
+or patch releases.</em></p>
+<h2><a class="anchor" aria-hidden="true" id="overview"></a><a href="#overview" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Overview</h2>
+<p>In the first release, Jet SQL supports the following features:</p>
+<ul>
+<li>SQL queries over <a href="/docs/next/sql/kafka-connector">Apache Kafka topics</a> and files
+(local and remote) (TODO)</li>
+<li>Joining Kafka or file data with local IMaps (enrichment)</li>
+<li>Filtering and projection using <a href="https://docs.hazelcast.org/docs/4.0.3/manual/html-single/index.html#expressions">SQL
+expressions</a></li>
+<li>Aggregating data from files using predefined <a href="basic-commands#aggregation-functions">aggregate
+functions</a></li>
+<li>Receiving query results via Jet client (Java) or writing the results
+to an <a href="/docs/next/sql/imap-connector">IMap</a> in the Jet cluster</li>
+<li>Running continuous (streaming) and batch queries, see
+<a href="/docs/next/sql/job-management">Job Management</a></li>
+</ul>
+<p>These are some of the features on our roadmap:</p>
+<ul>
+<li>Joins with arbitrary external data sources</li>
+<li>Windowed aggregation of streaming data</li>
+<li>JDBC</li>
+</ul>
+<h2><a class="anchor" aria-hidden="true" id="installation"></a><a href="#installation" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Installation</h2>
+<p>When you use the distribution package, the <code>hazelcast-jet-sql</code> is not on
+the class path by default. Make sure to move the
+<code>hazelcast-jet-sql-4.4-SNAPSHOT.jar</code> file from the <code>opt/</code> to the <code>lib/</code>
+directory.</p>
+<p>If you use Jet in embedded mode, besides the <code>hazelcast-jet</code> dependency
+add also the <code>hazelcast-jet-sql</code> dep:</p>
+<div class="tabs"><div class="nav-tabs"><div id="tab-group-58-tab-59" class="nav-link active" data-group="group_58" data-tab="tab-group-58-content-59">Gradle</div><div id="tab-group-58-tab-60" class="nav-link" data-group="group_58" data-tab="tab-group-58-content-60">Maven</div></div><div class="tab-content"><div id="tab-group-58-content-59" class="tab-pane active" data-group="group_58" tabindex="-1"><div><span><pre><code class="hljs css language-groovy">compile <span class="hljs-string">'com.hazelcast.jet:hazelcast-jet-sql:4.4-SNAPSHOT'</span><br /></code></pre>
+</span></div></div><div id="tab-group-58-content-60" class="tab-pane" data-group="group_58" tabindex="-1"><div><span><pre><code class="hljs css language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">dependency</span>&gt;</span><br />    <span class="hljs-tag">&lt;<span class="hljs-name">groupId</span>&gt;</span>com.hazelcast.jet<span class="hljs-tag">&lt;/<span class="hljs-name">groupId</span>&gt;</span><br />    <span class="hljs-tag">&lt;<span class="hljs-name">artifactId</span>&gt;</span>hazelcast-jet-sql<span class="hljs-tag">&lt;/<span class="hljs-name">artifactId</span>&gt;</span><br />    <span class="hljs-tag">&lt;<span class="hljs-name">version</span>&gt;</span>4.4-SNAPSHOT<span class="hljs-tag">&lt;/<span class="hljs-name">version</span>&gt;</span><br /><span class="hljs-tag">&lt;/<span class="hljs-name">dependency</span>&gt;</span><br /></code></pre>
+</span></div></div></div></div>
+<p>If you use other features from SQL such as the Kafka or File connectors,
+also add the <code>hazelcast-jet-kafka</code> or <code>hazelcast-jet-hadoop</code> modules in
+the same way.</p>
+<h2><a class="anchor" aria-hidden="true" id="example"></a><a href="#example" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Example</h2>
+<p>In this example we'll show how to query Apache Kafka using SQL and
+stream the messages to an IMap.</p>
+<p>First, make sure you have Apache Kafka up and running. You can follow
+the <a href="https://kafka.apache.org/quickstart">instructions here</a>. Start the
+broker and create a topic named <code>trades</code>.</p>
+<p>In our topic the trades will be encoded as JSON messages:</p>
+<pre><code class="hljs css language-plain"><span class="hljs-attr">key:</span> <span class="hljs-string">ABCD</span>
+<span class="hljs-attr">value:</span> <span class="hljs-string">{</span>
+    <span class="hljs-attr">"ticker":</span> <span class="hljs-string">"ABCD"</span><span class="hljs-string">,</span>
+    <span class="hljs-attr">"price":</span> <span class="hljs-number">5.5</span><span class="hljs-string">,</span>
+    <span class="hljs-attr">"amount":</span> <span class="hljs-number">10</span>
+<span class="hljs-string">}</span>
+</code></pre>
+<p>The <code>ticker</code> is repeated in both the key and the value. We'll ignore the
+key in the subsequent examples, it's only used by Kafka for
+partitioning.</p>
+<h3><a class="anchor" aria-hidden="true" id="creating-the-mapping-for-kafka-topic"></a><a href="#creating-the-mapping-for-kafka-topic" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Creating the Mapping for Kafka Topic</h3>
+<p>To use a remote topic as a table in Jet, first create an <code>EXTERNAL MAPPING</code> for the topic. It maps the messages to a fixed list of columns
+with data types:</p>
+<pre><code class="hljs css language-sql"><span class="hljs-keyword">CREATE</span> <span class="hljs-keyword">EXTERNAL</span> <span class="hljs-keyword">MAPPING</span> trades (
+    ticker <span class="hljs-built_in">VARCHAR</span>,
+    price <span class="hljs-built_in">DECIMAL</span>,
+    amount <span class="hljs-built_in">BIGINT</span>)
+<span class="hljs-keyword">TYPE</span> Kafka
+OPTIONS (
+    valueFormat <span class="hljs-string">'json'</span>,
+    <span class="hljs-string">"bootstrap.servers"</span> <span class="hljs-string">'127.0.0.1:9092'</span>
+    <span class="hljs-comment">/* ... more configuration options for the Kafka consumer */</span>
+)
+</code></pre>
+<p>The <code>valueFormat</code> option specifies the serialization format for the
+value. For other possible values see the <a href="kafka-connector">Kafka
+Connector</a> page. The options not handled by Jet, such
+as the <code>bootstrap.servers</code> above, are all passed directly to the Kafka
+consumer or producer.</p>
+<p>// TODO document the CLI</p>
+<p>To submit the above query, use the Java API (we plan to support JDBC and
+non-Java clients in the future):</p>
+<pre><code class="hljs css language-java"><span class="token class-name">JetInstance</span> inst <span class="token operator">=</span> <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">;</span>
+inst<span class="token punctuation">.</span><span class="token function">getSql</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">execute</span><span class="token punctuation">(</span> <span class="token comment">/* query text */</span> <span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<h3><a class="anchor" aria-hidden="true" id="querying-the-kafka-topic"></a><a href="#querying-the-kafka-topic" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Querying the Kafka Topic</h3>
+<p>A SQL query can now be used to read from the <code>trades</code> topic, as if it
+was a table:</p>
+<pre><code class="hljs css language-java"><span class="token class-name">JetInstance</span> inst <span class="token operator">=</span> <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">;</span>
+<span class="token keyword">try</span> <span class="token punctuation">(</span><span class="token class-name">SqlResult</span> result <span class="token operator">=</span> inst<span class="token punctuation">.</span><span class="token function">getSql</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">execute</span><span class="token punctuation">(</span><span class="token string">"SELECT * FROM trades"</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token class-name">SqlRow</span> row <span class="token operator">:</span> result<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token comment">// Process the row</span>
+        <span class="token class-name">System</span><span class="token punctuation">.</span>out<span class="token punctuation">.</span><span class="token function">println</span><span class="token punctuation">(</span>row<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>The query now runs in the Jet cluster and streams the results to the Jet
+client that started it. The iteration will never complete, a Kafka topic
+is a <em>streaming source</em>, that is it has no end of data. The backing Jet
+job will terminate when the client crashes, or you can add a
+<code>result.close()</code> call to close it earlier. By default, the reading
+starts at the tip of the topic, but you can modify it by adding
+<code>auto.offset.reset</code> Kafka property to the mapping options.</p>
+<p>You can use the power of the SQL language and use expressions and the
+<code>WHERE</code> clause, e.g.:</p>
+<pre><code class="hljs css language-sql"><span class="hljs-keyword">SELECT</span> ticker, <span class="hljs-keyword">ROUND</span>(price * <span class="hljs-number">100</span>) <span class="hljs-keyword">AS</span> price_cents, amount
+<span class="hljs-keyword">FROM</span> trades
+<span class="hljs-keyword">WHERE</span> price * amount &gt; <span class="hljs-number">100</span>
+</code></pre>
+<h3><a class="anchor" aria-hidden="true" id="creating-the-mapping-for-the-imap"></a><a href="#creating-the-mapping-for-the-imap" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Creating the Mapping for the IMap</h3>
+<p>Jet can update an IMap using the <code>SINK INTO</code> command, which means you
+can use Jet SQL as a simple API to ingest data and store it in IMDG. For
+the sake of this tutorial it's enough to think about the <code>SINK INTO</code>
+command as of a standard <code>INSERT INTO</code> command. If you're interested to
+know why don't we use the standard command, <a href="basic-commands#insertsink-statement">see
+here</a>.</p>
+<p>To be able to write to an IMap, Jet has to know what type of objects to
+create for the map key and value. It can derive that automatically by
+sampling an existing entry in the map, but if the map is empty<sup><a
+name='footnote-1-backref'></a><a href="#footnote-1">*</a></sup>, you have to create
+a mapping for it first. We want to replicate the topic structure, so we
+need to create a Java class for the value:</p>
+<pre><code class="hljs css language-java"><span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">Trade</span> <span class="token keyword">implements</span> <span class="token class-name">Serializable</span> <span class="token punctuation">{</span>
+    <span class="token keyword">public</span> <span class="token class-name">String</span> ticker<span class="token punctuation">;</span>
+    <span class="token keyword">public</span> <span class="token class-name">BigDecimal</span> price<span class="token punctuation">;</span>
+    <span class="token keyword">public</span> <span class="token keyword">long</span> amount<span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>We used public fields, but of course you can use private fields and use
+setters/getters. This class must be available to the cluster. You can
+either add it to the members class paths by creating a JAR file and
+adding to the <code>lib</code> folder, or you can use User Code Deployment. The
+user code deployment has to be enabled on the members; add the following
+section to the <code>config/hazelcast.yaml</code> file:</p>
+<pre><code class="hljs css language-yaml"><span class="hljs-attr">hazelcast:</span>
+  <span class="hljs-attr">user-code-deployment:</span>
+    <span class="hljs-attr">enabled:</span> <span class="hljs-literal">true</span>
+</code></pre>
+<p>Then use a client to upload the class:</p>
+<pre><code class="hljs css language-java"><span class="token class-name">ClientConfig</span> clientConfig <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">JetClientConfig</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+clientConfig<span class="token punctuation">.</span><span class="token function">getUserCodeDeploymentConfig</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+            <span class="token punctuation">.</span><span class="token function">setEnabled</span><span class="token punctuation">(</span><span class="token boolean">true</span><span class="token punctuation">)</span>
+            <span class="token punctuation">.</span><span class="token function">addClass</span><span class="token punctuation">(</span><span class="token class-name">Trade</span><span class="token punctuation">.</span><span class="token keyword">class</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token class-name">JetInstance</span> jet <span class="token operator">=</span> <span class="token class-name">Jet</span><span class="token punctuation">.</span><span class="token function">newJetClient</span><span class="token punctuation">(</span>clientConfig<span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>After this, you can create the mapping for the IMap. The name of the
+IMap is <code>latest_trades</code>:</p>
+<pre><code class="hljs css language-sql"><span class="hljs-keyword">CREATE</span> <span class="hljs-keyword">MAPPING</span> latest_trades
+<span class="hljs-keyword">TYPE</span> IMap
+OPTIONS (
+    keyFormat <span class="hljs-string">'java'</span>,
+    keyJavaClass <span class="hljs-string">'java.lang.String'</span>,
+    valueFormat <span class="hljs-string">'java'</span>,
+    valueJavaClass <span class="hljs-string">'com.example.Trade'</span>
+)
+</code></pre>
+<p>Note that we omitted the column list in this query. It will be
+determined automatically according to the OPTIONS. Since we use <code>String</code>
+as the key class, the default column name for the key will be used:
+<code>__key</code>. The properties of the <code>Trade</code> class will be used. So the
+mapping will behave as if the following columns were specified in the
+previous statement:</p>
+<pre><code class="hljs css language-sql">(
+    __key VARCHAR,
+    ticker VARCHAR,
+    price DECIMAL,
+    amount BIGINT
+)
+</code></pre>
+<h3><a class="anchor" aria-hidden="true" id="streaming-messages-from-the-kafka-topic-to-the-imap"></a><a href="#streaming-messages-from-the-kafka-topic-to-the-imap" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Streaming Messages from the Kafka Topic to the IMap</h3>
+<p>After creating the mapping for the <code>latest_trades</code> IMap, we can submit
+the following statement:</p>
+<pre><code class="hljs css language-sql">SINK INTO latest_trades(__key, ticker, price, amount)
+<span class="hljs-keyword">SELECT</span> ticker, ticker, price, amount
+<span class="hljs-keyword">FROM</span> trades
+</code></pre>
+<p>It will put the fields from the Kafka topic into the IMap, replicating
+the <code>ticker</code> twice: once into the value and once into the key. Since we
+use the <code>ticker</code> as the key, every new trade for the same ticker will
+overwrite the previous trade for that ticker, hence the name
+<code>latest_trades</code>.</p>
+<h3><a class="anchor" aria-hidden="true" id="creating-a-long-running-job"></a><a href="#creating-a-long-running-job" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Creating a Long-Running Job</h3>
+<p>However, you cannot directly execute the above command because it would
+never complete. Remember, it's reading from a Kafka topic, which is a
+stream of messages. Since it doesn't return any rows to the client, you
+must create a job for it:</p>
+<pre><code class="hljs css language-sql"><span class="hljs-keyword">CREATE</span> JOB trades_ingestion <span class="hljs-keyword">AS</span>
+SINK <span class="hljs-keyword">INTO</span> latest_trades(__key, ticker, price, amount)
+<span class="hljs-keyword">SELECT</span> ticker, ticker, price, amount
+<span class="hljs-keyword">FROM</span> trades
+</code></pre>
+<p>The part after the <code>AS</code> keyword is the same as the previous statement.
+The command will create a job named <code>trades_ingestion</code>. Now, even if the
+client disconnects, the cluster will continue running the job.</p>
+<h3><a class="anchor" aria-hidden="true" id="checking-the-target-imap-contents"></a><a href="#checking-the-target-imap-contents" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Checking the Target IMap Contents</h3>
+<p>To add some messages to the Kafka topic you can use this command:</p>
+<pre><code class="hljs css language-sql"><span class="hljs-keyword">INSERT</span> <span class="hljs-keyword">INTO</span> trades
+<span class="hljs-keyword">VALUES</span> (<span class="hljs-string">'ABCD'</span>, <span class="hljs-number">5.5</span>, <span class="hljs-number">10</span>), (<span class="hljs-string">'EFGH'</span>, <span class="hljs-number">14</span>, <span class="hljs-number">20</span>) <span class="hljs-comment">/* ,  ... */</span>
+</code></pre>
+<p>While this works, we intend to use this way only for prototyping or
+ad-hoc work. Jet is optimized for larger or long-running queries. Under
+the hood, it will spin up a distributed job for each INSERT statement.
+If you benchmarked the number of records per second, the performance
+would be embarrassing.</p>
+<p>To check out the contents of the <code>latest_trades</code> IMap, use:</p>
+<pre><code class="hljs css language-sql"><span class="hljs-keyword">SELECT</span> * <span class="hljs-keyword">FROM</span> latest_trades
+</code></pre>
+<h3><a class="anchor" aria-hidden="true" id="cancelling-the-job"></a><a href="#cancelling-the-job" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Cancelling the Job</h3>
+<p>To cancel the job, use:</p>
+<pre><code class="hljs css language-sql"><span class="hljs-keyword">DROP</span> JOB trades_ingestion
+</code></pre>
+<h2><a class="anchor" aria-hidden="true" id="imdg-sql-and-jet-sql"></a><a href="#imdg-sql-and-jet-sql" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>IMDG SQL and Jet SQL</h2>
+<p>Hazelcast IMDG can execute SQL statements using either the default SQL
+backend or the Jet SQL backend.</p>
+<p>The default SQL backend is designed for quick, ad-hoc queries over
+IMaps. The Jet backend allows you to combine various data sources (IMap,
+Kafka, files) using a single query. It is designed for long-running
+queries (continuous queries, batch processing) and does not optimize for
+very low query initialization overhead.</p>
+<p>The Hazelcast SQL service selects the backend automatically with a
+trial-and-error approach: first try the default IMDG backend, if it
+can't execute the statement, try the Jet backend.</p>
+<p>This documentation summarizes the additional SQL features of Hazelcast
+Jet. For a summary of the default SQL engine features, supported data
+types and the built-in functions and operators, please see the <a href="https://docs.hazelcast.org/docs/4.0.3/manual/html-single/index.html#sql">chapter
+on SQL</a>
+in the Hazelcast IMDG reference manual.</p>
+<hr>
+<p><span style='font-size:90%'><a
+name='footnote-1'><a href="#footnote-1-backref">*)</a> This statement is not
+entirely correct, it might not be enough if the map has one entry. The
+map has to have an entry on every cluster member. Practically, if the
+IMap doesn't have plenty of entries, you should always create the
+mapping and not rely on the auto-sampling.</span></p>
+</span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/docs/next/api/spring"><span class="arrow-prev">← </span><span>Spring Integration</span></a><a class="docs-next button" href="/docs/next/sql/basic-commands"><span>Basic commands</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#overview">Overview</a></li><li><a href="#installation">Installation</a></li><li><a href="#example">Example</a><ul class="toc-headings"><li><a href="#creating-the-mapping-for-kafka-topic">Creating the Mapping for Kafka Topic</a></li><li><a href="#querying-the-kafka-topic">Querying the Kafka Topic</a></li><li><a href="#creating-the-mapping-for-the-imap">Creating the Mapping for the IMap</a></li><li><a href="#streaming-messages-from-the-kafka-topic-to-the-imap">Streaming Messages from the Kafka Topic to the IMap</a></li><li><a href="#creating-a-long-running-job">Creating a Long-Running Job</a></li><li><a href="#checking-the-target-imap-contents">Checking the Target IMap Contents</a></li><li><a href="#cancelling-the-job">Cancelling the Job</a></li></ul></li><li><a href="#imdg-sql-and-jet-sql">IMDG SQL and Jet SQL</a></li></ul></nav></div><footer class="nav-footer" id="footer"><section class="sitemap"><div style="text-align:left"><a href="/" class="nav-home"><img src="/img/logo-light.svg" alt="Hazelcast Jet" width="200" height="40"/></a><div style="margin-left:12px"><a class="github-button" href="https://github.com/hazelcast/hazelcast-jet" data-icon="octicon-star" data-count-href="/facebook/docusaurus/stargazers" data-show-count="true" data-count-aria-label="# stargazers on GitHub" aria-label="Star this project on GitHub">Star On GitHub</a></div></div><div><h5>Docs</h5><a href="/docs/get-started/intro">Get Started</a><a href="/docs/concepts/dag">Concepts</a><a href="/docs/tutorials/kafka">Tutorials</a><a href="/docs/architecture/distributed-computing">Architecture</a><a href="/docs/operations/installation">Operations Guide</a><a href="/docs/enterprise">Enterprise Edition</a></div><div><h5>Community</h5><a href="https://groups.google.com/forum/#!forum/hazelcast-jet" target="_blank" rel="noreferrer noopener">Google Groups</a><a href="http://stackoverflow.com/questions/tagged/hazelcast-jet" target="_blank" rel="noreferrer noopener">Stack Overflow</a><a href="https://slack.hazelcast.com">Slack</a></div><div><h5>Latest From the Blog</h5><a href="/blog/2020/10/23/jet-43-is-released">Jet 4.3 Released</a><a href="/blog/2020/10/06/enabling-full-text-search">Enabling Full-text Search with Change Data Capture in a Legacy Application</a><a href="/blog/2020/09/18/cdc-meets-stream-processing">Change Data Capture meets Stream Processing</a><a href="/blog/2020/08/05/gc-tuning-for-jet">Sub-10 ms Latency in Java: Concurrent GC with Green Threads</a><a href="/blog/2020/07/16/designing-evergreen-cache-cdc">Designing an Evergreen Cache with Change Data Capture</a></div><div><h5>More</h5><a href="https://github.com/hazelcast/hazelcast-jet">GitHub Project</a><a href="http://hazelcast.com/company/careers/">Work at Hazelcast</a><a href="/license">License</a></div></section><section class="copyright">Copyright © 2020 Hazelcast Inc.</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
+                document.addEventListener('keyup', function(e) {
+                  if (e.target !== document.body) {
+                    return;
+                  }
+                  // keyCode for '/' (slash)
+                  if (e.keyCode === 191) {
+                    const search = document.getElementById('search_input_react');
+                    search && search.focus();
+                  }
+                });
+              </script><script>
+              var search = docsearch({
+                
+                apiKey: '79d1e4941621b9fd761d279d4d19ed69',
+                indexName: 'hazelcast-jet',
+                inputSelector: '#search_input_react',
+                algoliaOptions: {"facetFilters":["language:en","version:next"]}
+              });
+            </script></body></html>
