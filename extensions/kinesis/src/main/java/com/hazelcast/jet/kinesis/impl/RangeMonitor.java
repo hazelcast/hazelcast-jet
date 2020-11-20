@@ -15,11 +15,9 @@
  */
 package com.hazelcast.jet.kinesis.impl;
 
+import com.amazonaws.SdkClientException;
 import com.amazonaws.services.kinesis.AmazonKinesisAsync;
-import com.amazonaws.services.kinesis.model.ExpiredNextTokenException;
-import com.amazonaws.services.kinesis.model.LimitExceededException;
 import com.amazonaws.services.kinesis.model.ListShardsResult;
-import com.amazonaws.services.kinesis.model.ResourceInUseException;
 import com.amazonaws.services.kinesis.model.Shard;
 import com.hazelcast.logging.ILogger;
 
@@ -46,7 +44,15 @@ public class RangeMonitor extends AbstractShardWorker {
     /**
      * We don't want to issue shard listing requests at the peak allowed rate.
      */
-    private static final double PERCENTAGE_OF_SHARD_LISTING_RATE_UTILIZED = 0.5;
+    private static final double PERCENTAGE_OF_SHARD_LISTING_RATE_UTILIZED = 0.2;
+
+    /**
+     * Failure usually happens due to the over-utilization of resources and/or
+     * crossing of various limits. Even if we retry the operation it is a good
+     * idea to add some waits (decrease the rate) in order to alleviate the
+     * problem.
+     */
+    private static final long PAUSE_AFTER_FAILURE = 1000L; //todo: exponential backoff
 
     private final HashRange hashRange;
     private final Set<String> knownShards;
@@ -123,10 +129,11 @@ public class RangeMonitor extends AbstractShardWorker {
                     state = State.NEW_SHARDS_FOUND;
                     return Result.NEW_SHARDS;
                 }
-            } catch (LimitExceededException | ExpiredNextTokenException | ResourceInUseException e) {
-                logger.warning("Recoverable error encountered while listing shards: " + e.getMessage());
+            } catch (SdkClientException e) {
+                logger.warning("Failed listing shards, retrying. Cause: " + e.getMessage());
                 nextToken = null;
-                state = State.READY_TO_LIST_SHARDS; //todo: exponential backoff (add to nextListShardsTime)
+                nextListShardsTime = System.currentTimeMillis() + PAUSE_AFTER_FAILURE;
+                state = State.READY_TO_LIST_SHARDS;
                 return Result.NOTHING;
             } catch (Throwable t) {
                 throw rethrow(t);

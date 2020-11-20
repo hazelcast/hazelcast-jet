@@ -160,7 +160,8 @@ public class KinesisIntegrationTest extends JetTestSupport {
                             List<KeyedWindowResult<String, Long>> resultsForKey = windowResults.stream()
                                     .filter(wr -> wr.key().equals(key))
                                     .collect(Collectors.toList());
-                            assertTrue(resultsForKey.size() > 2); //multiple windows for each key, so watermarks work too
+                            assertTrue("Results for key " + key + ": " + resultsForKey,
+                                    resultsForKey.size() > 2); //multiple windows for each key, so watermarks work too
                         }
                     }));
 

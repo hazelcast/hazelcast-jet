@@ -15,6 +15,7 @@
  */
 package com.hazelcast.jet.kinesis.impl;
 
+import com.amazonaws.SdkClientException;
 import com.amazonaws.services.kinesis.AmazonKinesisAsync;
 import com.amazonaws.services.kinesis.model.ExpiredIteratorException;
 import com.amazonaws.services.kinesis.model.GetRecordsResult;
@@ -51,8 +52,12 @@ class ShardReader extends AbstractShardWorker {
      * doesn't return any data when it throws an exception. For this reason, we
      * recommend that you wait 1 second between calls to GetRecords. However,
      * it's possible that the application will get exceptions for longer than
-     * 1 second." */
-    private static final long READ_PAUSE_AFTER_THROUGHPUT_EXCEEDED = 1000L;
+     * 1 second."
+     *
+     * We also need to add this extra wait whenever we encounter other unexpected
+     * failures.
+     * */
+    private static final long PAUSE_AFTER_FAILURE = 1000L; //todo: exponential backoff
 
     /**
      * Maximum number of records returned by this reader in a single batch. Is
@@ -111,6 +116,10 @@ class ShardReader extends AbstractShardWorker {
             try {
                 shardIterator = helper.readResult(shardIteratorResult).getShardIterator();
                 state = State.NEED_TO_REQUEST_RECORDS;
+            } catch (SdkClientException sce) {
+                logger.warning("Failed retrieving shard iterator, retrying. Cause: " + sce.getMessage());
+                state = State.NO_SHARD_ITERATOR;
+                return Result.NOTHING;
             } catch (Throwable t) {
                 throw rethrow(t);
             }
@@ -143,21 +152,24 @@ class ShardReader extends AbstractShardWorker {
                     return Result.NOTHING;
                 }
             } catch (ProvisionedThroughputExceededException pte) {
-                logger.warning("Data throughput rate exceeded. Backing off and retrying.");
-                nextGetRecordsTime = System.currentTimeMillis() +
-                        READ_PAUSE_AFTER_THROUGHPUT_EXCEEDED; //todo: proper exponential backoff
-                state = State.NEED_TO_REQUEST_RECORDS;
-                return Result.NOTHING;
+                return dealWithReadRecordFailure("Data throughput rate exceeded. Backing off and retrying.");
             } catch (ExpiredIteratorException eie) {
-                logger.warning("Record iterator expired. Retrying.");
-                state = State.NEED_TO_REQUEST_RECORDS;
-                return Result.NOTHING;
+                return dealWithReadRecordFailure("Record iterator expired. Retrying.");
+            } catch (SdkClientException sce) {
+                return dealWithReadRecordFailure("Failed reading records, retrying. Cause: " + sce.getMessage());
             } catch (Throwable t) {
                 throw rethrow(t);
             }
         } else {
             return Result.NOTHING;
         }
+    }
+
+    private Result dealWithReadRecordFailure(String message) {
+        logger.warning(message);
+        nextGetRecordsTime = System.currentTimeMillis() + PAUSE_AFTER_FAILURE;
+        state = State.NEED_TO_REQUEST_RECORDS;
+        return Result.NOTHING;
     }
 
     private Result handleHasDataNeedToRequestRecords() {
