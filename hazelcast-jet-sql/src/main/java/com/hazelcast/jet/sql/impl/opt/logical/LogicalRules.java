@@ -27,6 +27,7 @@ import org.apache.calcite.rel.rules.ProjectFilterTransposeRule;
 import org.apache.calcite.rel.rules.ProjectMergeRule;
 import org.apache.calcite.rel.rules.ProjectRemoveRule;
 import org.apache.calcite.rel.rules.PruneEmptyRules;
+import org.apache.calcite.rel.rules.ReduceExpressionsRule;
 import org.apache.calcite.tools.RuleSet;
 import org.apache.calcite.tools.RuleSets;
 
@@ -61,6 +62,7 @@ public final class LogicalRules {
                 // Join
                 JoinLogicalRule.INSTANCE,
                 JoinProjectTransposeRule.RIGHT_PROJECT,
+                ReduceExpressionsRule.JOIN_INSTANCE,
 
                 // Value rules
                 ValuesLogicalRule.INSTANCE,
