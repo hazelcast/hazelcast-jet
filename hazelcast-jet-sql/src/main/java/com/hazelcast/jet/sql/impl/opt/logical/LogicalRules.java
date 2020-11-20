@@ -45,6 +45,7 @@ public final class LogicalRules {
                 FilterIntoScanLogicalRule.INSTANCE,
                 FilterAggregateTransposeRule.INSTANCE,
                 FilterIntoJoinRule.FILTER_ON_JOIN,
+                ReduceExpressionsRule.FILTER_INSTANCE,
 
                 // Project rules
                 ProjectLogicalRule.INSTANCE,
