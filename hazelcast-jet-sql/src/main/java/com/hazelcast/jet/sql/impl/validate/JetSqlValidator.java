@@ -37,6 +37,7 @@ import org.apache.calcite.sql.validate.SqlValidatorTable;
 import static com.hazelcast.jet.sql.impl.connector.SqlConnectorUtil.getJetSqlConnector;
 import static com.hazelcast.jet.sql.impl.validate.ValidatorResource.RESOURCE;
 import static org.apache.calcite.sql.SqlKind.AGGREGATE;
+import static org.apache.calcite.sql.SqlKind.VALUES;
 
 public class JetSqlValidator extends HazelcastSqlValidator {
 
@@ -131,11 +132,11 @@ public class JetSqlValidator extends HazelcastSqlValidator {
     protected void validateJoin(SqlJoin join, SqlValidatorScope scope) {
         super.validateJoin(join, scope);
 
-        class FindSelectVisitor extends SqlBasicVisitor<Void> {
+        class FindSelectOrValuesVisitor extends SqlBasicVisitor<Void> {
             boolean found;
 
             public Void visit(SqlCall call) {
-                if (call.getKind() == SqlKind.SELECT) {
+                if (call.getKind() == SqlKind.SELECT || call.getKind() == VALUES) {
                     found = true;
                     return null;
                 } else {
@@ -144,10 +145,10 @@ public class JetSqlValidator extends HazelcastSqlValidator {
             }
         }
 
-        FindSelectVisitor visitor = new FindSelectVisitor();
+        FindSelectOrValuesVisitor visitor = new FindSelectOrValuesVisitor();
         join.getRight().accept(visitor);
         if (visitor.found) {
-            throw newValidationError(join, RESOURCE.subqueryOnRightSideOfJoinNotSupported());
+            throw newValidationError(join, RESOURCE.subqueryValuesOnRightSideOfJoinNotSupported());
         }
     }
 }
