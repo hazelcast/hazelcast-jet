@@ -63,7 +63,7 @@ public class JetSqlParserTest {
                 + ")"
                 + "TYPE mapping_type "
                 + "OPTIONS("
-                + "\"option.key\" 'option.value'"
+                + "'option.key'='option.value'"
                 + ")";
 
         // when
@@ -183,8 +183,8 @@ public class JetSqlParserTest {
                 + "mapping_name "
                 + "TYPE mapping_type "
                 + "OPTIONS("
-                + "\"option.key\" 'value1'"
-                + ", \"option.key\" 'value2'"
+                + "'option.key'='value1'"
+                + ", 'option.key'='value2'"
                 + ")";
 
         // when
@@ -193,13 +193,13 @@ public class JetSqlParserTest {
     }
 
     @Test
-    public void test_createMappingRequiresOptionSimpleIdentifier() {
+    public void test_createMappingOptionRequiresStringLiteral() {
         // given
         String sql = "CREATE MAPPING "
                 + "mapping_name "
                 + "TYPE mapping_type "
                 + "OPTIONS ("
-                + "option.key 'value1'"
+                + "option='value1'"
                 + ")";
 
         // when
