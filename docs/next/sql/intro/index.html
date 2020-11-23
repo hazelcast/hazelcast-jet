@@ -128,8 +128,8 @@ with data types:</p>
     amount <span class="hljs-built_in">BIGINT</span>)
 <span class="hljs-keyword">TYPE</span> Kafka
 OPTIONS (
-    valueFormat <span class="hljs-string">'json'</span>,
-    <span class="hljs-string">"bootstrap.servers"</span> <span class="hljs-string">'127.0.0.1:9092'</span>
+    <span class="hljs-string">'valueFormat'</span> = <span class="hljs-string">'json'</span>,
+    <span class="hljs-string">'bootstrap.servers'</span> = <span class="hljs-string">'127.0.0.1:9092'</span>
     <span class="hljs-comment">/* ... more configuration options for the Kafka consumer */</span>
 )
 </code></pre>
@@ -209,10 +209,10 @@ IMap is <code>latest_trades</code>:</p>
 <pre><code class="hljs css language-sql"><span class="hljs-keyword">CREATE</span> <span class="hljs-keyword">MAPPING</span> latest_trades
 <span class="hljs-keyword">TYPE</span> IMap
 OPTIONS (
-    keyFormat <span class="hljs-string">'java'</span>,
-    keyJavaClass <span class="hljs-string">'java.lang.String'</span>,
-    valueFormat <span class="hljs-string">'java'</span>,
-    valueJavaClass <span class="hljs-string">'com.example.Trade'</span>
+    <span class="hljs-string">'keyFormat'</span> = <span class="hljs-string">'java'</span>,
+    <span class="hljs-string">'keyJavaClass'</span> = <span class="hljs-string">'java.lang.String'</span>,
+    <span class="hljs-string">'valueFormat'</span> = <span class="hljs-string">'java'</span>,
+    <span class="hljs-string">'valueJavaClass'</span> = <span class="hljs-string">'com.example.Trade'</span>
 )
 </code></pre>
 <p>Note that we omitted the column list in this query. It will be
