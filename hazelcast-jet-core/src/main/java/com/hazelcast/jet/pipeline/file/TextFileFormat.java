@@ -35,7 +35,7 @@ public class TextFileFormat implements FileFormat<String> {
      */
     public static final String FORMAT_TXT = "txt";
 
-    private final Charset charset;
+    private final String charset;
 
     /**
      * Creates a {@code TextFileFormat} with the default character encoding
@@ -53,7 +53,7 @@ public class TextFileFormat implements FileFormat<String> {
      * option is supported for local files only.
      */
     TextFileFormat(@Nonnull Charset charset) {
-        this.charset = requireNonNull(charset, "charset must not be null");
+        this.charset = requireNonNull(charset, "charset must not be null").name();
     }
 
     /**
@@ -61,7 +61,7 @@ public class TextFileFormat implements FileFormat<String> {
      */
     @Nonnull
     public Charset charset() {
-        return charset;
+        return Charset.forName(charset);
     }
 
     @Nonnull @Override

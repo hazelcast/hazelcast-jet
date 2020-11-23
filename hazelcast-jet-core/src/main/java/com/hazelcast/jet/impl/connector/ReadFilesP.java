@@ -20,6 +20,7 @@ import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.Traversers;
 import com.hazelcast.jet.core.AbstractProcessor;
+import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.processor.SourceProcessors;
 
@@ -145,6 +146,22 @@ public final class ReadFilesP<T> extends AbstractProcessor {
 
         return ProcessorMetaSupplier.of(DEFAULT_LOCAL_PARALLELISM, () -> new ReadFilesP<>(
                 directory, glob, sharedFileSystem, readFileFn)
+        );
+    }
+
+    /**
+     * Private API.
+     */
+    public static <T> Processor processor(
+            @Nonnull String directory,
+            @Nonnull String glob,
+            boolean sharedFileSystem,
+            @Nonnull FunctionEx<? super Path, ? extends Stream<T>> readFileFn
+    ) {
+        checkSerializable(readFileFn, "readFileFn");
+
+        return new ReadFilesP<>(
+                directory, glob, sharedFileSystem, readFileFn
         );
     }
 }

@@ -71,7 +71,6 @@ public class GlobFileSourceTest extends BaseFileFormatTest {
 
     @Test
     public void shouldReadAllFilesInDirectoryNoSlash() {
-        assumeThat(useHadoop).isTrue();
         FileSourceBuilder<String> source = FileSources.files("src/test/resources/directory")
                                                       .format(FileFormat.text());
 

@@ -35,7 +35,7 @@ public class LinesTextFileFormat implements FileFormat<String> {
      */
     public static final String FORMAT_LINES = "lines";
 
-    private final Charset charset;
+    private final String charset;
 
     /**
      * Creates a {@code LinesTextFileFormat} with the default character
@@ -53,14 +53,14 @@ public class LinesTextFileFormat implements FileFormat<String> {
      * option is supported for local files only.
      */
     LinesTextFileFormat(@Nonnull Charset charset) {
-        this.charset = requireNonNull(charset, "charset must not be null");
+        this.charset = requireNonNull(charset, "charset must not be null").name();
     }
 
     /**
      * Returns the configured character encoding.
      */
     public Charset charset() {
-        return charset;
+        return Charset.forName(charset);
     }
 
     @Nonnull @Override

@@ -18,6 +18,7 @@ package com.hazelcast.jet.pipeline.file;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.io.Serializable;
 import java.nio.charset.Charset;
 
 /**
@@ -28,7 +29,7 @@ import java.nio.charset.Charset;
  * @param <T> type of items a source using this file format will emit
  * @since 4.4
  */
-public interface FileFormat<T> {
+public interface FileFormat<T> extends Serializable {
 
     /**
      * Returns the unique identifier of the file format. The convention is to

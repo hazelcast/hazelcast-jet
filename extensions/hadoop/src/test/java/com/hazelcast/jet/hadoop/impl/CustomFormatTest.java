@@ -19,7 +19,11 @@ package com.hazelcast.jet.hadoop.impl;
 import com.hazelcast.function.BiFunctionEx;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.JetException;
+import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.hadoop.file.BaseFileFormatTest;
+import com.hazelcast.jet.pipeline.BatchSource;
+import com.hazelcast.jet.pipeline.Pipeline;
+import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.file.FileFormat;
 import com.hazelcast.jet.pipeline.file.FileSourceBuilder;
 import com.hazelcast.jet.pipeline.file.FileSources;
@@ -60,7 +64,13 @@ public class CustomFormatTest extends BaseFileFormatTest {
             if (useHadoop) {
                 builder.useHadoopForLocalFiles(true);
             }
-            builder.build();
+            BatchSource<Integer> source = builder.build();
+            Pipeline p = Pipeline.create();
+            p.readFrom(source)
+             .writeTo(Sinks.logger());
+
+            JetInstance jet = createJetMember();
+            jet.newJob(p).join();
         }).hasMessageContaining("FileFormat: unknown-integer-format");
     }
 

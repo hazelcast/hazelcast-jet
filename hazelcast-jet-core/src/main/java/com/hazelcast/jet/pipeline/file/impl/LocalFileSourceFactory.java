@@ -18,11 +18,12 @@ package com.hazelcast.jet.pipeline.file.impl;
 
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.JetException;
+import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.datamodel.Tuple2;
+import com.hazelcast.jet.impl.connector.ReadFilesP;
 import com.hazelcast.jet.impl.util.IOUtil;
 import com.hazelcast.jet.json.JsonUtil;
 import com.hazelcast.jet.pipeline.BatchSource;
-import com.hazelcast.jet.pipeline.Sources;
 import com.hazelcast.jet.pipeline.file.FileFormat;
 import com.hazelcast.jet.pipeline.file.FileSourceBuilder;
 import com.hazelcast.jet.pipeline.file.JsonFileFormat;
@@ -34,6 +35,7 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 import javax.annotation.Nonnull;
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -49,6 +51,7 @@ import java.util.stream.Stream;
 import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
 import static com.hazelcast.jet.impl.util.Util.uncheckCall;
 import static com.hazelcast.jet.impl.util.Util.uncheckRun;
+import static com.hazelcast.jet.pipeline.Sources.batchFromProcessor;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
 
@@ -82,23 +85,31 @@ public class LocalFileSourceFactory implements FileSourceFactory {
 
     @Nonnull @Override
     public <T> BatchSource<T> create(@Nonnull FileSourceBuilder<T> builder) {
-        Tuple2<String, String> dirAndGlob = deriveDirectoryAndGlobFromPath(builder.path());
-        assert dirAndGlob.f0() != null && dirAndGlob.f1() != null;
 
+        // Avoid serialization of the builder
+        String path = builder.path();
         FileFormat<T> format = requireNonNull(builder.format());
-        ReadFileFnProvider readFileFnProvider = readFileFnProviders.get(format.format());
-        if (readFileFnProvider == null) {
-            throw new JetException("Could not find ReadFileFnProvider for FileFormat: " + format.format() + ". " +
-                    "Did you provide correct modules on classpath?");
-        }
-        FunctionEx<Path, Stream<T>> mapFn = readFileFnProvider.createReadFileFn(format);
-        return Sources.filesBuilder(dirAndGlob.f0())
-                      .glob(dirAndGlob.f1())
-                      .sharedFileSystem(builder.isSharedFileSystem())
-                      .build(mapFn);
+        String formatId = format.format();
+        boolean sharedFileSystem = builder.isSharedFileSystem();
+
+        return batchFromProcessor("filesSource(" + new File(builder.path()) + ')',
+                ProcessorMetaSupplier.of(2, () -> {
+                    Tuple2<String, String> dirAndGlob = deriveDirectoryAndGlobFromPath(path);
+                    assert dirAndGlob.f0() != null && dirAndGlob.f1() != null;
+
+                    ReadFileFnProvider readFileFnProvider = readFileFnProviders.get(formatId);
+                    if (readFileFnProvider == null) {
+                        throw new JetException("Could not find ReadFileFnProvider for FileFormat: " + formatId + ". " +
+                                "Did you provide correct modules on classpath?");
+                    }
+                    FunctionEx<Path, Stream<T>> mapFn = readFileFnProvider.createReadFileFn(format);
+
+
+                    return ReadFilesP.processor(dirAndGlob.f0(), dirAndGlob.f1(), sharedFileSystem, mapFn);
+                }));
     }
 
-    private Tuple2<String, String> deriveDirectoryAndGlobFromPath(String path) {
+    private static Tuple2<String, String> deriveDirectoryAndGlobFromPath(String path) {
         Path p = Paths.get(path);
 
         String directory;
@@ -125,11 +136,8 @@ public class LocalFileSourceFactory implements FileSourceFactory {
         return tuple2(directory, glob);
     }
 
-    private boolean isDirectory(String path) {
-        // We can't ask the filesystem because this code runs on the client, which
-        // is likely a different machine than the cluster members. So this is a
-        // best guess, we assume that directories end with '/'.
-        return path.endsWith("/");
+    private static boolean isDirectory(String path) {
+        return new File(path).isDirectory();
     }
 
     @SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION")
