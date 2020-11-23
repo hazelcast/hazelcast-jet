@@ -322,7 +322,7 @@ CMD ["sh", "-c", "jet -t $ADDRESSES submit /examples/hello-world.jar"]
 image. The <code>ADD</code> command copies the <code>hello-world.jar</code> to the <code>/examples</code>
 directory inside the container image. <code>ENV</code> command defines an
 environment variable <code>ADDRESSES</code> with default value of <code>172.17.0.2</code>.
-This can be overriden via <code>-e</code> parameter of the <code>docker run</code>
+This can be overridden via <code>-e</code> parameter of the <code>docker run</code>
 command. The <code>CMD</code> command specifies what command to run.</p>
 <p>Then create the image by running the following command:</p>
 <pre><code class="hljs css language-bash">docker build . -t hazelcast-jet-hello-world
