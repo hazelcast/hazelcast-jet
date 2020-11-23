@@ -31,6 +31,7 @@ import com.hazelcast.jet.Observable;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.DAG;
+import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.impl.util.ConcurrentMemoizingSupplier;
 import com.hazelcast.jet.impl.util.JetConsoleLogHandler;
 import com.hazelcast.jet.pipeline.Pipeline;
@@ -49,15 +50,20 @@ import java.net.URLClassLoader;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.LockSupport;
 import java.util.function.Supplier;
 import java.util.jar.JarFile;
 import java.util.logging.ConsoleHandler;
 import java.util.logging.Handler;
 import java.util.logging.Level;
 import java.util.logging.LogManager;
+import java.util.stream.Collectors;
 
+import static com.hazelcast.jet.Util.idToString;
 import static com.hazelcast.jet.impl.config.ConfigProvider.locateAndGetJetConfig;
+import static com.hazelcast.jet.impl.util.Util.toLocalDateTime;
 import static com.hazelcast.spi.properties.ClusterProperty.LOGGING_TYPE;
 
 /**
@@ -79,6 +85,7 @@ public final class JetBootstrap {
 
     private static final ILogger LOGGER = Logger.getLogger(Jet.class.getName());
     private static final AtomicBoolean LOGGING_CONFIGURED = new AtomicBoolean(false);
+    private static final int WAIT_INTERVAL_MILLIS = 100;
 
     private JetBootstrap() {
     }
@@ -95,7 +102,7 @@ public final class JetBootstrap {
         JetBootstrap.supplier = new ConcurrentMemoizingSupplier<>(() ->
                 new InstanceProxy(supplier.get(), jar, snapshotName, jobName)
         );
-
+        List<Job> jobsBeforeSubmit = supplier.get().getJobs();
         try (JarFile jarFile = new JarFile(jar)) {
             if (StringUtil.isNullOrEmpty(mainClass)) {
                 if (jarFile.getManifest() == null) {
@@ -124,6 +131,11 @@ public final class JetBootstrap {
             String[] jobArgs = args.toArray(new String[0]);
             // upcast args to Object so it's passed as a single array-typed argument
             main.invoke(null, (Object) jobArgs);
+            List<Job> jobsAfterSubmit = JetBootstrap.supplier.get().getJobs();
+            printJobStatusInfo(jobsAfterSubmit
+                    .stream()
+                    .filter(job -> !jobsBeforeSubmit.contains(job))
+                    .collect(Collectors.toList()));
         } finally {
             JetInstance remembered = JetBootstrap.supplier.remembered();
             if (remembered != null) {
@@ -145,6 +157,30 @@ public final class JetBootstrap {
             System.err.println("Cannot find or load main class: " + mainClass);
             throw e;
         }
+    }
+
+    private static void printJobStatusInfo(List<Job> jobs) {
+        for (Job job : jobs) {
+            new Thread(() -> {
+                JobStatus status;
+                while ((status = job.getStatus()) == JobStatus.NOT_RUNNING || status == JobStatus.STARTING) {
+                    printf("Starting job %s...", formatJob(job));
+                    printf("Current status of the job %s...", status);
+                    LockSupport.parkNanos(TimeUnit.MILLISECONDS.toNanos(WAIT_INTERVAL_MILLIS));
+                }
+                printf("Current status of the job %s: %s", formatJob(job), status);
+            }).start();
+        }
+    }
+
+    private static String formatJob(Job job) {
+        return "id=" + idToString(job.getId())
+                + ", name=" + job.getName()
+                + ", submissionTime=" + toLocalDateTime(job.getSubmissionTime());
+    }
+
+    private static void printf(String format, Object... objects) {
+        System.out.printf(format + "%n", objects);
     }
 
     private static void error(String msg) {
