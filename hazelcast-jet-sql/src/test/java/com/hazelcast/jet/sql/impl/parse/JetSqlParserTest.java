@@ -193,21 +193,6 @@ public class JetSqlParserTest {
     }
 
     @Test
-    public void test_createMappingOptionRequiresStringLiteral() {
-        // given
-        String sql = "CREATE MAPPING "
-                + "mapping_name "
-                + "TYPE mapping_type "
-                + "OPTIONS ("
-                + "'option'='value1'"
-                + ")";
-
-        // when
-        assertThatThrownBy(() -> parse(sql))
-                .hasMessageContaining("Encountered \".\" at line 1, column 62");
-    }
-
-    @Test
     @Parameters({
             "false",
             "true"
