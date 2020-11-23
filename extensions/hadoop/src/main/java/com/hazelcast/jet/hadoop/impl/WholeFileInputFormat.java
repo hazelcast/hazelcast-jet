@@ -40,8 +40,6 @@ public class WholeFileInputFormat extends FileInputFormat<NullWritable, BytesWri
 
     @Override
     public RecordReader<NullWritable, BytesWritable> createRecordReader(InputSplit split, TaskAttemptContext context) {
-        WholeFileRecordReader reader = new WholeFileRecordReader();
-        reader.initialize(split, context);
-        return reader;
+        return new WholeFileRecordReader();
     }
 }

@@ -21,6 +21,7 @@ import com.fasterxml.jackson.databind.MappingIterator;
 import com.fasterxml.jackson.databind.ObjectReader;
 import com.fasterxml.jackson.dataformat.csv.CsvMapper;
 import com.fasterxml.jackson.dataformat.csv.CsvSchema;
+import com.hazelcast.jet.impl.util.ReflectionUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -53,26 +54,21 @@ public class CsvInputFormat extends FileInputFormat<NullWritable, Object> {
                 FileSplit fileSplit = (FileSplit) split;
                 Configuration conf = context.getConfiguration();
 
-                try {
+                Configuration configuration = context.getConfiguration();
+                String className = configuration.get(CSV_INPUT_FORMAT_BEAN_CLASS);
+                Class<?> clazz = ReflectionUtils.loadClass(className);
 
-                    Configuration configuration = context.getConfiguration();
-                    String className = configuration.get(CSV_INPUT_FORMAT_BEAN_CLASS);
-                    Class<?> clazz = Thread.currentThread().getContextClassLoader().loadClass(className);
+                CsvMapper mapper = new CsvMapper();
 
-                    CsvMapper mapper = new CsvMapper();
+                CsvSchema schema = CsvSchema.emptySchema().withHeader();
+                ObjectReader reader = mapper.readerFor(clazz)
+                                            .withoutFeatures(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+                                            .with(schema);
 
-                    CsvSchema schema = CsvSchema.emptySchema().withHeader();
-                    ObjectReader reader = mapper.readerFor(clazz)
-                                                .withoutFeatures(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
-                                                .with(schema);
-
-                    Path file = fileSplit.getPath();
-                    FileSystem fs = file.getFileSystem(conf);
-                    FSDataInputStream in = fs.open(file);
-                    iterator = reader.readValues((InputStream) in);
-                } catch (ClassNotFoundException e) {
-                    throw new RuntimeException(e);
-                }
+                Path file = fileSplit.getPath();
+                FileSystem fs = file.getFileSystem(conf);
+                FSDataInputStream in = fs.open(file);
+                iterator = reader.readValues((InputStream) in);
             }
 
             @Override

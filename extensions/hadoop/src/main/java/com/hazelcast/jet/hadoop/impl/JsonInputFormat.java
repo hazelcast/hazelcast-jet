@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.hadoop.impl;
 
+import com.hazelcast.jet.impl.util.ReflectionUtils;
 import com.hazelcast.jet.json.JsonUtil;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -39,58 +40,49 @@ public class JsonInputFormat extends FileInputFormat<LongWritable, Object> {
     @Override
     public RecordReader<LongWritable, Object> createRecordReader(InputSplit split, TaskAttemptContext context) {
 
-        try {
-            Configuration configuration = context.getConfiguration();
-            String className = configuration.get(JSON_INPUT_FORMAT_BEAN_CLASS);
-            Class<?> clazz = Thread.currentThread().getContextClassLoader().loadClass(className);
+        Configuration configuration = context.getConfiguration();
+        String className = configuration.get(JSON_INPUT_FORMAT_BEAN_CLASS);
+        Class<?> clazz = ReflectionUtils.loadClass(className);
 
-            return new RecordReader<LongWritable, Object>() {
+        return new RecordReader<LongWritable, Object>() {
 
-                final LineRecordReader reader = new LineRecordReader();
+            final LineRecordReader reader = new LineRecordReader();
 
-                @Override
-                public void initialize(InputSplit split, TaskAttemptContext context) throws IOException {
-                    reader.initialize(split, context);
-                }
+            @Override
+            public void initialize(InputSplit split, TaskAttemptContext context) throws IOException {
+                reader.initialize(split, context);
+            }
 
-                @Override
-                public boolean nextKeyValue() throws IOException {
-                    return reader.nextKeyValue();
-                }
+            @Override
+            public boolean nextKeyValue() throws IOException {
+                return reader.nextKeyValue();
+            }
 
-                @Override
-                public LongWritable getCurrentKey() {
-                    return reader.getCurrentKey();
-                }
+            @Override
+            public LongWritable getCurrentKey() {
+                return reader.getCurrentKey();
+            }
 
-                @Override
-                public Object getCurrentValue() throws IOException {
-                    return JsonUtil.beanFrom(reader.getCurrentValue().toString(), clazz);
-                }
+            @Override
+            public Object getCurrentValue() throws IOException {
+                return JsonUtil.beanFrom(reader.getCurrentValue().toString(), clazz);
+            }
 
-                @Override
-                public float getProgress() throws IOException {
-                    return reader.getProgress();
-                }
+            @Override
+            public float getProgress() throws IOException {
+                return reader.getProgress();
+            }
 
-                @Override
-                public void close() throws IOException {
-                    reader.close();
-                }
-            };
-
-        } catch (ClassNotFoundException e) {
-            throw new RuntimeException(e);
-        }
-
+            @Override
+            public void close() throws IOException {
+                reader.close();
+            }
+        };
     }
 
     @Override
     protected boolean isSplitable(JobContext context, Path file) {
         final CompressionCodec codec = new CompressionCodecFactory(context.getConfiguration()).getCodec(file);
-        if (null == codec) {
-            return true;
-        }
-        return codec instanceof SplittableCompressionCodec;
+        return null == codec || codec instanceof SplittableCompressionCodec;
     }
 }
