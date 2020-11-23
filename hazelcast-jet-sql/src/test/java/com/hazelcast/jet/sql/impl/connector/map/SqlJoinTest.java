@@ -134,7 +134,7 @@ public class SqlJoinTest extends SqlTestSupport {
         assertRowsAnyOrder(
                 "SELECT l.v, m.this " +
                 "FROM " + leftName + " l " +
-                "INNER JOIN " + mapName + " m ON 1=1 " +
+                "INNER JOIN " + mapName + " m ON 1 = 1 " +
                 "WHERE l.v = m.__key",
                 asList(
                         new Row(1, "value-1"),
@@ -542,7 +542,7 @@ public class SqlJoinTest extends SqlTestSupport {
     }
 
     @Test
-    public void test_alwaysFalseCondition() {
+    public void test_innerJoinWithAlwaysFalseCondition() {
         String leftName = randomName();
         TestBatchSqlConnector.create(sqlService, leftName, 4);
 
@@ -562,7 +562,7 @@ public class SqlJoinTest extends SqlTestSupport {
     }
 
     @Test
-    public void test_joinWithTypeConversion_smallerLeft() {
+    public void test_innerJoinWithTypeConversion_smallerLeft() {
         String leftName = randomName();
         TestBatchSqlConnector.create(sqlService, leftName, 3);
 
@@ -585,7 +585,7 @@ public class SqlJoinTest extends SqlTestSupport {
     }
 
     @Test
-    public void test_joinWithTypeConversion_smallerRight() {
+    public void test_innerJoinWithTypeConversion_smallerRight() {
         String leftName = randomName();
         TestBatchSqlConnector.create(sqlService, leftName, 3);
 
@@ -608,7 +608,7 @@ public class SqlJoinTest extends SqlTestSupport {
     }
 
     @Test
-    public void test_innerJoinWithSubqueryFails() {
+    public void test_innerJoinSelect() {
         String leftName = randomName();
         TestBatchSqlConnector.create(sqlService, leftName, 1);
 
@@ -630,7 +630,7 @@ public class SqlJoinTest extends SqlTestSupport {
     }
 
     @Test
-    public void test_innerJoinWithValues() {
+    public void test_innerJoinValues() {
         String leftName = randomName();
         TestBatchSqlConnector.create(sqlService, leftName, 1);
 
