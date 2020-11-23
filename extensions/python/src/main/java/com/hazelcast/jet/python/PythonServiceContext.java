@@ -18,7 +18,6 @@ package com.hazelcast.jet.python;
 import com.hazelcast.internal.nio.IOUtil;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.core.ProcessorSupplier;
-import com.hazelcast.jet.impl.util.ExceptionUtil;
 import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.logging.ILogger;
 
@@ -114,7 +113,7 @@ class PythonServiceContext {
         try {
             new ProcessBuilder("python3", "--version").start().waitFor();
         } catch (Exception e) {
-            throw ExceptionUtil.sneakyThrow(new Exception("python3 is not available", e));
+            throw new IllegalStateException("python3 is not available", e);
         }
     }
 
