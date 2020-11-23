@@ -49,6 +49,7 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -316,6 +317,14 @@ public final class Util {
             }
         }
         return -1;
+    }
+
+    /**
+     * Right pad an array with {@code n} null values.
+     */
+    public static Object[] padRight(Object[] array, int n) {
+        assert n > -1;
+        return n == 0 ? array : Arrays.copyOf(array, array.length + n);
     }
 
     /**

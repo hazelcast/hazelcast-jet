@@ -157,6 +157,7 @@ public class IMapSqlConnector implements SqlConnector {
             return new NestedLoopJoin(
                     "Join(Lookup-" + toString(table) + ")",
                     new JoinByPrimitiveKeyProcessorSupplier(
+                            joinInfo.isOuter(),
                             leftEquiJoinPrimitiveKeyIndex,
                             joinInfo.condition(),
                             name,
@@ -175,6 +176,7 @@ public class IMapSqlConnector implements SqlConnector {
                     new JoinScanProcessorSupplier(joinInfo, name, rightRowProjectorSupplier)
             );
         }
+        // TODO: detect and handle always-false condition ?
     }
 
     private static int leftEquiJoinPrimitiveKeyIndex(JetJoinInfo joinInfo, List<TableField> fields) {

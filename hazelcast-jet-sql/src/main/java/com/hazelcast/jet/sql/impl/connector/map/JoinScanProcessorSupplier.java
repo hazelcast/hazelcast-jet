@@ -20,7 +20,6 @@ import com.hazelcast.function.BiFunctionEx;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.jet.Traverser;
-import com.hazelcast.jet.Traversers;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.impl.execution.init.Contexts.ProcSupplierCtx;
@@ -41,6 +40,9 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map.Entry;
+
+import static com.hazelcast.jet.Traversers.traverseIterable;
+import static com.hazelcast.jet.impl.util.Util.padRight;
 
 @SuppressFBWarnings(
         value = {"SE_BAD_FIELD", "SE_NO_SERIALVERSIONID"},
@@ -103,25 +105,45 @@ final class JoinScanProcessorSupplier implements ProcessorSupplier, DataSerializ
             IMap<Object, Object> map,
             KvRowProjector rightRowProjector
     ) {
+        boolean outer = joinInfo.isOuter();
         BiFunctionEx<Object[], Object[], Object[]> joinFn = ExpressionUtil.joinFn(joinInfo.condition());
 
         return lefts -> {
-            List<Object[]> rows = new ArrayList<>();
+            List<Object[]> rights = new ArrayList<>();
             for (Entry<Object, Object> entry : map.entrySet()) {
                 Object[] right = rightRowProjector.project(entry);
-                if (right == null) {
-                    continue;
-                }
-
-                for (Object left : lefts) {
-                    Object[] joined = joinFn.apply((Object[]) left, right);
-                    if (joined != null) {
-                        rows.add(joined);
-                    }
+                if (right != null) {
+                    rights.add(right);
                 }
             }
-            return Traversers.traverseIterable(rows);
+
+            List<Object[]> rows = new ArrayList<>();
+            for (Object left : lefts) {
+                List<Object[]> joined = join((Object[]) left, rights, joinFn);
+                if (!joined.isEmpty()) {
+                    rows.addAll(joined);
+                } else if (outer) {
+                    rows.add(padRight((Object[]) left, rightRowProjector.getColumnCount()));
+                }
+            }
+            return traverseIterable(rows);
         };
+    }
+
+    private static List<Object[]> join(
+            Object[] left,
+            List<Object[]> rights,
+            BiFunctionEx<Object[], Object[], Object[]> joinFn
+    ) {
+        // TODO: get rid of intermediate list?
+        List<Object[]> rows = new ArrayList<>();
+        for (Object[] right : rights) {
+            Object[] joined = joinFn.apply(left, right);
+            if (joined != null) {
+                rows.add(joined);
+            }
+        }
+        return rows;
     }
 
     @Override

@@ -80,6 +80,7 @@ public class JoinByPrimitiveKeyProcessorTest {
     @Before
     public void setUp() {
         given(rightRowProjectorSupplier.get(any(), any())).willReturn(rightProjector);
+        given(rightProjector.getColumnCount()).willReturn(2);
         given(supplierContext.serializationService()).willReturn(serializationService);
         given(supplierContext.jetInstance()).willReturn(jetInstance);
         given(jetInstance.getMap(anyString())).willReturn(map);
@@ -87,9 +88,9 @@ public class JoinByPrimitiveKeyProcessorTest {
 
     @Test
     @SuppressWarnings("unchecked")
-    public void when_leftKeyIsNull_then_emptyResult() throws Exception {
+    public void when_innerJoinLeftKeyIsNull_then_emptyResult() throws Exception {
         // given
-        Processor processor = processor((Expression<Boolean>) ConstantExpression.create(true, BOOLEAN));
+        Processor processor = processor((Expression<Boolean>) ConstantExpression.create(true, BOOLEAN), false);
 
         // when
         processor.process(0, new TestInbox(singletonList(new Object[]{null})));
@@ -101,9 +102,9 @@ public class JoinByPrimitiveKeyProcessorTest {
 
     @Test
     @SuppressWarnings("unchecked")
-    public void when_rightValueIsNull_then_emptyResult() throws Exception {
+    public void when_innerJoinRightValueIsNull_then_emptyResult() throws Exception {
         // given
-        Processor processor = processor((Expression<Boolean>) ConstantExpression.create(true, BOOLEAN));
+        Processor processor = processor((Expression<Boolean>) ConstantExpression.create(true, BOOLEAN), false);
 
         given(map.getAsync(1)).willReturn(CompletableFuture.completedFuture(null));
 
@@ -117,9 +118,9 @@ public class JoinByPrimitiveKeyProcessorTest {
 
     @Test
     @SuppressWarnings("unchecked")
-    public void when_filteredOutByProjector_then_emptyResult() throws Exception {
+    public void when_innerJoinFilteredOutByProjector_then_emptyResult() throws Exception {
         // given
-        Processor processor = processor((Expression<Boolean>) ConstantExpression.create(true, BOOLEAN));
+        Processor processor = processor((Expression<Boolean>) ConstantExpression.create(true, BOOLEAN), false);
 
         given(map.getAsync(1)).willReturn(CompletableFuture.completedFuture("value"));
         given(rightProjector.project(entry(1, "value"))).willReturn(null);
@@ -134,9 +135,9 @@ public class JoinByPrimitiveKeyProcessorTest {
 
     @Test
     @SuppressWarnings({"unchecked", "ResultOfMethodCallIgnored"})
-    public void when_projectedByProjector_then_modified() throws Exception {
+    public void when_innerJoinProjectedByProjector_then_modified() throws Exception {
         // given
-        Processor processor = processor((Expression<Boolean>) ConstantExpression.create(true, BOOLEAN));
+        Processor processor = processor((Expression<Boolean>) ConstantExpression.create(true, BOOLEAN), false);
 
         given(map.getAsync(1)).willReturn(CompletableFuture.completedFuture("original"));
         given(rightProjector.project(entry(1, "original"))).willReturn(new Object[]{2, "modified"});
@@ -151,13 +152,13 @@ public class JoinByPrimitiveKeyProcessorTest {
     }
 
     @Test
-    public void when_filteredOutByCondition_then_absent() throws Exception {
+    public void when_innerJoinFilteredOutByCondition_then_absent() throws Exception {
         // given
         Processor processor = processor(ComparisonPredicate.create(
                 ColumnExpression.create(2, VARCHAR),
                 ConstantExpression.create("value-2", VARCHAR),
                 ComparisonMode.EQUALS
-        ));
+        ), false);
 
         given(map.getAsync(1)).willReturn(CompletableFuture.completedFuture("value-1"));
         given(rightProjector.project(entry(1, "value-1"))).willReturn(new Object[]{1, "value-1"});
@@ -170,8 +171,100 @@ public class JoinByPrimitiveKeyProcessorTest {
         verifyNoInteractions(outbox);
     }
 
-    private Processor processor(Expression<Boolean> condition) throws Exception {
+    @Test
+    @SuppressWarnings({"unchecked", "ResultOfMethodCallIgnored"})
+    public void when_outerJoinLeftKeyIsNull_then_nulls() throws Exception {
+        // given
+        Processor processor = processor((Expression<Boolean>) ConstantExpression.create(true, BOOLEAN), true);
+
+        // when
+        processor.process(0, new TestInbox(singletonList(new Object[]{null})));
+        processor.complete();
+
+        // then
+        verify(outbox).offer(-1, new Object[]{null, null, null});
+        verifyNoMoreInteractions(outbox);
+        verifyNoInteractions(map);
+    }
+
+    @Test
+    @SuppressWarnings({"unchecked", "ResultOfMethodCallIgnored"})
+    public void when_outerJoinRightValueIsNull_then_nulls() throws Exception {
+        // given
+        Processor processor = processor((Expression<Boolean>) ConstantExpression.create(true, BOOLEAN), true);
+
+        given(map.getAsync(1)).willReturn(CompletableFuture.completedFuture(null));
+
+        // when
+        processor.process(0, new TestInbox(singletonList(new Object[]{1})));
+        processor.complete();
+
+        // then
+        verify(outbox).offer(-1, new Object[]{1, null, null});
+        verifyNoMoreInteractions(outbox);
+    }
+
+    @Test
+    @SuppressWarnings({"unchecked", "ResultOfMethodCallIgnored"})
+    public void when_outerJoinFilteredOutByProjector_then_nulls() throws Exception {
+        // given
+        Processor processor = processor((Expression<Boolean>) ConstantExpression.create(true, BOOLEAN), true);
+
+        given(map.getAsync(1)).willReturn(CompletableFuture.completedFuture("value"));
+        given(rightProjector.project(entry(1, "value"))).willReturn(null);
+
+        // when
+        processor.process(0, new TestInbox(singletonList(new Object[]{1})));
+        processor.complete();
+
+        // then
+        verify(outbox).offer(-1, new Object[]{1, null, null});
+        verifyNoMoreInteractions(outbox);
+    }
+
+    @Test
+    @SuppressWarnings({"unchecked", "ResultOfMethodCallIgnored"})
+    public void when_outerJoinProjectedByProjector_then_modified() throws Exception {
+        // given
+        Processor processor = processor((Expression<Boolean>) ConstantExpression.create(true, BOOLEAN), true);
+
+        given(map.getAsync(1)).willReturn(CompletableFuture.completedFuture("original"));
+        given(rightProjector.project(entry(1, "original"))).willReturn(new Object[]{2, "modified"});
+
+        // when
+        processor.process(0, new TestInbox(singletonList(new Object[]{1})));
+        processor.complete();
+
+        // then
+        verify(outbox).offer(-1, new Object[]{1, 2, "modified"});
+        verifyNoMoreInteractions(outbox);
+    }
+
+    @Test
+    @SuppressWarnings("ResultOfMethodCallIgnored")
+    public void when_outerJoinFilteredOutByCondition_then_nulls() throws Exception {
+        // given
+        Processor processor = processor(ComparisonPredicate.create(
+                ColumnExpression.create(2, VARCHAR),
+                ConstantExpression.create("value-2", VARCHAR),
+                ComparisonMode.EQUALS
+        ), true);
+
+        given(map.getAsync(1)).willReturn(CompletableFuture.completedFuture("value-1"));
+        given(rightProjector.project(entry(1, "value-1"))).willReturn(new Object[]{1, "value-1"});
+
+        // when
+        processor.process(0, new TestInbox(singletonList(new Object[]{1})));
+        processor.complete();
+
+        // then
+        verify(outbox).offer(-1, new Object[]{1, null, null});
+        verifyNoMoreInteractions(outbox);
+    }
+
+    private Processor processor(Expression<Boolean> condition, boolean outer) throws Exception {
         ProcessorSupplier supplier = new JoinByPrimitiveKeyProcessorSupplier(
+                outer,
                 0,
                 condition,
                 "map",

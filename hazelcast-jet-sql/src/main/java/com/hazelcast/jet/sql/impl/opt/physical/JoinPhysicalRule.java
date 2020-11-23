@@ -42,7 +42,8 @@ public final class JoinPhysicalRule extends RelOptRule {
     public void onMatch(RelOptRuleCall call) {
         JoinLogicalRel logicalJoin = call.rel(0);
 
-        assert logicalJoin.getJoinType() == JoinRelType.INNER;
+        JoinRelType joinType = logicalJoin.getJoinType();
+        assert joinType == JoinRelType.INNER || joinType == JoinRelType.LEFT;
 
         RelNode physicalLeft = OptUtils.toPhysicalInput(logicalJoin.getLeft());
         RelNode physicalRight = OptUtils.toPhysicalInput(logicalJoin.getRight());

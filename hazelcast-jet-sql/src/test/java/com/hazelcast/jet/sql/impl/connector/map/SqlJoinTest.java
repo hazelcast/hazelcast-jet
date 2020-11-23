@@ -556,7 +556,7 @@ public class SqlJoinTest extends SqlTestSupport {
         assertRowsAnyOrder(
                 "SELECT l.v, m.__key, m.this " +
                 "FROM " + leftName + " l " +
-                "JOIN " + mapName + " m ON 1=2",
+                "JOIN " + mapName + " m ON 1 = 2",
                 emptyList()
         );
     }
@@ -640,5 +640,98 @@ public class SqlJoinTest extends SqlTestSupport {
                 ))
                 .hasCauseInstanceOf(QueryException.class)
                 .hasMessageContaining("SELECT/VALUES on the right side of a join not supported");
+    }
+
+    @Test
+    public void test_leftJoinOnPrimitiveKey() {
+        String leftName = randomName();
+        TestBatchSqlConnector.create(
+                sqlService,
+                leftName,
+                singletonList("v"),
+                singletonList(INT),
+                asList(new String[]{"0"}, new String[]{null}, new String[]{"2"})
+        );
+
+        String mapName = randomName();
+        instance().getMap(mapName).putAll(ImmutableMap.of(
+                1, "value-1",
+                2, "value-2",
+                3, "value-3"
+        ));
+
+        assertRowsAnyOrder(
+                "SELECT l.v, m.__key, m.this " +
+                "FROM " + leftName + " l " +
+                "LEFT JOIN " + mapName + " m ON l.v = m.__key",
+                asList(
+                        new Row(0, null, null),
+                        new Row(null, null, null),
+                        new Row(2, 2, "value-2")
+                )
+        );
+    }
+
+    @Test
+    public void test_leftJoinNotOnPrimitiveKey() {
+        String leftName = randomName();
+        TestBatchSqlConnector.create(
+                sqlService,
+                leftName,
+                singletonList("v"),
+                singletonList(INT),
+                asList(new String[]{"0"}, new String[]{null}, new String[]{"2"})
+        );
+
+        String mapName = randomName();
+        instance().getMap(mapName).putAll(ImmutableMap.of(
+                "value-1", 1,
+                "value-2", 2,
+                "value-3", 3
+        ));
+
+        assertRowsAnyOrder(
+                "SELECT l.v, m.__key, m.this " +
+                "FROM " + leftName + " l " +
+                "LEFT JOIN " + mapName + " m ON l.v = m.this",
+                asList(
+                        new Row(0, null, null),
+                        new Row(null, null, null),
+                        new Row(2, "value-2", 2)
+                )
+        );
+    }
+
+    @Test
+    public void test_leftJoinWithAlwaysTrueCondition() {
+        String leftName = randomName();
+        TestBatchSqlConnector.create(
+                sqlService,
+                leftName,
+                singletonList("v"),
+                singletonList(INT),
+                asList(new String[]{"0"}, new String[]{null})
+        );
+
+        String mapName = randomName();
+        instance().getMap(mapName).putAll(ImmutableMap.of(
+                "value-1", 1,
+                "value-2", 2,
+                "value-3", 3
+        ));
+
+        assertRowsAnyOrder(
+                "SELECT l.v, m.__key, m.this " +
+                "FROM " + leftName + " l " +
+                "LEFT JOIN " + mapName + " m ON 1 = 1",
+                asList(
+                        new Row(0, "value-1", 1),
+                        new Row(0, "value-2", 2),
+                        new Row(0, "value-3", 3),
+                        new Row(null, "value-1", 1),
+                        new Row(null, "value-2", 2),
+                        new Row(null, "value-3", 3)
+                )
+        );
     }
 }

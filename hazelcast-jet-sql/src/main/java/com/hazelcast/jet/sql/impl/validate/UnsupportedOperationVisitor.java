@@ -288,6 +288,7 @@ public final class UnsupportedOperationVisitor implements SqlVisitor<Void> {
                 if (symbolValue == JoinType.INNER
                     || symbolValue == JoinType.COMMA
                     || symbolValue == JoinType.CROSS
+                    || symbolValue == JoinType.LEFT
                 ) {
                     return null;
                 }
@@ -357,7 +358,11 @@ public final class UnsupportedOperationVisitor implements SqlVisitor<Void> {
     private void processJoin(SqlJoin join) {
         JoinType joinType = join.getJoinType();
 
-        if (joinType != JoinType.INNER && joinType != JoinType.COMMA && joinType != JoinType.CROSS) {
+        if (joinType != JoinType.INNER
+            && joinType != JoinType.COMMA
+            && joinType != JoinType.CROSS
+            && joinType != JoinType.LEFT
+        ) {
             throw unsupported(join, joinType.name() + " join");
         }
     }

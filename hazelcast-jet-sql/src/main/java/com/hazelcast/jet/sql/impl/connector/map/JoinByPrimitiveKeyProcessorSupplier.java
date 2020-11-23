@@ -20,7 +20,6 @@ import com.hazelcast.function.BiFunctionEx;
 import com.hazelcast.function.SupplierEx;
 import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.jet.Traverser;
-import com.hazelcast.jet.Traversers;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.impl.execution.init.Contexts.ProcSupplierCtx;
@@ -43,7 +42,10 @@ import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
+import static com.hazelcast.jet.Traversers.singleton;
 import static com.hazelcast.jet.Util.entry;
+import static com.hazelcast.jet.impl.util.Util.padRight;
+import static java.util.concurrent.CompletableFuture.completedFuture;
 
 @SuppressFBWarnings(
         value = {"SE_BAD_FIELD", "SE_NO_SERIALVERSIONID"},
@@ -53,6 +55,7 @@ final class JoinByPrimitiveKeyProcessorSupplier implements ProcessorSupplier, Da
 
     private static final int MAX_CONCURRENT_OPS = 8;
 
+    private boolean outer;
     private int leftEquiJoinIndex;
     private Expression<Boolean> condition;
     private String mapName;
@@ -67,11 +70,13 @@ final class JoinByPrimitiveKeyProcessorSupplier implements ProcessorSupplier, Da
     }
 
     JoinByPrimitiveKeyProcessorSupplier(
+            boolean outer,
             int leftEquiJoinIndex,
             Expression<Boolean> condition,
             String mapName,
             KvRowProjector.Supplier rightRowProjectorSupplier
     ) {
+        this.outer = outer;
         this.leftEquiJoinIndex = leftEquiJoinIndex;
         this.condition = condition;
         this.mapName = mapName;
@@ -97,7 +102,7 @@ final class JoinByPrimitiveKeyProcessorSupplier implements ProcessorSupplier, Da
                     ServiceFactories.iMapService(mapName),
                     map,
                     MAX_CONCURRENT_OPS,
-                    joinFn(leftEquiJoinIndex, condition, rightRowProjectorSupplier)
+                    joinFn(outer, leftEquiJoinIndex, condition, rightRowProjectorSupplier)
             );
             processors.add(processor);
         }
@@ -105,6 +110,7 @@ final class JoinByPrimitiveKeyProcessorSupplier implements ProcessorSupplier, Da
     }
 
     private static BiFunctionEx<IMap<Object, Object>, Object[], CompletableFuture<Traverser<Object[]>>> joinFn(
+            boolean outer,
             int leftEquiJoinIndex,
             Expression<Boolean> condition,
             SupplierEx<KvRowProjector> rightRowProjectorSupplier
@@ -113,32 +119,44 @@ final class JoinByPrimitiveKeyProcessorSupplier implements ProcessorSupplier, Da
 
         return (map, left) -> {
             Object key = left[leftEquiJoinIndex];
+            KvRowProjector rightRowProjector = rightRowProjectorSupplier.get();
+
             if (key == null) {
-                return null;
+                return outer ? completedFuture(singleton(padRight(left, rightRowProjector.getColumnCount()))) : null;
             }
 
             return map.getAsync(key).toCompletableFuture()
                       .thenApply(value -> {
-                          if (value == null) {
-                              return null;
-                          }
-
-                          Object[] right = rightRowProjectorSupplier.get().project(entry(key, value));
-                          if (right == null) {
-                              return null;
-                          }
-
-                          Object[] joined = joinFn.apply(left, right);
-                          if (joined != null) {
-                              return Traversers.singleton(joined);
-                          }
-                          return null;
+                          Object[] joined = join(left, key, value, rightRowProjector, joinFn);
+                          return joined != null ? singleton(joined)
+                                  : outer ? singleton(padRight(left, rightRowProjector.getColumnCount()))
+                                  : null;
                       });
         };
     }
 
+    private static Object[] join(
+            Object[] left,
+            Object key,
+            Object value,
+            KvRowProjector rightRowProjector,
+            BiFunctionEx<Object[], Object[], Object[]> joinFn
+    ) {
+        if (value == null) {
+            return null;
+        }
+
+        Object[] right = rightRowProjector.project(entry(key, value));
+        if (right == null) {
+            return null;
+        }
+
+        return joinFn.apply(left, right);
+    }
+
     @Override
     public void writeData(ObjectDataOutput out) throws IOException {
+        out.writeBoolean(outer);
         out.writeInt(leftEquiJoinIndex);
         out.writeObject(condition);
         out.writeObject(mapName);
@@ -147,6 +165,7 @@ final class JoinByPrimitiveKeyProcessorSupplier implements ProcessorSupplier, Da
 
     @Override
     public void readData(ObjectDataInput in) throws IOException {
+        outer = in.readBoolean();
         leftEquiJoinIndex = in.readInt();
         condition = in.readObject();
         mapName = in.readObject();

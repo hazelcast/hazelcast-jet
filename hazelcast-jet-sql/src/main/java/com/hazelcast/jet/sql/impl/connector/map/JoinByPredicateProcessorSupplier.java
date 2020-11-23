@@ -20,7 +20,6 @@ import com.hazelcast.function.BiFunctionEx;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.jet.Traverser;
-import com.hazelcast.jet.Traversers;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.impl.execution.init.Contexts.ProcSupplierCtx;
@@ -43,6 +42,12 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map.Entry;
+import java.util.Set;
+
+import static com.hazelcast.jet.Traversers.empty;
+import static com.hazelcast.jet.Traversers.singleton;
+import static com.hazelcast.jet.Traversers.traverseIterable;
+import static com.hazelcast.jet.impl.util.Util.padRight;
 
 @SuppressFBWarnings(
         value = {"SE_BAD_FIELD", "SE_NO_SERIALVERSIONID"},
@@ -108,6 +113,7 @@ final class JoinByPredicateProcessorSupplier implements ProcessorSupplier, DataS
             QueryPath[] rightPaths,
             KvRowProjector rightRowProjector
     ) {
+        boolean outer = joinInfo.isOuter();
         int[] leftEquiJoinIndices = joinInfo.leftEquiJoinIndices();
         int[] rightEquiJoinIndices = joinInfo.rightEquiJoinIndices();
         BiFunctionEx<Object[], Object[], Object[]> joinFn = ExpressionUtil.joinFn(joinInfo.nonEquiCondition());
@@ -116,23 +122,35 @@ final class JoinByPredicateProcessorSupplier implements ProcessorSupplier, DataS
             Predicate<Object, Object> predicate =
                     JoinPredicateFactory.toPredicate(left, leftEquiJoinIndices, rightEquiJoinIndices, rightPaths);
             if (predicate == null) {
-                return Traversers.empty();
+                return outer ? singleton(padRight(left, rightRowProjector.getColumnCount())) : empty();
             }
 
-            List<Object[]> rows = new ArrayList<>();
-            for (Entry<Object, Object> entry : map.entrySet(predicate)) {
-                Object[] right = rightRowProjector.project(entry);
-                if (right == null) {
-                    continue;
-                }
-
-                Object[] joined = joinFn.apply(left, right);
-                if (joined != null) {
-                    rows.add(joined);
-                }
-            }
-            return Traversers.traverseIterable(rows);
+            List<Object[]> joined = join(left, map.entrySet(predicate), rightRowProjector, joinFn);
+            return !joined.isEmpty() ? traverseIterable(joined)
+                    : outer ? singleton(padRight(left, rightRowProjector.getColumnCount()))
+                    : empty();
         };
+    }
+
+    private static List<Object[]> join(
+            Object[] left,
+            Set<Entry<Object, Object>> entries,
+            KvRowProjector rightRowProjector,
+            BiFunctionEx<Object[], Object[], Object[]> joinFn
+    ) {
+        List<Object[]> rows = new ArrayList<>();
+        for (Entry<Object, Object> entry : entries) {
+            Object[] right = rightRowProjector.project(entry);
+            if (right == null) {
+                continue;
+            }
+
+            Object[] joined = joinFn.apply(left, right);
+            if (joined != null) {
+                rows.add(joined);
+            }
+        }
+        return rows;
     }
 
     @Override
