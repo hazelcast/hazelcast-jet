@@ -203,9 +203,8 @@ MqttSources.builder()
 MQTT protocol defines these quality-of-services for subscribing the
 topics: `AT_MOST_ONCE`, `AT_LEAST_ONCE`, `EXACTLY_ONCE`. But I've
 confirmed a loss of message with `EXACTLY_ONCE` configuration even when
-the client restarted gracefully. I'm not sure if this is an issue of
-the client or the broker. I'll test the behaviour with HiveMQ client
-too.
+the client restarted gracefully. I've tried both Paho client and HiveMQ
+client, the results are same.
 
 If a client subscribes to a topic with quality of service `AT_LEAST_ONCE`
 or `EXACTLY_ONCE` and connects to the broker with `cleanSession=false`,
@@ -246,7 +245,7 @@ MqttSinks.builder()
         .topic("topic")
         .autoReconnect()
         .keepSession()
-        .retryCount(5)
+        .retryStrategy(RetryStrategies.indefinitely(1000))
         .messageFn(item -> {
             MqttMessage message = new MqttMessage(item.getBytes());
             message.setQos(2);
@@ -271,15 +270,7 @@ MqttSinks.builder()
             options.setMaxInflight(100);
             return options;
         })
-        .retryFn((exception, tryCount) -> {
-            if(tryCount > 5) {
-                return 0;
-            }
-            if(exception.getReasonCode() != MqttException.REASON_CODE_BROKER_UNAVAILABLE) {
-                return 0;
-            }
-            return 200;
-        })
+        .retryStrategy(RetryStrategies.indefinitely(1000))
         .topic("topic")
         .messageFn(item -> {
             MqttMessage message = new MqttMessage(item.getBytes());
@@ -298,8 +289,4 @@ a restart, some messages can be duplicated.
 
 The sink uses sync client to publish the messages. Any error/exception
 encountered while publishing the messages will fail the job. User can
-configure the retrying of the messages by providing a retry function.
-The retry function accepts a `MqttException`, current try count and
-returns the wait time before trying to send the message again. Any
-non-positive value means that the sink should not retry the message and
-fail the job.
+configure the retrying of the messages by providing a retry-strategy.
