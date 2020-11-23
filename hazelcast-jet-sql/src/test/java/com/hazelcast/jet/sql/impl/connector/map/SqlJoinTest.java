@@ -622,7 +622,7 @@ public class SqlJoinTest extends SqlTestSupport {
                         "JOIN (SELECT * FROM " + mapName + ") AS m ON l.v = m.__key"
                 ))
                 .hasCauseInstanceOf(QueryException.class)
-                .hasMessageContaining("Subquery/values on the right side of a join not supported");
+                .hasMessageContaining("SELECT/VALUES on the right side of a join not supported");
 
         // SELECT * FROM left JOIN (SELECT SUM(__key) AS __key FROM map) AS m ON l.v = m.__key
         // SELECT * FROM left JOIN LATERAL (SELECT __key, this FROM map WHERE __key < 3) AS m ON 1 = 1
@@ -639,6 +639,6 @@ public class SqlJoinTest extends SqlTestSupport {
                         "SELECT * FROM " + leftName + " l JOIN (VALUES (1)) AS r (__key) ON l.v = r.__key"
                 ))
                 .hasCauseInstanceOf(QueryException.class)
-                .hasMessageContaining("Subquery/values on the right side of a join not supported");
+                .hasMessageContaining("SELECT/VALUES on the right side of a join not supported");
     }
 }
