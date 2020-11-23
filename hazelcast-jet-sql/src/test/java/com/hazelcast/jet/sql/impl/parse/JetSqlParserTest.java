@@ -199,7 +199,7 @@ public class JetSqlParserTest {
                 + "mapping_name "
                 + "TYPE mapping_type "
                 + "OPTIONS ("
-                + "option='value1'"
+                + "'option'='value1'"
                 + ")";
 
         // when
