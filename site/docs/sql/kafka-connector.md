@@ -52,16 +52,16 @@ CREATE MAPPING my_topic (
 )
 TYPE Kafka
 OPTIONS (
-    keyFormat 'java',
-    keyJavaClass 'java.lang.String',
-    valueFormat 'avro',
-    "bootstrap.servers" '10.0.1.120',
-    "schema.registry.url" 'http://10.0.1.120:58819/'
-    "key.serializer" 'org.apache.kafka.common.serialization.LongSerializer',
-    "key.deserializer" 'org.apache.kafka.common.serialization.LongDeserializer',
-    "value.serializer" 'io.confluent.kafka.serializers.KafkaAvroSerializer',
-    "value.deserializer" 'io.confluent.kafka.serializers.KafkaAvroDeserializer',
-    "auto.offset.reset" 'earliest'
+    'keyFormat' = 'java',
+    'keyJavaClass' = 'java.lang.String',
+    'valueFormat' = 'avro',
+    'bootstrap.servers' = '10.0.1.120',
+    'schema.registry.url' = 'http://10.0.1.120:58819/'
+    'key.serializer' = 'org.apache.kafka.common.serialization.LongSerializer',
+    'key.deserializer' = 'org.apache.kafka.common.serialization.LongDeserializer',
+    'value.serializer' = 'io.confluent.kafka.serializers.KafkaAvroSerializer',
+    'value.deserializer' = 'io.confluent.kafka.serializers.KafkaAvroDeserializer',
+    'auto.offset.reset' = 'earliest'
     /* more Kafka options ... */
 )
 ```
@@ -76,7 +76,7 @@ to quote identifiers: this way the `.` is interpreted literally.
 ### JSON serialization
 
 You don't have to provide any options for the JSON format, but since
-Jet can't automatically determine the column list, you must explitictly
+Jet can't automatically determine the column list, you must explicitly
 specify it:
 
 ```sql
@@ -86,8 +86,8 @@ CREATE MAPPING my_topic(
     amount INT)
 TYPE Kafka
 OPTIONS (
-    keyFormat 'json',
-    valueFormat 'json')
+    'keyFormat' = 'json',
+    'valueFormat' = 'json')
 ```
 
 JSON's type system doesn't match SQL's exactly. For example, JSON
@@ -116,10 +116,10 @@ For this format you must specify the class name using `keyJavaClass` and
 CREATE MAPPING my_topic
 TYPE IMap
 OPTIONS (
-    keyFormat 'java',
-    keyJavaClass 'java.lang.Long',
-    valueFormat 'java',
-    valueJavaClass 'com.example.Person')
+    'keyFormat' = 'java',
+    'keyJavaClass' = 'java.lang.Long',
+    'valueFormat' = 'java',
+    'valueJavaClass' = 'com.example.Person')
 ```
 
 If the Java class corresponds to one of the basic data types (numbers,
