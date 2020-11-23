@@ -20,7 +20,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.mapreduce.InputSplit;
@@ -35,12 +34,16 @@ import java.io.IOException;
  * Hadoop: The Definitive Guide, Fourth Edition by Tom White (O'Reilly, 2014)
  * https://github.com/tomwhite/hadoop-book/blob/master/ch08-mr-types/src/main/java/WholeFileRecordReader.java
  */
-class WholeFileRecordReader extends RecordReader<NullWritable, BytesWritable> {
+abstract class WholeFileRecordReader<T> extends RecordReader<NullWritable, T> {
 
-    private final BytesWritable value = new BytesWritable();
+    private final T value;
     private FileSplit fileSplit;
     private Configuration conf;
     private boolean processed;
+
+    WholeFileRecordReader(T value) {
+        this.value = value;
+    }
 
     @Override
     public void initialize(InputSplit split, TaskAttemptContext context) {
@@ -58,7 +61,7 @@ class WholeFileRecordReader extends RecordReader<NullWritable, BytesWritable> {
             try {
                 in = fs.open(file);
                 IOUtils.readFully(in, contents, 0, contents.length);
-                value.set(contents, 0, contents.length);
+                setValue(contents, 0, contents.length, value);
             } finally {
                 IOUtils.closeStream(in);
             }
@@ -68,13 +71,15 @@ class WholeFileRecordReader extends RecordReader<NullWritable, BytesWritable> {
         return false;
     }
 
+    protected abstract void setValue(byte[] contents, int start, int length, T value);
+
     @Override
     public NullWritable getCurrentKey() {
         return NullWritable.get();
     }
 
     @Override
-    public BytesWritable getCurrentValue() {
+    public T getCurrentValue() {
         return value;
     }
 

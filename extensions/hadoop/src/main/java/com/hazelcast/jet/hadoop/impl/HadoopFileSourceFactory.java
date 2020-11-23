@@ -147,7 +147,7 @@ public class HadoopFileSourceFactory implements FileSourceFactory {
 
         @Override
         public <T> void configure(Job job, FileFormat<T> format) {
-            job.setInputFormatClass(WholeFileInputFormat.class);
+            job.setInputFormatClass(WholeFileAsBytesInputFormat.class);
         }
 
         @Override
@@ -246,7 +246,7 @@ public class HadoopFileSourceFactory implements FileSourceFactory {
 
         @Override
         public <T> void configure(Job job, FileFormat<T> format) {
-            job.setInputFormatClass(WholeTextInputFormat.class);
+            job.setInputFormatClass(WholeFileAsTextInputFormat.class);
         }
 
         @Override

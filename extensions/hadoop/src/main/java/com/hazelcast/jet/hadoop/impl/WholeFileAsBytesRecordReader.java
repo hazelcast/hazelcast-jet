@@ -16,30 +16,22 @@
 
 package com.hazelcast.jet.hadoop.impl;
 
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.BytesWritable;
-import org.apache.hadoop.io.NullWritable;
-import org.apache.hadoop.mapreduce.InputSplit;
-import org.apache.hadoop.mapreduce.JobContext;
-import org.apache.hadoop.mapreduce.RecordReader;
-import org.apache.hadoop.mapreduce.TaskAttemptContext;
-import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
-
 
 /**
  * Adapted from code example from book
  * Hadoop: The Definitive Guide, Fourth Edition by Tom White (O'Reilly, 2014)
- * https://github.com/tomwhite/hadoop-book/blob/master/ch08-mr-types/src/main/java/WholeFileInputFormat.java
+ * https://github.com/tomwhite/hadoop-book/blob/master/ch08-mr-types/src/main/java/WholeFileRecordReader.java
  */
-public class WholeFileInputFormat extends FileInputFormat<NullWritable, BytesWritable> {
+class WholeFileAsBytesRecordReader extends WholeFileRecordReader<BytesWritable> {
 
-    @Override
-    protected boolean isSplitable(JobContext context, Path file) {
-        return false;
+    WholeFileAsBytesRecordReader() {
+        super(new BytesWritable());
     }
 
     @Override
-    public RecordReader<NullWritable, BytesWritable> createRecordReader(InputSplit split, TaskAttemptContext context) {
-        return new WholeFileRecordReader();
+    protected void setValue(byte[] contents, int start, int length, BytesWritable value) {
+        value.set(contents, start, length);
     }
+
 }
